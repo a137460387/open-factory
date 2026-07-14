@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
-import { createPluginDevWatcher, routePluginMessageForRegistry, runPluginHookForRegistry, wirePluginMessageRouting, type PluginRegistry } from './plugin-manager';
+import {
+  createPluginDevWatcher,
+  routePluginMessageForRegistry,
+  runPluginHookForRegistry,
+  wirePluginMessageRouting,
+  type PluginRegistry,
+} from './plugin-manager';
 import type { LoadedPlugin, PluginRuntime } from './plugin-loader';
 
 describe('plugin manager', () => {
@@ -14,7 +20,7 @@ describe('plugin manager', () => {
 
     const entries = await runPluginHookForRegistry(registry, 'onExportBefore', {
       project: createProject('Plugin Isolation'),
-      outputPath: 'C:/Exports/out.mp4'
+      outputPath: 'C:/Exports/out.mp4',
     });
 
     expect(entries[0]).toMatchObject({ pluginId: 'throwing', hookName: 'onExportBefore', ok: false });
@@ -32,8 +38,8 @@ describe('plugin manager', () => {
     expect(
       await runPluginHookForRegistry(registry, 'onExportBefore', {
         project: createProject('Disabled Plugin'),
-        outputPath: 'C:/Exports/out.mp4'
-      })
+        outputPath: 'C:/Exports/out.mp4',
+      }),
     ).toEqual([]);
     expect(disabledHook).not.toHaveBeenCalled();
   });
@@ -44,7 +50,7 @@ describe('plugin manager', () => {
     const sender = makeLoadedPlugin('sender', ['read-project'], async () => undefined, {
       setMessageRouter(nextRouter) {
         router = nextRouter;
-      }
+      },
     });
     const receiver = makeLoadedPlugin('receiver', ['read-project'], async () => undefined, { receiveMessage });
     const registry: PluginRegistry = { plugins: [sender, receiver], errors: [] };
@@ -55,7 +61,7 @@ describe('plugin manager', () => {
     expect(receiveMessage).toHaveBeenCalledWith({
       fromPluginId: 'sender',
       event: 'color-grade:changed',
-      data: { nodeId: 'serial-1' }
+      data: { nodeId: 'serial-1' },
     });
   });
 
@@ -76,7 +82,7 @@ describe('plugin manager', () => {
         reloadCount += 1;
       },
       setTimer: (() => 1) as typeof setInterval,
-      clearTimer: () => undefined
+      clearTimer: () => undefined,
     });
 
     await watcher.tick();
@@ -92,7 +98,7 @@ function makeLoadedPlugin(
   id: string,
   permissions: LoadedPlugin['plugin']['permissions'],
   hook: PluginRuntime['invokeHook'],
-  runtimeOverrides: Partial<Pick<PluginRuntime, 'receiveMessage' | 'setMessageRouter'>> = {}
+  runtimeOverrides: Partial<Pick<PluginRuntime, 'receiveMessage' | 'setMessageRouter'>> = {},
 ): LoadedPlugin {
   const plugin: LoadedPlugin['plugin'] = {
     id,
@@ -100,7 +106,7 @@ function makeLoadedPlugin(
     version: '1.0.0',
     description: '',
     permissions,
-    hooks: { onExportBefore: () => undefined }
+    hooks: { onExportBefore: () => undefined },
   };
   return {
     sourcePath: `C:/Plugins/${id}.js`,
@@ -111,10 +117,10 @@ function makeLoadedPlugin(
       plugin,
       invokeHook: hook,
       ...runtimeOverrides,
-      dispose: () => undefined
+      dispose: () => undefined,
     },
     errors: [],
     builtin: false,
-    enabled: true
+    enabled: true,
   };
 }

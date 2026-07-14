@@ -10,7 +10,12 @@ type MontageStep = 'select' | 'analyze' | 'preview';
 interface SmartMontageDialogProps {
   media: MediaAsset[];
   initialVideoIds?: string[];
-  onGenerate(config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }): void;
+  onGenerate(config: {
+    videoAssetIds: string[];
+    audioAssetId: string;
+    beatTimes: number[];
+    sensitivity: BeatSensitivity;
+  }): void;
   onClose(): void;
 }
 
@@ -20,7 +25,7 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
 
   const [step, setStep] = useState<MontageStep>('select');
   const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>(() =>
-    initialVideoIds.length > 0 ? initialVideoIds : videoAssets.slice(0, 5).map((a) => a.id)
+    initialVideoIds.length > 0 ? initialVideoIds : videoAssets.slice(0, 5).map((a) => a.id),
   );
   const [selectedAudioId, setSelectedAudioId] = useState<string>(() => audioAssets[0]?.id ?? '');
   const [sensitivity, setSensitivity] = useState<BeatSensitivity>('medium');
@@ -29,8 +34,12 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
   const [estimatedBpm, setEstimatedBpm] = useState(0);
 
   const selectedVideoAssets = useMemo(
-    () => selectedVideoIds.flatMap((id) => { const a = media.find((m) => m.id === id); return a ? [a] : []; }),
-    [media, selectedVideoIds]
+    () =>
+      selectedVideoIds.flatMap((id) => {
+        const a = media.find((m) => m.id === id);
+        return a ? [a] : [];
+      }),
+    [media, selectedVideoIds],
   );
   const selectedAudioAsset = useMemo(() => media.find((m) => m.id === selectedAudioId), [media, selectedAudioId]);
 
@@ -38,7 +47,7 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
   const canGenerate = beatTimes.length >= 2 && selectedVideoIds.length >= 1 && !!selectedAudioId;
 
   const toggleVideo = useCallback((id: string) => {
-    setSelectedVideoIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setSelectedVideoIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }, []);
 
   const analyzeBeats = useCallback(async () => {
@@ -64,12 +73,18 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
       videoAssetIds: selectedVideoIds,
       audioAssetId: selectedAudioId,
       beatTimes,
-      sensitivity
+      sensitivity,
     });
   }, [canGenerate, selectedVideoIds, selectedAudioId, beatTimes, sensitivity, onGenerate]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="AI 智能混剪" data-testid="smart-montage-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="AI 智能混剪"
+      data-testid="smart-montage-dialog"
+    >
       <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         {/* Header */}
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -80,14 +95,24 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
               <p className="text-xs text-slate-500">根据音乐节拍自动切割和排列视频片段</p>
             </div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel" type="button" aria-label="关闭" onClick={onClose}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+            type="button"
+            aria-label="关闭"
+            onClick={onClose}
+          >
             <X size={16} />
           </button>
         </header>
 
         {/* Step indicator */}
         <div className="flex items-center gap-1 border-b border-line px-4 py-2 text-xs">
-          <StepBadge num={1} label="选择素材" active={step === 'select'} done={step === 'analyze' || step === 'preview'} />
+          <StepBadge
+            num={1}
+            label="选择素材"
+            active={step === 'select'}
+            done={step === 'analyze' || step === 'preview'}
+          />
           <ChevronRight size={12} className="text-slate-400" />
           <StepBadge num={2} label="分析节拍" active={step === 'analyze'} done={step === 'preview'} />
           <ChevronRight size={12} className="text-slate-400" />
@@ -105,18 +130,35 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
                   视频素材 ({selectedVideoIds.length} 已选)
                 </div>
                 {videoAssets.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500" data-testid="smart-montage-empty-video">
+                  <div
+                    className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500"
+                    data-testid="smart-montage-empty-video"
+                  >
                     暂无视频/图片素材，请先导入媒体
                   </div>
                 ) : (
-                  <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto" data-testid="smart-montage-video-list">
+                  <div
+                    className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto"
+                    data-testid="smart-montage-video-list"
+                  >
                     {videoAssets.map((asset) => {
                       const checked = selectedVideoIds.includes(asset.id);
                       return (
-                        <label key={asset.id} className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${checked ? 'border-brand bg-brand/5 text-ink' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}>
-                          <input className="h-4 w-4 accent-brand" type="checkbox" checked={checked} data-testid={`smart-montage-video-${asset.id}`} onChange={() => toggleVideo(asset.id)} />
+                        <label
+                          key={asset.id}
+                          className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${checked ? 'border-brand bg-brand/5 text-ink' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}
+                        >
+                          <input
+                            className="h-4 w-4 accent-brand"
+                            type="checkbox"
+                            checked={checked}
+                            data-testid={`smart-montage-video-${asset.id}`}
+                            onChange={() => toggleVideo(asset.id)}
+                          />
                           <span className="min-w-0 flex-1 truncate">{asset.name}</span>
-                          <span className="shrink-0 text-xs tabular-nums text-slate-400">{formatDuration(asset.duration)}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-slate-400">
+                            {formatDuration(asset.duration)}
+                          </span>
                         </label>
                       );
                     })}
@@ -131,16 +173,31 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
                   背景音乐
                 </div>
                 {audioAssets.length === 0 ? (
-                  <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500" data-testid="smart-montage-empty-audio">
+                  <div
+                    className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500"
+                    data-testid="smart-montage-empty-audio"
+                  >
                     暂无音频素材，请先导入音乐文件
                   </div>
                 ) : (
                   <div className="space-y-1" data-testid="smart-montage-audio-list">
                     {audioAssets.map((asset) => (
-                      <label key={asset.id} className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${selectedAudioId === asset.id ? 'border-brand bg-brand/5 text-ink' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}>
-                        <input className="h-4 w-4 accent-brand" type="radio" name="bgm" checked={selectedAudioId === asset.id} data-testid={`smart-montage-audio-${asset.id}`} onChange={() => setSelectedAudioId(asset.id)} />
+                      <label
+                        key={asset.id}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-colors ${selectedAudioId === asset.id ? 'border-brand bg-brand/5 text-ink' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}
+                      >
+                        <input
+                          className="h-4 w-4 accent-brand"
+                          type="radio"
+                          name="bgm"
+                          checked={selectedAudioId === asset.id}
+                          data-testid={`smart-montage-audio-${asset.id}`}
+                          onChange={() => setSelectedAudioId(asset.id)}
+                        />
                         <span className="min-w-0 flex-1 truncate">{asset.name}</span>
-                        <span className="shrink-0 text-xs tabular-nums text-slate-400">{formatDuration(asset.duration)}</span>
+                        <span className="shrink-0 text-xs tabular-nums text-slate-400">
+                          {formatDuration(asset.duration)}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -182,16 +239,22 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
               </div>
               <div className="rounded-md border border-line bg-panel p-3">
                 <p className="text-xs text-slate-500">
-                  系统将根据 {beatTimes.length} 个节拍点，把 {selectedVideoIds.length} 个视频素材按顺序循环排列到节拍间隔中，
-                  生成 {Math.min(beatTimes.length - 1, beatTimes.length)} 个片段，并添加背景音乐轨道。
+                  系统将根据 {beatTimes.length} 个节拍点，把 {selectedVideoIds.length}{' '}
+                  个视频素材按顺序循环排列到节拍间隔中， 生成 {Math.min(beatTimes.length - 1, beatTimes.length)}{' '}
+                  个片段，并添加背景音乐轨道。
                 </p>
               </div>
               {/* Beat timeline preview */}
-              <div className="relative h-8 overflow-hidden rounded-md border border-line bg-slate-50" data-testid="smart-montage-beat-preview">
+              <div
+                className="relative h-8 overflow-hidden rounded-md border border-line bg-slate-50"
+                data-testid="smart-montage-beat-preview"
+              >
                 {beatTimes.slice(0, 50).map((time, i) => {
                   const totalDuration = beatTimes[beatTimes.length - 1] - beatTimes[0];
                   const left = totalDuration > 0 ? ((time - beatTimes[0]) / totalDuration) * 100 : 0;
-                  return <div key={i} className="absolute top-0 h-full w-px bg-brand/40" style={{ left: `${left}%` }} />;
+                  return (
+                    <div key={i} className="absolute top-0 h-full w-px bg-brand/40" style={{ left: `${left}%` }} />
+                  );
                 })}
                 <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-500">
                   节拍分布预览
@@ -208,7 +271,11 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
               <button
                 className="rounded-md border border-line px-3 py-1.5 text-sm text-slate-600 hover:bg-panel"
                 type="button"
-                onClick={() => { setStep('select'); setBeatTimes([]); setEstimatedBpm(0); }}
+                onClick={() => {
+                  setStep('select');
+                  setBeatTimes([]);
+                  setEstimatedBpm(0);
+                }}
                 data-testid="smart-montage-back-button"
               >
                 返回修改
@@ -216,7 +283,12 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line px-3 py-1.5 text-sm text-slate-600 hover:bg-panel" type="button" onClick={onClose} data-testid="smart-montage-cancel-button">
+            <button
+              className="rounded-md border border-line px-3 py-1.5 text-sm text-slate-600 hover:bg-panel"
+              type="button"
+              onClick={onClose}
+              data-testid="smart-montage-cancel-button"
+            >
               取消
             </button>
             {step === 'select' && (
@@ -224,7 +296,10 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
                 className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-40"
                 type="button"
                 disabled={!canAnalyze || analyzing}
-                onClick={() => { setStep('analyze'); void analyzeBeats(); }}
+                onClick={() => {
+                  setStep('analyze');
+                  void analyzeBeats();
+                }}
                 data-testid="smart-montage-analyze-button"
               >
                 {analyzing ? <Loader2 size={14} className="animate-spin" /> : <Music size={14} />}
@@ -252,7 +327,9 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
 
 function StepBadge({ num, label, active, done }: { num: number; label: string; active: boolean; done: boolean }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-brand text-white' : done ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-brand text-white' : done ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}
+    >
       {done ? '✓' : num} {label}
     </span>
   );
@@ -261,7 +338,10 @@ function StepBadge({ num, label, active, done }: { num: number; label: string; a
 function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
     <div className="rounded-md border border-line bg-white p-3 text-center">
-      <div className="text-lg font-bold text-ink">{value}<span className="ml-0.5 text-xs font-normal text-slate-500">{unit}</span></div>
+      <div className="text-lg font-bold text-ink">
+        {value}
+        <span className="ml-0.5 text-xs font-normal text-slate-500">{unit}</span>
+      </div>
       <div className="text-xs text-slate-500">{label}</div>
     </div>
   );

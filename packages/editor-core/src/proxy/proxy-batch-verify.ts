@@ -107,9 +107,7 @@ export function buildBatchVerifyReport(results: ProxyVerifyResult[]): ProxyBatch
 }
 
 export function collectRepairAssetIds(report: ProxyBatchVerifyReport): string[] {
-  return report.results
-    .filter((r) => r.category !== 'healthy')
-    .map((r) => r.assetId);
+  return report.results.filter((r) => r.category !== 'healthy').map((r) => r.assetId);
 }
 
 export function shouldRunScheduledVerify(settings: ProxyBatchVerifySettings, nowMs: number): boolean {
@@ -130,9 +128,7 @@ export function updateRepairProgress(
     completed: progress.completed + (success ? 1 : 0),
     failed: progress.failed + (success ? 0 : 1),
     currentAssetId: undefined,
-    errors: success
-      ? progress.errors
-      : [...progress.errors, { assetId, error: error ?? 'unknown_error' }],
+    errors: success ? progress.errors : [...progress.errors, { assetId, error: error ?? 'unknown_error' }],
   };
 }
 
@@ -140,10 +136,7 @@ export function createRepairProgress(totalToRepair: number): ProxyRepairProgress
   return { totalToRepair, completed: 0, failed: 0, errors: [] };
 }
 
-export function buildRepairHistoryEntry(
-  progress: ProxyRepairProgress,
-  startedAt: number,
-): ProxyRepairHistoryEntry {
+export function buildRepairHistoryEntry(progress: ProxyRepairProgress, startedAt: number): ProxyRepairHistoryEntry {
   return {
     timestamp: Date.now(),
     totalAttempted: progress.completed + progress.failed,

@@ -201,10 +201,7 @@ export function SmartCreationPanel({
                 onToggle={() => toggleSection('narrative')}
                 testId="section-narrative"
               >
-                <NarrativeTimeline
-                  narrative={result.narrative}
-                  storyline={result.storyline}
-                />
+                <NarrativeTimeline narrative={result.narrative} storyline={result.storyline} />
                 {result.storyline && (
                   <button
                     data-testid="smart-creation-apply-storyline"

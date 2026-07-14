@@ -79,9 +79,7 @@ export function PreflightChecklistPanel() {
 
   return (
     <div className="border-t border-line bg-panel" data-testid="preflight-panel">
-      <div className="px-3 py-1.5 text-xs font-medium text-muted select-none">
-        {zhCN.preflightChecklist.title}
-      </div>
+      <div className="px-3 py-1.5 text-xs font-medium text-muted select-none">{zhCN.preflightChecklist.title}</div>
       {unackedIssues.length === 0 ? (
         <div className="px-3 py-2 text-xs text-green-600" data-testid="preflight-all-clear">
           {zhCN.preflightChecklist.allAcknowledged}
@@ -90,10 +88,16 @@ export function PreflightChecklistPanel() {
         <div className="px-2 pb-2 space-y-2">
           <div className="flex gap-2 text-[10px] text-muted px-1">
             <span data-testid="preflight-critical-count">
-              {zhCN.preflightChecklist.totalCritical.replace('{count}', String(unackedIssues.filter((i) => i.severity === 'critical').length))}
+              {zhCN.preflightChecklist.totalCritical.replace(
+                '{count}',
+                String(unackedIssues.filter((i) => i.severity === 'critical').length),
+              )}
             </span>
             <span data-testid="preflight-warning-count">
-              {zhCN.preflightChecklist.totalWarnings.replace('{count}', String(unackedIssues.filter((i) => i.severity === 'warning').length))}
+              {zhCN.preflightChecklist.totalWarnings.replace(
+                '{count}',
+                String(unackedIssues.filter((i) => i.severity === 'warning').length),
+              )}
             </span>
           </div>
           {categories.map(([cat, issues]) => {

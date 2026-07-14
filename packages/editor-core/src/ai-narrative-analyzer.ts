@@ -89,10 +89,7 @@ export function analyzeNarrative(
  * curve.  Segments are bucketed into four parts: setup / development /
  * climax / resolution based on emotion peaks and troughs.
  */
-function identifyStructure(
-  segments: ContentAnalysisSegment[],
-  curve: ContentEmotionPoint[],
-): NarrativeStructure {
+function identifyStructure(segments: ContentAnalysisSegment[], curve: ContentEmotionPoint[]): NarrativeStructure {
   const peakIndex = findPeakIndex(curve);
   const troughIndex = findTroughIndex(curve);
 
@@ -103,10 +100,7 @@ function identifyStructure(
   const acts: NarrativeAct[] = [];
 
   // Setup: start -> 25% mark (or peak if it comes first)
-  const setupEnd = Math.min(
-    segments[0].start + totalDuration * 0.25,
-    peakTime,
-  );
+  const setupEnd = Math.min(segments[0].start + totalDuration * 0.25, peakTime);
   acts.push(buildAct('setup', segments, segments[0].start, setupEnd));
 
   // Development: setup end -> peak
@@ -116,10 +110,7 @@ function identifyStructure(
 
   // Climax: peak -> trough (or 75% mark)
   const climaxStart = peakTime;
-  const climaxEnd = Math.max(
-    troughTime,
-    segments[0].start + totalDuration * 0.75,
-  );
+  const climaxEnd = Math.max(troughTime, segments[0].start + totalDuration * 0.75);
   acts.push(buildAct('climax', segments, climaxStart, Math.min(climaxEnd, segments[segments.length - 1].end)));
 
   // Resolution: climax end -> end
@@ -153,10 +144,7 @@ function buildAct(
  * Generate a narrative arc (series of tension points) from the emotion
  * curve, annotated with the act each point belongs to.
  */
-function buildArc(
-  curve: ContentEmotionPoint[],
-  structure: NarrativeStructure,
-): NarrativeArc {
+function buildArc(curve: ContentEmotionPoint[], structure: NarrativeStructure): NarrativeArc {
   const peakTime = curve[structure.peakIndex].time;
   const troughTime = curve[structure.troughIndex].time;
 
@@ -174,20 +162,14 @@ function buildArc(
  * Combines the raw emotion value with local gradient to reflect rising /
  * falling action.
  */
-function computeTension(
-  point: ContentEmotionPoint,
-  curve: ContentEmotionPoint[],
-): number {
+function computeTension(point: ContentEmotionPoint, curve: ContentEmotionPoint[]): number {
   const index = curve.indexOf(point);
   const prev = index > 0 ? curve[index - 1] : point;
   const gradient = point.value - prev.value;
   return clamp01(point.value * 0.7 + (gradient + 1) * 0.15 + point.brightness * 0.15);
 }
 
-function resolveAct(
-  time: number,
-  acts: NarrativeAct[],
-): NarrativeAct['label'] {
+function resolveAct(time: number, acts: NarrativeAct[]): NarrativeAct['label'] {
   for (const act of acts) {
     if (time >= act.start && time < act.end) {
       return act.label;
@@ -207,11 +189,7 @@ function resolveAct(
  * - Emotion variance (higher = more dynamic story)
  * - Peak/trough separation (good stories have distinct peaks and valleys)
  */
-function computeScore(
-  structure: NarrativeStructure,
-  arc: NarrativeArc,
-  curve: ContentEmotionPoint[],
-): number {
+function computeScore(structure: NarrativeStructure, arc: NarrativeArc, curve: ContentEmotionPoint[]): number {
   let score = 0;
 
   // Act coverage (up to 40 pts)
@@ -224,9 +202,7 @@ function computeScore(
   score += clamp01(emotionVariance * 4) * 30;
 
   // Peak-trough separation (up to 30 pts)
-  const separation = Math.abs(
-    curve[structure.peakIndex].value - curve[structure.troughIndex].value,
-  );
+  const separation = Math.abs(curve[structure.peakIndex].value - curve[structure.troughIndex].value);
   score += clamp01(separation * 1.5) * 30;
 
   return round(clamp01(score / 100) * 100);
@@ -284,14 +260,13 @@ function generateSuggestions(
   }
 
   // Check peak/trough separation
-  const peakTroughDiff = Math.abs(
-    curve[structure.peakIndex].value - curve[structure.troughIndex].value,
-  );
+  const peakTroughDiff = Math.abs(curve[structure.peakIndex].value - curve[structure.troughIndex].value);
   if (peakTroughDiff < 0.15) {
     suggestions.push({
       category: 'engagement',
       severity: 'info',
-      message: 'The emotional peak and trough are very close in intensity. A more dramatic arc may improve viewer retention.',
+      message:
+        'The emotional peak and trough are very close in intensity. A more dramatic arc may improve viewer retention.',
     });
   }
 
@@ -317,7 +292,8 @@ function generateSuggestions(
     suggestions.push({
       category: 'structure',
       severity: 'critical',
-      message: 'Narrative structure needs significant improvement. Consider restructuring to follow a clearer three-act pattern.',
+      message:
+        'Narrative structure needs significant improvement. Consider restructuring to follow a clearer three-act pattern.',
     });
   }
 

@@ -46,8 +46,16 @@ export const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
 
 export const AUDIO_VISUALIZATION_FORMATS = ['mp4', 'mov', 'webm'];
 export const VIDEO_EXPORT_FORMATS = ['mp4', 'mov', 'mkv', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence'];
-export const AUDIO_VISUALIZATION_STYLES: ExportAudioVisualizationStyle[] = ['waveform-line', 'spectrum-bars', 'circular-spectrum'];
-export const AUDIO_VISUALIZATION_BACKGROUND_TYPES: ExportAudioVisualizationBackground['type'][] = ['solid', 'gradient', 'image'];
+export const AUDIO_VISUALIZATION_STYLES: ExportAudioVisualizationStyle[] = [
+  'waveform-line',
+  'spectrum-bars',
+  'circular-spectrum',
+];
+export const AUDIO_VISUALIZATION_BACKGROUND_TYPES: ExportAudioVisualizationBackground['type'][] = [
+  'solid',
+  'gradient',
+  'image',
+];
 export const SUBTITLE_FORMATS: ExportSubtitleFormat[] = ['srt', 'vtt', 'ass', 'ssa'];
 
 export const DEFAULT_AUDIO_VISUALIZATION: NonNullable<ExportPresetSettings['audioVisualization']> = {
@@ -105,10 +113,13 @@ export function normalizeDraftSettings(settings: ExportPresetSettings): ExportPr
     outputMode = 'video';
   }
   const normalizedAnimatedImage = format === 'gif' || format === 'webp' || format === 'apng';
-  const hardwareEncoding = outputMode !== 'audio' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
+  const hardwareEncoding =
+    outputMode !== 'audio' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
   const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
   const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
-  const loudnessNormalization = supportsLoudnessNormalization(format, outputMode) ? normalizeLoudnessNormalization(settings.loudnessNormalization) : 'off';
+  const loudnessNormalization = supportsLoudnessNormalization(format, outputMode)
+    ? normalizeLoudnessNormalization(settings.loudnessNormalization)
+    : 'off';
   const visualExportSettingsEnabled = outputMode === 'video' && !normalizedAnimatedImage;
   const watermark = visualExportSettingsEnabled ? (settings.watermark ?? null) : null;
   const timecodeBurnIn = visualExportSettingsEnabled ? normalizeTimecodeBurnInDraft(settings.timecodeBurnIn) : null;
@@ -122,14 +133,17 @@ export function normalizeDraftSettings(settings: ExportPresetSettings): ExportPr
     height: targetAspectRatio === 'source' ? settings.height : dimensions.height,
     format,
     outputMode,
-    videoCodec: outputMode !== 'audio' ? normalizeVideoCodecForFormat(format, settings.videoCodec) : settings.videoCodec,
+    videoCodec:
+      outputMode !== 'audio' ? normalizeVideoCodecForFormat(format, settings.videoCodec) : settings.videoCodec,
     audioCodec: normalizeAudioCodecForFormat(format, settings.audioCodec),
     hardwareEncoding,
     loudnessNormalization,
     subtitleFormat: normalizeSubtitleFormat(settings.subtitleFormat),
     exportSidecarSubtitle: settings.exportSidecarSubtitle === true,
     subtitleLanguages: normalizeSubtitleLanguageList(settings.subtitleLanguages),
-    subtitleBurnInLanguage: settings.subtitleBurnInLanguage ? normalizeSubtitleLanguage(settings.subtitleBurnInLanguage) : undefined,
+    subtitleBurnInLanguage: settings.subtitleBurnInLanguage
+      ? normalizeSubtitleLanguage(settings.subtitleBurnInLanguage)
+      : undefined,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
@@ -159,7 +173,12 @@ function normalizeVideoCodecForFormat(format: string, current?: string): string 
   if (format === 'png-sequence') {
     return 'png';
   }
-  return current && current !== 'gif' && current !== 'libwebp_anim' && current !== 'apng' && current !== 'png' && current !== 'libvpx-vp9'
+  return current &&
+    current !== 'gif' &&
+    current !== 'libwebp_anim' &&
+    current !== 'apng' &&
+    current !== 'png' &&
+    current !== 'libvpx-vp9'
     ? current
     : 'libx264';
 }
@@ -238,7 +257,14 @@ function normalizeTimecodeBurnInDraft(
   return {
     enabled: true,
     position: normalizeWatermarkPosition(value.position),
-    fontSize: Math.round(clampUiNumber(String(value.fontSize ?? DEFAULT_TIMECODE_BURN_IN.fontSize), 8, 96, DEFAULT_TIMECODE_BURN_IN.fontSize)),
+    fontSize: Math.round(
+      clampUiNumber(
+        String(value.fontSize ?? DEFAULT_TIMECODE_BURN_IN.fontSize),
+        8,
+        96,
+        DEFAULT_TIMECODE_BURN_IN.fontSize,
+      ),
+    ),
     color: normalizeHexColor(value.color, DEFAULT_TIMECODE_BURN_IN.color),
     backgroundColor: normalizeHexColor(value.backgroundColor, DEFAULT_TIMECODE_BURN_IN.backgroundColor),
     includeFrameNumber: value.includeFrameNumber === true,
@@ -321,10 +347,7 @@ export function updateOutputMode(
   });
 }
 
-export function updateFormat(
-  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
-  value: string,
-): void {
+export function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => {
     const next: ExportPresetSettings = { ...current, format: value };
     if (value === 'm4a') {
@@ -395,7 +418,10 @@ export function updateFormat(
       delete next.hardwareEncoding;
       return next;
     }
-    next.outputMode = current.outputMode === 'audio-visualization' && isAudioVisualizationFormat(value) ? 'audio-visualization' : 'video';
+    next.outputMode =
+      current.outputMode === 'audio-visualization' && isAudioVisualizationFormat(value)
+        ? 'audio-visualization'
+        : 'video';
     if (value === 'webm') {
       next.videoCodec = 'libvpx-vp9';
       next.audioCodec = 'libopus';
@@ -496,7 +522,10 @@ export function updateAudioVisualizationBackgroundType(
       themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
       background:
         type === 'image'
-          ? { type: 'image' as const, path: visualization.background.type === 'image' ? visualization.background.path : '' }
+          ? {
+              type: 'image' as const,
+              path: visualization.background.type === 'image' ? visualization.background.path : '',
+            }
           : type === 'gradient'
             ? { type: 'gradient' as const, color: backgroundPrimaryColor(visualization.background), color2: '#1d4ed8' }
             : { type: 'solid' as const, color: backgroundPrimaryColor(visualization.background) },
@@ -548,7 +577,11 @@ export function updateAudioVisualizationBackgroundImagePath(
 ): void {
   setDraftSettings((current) => {
     const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
-    const nextVisualization = { ...visualization, themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID, background: { type: 'image' as const, path } };
+    const nextVisualization = {
+      ...visualization,
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+      background: { type: 'image' as const, path },
+    };
     delete nextVisualization.theme;
     return {
       ...current,
@@ -606,8 +639,11 @@ export function updateSubtitleLanguageSelection(
 ): void {
   const normalized = normalizeSubtitleLanguage(language);
   setDraftSettings((current) => {
-    const selected = normalizeSubtitleLanguageList(current.subtitleLanguages) ?? options.map((option) => option.language);
-    const next = checked ? Array.from(new Set([...selected, normalized])) : selected.filter((item) => item !== normalized);
+    const selected =
+      normalizeSubtitleLanguageList(current.subtitleLanguages) ?? options.map((option) => option.language);
+    const next = checked
+      ? Array.from(new Set([...selected, normalized]))
+      : selected.filter((item) => item !== normalized);
     const available = new Set(options.map((option) => option.language));
     return {
       ...current,
@@ -623,10 +659,7 @@ export function updateSubtitleBurnInLanguage(
   setDraftSettings((current) => ({ ...current, subtitleBurnInLanguage: normalizeSubtitleLanguage(language) }));
 }
 
-export function updateScaleMode(
-  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
-  value: string,
-): void {
+export function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
 }
 
@@ -666,14 +699,49 @@ export function updateHardwareEncoding(
 ): void {
   setDraftSettings((current) => ({ ...current, hardwareEncoding: checked }));
 }
-export function updateHardwareEncoderId(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoding: true, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), encoderId: v as import('@open-factory/editor-core').HardwareEncoderId } })); }
-export function updateHardwareEncoderPreset(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), preset: v } as import('@open-factory/editor-core').HardwareEncoderSettings })); }
-export function updateHardwareRateControlMode(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), rateControlMode: v as import('@open-factory/editor-core').HardwareRateControlMode } as import('@open-factory/editor-core').HardwareEncoderSettings })); }
-export function updateHardwareCq(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), cq: Number(v) } })); }
-export function updateHardwareVideoBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), videoBitrate: v } })); }
-export function updateHardwareMaxBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), maxBitrate: v } })); }
-export function updateHardwareGopSize(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), gopSize: Number(v) } })); }
-export function updateHardwareBFrames(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), bFrames: Number(v) } })); }
+export function updateHardwareEncoderId(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({
+    ...c,
+    hardwareEncoding: true,
+    hardwareEncoderSettings: {
+      ...(c.hardwareEncoderSettings ?? {}),
+      encoderId: v as import('@open-factory/editor-core').HardwareEncoderId,
+    },
+  }));
+}
+export function updateHardwareEncoderPreset(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({
+    ...c,
+    hardwareEncoderSettings: {
+      ...(c.hardwareEncoderSettings ?? {}),
+      preset: v,
+    } as import('@open-factory/editor-core').HardwareEncoderSettings,
+  }));
+}
+export function updateHardwareRateControlMode(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({
+    ...c,
+    hardwareEncoderSettings: {
+      ...(c.hardwareEncoderSettings ?? {}),
+      rateControlMode: v as import('@open-factory/editor-core').HardwareRateControlMode,
+    } as import('@open-factory/editor-core').HardwareEncoderSettings,
+  }));
+}
+export function updateHardwareCq(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), cq: Number(v) } }));
+}
+export function updateHardwareVideoBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), videoBitrate: v } }));
+}
+export function updateHardwareMaxBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), maxBitrate: v } }));
+}
+export function updateHardwareGopSize(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), gopSize: Number(v) } }));
+}
+export function updateHardwareBFrames(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void {
+  s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), bFrames: Number(v) } }));
+}
 
 export function updateLoudnessNormalization(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
@@ -686,7 +754,10 @@ export function updateMasterProcessing(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   updater: (current: ExportMasterProcessingSettings) => ExportMasterProcessingSettings,
 ): void {
-  setDraftSettings((current) => ({ ...current, masterProcessing: updater(normalizeExportMasterProcessing(current.masterProcessing)) }));
+  setDraftSettings((current) => ({
+    ...current,
+    masterProcessing: updater(normalizeExportMasterProcessing(current.masterProcessing)),
+  }));
 }
 
 export function updateMasterEqEnabled(
@@ -714,7 +785,10 @@ export function updateMasterStereoEnabled(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   enabled: boolean,
 ): void {
-  updateMasterProcessing(setDraftSettings, (current) => ({ ...current, stereoEnhancer: { ...current.stereoEnhancer, enabled } }));
+  updateMasterProcessing(setDraftSettings, (current) => ({
+    ...current,
+    stereoEnhancer: { ...current.stereoEnhancer, enabled },
+  }));
 }
 
 export function updateMasterStereoAmount(
@@ -754,7 +828,10 @@ export function updateColorManagement(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   patch: Partial<NonNullable<ExportPresetSettings['colorManagement']>>,
 ): void {
-  setDraftSettings((current) => ({ ...current, colorManagement: { ...normalizeExportColorManagement(current.colorManagement), ...patch } }));
+  setDraftSettings((current) => ({
+    ...current,
+    colorManagement: { ...normalizeExportColorManagement(current.colorManagement), ...patch },
+  }));
 }
 
 export function updatePostExportScriptCommand(
@@ -768,7 +845,10 @@ export function updateTimecodeBurnInEnabled(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   checked: boolean,
 ): void {
-  setDraftSettings((current) => ({ ...current, timecodeBurnIn: checked ? timecodeBurnInFrom(current.timecodeBurnIn) : null }));
+  setDraftSettings((current) => ({
+    ...current,
+    timecodeBurnIn: checked ? timecodeBurnInFrom(current.timecodeBurnIn) : null,
+  }));
 }
 
 export function updateTimecodeBurnInPosition(
@@ -776,7 +856,10 @@ export function updateTimecodeBurnInPosition(
   value: string,
 ): void {
   const position = isWatermarkPosition(value) ? value : DEFAULT_TIMECODE_BURN_IN.position;
-  setDraftSettings((current) => ({ ...current, timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), position } }));
+  setDraftSettings((current) => ({
+    ...current,
+    timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), position },
+  }));
 }
 
 export function updateTimecodeBurnInFontSize(
@@ -785,7 +868,10 @@ export function updateTimecodeBurnInFontSize(
 ): void {
   setDraftSettings((current) => ({
     ...current,
-    timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), fontSize: Math.round(clampUiNumber(value, 8, 96, DEFAULT_TIMECODE_BURN_IN.fontSize)) },
+    timecodeBurnIn: {
+      ...timecodeBurnInFrom(current.timecodeBurnIn),
+      fontSize: Math.round(clampUiNumber(value, 8, 96, DEFAULT_TIMECODE_BURN_IN.fontSize)),
+    },
   }));
 }
 
@@ -805,7 +891,10 @@ export function updateTimecodeBurnInFrameNumber(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   checked: boolean,
 ): void {
-  setDraftSettings((current) => ({ ...current, timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), includeFrameNumber: checked } }));
+  setDraftSettings((current) => ({
+    ...current,
+    timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), includeFrameNumber: checked },
+  }));
 }
 
 export function updateSlateEnabled(
@@ -881,7 +970,10 @@ export function updateTextWatermarkFont(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   value: string,
 ): void {
-  setDraftSettings((current) => ({ ...current, watermark: { ...textWatermarkFrom(current.watermark), fontFamily: value } }));
+  setDraftSettings((current) => ({
+    ...current,
+    watermark: { ...textWatermarkFrom(current.watermark), fontFamily: value },
+  }));
 }
 
 export function updateTextWatermarkColor(
@@ -905,7 +997,9 @@ export function updateTextWatermarkSize(
 // Watermark helpers
 // ---------------------------------------------------------------------------
 
-export function enableWatermark(watermark: ExportPresetSettings['watermark']): NonNullable<ExportPresetSettings['watermark']> {
+export function enableWatermark(
+  watermark: ExportPresetSettings['watermark'],
+): NonNullable<ExportPresetSettings['watermark']> {
   if (watermark?.type === 'image') {
     return imageWatermarkFrom(watermark);
   }
@@ -966,7 +1060,9 @@ function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormaliza
   return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
 }
 
-export function timecodeBurnInFrom(value: ExportPresetSettings['timecodeBurnIn']): NonNullable<ExportPresetSettings['timecodeBurnIn']> {
+export function timecodeBurnInFrom(
+  value: ExportPresetSettings['timecodeBurnIn'],
+): NonNullable<ExportPresetSettings['timecodeBurnIn']> {
   if (value?.enabled) {
     const normalized = normalizeTimecodeBurnInDraft(value) ?? DEFAULT_TIMECODE_BURN_IN;
     return {
@@ -1022,7 +1118,10 @@ export function choosePresetPackageConflictMode(
   if (!conflictName) {
     return 'rename';
   }
-  const response = window.prompt(zhCN.exportDialog.presetPackageConflictPrompt(conflictName), 'rename')?.trim().toLowerCase();
+  const response = window
+    .prompt(zhCN.exportDialog.presetPackageConflictPrompt(conflictName), 'rename')
+    ?.trim()
+    .toLowerCase();
   if (!response) {
     return undefined;
   }

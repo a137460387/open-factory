@@ -1,10 +1,23 @@
 import type { MediaAsset } from '@open-factory/editor-core';
 import { Scissors, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { zhCN } from '../i18n/strings';
 import { analyzeAudioSpectrum, convertLocalFileSrc, type AudioSpectrumAnalysis } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { resolveSpectrumContextMenu, resolveSpectrumSelection, resolveSpectrumTime, type SpectrumContextMenuState, type SpectrumSelectionRange } from './audioSpectrum';
+import {
+  resolveSpectrumContextMenu,
+  resolveSpectrumSelection,
+  resolveSpectrumTime,
+  type SpectrumContextMenuState,
+  type SpectrumSelectionRange,
+} from './audioSpectrum';
 
 interface AudioSpectrumDialogProps {
   asset: MediaAsset;
@@ -14,7 +27,13 @@ interface AudioSpectrumDialogProps {
   onSplitAtTime(time: number): void;
 }
 
-export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelection, onSplitAtTime }: AudioSpectrumDialogProps) {
+export default function AudioSpectrumDialog({
+  asset,
+  onClose,
+  onSeek,
+  onSelection,
+  onSplitAtTime,
+}: AudioSpectrumDialogProps) {
   const t = zhCN.mediaBin.spectrum;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [analysis, setAnalysis] = useState<AudioSpectrumAnalysis>();
@@ -37,7 +56,11 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
       })
       .catch((error) => {
         if (!canceled) {
-          showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+          showToast({
+            kind: 'warning',
+            title: t.failedTitle,
+            message: error instanceof Error ? error.message : t.failedMessage,
+          });
         }
       })
       .finally(() => {
@@ -115,14 +138,24 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" data-testid="audio-spectrum-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      data-testid="audio-spectrum-dialog"
+    >
       <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex min-h-12 items-center justify-between border-b border-line px-4">
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-ink">{t.title}</div>
             <div className="truncate text-xs text-slate-500">{asset.name}</div>
           </div>
-          <button className="rounded-md p-2 text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="audio-spectrum-close" onClick={onClose}>
+          <button
+            className="rounded-md p-2 text-slate-500 hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            data-testid="audio-spectrum-close"
+            onClick={onClose}
+          >
             <X size={16} />
           </button>
         </div>
@@ -142,21 +175,48 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
               />
               {loading || analysis?.spectrogramError ? (
                 <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center">
-                  <span className="rounded bg-black/70 px-2 py-1 text-xs font-medium text-white" data-testid="audio-spectrum-status">
+                  <span
+                    className="rounded bg-black/70 px-2 py-1 text-xs font-medium text-white"
+                    data-testid="audio-spectrum-status"
+                  >
                     {loading ? t.loading : t.unavailable}
                   </span>
                 </div>
               ) : null}
             </div>
-            {selectionLabel ? <div className="mt-2 text-xs font-medium text-slate-600" data-testid="audio-spectrum-selection">{selectionLabel}</div> : null}
+            {selectionLabel ? (
+              <div className="mt-2 text-xs font-medium text-slate-600" data-testid="audio-spectrum-selection">
+                {selectionLabel}
+              </div>
+            ) : null}
           </div>
           <aside className="rounded-md border border-line bg-panel p-3 text-xs" data-testid="audio-spectrum-stats">
             <div className="mb-2 font-semibold text-slate-700">{t.stats}</div>
-            <SpectrumStat label={t.integratedLufs} value={formatDb(analysis?.stats.integratedLufs, 'LUFS')} testId="audio-spectrum-stat-lufs" />
-            <SpectrumStat label={t.dynamicRange} value={formatDb(analysis?.stats.dynamicRangeLu, 'LU')} testId="audio-spectrum-stat-range" />
-            <SpectrumStat label={t.truePeak} value={formatDb(analysis?.stats.truePeakDbfs, 'dBFS')} testId="audio-spectrum-stat-true-peak" />
-            <SpectrumStat label={t.peak} value={formatDb(analysis?.stats.peakDb, 'dB')} testId="audio-spectrum-stat-peak" />
-            <SpectrumStat label={t.rms} value={formatDb(analysis?.stats.rmsDb, 'dB')} testId="audio-spectrum-stat-rms" />
+            <SpectrumStat
+              label={t.integratedLufs}
+              value={formatDb(analysis?.stats.integratedLufs, 'LUFS')}
+              testId="audio-spectrum-stat-lufs"
+            />
+            <SpectrumStat
+              label={t.dynamicRange}
+              value={formatDb(analysis?.stats.dynamicRangeLu, 'LU')}
+              testId="audio-spectrum-stat-range"
+            />
+            <SpectrumStat
+              label={t.truePeak}
+              value={formatDb(analysis?.stats.truePeakDbfs, 'dBFS')}
+              testId="audio-spectrum-stat-true-peak"
+            />
+            <SpectrumStat
+              label={t.peak}
+              value={formatDb(analysis?.stats.peakDb, 'dB')}
+              testId="audio-spectrum-stat-peak"
+            />
+            <SpectrumStat
+              label={t.rms}
+              value={formatDb(analysis?.stats.rmsDb, 'dB')}
+              testId="audio-spectrum-stat-rms"
+            />
             <button
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-panel"
               type="button"
@@ -225,7 +285,11 @@ function drawPlaceholder(canvas: HTMLCanvasElement | null): void {
   context.globalAlpha = 1;
 }
 
-function drawSelection(canvas: HTMLCanvasElement, selection: SpectrumSelectionRange | undefined, duration: number): void {
+function drawSelection(
+  canvas: HTMLCanvasElement,
+  selection: SpectrumSelectionRange | undefined,
+  duration: number,
+): void {
   if (!selection) {
     return;
   }
@@ -237,7 +301,12 @@ function drawSelection(canvas: HTMLCanvasElement, selection: SpectrumSelectionRa
   const start = Math.min(selection.inPoint, selection.outPoint);
   const end = Math.max(selection.inPoint, selection.outPoint);
   const safeDuration = Math.max(duration, 0.001);
-  context.fillRect((start / safeDuration) * canvas.width, 0, ((end - start) / safeDuration) * canvas.width, canvas.height);
+  context.fillRect(
+    (start / safeDuration) * canvas.width,
+    0,
+    ((end - start) / safeDuration) * canvas.width,
+    canvas.height,
+  );
 }
 
 function formatDb(value: number | undefined, unit: string): string {

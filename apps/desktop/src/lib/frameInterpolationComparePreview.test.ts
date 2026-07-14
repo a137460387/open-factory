@@ -10,7 +10,7 @@ describe('frame interpolation compare preview plan', () => {
     path: 'C:/Media/source.mp4',
     duration: 8,
     width: 1280,
-    height: 720
+    height: 720,
   };
   const clip: Extract<Clip, { type: 'video' }> = {
     id: 'clip-video',
@@ -27,7 +27,7 @@ describe('frame interpolation compare preview plan', () => {
     transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
     frameInterpolation: { enabled: false, targetFps: 60, mode: 'adaptive', protectionFrames: 2 },
-    slowMotionMode: 'none'
+    slowMotionMode: 'none',
   };
 
   it('builds four preview samples with mode-specific minterpolate filters', () => {
@@ -38,14 +38,14 @@ describe('frame interpolation compare preview plan', () => {
       timeline: {
         transitions: [],
         markers: [],
-        tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video', clips: [clip] })]
-      }
+        tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video', clips: [clip] })],
+      },
     };
     const plan = buildFrameInterpolationComparePreviewPlan(project, clip, asset, 3, 'C:/Preview', {
       original: '原始',
       blend: 'Blend',
       mci: 'MCI',
-      'optical-flow': 'Optical Flow'
+      'optical-flow': 'Optical Flow',
     });
 
     expect(plan.samples).toHaveLength(4);
@@ -53,6 +53,8 @@ describe('frame interpolation compare preview plan', () => {
     expect(plan.samples[1].plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=blend');
     expect(plan.samples[2].plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc');
     expect(plan.samples[3].plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc:vsbmc=1');
-    expect(plan.items.map((item) => item.sourceFrameTimes)).toEqual(plan.items.map(() => [2.933, 2.967, 3, 3.033, 3.067]));
+    expect(plan.items.map((item) => item.sourceFrameTimes)).toEqual(
+      plan.items.map(() => [2.933, 2.967, 3, 3.033, 3.067]),
+    );
   });
 });

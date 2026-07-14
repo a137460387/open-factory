@@ -6,19 +6,13 @@ import {
   UpdateClipCommand,
   type AddTimelineMarkerInput,
   type ClipPatch,
-  type TimelineAccessor
+  type TimelineAccessor,
 } from './commands/timeline-commands';
 import type { Clip, Project, Timeline, TimelineMarker } from './model';
 import { getTimelineDuration } from './timeline';
 
 export type TimelineScriptApiFunctionName =
-  | 'getClips'
-  | 'updateClip'
-  | 'addClip'
-  | 'deleteClip'
-  | 'getMarkers'
-  | 'addMarker'
-  | 'exportProject';
+  'getClips' | 'updateClip' | 'addClip' | 'deleteClip' | 'getMarkers' | 'addMarker' | 'exportProject';
 
 export interface TimelineScriptApiSignature {
   name: TimelineScriptApiFunctionName;
@@ -27,13 +21,41 @@ export interface TimelineScriptApiSignature {
 }
 
 export const TIMELINE_SCRIPT_API_SIGNATURES: TimelineScriptApiSignature[] = [
-  { name: 'getClips', signature: 'getClips(): Clip[]', description: 'Return a cloned list of clips from the active timeline.' },
-  { name: 'updateClip', signature: 'updateClip(id: string, patch: Partial<Clip>): void', description: 'Queue a patch for a timeline clip.' },
-  { name: 'addClip', signature: 'addClip(opts: Clip): void', description: 'Queue a complete clip object to insert into the timeline.' },
-  { name: 'deleteClip', signature: 'deleteClip(id: string): void', description: 'Queue removal for one timeline clip.' },
-  { name: 'getMarkers', signature: 'getMarkers(): TimelineMarker[]', description: 'Return a cloned list of active timeline markers.' },
-  { name: 'addMarker', signature: 'addMarker(time: number, label?: string): void', description: 'Queue a marker insertion on the active timeline.' },
-  { name: 'exportProject', signature: 'exportProject(preset: string): void', description: 'Queue an export request for the host export panel.' }
+  {
+    name: 'getClips',
+    signature: 'getClips(): Clip[]',
+    description: 'Return a cloned list of clips from the active timeline.',
+  },
+  {
+    name: 'updateClip',
+    signature: 'updateClip(id: string, patch: Partial<Clip>): void',
+    description: 'Queue a patch for a timeline clip.',
+  },
+  {
+    name: 'addClip',
+    signature: 'addClip(opts: Clip): void',
+    description: 'Queue a complete clip object to insert into the timeline.',
+  },
+  {
+    name: 'deleteClip',
+    signature: 'deleteClip(id: string): void',
+    description: 'Queue removal for one timeline clip.',
+  },
+  {
+    name: 'getMarkers',
+    signature: 'getMarkers(): TimelineMarker[]',
+    description: 'Return a cloned list of active timeline markers.',
+  },
+  {
+    name: 'addMarker',
+    signature: 'addMarker(time: number, label?: string): void',
+    description: 'Queue a marker insertion on the active timeline.',
+  },
+  {
+    name: 'exportProject',
+    signature: 'exportProject(preset: string): void',
+    description: 'Queue an export request for the host export panel.',
+  },
 ];
 
 export interface BuiltinTimelineScript {
@@ -51,8 +73,8 @@ export const BUILTIN_TIMELINE_SCRIPTS: BuiltinTimelineScript[] = [
       '    updateClip(clip.id, { speed: 1.25 });',
       '  }',
       '}',
-      'console.log(`updated ${clips.length} clips`);'
-    ].join('\n')
+      'console.log(`updated ${clips.length} clips`);',
+    ].join('\n'),
   },
   {
     id: 'sort-by-color-label',
@@ -68,8 +90,8 @@ export const BUILTIN_TIMELINE_SCRIPTS: BuiltinTimelineScript[] = [
       '  updateClip(clip.id, { start: cursor });',
       '  cursor += clip.duration;',
       '}',
-      'console.log(`sorted ${clips.length} clips by color label`);'
-    ].join('\n')
+      'console.log(`sorted ${clips.length} clips by color label`);',
+    ].join('\n'),
   },
   {
     id: 'minute-markers',
@@ -79,8 +101,8 @@ export const BUILTIN_TIMELINE_SCRIPTS: BuiltinTimelineScript[] = [
       'for (let time = 60; time < duration; time += 60) {',
       '  addMarker(time, `Minute ${Math.round(time / 60)}`);',
       '}',
-      'console.log(`timeline duration ${duration.toFixed(1)}s`);'
-    ].join('\n')
+      'console.log(`timeline duration ${duration.toFixed(1)}s`);',
+    ].join('\n'),
   },
   {
     id: 'export-each-clip',
@@ -88,8 +110,8 @@ export const BUILTIN_TIMELINE_SCRIPTS: BuiltinTimelineScript[] = [
       'for (const clip of getClips()) {',
       '  exportProject(`clip-${clip.id}`);',
       '  console.log(`queued export for ${clip.name}`);',
-      '}'
-    ].join('\n')
+      '}',
+    ].join('\n'),
   },
   {
     id: 'project-stats',
@@ -99,9 +121,9 @@ export const BUILTIN_TIMELINE_SCRIPTS: BuiltinTimelineScript[] = [
       'const duration = clips.reduce((end, clip) => Math.max(end, clip.start + clip.duration), 0);',
       'console.log(`clips=${clips.length}`);',
       'console.log(`markers=${markers.length}`);',
-      'console.log(`duration=${duration.toFixed(2)}s`);'
-    ].join('\n')
-  }
+      'console.log(`duration=${duration.toFixed(2)}s`);',
+    ].join('\n'),
+  },
 ];
 
 export interface TimelineScriptSnapshot {
@@ -128,7 +150,7 @@ export function createTimelineScriptSnapshot(project: Pick<Project, 'timeline'>)
   return {
     clips: cloneJson(timeline.tracks.flatMap((track) => track.clips)),
     markers: cloneJson(timeline.markers ?? []),
-    duration: getTimelineDuration(timeline)
+    duration: getTimelineDuration(timeline),
   };
 }
 
@@ -140,8 +162,13 @@ export function normalizeTimelineScriptOperations(operations: TimelineScriptOper
   return operations.map((operation) => normalizeTimelineScriptOperation(operation));
 }
 
-export function getTimelineScriptExportRequests(operations: TimelineScriptOperation[]): Array<Extract<TimelineScriptOperation, { type: 'exportProject' }>> {
-  return normalizeTimelineScriptOperations(operations).filter((operation): operation is Extract<TimelineScriptOperation, { type: 'exportProject' }> => operation.type === 'exportProject');
+export function getTimelineScriptExportRequests(
+  operations: TimelineScriptOperation[],
+): Array<Extract<TimelineScriptOperation, { type: 'exportProject' }>> {
+  return normalizeTimelineScriptOperations(operations).filter(
+    (operation): operation is Extract<TimelineScriptOperation, { type: 'exportProject' }> =>
+      operation.type === 'exportProject',
+  );
 }
 
 export class RunScriptCommand implements Command {
@@ -153,7 +180,7 @@ export class RunScriptCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly operations: TimelineScriptOperation[],
-    description = 'Run timeline script'
+    description = 'Run timeline script',
   ) {
     this.description = description;
   }
@@ -172,7 +199,7 @@ export class RunScriptCommand implements Command {
         getTimeline: () => timeline,
         setTimeline: (nextTimeline) => {
           timeline = nextTimeline;
-        }
+        },
       };
 
       for (const operation of normalized) {
@@ -212,31 +239,31 @@ function normalizeTimelineScriptOperation(operation: TimelineScriptOperation): T
     return {
       type: 'updateClip',
       clipId: normalizeRequiredString(operation.clipId, 'clip id'),
-      patch: normalizeRecord(operation.patch, 'clip patch') as ClipPatch
+      patch: normalizeRecord(operation.patch, 'clip patch') as ClipPatch,
     };
   }
   if (operation.type === 'addClip') {
     return {
       type: 'addClip',
-      clip: normalizeClipLike(operation.clip)
+      clip: normalizeClipLike(operation.clip),
     };
   }
   if (operation.type === 'deleteClip') {
     return {
       type: 'deleteClip',
-      clipId: normalizeRequiredString(operation.clipId, 'clip id')
+      clipId: normalizeRequiredString(operation.clipId, 'clip id'),
     };
   }
   if (operation.type === 'addMarker') {
     return {
       type: 'addMarker',
-      marker: normalizeMarkerInput(operation.marker)
+      marker: normalizeMarkerInput(operation.marker),
     };
   }
   if (operation.type === 'exportProject') {
     return {
       type: 'exportProject',
-      preset: normalizeRequiredString(operation.preset, 'export preset')
+      preset: normalizeRequiredString(operation.preset, 'export preset'),
     };
   }
   throw new Error('Unsupported timeline script operation');

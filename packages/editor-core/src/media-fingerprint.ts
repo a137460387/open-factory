@@ -38,7 +38,10 @@ export function calculatePerceptualHash(sample: LumaImageSample, hashSize = 8): 
   return bitsToHex(cells.map((value) => value >= average));
 }
 
-export function calculateFingerprintDistance(left: MediaFingerprint | undefined, right: MediaFingerprint | undefined): number {
+export function calculateFingerprintDistance(
+  left: MediaFingerprint | undefined,
+  right: MediaFingerprint | undefined,
+): number {
   if (!left || !right || left.kind !== right.kind) {
     return Number.POSITIVE_INFINITY;
   }
@@ -61,7 +64,10 @@ export function calculateFingerprintDistance(left: MediaFingerprint | undefined,
   return left.hash === right.hash ? 0 : Number.POSITIVE_INFINITY;
 }
 
-export function areMediaFingerprintsEquivalent(left: MediaFingerprint | undefined, right: MediaFingerprint | undefined): boolean {
+export function areMediaFingerprintsEquivalent(
+  left: MediaFingerprint | undefined,
+  right: MediaFingerprint | undefined,
+): boolean {
   const distance = calculateFingerprintDistance(left, right);
   if (!Number.isFinite(distance)) {
     return false;
@@ -77,13 +83,25 @@ export function createVideoFingerprint(frameHashes: string[]): MediaFingerprint 
 
 export function createAudioRmsFingerprint(rmsVector: number[]): MediaFingerprint {
   const vector = normalizeRmsVector(rmsVector);
-  return { version: 1, kind: 'audio', hash: vector.map((value) => Math.round(value * 255).toString(16).padStart(2, '0')).join(''), rmsVector: vector, algorithm: 'rms' };
+  return {
+    version: 1,
+    kind: 'audio',
+    hash: vector
+      .map((value) =>
+        Math.round(value * 255)
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join(''),
+    rmsVector: vector,
+    algorithm: 'rms',
+  };
 }
 
 export function collectFingerprintReferences(
   media: MediaAsset[],
   mediaMetadata: Record<string, MediaMetadata>,
-  source: MediaFingerprintReference['source'] = 'project'
+  source: MediaFingerprintReference['source'] = 'project',
 ): MediaFingerprintReference[] {
   return media
     .map((asset) => ({
@@ -91,34 +109,62 @@ export function collectFingerprintReferences(
       name: asset.name,
       path: asset.path,
       fingerprint: mediaMetadata[asset.id]?.fingerprint,
-      source
+      source,
     }))
     .filter((reference) => Boolean(reference.fingerprint));
 }
 
-export function detectCrossProjectFingerprintMatches(current: MediaFingerprintReference[], shared: MediaFingerprintReference[]): FingerprintDuplicateMatch[] {
+export function detectCrossProjectFingerprintMatches(
+  current: MediaFingerprintReference[],
+  shared: MediaFingerprintReference[],
+): FingerprintDuplicateMatch[] {
   return current
     .map((asset) => ({
       assetId: asset.assetId,
       path: asset.path,
-      matches: shared.filter((candidate) => candidate.path !== asset.path && areMediaFingerprintsEquivalent(asset.fingerprint, candidate.fingerprint))
+      matches: shared.filter(
+        (candidate) =>
+          candidate.path !== asset.path && areMediaFingerprintsEquivalent(asset.fingerprint, candidate.fingerprint),
+      ),
     }))
     .filter((match) => match.matches.length > 0);
 }
 
-export function listFingerprintSourcePaths(target: MediaFingerprint | undefined, references: MediaFingerprintReference[]): string[] {
+export function listFingerprintSourcePaths(
+  target: MediaFingerprint | undefined,
+  references: MediaFingerprintReference[],
+): string[] {
   if (!target) {
     return [];
   }
-  return Array.from(new Set(references.filter((reference) => areMediaFingerprintsEquivalent(target, reference.fingerprint)).map((reference) => reference.path))).sort((left, right) => left.localeCompare(right));
+  return Array.from(
+    new Set(
+      references
+        .filter((reference) => areMediaFingerprintsEquivalent(target, reference.fingerprint))
+        .map((reference) => reference.path),
+    ),
+  ).sort((left, right) => left.localeCompare(right));
 }
 
-export function findProjectFingerprintSourcePaths(project: Project, assetId: string, sharedReferences: MediaFingerprintReference[] = []): string[] {
+export function findProjectFingerprintSourcePaths(
+  project: Project,
+  assetId: string,
+  sharedReferences: MediaFingerprintReference[] = [],
+): string[] {
   const fingerprint = project.mediaMetadata[assetId]?.fingerprint;
-  return listFingerprintSourcePaths(fingerprint, [...collectFingerprintReferences(project.media, project.mediaMetadata), ...sharedReferences]);
+  return listFingerprintSourcePaths(fingerprint, [
+    ...collectFingerprintReferences(project.media, project.mediaMetadata),
+    ...sharedReferences,
+  ]);
 }
 
-function sampleBlockAverage(sample: LumaImageSample, x0Ratio: number, y0Ratio: number, x1Ratio: number, y1Ratio: number): number {
+function sampleBlockAverage(
+  sample: LumaImageSample,
+  x0Ratio: number,
+  y0Ratio: number,
+  x1Ratio: number,
+  y1Ratio: number,
+): number {
   const x0 = Math.floor(x0Ratio * sample.width);
   const y0 = Math.floor(y0Ratio * sample.height);
   const x1 = Math.max(x0 + 1, Math.ceil(x1Ratio * sample.width));
@@ -140,7 +186,9 @@ function sampleBlockAverage(sample: LumaImageSample, x0Ratio: number, y0Ratio: n
 function bitsToHex(bits: boolean[]): string {
   let output = '';
   for (let index = 0; index < bits.length; index += 4) {
-    const nibble = bits.slice(index, index + 4).reduce((value, bit, bitIndex) => value + (bit ? 1 << (3 - bitIndex) : 0), 0);
+    const nibble = bits
+      .slice(index, index + 4)
+      .reduce((value, bit, bitIndex) => value + (bit ? 1 << (3 - bitIndex) : 0), 0);
     output += nibble.toString(16);
   }
   return output;
@@ -152,7 +200,9 @@ function hammingHexDistance(left: string, right: string): number {
   for (let index = 0; index < length; index += 1) {
     const leftValue = Number.parseInt(left[index] ?? '0', 16);
     const rightValue = Number.parseInt(right[index] ?? '0', 16);
-    distance += countBits((Number.isFinite(leftValue) ? leftValue : 0) ^ (Number.isFinite(rightValue) ? rightValue : 0));
+    distance += countBits(
+      (Number.isFinite(leftValue) ? leftValue : 0) ^ (Number.isFinite(rightValue) ? rightValue : 0),
+    );
   }
   return distance;
 }
@@ -168,7 +218,10 @@ function countBits(value: number): number {
 }
 
 function normalizeHash(value: string): string {
-  return value.trim().toLowerCase().replace(/[^0-9a-f:]/g, '');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^0-9a-f:]/g, '');
 }
 
 function normalizeRmsVector(values: number[]): number[] {

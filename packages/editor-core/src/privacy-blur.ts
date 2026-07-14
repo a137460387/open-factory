@@ -1,10 +1,4 @@
-import {
-  createId,
-  normalizeMask,
-  normalizePrivacyBlurEffect,
-  type ClipMask,
-  type PrivacyBlurEffect
-} from './model';
+import { createId, normalizeMask, normalizePrivacyBlurEffect, type ClipMask, type PrivacyBlurEffect } from './model';
 import { round } from './time';
 
 export interface DetectedPrivacyBox {
@@ -23,7 +17,10 @@ export interface BuildPrivacyMasksOptions {
   idPrefix?: string;
 }
 
-export function buildPrivacyMasksFromDetections(detections: readonly DetectedPrivacyBox[], options: BuildPrivacyMasksOptions = {}): ClipMask[] {
+export function buildPrivacyMasksFromDetections(
+  detections: readonly DetectedPrivacyBox[],
+  options: BuildPrivacyMasksOptions = {},
+): ClipMask[] {
   const keyframes = detections
     .flatMap((box) => normalizePrivacyBox(box))
     .sort((left, right) => left.time - right.time || left.x - right.x || left.y - right.y);
@@ -46,13 +43,15 @@ export function buildPrivacyMasksFromDetections(detections: readonly DetectedPri
       privacyBlur: {
         enabled: true,
         effect: normalizePrivacyBlurEffect(options.effect),
-        color: options.color
-      }
-    })
+        color: options.color,
+      },
+    }),
   ];
 }
 
-function normalizePrivacyBox(box: DetectedPrivacyBox): Array<{ time: number; x: number; y: number; w: number; h: number }> {
+function normalizePrivacyBox(
+  box: DetectedPrivacyBox,
+): Array<{ time: number; x: number; y: number; w: number; h: number }> {
   if (!Number.isFinite(box.time)) {
     return [];
   }
@@ -64,8 +63,8 @@ function normalizePrivacyBox(box: DetectedPrivacyBox): Array<{ time: number; x: 
       x: round(Math.min(1 - w, Math.max(0, finiteOrDefault(box.x, 0)))),
       y: round(Math.min(1 - h, Math.max(0, finiteOrDefault(box.y, 0)))),
       w,
-      h
-    }
+      h,
+    },
   ];
 }
 

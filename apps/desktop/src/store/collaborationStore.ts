@@ -3,7 +3,7 @@ import type {
   CollaborationOperation,
   CollaborationPermission,
   CollaborationRole,
-  CollaborationUserPresence
+  CollaborationUserPresence,
 } from '@open-factory/editor-core';
 import { create } from 'zustand';
 
@@ -28,7 +28,7 @@ const DEFAULT_COLLABORATION_UI_STATE = {
   users: [] as CollaborationUserPresence[],
   locks: [] as CollaborationClipLock[],
   operations: [] as CollaborationOperation[],
-  lastSyncAt: undefined as number | undefined
+  lastSyncAt: undefined as number | undefined,
 };
 
 export const useCollaborationStore = create<CollaborationUiState>((set) => ({
@@ -38,7 +38,7 @@ export const useCollaborationStore = create<CollaborationUiState>((set) => ({
       ...state,
       users: [...state.users],
       locks: [...state.locks],
-      operations: [...state.operations]
+      operations: [...state.operations],
     }),
-  reset: () => set({ ...DEFAULT_COLLABORATION_UI_STATE, users: [], locks: [], operations: [] })
+  reset: () => set({ ...DEFAULT_COLLABORATION_UI_STATE, users: [], locks: [], operations: [] }),
 }));

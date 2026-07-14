@@ -12,7 +12,7 @@ export const NAMING_TEMPLATE_VARIABLES: NamingTemplateVariable[] = [
   { key: 'index', label: '序号', placeholder: '{index}' },
   { key: 'resolution', label: '分辨率', placeholder: '{resolution}' },
   { key: 'fps', label: '帧率', placeholder: '{fps}' },
-  { key: 'text', label: '自定义文本', placeholder: '{text:...}' }
+  { key: 'text', label: '自定义文本', placeholder: '{text:...}' },
 ];
 
 export interface NamingTemplateContext {
@@ -41,7 +41,7 @@ export const DEFAULT_NAMING_TEMPLATE: NamingTemplateConfig = {
   template: '{project}_{preset}_{date}_{index}',
   indexStart: 1,
   indexPadding: 3,
-  dateFormat: 'YYYYMMDD'
+  dateFormat: 'YYYYMMDD',
 };
 
 export function formatDateForNaming(date: Date, format: 'YYYYMMDD' | 'YYYY-MM-DD'): string {
@@ -65,10 +65,7 @@ export function formatIndexForNaming(index: number, padding: number): string {
   return index.toString().padStart(Math.max(1, padding), '0');
 }
 
-export function resolveNamingTemplate(
-  config: NamingTemplateConfig,
-  context: NamingTemplateContext
-): string {
+export function resolveNamingTemplate(config: NamingTemplateConfig, context: NamingTemplateContext): string {
   const now = new Date();
   const dateFormat = config.dateFormat ?? 'YYYYMMDD';
   const padding = config.indexPadding ?? 3;
@@ -93,7 +90,7 @@ export function resolveNamingTemplate(
 export function resolveNamingTemplateBatch(
   config: NamingTemplateConfig,
   baseContext: Omit<NamingTemplateContext, 'index'>,
-  count: number
+  count: number,
 ): string[] {
   const indexStart = config.indexStart ?? 1;
   const results: string[] = [];
@@ -110,7 +107,7 @@ export function previewNamingTemplate(config: NamingTemplateConfig): string {
     index: config.indexStart ?? 1,
     resolution: '1920x1080',
     fps: 30,
-    customText: config.customText
+    customText: config.customText,
   });
 }
 
@@ -127,7 +124,7 @@ export function deserializeNamingTemplateConfig(json: string): NamingTemplateCon
         indexStart: typeof parsed.indexStart === 'number' ? parsed.indexStart : 1,
         indexPadding: typeof parsed.indexPadding === 'number' ? parsed.indexPadding : 3,
         dateFormat: parsed.dateFormat === 'YYYY-MM-DD' ? 'YYYY-MM-DD' : 'YYYYMMDD',
-        customText: typeof parsed.customText === 'string' ? parsed.customText : undefined
+        customText: typeof parsed.customText === 'string' ? parsed.customText : undefined,
       };
     }
   } catch {

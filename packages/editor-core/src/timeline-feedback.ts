@@ -22,12 +22,14 @@ export interface TimelineSnapHighlight {
 }
 
 export const DEFAULT_TIMELINE_FEEDBACK_SETTINGS: TimelineFeedbackSettings = {
-  reduceMotion: false
+  reduceMotion: false,
 };
 
-export function normalizeTimelineFeedbackSettings(settings: Partial<TimelineFeedbackSettings> | undefined): TimelineFeedbackSettings {
+export function normalizeTimelineFeedbackSettings(
+  settings: Partial<TimelineFeedbackSettings> | undefined,
+): TimelineFeedbackSettings {
   return {
-    reduceMotion: settings?.reduceMotion === true
+    reduceMotion: settings?.reduceMotion === true,
   };
 }
 
@@ -55,7 +57,7 @@ export function createSnapHighlight(time: number, nowMs: number, durationMs = 20
   }
   return {
     time,
-    expiresAtMs: nowMs + Math.max(0, durationMs)
+    expiresAtMs: nowMs + Math.max(0, durationMs),
   };
 }
 
@@ -68,7 +70,7 @@ export function buildSelectionMarqueeRect(start: PointerPoint, current: PointerP
     left: start.x,
     top: start.y,
     right: current.x,
-    bottom: current.y
+    bottom: current.y,
   };
 }
 
@@ -77,6 +79,6 @@ export function getSelectionMarqueeBox(rect: SelectionRect): SelectionMarqueeBox
     left: Math.min(rect.left, rect.right),
     top: Math.min(rect.top, rect.bottom),
     width: Math.abs(rect.right - rect.left),
-    height: Math.abs(rect.bottom - rect.top)
+    height: Math.abs(rect.bottom - rect.top),
   };
 }

@@ -16,20 +16,48 @@ import { getReviewModeShellVisibility } from '../../review/reviewMode';
 
 const AudioMixer = lazy(() => import('../AudioMixer/AudioMixer').then((m) => ({ default: m.AudioMixer })));
 const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ default: m.Inspector })));
-const SmartRoughCutPanel = lazy(() => import('../SmartRoughCut/SmartRoughCutPanel').then((m) => ({ default: m.SmartRoughCutPanel })));
-const AIRoughCutPanel = lazy(() => import('../AIRoughCut/AIRoughCutPanel').then((m) => ({ default: m.AIRoughCutPanel })));
-const DirectorModePanel = lazy(() => import('../DirectorMode/DirectorModePanel').then((m) => ({ default: m.DirectorModePanel })));
-const MusicMatchPanel = lazy(() => import('../MusicMatch/MusicMatchPanel').then((m) => ({ default: m.MusicMatchPanel })));
-const HighlightReelPanel = lazy(() => import('../HighlightReel/HighlightReelPanel').then((m) => ({ default: m.HighlightReelPanel })));
-const ContextualTranslationPanel = lazy(() => import('../ContextualTranslation/ContextualTranslationPanel').then((m) => ({ default: m.ContextualTranslationPanel })));
-const AIChatEditorPanel = lazy(() => import('../AIChatEditor/AIChatEditorPanel').then((m) => ({ default: m.AIChatEditorPanel })));
-const AIVideoSummaryPanel = lazy(() => import('../AIVideoSummary/AIVideoSummaryPanel').then((m) => ({ default: m.AIVideoSummaryPanel })));
-const AINarrationPanel = lazy(() => import('../AINarration/AINarrationPanel').then((m) => ({ default: m.AINarrationPanel })));
-const SmartCreationPanel = lazy(() => import('../SmartCreation/SmartCreationPanel').then((m) => ({ default: m.SmartCreationPanel })));
+const SmartRoughCutPanel = lazy(() =>
+  import('../SmartRoughCut/SmartRoughCutPanel').then((m) => ({ default: m.SmartRoughCutPanel })),
+);
+const AIRoughCutPanel = lazy(() =>
+  import('../AIRoughCut/AIRoughCutPanel').then((m) => ({ default: m.AIRoughCutPanel })),
+);
+const DirectorModePanel = lazy(() =>
+  import('../DirectorMode/DirectorModePanel').then((m) => ({ default: m.DirectorModePanel })),
+);
+const MusicMatchPanel = lazy(() =>
+  import('../MusicMatch/MusicMatchPanel').then((m) => ({ default: m.MusicMatchPanel })),
+);
+const HighlightReelPanel = lazy(() =>
+  import('../HighlightReel/HighlightReelPanel').then((m) => ({ default: m.HighlightReelPanel })),
+);
+const ContextualTranslationPanel = lazy(() =>
+  import('../ContextualTranslation/ContextualTranslationPanel').then((m) => ({
+    default: m.ContextualTranslationPanel,
+  })),
+);
+const AIChatEditorPanel = lazy(() =>
+  import('../AIChatEditor/AIChatEditorPanel').then((m) => ({ default: m.AIChatEditorPanel })),
+);
+const AIVideoSummaryPanel = lazy(() =>
+  import('../AIVideoSummary/AIVideoSummaryPanel').then((m) => ({ default: m.AIVideoSummaryPanel })),
+);
+const AINarrationPanel = lazy(() =>
+  import('../AINarration/AINarrationPanel').then((m) => ({ default: m.AINarrationPanel })),
+);
+const SmartCreationPanel = lazy(() =>
+  import('../SmartCreation/SmartCreationPanel').then((m) => ({ default: m.SmartCreationPanel })),
+);
 const HistoryPanel = lazy(() => import('../History/HistoryPanel').then((m) => ({ default: m.HistoryPanel })));
-const ProjectDocumentationPanel = lazy(() => import('../ProjectDocumentationPanel').then((m) => ({ default: m.ProjectDocumentationPanel })));
-const AISubtitleWorkflowPanel = lazy(() => import('../AISubtitleWorkflow/AISubtitleWorkflowPanel').then((m) => ({ default: m.AISubtitleWorkflowPanel })));
-const SmartDistributionPanel = lazy(() => import('../SmartDistribution/SmartDistributionPanel').then((m) => ({ default: m.SmartDistributionPanel })));
+const ProjectDocumentationPanel = lazy(() =>
+  import('../ProjectDocumentationPanel').then((m) => ({ default: m.ProjectDocumentationPanel })),
+);
+const AISubtitleWorkflowPanel = lazy(() =>
+  import('../AISubtitleWorkflow/AISubtitleWorkflowPanel').then((m) => ({ default: m.AISubtitleWorkflowPanel })),
+);
+const SmartDistributionPanel = lazy(() =>
+  import('../SmartDistribution/SmartDistributionPanel').then((m) => ({ default: m.SmartDistributionPanel })),
+);
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -76,14 +104,17 @@ export function ShellRightPanel() {
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClips = useMemo(
     () => selectedClipIds.map((id) => selectClipById(project, id)).filter((c): c is Clip => Boolean(c)),
-    [project, selectedClipIds]
+    [project, selectedClipIds],
   );
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((t) => t.id === selectedClip.trackId)?.locked),
-    [project.timeline.tracks, selectedClip]
+    [project.timeline.tracks, selectedClip],
   );
 
-  const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const effectivePanels = useMemo(
+    () => getEffectivePanelState(layoutSettings, viewportSize.width),
+    [layoutSettings, viewportSize.width],
+  );
   const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
 
   const rightPrimaryPanelLabel = projectDocumentationOpen
@@ -111,10 +142,10 @@ export function ShellRightPanel() {
                         : smartDistributionOpen
                           ? '智能分发'
                           : aiSubtitleWorkflowOpen
-                          ? zhCN.aiSubtitleWorkflow.title
-                          : smartRoughCutOpen
-                            ? zhCN.panels.smartRoughCut
-                            : zhCN.panels.inspector;
+                            ? zhCN.aiSubtitleWorkflow.title
+                            : smartRoughCutOpen
+                              ? zhCN.panels.smartRoughCut
+                              : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -130,7 +161,9 @@ export function ShellRightPanel() {
         label={zhCN.layout.inspectorPanelCollapsed}
         title={zhCN.layout.expandInspectorPanel}
         testId="right-panel-expand-button"
-        onClick={() => persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })}
+        onClick={() =>
+          persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })
+        }
       />
     );
   }
@@ -148,7 +181,12 @@ export function ShellRightPanel() {
         title={zhCN.layout.collapseInspectorPanel}
         aria-label={zhCN.layout.collapseInspectorPanel}
         data-testid="right-panel-collapse-button"
-        onClick={() => persistLayoutPatch({ rightPanelCollapsed: true, panels: { ...layoutSettings.panels, inspector: false, audioMixer: false } })}
+        onClick={() =>
+          persistLayoutPatch({
+            rightPanelCollapsed: true,
+            panels: { ...layoutSettings.panels, inspector: false, audioMixer: false },
+          })
+        }
       >
         <ChevronRight size={16} />
       </button>
@@ -164,11 +202,28 @@ export function ShellRightPanel() {
             ) : directorModeOpen ? (
               <DirectorModePanel media={project.media} favoriteIds={[]} onClose={() => setDirectorModeOpen(false)} />
             ) : musicMatchOpen ? (
-              <MusicMatchPanel media={project.media} sequenceDuration={project.sequences.find((s) => s.id === project.activeSequenceId)?.settings?.duration ?? 0} onClose={() => setMusicMatchOpen(false)} />
+              <MusicMatchPanel
+                media={project.media}
+                sequenceDuration={
+                  project.sequences.find((s) => s.id === project.activeSequenceId)?.settings?.duration ?? 0
+                }
+                onClose={() => setMusicMatchOpen(false)}
+              />
             ) : highlightReelOpen ? (
-              <HighlightReelPanel media={project.media} clips={project.timeline.tracks.flatMap((t) => t.clips)} selectedClipIds={selectedClipIds} onClose={() => setHighlightReelOpen(false)} />
+              <HighlightReelPanel
+                media={project.media}
+                clips={project.timeline.tracks.flatMap((t) => t.clips)}
+                selectedClipIds={selectedClipIds}
+                onClose={() => setHighlightReelOpen(false)}
+              />
             ) : contextualTranslationOpen ? (
-              <ContextualTranslationPanel subtitleClips={project.timeline.tracks.filter((t) => t.type === 'subtitle').flatMap((t) => t.clips).filter((c) => c.type === 'subtitle')} onClose={() => setContextualTranslationOpen(false)} />
+              <ContextualTranslationPanel
+                subtitleClips={project.timeline.tracks
+                  .filter((t) => t.type === 'subtitle')
+                  .flatMap((t) => t.clips)
+                  .filter((c) => c.type === 'subtitle')}
+                onClose={() => setContextualTranslationOpen(false)}
+              />
             ) : aiChatEditorOpen ? (
               <AIChatEditorPanel project={project} onClose={() => setAiChatEditorOpen(false)} />
             ) : videoSummaryOpen ? (
@@ -200,9 +255,10 @@ export function ShellRightPanel() {
 
                   if (clipsToAdd.length === 0) return;
 
-                  const lastClipEnd = firstVideoTrack.clips.length > 0
-                    ? Math.max(...firstVideoTrack.clips.map((c) => c.start + c.duration))
-                    : 0;
+                  const lastClipEnd =
+                    firstVideoTrack.clips.length > 0
+                      ? Math.max(...firstVideoTrack.clips.map((c) => c.start + c.duration))
+                      : 0;
 
                   let currentTime = lastClipEnd;
                   for (const media of clipsToAdd) {
@@ -233,10 +289,11 @@ export function ShellRightPanel() {
 
                   let currentTime = 0;
                   for (const segment of storyline.storyline) {
-                    const matchingMedia = project.media.find((m) => {
-                      const scene = m.aiAnalysis?.scene?.toLowerCase() ?? '';
-                      return scene.includes(segment.sceneType) || segment.suggestedClips.includes(m.id);
-                    }) ?? project.media[0];
+                    const matchingMedia =
+                      project.media.find((m) => {
+                        const scene = m.aiAnalysis?.scene?.toLowerCase() ?? '';
+                        return scene.includes(segment.sceneType) || segment.suggestedClips.includes(m.id);
+                      }) ?? project.media[0];
 
                     if (!matchingMedia) continue;
 

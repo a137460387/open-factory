@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 
 interface CurvePoint {
-  x: number;  // 0 ~ 1
-  y: number;  // 0 ~ 1
+  x: number; // 0 ~ 1
+  y: number; // 0 ~ 1
   handleIn?: { x: number; y: number };
   handleOut?: { x: number; y: number };
 }
@@ -42,86 +42,95 @@ export const CurvesEditor: React.FC<CurvesEditorProps> = ({
     };
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    const pos = getMousePos(e);
-
-    // 检查是否点击了现有点
-    for (let i = 0; i < points.length; i++) {
-      const dx = pos.x - points[i].x;
-      const dy = pos.y - points[i].y;
-      if (dx * dx + dy * dy < 0.001) {
-        setDragging(i);
-        e.preventDefault();
-        return;
-      }
-    }
-
-    // 添加新点
-    const newPoints = [...points, { x: pos.x, y: pos.y }];
-    newPoints.sort((a, b) => a.x - b.x);
-    onChange(newPoints);
-  }, [points, onChange, getMousePos]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (dragging !== null) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
       const pos = getMousePos(e);
-      const newPoints = [...points];
-      // 保持首尾点的 x 坐标固定
-      if (dragging === 0) {
-        newPoints[dragging] = { ...newPoints[dragging], y: pos.y };
-      } else if (dragging === points.length - 1) {
-        newPoints[dragging] = { ...newPoints[dragging], y: pos.y };
-      } else {
-        // 中间点不能超出相邻点的 x 范围
-        const minX = points[dragging - 1].x + 0.01;
-        const maxX = points[dragging + 1].x - 0.01;
-        newPoints[dragging] = {
-          ...newPoints[dragging],
-          x: Math.max(minX, Math.min(maxX, pos.x)),
-          y: pos.y,
-        };
-      }
-      onChange(newPoints);
-    }
 
-    if (draggingHandle) {
-      const pos = getMousePos(e);
-      const newPoints = [...points];
-      const point = newPoints[draggingHandle.index];
-      if (draggingHandle.type === 'in') {
-        newPoints[draggingHandle.index] = {
-          ...point,
-          handleIn: { x: pos.x - point.x, y: pos.y - point.y },
-        };
-      } else {
-        newPoints[draggingHandle.index] = {
-          ...point,
-          handleOut: { x: pos.x - point.x, y: pos.y - point.y },
-        };
+      // 检查是否点击了现有点
+      for (let i = 0; i < points.length; i++) {
+        const dx = pos.x - points[i].x;
+        const dy = pos.y - points[i].y;
+        if (dx * dx + dy * dy < 0.001) {
+          setDragging(i);
+          e.preventDefault();
+          return;
+        }
       }
+
+      // 添加新点
+      const newPoints = [...points, { x: pos.x, y: pos.y }];
+      newPoints.sort((a, b) => a.x - b.x);
       onChange(newPoints);
-    }
-  }, [dragging, draggingHandle, points, onChange, getMousePos]);
+    },
+    [points, onChange, getMousePos],
+  );
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (dragging !== null) {
+        const pos = getMousePos(e);
+        const newPoints = [...points];
+        // 保持首尾点的 x 坐标固定
+        if (dragging === 0) {
+          newPoints[dragging] = { ...newPoints[dragging], y: pos.y };
+        } else if (dragging === points.length - 1) {
+          newPoints[dragging] = { ...newPoints[dragging], y: pos.y };
+        } else {
+          // 中间点不能超出相邻点的 x 范围
+          const minX = points[dragging - 1].x + 0.01;
+          const maxX = points[dragging + 1].x - 0.01;
+          newPoints[dragging] = {
+            ...newPoints[dragging],
+            x: Math.max(minX, Math.min(maxX, pos.x)),
+            y: pos.y,
+          };
+        }
+        onChange(newPoints);
+      }
+
+      if (draggingHandle) {
+        const pos = getMousePos(e);
+        const newPoints = [...points];
+        const point = newPoints[draggingHandle.index];
+        if (draggingHandle.type === 'in') {
+          newPoints[draggingHandle.index] = {
+            ...point,
+            handleIn: { x: pos.x - point.x, y: pos.y - point.y },
+          };
+        } else {
+          newPoints[draggingHandle.index] = {
+            ...point,
+            handleOut: { x: pos.x - point.x, y: pos.y - point.y },
+          };
+        }
+        onChange(newPoints);
+      }
+    },
+    [dragging, draggingHandle, points, onChange, getMousePos],
+  );
 
   const handleMouseUp = useCallback(() => {
     setDragging(null);
     setDraggingHandle(null);
   }, []);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    const pos = getMousePos(e);
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const pos = getMousePos(e);
 
-    // 检查是否双击了现有点（删除）
-    for (let i = 0; i < points.length; i++) {
-      const dx = pos.x - points[i].x;
-      const dy = pos.y - points[i].y;
-      if (dx * dx + dy * dy < 0.001 && i !== 0 && i !== points.length - 1) {
-        const newPoints = points.filter((_, idx) => idx !== i);
-        onChange(newPoints);
-        return;
+      // 检查是否双击了现有点（删除）
+      for (let i = 0; i < points.length; i++) {
+        const dx = pos.x - points[i].x;
+        const dy = pos.y - points[i].y;
+        if (dx * dx + dy * dy < 0.001 && i !== 0 && i !== points.length - 1) {
+          const newPoints = points.filter((_, idx) => idx !== i);
+          onChange(newPoints);
+          return;
+        }
       }
-    }
-  }, [points, onChange, getMousePos]);
+    },
+    [points, onChange, getMousePos],
+  );
 
   useEffect(() => {
     if (dragging !== null || draggingHandle) {
@@ -172,32 +181,18 @@ export const CurvesEditor: React.FC<CurvesEditorProps> = ({
         onDoubleClick={handleDoubleClick}
       >
         {/* 网格 */}
-        {[0.25, 0.5, 0.75].map(t => (
+        {[0.25, 0.5, 0.75].map((t) => (
           <React.Fragment key={t}>
-            <line
-              x1={t * width} y1={0} x2={t * width} y2={height}
-              stroke="#374151" strokeWidth={0.5}
-            />
-            <line
-              x1={0} y1={t * height} x2={width} y2={t * height}
-              stroke="#374151" strokeWidth={0.5}
-            />
+            <line x1={t * width} y1={0} x2={t * width} y2={height} stroke="#374151" strokeWidth={0.5} />
+            <line x1={0} y1={t * height} x2={width} y2={t * height} stroke="#374151" strokeWidth={0.5} />
           </React.Fragment>
         ))}
 
         {/* 对角线参考 */}
-        <line
-          x1={0} y1={height} x2={width} y2={0}
-          stroke="#4b5563" strokeWidth={1} strokeDasharray="4 4"
-        />
+        <line x1={0} y1={height} x2={width} y2={0} stroke="#4b5563" strokeWidth={1} strokeDasharray="4 4" />
 
         {/* 曲线 */}
-        <path
-          d={generateCurvePath()}
-          fill="none"
-          stroke={channelColor}
-          strokeWidth={2}
-        />
+        <path d={generateCurvePath()} fill="none" stroke={channelColor} strokeWidth={2} />
 
         {/* 控制点 */}
         {points.map((point, index) => (

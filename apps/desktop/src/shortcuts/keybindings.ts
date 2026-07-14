@@ -1,5 +1,10 @@
 import { getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
-import { TIMELINE_SHORTCUT_DEFINITIONS, normalizeAccelerator, type TimelineShortcutAction, type TimelineShortcutBindings } from './timeline-shortcuts';
+import {
+  TIMELINE_SHORTCUT_DEFINITIONS,
+  normalizeAccelerator,
+  type TimelineShortcutAction,
+  type TimelineShortcutBindings,
+} from './timeline-shortcuts';
 
 export interface KeybindingStorage {
   getAppDataDir(): Promise<string> | string;
@@ -12,12 +17,14 @@ const KEYBINDINGS_FILE = 'keybindings.json';
 const DEFAULT_STORAGE: KeybindingStorage = {
   getAppDataDir,
   readFile,
-  writeFile
+  writeFile,
 };
 
 const ACTIONS = new Set(TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => definition.action));
 
-export async function readCustomKeybindings(storage: KeybindingStorage = DEFAULT_STORAGE): Promise<TimelineShortcutBindings> {
+export async function readCustomKeybindings(
+  storage: KeybindingStorage = DEFAULT_STORAGE,
+): Promise<TimelineShortcutBindings> {
   const root = normalizePath(await storage.getAppDataDir());
   try {
     return parseCustomKeybindings(await storage.readFile(joinConfigPath(root, KEYBINDINGS_FILE)));
@@ -26,7 +33,10 @@ export async function readCustomKeybindings(storage: KeybindingStorage = DEFAULT
   }
 }
 
-export async function writeCustomKeybindings(bindings: TimelineShortcutBindings, storage: KeybindingStorage = DEFAULT_STORAGE): Promise<TimelineShortcutBindings> {
+export async function writeCustomKeybindings(
+  bindings: TimelineShortcutBindings,
+  storage: KeybindingStorage = DEFAULT_STORAGE,
+): Promise<TimelineShortcutBindings> {
   const root = normalizePath(await storage.getAppDataDir());
   const sanitized = sanitizeCustomKeybindings(bindings);
   await storage.writeFile(joinConfigPath(root, KEYBINDINGS_FILE), JSON.stringify({ bindings: sanitized }, null, 2));
@@ -52,7 +62,14 @@ function sanitizeCustomKeybindings(input: unknown): TimelineShortcutBindings {
       continue;
     }
     const rawBindings = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
-    const bindings = Array.from(new Set(rawBindings.filter((binding): binding is string => typeof binding === 'string').map(normalizeAccelerator).filter(Boolean)));
+    const bindings = Array.from(
+      new Set(
+        rawBindings
+          .filter((binding): binding is string => typeof binding === 'string')
+          .map(normalizeAccelerator)
+          .filter(Boolean),
+      ),
+    );
     if (bindings.length > 0) {
       result[action as TimelineShortcutAction] = bindings;
     }

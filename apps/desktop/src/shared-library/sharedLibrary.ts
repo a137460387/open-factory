@@ -1,7 +1,7 @@
 import {
   normalizeSubtitleStyleTemplateStyle,
   type SubtitleStyleTemplate,
-  type TimelineTemplateDefinition
+  type TimelineTemplateDefinition,
 } from '@open-factory/editor-core';
 import {
   createSharedLibraryArchive,
@@ -12,10 +12,18 @@ import {
   writeFile,
   type SharedLibraryArchiveFileEntry,
   type SharedLibraryArchiveResult,
-  type SharedLibraryImportResult
+  type SharedLibraryImportResult,
 } from '../lib/tauri-bridge';
 
-type SharedLibraryResourceType = 'export-preset' | 'subtitle-style' | 'macro' | 'title-template' | 'timeline-template' | 'lut' | 'workspace-layout' | 'custom-layout';
+type SharedLibraryResourceType =
+  | 'export-preset'
+  | 'subtitle-style'
+  | 'macro'
+  | 'title-template'
+  | 'timeline-template'
+  | 'lut'
+  | 'workspace-layout'
+  | 'custom-layout';
 export type SharedLibraryConflictMode = 'overwrite' | 'keep-both';
 
 export interface SharedLibraryResource<TPayload = unknown> {
@@ -41,8 +49,15 @@ export interface SharedLibraryStorage {
 }
 
 export interface SharedLibraryArchiveClient {
-  createSharedLibraryArchive(request: { outputPath: string; manifestContents: string; files: SharedLibraryArchiveFileEntry[] }): Promise<SharedLibraryArchiveResult> | SharedLibraryArchiveResult;
-  importSharedLibraryArchive(request: { archivePath: string; destinationDir: string }): Promise<SharedLibraryImportResult> | SharedLibraryImportResult;
+  createSharedLibraryArchive(request: {
+    outputPath: string;
+    manifestContents: string;
+    files: SharedLibraryArchiveFileEntry[];
+  }): Promise<SharedLibraryArchiveResult> | SharedLibraryArchiveResult;
+  importSharedLibraryArchive(request: {
+    archivePath: string;
+    destinationDir: string;
+  }): Promise<SharedLibraryImportResult> | SharedLibraryImportResult;
 }
 
 export interface SharedLibraryUpsertResult {
@@ -58,12 +73,12 @@ const bridgeStorage: SharedLibraryStorage = {
   getAppDataDir,
   fsExists,
   readFile,
-  writeFile
+  writeFile,
 };
 
 const bridgeArchiveClient: SharedLibraryArchiveClient = {
   createSharedLibraryArchive,
-  importSharedLibraryArchive
+  importSharedLibraryArchive,
 };
 
 function getSharedLibraryDir(appDataDir: string): string {
@@ -74,7 +89,9 @@ export function getSharedLibraryIndexPath(appDataDir: string): string {
   return `${getSharedLibraryDir(appDataDir)}/${SHARED_LIBRARY_INDEX}`;
 }
 
-export async function loadSharedLibrary(storage: SharedLibraryStorage = bridgeStorage): Promise<SharedLibraryResource[]> {
+export async function loadSharedLibrary(
+  storage: SharedLibraryStorage = bridgeStorage,
+): Promise<SharedLibraryResource[]> {
   const path = getSharedLibraryIndexPath(await storage.getAppDataDir());
   if (!(await storage.fsExists(path))) {
     return [];
@@ -82,15 +99,19 @@ export async function loadSharedLibrary(storage: SharedLibraryStorage = bridgeSt
   return parseSharedLibraryIndex(await storage.readFile(path));
 }
 
-async function saveSharedLibrary(resources: SharedLibraryResource[], storage: SharedLibraryStorage = bridgeStorage): Promise<void> {
+async function saveSharedLibrary(
+  resources: SharedLibraryResource[],
+  storage: SharedLibraryStorage = bridgeStorage,
+): Promise<void> {
   const path = getSharedLibraryIndexPath(await storage.getAppDataDir());
   await storage.writeFile(path, serializeSharedLibraryIndex(resources));
 }
 
 export async function addSharedLibraryResource(
-  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> & Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
+  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> &
+    Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
   conflictMode: SharedLibraryConflictMode = 'overwrite',
-  storage: SharedLibraryStorage = bridgeStorage
+  storage: SharedLibraryStorage = bridgeStorage,
 ): Promise<SharedLibraryUpsertResult> {
   const current = await loadSharedLibrary(storage);
   const result = upsertSharedLibraryResource(current, resource, conflictMode);
@@ -100,12 +121,15 @@ export async function addSharedLibraryResource(
 
 export function upsertSharedLibraryResource(
   resources: SharedLibraryResource[],
-  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> & Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
+  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> &
+    Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
   conflictMode: SharedLibraryConflictMode = 'overwrite',
-  now = new Date(Date.now()).toISOString()
+  now = new Date(Date.now()).toISOString(),
 ): SharedLibraryUpsertResult {
   const normalized = normalizeIncomingResource(resource, now);
-  const conflictIndex = resources.findIndex((item) => item.type === normalized.type && item.name.trim().toLowerCase() === normalized.name.trim().toLowerCase());
+  const conflictIndex = resources.findIndex(
+    (item) => item.type === normalized.type && item.name.trim().toLowerCase() === normalized.name.trim().toLowerCase(),
+  );
   if (conflictIndex < 0) {
     return { resources: [...resources, normalized], resource: normalized, action: 'created' };
   }
@@ -115,7 +139,7 @@ export function upsertSharedLibraryResource(
       ...normalized,
       id: uniqueSharedResourceId(normalized.id, resources),
       version: existing.version + 1,
-      updatedAt: now
+      updatedAt: now,
     };
     return { resources: [...resources, kept], resource: kept, action: 'kept-both' };
   }
@@ -123,16 +147,19 @@ export function upsertSharedLibraryResource(
     ...normalized,
     id: existing.id,
     version: existing.version + 1,
-    updatedAt: now
+    updatedAt: now,
   };
   return {
     resources: resources.map((item, index) => (index === conflictIndex ? overwritten : item)),
     resource: overwritten,
-    action: 'overwritten'
+    action: 'overwritten',
   };
 }
 
-export async function removeSharedLibraryResource(resourceId: string, storage: SharedLibraryStorage = bridgeStorage): Promise<SharedLibraryResource[]> {
+export async function removeSharedLibraryResource(
+  resourceId: string,
+  storage: SharedLibraryStorage = bridgeStorage,
+): Promise<SharedLibraryResource[]> {
   const next = (await loadSharedLibrary(storage)).filter((resource) => resource.id !== resourceId);
   await saveSharedLibrary(next, storage);
   return next;
@@ -153,12 +180,14 @@ export function parseSharedLibraryIndex(contents: string): SharedLibraryResource
 export function serializeSharedLibraryIndex(resources: SharedLibraryResource[]): string {
   const payload: SharedLibraryIndexFile = {
     schemaVersion: 1,
-    resources: resources.flatMap((resource) => normalizeStoredResource(resource))
+    resources: resources.flatMap((resource) => normalizeStoredResource(resource)),
   };
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
-export function subtitleStyleTemplateToSharedResource(template: SubtitleStyleTemplate): Omit<SharedLibraryResource, 'version' | 'updatedAt'> {
+export function subtitleStyleTemplateToSharedResource(
+  template: SubtitleStyleTemplate,
+): Omit<SharedLibraryResource, 'version' | 'updatedAt'> {
   return {
     id: `shared-subtitle-${sanitizeId(template.id)}`,
     type: 'subtitle-style',
@@ -166,12 +195,14 @@ export function subtitleStyleTemplateToSharedResource(template: SubtitleStyleTem
     payload: {
       id: template.id,
       name: template.name,
-      style: normalizeSubtitleStyleTemplateStyle(template.style)
-    }
+      style: normalizeSubtitleStyleTemplateStyle(template.style),
+    },
   };
 }
 
-export function sharedResourceToSubtitleStyleTemplate(resource: SharedLibraryResource): SubtitleStyleTemplate | undefined {
+export function sharedResourceToSubtitleStyleTemplate(
+  resource: SharedLibraryResource,
+): SubtitleStyleTemplate | undefined {
   if (resource.type !== 'subtitle-style' || !resource.payload || typeof resource.payload !== 'object') {
     return undefined;
   }
@@ -183,11 +214,15 @@ export function sharedResourceToSubtitleStyleTemplate(resource: SharedLibraryRes
     id: typeof payload.id === 'string' && payload.id.trim() ? `shared-${payload.id.trim()}` : resource.id,
     kind: 'custom',
     name: payload.name.trim(),
-    style: normalizeSubtitleStyleTemplateStyle((payload.style ?? {}) as Parameters<typeof normalizeSubtitleStyleTemplateStyle>[0])
+    style: normalizeSubtitleStyleTemplateStyle(
+      (payload.style ?? {}) as Parameters<typeof normalizeSubtitleStyleTemplateStyle>[0],
+    ),
   };
 }
 
-export async function loadSharedSubtitleStyleTemplates(storage: SharedLibraryStorage = bridgeStorage): Promise<SubtitleStyleTemplate[]> {
+export async function loadSharedSubtitleStyleTemplates(
+  storage: SharedLibraryStorage = bridgeStorage,
+): Promise<SubtitleStyleTemplate[]> {
   return (await loadSharedLibrary(storage)).flatMap((resource) => {
     const template = sharedResourceToSubtitleStyleTemplate(resource);
     return template ? [template] : [];
@@ -197,16 +232,19 @@ export async function loadSharedSubtitleStyleTemplates(storage: SharedLibrarySto
 export async function exportSharedLibrary(
   outputPath: string,
   storage: SharedLibraryStorage = bridgeStorage,
-  archiveClient: SharedLibraryArchiveClient = bridgeArchiveClient
+  archiveClient: SharedLibraryArchiveClient = bridgeArchiveClient,
 ): Promise<SharedLibraryArchiveResult> {
   const resources = await loadSharedLibrary(storage);
   const files = resources
     .filter((resource) => resource.filePath)
-    .map((resource): SharedLibraryArchiveFileEntry => ({ sourcePath: resource.filePath!, archivePath: `files/${sanitizeId(resource.id)}-${fileName(resource.filePath!)}` }));
+    .map((resource): SharedLibraryArchiveFileEntry => ({
+      sourcePath: resource.filePath!,
+      archivePath: `files/${sanitizeId(resource.id)}-${fileName(resource.filePath!)}`,
+    }));
   return archiveClient.createSharedLibraryArchive({
     outputPath,
     manifestContents: serializeSharedLibraryIndex(resources),
-    files
+    files,
   });
 }
 
@@ -214,7 +252,7 @@ export async function importSharedLibrary(
   archivePath: string,
   conflictMode: SharedLibraryConflictMode = 'keep-both',
   storage: SharedLibraryStorage = bridgeStorage,
-  archiveClient: SharedLibraryArchiveClient = bridgeArchiveClient
+  archiveClient: SharedLibraryArchiveClient = bridgeArchiveClient,
 ): Promise<SharedLibraryUpsertResult[]> {
   const destinationDir = getSharedLibraryDir(await storage.getAppDataDir());
   const imported = await archiveClient.importSharedLibraryArchive({ archivePath, destinationDir });
@@ -231,8 +269,9 @@ export async function importSharedLibrary(
 }
 
 function normalizeIncomingResource(
-  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> & Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
-  now: string
+  resource: Omit<SharedLibraryResource, 'version' | 'updatedAt'> &
+    Partial<Pick<SharedLibraryResource, 'version' | 'updatedAt'>>,
+  now: string,
 ): SharedLibraryResource {
   const name = resource.name.trim();
   return {
@@ -242,7 +281,7 @@ function normalizeIncomingResource(
     version: Math.max(1, Math.floor(resource.version ?? 1)),
     updatedAt: normalizeIso(resource.updatedAt) ?? now,
     payload: resource.payload,
-    filePath: resource.filePath?.trim() || undefined
+    filePath: resource.filePath?.trim() || undefined,
   };
 }
 
@@ -262,8 +301,8 @@ function normalizeStoredResource(value: unknown): SharedLibraryResource[] {
       version: Math.max(1, Math.floor(Number(resource.version) || 1)),
       updatedAt: normalizeIso(resource.updatedAt) ?? new Date(0).toISOString(),
       payload: resource.payload,
-      filePath: resource.filePath?.trim() || undefined
-    }
+      filePath: resource.filePath?.trim() || undefined,
+    },
   ];
 }
 

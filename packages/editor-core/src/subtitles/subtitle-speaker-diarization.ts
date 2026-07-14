@@ -1,4 +1,3 @@
-
 export const DEFAULT_PAUSE_THRESHOLD = 1.2;
 export const DEFAULT_ZCR_DIFF_THRESHOLD = 0.15;
 export const DEFAULT_SPEAKER_NAME_PREFIX = '说话人';
@@ -23,7 +22,7 @@ export interface SpeakerDiarizationResult {
 
 export function detectPauseBoundaries(
   segments: readonly SubtitleSegmentInput[],
-  pauseThreshold = DEFAULT_PAUSE_THRESHOLD
+  pauseThreshold = DEFAULT_PAUSE_THRESHOLD,
 ): boolean[] {
   if (segments.length <= 1) return segments.length === 1 ? [false] : [];
   const boundaries: boolean[] = [false];
@@ -37,7 +36,7 @@ export function detectPauseBoundaries(
 export function detectSpeakerChange(
   currentZcr: number,
   previousZcr: number,
-  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD
+  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD,
 ): boolean {
   return Math.abs(currentZcr - previousZcr) > zcrThreshold;
 }
@@ -45,7 +44,7 @@ export function detectSpeakerChange(
 export function assignSpeakerIds(
   segments: readonly SubtitleSegmentInput[],
   pauseThreshold = DEFAULT_PAUSE_THRESHOLD,
-  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD
+  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD,
 ): SpeakerAssignment[] {
   if (segments.length === 0) return [];
   const assignments: SpeakerAssignment[] = [{ segmentId: segments[0].id, speakerId: 0 }];
@@ -57,7 +56,7 @@ export function assignSpeakerIds(
     const hasZcrChange = detectSpeakerChange(
       segments[i].zeroCrossingRate ?? 0,
       segments[i - 1].zeroCrossingRate ?? 0,
-      zcrThreshold
+      zcrThreshold,
     );
 
     if (isPauseBoundary && hasZcrChange) {
@@ -76,18 +75,14 @@ export function buildSpeakerLabels(count: number, prefix = DEFAULT_SPEAKER_NAME_
   return labels;
 }
 
-export function renameSpeaker(
-  labels: Record<number, string>,
-  oldId: number,
-  newName: string
-): Record<number, string> {
+export function renameSpeaker(labels: Record<number, string>, oldId: number, newName: string): Record<number, string> {
   if (!(oldId in labels)) return { ...labels };
   return { ...labels, [oldId]: newName };
 }
 
 export function batchRenameSpeakers(
   labels: Record<number, string>,
-  renames: Record<number, string>
+  renames: Record<number, string>,
 ): Record<number, string> {
   const result = { ...labels };
   for (const [id, name] of Object.entries(renames)) {
@@ -102,12 +97,12 @@ export function batchRenameSpeakers(
 export function performSpeakerDiarization(
   segments: readonly SubtitleSegmentInput[],
   pauseThreshold = DEFAULT_PAUSE_THRESHOLD,
-  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD
+  zcrThreshold = DEFAULT_ZCR_DIFF_THRESHOLD,
 ): SpeakerDiarizationResult {
   const assignments = assignSpeakerIds(segments, pauseThreshold, zcrThreshold);
   const maxSpeaker = assignments.reduce((max, a) => Math.max(max, a.speakerId), 0);
   return {
     assignments,
-    speakerLabels: buildSpeakerLabels(maxSpeaker + 1)
+    speakerLabels: buildSpeakerLabels(maxSpeaker + 1),
   };
 }

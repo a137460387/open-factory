@@ -24,7 +24,7 @@ export const useWhisperSettingsStore = create<WhisperSettingsState>((set) => ({
       console.warn('Unable to save Whisper model path', error);
     });
     set({ modelPath });
-  }
+  },
 }));
 
 function readStoredPath(key: string): string {

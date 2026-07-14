@@ -1,13 +1,5 @@
 export type QuickActionId =
-  | 'mute'
-  | 'solo'
-  | 'volume'
-  | 'aspect-ratio'
-  | 'add-marker'
-  | 'copy'
-  | 'delete'
-  | 'split-here'
-  | 'inspector';
+  'mute' | 'solo' | 'volume' | 'aspect-ratio' | 'add-marker' | 'copy' | 'delete' | 'split-here' | 'inspector';
 
 export interface QuickActionDefinition {
   id: QuickActionId;
@@ -25,11 +17,18 @@ export const ALL_QUICK_ACTIONS: QuickActionDefinition[] = [
   { id: 'copy', label: '复制', batchSupported: true, icon: 'Copy' },
   { id: 'delete', label: '删除', batchSupported: true, icon: 'Trash2' },
   { id: 'split-here', label: '分割', batchSupported: false, icon: 'Scissors' },
-  { id: 'inspector', label: '属性', batchSupported: false, icon: 'Sliders' }
+  { id: 'inspector', label: '属性', batchSupported: false, icon: 'Sliders' },
 ];
 
 export const DEFAULT_QUICK_ACTION_ORDER: QuickActionId[] = [
-  'mute', 'solo', 'volume', 'aspect-ratio', 'add-marker', 'copy', 'delete', 'split-here'
+  'mute',
+  'solo',
+  'volume',
+  'aspect-ratio',
+  'add-marker',
+  'copy',
+  'delete',
+  'split-here',
 ];
 
 export const MAX_QUICK_ACTIONS = 8;
@@ -38,9 +37,7 @@ export function normalizeQuickActionOrder(value: unknown): QuickActionId[] {
   if (!Array.isArray(value)) {
     return [...DEFAULT_QUICK_ACTION_ORDER];
   }
-  const valid = value.filter((id): id is QuickActionId =>
-    ALL_QUICK_ACTIONS.some((action) => action.id === id)
-  );
+  const valid = value.filter((id): id is QuickActionId => ALL_QUICK_ACTIONS.some((action) => action.id === id));
   return valid.length > 0 ? valid.slice(0, MAX_QUICK_ACTIONS) : [...DEFAULT_QUICK_ACTION_ORDER];
 }
 
@@ -62,7 +59,7 @@ export function calculateQuickActionPosition(
   toolbarWidth: number,
   toolbarHeight: number,
   viewportWidth: number,
-  viewportHeight: number
+  viewportHeight: number,
 ): QuickActionPosition {
   const PADDING = 8;
   const center = clipRect.x + clipRect.width / 2;
@@ -83,10 +80,7 @@ export function calculateQuickActionPosition(
   return { x, y: belowY, placement: 'below' };
 }
 
-export function filterActionsForSelection(
-  order: QuickActionId[],
-  selectedCount: number
-): QuickActionId[] {
+export function filterActionsForSelection(order: QuickActionId[], selectedCount: number): QuickActionId[] {
   if (selectedCount <= 1) {
     return order;
   }

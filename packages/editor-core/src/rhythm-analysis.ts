@@ -1,6 +1,12 @@
 import type { Clip, Project, Timeline } from './model';
 import { getTimelineDuration } from './timeline';
-import { formatReportDuration, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './project/report-i18n';
+import {
+  formatReportDuration,
+  normalizeReportLocale,
+  reportHtmlLang,
+  reportLanguageLabel,
+  type ReportLocale,
+} from './project/report-i18n';
 
 export type RhythmReferenceType = 'advertising' | 'documentary' | 'variety' | 'short-video';
 
@@ -62,15 +68,18 @@ export const RHYTHM_REFERENCE_PROFILES: RhythmReferenceProfile[] = [
   { type: 'advertising', averageShotDuration: 2.2, typicalCutFrequency: 0.45 },
   { type: 'documentary', averageShotDuration: 6.5, typicalCutFrequency: 0.15 },
   { type: 'variety', averageShotDuration: 3.8, typicalCutFrequency: 0.26 },
-  { type: 'short-video', averageShotDuration: 1.6, typicalCutFrequency: 0.62 }
+  { type: 'short-video', averageShotDuration: 1.6, typicalCutFrequency: 0.62 },
 ];
 
 export function analyzeClipRhythm(project: Project, options: RhythmAnalysisOptions = {}): RhythmAnalysisReport {
   const shots = collectRhythmShots(project.timeline);
   const durations = shots.map((shot) => shot.duration);
-  const averageShotDuration = durations.length > 0 ? round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 0;
+  const averageShotDuration =
+    durations.length > 0 ? round(durations.reduce((sum, value) => sum + value, 0) / durations.length) : 0;
   const repeatedSegments = detectRepeatedRhythmSegments(shots);
-  const suggestions = repeatedSegments.map((segment) => `可考虑增加节奏变化：${segment.clipCount} 个连续镜头时长接近。`);
+  const suggestions = repeatedSegments.map(
+    (segment) => `可考虑增加节奏变化：${segment.clipCount} 个连续镜头时长接近。`,
+  );
   return {
     projectName: project.name,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
@@ -83,7 +92,7 @@ export function analyzeClipRhythm(project: Project, options: RhythmAnalysisOptio
     changePoints: detectRhythmChangePoints(shots),
     repeatedSegments,
     references: RHYTHM_REFERENCE_PROFILES.map((profile) => ({ ...profile })),
-    suggestions
+    suggestions,
   };
 }
 
@@ -109,7 +118,7 @@ export function calculateCutFrequencyCurve(shots: RhythmShot[], bucketSeconds = 
     const end = start + safeBucketSeconds;
     return {
       time: round(start),
-      cutsPerSecond: round(cutTimes.filter((time) => time >= start && time < end).length / safeBucketSeconds)
+      cutsPerSecond: round(cutTimes.filter((time) => time >= start && time < end).length / safeBucketSeconds),
     };
   });
 }
@@ -128,19 +137,26 @@ export function detectRhythmChangePoints(shots: RhythmShot[]): RhythmChangePoint
         nextClipId: next.clipId,
         previousDuration: previous.duration,
         nextDuration: next.duration,
-        ratio: round(ratio)
+        ratio: round(ratio),
       });
     }
   }
   return points;
 }
 
-export function detectRepeatedRhythmSegments(shots: RhythmShot[], minClipCount = 10, tolerance = 0.12): RepeatedRhythmSegment[] {
+export function detectRepeatedRhythmSegments(
+  shots: RhythmShot[],
+  minClipCount = 10,
+  tolerance = 0.12,
+): RepeatedRhythmSegment[] {
   const segments: RepeatedRhythmSegment[] = [];
   let startIndex = 0;
   while (startIndex < shots.length) {
     let endIndex = startIndex + 1;
-    while (endIndex < shots.length && durationsSimilar(shots[startIndex].duration, shots[endIndex].duration, tolerance)) {
+    while (
+      endIndex < shots.length &&
+      durationsSimilar(shots[startIndex].duration, shots[endIndex].duration, tolerance)
+    ) {
       endIndex += 1;
     }
     const count = endIndex - startIndex;
@@ -150,7 +166,7 @@ export function detectRepeatedRhythmSegments(shots: RhythmShot[], minClipCount =
         start: group[0].start,
         end: group[group.length - 1].start + group[group.length - 1].duration,
         clipCount: count,
-        averageDuration: round(group.reduce((sum, shot) => sum + shot.duration, 0) / count)
+        averageDuration: round(group.reduce((sum, shot) => sum + shot.duration, 0) / count),
       });
     }
     startIndex = Math.max(endIndex, startIndex + 1);
@@ -227,7 +243,10 @@ function renderChangeRows(report: RhythmAnalysisReport, locale: ReportLocale): s
     return `<tr><td colspan="4" class="empty">${rhythmLabels[locale].noChanges}</td></tr>`;
   }
   return report.changePoints
-    .map((point) => `<tr><td>${formatReportDuration(point.time, locale)}</td><td>${escapeHtml(point.previousClipId)} (${formatReportDuration(point.previousDuration, locale)})</td><td>${escapeHtml(point.nextClipId)} (${formatReportDuration(point.nextDuration, locale)})</td><td>${point.ratio}x</td></tr>`)
+    .map(
+      (point) =>
+        `<tr><td>${formatReportDuration(point.time, locale)}</td><td>${escapeHtml(point.previousClipId)} (${formatReportDuration(point.previousDuration, locale)})</td><td>${escapeHtml(point.nextClipId)} (${formatReportDuration(point.nextDuration, locale)})</td><td>${point.ratio}x</td></tr>`,
+    )
     .join('');
 }
 
@@ -264,7 +283,7 @@ const rhythmLabels: Record<ReportLocale, Record<string, string>> = {
     ratio: '差异',
     empty: '暂无数据。',
     noChanges: '未检测到明显变化点。',
-    noSuggestions: '暂无节奏建议。'
+    noSuggestions: '暂无节奏建议。',
   },
   en: {
     title: 'Edit Rhythm Analysis',
@@ -285,6 +304,6 @@ const rhythmLabels: Record<ReportLocale, Record<string, string>> = {
     ratio: 'Ratio',
     empty: 'No data.',
     noChanges: 'No obvious rhythm changes detected.',
-    noSuggestions: 'No rhythm suggestions.'
-  }
+    noSuggestions: 'No rhythm suggestions.',
+  },
 };

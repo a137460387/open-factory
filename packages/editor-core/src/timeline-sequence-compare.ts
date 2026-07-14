@@ -53,10 +53,7 @@ export function normalizeSplitRatio(ratio: unknown): number {
   return round(Math.min(0.8, Math.max(0.2, ratio)));
 }
 
-export function findSyncMarkerPairs(
-  leftMarkers: TimelineMarker[],
-  rightMarkers: TimelineMarker[],
-): SyncMarkerPair[] {
+export function findSyncMarkerPairs(leftMarkers: TimelineMarker[], rightMarkers: TimelineMarker[]): SyncMarkerPair[] {
   const pairs: SyncMarkerPair[] = [];
   const rightByName = new Map<string, TimelineMarker[]>();
   for (const marker of rightMarkers) {

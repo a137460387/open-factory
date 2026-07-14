@@ -1,4 +1,11 @@
-import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type EffectType, type MediaAsset, type ProjectColorPipeline } from '@open-factory/editor-core';
+import {
+  calculateSpeedCurveSourceDuration,
+  getClipSpeed,
+  type Clip,
+  type EffectType,
+  type MediaAsset,
+  type ProjectColorPipeline,
+} from '@open-factory/editor-core';
 import { recordPreviewDraw, recordPreviewError } from './debug';
 import type { HardwareDecodeManager } from './hw-decode-manager';
 import { drawTransformedSource2d } from './transform-2d';
@@ -17,7 +24,7 @@ export async function drawVideo2d(
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
   bypassProcessing = false,
   disabledEffectTypes: EffectType[] = [],
-  hwDecodeManager?: HardwareDecodeManager | null
+  hwDecodeManager?: HardwareDecodeManager | null,
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
 
@@ -66,7 +73,7 @@ export async function drawVideoWebGl(
   bypassProcessing = false,
   disabledEffectTypes: EffectType[] = [],
   colorPipeline?: ProjectColorPipeline,
-  hwDecodeManager?: HardwareDecodeManager | null
+  hwDecodeManager?: HardwareDecodeManager | null,
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
 
@@ -77,19 +84,37 @@ export async function drawVideoWebGl(
       const bitmap = await createImageBitmap(frame.imageData);
       try {
         if (clip.projection === 'equirectangular' && clip.panorama) {
-          const drawn = compositor.drawPanoramaSource(bitmap, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:hw` });
+          const drawn = compositor.drawPanoramaSource(
+            bitmap,
+            asset.width || 1280,
+            asset.height || 720,
+            clip.transform,
+            clip.panorama,
+            { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:hw` },
+          );
           if (drawn) {
             recordPreviewDraw('video', 'hw-decode');
             return;
           }
         }
-        compositor.drawSourceWithColorNodeGraph(bitmap, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-          bypassProcessing,
-          disabledEffectTypes,
-          colorPipeline,
-          blendMode: clip.blendMode,
-          textureCacheKey: `${asset.path}:hw`
-        });
+        compositor.drawSourceWithColorNodeGraph(
+          bitmap,
+          asset.width || 1280,
+          asset.height || 720,
+          clip.transform,
+          clip.colorNodeGraph,
+          clip.colorCorrection,
+          clip.effects,
+          clip.chromaKey,
+          clip.masks,
+          {
+            bypassProcessing,
+            disabledEffectTypes,
+            colorPipeline,
+            blendMode: clip.blendMode,
+            textureCacheKey: `${asset.path}:hw`,
+          },
+        );
         recordPreviewDraw('video', 'hw-decode');
         return;
       } finally {
@@ -104,38 +129,74 @@ export async function drawVideoWebGl(
   try {
     await seekVideo(video, sourceTime);
     if (clip.projection === 'equirectangular' && clip.panorama) {
-      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: asset.path });
+      const drawn = compositor.drawPanoramaSource(
+        video,
+        asset.width || 1280,
+        asset.height || 720,
+        clip.transform,
+        clip.panorama,
+        { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: asset.path },
+      );
       if (drawn) {
         recordPreviewDraw('video', 'video');
         return;
       }
     }
-    compositor.drawSourceWithColorNodeGraph(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-      bypassProcessing,
-      disabledEffectTypes,
-      colorPipeline,
-      blendMode: clip.blendMode,
-      textureCacheKey: asset.path
-    });
+    compositor.drawSourceWithColorNodeGraph(
+      video,
+      asset.width || 1280,
+      asset.height || 720,
+      clip.transform,
+      clip.colorNodeGraph,
+      clip.colorCorrection,
+      clip.effects,
+      clip.chromaKey,
+      clip.masks,
+      {
+        bypassProcessing,
+        disabledEffectTypes,
+        colorPipeline,
+        blendMode: clip.blendMode,
+        textureCacheKey: asset.path,
+      },
+    );
     recordPreviewDraw('video', 'video');
   } catch (error) {
     recordPreviewError(error instanceof Error ? error.message : 'WebGL video preview failed.');
     const fallback = await loadThumbnail(asset);
     if (fallback) {
       if (clip.projection === 'equirectangular' && clip.panorama) {
-        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:thumbnail` });
+        const drawn = compositor.drawPanoramaSource(
+          fallback,
+          asset.width || 1280,
+          asset.height || 720,
+          clip.transform,
+          clip.panorama,
+          { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:thumbnail` },
+        );
         if (drawn) {
           recordPreviewDraw('video', 'thumbnail');
           return;
         }
       }
-      compositor.drawSourceWithColorNodeGraph(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-        bypassProcessing,
-        disabledEffectTypes,
-        colorPipeline,
-        blendMode: clip.blendMode,
-        textureCacheKey: `${asset.path}:thumbnail`
-      });
+      compositor.drawSourceWithColorNodeGraph(
+        fallback,
+        asset.width || 1280,
+        asset.height || 720,
+        clip.transform,
+        clip.colorNodeGraph,
+        clip.colorCorrection,
+        clip.effects,
+        clip.chromaKey,
+        clip.masks,
+        {
+          bypassProcessing,
+          disabledEffectTypes,
+          colorPipeline,
+          blendMode: clip.blendMode,
+          textureCacheKey: `${asset.path}:thumbnail`,
+        },
+      );
       recordPreviewDraw('video', 'thumbnail');
     }
   }
@@ -152,7 +213,7 @@ function drawVideoSource2d(
   source: CanvasImageSource,
   asset: MediaAsset,
   clip: VideoClip,
-  bypassProcessing: boolean
+  bypassProcessing: boolean,
 ): void {
   drawTransformedSource2d(
     context,
@@ -160,6 +221,6 @@ function drawVideoSource2d(
     source,
     { width: asset.width || canvas.width, height: asset.height || canvas.height },
     clip.transform,
-    bypassProcessing ? undefined : clip.colorCorrection
+    bypassProcessing ? undefined : clip.colorCorrection,
   );
 }

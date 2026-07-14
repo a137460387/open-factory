@@ -43,9 +43,7 @@ export function CharacterTimelinePanel() {
 
   return (
     <div className="border-t border-line bg-panel" data-testid="character-panel">
-      <div className="px-3 py-1.5 text-xs font-medium text-muted select-none">
-        {zhCN.characterTimeline.title}
-      </div>
+      <div className="px-3 py-1.5 text-xs font-medium text-muted select-none">{zhCN.characterTimeline.title}</div>
       <div className="px-2 pb-2 space-y-1">
         {entries.map(([charId, entry]) => {
           const isHighlighted = highlightedCharId === charId;
@@ -81,9 +79,7 @@ export function CharacterTimelinePanel() {
               ) : (
                 <span className="flex-1 truncate">{entry.label}</span>
               )}
-              <span className="text-[10px] text-muted flex-shrink-0">
-                {entry.appearances.length}
-              </span>
+              <span className="text-[10px] text-muted flex-shrink-0">{entry.appearances.length}</span>
               <button
                 className="text-[10px] text-muted hover:text-fg flex-shrink-0"
                 onClick={(e) => {
@@ -101,7 +97,10 @@ export function CharacterTimelinePanel() {
       </div>
       {highlightedCharId && timeline.characters[highlightedCharId] && (
         <div className="px-3 pb-2 text-[10px] text-muted" data-testid="character-highlight-info">
-          {zhCN.characterTimeline.appearanceCount.replace('{count}', String(timeline.characters[highlightedCharId].appearances.length))}
+          {zhCN.characterTimeline.appearanceCount.replace(
+            '{count}',
+            String(timeline.characters[highlightedCharId].appearances.length),
+          )}
         </div>
       )}
     </div>

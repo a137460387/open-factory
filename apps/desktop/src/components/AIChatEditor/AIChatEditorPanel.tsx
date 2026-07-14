@@ -89,7 +89,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
             }
             const updates = allClips.map((clip) => ({
               clipId: clip.id,
-              patch: { speed: clip.speed }
+              patch: { speed: clip.speed },
             }));
             commandManager.execute(new BatchUpdateClipCommand(timelineAccessor, updates));
             return describeChatCommand(cmd);
@@ -101,7 +101,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
             }
             const updates = clips.map((clip) => ({
               clipId: clip.id,
-              patch: { speed: cmd.value }
+              patch: { speed: cmd.value },
             }));
             commandManager.execute(new BatchUpdateClipCommand(timelineAccessor, updates));
             return describeChatCommand(cmd);
@@ -121,12 +121,12 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         showToast({
           kind: 'error',
           title: '命令执行失败',
-          message: error instanceof Error ? error.message : '未知错误'
+          message: error instanceof Error ? error.message : '未知错误',
         });
         return undefined;
       }
     },
-    [project]
+    [project],
   );
 
   const handleSend = useCallback(async () => {
@@ -144,7 +144,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
       id: `user-${Date.now()}`,
       role: 'user',
       content: text,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     addEntry(userEntry);
     setInputText('');
@@ -161,7 +161,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         { role: 'system' as const, content: systemPrompt },
         { role: 'user' as const, content: contextMessage },
         ...historyMessages.slice(0, -1).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-        { role: 'user' as const, content: text }
+        { role: 'user' as const, content: text },
       ];
 
       const response = await callAiApi(
@@ -172,9 +172,9 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
           messages,
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 2048,
-          temperature: 0.2
+          temperature: 0.2,
         },
-        apiKey
+        apiKey,
       );
 
       const result = safeParseChatResponse(response.content);
@@ -195,18 +195,19 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         rejectedMessages.push(reason);
       }
 
-      const responseContent = executedDescriptions.length > 0
-        ? executedDescriptions.map((desc) => t.executed(desc)).join('\n')
-        : rejectedMessages.length > 0
-          ? `${t.actionRejected}：${rejectedMessages.join('；')}`
-          : response.content;
+      const responseContent =
+        executedDescriptions.length > 0
+          ? executedDescriptions.map((desc) => t.executed(desc)).join('\n')
+          : rejectedMessages.length > 0
+            ? `${t.actionRejected}：${rejectedMessages.join('；')}`
+            : response.content;
 
       const assistantEntry: ChatEntry = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: responseContent,
         timestamp: Date.now(),
-        executedCommand: executedDescriptions.length > 0 ? executedDescriptions.join(', ') : undefined
+        executedCommand: executedDescriptions.length > 0 ? executedDescriptions.join(', ') : undefined,
       };
       addEntry(assistantEntry);
     } catch (error) {
@@ -214,7 +215,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         id: `error-${Date.now()}`,
         role: 'assistant',
         content: error instanceof Error ? `${t.networkError}：${error.message}` : t.networkError,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       addEntry(errorEntry);
     } finally {
@@ -232,7 +233,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         }
       }
     },
-    [isGenerating, handleSend]
+    [isGenerating, handleSend],
   );
 
   const handleClear = useCallback(() => {
@@ -275,7 +276,9 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
         >
           {textProviders.length === 0 && <option value="">{t.noProvider}</option>}
           {textProviders.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>
@@ -283,9 +286,7 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2" data-testid="ai-chat-editor-messages">
         {entries.length === 0 && (
           <div className="text-center text-xs text-slate-400 py-8">
-            {project.timeline.tracks.flatMap((tr) => tr.clips).length === 0
-              ? t.noTimeline
-              : t.placeholder}
+            {project.timeline.tracks.flatMap((tr) => tr.clips).length === 0 ? t.noTimeline : t.placeholder}
           </div>
         )}
         {entries.map((entry) => (
@@ -296,15 +297,11 @@ export function AIChatEditorPanel({ project, onClose }: { project: Project; onCl
           >
             <div
               className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                entry.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-line text-ink'
+                entry.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border border-line text-ink'
               }`}
             >
               <div className="whitespace-pre-wrap">{entry.content}</div>
-              {entry.executedCommand && (
-                <div className="mt-1 text-xs text-slate-500">{t.undoHint}</div>
-              )}
+              {entry.executedCommand && <div className="mt-1 text-xs text-slate-500">{t.undoHint}</div>}
             </div>
           </div>
         ))}

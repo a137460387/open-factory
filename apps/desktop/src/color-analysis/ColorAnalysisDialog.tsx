@@ -20,14 +20,23 @@ export function ColorAnalysisDialog({ results, jumps, busy, onAnalyze, onAlign, 
     }
   }, [referenceClipId, results]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="color-analysis-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      role="dialog"
+      aria-modal="true"
+      data-testid="color-analysis-dialog"
+    >
       <div className="grid max-h-[88vh] w-full max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-white shadow-xl">
         <div className="flex items-start justify-between gap-3 border-b border-line p-4">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <p className="mt-1 text-xs text-slate-500">{t.summary(results.length, jumps.length)}</p>
           </div>
-          <button className="rounded-md border border-line px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+          >
             {zhCN.common.close}
           </button>
         </div>
@@ -86,16 +95,32 @@ export function ColorAnalysisDialog({ results, jumps, busy, onAnalyze, onAlign, 
               <tbody>
                 {results.length === 0 ? (
                   <tr>
-                    <td className="px-2 py-4 text-center text-slate-500" colSpan={6}>{t.noResults}</td>
+                    <td className="px-2 py-4 text-center text-slate-500" colSpan={6}>
+                      {t.noResults}
+                    </td>
                   </tr>
                 ) : (
                   results.map((result) => (
-                    <tr key={result.clipId} className="border-b border-line last:border-b-0" data-testid="color-analysis-result-row">
-                      <td className="max-w-[220px] truncate px-2 py-2 font-semibold text-ink">{result.name ?? result.clipId}</td>
-                      <td className="px-2 py-2 tabular-nums text-slate-700">{formatMetric(result.metrics.averageBrightness, 1)}</td>
-                      <td className="px-2 py-2 tabular-nums text-slate-700">{Math.round(result.metrics.colorTemperatureKelvin)}K</td>
-                      <td className="px-2 py-2 tabular-nums text-slate-700">{formatMetric(result.metrics.averageSaturation, 2)}</td>
-                      <td className="px-2 py-2 tabular-nums text-slate-700">{formatMetric(result.metrics.contrast, 1)}</td>
+                    <tr
+                      key={result.clipId}
+                      className="border-b border-line last:border-b-0"
+                      data-testid="color-analysis-result-row"
+                    >
+                      <td className="max-w-[220px] truncate px-2 py-2 font-semibold text-ink">
+                        {result.name ?? result.clipId}
+                      </td>
+                      <td className="px-2 py-2 tabular-nums text-slate-700">
+                        {formatMetric(result.metrics.averageBrightness, 1)}
+                      </td>
+                      <td className="px-2 py-2 tabular-nums text-slate-700">
+                        {Math.round(result.metrics.colorTemperatureKelvin)}K
+                      </td>
+                      <td className="px-2 py-2 tabular-nums text-slate-700">
+                        {formatMetric(result.metrics.averageSaturation, 2)}
+                      </td>
+                      <td className="px-2 py-2 tabular-nums text-slate-700">
+                        {formatMetric(result.metrics.contrast, 1)}
+                      </td>
                       <td className="px-2 py-2 text-slate-700">{t.tintBias[result.metrics.tintBias]}</td>
                     </tr>
                   ))
@@ -104,7 +129,10 @@ export function ColorAnalysisDialog({ results, jumps, busy, onAnalyze, onAlign, 
             </table>
           </div>
           {jumps.length > 0 ? (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" data-testid="color-analysis-jump-list">
+            <div
+              className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+              data-testid="color-analysis-jump-list"
+            >
               <div className="mb-2 font-semibold">{t.jumpListTitle}</div>
               <div className="space-y-1">
                 {jumps.map((jump) => (
@@ -117,7 +145,11 @@ export function ColorAnalysisDialog({ results, jumps, busy, onAnalyze, onAlign, 
           ) : null}
         </div>
         <div className="flex justify-end border-t border-line p-4">
-          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+          <button
+            className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+          >
             {zhCN.common.close}
           </button>
         </div>

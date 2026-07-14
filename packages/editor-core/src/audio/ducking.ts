@@ -38,7 +38,11 @@ export function peakToDb(peak: number, floorDb = -60): number {
   return round(Math.max(floorDb, Math.min(0, 20 * Math.log10(Math.min(1, peak)))));
 }
 
-export function detectDuckingRegions(samples: LoudnessSample[], thresholdDb: number, options: DetectDuckingRegionsOptions = {}): DuckingRegion[] {
+export function detectDuckingRegions(
+  samples: LoudnessSample[],
+  thresholdDb: number,
+  options: DetectDuckingRegionsOptions = {},
+): DuckingRegion[] {
   const ordered = samples
     .filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.db))
     .map((sample) => ({ ...sample, time: Math.max(0, sample.time) }))
@@ -55,7 +59,10 @@ export function detectDuckingRegions(samples: LoudnessSample[], thresholdDb: num
     const sample = ordered[index];
     const next = ordered[index + 1];
     const start = sample.time;
-    const end = Math.max(start + 0.001, sample.time + (sample.duration ?? (next ? Math.max(0.001, next.time - sample.time) : fallbackDuration)));
+    const end = Math.max(
+      start + 0.001,
+      sample.time + (sample.duration ?? (next ? Math.max(0.001, next.time - sample.time) : fallbackDuration)),
+    );
     if (sample.db >= thresholdDb) {
       active ??= { start, end, peakDb: sample.db };
       active.end = Math.max(active.end, end);
@@ -77,7 +84,11 @@ export function detectDuckingRegions(samples: LoudnessSample[], thresholdDb: num
     .filter((region) => region.end - region.start >= minRegionDuration);
 }
 
-export function buildDuckingKeyframesForClip(clip: Clip, regions: DuckingRegion[], options: DuckingKeyframeOptions): Keyframe<number>[] {
+export function buildDuckingKeyframesForClip(
+  clip: Clip,
+  regions: DuckingRegion[],
+  options: DuckingKeyframeOptions,
+): Keyframe<number>[] {
   if (!('volume' in clip)) {
     return [];
   }
@@ -126,11 +137,16 @@ export function buildDuckingKeyframesForClip(clip: Clip, regions: DuckingRegion[
       id: `${options.idPrefix ?? createId('duck')}-${clip.id}-${index}`,
       time: point.time,
       value: round(point.value),
-      easing: point.easing
+      easing: point.easing,
     }));
 }
 
-export function buildDuckingKeyframePlan(timeline: Timeline, backgroundTrackId: string, regions: DuckingRegion[], options: DuckingKeyframeOptions): DuckingKeyframePlan[] {
+export function buildDuckingKeyframePlan(
+  timeline: Timeline,
+  backgroundTrackId: string,
+  regions: DuckingRegion[],
+  options: DuckingKeyframeOptions,
+): DuckingKeyframePlan[] {
   const track = timeline.tracks.find((item) => item.id === backgroundTrackId);
   if (!track) {
     throw new Error(`Track ${backgroundTrackId} not found`);
@@ -171,7 +187,7 @@ function toRoundedRegion(region: DuckingRegion): DuckingRegion {
   return {
     start: round(region.start),
     end: round(Math.max(region.start, region.end)),
-    peakDb: round(region.peakDb)
+    peakDb: round(region.peakDb),
   };
 }
 

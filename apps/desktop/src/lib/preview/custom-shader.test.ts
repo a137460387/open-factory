@@ -12,7 +12,7 @@ describe('custom shader validation', () => {
       compileShader: () => undefined,
       getShaderParameter: () => false,
       getShaderInfoLog: () => 'ERROR: bad fragment shader',
-      deleteShader: () => undefined
+      deleteShader: () => undefined,
     } as unknown as WebGLRenderingContext;
 
     const result = validateCustomShaderSource(gl, 'gl_FragColor = vec4(1.0)');
@@ -34,9 +34,11 @@ describe('custom shader validation', () => {
       compileShader: () => undefined,
       getShaderParameter: () => true,
       getShaderInfoLog: () => null,
-      deleteShader: () => undefined
+      deleteShader: () => undefined,
     } as unknown as WebGLRenderingContext;
 
-    expect(validateCustomShaderSource(gl, 'gl_FragColor = texture2D(u_texture, v_texCoord);')).toMatchObject({ ok: true });
+    expect(validateCustomShaderSource(gl, 'gl_FragColor = texture2D(u_texture, v_texCoord);')).toMatchObject({
+      ok: true,
+    });
   });
 });

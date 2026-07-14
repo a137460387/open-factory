@@ -16,15 +16,18 @@ export function isStoryboardClip(clip: Clip): clip is StoryboardClip {
 export function getStoryboardCards(timeline: Timeline): StoryboardCard[] {
   return timeline.tracks
     .flatMap((track, trackIndex) =>
-      track.clips
-        .filter(isStoryboardClip)
-        .map((clip) => ({
-          clip,
-          track,
-          trackIndex
-        }))
+      track.clips.filter(isStoryboardClip).map((clip) => ({
+        clip,
+        track,
+        trackIndex,
+      })),
     )
-    .sort((left, right) => left.clip.start - right.clip.start || left.trackIndex - right.trackIndex || left.clip.id.localeCompare(right.clip.id));
+    .sort(
+      (left, right) =>
+        left.clip.start - right.clip.start ||
+        left.trackIndex - right.trackIndex ||
+        left.clip.id.localeCompare(right.clip.id),
+    );
 }
 
 export function reorderStoryboardClipIds(currentIds: string[], draggedClipId: string, targetClipId: string): string[] {
@@ -47,7 +50,9 @@ export function buildStoryboardReorderStarts(timeline: Timeline, orderedClipIds:
   const starts: Record<string, number> = {};
 
   for (const track of timeline.tracks) {
-    const currentCards = track.clips.filter(isStoryboardClip).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    const currentCards = track.clips
+      .filter(isStoryboardClip)
+      .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
     if (currentCards.length < 2) {
       continue;
     }

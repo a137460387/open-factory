@@ -20,7 +20,16 @@ export interface SubtitleDataOverlap {
 
 type CsvRow = string[];
 
-const STYLE_KEYS = ['fontSize', 'color', 'backgroundColor', 'backgroundOpacity', 'fontFamily', 'bold', 'italic', 'yOffset'] as const;
+const STYLE_KEYS = [
+  'fontSize',
+  'color',
+  'backgroundColor',
+  'backgroundOpacity',
+  'fontFamily',
+  'bold',
+  'italic',
+  'yOffset',
+] as const;
 
 export function parseSubtitleDataImport(contents: string, format: SubtitleDataImportFormat): SubtitleDataCue[] {
   return format === 'json' ? parseSubtitleDataJson(contents) : parseSubtitleDataCsv(contents);
@@ -87,7 +96,7 @@ export function detectSubtitleDataOverlaps(cues: SubtitleDataCue[]): SubtitleDat
         firstIndex: previous.index,
         secondIndex: current.index,
         start: round(current.cue.start),
-        end: round(Math.min(previous.cue.end, current.cue.end))
+        end: round(Math.min(previous.cue.end, current.cue.end)),
       });
     }
   }
@@ -114,11 +123,14 @@ function csvRowToCue(row: CsvRow, rowNumber: number): SubtitleDataCue {
   if (row.length < 3) {
     throw new Error(`CSV row ${rowNumber} must contain start_time,end_time,text`);
   }
-  return normalizeCue({
-    start: row[0],
-    end: row[1],
-    text: row.slice(2).join(',')
-  }, `CSV row ${rowNumber}`);
+  return normalizeCue(
+    {
+      start: row[0],
+      end: row[1],
+      text: row.slice(2).join(','),
+    },
+    `CSV row ${rowNumber}`,
+  );
 }
 
 function jsonEntryToCue(entry: unknown, rowNumber: number): SubtitleDataCue {
@@ -131,13 +143,16 @@ function jsonEntryToCue(entry: unknown, rowNumber: number): SubtitleDataCue {
       start: input.start ?? input.start_time,
       end: input.end ?? input.end_time,
       text: input.text,
-      style: normalizeSubtitleStylePatch(input.style)
+      style: normalizeSubtitleStylePatch(input.style),
     },
-    `JSON subtitle ${rowNumber}`
+    `JSON subtitle ${rowNumber}`,
   );
 }
 
-function normalizeCue(input: { start: unknown; end: unknown; text: unknown; style?: Partial<SubtitleStyle> }, label: string): SubtitleDataCue {
+function normalizeCue(
+  input: { start: unknown; end: unknown; text: unknown; style?: Partial<SubtitleStyle> },
+  label: string,
+): SubtitleDataCue {
   const start = parseSubtitleDataTimecode(input.start);
   const end = parseSubtitleDataTimecode(input.end);
   if (end <= start) {
@@ -150,7 +165,7 @@ function normalizeCue(input: { start: unknown; end: unknown; text: unknown; styl
     start,
     end,
     text: input.text.trim(),
-    style: input.style
+    style: input.style,
   };
 }
 

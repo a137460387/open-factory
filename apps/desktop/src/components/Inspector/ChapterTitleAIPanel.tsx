@@ -7,7 +7,7 @@ import {
   formatChaptersYouTube,
   formatChaptersBilibili,
   isProviderConfigured,
-  BatchAddMarkersCommand
+  BatchAddMarkersCommand,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -22,7 +22,7 @@ type ChapterPhase = 'idle' | 'processing' | 'preview' | 'applying';
 export function ChapterTitleAIPanel({
   allSubtitleClips,
   totalDuration,
-  selectedClipLocked
+  selectedClipLocked,
 }: {
   allSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
   totalDuration: number;
@@ -59,7 +59,10 @@ export function ChapterTitleAIPanel({
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const allChapters: AIChapterResult[] = [];
 
@@ -78,16 +81,17 @@ export function ChapterTitleAIPanel({
         const messages = [
           {
             role: 'system' as const,
-            content: '你是一个视频章节标题助手。用户会给你一段视频的字幕文本和时间范围。请为这段内容生成一个简洁的章节标题（不超过15个字）。返回JSON格式：[{"time": 秒数, "title": "标题"}]。只返回JSON数组，不要其他内容。'
+            content:
+              '你是一个视频章节标题助手。用户会给你一段视频的字幕文本和时间范围。请为这段内容生成一个简洁的章节标题（不超过15个字）。返回JSON格式：[{"time": 秒数, "title": "标题"}]。只返回JSON数组，不要其他内容。',
           },
           {
             role: 'user' as const,
             content: JSON.stringify({
               startTime: seg.start,
               endTime: seg.end,
-              text: segmentText
-            })
-          }
+              text: segmentText,
+            }),
+          },
         ];
 
         const response = await callAiApi(
@@ -98,12 +102,15 @@ export function ChapterTitleAIPanel({
             messages,
             customHeaders: selectedProvider.customHeaders,
             maxTokens: 1024,
-            temperature: 0.3
+            temperature: 0.3,
           },
-          apiKey
+          apiKey,
         );
 
-        if (abortRef.current) { setPhase('idle'); return; }
+        if (abortRef.current) {
+          setPhase('idle');
+          return;
+        }
 
         const parsed = parseChapterResponse(JSON.parse(response.content));
         allChapters.push(...parsed);
@@ -123,7 +130,7 @@ export function ChapterTitleAIPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('idle');
     }
@@ -145,19 +152,19 @@ export function ChapterTitleAIPanel({
       commandManager.execute(
         new BatchAddMarkersCommand(
           timelineAccessor,
-          chapters.map((ch) => ({ time: ch.time, label: ch.title }))
-        )
+          chapters.map((ch) => ({ time: ch.time, label: ch.title })),
+        ),
       );
       showToast({
         kind: 'success',
         title: t.appliedTitle,
-        message: t.appliedMessage(chapters.length)
+        message: t.appliedMessage(chapters.length),
       });
     } catch (error) {
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
     }
     setPhase('idle');
@@ -176,18 +183,30 @@ export function ChapterTitleAIPanel({
 
   if (!hasSubtitles) {
     return (
-      <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="chapter-title-ai-section">
-        <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+      <details
+        className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+        data-testid="chapter-title-ai-section"
+      >
+        <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+          {t.title}
+        </summary>
         <div className="space-y-3 border-t border-line p-2">
-          <div className="text-xs text-[var(--color-text-muted)]" data-testid="chapter-title-ai-no-subtitle">{t.noSubtitle}</div>
+          <div className="text-xs text-[var(--color-text-muted)]" data-testid="chapter-title-ai-no-subtitle">
+            {t.noSubtitle}
+          </div>
         </div>
       </details>
     );
   }
 
   return (
-    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="chapter-title-ai-section">
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+    <details
+      className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      data-testid="chapter-title-ai-section"
+    >
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+        {t.title}
+      </summary>
       <div className="space-y-3 border-t border-line p-2">
         {phase === 'idle' && (
           <>
@@ -202,7 +221,9 @@ export function ChapterTitleAIPanel({
               >
                 {enabledProviders.length === 0 && <option value="">{t.noProvider}</option>}
                 {enabledProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>

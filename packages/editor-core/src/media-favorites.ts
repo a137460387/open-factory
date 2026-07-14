@@ -1,4 +1,3 @@
-
 export const FAVORITES_MAX_RECENT = 30;
 export const FAVORITES_FILE = 'favorites.json';
 
@@ -109,8 +108,12 @@ export function normalizeFavoritesData(input: unknown): MediaFavoritesData {
   if (!input || typeof input !== 'object') return createDefaultFavoritesData();
   const data = input as Partial<MediaFavoritesData>;
   return {
-    favoriteIds: Array.isArray(data.favoriteIds) ? data.favoriteIds.filter((id): id is string => typeof id === 'string') : [],
-    recentIds: Array.isArray(data.recentIds) ? data.recentIds.filter((id): id is string => typeof id === 'string').slice(0, FAVORITES_MAX_RECENT) : [],
+    favoriteIds: Array.isArray(data.favoriteIds)
+      ? data.favoriteIds.filter((id): id is string => typeof id === 'string')
+      : [],
+    recentIds: Array.isArray(data.recentIds)
+      ? data.recentIds.filter((id): id is string => typeof id === 'string').slice(0, FAVORITES_MAX_RECENT)
+      : [],
     sharedPath: typeof data.sharedPath === 'string' ? data.sharedPath : undefined,
   };
 }

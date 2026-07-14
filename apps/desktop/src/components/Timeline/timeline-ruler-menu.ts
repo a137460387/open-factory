@@ -11,9 +11,13 @@ export interface RulerContextMenuItem {
 export function buildRulerContextMenuItems(timelineLabels = zhCN.timeline): RulerContextMenuItem[] {
   return [
     { action: 'add-marker', label: timelineLabels.rulerAddMarkerHere, testId: 'ruler-context-add-marker' },
-    { action: 'add-protected-range', label: timelineLabels.rulerAddProtectedRange, testId: 'ruler-context-add-protected-range' },
+    {
+      action: 'add-protected-range',
+      label: timelineLabels.rulerAddProtectedRange,
+      testId: 'ruler-context-add-protected-range',
+    },
     { action: 'set-in', label: timelineLabels.rulerSetInPoint, testId: 'ruler-context-set-in' },
     { action: 'set-out', label: timelineLabels.rulerSetOutPoint, testId: 'ruler-context-set-out' },
-    { action: 'jump-timecode', label: timelineLabels.rulerJumpToTimecode, testId: 'ruler-context-jump-timecode' }
+    { action: 'jump-timecode', label: timelineLabels.rulerJumpToTimecode, testId: 'ruler-context-jump-timecode' },
   ];
 }

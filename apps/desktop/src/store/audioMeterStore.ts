@@ -15,7 +15,7 @@ export interface AudioMeterState {
     trackLevels: Record<string, AudioMeterLevel>,
     masterLevel: AudioMeterLevel,
     trackFrequencyBands?: Record<string, number[]>,
-    trackAnalysisFrames?: Record<string, ChannelAnalysisFrame>
+    trackAnalysisFrames?: Record<string, ChannelAnalysisFrame>,
   ) => void;
   resetLevels: () => void;
 }
@@ -28,8 +28,9 @@ export const useAudioMeterStore = create<AudioMeterState>((set) => ({
   trackFrequencyBands: {},
   trackAnalysisFrames: {},
   masterLevel: SILENCE,
-  setLevels: (trackLevels, masterLevel, trackFrequencyBands = {}, trackAnalysisFrames = {}) => set({ trackLevels, masterLevel, trackFrequencyBands, trackAnalysisFrames }),
-  resetLevels: () => set({ trackLevels: {}, trackFrequencyBands: {}, trackAnalysisFrames: {}, masterLevel: SILENCE })
+  setLevels: (trackLevels, masterLevel, trackFrequencyBands = {}, trackAnalysisFrames = {}) =>
+    set({ trackLevels, masterLevel, trackFrequencyBands, trackAnalysisFrames }),
+  resetLevels: () => set({ trackLevels: {}, trackFrequencyBands: {}, trackAnalysisFrames: {}, masterLevel: SILENCE }),
 }));
 
 export function getSilentMeterLevel(): AudioMeterLevel {

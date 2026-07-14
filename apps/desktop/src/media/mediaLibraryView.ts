@@ -16,19 +16,29 @@ export const DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS: MediaLibraryViewSettings = {
   mode: 'grid',
   gridSize: 'medium',
   sortKey: 'importedAt',
-  sortDirection: 'asc'
+  sortDirection: 'asc',
 };
 
-export function normalizeMediaLibraryViewSettings(settings: Partial<MediaLibraryViewSettings> | undefined | null): MediaLibraryViewSettings {
+export function normalizeMediaLibraryViewSettings(
+  settings: Partial<MediaLibraryViewSettings> | undefined | null,
+): MediaLibraryViewSettings {
   return {
     mode: isMediaLibraryViewMode(settings?.mode) ? settings.mode : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.mode,
-    gridSize: isMediaLibraryGridSize(settings?.gridSize) ? settings.gridSize : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.gridSize,
+    gridSize: isMediaLibraryGridSize(settings?.gridSize)
+      ? settings.gridSize
+      : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.gridSize,
     sortKey: isMediaLibrarySortKey(settings?.sortKey) ? settings.sortKey : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.sortKey,
-    sortDirection: settings?.sortDirection === 'asc' || settings?.sortDirection === 'desc' ? settings.sortDirection : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.sortDirection
+    sortDirection:
+      settings?.sortDirection === 'asc' || settings?.sortDirection === 'desc'
+        ? settings.sortDirection
+        : DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS.sortDirection,
   };
 }
 
-export function sortMediaLibraryAssets(media: MediaAsset[], settings: Pick<MediaLibraryViewSettings, 'sortKey' | 'sortDirection'>): MediaAsset[] {
+export function sortMediaLibraryAssets(
+  media: MediaAsset[],
+  settings: Pick<MediaLibraryViewSettings, 'sortKey' | 'sortDirection'>,
+): MediaAsset[] {
   const direction = settings.sortDirection === 'asc' ? 1 : -1;
   return media
     .map((asset, index) => ({ asset, index }))
@@ -57,7 +67,8 @@ function compareBySortKey(left: MediaAsset, right: MediaAsset, sortKey: MediaLib
   }
   if (sortKey === 'frameRate') return compareNumber(left.frameRate, right.frameRate);
   if (sortKey === 'resolution') return compareNumber(getPixelCount(left), getPixelCount(right));
-  if (sortKey === 'codec') return compareText(left.videoCodec ?? left.audioCodec ?? '', right.videoCodec ?? right.audioCodec ?? '');
+  if (sortKey === 'codec')
+    return compareText(left.videoCodec ?? left.audioCodec ?? '', right.videoCodec ?? right.audioCodec ?? '');
   return compareNumber(parseImportedAt(left.importedAt), parseImportedAt(right.importedAt));
 }
 
@@ -88,7 +99,15 @@ function isMediaLibraryGridSize(value: unknown): value is MediaLibraryGridSize {
 }
 
 function isMediaLibrarySortKey(value: unknown): value is MediaLibrarySortKey {
-  return value === 'name' || value === 'duration' || value === 'size' || value === 'importedAt' || value === 'frameRate' || value === 'resolution' || value === 'codec';
+  return (
+    value === 'name' ||
+    value === 'duration' ||
+    value === 'size' ||
+    value === 'importedAt' ||
+    value === 'frameRate' ||
+    value === 'resolution' ||
+    value === 'codec'
+  );
 }
 
 function getPixelCount(asset: MediaAsset): number | undefined {

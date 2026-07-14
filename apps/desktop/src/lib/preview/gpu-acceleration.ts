@@ -4,7 +4,7 @@ import {
   type ProjectColorPipeline,
   type Sequence,
   type Timeline,
-  type TimelineRenderFrameRequest
+  type TimelineRenderFrameRequest,
 } from '@open-factory/editor-core';
 
 export const GPU_TEXTURE_POOL_MAX_BYTES = 512 * 1024 * 1024;
@@ -88,7 +88,7 @@ export class GpuTexturePool<TTexture> {
       key,
       texture: input.texture,
       bytes,
-      lastUsed: ++this.clock
+      lastUsed: ++this.clock,
     });
     this.usedBytes += bytes;
     this.pruneToBudget();
@@ -120,7 +120,7 @@ export class GpuTexturePool<TTexture> {
       bytes: this.usedBytes,
       count: this.entries.size,
       maxBytes: this.maxBytes,
-      keys: Array.from(this.entries.keys())
+      keys: Array.from(this.entries.keys()),
     };
   }
 
@@ -166,7 +166,7 @@ export function buildGpuPrefetchFrameRequests(input: GpuPrefetchFrameInput): Tim
     requests.push({
       frame,
       time: round(frame / fps),
-      key: buildTimelineRenderFrameKey({ ...input, fps, frame })
+      key: buildTimelineRenderFrameKey({ ...input, fps, frame }),
     });
   }
   return requests;
@@ -190,18 +190,24 @@ export interface GpuPreviewFeatureProbe {
 
 export function resolveGpuPreviewCapabilities(features: GpuPreviewFeatureProbe): GpuPreviewCapabilities {
   const offscreenCanvasWorkerSupported =
-    features.hasOffscreenCanvas && features.hasCanvasTransfer && features.hasWorker && features.hasCreateImageBitmap && features.hasWebGl;
+    features.hasOffscreenCanvas &&
+    features.hasCanvasTransfer &&
+    features.hasWorker &&
+    features.hasCreateImageBitmap &&
+    features.hasWebGl;
   return {
     offscreenCanvasWorkerSupported,
     texturePreloadSupported: features.hasCreateImageBitmap && features.hasWebGl,
     timerQuerySupported: features.hasTimerQuery === true,
-    fallbackReason: offscreenCanvasWorkerSupported ? undefined : 'offscreen-canvas-worker-unavailable'
+    fallbackReason: offscreenCanvasWorkerSupported ? undefined : 'offscreen-canvas-worker-unavailable',
   };
 }
 
 export function detectGpuPreviewCapabilities(canvas?: HTMLCanvasElement): GpuPreviewCapabilities {
   const canvasPrototype = typeof HTMLCanvasElement === 'undefined' ? undefined : HTMLCanvasElement.prototype;
-  const hasCanvasTransfer = typeof canvas?.transferControlToOffscreen === 'function' || typeof canvasPrototype?.transferControlToOffscreen === 'function';
+  const hasCanvasTransfer =
+    typeof canvas?.transferControlToOffscreen === 'function' ||
+    typeof canvasPrototype?.transferControlToOffscreen === 'function';
   const hasOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
   const hasWorker = typeof Worker !== 'undefined';
   const hasCreateImageBitmap = typeof createImageBitmap === 'function';
@@ -223,7 +229,7 @@ export function detectGpuPreviewCapabilities(canvas?: HTMLCanvasElement): GpuPre
     hasWorker,
     hasCreateImageBitmap,
     hasWebGl,
-    hasTimerQuery
+    hasTimerQuery,
   });
 }
 
@@ -247,11 +253,13 @@ export const DEFAULT_GPU_PREVIEW_METRICS: GpuPreviewMetrics = {
   instancedDrawCalls: 0,
   offscreenWorkerSupported: false,
   offscreenWorkerActive: false,
-  timerQuerySupported: false
+  timerQuerySupported: false,
 };
 
 export function estimateTextureBytes(width: number, height: number, bytesPerPixel = 4): number {
-  return normalizeTextureBytes(Math.max(1, Math.round(width)) * Math.max(1, Math.round(height)) * Math.max(1, Math.round(bytesPerPixel)));
+  return normalizeTextureBytes(
+    Math.max(1, Math.round(width)) * Math.max(1, Math.round(height)) * Math.max(1, Math.round(bytesPerPixel)),
+  );
 }
 
 export function calculateInstancedDrawCallCount(clipCount: number, instancingSupported: boolean): number {

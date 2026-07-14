@@ -45,7 +45,7 @@ const FILTER_PATTERNS = [
   /\brotate\b/g,
   /\bzoompan\b/g,
   /\bcrop\b/g,
-  /\bpad\b/g
+  /\bpad\b/g,
 ];
 
 export function estimateExportResourceNeeds(plan: FfmpegExportPlan): ExportResourceEstimate {
@@ -69,14 +69,29 @@ export function estimateExportResourceNeeds(plan: FfmpegExportPlan): ExportResou
       total.effectCount += estimate.effectCount;
       return total;
     },
-    { memoryMb: 0, cpuCost: 0, effectCount: 0 }
+    { memoryMb: 0, cpuCost: 0, effectCount: 0 },
   );
   const minterpolateCost = /\bminterpolate\b/.test(filterText) ? 850 : 0;
   const heavyTemporalCost = /\b(minterpolate|tblend|mpdecimate)\b/.test(filterText) ? 0.75 : 0;
-  const memoryMb = Math.round(320 + resolutionFactor * 360 + inputs.length * 96 + effectCount * 150 + textArtifacts.length * 32 + minterpolateCost + nestedEstimate.memoryMb);
-  const cpuCost = roundTwo(1 + resolutionFactor * 0.8 + (fps / 30 - 1) * 0.3 + effectCount * 0.22 + heavyTemporalCost + nestedEstimate.cpuCost);
+  const memoryMb = Math.round(
+    320 +
+      resolutionFactor * 360 +
+      inputs.length * 96 +
+      effectCount * 150 +
+      textArtifacts.length * 32 +
+      minterpolateCost +
+      nestedEstimate.memoryMb,
+  );
+  const cpuCost = roundTwo(
+    1 + resolutionFactor * 0.8 + (fps / 30 - 1) * 0.3 + effectCount * 0.22 + heavyTemporalCost + nestedEstimate.cpuCost,
+  );
   const diskMb = Math.round((duration * width * height * fps) / 90_000_000);
-  const memoryClass = memoryMb >= HEAVY_MEMORY_MB || effectCount >= 10 || minterpolateCost > 0 ? 'heavy' : memoryMb >= BALANCED_MEMORY_MB || effectCount >= 5 ? 'balanced' : 'light';
+  const memoryClass =
+    memoryMb >= HEAVY_MEMORY_MB || effectCount >= 10 || minterpolateCost > 0
+      ? 'heavy'
+      : memoryMb >= BALANCED_MEMORY_MB || effectCount >= 5
+        ? 'balanced'
+        : 'light';
   const reasons: string[] = [];
   if (effectCount > 0) {
     reasons.push(`effects:${effectCount}`);
@@ -97,7 +112,7 @@ export function estimateExportResourceNeeds(plan: FfmpegExportPlan): ExportResou
     effectCount,
     memoryClass,
     parallelEligible: memoryClass !== 'heavy',
-    reasons
+    reasons,
   };
 }
 
@@ -108,14 +123,22 @@ export function isExportPlanParallelEligible(plan: FfmpegExportPlan): boolean {
 export function canRunExportTasksInParallel(
   left: ExportTask | FfmpegExportPlan,
   right: ExportTask | FfmpegExportPlan,
-  memoryLimitMb = DEFAULT_PARALLEL_MEMORY_LIMIT_MB
+  memoryLimitMb = DEFAULT_PARALLEL_MEMORY_LIMIT_MB,
 ): boolean {
   const leftEstimate = estimateExportResourceNeeds(getPlan(left));
   const rightEstimate = estimateExportResourceNeeds(getPlan(right));
-  return leftEstimate.parallelEligible && rightEstimate.parallelEligible && leftEstimate.memoryMb + rightEstimate.memoryMb <= memoryLimitMb;
+  return (
+    leftEstimate.parallelEligible &&
+    rightEstimate.parallelEligible &&
+    leftEstimate.memoryMb + rightEstimate.memoryMb <= memoryLimitMb
+  );
 }
 
-export function startResourceAwareExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now = new Date().toISOString()): ExportTask[] {
+export function startResourceAwareExportTaskSlots(
+  tasks: ExportTask[],
+  maxConcurrent = 2,
+  now = new Date().toISOString(),
+): ExportTask[] {
   const limit = Math.min(4, Math.max(1, Math.round(Number.isFinite(maxConcurrent) ? maxConcurrent : 2)));
   const running = tasks.filter((task) => task.status === 'running');
   let availableSlots = Math.max(0, limit - running.length);
@@ -149,8 +172,13 @@ export function startResourceAwareExportTaskSlots(tasks: ExportTask[], maxConcur
   return tasks.map((task) => (startIds.has(task.id) ? { ...task, status: 'running', startedAt: now } : task));
 }
 
-export function detectSharedDecodeCacheHits(tasks: Array<{ id: string; plan: FfmpegExportPlan }>): SharedDecodeCacheHit[] {
-  const groups = new Map<string, { taskIds: string[]; inputPaths: string[]; startSeconds: number; durationSeconds: number }>();
+export function detectSharedDecodeCacheHits(
+  tasks: Array<{ id: string; plan: FfmpegExportPlan }>,
+): SharedDecodeCacheHit[] {
+  const groups = new Map<
+    string,
+    { taskIds: string[]; inputPaths: string[]; startSeconds: number; durationSeconds: number }
+  >();
   for (const task of tasks) {
     const key = buildSharedDecodeCacheKey(task.plan);
     if (!key) {
@@ -162,7 +190,12 @@ export function detectSharedDecodeCacheHits(tasks: Array<{ id: string; plan: Ffm
     if (group) {
       group.taskIds.push(task.id);
     } else {
-      groups.set(key, { taskIds: [task.id], inputPaths, startSeconds: range.startSeconds, durationSeconds: range.durationSeconds });
+      groups.set(key, {
+        taskIds: [task.id],
+        inputPaths,
+        startSeconds: range.startSeconds,
+        durationSeconds: range.durationSeconds,
+      });
     }
   }
   return Array.from(groups.entries())
@@ -180,11 +213,18 @@ export function buildSharedDecodeCacheKey(plan: FfmpegExportPlan): string | unde
 }
 
 export function calculateLowPowerThreadCount(hardwareConcurrency: number | undefined): number {
-  const cores = Number.isFinite(hardwareConcurrency) && hardwareConcurrency && hardwareConcurrency > 0 ? Math.floor(hardwareConcurrency) : 2;
+  const cores =
+    Number.isFinite(hardwareConcurrency) && hardwareConcurrency && hardwareConcurrency > 0
+      ? Math.floor(hardwareConcurrency)
+      : 2;
   return Math.max(1, Math.floor(cores / 2));
 }
 
-export function applyLowPowerThreads(plan: FfmpegExportPlan, enabled: boolean, hardwareConcurrency?: number): FfmpegExportPlan {
+export function applyLowPowerThreads(
+  plan: FfmpegExportPlan,
+  enabled: boolean,
+  hardwareConcurrency?: number,
+): FfmpegExportPlan {
   if (!enabled) {
     return plan;
   }
@@ -194,7 +234,10 @@ export function applyLowPowerThreads(plan: FfmpegExportPlan, enabled: boolean, h
     outputArgs: insertThreadArgs(plan.outputArgs ?? [], threadCount),
     fullArgs: insertThreadArgs(plan.fullArgs ?? [], threadCount),
     passes: plan.passes?.map((pass) => ({ ...pass, fullArgs: insertThreadArgs(pass.fullArgs, threadCount) })),
-    nestedPlans: (plan.nestedPlans ?? []).map((nested) => ({ ...nested, plan: applyLowPowerThreads(nested.plan, enabled, hardwareConcurrency) }))
+    nestedPlans: (plan.nestedPlans ?? []).map((nested) => ({
+      ...nested,
+      plan: applyLowPowerThreads(nested.plan, enabled, hardwareConcurrency),
+    })),
   };
 }
 
@@ -207,15 +250,19 @@ function getPlan(input: ExportTask | FfmpegExportPlan): FfmpegExportPlan {
 }
 
 function normalizeInputPaths(plan: FfmpegExportPlan): string[] {
-  return (plan.inputs ?? []).map((input) => input.path.trim().replace(/\\/g, '/').toLowerCase()).filter(Boolean).sort();
+  return (plan.inputs ?? [])
+    .map((input) => input.path.trim().replace(/\\/g, '/').toLowerCase())
+    .filter(Boolean)
+    .sort();
 }
 
 function getPlanRange(plan: FfmpegExportPlan): { startSeconds: number; durationSeconds: number } {
   const start = findNumericArg(plan.outputArgs ?? [], '-ss') ?? findNumericArg(plan.fullArgs ?? [], '-ss') ?? 0;
-  const duration = findNumericArg(plan.outputArgs ?? [], '-t') ?? findNumericArg(plan.fullArgs ?? [], '-t') ?? plan.duration;
+  const duration =
+    findNumericArg(plan.outputArgs ?? [], '-t') ?? findNumericArg(plan.fullArgs ?? [], '-t') ?? plan.duration;
   return {
     startSeconds: roundThree(Math.max(0, start)),
-    durationSeconds: roundThree(Math.max(0, duration))
+    durationSeconds: roundThree(Math.max(0, duration)),
   };
 }
 
@@ -260,7 +307,7 @@ function roundThree(value: number): number {
 
 function comparePendingExportTasksForScheduling(
   left: { task: ExportTask; index: number },
-  right: { task: ExportTask; index: number }
+  right: { task: ExportTask; index: number },
 ): number {
   const priorityDelta = priorityWeight(right.task.priority) - priorityWeight(left.task.priority);
   if (priorityDelta !== 0) {

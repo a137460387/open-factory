@@ -31,12 +31,15 @@ export function serializeExportQueueState(tasks: ExportTask[], savedAt = new Dat
   const state: ExportQueueStateFile = {
     version: EXPORT_QUEUE_STATE_VERSION,
     savedAt,
-    tasks: tasks.filter(isStoredExportQueueTask).map(sanitizeStoredTask)
+    tasks: tasks.filter(isStoredExportQueueTask).map(sanitizeStoredTask),
   };
   return JSON.stringify(state, null, 2);
 }
 
-export function parseExportQueueState(contents: string, interruptedMessage: string): ExportQueueRecoveryCandidate | undefined {
+export function parseExportQueueState(
+  contents: string,
+  interruptedMessage: string,
+): ExportQueueRecoveryCandidate | undefined {
   try {
     const parsed = JSON.parse(contents) as Partial<ExportQueueStateFile>;
     if (parsed.version !== EXPORT_QUEUE_STATE_VERSION || !Array.isArray(parsed.tasks)) {
@@ -47,7 +50,7 @@ export function parseExportQueueState(contents: string, interruptedMessage: stri
       ? {
           tasks,
           pendingCount: tasks.filter((task) => task.status === 'pending').length,
-          interruptedCount: tasks.filter((task) => task.status === 'interrupted').length
+          interruptedCount: tasks.filter((task) => task.status === 'interrupted').length,
         }
       : undefined;
   } catch {
@@ -65,7 +68,7 @@ export function shouldPersistExportQueueState(previous: ExportTask[], next: Expo
 
 export async function loadExportQueueRecoveryCandidate(
   interruptedMessage: string,
-  storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile }
+  storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile },
 ): Promise<ExportQueueRecoveryCandidate | undefined> {
   try {
     const path = getExportQueueStatePath(await storage.getAppDataDir());
@@ -75,12 +78,17 @@ export async function loadExportQueueRecoveryCandidate(
   }
 }
 
-export async function persistExportQueueState(tasks: ExportTask[], storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile }): Promise<void> {
+export async function persistExportQueueState(
+  tasks: ExportTask[],
+  storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile },
+): Promise<void> {
   const path = getExportQueueStatePath(await storage.getAppDataDir());
   await storage.writeFile(path, serializeExportQueueState(tasks));
 }
 
-export function installExportQueuePersistence(storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile }): () => void {
+export function installExportQueuePersistence(
+  storage: ExportQueueStateStorage = { getAppDataDir, readFile, writeFile },
+): () => void {
   let previousSignature = buildPersistenceSignature(useExportQueueStore.getState().tasks);
   return useExportQueueStore.subscribe((state) => {
     const nextTasks = state.tasks;
@@ -100,10 +108,28 @@ function normalizeRecoveredTask(task: unknown, interruptedMessage: string): Expo
     return [];
   }
   if (task.status === 'pending') {
-    return [sanitizeStoredTask({ ...task, progress: 0, startedAt: undefined, finishedAt: undefined, error: undefined, report: undefined, segments: undefined })];
+    return [
+      sanitizeStoredTask({
+        ...task,
+        progress: 0,
+        startedAt: undefined,
+        finishedAt: undefined,
+        error: undefined,
+        report: undefined,
+        segments: undefined,
+      }),
+    ];
   }
   if (task.status === 'interrupted') {
-    return [sanitizeStoredTask({ ...task, progress: Math.min(1, Math.max(0, task.progress)), finishedAt: undefined, report: undefined, segments: undefined })];
+    return [
+      sanitizeStoredTask({
+        ...task,
+        progress: Math.min(1, Math.max(0, task.progress)),
+        finishedAt: undefined,
+        report: undefined,
+        segments: undefined,
+      }),
+    ];
   }
   if (task.status === 'running') {
     return [
@@ -113,8 +139,8 @@ function normalizeRecoveredTask(task: unknown, interruptedMessage: string): Expo
         error: interruptedMessage,
         finishedAt: undefined,
         report: undefined,
-        segments: undefined
-      })
+        segments: undefined,
+      }),
     ];
   }
   return [];
@@ -130,7 +156,7 @@ function sanitizeStoredTask(task: ExportTask): ExportTask {
     progress: Math.min(1, Math.max(0, task.progress)),
     report: undefined,
     segments: task.status === 'running' || task.status === 'interrupted' ? undefined : task.segments,
-    finishedAt: undefined
+    finishedAt: undefined,
   };
 }
 
@@ -168,7 +194,7 @@ function buildPersistenceSignature(tasks: ExportTask[]): string {
       error: task.error,
       renderFarm: task.renderFarm,
       progressive: task.progressive,
-      versionedBatch: task.versionedBatch
-    }))
+      versionedBatch: task.versionedBatch,
+    })),
   );
 }

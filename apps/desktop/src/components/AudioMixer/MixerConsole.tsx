@@ -9,12 +9,7 @@ interface MixerConsoleProps {
   onMuteToggle: (trackId: string) => void;
 }
 
-export const MixerConsole: React.FC<MixerConsoleProps> = ({
-  state,
-  onChannelChange,
-  onSoloToggle,
-  onMuteToggle,
-}) => {
+export const MixerConsole: React.FC<MixerConsoleProps> = ({ state, onChannelChange, onSoloToggle, onMuteToggle }) => {
   return (
     <div className="flex flex-col h-full bg-gray-900" data-testid="mixer-console">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
@@ -23,7 +18,7 @@ export const MixerConsole: React.FC<MixerConsoleProps> = ({
 
       <div className="flex-1 flex overflow-x-auto p-2 gap-1">
         {/* 通道条 */}
-        {state.channels.map(channel => (
+        {state.channels.map((channel) => (
           <ChannelStrip
             key={channel.trackId}
             channel={channel}
@@ -34,13 +29,13 @@ export const MixerConsole: React.FC<MixerConsoleProps> = ({
         ))}
 
         {/* 总线条 */}
-        {state.buses.map(bus => (
+        {state.buses.map((bus) => (
           <div key={bus.id} className="flex flex-col items-center w-16 bg-gray-800 rounded p-1">
             <span className="text-xs text-gray-400 truncate w-full text-center">{bus.name}</span>
             <div className="flex-1 w-8 bg-gray-700 rounded-sm mt-1 relative">
               <div
                 className="absolute bottom-0 left-0 right-0 bg-blue-500 rounded-sm transition-all"
-                style={{ height: `${Math.max(0, Math.min(100, (bus.volume + 60) / 72 * 100))}%` }}
+                style={{ height: `${Math.max(0, Math.min(100, ((bus.volume + 60) / 72) * 100))}%` }}
               />
             </div>
           </div>
@@ -52,7 +47,7 @@ export const MixerConsole: React.FC<MixerConsoleProps> = ({
           <div className="flex-1 w-10 bg-gray-700 rounded-sm mt-1 relative">
             <div
               className="absolute bottom-0 left-0 right-0 bg-yellow-500 rounded-sm transition-all"
-              style={{ height: `${Math.max(0, Math.min(100, (state.masterBus.volume + 60) / 72 * 100))}%` }}
+              style={{ height: `${Math.max(0, Math.min(100, ((state.masterBus.volume + 60) / 72) * 100))}%` }}
             />
           </div>
           <span className="text-xs text-gray-400 mt-1">{state.masterBus.volume.toFixed(1)} dB</span>

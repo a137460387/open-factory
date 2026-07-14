@@ -71,16 +71,13 @@ export function useEditorShellPlaybackCallbacks() {
     state.setIsPlaying(true);
   }, []);
 
-  const stepFrame = useCallback(
-    (direction: -1 | 1) => {
-      const state = useEditorStore.getState();
-      const fps = state.project.settings.fps || 30;
-      state.setIsPlaying(false);
-      state.setPlaybackRate(1);
-      state.setPlayheadTime(state.playheadTime + direction / fps);
-    },
-    []
-  );
+  const stepFrame = useCallback((direction: -1 | 1) => {
+    const state = useEditorStore.getState();
+    const fps = state.project.settings.fps || 30;
+    state.setIsPlaying(false);
+    state.setPlaybackRate(1);
+    state.setPlayheadTime(state.playheadTime + direction / fps);
+  }, []);
 
   // --- 标注与书签 ---
   const addAnnotationAtPlayhead = useCallback(() => {
@@ -90,27 +87,38 @@ export function useEditorShellPlaybackCallbacks() {
         new AddProjectAnnotationCommand(projectAccessor, {
           time: state.playheadTime,
           text: zhCN.timeline.annotationLabel((state.project.annotations?.length ?? 0) + 1),
-          color: DEFAULT_PROJECT_ANNOTATION_COLOR
-        })
+          color: DEFAULT_PROJECT_ANNOTATION_COLOR,
+        }),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addAnnotationFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.annotationRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.addAnnotationFailed,
+      });
     }
   }, []);
 
-  const addReviewAnnotationAtPlayhead = useCallback((annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) => {
-    try {
-      commandManager.execute(
-        new AddReviewAnnotationCommand(projectAccessor, {
-          ...annotation,
-          color: annotation.color ?? DEFAULT_REVIEW_ANNOTATION_COLOR
-        })
-      );
-      showToast({ kind: 'success', title: zhCN.preview.reviewAnnotationAdded, message: annotation.text });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.preview.reviewAnnotationFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewAnnotationFailedMessage });
-    }
-  }, []);
+  const addReviewAnnotationAtPlayhead = useCallback(
+    (annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) => {
+      try {
+        commandManager.execute(
+          new AddReviewAnnotationCommand(projectAccessor, {
+            ...annotation,
+            color: annotation.color ?? DEFAULT_REVIEW_ANNOTATION_COLOR,
+          }),
+        );
+        showToast({ kind: 'success', title: zhCN.preview.reviewAnnotationAdded, message: annotation.text });
+      } catch (error) {
+        showToast({
+          kind: 'warning',
+          title: zhCN.preview.reviewAnnotationFailedTitle,
+          message: error instanceof Error ? error.message : zhCN.preview.reviewAnnotationFailedMessage,
+        });
+      }
+    },
+    [],
+  );
 
   const createReviewReport = useCallback(async () => {
     try {
@@ -119,7 +127,11 @@ export function useEditorShellPlaybackCallbacks() {
         showToast({ kind: 'success', title: zhCN.preview.reviewReportSaved, message: outputPath });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.preview.reviewReportFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewReportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.preview.reviewReportFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.preview.reviewReportFailedMessage,
+      });
     }
   }, []);
 
@@ -130,37 +142,51 @@ export function useEditorShellPlaybackCallbacks() {
         new AddProjectBookmarkCommand(projectAccessor, {
           id: createId('bookmark'),
           time: state.playheadTime,
-          note: zhCN.timeline.bookmarkLabel((state.project.bookmarks?.length ?? 0) + 1)
-        })
+          note: zhCN.timeline.bookmarkLabel((state.project.bookmarks?.length ?? 0) + 1),
+        }),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarkRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed,
+      });
     }
   }, []);
 
-  const jumpTimelineNavigationPoint = useCallback(
-    (direction: 'previous' | 'next') => {
-      const state = useEditorStore.getState();
-      const points = buildTimelineNavigationPoints(state.project.bookmarks, state.project.timeline.markers, getTimelineDuration(state.project.timeline));
-      const point = findTimelineNavigationPoint(points, state.playheadTime, direction);
-      if (point) {
-        state.setPlayheadTime(point.time);
-      }
-    },
-    []
-  );
+  const jumpTimelineNavigationPoint = useCallback((direction: 'previous' | 'next') => {
+    const state = useEditorStore.getState();
+    const points = buildTimelineNavigationPoints(
+      state.project.bookmarks,
+      state.project.timeline.markers,
+      getTimelineDuration(state.project.timeline),
+    );
+    const point = findTimelineNavigationPoint(points, state.playheadTime, direction);
+    if (point) {
+      state.setPlayheadTime(point.time);
+    }
+  }, []);
 
   const exportBookmarks = useCallback(async () => {
     try {
       const state = useEditorStore.getState();
-      const outputPath = await bridgeSaveFileDialog(`${state.project.name}-bookmarks.json`, [{ name: zhCN.fileDialogs.bookmarks, extensions: ['json'] }]);
+      const outputPath = await bridgeSaveFileDialog(`${state.project.name}-bookmarks.json`, [
+        { name: zhCN.fileDialogs.bookmarks, extensions: ['json'] },
+      ]);
       if (!outputPath) {
         return;
       }
-      await bridgeWriteFile(outputPath, serializeTimelineBookmarks(state.project.bookmarks ?? [], getTimelineDuration(state.project.timeline)));
+      await bridgeWriteFile(
+        outputPath,
+        serializeTimelineBookmarks(state.project.bookmarks ?? [], getTimelineDuration(state.project.timeline)),
+      );
       showToast({ kind: 'success', title: zhCN.timeline.bookmarksExported, message: outputPath });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksExportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksExportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarksExportFailed,
+        message: error instanceof Error ? error.message : zhCN.timeline.bookmarksExportFailedMessage,
+      });
     }
   }, []);
 
@@ -172,12 +198,27 @@ export function useEditorShellPlaybackCallbacks() {
         return;
       }
       const state = useEditorStore.getState();
-      const imported = parseTimelineBookmarksJson(await bridgeReadFile(inputPath), getTimelineDuration(state.project.timeline));
-      const nextBookmarks = mergeImportedTimelineBookmarks(state.project.bookmarks ?? [], imported, getTimelineDuration(state.project.timeline));
+      const imported = parseTimelineBookmarksJson(
+        await bridgeReadFile(inputPath),
+        getTimelineDuration(state.project.timeline),
+      );
+      const nextBookmarks = mergeImportedTimelineBookmarks(
+        state.project.bookmarks ?? [],
+        imported,
+        getTimelineDuration(state.project.timeline),
+      );
       commandManager.execute(new UpdateProjectBookmarksCommand(projectAccessor, nextBookmarks));
-      showToast({ kind: 'success', title: zhCN.timeline.bookmarksImported, message: zhCN.timeline.bookmarksImportedMessage(imported.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.bookmarksImported,
+        message: zhCN.timeline.bookmarksImportedMessage(imported.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksImportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksImportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarksImportFailed,
+        message: error instanceof Error ? error.message : zhCN.timeline.bookmarksImportFailedMessage,
+      });
     }
   }, []);
 
@@ -190,9 +231,9 @@ export function useEditorShellPlaybackCallbacks() {
         id: state.project.exportRanges[0]?.id,
         label: zhCN.timeline.exportRangeLabel(1),
         start,
-        end
+        end,
       },
-      duration
+      duration,
     );
     if (range.end <= range.start) {
       return;
@@ -208,9 +249,9 @@ export function useEditorShellPlaybackCallbacks() {
       {
         label: zhCN.timeline.exportRangeLabel(existing.length + 1),
         start,
-        end
+        end,
       },
-      duration
+      duration,
     );
     if (range.end <= range.start) {
       return;

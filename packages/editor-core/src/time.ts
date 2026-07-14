@@ -72,7 +72,10 @@ export function normalizeProjectFps(value: number | undefined): SupportedProject
   if (!Number.isFinite(value)) {
     return DEFAULT_FPS;
   }
-  return SUPPORTED_PROJECT_FPS.reduce((closest, candidate) => (Math.abs(candidate - value!) < Math.abs(closest - value!) ? candidate : closest), DEFAULT_FPS as SupportedProjectFps);
+  return SUPPORTED_PROJECT_FPS.reduce(
+    (closest, candidate) => (Math.abs(candidate - value!) < Math.abs(closest - value!) ? candidate : closest),
+    DEFAULT_FPS as SupportedProjectFps,
+  );
 }
 
 export function supportsDropFrameTimecode(fps: number): boolean {
@@ -100,7 +103,8 @@ export function secondsToTimecode(seconds: number, fps = DEFAULT_FPS, format: Ti
   const normalizedFps = normalizeProjectFps(fps);
   const nominalFps = Math.round(normalizedFps);
   const totalFrames = Math.max(0, Math.round(Math.max(0, Number.isFinite(seconds) ? seconds : 0) * normalizedFps));
-  const timecodeFrames = normalizeTimecodeFormat(format, normalizedFps) === 'df' ? addDropFrameLabels(totalFrames, nominalFps) : totalFrames;
+  const timecodeFrames =
+    normalizeTimecodeFormat(format, normalizedFps) === 'df' ? addDropFrameLabels(totalFrames, nominalFps) : totalFrames;
   const frames = timecodeFrames % nominalFps;
   const totalSeconds = Math.floor(timecodeFrames / nominalFps);
   const displaySeconds = totalSeconds % 60;
@@ -109,7 +113,10 @@ export function secondsToTimecode(seconds: number, fps = DEFAULT_FPS, format: Ti
   return [hours, minutes, displaySeconds, frames].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
-export function parseTimecodeToSeconds(value: string, options: { fps?: number; duration?: number } = {}): ParseTimecodeResult {
+export function parseTimecodeToSeconds(
+  value: string,
+  options: { fps?: number; duration?: number } = {},
+): ParseTimecodeResult {
   const match = /^(\d{2}):(\d{2}):(\d{2}):(\d{2})$/.exec(value.trim());
   if (!match) {
     return { ok: false, error: 'format' };
@@ -136,7 +143,11 @@ export function parseTimecodeToSeconds(value: string, options: { fps?: number; d
   const totalWholeSeconds = hours * 3600 + minutes * 60 + secondsPart;
   const totalFrames = Math.max(0, Math.round(totalWholeSeconds * normalizedFps) + frames);
   const seconds = framesToSeconds(totalFrames, normalizedFps);
-  if (typeof options.duration === 'number' && Number.isFinite(options.duration) && seconds > Math.max(0, options.duration) + 1 / Math.max(1, normalizedFps)) {
+  if (
+    typeof options.duration === 'number' &&
+    Number.isFinite(options.duration) &&
+    seconds > Math.max(0, options.duration) + 1 / Math.max(1, normalizedFps)
+  ) {
     return { ok: false, error: 'duration' };
   }
   return {
@@ -147,12 +158,15 @@ export function parseTimecodeToSeconds(value: string, options: { fps?: number; d
       hours,
       minutes,
       secondsPart,
-      frames
-    }
+      frames,
+    },
   };
 }
 
-export function parseFrameJumpQuery(value: string, options: { fps?: number; duration?: number; timecodeFormat?: TimecodeFormat } = {}): ParseFrameJumpResult {
+export function parseFrameJumpQuery(
+  value: string,
+  options: { fps?: number; duration?: number; timecodeFormat?: TimecodeFormat } = {},
+): ParseFrameJumpResult {
   const trimmed = value.trim();
   const frameMatch = /^f(\d+)$/i.exec(trimmed);
   const fps = normalizeProjectFps(options.fps ?? DEFAULT_FPS);
@@ -166,7 +180,11 @@ export function parseFrameJumpQuery(value: string, options: { fps?: number; dura
       return { ok: false, error: 'frame-number' };
     }
     const seconds = framesToSeconds(frameNumber, fps);
-    if (typeof options.duration === 'number' && Number.isFinite(options.duration) && seconds > Math.max(0, options.duration) + 1 / Math.max(1, fps)) {
+    if (
+      typeof options.duration === 'number' &&
+      Number.isFinite(options.duration) &&
+      seconds > Math.max(0, options.duration) + 1 / Math.max(1, fps)
+    ) {
       return { ok: false, error: 'duration' };
     }
     return {
@@ -176,8 +194,8 @@ export function parseFrameJumpQuery(value: string, options: { fps?: number; dura
         seconds,
         totalFrames: frameNumber,
         timecode: frameNumberToTimecode(frameNumber, fps, timecodeFormat),
-        frameNumber
-      }
+        frameNumber,
+      },
     };
   }
 
@@ -191,8 +209,8 @@ export function parseFrameJumpQuery(value: string, options: { fps?: number; dura
       kind: 'timecode',
       seconds: parsed.value.seconds,
       totalFrames: parsed.value.totalFrames,
-      timecode: secondsToTimecode(parsed.value.seconds, fps, timecodeFormat)
-    }
+      timecode: secondsToTimecode(parsed.value.seconds, fps, timecodeFormat),
+    },
   };
 }
 
@@ -202,6 +220,7 @@ function addDropFrameLabels(totalFrames: number, nominalFps: number): number {
   const framesPer10Minutes = nominalFps * 60 * 10 - dropFrames * 9;
   const tenMinuteBlocks = Math.floor(totalFrames / framesPer10Minutes);
   const remainingFrames = totalFrames % framesPer10Minutes;
-  const droppedFrames = dropFrames * (tenMinuteBlocks * 9 + Math.floor(Math.max(0, remainingFrames - dropFrames) / framesPerMinute));
+  const droppedFrames =
+    dropFrames * (tenMinuteBlocks * 9 + Math.floor(Math.max(0, remainingFrames - dropFrames) / framesPerMinute));
   return totalFrames + droppedFrames;
 }

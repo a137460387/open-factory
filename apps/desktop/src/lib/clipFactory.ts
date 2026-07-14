@@ -23,7 +23,7 @@ import {
   createAdjustmentClip,
   createCreditsClip as createCoreCreditsClip,
   createId,
-  getTimelineDuration
+  getTimelineDuration,
 } from '@open-factory/editor-core';
 import type { Subclip } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
@@ -33,7 +33,12 @@ export interface SubclipClipOptions {
   subclipName: string;
 }
 
-export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: Timeline, subclipOptions?: SubclipClipOptions): Clip {
+export function createClipFromAsset(
+  asset: MediaAsset,
+  track: Track,
+  timeline: Timeline,
+  subclipOptions?: SubclipClipOptions,
+): Clip {
   let duration: number;
   let trimStart = 0;
   if (subclipOptions) {
@@ -41,7 +46,11 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     trimStart = Math.max(0, subclip.inPoint);
     duration = Math.max(0.01, subclip.outPoint - subclip.inPoint);
   } else {
-    duration = asset.imageSequence ? Math.max(asset.imageSequence.frameCount / asset.imageSequence.frameRate, 1 / asset.imageSequence.frameRate) : asset.type === 'image' ? 5 : Math.max(asset.duration || 5, 1);
+    duration = asset.imageSequence
+      ? Math.max(asset.imageSequence.frameCount / asset.imageSequence.frameRate, 1 / asset.imageSequence.frameRate)
+      : asset.type === 'image'
+        ? 5
+        : Math.max(asset.duration || 5, 1);
   }
   const start = findAppendStart(track, timeline);
   const base = {
@@ -58,7 +67,7 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
     masks: [],
     sequenceFrameRate: asset.imageSequence?.frameRate,
-    subclipId: subclipOptions?.subclip.id
+    subclipId: subclipOptions?.subclip.id,
   };
 
   if (asset.type === 'audio') {
@@ -73,7 +82,7 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
       fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
       fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
       fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
-      spatialAudio: { ...DEFAULT_SPATIAL_AUDIO }
+      spatialAudio: { ...DEFAULT_SPATIAL_AUDIO },
     };
   }
   if (asset.type === 'image') {
@@ -90,7 +99,7 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
     fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
-    spatialAudio: { ...DEFAULT_SPATIAL_AUDIO }
+    spatialAudio: { ...DEFAULT_SPATIAL_AUDIO },
   };
 }
 
@@ -115,11 +124,23 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     textLayout: { ...DEFAULT_TEXT_LAYOUT },
     openTypeFeatures: { ...DEFAULT_TEXT_OPEN_TYPE_FEATURES },
     arcText: { ...DEFAULT_TEXT_ARC },
-    pathText: { ...DEFAULT_TEXT_PATH, path: DEFAULT_TEXT_PATH.path.map((point) => ({ ...point, handleIn: point.handleIn ? { ...point.handleIn } : undefined, handleOut: point.handleOut ? { ...point.handleOut } : undefined })) }
+    pathText: {
+      ...DEFAULT_TEXT_PATH,
+      path: DEFAULT_TEXT_PATH.path.map((point) => ({
+        ...point,
+        handleIn: point.handleIn ? { ...point.handleIn } : undefined,
+        handleOut: point.handleOut ? { ...point.handleOut } : undefined,
+      })),
+    },
   };
 }
 
-export function createCreditsClip(track: Track, timeline: Timeline, text = zhCN.clips.defaultCreditsContent, start?: number): Extract<Clip, { type: 'credits' }> {
+export function createCreditsClip(
+  track: Track,
+  timeline: Timeline,
+  text = zhCN.clips.defaultCreditsContent,
+  start?: number,
+): Extract<Clip, { type: 'credits' }> {
   return createCoreCreditsClip({
     id: createId('clip'),
     name: zhCN.clips.defaultCreditsName,
@@ -133,7 +154,7 @@ export function createCreditsClip(track: Track, timeline: Timeline, text = zhCN.
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
-    masks: []
+    masks: [],
   });
 }
 
@@ -150,7 +171,7 @@ export function createAdjustmentLayerClip(track: Track, timeline: Timeline): Ext
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
-    masks: []
+    masks: [],
   });
 }
 
@@ -158,7 +179,7 @@ export function createMotionGraphicClip(
   track: Track,
   timeline: Timeline,
   start = findAppendStart(track, timeline),
-  templateType: MotionGraphicTemplateType = 'countdown'
+  templateType: MotionGraphicTemplateType = 'countdown',
 ): Extract<Clip, { type: 'motion-graphic' }> {
   return createCoreMotionGraphicClip({
     id: createId('clip'),
@@ -176,8 +197,8 @@ export function createMotionGraphicClip(
     motionGraphic: {
       version: 1,
       templateType,
-      params: {}
-    }
+      params: {},
+    },
   });
 }
 

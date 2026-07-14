@@ -52,7 +52,7 @@ export function recordTagAction(
   aspectClass: TagLearningAspectClass,
   hasAudio: boolean,
   tag: string,
-  now?: () => Date
+  now?: () => Date,
 ): TagLearningData {
   const record: TagLearningRecord = {
     aspectClass,
@@ -74,11 +74,9 @@ export function recordTagAction(
 export function suggestTags(
   data: TagLearningData,
   aspectClass: TagLearningAspectClass,
-  hasAudio: boolean
+  hasAudio: boolean,
 ): TagSuggestion[] {
-  const relevant = data.records.filter(
-    (r) => r.aspectClass === aspectClass && r.hasAudio === hasAudio
-  );
+  const relevant = data.records.filter((r) => r.aspectClass === aspectClass && r.hasAudio === hasAudio);
   if (relevant.length === 0) return [];
 
   const tagCounts = new Map<string, number>();
@@ -137,7 +135,7 @@ export function parseTagLearningData(contents: string): TagLearningData {
           (r: unknown) =>
             r &&
             typeof (r as TagLearningRecord).tag === 'string' &&
-            typeof (r as TagLearningRecord).aspectClass === 'string'
+            typeof (r as TagLearningRecord).aspectClass === 'string',
         ),
       };
     }

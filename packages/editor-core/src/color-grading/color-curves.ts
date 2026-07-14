@@ -33,14 +33,14 @@ export interface RgbColor {
 
 export const DEFAULT_CURVE_POINTS: CurvePoint[] = [
   { x: 0, y: 0 },
-  { x: 1, y: 1 }
+  { x: 1, y: 1 },
 ];
 
 export const DEFAULT_COLOR_WHEEL_VALUE: ColorWheelValue = {
   r: 0,
   g: 0,
   b: 0,
-  intensity: 1
+  intensity: 1,
 };
 
 export const DEFAULT_COLOR_CURVES: ColorCurves = createDefaultColorCurves();
@@ -52,7 +52,7 @@ export function createDefaultColorCurves(): ColorCurves {
     master: cloneDefaultCurvePoints(),
     r: cloneDefaultCurvePoints(),
     g: cloneDefaultCurvePoints(),
-    b: cloneDefaultCurvePoints()
+    b: cloneDefaultCurvePoints(),
   };
 }
 
@@ -60,7 +60,7 @@ export function createDefaultThreeWayColor(): ThreeWayColor {
   return {
     lift: { ...DEFAULT_COLOR_WHEEL_VALUE },
     gamma: { ...DEFAULT_COLOR_WHEEL_VALUE },
-    gain: { ...DEFAULT_COLOR_WHEEL_VALUE }
+    gain: { ...DEFAULT_COLOR_WHEEL_VALUE },
   };
 }
 
@@ -81,7 +81,7 @@ export function normalizeColorCurves(curves: Partial<ColorCurves> | undefined): 
     master: normalizeCurvePoints(curves?.master),
     r: normalizeCurvePoints(curves?.r),
     g: normalizeCurvePoints(curves?.g),
-    b: normalizeCurvePoints(curves?.b)
+    b: normalizeCurvePoints(curves?.b),
   };
 }
 
@@ -90,7 +90,7 @@ export function normalizeColorWheelValue(value: Partial<ColorWheelValue> | undef
     r: normalizeFinite(value?.r, DEFAULT_COLOR_WHEEL_VALUE.r, -1, 1),
     g: normalizeFinite(value?.g, DEFAULT_COLOR_WHEEL_VALUE.g, -1, 1),
     b: normalizeFinite(value?.b, DEFAULT_COLOR_WHEEL_VALUE.b, -1, 1),
-    intensity: normalizeFinite(value?.intensity, DEFAULT_COLOR_WHEEL_VALUE.intensity, 0, 2)
+    intensity: normalizeFinite(value?.intensity, DEFAULT_COLOR_WHEEL_VALUE.intensity, 0, 2),
   };
 }
 
@@ -98,7 +98,7 @@ export function normalizeThreeWayColor(value: Partial<ThreeWayColor> | undefined
   return {
     lift: normalizeColorWheelValue(value?.lift),
     gamma: normalizeColorWheelValue(value?.gamma),
-    gain: normalizeColorWheelValue(value?.gain)
+    gain: normalizeColorWheelValue(value?.gain),
   };
 }
 
@@ -159,7 +159,7 @@ export function sampleColorCurves(curves: Partial<ColorCurves> | undefined, x: n
   return {
     r: sampleCurve(normalized.r, master),
     g: sampleCurve(normalized.g, master),
-    b: sampleCurve(normalized.b, master)
+    b: sampleCurve(normalized.b, master),
   };
 }
 
@@ -171,17 +171,21 @@ export function applyColorCurvesToRgb(input: RgbColor, curves: Partial<ColorCurv
   return {
     r: sampleCurve(normalized.r, clamp(input.r + delta, 0, 1)),
     g: sampleCurve(normalized.g, clamp(input.g + delta, 0, 1)),
-    b: sampleCurve(normalized.b, clamp(input.b + delta, 0, 1))
+    b: sampleCurve(normalized.b, clamp(input.b + delta, 0, 1)),
   };
 }
 
-export function serializeColorCurvesToCube(curves: Partial<ColorCurves> | undefined, size = 17, title = 'open-factory color curves'): string {
+export function serializeColorCurvesToCube(
+  curves: Partial<ColorCurves> | undefined,
+  size = 17,
+  title = 'open-factory color curves',
+): string {
   const sampleCount = Math.max(2, Math.round(size));
   const lines = [
     `TITLE "${sanitizeCubeTitle(title)}"`,
     `LUT_1D_SIZE ${sampleCount}`,
     'DOMAIN_MIN 0 0 0',
-    'DOMAIN_MAX 1 1 1'
+    'DOMAIN_MAX 1 1 1',
   ];
   for (let index = 0; index < sampleCount; index += 1) {
     const x = index / (sampleCount - 1);
@@ -194,9 +198,24 @@ export function serializeColorCurvesToCube(curves: Partial<ColorCurves> | undefi
 export function applyThreeWayColor(input: RgbColor, value: Partial<ThreeWayColor> | undefined): RgbColor {
   const normalized = normalizeThreeWayColor(value);
   return {
-    r: applyCdlChannel(input.r, normalized.lift.r + normalized.lift.intensity - 1, normalized.gamma.r + normalized.gamma.intensity, normalized.gain.r + normalized.gain.intensity),
-    g: applyCdlChannel(input.g, normalized.lift.g + normalized.lift.intensity - 1, normalized.gamma.g + normalized.gamma.intensity, normalized.gain.g + normalized.gain.intensity),
-    b: applyCdlChannel(input.b, normalized.lift.b + normalized.lift.intensity - 1, normalized.gamma.b + normalized.gamma.intensity, normalized.gain.b + normalized.gain.intensity)
+    r: applyCdlChannel(
+      input.r,
+      normalized.lift.r + normalized.lift.intensity - 1,
+      normalized.gamma.r + normalized.gamma.intensity,
+      normalized.gain.r + normalized.gain.intensity,
+    ),
+    g: applyCdlChannel(
+      input.g,
+      normalized.lift.g + normalized.lift.intensity - 1,
+      normalized.gamma.g + normalized.gamma.intensity,
+      normalized.gain.g + normalized.gain.intensity,
+    ),
+    b: applyCdlChannel(
+      input.b,
+      normalized.lift.b + normalized.lift.intensity - 1,
+      normalized.gamma.b + normalized.gamma.intensity,
+      normalized.gain.b + normalized.gain.intensity,
+    ),
   };
 }
 
@@ -207,7 +226,13 @@ function applyCdlChannel(input: number, lift: number, gamma: number, gain: numbe
 
 function isDefaultCurvePoints(points: CurvePoint[]): boolean {
   const normalized = normalizeCurvePoints(points);
-  return normalized.length === 2 && normalized[0].x === 0 && normalized[0].y === 0 && normalized[1].x === 1 && normalized[1].y === 1;
+  return (
+    normalized.length === 2 &&
+    normalized[0].x === 0 &&
+    normalized[0].y === 0 &&
+    normalized[1].x === 1 &&
+    normalized[1].y === 1
+  );
 }
 
 function isNeutralWheel(value: ColorWheelValue): boolean {

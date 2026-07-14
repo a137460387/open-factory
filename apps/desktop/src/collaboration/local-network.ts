@@ -11,9 +11,15 @@ import {
   type CollaborationRole,
   type CollaborationUserPresence,
   type Command,
-  type Project
+  type Project,
 } from '@open-factory/editor-core';
-import { broadcastCollaborationMessage, listenCollaborationMessage, startCollaborationHost, stopCollaborationHost, type CollaborationHostRequest } from '../lib/tauri-bridge';
+import {
+  broadcastCollaborationMessage,
+  listenCollaborationMessage,
+  startCollaborationHost,
+  stopCollaborationHost,
+  type CollaborationHostRequest,
+} from '../lib/tauri-bridge';
 import { useCollaborationStore } from '../store/collaborationStore';
 import { useEditorStore } from '../store/editorStore';
 
@@ -41,7 +47,7 @@ class LocalNetworkCollaborationController {
     userId: 'local-user',
     users: [],
     locks: [],
-    operations: []
+    operations: [],
   };
   private unlisten?: () => void;
   private applyingRemote = false;
@@ -51,7 +57,7 @@ class LocalNetworkCollaborationController {
       ...this.state,
       users: [...this.state.users],
       locks: [...this.state.locks],
-      operations: [...this.state.operations]
+      operations: [...this.state.operations],
     };
   }
 
@@ -62,7 +68,7 @@ class LocalNetworkCollaborationController {
       enabled: true,
       role: 'host',
       permission: 'edit',
-      userId: request.userId ?? this.state.userId
+      userId: request.userId ?? this.state.userId,
     };
     this.publishState();
     await this.ensureListening();
@@ -75,7 +81,7 @@ class LocalNetworkCollaborationController {
       enabled: true,
       role: 'client',
       permission: input.permission ?? 'edit',
-      userId: input.userId ?? this.state.userId
+      userId: input.userId ?? this.state.userId,
     };
     this.publishState();
     await this.ensureListening();
@@ -93,7 +99,11 @@ class LocalNetworkCollaborationController {
     if (!this.state.enabled || this.applyingRemote) {
       return;
     }
-    const operation = buildCollaborationOperationFromCommand(command, this.state.userId, useEditorStore.getState().project);
+    const operation = buildCollaborationOperationFromCommand(
+      command,
+      this.state.userId,
+      useEditorStore.getState().project,
+    );
     if (!canApplyCollaborationOperation(this.state.permission, operation)) {
       return;
     }
@@ -109,8 +119,8 @@ class LocalNetworkCollaborationController {
       serializeCollaborationMessage({
         type: 'project-sync',
         project: useEditorStore.getState().project,
-        timestamp: Date.now()
-      })
+        timestamp: Date.now(),
+      }),
     );
   }
 
@@ -120,11 +130,14 @@ class LocalNetworkCollaborationController {
       return;
     }
     if (message.type === 'presence') {
-      const users = assignCollaborationUserColors([...this.state.users.filter((user) => user.userId !== message.user.userId), message.user]);
+      const users = assignCollaborationUserColors([
+        ...this.state.users.filter((user) => user.userId !== message.user.userId),
+        message.user,
+      ]);
       this.state = {
         ...this.state,
         users,
-        locks: buildCollaborationClipLocks(this.state.operations, users, 10_000, Date.now())
+        locks: buildCollaborationClipLocks(this.state.operations, users, 10_000, Date.now()),
       };
       this.publishState();
       return;
@@ -167,15 +180,15 @@ class LocalNetworkCollaborationController {
       userId: this.state.userId,
       name,
       playheadTime,
-      color
+      color,
     };
     this.state = {
       ...this.state,
-      users: assignCollaborationUserColors([...this.state.users.filter((item) => item.userId !== user.userId), user])
+      users: assignCollaborationUserColors([...this.state.users.filter((item) => item.userId !== user.userId), user]),
     };
     this.state = {
       ...this.state,
-      locks: buildCollaborationClipLocks(this.state.operations, this.state.users, 10_000, Date.now())
+      locks: buildCollaborationClipLocks(this.state.operations, this.state.users, 10_000, Date.now()),
     };
     this.publishState();
     void broadcastCollaborationMessage(serializeCollaborationMessage({ type: 'presence', user }));
@@ -186,7 +199,7 @@ class LocalNetworkCollaborationController {
     this.state = {
       ...this.state,
       operations,
-      locks: buildCollaborationClipLocks(operations, this.state.users, 10_000, Date.now())
+      locks: buildCollaborationClipLocks(operations, this.state.users, 10_000, Date.now()),
     };
     this.publishState();
   }
@@ -205,7 +218,12 @@ class LocalNetworkCollaborationController {
 
 export const collaborationController = new LocalNetworkCollaborationController();
 
-function buildCollaborationOperationFromCommand(command: Command, userId: string, project: Project, timestamp = Date.now()): CollaborationOperation {
+function buildCollaborationOperationFromCommand(
+  command: Command,
+  userId: string,
+  project: Project,
+  timestamp = Date.now(),
+): CollaborationOperation {
   const params = extractSerializableCommandParams(command);
   const clipId = typeof params.clipId === 'string' ? params.clipId : undefined;
   return {
@@ -214,11 +232,11 @@ function buildCollaborationOperationFromCommand(command: Command, userId: string
     commandName: command.constructor.name || command.description,
     params: {
       ...params,
-      project
+      project,
     },
     timestamp,
     kind: command.description.toLowerCase().includes('collaboration note') ? 'comment' : 'timeline-command',
-    clipId
+    clipId,
   };
 }
 
@@ -249,7 +267,10 @@ function isJsonSerializable(value: unknown): boolean {
 
 function serializeCollaborationMessage(message: CollaborationMessage): string {
   if (message.type === 'operation') {
-    return JSON.stringify({ ...message, operation: parseCollaborationOperation(serializeCollaborationOperation(message.operation)) ?? message.operation });
+    return JSON.stringify({
+      ...message,
+      operation: parseCollaborationOperation(serializeCollaborationOperation(message.operation)) ?? message.operation,
+    });
   }
   return JSON.stringify(message);
 }

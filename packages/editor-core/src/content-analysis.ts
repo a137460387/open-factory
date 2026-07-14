@@ -101,7 +101,10 @@ export function classifySceneTypes(input: {
   return dedupeSceneTypes(output);
 }
 
-export function sampleEmotionCurve(samples: ContentAnalysisVisualSample[], segmentDuration: number): ContentEmotionPoint[] {
+export function sampleEmotionCurve(
+  samples: ContentAnalysisVisualSample[],
+  segmentDuration: number,
+): ContentEmotionPoint[] {
   const buckets = bucketVisualSamples(samples, segmentDuration);
   return buckets.map((bucket) => {
     const brightness = average(bucket.samples.map((sample) => clamp01(sample.brightness)));
@@ -109,16 +112,21 @@ export function sampleEmotionCurve(samples: ContentAnalysisVisualSample[], segme
     return {
       time: round(bucket.start),
       brightness: round(brightness),
-      value: round(Math.min(1, Math.abs(brightness - previousBrightness) * 1.6 + brightness * 0.65))
+      value: round(Math.min(1, Math.abs(brightness - previousBrightness) * 1.6 + brightness * 0.65)),
     };
   });
 }
 
-export function detectDialogueTurns(samples: ContentAnalysisAudioSample[], options: { silenceThreshold?: number; minTurnDuration?: number; mergeGap?: number } = {}): ContentDialogueTurn[] {
+export function detectDialogueTurns(
+  samples: ContentAnalysisAudioSample[],
+  options: { silenceThreshold?: number; minTurnDuration?: number; mergeGap?: number } = {},
+): ContentDialogueTurn[] {
   const silenceThreshold = options.silenceThreshold ?? 0.08;
   const minTurnDuration = options.minTurnDuration ?? 0.35;
   const mergeGap = options.mergeGap ?? 0.28;
-  const sorted = [...samples].filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.loudness)).sort((left, right) => left.time - right.time);
+  const sorted = [...samples]
+    .filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.loudness))
+    .sort((left, right) => left.time - right.time);
   const turns: ContentDialogueTurn[] = [];
   let active: { start: number; end: number; values: number[] } | undefined;
 
@@ -157,7 +165,8 @@ export function buildClipContentAnalysis(input: BuildClipContentAnalysisInput): 
     const audioInRange = audioSamples.filter((sample) => sample.time >= bucket.start && sample.time < bucket.end);
     const loudnessValues = audioInRange.map((sample) => clamp01(sample.loudness));
     const loudnessVariance = variance(loudnessValues);
-    const silenceRatio = loudnessValues.length > 0 ? loudnessValues.filter((value) => value <= 0.08).length / loudnessValues.length : 0;
+    const silenceRatio =
+      loudnessValues.length > 0 ? loudnessValues.filter((value) => value <= 0.08).length / loudnessValues.length : 0;
     const brightness = average(bucket.samples.map((sample) => clamp01(sample.brightness)));
     const motion = average(bucket.samples.map((sample) => clamp01(sample.motion)));
     const saturation = average(bucket.samples.map((sample) => clamp01(sample.saturation)));
@@ -166,13 +175,24 @@ export function buildClipContentAnalysis(input: BuildClipContentAnalysisInput): 
     return {
       start: round(bucket.start),
       end: round(Math.min(duration || bucket.end, bucket.end)),
-      sceneTypes: classifySceneTypes({ brightness, saturation, motion, faceRatio, colorTemperature, loudnessVariance, silenceRatio }),
+      sceneTypes: classifySceneTypes({
+        brightness,
+        saturation,
+        motion,
+        faceRatio,
+        colorTemperature,
+        loudnessVariance,
+        silenceRatio,
+      }),
       brightness: round(brightness),
       motion: round(motion),
-      ...(loudnessValues.length > 0 ? { loudness: round(average(loudnessValues)) } : {})
+      ...(loudnessValues.length > 0 ? { loudness: round(average(loudnessValues)) } : {}),
     };
   });
-  const sceneTypes = rankSceneTypes([...segments.flatMap((segment) => segment.sceneTypes), ...(dialogueTurns.length > 0 ? (['dialogue'] as ContentSceneType[]) : [])]);
+  const sceneTypes = rankSceneTypes([
+    ...segments.flatMap((segment) => segment.sceneTypes),
+    ...(dialogueTurns.length > 0 ? (['dialogue'] as ContentSceneType[]) : []),
+  ]);
   const primarySceneType = sceneTypes[0] ?? 'indoor';
   return normalizeClipContentAnalysis({
     version: CONTENT_ANALYSIS_VERSION,
@@ -182,7 +202,7 @@ export function buildClipContentAnalysis(input: BuildClipContentAnalysisInput): 
     segments,
     emotionCurve: sampleEmotionCurve(input.visualSamples, segmentDuration),
     dialogueTurns,
-    summary: buildContentAnalysisSummary(primarySceneType, segments.length, dialogueTurns.length)
+    summary: buildContentAnalysisSummary(primarySceneType, segments.length, dialogueTurns.length),
   })!;
 }
 
@@ -190,15 +210,24 @@ export function normalizeClipContentAnalysis(input: unknown): ClipContentAnalysi
   if (!isRecord(input)) {
     return undefined;
   }
-  const segments = Array.isArray(input.segments) ? input.segments.map(normalizeSegment).filter((segment): segment is ContentAnalysisSegment => Boolean(segment)) : [];
-  const emotionCurve = Array.isArray(input.emotionCurve) ? input.emotionCurve.map(normalizeEmotionPoint).filter((point): point is ContentEmotionPoint => Boolean(point)) : [];
-  const dialogueTurns = Array.isArray(input.dialogueTurns) ? input.dialogueTurns.map(normalizeDialogueTurn).filter((turn): turn is ContentDialogueTurn => Boolean(turn)) : [];
+  const segments = Array.isArray(input.segments)
+    ? input.segments.map(normalizeSegment).filter((segment): segment is ContentAnalysisSegment => Boolean(segment))
+    : [];
+  const emotionCurve = Array.isArray(input.emotionCurve)
+    ? input.emotionCurve.map(normalizeEmotionPoint).filter((point): point is ContentEmotionPoint => Boolean(point))
+    : [];
+  const dialogueTurns = Array.isArray(input.dialogueTurns)
+    ? input.dialogueTurns.map(normalizeDialogueTurn).filter((turn): turn is ContentDialogueTurn => Boolean(turn))
+    : [];
   const sceneTypes = rankSceneTypes([
     ...(Array.isArray(input.sceneTypes) ? input.sceneTypes.filter(isContentSceneType) : []),
-    ...segments.flatMap((segment) => segment.sceneTypes)
+    ...segments.flatMap((segment) => segment.sceneTypes),
   ]);
-  const primarySceneType = isContentSceneType(input.primarySceneType) ? input.primarySceneType : (sceneTypes[0] ?? 'indoor');
-  const analyzedAt = typeof input.analyzedAt === 'string' && input.analyzedAt.trim() ? input.analyzedAt : new Date(0).toISOString();
+  const primarySceneType = isContentSceneType(input.primarySceneType)
+    ? input.primarySceneType
+    : (sceneTypes[0] ?? 'indoor');
+  const analyzedAt =
+    typeof input.analyzedAt === 'string' && input.analyzedAt.trim() ? input.analyzedAt : new Date(0).toISOString();
   return {
     version: CONTENT_ANALYSIS_VERSION,
     analyzedAt,
@@ -207,7 +236,7 @@ export function normalizeClipContentAnalysis(input: unknown): ClipContentAnalysi
     segments,
     emotionCurve,
     dialogueTurns,
-    ...(typeof input.summary === 'string' && input.summary.trim() ? { summary: input.summary.trim() } : {})
+    ...(typeof input.summary === 'string' && input.summary.trim() ? { summary: input.summary.trim() } : {}),
   };
 }
 
@@ -217,10 +246,10 @@ export function serializeClipContentAnalysisJson(clip: Pick<Clip, 'id' | 'name' 
     {
       clipId: clip.id,
       clipName: clip.name,
-      contentAnalysis: analysis ?? null
+      contentAnalysis: analysis ?? null,
     },
     null,
-    2
+    2,
   );
 }
 
@@ -240,7 +269,7 @@ function normalizeSegment(input: unknown): ContentAnalysisSegment | undefined {
     sceneTypes: sceneTypes.length > 0 ? sceneTypes : ['indoor'],
     brightness: round(clamp01(finiteNumber(input.brightness) ?? 0)),
     motion: round(clamp01(finiteNumber(input.motion) ?? 0)),
-    ...(finiteNumber(input.loudness) !== undefined ? { loudness: round(clamp01(finiteNumber(input.loudness)!)) } : {})
+    ...(finiteNumber(input.loudness) !== undefined ? { loudness: round(clamp01(finiteNumber(input.loudness)!)) } : {}),
   };
 }
 
@@ -255,7 +284,7 @@ function normalizeEmotionPoint(input: unknown): ContentEmotionPoint | undefined 
   return {
     time: round(Math.max(0, time)),
     value: round(clamp01(finiteNumber(input.value) ?? 0)),
-    brightness: round(clamp01(finiteNumber(input.brightness) ?? finiteNumber(input.value) ?? 0))
+    brightness: round(clamp01(finiteNumber(input.brightness) ?? finiteNumber(input.value) ?? 0)),
   };
 }
 
@@ -271,17 +300,29 @@ function normalizeDialogueTurn(input: unknown): ContentDialogueTurn | undefined 
   return {
     start: round(Math.max(0, start)),
     end: round(Math.max(0, end)),
-    loudness: round(clamp01(finiteNumber(input.loudness) ?? 0))
+    loudness: round(clamp01(finiteNumber(input.loudness) ?? 0)),
   };
 }
 
-function bucketVisualSamples(samples: ContentAnalysisVisualSample[], segmentDuration: number): Array<{ start: number; end: number; previousBrightness?: number; samples: ContentAnalysisVisualSample[] }> {
-  const sorted = [...samples].filter((sample) => Number.isFinite(sample.time)).sort((left, right) => left.time - right.time);
+function bucketVisualSamples(
+  samples: ContentAnalysisVisualSample[],
+  segmentDuration: number,
+): Array<{ start: number; end: number; previousBrightness?: number; samples: ContentAnalysisVisualSample[] }> {
+  const sorted = [...samples]
+    .filter((sample) => Number.isFinite(sample.time))
+    .sort((left, right) => left.time - right.time);
   if (sorted.length === 0) {
-    return [{ start: 0, end: segmentDuration, samples: [{ time: 0, brightness: 0.45, saturation: 0.35, motion: 0.1 }] }];
+    return [
+      { start: 0, end: segmentDuration, samples: [{ time: 0, brightness: 0.45, saturation: 0.35, motion: 0.1 }] },
+    ];
   }
   const lastTime = Math.max(segmentDuration, sorted[sorted.length - 1].time);
-  const buckets: Array<{ start: number; end: number; previousBrightness?: number; samples: ContentAnalysisVisualSample[] }> = [];
+  const buckets: Array<{
+    start: number;
+    end: number;
+    previousBrightness?: number;
+    samples: ContentAnalysisVisualSample[];
+  }> = [];
   let previousBrightness: number | undefined;
   for (let start = 0; start <= lastTime + 0.000001; start += segmentDuration) {
     const end = start + segmentDuration;
@@ -300,7 +341,9 @@ function rankSceneTypes(types: ContentSceneType[]): ContentSceneType[] {
   for (const type of types) {
     counts.set(type, (counts.get(type) ?? 0) + 1);
   }
-  return CONTENT_SCENE_TYPES.filter((type) => counts.has(type)).sort((left, right) => (counts.get(right) ?? 0) - (counts.get(left) ?? 0));
+  return CONTENT_SCENE_TYPES.filter((type) => counts.has(type)).sort(
+    (left, right) => (counts.get(right) ?? 0) - (counts.get(left) ?? 0),
+  );
 }
 
 function dedupeSceneTypes(types: ContentSceneType[]): ContentSceneType[] {
@@ -311,7 +354,11 @@ function isContentSceneType(value: unknown): value is ContentSceneType {
   return typeof value === 'string' && CONTENT_SCENE_TYPES.includes(value as ContentSceneType);
 }
 
-function pushDialogueTurn(turns: ContentDialogueTurn[], active: { start: number; end: number; values: number[] }, minTurnDuration: number): void {
+function pushDialogueTurn(
+  turns: ContentDialogueTurn[],
+  active: { start: number; end: number; values: number[] },
+  minTurnDuration: number,
+): void {
   if (active.end - active.start < minTurnDuration) {
     return;
   }

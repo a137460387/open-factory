@@ -1,4 +1,43 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, Palette, Wand2, WandSparkles, XCircle, AlertTriangle } from 'lucide-react';
+import {
+  Activity,
+  Archive,
+  Camera,
+  Captions,
+  ChevronDown,
+  CircleHelp,
+  ClipboardList,
+  Download,
+  FileDown,
+  FilePlus2,
+  FileText,
+  FolderOpen,
+  GitCompareArrows,
+  Grid2X2,
+  History,
+  ImageDown,
+  LayoutGrid,
+  LockKeyhole,
+  MessageSquareText,
+  Mic2,
+  Monitor,
+  PanelsTopLeft,
+  Pause,
+  PictureInPicture2,
+  Play,
+  Redo2,
+  RotateCcw,
+  Save,
+  Scissors,
+  Settings,
+  Square,
+  Trash2,
+  Undo2,
+  Palette,
+  Wand2,
+  WandSparkles,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react';
 import {
   checkCostAlert,
   BUILT_IN_SPLIT_LAYOUTS,
@@ -9,7 +48,7 @@ import {
   type SplitLayoutDefinition,
   type SubtitleDataImportMode,
   type TimelineGridSettings,
-  type TimelineGridUnit
+  type TimelineGridUnit,
 } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
@@ -103,7 +142,7 @@ interface ToolbarProps {
   onToggleAIRoughCut(): void;
   onToggleDirectorMode(): void;
   onToggleMusicMatch(): void;
- onToggleHighlightReel(): void;
+  onToggleHighlightReel(): void;
   onToggleContextualTranslation(): void;
   onToggleAIChatEditor(): void;
   onToggleSmartCreation(): void;
@@ -189,7 +228,16 @@ interface ToolbarProps {
   lastBackupAt?: string;
 }
 
-const TIMELINE_GRID_UNITS: TimelineGridUnit[] = ['frame', '5-frames', '10-frames', 'second', '5-seconds', 'beat', 'measure', 'four-measures'];
+const TIMELINE_GRID_UNITS: TimelineGridUnit[] = [
+  'frame',
+  '5-frames',
+  '10-frames',
+  'second',
+  '5-seconds',
+  'beat',
+  'measure',
+  'four-measures',
+];
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
@@ -212,7 +260,9 @@ export function Toolbar(props: ToolbarProps) {
   const historyMeta = useEditorStore((state) => state.historyMeta);
   const dirty = useEditorStore((state) => state.dirty);
   const runningExportTask = useExportQueueStore((state) => state.tasks.find((task) => task.status === 'running'));
-  const activeMediaJobCount = useMediaJobStore((state) => state.jobs.filter((job) => job.status === 'pending' || job.status === 'running').length);
+  const activeMediaJobCount = useMediaJobStore(
+    (state) => state.jobs.filter((job) => job.status === 'pending' || job.status === 'running').length,
+  );
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const setWhisperExecutablePath = useWhisperSettingsStore((state) => state.setExecutablePath);
@@ -228,7 +278,11 @@ export function Toolbar(props: ToolbarProps) {
         setWhisperExecutablePath(path);
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: t.chooseWhisperExecutable, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+      showToast({
+        kind: 'warning',
+        title: t.chooseWhisperExecutable,
+        message: error instanceof Error ? error.message : zhCN.common.unavailable,
+      });
     }
   };
   const chooseWhisperModel = async () => {
@@ -238,13 +292,20 @@ export function Toolbar(props: ToolbarProps) {
         setWhisperModelPath(path);
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: t.chooseWhisperModel, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+      showToast({
+        kind: 'warning',
+        title: t.chooseWhisperModel,
+        message: error instanceof Error ? error.message : zhCN.common.unavailable,
+      });
     }
   };
 
   if (props.reviewMode) {
     return (
-      <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3" data-testid="review-toolbar">
+      <header
+        className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3"
+        data-testid="review-toolbar"
+      >
         <div className="mr-2 text-sm font-semibold text-ink">{t.reviewMode}</div>
         <div className="relative">
           <button
@@ -259,7 +320,10 @@ export function Toolbar(props: ToolbarProps) {
             <ChevronDown size={14} />
           </button>
           {viewMenuOpen ? (
-            <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-view-menu">
+            <div
+              className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+              data-testid="toolbar-view-menu"
+            >
               <button
                 className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
                 type="button"
@@ -287,7 +351,13 @@ export function Toolbar(props: ToolbarProps) {
           ) : null}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
+          <ToolButton
+            title={isPlaying ? t.pause : t.play}
+            onClick={() => setIsPlaying(!isPlaying)}
+            icon={isPlaying ? <Pause size={17} /> : <Play size={17} />}
+            testId="toolbar-playback-button"
+            playbackState={isPlaying ? 'playing' : 'paused'}
+          />
         </div>
       </header>
     );
@@ -314,7 +384,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {fileMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-file-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-file-menu"
+          >
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -495,7 +568,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {editMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-edit-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-edit-menu"
+          >
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -550,7 +626,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {viewMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-view-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-view-menu"
+          >
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -561,7 +640,9 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.safeFrameGuides}</span>
-              <span className="text-xs text-slate-500">{props.safeFrameGuides ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+              <span className="text-xs text-slate-500">
+                {props.safeFrameGuides ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}
+              </span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
@@ -573,7 +654,9 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.thumbnailTrack}</span>
-              <span className="text-xs text-slate-500">{props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+              <span className="text-xs text-slate-500">
+                {props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}
+              </span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
@@ -585,7 +668,9 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.timelineMinimap}</span>
-              <span className="text-xs text-slate-500">{props.timelineMinimapVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+              <span className="text-xs text-slate-500">
+                {props.timelineMinimapVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}
+              </span>
             </button>
             <div className="my-1 border-t border-line" />
             <button
@@ -619,7 +704,9 @@ export function Toolbar(props: ToolbarProps) {
               onClick={() => props.onTimelineHeatmapChange({ enabled: !props.timelineHeatmap.enabled })}
             >
               <span>{t.timelineHeatmap}</span>
-              <span className="text-xs text-slate-500">{props.timelineHeatmap.enabled ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+              <span className="text-xs text-slate-500">
+                {props.timelineHeatmap.enabled ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}
+              </span>
             </button>
             {props.timelineHeatmap.enabled ? (
               <div className="space-y-2 px-3 pb-2 text-xs text-slate-600" data-testid="toolbar-view-heatmap-controls">
@@ -629,7 +716,9 @@ export function Toolbar(props: ToolbarProps) {
                     className="mt-1 w-full rounded border border-line bg-white px-2 py-1 text-xs"
                     value={props.timelineHeatmap.type}
                     data-testid="toolbar-view-heatmap-type-select"
-                    onChange={(event) => props.onTimelineHeatmapChange({ type: event.target.value as TimelineHeatmapViewSettings['type'] })}
+                    onChange={(event) =>
+                      props.onTimelineHeatmapChange({ type: event.target.value as TimelineHeatmapViewSettings['type'] })
+                    }
                   >
                     {(['edit-density', 'volume', 'cut-frequency'] as const).map((type) => (
                       <option key={type} value={type}>
@@ -660,7 +749,11 @@ export function Toolbar(props: ToolbarProps) {
                     className="mt-1 w-full rounded border border-line bg-white px-2 py-1 text-xs"
                     value={props.timelineHeatmap.colorScheme}
                     data-testid="toolbar-view-heatmap-color-select"
-                    onChange={(event) => props.onTimelineHeatmapChange({ colorScheme: event.target.value as TimelineHeatmapViewSettings['colorScheme'] })}
+                    onChange={(event) =>
+                      props.onTimelineHeatmapChange({
+                        colorScheme: event.target.value as TimelineHeatmapViewSettings['colorScheme'],
+                      })
+                    }
                   >
                     {(['warm', 'cool', 'mono'] as const).map((scheme) => (
                       <option key={scheme} value={scheme}>
@@ -705,7 +798,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {toolsMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-tools-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-tools-menu"
+          >
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -1078,7 +1174,10 @@ export function Toolbar(props: ToolbarProps) {
               <span>{t.beatSync}</span>
               <Activity size={14} />
             </button>
-            <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">
+            <label
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600"
+              data-testid="toolbar-tools-beat-sensitivity-row"
+            >
               <span>{t.beatSensitivity}</span>
               <select
                 className="rounded border border-line bg-white px-2 py-1 text-xs text-slate-700"
@@ -1143,7 +1242,9 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{props.audioSeparationRunning ? t.cancelAudioSeparation : t.audioSeparation}</span>
-              {props.audioSeparationRunning && props.audioSeparationProgress !== undefined ? <span className="text-xs text-slate-500">{Math.round(props.audioSeparationProgress * 100)}%</span> : null}
+              {props.audioSeparationRunning && props.audioSeparationProgress !== undefined ? (
+                <span className="text-xs text-slate-500">{Math.round(props.audioSeparationProgress * 100)}%</span>
+              ) : null}
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
@@ -1241,7 +1342,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {helpMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-help-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-help-menu"
+          >
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -1268,11 +1372,36 @@ export function Toolbar(props: ToolbarProps) {
           ) : null}
         </div>
       </div>
-      <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
-      <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />
-      <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
-      <ToolButton title={t.saveEncryptedProject} onClick={props.onSaveEncryptedProject} icon={<LockKeyhole size={17} />} testId="toolbar-save-encrypted-project-button" />
-      <ToolButton title={t.archiveProject} onClick={props.onArchiveProject} icon={<Archive size={17} />} testId="toolbar-archive-project-button" />
+      <ToolButton
+        title={t.newProject}
+        onClick={props.onNewProject}
+        icon={<FilePlus2 size={17} />}
+        testId="toolbar-new-project-button"
+      />
+      <ToolButton
+        title={t.openProject}
+        onClick={props.onOpenProject}
+        icon={<FolderOpen size={17} />}
+        testId="toolbar-open-project-button"
+      />
+      <ToolButton
+        title={t.saveProject}
+        onClick={props.onSaveProject}
+        icon={<Save size={17} />}
+        testId="toolbar-save-project-button"
+      />
+      <ToolButton
+        title={t.saveEncryptedProject}
+        onClick={props.onSaveEncryptedProject}
+        icon={<LockKeyhole size={17} />}
+        testId="toolbar-save-encrypted-project-button"
+      />
+      <ToolButton
+        title={t.archiveProject}
+        onClick={props.onArchiveProject}
+        icon={<Archive size={17} />}
+        testId="toolbar-archive-project-button"
+      />
       <div className="mx-1 h-7 w-px bg-line" />
       <div className="relative">
         <button
@@ -1294,7 +1423,10 @@ export function Toolbar(props: ToolbarProps) {
           <ChevronDown size={14} />
         </button>
         {importMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 w-64 rounded-md border border-line bg-white p-2 shadow-soft" data-testid="toolbar-import-menu">
+          <div
+            className="absolute left-0 top-10 z-20 w-64 rounded-md border border-line bg-white p-2 shadow-soft"
+            data-testid="toolbar-import-menu"
+          >
             <button
               className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -1320,7 +1452,10 @@ export function Toolbar(props: ToolbarProps) {
               <span>{t.importSubtitles}</span>
             </button>
             <div className="my-2 h-px bg-line" />
-            <label className="mb-1 block px-2 text-[11px] font-medium uppercase tracking-wide text-slate-500" htmlFor="subtitle-data-import-mode-select">
+            <label
+              className="mb-1 block px-2 text-[11px] font-medium uppercase tracking-wide text-slate-500"
+              htmlFor="subtitle-data-import-mode-select"
+            >
               {t.subtitleDataImportMode}
             </label>
             <select
@@ -1349,8 +1484,18 @@ export function Toolbar(props: ToolbarProps) {
           </div>
         ) : null}
       </div>
-      <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
-      <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
+      <ToolButton
+        title={t.importMedia}
+        onClick={props.onImportMedia}
+        icon={<FileDown size={17} />}
+        testId="toolbar-import-media-button"
+      />
+      <ToolButton
+        title={t.importSubtitles}
+        onClick={props.onImportSubtitles}
+        icon={<Captions size={17} />}
+        testId="import-subtitles-button"
+      />
       <div className="relative">
         <button
           className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-sm font-medium text-slate-700 hover:bg-white"
@@ -1372,10 +1517,19 @@ export function Toolbar(props: ToolbarProps) {
         >
           {props.recordingActive ? <Square size={15} /> : <Monitor size={15} />}
           <span>{props.recordingActive ? t.stopRecording : t.record}</span>
-          {props.recordingActive ? <span className="text-xs tabular-nums text-slate-500">{formatRecordingElapsed(props.recordingElapsedSeconds)}</span> : <ChevronDown size={14} />}
+          {props.recordingActive ? (
+            <span className="text-xs tabular-nums text-slate-500">
+              {formatRecordingElapsed(props.recordingElapsedSeconds)}
+            </span>
+          ) : (
+            <ChevronDown size={14} />
+          )}
         </button>
         {recordMenuOpen ? (
-          <div className="absolute left-0 top-10 z-20 min-w-40 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-record-menu">
+          <div
+            className="absolute left-0 top-10 z-20 min-w-40 rounded-md border border-line bg-white py-1 shadow-soft"
+            data-testid="toolbar-record-menu"
+          >
             <button
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -1403,8 +1557,20 @@ export function Toolbar(props: ToolbarProps) {
           </div>
         ) : null}
       </div>
-      <ToolButton title={canExport ? t.exportVideo : t.exportDisabled} disabled={!canExport || isExporting} onClick={props.onExportVideo} icon={<Download size={17} />} testId="toolbar-export-button" />
-      <ToolButton title={t.exportTimeline} disabled={isExporting} onClick={props.onExportTimeline} icon={<FileDown size={17} />} testId="toolbar-export-timeline-button" />
+      <ToolButton
+        title={canExport ? t.exportVideo : t.exportDisabled}
+        disabled={!canExport || isExporting}
+        onClick={props.onExportVideo}
+        icon={<Download size={17} />}
+        testId="toolbar-export-button"
+      />
+      <ToolButton
+        title={t.exportTimeline}
+        disabled={isExporting}
+        onClick={props.onExportTimeline}
+        icon={<FileDown size={17} />}
+        testId="toolbar-export-timeline-button"
+      />
       <ToolButton
         title={canExport ? t.exportCurrentFrame : t.exportDisabled}
         disabled={!canExport || isExporting}
@@ -1412,7 +1578,10 @@ export function Toolbar(props: ToolbarProps) {
         icon={<ImageDown size={17} />}
         testId="toolbar-export-frame-button"
       />
-      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.previewQuality}>
+      <label
+        className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.previewQuality}
+      >
         <span>{t.previewQuality}</span>
         <select
           className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
@@ -1434,8 +1603,17 @@ export function Toolbar(props: ToolbarProps) {
         testId="toolbar-popout-preview-button"
         active={props.previewWindowOpen}
       />
-      <ToolButton title={t.gridSnap} onClick={props.onToggleTimelineGridSnap} icon={<Grid2X2 size={17} />} testId="toolbar-grid-snap-button" active={props.timelineGridSettings.enabled} />
-      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.gridSnapUnit}>
+      <ToolButton
+        title={t.gridSnap}
+        onClick={props.onToggleTimelineGridSnap}
+        icon={<Grid2X2 size={17} />}
+        testId="toolbar-grid-snap-button"
+        active={props.timelineGridSettings.enabled}
+      />
+      <label
+        className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.gridSnapUnit}
+      >
         <span>{t.gridSnapUnit}</span>
         <select
           className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
@@ -1454,7 +1632,7 @@ export function Toolbar(props: ToolbarProps) {
         <button
           className={clsx(
             'inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition hover:border-line hover:bg-panel hover:text-ink',
-            workspaceLayoutOpen ? 'border-brand bg-brand text-white' : undefined
+            workspaceLayoutOpen ? 'border-brand bg-brand text-white' : undefined,
           )}
           type="button"
           title={t.workspaceLayout}
@@ -1489,11 +1667,29 @@ export function Toolbar(props: ToolbarProps) {
         ) : null}
       </div>
       {checkCostAlert(aiSettings.usageRecords, aiSettings.costAlertThreshold) ? (
-        <ToolButton title={zhCN.settings.aiServices.costAlertTitle} onClick={props.onOpenSettings} icon={<AlertTriangle size={17} className="text-amber-500" />} testId="toolbar-cost-alert" />
+        <ToolButton
+          title={zhCN.settings.aiServices.costAlertTitle}
+          onClick={props.onOpenSettings}
+          icon={<AlertTriangle size={17} className="text-amber-500" />}
+          testId="toolbar-cost-alert"
+        />
       ) : null}
-            <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
-      <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
-      <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
+      <ToolButton
+        title={t.settings}
+        onClick={props.onOpenSettings}
+        icon={<Settings size={17} />}
+        testId="toolbar-settings-button"
+      />
+      <ToolButton
+        title={t.clearMediaCache}
+        onClick={props.onClearCache}
+        icon={<Trash2 size={17} />}
+        testId="settings-clear-cache-button"
+      />
+      <label
+        className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.autosaveInterval}
+      >
         <span>{t.autosave}</span>
         <input
           className="h-6 w-12 rounded border border-line bg-white px-1 text-right tabular-nums text-slate-700"
@@ -1507,7 +1703,10 @@ export function Toolbar(props: ToolbarProps) {
         />
         <span>{zhCN.common.secondsShort}</span>
       </label>
-      <div className="flex h-9 min-w-[380px] items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.whisperExecutable}>
+      <div
+        className="flex h-9 min-w-[380px] items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.whisperExecutable}
+      >
         <Mic2 size={14} />
         <input
           className="h-6 min-w-0 flex-1 rounded border border-line bg-white px-1 text-slate-700"
@@ -1545,27 +1744,116 @@ export function Toolbar(props: ToolbarProps) {
         </button>
       </div>
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
-      <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
-      <ToolButton title={t.history} onClick={props.onToggleHistoryPanel} icon={<History size={17} />} testId="toolbar-history-button" active={props.historyPanelOpen} />
-      <ToolButton title={t.projectDocumentation} onClick={props.onToggleProjectDocumentation} icon={<FileText size={17} />} testId="toolbar-project-documentation-button" active={props.projectDocumentationOpen} />
-      <ToolButton title={t.storyboard} onClick={props.onToggleStoryboard} icon={<LayoutGrid size={17} />} testId="storyboard-toggle-button" active={props.storyboardOpen} />
-      <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
-      <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
-  <ToolButton title={zhCN.aiRoughCut.title} onClick={props.onToggleAIRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-ai-rough-cut-button" active={props.aiRoughCutOpen} />
-          <ToolButton title={zhCN.directorMode.title} onClick={props.onToggleDirectorMode} icon={<WandSparkles size={17} />} testId="toolbar-director-mode-button" active={props.directorModeOpen} />
-          <ToolButton title={zhCN.musicMatch.title} onClick={props.onToggleMusicMatch} icon={<WandSparkles size={17} />} testId="toolbar-music-match-button" active={props.musicMatchOpen} />
-          <ToolButton title={zhCN.highlightReel.title} onClick={props.onToggleHighlightReel} icon={<WandSparkles size={17} />} testId="toolbar-highlight-reel-button" active={props.highlightReelOpen} />
-          <ToolButton title={zhCN.contextualTranslation.title} onClick={props.onToggleContextualTranslation} icon={<WandSparkles size={17} />} testId="toolbar-contextual-translation-button" active={props.contextualTranslationOpen} />
-          <ToolButton title={zhCN.aiChatEditor.title} onClick={props.onToggleAIChatEditor} icon={<WandSparkles size={17} />} testId="toolbar-ai-chat-editor-button" active={props.aiChatEditorOpen} />
-          <ToolButton title={featureStrings.smartCreation.title} onClick={props.onToggleSmartCreation} icon={<WandSparkles size={17} />} testId="toolbar-smart-creation-button" active={props.smartCreationOpen} />
-      <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
+      <ToolButton
+        title={t.undo}
+        disabled={!historyMeta.canUndo}
+        onClick={props.onUndo}
+        icon={<Undo2 size={17} />}
+        testId="toolbar-undo-button"
+      />
+      <ToolButton
+        title={t.redo}
+        disabled={!historyMeta.canRedo}
+        onClick={props.onRedo}
+        icon={<Redo2 size={17} />}
+        testId="toolbar-redo-button"
+      />
+      <ToolButton
+        title={t.history}
+        onClick={props.onToggleHistoryPanel}
+        icon={<History size={17} />}
+        testId="toolbar-history-button"
+        active={props.historyPanelOpen}
+      />
+      <ToolButton
+        title={t.projectDocumentation}
+        onClick={props.onToggleProjectDocumentation}
+        icon={<FileText size={17} />}
+        testId="toolbar-project-documentation-button"
+        active={props.projectDocumentationOpen}
+      />
+      <ToolButton
+        title={t.storyboard}
+        onClick={props.onToggleStoryboard}
+        icon={<LayoutGrid size={17} />}
+        testId="storyboard-toggle-button"
+        active={props.storyboardOpen}
+      />
+      <ToolButton
+        title={t.splitSelectedClip}
+        onClick={props.onSplitSelected}
+        icon={<Scissors size={17} />}
+        testId="toolbar-split-button"
+      />
+      <ToolButton
+        title={t.smartRoughCut}
+        onClick={props.onToggleSmartRoughCut}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-smart-rough-cut-button"
+        active={props.smartRoughCutOpen}
+      />
+      <ToolButton
+        title={zhCN.aiRoughCut.title}
+        onClick={props.onToggleAIRoughCut}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-ai-rough-cut-button"
+        active={props.aiRoughCutOpen}
+      />
+      <ToolButton
+        title={zhCN.directorMode.title}
+        onClick={props.onToggleDirectorMode}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-director-mode-button"
+        active={props.directorModeOpen}
+      />
+      <ToolButton
+        title={zhCN.musicMatch.title}
+        onClick={props.onToggleMusicMatch}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-music-match-button"
+        active={props.musicMatchOpen}
+      />
+      <ToolButton
+        title={zhCN.highlightReel.title}
+        onClick={props.onToggleHighlightReel}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-highlight-reel-button"
+        active={props.highlightReelOpen}
+      />
+      <ToolButton
+        title={zhCN.contextualTranslation.title}
+        onClick={props.onToggleContextualTranslation}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-contextual-translation-button"
+        active={props.contextualTranslationOpen}
+      />
+      <ToolButton
+        title={zhCN.aiChatEditor.title}
+        onClick={props.onToggleAIChatEditor}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-ai-chat-editor-button"
+        active={props.aiChatEditorOpen}
+      />
+      <ToolButton
+        title={featureStrings.smartCreation.title}
+        onClick={props.onToggleSmartCreation}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-smart-creation-button"
+        active={props.smartCreationOpen}
+      />
+      <ToolButton
+        title={t.createMulticamSequence}
+        disabled={!props.canCreateMulticamSequence}
+        onClick={props.onCreateMulticamSequence}
+        icon={<PanelsTopLeft size={17} />}
+        testId="toolbar-create-multicam-button"
+      />
       <div className="relative">
         <button
           className={clsx(
             'inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition',
             splitLayoutOpen ? 'border-brand bg-brand text-white' : undefined,
-            props.canApplySplitLayout ? 'hover:border-line hover:bg-panel hover:text-ink' : 'opacity-40'
+            props.canApplySplitLayout ? 'hover:border-line hover:bg-panel hover:text-ink' : 'opacity-40',
           )}
           type="button"
           title={t.applySplitLayout}
@@ -1601,7 +1889,13 @@ export function Toolbar(props: ToolbarProps) {
           />
         ) : null}
       </div>
-      <ToolButton title={t.applyPiPLayout} disabled={!props.canApplyPiPLayout} onClick={props.onApplyPiPLayout} icon={<PictureInPicture2 size={17} />} testId="toolbar-pip-button" />
+      <ToolButton
+        title={t.applyPiPLayout}
+        disabled={!props.canApplyPiPLayout}
+        onClick={props.onApplyPiPLayout}
+        icon={<PictureInPicture2 size={17} />}
+        testId="toolbar-pip-button"
+      />
       <select
         className="h-9 rounded-md border border-line bg-panel px-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
         title={t.pipPosition}
@@ -1617,7 +1911,13 @@ export function Toolbar(props: ToolbarProps) {
         <option value="top-left">{t.pipPositions['top-left']}</option>
       </select>
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
+      <ToolButton
+        title={isPlaying ? t.pause : t.play}
+        onClick={() => setIsPlaying(!isPlaying)}
+        icon={isPlaying ? <Pause size={17} /> : <Play size={17} />}
+        testId="toolbar-playback-button"
+        playbackState={isPlaying ? 'playing' : 'paused'}
+      />
       {activeMediaJobCount > 0 ? (
         <button
           className="inline-flex h-8 items-center gap-1 rounded-full border border-line bg-panel px-2 text-xs font-semibold text-slate-700 hover:bg-white"
@@ -1637,9 +1937,21 @@ export function Toolbar(props: ToolbarProps) {
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(exportProgress * 100)}%` }} />
           </div>
           <div className="w-10 text-right text-xs tabular-nums text-slate-600">{Math.round(exportProgress * 100)}%</div>
-          {isExporting ? <ToolButton title={t.cancelExport} onClick={props.onCancelExport} icon={<XCircle size={16} />} testId="toolbar-cancel-export-button" /> : null}
+          {isExporting ? (
+            <ToolButton
+              title={t.cancelExport}
+              onClick={props.onCancelExport}
+              icon={<XCircle size={16} />}
+              testId="toolbar-cancel-export-button"
+            />
+          ) : null}
           {props.lastExportPath && props.onRevealExport ? (
-            <button className="rounded-md border border-line bg-white p-2 text-slate-700 hover:bg-panel" title={t.openExportFolder} onClick={props.onRevealExport} data-testid="toolbar-open-export-folder-button">
+            <button
+              className="rounded-md border border-line bg-white p-2 text-slate-700 hover:bg-panel"
+              title={t.openExportFolder}
+              onClick={props.onRevealExport}
+              data-testid="toolbar-open-export-folder-button"
+            >
               <RotateCcw size={15} />
             </button>
           ) : null}
@@ -1666,7 +1978,7 @@ function SplitLayoutPicker({
   customRatio,
   onCustomRatioChange,
   onApply,
-  onSaveCustom
+  onSaveCustom,
 }: {
   customLayouts: SplitLayoutDefinition[];
   customRatio: number;
@@ -1677,7 +1989,10 @@ function SplitLayoutPicker({
   const t = zhCN.toolbar;
   const layouts = [...SPLIT_LAYOUT_PRESET_IDS.map((id) => BUILT_IN_SPLIT_LAYOUTS[id]), ...customLayouts];
   return (
-    <div className="absolute left-0 top-10 z-30 w-80 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="split-layout-picker">
+    <div
+      className="absolute left-0 top-10 z-30 w-80 rounded-md border border-line bg-white p-3 text-xs shadow-soft"
+      data-testid="split-layout-picker"
+    >
       <div className="mb-2 font-semibold text-slate-700">{t.applySplitLayout}</div>
       <div className="grid grid-cols-2 gap-2">
         {layouts.map((layout) => (
@@ -1689,7 +2004,9 @@ function SplitLayoutPicker({
             onClick={() => onApply(layout.id)}
           >
             <SplitLayoutPreview layout={layout} />
-            <div className="mt-1 truncate font-medium text-slate-700">{t.splitLayouts[layout.id as keyof typeof t.splitLayouts] ?? layout.name}</div>
+            <div className="mt-1 truncate font-medium text-slate-700">
+              {t.splitLayouts[layout.id as keyof typeof t.splitLayouts] ?? layout.name}
+            </div>
           </button>
         ))}
       </div>
@@ -1725,7 +2042,7 @@ function WorkspaceLayoutPicker({
   layouts,
   activeLayoutId,
   onApply,
-  onSave
+  onSave,
 }: {
   layouts: WorkspaceLayoutDefinition[];
   activeLayoutId: WorkspaceLayoutId;
@@ -1736,7 +2053,10 @@ function WorkspaceLayoutPicker({
   const builtInLayouts = layouts.filter((layout) => layout.builtIn);
   const customLayouts = layouts.filter((layout) => !layout.builtIn);
   return (
-    <div className="absolute left-0 top-10 z-30 w-72 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="workspace-layout-picker">
+    <div
+      className="absolute left-0 top-10 z-30 w-72 rounded-md border border-line bg-white p-3 text-xs shadow-soft"
+      data-testid="workspace-layout-picker"
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="font-semibold text-slate-700">{t.workspaceLayout}</div>
         <button
@@ -1748,17 +2068,30 @@ function WorkspaceLayoutPicker({
           {t.saveWorkspaceLayout}
         </button>
       </div>
-      <WorkspaceLayoutGroup title={t.builtInWorkspaceLayouts} layouts={builtInLayouts} activeLayoutId={activeLayoutId} onApply={onApply} />
+      <WorkspaceLayoutGroup
+        title={t.builtInWorkspaceLayouts}
+        layouts={builtInLayouts}
+        activeLayoutId={activeLayoutId}
+        onApply={onApply}
+      />
       <div className="mt-3">
         <div className="mb-1 px-1 text-[11px] font-semibold uppercase text-slate-500">{t.customWorkspaceLayouts}</div>
         {customLayouts.length > 0 ? (
           <div className="space-y-1">
             {customLayouts.map((layout) => (
-              <WorkspaceLayoutOption key={layout.id} layout={layout} active={layout.id === activeLayoutId} onApply={onApply} />
+              <WorkspaceLayoutOption
+                key={layout.id}
+                layout={layout}
+                active={layout.id === activeLayoutId}
+                onApply={onApply}
+              />
             ))}
           </div>
         ) : (
-          <div className="rounded border border-dashed border-line px-2 py-3 text-center text-slate-500" data-testid="workspace-layout-empty-custom">
+          <div
+            className="rounded border border-dashed border-line px-2 py-3 text-center text-slate-500"
+            data-testid="workspace-layout-empty-custom"
+          >
             {t.noCustomWorkspaceLayouts}
           </div>
         )}
@@ -1771,7 +2104,7 @@ function WorkspaceLayoutGroup({
   title,
   layouts,
   activeLayoutId,
-  onApply
+  onApply,
 }: {
   title: string;
   layouts: WorkspaceLayoutDefinition[];
@@ -1783,7 +2116,12 @@ function WorkspaceLayoutGroup({
       <div className="mb-1 px-1 text-[11px] font-semibold uppercase text-slate-500">{title}</div>
       <div className="space-y-1">
         {layouts.map((layout) => (
-          <WorkspaceLayoutOption key={layout.id} layout={layout} active={layout.id === activeLayoutId} onApply={onApply} />
+          <WorkspaceLayoutOption
+            key={layout.id}
+            layout={layout}
+            active={layout.id === activeLayoutId}
+            onApply={onApply}
+          />
         ))}
       </div>
     </div>
@@ -1793,24 +2131,31 @@ function WorkspaceLayoutGroup({
 function WorkspaceLayoutOption({
   layout,
   active,
-  onApply
+  onApply,
 }: {
   layout: WorkspaceLayoutDefinition;
   active: boolean;
   onApply(layoutId: WorkspaceLayoutId): void;
 }) {
   const t = zhCN.toolbar;
-  const name = layout.builtIn ? t.workspaceLayouts[layout.id as keyof typeof t.workspaceLayouts] ?? layout.name : layout.name;
+  const name = layout.builtIn
+    ? (t.workspaceLayouts[layout.id as keyof typeof t.workspaceLayouts] ?? layout.name)
+    : layout.name;
   return (
     <button
-      className={clsx('flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left hover:bg-panel', active ? 'border-brand bg-brand/5 text-brand' : 'border-line text-slate-700')}
+      className={clsx(
+        'flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left hover:bg-panel',
+        active ? 'border-brand bg-brand/5 text-brand' : 'border-line text-slate-700',
+      )}
       type="button"
       data-testid={`workspace-layout-option-${layout.id}`}
       aria-pressed={active}
       onClick={() => onApply(layout.id)}
     >
       <span className="min-w-0 truncate font-medium">{name}</span>
-      <span className="shrink-0 text-[11px] text-slate-500">{active ? t.workspaceLayoutActive : layout.shortcutSlot ? t.workspaceShortcut(layout.shortcutSlot) : ''}</span>
+      <span className="shrink-0 text-[11px] text-slate-500">
+        {active ? t.workspaceLayoutActive : layout.shortcutSlot ? t.workspaceShortcut(layout.shortcutSlot) : ''}
+      </span>
     </button>
   );
 }
@@ -1839,7 +2184,7 @@ function ToolButton({ title, icon, disabled, active, onClick, testId, playbackSt
       className={clsx(
         'inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition',
         active ? 'border-brand bg-brand text-white' : undefined,
-        disabled ? 'opacity-40' : 'hover:border-line hover:bg-panel hover:text-ink'
+        disabled ? 'opacity-40' : 'hover:border-line hover:bg-panel hover:text-ink',
       )}
       title={title}
       aria-label={title}

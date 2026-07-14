@@ -35,7 +35,10 @@ export interface OperationRecordingSlide {
   timestampMs: number;
 }
 
-export function createOperationRecording(initialProject: Project, options: { createdAt?: string; startedAtMs?: number } = {}): OperationRecordingFile {
+export function createOperationRecording(
+  initialProject: Project,
+  options: { createdAt?: string; startedAtMs?: number } = {},
+): OperationRecordingFile {
   const startedAtMs = finiteNumber(options.startedAtMs, Date.now());
   return {
     format: OPERATION_RECORDING_FORMAT,
@@ -43,11 +46,16 @@ export function createOperationRecording(initialProject: Project, options: { cre
     createdAt: normalizeIsoDate(options.createdAt),
     startedAtMs,
     initialProject: cloneJson(initialProject),
-    commands: []
+    commands: [],
   };
 }
 
-export function recordOperationCommand(recording: OperationRecordingFile, command: Command, projectAfter: Project, timestampMs = Date.now()): OperationRecordingFile {
+export function recordOperationCommand(
+  recording: OperationRecordingFile,
+  command: Command,
+  projectAfter: Project,
+  timestampMs = Date.now(),
+): OperationRecordingFile {
   const normalized = normalizeOperationRecording(recording);
   const index = normalized.commands.length;
   const safeTimestamp = Math.max(normalized.startedAtMs, finiteNumber(timestampMs, normalized.startedAtMs));
@@ -59,11 +67,11 @@ export function recordOperationCommand(recording: OperationRecordingFile, comman
     timestampMs: safeTimestamp,
     relativeTimeMs: Math.max(0, safeTimestamp - normalized.startedAtMs),
     payload: extractCommandPayload(command),
-    projectAfter: cloneJson(projectAfter)
+    projectAfter: cloneJson(projectAfter),
   };
   return {
     ...normalized,
-    commands: [...normalized.commands, entry]
+    commands: [...normalized.commands, entry],
   };
 }
 
@@ -107,8 +115,8 @@ export function normalizeOperationRecording(input: unknown): OperationRecordingF
             timestampMs,
             relativeTimeMs: Math.max(0, finiteNumber(item.relativeTimeMs, timestampMs - startedAtMs)),
             payload: cloneSerializable(item.payload),
-            projectAfter: cloneJson(item.projectAfter)
-          }
+            projectAfter: cloneJson(item.projectAfter),
+          },
         ];
       })
     : [];
@@ -118,11 +126,15 @@ export function normalizeOperationRecording(input: unknown): OperationRecordingF
     createdAt: normalizeIsoDate(record.createdAt),
     startedAtMs,
     initialProject: cloneJson(record.initialProject),
-    commands
+    commands,
   };
 }
 
-export function getOperationReplayDelayMs(previous: RecordedOperationCommand | undefined, next: RecordedOperationCommand, speed: OperationReplaySpeed): number {
+export function getOperationReplayDelayMs(
+  previous: RecordedOperationCommand | undefined,
+  next: RecordedOperationCommand,
+  speed: OperationReplaySpeed,
+): number {
   if (!previous) {
     return 0;
   }
@@ -130,11 +142,14 @@ export function getOperationReplayDelayMs(previous: RecordedOperationCommand | u
   return Math.max(0, Math.round((next.timestampMs - previous.timestampMs) / safeSpeed));
 }
 
-export function buildOperationReplaySchedule(recording: OperationRecordingFile, speed: OperationReplaySpeed): Array<{ index: number; delayMs: number }> {
+export function buildOperationReplaySchedule(
+  recording: OperationRecordingFile,
+  speed: OperationReplaySpeed,
+): Array<{ index: number; delayMs: number }> {
   const normalized = normalizeOperationRecording(recording);
   return normalized.commands.map((command, index) => ({
     index,
-    delayMs: getOperationReplayDelayMs(index > 0 ? normalized.commands[index - 1] : undefined, command, speed)
+    delayMs: getOperationReplayDelayMs(index > 0 ? normalized.commands[index - 1] : undefined, command, speed),
   }));
 }
 
@@ -144,10 +159,16 @@ export function getOperationProjectAtStep(recording: OperationRecordingFile, ste
   if (index < 0) {
     return cloneJson(normalized.initialProject);
   }
-  return cloneJson(normalized.commands[Math.min(index, normalized.commands.length - 1)]?.projectAfter ?? normalized.initialProject);
+  return cloneJson(
+    normalized.commands[Math.min(index, normalized.commands.length - 1)]?.projectAfter ?? normalized.initialProject,
+  );
 }
 
-export function replayOperationRecording(recording: OperationRecordingFile, applyProject: (project: Project, command: RecordedOperationCommand, index: number) => void, upToIndex = Number.POSITIVE_INFINITY): void {
+export function replayOperationRecording(
+  recording: OperationRecordingFile,
+  applyProject: (project: Project, command: RecordedOperationCommand, index: number) => void,
+  upToIndex = Number.POSITIVE_INFINITY,
+): void {
   const normalized = normalizeOperationRecording(recording);
   const maxIndex = Math.min(normalized.commands.length - 1, Math.floor(upToIndex));
   for (const command of normalized.commands) {
@@ -158,7 +179,10 @@ export function replayOperationRecording(recording: OperationRecordingFile, appl
   }
 }
 
-export function buildOperationRecordingSlides(recording: OperationRecordingFile, everyNSteps = 1): OperationRecordingSlide[] {
+export function buildOperationRecordingSlides(
+  recording: OperationRecordingFile,
+  everyNSteps = 1,
+): OperationRecordingSlide[] {
   const normalized = normalizeOperationRecording(recording);
   const step = Math.max(1, Math.floor(everyNSteps));
   return normalized.commands
@@ -169,7 +193,7 @@ export function buildOperationRecordingSlides(recording: OperationRecordingFile,
       description: command.description,
       clipCount: command.projectAfter.timeline.tracks.reduce((count, track) => count + track.clips.length, 0),
       trackCount: command.projectAfter.timeline.tracks.length,
-      timestampMs: command.timestampMs
+      timestampMs: command.timestampMs,
     }));
 }
 
@@ -181,7 +205,7 @@ export function generateOperationRecordingSlidesHtml(recording: OperationRecordi
   <p class="kicker">${escapeHtml(slide.title)}</p>
   <h2>${escapeHtml(slide.description)}</h2>
   <div class="meta">Clip ${slide.clipCount} / Track ${slide.trackCount} / ${Math.round(slide.timestampMs)} ms</div>
-</section>`
+</section>`,
     )
     .join('\n');
   return `<!doctype html>
@@ -243,7 +267,12 @@ function cloneJson<T>(value: T): T {
 }
 
 function isProjectLike(value: unknown): value is Project {
-  return Boolean(value && typeof value === 'object' && Array.isArray((value as Project).media) && (value as Project).timeline?.tracks);
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    Array.isArray((value as Project).media) &&
+    (value as Project).timeline?.tracks,
+  );
 }
 
 function finiteNumber(value: unknown, fallback: number): number {

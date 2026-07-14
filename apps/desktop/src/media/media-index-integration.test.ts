@@ -6,7 +6,11 @@ vi.mock('../lib/tauri-bridge', () => ({
   batchAutoTagAssets: vi.fn(),
 }));
 
-import { mediaAssetToIndexAsset, mediaAssetToAutoTagRequest, indexAndTagImportedMedia } from './media-index-integration';
+import {
+  mediaAssetToIndexAsset,
+  mediaAssetToAutoTagRequest,
+  indexAndTagImportedMedia,
+} from './media-index-integration';
 import { initMediaIndexDb, batchUpsertMediaAssets, batchAutoTagAssets } from '../lib/tauri-bridge';
 import type { MediaAsset } from '@open-factory/editor-core';
 
@@ -155,10 +159,7 @@ describe('media-index-integration', () => {
 
     it('批量处理多个资产', async () => {
       mockInitMediaIndexDb.mockResolvedValue(undefined);
-      mockBatchAutoTagAssets.mockResolvedValue([
-        { tags: ['1080p', '视频'] },
-        { tags: ['音频'] },
-      ]);
+      mockBatchAutoTagAssets.mockResolvedValue([{ tags: ['1080p', '视频'] }, { tags: ['音频'] }]);
       mockBatchUpsertMediaAssets.mockResolvedValue(2);
 
       const assets = [
@@ -167,14 +168,17 @@ describe('media-index-integration', () => {
       ];
       await indexAndTagImportedMedia(assets, '/test/project');
 
-      expect(mockBatchAutoTagAssets).toHaveBeenCalledWith('/test/project', expect.arrayContaining([
-        expect.objectContaining({ assetId: 'v1' }),
-        expect.objectContaining({ assetId: 'a1' }),
-      ]));
-      expect(mockBatchUpsertMediaAssets).toHaveBeenCalledWith('/test/project', expect.arrayContaining([
-        expect.objectContaining({ id: 'v1' }),
-        expect.objectContaining({ id: 'a1' }),
-      ]));
+      expect(mockBatchAutoTagAssets).toHaveBeenCalledWith(
+        '/test/project',
+        expect.arrayContaining([
+          expect.objectContaining({ assetId: 'v1' }),
+          expect.objectContaining({ assetId: 'a1' }),
+        ]),
+      );
+      expect(mockBatchUpsertMediaAssets).toHaveBeenCalledWith(
+        '/test/project',
+        expect.arrayContaining([expect.objectContaining({ id: 'v1' }), expect.objectContaining({ id: 'a1' })]),
+      );
     });
   });
 });

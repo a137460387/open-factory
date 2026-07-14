@@ -10,7 +10,7 @@ export interface ProjectPasswordRequest {
 export function ProjectPasswordDialog({
   request,
   onClose,
-  onConfirm
+  onConfirm,
 }: {
   request: ProjectPasswordRequest;
   onClose(): void;
@@ -20,7 +20,10 @@ export function ProjectPasswordDialog({
   const disabled = password.trim().length === 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="project-password-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="project-password-dialog"
+    >
       <form
         className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft"
         onSubmit={(event) => {
@@ -46,13 +49,25 @@ export function ProjectPasswordDialog({
               autoFocus
             />
           </label>
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.projectFiles.encryptedForgetWarning}</div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+            {zhCN.projectFiles.encryptedForgetWarning}
+          </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="project-password-cancel-button">
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            data-testid="project-password-cancel-button"
+          >
             {zhCN.common.cancel}
           </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50" type="submit" disabled={disabled} data-testid="project-password-confirm-button">
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50"
+            type="submit"
+            disabled={disabled}
+            data-testid="project-password-confirm-button"
+          >
             {zhCN.projectFiles.encryptedConfirm}
           </button>
         </div>

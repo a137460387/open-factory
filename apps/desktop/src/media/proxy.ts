@@ -9,7 +9,11 @@ export interface ProxyGenerationOptions {
   sourceDuration?: number;
 }
 
-export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySettings, options: ProxyGenerationOptions = {}): Promise<MediaAsset> {
+export async function createProxyForAsset(
+  asset: MediaAsset,
+  settings?: ProxySettings,
+  options: ProxyGenerationOptions = {},
+): Promise<MediaAsset> {
   const appDataDir = await getAppDataDir();
   const plan = buildProxyPlan(asset, appDataDir, settings, options);
   if (!plan) {
@@ -20,7 +24,7 @@ export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySet
     ...asset,
     proxyPath: result.proxyPath,
     proxyStatus: 'ready',
-    proxyError: undefined
+    proxyError: undefined,
   };
 }
 

@@ -43,7 +43,7 @@ export function buildDirectorModeMediaInfo(
     type: string;
     duration: number;
     aiAnalysis?: { tags?: string[]; scene?: string; mood?: string };
-  }>
+  }>,
 ): DirectorModeMediaInfo[] {
   return media.map((m) => ({
     mediaId: m.id,
@@ -52,7 +52,7 @@ export function buildDirectorModeMediaInfo(
     duration: m.duration,
     tags: m.aiAnalysis?.tags,
     scene: m.aiAnalysis?.scene,
-    mood: m.aiAnalysis?.mood
+    mood: m.aiAnalysis?.mood,
   }));
 }
 
@@ -62,7 +62,7 @@ export function buildDirectorModeMediaInfo(
  */
 export function splitDirectorModeMediaBatches(
   mediaInfo: DirectorModeMediaInfo[],
-  maxBatch = DIRECTOR_MODE_MAX_BATCH
+  maxBatch = DIRECTOR_MODE_MAX_BATCH,
 ): DirectorModeMediaInfo[][] {
   if (mediaInfo.length === 0) return [];
   const batches: DirectorModeMediaInfo[][] = [];
@@ -75,13 +75,13 @@ export function splitDirectorModeMediaBatches(
 export function buildDirectorModeSystemPrompt(
   style: DirectorModeStyle,
   addMarkers: boolean,
-  addMusicPlaceholder: boolean
+  addMusicPlaceholder: boolean,
 ): string {
   const styleMap: Record<DirectorModeStyle, string> = {
     energetic: '节奏明快',
     calm: '舒缓叙事',
     documentary: '纪录片',
-    'social-short': '社媒短视频'
+    'social-short': '社媒短视频',
   };
   const lines = [
     '你是一个专业的视频导演助手。用户会给你一段视频目标描述、目标时长、风格偏好，以及媒体库中可用素材的信息。',
@@ -95,7 +95,7 @@ export function buildDirectorModeSystemPrompt(
     '    "trackIndex": 0,',
     '    "order": 0,',
     '    "reason": "选择理由"',
-    '  }],'
+    '  }],',
   ];
   if (addMarkers) {
     lines.push('  "markers": [{ "time": 0, "label": "章节标题" }],');
@@ -116,7 +116,7 @@ export function buildDirectorModeSystemPrompt(
 export function buildDirectorModeUserPrompt(
   description: string,
   targetDuration: number,
-  mediaInfo: DirectorModeMediaInfo[]
+  mediaInfo: DirectorModeMediaInfo[],
 ): string {
   const lines = [`视频目标描述: ${description}`];
   lines.push(`目标时长: ${targetDuration}秒`);
@@ -147,11 +147,16 @@ export function parseDirectorModeResponse(json: unknown): DirectorModePlan {
       if (!mediaId) continue;
       segments.push({
         mediaId,
-        trimStart: typeof entry.trimStart === 'number' && Number.isFinite(entry.trimStart) ? Math.max(0, entry.trimStart) : 0,
+        trimStart:
+          typeof entry.trimStart === 'number' && Number.isFinite(entry.trimStart) ? Math.max(0, entry.trimStart) : 0,
         duration: Math.max(0.1, Number.isFinite(entry.duration) ? entry.duration : 3),
-        trackIndex: typeof entry.trackIndex === 'number' && Number.isFinite(entry.trackIndex) ? Math.max(0, Math.round(entry.trackIndex)) : 0,
-        order: typeof entry.order === 'number' && Number.isFinite(entry.order) ? Math.max(0, Math.round(entry.order)) : 0,
-        reason: typeof entry.reason === 'string' ? entry.reason.trim() : ''
+        trackIndex:
+          typeof entry.trackIndex === 'number' && Number.isFinite(entry.trackIndex)
+            ? Math.max(0, Math.round(entry.trackIndex))
+            : 0,
+        order:
+          typeof entry.order === 'number' && Number.isFinite(entry.order) ? Math.max(0, Math.round(entry.order)) : 0,
+        reason: typeof entry.reason === 'string' ? entry.reason.trim() : '',
       });
     }
   }
@@ -166,7 +171,7 @@ export function parseDirectorModeResponse(json: unknown): DirectorModePlan {
       if (!label) continue;
       markers.push({
         time: Math.max(0, entry.time),
-        label
+        label,
       });
     }
   }
@@ -180,10 +185,7 @@ export function parseDirectorModeResponse(json: unknown): DirectorModePlan {
  * Validate that the total duration of all segments does not exceed the target duration.
  * Returns true if valid (total ≤ target), false otherwise.
  */
-export function validateDirectorModeTotalDuration(
-  segments: DirectorModeSegment[],
-  targetDuration: number
-): boolean {
+export function validateDirectorModeTotalDuration(segments: DirectorModeSegment[], targetDuration: number): boolean {
   if (segments.length === 0) return true;
   const total = segments.reduce((sum, s) => sum + s.duration, 0);
   return total <= targetDuration + 0.01; // small epsilon for float comparison
@@ -206,7 +208,7 @@ export interface DirectorModeStoryboardCard {
  */
 export function buildDirectorModeStoryboardCards(
   plan: DirectorModePlan,
-  mediaById: Map<string, { name: string }>
+  mediaById: Map<string, { name: string }>,
 ): DirectorModeStoryboardCard[] {
   return [...plan.segments]
     .sort((a, b) => a.order - b.order)
@@ -218,6 +220,6 @@ export function buildDirectorModeStoryboardCards(
       trackIndex: seg.trackIndex,
       order: seg.order,
       reason: seg.reason,
-      deleted: false
+      deleted: false,
     }));
 }

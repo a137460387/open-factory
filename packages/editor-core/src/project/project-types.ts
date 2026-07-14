@@ -18,7 +18,7 @@ import type {
   Timeline,
   TimelineBookmark,
   TimelineNote,
-  TtsSegment
+  TtsSegment,
 } from '../model-types';
 import type { MixerState } from '../audio/mixer-types';
 import type { CharacterTimeline } from '../ai-character-timeline';
@@ -88,4 +88,3 @@ export interface MediaPathResolution {
   path: string;
   usedRelativePath: boolean;
 }
-

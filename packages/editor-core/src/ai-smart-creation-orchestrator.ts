@@ -13,27 +13,12 @@ import type {
   ContentSceneType,
   ContentEmotionPoint,
 } from './content-analysis';
-import type {
-  SceneDetectionResult,
-  SceneDetectionOptions,
-} from './ai-scene-detector';
-import type {
-  EmotionAnalysisResult,
-} from './ai-emotion-analyzer';
-import type {
-  SpeechUnderstandingResult,
-} from './ai-speech-understanding';
-import type {
-  NarrativeAnalysisResult,
-} from './ai-narrative-analyzer';
-import type {
-  RecommendationResult,
-  RecommendationContext,
-} from './ai-smart-recommender';
-import type {
-  NarrativeGenerationResult,
-  NarrativeTemplate,
-} from './ai-narrative-generator';
+import type { SceneDetectionResult, SceneDetectionOptions } from './ai-scene-detector';
+import type { EmotionAnalysisResult } from './ai-emotion-analyzer';
+import type { SpeechUnderstandingResult } from './ai-speech-understanding';
+import type { NarrativeAnalysisResult } from './ai-narrative-analyzer';
+import type { RecommendationResult, RecommendationContext } from './ai-smart-recommender';
+import type { NarrativeGenerationResult, NarrativeTemplate } from './ai-narrative-generator';
 import { detectScenes } from './ai-scene-detector';
 import { analyzeEmotion } from './ai-emotion-analyzer';
 import { understandSpeech } from './ai-speech-understanding';
@@ -92,7 +77,7 @@ function createPhaseProgress(
   phase: SmartCreationPhase,
   phaseProgress: number,
   message: string,
-  completedPhases: SmartCreationPhase[]
+  completedPhases: SmartCreationPhase[],
 ): SmartCreationProgress {
   let totalProgress = 0;
   for (const completed of completedPhases) {
@@ -117,7 +102,7 @@ function createPhaseProgress(
  */
 export async function orchestrateSmartCreation(
   media: MediaAsset[],
-  options: SmartCreationOptions = {}
+  options: SmartCreationOptions = {},
 ): Promise<SmartCreationResult> {
   const {
     enableSpeechUnderstanding = true,
@@ -132,55 +117,41 @@ export async function orchestrateSmartCreation(
   const completedPhases: SmartCreationPhase[] = [];
 
   // Phase 1: Scene Detection
-  onProgress?.(
-    createPhaseProgress('scene_detection', 0, '正在检测场景...', completedPhases)
-  );
+  onProgress?.(createPhaseProgress('scene_detection', 0, '正在检测场景...', completedPhases));
 
   const allVisualSamples = collectVisualSamples(media);
   const scenes = detectScenes(allVisualSamples, sceneDetection);
 
-  onProgress?.(
-    createPhaseProgress('scene_detection', 100, `检测到 ${scenes.segments.length} 个场景`, completedPhases)
-  );
+  onProgress?.(createPhaseProgress('scene_detection', 100, `检测到 ${scenes.segments.length} 个场景`, completedPhases));
   completedPhases.push('scene_detection');
 
   // Phase 2: Emotion Analysis
-  onProgress?.(
-    createPhaseProgress('emotion_analysis', 0, '正在分析情绪...', completedPhases)
-  );
+  onProgress?.(createPhaseProgress('emotion_analysis', 0, '正在分析情绪...', completedPhases));
 
   const allAudioSamples = collectAudioSamples(media);
   const emotionResult = analyzeEmotion(allVisualSamples, allAudioSamples);
   // Keep the original emotion result with EmotionPoint[] type
   const emotions = emotionResult;
 
-  onProgress?.(
-    createPhaseProgress('emotion_analysis', 100, '情绪分析完成', completedPhases)
-  );
+  onProgress?.(createPhaseProgress('emotion_analysis', 100, '情绪分析完成', completedPhases));
   completedPhases.push('emotion_analysis');
 
   // Phase 3: Speech Understanding (optional)
   let speech: SpeechUnderstandingResult | undefined;
   if (enableSpeechUnderstanding) {
-    onProgress?.(
-      createPhaseProgress('speech_understanding', 0, '正在理解语音...', completedPhases)
-    );
+    onProgress?.(createPhaseProgress('speech_understanding', 0, '正在理解语音...', completedPhases));
 
     const transcripts = collectTranscripts(media);
     if (transcripts.length > 0) {
       speech = understandSpeech(transcripts.join('\n'));
     }
 
-    onProgress?.(
-      createPhaseProgress('speech_understanding', 100, '语音理解完成', completedPhases)
-    );
+    onProgress?.(createPhaseProgress('speech_understanding', 100, '语音理解完成', completedPhases));
     completedPhases.push('speech_understanding');
   }
 
   // Phase 4: Narrative Analysis
-  onProgress?.(
-    createPhaseProgress('narrative_analysis', 0, '正在分析叙事结构...', completedPhases)
-  );
+  onProgress?.(createPhaseProgress('narrative_analysis', 0, '正在分析叙事结构...', completedPhases));
 
   // Convert scene segments to format expected by analyzeNarrative
   const narrativeSegments = scenes.segments.map((seg) => ({
@@ -198,44 +169,32 @@ export async function orchestrateSmartCreation(
   }));
   const narrative = analyzeNarrative(narrativeSegments, emotionCurveForNarrative);
 
-  onProgress?.(
-    createPhaseProgress('narrative_analysis', 100, `叙事评分: ${narrative.score}`, completedPhases)
-  );
+  onProgress?.(createPhaseProgress('narrative_analysis', 100, `叙事评分: ${narrative.score}`, completedPhases));
   completedPhases.push('narrative_analysis');
 
   // Phase 5: Recommendation
-  onProgress?.(
-    createPhaseProgress('recommendation', 0, '正在生成推荐...', completedPhases)
-  );
+  onProgress?.(createPhaseProgress('recommendation', 0, '正在生成推荐...', completedPhases));
 
   const clips = extractClipsFromMedia(media);
-  const recommendations = generateRecommendations(
-    clips,
-    scenes,
-    emotions,
-    narrative,
-    maxRecommendations
-  );
+  const recommendations = generateRecommendations(clips, scenes, emotions, narrative, maxRecommendations);
 
   onProgress?.(
-    createPhaseProgress('recommendation', 100, `生成 ${recommendations.clips.length} 条推荐`, completedPhases)
+    createPhaseProgress('recommendation', 100, `生成 ${recommendations.clips.length} 条推荐`, completedPhases),
   );
   completedPhases.push('recommendation');
 
   // Phase 6: Storyline Generation (optional)
   let storyline: NarrativeGenerationResult | undefined;
   if (narrativeTemplate) {
-    onProgress?.(
-      createPhaseProgress('storyline', 0, '正在生成故事线...', completedPhases)
-    );
+    onProgress?.(createPhaseProgress('storyline', 0, '正在生成故事线...', completedPhases));
 
     storyline = generateNarrative(
       { scenes: scenes.segments, emotions, speech },
-      { template: narrativeTemplate, targetDuration, pacing }
+      { template: narrativeTemplate, targetDuration, pacing },
     );
 
     onProgress?.(
-      createPhaseProgress('storyline', 100, `故事线包含 ${storyline.storyline.length} 个片段`, completedPhases)
+      createPhaseProgress('storyline', 100, `故事线包含 ${storyline.storyline.length} 个片段`, completedPhases),
     );
     completedPhases.push('storyline');
   }
@@ -291,9 +250,7 @@ function estimateMotion(m: MediaAsset): number {
   // Higher frame rate often indicates action/sports content
   const fpsFactor = Math.min(1, Math.max(0, (fps - 24) / 96));
   // Larger files per second might indicate more motion
-  const bitrateFactor = m.size && m.duration > 0
-    ? Math.min(1, (m.size / m.duration) / 5_000_000)
-    : 0.3;
+  const bitrateFactor = m.size && m.duration > 0 ? Math.min(1, m.size / m.duration / 5_000_000) : 0.3;
   return fpsFactor * 0.6 + bitrateFactor * 0.4;
 }
 
@@ -452,16 +409,13 @@ function generateRecommendations(
   scenes: SceneDetectionResult,
   emotions: EmotionAnalysisResult,
   narrative: NarrativeAnalysisResult,
-  maxRecommendations: number
+  maxRecommendations: number,
 ): RecommendationResult {
   // Build context from analysis results
   const avgEmotion =
-    emotions.curve.length > 0
-      ? emotions.curve.reduce((sum, p) => sum + p.value, 0) / emotions.curve.length
-      : 0;
+    emotions.curve.length > 0 ? emotions.curve.reduce((sum, p) => sum + p.value, 0) / emotions.curve.length : 0;
 
-  const dominantSceneType =
-    scenes.segments.length > 0 ? scenes.segments[0].sceneType : 'indoor';
+  const dominantSceneType = scenes.segments.length > 0 ? scenes.segments[0].sceneType : 'indoor';
 
   // Build recommendation context
   const context: RecommendationContext = {

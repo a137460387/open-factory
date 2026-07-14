@@ -8,7 +8,7 @@ import {
   reorderStoryboardClipIds,
   type Clip,
   type MediaAsset,
-  type MediaLabelColor
+  type MediaLabelColor,
 } from '@open-factory/editor-core';
 import { Copy, Flag, LocateFixed, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -31,7 +31,7 @@ const COLOR_CHOICES: Array<{ color: MediaLabelColor; className: string }> = [
   { color: 'yellow', className: 'bg-yellow-400' },
   { color: 'green', className: 'bg-green-500' },
   { color: 'blue', className: 'bg-blue-500' },
-  { color: 'purple', className: 'bg-purple-500' }
+  { color: 'purple', className: 'bg-purple-500' },
 ];
 
 export function StoryboardView() {
@@ -74,7 +74,11 @@ export function StoryboardView() {
       commandManager.execute(new MoveClipsCommand(timelineAccessor, starts));
       setSelectedClipId(draggedClipId);
     } catch (error) {
-      showToast({ kind: 'warning', title: t.reorderFailed, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.reorderFailed,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     } finally {
       setDraggedClipId(undefined);
     }
@@ -96,7 +100,10 @@ export function StoryboardView() {
     if (clips.length === 0) {
       return;
     }
-    let cursor = Math.max(...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration)), 0);
+    let cursor = Math.max(
+      ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration)),
+      0,
+    );
     try {
       for (const clip of clips) {
         const clone = { ...clip, id: createId('clip'), name: `${clip.name} ${t.copySuffix}`, start: cursor } as Clip;
@@ -105,7 +112,11 @@ export function StoryboardView() {
       }
       setMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: t.copyFailed, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.copyFailed,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -133,7 +144,10 @@ export function StoryboardView() {
       onPointerDown={() => setMenu(undefined)}
     >
       {cards.length === 0 ? (
-        <div className="flex h-full items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500" data-testid="storyboard-empty">
+        <div
+          className="flex h-full items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500"
+          data-testid="storyboard-empty"
+        >
           {t.empty}
         </div>
       ) : (
@@ -175,9 +189,16 @@ export function StoryboardView() {
                 }}
               >
                 <StoryboardThumb asset={asset} name={clip.name} />
-                {mediaLabel ? <span className={`absolute left-2 top-2 h-3 w-3 rounded-full ring-2 ring-white ${COLOR_CHOICES.find((item) => item.color === mediaLabel)?.className ?? 'bg-slate-400'}`} /> : null}
+                {mediaLabel ? (
+                  <span
+                    className={`absolute left-2 top-2 h-3 w-3 rounded-full ring-2 ring-white ${COLOR_CHOICES.find((item) => item.color === mediaLabel)?.className ?? 'bg-slate-400'}`}
+                  />
+                ) : null}
                 <div className="space-y-1 p-2">
-                  <div className="truncate text-xs font-semibold text-ink" data-testid={`storyboard-card-name-${clip.id}`}>
+                  <div
+                    className="truncate text-xs font-semibold text-ink"
+                    data-testid={`storyboard-card-name-${clip.id}`}
+                  >
                     {clip.name}
                   </div>
                   <div className="flex items-center justify-between gap-2 text-[11px] tabular-nums text-slate-500">
@@ -211,7 +232,15 @@ export function StoryboardView() {
 function StoryboardThumb({ asset, name }: { asset?: MediaAsset; name: string }) {
   const src = asset?.thumbnail || (asset?.type === 'image' ? convertLocalFileSrc(asset.path) : undefined);
   if (src) {
-    return <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={name} draggable={false} loading="lazy" />;
+    return (
+      <img
+        className="aspect-video w-full bg-slate-100 object-cover"
+        src={src}
+        alt={name}
+        draggable={false}
+        loading="lazy"
+      />
+    );
   }
   return (
     <div className="flex aspect-video w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-500">
@@ -225,7 +254,7 @@ function StoryboardMenu({
   onDelete,
   onCopy,
   onJump,
-  onColor
+  onColor,
 }: {
   menu: MenuState;
   onDelete(): void;
@@ -240,9 +269,25 @@ function StoryboardMenu({
       data-testid="storyboard-context-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <MenuButton testId="storyboard-menu-jump" label={zhCN.storyboard.jump} icon={<LocateFixed size={14} />} onClick={onJump} />
-      <MenuButton testId="storyboard-menu-copy" label={zhCN.storyboard.copy} icon={<Copy size={14} />} onClick={onCopy} />
-      <MenuButton testId="storyboard-menu-delete" label={zhCN.storyboard.delete} icon={<Trash2 size={14} />} onClick={onDelete} danger />
+      <MenuButton
+        testId="storyboard-menu-jump"
+        label={zhCN.storyboard.jump}
+        icon={<LocateFixed size={14} />}
+        onClick={onJump}
+      />
+      <MenuButton
+        testId="storyboard-menu-copy"
+        label={zhCN.storyboard.copy}
+        icon={<Copy size={14} />}
+        onClick={onCopy}
+      />
+      <MenuButton
+        testId="storyboard-menu-delete"
+        label={zhCN.storyboard.delete}
+        icon={<Trash2 size={14} />}
+        onClick={onDelete}
+        danger
+      />
       <div className="mt-2 border-t border-line pt-2">
         <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold text-slate-500">
           <Flag size={12} />
@@ -260,7 +305,12 @@ function StoryboardMenu({
               onClick={() => onColor(item.color)}
             />
           ))}
-          <button className="h-5 rounded border border-line px-1 text-[10px] text-slate-600 hover:bg-panel" type="button" data-testid="storyboard-color-clear" onClick={() => onColor(null)}>
+          <button
+            className="h-5 rounded border border-line px-1 text-[10px] text-slate-600 hover:bg-panel"
+            type="button"
+            data-testid="storyboard-color-clear"
+            onClick={() => onColor(null)}
+          >
             {zhCN.common.clear}
           </button>
         </div>
@@ -269,9 +319,26 @@ function StoryboardMenu({
   );
 }
 
-function MenuButton({ testId, label, icon, onClick, danger = false }: { testId: string; label: string; icon: ReactNode; onClick(): void; danger?: boolean }) {
+function MenuButton({
+  testId,
+  label,
+  icon,
+  onClick,
+  danger = false,
+}: {
+  testId: string;
+  label: string;
+  icon: ReactNode;
+  onClick(): void;
+  danger?: boolean;
+}) {
   return (
-    <button className={`flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-panel ${danger ? 'text-rose-700' : 'text-slate-700'}`} type="button" data-testid={testId} onClick={onClick}>
+    <button
+      className={`flex w-full items-center gap-2 rounded px-2 py-2 text-left hover:bg-panel ${danger ? 'text-rose-700' : 'text-slate-700'}`}
+      type="button"
+      data-testid={testId}
+      onClick={onClick}
+    >
       {icon}
       <span>{label}</span>
     </button>

@@ -6,19 +6,17 @@ import { useEditorFeatureStore } from '../../store/editorFeatureStore';
 import { PanelLoading } from '../PanelLoading';
 
 const ProjectEncryptionSaveDialog = lazy(() =>
-  import('./ProjectEncryptionSaveDialog').then((m) => ({ default: m.ProjectEncryptionSaveDialog }))
+  import('./ProjectEncryptionSaveDialog').then((m) => ({ default: m.ProjectEncryptionSaveDialog })),
 );
 const ProjectPasswordDialog = lazy(() =>
-  import('./ProjectPasswordDialog').then((m) => ({ default: m.ProjectPasswordDialog }))
+  import('./ProjectPasswordDialog').then((m) => ({ default: m.ProjectPasswordDialog })),
 );
 
 export interface SecurityDialogsProps {
   confirmProjectEncryptionSave: (options: ProjectFileEncryptionOptions) => Promise<void>;
 }
 
-export function SecurityDialogs({
-  confirmProjectEncryptionSave,
-}: SecurityDialogsProps) {
+export function SecurityDialogs({ confirmProjectEncryptionSave }: SecurityDialogsProps) {
   const projectEncryptionSaveOpen = useEditorUIStore((s) => s.projectEncryptionSaveOpen);
   const setProjectEncryptionSaveOpen = useEditorUIStore((s) => s.setProjectEncryptionSaveOpen);
   const projectPasswordRequest = useEditorFeatureStore((s) => s.projectPasswordRequest);

@@ -5,49 +5,44 @@ import { useEditorUIStore } from '../../store/editorUIStore';
 import { useEditorFeatureStore } from '../../store/editorFeatureStore';
 import type { TimelineShortcutBindings } from '../../shortcuts/timeline-shortcuts';
 import type { ClipMacro, MacroHistoryEntry } from '../../macros/clip-macros';
-import type {
-  PreviewPerformanceSettings,
-  PreviewSkipFrames,
-} from '../../lib/preview/preview-performance';
+import type { PreviewPerformanceSettings, PreviewSkipFrames } from '../../lib/preview/preview-performance';
 import type { TimelineInteractionSettings } from '../../settings/appSettings';
 import { PanelLoading } from '../PanelLoading';
 
-const SettingsDialog = lazy(() =>
-  import('../../settings/SettingsDialog').then((m) => ({ default: m.SettingsDialog }))
-);
+const SettingsDialog = lazy(() => import('../../settings/SettingsDialog').then((m) => ({ default: m.SettingsDialog })));
 const MacroHistoryDialog = lazy(() =>
-  import('../../macros/MacroHistoryDialog').then((m) => ({ default: m.MacroHistoryDialog }))
+  import('../../macros/MacroHistoryDialog').then((m) => ({ default: m.MacroHistoryDialog })),
 );
 const ErrorKnowledgeDialog = lazy(() =>
   import('../../export-error-knowledge/ErrorKnowledgeDialog').then((m) => ({
     default: m.ErrorKnowledgeDialog,
-  }))
+  })),
 );
 const SequenceCompareDialog = lazy(() =>
   import('../../sequence-compare/SequenceCompareDialog').then((m) => ({
     default: m.SequenceCompareDialog,
-  }))
+  })),
 );
 const SubtitleSyncPanel = lazy(() =>
   import('../../subtitle-sync-monitor/SubtitleSyncPanel').then((m) => ({
     default: m.SubtitleSyncPanel,
-  }))
+  })),
 );
 const ProxyBatchVerifyDialog = lazy(() =>
   import('../../proxy-batch-verify/ProxyBatchVerifyDialog').then((m) => ({
     default: m.ProxyBatchVerifyDialog,
-  }))
+  })),
 );
 const FormatConverterDialog = lazy(() =>
-  import('../FormatConverterDialog').then((m) => ({ default: m.FormatConverterDialog }))
+  import('../FormatConverterDialog').then((m) => ({ default: m.FormatConverterDialog })),
 );
 const EmotionAnalysisPanel = lazy(() =>
-  import('../EmotionAnalysisPanel').then((m) => ({ default: m.EmotionAnalysisPanel }))
+  import('../EmotionAnalysisPanel').then((m) => ({ default: m.EmotionAnalysisPanel })),
 );
 const ExportHistoryClassifierPanel = lazy(() =>
   import('../ExportHistoryClassifierPanel').then((m) => ({
     default: m.ExportHistoryClassifierPanel,
-  }))
+  })),
 );
 
 type Updater<T> = T | ((current: T) => T);
@@ -139,9 +134,7 @@ export function SettingsDialogs({
       {macroHistoryOpen ? (
         <MacroHistoryDialog entries={macroHistory} onClose={() => setMacroHistoryOpen(false)} />
       ) : null}
-      {errorKnowledgeOpen ? (
-        <ErrorKnowledgeDialog stderr={""} onClose={() => setErrorKnowledgeOpen(false)} />
-      ) : null}
+      {errorKnowledgeOpen ? <ErrorKnowledgeDialog stderr={''} onClose={() => setErrorKnowledgeOpen(false)} /> : null}
       {sequenceCompareOpen ? (
         <SequenceCompareDialog project={project} onClose={() => setSequenceCompareOpen(false)} />
       ) : null}

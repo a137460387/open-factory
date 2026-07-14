@@ -5,7 +5,7 @@ import {
   applyThemeToDocument,
   normalizeThemeSettings,
   type ThemeDefinition,
-  type ThemeSettings
+  type ThemeSettings,
 } from './theme';
 
 const themeListeners = new Set<() => void>();

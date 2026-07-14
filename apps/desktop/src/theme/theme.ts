@@ -53,7 +53,7 @@ export const DEFAULT_CUSTOM_THEME_COLORS: CustomThemeColors = {
   primary: '#1f7a68',
   accent: '#d9553f',
   background: '#10141b',
-  text: '#f8fafc'
+  text: '#f8fafc',
 };
 
 export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
@@ -77,8 +77,8 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       danger: '#fb7185',
       canvasBackground: '#080c12',
       scopeBackground: '#080c12',
-      scopeGuide: '#475569'
-    }
+      scopeGuide: '#475569',
+    },
   },
   light: {
     id: 'light',
@@ -90,7 +90,7 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       bgSecondary: '#f5f6f8',
       bgElevated: '#ffffff',
       textPrimary: '#16181d',
-     textSecondary: '#4b5563',
+      textSecondary: '#4b5563',
       textMuted: '#5a6b7c',
       border: '#d9dde5',
       accent: '#1f7a68',
@@ -100,8 +100,8 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       danger: '#dc2626',
       canvasBackground: '#1b2028',
       scopeBackground: '#10141b',
-      scopeGuide: '#94a3b8'
-    }
+      scopeGuide: '#94a3b8',
+    },
   },
   'high-contrast': {
     id: 'high-contrast',
@@ -123,8 +123,8 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       danger: '#ff4d4d',
       canvasBackground: '#000000',
       scopeBackground: '#000000',
-      scopeGuide: '#ffffff'
-    }
+      scopeGuide: '#ffffff',
+    },
   },
   oled: {
     id: 'oled',
@@ -146,14 +146,14 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       danger: '#f43f5e',
       canvasBackground: '#000000',
       scopeBackground: '#000000',
-      scopeGuide: '#334155'
-    }
-  }
+      scopeGuide: '#334155',
+    },
+  },
 };
 
 export const DEFAULT_THEME_SETTINGS: ThemeSettings = {
   activeThemeId: 'dark',
-  customThemes: []
+  customThemes: [],
 };
 
 const THEME_COLOR_VARIABLES: Array<[string, keyof ThemeColors]> = [
@@ -171,7 +171,7 @@ const THEME_COLOR_VARIABLES: Array<[string, keyof ThemeColors]> = [
   ['--color-danger', 'danger'],
   ['--color-canvas-bg', 'canvasBackground'],
   ['--color-scope-bg', 'scopeBackground'],
-  ['--color-scope-guide', 'scopeGuide']
+  ['--color-scope-guide', 'scopeGuide'],
 ];
 
 export function normalizeThemeSettings(value: Partial<ThemeSettings> | undefined): ThemeSettings {
@@ -181,11 +181,12 @@ export function normalizeThemeSettings(value: Partial<ThemeSettings> | undefined
   const customThemes = Array.isArray(value.customThemes)
     ? value.customThemes.map(normalizeCustomTheme).filter((theme): theme is CustomTheme => Boolean(theme))
     : [];
-  const activeThemeId = typeof value.activeThemeId === 'string' ? value.activeThemeId : DEFAULT_THEME_SETTINGS.activeThemeId;
+  const activeThemeId =
+    typeof value.activeThemeId === 'string' ? value.activeThemeId : DEFAULT_THEME_SETTINGS.activeThemeId;
   const activeExists = isBuiltinThemeId(activeThemeId) || customThemes.some((theme) => theme.id === activeThemeId);
   return {
     activeThemeId: activeExists ? activeThemeId : DEFAULT_THEME_SETTINGS.activeThemeId,
-    customThemes
+    customThemes,
   };
 }
 
@@ -200,7 +201,7 @@ export function resolveTheme(settings: Partial<ThemeSettings> | undefined): Them
 
 export function upsertCustomTheme(
   settings: Partial<ThemeSettings> | undefined,
-  input: { id?: string; name: string; colors: Partial<CustomThemeColors> }
+  input: { id?: string; name: string; colors: Partial<CustomThemeColors> },
 ): { settings: ThemeSettings; theme: CustomTheme } {
   const normalized = normalizeThemeSettings(settings);
   const now = new Date().toISOString();
@@ -213,7 +214,7 @@ export function upsertCustomTheme(
     name,
     colors,
     createdAt: existing?.createdAt ?? now,
-    updatedAt: now
+    updatedAt: now,
   };
   const customThemes = existing
     ? normalized.customThemes.map((item) => (item.id === existing.id ? theme : item))
@@ -222,8 +223,8 @@ export function upsertCustomTheme(
     theme,
     settings: {
       activeThemeId: id,
-      customThemes
-    }
+      customThemes,
+    },
   };
 }
 
@@ -232,13 +233,13 @@ export function deleteCustomTheme(settings: Partial<ThemeSettings> | undefined, 
   const customThemes = normalized.customThemes.filter((theme) => theme.id !== id);
   return {
     activeThemeId: normalized.activeThemeId === id ? DEFAULT_THEME_SETTINGS.activeThemeId : normalized.activeThemeId,
-    customThemes
+    customThemes,
   };
 }
 
 export function buildThemeCssVariables(theme: ThemeDefinition): Record<string, string> {
   const variables: Record<string, string> = {
-    '--shadow-soft': theme.shadowSoft
+    '--shadow-soft': theme.shadowSoft,
   };
   for (const [variable, key] of THEME_COLOR_VARIABLES) {
     const hex = normalizeHexColor(theme.colors[key], BUILTIN_THEMES.dark.colors[key]);
@@ -248,7 +249,10 @@ export function buildThemeCssVariables(theme: ThemeDefinition): Record<string, s
   return variables;
 }
 
-export function applyThemeToDocument(settings: Partial<ThemeSettings> | undefined, target: Document | undefined = typeof document === 'undefined' ? undefined : document): ThemeDefinition {
+export function applyThemeToDocument(
+  settings: Partial<ThemeSettings> | undefined,
+  target: Document | undefined = typeof document === 'undefined' ? undefined : document,
+): ThemeDefinition {
   const theme = resolveTheme(settings);
   if (!target) {
     return theme;
@@ -257,7 +261,10 @@ export function applyThemeToDocument(settings: Partial<ThemeSettings> | undefine
   return theme;
 }
 
-export function applyThemeDefinitionToDocument(theme: ThemeDefinition, target: Document | undefined = typeof document === 'undefined' ? undefined : document): void {
+export function applyThemeDefinitionToDocument(
+  theme: ThemeDefinition,
+  target: Document | undefined = typeof document === 'undefined' ? undefined : document,
+): void {
   if (!target) {
     return;
   }
@@ -302,8 +309,8 @@ function customThemeToDefinition(theme: CustomTheme): ThemeDefinition {
       danger: '#ef4444',
       canvasBackground: mixHex(colors.background, '#000000', backgroundIsDark ? 0.35 : 0.75),
       scopeBackground: mixHex(colors.background, '#000000', backgroundIsDark ? 0.48 : 0.82),
-      scopeGuide: mixHex(colors.text, colors.background, 0.55)
-    }
+      scopeGuide: mixHex(colors.text, colors.background, 0.55),
+    },
   };
 }
 
@@ -313,14 +320,14 @@ export function extractCustomThemeColors(theme: ThemeDefinition): CustomThemeCol
       primary: theme.colors.accent,
       accent: theme.colors.accentWarm,
       background: theme.colors.bgPrimary,
-      text: theme.colors.textPrimary
+      text: theme.colors.textPrimary,
     };
   }
   return {
     primary: theme.colors.accent,
     accent: theme.colors.accentWarm,
     background: theme.colors.bgPrimary,
-    text: theme.colors.textPrimary
+    text: theme.colors.textPrimary,
   };
 }
 
@@ -329,7 +336,7 @@ function normalizeCustomThemeColors(colors: Partial<CustomThemeColors> | undefin
     primary: normalizeHexColor(colors?.primary, DEFAULT_CUSTOM_THEME_COLORS.primary),
     accent: normalizeHexColor(colors?.accent, DEFAULT_CUSTOM_THEME_COLORS.accent),
     background: normalizeHexColor(colors?.background, DEFAULT_CUSTOM_THEME_COLORS.background),
-    text: normalizeHexColor(colors?.text, DEFAULT_CUSTOM_THEME_COLORS.text)
+    text: normalizeHexColor(colors?.text, DEFAULT_CUSTOM_THEME_COLORS.text),
   };
 }
 
@@ -345,7 +352,7 @@ function normalizeCustomTheme(value: Partial<CustomTheme> | undefined): CustomTh
   const theme: CustomTheme = {
     id: value.id.trim(),
     name,
-    colors: normalizeCustomThemeColors(value.colors)
+    colors: normalizeCustomThemeColors(value.colors),
   };
   if (typeof value.createdAt === 'string' && value.createdAt.trim()) {
     theme.createdAt = value.createdAt.trim();
@@ -363,7 +370,10 @@ function normalizeHexColor(value: string | undefined, fallback: string): string 
   }
   const shortMatch = raw.match(/^#([0-9a-fA-F]{3})$/);
   if (shortMatch) {
-    return `#${shortMatch[1].split('').map((part) => `${part}${part}`).join('')}`.toLowerCase();
+    return `#${shortMatch[1]
+      .split('')
+      .map((part) => `${part}${part}`)
+      .join('')}`.toLowerCase();
   }
   return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw.toLowerCase() : fallback;
 }
@@ -386,7 +396,7 @@ function createCustomThemeId(name: string, usedIds: Set<string>): string {
 function cloneThemeSettings(settings: ThemeSettings): ThemeSettings {
   return {
     activeThemeId: settings.activeThemeId,
-    customThemes: settings.customThemes.map((theme) => ({ ...theme, colors: { ...theme.colors } }))
+    customThemes: settings.customThemes.map((theme) => ({ ...theme, colors: { ...theme.colors } })),
   };
 }
 
@@ -397,14 +407,22 @@ function hexToRgbTriplet(hex: string): string {
 
 function hexToRgb(hex: string): [number, number, number] {
   const value = normalizeHexColor(hex, '#000000').slice(1);
-  return [Number.parseInt(value.slice(0, 2), 16), Number.parseInt(value.slice(2, 4), 16), Number.parseInt(value.slice(4, 6), 16)];
+  return [
+    Number.parseInt(value.slice(0, 2), 16),
+    Number.parseInt(value.slice(2, 4), 16),
+    Number.parseInt(value.slice(4, 6), 16),
+  ];
 }
 
 function mixHex(left: string, right: string, amount: number): string {
   const [lr, lg, lb] = hexToRgb(left);
   const [rr, rg, rb] = hexToRgb(right);
   const ratio = Math.min(1, Math.max(0, amount));
-  return rgbToHex(Math.round(lr + (rr - lr) * ratio), Math.round(lg + (rg - lg) * ratio), Math.round(lb + (rb - lb) * ratio));
+  return rgbToHex(
+    Math.round(lr + (rr - lr) * ratio),
+    Math.round(lg + (rg - lg) * ratio),
+    Math.round(lb + (rb - lb) * ratio),
+  );
 }
 
 function rgbToHex(r: number, g: number, b: number): string {

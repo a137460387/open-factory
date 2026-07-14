@@ -1,6 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2, Sparkles, Volume2 } from 'lucide-react';
-import type { Clip, AIDenoiseRecommendation, NoiseProfile, DenoiseFilterRecommendation } from '@open-factory/editor-core';
+import type {
+  Clip,
+  AIDenoiseRecommendation,
+  NoiseProfile,
+  DenoiseFilterRecommendation,
+} from '@open-factory/editor-core';
 import {
   classifyNoiseProfile,
   recommendDenoiseFilters,
@@ -9,7 +14,7 @@ import {
   buildDenoiseFfmpegArgs,
   createDenoiseRecommendation,
   normalizeAIDenoiseRecommendation,
-  hasAvailableTextProvider
+  hasAvailableTextProvider,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -40,7 +45,8 @@ export function AIDenoisePanel({
 
   // Load existing recommendation from clip track
   useEffect(() => {
-    const existing = (clip as unknown as Record<string, unknown>).aiDenoiseRecommendation as AIDenoiseRecommendation | undefined;
+    const existing = (clip as unknown as Record<string, unknown>).aiDenoiseRecommendation as
+      AIDenoiseRecommendation | undefined;
     if (existing) {
       setRecommendation(existing);
     }
@@ -69,17 +75,20 @@ export function AIDenoisePanel({
         noiseProfile,
       });
 
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: '降噪推荐助手' },
-          { role: 'user', content: payload },
-        ],
-        temperature: 0.3,
-        timeoutSecs: 30,
-      }, apiKey);
+      const response = await callAiApi(
+        {
+          providerId: selectedProvider.id,
+          baseUrl: selectedProvider.baseUrl,
+          model: selectedProvider.defaultModel,
+          messages: [
+            { role: 'system', content: '降噪推荐助手' },
+            { role: 'user', content: payload },
+          ],
+          temperature: 0.3,
+          timeoutSecs: 30,
+        },
+        apiKey,
+      );
 
       if (abortRef.current) return;
 
@@ -112,7 +121,9 @@ export function AIDenoisePanel({
   }, [selectedProvider, available, clip, trackId, onUpdateTrack]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   const handleApply = () => {
@@ -141,13 +152,19 @@ export function AIDenoisePanel({
   );
 
   const renderFilter = (filter: DenoiseFilterRecommendation, index: number) => (
-    <div key={index} className="rounded-md border border-brand/30 bg-brand/5 p-2 text-xs" data-testid={`ai-denoise-filter-${filter.filter}`}>
+    <div
+      key={index}
+      className="rounded-md border border-brand/30 bg-brand/5 p-2 text-xs"
+      data-testid={`ai-denoise-filter-${filter.filter}`}
+    >
       <div className="flex items-center justify-between">
         <span className="font-semibold text-ink">{filter.filter}</span>
         <span className="text-[var(--color-text-muted)]">{filter.reason}</span>
       </div>
       <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">
-        {Object.entries(filter.params).map(([k, v]) => `${k}=${v}`).join(' · ')}
+        {Object.entries(filter.params)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(' · ')}
       </div>
     </div>
   );
@@ -162,7 +179,9 @@ export function AIDenoisePanel({
       </summary>
       <div className="space-y-2 p-1">
         {!available && (
-          <p className="text-xs text-orange-500" data-testid="ai-denoise-no-provider">{t.noProvider}</p>
+          <p className="text-xs text-orange-500" data-testid="ai-denoise-no-provider">
+            {t.noProvider}
+          </p>
         )}
 
         {!loading && !hasResults && (
@@ -175,9 +194,13 @@ export function AIDenoisePanel({
               data-testid="ai-denoise-provider-select"
             >
               {providers.length === 0 && <option value="">{t.noProvider}</option>}
-              {providers.filter((p) => p.enabled).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
         )}
@@ -196,14 +219,20 @@ export function AIDenoisePanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-denoise-loading">
+          <div
+            className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]"
+            data-testid="ai-denoise-loading"
+          >
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="ai-denoise-error">
+          <div
+            className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+            data-testid="ai-denoise-error"
+          >
             {error}
           </div>
         )}
@@ -215,14 +244,16 @@ export function AIDenoisePanel({
               {renderNoiseBar(t.hum, 'hum', profile.humScore)}
               {renderNoiseBar(t.hiss, 'hiss', profile.hissScore)}
               {renderNoiseBar(t.wind, 'wind', profile.windScore)}
-              <div className="mt-1 text-xs text-[var(--color-text-muted)]">{t.snr}: {profile.snrEstimate.toFixed(1)} dB</div>
+              <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                {t.snr}: {profile.snrEstimate.toFixed(1)} dB
+              </div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t.recommendedFilters}</div>
-              <div className="space-y-1">
-                {recommendation!.recommendedFilters.map((f, i) => renderFilter(f, i))}
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">
+                {t.recommendedFilters}
               </div>
+              <div className="space-y-1">{recommendation!.recommendedFilters.map((f, i) => renderFilter(f, i))}</div>
             </div>
 
             <div className="flex gap-2">
@@ -250,4 +281,3 @@ export function AIDenoisePanel({
     </details>
   );
 }
-

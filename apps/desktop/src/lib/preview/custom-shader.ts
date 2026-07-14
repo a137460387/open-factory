@@ -14,7 +14,7 @@ export function validateCustomShaderSource(gl: WebGLRenderingContext, source: st
     return {
       ok: false,
       error: t('inspector.customShader.compileFailed'),
-      fragmentSource
+      fragmentSource,
     };
   }
   gl.shaderSource(shader, fragmentSource);

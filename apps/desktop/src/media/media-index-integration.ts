@@ -4,11 +4,7 @@
  */
 import type { MediaAsset } from '@open-factory/editor-core';
 import type { MediaIndexAsset, AutoTagRequest } from '../lib/tauri-bridge';
-import {
-  initMediaIndexDb,
-  batchUpsertMediaAssets,
-  batchAutoTagAssets,
-} from '../lib/tauri-bridge';
+import { initMediaIndexDb, batchUpsertMediaAssets, batchAutoTagAssets } from '../lib/tauri-bridge';
 
 /**
  * 将 MediaAsset 转换为 MediaIndexAsset
@@ -66,10 +62,7 @@ export function mediaAssetToAutoTagRequest(asset: MediaAsset, projectPath: strin
  *
  * 该函数是 fire-and-forget 模式，不会阻塞导入流程
  */
-export async function indexAndTagImportedMedia(
-  importedMedia: MediaAsset[],
-  projectPath: string,
-): Promise<void> {
+export async function indexAndTagImportedMedia(importedMedia: MediaAsset[], projectPath: string): Promise<void> {
   if (importedMedia.length === 0 || !projectPath) return;
 
   try {
@@ -77,9 +70,7 @@ export async function indexAndTagImportedMedia(
     await initMediaIndexDb(projectPath);
 
     // 2. 调用自动打标（Rust 端会同时写入 tags 和 asset_tags 表）
-    const tagRequests = importedMedia.map((asset) =>
-      mediaAssetToAutoTagRequest(asset, projectPath),
-    );
+    const tagRequests = importedMedia.map((asset) => mediaAssetToAutoTagRequest(asset, projectPath));
     await batchAutoTagAssets(projectPath, tagRequests);
 
     // 3. 批量写入资产索引（media_assets 表）

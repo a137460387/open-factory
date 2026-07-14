@@ -3,7 +3,7 @@ import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
   DEFAULT_AUDIO_FADE_CURVE,
-  createId
+  createId,
 } from './model';
 import type { ClipContentAnalysis } from './content-analysis';
 import type { AudioClip, Clip, MediaAsset } from './model-types';
@@ -41,7 +41,10 @@ export type SmartRoughCutBrollCandidate =
       keywords?: string[];
     };
 
-export function buildDialogueRoughCutClips(sourceClip: SmartRoughCutMediaClip, intervals: SmartDialogueInterval[]): SmartRoughCutMediaClip[] {
+export function buildDialogueRoughCutClips(
+  sourceClip: SmartRoughCutMediaClip,
+  intervals: SmartDialogueInterval[],
+): SmartRoughCutMediaClip[] {
   const speed = getClipSpeed(sourceClip);
   let cursor = sourceClip.start;
   return normalizeDialogueIntervals(intervals, sourceClip.duration).map((interval, index) => {
@@ -52,14 +55,17 @@ export function buildDialogueRoughCutClips(sourceClip: SmartRoughCutMediaClip, i
       name: `${sourceClip.name} D${index + 1}`,
       start: cursor,
       duration,
-      trimStart
+      trimStart,
     });
     cursor = round(cursor + duration);
     return clip;
   });
 }
 
-export function scoreBrollKeywordMatch(main: SmartRoughCutKeywordSource, candidate: SmartRoughCutKeywordSource): number {
+export function scoreBrollKeywordMatch(
+  main: SmartRoughCutKeywordSource,
+  candidate: SmartRoughCutKeywordSource,
+): number {
   const mainTags = extractSceneTags(main);
   const candidateTags = extractSceneTags(candidate);
   const sceneScore = scoreSetOverlap(mainTags, candidateTags);
@@ -68,7 +74,11 @@ export function scoreBrollKeywordMatch(main: SmartRoughCutKeywordSource, candida
   return round(Math.min(1, sceneScore * 0.62 + tokenScore * 0.3 + typeScore));
 }
 
-export function buildBrollInsertClips(mainClips: SmartRoughCutVisualClip[], candidates: SmartRoughCutBrollCandidate[], targetTrackId: string): SmartRoughCutVisualClip[] {
+export function buildBrollInsertClips(
+  mainClips: SmartRoughCutVisualClip[],
+  candidates: SmartRoughCutBrollCandidate[],
+  targetTrackId: string,
+): SmartRoughCutVisualClip[] {
   const visualCandidates = candidates.filter(isVisualCandidate);
   if (visualCandidates.length === 0 || targetTrackId.trim() === '') {
     return [];
@@ -84,7 +94,11 @@ export function buildBrollInsertClips(mainClips: SmartRoughCutVisualClip[], cand
     });
 }
 
-export function buildRhythmAssembleClips(videoClips: SmartRoughCutVisualClip[], beatTimes: number[], targetTrackId?: string): SmartRoughCutVisualClip[] {
+export function buildRhythmAssembleClips(
+  videoClips: SmartRoughCutVisualClip[],
+  beatTimes: number[],
+  targetTrackId?: string,
+): SmartRoughCutVisualClip[] {
   const clips = [...videoClips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
   const beats = normalizeBeatTimes(beatTimes);
   const trackId = targetTrackId?.trim() || clips[0]?.trackId;
@@ -105,13 +119,16 @@ export function buildRhythmAssembleClips(videoClips: SmartRoughCutVisualClip[], 
         trackId,
         start,
         duration,
-        trimStart: source.trimStart
-      })
+        trimStart: source.trimStart,
+      }),
     ];
   });
 }
 
-function normalizeDialogueIntervals(intervals: SmartDialogueInterval[], maxDuration: number): Array<{ start: number; end: number }> {
+function normalizeDialogueIntervals(
+  intervals: SmartDialogueInterval[],
+  maxDuration: number,
+): Array<{ start: number; end: number }> {
   const duration = Math.max(0, maxDuration);
   return intervals
     .map((interval) => {
@@ -125,28 +142,34 @@ function normalizeDialogueIntervals(intervals: SmartDialogueInterval[], maxDurat
 }
 
 function normalizeBeatTimes(beatTimes: number[]): number[] {
-  return Array.from(new Set(beatTimes.filter((time) => Number.isFinite(time) && time >= 0).map((time) => round(time)))).sort((left, right) => left - right);
+  return Array.from(
+    new Set(beatTimes.filter((time) => Number.isFinite(time) && time >= 0).map((time) => round(time))),
+  ).sort((left, right) => left - right);
 }
 
 function chooseBestBrollCandidate(
   mainClip: SmartRoughCutVisualClip,
   candidates: SmartRoughCutBrollCandidate[],
-  offset: number
+  offset: number,
 ): SmartRoughCutBrollCandidate | undefined {
   return candidates
     .map((candidate, index) => ({
       candidate,
       index,
-      score: scoreBrollKeywordMatch(mainClip, getCandidateKeywordSource(candidate))
+      score: scoreBrollKeywordMatch(mainClip, getCandidateKeywordSource(candidate)),
     }))
-    .sort((left, right) => right.score - left.score || ((left.index + offset) % candidates.length) - ((right.index + offset) % candidates.length))[0]?.candidate;
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        ((left.index + offset) % candidates.length) - ((right.index + offset) % candidates.length),
+    )[0]?.candidate;
 }
 
 function buildBrollClipFromCandidate(
   mainClip: SmartRoughCutVisualClip,
   candidate: SmartRoughCutBrollCandidate,
   targetTrackId: string,
-  index: number
+  index: number,
 ): SmartRoughCutVisualClip {
   if (candidate.kind === 'clip') {
     return cloneVisualClipSegment(candidate.clip, {
@@ -155,7 +178,7 @@ function buildBrollClipFromCandidate(
       trackId: targetTrackId,
       start: mainClip.start,
       duration: mainClip.duration,
-      trimStart: candidate.clip.trimStart
+      trimStart: candidate.clip.trimStart,
     });
   }
   return createVisualClipFromAsset(candidate.asset, {
@@ -163,13 +186,13 @@ function buildBrollClipFromCandidate(
     name: `${candidate.asset.name} B${index + 1}`,
     trackId: targetTrackId,
     start: mainClip.start,
-    duration: mainClip.duration
+    duration: mainClip.duration,
   });
 }
 
 export function createVisualClipFromAsset(
   asset: MediaAsset,
-  input: { id: string; name: string; trackId: string; start: number; duration: number }
+  input: { id: string; name: string; trackId: string; start: number; duration: number },
 ): SmartRoughCutVisualClip {
   const duration = round(Math.max(0.001, input.duration));
   const base = {
@@ -183,7 +206,7 @@ export function createVisualClipFromAsset(
     trimEnd: asset.type === 'video' ? round(Math.max(0, (asset.duration || duration) - duration)) : 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-    transform: { ...DEFAULT_TRANSFORM }
+    transform: { ...DEFAULT_TRANSFORM },
   };
   if (asset.type === 'image') {
     return { ...base, type: 'image' };
@@ -193,7 +216,7 @@ export function createVisualClipFromAsset(
 
 function cloneMediaClipSegment<TClip extends SmartRoughCutMediaClip>(
   source: TClip,
-  patch: { id: string; name: string; start: number; duration: number; trimStart: number }
+  patch: { id: string; name: string; start: number; duration: number; trimStart: number },
 ): TClip {
   const trimEnd = calculateTrimEnd(source, patch.trimStart, patch.duration);
   return cloneClipValue({
@@ -203,13 +226,13 @@ function cloneMediaClipSegment<TClip extends SmartRoughCutMediaClip>(
     start: round(Math.max(0, patch.start)),
     duration: round(Math.max(0.001, patch.duration)),
     trimStart: round(Math.max(0, patch.trimStart)),
-    trimEnd
+    trimEnd,
   }) as TClip;
 }
 
 function cloneVisualClipSegment<TClip extends SmartRoughCutVisualClip>(
   source: TClip,
-  patch: { id: string; name: string; trackId: string; start: number; duration: number; trimStart: number }
+  patch: { id: string; name: string; trackId: string; start: number; duration: number; trimStart: number },
 ): TClip {
   const trimEnd = source.type === 'video' ? calculateTrimEnd(source, patch.trimStart, patch.duration) : source.trimEnd;
   return cloneClipValue({
@@ -220,11 +243,15 @@ function cloneVisualClipSegment<TClip extends SmartRoughCutVisualClip>(
     start: round(Math.max(0, patch.start)),
     duration: round(Math.max(0.001, patch.duration)),
     trimStart: round(Math.max(0, patch.trimStart)),
-    trimEnd
+    trimEnd,
   }) as TClip;
 }
 
-function calculateTrimEnd(source: Pick<Clip, 'duration' | 'trimStart' | 'trimEnd' | 'speed' | 'keyframes'>, nextTrimStart: number, nextDuration: number): number {
+function calculateTrimEnd(
+  source: Pick<Clip, 'duration' | 'trimStart' | 'trimEnd' | 'speed' | 'keyframes'>,
+  nextTrimStart: number,
+  nextDuration: number,
+): number {
   const totalSourceDuration = round(source.trimStart + getClipSourceVisibleDuration(source) + source.trimEnd);
   const visibleSourceDuration = round(nextDuration * getClipSpeed(source));
   return round(Math.max(0, totalSourceDuration - Math.max(0, nextTrimStart) - visibleSourceDuration));
@@ -236,7 +263,7 @@ function getCandidateKeywordSource(candidate: SmartRoughCutBrollCandidate): Smar
       name: candidate.clip.name,
       type: candidate.clip.type,
       keywords: candidate.keywords,
-      contentAnalysis: candidate.clip.contentAnalysis
+      contentAnalysis: candidate.clip.contentAnalysis,
     };
   }
   return {
@@ -244,7 +271,7 @@ function getCandidateKeywordSource(candidate: SmartRoughCutBrollCandidate): Smar
     path: candidate.asset.path,
     type: candidate.asset.type,
     keywords: candidate.keywords,
-    contentAnalysis: candidate.contentAnalysis
+    contentAnalysis: candidate.contentAnalysis,
   };
 }
 
@@ -260,12 +287,17 @@ function extractSceneTags(source: SmartRoughCutKeywordSource): string[] {
     source.type,
     source.contentAnalysis?.primarySceneType,
     ...(source.contentAnalysis?.sceneTypes ?? []),
-    ...(source.contentAnalysis?.segments?.flatMap((segment) => segment.sceneTypes) ?? [])
+    ...(source.contentAnalysis?.segments?.flatMap((segment) => segment.sceneTypes) ?? []),
   ]);
 }
 
 function extractKeywordTokens(source: SmartRoughCutKeywordSource): string[] {
-  return dedupe([...(source.keywords ?? []), ...tokenize(source.name), ...tokenize(source.path), ...tokenize(source.contentAnalysis?.summary)]);
+  return dedupe([
+    ...(source.keywords ?? []),
+    ...tokenize(source.name),
+    ...tokenize(source.path),
+    ...tokenize(source.contentAnalysis?.summary),
+  ]);
 }
 
 function scoreSetOverlap(left: string[], right: string[]): number {
@@ -286,7 +318,13 @@ function tokenize(value: string | undefined): string[] {
 }
 
 function dedupe(values: Array<string | undefined>): string[] {
-  return Array.from(new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map((value) => value.trim().toLowerCase())));
+  return Array.from(
+    new Set(
+      values
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .map((value) => value.trim().toLowerCase()),
+    ),
+  );
 }
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {
@@ -342,13 +380,15 @@ export function buildSmartMontageClips(config: SmartMontageConfig): SmartMontage
     const duration = round(end - start);
     if (duration <= 0.000001) return [];
     const asset = orderedAssets[index % orderedAssets.length];
-    return [createVisualClipFromAsset(asset, {
-      id: createId('montage'),
-      name: `${asset.name} M${index + 1}`,
-      trackId: videoTrackId,
-      start,
-      duration
-    })];
+    return [
+      createVisualClipFromAsset(asset, {
+        id: createId('montage'),
+        name: `${asset.name} M${index + 1}`,
+        trackId: videoTrackId,
+        start,
+        duration,
+      }),
+    ];
   });
 
   const montageStart = beats[0];
@@ -371,7 +411,7 @@ export function buildSmartMontageClips(config: SmartMontageConfig): SmartMontage
     fadeInDuration: 0,
     fadeOutDuration: 0,
     fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
   };
 
   return { visualClips, audioClip, estimatedBpm: estimateBpmFromTimes(beats), beatCount: beats.length };

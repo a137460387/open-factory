@@ -34,16 +34,16 @@ export const BUILT_IN_SPLIT_LAYOUTS: Record<SplitLayoutPresetId, SplitLayoutDefi
     name: 'Side by side',
     cells: [
       { x: 0, y: 0, width: 0.5, height: 1 },
-      { x: 0.5, y: 0, width: 0.5, height: 1 }
-    ]
+      { x: 0.5, y: 0, width: 0.5, height: 1 },
+    ],
   },
   stacked: {
     id: 'stacked',
     name: 'Stacked',
     cells: [
       { x: 0, y: 0, width: 1, height: 0.5 },
-      { x: 0, y: 0.5, width: 1, height: 0.5 }
-    ]
+      { x: 0, y: 0.5, width: 1, height: 0.5 },
+    ],
   },
   quad: {
     id: 'quad',
@@ -52,8 +52,8 @@ export const BUILT_IN_SPLIT_LAYOUTS: Record<SplitLayoutPresetId, SplitLayoutDefi
       { x: 0, y: 0, width: 0.5, height: 0.5 },
       { x: 0.5, y: 0, width: 0.5, height: 0.5 },
       { x: 0, y: 0.5, width: 0.5, height: 0.5 },
-      { x: 0.5, y: 0.5, width: 0.5, height: 0.5 }
-    ]
+      { x: 0.5, y: 0.5, width: 0.5, height: 0.5 },
+    ],
   },
   'three-columns': {
     id: 'three-columns',
@@ -61,8 +61,8 @@ export const BUILT_IN_SPLIT_LAYOUTS: Record<SplitLayoutPresetId, SplitLayoutDefi
     cells: [
       { x: 0, y: 0, width: 1 / 3, height: 1 },
       { x: 1 / 3, y: 0, width: 1 / 3, height: 1 },
-      { x: 2 / 3, y: 0, width: 1 / 3, height: 1 }
-    ]
+      { x: 2 / 3, y: 0, width: 1 / 3, height: 1 },
+    ],
   },
   'main-side': {
     id: 'main-side',
@@ -70,15 +70,26 @@ export const BUILT_IN_SPLIT_LAYOUTS: Record<SplitLayoutPresetId, SplitLayoutDefi
     cells: [
       { x: 0, y: 0, width: 2 / 3, height: 1 },
       { x: 2 / 3, y: 0, width: 1 / 3, height: 0.5 },
-      { x: 2 / 3, y: 0.5, width: 1 / 3, height: 0.5 }
-    ]
-  }
+      { x: 2 / 3, y: 0.5, width: 1 / 3, height: 0.5 },
+    ],
+  },
 };
 
-export const SPLIT_LAYOUT_PRESET_IDS: SplitLayoutPresetId[] = ['side-by-side', 'stacked', 'quad', 'three-columns', 'main-side'];
+export const SPLIT_LAYOUT_PRESET_IDS: SplitLayoutPresetId[] = [
+  'side-by-side',
+  'stacked',
+  'quad',
+  'three-columns',
+  'main-side',
+];
 
-export function getSplitLayoutDefinition(layoutId: SplitLayoutPresetId | string, customLayouts: SplitLayoutDefinition[] = []): SplitLayoutDefinition | undefined {
-  return BUILT_IN_SPLIT_LAYOUTS[layoutId as SplitLayoutPresetId] ?? customLayouts.find((layout) => layout.id === layoutId);
+export function getSplitLayoutDefinition(
+  layoutId: SplitLayoutPresetId | string,
+  customLayouts: SplitLayoutDefinition[] = [],
+): SplitLayoutDefinition | undefined {
+  return (
+    BUILT_IN_SPLIT_LAYOUTS[layoutId as SplitLayoutPresetId] ?? customLayouts.find((layout) => layout.id === layoutId)
+  );
 }
 
 export function calculateSplitLayoutTransforms(input: {
@@ -106,8 +117,8 @@ export function calculateSplitLayoutTransforms(input: {
         scaleX,
         scaleY,
         rotation: 0,
-        opacity: 1
-      }
+        opacity: 1,
+      },
     };
   });
 }
@@ -121,12 +132,15 @@ export function createMainSideSplitLayout(id: string, name: string, mainRatio: n
     cells: [
       { x: 0, y: 0, width: ratio, height: 1 },
       { x: ratio, y: 0, width: sideRatio, height: 0.5 },
-      { x: ratio, y: 0.5, width: sideRatio, height: 0.5 }
-    ]
+      { x: ratio, y: 0.5, width: sideRatio, height: 0.5 },
+    ],
   };
 }
 
-export function normalizeSplitLayoutDefinition(layout: unknown, fallbackId = 'custom-split'): SplitLayoutDefinition | undefined {
+export function normalizeSplitLayoutDefinition(
+  layout: unknown,
+  fallbackId = 'custom-split',
+): SplitLayoutDefinition | undefined {
   if (!layout || typeof layout !== 'object') {
     return undefined;
   }
@@ -138,7 +152,7 @@ export function normalizeSplitLayoutDefinition(layout: unknown, fallbackId = 'cu
   return {
     id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : fallbackId,
     name: typeof input.name === 'string' && input.name.trim() ? input.name.trim() : 'Custom split',
-    cells
+    cells,
   };
 }
 

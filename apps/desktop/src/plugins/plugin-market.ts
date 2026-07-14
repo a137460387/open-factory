@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { bridgeConfirm, copyFile, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { refreshPluginRegistry, type PluginRegistry } from './plugin-manager';
 import { extractManifestPermissions, type PluginPermission } from './plugin-loader';
@@ -35,7 +35,10 @@ interface PluginCatalogResponseLike {
 }
 
 export type PluginCatalogFetcher = (url: string) => Promise<PluginCatalogResponseLike>;
-type PluginInstallConfirmer = (entry: PluginCatalogEntry, permissions: PluginPermission[]) => Promise<boolean> | boolean;
+type PluginInstallConfirmer = (
+  entry: PluginCatalogEntry,
+  permissions: PluginPermission[],
+) => Promise<boolean> | boolean;
 type PluginHashProvider = (contents: string) => Promise<string> | string;
 
 export interface PluginInstallOptions {
@@ -51,7 +54,7 @@ export async function loadPluginCatalog({
   url = PLUGIN_CATALOG_URL,
   fetcher = defaultFetcher,
   readCache = readDefaultCatalogCache,
-  writeCache = writeDefaultCatalogCache
+  writeCache = writeDefaultCatalogCache,
 }: {
   url?: string;
   fetcher?: PluginCatalogFetcher;
@@ -65,7 +68,7 @@ export async function loadPluginCatalog({
     }
     const contents = await response.text();
     const entries = parsePluginCatalogJson(contents);
-    await writeCache(contents).catch(logError("plugin-market"));
+    await writeCache(contents).catch(logError('plugin-market'));
     return { entries, source: 'network' };
   } catch (error) {
     const cached = await readCache();
@@ -78,7 +81,11 @@ export async function loadPluginCatalog({
 
 export function parsePluginCatalogJson(contents: string): PluginCatalogEntry[] {
   const parsed = JSON.parse(contents) as unknown;
-  const rawEntries = Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' && Array.isArray((parsed as { plugins?: unknown }).plugins) ? (parsed as { plugins: unknown[] }).plugins : [];
+  const rawEntries = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object' && Array.isArray((parsed as { plugins?: unknown }).plugins)
+      ? (parsed as { plugins: unknown[] }).plugins
+      : [];
   return rawEntries.flatMap((entry) => {
     const normalized = normalizeCatalogEntry(entry);
     return normalized ? [normalized] : [];
@@ -97,7 +104,10 @@ export function compareSemver(left: string, right: string): number {
   return 0;
 }
 
-export function getCatalogEntryInstallState(entry: PluginCatalogEntry, registry: PluginRegistry | undefined): PluginInstallState {
+export function getCatalogEntryInstallState(
+  entry: PluginCatalogEntry,
+  registry: PluginRegistry | undefined,
+): PluginInstallState {
   const installed = registry?.plugins.find((plugin) => plugin.plugin.id === entry.id);
   if (!installed) {
     return { status: 'not-installed' };
@@ -107,7 +117,10 @@ export function getCatalogEntryInstallState(entry: PluginCatalogEntry, registry:
     : { status: 'installed', installedVersion: installed.plugin.version };
 }
 
-export async function installCatalogPlugin(entry: PluginCatalogEntry, optionsOrFetcher: PluginCatalogFetcher | PluginInstallOptions = defaultFetcher): Promise<string> {
+export async function installCatalogPlugin(
+  entry: PluginCatalogEntry,
+  optionsOrFetcher: PluginCatalogFetcher | PluginInstallOptions = defaultFetcher,
+): Promise<string> {
   const options = typeof optionsOrFetcher === 'function' ? { fetcher: optionsOrFetcher } : optionsOrFetcher;
   const fetcher = options.fetcher ?? defaultFetcher;
   const declaredHash = normalizeSha256(entry.sha256);
@@ -199,13 +212,15 @@ function normalizeCatalogEntry(input: unknown): PluginCatalogEntry | undefined {
     description: stringValue(record.description),
     permissions: normalizePermissions(record.permissions),
     downloadUrl,
-    sha256
+    sha256,
   };
 }
 
 function normalizePermissions(input: unknown): PluginPermission[] {
   const permissions = Array.isArray(input) ? input : [];
-  return permissions.filter((permission): permission is PluginPermission => VALID_PLUGIN_PERMISSIONS.includes(permission as PluginPermission));
+  return permissions.filter((permission): permission is PluginPermission =>
+    VALID_PLUGIN_PERMISSIONS.includes(permission as PluginPermission),
+  );
 }
 
 function parseSemver(value: string): [number, number, number] {
@@ -234,11 +249,16 @@ function samePermissionSet(left: PluginPermission[], right: PluginPermission[]):
 function confirmCatalogPluginInstall(entry: PluginCatalogEntry, permissions: PluginPermission[]): Promise<boolean> {
   const permissionList = permissions.length > 0 ? permissions.join(', ') : 'none';
   return bridgeConfirm(
-    [`插件名称：${entry.name}`, `来源 URL：${entry.downloadUrl}`, `所需权限：${permissionList}`, '此插件来自第三方，请确认来源可信'].join('\n'),
+    [
+      `插件名称：${entry.name}`,
+      `来源 URL：${entry.downloadUrl}`,
+      `所需权限：${permissionList}`,
+      '此插件来自第三方，请确认来源可信',
+    ].join('\n'),
     {
       title: '安装第三方插件',
-      kind: 'warning'
-    }
+      kind: 'warning',
+    },
   );
 }
 

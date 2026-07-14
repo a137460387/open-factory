@@ -68,13 +68,24 @@ const DEFAULT_MIN_SEGMENT_DURATION = 0.25;
 const DEFAULT_MAX_SPEAKERS = 4;
 const EPSILON = 0.000001;
 
-export function detectSpeakerSegments(frames: SpeakerDiarizationFrame[], options: SpeakerDiarizationOptions = {}): SpeakerDiarizationSegment[] {
+export function detectSpeakerSegments(
+  frames: SpeakerDiarizationFrame[],
+  options: SpeakerDiarizationOptions = {},
+): SpeakerDiarizationSegment[] {
   const silenceThreshold = clamp(finiteOrDefault(options.silenceThreshold, DEFAULT_SILENCE_THRESHOLD), 0, 1);
-  const pitchThreshold = Math.max(10, finiteOrDefault(options.pitchChangeThresholdHz, DEFAULT_PITCH_CHANGE_THRESHOLD_HZ));
+  const pitchThreshold = Math.max(
+    10,
+    finiteOrDefault(options.pitchChangeThresholdHz, DEFAULT_PITCH_CHANGE_THRESHOLD_HZ),
+  );
   const minSegmentDuration = Math.max(0.05, finiteOrDefault(options.minSegmentDuration, DEFAULT_MIN_SEGMENT_DURATION));
-  const maxSpeakers = Math.max(1, Math.min(DEFAULT_MAX_SPEAKERS, Math.floor(finiteOrDefault(options.maxSpeakers, DEFAULT_MAX_SPEAKERS))));
+  const maxSpeakers = Math.max(
+    1,
+    Math.min(DEFAULT_MAX_SPEAKERS, Math.floor(finiteOrDefault(options.maxSpeakers, DEFAULT_MAX_SPEAKERS))),
+  );
   const dialogueIntervals = normalizeDialogueIntervals(options.dialogueIntervals);
-  const normalized = normalizeFrames(frames).filter((frame) => dialogueIntervals.length === 0 || dialogueIntervals.some((interval) => overlaps(frame, interval)));
+  const normalized = normalizeFrames(frames).filter(
+    (frame) => dialogueIntervals.length === 0 || dialogueIntervals.some((interval) => overlaps(frame, interval)),
+  );
   const voiceRuns = collectVoiceRuns(normalized, silenceThreshold, minSegmentDuration);
   const clusters: SpeakerCluster[] = [];
   const segments: SpeakerDiarizationSegment[] = [];
@@ -94,7 +105,7 @@ export function detectSpeakerSegments(frames: SpeakerDiarizationFrame[], options
       averagePitchHz: round(averagePitchHz),
       averageCentroidHz: round(averageCentroidHz),
       confidence,
-      confidenceLabel: labelConfidence(confidence)
+      confidenceLabel: labelConfidence(confidence),
     });
   }
 
@@ -104,7 +115,7 @@ export function detectSpeakerSegments(frames: SpeakerDiarizationFrame[], options
 export function buildSpeakerDiarizationTracks(
   sourceClip: Extract<Clip, { type: 'audio' | 'video' }>,
   segments: SpeakerDiarizationSegment[],
-  options: SpeakerDiarizationTrackOptions = {}
+  options: SpeakerDiarizationTrackOptions = {},
 ): Track[] {
   const baseId = sanitizeId(options.baseId ?? 'speaker-diarization');
   const speakerNamePrefix = options.speakerNamePrefix?.trim() || 'Speaker';
@@ -151,14 +162,14 @@ export function buildSpeakerDiarizationTracks(
             fadeOutCurve: sourceClip.fadeOutCurve,
             audioDenoise: sourceClip.audioDenoise,
             audioChannelRouting: sourceClip.audioChannelRouting,
-            spatialAudio: sourceClip.spatialAudio
+            spatialAudio: sourceClip.spatialAudio,
           };
         });
       return createTrack({
         id: trackId,
         type: 'audio',
         name: `${speakerNamePrefix} ${speakerIndex + 1}`,
-        clips
+        clips,
       });
     });
 }
@@ -178,7 +189,11 @@ export function labelConfidence(confidence: number): SpeakerDiarizationConfidenc
   return 'low';
 }
 
-function collectVoiceRuns(frames: NormalizedSpeakerFrame[], silenceThreshold: number, minSegmentDuration: number): RawVoiceRun[] {
+function collectVoiceRuns(
+  frames: NormalizedSpeakerFrame[],
+  silenceThreshold: number,
+  minSegmentDuration: number,
+): RawVoiceRun[] {
   const runs: RawVoiceRun[] = [];
   let current: RawVoiceRun | undefined;
   for (const frame of frames) {
@@ -205,7 +220,13 @@ function pushRun(runs: RawVoiceRun[], run: RawVoiceRun | undefined, minSegmentDu
   }
 }
 
-function assignSpeakerCluster(clusters: SpeakerCluster[], pitchHz: number, centroidHz: number, thresholdHz: number, maxSpeakers: number): { cluster: SpeakerCluster; distance: number } {
+function assignSpeakerCluster(
+  clusters: SpeakerCluster[],
+  pitchHz: number,
+  centroidHz: number,
+  thresholdHz: number,
+  maxSpeakers: number,
+): { cluster: SpeakerCluster; distance: number } {
   const nearest = clusters
     .map((cluster) => ({ cluster, distance: speakerDistance(cluster, pitchHz, centroidHz) }))
     .sort((left, right) => left.distance - right.distance)[0];
@@ -214,7 +235,7 @@ function assignSpeakerCluster(clusters: SpeakerCluster[], pitchHz: number, centr
       speakerIndex: clusters.length,
       pitchHz,
       centroidHz,
-      segmentCount: 1
+      segmentCount: 1,
     };
     clusters.push(cluster);
     return { cluster, distance: 0 };
@@ -233,7 +254,11 @@ function speakerDistance(cluster: SpeakerCluster, pitchHz: number, centroidHz: n
   return pitchDistance + centroidDistance;
 }
 
-function calculateSegmentConfidence(frames: NormalizedSpeakerFrame[], assignmentDistance: number, thresholdHz: number): number {
+function calculateSegmentConfidence(
+  frames: NormalizedSpeakerFrame[],
+  assignmentDistance: number,
+  thresholdHz: number,
+): number {
   const averagePitch = weightedAverage(frames, (frame) => frame.pitchHz);
   const pitchVariance = weightedAverage(frames, (frame) => Math.abs(frame.pitchHz - averagePitch));
   const loudness = weightedAverage(frames, (frame) => frame.loudness);
@@ -251,17 +276,21 @@ function normalizeFrames(frames: SpeakerDiarizationFrame[]): NormalizedSpeakerFr
       duration: round(Math.max(0.001, frame.duration)),
       loudness: clamp(finiteOrDefault(frame.loudness, 0), 0, 1),
       pitchHz: Math.max(0, finiteOrDefault(frame.pitchHz, 0)),
-      spectralCentroidHz: Math.max(0, finiteOrDefault(frame.spectralCentroidHz, 0))
+      spectralCentroidHz: Math.max(0, finiteOrDefault(frame.spectralCentroidHz, 0)),
     }))
     .sort((left, right) => left.time - right.time || left.duration - right.duration);
 }
 
-function normalizeDialogueIntervals(intervals: SpeakerDiarizationOptions['dialogueIntervals']): Array<{ start: number; end: number }> {
+function normalizeDialogueIntervals(
+  intervals: SpeakerDiarizationOptions['dialogueIntervals'],
+): Array<{ start: number; end: number }> {
   if (!Array.isArray(intervals)) {
     return [];
   }
   return intervals
-    .filter((interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end) && interval.end > interval.start)
+    .filter(
+      (interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end) && interval.end > interval.start,
+    )
     .map((interval) => ({ start: round(Math.max(0, interval.start)), end: round(Math.max(0, interval.end)) }))
     .sort((left, right) => left.start - right.start || left.end - right.end);
 }
@@ -282,7 +311,12 @@ function weightedAverage(frames: NormalizedSpeakerFrame[], pick: (frame: Normali
 }
 
 function sanitizeId(value: string): string {
-  return value.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'speaker-diarization';
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'speaker-diarization'
+  );
 }
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {

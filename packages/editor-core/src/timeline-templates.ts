@@ -12,7 +12,7 @@ import {
   type ProjectSettings,
   type Timeline,
   type Track,
-  type TrackType
+  type TrackType,
 } from './model';
 
 export const TIMELINE_TEMPLATE_SCHEMA_VERSION = 1;
@@ -101,14 +101,22 @@ export const BUILT_IN_TIMELINE_TEMPLATES: readonly TimelineTemplateDefinition[] 
     placeholders: [
       { id: 'placeholder-host-camera', name: '主持机位', assetType: 'video', duration: 8, width: 1920, height: 1080 },
       { id: 'placeholder-guest-camera', name: '嘉宾机位', assetType: 'video', duration: 8, width: 1920, height: 1080 },
-      { id: 'placeholder-dialogue-audio', name: '对白音频', assetType: 'audio', duration: 8 }
+      { id: 'placeholder-dialogue-audio', name: '对白音频', assetType: 'audio', duration: 8 },
     ],
     tracks: [
-      builtInTrack('track-cam-a', 'video', '机位 A', [builtInMediaClip('clip-cam-a', 'track-cam-a', 'placeholder-host-camera', 'video', '主持机位', 0, 8)]),
-      builtInTrack('track-cam-b', 'video', '机位 B', [builtInMediaClip('clip-cam-b', 'track-cam-b', 'placeholder-guest-camera', 'video', '嘉宾机位', 0, 8)]),
-      builtInTrack('track-dialogue', 'audio', '对白', [builtInMediaClip('clip-dialogue', 'track-dialogue', 'placeholder-dialogue-audio', 'audio', '对白音频', 0, 8)]),
-      builtInTrack('track-subtitles', 'subtitle', '字幕', [builtInSubtitleClip('clip-subtitle-cue', 'track-subtitles', 0.5, 2)])
-    ]
+      builtInTrack('track-cam-a', 'video', '机位 A', [
+        builtInMediaClip('clip-cam-a', 'track-cam-a', 'placeholder-host-camera', 'video', '主持机位', 0, 8),
+      ]),
+      builtInTrack('track-cam-b', 'video', '机位 B', [
+        builtInMediaClip('clip-cam-b', 'track-cam-b', 'placeholder-guest-camera', 'video', '嘉宾机位', 0, 8),
+      ]),
+      builtInTrack('track-dialogue', 'audio', '对白', [
+        builtInMediaClip('clip-dialogue', 'track-dialogue', 'placeholder-dialogue-audio', 'audio', '对白音频', 0, 8),
+      ]),
+      builtInTrack('track-subtitles', 'subtitle', '字幕', [
+        builtInSubtitleClip('clip-subtitle-cue', 'track-subtitles', 0.5, 2),
+      ]),
+    ],
   }),
   createBuiltInTemplate({
     id: 'vlog-opener',
@@ -117,13 +125,17 @@ export const BUILT_IN_TIMELINE_TEMPLATES: readonly TimelineTemplateDefinition[] 
     duration: 6,
     placeholders: [
       { id: 'placeholder-opening-video', name: '开场视频', assetType: 'video', duration: 6, width: 1920, height: 1080 },
-      { id: 'placeholder-music', name: '背景音乐', assetType: 'audio', duration: 6 }
+      { id: 'placeholder-music', name: '背景音乐', assetType: 'audio', duration: 6 },
     ],
     tracks: [
-      builtInTrack('track-video', 'video', '主画面', [builtInMediaClip('clip-opening', 'track-video', 'placeholder-opening-video', 'video', '开场视频', 0, 6)]),
+      builtInTrack('track-video', 'video', '主画面', [
+        builtInMediaClip('clip-opening', 'track-video', 'placeholder-opening-video', 'video', '开场视频', 0, 6),
+      ]),
       builtInTrack('track-title', 'text', '标题', [builtInTextClip('clip-title', 'track-title', 'Vlog', 0.2, 2.5)]),
-      builtInTrack('track-music', 'audio', '音乐', [builtInMediaClip('clip-music', 'track-music', 'placeholder-music', 'audio', '背景音乐', 0, 6)])
-    ]
+      builtInTrack('track-music', 'audio', '音乐', [
+        builtInMediaClip('clip-music', 'track-music', 'placeholder-music', 'audio', '背景音乐', 0, 6),
+      ]),
+    ],
   }),
   createBuiltInTemplate({
     id: 'product-showcase',
@@ -131,14 +143,42 @@ export const BUILT_IN_TIMELINE_TEMPLATES: readonly TimelineTemplateDefinition[] 
     description: '产品主镜头、细节镜头和标题说明。',
     duration: 10,
     placeholders: [
-      { id: 'placeholder-product-main', name: '产品主镜头', assetType: 'video', duration: 5, width: 1920, height: 1080 },
-      { id: 'placeholder-product-detail', name: '产品细节', assetType: 'video', duration: 5, width: 1920, height: 1080 }
+      {
+        id: 'placeholder-product-main',
+        name: '产品主镜头',
+        assetType: 'video',
+        duration: 5,
+        width: 1920,
+        height: 1080,
+      },
+      {
+        id: 'placeholder-product-detail',
+        name: '产品细节',
+        assetType: 'video',
+        duration: 5,
+        width: 1920,
+        height: 1080,
+      },
     ],
     tracks: [
-      builtInTrack('track-main', 'video', '主镜头', [builtInMediaClip('clip-product-main', 'track-main', 'placeholder-product-main', 'video', '产品主镜头', 0, 5)]),
-      builtInTrack('track-detail', 'video', '细节', [builtInMediaClip('clip-product-detail', 'track-detail', 'placeholder-product-detail', 'video', '产品细节', 5, 5)]),
-      builtInTrack('track-title', 'text', '说明文字', [builtInTextClip('clip-product-title', 'track-title', '产品亮点', 0.5, 3)])
-    ]
+      builtInTrack('track-main', 'video', '主镜头', [
+        builtInMediaClip('clip-product-main', 'track-main', 'placeholder-product-main', 'video', '产品主镜头', 0, 5),
+      ]),
+      builtInTrack('track-detail', 'video', '细节', [
+        builtInMediaClip(
+          'clip-product-detail',
+          'track-detail',
+          'placeholder-product-detail',
+          'video',
+          '产品细节',
+          5,
+          5,
+        ),
+      ]),
+      builtInTrack('track-title', 'text', '说明文字', [
+        builtInTextClip('clip-product-title', 'track-title', '产品亮点', 0.5, 3),
+      ]),
+    ],
   }),
   createBuiltInTemplate({
     id: 'tutorial-screen-recording',
@@ -146,18 +186,34 @@ export const BUILT_IN_TIMELINE_TEMPLATES: readonly TimelineTemplateDefinition[] 
     description: '屏幕录制、旁白和步骤字幕。',
     duration: 12,
     placeholders: [
-      { id: 'placeholder-screen-recording', name: '屏幕录制', assetType: 'video', duration: 12, width: 1920, height: 1080 },
-      { id: 'placeholder-voiceover', name: '旁白', assetType: 'audio', duration: 12 }
+      {
+        id: 'placeholder-screen-recording',
+        name: '屏幕录制',
+        assetType: 'video',
+        duration: 12,
+        width: 1920,
+        height: 1080,
+      },
+      { id: 'placeholder-voiceover', name: '旁白', assetType: 'audio', duration: 12 },
     ],
     tracks: [
-      builtInTrack('track-screen', 'video', '屏幕', [builtInMediaClip('clip-screen', 'track-screen', 'placeholder-screen-recording', 'video', '屏幕录制', 0, 12)]),
-      builtInTrack('track-voiceover', 'audio', '旁白', [builtInMediaClip('clip-voiceover', 'track-voiceover', 'placeholder-voiceover', 'audio', '旁白', 0, 12)]),
-      builtInTrack('track-subtitles', 'subtitle', '步骤字幕', [builtInSubtitleClip('clip-step-subtitle', 'track-subtitles', 1, 3)])
-    ]
-  })
+      builtInTrack('track-screen', 'video', '屏幕', [
+        builtInMediaClip('clip-screen', 'track-screen', 'placeholder-screen-recording', 'video', '屏幕录制', 0, 12),
+      ]),
+      builtInTrack('track-voiceover', 'audio', '旁白', [
+        builtInMediaClip('clip-voiceover', 'track-voiceover', 'placeholder-voiceover', 'audio', '旁白', 0, 12),
+      ]),
+      builtInTrack('track-subtitles', 'subtitle', '步骤字幕', [
+        builtInSubtitleClip('clip-step-subtitle', 'track-subtitles', 1, 3),
+      ]),
+    ],
+  }),
 ] as const;
 
-export function serializeTimelineTemplate(project: Project, options: SerializeTimelineTemplateOptions): TimelineTemplateDefinition {
+export function serializeTimelineTemplate(
+  project: Project,
+  options: SerializeTimelineTemplateOptions,
+): TimelineTemplateDefinition {
   const selectedClipIds = options.clipIds?.length ? new Set(options.clipIds) : undefined;
   const sourceTracks = selectedClipIds
     ? project.timeline.tracks
@@ -202,9 +258,9 @@ export function serializeTimelineTemplate(project: Project, options: SerializeTi
           id: cloned.id,
           sourceClipId: clip.id,
           mediaPlaceholderId,
-          clip: cloned
+          clip: cloned,
         };
-      })
+      }),
     };
   });
   return {
@@ -216,11 +272,14 @@ export function serializeTimelineTemplate(project: Project, options: SerializeTi
     duration: roundTime(Math.max(0, ...allClips.map((clip) => clip.start + clip.duration - baseStart))),
     placeholders,
     tracks,
-    createdAt: options.createdAt ?? new Date(Date.now()).toISOString()
+    createdAt: options.createdAt ?? new Date(Date.now()).toISOString(),
   };
 }
 
-export function instantiateTimelineTemplate(template: TimelineTemplateDefinition, bindings: TimelineTemplatePlaceholderBindings = {}): InstantiatedTimelineTemplate {
+export function instantiateTimelineTemplate(
+  template: TimelineTemplateDefinition,
+  bindings: TimelineTemplatePlaceholderBindings = {},
+): InstantiatedTimelineTemplate {
   const placeholderAssetIds: Record<string, string> = {};
   const media = template.placeholders.map((placeholder, index) => {
     const binding = normalizePlaceholderBinding(bindings[placeholder.id]);
@@ -236,7 +295,7 @@ export function instantiateTimelineTemplate(template: TimelineTemplateDefinition
       width: finiteOrDefault(binding?.width, placeholder.width ?? 0),
       height: finiteOrDefault(binding?.height, placeholder.height ?? 0),
       missing: !path,
-      size: binding?.size
+      size: binding?.size,
     } satisfies MediaAsset;
   });
   const tracks: Track[] = template.tracks.map((templateTrack, trackIndex) => {
@@ -262,20 +321,20 @@ export function instantiateTimelineTemplate(template: TimelineTemplateDefinition
       locked: templateTrack.locked,
       volume: templateTrack.volume,
       pan: templateTrack.pan,
-      clips
+      clips,
     });
   });
   return {
     timeline: { tracks, markers: [], transitions: [] },
     media,
-    placeholderAssetIds
+    placeholderAssetIds,
   };
 }
 
 export function instantiateTimelineTemplateProject(
   template: TimelineTemplateDefinition,
   bindings: TimelineTemplatePlaceholderBindings = {},
-  options: { name?: string } = {}
+  options: { name?: string } = {},
 ): Project {
   const instance = instantiateTimelineTemplate(template, bindings);
   const project = createProject(options.name ?? template.name);
@@ -286,17 +345,20 @@ export function instantiateTimelineTemplateProject(
     media: instance.media,
     timeline: instance.timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: instance.timeline }],
-    activeSequenceId: PRIMARY_SEQUENCE_ID
+    activeSequenceId: PRIMARY_SEQUENCE_ID,
   };
 }
 
-export function getMissingTimelineTemplatePlaceholders(template: TimelineTemplateDefinition, bindings: TimelineTemplatePlaceholderBindings = {}): TimelineTemplatePlaceholder[] {
+export function getMissingTimelineTemplatePlaceholders(
+  template: TimelineTemplateDefinition,
+  bindings: TimelineTemplatePlaceholderBindings = {},
+): TimelineTemplatePlaceholder[] {
   return template.placeholders.filter((placeholder) => !normalizePlaceholderBinding(bindings[placeholder.id])?.path);
 }
 
 export function fillTimelineTemplatePlaceholders(
   template: TimelineTemplateDefinition,
-  bindings: TimelineTemplatePlaceholderBindings
+  bindings: TimelineTemplatePlaceholderBindings,
 ): Record<string, TimelineTemplatePlaceholderBinding> {
   const filled: Record<string, TimelineTemplatePlaceholderBinding> = {};
   for (const placeholder of template.placeholders) {
@@ -311,19 +373,23 @@ export function fillTimelineTemplatePlaceholders(
       duration: finiteOrUndefined(binding.duration) ?? placeholder.duration,
       width: finiteOrUndefined(binding.width) ?? placeholder.width,
       height: finiteOrUndefined(binding.height) ?? placeholder.height,
-      size: finiteOrUndefined(binding.size)
+      size: finiteOrUndefined(binding.size),
     };
   }
   return filled;
 }
 
-export function renderTimelineTemplatePreviewSvg(template: TimelineTemplateDefinition, options: { width?: number; trackHeight?: number } = {}): string {
+export function renderTimelineTemplatePreviewSvg(
+  template: TimelineTemplateDefinition,
+  options: { width?: number; trackHeight?: number } = {},
+): string {
   const width = Math.max(320, Math.round(options.width ?? 640));
   const trackHeight = Math.max(28, Math.round(options.trackHeight ?? 34));
   const padding = 12;
   const labelWidth = 108;
   const gap = 8;
-  const height = padding * 2 + Math.max(1, template.tracks.length) * trackHeight + Math.max(0, template.tracks.length - 1) * gap;
+  const height =
+    padding * 2 + Math.max(1, template.tracks.length) * trackHeight + Math.max(0, template.tracks.length - 1) * gap;
   const laneWidth = width - padding * 2 - labelWidth;
   const duration = Math.max(0.1, template.duration);
   const rows = template.tracks
@@ -348,7 +414,11 @@ export function normalizeTimelineTemplateDefinition(value: unknown): TimelineTem
     return undefined;
   }
   const candidate = value as Partial<TimelineTemplateDefinition>;
-  if (candidate.schemaVersion !== TIMELINE_TEMPLATE_SCHEMA_VERSION || typeof candidate.id !== 'string' || typeof candidate.name !== 'string') {
+  if (
+    candidate.schemaVersion !== TIMELINE_TEMPLATE_SCHEMA_VERSION ||
+    typeof candidate.id !== 'string' ||
+    typeof candidate.name !== 'string'
+  ) {
     return undefined;
   }
   if (!Array.isArray(candidate.tracks) || !Array.isArray(candidate.placeholders)) {
@@ -358,12 +428,15 @@ export function normalizeTimelineTemplateDefinition(value: unknown): TimelineTem
     schemaVersion: TIMELINE_TEMPLATE_SCHEMA_VERSION,
     id: candidate.id,
     name: candidate.name.trim() || 'Timeline Template',
-    description: typeof candidate.description === 'string' && candidate.description.trim() ? candidate.description.trim() : undefined,
+    description:
+      typeof candidate.description === 'string' && candidate.description.trim()
+        ? candidate.description.trim()
+        : undefined,
     settings: candidate.settings,
     duration: Math.max(0, Number(candidate.duration) || 0),
     placeholders: candidate.placeholders.flatMap((placeholder) => normalizePlaceholder(placeholder)),
     tracks: candidate.tracks.flatMap((track) => normalizeTemplateTrack(track)),
-    createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : undefined
+    createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : undefined,
   };
 }
 
@@ -389,8 +462,8 @@ function normalizeTemplateTrack(value: unknown): TimelineTemplateTrack[] {
       locked: track.locked,
       volume: track.volume,
       pan: track.pan,
-      clips: track.clips.flatMap((entry) => normalizeTemplateClip(entry))
-    }
+      clips: track.clips.flatMap((entry) => normalizeTemplateClip(entry)),
+    },
   ];
 }
 
@@ -407,8 +480,8 @@ function normalizeTemplateClip(value: unknown): TimelineTemplateClip[] {
       id: entry.id,
       sourceClipId: entry.sourceClipId,
       mediaPlaceholderId: typeof entry.mediaPlaceholderId === 'string' ? entry.mediaPlaceholderId : undefined,
-      clip: clone(entry.clip) as Clip
-    }
+      clip: clone(entry.clip) as Clip,
+    },
   ];
 }
 
@@ -428,12 +501,16 @@ function normalizePlaceholder(value: unknown): TimelineTemplatePlaceholder[] {
       originalPath: placeholder.originalPath,
       duration: finiteOrUndefined(placeholder.duration),
       width: finiteOrUndefined(placeholder.width),
-      height: finiteOrUndefined(placeholder.height)
-    }
+      height: finiteOrUndefined(placeholder.height),
+    },
   ];
 }
 
-function getOrCreatePlaceholder(asset: MediaAsset, byMediaId: Map<string, TimelineTemplatePlaceholder>, placeholders: TimelineTemplatePlaceholder[]): TimelineTemplatePlaceholder {
+function getOrCreatePlaceholder(
+  asset: MediaAsset,
+  byMediaId: Map<string, TimelineTemplatePlaceholder>,
+  placeholders: TimelineTemplatePlaceholder[],
+): TimelineTemplatePlaceholder {
   const existing = byMediaId.get(asset.id);
   if (existing) {
     return existing;
@@ -445,14 +522,16 @@ function getOrCreatePlaceholder(asset: MediaAsset, byMediaId: Map<string, Timeli
     originalPath: asset.path,
     duration: finiteOrUndefined(asset.duration),
     width: finiteOrUndefined(asset.width),
-    height: finiteOrUndefined(asset.height)
+    height: finiteOrUndefined(asset.height),
   };
   byMediaId.set(asset.id, placeholder);
   placeholders.push(placeholder);
   return placeholder;
 }
 
-function normalizePlaceholderBinding(value: string | TimelineTemplatePlaceholderBinding | undefined): TimelineTemplatePlaceholderBinding | undefined {
+function normalizePlaceholderBinding(
+  value: string | TimelineTemplatePlaceholderBinding | undefined,
+): TimelineTemplatePlaceholderBinding | undefined {
   if (typeof value === 'string') {
     return value.trim() ? { path: value.trim() } : undefined;
   }
@@ -463,15 +542,17 @@ function normalizePlaceholderBinding(value: string | TimelineTemplatePlaceholder
     ...value,
     path: value.path.trim(),
     name: value.name?.trim() || undefined,
-    assetType: isAssetType(value.assetType) ? value.assetType : undefined
+    assetType: isAssetType(value.assetType) ? value.assetType : undefined,
   };
 }
 
-function createBuiltInTemplate(input: Omit<TimelineTemplateDefinition, 'schemaVersion' | 'settings' | 'createdAt'>): TimelineTemplateDefinition {
+function createBuiltInTemplate(
+  input: Omit<TimelineTemplateDefinition, 'schemaVersion' | 'settings' | 'createdAt'>,
+): TimelineTemplateDefinition {
   return {
     schemaVersion: TIMELINE_TEMPLATE_SCHEMA_VERSION,
     ...input,
-    settings: { fps: 30, timecodeFormat: 'ndf', width: 1920, height: 1080 }
+    settings: { fps: 30, timecodeFormat: 'ndf', width: 1920, height: 1080 },
   };
 }
 
@@ -479,18 +560,32 @@ function builtInTrack(id: string, type: TrackType, name: string, clips: Timeline
   return { id, sourceTrackId: id, type, name, clips };
 }
 
-function builtInMediaClip(id: string, trackId: string, mediaPlaceholderId: string, type: 'video' | 'audio', name: string, start: number, duration: number): TimelineTemplateClip {
+function builtInMediaClip(
+  id: string,
+  trackId: string,
+  mediaPlaceholderId: string,
+  type: 'video' | 'audio',
+  name: string,
+  start: number,
+  duration: number,
+): TimelineTemplateClip {
   const base = builtInBaseClip(id, trackId, name, start, duration);
   const clip = {
     ...base,
     type,
     mediaId: mediaPlaceholderId,
-    volume: 1
+    volume: 1,
   } as Extract<Clip, { type: 'video' | 'audio' }>;
   return { id, sourceClipId: id, mediaPlaceholderId, clip };
 }
 
-function builtInTextClip(id: string, trackId: string, text: string, start: number, duration: number): TimelineTemplateClip {
+function builtInTextClip(
+  id: string,
+  trackId: string,
+  text: string,
+  start: number,
+  duration: number,
+): TimelineTemplateClip {
   const clip = {
     ...builtInBaseClip(id, trackId, text, start, duration),
     type: 'text',
@@ -502,8 +597,8 @@ function builtInTextClip(id: string, trackId: string, text: string, start: numbe
       backgroundOpacity: 0,
       fontFamily: 'Inter, Arial, sans-serif',
       bold: true,
-      italic: false
-    }
+      italic: false,
+    },
   } satisfies Extract<Clip, { type: 'text' }>;
   return { id, sourceClipId: id, clip };
 }
@@ -525,9 +620,9 @@ function builtInSubtitleClip(id: string, trackId: string, start: number, duratio
       outlineColor: '#000000',
       outlineWidth: 0,
       shadowColor: '#000000',
-      shadowOffset: 0
+      shadowOffset: 0,
     },
-    subtitleMode: 'burn-in'
+    subtitleMode: 'burn-in',
   } satisfies Extract<Clip, { type: 'subtitle' }>;
   return { id, sourceClipId: id, clip };
 }
@@ -543,7 +638,7 @@ function builtInBaseClip(id: string, trackId: string, name: string, start: numbe
     trimEnd: 0,
     speed: 1,
     colorCorrection: clone(DEFAULT_COLOR_CORRECTION),
-    transform: clone(DEFAULT_TRANSFORM)
+    transform: clone(DEFAULT_TRANSFORM),
   };
 }
 
@@ -569,12 +664,14 @@ function fileNameFromPath(path: string): string | undefined {
 }
 
 function sanitizeId(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'item';
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'item'
+  );
 }
 
 function trackColor(type: TrackType): string {

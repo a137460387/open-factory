@@ -7,7 +7,7 @@ import {
   listProjectSnapshots,
   pruneProjectSnapshots,
   readProjectSnapshot,
-  saveProjectSnapshot
+  saveProjectSnapshot,
 } from './projectSnapshots';
 import { setActiveProjectEncryptionPassword } from './projectFiles';
 import type { TauriMocks } from './tauri-bridge';
@@ -55,8 +55,8 @@ describe('project snapshots', () => {
         },
         fsExists: (path) => path.endsWith('/snapshots/project-1') || files.has(path),
         scanDirectory: (path) => Array.from(files.keys()).filter((file) => file.startsWith(`${path}/`)),
-        getFileStat: (path) => ({ path, size: files.get(path)?.length ?? 0, mtimeMs: mtimes.get(path) ?? 0 })
-      } satisfies TauriMocks
+        getFileStat: (path) => ({ path, size: files.get(path)?.length ?? 0, mtimeMs: mtimes.get(path) ?? 0 }),
+      } satisfies TauriMocks,
     });
   });
 

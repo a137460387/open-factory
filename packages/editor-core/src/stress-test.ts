@@ -12,9 +12,21 @@ export interface StressScenarioDef {
 }
 
 export const STRESS_SCENARIOS: StressScenarioDef[] = [
-  { id: 'mega-clips', label: '超大项目（500+ clip）', description: '在单一视频轨道上生成超过 500 个短片段，验证渲染和交互性能。' },
-  { id: 'long-timeline', label: '超长时间线（4h+）', description: '生成总时长超过 4 小时的时间线，验证缩放和滚动性能。' },
-  { id: 'mass-keyframes', label: '大量关键帧（100+/clip）', description: '在单个 clip 上添加超过 100 个关键帧，验证关键帧面板和插值性能。' },
+  {
+    id: 'mega-clips',
+    label: '超大项目（500+ clip）',
+    description: '在单一视频轨道上生成超过 500 个短片段，验证渲染和交互性能。',
+  },
+  {
+    id: 'long-timeline',
+    label: '超长时间线（4h+）',
+    description: '生成总时长超过 4 小时的时间线，验证缩放和滚动性能。',
+  },
+  {
+    id: 'mass-keyframes',
+    label: '大量关键帧（100+/clip）',
+    description: '在单个 clip 上添加超过 100 个关键帧，验证关键帧面板和插值性能。',
+  },
   { id: 'deep-nested', label: '深度嵌套（5 层）', description: '生成 5 层嵌套序列，验证嵌套渲染和展开性能。' },
 ];
 
@@ -74,12 +86,7 @@ function emptyProjectFields() {
   };
 }
 
-export function createVideoClipForStress(
-  trackId: string,
-  start: number,
-  duration: number,
-  index: number,
-): VideoClip {
+export function createVideoClipForStress(trackId: string, start: number, duration: number, index: number): VideoClip {
   return {
     id: createId('clip'),
     type: 'video',
@@ -151,7 +158,11 @@ export function generateLongTimelineProject(targetHours = 4.5): { project: Proje
   };
 }
 
-export function generateMassKeyframesProject(keyframeCount = 120): { project: Project; trackId: string; clipId: string } {
+export function generateMassKeyframesProject(keyframeCount = 120): {
+  project: Project;
+  trackId: string;
+  clipId: string;
+} {
   const trackId = createId('track');
   const clipId = createId('clip');
   const clipDuration = keyframeCount * 0.5;
@@ -190,7 +201,16 @@ export function generateMassKeyframesProject(keyframeCount = 120): { project: Pr
 
 export function generateDeepNestedProject(depth = 5): { project: Project; sequenceIds: string[] } {
   const sequenceIds: string[] = [];
-  let innerTimeline = { tracks: [{ id: createId('track'), type: 'video' as const, name: 'Inner', clips: [createVideoClipForStress('t0', 0, 10, 0)] }] };
+  let innerTimeline = {
+    tracks: [
+      {
+        id: createId('track'),
+        type: 'video' as const,
+        name: 'Inner',
+        clips: [createVideoClipForStress('t0', 0, 10, 0)],
+      },
+    ],
+  };
   const sequences: Sequence[] = [];
   for (let d = 0; d < depth; d++) {
     const seqId = createId('seq');
@@ -198,16 +218,20 @@ export function generateDeepNestedProject(depth = 5): { project: Project; sequen
     sequences.push({ id: seqId, name: `nest-level-${d}`, timeline: innerTimeline });
     const refClipId = createId('clip');
     innerTimeline = {
-      tracks: [{
-        id: createId('track'),
-        type: 'video',
-        name: `Level ${d}`,
-        clips: [{
-          ...createVideoClipForStress('t', 0, 10, d),
-          id: refClipId,
-          sequenceRefId: seqId,
-        } as VideoClip],
-      }],
+      tracks: [
+        {
+          id: createId('track'),
+          type: 'video',
+          name: `Level ${d}`,
+          clips: [
+            {
+              ...createVideoClipForStress('t', 0, 10, d),
+              id: refClipId,
+              sequenceRefId: seqId,
+            } as VideoClip,
+          ],
+        },
+      ],
     };
   }
   const timeline = innerTimeline;
@@ -237,21 +261,39 @@ export function generateStressScenario(scenarioId: StressScenarioId): {
     case 'mega-clips': {
       const { project } = generateMegaClipsProject();
       const clipCount = project.timeline.tracks.reduce((sum, t) => sum + t.clips.length, 0);
-      return { project, metrics: { clipCount, totalDurationSec: clipCount * 2, maxKeyframesPerClip: 0, nestingDepth: 1 } };
+      return {
+        project,
+        metrics: { clipCount, totalDurationSec: clipCount * 2, maxKeyframesPerClip: 0, nestingDepth: 1 },
+      };
     }
     case 'long-timeline': {
       const { project } = generateLongTimelineProject();
       const clipCount = project.timeline.tracks.reduce((sum, t) => sum + t.clips.length, 0);
-      return { project, metrics: { clipCount, totalDurationSec: clipCount * 60, maxKeyframesPerClip: 0, nestingDepth: 1 } };
+      return {
+        project,
+        metrics: { clipCount, totalDurationSec: clipCount * 60, maxKeyframesPerClip: 0, nestingDepth: 1 },
+      };
     }
     case 'mass-keyframes': {
       const { project, clipId } = generateMassKeyframesProject();
-      const kfClip = project.timeline.tracks[0]?.clips.find((c) => c.id === clipId) as (VideoClip & { keyframes?: unknown[] }) | undefined;
-      return { project, metrics: { clipCount: 1, totalDurationSec: 60, maxKeyframesPerClip: (kfClip?.keyframes?.length as number) ?? 0, nestingDepth: 1 } };
+      const kfClip = project.timeline.tracks[0]?.clips.find((c) => c.id === clipId) as
+        (VideoClip & { keyframes?: unknown[] }) | undefined;
+      return {
+        project,
+        metrics: {
+          clipCount: 1,
+          totalDurationSec: 60,
+          maxKeyframesPerClip: (kfClip?.keyframes?.length as number) ?? 0,
+          nestingDepth: 1,
+        },
+      };
     }
     case 'deep-nested': {
       const { project, sequenceIds } = generateDeepNestedProject();
-      return { project, metrics: { clipCount: 1, totalDurationSec: 10, maxKeyframesPerClip: 0, nestingDepth: sequenceIds.length } };
+      return {
+        project,
+        metrics: { clipCount: 1, totalDurationSec: 10, maxKeyframesPerClip: 0, nestingDepth: sequenceIds.length },
+      };
     }
   }
 }
@@ -282,9 +324,24 @@ export function compareWithBaseline(
     ];
   }
   return [
-    { metric: 'renderTimeMs', current: metrics.renderTimeMs, baseline: baseline.renderTimeMs, degraded: metrics.renderTimeMs > baseline.renderTimeMs * DEGRADATION_THRESHOLD },
-    { metric: 'memoryUsageMb', current: metrics.memoryUsageMb, baseline: baseline.memoryUsageMb, degraded: metrics.memoryUsageMb > baseline.memoryUsageMb * DEGRADATION_THRESHOLD },
-    { metric: 'exportEstimateSec', current: metrics.exportEstimateSec, baseline: baseline.exportEstimateSec, degraded: metrics.exportEstimateSec > baseline.exportEstimateSec * DEGRADATION_THRESHOLD },
+    {
+      metric: 'renderTimeMs',
+      current: metrics.renderTimeMs,
+      baseline: baseline.renderTimeMs,
+      degraded: metrics.renderTimeMs > baseline.renderTimeMs * DEGRADATION_THRESHOLD,
+    },
+    {
+      metric: 'memoryUsageMb',
+      current: metrics.memoryUsageMb,
+      baseline: baseline.memoryUsageMb,
+      degraded: metrics.memoryUsageMb > baseline.memoryUsageMb * DEGRADATION_THRESHOLD,
+    },
+    {
+      metric: 'exportEstimateSec',
+      current: metrics.exportEstimateSec,
+      baseline: baseline.exportEstimateSec,
+      degraded: metrics.exportEstimateSec > baseline.exportEstimateSec * DEGRADATION_THRESHOLD,
+    },
   ];
 }
 
@@ -313,6 +370,8 @@ export function createIsolatedProjectContext<T>(generator: () => T): { result: T
   const result = generator();
   return {
     result,
-    cleanup: () => { /* no-op in pure core; real cleanup handled by app shell */ },
+    cleanup: () => {
+      /* no-op in pure core; real cleanup handled by app shell */
+    },
   };
 }

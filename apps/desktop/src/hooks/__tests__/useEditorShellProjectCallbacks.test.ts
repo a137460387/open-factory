@@ -193,7 +193,10 @@ describe('useEditorShellProjectCallbacks', () => {
       '/mock/path/test.cutproj.json',
       expect.objectContaining({ encrypted: false }),
     );
-    expect(deleteAutosaveAfterSave).toHaveBeenCalledWith('/mock/path/test.cutproj.json', '/mock/path/test.cutproj.json');
+    expect(deleteAutosaveAfterSave).toHaveBeenCalledWith(
+      '/mock/path/test.cutproj.json',
+      '/mock/path/test.cutproj.json',
+    );
     expect(mockSetProjectPath).toHaveBeenCalledWith('/mock/path/test.cutproj.json');
     expect(mockSetDirty).toHaveBeenCalledWith(false);
     expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));

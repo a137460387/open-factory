@@ -9,7 +9,7 @@ import {
   RECENT_PROJECT_PATH_KEY,
   readProjectFile,
   writeProjectFile,
-  writeAutosaveProjectSafely
+  writeAutosaveProjectSafely,
 } from './projectFiles';
 import type { TauriMocks } from './tauri-bridge';
 
@@ -83,11 +83,11 @@ describe('project autosave files', () => {
         exists.set(path, false);
       },
       fsExists: (path) => exists.get(path) ?? false,
-      getFileStat: (path) => ({ path, size: 10, mtimeMs: mtimes.get(path) ?? 0 })
+      getFileStat: (path) => ({ path, size: 10, mtimeMs: mtimes.get(path) ?? 0 }),
     };
     vi.stubGlobal('window', {
       localStorage: storage,
-      __TAURI_MOCKS__: mocks
+      __TAURI_MOCKS__: mocks,
     });
   });
 
@@ -130,7 +130,7 @@ describe('project autosave files', () => {
     await expect(findStartupAutosaveRecovery()).resolves.toMatchObject({
       kind: 'saved-project',
       autosavePath: 'C:/Projects/edit.cutproj.json.autosave',
-      projectPath: 'C:/Projects/edit.cutproj.json'
+      projectPath: 'C:/Projects/edit.cutproj.json',
     });
 
     mtimes.set('C:/Projects/edit.cutproj.json.autosave', 900);
@@ -145,11 +145,13 @@ describe('project autosave files', () => {
         getAppDataDir: () => 'C:/Users/E2E/AppData/Roaming/open-factory',
         writeFile: () => {
           throw new Error('disk full');
-        }
-      } satisfies TauriMocks
+        },
+      } satisfies TauriMocks,
     });
 
-    await expect(writeAutosaveProjectSafely(createProject('Failing'), 'C:/Projects/edit.cutproj.json')).resolves.toBeUndefined();
+    await expect(
+      writeAutosaveProjectSafely(createProject('Failing'), 'C:/Projects/edit.cutproj.json'),
+    ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
   });
 

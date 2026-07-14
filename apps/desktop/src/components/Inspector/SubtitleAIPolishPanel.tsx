@@ -4,7 +4,7 @@ import {
   calculateSubtitlePolishBatchSplit,
   parseSubtitlePolishResponse,
   removeFillerWords,
-  isProviderConfigured
+  isProviderConfigured,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -27,7 +27,7 @@ type PolishPhase = 'idle' | 'processing' | 'preview' | 'applying';
 
 export function SubtitleAIPolishPanel({
   selectedSubtitleClips,
-  selectedClipLocked
+  selectedClipLocked,
 }: {
   selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
   selectedClipLocked: boolean;
@@ -57,7 +57,7 @@ export function SubtitleAIPolishPanel({
     const items = selectedSubtitleClips.map((clip, index) => ({
       clipId: clip.id,
       index,
-      text: removeFillers ? removeFillerWords(clip.text) : clip.text
+      text: removeFillers ? removeFillerWords(clip.text) : clip.text,
     }));
     const batches = calculateSubtitlePolishBatchSplit(items.length, 50);
     const results: PolishedItem[] = [];
@@ -65,19 +65,23 @@ export function SubtitleAIPolishPanel({
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       for (const batchSize of batches) {
         const batch = items.slice(offset, offset + batchSize);
         const messages = [
           {
             role: 'system' as const,
-            content: '你是一个专业的字幕编辑助手。用户会给你一段JSON数组，每个元素有index和text字段。请修正错别字、标点符号错误、优化断句（每条不超过20字），返回相同格式的JSON数组。只返回JSON数组，不要其他内容。'
+            content:
+              '你是一个专业的字幕编辑助手。用户会给你一段JSON数组，每个元素有index和text字段。请修正错别字、标点符号错误、优化断句（每条不超过20字），返回相同格式的JSON数组。只返回JSON数组，不要其他内容。',
           },
           {
             role: 'user' as const,
-            content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text })))
-          }
+            content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text }))),
+          },
         ];
 
         const response = await callAiApi(
@@ -88,12 +92,15 @@ export function SubtitleAIPolishPanel({
             messages,
             customHeaders: selectedProvider.customHeaders,
             maxTokens: 4096,
-            temperature: 0.3
+            temperature: 0.3,
           },
-          apiKey
+          apiKey,
         );
 
-        if (abortRef.current) { setPhase('idle'); return; }
+        if (abortRef.current) {
+          setPhase('idle');
+          return;
+        }
 
         const parsed = parseSubtitlePolishResponse(JSON.parse(response.content));
         for (const item of parsed) {
@@ -104,7 +111,7 @@ export function SubtitleAIPolishPanel({
               index: original.index,
               originalText: original.text,
               polishedText: item.text,
-              accepted: true
+              accepted: true,
             });
           }
         }
@@ -125,7 +132,7 @@ export function SubtitleAIPolishPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('idle');
     }
@@ -139,7 +146,7 @@ export function SubtitleAIPolishPanel({
 
   const toggleItem = useCallback((clipId: string) => {
     setPolishedItems((prev) =>
-      prev.map((item) => (item.clipId === clipId ? { ...item, accepted: !item.accepted } : item))
+      prev.map((item) => (item.clipId === clipId ? { ...item, accepted: !item.accepted } : item)),
     );
   }, []);
 
@@ -162,19 +169,19 @@ export function SubtitleAIPolishPanel({
       commandManager.execute(
         new BatchUpdateSubtitleTextCommand(
           timelineAccessor,
-          accepted.map((item) => ({ clipId: item.clipId, text: item.polishedText }))
-        )
+          accepted.map((item) => ({ clipId: item.clipId, text: item.polishedText })),
+        ),
       );
       showToast({
         kind: 'success',
         title: t.appliedTitle,
-        message: t.appliedMessage(accepted.length)
+        message: t.appliedMessage(accepted.length),
       });
     } catch (error) {
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
     }
     setPhase('idle');
@@ -186,8 +193,13 @@ export function SubtitleAIPolishPanel({
   }
 
   return (
-    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-ai-polish-section">
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+    <details
+      className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      data-testid="subtitle-ai-polish-section"
+    >
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+        {t.title}
+      </summary>
       <div className="space-y-3 border-t border-line p-2">
         {phase === 'idle' && (
           <>
@@ -202,7 +214,9 @@ export function SubtitleAIPolishPanel({
               >
                 {enabledProviders.length === 0 && <option value="">{t.noProvider}</option>}
                 {enabledProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -264,9 +278,7 @@ export function SubtitleAIPolishPanel({
                     </div>
                     <button
                       className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-medium ${
-                        item.accepted
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-red-100 text-red-700'
+                        item.accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                       }`}
                       type="button"
                       onClick={() => toggleItem(item.clipId)}

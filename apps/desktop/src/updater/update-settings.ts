@@ -1,4 +1,5 @@
-export const DEFAULT_UPDATE_ENDPOINT = 'https://github.com/open-factory/open-factory/releases/latest/download/latest.json';
+export const DEFAULT_UPDATE_ENDPOINT =
+  'https://github.com/open-factory/open-factory/releases/latest/download/latest.json';
 export const DEFAULT_RELEASE_NOTES_ENDPOINT = 'https://api.github.com/repos/open-factory/open-factory/releases/latest';
 
 export interface UpdateSettings {
@@ -7,12 +8,12 @@ export interface UpdateSettings {
 }
 
 export const DEFAULT_UPDATE_SETTINGS: UpdateSettings = {
-  autoCheckEnabled: true
+  autoCheckEnabled: true,
 };
 
 export function normalizeUpdateSettings(settings: Partial<UpdateSettings> | undefined): UpdateSettings {
   const normalized: UpdateSettings = {
-    autoCheckEnabled: settings?.autoCheckEnabled !== false
+    autoCheckEnabled: settings?.autoCheckEnabled !== false,
   };
   const endpoint = normalizeUpdaterEndpointUrl(settings?.customEndpoint);
   if (endpoint) {

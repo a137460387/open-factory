@@ -29,15 +29,15 @@ describe('i18n strings', () => {
     expect(t<(index: number) => string>('timeline.markerLabel')(2)).toBe('标记 2');
   });
 });
-  it('covers new batchCrop, namingTemplate, quickActions, and duplicateMediaMerge keys', () => {
-    setLanguage('zh');
-    expect(t('batchCrop.title')).toBe('批量转比例');
-    expect(t<(n: number) => string>('batchCrop.previewCount')(3)).toContain('3');
-    expect(t<(n: number) => string>('batchCrop.appliedMessage')(5)).toContain('5');
-    expect(t('namingTemplate.title')).toBe('文件命名规则');
-    expect(t('quickActions.mute')).toBe('静音');
-    expect(t('duplicateMediaMerge.qualityCompare')).toBe('质量对比');
-    expect(t<(n: number) => string>('duplicateMediaMerge.mergeHistoryTitle')(2)).toContain('2');
-    expect(t<(n: number) => string>('duplicateMediaMerge.crossProjectMessage')(3)).toContain('3');
-    expect(t<(k: string, m: number) => string>('duplicateMediaMerge.historyEntry')('file.mp4', 2)).toContain('file.mp4');
-  });
+it('covers new batchCrop, namingTemplate, quickActions, and duplicateMediaMerge keys', () => {
+  setLanguage('zh');
+  expect(t('batchCrop.title')).toBe('批量转比例');
+  expect(t<(n: number) => string>('batchCrop.previewCount')(3)).toContain('3');
+  expect(t<(n: number) => string>('batchCrop.appliedMessage')(5)).toContain('5');
+  expect(t('namingTemplate.title')).toBe('文件命名规则');
+  expect(t('quickActions.mute')).toBe('静音');
+  expect(t('duplicateMediaMerge.qualityCompare')).toBe('质量对比');
+  expect(t<(n: number) => string>('duplicateMediaMerge.mergeHistoryTitle')(2)).toContain('2');
+  expect(t<(n: number) => string>('duplicateMediaMerge.crossProjectMessage')(3)).toContain('3');
+  expect(t<(k: string, m: number) => string>('duplicateMediaMerge.historyEntry')('file.mp4', 2)).toContain('file.mp4');
+});

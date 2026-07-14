@@ -1,5 +1,11 @@
 import { clamp, round } from './time';
-import { createDefaultColorCurves, normalizeColorCurves, type ColorCurves, type CurvePoint, type RgbColor } from './color-grading';
+import {
+  createDefaultColorCurves,
+  normalizeColorCurves,
+  type ColorCurves,
+  type CurvePoint,
+  type RgbColor,
+} from './color-grading';
 
 export interface ColorMatchFrameSample {
   data: ArrayLike<number>;
@@ -61,7 +67,7 @@ export function calculateColorMatchStats(sample: ColorMatchFrameSample): ColorMa
     r: statsFromSums(sums.r, sumsSq.r, pixelCount),
     g: statsFromSums(sums.g, sumsSq.g, pixelCount),
     b: statsFromSums(sums.b, sumsSq.b, pixelCount),
-    pixelCount
+    pixelCount,
   };
 }
 
@@ -69,12 +75,14 @@ export function buildColorMatchTransform(source: ColorMatchStats, reference: Col
   return {
     r: buildChannelTransform(source.r, reference.r),
     g: buildChannelTransform(source.g, reference.g),
-    b: buildChannelTransform(source.b, reference.b)
+    b: buildChannelTransform(source.b, reference.b),
   };
 }
 
 export function buildColorMatchCurves(source: ColorMatchFrameSample, reference: ColorMatchFrameSample): ColorCurves {
-  return colorMatchTransformToCurves(buildColorMatchTransform(calculateColorMatchStats(source), calculateColorMatchStats(reference)));
+  return colorMatchTransformToCurves(
+    buildColorMatchTransform(calculateColorMatchStats(source), calculateColorMatchStats(reference)),
+  );
 }
 
 export function colorMatchTransformToCurves(transform: ColorMatchTransform): ColorCurves {
@@ -82,7 +90,7 @@ export function colorMatchTransformToCurves(transform: ColorMatchTransform): Col
     ...createDefaultColorCurves(),
     r: transformChannelToCurve(transform.r),
     g: transformChannelToCurve(transform.g),
-    b: transformChannelToCurve(transform.b)
+    b: transformChannelToCurve(transform.b),
   });
 }
 
@@ -90,7 +98,7 @@ export function applyColorMatchTransformToRgb(input: RgbColor, transform: ColorM
   return {
     r: applyChannelTransform(input.r, transform.r),
     g: applyChannelTransform(input.g, transform.g),
-    b: applyChannelTransform(input.b, transform.b)
+    b: applyChannelTransform(input.b, transform.b),
   };
 }
 
@@ -99,7 +107,7 @@ function buildChannelTransform(source: ColorChannelStats, reference: ColorChanne
   return {
     slope: round(slope),
     intercept: round(reference.mean - source.mean * slope),
-    sourceMean: source.mean
+    sourceMean: source.mean,
   };
 }
 
@@ -121,7 +129,7 @@ function statsFromSums(sum: number, sumSq: number, count: number): ColorChannelS
   const variance = Math.max(0, sumSq / count - mean * mean);
   return {
     mean: round(mean),
-    stdDev: round(Math.sqrt(variance))
+    stdDev: round(Math.sqrt(variance)),
   };
 }
 

@@ -2,7 +2,7 @@ import type { SubtitleClip, SubtitleStyle } from '../model-types';
 import {
   BUILTIN_SUBTITLE_STYLE_TEMPLATES,
   type SubtitleStyleTemplate,
-  type BuiltinSubtitleStyleTemplateId
+  type BuiltinSubtitleStyleTemplateId,
 } from './style-templates';
 
 export const QUICKBAR_MAX_VISIBLE = 8;
@@ -18,10 +18,7 @@ export interface QuickbarState {
  * 判断快速样式条是否应当显示。
  * 条件：有选中的字幕 clip 且用户偏好未关闭浮层。
  */
-export function shouldShowQuickbar(
-  selectedClips: Array<{ type: string }>,
-  userPrefEnabled: boolean
-): boolean {
+export function shouldShowQuickbar(selectedClips: Array<{ type: string }>, userPrefEnabled: boolean): boolean {
   if (!userPrefEnabled) return false;
   return selectedClips.some((clip) => clip.type === 'subtitle');
 }
@@ -37,10 +34,7 @@ export function getQuickbarTemplates(): SubtitleStyleTemplate[] {
  * 判断当前选中 clip 的样式是否匹配指定模板。
  * 通过比较关键字段来判断，不依赖引用相等。
  */
-export function isStyleMatchingTemplate(
-  clipStyle: SubtitleStyle,
-  templateStyle: SubtitleStyle
-): boolean {
+export function isStyleMatchingTemplate(clipStyle: SubtitleStyle, templateStyle: SubtitleStyle): boolean {
   return (
     clipStyle.fontSize === templateStyle.fontSize &&
     clipStyle.color === templateStyle.color &&
@@ -72,7 +66,7 @@ export function resolveActiveTemplateId(clips: SubtitleClip[]): string | null {
 export function applyStyleTemplateBatch(
   clips: SubtitleClip[],
   template: SubtitleStyleTemplate,
-  targetClipIds: Set<string>
+  targetClipIds: Set<string>,
 ): SubtitleClip[] {
   return clips.map((clip) => {
     if (!targetClipIds.has(clip.id)) return clip;

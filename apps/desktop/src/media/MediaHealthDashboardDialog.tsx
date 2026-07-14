@@ -22,18 +22,26 @@ export function MediaHealthDashboardDialog({
   onClose,
   onRescan,
   onRepair,
-  onOpenRelinkPanel
+  onOpenRelinkPanel,
 }: MediaHealthDashboardDialogProps) {
   const t = zhCN.mediaHealthDashboard;
   const repairTaskCount = dashboard?.repairTasks.reduce((total, task) => total + task.count, 0) ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="media-health-dashboard-dialog">
-      <section className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-soft" data-testid="media-health-dashboard-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="media-health-dashboard-dialog"
+    >
+      <section
+        className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-soft"
+        data-testid="media-health-dashboard-panel"
+      >
         <div className="flex items-start justify-between gap-4 border-b border-line px-4 py-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
-            <div className="text-xs text-slate-500">{scanning ? t.scanning : dashboard ? t.summary(dashboard.issueCount) : t.waiting}</div>
+            <div className="text-xs text-slate-500">
+              {scanning ? t.scanning : dashboard ? t.summary(dashboard.issueCount) : t.waiting}
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <label className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700">
@@ -46,52 +54,118 @@ export function MediaHealthDashboardDialog({
               />
               {t.autoShow}
             </label>
-            <button className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50" type="button" data-testid="media-health-repair-button" onClick={onRepair} disabled={scanning || repairTaskCount === 0}>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+              type="button"
+              data-testid="media-health-repair-button"
+              onClick={onRepair}
+              disabled={scanning || repairTaskCount === 0}
+            >
               <Wrench size={14} />
               {t.repair}
             </button>
-            <button className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50" type="button" data-testid="media-health-rescan-button" onClick={onRescan} disabled={scanning}>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+              type="button"
+              data-testid="media-health-rescan-button"
+              onClick={onRescan}
+              disabled={scanning}
+            >
               <RefreshCw size={14} />
               {t.rescan}
             </button>
-            <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="media-health-close-button" onClick={onClose}>
+            <button
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel"
+              type="button"
+              title={zhCN.common.close}
+              aria-label={zhCN.common.close}
+              data-testid="media-health-close-button"
+              onClick={onClose}
+            >
               <X size={16} />
             </button>
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {scanning && !dashboard ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.scanning}</div> : null}
+          {scanning && !dashboard ? (
+            <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.scanning}</div>
+          ) : null}
           {dashboard ? (
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <MetricCard testId="media-health-card-proxy-coverage" title={t.cards.proxyCoverage} icon={<Gauge size={18} />} tone="teal">
+                <MetricCard
+                  testId="media-health-card-proxy-coverage"
+                  title={t.cards.proxyCoverage}
+                  icon={<Gauge size={18} />}
+                  tone="teal"
+                >
                   <div className="flex items-center gap-4">
                     <ProxyRing dashboard={dashboard} />
                     <div>
-                      <div className="text-2xl font-semibold tabular-nums text-ink" data-testid="media-health-proxy-coverage-value">
+                      <div
+                        className="text-2xl font-semibold tabular-nums text-ink"
+                        data-testid="media-health-proxy-coverage-value"
+                      >
                         {t.proxyCoverageValue(dashboard.proxyCoverage.ready, dashboard.proxyCoverage.total)}
                       </div>
-                      <div className="text-xs text-slate-500">{t.proxyCoveragePercent(dashboard.proxyCoverage.progress.percent)}</div>
+                      <div className="text-xs text-slate-500">
+                        {t.proxyCoveragePercent(dashboard.proxyCoverage.progress.percent)}
+                      </div>
                     </div>
                   </div>
                 </MetricCard>
-                <MetricCard testId="media-health-card-missing-media" title={t.cards.missingMedia} icon={<AlertTriangle size={18} />} tone="red">
-                  <CountWithAction count={dashboard.missingMedia.count} testId="media-health-missing-count" actionTestId="media-health-missing-card-action" actionLabel={t.openRelink} actionDisabled={dashboard.missingMedia.count === 0} onAction={onOpenRelinkPanel} />
+                <MetricCard
+                  testId="media-health-card-missing-media"
+                  title={t.cards.missingMedia}
+                  icon={<AlertTriangle size={18} />}
+                  tone="red"
+                >
+                  <CountWithAction
+                    count={dashboard.missingMedia.count}
+                    testId="media-health-missing-count"
+                    actionTestId="media-health-missing-card-action"
+                    actionLabel={t.openRelink}
+                    actionDisabled={dashboard.missingMedia.count === 0}
+                    onAction={onOpenRelinkPanel}
+                  />
                 </MetricCard>
-                <MetricCard testId="media-health-card-expired-proxy" title={t.cards.expiredProxy} icon={<RefreshCw size={18} />} tone="orange">
+                <MetricCard
+                  testId="media-health-card-expired-proxy"
+                  title={t.cards.expiredProxy}
+                  icon={<RefreshCw size={18} />}
+                  tone="orange"
+                >
                   <CountValue count={dashboard.expiredProxies.count} testId="media-health-expired-proxy-count" />
                 </MetricCard>
-                <MetricCard testId="media-health-card-unused-media" title={t.cards.unusedMedia} icon={<Archive size={18} />} tone="slate">
+                <MetricCard
+                  testId="media-health-card-unused-media"
+                  title={t.cards.unusedMedia}
+                  icon={<Archive size={18} />}
+                  tone="slate"
+                >
                   <CountValue count={dashboard.unusedMedia.count} testId="media-health-unused-media-count" />
                 </MetricCard>
-                <MetricCard testId="media-health-card-storage" title={t.cards.storage} icon={<Database size={18} />} tone="blue">
+                <MetricCard
+                  testId="media-health-card-storage"
+                  title={t.cards.storage}
+                  icon={<Database size={18} />}
+                  tone="blue"
+                >
                   <StorageBar dashboard={dashboard} />
                 </MetricCard>
-                <MetricCard testId="media-health-card-recent-imports" title={t.cards.recentImports} icon={<CalendarDays size={18} />} tone="violet">
+                <MetricCard
+                  testId="media-health-card-recent-imports"
+                  title={t.cards.recentImports}
+                  icon={<CalendarDays size={18} />}
+                  tone="violet"
+                >
                   <RecentImportChart dashboard={dashboard} />
                 </MetricCard>
               </div>
-              <section className="rounded-md border border-line bg-panel p-3" data-testid="media-health-repair-task-list">
+              <section
+                className="rounded-md border border-line bg-panel p-3"
+                data-testid="media-health-repair-task-list"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-ink">{t.repairTasks}</h3>
                   <span className="text-xs text-slate-500">{t.repairTaskCount(repairTaskCount)}</span>
@@ -116,14 +190,26 @@ export function MediaHealthDashboardDialog({
   );
 }
 
-function MetricCard({ testId, title, icon, tone, children }: { testId: string; title: string; icon: ReactNode; tone: 'teal' | 'red' | 'orange' | 'slate' | 'blue' | 'violet'; children: ReactNode }) {
+function MetricCard({
+  testId,
+  title,
+  icon,
+  tone,
+  children,
+}: {
+  testId: string;
+  title: string;
+  icon: ReactNode;
+  tone: 'teal' | 'red' | 'orange' | 'slate' | 'blue' | 'violet';
+  children: ReactNode;
+}) {
   const toneClass = {
     teal: 'text-teal-700 bg-teal-50',
     red: 'text-red-700 bg-red-50',
     orange: 'text-orange-700 bg-orange-50',
     slate: 'text-slate-700 bg-slate-100',
     blue: 'text-blue-700 bg-blue-50',
-    violet: 'text-violet-700 bg-violet-50'
+    violet: 'text-violet-700 bg-violet-50',
   }[tone];
   return (
     <section className="min-h-[148px] rounded-md border border-line bg-white p-3" data-testid={testId}>
@@ -139,9 +225,26 @@ function MetricCard({ testId, title, icon, tone, children }: { testId: string; t
 function ProxyRing({ dashboard }: { dashboard: MediaHealthDashboard }) {
   const progress = dashboard.proxyCoverage.progress;
   return (
-    <svg className="h-20 w-20 shrink-0" viewBox="0 0 44 44" role="img" aria-label={zhCN.mediaHealthDashboard.cards.proxyCoverage}>
+    <svg
+      className="h-20 w-20 shrink-0"
+      viewBox="0 0 44 44"
+      role="img"
+      aria-label={zhCN.mediaHealthDashboard.cards.proxyCoverage}
+    >
       <circle cx="22" cy="22" r="16" fill="none" stroke="#e2e8f0" strokeWidth="6" />
-      <circle cx="22" cy="22" r="16" fill="none" stroke="#0f766e" strokeWidth="6" strokeLinecap="round" pathLength="100" strokeDasharray={progress.dashArray} transform="rotate(-90 22 22)" data-testid="media-health-proxy-ring" />
+      <circle
+        cx="22"
+        cy="22"
+        r="16"
+        fill="none"
+        stroke="#0f766e"
+        strokeWidth="6"
+        strokeLinecap="round"
+        pathLength="100"
+        strokeDasharray={progress.dashArray}
+        transform="rotate(-90 22 22)"
+        data-testid="media-health-proxy-ring"
+      />
       <text x="22" y="25" textAnchor="middle" className="fill-slate-700 text-[9px] font-semibold">
         {progress.percent}%
       </text>
@@ -149,11 +252,31 @@ function ProxyRing({ dashboard }: { dashboard: MediaHealthDashboard }) {
   );
 }
 
-function CountWithAction({ count, testId, actionTestId, actionLabel, actionDisabled, onAction }: { count: number; testId: string; actionTestId: string; actionLabel: string; actionDisabled: boolean; onAction(): void }) {
+function CountWithAction({
+  count,
+  testId,
+  actionTestId,
+  actionLabel,
+  actionDisabled,
+  onAction,
+}: {
+  count: number;
+  testId: string;
+  actionTestId: string;
+  actionLabel: string;
+  actionDisabled: boolean;
+  onAction(): void;
+}) {
   return (
     <div>
       <CountValue count={count} testId={testId} />
-      <button className="mt-3 inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50" type="button" data-testid={actionTestId} disabled={actionDisabled} onClick={onAction}>
+      <button
+        className="mt-3 inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+        type="button"
+        data-testid={actionTestId}
+        disabled={actionDisabled}
+        onClick={onAction}
+      >
         <Link2 size={14} />
         {actionLabel}
       </button>
@@ -175,7 +298,12 @@ function StorageBar({ dashboard }: { dashboard: MediaHealthDashboard }) {
     <div>
       <div className="flex h-3 overflow-hidden rounded-full bg-slate-100" data-testid="media-health-storage-bar">
         {dashboard.storage.segments.map((segment) => (
-          <div key={segment.kind} className={storageSegmentClass(segment.kind)} style={{ width: `${Math.max(2, Math.round(segment.ratio * 100))}%` }} title={t.storageKinds[segment.kind]} />
+          <div
+            key={segment.kind}
+            className={storageSegmentClass(segment.kind)}
+            style={{ width: `${Math.max(2, Math.round(segment.ratio * 100))}%` }}
+            title={t.storageKinds[segment.kind]}
+          />
         ))}
       </div>
       <div className="mt-3 grid gap-1 text-xs text-slate-600">
@@ -196,7 +324,12 @@ function RecentImportChart({ dashboard }: { dashboard: MediaHealthDashboard }) {
   const coordinates = points.map((point, index) => `${index * 20},${40 - (point.count / max) * 34}`).join(' ');
   return (
     <div>
-      <svg className="h-16 w-full" viewBox="0 0 120 44" preserveAspectRatio="none" data-testid="media-health-recent-import-chart">
+      <svg
+        className="h-16 w-full"
+        viewBox="0 0 120 44"
+        preserveAspectRatio="none"
+        data-testid="media-health-recent-import-chart"
+      >
         <polyline fill="none" stroke="#7c3aed" strokeWidth="2" points={coordinates} />
         {points.map((point, index) => (
           <circle key={point.day} cx={index * 20} cy={40 - (point.count / max) * 34} r="2" fill="#7c3aed" />
@@ -204,7 +337,12 @@ function RecentImportChart({ dashboard }: { dashboard: MediaHealthDashboard }) {
       </svg>
       <div className="mt-2 flex justify-between gap-1 text-[10px] text-slate-500">
         {points.map((point) => (
-          <span key={point.day} className="tabular-nums" data-testid="media-health-recent-import-point" data-count={point.count}>
+          <span
+            key={point.day}
+            className="tabular-nums"
+            data-testid="media-health-recent-import-point"
+            data-count={point.count}
+          >
             {point.day.slice(5)}
           </span>
         ))}

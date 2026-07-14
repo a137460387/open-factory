@@ -93,8 +93,8 @@ function calcGCD(a: number, b: number): number {
 // ─── 重心计算 ────────────────────────────────────────────
 
 interface CenterOfInterest {
-  x: number;  // 归一化 0-1
-  y: number;  // 归一化 0-1
+  x: number; // 归一化 0-1
+  y: number; // 归一化 0-1
 }
 
 /**
@@ -120,7 +120,7 @@ function calculateCenterOfInterest(input: CropAnalysisInput): CenterOfInterest {
     const subtitleTop = input.subtitleY;
     // 如果字幕在画面下半部，重心上移
     if (subtitleTop > 0.6) {
-      y = y * 0.8 + 0.35 * 0.2;  // 向上偏移
+      y = y * 0.8 + 0.35 * 0.2; // 向上偏移
     }
   }
 
@@ -176,7 +176,7 @@ export function calculateSmartCrop(
   if (sourceRatio > targetRatio) {
     // 源画面更宽 → 裁剪左右两侧
     cropH = 1.0;
-    cropW = (targetRatio / sourceRatio);
+    cropW = targetRatio / sourceRatio;
 
     // 基于重心水平定位
     const maxCropX = 1.0 - cropW;
@@ -187,7 +187,7 @@ export function calculateSmartCrop(
   } else {
     // 源画面更高 → 裁剪上下两侧
     cropW = 1.0;
-    cropH = (sourceRatio / targetRatio);
+    cropH = sourceRatio / targetRatio;
 
     // 基于重心垂直定位
     const maxCropY = 1.0 - cropH;
@@ -200,10 +200,10 @@ export function calculateSmartCrop(
   // 置信度计算
   let confidence = 0.8;
   if (input.motionCenterX !== undefined) {
-    confidence += 0.1;  // 有运动分析数据
+    confidence += 0.1; // 有运动分析数据
   }
   if (input.subtitleY !== undefined) {
-    confidence += 0.05;  // 有字幕位置数据
+    confidence += 0.05; // 有字幕位置数据
   }
   // 如果裁剪量过大，降低置信度
   const cropRatio = sourceRatio > targetRatio ? cropW : cropH;
@@ -213,10 +213,7 @@ export function calculateSmartCrop(
   }
 
   // 生成 FFmpeg 滤镜
-  const cropFilter = buildCropFilter(
-    sourceWidth, sourceHeight,
-    cropX, cropY, cropW, cropH,
-  );
+  const cropFilter = buildCropFilter(sourceWidth, sourceHeight, cropX, cropY, cropW, cropH);
 
   const scaleFilter = `scale=${targetPlatform.width}:${targetPlatform.height}:flags=lanczos`;
 
@@ -333,9 +330,10 @@ export function calculateCropPreviewDimensions(
  * 将裁剪结果转换为 reframe offset 参数
  * 用于集成到现有的 ExportSettings.reframeOffsetX/Y
  */
-export function cropResultToReframeOffset(
-  cropResult: SmartCropResult,
-): { reframeOffsetX: number; reframeOffsetY: number } {
+export function cropResultToReframeOffset(cropResult: SmartCropResult): {
+  reframeOffsetX: number;
+  reframeOffsetY: number;
+} {
   // 计算裁剪中心相对于画面中心的偏移
   const cropCenterX = cropResult.cropX + cropResult.cropWidth / 2;
   const cropCenterY = cropResult.cropY + cropResult.cropHeight / 2;
@@ -350,9 +348,7 @@ export function cropResultToReframeOffset(
  * 构建完整的裁剪 + 缩放滤镜链
  * 可直接注入 FFmpeg filter_complex
  */
-export function buildCropScaleFilterChain(
-  cropResult: SmartCropResult,
-): string {
+export function buildCropScaleFilterChain(cropResult: SmartCropResult): string {
   const filters: string[] = [];
 
   if (cropResult.cropFilter) {

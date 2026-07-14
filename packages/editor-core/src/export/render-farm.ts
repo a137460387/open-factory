@@ -60,7 +60,7 @@ export function clampRenderFarmInstances(value: number): number {
 
 export function calculateRenderFarmSegments(
   duration: number,
-  options: { thresholdSeconds?: number; targetSegmentSeconds?: number } = {}
+  options: { thresholdSeconds?: number; targetSegmentSeconds?: number } = {},
 ): RenderFarmSegment[] {
   const safeDuration = Math.max(0, Number.isFinite(duration) ? duration : 0);
   const threshold = Math.max(1, options.thresholdSeconds ?? RENDER_FARM_SPLIT_THRESHOLD_SECONDS);
@@ -78,7 +78,7 @@ export function calculateRenderFarmSegments(
       id: `segment-${index + 1}`,
       index,
       start: round(start),
-      duration: segmentDuration
+      duration: segmentDuration,
     });
     start = round(start + segmentDuration);
   }
@@ -93,32 +93,46 @@ export function createRenderFarmSegmentStatuses(
   segments: RenderFarmSegment[],
   tempSegmentsDir: string,
   taskId: string,
-  outputPath: string
+  outputPath: string,
 ): RenderFarmSegmentStatus[] {
   return segments.map((segment) => ({
     ...segment,
     outputPath: buildRenderFarmSegmentPath(tempSegmentsDir, taskId, segment.index, outputPath),
     status: 'pending',
-    progress: 0
+    progress: 0,
   }));
 }
 
-export function buildRenderFarmSegmentPath(tempSegmentsDir: string, taskId: string, index: number, outputPath: string): string {
+export function buildRenderFarmSegmentPath(
+  tempSegmentsDir: string,
+  taskId: string,
+  index: number,
+  outputPath: string,
+): string {
   const extension = outputPath.match(/\.([a-zA-Z0-9]+)$/)?.[1] ?? 'mp4';
   const safeTask = taskId.replace(/[^a-zA-Z0-9_-]/g, '_');
-  return normalizeFfmpegPath(`${tempSegmentsDir.replace(/[\\/]+$/g, '')}/${safeTask}-segment-${String(index + 1).padStart(2, '0')}.${extension}`);
+  return normalizeFfmpegPath(
+    `${tempSegmentsDir.replace(/[\\/]+$/g, '')}/${safeTask}-segment-${String(index + 1).padStart(2, '0')}.${extension}`,
+  );
 }
 
 export function buildRenderFarmSegmentPlan(plan: FfmpegExportPlan, segment: RenderFarmSegmentStatus): FfmpegExportPlan {
   const fullArgs = replaceFinalOutputArg(plan.fullArgs, segment.outputPath);
-  fullArgs.splice(Math.max(0, fullArgs.length - 1), 0, '-ss', formatSeconds(segment.start), '-t', formatSeconds(segment.duration));
+  fullArgs.splice(
+    Math.max(0, fullArgs.length - 1),
+    0,
+    '-ss',
+    formatSeconds(segment.start),
+    '-t',
+    formatSeconds(segment.duration),
+  );
   return {
     ...plan,
     fullArgs,
     outputArgs: replaceFinalOutputArg(plan.outputArgs, segment.outputPath),
     displayCommand: undefined,
     postExportScript: null,
-    duration: segment.duration
+    duration: segment.duration,
   };
 }
 
@@ -130,7 +144,7 @@ export function buildRenderFarmConcatPlan(
   segments: Pick<RenderFarmSegmentStatus, 'outputPath' | 'duration'>[],
   outputPath: string,
   concatListPath: string,
-  sourcePlan?: Pick<FfmpegExportPlan, 'projectName' | 'postExportScript'>
+  sourcePlan?: Pick<FfmpegExportPlan, 'projectName' | 'postExportScript'>,
 ): FfmpegExportPlan {
   const normalizedOutput = normalizeFfmpegPath(outputPath);
   const normalizedList = normalizeFfmpegPath(concatListPath);
@@ -146,16 +160,27 @@ export function buildRenderFarmConcatPlan(
     textArtifacts: [],
     nestedPlans: [],
     postExportScript: sourcePlan?.postExportScript ?? null,
-    duration: round(segments.reduce((total, segment) => total + segment.duration, 0))
+    duration: round(segments.reduce((total, segment) => total + segment.duration, 0)),
   };
 }
 
-export function calculateRenderFarmProgress(segments: Pick<RenderFarmSegmentStatus, 'duration' | 'progress'>[]): number {
+export function calculateRenderFarmProgress(
+  segments: Pick<RenderFarmSegmentStatus, 'duration' | 'progress'>[],
+): number {
   const total = segments.reduce((sum, segment) => sum + Math.max(0, segment.duration), 0);
   if (total <= 0) {
     return 0;
   }
-  return Math.min(1, Math.max(0, segments.reduce((sum, segment) => sum + Math.max(0, segment.duration) * Math.min(1, Math.max(0, segment.progress)), 0) / total));
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      segments.reduce(
+        (sum, segment) => sum + Math.max(0, segment.duration) * Math.min(1, Math.max(0, segment.progress)),
+        0,
+      ) / total,
+    ),
+  );
 }
 
 export async function runRenderFarmWithFallback(context: RenderFarmRunContext): Promise<RenderFarmRunOutcome> {
@@ -168,21 +193,36 @@ export async function runRenderFarmWithFallback(context: RenderFarmRunContext): 
     const result = await context.runPlan(context.plan, context.taskId);
     return { report: result.report, usedFallback: false };
   }
-  let segments = createRenderFarmSegmentStatuses(rawSegments, context.tempSegmentsDir, context.taskId, context.outputPath);
+  let segments = createRenderFarmSegmentStatuses(
+    rawSegments,
+    context.tempSegmentsDir,
+    context.taskId,
+    context.outputPath,
+  );
   context.onSegments?.(segments);
-  const concatListPath = normalizeFfmpegPath(`${context.tempSegmentsDir.replace(/[\\/]+$/g, '')}/${context.taskId.replace(/[^a-zA-Z0-9_-]/g, '_')}-concat.txt`);
+  const concatListPath = normalizeFfmpegPath(
+    `${context.tempSegmentsDir.replace(/[\\/]+$/g, '')}/${context.taskId.replace(/[^a-zA-Z0-9_-]/g, '_')}-concat.txt`,
+  );
   try {
     await runSegmentsInPool(context, segments);
     await context.writeFile(concatListPath, buildRenderFarmConcatList(segments));
-    const result = await context.runPlan(buildRenderFarmConcatPlan(segments, context.outputPath, concatListPath, context.plan), `${context.taskId}:concat`);
+    const result = await context.runPlan(
+      buildRenderFarmConcatPlan(segments, context.outputPath, concatListPath, context.plan),
+      `${context.taskId}:concat`,
+    );
     return { report: result.report, usedFallback: false };
   } catch {
-    segments = segments.map((segment) => (segment.status === 'success' ? segment : { ...segment, status: 'error', progress: 0 }));
+    segments = segments.map((segment) =>
+      segment.status === 'success' ? segment : { ...segment, status: 'error', progress: 0 },
+    );
     context.onSegments?.(segments);
     const result = await context.runPlan(context.plan, context.taskId);
     return { report: result.report, usedFallback: true };
   } finally {
-    await Promise.allSettled([...segments.map((segment) => context.removeFile(segment.outputPath)), context.removeFile(concatListPath)]);
+    await Promise.allSettled([
+      ...segments.map((segment) => context.removeFile(segment.outputPath)),
+      context.removeFile(concatListPath),
+    ]);
   }
 }
 
@@ -196,11 +236,18 @@ async function runSegmentsInPool(context: RenderFarmRunContext, segments: Render
       cursor += 1;
       updateSegment(context, segments, segment.id, { status: 'running', progress: 0.05 });
       try {
-        await context.runPlan(buildRenderFarmSegmentPlan(context.plan, { ...segment, status: 'running', progress: 0.05 }), `${context.taskId}:${segment.id}`);
+        await context.runPlan(
+          buildRenderFarmSegmentPlan(context.plan, { ...segment, status: 'running', progress: 0.05 }),
+          `${context.taskId}:${segment.id}`,
+        );
         updateSegment(context, segments, segment.id, { status: 'success', progress: 1 });
       } catch (error) {
         failure = error;
-        updateSegment(context, segments, segment.id, { status: 'error', progress: 0, error: error instanceof Error ? error.message : 'Segment render failed' });
+        updateSegment(context, segments, segment.id, {
+          status: 'error',
+          progress: 0,
+          error: error instanceof Error ? error.message : 'Segment render failed',
+        });
       }
     }
   }
@@ -214,7 +261,7 @@ function updateSegment(
   context: RenderFarmRunContext,
   segments: RenderFarmSegmentStatus[],
   segmentId: string,
-  patch: Partial<RenderFarmSegmentStatus>
+  patch: Partial<RenderFarmSegmentStatus>,
 ): void {
   const index = segments.findIndex((segment) => segment.id === segmentId);
   if (index === -1) {

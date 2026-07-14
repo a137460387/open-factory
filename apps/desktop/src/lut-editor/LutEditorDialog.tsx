@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import {
   buildLutCreatorMatrix,
   buildLutCreatorReferenceTransform,
@@ -16,10 +23,16 @@ import {
   type CurvePoint,
   type LutCreatorPrecision,
   type LutCreatorState,
-  type ThreeWayColor
+  type ThreeWayColor,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { getAppDataDir, openFileDialog, readColorMatchFrameSample, saveFileDialog, writeFile } from '../lib/tauri-bridge';
+import {
+  getAppDataDir,
+  openFileDialog,
+  readColorMatchFrameSample,
+  saveFileDialog,
+  writeFile,
+} from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 
 interface LutEditorDialogProps {
@@ -33,13 +46,13 @@ const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }>
   { key: 'master', label: zhCN.inspector.fields.masterCurve, color: '#f8fafc' },
   { key: 'r', label: zhCN.inspector.fields.redCurve, color: '#ef4444' },
   { key: 'g', label: zhCN.inspector.fields.greenCurve, color: '#22c55e' },
-  { key: 'b', label: zhCN.inspector.fields.blueCurve, color: '#3b82f6' }
+  { key: 'b', label: zhCN.inspector.fields.blueCurve, color: '#3b82f6' },
 ];
 
 const THREE_WAY_CHANNELS: Array<{ key: ThreeWayKey; label: string }> = [
   { key: 'lift', label: zhCN.inspector.fields.lift },
   { key: 'gamma', label: zhCN.inspector.fields.gamma },
-  { key: 'gain', label: zhCN.inspector.fields.gain }
+  { key: 'gain', label: zhCN.inspector.fields.gain },
 ];
 
 export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
@@ -55,7 +68,9 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
   async function loadReferenceImage() {
     try {
       setBusy(true);
-      const [path] = await openFileDialog(false, [{ name: t.referenceImageFilter, extensions: ['png', 'jpg', 'jpeg', 'webp'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.referenceImageFilter, extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      ]);
       if (!path) {
         return;
       }
@@ -67,7 +82,11 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
       updateState({ referenceTransform: transform, referenceName: fileNameFromPath(path) });
       showToast({ kind: 'success', title: t.referenceLoaded, message: fileNameFromPath(path) });
     } catch (error) {
-      showToast({ kind: 'error', title: t.referenceFailed, message: error instanceof Error ? error.message : t.referenceFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.referenceFailed,
+        message: error instanceof Error ? error.message : t.referenceFailedMessage,
+      });
     } finally {
       setBusy(false);
     }
@@ -86,14 +105,21 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
       showToast({ kind: 'success', title: t.exportedTitle, message: path });
       onClose();
     } catch (error) {
-      showToast({ kind: 'error', title: t.exportFailed, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.exportFailed,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="lut-editor-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="lut-editor-dialog"
+    >
       <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <div className="border-b border-line p-4">
           <h2 className="text-base font-semibold text-ink">{t.title}</h2>
@@ -104,11 +130,21 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-xs font-medium text-slate-600">
                 {t.name}
-                <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" value={state.title} onChange={(event) => updateState({ title: event.target.value })} data-testid="lut-editor-name-input" />
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                  value={state.title}
+                  onChange={(event) => updateState({ title: event.target.value })}
+                  data-testid="lut-editor-name-input"
+                />
               </label>
               <label className="block text-xs font-medium text-slate-600">
                 {t.precision}
-                <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={state.precision} onChange={(event) => updateState({ precision: Number(event.target.value) as LutCreatorPrecision })} data-testid="lut-editor-precision-select">
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={state.precision}
+                  onChange={(event) => updateState({ precision: Number(event.target.value) as LutCreatorPrecision })}
+                  data-testid="lut-editor-precision-select"
+                >
                   <option value={17}>{t.precisions[17]}</option>
                   <option value={33}>{t.precisions[33]}</option>
                   <option value={65}>{t.precisions[65]}</option>
@@ -117,7 +153,10 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
             </div>
             <section>
               <h3 className="mb-2 text-sm font-semibold text-ink">{t.threeWay}</h3>
-              <ThreeWayColorEditor threeWayColor={state.threeWayColor} onCommit={(threeWayColor) => updateState({ threeWayColor })} />
+              <ThreeWayColorEditor
+                threeWayColor={state.threeWayColor}
+                onCommit={(threeWayColor) => updateState({ threeWayColor })}
+              />
             </section>
             <section>
               <h3 className="mb-2 text-sm font-semibold text-ink">{t.curves}</h3>
@@ -127,9 +166,17 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-ink">{t.colorMatch}</h3>
-                  <p className="text-xs text-slate-500">{state.referenceName ? t.referenceCurrent(state.referenceName) : t.referenceEmpty}</p>
+                  <p className="text-xs text-slate-500">
+                    {state.referenceName ? t.referenceCurrent(state.referenceName) : t.referenceEmpty}
+                  </p>
                 </div>
-                <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-50" type="button" onClick={() => void loadReferenceImage()} disabled={busy} data-testid="lut-editor-reference-button">
+                <button
+                  className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-50"
+                  type="button"
+                  onClick={() => void loadReferenceImage()}
+                  disabled={busy}
+                  data-testid="lut-editor-reference-button"
+                >
                   {t.loadReference}
                 </button>
               </div>
@@ -138,16 +185,30 @@ export function LutEditorDialog({ onClose }: LutEditorDialogProps) {
           <aside className="min-h-0 overflow-y-auto bg-panel p-4">
             <h3 className="mb-2 text-sm font-semibold text-ink">{t.preview}</h3>
             <LutPreviewCanvas matrix={matrix} />
-            <div className="mt-3 rounded-md border border-line bg-white p-3 text-xs text-slate-600" data-testid="lut-editor-matrix-summary">
+            <div
+              className="mt-3 rounded-md border border-line bg-white p-3 text-xs text-slate-600"
+              data-testid="lut-editor-matrix-summary"
+            >
               {t.matrixSummary(matrix.size, matrix.values.length)}
             </div>
           </aside>
         </div>
         <div className="flex justify-end gap-2 border-t border-line p-4">
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} disabled={busy}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+          >
             {zhCN.common.cancel}
           </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50" type="button" onClick={() => void exportCube()} disabled={busy} data-testid="lut-editor-export-button">
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50"
+            type="button"
+            onClick={() => void exportCube()}
+            disabled={busy}
+            data-testid="lut-editor-export-button"
+          >
             {busy ? t.exporting : t.export}
           </button>
         </div>
@@ -169,33 +230,68 @@ function LutPreviewCanvas({ matrix }: { matrix: ReturnType<typeof buildLutCreato
     }
   }, [matrix]);
 
-  return <canvas ref={canvasRef} className="block aspect-video w-full rounded-md border border-line bg-slate-950" width={320} height={180} data-testid="lut-editor-webgl-preview" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="block aspect-video w-full rounded-md border border-line bg-slate-950"
+      width={320}
+      height={180}
+      data-testid="lut-editor-webgl-preview"
+    />
+  );
 }
 
-function ThreeWayColorEditor({ threeWayColor, onCommit }: { threeWayColor: ThreeWayColor; onCommit(color: ThreeWayColor): void }) {
+function ThreeWayColorEditor({
+  threeWayColor,
+  onCommit,
+}: {
+  threeWayColor: ThreeWayColor;
+  onCommit(color: ThreeWayColor): void;
+}) {
   const normalized = normalizeThreeWayColor(threeWayColor);
   const updateWheel = (key: ThreeWayKey, patch: Partial<ColorWheelValue>) => {
     onCommit(
       normalizeThreeWayColor({
         ...normalized,
-        [key]: normalizeColorWheelValue({ ...normalized[key], ...patch })
-      })
+        [key]: normalizeColorWheelValue({ ...normalized[key], ...patch }),
+      }),
     );
   };
 
   return (
     <div className="grid gap-3 sm:grid-cols-3" data-testid="lut-editor-three-way">
       {THREE_WAY_CHANNELS.map((channel) => (
-        <ColorWheelControl key={channel.key} label={channel.label} value={normalized[channel.key]} onCommit={(patch) => updateWheel(channel.key, patch)} testId={`lut-color-wheel-${channel.key}`} />
+        <ColorWheelControl
+          key={channel.key}
+          label={channel.label}
+          value={normalized[channel.key]}
+          onCommit={(patch) => updateWheel(channel.key, patch)}
+          testId={`lut-color-wheel-${channel.key}`}
+        />
       ))}
-      <button className="rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white sm:col-span-3" type="button" onClick={() => onCommit(DEFAULT_THREE_WAY_COLOR)} data-testid="lut-editor-reset-three-way">
+      <button
+        className="rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white sm:col-span-3"
+        type="button"
+        onClick={() => onCommit(DEFAULT_THREE_WAY_COLOR)}
+        data-testid="lut-editor-reset-three-way"
+      >
         {zhCN.common.reset}
       </button>
     </div>
   );
 }
 
-function ColorWheelControl({ label, value, onCommit, testId }: { label: string; value: ColorWheelValue; onCommit(patch: Partial<ColorWheelValue>): void; testId: string }) {
+function ColorWheelControl({
+  label,
+  value,
+  onCommit,
+  testId,
+}: {
+  label: string;
+  value: ColorWheelValue;
+  onCommit(patch: Partial<ColorWheelValue>): void;
+  testId: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -236,7 +332,15 @@ function ColorWheelControl({ label, value, onCommit, testId }: { label: string; 
           }
         }}
       />
-      <RangeNumberField label={zhCN.inspector.fields.intensity} value={value.intensity} min={0} max={2} step={0.01} onCommit={(intensity) => onCommit({ intensity })} testId={`${testId}-intensity`} />
+      <RangeNumberField
+        label={zhCN.inspector.fields.intensity}
+        value={value.intensity}
+        min={0}
+        max={2}
+        step={0.01}
+        onCommit={(intensity) => onCommit({ intensity })}
+        testId={`${testId}-intensity`}
+      />
     </div>
   );
 }
@@ -257,7 +361,11 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      drawCurveCanvas(canvas, draft[activeChannel], CURVE_CHANNELS.find((item) => item.key === activeChannel)?.color ?? '#e2e8f0');
+      drawCurveCanvas(
+        canvas,
+        draft[activeChannel],
+        CURVE_CHANNELS.find((item) => item.key === activeChannel)?.color ?? '#e2e8f0',
+      );
     }
   }, [activeChannel, draft]);
 
@@ -323,19 +431,39 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
     if (nearest === null || points.length <= 2) {
       return;
     }
-    updateActivePoints(points.filter((_, index) => index !== nearest), true);
+    updateActivePoints(
+      points.filter((_, index) => index !== nearest),
+      true,
+    );
   };
 
   return (
     <div className="space-y-2 rounded-md border border-line bg-panel p-2" data-testid="lut-editor-curve-editor">
       <div className="grid grid-cols-4 gap-1">
         {CURVE_CHANNELS.map((channel) => (
-          <button key={channel.key} className={`rounded-md border px-2 py-1 text-xs font-semibold ${activeChannel === channel.key ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'}`} type="button" data-testid={`lut-curve-tab-${channel.key}`} onClick={() => setActiveChannel(channel.key)}>
+          <button
+            key={channel.key}
+            className={`rounded-md border px-2 py-1 text-xs font-semibold ${activeChannel === channel.key ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}
+            type="button"
+            data-testid={`lut-curve-tab-${channel.key}`}
+            onClick={() => setActiveChannel(channel.key)}
+          >
             {channel.label}
           </button>
         ))}
       </div>
-      <canvas ref={canvasRef} className="block h-64 w-64 touch-none rounded border border-line bg-slate-950" width={256} height={256} data-testid="lut-curve-editor-canvas" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onDoubleClick={handleDoubleClick} />
+      <canvas
+        ref={canvasRef}
+        className="block h-64 w-64 touch-none rounded border border-line bg-slate-950"
+        width={256}
+        height={256}
+        data-testid="lut-curve-editor-canvas"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+      />
       <button
         className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
         type="button"
@@ -353,7 +481,23 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
   );
 }
 
-function RangeNumberField({ label, value, min, max, step, onCommit, testId }: { label: string; value: number; min: number; max: number; step: number; onCommit(value: number): void; testId?: string }) {
+function RangeNumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onCommit,
+  testId,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onCommit(value: number): void;
+  testId?: string;
+}) {
   const commitClamped = (nextValue: number) => {
     if (Number.isFinite(nextValue)) {
       onCommit(Math.min(max, Math.max(min, nextValue)));
@@ -363,9 +507,26 @@ function RangeNumberField({ label, value, min, max, step, onCommit, testId }: { 
     <label className="mt-2 block text-xs font-medium text-slate-600">
       <span className="flex items-center justify-between gap-2">
         <span>{label}</span>
-        <input className="w-20 rounded-md border border-line px-2 py-1 text-right text-xs tabular-nums text-ink" type="number" value={Number(value.toFixed(3))} min={min} max={max} step={step} onChange={(event) => commitClamped(Number(event.target.value))} data-testid={testId} />
+        <input
+          className="w-20 rounded-md border border-line px-2 py-1 text-right text-xs tabular-nums text-ink"
+          type="number"
+          value={Number(value.toFixed(3))}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(event) => commitClamped(Number(event.target.value))}
+          data-testid={testId}
+        />
       </span>
-      <input className="mt-1 w-full accent-brand" type="range" min={min} max={max} step={step} value={value} onChange={(event) => commitClamped(Number(event.target.value))} />
+      <input
+        className="mt-1 w-full accent-brand"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => commitClamped(Number(event.target.value))}
+      />
     </label>
   );
 }
@@ -384,7 +545,14 @@ function drawWebGl3dLutPreview(canvas: HTMLCanvasElement, matrix: ReturnType<typ
   if (!texture || !buffer) {
     return false;
   }
-  const data = new Uint8Array(matrix.values.flatMap((color) => [Math.round(color.r * 255), Math.round(color.g * 255), Math.round(color.b * 255), 255]));
+  const data = new Uint8Array(
+    matrix.values.flatMap((color) => [
+      Math.round(color.r * 255),
+      Math.round(color.g * 255),
+      Math.round(color.b * 255),
+      255,
+    ]),
+  );
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.bindTexture(gl.TEXTURE_3D, texture);
   gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -411,15 +579,22 @@ function drawWebGl3dLutPreview(canvas: HTMLCanvasElement, matrix: ReturnType<typ
 }
 
 function createPreviewProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
-  const vertex = compileShader(gl, gl.VERTEX_SHADER, `#version 300 es
+  const vertex = compileShader(
+    gl,
+    gl.VERTEX_SHADER,
+    `#version 300 es
     in vec2 a_position;
     out vec2 v_uv;
     void main() {
       v_uv = a_position * 0.5 + 0.5;
       gl_Position = vec4(a_position, 0.0, 1.0);
     }
-  `);
-  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+  `,
+  );
+  const fragment = compileShader(
+    gl,
+    gl.FRAGMENT_SHADER,
+    `#version 300 es
     precision highp float;
     precision highp sampler3D;
     uniform sampler3D u_lut;
@@ -429,7 +604,8 @@ function createPreviewProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
       float slice = smoothstep(0.0, 1.0, v_uv.x * 0.35 + v_uv.y * 0.65);
       outColor = vec4(texture(u_lut, vec3(v_uv.x, 1.0 - v_uv.y, slice)).rgb, 1.0);
     }
-  `);
+  `,
+  );
   if (!vertex || !fragment) {
     return null;
   }
@@ -524,7 +700,7 @@ function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: 
   const rect = canvas.getBoundingClientRect();
   return {
     x: clampUnit((event.clientX - rect.left) / rect.width),
-    y: clampUnit(1 - (event.clientY - rect.top) / rect.height)
+    y: clampUnit(1 - (event.clientY - rect.top) / rect.height),
   };
 }
 
@@ -559,7 +735,7 @@ function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void
         image.data[offset + 3] = 0;
         continue;
       }
-      const hue = ((Math.atan2(dy, dx) / (Math.PI * 2)) + 1) % 1;
+      const hue = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
       const rgb = hsvToRgb(hue, distance, 1);
       image.data[offset] = Math.round(rgb.r * 255);
       image.data[offset + 1] = Math.round(rgb.g * 255);
@@ -578,7 +754,10 @@ function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void
   context.stroke();
 }
 
-function eventToUnitPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): { x: number; y: number } {
+function eventToUnitPoint(
+  event: { clientX: number; clientY: number },
+  canvas: HTMLCanvasElement,
+): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
@@ -590,7 +769,7 @@ function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelVa
   return {
     r: clampSigned(point.x),
     g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
-    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y)
+    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y),
   };
 }
 
@@ -628,7 +807,14 @@ function fileNameFromPath(path: string): string {
 }
 
 function sanitizeFileBaseName(name: string): string {
-  return name.trim().replace(/\.cube$/i, '').replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_').replace(/\s+/g, ' ').trim() || 'open-factory-lut';
+  return (
+    name
+      .trim()
+      .replace(/\.cube$/i, '')
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'open-factory-lut'
+  );
 }
 
 function clampUnit(value: number): number {

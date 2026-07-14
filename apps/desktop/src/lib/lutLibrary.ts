@@ -21,7 +21,7 @@ const DEFAULT_STORAGE: LutLibraryStorage = {
   getAppDataDir,
   scanDirectory,
   readFile,
-  writeFile
+  writeFile,
 };
 
 export async function loadLutLibrary(storage: LutLibraryStorage = DEFAULT_STORAGE): Promise<LutLibraryItem[]> {
@@ -37,14 +37,16 @@ export async function loadLutLibrary(storage: LutLibraryStorage = DEFAULT_STORAG
         name: lutDisplayName(path),
         path,
         favorite: favoriteSet.has(path),
-        previewDataUrl: renderCubePreviewDataUrl(contents)
+        previewDataUrl: renderCubePreviewDataUrl(contents),
       };
-    })
+    }),
   );
 }
 
 export function filterCubeFiles(paths: string[]): string[] {
-  return Array.from(new Set(paths.map(normalizePath).filter((path) => path.toLowerCase().endsWith('.cube')))).sort((left, right) => left.localeCompare(right));
+  return Array.from(new Set(paths.map(normalizePath).filter((path) => path.toLowerCase().endsWith('.cube')))).sort(
+    (left, right) => left.localeCompare(right),
+  );
 }
 
 export async function readLutFavorites(storage: LutLibraryStorage = DEFAULT_STORAGE): Promise<string[]> {
@@ -56,7 +58,10 @@ export async function readLutFavorites(storage: LutLibraryStorage = DEFAULT_STOR
   }
 }
 
-export async function writeLutFavorites(paths: string[], storage: LutLibraryStorage = DEFAULT_STORAGE): Promise<string[]> {
+export async function writeLutFavorites(
+  paths: string[],
+  storage: LutLibraryStorage = DEFAULT_STORAGE,
+): Promise<string[]> {
   const root = normalizePath(await storage.getAppDataDir());
   const unique = filterCubeFiles(paths);
   await storage.writeFile(joinConfigPath(root, LUT_FAVORITES_FILE), JSON.stringify({ favorites: unique }, null, 2));
@@ -101,7 +106,7 @@ function renderCubePreviewDataUrl(contents: string, width = 96, height = 54): st
       const source: Rgb = {
         r: width <= 1 ? 0 : x / (width - 1),
         g: height <= 1 ? 0 : y / (height - 1),
-        b: 0.5
+        b: 0.5,
       };
       const output = lut ? applyCubeLut(source, lut) : source;
       image.data[offset] = Math.round(output.r * 255);
@@ -167,7 +172,10 @@ function lutDisplayName(path: string): string {
 }
 
 function stableLutId(path: string): string {
-  return `lut-${normalizePath(path).replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()}`;
+  return `lut-${normalizePath(path)
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()}`;
 }
 
 function joinConfigPath(root: string, fileName: string): string {

@@ -7,7 +7,7 @@ import {
   markSmartRoughCutStepError,
   markSmartRoughCutStepRunning,
   setAllSmartRoughCutSelection,
-  toggleSmartRoughCutSelection
+  toggleSmartRoughCutSelection,
 } from './smart-rough-cut-state';
 
 describe('smart rough cut state', () => {

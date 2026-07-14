@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { appendFrameSearchHistory, FRAME_SEARCH_HISTORY_STORAGE_KEY, readFrameSearchHistory, writeFrameSearchHistory } from './frameSearchHistory';
+import {
+  appendFrameSearchHistory,
+  FRAME_SEARCH_HISTORY_STORAGE_KEY,
+  readFrameSearchHistory,
+  writeFrameSearchHistory,
+} from './frameSearchHistory';
 
 class MemoryStorage {
   private values = new Map<string, string>();
@@ -29,7 +34,7 @@ describe('frame search history persistence', () => {
     const stored = writeFrameSearchHistory([
       { type: 'timecode', query: '00:00:01:00', label: '00:00:01:00', time: 1 },
       { type: 'clip', query: 'Interview', label: 'Interview Clip', time: 3, selectedClipIds: ['clip-interview'] },
-      { type: 'frame', query: '', label: 'Frame', time: 0 }
+      { type: 'frame', query: '', label: 'Frame', time: 0 },
     ]);
 
     expect(stored).toHaveLength(2);

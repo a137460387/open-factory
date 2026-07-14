@@ -36,10 +36,7 @@ export function isWithinSnapTolerance(time: number, beatTime: number): boolean {
   return Math.abs(time - beatTime) * 1000 < BEAT_SNAP_TOLERANCE_MS;
 }
 
-export function calculateBeatSnapForClips(
-  clips: Clip[],
-  beatTimes: number[]
-): BeatSnapResult {
+export function calculateBeatSnapForClips(clips: Clip[], beatTimes: number[]): BeatSnapResult {
   const snappedClipIds: string[] = [];
   const suggestions: BeatSnapSuggestion[] = [];
   const beats = beatTimes.filter((t) => Number.isFinite(t) && t >= 0).sort((a, b) => a - b);
@@ -86,7 +83,7 @@ export function applyBeatSnapToClip(clip: Clip, edge: 'in' | 'out', suggestedTim
 export function removeSuggestion(
   suggestions: BeatSnapSuggestion[],
   clipId: string,
-  edge: 'in' | 'out'
+  edge: 'in' | 'out',
 ): BeatSnapSuggestion[] {
   return suggestions.filter((s) => !(s.clipId === clipId && s.edge === edge));
 }

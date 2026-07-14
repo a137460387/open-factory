@@ -79,7 +79,11 @@ export interface MediaHealthAutoShowOptions {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function buildMediaHealthDashboard(project: Project, report: ProjectHealthReport, input: MediaHealthDashboardInput = {}): MediaHealthDashboard {
+export function buildMediaHealthDashboard(
+  project: Project,
+  report: ProjectHealthReport,
+  input: MediaHealthDashboardInput = {},
+): MediaHealthDashboard {
   const videoAssets = project.media.filter((asset) => asset.type === 'video');
   const readyProxyAssets = videoAssets.filter((asset) => Boolean(asset.proxyPath && asset.proxyStatus === 'ready'));
   const expiredProxyAssetIds = collectExpiredProxyAssetIds(project.media, input.sourceStats, input.proxyStats);
@@ -93,40 +97,45 @@ export function buildMediaHealthDashboard(project: Project, report: ProjectHealt
     proxyCoverage: {
       ready: readyProxyAssets.length,
       total: videoAssets.length,
-      progress: calculateMediaHealthRingProgress(readyProxyAssets.length, videoAssets.length)
+      progress: calculateMediaHealthRingProgress(readyProxyAssets.length, videoAssets.length),
     },
     missingMedia: {
       count: missingAssetIds.length,
-      assetIds: missingAssetIds
+      assetIds: missingAssetIds,
     },
     expiredProxies: {
       count: expiredProxyAssetIds.length,
-      assetIds: expiredProxyAssetIds
+      assetIds: expiredProxyAssetIds,
     },
     unusedMedia: {
       count: unusedAssetIds.length,
-      assetIds: unusedAssetIds
+      assetIds: unusedAssetIds,
     },
     storage: {
       mediaBytes,
       proxyBytes,
       cacheBytes,
       totalBytes,
-      segments: buildStorageSegments(mediaBytes, proxyBytes, cacheBytes)
+      segments: buildStorageSegments(mediaBytes, proxyBytes, cacheBytes),
     },
     recentImports: {
-      points: buildRecentImportTrend(project.media, input.nowMs ?? Date.now(), 7)
+      points: buildRecentImportTrend(project.media, input.nowMs ?? Date.now(), 7),
     },
-    issueCount: missingAssetIds.length + expiredProxyAssetIds.length + unusedAssetIds.length + report.proxyMissing.length
+    issueCount:
+      missingAssetIds.length + expiredProxyAssetIds.length + unusedAssetIds.length + report.proxyMissing.length,
   };
 
   return {
     ...dashboardWithoutTasks,
-    repairTasks: planMediaHealthRepairTasks(report, dashboardWithoutTasks.expiredProxies.assetIds)
+    repairTasks: planMediaHealthRepairTasks(report, dashboardWithoutTasks.expiredProxies.assetIds),
   };
 }
 
-export function calculateMediaHealthRingProgress(value: number, total: number, circumference = 100): MediaHealthRingProgress {
+export function calculateMediaHealthRingProgress(
+  value: number,
+  total: number,
+  circumference = 100,
+): MediaHealthRingProgress {
   const safeTotal = Math.max(0, Math.round(total));
   const safeValue = Math.max(0, Math.min(Math.round(value), safeTotal));
   const ratio = safeTotal === 0 ? 1 : safeValue / safeTotal;
@@ -138,7 +147,7 @@ export function calculateMediaHealthRingProgress(value: number, total: number, c
     total: safeTotal,
     ratio,
     percent,
-    dashArray: `${visible} ${hidden}`
+    dashArray: `${visible} ${hidden}`,
   };
 }
 
@@ -147,7 +156,7 @@ export function buildRecentImportTrend(media: MediaAsset[], nowMs: number, days 
   const firstDayMs = startOfUtcDay(nowMs) - (safeDays - 1) * DAY_MS;
   const points = Array.from({ length: safeDays }, (_, index) => ({
     day: new Date(firstDayMs + index * DAY_MS).toISOString().slice(0, 10),
-    count: 0
+    count: 0,
   }));
   const byDay = new Map(points.map((point) => [point.day, point]));
   for (const asset of media) {
@@ -167,27 +176,30 @@ export function buildRecentImportTrend(media: MediaAsset[], nowMs: number, days 
   return points;
 }
 
-export function planMediaHealthRepairTasks(report: ProjectHealthReport, expiredProxyAssetIds: string[]): MediaHealthRepairTask[] {
+export function planMediaHealthRepairTasks(
+  report: ProjectHealthReport,
+  expiredProxyAssetIds: string[],
+): MediaHealthRepairTask[] {
   const tasks: MediaHealthRepairTask[] = [];
   if (report.proxyMissing.length > 0) {
     tasks.push({
       type: 'generate-missing-proxies',
       count: report.proxyMissing.length,
-      assetIds: report.proxyMissing.map((issue) => issue.assetId)
+      assetIds: report.proxyMissing.map((issue) => issue.assetId),
     });
   }
   if (report.orphanMedia.length > 0) {
     tasks.push({
       type: 'clean-unused-media',
       count: report.orphanMedia.length,
-      assetIds: report.orphanMedia.map((issue) => issue.assetId)
+      assetIds: report.orphanMedia.map((issue) => issue.assetId),
     });
   }
   if (expiredProxyAssetIds.length > 0) {
     tasks.push({
       type: 'rebuild-damaged-cache',
       count: expiredProxyAssetIds.length,
-      assetIds: [...expiredProxyAssetIds]
+      assetIds: [...expiredProxyAssetIds],
     });
   }
   return tasks;
@@ -200,7 +212,7 @@ export function shouldAutoShowMediaHealthDashboard(options: MediaHealthAutoShowO
 function collectExpiredProxyAssetIds(
   media: MediaAsset[],
   sourceStats: Record<string, MediaHealthFileStat | undefined> | undefined,
-  proxyStats: Record<string, MediaHealthFileStat | undefined> | undefined
+  proxyStats: Record<string, MediaHealthFileStat | undefined> | undefined,
 ): string[] {
   return media
     .filter((asset) => {
@@ -214,19 +226,25 @@ function collectExpiredProxyAssetIds(
     .map((asset) => asset.id);
 }
 
-function sumMediaBytes(media: MediaAsset[], sourceStats: Record<string, MediaHealthFileStat | undefined> | undefined): number {
+function sumMediaBytes(
+  media: MediaAsset[],
+  sourceStats: Record<string, MediaHealthFileStat | undefined> | undefined,
+): number {
   return Math.max(
     0,
     Math.round(
       media.reduce((total, asset) => {
         const size = sourceStats?.[asset.path]?.size ?? asset.size ?? 0;
         return total + (Number.isFinite(size) && size > 0 ? size : 0);
-      }, 0)
-    )
+      }, 0),
+    ),
   );
 }
 
-function sumProxyBytes(media: MediaAsset[], proxyStats: Record<string, MediaHealthFileStat | undefined> | undefined): number {
+function sumProxyBytes(
+  media: MediaAsset[],
+  proxyStats: Record<string, MediaHealthFileStat | undefined> | undefined,
+): number {
   const proxyPaths = new Set(media.map((asset) => asset.proxyPath).filter((path): path is string => Boolean(path)));
   let total = 0;
   for (const path of proxyPaths) {
@@ -243,7 +261,7 @@ function buildStorageSegments(mediaBytes: number, proxyBytes: number, cacheBytes
   return [
     { kind: 'media', bytes: mediaBytes, ratio: total === 0 ? 0 : mediaBytes / total },
     { kind: 'proxy', bytes: proxyBytes, ratio: total === 0 ? 0 : proxyBytes / total },
-    { kind: 'cache', bytes: cacheBytes, ratio: total === 0 ? 0 : cacheBytes / total }
+    { kind: 'cache', bytes: cacheBytes, ratio: total === 0 ? 0 : cacheBytes / total },
   ];
 }
 

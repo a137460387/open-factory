@@ -1,4 +1,3 @@
-
 export interface BatchExportTask {
   projectPath: string;
   preset?: string;
@@ -36,7 +35,11 @@ const LOCAL_PATH_RE = /^[a-zA-Z]:\\|^\/|^\.\//;
 const URL_RE = /^https?:\/\//i;
 const SHELL_INJECTION_RE = /[;&|`$(){}!#]/;
 
-export function validateBatchExportScript(raw: unknown): { valid: boolean; errors: string[]; script?: BatchExportScript } {
+export function validateBatchExportScript(raw: unknown): {
+  valid: boolean;
+  errors: string[];
+  script?: BatchExportScript;
+} {
   const errors: string[] = [];
   if (!raw || typeof raw !== 'object') {
     return { valid: false, errors: ['脚本必须是 JSON 对象'] };
@@ -79,7 +82,11 @@ export function validateBatchExportScript(raw: unknown): { valid: boolean; error
   };
 }
 
-export function parseBatchScriptJson(jsonStr: string): { valid: boolean; errors: string[]; script?: BatchExportScript } {
+export function parseBatchScriptJson(jsonStr: string): {
+  valid: boolean;
+  errors: string[];
+  script?: BatchExportScript;
+} {
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonStr);

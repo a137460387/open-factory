@@ -6,27 +6,25 @@ import { useEditorFeatureStore } from '../../store/editorFeatureStore';
 import type { TimelineImportSummary } from '../../timeline-export/TimelineExportDialog';
 import { PanelLoading } from '../PanelLoading';
 
-const ExportDialog = lazy(() =>
-  import('../../export/ExportDialog').then((m) => ({ default: m.ExportDialog }))
-);
+const ExportDialog = lazy(() => import('../../export/ExportDialog').then((m) => ({ default: m.ExportDialog })));
 const TimelineExportDialog = lazy(() =>
-  import('../../timeline-export/TimelineExportDialog').then((m) => ({ default: m.TimelineExportDialog }))
+  import('../../timeline-export/TimelineExportDialog').then((m) => ({ default: m.TimelineExportDialog })),
 );
 const ProfessionalNleExportDialog = lazy(() =>
   import('../../professional-nle/ProfessionalNleExportDialog').then((m) => ({
     default: m.ProfessionalNleExportDialog,
-  }))
+  })),
 );
 const BatchTranscodeDialog = lazy(() =>
-  import('../../media/BatchTranscodeDialog').then((m) => ({ default: m.BatchTranscodeDialog }))
+  import('../../media/BatchTranscodeDialog').then((m) => ({ default: m.BatchTranscodeDialog })),
 );
 const BatchWatermarkDialog = lazy(() =>
-  import('../../media/BatchWatermarkDialog').then((m) => ({ default: m.BatchWatermarkDialog }))
+  import('../../media/BatchWatermarkDialog').then((m) => ({ default: m.BatchWatermarkDialog })),
 );
 const BatchProjectProcessingDialog = lazy(() =>
   import('../../projectBatch/BatchProjectProcessingDialog').then((m) => ({
     default: m.BatchProjectProcessingDialog,
-  }))
+  })),
 );
 const GifExportDialog = lazy(() => import('../../media/GifExportDialog'));
 
@@ -100,10 +98,7 @@ export function ExportDialogs({
         />
       ) : null}
       {professionalNleExportOpen ? (
-        <ProfessionalNleExportDialog
-          project={project}
-          onClose={() => setProfessionalNleExportOpen(false)}
-        />
+        <ProfessionalNleExportDialog project={project} onClose={() => setProfessionalNleExportOpen(false)} />
       ) : null}
       {batchTranscodeOpen ? (
         <BatchTranscodeDialog
@@ -122,9 +117,7 @@ export function ExportDialogs({
       {batchProjectProcessingOpen ? (
         <BatchProjectProcessingDialog onClose={() => setBatchProjectProcessingOpen(false)} />
       ) : null}
-      {gifExportAsset ? (
-        <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} />
-      ) : null}
+      {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
     </Suspense>
   );
 }

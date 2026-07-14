@@ -216,7 +216,7 @@ export function generateNarrative(
     emotions: EmotionAnalysisResult;
     speech?: SpeechUnderstandingResult;
   },
-  options: NarrativeGenerationOptions = {}
+  options: NarrativeGenerationOptions = {},
 ): NarrativeGenerationResult {
   const {
     template = 'documentary',
@@ -240,7 +240,7 @@ export function generateNarrative(
       seg.sceneTypes,
       seg.emotionRange,
       currentTime,
-      currentTime + duration
+      currentTime + duration,
     );
 
     // Find clips that fit the emotion target
@@ -282,7 +282,7 @@ function findMatchingScenes(
   targetSceneTypes: ContentSceneType[],
   emotionRange: [number, number],
   startTime: number,
-  endTime: number
+  endTime: number,
 ): SceneSegment[] {
   return scenes.filter((scene) => {
     // Check time range overlap
@@ -295,8 +295,7 @@ function findMatchingScenes(
 
     // Check emotion range (approximate based on brightness and motion)
     const estimatedEmotion = estimateSceneEmotion(scene);
-    const emotionMatch =
-      estimatedEmotion >= emotionRange[0] && estimatedEmotion <= emotionRange[1];
+    const emotionMatch = estimatedEmotion >= emotionRange[0] && estimatedEmotion <= emotionRange[1];
 
     return typeMatch || emotionMatch;
   });

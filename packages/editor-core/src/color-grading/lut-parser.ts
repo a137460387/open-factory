@@ -3,7 +3,10 @@ import type { LUTData } from './lut';
 
 /** 解析 .cube 文件 */
 export function parseCubeFile(content: string): LUTData {
-  const lines = content.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const lines = content
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
 
   let size = 0;
   let domainMin: [number, number, number] = [0, 0, 0];
@@ -77,7 +80,10 @@ export function parseCubeFile(content: string): LUTData {
 
 /** 解析 .3dl 文件 */
 export function parse3dlFile(content: string): LUTData {
-  const lines = content.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+  const lines = content
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
 
   let size = 0;
   const dataPoints: number[] = [];
@@ -114,7 +120,7 @@ export function parse3dlFile(content: string): LUTData {
     size,
     domainMin: [0, 0, 0],
     domainMax: [1, 1, 1],
-    data: new Float32Array(dataPoints.map(v => v * scale)),
+    data: new Float32Array(dataPoints.map((v) => v * scale)),
   };
 }
 

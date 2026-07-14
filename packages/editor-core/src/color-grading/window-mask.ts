@@ -57,9 +57,7 @@ export function createDefaultGradientMask(): WindowMaskParams {
 }
 
 /** 验证窗口遮罩参数 */
-export function validateWindowMaskParams(
-  params: WindowMaskParams
-): WindowMaskParams {
+export function validateWindowMaskParams(params: WindowMaskParams): WindowMaskParams {
   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
   const result = { ...params };
 

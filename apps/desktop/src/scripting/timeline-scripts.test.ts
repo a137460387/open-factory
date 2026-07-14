@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { getTimelineScriptPath, getTimelineScriptsDir, loadTimelineScripts, saveTimelineScript } from './timeline-scripts';
+import {
+  getTimelineScriptPath,
+  getTimelineScriptsDir,
+  loadTimelineScripts,
+  saveTimelineScript,
+} from './timeline-scripts';
 
 describe('timeline script file library', () => {
   it('stores scripts under AppData scripts directory', () => {
     const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
 
     expect(getTimelineScriptsDir(appDataDir)).toBe('C:/Users/E2E/AppData/Roaming/open-factory/scripts');
-    expect(getTimelineScriptPath(appDataDir, 'Batch Speed')).toBe('C:/Users/E2E/AppData/Roaming/open-factory/scripts/Batch Speed.js');
+    expect(getTimelineScriptPath(appDataDir, 'Batch Speed')).toBe(
+      'C:/Users/E2E/AppData/Roaming/open-factory/scripts/Batch Speed.js',
+    );
   });
 
   it('saves, renames, and loads local scripts', async () => {
@@ -24,7 +31,7 @@ describe('timeline script file library', () => {
       removeFile: (path: string) => {
         deleted.push(path);
         files.delete(path);
-      }
+      },
     };
 
     const first = await saveTimelineScript('Batch Speed', 'console.log("a");', undefined, storage);
@@ -33,6 +40,8 @@ describe('timeline script file library', () => {
 
     expect(deleted).toEqual([first.path]);
     expect(renamed.path).toBe(`${appDataDir}/scripts/Batch Speed v2.js`);
-    expect(scripts).toEqual([{ id: renamed.path, name: 'Batch Speed v2', path: renamed.path, code: 'console.log("b");\n' }]);
+    expect(scripts).toEqual([
+      { id: renamed.path, name: 'Batch Speed v2', path: renamed.path, code: 'console.log("b");\n' },
+    ]);
   });
 });

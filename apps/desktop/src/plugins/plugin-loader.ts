@@ -6,10 +6,17 @@ import type {
   PluginHookPayloads,
   PluginHooks,
   PluginMessagePayload,
-  PluginPermission
+  PluginPermission,
 } from '@open-factory/plugin-sdk';
 
-export type { OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginMessagePayload, PluginPermission };
+export type {
+  OpenFactoryPlugin,
+  OpenFactoryPluginManifest,
+  PluginHookName,
+  PluginHookPayloads,
+  PluginMessagePayload,
+  PluginPermission,
+};
 
 export interface PluginSourceFile {
   path: string;
@@ -49,7 +56,10 @@ export interface PluginRegistry {
 
 export type PluginRuntimeFactory = (source: PluginSourceFile) => Promise<PluginRuntime> | PluginRuntime;
 
-export async function loadPluginFiles(files: PluginSourceFile[], runtimeFactory: PluginRuntimeFactory = createWorkerPluginRuntime): Promise<PluginRegistry> {
+export async function loadPluginFiles(
+  files: PluginSourceFile[],
+  runtimeFactory: PluginRuntimeFactory = createWorkerPluginRuntime,
+): Promise<PluginRegistry> {
   const plugins: LoadedPlugin[] = [];
   const errors: Array<{ sourcePath: string; message: string }> = [];
   for (const file of files) {
@@ -64,12 +74,12 @@ export async function loadPluginFiles(files: PluginSourceFile[], runtimeFactory:
         runtime: withPermissionGuard(runtime),
         errors: [],
         builtin: false,
-        enabled: true
+        enabled: true,
       });
     } catch (error) {
       errors.push({
         sourcePath: file.path,
-        message: formatPluginError(error)
+        message: formatPluginError(error),
       });
     }
   }
@@ -87,8 +97,8 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
       onExportBefore(payload: PluginHookPayloads['onExportBefore']) {
         const clipCount = payload.project.timeline.tracks.reduce((count, track) => count + track.clips.length, 0);
         return { message: `导出前片段数: ${clipCount}` };
-      }
-    }
+      },
+    },
   });
   const runtime: PluginRuntime = {
     plugin,
@@ -98,7 +108,7 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
     },
     dispose() {
       return undefined;
-    }
+    },
   };
   const guardedRuntime = withPermissionGuard(runtime);
   return {
@@ -109,21 +119,22 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
     runtime: guardedRuntime,
     errors: [],
     builtin: true,
-    enabled: true
+    enabled: true,
   };
 }
 
 export function getExportBeforePayload(
   project: Project,
   outputPath: string,
-  settings?: Partial<Omit<ExportSettings, 'outputPath'>>
+  settings?: Partial<Omit<ExportSettings, 'outputPath'>>,
 ): PluginHookPayloads['onExportBefore'] {
   return { project, outputPath, settings };
 }
 
 export function normalizePluginMetadata(input: unknown): OpenFactoryPlugin {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
-  const manifest = record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
+  const manifest =
+    record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
   const hooks = record.hooks && typeof record.hooks === 'object' ? (record.hooks as Record<string, unknown>) : {};
   const normalizedHooks: PluginHooks = {};
   for (const hookName of ['onClipSelected', 'onExportBefore', 'onMenuRegister'] as const) {
@@ -131,11 +142,21 @@ export function normalizePluginMetadata(input: unknown): OpenFactoryPlugin {
       normalizedHooks[hookName] = hooks[hookName] as never;
     }
   }
-  const id = typeof manifest.id === 'string' && manifest.id.trim() ? manifest.id.trim() : `plugin-${stableHash(JSON.stringify(Object.keys(normalizedHooks)))}`;
+  const id =
+    typeof manifest.id === 'string' && manifest.id.trim()
+      ? manifest.id.trim()
+      : `plugin-${stableHash(JSON.stringify(Object.keys(normalizedHooks)))}`;
   const name = typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : id;
   const version = typeof manifest.version === 'string' && manifest.version.trim() ? manifest.version.trim() : '0.0.0';
   const description = typeof manifest.description === 'string' ? manifest.description.trim() : '';
-  return { id, name, version, description, permissions: normalizePluginPermissions(manifest.permissions), hooks: normalizedHooks };
+  return {
+    id,
+    name,
+    version,
+    description,
+    permissions: normalizePluginPermissions(manifest.permissions),
+    hooks: normalizedHooks,
+  };
 }
 
 export function extractManifestPermissions(source: string): PluginPermission[] | undefined {
@@ -148,7 +169,9 @@ export function extractManifestPermissions(source: string): PluginPermission[] |
   if (!permissionsRange) {
     return undefined;
   }
-  return normalizePluginPermissions(readStaticStringArray(manifestSource.slice(permissionsRange.start, permissionsRange.end + 1)));
+  return normalizePluginPermissions(
+    readStaticStringArray(manifestSource.slice(permissionsRange.start, permissionsRange.end + 1)),
+  );
 }
 
 async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<PluginRuntime> {
@@ -160,7 +183,10 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
   URL.revokeObjectURL(workerUrl);
   let nextId = 1;
   let messageRouter: PluginMessageRouter | undefined;
-  const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
+  const pending = new Map<
+    number,
+    { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }
+  >();
   worker.addEventListener('message', (event: MessageEvent<WorkerResponse>) => {
     const response = event.data;
     if (!('id' in response)) {
@@ -190,7 +216,9 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
       pending.set(id, { resolve, reject, timer });
       worker.postMessage({ ...message, id });
     });
-  const plugin = normalizeWorkerMetadata(await request({ type: 'load', path: source.path, code: source.code, manifest: source.manifest }));
+  const plugin = normalizeWorkerMetadata(
+    await request({ type: 'load', path: source.path, code: source.code, manifest: source.manifest }),
+  );
   return {
     plugin,
     invokeHook(hookName, payload) {
@@ -212,13 +240,14 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
         pending.delete(id);
       }
       worker.terminate();
-    }
+    },
   };
 }
 
 function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
-  const manifest = record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
+  const manifest =
+    record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
   const hooks = Array.isArray(record.hooks) ? record.hooks : [];
   const hookMap: PluginHooks = {};
   for (const hookName of hooks) {
@@ -232,7 +261,7 @@ function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
     version: typeof manifest.version === 'string' ? manifest.version : '0.0.0',
     description: typeof manifest.description === 'string' ? manifest.description : '',
     permissions: normalizePluginPermissions(manifest.permissions),
-    hooks: hookMap
+    hooks: hookMap,
   };
 }
 
@@ -285,7 +314,7 @@ function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
     },
     dispose() {
       runtime.dispose();
-    }
+    },
   };
 }
 
@@ -304,7 +333,12 @@ function isPluginHookName(value: unknown): value is PluginHookName {
   return value === 'onClipSelected' || value === 'onExportBefore' || value === 'onMenuRegister';
 }
 
-function findStaticPropertyValueRange(source: string, propertyName: string, open: '{' | '[', close: '}' | ']'): { start: number; end: number } | undefined {
+function findStaticPropertyValueRange(
+  source: string,
+  propertyName: string,
+  open: '{' | '[',
+  close: '}' | ']',
+): { start: number; end: number } | undefined {
   let index = 0;
   while (index < source.length) {
     index = skipIgnorable(source, index);

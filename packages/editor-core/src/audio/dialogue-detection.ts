@@ -1,4 +1,10 @@
-import { DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TRANSFORM } from '../model';
+import {
+  DEFAULT_CLIP_SPEED,
+  DEFAULT_COLOR_CORRECTION,
+  DEFAULT_SUBTITLE_MODE,
+  DEFAULT_SUBTITLE_STYLE,
+  DEFAULT_TRANSFORM,
+} from '../model';
 import { round } from '../time';
 import type { Clip } from '../model-types';
 
@@ -53,24 +59,31 @@ export const DIALOGUE_SENSITIVITY_PRESETS = {
   low: {
     minDuration: 0.7,
     loudnessThreshold: 0.32,
-    voiceEnergyRatio: 0.62
+    voiceEnergyRatio: 0.62,
   },
   medium: {
     minDuration: 0.45,
     loudnessThreshold: 0.24,
-    voiceEnergyRatio: 0.52
+    voiceEnergyRatio: 0.52,
   },
   high: {
     minDuration: 0.25,
     loudnessThreshold: 0.16,
-    voiceEnergyRatio: 0.42
-  }
-} as const satisfies Record<DialogueSensitivity, { minDuration: number; loudnessThreshold: number; voiceEnergyRatio: number }>;
+    voiceEnergyRatio: 0.42,
+  },
+} as const satisfies Record<
+  DialogueSensitivity,
+  { minDuration: number; loudnessThreshold: number; voiceEnergyRatio: number }
+>;
 
 const DEFAULT_MERGE_GAP = 0.18;
 const EPSILON = 0.000001;
 
-export function calculateVoiceBandEnergy(frequencyBins: DialogueDetectionFrame['frequencyBins']): { voiceEnergy: number; totalEnergy: number; ratio: number } {
+export function calculateVoiceBandEnergy(frequencyBins: DialogueDetectionFrame['frequencyBins']): {
+  voiceEnergy: number;
+  totalEnergy: number;
+  ratio: number;
+} {
   let voiceEnergy = 0;
   let totalEnergy = 0;
   for (const bin of frequencyBins) {
@@ -84,11 +97,14 @@ export function calculateVoiceBandEnergy(frequencyBins: DialogueDetectionFrame['
   return {
     voiceEnergy: round(voiceEnergy),
     totalEnergy: round(totalEnergy),
-    ratio: totalEnergy > EPSILON ? round(voiceEnergy / totalEnergy) : 0
+    ratio: totalEnergy > EPSILON ? round(voiceEnergy / totalEnergy) : 0,
   };
 }
 
-export function detectDialogueIntervals(frames: DialogueDetectionFrame[], options: DialogueDetectionOptions = {}): DialogueInterval[] {
+export function detectDialogueIntervals(
+  frames: DialogueDetectionFrame[],
+  options: DialogueDetectionOptions = {},
+): DialogueInterval[] {
   const sensitivity = normalizeSensitivity(options.sensitivity);
   const preset = DIALOGUE_SENSITIVITY_PRESETS[sensitivity];
   const minConfidence = Math.min(1, Math.max(0, finiteOrDefault(options.minConfidence, 0.5)));
@@ -102,7 +118,8 @@ export function detectDialogueIntervals(frames: DialogueDetectionFrame[], option
     const loudnessScore = preset.loudnessThreshold > 0 ? Math.min(1, loudness / preset.loudnessThreshold) : 0;
     const voiceScore = preset.voiceEnergyRatio > 0 ? Math.min(1, voice.ratio / preset.voiceEnergyRatio) : 0;
     const confidence = round(loudnessScore * 0.45 + voiceScore * 0.55);
-    const active = loudness >= preset.loudnessThreshold && voice.ratio >= preset.voiceEnergyRatio && confidence >= minConfidence;
+    const active =
+      loudness >= preset.loudnessThreshold && voice.ratio >= preset.voiceEnergyRatio && confidence >= minConfidence;
     const frameStart = frame.time;
     const frameEnd = round(frame.time + frame.duration);
 
@@ -136,7 +153,11 @@ export function detectDialogueIntervals(frames: DialogueDetectionFrame[], option
     .map((interval, index) => ({ ...interval, id: `dialogue-${index + 1}` }));
 }
 
-export function compareDialogueWithWhisper(dialogues: DialogueInterval[], whisperSegments: WhisperSegmentLike[], minOverlapRatio = 0.35): DialogueWhisperMiss[] {
+export function compareDialogueWithWhisper(
+  dialogues: DialogueInterval[],
+  whisperSegments: WhisperSegmentLike[],
+  minOverlapRatio = 0.35,
+): DialogueWhisperMiss[] {
   const normalizedWhisper = whisperSegments
     .filter((segment) => Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start)
     .map((segment) => ({ start: round(Math.max(0, segment.start)), end: round(Math.max(0, segment.end)) }));
@@ -151,11 +172,14 @@ export function compareDialogueWithWhisper(dialogues: DialogueInterval[], whispe
       start: dialogue.start,
       end: dialogue.end,
       duration: dialogue.duration,
-      confidence: dialogue.confidence
+      confidence: dialogue.confidence,
     }));
 }
 
-export function createSubtitleClipsFromDialogues(dialogues: DialogueInterval[], input: DialogueSubtitleClipInput): Array<Extract<Clip, { type: 'subtitle' }>> {
+export function createSubtitleClipsFromDialogues(
+  dialogues: DialogueInterval[],
+  input: DialogueSubtitleClipInput,
+): Array<Extract<Clip, { type: 'subtitle' }>> {
   const baseId = sanitizeId(input.baseId ?? 'dialogue-subtitle');
   const namePrefix = input.namePrefix?.trim() || 'Dialogue';
   return dialogues
@@ -174,11 +198,16 @@ export function createSubtitleClipsFromDialogues(dialogues: DialogueInterval[], 
       transform: { ...DEFAULT_TRANSFORM },
       text: '',
       style: { ...DEFAULT_SUBTITLE_STYLE },
-      subtitleMode: DEFAULT_SUBTITLE_MODE
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
     }));
 }
 
-function createOpenInterval(index: number, start: number, end: number, confidence: number): DialogueInterval & { scoreSum: number; frameCount: number } {
+function createOpenInterval(
+  index: number,
+  start: number,
+  end: number,
+  confidence: number,
+): DialogueInterval & { scoreSum: number; frameCount: number } {
   return {
     id: `candidate-${index + 1}`,
     start,
@@ -186,11 +215,14 @@ function createOpenInterval(index: number, start: number, end: number, confidenc
     duration: round(end - start),
     confidence,
     scoreSum: confidence,
-    frameCount: 1
+    frameCount: 1,
   };
 }
 
-function mergeDialogueIntervals(intervals: Array<DialogueInterval & { scoreSum?: number; frameCount?: number }>, mergeGap: number): DialogueInterval[] {
+function mergeDialogueIntervals(
+  intervals: Array<DialogueInterval & { scoreSum?: number; frameCount?: number }>,
+  mergeGap: number,
+): DialogueInterval[] {
   const merged: Array<DialogueInterval & { scoreSum: number; frameCount: number }> = [];
   for (const interval of intervals.sort((left, right) => left.start - right.start || left.end - right.end)) {
     const previous = merged[merged.length - 1];
@@ -201,7 +233,11 @@ function mergeDialogueIntervals(intervals: Array<DialogueInterval & { scoreSum?:
       previous.frameCount += interval.frameCount ?? 1;
       previous.confidence = round(previous.scoreSum / previous.frameCount);
     } else {
-      merged.push({ ...interval, scoreSum: interval.confidence * (interval.frameCount ?? 1), frameCount: interval.frameCount ?? 1 });
+      merged.push({
+        ...interval,
+        scoreSum: interval.confidence * (interval.frameCount ?? 1),
+        frameCount: interval.frameCount ?? 1,
+      });
     }
   }
   return merged.map(({ scoreSum: _scoreSum, frameCount: _frameCount, ...interval }) => interval);
@@ -209,12 +245,18 @@ function mergeDialogueIntervals(intervals: Array<DialogueInterval & { scoreSum?:
 
 function normalizeFrames(frames: DialogueDetectionFrame[]): DialogueDetectionFrame[] {
   return frames
-    .filter((frame) => Number.isFinite(frame.time) && Number.isFinite(frame.duration) && frame.duration > 0 && Array.isArray(frame.frequencyBins))
+    .filter(
+      (frame) =>
+        Number.isFinite(frame.time) &&
+        Number.isFinite(frame.duration) &&
+        frame.duration > 0 &&
+        Array.isArray(frame.frequencyBins),
+    )
     .map((frame) => ({
       time: round(Math.max(0, frame.time)),
       duration: round(Math.max(0.001, frame.duration)),
       loudness: Math.max(0, finiteOrDefault(frame.loudness, 0)),
-      frequencyBins: frame.frequencyBins
+      frequencyBins: frame.frequencyBins,
     }))
     .sort((left, right) => left.time - right.time);
 }
@@ -223,12 +265,20 @@ function normalizeSensitivity(value: DialogueSensitivity | undefined): DialogueS
   return value === 'low' || value === 'high' ? value : 'medium';
 }
 
-function overlapDuration(left: Pick<DialogueInterval, 'start' | 'end'>, right: Pick<WhisperSegmentLike, 'start' | 'end'>): number {
+function overlapDuration(
+  left: Pick<DialogueInterval, 'start' | 'end'>,
+  right: Pick<WhisperSegmentLike, 'start' | 'end'>,
+): number {
   return Math.max(0, Math.min(left.end, right.end) - Math.max(left.start, right.start));
 }
 
 function sanitizeId(value: string): string {
-  return value.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'dialogue-subtitle';
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'dialogue-subtitle'
+  );
 }
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {

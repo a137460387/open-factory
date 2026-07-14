@@ -2,7 +2,12 @@ import type { KeyframeEasing } from './model-types';
 
 export type AudioFadeCurveType = 'linear' | 'logarithmic' | 'exponential' | 's-curve';
 
-export const AUDIO_FADE_CURVE_TYPES: readonly AudioFadeCurveType[] = ['linear', 'logarithmic', 'exponential', 's-curve'];
+export const AUDIO_FADE_CURVE_TYPES: readonly AudioFadeCurveType[] = [
+  'linear',
+  'logarithmic',
+  'exponential',
+  's-curve',
+];
 
 export interface AudioFadeCurveMapping {
   curveType: AudioFadeCurveType;
@@ -14,11 +19,11 @@ export const AUDIO_FADE_CURVE_MAPPINGS: readonly AudioFadeCurveMapping[] = [
   { curveType: 'linear', ffmpegCurve: 'tri', label: '线性' },
   { curveType: 'logarithmic', ffmpegCurve: 'log', label: '对数' },
   { curveType: 'exponential', ffmpegCurve: 'exp', label: '指数' },
-  { curveType: 's-curve', ffmpegCurve: 'qsin', label: 'S形' }
+  { curveType: 's-curve', ffmpegCurve: 'qsin', label: 'S形' },
 ];
 
 const CURVE_TO_FFMPEG: Record<AudioFadeCurveType, string> = Object.fromEntries(
-  AUDIO_FADE_CURVE_MAPPINGS.map((m) => [m.curveType, m.ffmpegCurve])
+  AUDIO_FADE_CURVE_MAPPINGS.map((m) => [m.curveType, m.ffmpegCurve]),
 ) as Record<AudioFadeCurveType, string>;
 
 export function mapAudioFadeCurveToFfmpeg(curve: AudioFadeCurveType): string {
@@ -51,7 +56,7 @@ export function inferCurveTypeFromHandleAngle(angleDegrees: number): AudioFadeCu
 
 export function getFadeCurveSamplePoints(
   curve: AudioFadeCurveType,
-  steps: number = 50
+  steps: number = 50,
 ): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = [];
   for (let i = 0; i <= steps; i++) {

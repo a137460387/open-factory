@@ -16,20 +16,25 @@ const FRAME_SEARCH_HISTORY_TYPES = new Set<FrameSearchHistoryEntryType>(['timeco
 export function appendFrameSearchHistoryEntry(
   history: readonly FrameSearchHistoryEntry[],
   entry: FrameSearchHistoryEntry,
-  limit = FRAME_SEARCH_HISTORY_LIMIT
+  limit = FRAME_SEARCH_HISTORY_LIMIT,
 ): FrameSearchHistoryEntry[] {
   const sanitizedEntry = sanitizeFrameSearchHistoryEntry(entry);
   if (!sanitizedEntry) {
     return sanitizeFrameSearchHistory(history, limit);
   }
   const dedupeKey = frameSearchHistoryDedupeKey(sanitizedEntry);
-  return [sanitizedEntry, ...sanitizeFrameSearchHistory(history, Number.POSITIVE_INFINITY).filter((item) => frameSearchHistoryDedupeKey(item) !== dedupeKey)].slice(
-    0,
-    Math.max(1, Math.floor(limit))
-  );
+  return [
+    sanitizedEntry,
+    ...sanitizeFrameSearchHistory(history, Number.POSITIVE_INFINITY).filter(
+      (item) => frameSearchHistoryDedupeKey(item) !== dedupeKey,
+    ),
+  ].slice(0, Math.max(1, Math.floor(limit)));
 }
 
-export function sanitizeFrameSearchHistory(input: unknown, limit = FRAME_SEARCH_HISTORY_LIMIT): FrameSearchHistoryEntry[] {
+export function sanitizeFrameSearchHistory(
+  input: unknown,
+  limit = FRAME_SEARCH_HISTORY_LIMIT,
+): FrameSearchHistoryEntry[] {
   const values = Array.isArray(input) ? input : [];
   const entries = values.flatMap((value): FrameSearchHistoryEntry[] => {
     const entry = sanitizeFrameSearchHistoryEntry(value);
@@ -53,7 +58,13 @@ function sanitizeFrameSearchHistoryEntry(input: unknown): FrameSearchHistoryEntr
     return undefined;
   }
   const selectedClipIds = Array.isArray(value.selectedClipIds)
-    ? Array.from(new Set(value.selectedClipIds.filter((clipId): clipId is string => typeof clipId === 'string' && clipId.trim().length > 0).map((clipId) => clipId.trim())))
+    ? Array.from(
+        new Set(
+          value.selectedClipIds
+            .filter((clipId): clipId is string => typeof clipId === 'string' && clipId.trim().length > 0)
+            .map((clipId) => clipId.trim()),
+        ),
+      )
     : undefined;
   const createdAt = typeof value.createdAt === 'string' && value.createdAt.trim() ? value.createdAt.trim() : undefined;
   return {
@@ -62,10 +73,16 @@ function sanitizeFrameSearchHistoryEntry(input: unknown): FrameSearchHistoryEntr
     label,
     time,
     ...(selectedClipIds && selectedClipIds.length > 0 ? { selectedClipIds } : {}),
-    ...(createdAt ? { createdAt } : {})
+    ...(createdAt ? { createdAt } : {}),
   };
 }
 
 function frameSearchHistoryDedupeKey(entry: FrameSearchHistoryEntry): string {
-  return [entry.type, entry.query.toLowerCase(), entry.label.toLowerCase(), entry.time.toFixed(6), (entry.selectedClipIds ?? []).join(',')].join('|');
+  return [
+    entry.type,
+    entry.query.toLowerCase(),
+    entry.label.toLowerCase(),
+    entry.time.toFixed(6),
+    (entry.selectedClipIds ?? []).join(','),
+  ].join('|');
 }

@@ -6,10 +6,7 @@ import { zhCN } from '../i18n/strings';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../media/contentAnalysis';
-import {
-  collectContentAnalysisTargets,
-  findContentAnalysisTarget,
-} from '../lib/content-analysis-helpers';
+import { collectContentAnalysisTargets, findContentAnalysisTarget } from '../lib/content-analysis-helpers';
 
 // ---------------------------------------------------------------------------
 // 参数接口：Content Analysis 回调组
@@ -24,33 +21,48 @@ interface ContentAnalysisCallbacksDeps {
 export function useContentAnalysisCallbacks(deps: ContentAnalysisCallbacksDeps) {
   const { setContentAnalysisRunningClipId } = deps;
 
-  const runSingleContentAnalysis = useCallback(async (target: ContentAnalysisTarget): Promise<boolean> => {
-    setContentAnalysisRunningClipId(target.clip.id);
-    try {
-      const analysis = await analyzeClipContentLocally(target.clip, target.asset);
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, target.clip.id, { contentAnalysis: analysis }));
-      return true;
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
-      return false;
-    } finally {
-      setContentAnalysisRunningClipId(undefined);
-    }
-  }, [setContentAnalysisRunningClipId]);
+  const runSingleContentAnalysis = useCallback(
+    async (target: ContentAnalysisTarget): Promise<boolean> => {
+      setContentAnalysisRunningClipId(target.clip.id);
+      try {
+        const analysis = await analyzeClipContentLocally(target.clip, target.asset);
+        commandManager.execute(new UpdateClipCommand(timelineAccessor, target.clip.id, { contentAnalysis: analysis }));
+        return true;
+      } catch (error) {
+        showToast({
+          kind: 'error',
+          title: zhCN.contentAnalysis.failedTitle,
+          message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage,
+        });
+        return false;
+      } finally {
+        setContentAnalysisRunningClipId(undefined);
+      }
+    },
+    [setContentAnalysisRunningClipId],
+  );
 
   const analyzeContentClip = useCallback(
     async (clipId: string) => {
       const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
       if (!target) {
-        showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.noTargets });
+        showToast({
+          kind: 'warning',
+          title: zhCN.contentAnalysis.failedTitle,
+          message: zhCN.contentAnalysis.noTargets,
+        });
         return;
       }
       const completed = await runSingleContentAnalysis(target);
       if (completed) {
-        showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(1) });
+        showToast({
+          kind: 'success',
+          title: zhCN.contentAnalysis.completedTitle,
+          message: zhCN.contentAnalysis.completedMessage(1),
+        });
       }
     },
-    [runSingleContentAnalysis]
+    [runSingleContentAnalysis],
   );
 
   const analyzePreferredContentTargets = useCallback(async () => {
@@ -69,14 +81,22 @@ export function useContentAnalysisCallbacks(deps: ContentAnalysisCallbacksDeps) 
       }
     }
     if (completed > 0) {
-      showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(completed) });
+      showToast({
+        kind: 'success',
+        title: zhCN.contentAnalysis.completedTitle,
+        message: zhCN.contentAnalysis.completedMessage(completed),
+      });
     }
   }, [runSingleContentAnalysis]);
 
   const exportContentAnalysis = useCallback(async (clipId: string) => {
     const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
     if (!target?.clip.contentAnalysis) {
-      showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.notAnalyzed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.contentAnalysis.failedTitle,
+        message: zhCN.contentAnalysis.notAnalyzed,
+      });
       return;
     }
     try {
@@ -85,7 +105,11 @@ export function useContentAnalysisCallbacks(deps: ContentAnalysisCallbacksDeps) 
         showToast({ kind: 'success', title: zhCN.contentAnalysis.exportedTitle, message: outputPath });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.contentAnalysis.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage,
+      });
     }
   }, []);
 

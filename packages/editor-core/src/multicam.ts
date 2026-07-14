@@ -24,7 +24,7 @@ import {
   type Project,
   type SwitchPoint,
   type Timeline,
-  type Track
+  type Track,
 } from './model';
 import { cloneEffects, normalizeEffects } from './effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from './keyframes';
@@ -91,10 +91,13 @@ export function calculateAudioAlignmentOffset(
   reference: ArrayLike<number>,
   candidate: ArrayLike<number>,
   sampleRate: number,
-  maxOffsetSeconds = 5
+  maxOffsetSeconds = 5,
 ): number {
   const rate = Math.max(1, Math.round(sampleRate || 1));
-  const maxLag = Math.min(Math.max(reference.length, candidate.length) - 1, Math.max(0, Math.round(maxOffsetSeconds * rate)));
+  const maxLag = Math.min(
+    Math.max(reference.length, candidate.length) - 1,
+    Math.max(0, Math.round(maxOffsetSeconds * rate)),
+  );
   if (reference.length === 0 || candidate.length === 0 || maxLag <= 0) {
     return 0;
   }
@@ -140,13 +143,17 @@ export function parseLtcTimecode(value: string, fps = 30): ParsedMulticamTimecod
     hours: parsed.value.hours,
     minutes: parsed.value.minutes,
     secondsPart: parsed.value.secondsPart,
-    frames: parsed.value.frames
+    frames: parsed.value.frames,
   };
 }
 
 export const parseVitcTimecode = parseLtcTimecode;
 
-export function calculateTimecodeAlignmentOffsets(points: MulticamTimecodeSyncPoint[], referenceClipId: string, fps = 30): Record<string, number> {
+export function calculateTimecodeAlignmentOffsets(
+  points: MulticamTimecodeSyncPoint[],
+  referenceClipId: string,
+  fps = 30,
+): Record<string, number> {
   const parsed = new Map<string, ParsedMulticamTimecode>();
   for (const point of points) {
     const timecode = parseLtcTimecode(point.timecode, fps);
@@ -158,10 +165,15 @@ export function calculateTimecodeAlignmentOffsets(points: MulticamTimecodeSyncPo
   if (!reference) {
     return {};
   }
-  return Object.fromEntries(Array.from(parsed.entries()).map(([clipId, timecode]) => [clipId, round(reference.seconds - timecode.seconds)]));
+  return Object.fromEntries(
+    Array.from(parsed.entries()).map(([clipId, timecode]) => [clipId, round(reference.seconds - timecode.seconds)]),
+  );
 }
 
-export function calculateManualMarkerAlignmentOffsets(points: MulticamManualSyncPoint[], referenceClipId: string): Record<string, number> {
+export function calculateManualMarkerAlignmentOffsets(
+  points: MulticamManualSyncPoint[],
+  referenceClipId: string,
+): Record<string, number> {
   const reference = points.find((point) => point.clipId === referenceClipId);
   if (!reference || !Number.isFinite(reference.markerTime)) {
     return {};
@@ -169,11 +181,16 @@ export function calculateManualMarkerAlignmentOffsets(points: MulticamManualSync
   return Object.fromEntries(
     points
       .filter((point) => Number.isFinite(point.markerTime))
-      .map((point) => [point.clipId, round(reference.markerTime - Math.max(0, point.markerTime))])
+      .map((point) => [point.clipId, round(reference.markerTime - Math.max(0, point.markerTime))]),
   );
 }
 
-export function setMulticamSwitch(multicam: MulticamSequence, time: number, angleId: string, duration: number): MulticamSwitch[] {
+export function setMulticamSwitch(
+  multicam: MulticamSequence,
+  time: number,
+  angleId: string,
+  duration: number,
+): MulticamSwitch[] {
   const normalized = normalizeMulticamSequence(multicam, duration);
   if (!normalized || !normalized.angles.some((angle) => angle.id === angleId)) {
     throw new Error('Invalid multicam angle');
@@ -183,9 +200,9 @@ export function setMulticamSwitch(multicam: MulticamSequence, time: number, angl
   return normalizeMulticamSequence(
     {
       ...normalized,
-      switches: [...kept, { id: createId('multicam-switch'), time: switchTime, angleId }]
+      switches: [...kept, { id: createId('multicam-switch'), time: switchTime, angleId }],
     },
-    duration
+    duration,
   )!.switches;
 }
 
@@ -195,19 +212,29 @@ export function getActiveMulticamAngle(multicam: MulticamSequence, time: number)
     throw new Error('Invalid multicam sequence');
   }
   const switchTime = round(Math.max(0, time));
-  const activeSwitch = [...normalized.switches].reverse().find((item) => item.time <= switchTime) ?? normalized.switches[0];
+  const activeSwitch =
+    [...normalized.switches].reverse().find((item) => item.time <= switchTime) ?? normalized.switches[0];
   return normalized.angles.find((angle) => angle.id === activeSwitch.angleId) ?? normalized.angles[0];
 }
 
-export function buildMulticamSwitchHistory(multicam: MulticamSequence, duration: number, fps = 30): MulticamSwitchHistoryEntry[] {
+export function buildMulticamSwitchHistory(
+  multicam: MulticamSequence,
+  duration: number,
+  fps = 30,
+): MulticamSwitchHistoryEntry[] {
   const normalized = normalizeMulticamSequence(multicam, duration);
   if (!normalized) {
     return [];
   }
-  const warningTargets = new Set(findFrequentMulticamSwitchWarnings(normalized, duration, fps).map((warning) => warning.toSwitchId));
+  const warningTargets = new Set(
+    findFrequentMulticamSwitchWarnings(normalized, duration, fps).map((warning) => warning.toSwitchId),
+  );
   return normalized.switches.map((item, index) => {
     const nextTime = normalized.switches[index + 1]?.time ?? duration;
-    const angleIndex = Math.max(0, normalized.angles.findIndex((angle) => angle.id === item.angleId));
+    const angleIndex = Math.max(
+      0,
+      normalized.angles.findIndex((angle) => angle.id === item.angleId),
+    );
     const angle = normalized.angles[angleIndex] ?? normalized.angles[0];
     const segmentDuration = round(Math.max(0, nextTime - item.time));
     return {
@@ -220,7 +247,7 @@ export function buildMulticamSwitchHistory(multicam: MulticamSequence, duration:
       angleIndex,
       timecode: secondsToTimecode(item.time, fps),
       durationTimecode: secondsToTimecode(segmentDuration, fps),
-      tooFrequent: warningTargets.has(item.id)
+      tooFrequent: warningTargets.has(item.id),
     };
   });
 }
@@ -231,14 +258,19 @@ export function serializeMulticamSwitchHistory(multicam: MulticamSequence, durat
       version: 1,
       fps,
       duration: round(Math.max(0, duration)),
-      switches: buildMulticamSwitchHistory(multicam, duration, fps)
+      switches: buildMulticamSwitchHistory(multicam, duration, fps),
     },
     null,
-    2
+    2,
   );
 }
 
-export function findFrequentMulticamSwitchWarnings(multicam: MulticamSequence, duration: number, fps = 30, minFrames = 12): MulticamSwitchWarning[] {
+export function findFrequentMulticamSwitchWarnings(
+  multicam: MulticamSequence,
+  duration: number,
+  fps = 30,
+  minFrames = 12,
+): MulticamSwitchWarning[] {
   const normalized = normalizeMulticamSequence(multicam, duration);
   if (!normalized) {
     return [];
@@ -255,7 +287,13 @@ export function findFrequentMulticamSwitchWarnings(multicam: MulticamSequence, d
   return warnings;
 }
 
-export function trimMulticamSwitch(multicam: MulticamSequence, switchId: string, frameDelta: number, fps: number, duration: number): MulticamSwitch[] {
+export function trimMulticamSwitch(
+  multicam: MulticamSequence,
+  switchId: string,
+  frameDelta: number,
+  fps: number,
+  duration: number,
+): MulticamSwitch[] {
   const normalized = normalizeMulticamSequence(multicam, duration);
   if (!normalized) {
     throw new Error('Invalid multicam sequence');
@@ -270,17 +308,23 @@ export function trimMulticamSwitch(multicam: MulticamSequence, switchId: string,
   const minTime = previous ? previous.time + frameDuration : 0;
   const maxTime = next ? next.time - frameDuration : duration;
   const current = normalized.switches[index];
-  const time = round(Math.min(Math.max(current.time + framesToSeconds(frameDelta, fps), minTime), Math.max(minTime, maxTime)));
+  const time = round(
+    Math.min(Math.max(current.time + framesToSeconds(frameDelta, fps), minTime), Math.max(minTime, maxTime)),
+  );
   return normalizeMulticamSequence(
     {
       ...normalized,
-      switches: normalized.switches.map((item) => (item.id === switchId ? { ...item, time } : item))
+      switches: normalized.switches.map((item) => (item.id === switchId ? { ...item, time } : item)),
     },
-    duration
+    duration,
   )!.switches;
 }
 
-export function createMulticamSequenceProject(project: Project, clipIds: string[], options: MulticamCreateOptions = {}): MulticamCreateResult {
+export function createMulticamSequenceProject(
+  project: Project,
+  clipIds: string[],
+  options: MulticamCreateOptions = {},
+): MulticamCreateResult {
   const uniqueIds = Array.from(new Set(clipIds));
   if (uniqueIds.length < 2 || uniqueIds.length > 8) {
     throw new Error('Multicam requires 2 to 8 clips');
@@ -305,11 +349,13 @@ export function createMulticamSequenceProject(project: Project, clipIds: string[
       clipId: nestedClip.id,
       trackId,
       name: clip.name || `Camera ${index + 1}`,
-      offset
+      offset,
     });
     return createTrack({ id: trackId, type: 'video', name: `Camera ${index + 1}`, clips: [nestedClip] });
   });
-  const duration = round(Math.max(...sequenceTracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration))));
+  const duration = round(
+    Math.max(...sequenceTracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration))),
+  );
   const targetTrack = locations[0].track;
   const multicamClip = createNestedSequenceClip({
     id: createId('clip'),
@@ -323,31 +369,40 @@ export function createMulticamSequenceProject(project: Project, clipIds: string[
     trimEnd: 0,
     multicam: {
       angles,
-      switches: [{ id: createId('multicam-switch'), time: 0, angleId: angles[0].id }]
-    }
+      switches: [{ id: createId('multicam-switch'), time: 0, angleId: angles[0].id }],
+    },
   });
   const nextTimeline: Timeline = {
     ...activeTimeline,
     tracks: activeTimeline.tracks.map((track) => {
       const clips = track.clips.filter((clip) => !selected.has(clip.id));
-      const nextClips = track.id === targetTrack.id ? [...clips, multicamClip].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)) : clips;
+      const nextClips =
+        track.id === targetTrack.id
+          ? [...clips, multicamClip].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
+          : clips;
       if (track.id === targetTrack.id && detectOverlap({ ...track, clips }, multicamClip)) {
         throw new Error('Multicam sequence would overlap an unselected clip');
       }
       return { ...track, clips: nextClips };
     }),
-    transitions: (activeTimeline.transitions ?? []).filter((transition) => !selected.has(transition.fromClipId) && !selected.has(transition.toClipId))
+    transitions: (activeTimeline.transitions ?? []).filter(
+      (transition) => !selected.has(transition.fromClipId) && !selected.has(transition.toClipId),
+    ),
   };
-  const sequence = createSequence({ id: sequenceId, name: sequenceName, timeline: { tracks: sequenceTracks, transitions: [], markers: [] } });
+  const sequence = createSequence({
+    id: sequenceId,
+    name: sequenceName,
+    timeline: { tracks: sequenceTracks, transitions: [], markers: [] },
+  });
   const withTimeline = replaceProjectActiveTimeline(syncedProject, nextTimeline);
   return {
     project: {
       ...withTimeline,
       sequences: [...getProjectSequences(withTimeline), sequence],
-      activeSequenceId
+      activeSequenceId,
     },
     multicamClipId: multicamClip.id,
-    sequenceId
+    sequenceId,
   };
 }
 
@@ -356,12 +411,12 @@ export function flattenMulticamProjectForExport(project: Project): Project {
   const flattenedSequences = getProjectSequences(project).map((sequence) =>
     sequence.id === getProjectActiveSequenceId(project)
       ? createSequence({ ...sequence, timeline: flattenedTimeline })
-      : createSequence({ ...sequence, timeline: flattenMulticamTimeline(sequence.timeline, project) })
+      : createSequence({ ...sequence, timeline: flattenMulticamTimeline(sequence.timeline, project) }),
   );
   return {
     ...project,
     timeline: flattenedTimeline,
-    sequences: flattenedSequences
+    sequences: flattenedSequences,
   };
 }
 
@@ -380,7 +435,11 @@ function findVisualClipLocation(timeline: Timeline, clipId: string): ClipLocatio
   throw new Error(`Clip ${clipId} not found`);
 }
 
-function cloneAngleClip(clip: Extract<Clip, { mediaId: string }>, trackId: string, start: number): Extract<Clip, { mediaId: string }> {
+function cloneAngleClip(
+  clip: Extract<Clip, { mediaId: string }>,
+  trackId: string,
+  start: number,
+): Extract<Clip, { mediaId: string }> {
   return {
     ...clip,
     id: createId('clip'),
@@ -397,7 +456,7 @@ function cloneAngleClip(clip: Extract<Clip, { mediaId: string }>, trackId: strin
     masks: clip.masks ? clip.masks.map((mask) => ({ ...mask })) : undefined,
     motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
-    effects: normalizeEffects(cloneEffects(clip.effects))
+    effects: normalizeEffects(cloneEffects(clip.effects)),
   } as Extract<Clip, { mediaId: string }>;
 }
 
@@ -418,22 +477,32 @@ function flattenMulticamTimeline(timeline: Timeline, project: Project): Timeline
       changed = true;
       return flattened;
     });
-    return { ...track, clips: clips.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)) };
+    return {
+      ...track,
+      clips: clips.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
+    };
   });
   if (!changed) {
     return timeline;
   }
   const removedClipIds = new Set(
-    timeline.tracks.flatMap((track) => track.clips.filter((clip) => clip.type === 'nested-sequence' && clip.multicam).map((clip) => clip.id))
+    timeline.tracks.flatMap((track) =>
+      track.clips.filter((clip) => clip.type === 'nested-sequence' && clip.multicam).map((clip) => clip.id),
+    ),
   );
   return {
     ...timeline,
     tracks,
-    transitions: (timeline.transitions ?? []).filter((transition) => !removedClipIds.has(transition.fromClipId) && !removedClipIds.has(transition.toClipId))
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => !removedClipIds.has(transition.fromClipId) && !removedClipIds.has(transition.toClipId),
+    ),
   };
 }
 
-function flattenMulticamClip(clip: Extract<Clip, { type: 'nested-sequence' }>, project: Project): Extract<Clip, { mediaId: string }>[] {
+function flattenMulticamClip(
+  clip: Extract<Clip, { type: 'nested-sequence' }>,
+  project: Project,
+): Extract<Clip, { mediaId: string }>[] {
   const multicam = normalizeMulticamSequence(clip.multicam, clip.duration);
   const sequence = getProjectSequences(project).find((item) => item.id === clip.sequenceId);
   if (!multicam || !sequence) {
@@ -475,7 +544,7 @@ function cloneAngleSegment(
   parent: Extract<Clip, { type: 'nested-sequence' }>,
   localStart: number,
   localEnd: number,
-  index: number
+  index: number,
 ): Extract<Clip, { mediaId: string }> {
   const sourceOffset = round(Math.max(0, localStart - source.start) * (source.speed ?? DEFAULT_CLIP_SPEED));
   const duration = round(localEnd - localStart);
@@ -492,7 +561,7 @@ function cloneAngleSegment(
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...source.colorCorrection, ...parent.colorCorrection },
     effects: normalizeEffects([...(cloneEffects(source.effects) ?? []), ...(cloneEffects(parent.effects) ?? [])]),
     volume: 'volume' in source ? source.volume : 1,
-    muted: 'muted' in source ? source.muted : undefined
+    muted: 'muted' in source ? source.muted : undefined,
   } as Extract<Clip, { mediaId: string }>;
 }
 
@@ -590,7 +659,7 @@ export function deleteSwitchPoint(switchPoints: SwitchPoint[], index: number): S
 export function updateSwitchPoint(
   switchPoints: SwitchPoint[],
   index: number,
-  updates: Partial<SwitchPoint>
+  updates: Partial<SwitchPoint>,
 ): SwitchPoint[] {
   if (index < 0 || index >= switchPoints.length) {
     throw new Error('Switch point index out of range');

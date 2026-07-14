@@ -85,9 +85,7 @@ export async function startDistribution(
   if (options.enableSmartCrop !== false) {
     const platformSpecs = options.platforms.map(getDistributionPlatform);
     const crops = calculateBatchSmartCrops(cropInput, platformSpecs);
-    cropResults = new Map(
-      crops.map((crop) => [crop.platformId, crop]),
-    );
+    cropResults = new Map(crops.map((crop) => [crop.platformId, crop]));
     store.setCropResults(cropResults);
   }
 
@@ -129,9 +127,7 @@ export async function startDistribution(
  */
 export function buildCropAnalysisInput(project: Project): CropAnalysisInput {
   const settings = project.settings;
-  const hasSubtitles = project.timeline?.tracks?.some(
-    (t) => t.type === 'subtitle',
-  ) ?? false;
+  const hasSubtitles = project.timeline?.tracks?.some((t) => t.type === 'subtitle') ?? false;
 
   return {
     sourceWidth: settings.width,
@@ -149,9 +145,7 @@ export function buildCropAnalysisInput(project: Project): CropAnalysisInput {
  */
 export function getPlatformRecommendations(project: Project) {
   const settings = project.settings;
-  const hasSubtitles = project.timeline?.tracks?.some(
-    (t) => t.type === 'subtitle',
-  ) ?? false;
+  const hasSubtitles = project.timeline?.tracks?.some((t) => t.type === 'subtitle') ?? false;
 
   return buildDistributionRecommendations({
     width: settings.width,
@@ -214,9 +208,7 @@ export function previewExportSettings(
       fps: platform.fps,
       bitrate: `${platform.videoBitrate} / ${platform.audioBitrate}`,
       format: platform.format,
-      maxDuration: platform.maxDurationSecs
-        ? `${platform.maxDurationSecs}s`
-        : '无限制',
+      maxDuration: platform.maxDurationSecs ? `${platform.maxDurationSecs}s` : '无限制',
       estimatedSize: formatFileSize(estimatedBytes),
     };
   });
@@ -230,10 +222,14 @@ function parseBitrate(bitrate: string): number {
   const value = Number(match[1]);
   const unit = (match[2] ?? '').toLowerCase();
   switch (unit) {
-    case 'k': return value * 1_000;
-    case 'm': return value * 1_000_000;
-    case 'g': return value * 1_000_000_000;
-    default: return value;
+    case 'k':
+      return value * 1_000;
+    case 'm':
+      return value * 1_000_000;
+    case 'g':
+      return value * 1_000_000_000;
+    default:
+      return value;
   }
 }
 

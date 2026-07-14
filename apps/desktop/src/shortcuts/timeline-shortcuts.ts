@@ -78,7 +78,10 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'reveal-in-timeline', defaultBindings: ['Shift+F'] },
 ];
 
-export function resolveTimelineShortcutAction(event: TimelineShortcutKey, customBindings: TimelineShortcutBindings = {}): TimelineShortcutAction | null {
+export function resolveTimelineShortcutAction(
+  event: TimelineShortcutKey,
+  customBindings: TimelineShortcutBindings = {},
+): TimelineShortcutAction | null {
   if (event.isTyping) {
     return null;
   }
@@ -96,11 +99,20 @@ export function resolveTimelineShortcutAction(event: TimelineShortcutKey, custom
   return null;
 }
 
-export function getEffectiveTimelineShortcutBindings(customBindings: TimelineShortcutBindings = {}): Record<TimelineShortcutAction, string[]> {
-  return Object.fromEntries(TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => [definition.action, getEffectiveBindings(definition, customBindings)])) as Record<TimelineShortcutAction, string[]>;
+export function getEffectiveTimelineShortcutBindings(
+  customBindings: TimelineShortcutBindings = {},
+): Record<TimelineShortcutAction, string[]> {
+  return Object.fromEntries(
+    TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => [
+      definition.action,
+      getEffectiveBindings(definition, customBindings),
+    ]),
+  ) as Record<TimelineShortcutAction, string[]>;
 }
 
-export function detectTimelineShortcutConflicts(bindings: TimelineShortcutBindings): Record<TimelineShortcutAction, string[]> {
+export function detectTimelineShortcutConflicts(
+  bindings: TimelineShortcutBindings,
+): Record<TimelineShortcutAction, string[]> {
   const conflicts = {} as Record<TimelineShortcutAction, string[]>;
   for (const definition of TIMELINE_SHORTCUT_DEFINITIONS) {
     conflicts[definition.action] = [];
@@ -159,7 +171,10 @@ export function normalizeAccelerator(input: string): string {
   return [...ordered, normalizeKeyName(key)].join('+');
 }
 
-function getEffectiveBindings(definition: TimelineShortcutDefinition, customBindings: TimelineShortcutBindings): string[] {
+function getEffectiveBindings(
+  definition: TimelineShortcutDefinition,
+  customBindings: TimelineShortcutBindings,
+): string[] {
   const custom = customBindings[definition.action]?.map(normalizeAccelerator).filter(Boolean);
   return custom && custom.length > 0 ? custom : definition.defaultBindings;
 }

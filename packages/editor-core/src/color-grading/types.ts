@@ -143,7 +143,7 @@ export function createEmptyColorGradingGraph(): ColorGradingGraph {
 /** 创建调色节点 */
 export function createColorGradingNode(
   type: ColorGradingNodeType,
-  position: { x: number; y: number } = { x: 0, y: 0 }
+  position: { x: number; y: number } = { x: 0, y: 0 },
 ): ColorGradingNode {
   const id = `color-node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let params: ColorGradingNodeParams;
@@ -163,10 +163,22 @@ export function createColorGradingNode(
       break;
     case 'curves':
       params = {
-        master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-        red: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-        green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-        blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        master: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        red: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        green: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+        blue: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
       } as CurvesNodeParams;
       break;
     case 'lut-apply':
@@ -237,26 +249,17 @@ export function validatePrimarySliderParams(params: PrimarySliderParams): Primar
 }
 
 /** 归一化节点图（去除无效数据） */
-export function normalizeColorGradingGraph(
-  graph: unknown
-): ColorGradingGraph {
+export function normalizeColorGradingGraph(graph: unknown): ColorGradingGraph {
   if (!graph || typeof graph !== 'object') {
     return createEmptyColorGradingGraph();
   }
 
   const g = graph as Record<string, unknown>;
-  const nodes = Array.isArray(g.nodes)
-    ? (g.nodes as unknown[]).filter(isValidColorNode).map(normalizeColorNode)
-    : [];
-  const connections = Array.isArray(g.connections)
-    ? (g.connections as unknown[]).filter(isValidConnection)
-    : [];
+  const nodes = Array.isArray(g.nodes) ? (g.nodes as unknown[]).filter(isValidColorNode).map(normalizeColorNode) : [];
+  const connections = Array.isArray(g.connections) ? (g.connections as unknown[]).filter(isValidConnection) : [];
 
   const nodeIds = new Set(nodes.map((n) => n.id));
-  const activeNodeId =
-    typeof g.activeNodeId === 'string' && nodeIds.has(g.activeNodeId)
-      ? g.activeNodeId
-      : null;
+  const activeNodeId = typeof g.activeNodeId === 'string' && nodeIds.has(g.activeNodeId) ? g.activeNodeId : null;
 
   return {
     nodes,
@@ -277,28 +280,40 @@ function normalizeColorNode(node: unknown): ColorGradingNode {
 
   let params: ColorGradingNodeParams;
   if (type === 'primary-wheel') {
-    params = validatePrimaryWheelParams(
-      (n.params as PrimaryWheelParams) ?? createDefaultPrimaryWheelParams()
-    );
+    params = validatePrimaryWheelParams((n.params as PrimaryWheelParams) ?? createDefaultPrimaryWheelParams());
   } else if (type === 'primary-slider') {
-    params = validatePrimarySliderParams(
-      (n.params as PrimarySliderParams) ?? createDefaultPrimarySliderParams()
-    );
+    params = validatePrimarySliderParams((n.params as PrimarySliderParams) ?? createDefaultPrimarySliderParams());
   } else if (type === 'hsl-qualifier') {
-    params = validateHSLQualifierParams(
-      (n.params as HSLQualifierParams) ?? createDefaultHSLQualifierParams()
-    );
+    params = validateHSLQualifierParams((n.params as HSLQualifierParams) ?? createDefaultHSLQualifierParams());
   } else if (type === 'window-mask') {
-    params = validateWindowMaskParams(
-      (n.params as WindowMaskParams) ?? createDefaultCircleMask()
-    );
+    params = validateWindowMaskParams((n.params as WindowMaskParams) ?? createDefaultCircleMask());
   } else if (type === 'curves') {
     const p = n.params as CurvesNodeParams;
     params = {
-      master: Array.isArray(p?.master) ? p.master : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-      red: Array.isArray(p?.red) ? p.red : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-      green: Array.isArray(p?.green) ? p.green : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-      blue: Array.isArray(p?.blue) ? p.blue : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+      master: Array.isArray(p?.master)
+        ? p.master
+        : [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+      red: Array.isArray(p?.red)
+        ? p.red
+        : [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+      green: Array.isArray(p?.green)
+        ? p.green
+        : [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+      blue: Array.isArray(p?.blue)
+        ? p.blue
+        : [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
     };
   } else if (type === 'lut-apply') {
     const p = n.params as LUTApplyNodeParams;
@@ -323,9 +338,9 @@ function normalizeColorNode(node: unknown): ColorGradingNode {
     type,
     enabled: n.enabled !== false,
     params,
-    inputs: Array.isArray(n.inputs) ? n.inputs as string[] : [],
+    inputs: Array.isArray(n.inputs) ? (n.inputs as string[]) : [],
     output: typeof n.output === 'string' ? n.output : null,
-    position: isValidPosition(n.position) ? n.position as { x: number; y: number } : { x: 0, y: 0 },
+    position: isValidPosition(n.position) ? (n.position as { x: number; y: number }) : { x: 0, y: 0 },
   };
 }
 

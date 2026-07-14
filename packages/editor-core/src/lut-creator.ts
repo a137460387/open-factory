@@ -7,7 +7,7 @@ import {
   normalizeThreeWayColor,
   type ColorCurves,
   type RgbColor,
-  type ThreeWayColor
+  type ThreeWayColor,
 } from './color-grading';
 import {
   applyColorMatchTransformToRgb,
@@ -15,7 +15,7 @@ import {
   calculateColorMatchStats,
   type ColorMatchChannelTransform,
   type ColorMatchFrameSample,
-  type ColorMatchTransform
+  type ColorMatchTransform,
 } from './color-match';
 import { clamp, round } from './time';
 
@@ -45,7 +45,7 @@ export function createDefaultLutCreatorState(): LutCreatorState {
     threeWayColor: createDefaultThreeWayColor(),
     colorCurves: createDefaultColorCurves(),
     referenceTransform: null,
-    referenceName: null
+    referenceName: null,
   };
 }
 
@@ -61,11 +61,14 @@ export function normalizeLutCreatorState(state: Partial<LutCreatorState> | undef
     threeWayColor: normalizeThreeWayColor(state?.threeWayColor),
     colorCurves: normalizeColorCurves(state?.colorCurves),
     referenceTransform: normalizeColorMatchTransform(state?.referenceTransform),
-    referenceName: typeof state?.referenceName === 'string' && state.referenceName.trim() ? state.referenceName.trim() : null
+    referenceName:
+      typeof state?.referenceName === 'string' && state.referenceName.trim() ? state.referenceName.trim() : null,
   };
 }
 
-export function buildLutCreatorReferenceTransform(reference: ColorMatchFrameSample | undefined): ColorMatchTransform | null {
+export function buildLutCreatorReferenceTransform(
+  reference: ColorMatchFrameSample | undefined,
+): ColorMatchTransform | null {
   if (!reference) {
     return null;
   }
@@ -77,7 +80,9 @@ export function applyLutCreatorGrade(input: RgbColor, state: Partial<LutCreatorS
   const normalized = normalizeLutCreatorState(state);
   const wheel = applyThreeWayColor(clampRgb(input), normalized.threeWayColor);
   const curved = applyColorCurvesToRgb(wheel, normalized.colorCurves);
-  const matched = normalized.referenceTransform ? applyColorMatchTransformToRgb(curved, normalized.referenceTransform) : curved;
+  const matched = normalized.referenceTransform
+    ? applyColorMatchTransformToRgb(curved, normalized.referenceTransform)
+    : curved;
   return clampRgb(matched);
 }
 
@@ -93,10 +98,10 @@ export function buildLutCreatorMatrix(state: Partial<LutCreatorState> | undefine
             {
               r: red / (size - 1),
               g: green / (size - 1),
-              b: blue / (size - 1)
+              b: blue / (size - 1),
             },
-            normalized
-          )
+            normalized,
+          ),
         );
       }
     }
@@ -112,7 +117,9 @@ export function serializeLutCreatorCube(state: Partial<LutCreatorState> | undefi
     `LUT_3D_SIZE ${matrix.size}`,
     'DOMAIN_MIN 0 0 0',
     'DOMAIN_MAX 1 1 1',
-    ...matrix.values.map((color) => `${formatCubeNumber(color.r)} ${formatCubeNumber(color.g)} ${formatCubeNumber(color.b)}`)
+    ...matrix.values.map(
+      (color) => `${formatCubeNumber(color.r)} ${formatCubeNumber(color.g)} ${formatCubeNumber(color.b)}`,
+    ),
   ];
   return `${lines.join('\n')}\n`;
 }
@@ -136,7 +143,7 @@ function normalizeColorMatchTransform(value: ColorMatchTransform | null | undefi
   return {
     r: normalizeChannelTransform(value.r),
     g: normalizeChannelTransform(value.g),
-    b: normalizeChannelTransform(value.b)
+    b: normalizeChannelTransform(value.b),
   };
 }
 
@@ -144,7 +151,7 @@ function normalizeChannelTransform(value: ColorMatchChannelTransform): ColorMatc
   return {
     slope: normalizeFinite(value.slope, 1, -8, 8),
     intercept: normalizeFinite(value.intercept, 0, -2, 2),
-    sourceMean: normalizeFinite(value.sourceMean, 0.5, 0, 1)
+    sourceMean: normalizeFinite(value.sourceMean, 0.5, 0, 1),
   };
 }
 
@@ -156,7 +163,7 @@ function clampRgb(input: RgbColor): RgbColor {
   return {
     r: round(clamp(input.r, 0, 1)),
     g: round(clamp(input.g, 0, 1)),
-    b: round(clamp(input.b, 0, 1))
+    b: round(clamp(input.b, 0, 1)),
   };
 }
 

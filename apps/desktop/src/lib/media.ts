@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import type { AssetType, ImageSequenceInfo, MediaAsset } from '@open-factory/editor-core';
 import { createId, parseFfprobeColorProfile } from '@open-factory/editor-core';
 import { readThumbnailFromCache, writeThumbnailToCache } from '../cache/cache-service';
@@ -28,7 +28,9 @@ export async function pickMediaPaths(): Promise<string[]> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
     return pickBrowserFiles();
   }
-  return openFileDialog(true, [{ name: zhCN.fileDialogs.media, extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS] }]);
+  return openFileDialog(true, [
+    { name: zhCN.fileDialogs.media, extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS] },
+  ]);
 }
 
 export async function pickVideoPaths(): Promise<string[]> {
@@ -45,8 +47,12 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
   }
   const mockProbe = window.__TAURI_MOCKS__?.probeMediaPath;
   const src = sourceUrl(path);
-  const stat = isTauriRuntime() || window.__TAURI_MOCKS__ ? await getFileStat(path).catch(logError("media")) : undefined;
-  const mediaProbe: MediaProbe = isTauriRuntime() || window.__TAURI_MOCKS__ ? await probeMedia(path).catch(() => ({ hasAudio: false })) : { hasAudio: false };
+  const stat =
+    isTauriRuntime() || window.__TAURI_MOCKS__ ? await getFileStat(path).catch(logError('media')) : undefined;
+  const mediaProbe: MediaProbe =
+    isTauriRuntime() || window.__TAURI_MOCKS__
+      ? await probeMedia(path).catch(() => ({ hasAudio: false }))
+      : { hasAudio: false };
   const base: MediaAsset = {
     id: createId('asset'),
     type,
@@ -70,7 +76,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     fieldOrder: mediaProbe.fieldOrder,
     colorProfile: parseFfprobeColorProfile(mediaProbe),
     proxyStatus: type === 'video' ? 'none' : undefined,
-    imageSequence
+    imageSequence,
   };
   if (mockProbe) {
     const mock = await mockProbe(path);
@@ -82,7 +88,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
       type,
       name: imageSequence ? sequenceNameFromPattern(imageSequence) : fileNameFromPath(path),
       duration: imageSequence ? imageSequence.frameCount / imageSequence.frameRate : (mock.duration ?? base.duration),
-      imageSequence
+      imageSequence,
     };
     if (asset.thumbnail) {
       await writeThumbnailToCache(asset, asset.thumbnail, asset.width || 320, asset.height || 180);
@@ -96,7 +102,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
       ...base,
       duration: metadata.duration,
       width: metadata.width,
-      height: metadata.height
+      height: metadata.height,
     };
     const cached = await readThumbnailFromCache(asset);
     const thumbnail = cached ?? (await createVideoThumbnail(src, metadata.duration));
@@ -109,24 +115,24 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     return {
       ...base,
       duration: await loadAudioDuration(src),
-      thumbnail: undefined
+      thumbnail: undefined,
     };
   }
   const metadata = await loadImageMetadata(src);
   const asset = {
     ...base,
     width: metadata.width,
-    height: metadata.height
+    height: metadata.height,
   };
   const cached = await readThumbnailFromCache(asset);
   if (!cached && metadata.thumbnail) {
     await writeThumbnailToCache(asset, metadata.thumbnail, 320, 180);
   }
-    return {
-      ...asset,
-      duration: imageSequence ? imageSequence.frameCount / imageSequence.frameRate : asset.duration,
-      thumbnail: cached ?? metadata.thumbnail
-    };
+  return {
+    ...asset,
+    duration: imageSequence ? imageSequence.frameCount / imageSequence.frameRate : asset.duration,
+    thumbnail: cached ?? metadata.thumbnail,
+  };
 }
 
 function sequenceNameFromPattern(sequence: ImageSequenceInfo): string {
@@ -134,7 +140,10 @@ function sequenceNameFromPattern(sequence: ImageSequenceInfo): string {
   return `${first} ${zhCN.mediaBin.sequenceSuffix}`;
 }
 
-export async function probeMediaPaths(paths: string[], existingMedia: MediaAsset[]): Promise<{ media: MediaAsset[]; duplicateCount: number }> {
+export async function probeMediaPaths(
+  paths: string[],
+  existingMedia: MediaAsset[],
+): Promise<{ media: MediaAsset[]; duplicateCount: number }> {
   const existingPaths = new Set(existingMedia.flatMap((asset) => [asset.path, ...(asset.imageSequence?.paths ?? [])]));
   const uniquePaths = paths.filter((path) => !existingPaths.has(path));
   const sequences = detectPngSequences(uniquePaths);
@@ -148,7 +157,7 @@ export async function probeMediaPaths(paths: string[], existingMedia: MediaAsset
   }
   return {
     media,
-    duplicateCount: paths.length - uniquePaths.length
+    duplicateCount: paths.length - uniquePaths.length,
   };
 }
 
@@ -182,7 +191,7 @@ export function detectPngSequences(paths: string[], frameRate = 30): ImageSequen
       startNumber: sorted[0].number,
       frameCount: sorted.length,
       frameRate,
-      paths: sorted.map((frame) => frame.path)
+      paths: sorted.map((frame) => frame.path),
     });
   }
   return sequences;
@@ -195,7 +204,9 @@ export function sourceUrl(path: string): string {
   return path;
 }
 
-async function pickBrowserFiles(extensions = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS]): Promise<string[]> {
+async function pickBrowserFiles(
+  extensions = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS],
+): Promise<string[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -216,15 +227,22 @@ function loadVideoMetadata(src: string): Promise<{ duration: number; width: numb
     video.muted = true;
     video.addEventListener(
       'loadedmetadata',
-      () => resolve({ duration: Number.isFinite(video.duration) ? video.duration : 0, width: video.videoWidth, height: video.videoHeight }),
-      { once: true }
+      () =>
+        resolve({
+          duration: Number.isFinite(video.duration) ? video.duration : 0,
+          width: video.videoWidth,
+          height: video.videoHeight,
+        }),
+      { once: true },
     );
     video.addEventListener('error', () => reject(new Error(zhCN.errors.videoMetadata)), { once: true });
     video.src = src;
   });
 }
 
-function parsePngSequencePath(path: string): { directory: string; prefix: string; digits: number; number: number } | undefined {
+function parsePngSequencePath(
+  path: string,
+): { directory: string; prefix: string; digits: number; number: number } | undefined {
   const normalized = path.replace(/\\/g, '/');
   const slash = normalized.lastIndexOf('/');
   const directory = slash >= 0 ? normalized.slice(0, slash) : '';
@@ -237,7 +255,7 @@ function parsePngSequencePath(path: string): { directory: string; prefix: string
     directory,
     prefix: match[1],
     digits: match[2].length,
-    number: Number(match[2])
+    number: Number(match[2]),
   };
 }
 
@@ -245,7 +263,9 @@ function loadAudioDuration(src: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const audio = document.createElement('audio');
     audio.preload = 'metadata';
-    audio.addEventListener('loadedmetadata', () => resolve(Number.isFinite(audio.duration) ? audio.duration : 0), { once: true });
+    audio.addEventListener('loadedmetadata', () => resolve(Number.isFinite(audio.duration) ? audio.duration : 0), {
+      once: true,
+    });
     audio.addEventListener('error', () => reject(new Error(zhCN.errors.audioMetadata)), { once: true });
     audio.src = src;
   });

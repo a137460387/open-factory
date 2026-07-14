@@ -61,10 +61,12 @@ export const DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS: PostExportQualityAs
   blackFrameDurationSeconds: 0.5,
   silenceThresholdDb: -50,
   silenceDurationSeconds: 2,
-  autoRetry: false
+  autoRetry: false,
 };
 
-export function normalizePostExportQualityAssuranceSettings(settings: Partial<PostExportQualityAssuranceSettings> | undefined): PostExportQualityAssuranceSettings {
+export function normalizePostExportQualityAssuranceSettings(
+  settings: Partial<PostExportQualityAssuranceSettings> | undefined,
+): PostExportQualityAssuranceSettings {
   return {
     enabled: settings?.enabled === true,
     duration: settings?.duration === true,
@@ -74,38 +76,72 @@ export function normalizePostExportQualityAssuranceSettings(settings: Partial<Po
     resolution: settings?.resolution === true,
     minFileSizeBytes: normalizeOptionalBytes(settings?.minFileSizeBytes),
     maxFileSizeBytes: normalizeOptionalBytes(settings?.maxFileSizeBytes),
-    blackFrameDurationSeconds: normalizePositiveNumber(settings?.blackFrameDurationSeconds, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds),
-    silenceThresholdDb: normalizeFiniteNumber(settings?.silenceThresholdDb, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb),
-    silenceDurationSeconds: normalizePositiveNumber(settings?.silenceDurationSeconds, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds),
-    autoRetry: settings?.autoRetry === true
+    blackFrameDurationSeconds: normalizePositiveNumber(
+      settings?.blackFrameDurationSeconds,
+      DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds,
+    ),
+    silenceThresholdDb: normalizeFiniteNumber(
+      settings?.silenceThresholdDb,
+      DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb,
+    ),
+    silenceDurationSeconds: normalizePositiveNumber(
+      settings?.silenceDurationSeconds,
+      DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds,
+    ),
+    autoRetry: settings?.autoRetry === true,
   };
 }
 
 export function hasEnabledPostExportQualityChecks(settings: PostExportQualityAssuranceSettings): boolean {
-  return settings.enabled && (settings.duration || settings.blackFrames || settings.silence || settings.fileSize || settings.resolution);
+  return (
+    settings.enabled &&
+    (settings.duration || settings.blackFrames || settings.silence || settings.fileSize || settings.resolution)
+  );
 }
 
-export function buildPostExportBlackDetectArgs(outputPath: string, minDurationSeconds = DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds): string[] {
-  return ['-hide_banner', '-i', outputPath, '-vf', `blackdetect=d=${formatNumber(minDurationSeconds)}`, '-an', '-f', 'null', '-'];
+export function buildPostExportBlackDetectArgs(
+  outputPath: string,
+  minDurationSeconds = DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds,
+): string[] {
+  return [
+    '-hide_banner',
+    '-i',
+    outputPath,
+    '-vf',
+    `blackdetect=d=${formatNumber(minDurationSeconds)}`,
+    '-an',
+    '-f',
+    'null',
+    '-',
+  ];
 }
 
 export function buildPostExportSilenceDetectArgs(
   outputPath: string,
   thresholdDb = DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb,
-  minDurationSeconds = DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds
+  minDurationSeconds = DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds,
 ): string[] {
-  return ['-hide_banner', '-i', outputPath, '-af', `silencedetect=n=${formatNumber(thresholdDb)}dB:d=${formatNumber(minDurationSeconds)}`, '-vn', '-f', 'null', '-'];
+  return [
+    '-hide_banner',
+    '-i',
+    outputPath,
+    '-af',
+    `silencedetect=n=${formatNumber(thresholdDb)}dB:d=${formatNumber(minDurationSeconds)}`,
+    '-vn',
+    '-f',
+    'null',
+    '-',
+  ];
 }
 
 export function parseBlackDetectOutput(text: string): DetectedMediaRange[] {
-  return text
-    .split(/\r?\n/)
-    .flatMap((line) => {
-      const start = parseNamedNumber(line, 'black_start');
-      const end = parseNamedNumber(line, 'black_end');
-      const duration = parseNamedNumber(line, 'black_duration') ?? (start !== undefined && end !== undefined ? end - start : undefined);
-      return start !== undefined && end !== undefined && duration !== undefined ? [{ start, end, duration }] : [];
-    });
+  return text.split(/\r?\n/).flatMap((line) => {
+    const start = parseNamedNumber(line, 'black_start');
+    const end = parseNamedNumber(line, 'black_end');
+    const duration =
+      parseNamedNumber(line, 'black_duration') ?? (start !== undefined && end !== undefined ? end - start : undefined);
+    return start !== undefined && end !== undefined && duration !== undefined ? [{ start, end, duration }] : [];
+  });
 }
 
 export function parseSilenceDetectOutput(text: string): DetectedMediaRange[] {
@@ -118,7 +154,8 @@ export function parseSilenceDetectOutput(text: string): DetectedMediaRange[] {
     }
     const end = parseNamedNumber(line, 'silence_end');
     if (end !== undefined) {
-      const duration = parseNamedNumber(line, 'silence_duration') ?? (currentStart !== undefined ? end - currentStart : 0);
+      const duration =
+        parseNamedNumber(line, 'silence_duration') ?? (currentStart !== undefined ? end - currentStart : 0);
       ranges.push({ start: currentStart ?? Math.max(0, end - duration), end, duration });
       currentStart = undefined;
     }
@@ -129,17 +166,33 @@ export function parseSilenceDetectOutput(text: string): DetectedMediaRange[] {
 export function buildPostExportQualityAssuranceResult(
   settings: PostExportQualityAssuranceSettings,
   measurements: PostExportQualityMeasurements,
-  completedAt = new Date().toISOString()
+  completedAt = new Date().toISOString(),
 ): PostExportQualityAssuranceResult {
   const checks: PostExportQualityCheckResult[] = [];
   if (settings.duration) {
     checks.push(checkDuration(measurements));
   }
   if (settings.blackFrames) {
-    checks.push(checkRanges('blackFrames', measurements.blackFrames ?? [], settings.blackFrameDurationSeconds, '检测到意外黑帧', '未检测到意外黑帧'));
+    checks.push(
+      checkRanges(
+        'blackFrames',
+        measurements.blackFrames ?? [],
+        settings.blackFrameDurationSeconds,
+        '检测到意外黑帧',
+        '未检测到意外黑帧',
+      ),
+    );
   }
   if (settings.silence) {
-    checks.push(checkRanges('silence', measurements.silence ?? [], settings.silenceDurationSeconds, '检测到意外静音', '未检测到意外静音'));
+    checks.push(
+      checkRanges(
+        'silence',
+        measurements.silence ?? [],
+        settings.silenceDurationSeconds,
+        '检测到意外静音',
+        '未检测到意外静音',
+      ),
+    );
   }
   if (settings.fileSize) {
     checks.push(checkFileSize(settings, measurements.fileSizeBytes));
@@ -152,7 +205,7 @@ export function buildPostExportQualityAssuranceResult(
     status,
     checks,
     retryRecommended: status === 'fail' && settings.autoRetry,
-    completedAt
+    completedAt,
   };
 }
 
@@ -166,7 +219,11 @@ export function summarizePostExportQualityStatus(checks: PostExportQualityCheckR
   return 'pass';
 }
 
-export function shouldRetryPostExportQuality(result: Pick<PostExportQualityAssuranceResult, 'status'>, settings: Pick<PostExportQualityAssuranceSettings, 'autoRetry'>, retryAttempt: number): boolean {
+export function shouldRetryPostExportQuality(
+  result: Pick<PostExportQualityAssuranceResult, 'status'>,
+  settings: Pick<PostExportQualityAssuranceSettings, 'autoRetry'>,
+  retryAttempt: number,
+): boolean {
   return settings.autoRetry === true && retryAttempt < 1 && result.status === 'fail';
 }
 
@@ -189,15 +246,24 @@ function checkRanges(
   ranges: DetectedMediaRange[],
   minDuration: number,
   warningMessage: string,
-  passMessage: string
+  passMessage: string,
 ): PostExportQualityCheckResult {
   const unexpected = ranges.filter((range) => range.duration >= minDuration);
   return unexpected.length > 0
-    ? { id, status: 'warning', message: `${warningMessage} ${unexpected.length} 段`, actual: unexpected.length, ranges: unexpected }
+    ? {
+        id,
+        status: 'warning',
+        message: `${warningMessage} ${unexpected.length} 段`,
+        actual: unexpected.length,
+        ranges: unexpected,
+      }
     : { id, status: 'pass', message: passMessage, actual: 0, ranges: [] };
 }
 
-function checkFileSize(settings: PostExportQualityAssuranceSettings, actual: number | undefined): PostExportQualityCheckResult {
+function checkFileSize(
+  settings: PostExportQualityAssuranceSettings,
+  actual: number | undefined,
+): PostExportQualityCheckResult {
   if (!isFiniteNumber(actual)) {
     return { id: 'fileSize', status: 'warning', message: '无法读取导出文件大小' };
   }
@@ -214,7 +280,12 @@ function checkFileSize(settings: PostExportQualityAssuranceSettings, actual: num
 
 function checkResolution(measurements: PostExportQualityMeasurements): PostExportQualityCheckResult {
   const { expectedWidth, expectedHeight, actualWidth, actualHeight } = measurements;
-  if (!isFiniteNumber(expectedWidth) || !isFiniteNumber(expectedHeight) || !isFiniteNumber(actualWidth) || !isFiniteNumber(actualHeight)) {
+  if (
+    !isFiniteNumber(expectedWidth) ||
+    !isFiniteNumber(expectedHeight) ||
+    !isFiniteNumber(actualWidth) ||
+    !isFiniteNumber(actualHeight)
+  ) {
     return { id: 'resolution', status: 'fail', message: '无法读取导出分辨率' };
   }
   const expected = `${expectedWidth}x${expectedHeight}`;

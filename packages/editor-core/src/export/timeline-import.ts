@@ -26,7 +26,7 @@ import {
   type Track,
   type TrackType,
   type Transition,
-  type VideoClip
+  type VideoClip,
 } from '../model';
 import { normalizePath } from '../project/relative-paths';
 import { round } from '../time';
@@ -143,17 +143,28 @@ export function matchEdlEventsToMedia(events: Cmx3600EdlEvent[], media: MediaAss
   });
 }
 
-export function buildCmx3600EdlImport(project: Project, contents: string, options: Cmx3600EdlImportOptions = {}): Cmx3600EdlImportResult {
+export function buildCmx3600EdlImport(
+  project: Project,
+  contents: string,
+  options: Cmx3600EdlImportOptions = {},
+): Cmx3600EdlImportResult {
   const fps = normalizeFps(options.fps ?? project.settings.fps);
   const parsed = parseCmx3600Edl(contents, fps);
   const events = parsed.events
     .filter((event) => event.recordEnd > event.recordStart && event.sourceEnd >= event.sourceStart)
-    .sort((left, right) => left.recordStart - right.recordStart || left.trackType.localeCompare(right.trackType) || left.id.localeCompare(right.id));
+    .sort(
+      (left, right) =>
+        left.recordStart - right.recordStart ||
+        left.trackType.localeCompare(right.trackType) ||
+        left.id.localeCompare(right.id),
+    );
   const matches = matchEdlEventsToMedia(events, project.media);
   const usedIds = new Set<string>([
     ...project.media.map((asset) => asset.id),
     ...getProjectSequences(project).map((sequence) => sequence.id),
-    ...getProjectSequences(project).flatMap((sequence) => sequence.timeline.tracks.flatMap((track) => [track.id, ...track.clips.map((clip) => clip.id)]))
+    ...getProjectSequences(project).flatMap((sequence) =>
+      sequence.timeline.tracks.flatMap((track) => [track.id, ...track.clips.map((clip) => clip.id)]),
+    ),
   ]);
   const missingMediaByKey = new Map<string, MediaAsset>();
   const importedMedia: MediaAsset[] = [];
@@ -172,13 +183,13 @@ export function buildCmx3600EdlImport(project: Project, contents: string, option
   const timeline: Timeline = {
     tracks,
     transitions: buildImportedTransitions(clipInputs, fps),
-    markers: []
+    markers: [],
   };
   const title = normalizeImportTitle(options.sequenceName ?? parsed.title);
   const sequence = createSequence({
     id: uniqueId(`sequence-edl-${slug(title)}`, usedIds),
     name: title,
-    timeline
+    timeline,
   });
   return {
     title,
@@ -186,7 +197,7 @@ export function buildCmx3600EdlImport(project: Project, contents: string, option
     media: importedMedia,
     matches,
     matchedCount: matches.filter((match) => match.kind !== 'missing').length,
-    missingCount: matches.filter((match) => match.kind === 'missing').length
+    missingCount: matches.filter((match) => match.kind === 'missing').length,
   };
 }
 
@@ -194,14 +205,17 @@ export function applyCmx3600EdlImport(project: Project, result: Cmx3600EdlImport
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const existingMediaIds = new Set(synced.media.map((asset) => asset.id));
   const media = [...synced.media, ...result.media.filter((asset) => !existingMediaIds.has(asset.id))];
-  const sequences = [...getProjectSequences(synced).filter((sequence) => sequence.id !== result.sequence.id), result.sequence];
+  const sequences = [
+    ...getProjectSequences(synced).filter((sequence) => sequence.id !== result.sequence.id),
+    result.sequence,
+  ];
   return {
     ...synced,
     media,
     sequences,
     timeline: result.sequence.timeline,
     activeSequenceId: result.sequence.id,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -233,7 +247,7 @@ function parseEdlEventLine(line: string, fps: number, index: number): Cmx3600Edl
     sourceEnd: timecodeToSeconds(timecodes[1], fps),
     recordStart: timecodeToSeconds(timecodes[2], fps),
     recordEnd: timecodeToSeconds(timecodes[3], fps),
-    comments: []
+    comments: [],
   };
 }
 
@@ -249,7 +263,10 @@ function normalizeTransition(value: string): EdlTransitionType {
 }
 
 function timecodeToSeconds(value: string, fps: number): number {
-  const [hours, minutes, seconds, frames] = value.replace(';', ':').split(':').map((part) => Number(part));
+  const [hours, minutes, seconds, frames] = value
+    .replace(';', ':')
+    .split(':')
+    .map((part) => Number(part));
   return round(hours * 3600 + minutes * 60 + seconds + frames / fps);
 }
 
@@ -319,7 +336,13 @@ function tokenOverlapScore(left: string, right: string): number {
 }
 
 function eventCandidateNames(event: Cmx3600EdlEvent): string[] {
-  return uniqueStrings([event.clipName, event.sourceFile ? basename(event.sourceFile) : undefined, event.reel, stripExtension(event.clipName), event.sourceFile ? stripExtension(basename(event.sourceFile)) : undefined]);
+  return uniqueStrings([
+    event.clipName,
+    event.sourceFile ? basename(event.sourceFile) : undefined,
+    event.reel,
+    stripExtension(event.clipName),
+    event.sourceFile ? stripExtension(basename(event.sourceFile)) : undefined,
+  ]);
 }
 
 function assetCandidateNames(asset: MediaAsset): string[] {
@@ -354,7 +377,7 @@ function getOrCreateMissingMedia(
   event: Cmx3600EdlEvent,
   project: Project,
   usedIds: Set<string>,
-  missingMediaByKey: Map<string, MediaAsset>
+  missingMediaByKey: Map<string, MediaAsset>,
 ): MediaAsset {
   const key = normalizeSearchName(event.clipName ?? event.sourceFile ?? event.reel);
   const existing = missingMediaByKey.get(key);
@@ -362,7 +385,14 @@ function getOrCreateMissingMedia(
     return existing;
   }
   const name = event.clipName ?? (event.sourceFile ? basename(event.sourceFile) : event.reel);
-  const duration = round(Math.max(event.sourceEnd, event.sourceEnd - event.sourceStart, event.recordEnd - event.recordStart, 1 / normalizeFps(project.settings.fps)));
+  const duration = round(
+    Math.max(
+      event.sourceEnd,
+      event.sourceEnd - event.sourceStart,
+      event.recordEnd - event.recordStart,
+      1 / normalizeFps(project.settings.fps),
+    ),
+  );
   const asset: MediaAsset = {
     id: uniqueId(`media-edl-${slug(name)}`, usedIds),
     type: event.trackType === 'audio' ? 'audio' : 'video',
@@ -372,7 +402,7 @@ function getOrCreateMissingMedia(
     width: event.trackType === 'video' ? project.settings.width : 0,
     height: event.trackType === 'video' ? project.settings.height : 0,
     missing: true,
-    hasAudio: event.trackType === 'audio'
+    hasAudio: event.trackType === 'audio',
   };
   missingMediaByKey.set(key, asset);
   return asset;
@@ -401,7 +431,7 @@ function createClipForImportedEvent(event: Cmx3600EdlEvent, asset: MediaAsset, u
     masks: [],
     motionTrack: undefined,
     keyframes: undefined,
-    effects: undefined
+    effects: undefined,
   };
   if (event.trackType === 'video' && asset.type === 'image') {
     return { ...base, type: 'image', trackId: 'track-edl-video' } satisfies ImageClip;
@@ -414,7 +444,7 @@ function createClipForImportedEvent(event: Cmx3600EdlEvent, asset: MediaAsset, u
     fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
   };
   if (event.trackType === 'audio') {
     return { ...base, ...audioDefaults, type: 'audio', trackId: 'track-edl-audio' } satisfies AudioClip;
@@ -434,14 +464,16 @@ function buildImportedTracks(inputs: Array<{ event: Cmx3600EdlEvent; clip: Clip 
   return [
     createTrack({ id: 'track-edl-video', type: 'video', name: 'EDL Video', clips: videoClips }),
     createTrack({ id: 'track-edl-audio', type: 'audio', name: 'EDL Audio', clips: audioClips }),
-    createTrack({ id: 'track-edl-text', type: 'text', name: 'EDL Text', clips: [] })
+    createTrack({ id: 'track-edl-text', type: 'text', name: 'EDL Text', clips: [] }),
   ];
 }
 
 function buildImportedTransitions(inputs: Array<{ event: Cmx3600EdlEvent; clip: Clip }>, fps: number): Transition[] {
   const transitions: Transition[] = [];
   for (const trackType of ['video', 'audio'] as const) {
-    const items = inputs.filter((input) => input.event.trackType === trackType).sort((left, right) => sortClips(left.clip, right.clip));
+    const items = inputs
+      .filter((input) => input.event.trackType === trackType)
+      .sort((left, right) => sortClips(left.clip, right.clip));
     for (let index = 1; index < items.length; index += 1) {
       const current = items[index];
       const previous = items[index - 1];
@@ -459,7 +491,7 @@ function buildImportedTransitions(inputs: Array<{ event: Cmx3600EdlEvent; clip: 
         type: 'dissolve',
         duration,
         fromClipId: previous.clip.id,
-        toClipId: current.clip.id
+        toClipId: current.clip.id,
       });
     }
   }

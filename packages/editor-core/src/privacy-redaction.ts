@@ -26,7 +26,7 @@ const SMOOTHING_WINDOW = 3;
 
 export function computeIOU(
   a: { x: number; y: number; w: number; h: number },
-  b: { x: number; y: number; w: number; h: number }
+  b: { x: number; y: number; w: number; h: number },
 ): number {
   const ax1 = a.x;
   const ay1 = a.y;
@@ -49,9 +49,7 @@ export function computeIOU(
 }
 
 export function matchRegionsAcrossFrames(frames: PrivacyDetectionFrame[]): MatchedRegion[] {
-  const sorted = [...frames]
-    .filter((f) => Number.isFinite(f.time) && f.time >= 0)
-    .sort((a, b) => a.time - b.time);
+  const sorted = [...frames].filter((f) => Number.isFinite(f.time) && f.time >= 0).sort((a, b) => a.time - b.time);
   if (sorted.length === 0) return [];
 
   let nextTrackId = 0;
@@ -85,14 +83,17 @@ export function matchRegionsAcrossFrames(frames: PrivacyDetectionFrame[]): Match
       tracks.push({
         type: region.type,
         trackId: nextTrackId++,
-        frames: [{ time: frame.time, ...region.box }]
+        frames: [{ time: frame.time, ...region.box }],
       });
     }
   }
   return tracks;
 }
 
-export function smoothRedactionKeyframes(keyframes: RedactionKeyframe[], windowSize = SMOOTHING_WINDOW): RedactionKeyframe[] {
+export function smoothRedactionKeyframes(
+  keyframes: RedactionKeyframe[],
+  windowSize = SMOOTHING_WINDOW,
+): RedactionKeyframe[] {
   if (keyframes.length <= 1) return keyframes.map((k) => ({ ...k }));
   const sorted = [...keyframes].sort((a, b) => a.time - b.time);
   const half = Math.floor(windowSize / 2);
@@ -108,16 +109,21 @@ export function smoothRedactionKeyframes(keyframes: RedactionKeyframe[], windowS
   });
 }
 
-export function buildRedactionsFromDetection(response: PrivacyDetectionResponse, idPrefix?: string): ClipPrivacyRedaction[] {
+export function buildRedactionsFromDetection(
+  response: PrivacyDetectionResponse,
+  idPrefix?: string,
+): ClipPrivacyRedaction[] {
   const matched = matchRegionsAcrossFrames(response.frames);
   return matched.map((track) => {
-    const smoothed = smoothRedactionKeyframes(track.frames.map((f) => ({ time: f.time, x: f.x, y: f.y, w: f.w, h: f.h })));
+    const smoothed = smoothRedactionKeyframes(
+      track.frames.map((f) => ({ time: f.time, x: f.x, y: f.y, w: f.w, h: f.h })),
+    );
     return {
       id: createId(idPrefix ?? 'redaction'),
       type: track.type,
       keyframes: smoothed,
       blurStrength: 1,
-      enabled: true
+      enabled: true,
     };
   });
 }
@@ -139,7 +145,14 @@ export function parsePrivacyDetectionResponse(json: unknown): PrivacyDetectionRe
       const type = reg.type;
       if (type !== 'face' && type !== 'license_plate' && type !== 'screen') continue;
       const box = reg.box as Record<string, unknown> | undefined;
-      if (!box || typeof box.x !== 'number' || typeof box.y !== 'number' || typeof box.w !== 'number' || typeof box.h !== 'number') continue;
+      if (
+        !box ||
+        typeof box.x !== 'number' ||
+        typeof box.y !== 'number' ||
+        typeof box.w !== 'number' ||
+        typeof box.h !== 'number'
+      )
+        continue;
       regions.push({ type, box: { x: box.x, y: box.y, w: box.w, h: box.h } });
     }
     frames.push({ time: entry.time, regions });
@@ -151,7 +164,7 @@ export function buildPrivacyRedactionFFmpegExpressions(
   redactions: ClipPrivacyRedaction[],
   videoWidth: number,
   videoHeight: number,
-  filterType: 'delogo' | 'boxblur' = 'boxblur'
+  filterType: 'delogo' | 'boxblur' = 'boxblur',
 ): string[] {
   const enabled = redactions.filter((r) => r.enabled && r.keyframes.length > 0);
   if (enabled.length === 0) return [];
@@ -168,7 +181,7 @@ export function buildPrivacyRedactionFFmpegExpressions(
       const ph = Math.max(2, Math.round(kf.h * videoHeight));
       if (filterType === 'delogo') {
         filters.push(
-          `delogo=x=${px}:y=${py}:w=${pw}:h=${ph}:enable='between(t,${kf.time.toFixed(3)},${nextTime.toFixed(3)})'`
+          `delogo=x=${px}:y=${py}:w=${pw}:h=${ph}:enable='between(t,${kf.time.toFixed(3)},${nextTime.toFixed(3)})'`,
         );
       } else {
         const bx = Math.max(0, px - 2);
@@ -176,7 +189,7 @@ export function buildPrivacyRedactionFFmpegExpressions(
         const bw = Math.min(videoWidth - bx, pw + 4);
         const bh = Math.min(videoHeight - by, ph + 4);
         filters.push(
-          `boxblur=${Math.round(redaction.blurStrength * 10)}:enable='between(t,${kf.time.toFixed(3)},${nextTime.toFixed(3)})':x=${bx}:y=${by}:w=${bw}:h=${bh}`
+          `boxblur=${Math.round(redaction.blurStrength * 10)}:enable='between(t,${kf.time.toFixed(3)},${nextTime.toFixed(3)})':x=${bx}:y=${by}:w=${bw}:h=${bh}`,
         );
       }
     }
@@ -189,8 +202,11 @@ export function normalizePrivacyRedaction(input: Partial<ClipPrivacyRedaction>):
     id: typeof input.id === 'string' && input.id ? input.id : createId('redaction'),
     type: input.type === 'face' || input.type === 'license_plate' || input.type === 'screen' ? input.type : 'face',
     keyframes: normalizeRedactionKeyframes(input.keyframes),
-    blurStrength: typeof input.blurStrength === 'number' && Number.isFinite(input.blurStrength) ? Math.min(1, Math.max(0, input.blurStrength)) : 1,
-    enabled: input.enabled !== false
+    blurStrength:
+      typeof input.blurStrength === 'number' && Number.isFinite(input.blurStrength)
+        ? Math.min(1, Math.max(0, input.blurStrength))
+        : 1,
+    enabled: input.enabled !== false,
   };
 }
 
@@ -204,7 +220,7 @@ export function normalizeRedactionKeyframes(kfs: unknown): RedactionKeyframe[] {
       x: round(Math.min(1, Math.max(0, typeof k.x === 'number' ? k.x : 0))),
       y: round(Math.min(1, Math.max(0, typeof k.y === 'number' ? k.y : 0))),
       w: round(Math.min(1, Math.max(0.001, typeof k.w === 'number' ? k.w : 0.1))),
-      h: round(Math.min(1, Math.max(0.001, typeof k.h === 'number' ? k.h : 0.1)))
+      h: round(Math.min(1, Math.max(0.001, typeof k.h === 'number' ? k.h : 0.1))),
     }))
     .sort((a, b) => a.time - b.time);
 }

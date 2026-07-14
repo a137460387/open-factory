@@ -9,7 +9,7 @@ import {
   shouldShowTutorial,
   skipTutorialProgress,
   type TutorialProgressSettings,
-  type TutorialSignals
+  type TutorialSignals,
 } from './tutorialState';
 
 function progress(step: number): TutorialProgressSettings {
@@ -22,9 +22,21 @@ function signals(patch: Partial<TutorialSignals>): TutorialSignals {
 
 describe('tutorial state machine', () => {
   it('normalizes persisted tutorial progress boundaries', () => {
-    expect(normalizeTutorialProgressSettings({ tutorialStep: -4 })).toEqual({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
-    expect(normalizeTutorialProgressSettings({ tutorialStep: 99 })).toEqual({ tutorialStep: TUTORIAL_STEP_COUNT, tutorialSkipped: false, tutorialCompleted: true });
-    expect(normalizeTutorialProgressSettings({ tutorialStep: 2.6, tutorialSkipped: true })).toEqual({ tutorialStep: 3, tutorialSkipped: true, tutorialCompleted: false });
+    expect(normalizeTutorialProgressSettings({ tutorialStep: -4 })).toEqual({
+      tutorialStep: 0,
+      tutorialSkipped: false,
+      tutorialCompleted: false,
+    });
+    expect(normalizeTutorialProgressSettings({ tutorialStep: 99 })).toEqual({
+      tutorialStep: TUTORIAL_STEP_COUNT,
+      tutorialSkipped: false,
+      tutorialCompleted: true,
+    });
+    expect(normalizeTutorialProgressSettings({ tutorialStep: 2.6, tutorialSkipped: true })).toEqual({
+      tutorialStep: 3,
+      tutorialSkipped: true,
+      tutorialCompleted: false,
+    });
   });
 
   it('maps each tutorial step to its required completion signal', () => {
@@ -36,7 +48,7 @@ describe('tutorial state machine', () => {
       [4, { volumeAdjusted: true }],
       [5, { textAdded: true }],
       [6, { videoExported: true }],
-      [7, { projectSaved: true }]
+      [7, { projectSaved: true }],
     ];
 
     for (const [index, patch] of cases) {
@@ -58,7 +70,7 @@ describe('tutorial state machine', () => {
     expect(advanceTutorialProgress(progress(7), signals({ projectSaved: true }))).toEqual({
       tutorialStep: 8,
       tutorialSkipped: false,
-      tutorialCompleted: true
+      tutorialCompleted: true,
     });
   });
 

@@ -12,7 +12,7 @@ import {
   type Sequence,
   type Timeline,
   type Transition,
-  type TrackType
+  type TrackType,
 } from '../model';
 import { getClipSourceVisibleDuration, getTimelineDuration } from '../timeline';
 import { round } from '../time';
@@ -56,7 +56,7 @@ export function exportCmx3600Edl(project: Project): string {
   events.forEach((event, index) => {
     const edit = String(index + 1).padStart(3, '0');
     lines.push(
-      `${edit}  AX       V     C        ${secondsToTimecode(event.sourceStart, fps)} ${secondsToTimecode(event.sourceEnd, fps)} ${secondsToTimecode(event.recordStart, fps)} ${secondsToTimecode(event.recordEnd, fps)}`
+      `${edit}  AX       V     C        ${secondsToTimecode(event.sourceStart, fps)} ${secondsToTimecode(event.sourceEnd, fps)} ${secondsToTimecode(event.recordStart, fps)} ${secondsToTimecode(event.recordEnd, fps)}`,
     );
     lines.push(`* FROM CLIP NAME: ${sanitizeEdlText(event.name)}`);
     if (event.sourcePath) {
@@ -93,7 +93,7 @@ export function exportFinalCutXml(project: Project, options: TimelineExportOptio
       const transition = next ? transitionByPair.get(`${event.clipId}->${next.clipId}`) : undefined;
       return [
         clipItemXml(event, index, fps, 10),
-        ...(transition ? [transitionItemXml(transition, index, event, fps, 10)] : [])
+        ...(transition ? [transitionItemXml(transition, index, event, fps, 10)] : []),
       ];
     }),
     '        </track>',
@@ -106,13 +106,17 @@ export function exportFinalCutXml(project: Project, options: TimelineExportOptio
     '    </media>',
     '  </sequence>',
     '</xmeml>',
-    ''
+    '',
   ]
     .filter(Boolean)
     .join('\n');
 }
 
-export function exportProfessionalNle(project: Project, format: ProfessionalNleExportFormat, options: ProfessionalNleExportOptions = {}): string {
+export function exportProfessionalNle(
+  project: Project,
+  format: ProfessionalNleExportFormat,
+  options: ProfessionalNleExportOptions = {},
+): string {
   if (format === 'aaf') {
     return exportAaf(project, options);
   }
@@ -124,14 +128,16 @@ export function exportProfessionalNle(project: Project, format: ProfessionalNleE
 
 export function exportAaf(project: Project, options: ProfessionalNleExportOptions = {}): string {
   const fps = normalizeFps(project.settings.fps);
-  const events = flattenTimelineForExport(project, options).filter((event) => event.trackType === 'video' || event.trackType === 'audio');
+  const events = flattenTimelineForExport(project, options).filter(
+    (event) => event.trackType === 'video' || event.trackType === 'audio',
+  );
   const lines = [
     'AAF',
     `MasterMob: ${sanitizeAafText(project.name)}`,
     `MobRate: ${fps}`,
     `MediaMode: ${options.mediaMode ?? 'link'}`,
     `MobSlotCount: ${events.length}`,
-    ''
+    '',
   ];
   events.forEach((event, index) => {
     lines.push(
@@ -141,7 +147,7 @@ export function exportAaf(project: Project, options: ProfessionalNleExportOption
       `SourceMob ${sanitizeAafText(event.sourceName)}`,
       event.sourcePath ? `SourcePath ${sanitizeAafText(event.sourcePath)}` : 'SourcePath <generated>',
       `MasterMob ${sanitizeAafText(project.name)}`,
-      ''
+      '',
     );
   });
   return `${lines.join('\n').trimEnd()}\n`;
@@ -149,13 +155,15 @@ export function exportAaf(project: Project, options: ProfessionalNleExportOption
 
 export function exportOmf(project: Project, options: ProfessionalNleExportOptions = {}): string {
   const fps = normalizeFps(project.settings.fps);
-  const events = flattenTimelineForExport(project, options).filter((event) => event.trackType === 'video' || event.trackType === 'audio');
+  const events = flattenTimelineForExport(project, options).filter(
+    (event) => event.trackType === 'video' || event.trackType === 'audio',
+  );
   const lines = [
     'OMFI 2.0',
     `MasterMob: ${sanitizeAafText(project.name)}`,
     `MobRate: ${fps}`,
     `MediaMode: ${options.mediaMode ?? 'link'}`,
-    ''
+    '',
   ];
   events.forEach((event, index) => {
     lines.push(
@@ -163,7 +171,7 @@ export function exportOmf(project: Project, options: ProfessionalNleExportOption
       `SourceClip ${sanitizeAafText(event.name)}`,
       `MobSlotTimecode ${secondsToTimecode(event.recordStart, fps)} -> ${secondsToTimecode(event.recordEnd, fps)}`,
       event.sourcePath ? `SourcePath ${sanitizeAafText(event.sourcePath)}` : 'SourcePath <generated>',
-      ''
+      '',
     );
   });
   return `${lines.join('\n').trimEnd()}\n`;
@@ -178,10 +186,15 @@ export function flattenTimelineForExport(project: Project, options: TimelineExpo
     sequences,
     mediaById,
     new Set([sequences.find((sequence) => sequence.timeline === primary)?.id ?? 'sequence-main']),
-    options.mediaPathMap
+    options.mediaPathMap,
   )
     .filter((event) => event.recordEnd > event.recordStart)
-    .sort((left, right) => left.recordStart - right.recordStart || left.trackType.localeCompare(right.trackType) || left.name.localeCompare(right.name));
+    .sort(
+      (left, right) =>
+        left.recordStart - right.recordStart ||
+        left.trackType.localeCompare(right.trackType) ||
+        left.name.localeCompare(right.name),
+    );
 }
 
 function collectTimelineEvents(
@@ -189,7 +202,7 @@ function collectTimelineEvents(
   sequences: Sequence[],
   mediaById: Map<string, MediaAsset>,
   visited: Set<string>,
-  mediaPathMap?: Record<string, string> | Map<string, string>
+  mediaPathMap?: Record<string, string> | Map<string, string>,
 ): TimelineExportEvent[] {
   const events: TimelineExportEvent[] = [];
   for (const track of timeline.tracks) {
@@ -205,12 +218,22 @@ function collectTimelineEvents(
         if (!sequence) {
           continue;
         }
-        const nestedEvents = collectTimelineEvents(sequence.timeline, sequences, mediaById, new Set([...visited, clip.sequenceId]), mediaPathMap);
+        const nestedEvents = collectTimelineEvents(
+          sequence.timeline,
+          sequences,
+          mediaById,
+          new Set([...visited, clip.sequenceId]),
+          mediaPathMap,
+        );
         events.push(...mapNestedEvents(clip, nestedEvents));
         continue;
       }
       const media = 'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined;
-      if ((track.type === 'video' && (clip.type === 'video' || clip.type === 'image' || clip.type === 'motion-graphic')) || (track.type === 'audio' && clip.type === 'audio')) {
+      if (
+        (track.type === 'video' &&
+          (clip.type === 'video' || clip.type === 'image' || clip.type === 'motion-graphic')) ||
+        (track.type === 'audio' && clip.type === 'audio')
+      ) {
         events.push(clipToEvent(clip, track.type, media, mediaPathMap));
       }
     }
@@ -218,7 +241,10 @@ function collectTimelineEvents(
   return events;
 }
 
-function mapNestedEvents(clip: Extract<Clip, { type: 'nested-sequence' }>, nestedEvents: TimelineExportEvent[]): TimelineExportEvent[] {
+function mapNestedEvents(
+  clip: Extract<Clip, { type: 'nested-sequence' }>,
+  nestedEvents: TimelineExportEvent[],
+): TimelineExportEvent[] {
   const visibleStart = clip.trimStart;
   const visibleEnd = clip.trimStart + clip.duration;
   return nestedEvents.flatMap((event) => {
@@ -235,8 +261,8 @@ function mapNestedEvents(clip: Extract<Clip, { type: 'nested-sequence' }>, neste
         recordStart: round(clip.start + nestedStart - visibleStart),
         recordEnd: round(clip.start + nestedEnd - visibleStart),
         sourceStart: round(event.sourceStart + startOffset),
-        sourceEnd: round(event.sourceStart + startOffset + (nestedEnd - nestedStart))
-      }
+        sourceEnd: round(event.sourceStart + startOffset + (nestedEnd - nestedStart)),
+      },
     ];
   });
 }
@@ -245,10 +271,13 @@ function clipToEvent(
   clip: Clip,
   trackType: TrackType,
   media?: MediaAsset,
-  mediaPathMap?: Record<string, string> | Map<string, string>
+  mediaPathMap?: Record<string, string> | Map<string, string>,
 ): TimelineExportEvent {
   const sourceStart = clip.type === 'image' || clip.type === 'motion-graphic' ? 0 : clip.trimStart;
-  const sourceEnd = clip.type === 'image' || clip.type === 'motion-graphic' ? clip.duration : clip.trimStart + Math.min(getClipSourceVisibleDuration(clip), clip.duration);
+  const sourceEnd =
+    clip.type === 'image' || clip.type === 'motion-graphic'
+      ? clip.duration
+      : clip.trimStart + Math.min(getClipSourceVisibleDuration(clip), clip.duration);
   return {
     id: clip.id,
     clipId: clip.id,
@@ -261,7 +290,7 @@ function clipToEvent(
     recordStart: clip.start,
     recordEnd: round(clip.start + clip.duration),
     sourceStart: round(sourceStart),
-    sourceEnd: round(sourceEnd)
+    sourceEnd: round(sourceEnd),
   };
 }
 
@@ -285,13 +314,19 @@ function clipItemXml(event: TimelineExportEvent, index: number, fps: number, ind
     event.sourcePath ? `${pad}    <pathurl>${escapeXml(pathToFileUrl(event.sourcePath))}</pathurl>` : '',
     `${pad}  </file>`,
     ...buildColorCorrectionXml(event.colorCorrection, indent + 2),
-    `${pad}</clipitem>`
+    `${pad}</clipitem>`,
   ]
     .filter(Boolean)
     .join('\n');
 }
 
-function transitionItemXml(transition: Transition, index: number, event: TimelineExportEvent, fps: number, indent: number): string {
+function transitionItemXml(
+  transition: Transition,
+  index: number,
+  event: TimelineExportEvent,
+  fps: number,
+  indent: number,
+): string {
   const pad = ' '.repeat(indent);
   const durationFrames = secondsToFrames(normalizeTransitionDuration(transition.duration), fps);
   const start = secondsToFrames(Math.max(0, event.recordEnd - transition.duration), fps);
@@ -306,7 +341,7 @@ function transitionItemXml(transition: Transition, index: number, event: Timelin
     `${pad}    <name>${escapeXml(name)}</name>`,
     `${pad}    <effectid>${escapeXml(normalizeTransitionType(transition.type))}</effectid>`,
     `${pad}  </effect>`,
-    `${pad}</transitionitem>`
+    `${pad}</transitionitem>`,
   ].join('\n');
 }
 
@@ -323,10 +358,12 @@ function buildColorCorrectionXml(colorCorrection: ColorCorrection, indent: numbe
     `${pad}    <parameter><name>Brightness</name><value>${formatXmlNumber(colorCorrection.brightness)}</value></parameter>`,
     `${pad}    <parameter><name>Contrast</name><value>${formatXmlNumber(colorCorrection.contrast)}</value></parameter>`,
     `${pad}    <parameter><name>Saturation</name><value>${formatXmlNumber(colorCorrection.saturation)}</value></parameter>`,
-    `${pad}    <parameter><name>Hue</name><value>${formatXmlNumber(colorCorrection.hue)}</value></parameter>`
+    `${pad}    <parameter><name>Hue</name><value>${formatXmlNumber(colorCorrection.hue)}</value></parameter>`,
   ];
   if (colorCorrection.lutPath) {
-    lines.push(`${pad}    <parameter><name>LUT Path</name><value>${escapeXml(colorCorrection.lutPath)}</value></parameter>`);
+    lines.push(
+      `${pad}    <parameter><name>LUT Path</name><value>${escapeXml(colorCorrection.lutPath)}</value></parameter>`,
+    );
   }
   if (!isDefaultColorCurves(colorCorrection.colorCurves)) {
     lines.push(`${pad}    <parameter><name>Color Curves</name><value>present</value></parameter>`);
@@ -340,7 +377,9 @@ function buildColorCorrectionXml(colorCorrection: ColorCorrection, indent: numbe
 
 function rateXml(fps: number, indent: number): string {
   const pad = ' '.repeat(indent);
-  return [`<rate>`, `${pad}  <timebase>${fps}</timebase>`, `${pad}  <ntsc>FALSE</ntsc>`, `${pad}</rate>`].join(`\n${pad}`);
+  return [`<rate>`, `${pad}  <timebase>${fps}</timebase>`, `${pad}  <ntsc>FALSE</ntsc>`, `${pad}</rate>`].join(
+    `\n${pad}`,
+  );
 }
 
 function secondsToFrames(seconds: number, fps: number): number {
@@ -370,14 +409,22 @@ function sanitizeAafText(value: string): string {
 }
 
 function escapeXml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 function formatXmlNumber(value: number): string {
   return round(value).toString();
 }
 
-function resolveMediaPath(path: string | undefined, mediaPathMap?: Record<string, string> | Map<string, string>): string | undefined {
+function resolveMediaPath(
+  path: string | undefined,
+  mediaPathMap?: Record<string, string> | Map<string, string>,
+): string | undefined {
   if (!path || !mediaPathMap) {
     return path;
   }

@@ -6,7 +6,7 @@ import {
   secondsToTimecode,
   type Project,
   type SmartRecommendationReasonCode,
-  type SmartSegmentRecommendation
+  type SmartSegmentRecommendation,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 
@@ -18,7 +18,11 @@ interface SmartRecommendationsDialogProps {
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 
-export default function SmartRecommendationsDialog({ project, onAddToTimeline, onClose }: SmartRecommendationsDialogProps) {
+export default function SmartRecommendationsDialog({
+  project,
+  onAddToTimeline,
+  onClose,
+}: SmartRecommendationsDialogProps) {
   const t = zhCN.smartRecommendations;
   const context = useMemo(() => buildSmartTimelineContext(project), [project]);
   const recommendations = useMemo(() => buildSmartSegmentRecommendations(project), [project]);
@@ -30,7 +34,10 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="smart-recommendations-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="smart-recommendations-dialog"
+    >
       <section className="grid max-h-[88vh] w-full max-w-5xl grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
@@ -52,9 +59,17 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
           </button>
         </header>
 
-        <div className="grid gap-2 border-b border-line bg-panel px-4 py-3 text-xs text-slate-600 sm:grid-cols-4" data-testid="smart-recommendations-context">
+        <div
+          className="grid gap-2 border-b border-line bg-panel px-4 py-3 text-xs text-slate-600 sm:grid-cols-4"
+          data-testid="smart-recommendations-context"
+        >
           <SummaryCell label={t.gaps} value={String(context.gaps.length)} />
-          <SummaryCell label={t.usedTypes} value={context.usedTypes.length > 0 ? context.usedTypes.map((type) => t.assetTypes[type]).join(' / ') : t.none} />
+          <SummaryCell
+            label={t.usedTypes}
+            value={
+              context.usedTypes.length > 0 ? context.usedTypes.map((type) => t.assetTypes[type]).join(' / ') : t.none
+            }
+          />
           <SummaryCell label={t.rhythm} value={t.cutsPerMinute(context.rhythmCutsPerMinute)} />
           <SummaryCell label={t.averageClipDuration} value={t.seconds(context.averageClipDuration)} />
         </div>
@@ -62,7 +77,10 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
         <div className="grid min-h-0 gap-px bg-line md:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-h-0 overflow-auto bg-white p-4">
             {recommendations.length === 0 ? (
-              <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500" data-testid="smart-recommendations-empty">
+              <div
+                className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500"
+                data-testid="smart-recommendations-empty"
+              >
                 {t.empty}
               </div>
             ) : (
@@ -85,18 +103,25 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
                     <div className="grid gap-2 p-3">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold text-ink">{recommendation.assetName}</div>
-                        <div className="text-xs text-slate-500">{t.assetSummary(t.assetTypes[recommendation.assetType], recommendation.duration)}</div>
+                        <div className="text-xs text-slate-500">
+                          {t.assetSummary(t.assetTypes[recommendation.assetType], recommendation.duration)}
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {recommendation.reasons.map((reason) => (
-                          <span key={reason.code} className="rounded bg-panel px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
+                          <span
+                            key={reason.code}
+                            className="rounded bg-panel px-1.5 py-0.5 text-[11px] font-medium text-slate-600"
+                          >
                             {reasonLabel(reason.code)}
                           </span>
                         ))}
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500">{t.score}</span>
-                        <span className="font-semibold tabular-nums text-ink">{Math.round(recommendation.score * 100)}%</span>
+                        <span className="font-semibold tabular-nums text-ink">
+                          {Math.round(recommendation.score * 100)}%
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -111,10 +136,18 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
                 <RecommendationPreview recommendation={selected} large />
                 <div>
                   <h3 className="text-sm font-semibold text-ink">{selected.assetName}</h3>
-                  <p className="mt-1 text-xs text-slate-500">{t.matchSummary(Math.round(selected.colorSimilarity * 100), Math.round(selected.durationScore * 100))}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {t.matchSummary(
+                      Math.round(selected.colorSimilarity * 100),
+                      Math.round(selected.durationScore * 100),
+                    )}
+                  </p>
                 </div>
                 {selected.gap ? (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" data-testid="smart-recommendation-gap">
+                  <div
+                    className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+                    data-testid="smart-recommendation-gap"
+                  >
                     <div className="font-semibold">{t.gapTitle}</div>
                     <div className="mt-1">{formatGap(selected, project)}</div>
                   </div>
@@ -130,7 +163,9 @@ export default function SmartRecommendationsDialog({ project, onAddToTimeline, o
                 </button>
               </div>
             ) : (
-              <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500">{t.noPreview}</div>
+              <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500">
+                {t.noPreview}
+              </div>
             )}
           </aside>
         </div>
@@ -152,8 +187,16 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RecommendationPreview({ recommendation, large = false }: { recommendation: SmartSegmentRecommendation; large?: boolean }) {
-  const className = large ? 'aspect-video w-full overflow-hidden rounded-md border border-line bg-slate-100' : 'aspect-video w-full overflow-hidden bg-slate-100';
+function RecommendationPreview({
+  recommendation,
+  large = false,
+}: {
+  recommendation: SmartSegmentRecommendation;
+  large?: boolean;
+}) {
+  const className = large
+    ? 'aspect-video w-full overflow-hidden rounded-md border border-line bg-slate-100'
+    : 'aspect-video w-full overflow-hidden bg-slate-100';
   if (recommendation.thumbnail) {
     return <img className={`${className} object-cover`} src={recommendation.thumbnail} alt="" loading="lazy" />;
   }

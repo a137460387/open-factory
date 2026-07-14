@@ -1,8 +1,7 @@
 export type BuiltinAudioVisualizationThemeId = 'neon-cyberpunk' | 'minimal-white' | 'retro-vu' | 'nature' | 'flame';
 
 export type AudioVisualizationThemeBackground =
-  | { type: 'solid'; color: string }
-  | { type: 'gradient'; color: string; color2: string };
+  { type: 'solid'; color: string } | { type: 'gradient'; color: string; color2: string };
 
 export interface AudioVisualizationThemeDefinition {
   id: string;
@@ -62,7 +61,7 @@ export const BUILTIN_AUDIO_VISUALIZATION_THEMES: readonly AudioVisualizationThem
     particleColor: '#67e8f9',
     border: true,
     borderColor: '#38bdf8',
-    borderWidth: 2
+    borderWidth: 2,
   },
   {
     id: 'minimal-white',
@@ -77,7 +76,7 @@ export const BUILTIN_AUDIO_VISUALIZATION_THEMES: readonly AudioVisualizationThem
     particleColor: '#ffffff',
     border: true,
     borderColor: '#ffffff',
-    borderWidth: 1
+    borderWidth: 1,
   },
   {
     id: 'retro-vu',
@@ -92,7 +91,7 @@ export const BUILTIN_AUDIO_VISUALIZATION_THEMES: readonly AudioVisualizationThem
     particleColor: '#facc15',
     border: true,
     borderColor: '#7ddc63',
-    borderWidth: 3
+    borderWidth: 3,
   },
   {
     id: 'nature',
@@ -107,7 +106,7 @@ export const BUILTIN_AUDIO_VISUALIZATION_THEMES: readonly AudioVisualizationThem
     particleColor: '#bbf7d0',
     border: false,
     borderColor: '#86efac',
-    borderWidth: 1
+    borderWidth: 1,
   },
   {
     id: 'flame',
@@ -122,24 +121,30 @@ export const BUILTIN_AUDIO_VISUALIZATION_THEMES: readonly AudioVisualizationThem
     particleColor: '#fed7aa',
     border: true,
     borderColor: '#fdba74',
-    borderWidth: 2
-  }
+    borderWidth: 2,
+  },
 ];
 
-export const BUILTIN_AUDIO_VISUALIZATION_THEME_IDS = BUILTIN_AUDIO_VISUALIZATION_THEMES.map((theme) => theme.id) as BuiltinAudioVisualizationThemeId[];
+export const BUILTIN_AUDIO_VISUALIZATION_THEME_IDS = BUILTIN_AUDIO_VISUALIZATION_THEMES.map(
+  (theme) => theme.id,
+) as BuiltinAudioVisualizationThemeId[];
 
-export function isBuiltinAudioVisualizationThemeId(value: string | undefined): value is BuiltinAudioVisualizationThemeId {
+export function isBuiltinAudioVisualizationThemeId(
+  value: string | undefined,
+): value is BuiltinAudioVisualizationThemeId {
   return BUILTIN_AUDIO_VISUALIZATION_THEME_IDS.includes(value as BuiltinAudioVisualizationThemeId);
 }
 
-export function getBuiltinAudioVisualizationTheme(id: string | undefined): AudioVisualizationThemeDefinition | undefined {
+export function getBuiltinAudioVisualizationTheme(
+  id: string | undefined,
+): AudioVisualizationThemeDefinition | undefined {
   return BUILTIN_AUDIO_VISUALIZATION_THEMES.find((theme) => theme.id === id);
 }
 
 export function resolveAudioVisualizationTheme(
   themeId: string | undefined,
   customThemes: readonly AudioVisualizationThemeDefinition[] = [],
-  inlineTheme?: Partial<AudioVisualizationThemeDefinition>
+  inlineTheme?: Partial<AudioVisualizationThemeDefinition>,
 ): AudioVisualizationThemeDefinition | undefined {
   if (inlineTheme) {
     return normalizeAudioVisualizationTheme(inlineTheme);
@@ -152,7 +157,7 @@ export function resolveAudioVisualizationTheme(
 
 export function expandAudioVisualizationTheme(
   source: AudioVisualizationThemeSource = {},
-  customThemes: readonly AudioVisualizationThemeDefinition[] = []
+  customThemes: readonly AudioVisualizationThemeDefinition[] = [],
 ): ExpandedAudioVisualizationTheme {
   const resolved = resolveAudioVisualizationTheme(source.themeId, customThemes, source.theme);
   const manualColorStart = normalizeHexColor(source.colorStart ?? source.color, '#22d3ee');
@@ -162,7 +167,8 @@ export function expandAudioVisualizationTheme(
     themeId: resolved?.id ?? source.themeId ?? MANUAL_AUDIO_VISUALIZATION_THEME_ID,
     colorStart,
     colorEnd,
-    background: resolved?.background ?? normalizeThemeBackground(source.background, { type: 'solid', color: '#050816' }),
+    background:
+      resolved?.background ?? normalizeThemeBackground(source.background, { type: 'solid', color: '#050816' }),
     glow: resolved?.glow ?? false,
     glowColor: resolved?.glowColor ?? colorStart,
     glowStrength: resolved?.glowStrength ?? 0,
@@ -170,11 +176,13 @@ export function expandAudioVisualizationTheme(
     particleColor: resolved?.particleColor ?? colorEnd,
     border: resolved?.border ?? false,
     borderColor: resolved?.borderColor ?? colorStart,
-    borderWidth: resolved?.borderWidth ?? 1
+    borderWidth: resolved?.borderWidth ?? 1,
   };
 }
 
-export function normalizeAudioVisualizationTheme(input: Partial<AudioVisualizationThemeDefinition> | undefined): AudioVisualizationThemeDefinition {
+export function normalizeAudioVisualizationTheme(
+  input: Partial<AudioVisualizationThemeDefinition> | undefined,
+): AudioVisualizationThemeDefinition {
   const fallback = BUILTIN_AUDIO_VISUALIZATION_THEMES[0];
   const colorStart = normalizeHexColor(input?.colorStart, fallback.colorStart);
   const colorEnd = normalizeHexColor(input?.colorEnd, colorStart);
@@ -191,7 +199,7 @@ export function normalizeAudioVisualizationTheme(input: Partial<AudioVisualizati
     particleColor: normalizeHexColor(input?.particleColor, colorEnd),
     border: input?.border === true,
     borderColor: normalizeHexColor(input?.borderColor, colorStart),
-    borderWidth: normalizeInteger(input?.borderWidth, 1, 12, fallback.borderWidth)
+    borderWidth: normalizeInteger(input?.borderWidth, 1, 12, fallback.borderWidth),
   };
 }
 
@@ -205,7 +213,12 @@ export function normalizeCustomAudioVisualizationThemes(input: unknown): CustomA
       return [];
     }
     const normalized = normalizeAudioVisualizationTheme(item as Partial<AudioVisualizationThemeDefinition>);
-    if (!normalized.id || isBuiltinAudioVisualizationThemeId(normalized.id) || normalized.id === MANUAL_AUDIO_VISUALIZATION_THEME_ID || seen.has(normalized.id)) {
+    if (
+      !normalized.id ||
+      isBuiltinAudioVisualizationThemeId(normalized.id) ||
+      normalized.id === MANUAL_AUDIO_VISUALIZATION_THEME_ID ||
+      seen.has(normalized.id)
+    ) {
       return [];
     }
     seen.add(normalized.id);
@@ -215,31 +228,37 @@ export function normalizeCustomAudioVisualizationThemes(input: unknown): CustomA
 
 export function upsertCustomAudioVisualizationTheme(
   themes: readonly CustomAudioVisualizationTheme[],
-  theme: Partial<AudioVisualizationThemeDefinition>
+  theme: Partial<AudioVisualizationThemeDefinition>,
 ): CustomAudioVisualizationTheme[] {
   const normalized = normalizeAudioVisualizationTheme(theme);
-  const id = isBuiltinAudioVisualizationThemeId(normalized.id) || normalized.id === MANUAL_AUDIO_VISUALIZATION_THEME_ID ? `custom-${normalized.id}` : normalized.id;
+  const id =
+    isBuiltinAudioVisualizationThemeId(normalized.id) || normalized.id === MANUAL_AUDIO_VISUALIZATION_THEME_ID
+      ? `custom-${normalized.id}`
+      : normalized.id;
   const nextTheme = { ...normalized, id };
   const existing = normalizeCustomAudioVisualizationThemes(themes);
   const replaced = existing.some((item) => item.id === id);
   return replaced ? existing.map((item) => (item.id === id ? nextTheme : item)) : [...existing, nextTheme];
 }
 
-export function removeCustomAudioVisualizationTheme(themes: readonly CustomAudioVisualizationTheme[], id: string): CustomAudioVisualizationTheme[] {
+export function removeCustomAudioVisualizationTheme(
+  themes: readonly CustomAudioVisualizationTheme[],
+  id: string,
+): CustomAudioVisualizationTheme[] {
   const normalizedId = normalizeThemeId(id, '');
   return normalizeCustomAudioVisualizationThemes(themes).filter((theme) => theme.id !== normalizedId);
 }
 
 function normalizeThemeBackground(
   input: Partial<AudioVisualizationThemeBackground> | undefined,
-  fallback: AudioVisualizationThemeBackground
+  fallback: AudioVisualizationThemeBackground,
 ): AudioVisualizationThemeBackground {
   if (input?.type === 'gradient') {
     const color = normalizeHexColor(input.color, fallback.type === 'gradient' ? fallback.color : '#050816');
     return {
       type: 'gradient',
       color,
-      color2: normalizeHexColor(input.color2, fallback.type === 'gradient' ? fallback.color2 : color)
+      color2: normalizeHexColor(input.color2, fallback.type === 'gradient' ? fallback.color2 : color),
     };
   }
   if (input?.type === 'solid') {

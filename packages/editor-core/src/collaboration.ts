@@ -36,7 +36,16 @@ export interface CollaborationReconnectResult {
   hostUpdatedAt?: string;
 }
 
-export const COLLABORATION_USER_COLORS = ['#38bdf8', '#f59e0b', '#a78bfa', '#10b981', '#f43f5e', '#22c55e', '#6366f1', '#14b8a6'];
+export const COLLABORATION_USER_COLORS = [
+  '#38bdf8',
+  '#f59e0b',
+  '#a78bfa',
+  '#10b981',
+  '#f43f5e',
+  '#22c55e',
+  '#6366f1',
+  '#14b8a6',
+];
 
 export function rebaseCollaborationOperations(operations: CollaborationOperation[]): CollaborationOperation[] {
   const latestByClipId = new Map<string, CollaborationOperation>();
@@ -51,7 +60,7 @@ export function rebaseCollaborationOperations(operations: CollaborationOperation
         ? {
             ...operation,
             rebaseAfterOperationId: previous.id,
-            rebased: true
+            rebased: true,
           }
         : { ...operation, rebased: false };
       latestByClipId.set(operation.clipId, rebased);
@@ -59,29 +68,41 @@ export function rebaseCollaborationOperations(operations: CollaborationOperation
     });
 }
 
-export function canApplyCollaborationOperation(permission: CollaborationPermission, operation: Pick<CollaborationOperation, 'kind'>): boolean {
+export function canApplyCollaborationOperation(
+  permission: CollaborationPermission,
+  operation: Pick<CollaborationOperation, 'kind'>,
+): boolean {
   if (permission === 'edit') {
     return true;
   }
   return operation.kind === 'comment' || operation.kind === 'playhead';
 }
 
-export function applyCollaborationReconnectState(clientProject: Project, hostProject: Project): CollaborationReconnectResult {
+export function applyCollaborationReconnectState(
+  clientProject: Project,
+  hostProject: Project,
+): CollaborationReconnectResult {
   return {
     project: hostProject,
     overwritten: clientProject.id !== hostProject.id || clientProject.updatedAt !== hostProject.updatedAt,
-    hostUpdatedAt: hostProject.updatedAt
+    hostUpdatedAt: hostProject.updatedAt,
   };
 }
 
 export function assignCollaborationUserColors(users: CollaborationUserPresence[]): CollaborationUserPresence[] {
   return users.map((user, index) => ({
     ...user,
-    color: normalizeCollaborationColor(user.color) ?? COLLABORATION_USER_COLORS[index % COLLABORATION_USER_COLORS.length]
+    color:
+      normalizeCollaborationColor(user.color) ?? COLLABORATION_USER_COLORS[index % COLLABORATION_USER_COLORS.length],
   }));
 }
 
-export function buildCollaborationClipLocks(operations: CollaborationOperation[], users: CollaborationUserPresence[], ttlMs: number, nowMs: number): CollaborationClipLock[] {
+export function buildCollaborationClipLocks(
+  operations: CollaborationOperation[],
+  users: CollaborationUserPresence[],
+  ttlMs: number,
+  nowMs: number,
+): CollaborationClipLock[] {
   const userById = new Map(users.map((user) => [user.userId, user]));
   const locksByClipId = new Map<string, CollaborationClipLock>();
   for (const operation of operations) {
@@ -93,7 +114,7 @@ export function buildCollaborationClipLocks(operations: CollaborationOperation[]
       clipId: operation.clipId,
       userId: operation.userId,
       userName: user?.name ?? operation.userId,
-      updatedAt: operation.timestamp
+      updatedAt: operation.timestamp,
     });
   }
   return Array.from(locksByClipId.values()).sort((left, right) => left.clipId.localeCompare(right.clipId));
@@ -115,7 +136,7 @@ export function parseCollaborationOperation(value: string): CollaborationOperati
       commandName: parsed.commandName,
       params: parsed.params && typeof parsed.params === 'object' ? (parsed.params as Record<string, unknown>) : {},
       timestamp: parsed.timestamp,
-      kind: parsed.kind
+      kind: parsed.kind,
     };
     if (typeof parsed.clipId === 'string') {
       operation.clipId = parsed.clipId;

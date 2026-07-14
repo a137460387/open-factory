@@ -263,7 +263,9 @@ export class HardwareDecodeManager {
       const timestamp = currentTimestamp + frameDuration * i;
 
       // 异步解码，不等待完成
-      this.decodeFrame(timestamp).catch((error) => { console.error("hw-decode-manager", error); }); // 预解码失败时忽略错误
+      this.decodeFrame(timestamp).catch((error) => {
+        console.error('hw-decode-manager', error);
+      }); // 预解码失败时忽略错误
     }
   }
 
@@ -321,11 +323,7 @@ export class HardwareDecodeManager {
     }
 
     // 创建 ImageData
-    return new ImageData(
-      new Uint8ClampedArray(bytes.buffer),
-      frame.width,
-      frame.height
-    );
+    return new ImageData(new Uint8ClampedArray(bytes.buffer), frame.width, frame.height);
   }
 
   /**

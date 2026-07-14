@@ -12,12 +12,7 @@ import { useAISettingsStore } from '../store/aiSettingsStore';
 import { useEditorStore } from '../store/editorStore';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { showToast } from './toast';
-import {
-  callTtsApi,
-  writeBinaryFile,
-  fsExists,
-  getAppDataDir,
-} from './tauri-bridge';
+import { callTtsApi, writeBinaryFile, fsExists, getAppDataDir } from './tauri-bridge';
 
 interface TtsClipInput {
   id: string;
@@ -33,9 +28,7 @@ interface TtsClipInput {
 export async function generateTtsVoiceover(clips: TtsClipInput[]): Promise<void> {
   const aiState = useAISettingsStore.getState();
   const providerId = aiState.serviceMapping['voiceover'];
-  const provider = aiState.providers.find(
-    (p) => p.id === providerId && p.enabled,
-  );
+  const provider = aiState.providers.find((p) => p.id === providerId && p.enabled);
   if (!provider || !aiState.ttsVoiceId) {
     showToast({
       kind: 'warning',
@@ -130,8 +123,7 @@ export async function generateTtsVoiceover(clips: TtsClipInput[]): Promise<void>
     showToast({
       kind: 'error',
       title: zhCN.aiTts.failedTitle,
-      message:
-        error instanceof Error ? error.message : zhCN.aiTts.failedMessage,
+      message: error instanceof Error ? error.message : zhCN.aiTts.failedMessage,
     });
   }
 }
@@ -139,13 +131,8 @@ export async function generateTtsVoiceover(clips: TtsClipInput[]): Promise<void>
 /**
  * Collect subtitle clips from a track for TTS generation.
  */
-export function collectSubtitleClipsForTts(
-  project: Project,
-  trackId: string,
-): TtsClipInput[] {
-  const track = project.timeline.tracks.find(
-    (t) => t.id === trackId && t.type === 'subtitle',
-  );
+export function collectSubtitleClipsForTts(project: Project, trackId: string): TtsClipInput[] {
+  const track = project.timeline.tracks.find((t) => t.id === trackId && t.type === 'subtitle');
   if (!track) return [];
   return (track.clips.filter((c) => c.type === 'subtitle') as SubtitleClip[])
     .sort((a, b) => a.start - b.start)

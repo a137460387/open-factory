@@ -14,7 +14,7 @@ describe('subtitle translation API client', () => {
       }),
       clear: vi.fn(() => {
         storage.clear();
-      })
+      }),
     });
     acceptTranslationTOS();
   });
@@ -27,9 +27,13 @@ describe('subtitle translation API client', () => {
     localStorage.clear();
     const fetchMock = vi.fn();
 
-    await expect(translateSubtitleItems([{ id: 'cue-a', text: 'Hello' }], { provider: 'deepl', apiKey: 'deepl-key', targetLanguage: 'ZH' }, fetchMock as typeof fetch)).rejects.toThrow(
-      'TRANSLATION_TOS_NOT_ACCEPTED'
-    );
+    await expect(
+      translateSubtitleItems(
+        [{ id: 'cue-a', text: 'Hello' }],
+        { provider: 'deepl', apiKey: 'deepl-key', targetLanguage: 'ZH' },
+        fetchMock as typeof fetch,
+      ),
+    ).rejects.toThrow('TRANSLATION_TOS_NOT_ACCEPTED');
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -37,9 +41,13 @@ describe('subtitle translation API client', () => {
   it('requires an API key before contacting translation providers', async () => {
     const fetchMock = vi.fn();
 
-    await expect(translateSubtitleItems([{ id: 'cue-a', text: 'Hello' }], { provider: 'deepl', apiKey: ' ', targetLanguage: 'ZH' }, fetchMock as typeof fetch)).rejects.toThrow(
-      'TRANSLATION_API_KEY_REQUIRED'
-    );
+    await expect(
+      translateSubtitleItems(
+        [{ id: 'cue-a', text: 'Hello' }],
+        { provider: 'deepl', apiKey: ' ', targetLanguage: 'ZH' },
+        fetchMock as typeof fetch,
+      ),
+    ).rejects.toThrow('TRANSLATION_API_KEY_REQUIRED');
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -49,10 +57,16 @@ describe('subtitle translation API client', () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body as URLSearchParams;
       const texts = body.getAll('text');
-      return new Response(JSON.stringify({ translations: texts.map((text) => ({ text: `${text} ZH` })) }), { status: 200 });
+      return new Response(JSON.stringify({ translations: texts.map((text) => ({ text: `${text} ZH` })) }), {
+        status: 200,
+      });
     });
 
-    const result = await translateSubtitleItems(items, { provider: 'deepl', apiKey: 'deepl-key', targetLanguage: 'ZH' }, fetchMock as typeof fetch);
+    const result = await translateSubtitleItems(
+      items,
+      { provider: 'deepl', apiKey: 'deepl-key', targetLanguage: 'ZH' },
+      fetchMock as typeof fetch,
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect((fetchMock.mock.calls[0][1]?.body as URLSearchParams).getAll('text')).toHaveLength(50);
@@ -62,13 +76,24 @@ describe('subtitle translation API client', () => {
   it('sends Google requests with q array and target language', async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { q: string[]; target: string };
-      return new Response(JSON.stringify({ data: { translations: body.q.map((text) => ({ translatedText: `${text} JA` })) } }), { status: 200 });
+      return new Response(
+        JSON.stringify({ data: { translations: body.q.map((text) => ({ translatedText: `${text} JA` })) } }),
+        { status: 200 },
+      );
     });
 
-    const result = await translateSubtitleItems([{ id: 'cue-a', text: 'Hello' }], { provider: 'google', apiKey: 'google-key', targetLanguage: 'JA' }, fetchMock as typeof fetch);
+    const result = await translateSubtitleItems(
+      [{ id: 'cue-a', text: 'Hello' }],
+      { provider: 'google', apiKey: 'google-key', targetLanguage: 'JA' },
+      fetchMock as typeof fetch,
+    );
 
     expect(String(fetchMock.mock.calls[0][0])).toContain('key=google-key');
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ q: ['Hello'], target: 'JA', format: 'text' });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+      q: ['Hello'],
+      target: 'JA',
+      format: 'text',
+    });
     expect(result).toEqual([{ id: 'cue-a', text: 'Hello', translatedText: 'Hello JA' }]);
   });
 
@@ -82,32 +107,34 @@ describe('subtitle translation API client', () => {
     await translateSubtitleItems(
       [
         { id: 'cue-a', text: 'A' },
-        { id: 'cue-b', text: 'B' }
+        { id: 'cue-b', text: 'B' },
       ],
       { provider: 'deepl', apiKey: 'key', targetLanguage: 'ZH' },
       fetchMock as typeof fetch,
-      (completed, total) => progress.push([completed, total])
+      (completed, total) => progress.push([completed, total]),
     );
 
     expect(progress).toEqual([
       [0, 2],
       [1, 2],
-      [2, 2]
+      [2, 2],
     ]);
   });
 
   it('throws when response count does not match request count', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ translations: [{ text: 'Only one' }] }), { status: 200 }));
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ translations: [{ text: 'Only one' }] }), { status: 200 }),
+    );
 
     await expect(
       translateSubtitleItems(
         [
           { id: 'cue-a', text: 'A' },
-          { id: 'cue-b', text: 'B' }
+          { id: 'cue-b', text: 'B' },
         ],
         { provider: 'deepl', apiKey: 'key', targetLanguage: 'ZH' },
-        fetchMock as typeof fetch
-      )
+        fetchMock as typeof fetch,
+      ),
     ).rejects.toThrow('response count');
   });
 });

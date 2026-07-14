@@ -6,7 +6,7 @@ import {
   type ExportPublishPlatform,
   type ExportPublishSmtpSettings,
   type ExportPublishWebhookSettings,
-  type ExportPublishWindow
+  type ExportPublishWindow,
 } from './publish-pipeline';
 
 export type ExportPipelineNodeType =
@@ -62,9 +62,15 @@ export function createTwoStepExportPipeline(name = 'Export Pipeline'): ExportPip
     name,
     nodes: [
       { id: 'node-export-mp4', type: 'export-mp4', name: 'Export MP4', condition: 'always' },
-      { id: 'node-script-hook', type: 'script-hook', name: 'Script Hook', condition: 'on-success', script: 'echo {output}' }
+      {
+        id: 'node-script-hook',
+        type: 'script-hook',
+        name: 'Script Hook',
+        condition: 'on-success',
+        script: 'echo {output}',
+      },
     ],
-    edges: [{ from: 'node-export-mp4', to: 'node-script-hook' }]
+    edges: [{ from: 'node-export-mp4', to: 'node-script-hook' }],
   });
 }
 
@@ -85,16 +91,16 @@ export function createPublishAutomationPipeline(name = 'Publish Pipeline'): Expo
           from: 'open-factory@example.local',
           to: ['producer@example.local'],
           subject: 'Open Factory export complete',
-          passwordKey: 'default'
+          passwordKey: 'default',
         },
-        publishWindow: { daysOfWeek: [1, 2, 3, 4, 5, 6, 7], startHour: 0, endHour: 24 }
+        publishWindow: { daysOfWeek: [1, 2, 3, 4, 5, 6, 7], startHour: 0, endHour: 24 },
       },
       {
         id: 'node-publish-platform',
         type: 'publish-platform',
         name: 'Publish to Platform',
         condition: 'on-success',
-        platform: 'youtube'
+        platform: 'youtube',
       },
       {
         id: 'node-webhook-callback',
@@ -104,36 +110,45 @@ export function createPublishAutomationPipeline(name = 'Publish Pipeline'): Expo
         webhook: {
           url: 'https://example.invalid/open-factory/export-complete',
           headers: { 'X-Open-Factory': 'export' },
-          timeoutMs: 5000
-        }
+          timeoutMs: 5000,
+        },
       },
-      { id: 'node-release-record', type: 'write-release-record', name: 'Write Release Record', condition: 'on-success' }
+      {
+        id: 'node-release-record',
+        type: 'write-release-record',
+        name: 'Write Release Record',
+        condition: 'on-success',
+      },
     ],
     edges: [
       { from: 'node-export-mp4', to: 'node-email-notification' },
       { from: 'node-export-mp4', to: 'node-publish-platform' },
       { from: 'node-export-mp4', to: 'node-webhook-callback' },
-      { from: 'node-export-mp4', to: 'node-release-record' }
-    ]
+      { from: 'node-export-mp4', to: 'node-release-record' },
+    ],
   });
 }
 
 export function normalizeExportPipeline(input: Partial<ExportPipeline> | undefined): ExportPipeline {
-  const nodes = Array.isArray(input?.nodes) ? input.nodes.map(normalizePipelineNode).filter((node): node is ExportPipelineNode => Boolean(node)) : [];
+  const nodes = Array.isArray(input?.nodes)
+    ? input.nodes.map(normalizePipelineNode).filter((node): node is ExportPipelineNode => Boolean(node))
+    : [];
   const nodeIds = new Set(nodes.map((node) => node.id));
   const edges = Array.isArray(input?.edges)
     ? input.edges
         .map((edge) => ({
           from: typeof edge.from === 'string' ? edge.from.trim() : '',
-          to: typeof edge.to === 'string' ? edge.to.trim() : ''
+          to: typeof edge.to === 'string' ? edge.to.trim() : '',
         }))
-        .filter((edge) => edge.from && edge.to && edge.from !== edge.to && nodeIds.has(edge.from) && nodeIds.has(edge.to))
+        .filter(
+          (edge) => edge.from && edge.to && edge.from !== edge.to && nodeIds.has(edge.from) && nodeIds.has(edge.to),
+        )
     : [];
   return {
     id: typeof input?.id === 'string' && input.id.trim() ? input.id.trim() : 'pipeline',
     name: typeof input?.name === 'string' && input.name.trim() ? input.name.trim().slice(0, 120) : 'Export Pipeline',
     nodes,
-    edges
+    edges,
   };
 }
 
@@ -186,7 +201,7 @@ export function getPipelineUpstreamNodeIds(pipeline: ExportPipeline, nodeId: str
 
 export function shouldRunExportPipelineNode(
   node: Pick<ExportPipelineNode, 'condition'>,
-  upstreamStatuses: readonly ExportPipelineNodeStatus[]
+  upstreamStatuses: readonly ExportPipelineNodeStatus[],
 ): boolean {
   const condition = node.condition ?? 'on-success';
   if (condition === 'always') {
@@ -212,9 +227,15 @@ function normalizePipelineNode(node: Partial<ExportPipelineNode>): ExportPipelin
     retryOnFailure: node.retryOnFailure === true,
     ...(typeof node.script === 'string' && node.script.trim() ? { script: node.script.trim() } : {}),
     ...(type === 'publish-platform' ? { platform: normalizePublishPlatform(node.platform) } : {}),
-    ...(type === 'email-notification' && normalizeSmtpSettings(node.smtp) ? { smtp: normalizeSmtpSettings(node.smtp) } : {}),
-    ...(type === 'webhook-callback' && normalizeWebhookSettings(node.webhook) ? { webhook: normalizeWebhookSettings(node.webhook) } : {}),
-    ...(normalizePublishWindow(node.publishWindow) ? { publishWindow: normalizePublishWindow(node.publishWindow) } : {})
+    ...(type === 'email-notification' && normalizeSmtpSettings(node.smtp)
+      ? { smtp: normalizeSmtpSettings(node.smtp) }
+      : {}),
+    ...(type === 'webhook-callback' && normalizeWebhookSettings(node.webhook)
+      ? { webhook: normalizeWebhookSettings(node.webhook) }
+      : {}),
+    ...(normalizePublishWindow(node.publishWindow)
+      ? { publishWindow: normalizePublishWindow(node.publishWindow) }
+      : {}),
   };
 }
 
@@ -249,7 +270,7 @@ function defaultNodeName(type: ExportPipelineNodeType): string {
     'publish-platform': 'Publish Platform',
     'email-notification': 'Email Notification',
     'webhook-callback': 'Webhook Callback',
-    'write-release-record': 'Write Release Record'
+    'write-release-record': 'Write Release Record',
   }[type];
 }
 

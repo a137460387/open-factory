@@ -28,18 +28,18 @@ i18n
   .init({
     resources: {
       zh: { translation: zhCN },
-      en: { translation: enUS }
+      en: { translation: enUS },
     },
     lng: detectInitialLanguage(),
     fallbackLng: 'zh',
     interpolation: {
-      escapeValue: false
+      escapeValue: false,
     },
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: STORAGE_KEY,
-      caches: ['localStorage']
-    }
+      caches: ['localStorage'],
+    },
   });
 
 /**

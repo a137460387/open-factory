@@ -11,7 +11,7 @@ import {
   type MediaAsset,
   type Project,
   type SceneClipFeatures,
-  type SceneReorderStrategy
+  type SceneReorderStrategy,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { convertLocalFileSrc } from '../lib/tauri-bridge';
@@ -25,7 +25,13 @@ interface SceneReorderDialogProps {
   onClose(): void;
 }
 
-const STRATEGIES: SceneReorderStrategy[] = ['brightness-asc', 'brightness-desc', 'color-similar', 'motion-rhythm', 'duration-balance'];
+const STRATEGIES: SceneReorderStrategy[] = [
+  'brightness-asc',
+  'brightness-desc',
+  'color-similar',
+  'motion-rhythm',
+  'duration-balance',
+];
 const SAMPLE_SIZE = 12;
 
 export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneReorderDialogProps) {
@@ -38,7 +44,7 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
   const selectedIdSet = useMemo(() => new Set(selectedClipIds), [selectedClipIds]);
   const cards = useMemo(
     () => getStoryboardCards(project.timeline).filter((card) => selectedIdSet.has(card.clip.id)),
-    [project.timeline, selectedIdSet]
+    [project.timeline, selectedIdSet],
   );
   const selectedVisualClipIds = useMemo(() => cards.map((card) => card.clip.id), [cards]);
   const orderedFeatures = useMemo(() => orderSceneClipFeatures(features, strategy), [features, strategy]);
@@ -58,7 +64,7 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
       cards.map(async ({ clip }) => {
         const asset = 'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined;
         return analyzeSceneClipFeature(clip, asset);
-      })
+      }),
     )
       .then((nextFeatures) => {
         if (!canceled) {
@@ -88,12 +94,19 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
       showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage(orderedIds.length) });
       onClose();
     } catch (error) {
-      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="scene-reorder-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="scene-reorder-dialog"
+    >
       <section className="grid max-h-[88vh] w-full max-w-5xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -141,11 +154,17 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
         </div>
         <div className="min-h-0 overflow-auto p-4">
           {orderedCards.length < 2 ? (
-            <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500" data-testid="scene-reorder-empty">
+            <div
+              className="flex h-48 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500"
+              data-testid="scene-reorder-empty"
+            >
               {t.empty}
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3" data-testid="scene-reorder-preview">
+            <div
+              className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3"
+              data-testid="scene-reorder-preview"
+            >
               {orderedCards.map(({ clip }, index) => {
                 const asset = 'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined;
                 const feature = orderedFeatures.find((item) => item.clipId === clip.id);
@@ -159,7 +178,12 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
             {orderChanged ? t.orderChanged : t.orderUnchanged}
           </span>
           <div className="flex items-center gap-2">
-            <button type="button" className="h-9 rounded-md border border-line px-3 text-sm text-slate-700 hover:bg-panel" data-testid="scene-reorder-cancel-button" onClick={onClose}>
+            <button
+              type="button"
+              className="h-9 rounded-md border border-line px-3 text-sm text-slate-700 hover:bg-panel"
+              data-testid="scene-reorder-cancel-button"
+              onClick={onClose}
+            >
               {zhCN.common.cancel}
             </button>
             <button
@@ -179,20 +203,46 @@ export function SceneReorderDialog({ project, selectedClipIds, onClose }: SceneR
   );
 }
 
-function SceneReorderCard({ index, clip, asset, feature }: { index: number; clip: Clip; asset?: MediaAsset; feature?: SceneClipFeatures }) {
+function SceneReorderCard({
+  index,
+  clip,
+  asset,
+  feature,
+}: {
+  index: number;
+  clip: Clip;
+  asset?: MediaAsset;
+  feature?: SceneClipFeatures;
+}) {
   const t = zhCN.sceneReorder;
   const src = resolvePreviewSrc(asset);
   return (
-    <article className="overflow-hidden rounded-md border border-line bg-white shadow-sm" data-testid={`scene-reorder-card-${clip.id}`}>
+    <article
+      className="overflow-hidden rounded-md border border-line bg-white shadow-sm"
+      data-testid={`scene-reorder-card-${clip.id}`}
+    >
       {src ? (
-        <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={clip.name} draggable={false} loading="lazy" />
+        <img
+          className="aspect-video w-full bg-slate-100 object-cover"
+          src={src}
+          alt={clip.name}
+          draggable={false}
+          loading="lazy"
+        />
       ) : (
-        <div className="flex aspect-video w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-500">{clip.type === 'image' ? zhCN.storyboard.image : zhCN.storyboard.video}</div>
+        <div className="flex aspect-video w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-500">
+          {clip.type === 'image' ? zhCN.storyboard.image : zhCN.storyboard.video}
+        </div>
       )}
       <div className="space-y-1 p-2">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand text-[11px] font-semibold text-white">{index}</span>
-          <span className="min-w-0 truncate text-xs font-semibold text-ink" data-testid={`scene-reorder-card-name-${clip.id}`}>
+          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-brand text-[11px] font-semibold text-white">
+            {index}
+          </span>
+          <span
+            className="min-w-0 truncate text-xs font-semibold text-ink"
+            data-testid={`scene-reorder-card-name-${clip.id}`}
+          >
             {clip.name}
           </span>
         </div>
@@ -211,7 +261,7 @@ async function analyzeSceneClipFeature(clip: Clip, asset?: MediaAsset): Promise<
     duration: clip.duration,
     brightness: clamp01(0.5 + (clip.colorCorrection?.brightness ?? 0) / 2),
     motion: estimateClipMotion(clip),
-    color: fallbackColorFromAsset(asset)
+    color: fallbackColorFromAsset(asset),
   });
   const src = resolvePreviewSrc(asset);
   if (!src) {
@@ -222,7 +272,7 @@ async function analyzeSceneClipFeature(clip: Clip, asset?: MediaAsset): Promise<
     return extractSceneClipFeatures({
       clipId: clip.id,
       duration: clip.duration,
-      frames: [{ pixels, motionFromPrevious: fallback.motion }]
+      frames: [{ pixels, motionFromPrevious: fallback.motion }],
     });
   } catch {
     return fallback;

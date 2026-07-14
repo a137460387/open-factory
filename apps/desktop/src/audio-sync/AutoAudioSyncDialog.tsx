@@ -32,7 +32,7 @@ export function AutoAudioSyncDialog({
   onModeChange,
   onAnalyze,
   onApply,
-  onClose
+  onClose,
 }: AutoAudioSyncDialogProps) {
   const t = zhCN.autoAudioSync;
   const primary = targets.find((target) => target.clipId === primaryClipId) ?? targets[0];
@@ -41,14 +41,26 @@ export function AutoAudioSyncDialog({
   const lowCount = results.filter((result) => result.confidence === 'low' || !result.applied).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="auto-audio-sync-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      role="dialog"
+      aria-modal="true"
+      data-testid="auto-audio-sync-dialog"
+    >
       <div className="w-full max-w-3xl rounded-lg border border-line bg-white p-4 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
-            <p className="mt-1 text-sm text-slate-600" data-testid="auto-audio-sync-summary">{t.summary(targets.length, primary?.clipName ?? '')}</p>
+            <p className="mt-1 text-sm text-slate-600" data-testid="auto-audio-sync-summary">
+              {t.summary(targets.length, primary?.clipName ?? '')}
+            </p>
           </div>
-          <button className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel" type="button" data-testid="auto-audio-sync-close-button" onClick={onClose}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel"
+            type="button"
+            data-testid="auto-audio-sync-close-button"
+            onClick={onClose}
+          >
             {t.close}
           </button>
         </div>
@@ -105,16 +117,26 @@ export function AutoAudioSyncDialog({
               .map((target) => {
                 const result = resultByClipId.get(target.clipId);
                 return (
-                  <div className="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr] items-center px-3 py-2 text-sm" key={target.clipId} data-testid={`auto-audio-sync-result-${target.clipId}`}>
+                  <div
+                    className="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr] items-center px-3 py-2 text-sm"
+                    key={target.clipId}
+                    data-testid={`auto-audio-sync-result-${target.clipId}`}
+                  >
                     <div className="min-w-0">
                       <div className="truncate font-medium text-ink">{target.clipName}</div>
                       <div className="truncate text-xs text-slate-500">{target.mediaName}</div>
                     </div>
                     <span className="text-xs tabular-nums text-slate-600">{target.start.toFixed(2)}s</span>
-                    <span className="text-xs tabular-nums text-slate-700" data-testid={`auto-audio-sync-offset-${target.clipId}`}>
+                    <span
+                      className="text-xs tabular-nums text-slate-700"
+                      data-testid={`auto-audio-sync-offset-${target.clipId}`}
+                    >
                       {result ? t.offset(result.offsetMs) : t.pending}
                     </span>
-                    <span className={`text-xs font-semibold ${confidenceClass(result?.confidence)}`} data-testid={`auto-audio-sync-confidence-${target.clipId}`}>
+                    <span
+                      className={`text-xs font-semibold ${confidenceClass(result?.confidence)}`}
+                      data-testid={`auto-audio-sync-confidence-${target.clipId}`}
+                    >
                       {result ? t.confidence(result.confidence, result.peakScore) : t.pending}
                     </span>
                   </div>
@@ -124,15 +146,24 @@ export function AutoAudioSyncDialog({
         </div>
 
         {lowCount > 0 ? (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="auto-audio-sync-low-confidence">
+          <div
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+            data-testid="auto-audio-sync-low-confidence"
+          >
             {t.lowConfidenceNotice(lowCount)}
           </div>
         ) : null}
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-500" data-testid="auto-audio-sync-apply-count">{results.length > 0 ? t.applyCount(appliedCount) : t.ready}</div>
+          <div className="text-xs text-slate-500" data-testid="auto-audio-sync-apply-count">
+            {results.length > 0 ? t.applyCount(appliedCount) : t.ready}
+          </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line px-3 py-2 text-xs text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-xs text-slate-600 hover:bg-panel"
+              type="button"
+              onClick={onClose}
+            >
               {zhCN.common.cancel}
             </button>
             <button

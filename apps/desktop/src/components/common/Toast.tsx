@@ -13,7 +13,7 @@ const toneClass = {
   info: 'border-slate-300 bg-white',
   success: 'border-emerald-300 bg-emerald-50',
   warning: 'border-amber-300 bg-amber-50',
-  error: 'border-rose-300 bg-rose-50'
+  error: 'border-rose-300 bg-rose-50',
 };
 
 export function ToastViewport() {

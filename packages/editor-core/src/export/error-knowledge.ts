@@ -75,7 +75,13 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
   {
     id: 'path-invalid',
     category: 'path',
-    patterns: ['No such file or directory', 'invalid argument', 'path.*invalid', 'special character', 'is not recognized'],
+    patterns: [
+      'No such file or directory',
+      'invalid argument',
+      'path.*invalid',
+      'special character',
+      'is not recognized',
+    ],
     label: '输出路径异常',
     causes: ['输出路径包含中文、空格或特殊符号', '目标目录不存在', '路径长度超出系统限制'],
     solutions: ['使用纯英文、无空格的输出路径', '确认目标目录已存在', '缩短文件路径至 260 字符以内'],
@@ -98,7 +104,11 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
     patterns: ['No space left', 'disk full', 'not enough space', 'ENOSPC'],
     label: '磁盘空间不足',
     causes: ['输出分区剩余空间不足以容纳导出文件', '临时目录所在分区空间不足'],
-    solutions: ['清理磁盘空间或将输出目录改到其他分区', '降低导出码率或分辨率以减小文件体积', '清除应用缓存释放临时空间'],
+    solutions: [
+      '清理磁盘空间或将输出目录改到其他分区',
+      '降低导出码率或分辨率以减小文件体积',
+      '清除应用缓存释放临时空间',
+    ],
     links: ['https://github.com/open-factory/open-factory/wiki/export-troubleshooting'],
     baseWeight: 1.0,
   },
@@ -118,7 +128,11 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
     patterns: ['font.*not found', 'Fontconfig', 'glyph.*not found', 'cannot render.*font', 'font.*missing'],
     label: '字体缺失',
     causes: ['drawtext 滤镜引用了未安装的字体', '系统缺少 fontconfig 或字体缓存未更新', '字体文件路径不正确'],
-    solutions: ['安装所需字体到系统字体目录', '运行 fc-cache -fv 更新字体缓存', '使用系统已安装的通用字体（如 Arial、Noto Sans）'],
+    solutions: [
+      '安装所需字体到系统字体目录',
+      '运行 fc-cache -fv 更新字体缓存',
+      '使用系统已安装的通用字体（如 Arial、Noto Sans）',
+    ],
     links: ['https://github.com/open-factory/open-factory/wiki/subtitle-font-guide'],
     baseWeight: 0.9,
   },
@@ -128,7 +142,10 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
     patterns: ['fontconfig', 'cannot open shared object.*libfontconfig', 'FcInit'],
     label: 'fontconfig 依赖缺失',
     causes: ['系统未安装 fontconfig 库', 'FFmpeg 编译时未链接 fontconfig'],
-    solutions: ['安装 fontconfig（Linux: apt install fontconfig，Windows: 安装 MSYS2 fontconfig）', '使用包含 fontconfig 的 FFmpeg 构建版本'],
+    solutions: [
+      '安装 fontconfig（Linux: apt install fontconfig，Windows: 安装 MSYS2 fontconfig）',
+      '使用包含 fontconfig 的 FFmpeg 构建版本',
+    ],
     links: ['https://github.com/open-factory/open-factory/wiki/subtitle-font-guide'],
     baseWeight: 0.88,
   },
@@ -178,7 +195,11 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
     patterns: ['option.*not found', 'Unrecognized option', 'Invalid argument.*option', 'Unknown option'],
     label: 'FFmpeg 版本不兼容',
     causes: ['当前 FFmpeg 版本过旧，不支持所用参数', 'FFmpeg 版本过新，某些参数语法已变更'],
-    solutions: ['升级 FFmpeg 到 6.0 或更高版本', '检查导出预设中的高级参数是否与当前版本兼容', '重置导出预设为默认参数'],
+    solutions: [
+      '升级 FFmpeg 到 6.0 或更高版本',
+      '检查导出预设中的高级参数是否与当前版本兼容',
+      '重置导出预设为默认参数',
+    ],
     links: ['https://github.com/open-factory/open-factory/wiki/ffmpeg-compatibility'],
     baseWeight: 0.85,
   },
@@ -188,7 +209,11 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
     patterns: ['Invalid data found', 'corrupt', 'truncated', 'broken', 'moov atom not found'],
     label: '源文件损坏',
     causes: ['输入媒体文件下载不完整或已损坏', '视频文件缺少 moov atom（MP4 未完整封装）', '文件传输过程中数据丢失'],
-    solutions: ['尝试重新导入或用其他工具修复源文件', '使用 FFmpeg 重新封装：ffmpeg -i input.mp4 -c copy output.mp4', '从原始来源重新获取媒体文件'],
+    solutions: [
+      '尝试重新导入或用其他工具修复源文件',
+      '使用 FFmpeg 重新封装：ffmpeg -i input.mp4 -c copy output.mp4',
+      '从原始来源重新获取媒体文件',
+    ],
     links: ['https://github.com/open-factory/open-factory/wiki/media-repair'],
     baseWeight: 0.9,
   },
@@ -235,7 +260,12 @@ export const BUILT_IN_ERROR_ENTRIES: ErrorKnowledgeEntry[] = [
   {
     id: 'audio-encode-error',
     category: 'audio',
-    patterns: ['audio.*encode.*error', 'sample rate.*not supported', 'channel.*layout.*not supported', 'audio.*bitrate'],
+    patterns: [
+      'audio.*encode.*error',
+      'sample rate.*not supported',
+      'channel.*layout.*not supported',
+      'audio.*bitrate',
+    ],
     label: '音频编码错误',
     causes: ['音频采样率或声道布局与编码器不兼容', '音频比特率设置超出编码器限制', '音频源数据损坏'],
     solutions: ['将音频采样率设置为 44100Hz 或 48000Hz', '使用标准声道布局（立体声/单声道）', '降低音频比特率设置'],
@@ -314,11 +344,7 @@ export function createDefaultKnowledgeStore(): ErrorKnowledgeStore {
   };
 }
 
-export function addFeedback(
-  store: ErrorKnowledgeStore,
-  entryId: string,
-  helpful: boolean,
-): ErrorKnowledgeStore {
+export function addFeedback(store: ErrorKnowledgeStore, entryId: string, helpful: boolean): ErrorKnowledgeStore {
   const record: ErrorFeedbackRecord = { entryId, helpful, timestamp: Date.now() };
   return {
     ...store,
@@ -366,7 +392,10 @@ export function normalizeEntry(entry: Partial<ErrorKnowledgeEntry>): ErrorKnowle
     causes: Array.isArray(entry.causes) ? entry.causes.filter((c) => typeof c === 'string' && c.trim()) : [],
     solutions: Array.isArray(entry.solutions) ? entry.solutions.filter((s) => typeof s === 'string' && s.trim()) : [],
     links: Array.isArray(entry.links) ? entry.links.filter((l) => typeof l === 'string' && l.trim()) : [],
-    baseWeight: typeof entry.baseWeight === 'number' && Number.isFinite(entry.baseWeight) ? Math.min(2, Math.max(0, entry.baseWeight)) : 0.5,
+    baseWeight:
+      typeof entry.baseWeight === 'number' && Number.isFinite(entry.baseWeight)
+        ? Math.min(2, Math.max(0, entry.baseWeight))
+        : 0.5,
   };
 }
 
@@ -395,9 +424,21 @@ function roundScore(value: number): number {
 }
 
 const VALID_CATEGORIES: ErrorCategory[] = [
-  'codec', 'path', 'disk', 'font', 'permission', 'network', 'memory',
-  'ffmpeg-version', 'input-format', 'output-format', 'hardware', 'timeout',
-  'subtitles', 'audio', 'general',
+  'codec',
+  'path',
+  'disk',
+  'font',
+  'permission',
+  'network',
+  'memory',
+  'ffmpeg-version',
+  'input-format',
+  'output-format',
+  'hardware',
+  'timeout',
+  'subtitles',
+  'audio',
+  'general',
 ];
 
 function normalizeCategory(value: unknown): ErrorCategory {

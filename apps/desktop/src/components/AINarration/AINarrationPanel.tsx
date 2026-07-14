@@ -74,22 +74,28 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
     setPhase('generating');
 
     try {
-      const chapters = markers.length > 0
-        ? buildChaptersFromMarkers(markers, totalDuration, new Map(), buildSubtitleTextMap())
-        : [{
-            time: 0,
-            duration: totalDuration,
-            label: '',
-            sceneDescription: '',
-            subtitleText: buildSubtitleTextMap().get(0) ?? '',
-          }];
+      const chapters =
+        markers.length > 0
+          ? buildChaptersFromMarkers(markers, totalDuration, new Map(), buildSubtitleTextMap())
+          : [
+              {
+                time: 0,
+                duration: totalDuration,
+                label: '',
+                sceneDescription: '',
+                subtitleText: buildSubtitleTextMap().get(0) ?? '',
+              },
+            ];
 
       const isChinese = true;
       const systemPrompt = buildNarrationSystemPrompt(selectedStyle, isChinese);
       const userPrompt = buildNarrationUserPrompt(chapters);
 
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
@@ -107,10 +113,13 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
           temperature: 0.7,
           timeoutSecs: 120,
         },
-        apiKey
+        apiKey,
       );
 
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = parseNarrationResponse(JSON.parse(response.content));
       setSegments(parsed);
@@ -175,7 +184,9 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
                 data-testid="ai-narration-style-select"
               >
                 {NARRATION_STYLES.map((style) => (
-                  <option key={style} value={style}>{STYLE_LABELS[style]}</option>
+                  <option key={style} value={style}>
+                    {STYLE_LABELS[style]}
+                  </option>
                 ))}
               </select>
             </div>
@@ -190,14 +201,14 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
               >
                 {textProviders.length === 0 && <option value="">{t.noProvider}</option>}
                 {textProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="text-xs text-slate-500">
-              {markers.length > 0
-                ? t.chapterCount(markers.length)
-                : t.noMarkers}
+              {markers.length > 0 ? t.chapterCount(markers.length) : t.noMarkers}
             </div>
             <button
               className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -232,7 +243,9 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
             {segments.map((seg, i) => (
               <div key={i} className="rounded-md border border-line p-2 space-y-1">
                 <div className="flex items-center gap-2 text-[11px] text-blue-600 font-mono">
-                  <span>{t.timeRange}: {formatTime(seg.markerTime)} - {formatTime(seg.markerTime + seg.duration)}</span>
+                  <span>
+                    {t.timeRange}: {formatTime(seg.markerTime)} - {formatTime(seg.markerTime + seg.duration)}
+                  </span>
                 </div>
                 <div className="space-y-1">
                   <label className="block text-[11px] text-slate-500">{t.text}</label>
@@ -259,7 +272,10 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
               <button
                 className="flex-1 rounded-md border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-panel"
                 type="button"
-                onClick={() => { setSegments([]); setPhase('idle'); }}
+                onClick={() => {
+                  setSegments([]);
+                  setPhase('idle');
+                }}
                 data-testid="ai-narration-regenerate"
               >
                 {t.regenerate}

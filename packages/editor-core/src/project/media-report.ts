@@ -1,7 +1,13 @@
 import { getProjectSequences, type Clip, type MediaAsset, type Project } from '../model';
 import { getTimelineDuration } from '../timeline';
 import { normalizePath } from './relative-paths';
-import { formatReportDuration, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './report-i18n';
+import {
+  formatReportDuration,
+  normalizeReportLocale,
+  reportHtmlLang,
+  reportLanguageLabel,
+  type ReportLocale,
+} from './report-i18n';
 
 export interface OfflineMediaFileStatus {
   path: string;
@@ -94,7 +100,11 @@ export function collectOfflineMediaReportPaths(project: Project): string[] {
   return Array.from(paths.values());
 }
 
-export function buildOfflineMediaReport(project: Project, fileStatuses: OfflineMediaFileStatus[] = [], options: OfflineMediaReportOptions = {}): OfflineMediaReport {
+export function buildOfflineMediaReport(
+  project: Project,
+  fileStatuses: OfflineMediaFileStatus[] = [],
+  options: OfflineMediaReportOptions = {},
+): OfflineMediaReport {
   const locale = normalizeReportLocale(options.locale);
   const statusByPath = new Map(fileStatuses.map((status) => [pathKey(status.path), status]));
   const usageStats = buildMediaUsageStats(project);
@@ -111,13 +121,15 @@ export function buildOfflineMediaReport(project: Project, fileStatuses: OfflineM
         assetType: asset.type,
         path,
         exists,
-        sizeBytes: exists ? normalizeSize(status?.size ?? (pathKey(path) === pathKey(asset.path) ? asset.size : undefined)) : 0,
+        sizeBytes: exists
+          ? normalizeSize(status?.size ?? (pathKey(path) === pathKey(asset.path) ? asset.size : undefined))
+          : 0,
         hasProxy: Boolean(asset.proxyPath && asset.proxyStatus !== 'error' && proxyStatus?.exists !== false),
         timelineAppearances: usageStat?.appearanceCount ?? 0,
         totalUsedDurationSeconds: usageStat?.totalUsedDurationSeconds ?? 0,
-        usageSegments: usageStat?.segments ?? []
+        usageSegments: usageStat?.segments ?? [],
       };
-    })
+    }),
   );
   const mediaSizeBytes = sumUniqueExistingPathSizes(rows);
   const durationSeconds = getTimelineDuration(project.timeline);
@@ -133,10 +145,11 @@ export function buildOfflineMediaReport(project: Project, fileStatuses: OfflineM
     totals: {
       durationSeconds,
       mediaSizeBytes,
-      estimatedExportSizeBytes: options.estimatedExportSizeBytes ?? estimateDefaultExportSizeBytes(project, durationSeconds),
+      estimatedExportSizeBytes:
+        options.estimatedExportSizeBytes ?? estimateDefaultExportSizeBytes(project, durationSeconds),
       missingCount: rows.filter((row) => !row.exists).length,
-      totalUsedDurationSeconds: usageStats.reduce((total, stat) => total + stat.totalUsedDurationSeconds, 0)
-    }
+      totalUsedDurationSeconds: usageStats.reduce((total, stat) => total + stat.totalUsedDurationSeconds, 0),
+    },
   };
 }
 
@@ -159,7 +172,7 @@ export function buildMediaUsageStats(project: Project): MediaUsageStat[] {
             assetType: asset.type,
             appearanceCount: 0,
             totalUsedDurationSeconds: 0,
-            segments: []
+            segments: [],
           } satisfies MediaUsageStat);
         const duration = Math.max(0, clip.duration);
         current.segments.push({
@@ -173,7 +186,7 @@ export function buildMediaUsageStats(project: Project): MediaUsageStat[] {
           end: clip.start + duration,
           duration,
           trimStart: 'trimStart' in clip ? clip.trimStart : 0,
-          trimEnd: 'trimEnd' in clip ? clip.trimEnd : 0
+          trimEnd: 'trimEnd' in clip ? clip.trimEnd : 0,
         });
         current.appearanceCount += 1;
         current.totalUsedDurationSeconds += duration;
@@ -181,7 +194,9 @@ export function buildMediaUsageStats(project: Project): MediaUsageStat[] {
       }
     }
   }
-  return Array.from(stats.values()).sort((left, right) => left.assetName.localeCompare(right.assetName) || left.assetId.localeCompare(right.assetId));
+  return Array.from(stats.values()).sort(
+    (left, right) => left.assetName.localeCompare(right.assetName) || left.assetId.localeCompare(right.assetId),
+  );
 }
 
 export function buildTimelineHeatmapData(project: Project, bucketCount = 24): TimelineHeatmapBucket[] {
@@ -199,19 +214,22 @@ export function buildTimelineHeatmapData(project: Project, bucketCount = 24): Ti
       start,
       end,
       overlapCount: clips.filter((clip) => clip.start < end && clip.start + clip.duration > start).length,
-      intensity: 0
+      intensity: 0,
     };
   });
   const maxOverlap = Math.max(1, ...buckets.map((bucket) => bucket.overlapCount));
   return buckets.map((bucket) => ({ ...bucket, intensity: bucket.overlapCount / maxOverlap }));
 }
 
-export function buildProjectArchivePreflight(project: Project, fileStatuses: OfflineMediaFileStatus[] = []): ProjectArchivePreflight {
+export function buildProjectArchivePreflight(
+  project: Project,
+  fileStatuses: OfflineMediaFileStatus[] = [],
+): ProjectArchivePreflight {
   const report = buildOfflineMediaReport(project, fileStatuses);
   const missingRows = report.rows.filter((row) => !row.exists);
   return {
     missingRows,
-    missingPaths: missingRows.map((row) => row.path)
+    missingPaths: missingRows.map((row) => row.path),
   };
 }
 
@@ -230,7 +248,7 @@ export function renderOfflineMediaReportHtml(report: OfflineMediaReport): string
           <td>${row.timelineAppearances}</td>
           <td>${formatReportDuration(row.totalUsedDurationSeconds, report.locale)}</td>
           <td>${renderUsageSegmentList(row.usageSegments, report.locale)}</td>
-        </tr>`
+        </tr>`,
     )
     .join('');
   const heatmap = renderHeatmap(report.heatmap, report.locale);
@@ -301,7 +319,11 @@ export function renderOfflineMediaReportHtml(report: OfflineMediaReport): string
 </html>`;
 }
 
-export function buildOfflineMediaReportHtml(project: Project, fileStatuses: OfflineMediaFileStatus[] = [], options: OfflineMediaReportOptions = {}): string {
+export function buildOfflineMediaReportHtml(
+  project: Project,
+  fileStatuses: OfflineMediaFileStatus[] = [],
+  options: OfflineMediaReportOptions = {},
+): string {
   return renderOfflineMediaReportHtml(buildOfflineMediaReport(project, fileStatuses, options));
 }
 
@@ -369,7 +391,7 @@ function renderUsageSegmentList(segments: MediaUsageSegment[], locale: ReportLoc
   return `<ul class="usage-list">${segments
     .map(
       (segment) =>
-        `<li>${escapeHtml(segment.sequenceName)} / ${escapeHtml(segment.trackName)} / ${escapeHtml(segment.clipName)}：${formatReportDuration(segment.start, locale)} - ${formatReportDuration(segment.end, locale)}（${formatReportDuration(segment.duration, locale)}）</li>`
+        `<li>${escapeHtml(segment.sequenceName)} / ${escapeHtml(segment.trackName)} / ${escapeHtml(segment.clipName)}：${formatReportDuration(segment.start, locale)} - ${formatReportDuration(segment.end, locale)}（${formatReportDuration(segment.duration, locale)}）</li>`,
     )
     .join('')}</ul>`;
 }
@@ -396,7 +418,7 @@ function renderUnusedMediaList(rows: OfflineMediaReportRow[], locale: ReportLoca
   return `<ul class="unused-list">${rows
     .map(
       (row) =>
-        `<li data-media-id="${escapeHtml(row.assetId)}"><span>${escapeHtml(row.assetName)} <code>${escapeHtml(row.path)}</code></span><button type="button" onclick="this.closest('li').remove()">${labels.removeFromBin}</button></li>`
+        `<li data-media-id="${escapeHtml(row.assetId)}"><span>${escapeHtml(row.assetName)} <code>${escapeHtml(row.path)}</code></span><button type="button" onclick="this.closest('li').remove()">${labels.removeFromBin}</button></li>`,
     )
     .join('')}</ul>`;
 }
@@ -420,7 +442,10 @@ function renderDurationPieChart(stats: MediaUsageStat[], locale: ReportLocale): 
       return {
         stat,
         color,
-        path: used.length === 1 ? `<circle cx="80" cy="80" r="64" fill="${color}" />` : `<path d="${describePieSlice(80, 80, 64, start, end)}" fill="${color}" />`
+        path:
+          used.length === 1
+            ? `<circle cx="80" cy="80" r="64" fill="${color}" />`
+            : `<path d="${describePieSlice(80, 80, 64, start, end)}" fill="${color}" />`,
       };
     })
     .map((slice) => slice.path)
@@ -445,7 +470,7 @@ function describePieSlice(cx: number, cy: number, radius: number, startAngle: nu
 function polarToCartesian(cx: number, cy: number, radius: number, angle: number): { x: string; y: string } {
   return {
     x: (cx + radius * Math.cos(angle)).toFixed(3),
-    y: (cy + radius * Math.sin(angle)).toFixed(3)
+    y: (cy + radius * Math.sin(angle)).toFixed(3),
   };
 }
 
@@ -497,7 +522,7 @@ const mediaReportLabels: Record<ReportLocale, Record<string, string>> = {
     emptyUnused: '无未使用媒体。',
     emptyDuration: '暂无使用时长',
     overlapClips: '个叠加片段',
-    removeFromBin: '从媒体库移除'
+    removeFromBin: '从媒体库移除',
   },
   en: {
     title: 'Media Usage Analysis',
@@ -530,6 +555,6 @@ const mediaReportLabels: Record<ReportLocale, Record<string, string>> = {
     emptyUnused: 'No unused media.',
     emptyDuration: 'No used duration',
     overlapClips: 'overlapping clips',
-    removeFromBin: 'Remove from media bin'
-  }
+    removeFromBin: 'Remove from media bin',
+  },
 };

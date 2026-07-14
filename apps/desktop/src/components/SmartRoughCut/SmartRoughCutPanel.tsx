@@ -16,14 +16,19 @@ import {
   type SmartRoughCutBrollCandidate,
   type SmartRoughCutVisualClip,
   type Timeline,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { zhCN } from '../../i18n/strings';
 import { detectClipDialogue } from '../../lib/dialogueDetection';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { detectSceneChanges } from '../../lib/tauri-bridge';
-import { buildWhisperSubtitleTrackForClip, canGenerateSubtitlesForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
+import {
+  buildWhisperSubtitleTrackForClip,
+  canGenerateSubtitlesForClip,
+  getWhisperAvailability,
+  type WhisperAvailability,
+} from '../../lib/whisper';
 import { showToast } from '../../lib/toast';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
@@ -38,7 +43,7 @@ import {
   setAllSmartRoughCutSelection,
   type SmartRoughCutStep,
   type SmartRoughCutSelection,
-  type SmartRoughCutStepStatus
+  type SmartRoughCutStepStatus,
 } from './smart-rough-cut-state';
 
 interface SmartRoughCutPanelProps {
@@ -63,12 +68,23 @@ type SmartRoughCutTab = 'basic' | 'dialogue' | 'broll' | 'rhythm';
 
 export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelProps) {
   const [state, setState] = useState(createInitialSmartRoughCutState);
-  const [pendingScene, setPendingScene] = useState<{ clipId: string; items: SceneCandidate[]; selection: SmartRoughCutSelection }>();
-  const [pendingSilence, setPendingSilence] = useState<{ clipId: string; items: SilenceCandidate[]; selection: SmartRoughCutSelection }>();
+  const [pendingScene, setPendingScene] = useState<{
+    clipId: string;
+    items: SceneCandidate[];
+    selection: SmartRoughCutSelection;
+  }>();
+  const [pendingSilence, setPendingSilence] = useState<{
+    clipId: string;
+    items: SilenceCandidate[];
+    selection: SmartRoughCutSelection;
+  }>();
   const [activeTab, setActiveTab] = useState<SmartRoughCutTab>('basic');
   const [brollTrackId, setBrollTrackId] = useState('');
   const [rhythmTrackId, setRhythmTrackId] = useState('');
-  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
+  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({
+    ready: false,
+    error: zhCN.whisper.notConfigured,
+  });
   const whisperExecutablePath = useWhisperSettingsStore((item) => item.executablePath);
   const whisperModelPath = useWhisperSettingsStore((item) => item.modelPath);
   const project = useEditorStore((item) => item.project);
@@ -76,26 +92,41 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
   const setSelectedClipId = useEditorStore((item) => item.setSelectedClipId);
   const timeline = project.timeline;
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
-  const selectedTimelineClips = useMemo(() => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)), [selectedClipIds, timeline]);
+  const selectedTimelineClips = useMemo(
+    () => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)),
+    [selectedClipIds, timeline],
+  );
   const selectedVisualClips = useMemo(() => selectedTimelineClips.filter(isVisualClip), [selectedTimelineClips]);
-  const mainVisualClips = useMemo(() => getPrimaryVisualClips(timeline, selectedVisualClips), [selectedVisualClips, timeline]);
+  const mainVisualClips = useMemo(
+    () => getPrimaryVisualClips(timeline, selectedVisualClips),
+    [selectedVisualClips, timeline],
+  );
   const videoTracks = useMemo(() => timeline.tracks.filter((track) => track.type === 'video'), [timeline]);
-  const rhythmBeatTimes = useMemo(() => getRhythmBeatTimes(project, selectedTimelineClips), [project, selectedTimelineClips]);
+  const rhythmBeatTimes = useMemo(
+    () => getRhythmBeatTimes(project, selectedTimelineClips),
+    [project, selectedTimelineClips],
+  );
   const anyRunning = Object.values(state.steps).some((step) => step.status === 'running');
   const canRunScene = selectedClip?.type === 'video' && Boolean(asset);
-  const canRunSilence = Boolean(selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)));
+  const canRunSilence = Boolean(
+    selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)),
+  );
   const canRunWhisper = canGenerateSubtitlesForClip(selectedClip, asset, whisperAvailability.ready);
-  const canRunDialogue = Boolean(selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)));
+  const canRunDialogue = Boolean(
+    selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)),
+  );
   const canRunBroll = mainVisualClips.length > 0 && buildBrollCandidates(media, selectedTimelineClips).length > 0;
   const canRunRhythm = selectedVisualClips.length > 0 && rhythmBeatTimes.length >= 2;
 
   useEffect(() => {
     let disposed = false;
-    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then((availability) => {
-      if (!disposed) {
-        setWhisperAvailability(availability);
-      }
-    });
+    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then(
+      (availability) => {
+        if (!disposed) {
+          setWhisperAvailability(availability);
+        }
+      },
+    );
     return () => {
       disposed = true;
     };
@@ -117,12 +148,20 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       const speed = getClipSpeed(clip);
       const sourceStart = clip.trimStart;
       const sourceEnd = sourceStart + clip.duration * speed;
-      const result = await detectSceneChanges({ path: mediaAsset.path, threshold: 0.3, duration: mediaAsset.duration || clip.duration });
+      const result = await detectSceneChanges({
+        path: mediaAsset.path,
+        threshold: 0.3,
+        duration: mediaAsset.duration || clip.duration,
+      });
       const splitTimes = result.sceneTimes
         .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
         .map((time) => round((time - sourceStart) / speed));
       const items = buildSceneCandidates(splitTimes, clip.duration, mediaAsset.thumbnail);
-      setPendingScene({ clipId: clip.id, items, selection: createSmartRoughCutSelection(items.map((item) => item.id)) });
+      setPendingScene({
+        clipId: clip.id,
+        items,
+        selection: createSmartRoughCutSelection(items.map((item) => item.id)),
+      });
       return {};
     });
   }
@@ -139,10 +178,14 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       const ranges = await detectClipSilence(clip, mediaAsset, {
         thresholdDb: -40,
         minSilenceDuration: 0.5,
-        marginDuration: 0.1
+        marginDuration: 0.1,
       });
       const items = ranges.map((range, index) => ({ id: `silence-${index}`, range }));
-      setPendingSilence({ clipId: clip.id, items, selection: createSmartRoughCutSelection(items.map((item) => item.id)) });
+      setPendingSilence({
+        clipId: clip.id,
+        items,
+        selection: createSmartRoughCutSelection(items.map((item) => item.id)),
+      });
       return {};
     });
   }
@@ -178,7 +221,9 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       if (ranges.length > 0) {
         commandManager.execute(new RemoveSilenceCommand(timelineAccessor, pendingSilence.clipId, ranges));
       }
-      setState((current) => markSmartRoughCutStepComplete(current, 'silence', { removedSilenceSeconds: sumSilentDuration(ranges) }));
+      setState((current) =>
+        markSmartRoughCutStepComplete(current, 'silence', { removedSilenceSeconds: sumSilentDuration(ranges) }),
+      );
       setPendingSilence(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
@@ -190,17 +235,25 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
   async function runWhisper(): Promise<void> {
     await runStep('whisper', async () => {
       const { clip, mediaAsset } = requireSelectedMedia('whisper');
-      const availability = await getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath });
+      const availability = await getWhisperAvailability({
+        executablePath: whisperExecutablePath,
+        modelPath: whisperModelPath,
+      });
       if (!availability.ready) {
         throw new Error(availability.error ?? zhCN.whisper.notConfigured);
       }
       if ((clip.type !== 'audio' && clip.type !== 'video') || !canGenerateSubtitlesForClip(clip, mediaAsset, true)) {
         throw new Error(zhCN.smartRoughCut.whisperUnavailable);
       }
-      const track = await buildWhisperSubtitleTrackForClip(clip, mediaAsset, useEditorStore.getState().project.timeline, {
-        executablePath: whisperExecutablePath,
-        modelPath: whisperModelPath
-      });
+      const track = await buildWhisperSubtitleTrackForClip(
+        clip,
+        mediaAsset,
+        useEditorStore.getState().project.timeline,
+        {
+          executablePath: whisperExecutablePath,
+          modelPath: whisperModelPath,
+        },
+      );
       if (track.clips.length === 0) {
         throw new Error(zhCN.whisper.noSubtitleCues);
       }
@@ -252,7 +305,7 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
         timelineAccessor,
         selectedVisualClips.map((clip) => clip.id),
         rhythmBeatTimes,
-        targetTrackId
+        targetTrackId,
       );
       commandManager.execute(command);
       setSelectedClipId(`${selectedVisualClips[0].id}-rhythm-1`);
@@ -282,7 +335,7 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
             ? zhCN.smartRoughCut.silenceUnavailable
             : step === 'dialogue'
               ? zhCN.smartRoughCut.dialogueUnavailable
-              : zhCN.smartRoughCut.whisperUnavailable
+              : zhCN.smartRoughCut.whisperUnavailable,
       );
     }
     return { clip: selectedClip, mediaAsset: asset };
@@ -292,7 +345,9 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
     if (timelineAccessor.getTimeline().tracks.some((track) => track.id === trackId)) {
       return;
     }
-    commandManager.execute(new AddTrackCommand(timelineAccessor, createTrack({ id: trackId, type: 'video', name, clips: [] })));
+    commandManager.execute(
+      new AddTrackCommand(timelineAccessor, createTrack({ id: trackId, type: 'video', name, clips: [] })),
+    );
   }
 
   return (
@@ -304,7 +359,10 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
-        <div className="mb-3 grid grid-cols-4 gap-1 rounded-md border border-line bg-panel p-1" data-testid="smart-rough-cut-tabs">
+        <div
+          className="mb-3 grid grid-cols-4 gap-1 rounded-md border border-line bg-panel p-1"
+          data-testid="smart-rough-cut-tabs"
+        >
           {(['basic', 'dialogue', 'broll', 'rhythm'] as SmartRoughCutTab[]).map((tab) => (
             <button
               key={tab}
@@ -334,7 +392,9 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
                 <SceneResultList
                   items={pendingScene.items}
                   selection={pendingScene.selection}
-                  onSelectionChange={(selection) => setPendingScene((current) => (current ? { ...current, selection } : current))}
+                  onSelectionChange={(selection) =>
+                    setPendingScene((current) => (current ? { ...current, selection } : current))
+                  }
                   onApply={applySceneSplit}
                 />
               ) : null}
@@ -353,14 +413,20 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
                 <SilenceResultList
                   items={pendingSilence.items}
                   selection={pendingSilence.selection}
-                  onSelectionChange={(selection) => setPendingSilence((current) => (current ? { ...current, selection } : current))}
+                  onSelectionChange={(selection) =>
+                    setPendingSilence((current) => (current ? { ...current, selection } : current))
+                  }
                   onApply={applySilenceRemoval}
                 />
               ) : null}
             </SmartStep>
             <SmartStep
               title={zhCN.smartRoughCut.steps.whisper}
-              description={whisperAvailability.ready ? zhCN.smartRoughCut.whisperDescription : whisperAvailability.error ?? zhCN.whisper.notConfigured}
+              description={
+                whisperAvailability.ready
+                  ? zhCN.smartRoughCut.whisperDescription
+                  : (whisperAvailability.error ?? zhCN.whisper.notConfigured)
+              }
               status={state.steps.whisper.status}
               error={state.steps.whisper.error}
               testId="smart-whisper"
@@ -393,7 +459,13 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
             disabled={anyRunning || !canRunBroll}
             onRun={() => void runBrollInsert()}
           >
-            <TrackSelect value={brollTrackId} tracks={videoTracks} autoLabel={zhCN.smartRoughCut.steps.broll} testId="smart-broll-track" onChange={setBrollTrackId} />
+            <TrackSelect
+              value={brollTrackId}
+              tracks={videoTracks}
+              autoLabel={zhCN.smartRoughCut.steps.broll}
+              testId="smart-broll-track"
+              onChange={setBrollTrackId}
+            />
           </SmartStep>
         ) : null}
         {activeTab === 'rhythm' ? (
@@ -407,17 +479,25 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
             disabled={anyRunning || !canRunRhythm}
             onRun={() => void runRhythmAssemble()}
           >
-            <TrackSelect value={rhythmTrackId} tracks={videoTracks} testId="smart-rhythm-track" onChange={setRhythmTrackId} />
+            <TrackSelect
+              value={rhythmTrackId}
+              tracks={videoTracks}
+              testId="smart-rhythm-track"
+              onChange={setRhythmTrackId}
+            />
           </SmartStep>
         ) : null}
-        <div className="mt-3 rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="smart-rough-cut-report">
+        <div
+          className="mt-3 rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+          data-testid="smart-rough-cut-report"
+        >
           {zhCN.smartRoughCut.report(
             state.report.removedSilenceSeconds.toFixed(1),
             state.report.sceneSplits,
             state.report.subtitleClips,
             state.report.dialogueClips,
             state.report.brollClips,
-            state.report.rhythmClips
+            state.report.rhythmClips,
           )}
         </div>
       </div>
@@ -434,7 +514,7 @@ function SmartStep({
   buttonLabel,
   disabled,
   onRun,
-  children
+  children,
 }: {
   title: string;
   description: string;
@@ -450,13 +530,23 @@ function SmartStep({
     <section className="mb-3 rounded-md border border-line bg-white p-3">
       <div className="flex items-center gap-2">
         <h3 className="min-w-0 flex-1 truncate text-xs font-semibold text-ink">{title}</h3>
-        <span className="rounded border border-line bg-panel px-1.5 py-0.5 text-[10px] font-medium text-slate-600" data-testid={`${testId}-status`} data-status={status}>
+        <span
+          className="rounded border border-line bg-panel px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
+          data-testid={`${testId}-status`}
+          data-status={status}
+        >
           {zhCN.smartRoughCut.statuses[status]}
         </span>
       </div>
       <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
       {error ? <div className="mt-1 text-xs text-rose-700">{error}</div> : null}
-      <button className="mt-2 w-full rounded-md bg-brand px-3 py-2 text-xs font-medium text-white disabled:opacity-40" type="button" disabled={disabled} data-testid={`${testId}-button`} onClick={onRun}>
+      <button
+        className="mt-2 w-full rounded-md bg-brand px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+        type="button"
+        disabled={disabled}
+        data-testid={`${testId}-button`}
+        onClick={onRun}
+      >
         {buttonLabel}
       </button>
       {children}
@@ -469,7 +559,7 @@ function TrackSelect({
   tracks,
   autoLabel,
   testId,
-  onChange
+  onChange,
 }: {
   value: string;
   tracks: Track[];
@@ -480,7 +570,12 @@ function TrackSelect({
   return (
     <label className="mt-2 block text-xs text-slate-600">
       <span className="mb-1 block font-medium text-slate-700">{zhCN.smartRoughCut.targetTrack}</span>
-      <select className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs text-ink"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {autoLabel ? <option value="">{autoLabel}</option> : null}
         {tracks.map((track) => (
           <option key={track.id} value={track.id}>
@@ -496,7 +591,7 @@ function SceneResultList({
   items,
   selection,
   onSelectionChange,
-  onApply
+  onApply,
 }: {
   items: SceneCandidate[];
   selection: SmartRoughCutSelection;
@@ -507,7 +602,9 @@ function SceneResultList({
   return (
     <SelectableResultList
       testId="smart-scene"
-      summary={zhCN.smartRoughCut.scenePreview(items.flatMap((item) => (typeof item.splitTime === 'number' ? [item.splitTime] : [])))}
+      summary={zhCN.smartRoughCut.scenePreview(
+        items.flatMap((item) => (typeof item.splitTime === 'number' ? [item.splitTime] : [])),
+      )}
       selection={selection}
       selectedCount={selectedCount}
       totalCount={items.length}
@@ -516,7 +613,11 @@ function SceneResultList({
       onApply={onApply}
     >
       {items.map((item) => (
-        <label key={item.id} className="flex items-center gap-2 rounded border border-line bg-white p-2" data-testid={`smart-scene-item-${item.id}`}>
+        <label
+          key={item.id}
+          className="flex items-center gap-2 rounded border border-line bg-white p-2"
+          data-testid={`smart-scene-item-${item.id}`}
+        >
           <input
             className="h-4 w-4 accent-brand"
             type="checkbox"
@@ -525,9 +626,13 @@ function SceneResultList({
             data-testid={`smart-scene-checkbox-${item.id}`}
           />
           <span className="h-10 w-16 flex-none overflow-hidden rounded bg-slate-200">
-            {item.thumbnail ? <img className="h-full w-full object-cover" src={item.thumbnail} alt="" loading="lazy" /> : null}
+            {item.thumbnail ? (
+              <img className="h-full w-full object-cover" src={item.thumbnail} alt="" loading="lazy" />
+            ) : null}
           </span>
-          <span className="min-w-0 flex-1 text-slate-700">{zhCN.smartRoughCut.sceneRange(formatSeconds(item.start), formatSeconds(item.end))}</span>
+          <span className="min-w-0 flex-1 text-slate-700">
+            {zhCN.smartRoughCut.sceneRange(formatSeconds(item.start), formatSeconds(item.end))}
+          </span>
         </label>
       ))}
     </SelectableResultList>
@@ -538,7 +643,7 @@ function SilenceResultList({
   items,
   selection,
   onSelectionChange,
-  onApply
+  onApply,
 }: {
   items: SilenceCandidate[];
   selection: SmartRoughCutSelection;
@@ -559,7 +664,11 @@ function SilenceResultList({
       onApply={onApply}
     >
       {items.map((item) => (
-        <label key={item.id} className="flex items-center gap-2 rounded border border-line bg-white p-2" data-testid={`smart-silence-item-${item.id}`}>
+        <label
+          key={item.id}
+          className="flex items-center gap-2 rounded border border-line bg-white p-2"
+          data-testid={`smart-silence-item-${item.id}`}
+        >
           <input
             className="h-4 w-4 accent-brand"
             type="checkbox"
@@ -568,7 +677,11 @@ function SilenceResultList({
             data-testid={`smart-silence-checkbox-${item.id}`}
           />
           <span className="min-w-0 flex-1 text-slate-700">
-            {zhCN.smartRoughCut.silenceRange(formatSeconds(item.range.start), formatSeconds(item.range.end), formatSeconds(item.range.duration))}
+            {zhCN.smartRoughCut.silenceRange(
+              formatSeconds(item.range.start),
+              formatSeconds(item.range.end),
+              formatSeconds(item.range.duration),
+            )}
           </span>
         </label>
       ))}
@@ -585,7 +698,7 @@ function SelectableResultList({
   applyLabel,
   onSelectionChange,
   onApply,
-  children
+  children,
 }: {
   testId: string;
   summary: string;
@@ -598,21 +711,42 @@ function SelectableResultList({
   children: ReactNode;
 }) {
   return (
-    <div className="mt-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid={`${testId}-preview`}>
+    <div
+      className="mt-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600"
+      data-testid={`${testId}-preview`}
+    >
       <div className="flex items-center justify-between gap-2">
         <div>{summary}</div>
-        <div className="whitespace-nowrap text-[11px] text-slate-500">{zhCN.smartRoughCut.selectedCount(selectedCount, totalCount)}</div>
+        <div className="whitespace-nowrap text-[11px] text-slate-500">
+          {zhCN.smartRoughCut.selectedCount(selectedCount, totalCount)}
+        </div>
       </div>
       <div className="mt-2 flex gap-2">
-        <button className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`${testId}-select-all`} onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, true))}>
+        <button
+          className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid={`${testId}-select-all`}
+          onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, true))}
+        >
           {zhCN.smartRoughCut.selectAll}
         </button>
-        <button className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`${testId}-select-none`} onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, false))}>
+        <button
+          className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid={`${testId}-select-none`}
+          onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, false))}
+        >
           {zhCN.smartRoughCut.selectNone}
         </button>
       </div>
       <div className="mt-2 max-h-40 space-y-1 overflow-auto">{children}</div>
-      <button className="mt-2 rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel" type="button" disabled={selectedCount === 0} data-testid={`${testId}-apply-button`} onClick={onApply}>
+      <button
+        className="mt-2 rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel"
+        type="button"
+        disabled={selectedCount === 0}
+        data-testid={`${testId}-apply-button`}
+        onClick={onApply}
+      >
         {applyLabel}
       </button>
     </div>
@@ -634,7 +768,10 @@ function isVisualClip(clip: Clip): clip is SmartRoughCutVisualClip {
   return clip.type === 'video' || clip.type === 'image';
 }
 
-function getPrimaryVisualClips(timeline: Timeline, selectedVisualClips: SmartRoughCutVisualClip[]): SmartRoughCutVisualClip[] {
+function getPrimaryVisualClips(
+  timeline: Timeline,
+  selectedVisualClips: SmartRoughCutVisualClip[],
+): SmartRoughCutVisualClip[] {
   if (selectedVisualClips.length > 0) {
     return selectedVisualClips;
   }
@@ -643,8 +780,13 @@ function getPrimaryVisualClips(timeline: Timeline, selectedVisualClips: SmartRou
 
 function buildBrollCandidates(media: MediaAsset[], selectedClips: Clip[]): SmartRoughCutBrollCandidate[] {
   const selectedMediaIds = new Set(selectedClips.flatMap((clip) => ('mediaId' in clip ? [clip.mediaId] : [])));
-  const preferred = media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing && !selectedMediaIds.has(asset.id));
-  const fallback = preferred.length > 0 ? preferred : media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing);
+  const preferred = media.filter(
+    (asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing && !selectedMediaIds.has(asset.id),
+  );
+  const fallback =
+    preferred.length > 0
+      ? preferred
+      : media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing);
   return fallback.map((asset) => ({ kind: 'media', asset }));
 }
 
@@ -672,7 +814,7 @@ function buildSceneCandidates(splitTimes: number[], duration: number, thumbnail?
     start,
     end: boundaries[index + 1],
     splitTime: index < points.length ? boundaries[index + 1] : undefined,
-    thumbnail
+    thumbnail,
   }));
 }
 

@@ -49,7 +49,7 @@ export class CommandManager {
       id: `history-${this.nextEntryId++}`,
       description: command.description,
       timestamp: new Date().toISOString(),
-      affectedClipCount: inferAffectedClipCount(command)
+      affectedClipCount: inferAffectedClipCount(command),
     };
     const node: CommandHistoryNode = {
       id: entry.id,
@@ -57,7 +57,7 @@ export class CommandManager {
       entry,
       parent: this.current,
       children: [],
-      order: this.nextOrder++
+      order: this.nextOrder++,
     };
     this.current.children.push(node);
     this.current.preferredChildId = node.id;
@@ -97,7 +97,7 @@ export class CommandManager {
   jumpTo(index: number): void {
     const flattened = this.flattenHistory();
     const targetIndex = Math.min(flattened.length - 1, Math.max(-1, Math.floor(index)));
-    const target = targetIndex < 0 ? this.root : flattened[targetIndex]?.node ?? this.root;
+    const target = targetIndex < 0 ? this.root : (flattened[targetIndex]?.node ?? this.root);
     this.jumpToNode(target);
   }
 
@@ -170,10 +170,10 @@ export class CommandManager {
         siblingCount,
         childCount: node.children.length,
         isCurrent: node === this.current,
-        activePath: activePathIds.has(node.id)
+        activePath: activePathIds.has(node.id),
       })),
       position: cursor + 1,
-      total: flattened.length
+      total: flattened.length,
     };
   }
 

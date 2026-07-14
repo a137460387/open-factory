@@ -73,10 +73,7 @@ export const ENGLISH_SPELL_CHECK_DICT: SpellCheckEntry[] = [
   { pattern: 'neccessary', replacement: 'necessary', language: 'en' },
 ];
 
-export const DEFAULT_SPELL_CHECK_DICT: SpellCheckEntry[] = [
-  ...CHINESE_SPELL_CHECK_DICT,
-  ...ENGLISH_SPELL_CHECK_DICT,
-];
+export const DEFAULT_SPELL_CHECK_DICT: SpellCheckEntry[] = [...CHINESE_SPELL_CHECK_DICT, ...ENGLISH_SPELL_CHECK_DICT];
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -85,7 +82,7 @@ function escapeRegExp(value: string): string {
 export function scanSubtitleSpelling(
   inputs: SpellCheckScanInput[],
   dictionary: SpellCheckEntry[] = DEFAULT_SPELL_CHECK_DICT,
-  glossary: string[] = []
+  glossary: string[] = [],
 ): SpellCheckResult[] {
   const glossarySet = new Set(glossary.map((term) => term.toLowerCase()));
   const results: SpellCheckResult[] = [];
@@ -108,7 +105,7 @@ export function scanSubtitleSpelling(
           matchedWord,
           suggestions: [entry.replacement],
           startIndex: match.index,
-          endIndex: match.index + matchedWord.length
+          endIndex: match.index + matchedWord.length,
         });
       }
     }
@@ -117,21 +114,14 @@ export function scanSubtitleSpelling(
   return results.sort((a, b) => a.start - b.start || a.startIndex - b.startIndex);
 }
 
-export function applySpellCheckReplacement(
-  text: string,
-  result: SpellCheckResult,
-  replacement: string
-): string {
+export function applySpellCheckReplacement(text: string, result: SpellCheckResult, replacement: string): string {
   if (result.startIndex < 0 || result.startIndex >= text.length) {
     return text;
   }
   return text.slice(0, result.startIndex) + replacement + text.slice(result.endIndex);
 }
 
-export function buildSpellCheckReplacement(
-  text: string,
-  replaceInputs: SpellCheckReplaceInput[]
-): string {
+export function buildSpellCheckReplacement(text: string, replaceInputs: SpellCheckReplaceInput[]): string {
   let result = text;
   const sorted = [...replaceInputs].sort((a, b) => b.startIndex - a.startIndex);
   for (const input of sorted) {
@@ -145,7 +135,7 @@ export function buildSpellCheckReplacement(
 
 export function serializeSpellCheckReportCsv(
   results: SpellCheckResult[],
-  options: { fps?: number; timecodeFormat?: TimecodeFormat } = {}
+  options: { fps?: number; timecodeFormat?: TimecodeFormat } = {},
 ): string {
   const rows = [['timecode', 'clip_id', 'matched_word', 'suggestion', 'original_text']];
   for (const result of results) {
@@ -154,7 +144,7 @@ export function serializeSpellCheckReportCsv(
       result.clipId,
       result.matchedWord,
       result.suggestions[0] ?? '',
-      result.originalText
+      result.originalText,
     ]);
   }
   return rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n') + '\n';

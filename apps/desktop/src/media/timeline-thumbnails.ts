@@ -1,10 +1,10 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   TIMELINE_THUMBNAIL_WIDTH,
   buildTimelineThumbnailCacheKey,
   calculateTimelineThumbnailTimestamps,
   type Clip,
-  type MediaAsset
+  type MediaAsset,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
@@ -29,14 +29,18 @@ let worker: Worker | undefined;
 let workerUnavailable = false;
 let workerRequestId = 0;
 
-export function getTimelineThumbnailPlaceholders(asset: MediaAsset, clip: VideoClip, pixelWidth: number): TimelineThumbnailFrame[] {
+export function getTimelineThumbnailPlaceholders(
+  asset: MediaAsset,
+  clip: VideoClip,
+  pixelWidth: number,
+): TimelineThumbnailFrame[] {
   const mediaPath = getPreviewMediaPath(asset);
   return calculateTimelineThumbnailTimestamps({
     clipDuration: clip.duration,
     clipPixelWidth: pixelWidth,
     trimStart: clip.trimStart,
     speed: clip.speed,
-    keyframes: clip.keyframes
+    keyframes: clip.keyframes,
   }).map((timestamp) => {
     const key = buildTimelineThumbnailCacheKey(mediaPath, timestamp);
     return { key, timestamp, dataUrl: thumbnailCache.get(key) };
@@ -49,7 +53,11 @@ export function getTimelineThumbnailPlaceholder(asset: MediaAsset, timestamp: nu
   return { key, timestamp, dataUrl: thumbnailCache.get(key) };
 }
 
-export async function getTimelineThumbnails(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {
+export async function getTimelineThumbnails(
+  asset: MediaAsset,
+  clip: VideoClip,
+  pixelWidth: number,
+): Promise<TimelineThumbnailFrame[]> {
   const frames = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
   if (frames.every((frame) => thumbnailCache.has(frame.key))) {
     return frames.map((frame) => ({ ...frame, dataUrl: thumbnailCache.get(frame.key) }));
@@ -64,9 +72,11 @@ export async function getTimelineThumbnailFrame(asset: MediaAsset, timestamp: nu
   }
   return runBackgroundMediaTask(async () => {
     const mediaPath = getPreviewMediaPath(asset);
-    const pending = pendingFrames.get(frame.key) ?? generateTimelineThumbnail(mediaPath, timestamp).finally(() => pendingFrames.delete(frame.key));
+    const pending =
+      pendingFrames.get(frame.key) ??
+      generateTimelineThumbnail(mediaPath, timestamp).finally(() => pendingFrames.delete(frame.key));
     pendingFrames.set(frame.key, pending);
-    const dataUrl = await pending.catch(logError("timeline-thumbnails"));
+    const dataUrl = await pending.catch(logError('timeline-thumbnails'));
     if (dataUrl) {
       thumbnailCache.set(frame.key, dataUrl);
     }
@@ -74,16 +84,22 @@ export async function getTimelineThumbnailFrame(asset: MediaAsset, timestamp: nu
   });
 }
 
-async function getTimelineThumbnailsUnthrottled(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {
+async function getTimelineThumbnailsUnthrottled(
+  asset: MediaAsset,
+  clip: VideoClip,
+  pixelWidth: number,
+): Promise<TimelineThumbnailFrame[]> {
   const mediaPath = getPreviewMediaPath(asset);
   const frames = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
   for (const frame of frames) {
     if (thumbnailCache.has(frame.key)) {
       continue;
     }
-    const pending = pendingFrames.get(frame.key) ?? generateTimelineThumbnail(mediaPath, frame.timestamp).finally(() => pendingFrames.delete(frame.key));
+    const pending =
+      pendingFrames.get(frame.key) ??
+      generateTimelineThumbnail(mediaPath, frame.timestamp).finally(() => pendingFrames.delete(frame.key));
     pendingFrames.set(frame.key, pending);
-    const dataUrl = await pending.catch(logError("timeline-thumbnails"));
+    const dataUrl = await pending.catch(logError('timeline-thumbnails'));
     if (dataUrl) {
       thumbnailCache.set(frame.key, dataUrl);
     }
@@ -96,9 +112,11 @@ async function generateTimelineThumbnail(mediaPath: string, timestamp: number): 
   const duration = Number.isFinite(video.duration) ? video.duration : timestamp;
   const safeTime = Math.min(Math.max(0, timestamp), Math.max(0, duration - 0.035));
   await seekVideo(video, safeTime);
-  const bitmap = await createImageBitmap(video).catch(logError("timeline-thumbnails"));
+  const bitmap = await createImageBitmap(video).catch(logError('timeline-thumbnails'));
   if (bitmap) {
-    return renderBitmapInWorker(bitmap, TIMELINE_THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT).catch(() => drawThumbnailOnMainThread(video));
+    return renderBitmapInWorker(bitmap, TIMELINE_THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT).catch(() =>
+      drawThumbnailOnMainThread(video),
+    );
   }
   return drawThumbnailOnMainThread(video);
 }

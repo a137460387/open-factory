@@ -81,7 +81,10 @@ import { loadSharedLibrary } from '../shared-library/sharedLibrary';
 // ---------------------------------------------------------------------------
 
 interface MediaCallbacksDeps {
-  runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => Promise<void>;
+  runAutomationForMedia: (
+    trigger: 'on-import' | 'on-export-complete' | 'on-project-open',
+    media: MediaAsset[],
+  ) => Promise<void>;
 }
 
 /**
@@ -117,56 +120,70 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
   }, []);
 
   const applyImportedMediaColorConversionChoice = useCallback(async (media: MediaAsset[]): Promise<MediaAsset[]> => {
-    const workingColorSpace = normalizeProjectWorkingColorSpace(useEditorStore.getState().project.settings.workingColorSpace);
-    const mismatched = media.filter((asset) => asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace);
+    const workingColorSpace = normalizeProjectWorkingColorSpace(
+      useEditorStore.getState().project.settings.workingColorSpace,
+    );
+    const mismatched = media.filter(
+      (asset) => asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace,
+    );
     if (mismatched.length === 0) {
       return media;
     }
-    const confirmed = await bridgeConfirm(zhCN.editorToasts.colorConversionPrompt(mismatched.length, getColorSpaceDisplayName(workingColorSpace)), {
-      title: zhCN.settings.general.workingColorSpace
-    });
+    const confirmed = await bridgeConfirm(
+      zhCN.editorToasts.colorConversionPrompt(mismatched.length, getColorSpaceDisplayName(workingColorSpace)),
+      {
+        title: zhCN.settings.general.workingColorSpace,
+      },
+    );
     if (!confirmed) {
       return media;
     }
     return media.map((asset) =>
       asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace
         ? { ...asset, colorProfile: { ...asset.colorProfile, autoConvertToWorkingSpace: true } }
-        : asset
+        : asset,
     );
   }, []);
 
-  const queueFrameRateConversionForImportedMedia = useCallback(
-    async (media: MediaAsset[]) => {
-      const project = useEditorStore.getState().project;
-      if (project.settings.vfrHandling === 'ignore') {
-        return;
-      }
-      const frameRateMedia = media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, project.settings.fps)));
-      if (frameRateMedia.length === 0) {
-        return;
-      }
-      if (project.settings.vfrHandling === 'ask') {
-        const shouldConvert = await bridgeConfirm(zhCN.editorToasts.frameRateConversionPrompt(frameRateMedia.length, getProjectFrameRateConversionTarget(project.settings.fps)), {
+  const queueFrameRateConversionForImportedMedia = useCallback(async (media: MediaAsset[]) => {
+    const project = useEditorStore.getState().project;
+    if (project.settings.vfrHandling === 'ignore') {
+      return;
+    }
+    const frameRateMedia = media.filter(
+      (asset) =>
+        asset.type === 'video' &&
+        (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, project.settings.fps)),
+    );
+    if (frameRateMedia.length === 0) {
+      return;
+    }
+    if (project.settings.vfrHandling === 'ask') {
+      const shouldConvert = await bridgeConfirm(
+        zhCN.editorToasts.frameRateConversionPrompt(
+          frameRateMedia.length,
+          getProjectFrameRateConversionTarget(project.settings.fps),
+        ),
+        {
           title: zhCN.editorToasts.frameRateConversionPromptTitle,
-          kind: 'warning'
-        });
-        if (!shouldConvert) {
-          return;
-        }
+          kind: 'warning',
+        },
+      );
+      if (!shouldConvert) {
+        return;
       }
-      for (const asset of frameRateMedia) {
-        const cfrFrameRate = isFrameRateMismatch(asset.frameRate, project.settings.fps)
-          ? getProjectFrameRateConversionTarget(project.settings.fps)
-          : getProjectFrameRateConversionTarget(project.settings.fps, asset.frameRate ?? project.settings.fps);
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
-          force: true,
-          cfrFrameRate
-        });
-      }
-      void ensureMediaJobRunner();
-    },
-    []
-  );
+    }
+    for (const asset of frameRateMedia) {
+      const cfrFrameRate = isFrameRateMismatch(asset.frameRate, project.settings.fps)
+        ? getProjectFrameRateConversionTarget(project.settings.fps)
+        : getProjectFrameRateConversionTarget(project.settings.fps, asset.frameRate ?? project.settings.fps);
+      useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
+        force: true,
+        cfrFrameRate,
+      });
+    }
+    void ensureMediaJobRunner();
+  }, []);
 
   // --- 媒体导入 ---
   const importMedia = useCallback(async () => {
@@ -178,7 +195,11 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       const project = useEditorStore.getState().project;
       const result = await probeMediaPaths(paths, project.media);
       if (result.duplicateCount > 0) {
-        showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
+        showToast({
+          kind: 'info',
+          title: zhCN.editorToasts.duplicateTitle,
+          message: zhCN.editorToasts.duplicateMessage(result.duplicateCount),
+        });
       }
       if (result.media.length > 0) {
         const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
@@ -188,19 +209,36 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         await queueFrameRateConversionForImportedMedia(importedMedia);
         void runAutomationForMedia('on-import', importedMedia);
         useEditorSettingsStore.getState().setTutorialSignals((current) => ({ ...current, mediaImported: true }));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.editorToasts.mediaImported,
+          message: zhCN.editorToasts.mediaImportedMessage(result.media.length),
+        });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.importFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage,
+      });
     }
-  }, [applyImportedMediaColorConversionChoice, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
+  }, [
+    applyImportedMediaColorConversionChoice,
+    persistMediaFingerprints,
+    queueFrameRateConversionForImportedMedia,
+    runAutomationForMedia,
+  ]);
 
   const addVersionForMedia = useCallback(
     async (assetId: string) => {
       const currentProject = useEditorStore.getState().project;
       const asset = currentProject.media.find((item) => item.id === assetId);
       if (!asset) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionMissingAsset });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.mediaVersionAddFailed,
+          message: zhCN.editorToasts.mediaVersionMissingAsset,
+        });
         return;
       }
       try {
@@ -210,20 +248,35 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
           return;
         }
         if (path === asset.path) {
-          showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionSameFile });
+          showToast({
+            kind: 'warning',
+            title: zhCN.editorToasts.mediaVersionAddFailed,
+            message: zhCN.editorToasts.mediaVersionSameFile,
+          });
           return;
         }
         const latestProject = useEditorStore.getState().project;
         const existing = latestProject.media.find((item) => item.path === path);
-        const result = existing ? { media: [] as MediaAsset[], duplicateCount: 1 } : await probeMediaPaths([path], latestProject.media);
-        const importedMedia = result.media.length > 0 ? await applyImportedMediaColorConversionChoice(result.media) : result.media;
+        const result = existing
+          ? { media: [] as MediaAsset[], duplicateCount: 1 }
+          : await probeMediaPaths([path], latestProject.media);
+        const importedMedia =
+          result.media.length > 0 ? await applyImportedMediaColorConversionChoice(result.media) : result.media;
         const versionAsset = existing ?? importedMedia[0];
         if (!versionAsset) {
-          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.importFailedMessage });
+          showToast({
+            kind: 'error',
+            title: zhCN.editorToasts.mediaVersionAddFailed,
+            message: zhCN.editorToasts.importFailedMessage,
+          });
           return;
         }
         if (versionAsset.type !== asset.type) {
-          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionTypeMismatch });
+          showToast({
+            kind: 'error',
+            title: zhCN.editorToasts.mediaVersionAddFailed,
+            message: zhCN.editorToasts.mediaVersionTypeMismatch,
+          });
           return;
         }
         if (importedMedia.length > 0) {
@@ -235,12 +288,25 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         const metadata = useEditorStore.getState().project.mediaMetadata[assetId];
         const { addMediaVersion } = await import('@open-factory/editor-core');
         useEditorStore.getState().setMediaMetadata(assetId, addMediaVersion(metadata, versionAsset));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaVersionAdded, message: zhCN.editorToasts.mediaVersionAddedMessage(versionAsset.name) });
+        showToast({
+          kind: 'success',
+          title: zhCN.editorToasts.mediaVersionAdded,
+          message: zhCN.editorToasts.mediaVersionAddedMessage(versionAsset.name),
+        });
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.mediaVersionAddFailed,
+          message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage,
+        });
       }
     },
-    [applyImportedMediaColorConversionChoice, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia]
+    [
+      applyImportedMediaColorConversionChoice,
+      persistMediaFingerprints,
+      queueFrameRateConversionForImportedMedia,
+      runAutomationForMedia,
+    ],
   );
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
@@ -251,7 +317,11 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
   const batchGenerateCovers = useCallback(async () => {
     const tasks = buildCoverFrameBatchTasks(useEditorStore.getState().project.media);
     if (tasks.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.coverBatchFailed, message: zhCN.editorToasts.coverBatchNoVideo });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.coverBatchFailed,
+        message: zhCN.editorToasts.coverBatchNoVideo,
+      });
       return;
     }
     try {
@@ -259,16 +329,28 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       const baseDir = projectPath ? dirname(projectPath) : await getAppDataDir();
       const result = await batchExtractCoverFrames({
         outputDir: joinLocalPath(baseDir, 'covers'),
-        tasks
+        tasks,
       });
       const completed = result.results.filter((item) => item.status === 'completed').length;
       if (completed === 0) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: result.results.find((item) => item.error)?.error ?? zhCN.editorToasts.coverBatchFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.coverBatchFailed,
+          message: result.results.find((item) => item.error)?.error ?? zhCN.editorToasts.coverBatchFailedMessage,
+        });
         return;
       }
-      showToast({ kind: 'success', title: zhCN.editorToasts.coverBatchCompleted, message: zhCN.editorToasts.coverBatchCompletedMessage(completed) });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.coverBatchCompleted,
+        message: zhCN.editorToasts.coverBatchCompletedMessage(completed),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.coverBatchFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.coverBatchFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.coverBatchFailedMessage,
+      });
     }
   }, []);
 
@@ -277,7 +359,11 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     try {
       commandManager.execute(new AddMediaFolderCommand(projectAccessor, { name: zhCN.mediaBin.newFolder, parentId }));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.mediaBin.newFolder, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.mediaBin.newFolder,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }, []);
 
@@ -301,84 +387,101 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     if (assetIds.length === 0) {
       return;
     }
-    commandManager.execute(new BatchUpdateMetadataCommand(projectAccessor, assetIds.map((assetId) => ({ assetId, metadata }))));
-    showToast({ kind: 'success', title: zhCN.mediaBin.batchEditMetadata, message: zhCN.mediaBin.batchMetadataUpdated(assetIds.length) });
+    commandManager.execute(
+      new BatchUpdateMetadataCommand(
+        projectAccessor,
+        assetIds.map((assetId) => ({ assetId, metadata })),
+      ),
+    );
+    showToast({
+      kind: 'success',
+      title: zhCN.mediaBin.batchEditMetadata,
+      message: zhCN.mediaBin.batchMetadataUpdated(assetIds.length),
+    });
   }, []);
 
-  const batchRenameMedia = useCallback(async (_assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => {
-    const state = useEditorStore.getState();
-    const assetById = new Map(state.project.media.map((asset) => [asset.id, asset]));
-    const renamePlan = preview
-      .filter((item) => item.changed)
-      .map((item) => {
-        const asset = assetById.get(item.assetId);
-        return asset
-          ? {
+  const batchRenameMedia = useCallback(
+    async (_assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => {
+      const state = useEditorStore.getState();
+      const assetById = new Map(state.project.media.map((asset) => [asset.id, asset]));
+      const renamePlan = preview
+        .filter((item) => item.changed)
+        .map((item) => {
+          const asset = assetById.get(item.assetId);
+          return asset
+            ? {
+                assetId: item.assetId,
+                name: item.nextName,
+                oldPath: asset.path,
+                nextPath: renameFiles ? replaceMediaPathBasename(asset.path, item.nextName) : asset.path,
+              }
+            : undefined;
+        })
+        .filter((item): item is { assetId: string; name: string; oldPath: string; nextPath: string } => Boolean(item));
+      if (renamePlan.length === 0) {
+        return;
+      }
+      let commandExecuted = false;
+      try {
+        commandManager.execute(
+          new BatchRenameMediaCommand(
+            projectAccessor,
+            renamePlan.map((item) => ({
               assetId: item.assetId,
-              name: item.nextName,
-              oldPath: asset.path,
-              nextPath: renameFiles ? replaceMediaPathBasename(asset.path, item.nextName) : asset.path
+              name: item.name,
+              path: renameFiles ? item.nextPath : undefined,
+            })),
+          ),
+        );
+        commandExecuted = true;
+        if (renameFiles) {
+          for (const item of renamePlan) {
+            if (item.oldPath !== item.nextPath) {
+              await bridgeMoveFile(item.oldPath, item.nextPath);
             }
-          : undefined;
-      })
-      .filter((item): item is { assetId: string; name: string; oldPath: string; nextPath: string } => Boolean(item));
-    if (renamePlan.length === 0) {
-      return;
-    }
-    let commandExecuted = false;
-    try {
-      commandManager.execute(
-        new BatchRenameMediaCommand(
-          projectAccessor,
-          renamePlan.map((item) => ({
-            assetId: item.assetId,
-            name: item.name,
-            path: renameFiles ? item.nextPath : undefined
-          }))
-        )
-      );
-      commandExecuted = true;
-      if (renameFiles) {
-        for (const item of renamePlan) {
-          if (item.oldPath !== item.nextPath) {
-            await bridgeMoveFile(item.oldPath, item.nextPath);
           }
         }
+        showToast({
+          kind: 'success',
+          title: zhCN.mediaBin.batchRename,
+          message: zhCN.mediaBin.batchRenameCompleted(renamePlan.length),
+        });
+      } catch (error) {
+        if (commandExecuted && renameFiles) {
+          commandManager.undo();
+        }
+        showToast({
+          kind: 'error',
+          title: zhCN.mediaBin.batchRenameFailed,
+          message: error instanceof Error ? error.message : zhCN.mediaBin.batchRenameFailedMessage,
+        });
       }
-      showToast({ kind: 'success', title: zhCN.mediaBin.batchRename, message: zhCN.mediaBin.batchRenameCompleted(renamePlan.length) });
+    },
+    [],
+  );
+
+  // --- 重链接 ---
+  const relinkMedia = useCallback(async (assetId: string) => {
+    const project = useEditorStore.getState().project;
+    const asset = project.media.find((item) => item.id === assetId);
+    if (!asset) {
+      return;
+    }
+    try {
+      const relinked = await relinkSingleMedia(asset);
+      if (!relinked) {
+        return;
+      }
+      useEditorStore.getState().setMedia(project.media.map((item) => (item.id === assetId ? relinked : item)));
+      showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
     } catch (error) {
-      if (commandExecuted && renameFiles) {
-        commandManager.undo();
-      }
       showToast({
         kind: 'error',
-        title: zhCN.mediaBin.batchRenameFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaBin.batchRenameFailedMessage
+        title: zhCN.editorToasts.relinkFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage,
       });
     }
   }, []);
-
-  // --- 重链接 ---
-  const relinkMedia = useCallback(
-    async (assetId: string) => {
-      const project = useEditorStore.getState().project;
-      const asset = project.media.find((item) => item.id === assetId);
-      if (!asset) {
-        return;
-      }
-      try {
-        const relinked = await relinkSingleMedia(asset);
-        if (!relinked) {
-          return;
-        }
-        useEditorStore.getState().setMedia(project.media.map((item) => (item.id === assetId ? relinked : item)));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
-      }
-    },
-    []
-  );
 
   const relinkAllMissing = useCallback(async () => {
     try {
@@ -388,10 +491,14 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       showToast({
         kind: result.relinkedCount > 0 ? 'success' : 'warning',
         title: zhCN.editorToasts.relinkComplete,
-        message: zhCN.editorToasts.relinkCompleteMessage(result.relinkedCount, result.warnings.length)
+        message: zhCN.editorToasts.relinkCompleteMessage(result.relinkedCount, result.warnings.length),
       });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkMissingFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.relinkFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.relinkMissingFailedMessage,
+      });
     }
   }, []);
 
@@ -410,7 +517,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       showToast({
         kind: 'error',
         title: zhCN.duplicateMedia.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.duplicateMedia.scanFailedMessage
+        message: error instanceof Error ? error.message : zhCN.duplicateMedia.scanFailedMessage,
       });
     }
   }, []);
@@ -422,9 +529,17 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       }
       useEditorUIStore.getState().setDuplicateMediaOpen(false);
       useEditorFeatureStore.getState().setDuplicateMediaGroups([]);
-      showToast({ kind: 'success', title: zhCN.duplicateMedia.mergedTitle, message: zhCN.duplicateMedia.mergedMessage(selections.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.duplicateMedia.mergedTitle,
+        message: zhCN.duplicateMedia.mergedMessage(selections.length),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.projectHealth.toasts.fixFailed,
+        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+      });
     }
   }, []);
 
@@ -435,7 +550,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       const currentProject = useEditorStore.getState().project;
       const [groups, cleanup] = await Promise.all([
         scanSmartDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata),
-        scanMediaCleanupReport(currentProject)
+        scanMediaCleanupReport(currentProject),
       ]);
       useEditorFeatureStore.getState().setMediaOrganizerGroups(groups);
       useEditorFeatureStore.getState().setMediaOrganizerCleanup(cleanup);
@@ -443,7 +558,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       showToast({
         kind: 'error',
         title: zhCN.mediaOrganizer.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaOrganizer.scanFailedMessage
+        message: error instanceof Error ? error.message : zhCN.mediaOrganizer.scanFailedMessage,
       });
     } finally {
       useEditorFeatureStore.getState().setMediaOrganizerScanning(false);
@@ -469,29 +584,50 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         }
         let removedCount = 0;
         for (const selection of selections) {
-          commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, [selection.keepAssetId, ...selection.removeAssetIds]));
+          commandManager.execute(
+            new MergeMediaCommand(projectAccessor, selection.keepAssetId, [
+              selection.keepAssetId,
+              ...selection.removeAssetIds,
+            ]),
+          );
           removedCount += selection.removeAssetIds.length;
         }
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(removedCount) });
+        showToast({
+          kind: 'success',
+          title: zhCN.mediaOrganizer.removedTitle,
+          message: zhCN.mediaOrganizer.removedMessage(removedCount),
+        });
         void refreshMediaOrganizer();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshMediaOrganizer]
+    [refreshMediaOrganizer],
   );
 
   const removeMediaOrganizerReferences = useCallback(
     (assetIds: string[]) => {
       try {
         commandManager.execute(new RemoveMediaCommand(projectAccessor, assetIds));
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(assetIds.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.mediaOrganizer.removedTitle,
+          message: zhCN.mediaOrganizer.removedMessage(assetIds.length),
+        });
         void refreshMediaOrganizer();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshMediaOrganizer]
+    [refreshMediaOrganizer],
   );
 
   const archiveUnusedMedia = useCallback(async () => {
@@ -515,10 +651,18 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       }
       const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
       commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.archivedTitle));
-      showToast({ kind: 'success', title: zhCN.mediaOrganizer.archivedTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.mediaOrganizer.archivedTitle,
+        message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length),
+      });
       void refreshMediaOrganizer();
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.mediaOrganizer.archiveFailed, message: error instanceof Error ? error.message : zhCN.mediaOrganizer.archiveFailed });
+      showToast({
+        kind: 'error',
+        title: zhCN.mediaOrganizer.archiveFailed,
+        message: error instanceof Error ? error.message : zhCN.mediaOrganizer.archiveFailed,
+      });
     }
   }, [refreshMediaOrganizer]);
 
@@ -539,13 +683,21 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         }
         const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
         commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.renameTitle));
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.renameTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.mediaOrganizer.renameTitle,
+          message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length),
+        });
         void refreshMediaOrganizer();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshMediaOrganizer]
+    [refreshMediaOrganizer],
   );
 
   // --- 合规 ---
@@ -561,28 +713,36 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       const matches = matchConformByFilename(
         currentProject.media,
         paths.map((path) => ({ path })),
-        { caseInsensitive: true }
+        { caseInsensitive: true },
       );
-      const preflight = buildConformPreflight(currentProject.media, matches, { fallbackFrameRate: currentProject.settings.fps });
+      const preflight = buildConformPreflight(currentProject.media, matches, {
+        fallbackFrameRate: currentProject.settings.fps,
+      });
       const replacements = buildConformMediaReplacements(preflight);
       const report = buildConformReport(preflight, { selectedOnly: true });
 
       if (replacements.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.conformMedia.noMatchesTitle, message: zhCN.conformMedia.noMatchesMessage });
+        showToast({
+          kind: 'warning',
+          title: zhCN.conformMedia.noMatchesTitle,
+          message: zhCN.conformMedia.noMatchesMessage,
+        });
         return;
       }
 
-      commandManager.execute(new ConformMediaCommand(projectAccessor, replacements, zhCN.conformMedia.commandDescription));
+      commandManager.execute(
+        new ConformMediaCommand(projectAccessor, replacements, zhCN.conformMedia.commandDescription),
+      );
       showToast({
         kind: report.failureCount > 0 || report.warningCount > 0 ? 'warning' : 'success',
         title: zhCN.conformMedia.completedTitle,
-        message: zhCN.conformMedia.completedMessage(report.successCount, report.warningCount, report.failureCount)
+        message: zhCN.conformMedia.completedMessage(report.successCount, report.warningCount, report.failureCount),
       });
     } catch (error) {
       showToast({
         kind: 'error',
         title: zhCN.conformMedia.failedTitle,
-        message: error instanceof Error ? error.message : zhCN.conformMedia.failedMessage
+        message: error instanceof Error ? error.message : zhCN.conformMedia.failedMessage,
       });
     }
   }, []);

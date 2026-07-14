@@ -3,7 +3,7 @@ import { zhCN } from '../i18n/strings';
 import {
   getEffectiveTimelineShortcutBindings,
   TIMELINE_SHORTCUT_DEFINITIONS,
-  type TimelineShortcutBindings
+  type TimelineShortcutBindings,
 } from '../shortcuts/timeline-shortcuts';
 
 interface ShortcutCheatsheetPanelProps {
@@ -16,7 +16,7 @@ export function ShortcutCheatsheetPanel({ bindings, onClose }: ShortcutCheatshee
   const effectiveBindings = getEffectiveTimelineShortcutBindings(bindings);
   const timelineRows = TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => ({
     label: zhCN.settings.shortcuts.actions[definition.action],
-    keys: effectiveBindings[definition.action].join(' / ')
+    keys: effectiveBindings[definition.action].join(' / '),
   }));
   return (
     <div
@@ -54,7 +54,11 @@ export function ShortcutCheatsheetPanel({ bindings, onClose }: ShortcutCheatshee
         <div className="grid max-h-[calc(82vh-65px)] gap-4 overflow-y-auto p-4 md:grid-cols-[1.2fr_0.8fr]">
           <ShortcutSection title={t.timeline} rows={timelineRows} testId="shortcut-cheatsheet-timeline" />
           <div className="space-y-4">
-            <ShortcutSection title={t.timelineEditing} rows={t.timelineEditingRows} testId="shortcut-cheatsheet-timeline-editing" />
+            <ShortcutSection
+              title={t.timelineEditing}
+              rows={t.timelineEditingRows}
+              testId="shortcut-cheatsheet-timeline-editing"
+            />
             <ShortcutSection title={t.mediaBin} rows={t.mediaBinRows} testId="shortcut-cheatsheet-media-bin" />
             <ShortcutSection title={t.inspector} rows={t.inspectorRows} testId="shortcut-cheatsheet-inspector" />
           </div>
@@ -64,15 +68,28 @@ export function ShortcutCheatsheetPanel({ bindings, onClose }: ShortcutCheatshee
   );
 }
 
-function ShortcutSection({ title, rows, testId }: { title: string; rows: ReadonlyArray<{ label: string; keys: string }>; testId: string }) {
+function ShortcutSection({
+  title,
+  rows,
+  testId,
+}: {
+  title: string;
+  rows: ReadonlyArray<{ label: string; keys: string }>;
+  testId: string;
+}) {
   return (
     <section className="rounded-md border border-line bg-panel p-3" data-testid={testId}>
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-normal text-slate-600">{title}</h3>
       <div className="divide-y divide-line rounded-md bg-white">
         {rows.map((row) => (
-          <div key={`${row.label}-${row.keys}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-xs">
+          <div
+            key={`${row.label}-${row.keys}`}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 text-xs"
+          >
             <span className="min-w-0 text-slate-700">{row.label}</span>
-            <kbd className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-[11px] text-ink">{row.keys}</kbd>
+            <kbd className="rounded border border-line bg-panel px-2 py-0.5 font-mono text-[11px] text-ink">
+              {row.keys}
+            </kbd>
           </div>
         ))}
       </div>

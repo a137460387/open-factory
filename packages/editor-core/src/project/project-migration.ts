@@ -47,15 +47,26 @@ import {
   normalizeSubtitleTrackType,
   normalizeTextPath,
   normalizeTransform,
-  normalizeVideoRestoration
-  , normalizeClipAIReframe,
+  normalizeVideoRestoration,
+  normalizeClipAIReframe,
   normalizeAnomalyIntervals,
   normalizeSubtitleSpeakerId,
   normalizeSpeakerLabels,
-  normalizeMixerState
+  normalizeMixerState,
 } from '../model';
 import { normalizeColorNodeGraph } from '../color-node-graph';
-import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition } from '../model-types';
+import type {
+  Clip,
+  ImageSequenceInfo,
+  MediaAsset,
+  MediaFolder,
+  MediaMetadata,
+  Project,
+  Sequence,
+  Subclip,
+  Timeline,
+  Transition,
+} from '../model-types';
 import type { TimingAdaptation, TtsSegment, DubbingAdaptationType } from '../model-types';
 import type { MixerState } from '../audio/mixer-types';
 import type { CharacterTimeline } from '../ai-character-timeline';
@@ -72,7 +83,12 @@ import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
-import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../text-layout';
+import {
+  normalizeRichTextDocument,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
+} from '../text-layout';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { normalizeBeatMarkers } from '../beats';
@@ -83,19 +99,43 @@ import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } fro
 import { normalizeProjectDocumentation } from './documentation';
 import { normalizeProjectReleaseVersion } from './release-workflow';
 
-const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const, workingColorSpace: 'srgb' as const };
+const DEFAULT_SETTINGS = {
+  fps: 30,
+  timecodeFormat: 'ndf' as const,
+  width: 1280,
+  height: 720,
+  colorPipeline: 'sdr-srgb' as const,
+  workingColorSpace: 'srgb' as const,
+};
 
 const VALID_DUBBING_ADAPTATION_TYPES: ReadonlySet<DubbingAdaptationType> = new Set(['compress', 'pad', 'trim', 'none']);
-const VALID_EMOTION_TONES: ReadonlySet<EmotionTone> = new Set(['energetic', 'calm', 'tense', 'happy', 'sad', 'neutral']);
+const VALID_EMOTION_TONES: ReadonlySet<EmotionTone> = new Set([
+  'energetic',
+  'calm',
+  'tense',
+  'happy',
+  'sad',
+  'neutral',
+]);
 
 function normalizeTimingAdaptation(input: unknown): TimingAdaptation | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   if (typeof obj.durationDelta !== 'number' || !Number.isFinite(obj.durationDelta)) return undefined;
-  if (typeof obj.adaptationType !== 'string' || !VALID_DUBBING_ADAPTATION_TYPES.has(obj.adaptationType as DubbingAdaptationType)) return undefined;
+  if (
+    typeof obj.adaptationType !== 'string' ||
+    !VALID_DUBBING_ADAPTATION_TYPES.has(obj.adaptationType as DubbingAdaptationType)
+  )
+    return undefined;
   const atempoRatio = typeof obj.atempoRatio === 'number' && Number.isFinite(obj.atempoRatio) ? obj.atempoRatio : null;
-  const suggestedOutPoint = typeof obj.suggestedOutPoint === 'number' && Number.isFinite(obj.suggestedOutPoint) ? obj.suggestedOutPoint : null;
-  return { durationDelta: obj.durationDelta, adaptationType: obj.adaptationType as DubbingAdaptationType, atempoRatio, suggestedOutPoint };
+  const suggestedOutPoint =
+    typeof obj.suggestedOutPoint === 'number' && Number.isFinite(obj.suggestedOutPoint) ? obj.suggestedOutPoint : null;
+  return {
+    durationDelta: obj.durationDelta,
+    adaptationType: obj.adaptationType as DubbingAdaptationType,
+    atempoRatio,
+    suggestedOutPoint,
+  };
 }
 
 function normalizeTtsSegment(input: unknown): TtsSegment | null {
@@ -156,7 +196,12 @@ function normalizeEmotionAnalysis(input: unknown): EmotionAnalysis | undefined {
   if (typeof obj.intensity !== 'number' || !Number.isFinite(obj.intensity)) return undefined;
   if (typeof obj.reason !== 'string') return undefined;
   if (typeof obj.analyzedAt !== 'string') return undefined;
-  return { emotionTone: obj.emotionTone as EmotionTone, intensity: obj.intensity, reason: obj.reason, analyzedAt: obj.analyzedAt };
+  return {
+    emotionTone: obj.emotionTone as EmotionTone,
+    intensity: obj.intensity,
+    reason: obj.reason,
+    analyzedAt: obj.analyzedAt,
+  };
 }
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
@@ -167,7 +212,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
   const clipIds = project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
   const media = project.media.map((asset) => {
     const normalizedPath = normalizePath(asset.path);
-    const relativePath = projectPath ? makeRelativePath(normalizedPath, projectPath) : asset.relativePath ?? null;
+    const relativePath = projectPath ? makeRelativePath(normalizedPath, projectPath) : (asset.relativePath ?? null);
     if (projectPath && relativePath === null) {
       warnings.push(`Media ${asset.name} is on a different drive and will be saved with an absolute path.`);
     }
@@ -182,16 +227,18 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       frameRate: normalizeSequenceFrameRate(asset.frameRate),
       avgFrameRate: normalizeOptionalString(asset.avgFrameRate),
       realFrameRate: normalizeOptionalString(asset.realFrameRate),
-      variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
+      variableFrameRate:
+        asset.variableFrameRate === true ||
+        isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
       fieldOrder: normalizeOptionalString(asset.fieldOrder),
       colorProfile: normalizeMediaColorProfile(asset.colorProfile),
       imageSequence: asset.imageSequence
         ? {
             ...asset.imageSequence,
             pattern: normalizePath(asset.imageSequence.pattern),
-            paths: asset.imageSequence.paths.map(normalizePath)
+            paths: asset.imageSequence.paths.map(normalizePath),
           }
-        : undefined
+        : undefined,
     };
   });
 
@@ -210,7 +257,10 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
       reviewAnnotations: normalizeReviewAnnotations(project.reviewAnnotations, getTimelineDuration(project.timeline)),
-      collaborationNotes: normalizeCollaborationNotes(project.collaborationNotes, getTimelineDuration(project.timeline)),
+      collaborationNotes: normalizeCollaborationNotes(
+        project.collaborationNotes,
+        getTimelineDuration(project.timeline),
+      ),
       timelineNotes: normalizeTimelineNotes(project.timelineNotes, getTimelineDuration(project.timeline)),
       bookmarks: normalizeTimelineBookmarks(project.bookmarks, getTimelineDuration(project.timeline)),
       beatMarkers: normalizeBeatMarkers(project.beatMarkers, getTimelineDuration(project.timeline)),
@@ -224,14 +274,14 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       timeline: primaryTimeline,
       sequences,
       subclips: project.subclips ?? [],
-      activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
-      , zoomMemory: normalizeZoomMemory(project.zoomMemory)
-      , ttsSegments: project.ttsSegments ?? []
-      , characterTimeline: project.characterTimeline
-      , preflightReport: project.preflightReport
-      , mixerState: project.mixerState
+      activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID,
+      zoomMemory: normalizeZoomMemory(project.zoomMemory),
+      ttsSegments: project.ttsSegments ?? [],
+      characterTimeline: project.characterTimeline,
+      preflightReport: project.preflightReport,
+      mixerState: project.mixerState,
     },
-    warnings: warnings.length > 0 ? warnings : undefined
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 
@@ -266,8 +316,14 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         mediaFolders,
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
-        reviewAnnotations: normalizeReviewAnnotations(file.project.reviewAnnotations, getTimelineDuration(primaryTimeline)),
-        collaborationNotes: normalizeCollaborationNotes(file.project.collaborationNotes, getTimelineDuration(primaryTimeline)),
+        reviewAnnotations: normalizeReviewAnnotations(
+          file.project.reviewAnnotations,
+          getTimelineDuration(primaryTimeline),
+        ),
+        collaborationNotes: normalizeCollaborationNotes(
+          file.project.collaborationNotes,
+          getTimelineDuration(primaryTimeline),
+        ),
         timelineNotes: normalizeTimelineNotes(file.project.timelineNotes, getTimelineDuration(primaryTimeline)),
         bookmarks: normalizeTimelineBookmarks(file.project.bookmarks, getTimelineDuration(primaryTimeline)),
         beatMarkers: normalizeBeatMarkers(file.project.beatMarkers, getTimelineDuration(primaryTimeline)),
@@ -281,14 +337,14 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         timeline: activeTimeline,
         sequences,
         subclips: normalizeSubclips(file.project.subclips),
-        activeSequenceId
-        , zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences)
-        , ttsSegments: normalizeTtsSegments(file.project.ttsSegments)
-        , characterTimeline: normalizeCharacterTimeline(file.project.characterTimeline)
-        , preflightReport: normalizePreflightReport(file.project.preflightReport)
-        , mixerState: normalizeMixerState(file.project.mixerState)
+        activeSequenceId,
+        zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences),
+        ttsSegments: normalizeTtsSegments(file.project.ttsSegments),
+        characterTimeline: normalizeCharacterTimeline(file.project.characterTimeline),
+        preflightReport: normalizePreflightReport(file.project.preflightReport),
+        mixerState: normalizeMixerState(file.project.mixerState),
       },
-      warnings: [...(file.warnings ?? [])]
+      warnings: [...(file.warnings ?? [])],
     };
   }
 
@@ -325,16 +381,15 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         timeline: primaryTimeline,
         subclips: [],
         sequences,
-        activeSequenceId: PRIMARY_SEQUENCE_ID
-        , ttsSegments: []
+        activeSequenceId: PRIMARY_SEQUENCE_ID,
+        ttsSegments: [],
       },
-      warnings: ['Migrated legacy version 0.1 project file from assets to media.']
+      warnings: ['Migrated legacy version 0.1 project file from assets to media.'],
     };
   }
 
   throw new Error('Unsupported project file format.');
 }
-
 
 function normalizeSubclip(input: Partial<Subclip> | undefined): Subclip | null {
   if (!input || typeof input !== 'object') return null;
@@ -344,7 +399,16 @@ function normalizeSubclip(input: Partial<Subclip> | undefined): Subclip | null {
   if (!sourceMediaId) return null;
   const inPoint = Number.isFinite(input.inPoint) ? Math.max(0, input.inPoint!) : 0;
   const outPoint = Number.isFinite(input.outPoint) ? Math.max(inPoint, input.outPoint!) : inPoint;
-  return { id, name, sourceMediaId, inPoint, outPoint, color: input.color, description: input.description, createdAt: input.createdAt };
+  return {
+    id,
+    name,
+    sourceMediaId,
+    inPoint,
+    outPoint,
+    color: input.color,
+    description: input.description,
+    createdAt: input.createdAt,
+  };
 }
 
 function normalizeSubclips(subclips: unknown): Subclip[] {
@@ -352,7 +416,10 @@ function normalizeSubclips(subclips: unknown): Subclip[] {
   return subclips.map(normalizeSubclip).filter((s): s is Subclip => s !== null);
 }
 
-function normalizeMediaMetadata(metadata: Record<string, MediaMetadata> | undefined, media: MediaAsset[]): Record<string, MediaMetadata> {
+function normalizeMediaMetadata(
+  metadata: Record<string, MediaMetadata> | undefined,
+  media: MediaAsset[],
+): Record<string, MediaMetadata> {
   const mediaIds = new Set(media.map((asset) => asset.id));
   const output: Record<string, MediaMetadata> = {};
   for (const [assetId, value] of Object.entries(metadata ?? {})) {
@@ -366,11 +433,21 @@ function normalizeMediaMetadata(metadata: Record<string, MediaMetadata> | undefi
 }
 
 export function isProjectFileV2(file: ProjectFile | unknown): file is ProjectFileV2 {
-  return Boolean(file && typeof file === 'object' && (file as ProjectFileV2).schemaVersion === 2 && (file as ProjectFileV2).project?.media);
+  return Boolean(
+    file &&
+    typeof file === 'object' &&
+    (file as ProjectFileV2).schemaVersion === 2 &&
+    (file as ProjectFileV2).project?.media,
+  );
 }
 
 export function isProjectFileV1(file: ProjectFile | unknown): file is ProjectFileV1 {
-  return Boolean(file && typeof file === 'object' && (file as ProjectFileV1).version === '0.1' && Array.isArray((file as ProjectFileV1).assets));
+  return Boolean(
+    file &&
+    typeof file === 'object' &&
+    (file as ProjectFileV1).version === '0.1' &&
+    Array.isArray((file as ProjectFileV1).assets),
+  );
 }
 
 function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolders: MediaFolder[] = []): MediaAsset {
@@ -386,10 +463,12 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolde
     frameRate: normalizeSequenceFrameRate(asset.frameRate),
     avgFrameRate: normalizeOptionalString(asset.avgFrameRate),
     realFrameRate: normalizeOptionalString(asset.realFrameRate),
-    variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
+    variableFrameRate:
+      asset.variableFrameRate === true ||
+      isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
     fieldOrder: normalizeOptionalString(asset.fieldOrder),
     colorProfile: normalizeMediaColorProfile(asset.colorProfile),
-    imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
+    imageSequence: normalizeImageSequence(asset.imageSequence, projectPath),
   };
 }
 
@@ -401,16 +480,29 @@ function normalizeProjectCoverPath(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? normalizePath(value) : undefined;
 }
 
-function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, projectPath?: string): ImageSequenceInfo | undefined {
+function normalizeImageSequence(
+  sequence: ImageSequenceInfo | undefined,
+  projectPath?: string,
+): ImageSequenceInfo | undefined {
   if (!sequence || !Array.isArray(sequence.paths) || sequence.paths.length === 0) {
     return undefined;
   }
   const paths = sequence.paths.map((item) =>
-    normalizePath(resolveMediaPath({ path: item, relativePath: isAbsolutePath(item) ? null : item } as MediaAsset, projectPath))
+    normalizePath(
+      resolveMediaPath({ path: item, relativePath: isAbsolutePath(item) ? null : item } as MediaAsset, projectPath),
+    ),
   );
   const pattern =
     typeof sequence.pattern === 'string' && sequence.pattern.trim()
-      ? normalizePath(resolveMediaPath({ path: sequence.pattern, relativePath: isAbsolutePath(sequence.pattern) ? null : sequence.pattern } as MediaAsset, projectPath))
+      ? normalizePath(
+          resolveMediaPath(
+            {
+              path: sequence.pattern,
+              relativePath: isAbsolutePath(sequence.pattern) ? null : sequence.pattern,
+            } as MediaAsset,
+            projectPath,
+          ),
+        )
       : paths[0];
   const frameRate = normalizeSequenceFrameRate(sequence.frameRate) ?? 30;
   const frameCount = Math.max(1, Math.round(sequence.frameCount || paths.length));
@@ -419,7 +511,7 @@ function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, project
     startNumber: Math.max(0, Math.round(sequence.startNumber || 0)),
     frameCount,
     frameRate,
-    paths: paths.slice(0, frameCount)
+    paths: paths.slice(0, frameCount),
   };
 }
 
@@ -427,14 +519,14 @@ function cloneTimeline(timeline: Timeline): Timeline {
   const tracks = timeline.tracks.map((track) =>
     createTrack({
       ...track,
-      clips: track.clips.map((clip) => cloneClip(clip))
-    })
+      clips: track.clips.map((clip) => cloneClip(clip)),
+    }),
   );
   const draft = { tracks, transitions: [] };
   return {
     tracks,
     markers: normalizeTimelineMarkers(timeline.markers, getTimelineDuration({ tracks })),
-    transitions: (timeline.transitions ?? []).map((transition) => cloneTransition(transition, draft))
+    transitions: (timeline.transitions ?? []).map((transition) => cloneTransition(transition, draft)),
   };
 }
 
@@ -454,11 +546,13 @@ function cloneProjectSequences(project: Project): Sequence[] {
       id: sequence.id,
       name: sequence.name,
       timeline: cloneTimeline(sequence.id === activeSequenceId ? project.timeline : sequence.timeline),
-      ...(sequence.settings ? { settings: sequence.settings } : {})
-    })
+      ...(sequence.settings ? { settings: sequence.settings } : {}),
+    }),
   );
   if (!cloned.some((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)) {
-    cloned.unshift(createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: cloneTimeline(project.timeline) }));
+    cloned.unshift(
+      createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: cloneTimeline(project.timeline) }),
+    );
   }
   return orderPrimarySequenceFirst(cloned);
 }
@@ -469,8 +563,8 @@ function cloneFileSequences(sequences: Sequence[] | undefined, primaryTimeline: 
       id: sequence.id,
       name: normalizeSequenceName(sequence.name),
       timeline: cloneTimeline(sequence.timeline),
-      ...(sequence.settings ? { settings: sequence.settings } : {})
-    })
+      ...(sequence.settings ? { settings: sequence.settings } : {}),
+    }),
   );
   const primaryIndex = cloned.findIndex((sequence) => sequence.id === PRIMARY_SEQUENCE_ID);
   if (primaryIndex >= 0) {
@@ -482,7 +576,9 @@ function cloneFileSequences(sequences: Sequence[] | undefined, primaryTimeline: 
 }
 
 function orderPrimarySequenceFirst(sequences: Sequence[]): Sequence[] {
-  return [...sequences].sort((left, right) => (left.id === PRIMARY_SEQUENCE_ID ? -1 : right.id === PRIMARY_SEQUENCE_ID ? 1 : left.name.localeCompare(right.name)));
+  return [...sequences].sort((left, right) =>
+    left.id === PRIMARY_SEQUENCE_ID ? -1 : right.id === PRIMARY_SEQUENCE_ID ? 1 : left.name.localeCompare(right.name),
+  );
 }
 
 function normalizeActiveSequenceId(activeSequenceId: string | undefined, sequences: Sequence[]): string {
@@ -497,7 +593,7 @@ function cloneTransition(transition: Transition, timeline: Timeline): Transition
   }
   return {
     ...cloned,
-    duration: clampTransitionDuration(cloned.duration, pair.fromClip, pair.toClip)
+    duration: clampTransitionDuration(cloned.duration, pair.fromClip, pair.toClip),
   };
 }
 
@@ -510,7 +606,9 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     speed: clampClipSpeed(clip.speed),
     colorLabel: normalizeTimelineLabelColor(clip.colorLabel),
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
-    ...(clip.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) } : {}),
+    ...(clip.colorNodeGraph
+      ? { colorNodeGraph: normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) }
+      : {}),
     transform: normalizeTransform(clip.transform),
     chromaKey: normalizeChromaKey(clip.chromaKey),
     stabilization: normalizeStabilization(clip.stabilization),
@@ -538,7 +636,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     scenecuts,
     aiReframe: normalizeClipAIReframe(clip.aiReframe),
     anomalies: normalizeAnomalyIntervals(clip.anomalies),
-    emotionAnalysis: normalizeEmotionAnalysis(clip.emotionAnalysis)
+    emotionAnalysis: normalizeEmotionAnalysis(clip.emotionAnalysis),
   };
   if (!beatMarkers) {
     delete (cloned as Partial<Clip>).beatMarkers;
@@ -557,7 +655,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       fadeOutDuration: normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration),
       fadeInCurve: normalizeAudioFadeCurve(clip.fadeInCurve),
       fadeOutCurve: normalizeAudioFadeCurve(clip.fadeOutCurve),
-      spatialAudio: normalizeSpatialAudio(clip.spatialAudio)
+      spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
     });
   }
   if (clip.type === 'text') {
@@ -570,7 +668,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       textLayout: normalizeTextLayout(clip.textLayout),
       openTypeFeatures: normalizeTextOpenTypeFeatures(clip.openTypeFeatures),
       arcText: normalizeTextArc(clip.arcText),
-      pathText: normalizeTextPath(clip.pathText)
+      pathText: normalizeTextPath(clip.pathText),
     } as TClip;
   }
   if (clip.type === 'subtitle') {
@@ -583,7 +681,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       style: { ...DEFAULT_SUBTITLE_STYLE, ...clip.style },
       subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE,
       dataSubtitle: normalizeDataSubtitleSource(clip.dataSubtitle),
-      speakerId: normalizeSubtitleSpeakerId(clip.speakerId)
+      speakerId: normalizeSubtitleSpeakerId(clip.speakerId),
     } as TClip;
   }
   if (clip.type === 'credits') {
@@ -592,13 +690,13 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       text: typeof clip.text === 'string' ? clip.text : '',
       rows: normalizeCreditsRows(clip.rows, clip.text),
       rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
-      style: normalizeCreditsStyle(clip.style)
+      style: normalizeCreditsStyle(clip.style),
     } as TClip;
   }
   if (clip.type === 'motion-graphic') {
     return {
       ...cloned,
-      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration)
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration),
     } as TClip;
   }
   return cloned as TClip;
@@ -609,10 +707,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
  * - 保留值为有限正数的条目
  * - 可选地清理不属于有效序列的孤立条目
  */
-function normalizeZoomMemory(
-  zoomMemory: unknown,
-  sequences?: Sequence[]
-): Record<string, number> | undefined {
+function normalizeZoomMemory(zoomMemory: unknown, sequences?: Sequence[]): Record<string, number> | undefined {
   if (!zoomMemory || typeof zoomMemory !== 'object' || Array.isArray(zoomMemory)) {
     return undefined;
   }
@@ -635,4 +730,3 @@ function normalizeZoomMemory(
   }
   return hasEntries ? result : undefined;
 }
-

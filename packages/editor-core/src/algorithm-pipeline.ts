@@ -51,10 +51,7 @@ export function scoreMediaForHighlight(media: MediaAsset): number {
   return score;
 }
 
-export function selectHighlightClips(
-  media: MediaAsset[],
-  options: HighlightOptions = {}
-): AIRoughCutClip[] {
+export function selectHighlightClips(media: MediaAsset[], options: HighlightOptions = {}): AIRoughCutClip[] {
   const { maxClips = 10, minDuration = 2, maxDuration = 30 } = options;
   if (media.length === 0) return [];
 
@@ -71,7 +68,7 @@ export function selectHighlightClips(
       startTime: pickBestStartTime(m),
       duration,
       trackIndex: 0,
-      reason: buildHighlightReason(m)
+      reason: buildHighlightReason(m),
     });
   }
   return selected;
@@ -80,12 +77,18 @@ export function selectHighlightClips(
 // ─── 场景检测驱动排列 ──────────────────────────────────────
 
 const SCENE_ORDER: Record<string, number> = {
-  '室内': 0, 'indoor': 0,
-  '室外': 1, 'outdoor': 1,
-  '产品展示': 2, '使用场景': 3,
-  '夜景': 4, 'night': 4,
-  '结尾': 5, 'close-up': 6,
-  'action': 7, 'dialogue': 8
+  室内: 0,
+  indoor: 0,
+  室外: 1,
+  outdoor: 1,
+  产品展示: 2,
+  使用场景: 3,
+  夜景: 4,
+  night: 4,
+  结尾: 5,
+  'close-up': 6,
+  action: 7,
+  dialogue: 8,
 };
 
 export function assembleBySceneOrder(media: MediaAsset[]): AIRoughCutClip[] {
@@ -100,7 +103,7 @@ export function assembleBySceneOrder(media: MediaAsset[]): AIRoughCutClip[] {
   }
 
   const sortedScenes = Array.from(grouped.entries()).sort(
-    (a, b) => (SCENE_ORDER[a[0]] ?? 99) - (SCENE_ORDER[b[0]] ?? 99)
+    (a, b) => (SCENE_ORDER[a[0]] ?? 99) - (SCENE_ORDER[b[0]] ?? 99),
   );
 
   const result: AIRoughCutClip[] = [];
@@ -117,7 +120,7 @@ export function assembleBySceneOrder(media: MediaAsset[]): AIRoughCutClip[] {
         startTime: pickBestStartTime(m),
         duration: clampDuration(m.duration, 2, 30),
         trackIndex: 0,
-        reason: `场景: ${scene}`
+        reason: `场景: ${scene}`,
       });
     }
   }
@@ -126,10 +129,7 @@ export function assembleBySceneOrder(media: MediaAsset[]): AIRoughCutClip[] {
 
 // ─── 静音剔除 ──────────────────────────────────────────────
 
-export function filterSilentFromMedia(
-  media: MediaAsset[],
-  options: SilenceOptions = {}
-): AIRoughCutClip[] {
+export function filterSilentFromMedia(media: MediaAsset[], options: SilenceOptions = {}): AIRoughCutClip[] {
   const { minSilenceDuration = 0.5, paddingRatio = 0.05 } = options;
   if (media.length === 0) return [];
 
@@ -141,7 +141,7 @@ export function filterSilentFromMedia(
         startTime: 0,
         duration: Math.min(m.duration, 30),
         trackIndex: 0,
-        reason: '无音频，使用完整片段'
+        reason: '无音频，使用完整片段',
       });
       continue;
     }
@@ -155,7 +155,7 @@ export function filterSilentFromMedia(
         startTime: seg.start,
         duration: seg.duration,
         trackIndex: 0,
-        reason: '有效音频段'
+        reason: '有效音频段',
       });
     }
   }
@@ -165,7 +165,7 @@ export function filterSilentFromMedia(
 function buildNonSilentSegments(
   totalDuration: number,
   _minSilenceDuration: number,
-  silenceGap: number
+  silenceGap: number,
 ): Array<{ start: number; duration: number }> {
   const segmentDuration = Math.max(2, totalDuration * 0.6);
   const start = silenceGap;
@@ -188,7 +188,7 @@ export function assembleByDialogue(media: MediaAsset[]): AIRoughCutClip[] {
         startTime: 0,
         duration: Math.min(m.duration, 15),
         trackIndex: 0,
-        reason: '无音频，使用片段前段'
+        reason: '无音频，使用片段前段',
       });
       continue;
     }
@@ -200,16 +200,14 @@ export function assembleByDialogue(media: MediaAsset[]): AIRoughCutClip[] {
         startTime: seg.start,
         duration: seg.duration,
         trackIndex: 0,
-        reason: '语音段'
+        reason: '语音段',
       });
     }
   }
   return result;
 }
 
-function estimateDialogueSegments(
-  totalDuration: number
-): Array<{ start: number; duration: number }> {
+function estimateDialogueSegments(totalDuration: number): Array<{ start: number; duration: number }> {
   const segmentLen = Math.min(10, Math.max(3, totalDuration / 3));
   const segments: Array<{ start: number; duration: number }> = [];
   let cursor = 0;
@@ -225,10 +223,7 @@ function estimateDialogueSegments(
 
 // ─── 流水线入口 ────────────────────────────────────────────
 
-export function runAlgorithmPipeline(
-  media: MediaAsset[],
-  options: AlgorithmPipelineOptions
-): AIRoughCutClip[] {
+export function runAlgorithmPipeline(media: MediaAsset[], options: AlgorithmPipelineOptions): AIRoughCutClip[] {
   if (media.length === 0 || options.steps.length === 0) return [];
 
   let result: AIRoughCutClip[] = [];

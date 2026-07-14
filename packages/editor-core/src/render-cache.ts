@@ -75,7 +75,7 @@ export class TimelineRenderFrameCache<TBitmap> {
       time: round(Math.max(0, entry.time)),
       duration: round(Math.max(0, entry.duration)),
       bytes: Math.max(1, Math.round(entry.bytes)),
-      ts: entry.ts ?? now
+      ts: entry.ts ?? now,
     };
     this.entries.set(normalized.key, normalized);
     this.bytes += normalized.bytes;
@@ -96,7 +96,10 @@ export class TimelineRenderFrameCache<TBitmap> {
     return this.entries.has(key);
   }
 
-  retainAround(playheadTime: number, retainSeconds = TIMELINE_RENDER_CACHE_RETAIN_SECONDS): TimelineRenderFrameCacheSnapshot {
+  retainAround(
+    playheadTime: number,
+    retainSeconds = TIMELINE_RENDER_CACHE_RETAIN_SECONDS,
+  ): TimelineRenderFrameCacheSnapshot {
     const start = Math.max(0, playheadTime - retainSeconds);
     const end = playheadTime + retainSeconds;
     for (const entry of [...this.entries.values()]) {
@@ -132,11 +135,11 @@ export class TimelineRenderFrameCache<TBitmap> {
       ranges: mergeTimelineRenderRanges(
         [...this.entries.values()].map((entry) => ({
           start: entry.time,
-          end: round(entry.time + Math.max(entry.duration, 0.000001))
-        }))
+          end: round(entry.time + Math.max(entry.duration, 0.000001)),
+        })),
       ),
       bytes: this.bytes,
-      count: this.entries.size
+      count: this.entries.size,
     };
   }
 
@@ -200,7 +203,7 @@ export function buildTimelineRenderFrameRequests(input: {
     requests.push({
       frame,
       time,
-      key: buildTimelineRenderFrameKey({ ...input, fps, frame })
+      key: buildTimelineRenderFrameKey({ ...input, fps, frame }),
     });
   }
   return requests;
@@ -236,7 +239,7 @@ export function mergeTimelineRenderRanges(ranges: TimelineRenderRange[]): Timeli
   const sorted = ranges
     .map((range) => ({
       start: round(Math.max(0, Math.min(range.start, range.end))),
-      end: round(Math.max(0, Math.max(range.start, range.end)))
+      end: round(Math.max(0, Math.max(range.start, range.end))),
     }))
     .filter((range) => range.end > range.start)
     .sort((left, right) => left.start - right.start || left.end - right.end);
@@ -253,7 +256,12 @@ export function mergeTimelineRenderRanges(ranges: TimelineRenderRange[]): Timeli
   return merged;
 }
 
-function buildTimelineRenderSignature(timeline: Timeline, media: MediaAsset[], sequences: Sequence[] = [], activeSequenceId?: string): string {
+function buildTimelineRenderSignature(
+  timeline: Timeline,
+  media: MediaAsset[],
+  sequences: Sequence[] = [],
+  activeSequenceId?: string,
+): string {
   const relevantMedia = media.map((asset) => ({
     id: asset.id,
     path: asset.path,
@@ -264,16 +272,16 @@ function buildTimelineRenderSignature(timeline: Timeline, media: MediaAsset[], s
     height: asset.height,
     size: asset.size,
     mtimeMs: asset.mtimeMs,
-    cacheKey: asset.cacheKey
+    cacheKey: asset.cacheKey,
   }));
   return stableStringify({
     activeSequenceId,
     timeline: normalizeTimelineForSignature(timeline),
     sequences: sequences.map((sequence) => ({
       id: sequence.id,
-      timeline: normalizeTimelineForSignature(sequence.timeline)
+      timeline: normalizeTimelineForSignature(sequence.timeline),
     })),
-    media: relevantMedia
+    media: relevantMedia,
   });
 }
 
@@ -285,8 +293,8 @@ function normalizeTimelineForSignature(timeline: Timeline): unknown {
       type: track.type,
       muted: track.muted,
       solo: track.solo,
-      clips: track.clips.map((clip) => buildClipRenderSignature(clip))
-    }))
+      clips: track.clips.map((clip) => buildClipRenderSignature(clip)),
+    })),
   };
 }
 
@@ -313,7 +321,7 @@ function buildClipRenderSignature(clip: Clip): string {
     text: 'text' in clip ? clip.text : undefined,
     style: 'style' in clip ? clip.style : undefined,
     subtitleMode: 'subtitleMode' in clip ? clip.subtitleMode : undefined,
-    sequenceId: 'sequenceId' in clip ? clip.sequenceId : undefined
+    sequenceId: 'sequenceId' in clip ? clip.sequenceId : undefined,
   });
 }
 
@@ -322,7 +330,10 @@ function flattenTimelineClips(timeline: Timeline): Map<string, Clip> {
 }
 
 function getTimelineEnd(timeline: Timeline): number {
-  return timeline.tracks.reduce((duration, track) => Math.max(duration, ...track.clips.map((clip) => clip.start + clip.duration), 0), 0);
+  return timeline.tracks.reduce(
+    (duration, track) => Math.max(duration, ...track.clips.map((clip) => clip.start + clip.duration), 0),
+    0,
+  );
 }
 
 function normalizePositiveInteger(value: number, fallback: number): number {

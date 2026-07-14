@@ -69,7 +69,7 @@ function computeBlockNCC(
   dx: number,
   dy: number,
   bW: number,
-  bH: number
+  bH: number,
 ): number {
   let sumA = 0;
   let sumB = 0;
@@ -121,7 +121,7 @@ function findBestMatch(
   by: number,
   bW: number,
   bH: number,
-  radius: number
+  radius: number,
 ): { dx: number; dy: number; ncc: number } {
   let bestDx = 0;
   let bestDy = 0;
@@ -157,7 +157,7 @@ export function estimateFrameMotion(
   width: number,
   height: number,
   gridSize = 4,
-  searchRadius = 4
+  searchRadius = 4,
 ): number {
   if (width < gridSize || height < gridSize) return 0;
   const blockW = Math.floor(width / gridSize);
@@ -201,7 +201,7 @@ export function buildMulticamFeaturePayload(
   duration: number,
   windowSeconds: number,
   audioData: AngleAudioSamples[],
-  motionData: AngleMotionFrames[]
+  motionData: AngleMotionFrames[],
 ): MulticamFeaturePayload {
   const ws = Math.max(0.1, windowSeconds);
   const windowCount = Math.max(1, Math.ceil(duration / ws));
@@ -211,10 +211,7 @@ export function buildMulticamFeaturePayload(
     const wEnd = Math.min(duration, wStart + ws);
     const time = round(wStart);
     const angles: MulticamAngleFeature[] = [];
-    const allAngleIds = new Set([
-      ...audioData.map((a) => a.angleId),
-      ...motionData.map((m) => m.angleId)
-    ]);
+    const allAngleIds = new Set([...audioData.map((a) => a.angleId), ...motionData.map((m) => m.angleId)]);
     for (const angleId of allAngleIds) {
       const audio = audioData.find((a) => a.angleId === angleId);
       const motion = motionData.find((m) => m.angleId === angleId);
@@ -269,7 +266,7 @@ export function buildMulticamCutSystemPrompt(): string {
     '4. 切换应自然流畅，避免过于频繁。',
     '',
     '返回 JSON 格式：{"cuts": [{"time": 秒, "angleId": "角度ID", "reason": "原因", "confidence": 0~1}]}',
-    '只返回 JSON，不要其他内容。'
+    '只返回 JSON，不要其他内容。',
   ].join('\n');
 }
 
@@ -289,15 +286,16 @@ export function parseMulticamCutResponse(json: unknown): MulticamCutSuggestion[]
         item != null &&
         typeof item === 'object' &&
         typeof (item as Record<string, unknown>).time === 'number' &&
-        typeof (item as Record<string, unknown>).angleId === 'string'
+        typeof (item as Record<string, unknown>).angleId === 'string',
     )
     .map((item) => ({
       time: round(Math.max(0, (item as { time: number }).time)),
       angleId: ((item as { angleId: string }).angleId || '').trim(),
       confidence: clampConfidence((item as { confidence?: unknown }).confidence),
-      reason: typeof (item as { reason?: unknown }).reason === 'string'
-        ? ((item as { reason: string }).reason || '').trim().slice(0, 200)
-        : ''
+      reason:
+        typeof (item as { reason?: unknown }).reason === 'string'
+          ? ((item as { reason: string }).reason || '').trim().slice(0, 200)
+          : '',
     }))
     .filter((item) => item.angleId.length > 0)
     .sort((a, b) => a.time - b.time);
@@ -322,7 +320,7 @@ export const DEFAULT_MIN_SWITCH_INTERVAL = 1.5;
  */
 export function enforceMinimumSwitchInterval(
   suggestions: MulticamCutSuggestion[],
-  minInterval: number = DEFAULT_MIN_SWITCH_INTERVAL
+  minInterval: number = DEFAULT_MIN_SWITCH_INTERVAL,
 ): MulticamCutSuggestion[] {
   if (suggestions.length <= 1) return [...suggestions];
   const sorted = [...suggestions].sort((a, b) => a.time - b.time || b.confidence - a.confidence);
@@ -346,7 +344,7 @@ export function enforceMinimumSwitchInterval(
 
 export function validateCutAngles(
   suggestions: MulticamCutSuggestion[],
-  validAngleIds: string[]
+  validAngleIds: string[],
 ): MulticamCutSuggestion[] {
   const valid = new Set(validAngleIds);
   return suggestions.filter((s) => valid.has(s.angleId));

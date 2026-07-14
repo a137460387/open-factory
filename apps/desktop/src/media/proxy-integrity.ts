@@ -4,7 +4,7 @@ import {
   shouldRunProxyIntegrityCheck,
   type Project,
   type ProxyFileStatLike,
-  type ProxyInventoryItem
+  type ProxyInventoryItem,
 } from '@open-factory/editor-core';
 import { fsExists, getFileStat } from '../lib/tauri-bridge';
 
@@ -26,7 +26,10 @@ export interface ProxyIntegrityCheckResult {
   inventory: ProxyInventoryItem[];
 }
 
-export async function runScheduledProxyIntegrityCheck(project: Project, dependencies: ProxyIntegrityCheckDependencies = {}): Promise<ProxyIntegrityCheckResult> {
+export async function runScheduledProxyIntegrityCheck(
+  project: Project,
+  dependencies: ProxyIntegrityCheckDependencies = {},
+): Promise<ProxyIntegrityCheckResult> {
   const nowMs = dependencies.nowMs ?? Date.now();
   const lastRunAtMs = dependencies.getLastRunAtMs?.() ?? readLastRunAtMs();
   if (!shouldRunProxyIntegrityCheck(lastRunAtMs, nowMs, dependencies.intervalMs)) {
@@ -42,7 +45,10 @@ export async function runScheduledProxyIntegrityCheck(project: Project, dependen
   return { ran: true, assetIds, inventory };
 }
 
-async function collectProxyIntegrityInventory(project: Project, dependencies: ProxyIntegrityCheckDependencies = {}): Promise<ProxyInventoryItem[]> {
+async function collectProxyIntegrityInventory(
+  project: Project,
+  dependencies: ProxyIntegrityCheckDependencies = {},
+): Promise<ProxyInventoryItem[]> {
   const sourceStats: Record<string, ProxyFileStatLike | undefined> = {};
   const proxyStats: Record<string, ProxyFileStatLike | undefined> = {};
   const existingProxyPaths = new Set<string>();
@@ -58,7 +64,12 @@ async function collectProxyIntegrityInventory(project: Project, dependencies: Pr
       proxyStats[asset.proxyPath] = await safeStat(asset.proxyPath, dependencies);
     }
   }
-  return buildProxyInventory(project.media, { sourceStats, proxyStats, existingProxyPaths, timeline: project.timeline });
+  return buildProxyInventory(project.media, {
+    sourceStats,
+    proxyStats,
+    existingProxyPaths,
+    timeline: project.timeline,
+  });
 }
 
 async function safeExists(path: string, dependencies: ProxyIntegrityCheckDependencies): Promise<boolean> {
@@ -69,7 +80,10 @@ async function safeExists(path: string, dependencies: ProxyIntegrityCheckDepende
   }
 }
 
-async function safeStat(path: string, dependencies: ProxyIntegrityCheckDependencies): Promise<ProxyFileStatLike | undefined> {
+async function safeStat(
+  path: string,
+  dependencies: ProxyIntegrityCheckDependencies,
+): Promise<ProxyFileStatLike | undefined> {
   try {
     return await (dependencies.readFileStat ?? getFileStat)(path);
   } catch {

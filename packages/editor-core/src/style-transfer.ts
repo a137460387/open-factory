@@ -1,4 +1,13 @@
-import { cloneEffects, DEFAULT_EFFECT_PARAMS, normalizeEffect, normalizeEffectParams, type Effect, type EffectParamValue, type EffectParams, type EffectType } from './effects';
+import {
+  cloneEffects,
+  DEFAULT_EFFECT_PARAMS,
+  normalizeEffect,
+  normalizeEffectParams,
+  type Effect,
+  type EffectParamValue,
+  type EffectParams,
+  type EffectType,
+} from './effects';
 import { createId, normalizeColorCorrection } from './model';
 import type { Clip, ColorCorrection } from './model-types';
 import { clamp, round } from './time';
@@ -47,22 +56,28 @@ const DEFAULT_SCOPE: StyleTransferScope = { color: true, effects: true, lut: tru
 export function calculateStyleSummary(clips: readonly Clip[]): StyleSummary {
   const normalizedClips = clips.filter(Boolean);
   const colorCorrections = normalizedClips.map((clip) => normalizeColorCorrection(clip.colorCorrection));
-  const color = Object.fromEntries(COLOR_KEYS.map((key) => [key, calculateNumericStat(colorCorrections.map((correction) => correction[key]))])) as Record<ColorStyleKey, NumericStyleStat>;
+  const color = Object.fromEntries(
+    COLOR_KEYS.map((key) => [key, calculateNumericStat(colorCorrections.map((correction) => correction[key]))]),
+  ) as Record<ColorStyleKey, NumericStyleStat>;
   const lutPath = calculateMode(
     colorCorrections
       .map((correction) => correction.lutPath)
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-      .map((value) => value.trim())
+      .map((value) => value.trim()),
   );
   return {
     clipCount: normalizedClips.length,
     color,
     lutPath: lutPath ?? null,
-    effects: summarizeEffects(normalizedClips.flatMap((clip) => cloneEffects(clip.effects) ?? []))
+    effects: summarizeEffects(normalizedClips.flatMap((clip) => cloneEffects(clip.effects) ?? [])),
   };
 }
 
-export function applyStyleToClip<TClip extends Clip>(clip: TClip, summary: StyleSummary, options: ApplyStyleTransferOptions): TClip {
+export function applyStyleToClip<TClip extends Clip>(
+  clip: TClip,
+  summary: StyleSummary,
+  options: ApplyStyleTransferOptions,
+): TClip {
   const strength = normalizeStrength(options.strength);
   if (strength <= 0 || summary.clipCount === 0) {
     return cloneClipStyleFields(clip);
@@ -72,13 +87,13 @@ export function applyStyleToClip<TClip extends Clip>(clip: TClip, summary: Style
   if (scope.color || scope.lut) {
     next = {
       ...next,
-      colorCorrection: applyColorStyle(next.colorCorrection, summary, strength, scope)
+      colorCorrection: applyColorStyle(next.colorCorrection, summary, strength, scope),
     };
   }
   if (scope.effects) {
     next = {
       ...next,
-      effects: applyEffectStyle(next.effects, summary.effects, strength)
+      effects: applyEffectStyle(next.effects, summary.effects, strength),
     };
   }
   return next;
@@ -92,7 +107,7 @@ export function normalizeStyleTransferScope(scope: Partial<StyleTransferScope> |
   return {
     color: scope?.color ?? DEFAULT_SCOPE.color,
     effects: scope?.effects ?? DEFAULT_SCOPE.effects,
-    lut: scope?.lut ?? DEFAULT_SCOPE.lut
+    lut: scope?.lut ?? DEFAULT_SCOPE.lut,
   };
 }
 
@@ -106,7 +121,7 @@ function summarizeEffects(effects: Effect[]): EffectStyleSummary[] {
       type,
       count: entries.length,
       enabledRatio: entries.filter((effect) => effect.enabled).length / Math.max(1, entries.length),
-      params: summarizeEffectParams(entries)
+      params: summarizeEffectParams(entries),
     }))
     .sort((left, right) => left.type.localeCompare(right.type));
 }
@@ -139,7 +154,12 @@ function summarizeEffectParams(effects: Effect[]): Record<string, EffectParamSty
   return output;
 }
 
-function applyColorStyle(colorCorrection: ColorCorrection, summary: StyleSummary, strength: number, scope: StyleTransferScope): ColorCorrection {
+function applyColorStyle(
+  colorCorrection: ColorCorrection,
+  summary: StyleSummary,
+  strength: number,
+  scope: StyleTransferScope,
+): ColorCorrection {
   const current = normalizeColorCorrection(colorCorrection);
   const patch: Partial<ColorCorrection> = {};
   if (scope.color) {
@@ -153,7 +173,11 @@ function applyColorStyle(colorCorrection: ColorCorrection, summary: StyleSummary
   return normalizeColorCorrection({ ...current, ...patch });
 }
 
-function applyEffectStyle(currentEffects: Effect[] | undefined, summaries: EffectStyleSummary[], strength: number): Effect[] | undefined {
+function applyEffectStyle(
+  currentEffects: Effect[] | undefined,
+  summaries: EffectStyleSummary[],
+  strength: number,
+): Effect[] | undefined {
   const current = cloneEffects(currentEffects) ?? [];
   const currentByType = new Map(current.map((effect) => [effect.type, effect]));
   const styledTypes = new Set(summaries.map((summary) => summary.type));
@@ -164,15 +188,20 @@ function applyEffectStyle(currentEffects: Effect[] | undefined, summaries: Effec
     const effect = normalizeEffect({
       id: existing?.id ?? createId(`style-${summary.type}`),
       type: summary.type,
-      enabled: strength >= 0.5 ? summary.enabledRatio >= 0.5 : existing?.enabled ?? summary.enabledRatio >= 0.5,
-      params
+      enabled: strength >= 0.5 ? summary.enabledRatio >= 0.5 : (existing?.enabled ?? summary.enabledRatio >= 0.5),
+      params,
     });
     return effect ? [effect] : [];
   });
   return cloneEffects([...untouched, ...styled]);
 }
 
-function applyEffectParams(type: EffectType, currentParams: EffectParams | undefined, summaries: Record<string, EffectParamStyleSummary>, strength: number): EffectParams {
+function applyEffectParams(
+  type: EffectType,
+  currentParams: EffectParams | undefined,
+  summaries: Record<string, EffectParamStyleSummary>,
+  strength: number,
+): EffectParams {
   const current = normalizeEffectParams(type, currentParams);
   const defaults = DEFAULT_EFFECT_PARAMS[type];
   const next: EffectParams = { ...current };
@@ -205,7 +234,9 @@ function calculateMode(values: readonly string[]): string | undefined {
   for (const value of values) {
     counts.set(value, (counts.get(value) ?? 0) + 1);
   }
-  return Array.from(counts.entries()).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0];
+  return Array.from(counts.entries()).sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+  )[0]?.[0];
 }
 
 function normalizeStrength(strength: number): number {
@@ -216,6 +247,6 @@ function cloneClipStyleFields<TClip extends Clip>(clip: TClip): TClip {
   return {
     ...clip,
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
   };
 }

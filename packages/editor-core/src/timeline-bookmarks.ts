@@ -19,7 +19,7 @@ const NAVIGATION_EPSILON = 0.000001;
 export function serializeTimelineBookmarks(bookmarks: TimelineBookmark[], maxTime?: number): string {
   const file: TimelineBookmarkFile = {
     version: 1,
-    bookmarks: normalizeTimelineBookmarks(bookmarks, maxTime)
+    bookmarks: normalizeTimelineBookmarks(bookmarks, maxTime),
   };
   return `${JSON.stringify(file, null, 2)}\n`;
 }
@@ -43,7 +43,11 @@ export function parseTimelineBookmarksJson(contents: string, maxTime?: number): 
   return normalizeTimelineBookmarks(bookmarks as TimelineBookmark[], maxTime);
 }
 
-export function mergeImportedTimelineBookmarks(existing: TimelineBookmark[], imported: TimelineBookmark[], maxTime?: number): TimelineBookmark[] {
+export function mergeImportedTimelineBookmarks(
+  existing: TimelineBookmark[],
+  imported: TimelineBookmark[],
+  maxTime?: number,
+): TimelineBookmark[] {
   const next = normalizeTimelineBookmarks(existing, maxTime);
   const usedIds = new Set(next.map((bookmark) => bookmark.id));
   for (const bookmark of normalizeTimelineBookmarks(imported, maxTime)) {
@@ -54,25 +58,37 @@ export function mergeImportedTimelineBookmarks(existing: TimelineBookmark[], imp
   return normalizeTimelineBookmarks(next, maxTime);
 }
 
-export function buildTimelineNavigationPoints(bookmarks: TimelineBookmark[] | undefined, markers: TimelineMarker[] | undefined, maxTime?: number): TimelineNavigationPoint[] {
+export function buildTimelineNavigationPoints(
+  bookmarks: TimelineBookmark[] | undefined,
+  markers: TimelineMarker[] | undefined,
+  maxTime?: number,
+): TimelineNavigationPoint[] {
   const bookmarkPoints: TimelineNavigationPoint[] = normalizeTimelineBookmarks(bookmarks, maxTime).map((bookmark) => ({
     id: bookmark.id,
     type: 'bookmark',
     time: bookmark.time,
-    label: bookmark.note
+    label: bookmark.note,
   }));
   const markerPoints: TimelineNavigationPoint[] = [...(markers ?? [])].map((marker) => ({
     id: marker.id,
     type: 'marker',
     time: marker.time,
-    label: marker.label
+    label: marker.label,
   }));
-  return [...bookmarkPoints, ...markerPoints].sort((left, right) => left.time - right.time || left.type.localeCompare(right.type) || left.id.localeCompare(right.id));
+  return [...bookmarkPoints, ...markerPoints].sort(
+    (left, right) => left.time - right.time || left.type.localeCompare(right.type) || left.id.localeCompare(right.id),
+  );
 }
 
-export function findTimelineNavigationPoint(points: TimelineNavigationPoint[], currentTime: number, direction: 'next' | 'previous'): TimelineNavigationPoint | undefined {
+export function findTimelineNavigationPoint(
+  points: TimelineNavigationPoint[],
+  currentTime: number,
+  direction: 'next' | 'previous',
+): TimelineNavigationPoint | undefined {
   const time = Number.isFinite(currentTime) ? currentTime : 0;
-  const sorted = [...points].sort((left, right) => left.time - right.time || left.type.localeCompare(right.type) || left.id.localeCompare(right.id));
+  const sorted = [...points].sort(
+    (left, right) => left.time - right.time || left.type.localeCompare(right.type) || left.id.localeCompare(right.id),
+  );
   if (direction === 'next') {
     return sorted.find((point) => point.time > time + NAVIGATION_EPSILON);
   }

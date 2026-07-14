@@ -1,4 +1,13 @@
-import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams, CurvesNodeParams, LUTApplyNodeParams, PrimarySliderParams, PrimaryWheelParams, TrackingMaskNodeParams } from './types';
+import type {
+  ColorGradingGraph,
+  ColorGradingNode,
+  ColorGradingNodeParams,
+  CurvesNodeParams,
+  LUTApplyNodeParams,
+  PrimarySliderParams,
+  PrimaryWheelParams,
+  TrackingMaskNodeParams,
+} from './types';
 import type { HSLQualifierParams } from './hsl-qualifier';
 import type { WindowMaskParams } from './window-mask';
 import { sampleCurve } from './color-curves';
@@ -26,16 +35,31 @@ export interface GraphExecutionResult {
 /** Graph validation error */
 export type GraphValidationError = string;
 
+/**
+ * 调色节点图执行引擎
+ *
+ * 将调色节点图（ColorGradingGraph）编译为 WebGL uniform 值和 fragment shader 代码片段。
+ * 支持拓扑排序、环检测、节点执行和 uniform 合并。
+ *
+ * @example
+ * ```ts
+ * const result = NodeGraphEngine.execute(graph);
+ * // result.combinedUniforms 包含所有 uniform 值
+ * // result.nodeResults 包含每个节点的 shader 代码片段
+ * ```
+ */
 export class NodeGraphEngine {
   /**
-   * Topological sort of nodes using Kahn's algorithm.
-   * @throws if a cycle is detected
+   * 使用 Kahn 算法对节点图进行拓扑排序。
+   * @param graph - 调色节点图
+   * @returns 排序后的节点数组
+   * @throws 如果检测到循环依赖则抛出错误
    */
   static topologicalSort(graph: ColorGradingGraph): ColorGradingNode[] {
     const { nodes, connections } = graph;
     if (nodes.length === 0) return [];
 
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
     const inDegree = new Map<string, number>();
     const adjacency = new Map<string, string[]>();
 
@@ -81,7 +105,7 @@ export class NodeGraphEngine {
    * Execute the color grading node graph.
    */
   static execute(graph: ColorGradingGraph): GraphExecutionResult {
-    const enabledNodes = graph.nodes.filter(n => n.enabled);
+    const enabledNodes = graph.nodes.filter((n) => n.enabled);
     if (enabledNodes.length === 0) {
       return { nodeResults: [], combinedUniforms: {} };
     }
@@ -89,9 +113,9 @@ export class NodeGraphEngine {
     const enabledGraph: ColorGradingGraph = {
       ...graph,
       nodes: enabledNodes,
-      connections: graph.connections.filter(c => {
-        const fromEnabled = enabledNodes.some(n => n.id === c.fromNodeId);
-        const toEnabled = enabledNodes.some(n => n.id === c.toNodeId);
+      connections: graph.connections.filter((c) => {
+        const fromEnabled = enabledNodes.some((n) => n.id === c.fromNodeId);
+        const toEnabled = enabledNodes.some((n) => n.id === c.toNodeId);
         return fromEnabled && toEnabled;
       }),
     };
@@ -114,10 +138,7 @@ export class NodeGraphEngine {
   /**
    * Execute a single node.
    */
-  private static executeNode(
-    node: ColorGradingNode,
-    _previousResults: NodeExecutionResult[]
-  ): NodeExecutionResult {
+  private static executeNode(node: ColorGradingNode, _previousResults: NodeExecutionResult[]): NodeExecutionResult {
     switch (node.type) {
       case 'primary-wheel':
         return this.executePrimaryWheel(node);
@@ -223,10 +244,7 @@ export class NodeGraphEngine {
           [`${prefix}_softness`]: p.circle.softness,
           [`${prefix}_invert`]: p.invert ? 1.0 : 0.0,
         },
-        fragmentSnippets: [
-          `// Circle Mask: ${node.id}`,
-          `color *= circleMask(v_uv);`,
-        ],
+        fragmentSnippets: [`// Circle Mask: ${node.id}`, `color *= circleMask(v_uv);`],
       };
     }
 
@@ -239,10 +257,7 @@ export class NodeGraphEngine {
           [`${prefix}_softness`]: p.linearGradient.softness,
           [`${prefix}_invert`]: p.invert ? 1.0 : 0.0,
         },
-        fragmentSnippets: [
-          `// Gradient Mask: ${node.id}`,
-          `color *= gradientMask(v_uv);`,
-        ],
+        fragmentSnippets: [`// Gradient Mask: ${node.id}`, `color *= gradientMask(v_uv);`],
       };
     }
 

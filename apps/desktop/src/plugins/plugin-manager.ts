@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import type { ExportSettings, Project } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, getFileStat, readFile, removeFile, scanDirectory } from '../lib/tauri-bridge';
 import {
@@ -12,7 +12,7 @@ import {
   type PluginHookPayloads,
   type PluginMessagePayload,
   type PluginRegistry,
-  type PluginSourceFile
+  type PluginSourceFile,
 } from './plugin-loader';
 
 const PLUGIN_STATE_KEY = 'open-factory:plugins';
@@ -58,7 +58,10 @@ export function getPluginRegistrySnapshot(): PluginRegistry | undefined {
   return registry;
 }
 
-async function runPluginHook<K extends PluginHookName>(hookName: K, payload: PluginHookPayloads[K]): Promise<PluginHookLogEntry[]> {
+async function runPluginHook<K extends PluginHookName>(
+  hookName: K,
+  payload: PluginHookPayloads[K],
+): Promise<PluginHookLogEntry[]> {
   const current = await ensurePluginRegistry();
   return runPluginHookForRegistry(current, hookName, payload);
 }
@@ -66,7 +69,7 @@ async function runPluginHook<K extends PluginHookName>(hookName: K, payload: Plu
 export async function runPluginHookForRegistry<K extends PluginHookName>(
   current: PluginRegistry,
   hookName: K,
-  payload: PluginHookPayloads[K]
+  payload: PluginHookPayloads[K],
 ): Promise<PluginHookLogEntry[]> {
   const entries: PluginHookLogEntry[] = [];
   for (const loaded of current.plugins) {
@@ -92,7 +95,11 @@ export async function runPluginHookForRegistry<K extends PluginHookName>(
   return entries;
 }
 
-export function runExportBeforePlugins(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>): Promise<PluginHookLogEntry[]> {
+export function runExportBeforePlugins(
+  project: Project,
+  outputPath: string,
+  settings?: Partial<Omit<ExportSettings, 'outputPath'>>,
+): Promise<PluginHookLogEntry[]> {
   return runPluginHook('onExportBefore', getExportBeforePayload(project, outputPath, settings));
 }
 
@@ -117,7 +124,7 @@ export function setPluginEnabled(pluginId: string, enabled: boolean): PluginRegi
   }
   registry = {
     ...registry,
-    plugins: registry.plugins.map((entry) => (entry.plugin.id === pluginId ? { ...entry, enabled } : entry))
+    plugins: registry.plugins.map((entry) => (entry.plugin.id === pluginId ? { ...entry, enabled } : entry)),
   };
   return registry;
 }
@@ -139,9 +146,9 @@ async function loadRegistry(): Promise<PluginRegistry> {
   return {
     plugins: [builtin, ...loaded.plugins].map((entry) => ({
       ...entry,
-      enabled: !disabledPluginIds.has(entry.plugin.id)
+      enabled: !disabledPluginIds.has(entry.plugin.id),
     })),
-    errors: loaded.errors
+    errors: loaded.errors,
   };
 }
 
@@ -170,7 +177,7 @@ async function readPluginFiles(): Promise<PluginSourceFile[]> {
       manifestPath,
       manifest,
       dev: manifest.dev === true,
-      code: await readFile(entryPath)
+      code: await readFile(entryPath),
     });
   }
 
@@ -224,7 +231,7 @@ export function createPluginDevWatcher({
   readSignature,
   onReload,
   setTimer = setInterval,
-  clearTimer = clearInterval
+  clearTimer = clearInterval,
 }: {
   roots: string[];
   intervalMs?: number;
@@ -276,16 +283,18 @@ export function createPluginDevWatcher({
         timer = undefined;
       }
     },
-    tick
+    tick,
   };
 }
 
 async function readPluginDevSignature(roots: string[]): Promise<string> {
   const entries: string[] = [];
   for (const root of Array.from(new Set(roots.map(normalizePath))).sort((left, right) => left.localeCompare(right))) {
-    const paths = (await scanDirectory(root, 3).catch(() => [])).map(normalizePath).sort((left, right) => left.localeCompare(right));
+    const paths = (await scanDirectory(root, 3).catch(() => []))
+      .map(normalizePath)
+      .sort((left, right) => left.localeCompare(right));
     for (const path of paths) {
-      const stat = await getFileStat(path).catch(logError("plugin-manager"));
+      const stat = await getFileStat(path).catch(logError('plugin-manager'));
       entries.push(`${path}:${stat?.size ?? -1}:${stat?.mtimeMs ?? -1}`);
     }
   }
@@ -305,7 +314,7 @@ export async function routePluginMessageForRegistry(
   fromPluginId: string,
   targetPluginId: string,
   event: string,
-  data: unknown
+  data: unknown,
 ): Promise<boolean> {
   const target = current.plugins.find((plugin) => plugin.enabled && plugin.plugin.id === targetPluginId);
   if (!target?.runtime.receiveMessage) {
@@ -326,7 +335,7 @@ function startPluginDevWatcher(current: PluginRegistry): void {
     readSignature: readPluginDevSignature,
     onReload: async () => {
       await refreshPluginRegistry();
-    }
+    },
   });
   devWatcher.start();
 }
@@ -342,7 +351,11 @@ function readDisabledPluginIds(): Set<string> {
   }
   try {
     const parsed = JSON.parse(window.localStorage.getItem(PLUGIN_STATE_KEY) ?? '{}') as { disabledPluginIds?: unknown };
-    return new Set(Array.isArray(parsed.disabledPluginIds) ? parsed.disabledPluginIds.filter((id): id is string => typeof id === 'string') : []);
+    return new Set(
+      Array.isArray(parsed.disabledPluginIds)
+        ? parsed.disabledPluginIds.filter((id): id is string => typeof id === 'string')
+        : [],
+    );
   } catch {
     return new Set();
   }
@@ -352,7 +365,10 @@ function writeDisabledPluginIds(disabledPluginIds: Set<string>): void {
   if (typeof window === 'undefined') {
     return;
   }
-  window.localStorage.setItem(PLUGIN_STATE_KEY, JSON.stringify({ disabledPluginIds: Array.from(disabledPluginIds).sort() }));
+  window.localStorage.setItem(
+    PLUGIN_STATE_KEY,
+    JSON.stringify({ disabledPluginIds: Array.from(disabledPluginIds).sort() }),
+  );
 }
 
 export type { LoadedPlugin, PluginRegistry };

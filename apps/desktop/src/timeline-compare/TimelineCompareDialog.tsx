@@ -8,7 +8,7 @@ import {
   type Timeline,
   type TimelineVersionDiffItem,
   type TimelineVersionDiffType,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
@@ -35,7 +35,9 @@ const TRACK_HEIGHT = 56;
 
 export function TimelineCompareDialog({ project, projectPath, onApply, onClose }: TimelineCompareDialogProps) {
   const t = zhCN.timelineCompare;
-  const [versions, setVersions] = useState<LoadedVersion[]>([{ id: 'current', label: zhCN.projectSnapshots.currentVersion, project }]);
+  const [versions, setVersions] = useState<LoadedVersion[]>([
+    { id: 'current', label: zhCN.projectSnapshots.currentVersion, project },
+  ]);
   const [baseId, setBaseId] = useState('current');
   const [targetId, setTargetId] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -58,8 +60,8 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
             id: entry.path,
             label: entry.name,
             entry,
-            project: await readProjectSnapshot(entry, projectPath)
-          }))
+            project: await readProjectSnapshot(entry, projectPath),
+          })),
         );
         if (disposed) {
           return;
@@ -73,7 +75,11 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
           setTargetId(loaded[0]?.id ?? '');
         }
       } catch (error) {
-        showToast({ kind: 'warning', title: t.title, message: error instanceof Error ? error.message : zhCN.projectSnapshots.compareFailed });
+        showToast({
+          kind: 'warning',
+          title: t.title,
+          message: error instanceof Error ? error.message : zhCN.projectSnapshots.compareFailed,
+        });
       } finally {
         if (!disposed) {
           setLoading(false);
@@ -88,7 +94,10 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
 
   const base = versions.find((version) => version.id === baseId);
   const target = versions.find((version) => version.id === targetId);
-  const diff = useMemo(() => (base && target ? diffTimelineVersions(base.project.timeline, target.project.timeline) : undefined), [base, target]);
+  const diff = useMemo(
+    () => (base && target ? diffTimelineVersions(base.project.timeline, target.project.timeline) : undefined),
+    [base, target],
+  );
   const items = diff?.items ?? [];
   const activeItem = activeIndex >= 0 ? items[activeIndex] : undefined;
 
@@ -114,7 +123,13 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
     if (!source || !targetElement) {
       return;
     }
-    const nextOffset = calculateTimelineCompareScrollSync(source.scrollLeft, source.scrollWidth, source.clientWidth, targetElement.scrollWidth, targetElement.clientWidth);
+    const nextOffset = calculateTimelineCompareScrollSync(
+      source.scrollLeft,
+      source.scrollWidth,
+      source.clientWidth,
+      targetElement.scrollWidth,
+      targetElement.clientWidth,
+    );
     syncingRef.current = true;
     targetElement.scrollLeft = nextOffset;
     setSyncOffset(nextOffset);
@@ -134,21 +149,43 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="timeline-compare-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      role="dialog"
+      aria-modal="true"
+      data-testid="timeline-compare-dialog"
+    >
       <div className="grid max-h-[90vh] w-full max-w-7xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-xl">
         <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <p className="mt-0.5 text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="rounded-md p-2 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button
+            className="rounded-md p-2 text-slate-500 hover:bg-panel"
+            type="button"
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
         <div className="space-y-3 border-b border-line bg-panel p-4">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
-            <VersionSelect label={t.versionA} value={baseId} versions={versions.filter((version) => version.id !== targetId)} onChange={setBaseId} testId="timeline-compare-base-select" />
-            <VersionSelect label={t.versionB} value={targetId} versions={versions.filter((version) => version.id !== baseId && version.id !== 'current')} onChange={setTargetId} testId="timeline-compare-target-select" />
+            <VersionSelect
+              label={t.versionA}
+              value={baseId}
+              versions={versions.filter((version) => version.id !== targetId)}
+              onChange={setBaseId}
+              testId="timeline-compare-base-select"
+            />
+            <VersionSelect
+              label={t.versionB}
+              value={targetId}
+              versions={versions.filter((version) => version.id !== baseId && version.id !== 'current')}
+              onChange={setTargetId}
+              testId="timeline-compare-target-select"
+            />
             <label className="block text-xs font-medium text-slate-600">
               {t.zoom}
               <input
@@ -165,14 +202,21 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-600">
             <span data-testid="timeline-compare-summary">
-              {diff ? t.summary(diff.summary.added, diff.summary.deleted, diff.summary.modified, diff.summary.trackChanges) : loading ? t.loading : t.noSnapshots}
+              {diff
+                ? t.summary(diff.summary.added, diff.summary.deleted, diff.summary.modified, diff.summary.trackChanges)
+                : loading
+                  ? t.loading
+                  : t.noSnapshots}
             </span>
             <span data-testid="timeline-compare-sync-offset">{t.syncOffset(syncOffset)}</span>
           </div>
         </div>
         <div className="min-h-0 overflow-hidden">
           {items.length === 0 ? (
-            <div className="grid h-full place-items-center p-6 text-sm text-slate-500" data-testid="timeline-compare-empty">
+            <div
+              className="grid h-full place-items-center p-6 text-sm text-slate-500"
+              data-testid="timeline-compare-empty"
+            >
               {loading ? t.loading : targetId ? t.noDiffs : t.noSnapshots}
             </div>
           ) : (
@@ -199,7 +243,11 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
                   onScroll={() => syncScroll('b')}
                 />
               </div>
-              <div className="min-h-0 overflow-y-auto border-t border-line bg-white" data-testid="timeline-compare-diff-list" data-active-index={activeIndex}>
+              <div
+                className="min-h-0 overflow-y-auto border-t border-line bg-white"
+                data-testid="timeline-compare-diff-list"
+                data-active-index={activeIndex}
+              >
                 {items.map((item, index) => (
                   <label
                     key={item.id}
@@ -207,15 +255,27 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
                     data-testid="timeline-compare-diff-row"
                     data-active={index === activeIndex ? 'true' : 'false'}
                   >
-                    <input className="mt-1 h-4 w-4 accent-brand" type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} data-testid={`timeline-compare-diff-check-${item.id}`} />
-                    <span className="rounded bg-panel px-2 py-1 text-xs font-semibold text-slate-700">{t.diffTypes[item.type]}</span>
+                    <input
+                      className="mt-1 h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={selected.includes(item.id)}
+                      onChange={() => toggle(item.id)}
+                      data-testid={`timeline-compare-diff-check-${item.id}`}
+                    />
+                    <span className="rounded bg-panel px-2 py-1 text-xs font-semibold text-slate-700">
+                      {t.diffTypes[item.type]}
+                    </span>
                     <span className="min-w-0">
                       <span className="block truncate font-semibold text-ink">{item.label}</span>
                       <span className="block truncate text-xs text-slate-500">{item.clipId ?? item.trackId}</span>
                     </span>
                     <span className="space-y-1 text-xs text-slate-600">
                       {item.fields.map((field) => (
-                        <span key={field.field} className="block truncate" title={`${field.field}: ${formatValue(field.before)} -> ${formatValue(field.after)}`}>
+                        <span
+                          key={field.field}
+                          className="block truncate"
+                          title={`${field.field}: ${formatValue(field.before)} -> ${formatValue(field.after)}`}
+                        >
                           <span className="font-semibold">{field.field}</span>: {formatValue(field.before)}
                           {' -> '}
                           {formatValue(field.after)}
@@ -230,11 +290,21 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line p-4">
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="timeline-compare-prev-diff" onClick={() => jumpDiff('previous')}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="timeline-compare-prev-diff"
+              onClick={() => jumpDiff('previous')}
+            >
               <ChevronUp size={16} />
               {t.previousDiff}
             </button>
-            <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="timeline-compare-next-diff" onClick={() => jumpDiff('next')}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="timeline-compare-next-diff"
+              onClick={() => jumpDiff('next')}
+            >
               <ChevronDown size={16} />
               {t.nextDiff}
             </button>
@@ -243,10 +313,20 @@ export function TimelineCompareDialog({ project, projectPath, onApply, onClose }
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-panel"
+              type="button"
+              onClick={onClose}
+            >
               {zhCN.common.close}
             </button>
-            <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" type="button" disabled={selected.length === 0} data-testid="timeline-compare-apply-selected" onClick={applySelected}>
+            <button
+              className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              type="button"
+              disabled={selected.length === 0}
+              data-testid="timeline-compare-apply-selected"
+              onClick={applySelected}
+            >
               {t.applySelected}
             </button>
           </div>
@@ -261,7 +341,7 @@ function VersionSelect({
   value,
   versions,
   testId,
-  onChange
+  onChange,
 }: {
   label: string;
   value: string;
@@ -272,7 +352,12 @@ function VersionSelect({
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      >
         <option value="">{zhCN.projectSnapshots.noSnapshots}</option>
         {versions.map((version) => (
           <option key={version.id} value={version.id}>
@@ -292,7 +377,7 @@ function ReadonlyTimelinePane({
   diffItems,
   activeItemId,
   zoom,
-  onScroll
+  onScroll,
 }: {
   scrollRef: MutableRefObject<HTMLDivElement | null>;
   side: 'a' | 'b';
@@ -304,13 +389,24 @@ function ReadonlyTimelinePane({
   onScroll(): void;
 }) {
   const tracks = useMemo(() => buildReadonlyTracks(timeline, diffItems, side), [diffItems, side, timeline]);
-  const duration = useMemo(() => Math.max(1, getTimelineDuration(timeline ?? { tracks: [] }), ...getDeletedPlaceholders(diffItems).map((clip) => clip.start + clip.duration)), [diffItems, timeline]);
+  const duration = useMemo(
+    () =>
+      Math.max(
+        1,
+        getTimelineDuration(timeline ?? { tracks: [] }),
+        ...getDeletedPlaceholders(diffItems).map((clip) => clip.start + clip.duration),
+      ),
+    [diffItems, timeline],
+  );
   const width = Math.max(MIN_TIMELINE_WIDTH, duration * zoom + 120);
   const typeByClipId = useMemo(() => buildDiffTypeByClipId(diffItems), [diffItems]);
   const movedItems = diffItems.filter((item) => item.type === 'clip-moved');
 
   return (
-    <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-slate-50" data-testid={`timeline-compare-pane-${side}`}>
+    <section
+      className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-slate-50"
+      data-testid={`timeline-compare-pane-${side}`}
+    >
       <div className="flex items-center justify-between border-b border-line bg-white px-3 py-2 text-xs font-semibold text-slate-600">
         <span className="truncate">{label}</span>
         <span>{zhCN.timelineCompare.readonly}</span>
@@ -325,10 +421,20 @@ function ReadonlyTimelinePane({
       >
         <div className="space-y-2 p-3" style={{ width }}>
           {tracks.map((track) => (
-            <div key={track.id} className="grid grid-cols-[120px_minmax(0,1fr)] overflow-hidden rounded border border-line bg-white" data-testid={`timeline-compare-track-${side}`}>
-              <div className="flex items-center border-r border-line px-2 text-xs font-semibold text-slate-600">{track.name}</div>
+            <div
+              key={track.id}
+              className="grid grid-cols-[120px_minmax(0,1fr)] overflow-hidden rounded border border-line bg-white"
+              data-testid={`timeline-compare-track-${side}`}
+            >
+              <div className="flex items-center border-r border-line px-2 text-xs font-semibold text-slate-600">
+                {track.name}
+              </div>
               <div className="relative bg-slate-100" style={{ height: TRACK_HEIGHT }}>
-                {track.clips.length === 0 ? <div className="flex h-full items-center px-3 text-xs text-slate-400">{zhCN.timelineCompare.emptyTrack}</div> : null}
+                {track.clips.length === 0 ? (
+                  <div className="flex h-full items-center px-3 text-xs text-slate-400">
+                    {zhCN.timelineCompare.emptyTrack}
+                  </div>
+                ) : null}
                 {track.clips.map((clip) => (
                   <ReadonlyClipBlock
                     key={`${side}-${clip.id}`}
@@ -346,7 +452,9 @@ function ReadonlyTimelinePane({
                   : null}
                 {movedItems
                   .filter((item) => item.trackId === track.id)
-                  .map((item) => <MoveArrow key={`move-${item.id}`} item={item} zoom={zoom} />)}
+                  .map((item) => (
+                    <MoveArrow key={`move-${item.id}`} item={item} zoom={zoom} />
+                  ))}
               </div>
             </div>
           ))}
@@ -356,7 +464,19 @@ function ReadonlyTimelinePane({
   );
 }
 
-function ReadonlyClipBlock({ clip, diffType, active, side, zoom }: { clip: Clip; diffType?: TimelineVersionDiffType; active: boolean; side: 'a' | 'b'; zoom: number }) {
+function ReadonlyClipBlock({
+  clip,
+  diffType,
+  active,
+  side,
+  zoom,
+}: {
+  clip: Clip;
+  diffType?: TimelineVersionDiffType;
+  active: boolean;
+  side: 'a' | 'b';
+  zoom: number;
+}) {
   const className = clipClassName(diffType, active);
   return (
     <div
@@ -411,7 +531,11 @@ interface DeletedClipPlaceholder {
   duration: number;
 }
 
-function buildReadonlyTracks(timeline: Timeline | undefined, diffItems: TimelineVersionDiffItem[], side: 'a' | 'b'): Track[] {
+function buildReadonlyTracks(
+  timeline: Timeline | undefined,
+  diffItems: TimelineVersionDiffItem[],
+  side: 'a' | 'b',
+): Track[] {
   const tracks = timeline?.tracks.map((track) => ({ ...track, clips: [...track.clips] })) ?? [];
   if (side !== 'b') {
     return tracks;
@@ -446,7 +570,7 @@ function getDeletedPlaceholders(items: TimelineVersionDiffItem[]): DeletedClipPl
         name: item.label,
         trackId: item.trackId,
         start: Number(before?.start ?? 0),
-        duration: Math.max(0.1, Number(before?.duration ?? 1))
+        duration: Math.max(0.1, Number(before?.duration ?? 1)),
       };
     });
 }

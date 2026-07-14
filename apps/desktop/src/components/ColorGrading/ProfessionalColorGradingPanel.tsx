@@ -1,11 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import type {
-  Clip,
-  ColorCorrection,
-  ColorCurves,
-  ThreeWayColor,
-  ColorWheelValue,
-} from '@open-factory/editor-core';
+import type { Clip, ColorCorrection, ColorCurves, ThreeWayColor, ColorWheelValue } from '@open-factory/editor-core';
 import {
   normalizeColorCorrection,
   normalizeThreeWayColor,
@@ -40,18 +34,12 @@ export const ProfessionalColorGradingPanel: React.FC<ProfessionalColorGradingPan
 }) => {
   const [activeTab, setActiveTab] = useState<GradingTab>('basic');
 
-  const colorCorrection = useMemo(
-    () => normalizeColorCorrection(clip.colorCorrection),
-    [clip.colorCorrection],
-  );
+  const colorCorrection = useMemo(() => normalizeColorCorrection(clip.colorCorrection), [clip.colorCorrection]);
   const threeWayColor = useMemo(
     () => normalizeThreeWayColor(colorCorrection.threeWayColor),
     [colorCorrection.threeWayColor],
   );
-  const colorCurves = useMemo(
-    () => normalizeColorCurves(colorCorrection.colorCurves),
-    [colorCorrection.colorCurves],
-  );
+  const colorCurves = useMemo(() => normalizeColorCurves(colorCorrection.colorCurves), [colorCorrection.colorCurves]);
 
   const handleResetBasic = useCallback(() => {
     onCommitColorCorrection({
@@ -110,11 +98,7 @@ export const ProfessionalColorGradingPanel: React.FC<ProfessionalColorGradingPan
           />
         )}
         {activeTab === 'lut' && (
-          <LUTGradingTab
-            lutPath={colorCorrection.lutPath}
-            onChooseLUT={onChooseLUT}
-            onClearLUT={handleClearLUT}
-          />
+          <LUTGradingTab lutPath={colorCorrection.lutPath} onChooseLUT={onChooseLUT} onClearLUT={handleClearLUT} />
         )}
         {activeTab === 'curves' && (
           <CurvesGradingTab
@@ -134,11 +118,7 @@ interface BasicGradingTabProps {
   onReset: () => void;
 }
 
-const BasicGradingTab: React.FC<BasicGradingTabProps> = ({
-  colorCorrection,
-  onCommit,
-  onReset,
-}) => (
+const BasicGradingTab: React.FC<BasicGradingTabProps> = ({ colorCorrection, onCommit, onReset }) => (
   <div className="space-y-3" data-testid="basic-grading-tab">
     <GradingSlider
       label="亮度"
@@ -203,11 +183,7 @@ interface WheelsGradingTabProps {
   onReset: () => void;
 }
 
-const WheelsGradingTab: React.FC<WheelsGradingTabProps> = ({
-  threeWayColor,
-  onCommit,
-  onReset,
-}) => {
+const WheelsGradingTab: React.FC<WheelsGradingTabProps> = ({ threeWayColor, onCommit, onReset }) => {
   const updateWheel = useCallback(
     (key: ThreeWayKey, patch: Partial<ColorWheelValue>) => {
       onCommit(
@@ -324,13 +300,8 @@ const ColorWheelControl: React.FC<{
   );
 
   return (
-    <div
-      className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-2"
-      data-testid={testId}
-    >
-      <div className="mb-2 text-xs font-semibold text-[var(--color-text-secondary)]">
-        {label}
-      </div>
+    <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid={testId}>
+      <div className="mb-2 text-xs font-semibold text-[var(--color-text-secondary)]">{label}</div>
       <div className="flex items-start gap-3">
         <canvas
           ref={canvasRef}
@@ -414,17 +385,11 @@ function formatLutPath(path?: string | null): string {
   return parts[parts.length - 1] ?? path;
 }
 
-const LUTGradingTab: React.FC<LUTGradingTabProps> = ({
-  lutPath,
-  onChooseLUT,
-  onClearLUT,
-}) => (
+const LUTGradingTab: React.FC<LUTGradingTabProps> = ({ lutPath, onChooseLUT, onClearLUT }) => (
   <div className="space-y-3" data-testid="lut-grading-tab">
     <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
-          当前 LUT
-        </span>
+        <span className="text-xs font-semibold text-[var(--color-text-secondary)]">当前 LUT</span>
         {lutPath ? (
           <button
             type="button"
@@ -470,11 +435,7 @@ const CURVE_CHANNELS: { key: CurveChannel; label: string; color: string }[] = [
   { key: 'b', label: '蓝', color: '#3b82f6' },
 ];
 
-const CurvesGradingTab: React.FC<CurvesGradingTabProps> = ({
-  curves,
-  onCommit,
-  onReset,
-}) => {
+const CurvesGradingTab: React.FC<CurvesGradingTabProps> = ({ curves, onCommit, onReset }) => {
   const [activeChannel, setActiveChannel] = useState<CurveChannel>('master');
 
   const channelPoints = useMemo(() => {
@@ -535,28 +496,20 @@ interface MiniCurveEditorProps {
   testId: string;
 }
 
-const MiniCurveEditor: React.FC<MiniCurveEditorProps> = ({
-  points,
-  onChange,
-  color,
-  testId,
-}) => {
+const MiniCurveEditor: React.FC<MiniCurveEditorProps> = ({ points, onChange, color, testId }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const width = 256;
   const height = 256;
 
-  const getMousePos = useCallback(
-    (e: React.MouseEvent | MouseEvent): { x: number; y: number } => {
-      if (!svgRef.current) return { x: 0, y: 0 };
-      const rect = svgRef.current.getBoundingClientRect();
-      return {
-        x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
-        y: Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height)),
-      };
-    },
-    [],
-  );
+  const getMousePos = useCallback((e: React.MouseEvent | MouseEvent): { x: number; y: number } => {
+    if (!svgRef.current) return { x: 0, y: 0 };
+    const rect = svgRef.current.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height)),
+    };
+  }, []);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {

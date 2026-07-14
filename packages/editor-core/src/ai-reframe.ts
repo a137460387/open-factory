@@ -37,7 +37,11 @@ export interface ClipAIReframe {
   generatedAt: number;
 }
 
-export function computeSampleTimes(clipDuration: number, interval = DEFAULT_REFrame_SAMPLE_INTERVAL, sceneCuts?: readonly number[]): number[] {
+export function computeSampleTimes(
+  clipDuration: number,
+  interval = DEFAULT_REFrame_SAMPLE_INTERVAL,
+  sceneCuts?: readonly number[],
+): number[] {
   const duration = Math.max(0, Number.isFinite(clipDuration) ? clipDuration : 0);
   if (duration <= 0) {
     return [];
@@ -71,7 +75,7 @@ export function bboxToCropWindow(
   bbox: ReframeBoundingBox,
   sourceWidth: number,
   sourceHeight: number,
-  targetAspect: Exclude<TargetAspectRatio, 'source'>
+  targetAspect: Exclude<TargetAspectRatio, 'source'>,
 ): { cropX: number; cropY: number; cropW: number; cropH: number } {
   const ratio = getTargetAspectRatioValue(targetAspect);
   const safeWidth = Math.max(1, sourceWidth);
@@ -108,7 +112,7 @@ export function generateReframeKeyframes(
   aiFrames: ReframeAIFrame[],
   sourceWidth: number,
   sourceHeight: number,
-  targetAspect: TargetAspectRatio
+  targetAspect: TargetAspectRatio,
 ): ReframeKeyframe[] {
   const normalizedAspect = normalizeTargetAspectRatio(targetAspect);
   if (normalizedAspect === 'source') {
@@ -124,7 +128,10 @@ export function generateReframeKeyframes(
   return keyframes;
 }
 
-export function smoothKeyframes(keyframes: readonly ReframeKeyframe[], windowSize = DEFAULT_SMOOTHING_WINDOW): ReframeKeyframe[] {
+export function smoothKeyframes(
+  keyframes: readonly ReframeKeyframe[],
+  windowSize = DEFAULT_SMOOTHING_WINDOW,
+): ReframeKeyframe[] {
   if (keyframes.length <= 1 || windowSize <= 1) {
     return keyframes.map((kf) => ({ ...kf }));
   }
@@ -145,12 +152,15 @@ export function smoothKeyframes(keyframes: readonly ReframeKeyframe[], windowSiz
       cropX: round(sumX / count),
       cropY: round(sumY / count),
       cropW: kf.cropW,
-      cropH: kf.cropH
+      cropH: kf.cropH,
     };
   });
 }
 
-export function interpolateReframeAtTime(keyframes: readonly ReframeKeyframe[], time: number): ReframeKeyframe | undefined {
+export function interpolateReframeAtTime(
+  keyframes: readonly ReframeKeyframe[],
+  time: number,
+): ReframeKeyframe | undefined {
   if (keyframes.length === 0) {
     return undefined;
   }
@@ -181,7 +191,7 @@ export function interpolateReframeAtTime(keyframes: readonly ReframeKeyframe[], 
         cropX: round(a.cropX + (b.cropX - a.cropX) * t),
         cropY: round(a.cropY + (b.cropY - a.cropY) * t),
         cropW: a.cropW,
-        cropH: a.cropH
+        cropH: a.cropH,
       };
     }
   }

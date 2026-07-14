@@ -9,7 +9,7 @@ import {
   filterAlreadyCategorizedMedia,
   hasAvailableTextProvider,
   type AIMediaOrganizeSuggestion,
-  type MediaCollection
+  type MediaCollection,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -31,7 +31,12 @@ interface AIMediaOrganizePanelProps {
   onClose: () => void;
 }
 
-export function AIMediaOrganizePanel({ media, existingCollections, onCollectionsUpdated, onClose }: AIMediaOrganizePanelProps) {
+export function AIMediaOrganizePanel({
+  media,
+  existingCollections,
+  onCollectionsUpdated,
+  onClose,
+}: AIMediaOrganizePanelProps) {
   const providers = useAISettingsStore((s) => s.providers);
   const available = hasAvailableTextProvider(providers);
 
@@ -70,20 +75,24 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
         return;
       }
 
-      const systemPrompt = 'You are a media organizer. Given a list of media with tags and scene info, suggest meaningful collections. Return JSON: {"collections":[{"name":"string","mediaIds":["id"],"reason":"string"}]}';
+      const systemPrompt =
+        'You are a media organizer. Given a list of media with tags and scene info, suggest meaningful collections. Return JSON: {"collections":[{"name":"string","mediaIds":["id"],"reason":"string"}]}';
       const userPrompt = `Organize the following media into collections:\n\n${payload}`;
 
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        timeoutSecs: 60
-      }, apiKey);
+      const response = await callAiApi(
+        {
+          providerId: selectedProvider.id,
+          baseUrl: selectedProvider.baseUrl,
+          model: selectedProvider.defaultModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+          timeoutSecs: 60,
+        },
+        apiKey,
+      );
 
       if (abortRef.current) return;
 
@@ -99,7 +108,7 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
       const result = parseAIMediaOrganizeResponse(parsed);
       const organizeSuggestions: OrganizeSuggestion[] = result.collections.map((c) => ({
         ...c,
-        status: 'pending' as const
+        status: 'pending' as const,
       }));
       setSuggestions(organizeSuggestions);
     } catch (err) {
@@ -112,11 +121,11 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
   }, [available, providers, media, existingCollections]);
 
   const handleAccept = useCallback((index: number) => {
-    setSuggestions((prev) => prev.map((s, i) => i === index ? { ...s, status: 'accepted' } : s));
+    setSuggestions((prev) => prev.map((s, i) => (i === index ? { ...s, status: 'accepted' } : s)));
   }, []);
 
   const handleReject = useCallback((index: number) => {
-    setSuggestions((prev) => prev.map((s, i) => i === index ? { ...s, status: 'rejected' } : s));
+    setSuggestions((prev) => prev.map((s, i) => (i === index ? { ...s, status: 'rejected' } : s)));
   }, []);
 
   const handleApplyAll = useCallback(() => {
@@ -124,11 +133,13 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
   }, []);
 
   const handleApplyChanges = useCallback(() => {
-    const accepted = suggestions.filter((s) => s.status === 'accepted').map((s) => ({
-      name: s.name,
-      mediaIds: s.mediaIds,
-      reason: s.reason
-    }));
+    const accepted = suggestions
+      .filter((s) => s.status === 'accepted')
+      .map((s) => ({
+        name: s.name,
+        mediaIds: s.mediaIds,
+        reason: s.reason,
+      }));
     if (accepted.length === 0) return;
     const aiCollections = buildMediaCollectionsFromAI(accepted, existingCollections);
     const merged = mergeCollectionsWithExisting(aiCollections, existingCollections);
@@ -137,7 +148,9 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
   }, [suggestions, existingCollections, onCollectionsUpdated, onClose]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   const acceptedCount = suggestions.filter((s) => s.status === 'accepted').length;
@@ -179,20 +192,28 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]" data-testid="media-organize-loading">
+        <div
+          className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]"
+          data-testid="media-organize-loading"
+        >
           <Loader2 size={16} className="animate-spin" />
           {t.analyzing}
         </div>
       )}
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="media-organize-error">
+        <div
+          className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+          data-testid="media-organize-error"
+        >
           {error}
         </div>
       )}
 
       {!loading && !error && executed && suggestions.length === 0 && (
-        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="media-organize-empty">{t.empty}</p>
+        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="media-organize-empty">
+          {t.empty}
+        </p>
       )}
 
       {suggestions.length > 0 && (
@@ -206,22 +227,29 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
               className={clsx(
                 'rounded-md border p-2',
                 suggestion.status === 'accepted' && 'border-green-300 bg-green-50',
-                suggestion.status === 'rejected' && 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] opacity-50',
-                suggestion.status === 'pending' && 'border-brand/20 bg-[var(--color-bg-elevated)]'
+                suggestion.status === 'rejected' &&
+                  'border-[var(--color-border)] bg-[var(--color-bg-secondary)] opacity-50',
+                suggestion.status === 'pending' && 'border-brand/20 bg-[var(--color-bg-elevated)]',
               )}
               data-testid={`media-organize-suggestion-${index}`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <FolderPlus size={12} className={suggestion.status === 'accepted' ? 'text-green-600' : 'text-brand'} />
+                    <FolderPlus
+                      size={12}
+                      className={suggestion.status === 'accepted' ? 'text-green-600' : 'text-brand'}
+                    />
                     <span className="text-xs font-semibold text-ink">{suggestion.name}</span>
                     <span className="rounded bg-[var(--color-bg-elevated)] px-1 py-0.5 text-[10px] text-[var(--color-text-muted)]">
                       {suggestion.mediaIds.length} 素材
                     </span>
                   </div>
                   {suggestion.reason && (
-                    <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]" data-testid={`media-organize-reason-${index}`}>
+                    <p
+                      className="mt-0.5 text-[11px] text-[var(--color-text-muted)]"
+                      data-testid={`media-organize-reason-${index}`}
+                    >
                       {suggestion.reason}
                     </p>
                   )}
@@ -277,4 +305,3 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
     </div>
   );
 }
-

@@ -2,17 +2,17 @@
 
 /** LUT 数据 */
 export interface LUTData {
-  size: number;         // 3D LUT 尺寸（如 17, 33, 65）
+  size: number; // 3D LUT 尺寸（如 17, 33, 65）
   domainMin: [number, number, number];
   domainMax: [number, number, number];
-  data: Float32Array;   // RGB 值数组，size^3 * 3
+  data: Float32Array; // RGB 值数组，size^3 * 3
 }
 
 /** LUT 图层 */
 export interface ColorGradingLUTLayer {
   id: string;
-  lutId: string;        // 引用 LUTLibrary 中的ID
-  intensity: number;    // 0 ~ 1 混合强度
+  lutId: string; // 引用 LUTLibrary 中的ID
+  intensity: number; // 0 ~ 1 混合强度
   enabled: boolean;
 }
 
@@ -23,7 +23,7 @@ export interface LUTLibraryEntry {
   filePath: string;
   format: 'cube' | '3dl';
   size: number;
-  thumbnail?: string;   // 预览缩略图
+  thumbnail?: string; // 预览缩略图
   tags: string[];
   createdAt: string;
 }
@@ -43,8 +43,8 @@ export function validateLUTData(data: LUTData): boolean {
   if (data.size < 2 || data.size > 256) return false;
   const expectedLength = data.size * data.size * data.size * 3;
   if (data.data.length !== expectedLength) return false;
-  if (data.domainMin.some(v => v < -10 || v > 10)) return false;
-  if (data.domainMax.some(v => v < -10 || v > 10)) return false;
+  if (data.domainMin.some((v) => v < -10 || v > 10)) return false;
+  if (data.domainMax.some((v) => v < -10 || v > 10)) return false;
   return true;
 }
 

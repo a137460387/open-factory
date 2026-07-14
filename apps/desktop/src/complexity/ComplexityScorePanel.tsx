@@ -1,4 +1,11 @@
-import { calculateComplexityScore, createComplexityReport, REFERENCE_COMPLEXITY_PROJECTS, type ComplexityDimensionId, type ComplexityDimensionScore, type Project } from '@open-factory/editor-core';
+import {
+  calculateComplexityScore,
+  createComplexityReport,
+  REFERENCE_COMPLEXITY_PROJECTS,
+  type ComplexityDimensionId,
+  type ComplexityDimensionScore,
+  type Project,
+} from '@open-factory/editor-core';
 import { Download, X } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -9,7 +16,13 @@ interface ComplexityScorePanelProps {
   onClose(): void;
 }
 
-const DIMENSION_ORDER: ComplexityDimensionId[] = ['timelineDensity', 'effectComplexity', 'colorDepth', 'audioComplexity', 'keyframeDensity'];
+const DIMENSION_ORDER: ComplexityDimensionId[] = [
+  'timelineDensity',
+  'effectComplexity',
+  'colorDepth',
+  'audioComplexity',
+  'keyframeDensity',
+];
 
 export function ComplexityScorePanel({ project, onClose }: ComplexityScorePanelProps) {
   const t = zhCN.complexity;
@@ -38,14 +51,23 @@ export function ComplexityScorePanel({ project, onClose }: ComplexityScorePanelP
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="complexity-score-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="complexity-score-panel"
+    >
       <section className="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
             <p className="mt-0.5 text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="rounded-md p-1 text-slate-500 hover:bg-panel hover:text-ink" type="button" data-testid="complexity-close-button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button
+            className="rounded-md p-1 text-slate-500 hover:bg-panel hover:text-ink"
+            type="button"
+            data-testid="complexity-close-button"
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </header>
@@ -62,8 +84,19 @@ export function ComplexityScorePanel({ project, onClose }: ComplexityScorePanelP
                 </span>
               </div>
             </div>
-            <canvas ref={canvasRef} className="aspect-square w-full rounded-md border border-line bg-slate-950" width={300} height={300} data-testid="complexity-radar-canvas" />
-            <button className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-[#176858]" type="button" data-testid="complexity-export-json-button" onClick={downloadReport}>
+            <canvas
+              ref={canvasRef}
+              className="aspect-square w-full rounded-md border border-line bg-slate-950"
+              width={300}
+              height={300}
+              data-testid="complexity-radar-canvas"
+            />
+            <button
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-[#176858]"
+              type="button"
+              data-testid="complexity-export-json-button"
+              onClick={downloadReport}
+            >
               <Download size={14} />
               {t.exportJson}
             </button>
@@ -95,20 +128,32 @@ export function ComplexityScorePanel({ project, onClose }: ComplexityScorePanelP
 function DimensionRow({ dimension }: { dimension: ComplexityDimensionScore }) {
   const t = zhCN.complexity;
   return (
-    <article className="rounded-md border border-line p-3 text-xs" data-testid="complexity-dimension-row" data-dimension-id={dimension.id}>
+    <article
+      className="rounded-md border border-line p-3 text-xs"
+      data-testid="complexity-dimension-row"
+      data-dimension-id={dimension.id}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold text-slate-700">{t.dimensions[dimension.id]}</span>
         <span className="tabular-nums text-slate-500">{dimension.score.toFixed(1)}</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-panel">
-        <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, Math.max(0, dimension.score))}%` }} />
+        <div
+          className="h-full rounded-full bg-brand"
+          style={{ width: `${Math.min(100, Math.max(0, dimension.score))}%` }}
+        />
       </div>
       <div className="mt-1 text-[11px] text-slate-500">{dimension.detail}</div>
     </article>
   );
 }
 
-function drawRadar(context: CanvasRenderingContext2D, dimensions: readonly ComplexityDimensionScore[], width: number, height: number): void {
+function drawRadar(
+  context: CanvasRenderingContext2D,
+  dimensions: readonly ComplexityDimensionScore[],
+  width: number,
+  height: number,
+): void {
   context.clearRect(0, 0, width, height);
   const centerX = width / 2;
   const centerY = height / 2;
@@ -126,7 +171,7 @@ function drawRadar(context: CanvasRenderingContext2D, dimensions: readonly Compl
     dimensions.map((dimension) => ({ ...dimension, score: 100 })),
     width,
     height,
-    28
+    28,
   );
   for (const point of outer) {
     context.beginPath();

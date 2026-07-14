@@ -31,6 +31,8 @@ describe('useTheme store', () => {
       return createElement('span', { 'data-canvas-bg': theme.colors.canvasBackground });
     }
 
-    expect(renderToString(createElement(ThemeProbe))).toContain(`data-canvas-bg="${BUILTIN_THEMES.oled.colors.canvasBackground}"`);
+    expect(renderToString(createElement(ThemeProbe))).toContain(
+      `data-canvas-bg="${BUILTIN_THEMES.oled.colors.canvasBackground}"`,
+    );
   });
 });

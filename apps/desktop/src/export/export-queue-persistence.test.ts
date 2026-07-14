@@ -4,7 +4,7 @@ import {
   parseExportQueueState,
   serializeExportQueueState,
   shouldPersistExportQueueState,
-  shouldShowExportQueueRecoveryDialog
+  shouldShowExportQueueRecoveryDialog,
 } from './export-queue-persistence';
 
 const plan: FfmpegExportPlan = {
@@ -16,7 +16,7 @@ const plan: FfmpegExportPlan = {
   warnings: [],
   textArtifacts: [],
   nestedPlans: [],
-  duration: 6
+  duration: 6,
 };
 
 function task(overrides: Partial<ExportTask> = {}): ExportTask {
@@ -34,17 +34,20 @@ function task(overrides: Partial<ExportTask> = {}): ExportTask {
     finishedAt: overrides.finishedAt,
     error: overrides.error,
     report: overrides.report,
-    progressive: overrides.progressive
+    progressive: overrides.progressive,
   };
 }
 
 describe('export queue persistence', () => {
   it('serializes only restorable queue tasks', () => {
-    const serialized = serializeExportQueueState([
-      task({ id: 'pending', status: 'pending' }),
-      task({ id: 'running', status: 'running', progress: 0.4 }),
-      task({ id: 'done', status: 'success', progress: 1 })
-    ], '2026-06-15T01:00:00.000Z');
+    const serialized = serializeExportQueueState(
+      [
+        task({ id: 'pending', status: 'pending' }),
+        task({ id: 'running', status: 'running', progress: 0.4 }),
+        task({ id: 'done', status: 'success', progress: 1 }),
+      ],
+      '2026-06-15T01:00:00.000Z',
+    );
 
     const parsed = JSON.parse(serialized) as { tasks: ExportTask[] };
     expect(parsed.tasks.map((item) => item.id)).toEqual(['pending', 'running']);
@@ -53,7 +56,7 @@ describe('export queue persistence', () => {
   it('deserializes pending tasks and marks running tasks as interrupted', () => {
     const serialized = serializeExportQueueState([
       task({ id: 'pending', status: 'pending', progress: 0.8 }),
-      task({ id: 'running', status: 'running', progress: 0.35, startedAt: '2026-06-15T00:30:00.000Z' })
+      task({ id: 'running', status: 'running', progress: 0.35, startedAt: '2026-06-15T00:30:00.000Z' }),
     ]);
 
     const recovery = parseExportQueueState(serialized, '导出被中断。');
@@ -61,7 +64,7 @@ describe('export queue persistence', () => {
     expect(recovery?.interruptedCount).toBe(1);
     expect(recovery?.tasks.map((item) => [item.id, item.status, item.progress, item.error])).toEqual([
       ['pending', 'pending', 0, undefined],
-      ['running', 'interrupted', 0.35, '导出被中断。']
+      ['running', 'interrupted', 0.35, '导出被中断。'],
     ]);
   });
 
@@ -75,9 +78,9 @@ describe('export queue persistence', () => {
           enabled: true,
           supported: true,
           partialPath: 'C:/Exports/output.partial.mp4',
-          completedDuration: 3
-        }
-      })
+          completedDuration: 3,
+        },
+      }),
     ]);
 
     const recovery = parseExportQueueState(serialized, '导出被中断。');
@@ -87,8 +90,8 @@ describe('export queue persistence', () => {
       status: 'interrupted',
       progressive: {
         partialPath: 'C:/Exports/output.partial.mp4',
-        completedDuration: 3
-      }
+        completedDuration: 3,
+      },
     });
   });
 

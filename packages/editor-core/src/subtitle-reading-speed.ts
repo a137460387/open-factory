@@ -38,7 +38,10 @@ export function countCharacters(text: string, language: string): number {
   }
 
   // 英文等拉丁语系：按单词数
-  const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
   return words.length;
 }
 
@@ -56,7 +59,7 @@ export function calculateReadingSpeed(
   text: string,
   startTime: number,
   endTime: number,
-  language: string = 'zh'
+  language: string = 'zh',
 ): ReadingSpeedWarning | null {
   const duration = endTime - startTime;
   if (duration <= 0 || !text) return null;
@@ -84,11 +87,7 @@ export function calculateReadingSpeed(
 /**
  * 检测连续字幕是否共享前缀（断句不当）
  */
-export function detectSharedPrefix(
-  textA: string,
-  textB: string,
-  minPrefixLength: number = 3
-): boolean {
+export function detectSharedPrefix(textA: string, textB: string, minPrefixLength: number = 3): boolean {
   if (!textA || !textB) return false;
   const prefixLen = Math.min(textA.length, textB.length, minPrefixLength);
   for (let i = 0; i < prefixLen; i++) {
@@ -101,11 +100,7 @@ export function detectSharedPrefix(
  * 自动拆分字幕文本
  * 按标点或中点粗略二分
  */
-export function autoSplitSubtitle(
-  text: string,
-  startTime: number,
-  endTime: number
-): SubtitleSplitResult {
+export function autoSplitSubtitle(text: string, startTime: number, endTime: number): SubtitleSplitResult {
   const duration = endTime - startTime;
 
   // 尝试在标点符号处分割
@@ -142,11 +137,7 @@ export function autoSplitSubtitle(
 /**
  * 计算延长至安全时长后的结束时间
  */
-export function calculateSafeDuration(
-  text: string,
-  startTime: number,
-  language: string = 'zh'
-): number {
+export function calculateSafeDuration(text: string, startTime: number, language: string = 'zh'): number {
   const chars = countCharacters(text, language);
   const maxCps = getRecommendedMax(language);
   const safeDuration = chars / maxCps;
@@ -156,10 +147,6 @@ export function calculateSafeDuration(
 /**
  * 检查延长后是否与下一字幕重叠
  */
-export function wouldOverlapNextSegment(
-  newEndTime: number,
-  nextStartTime: number,
-  tolerance: number = 0.01
-): boolean {
+export function wouldOverlapNextSegment(newEndTime: number, nextStartTime: number, tolerance: number = 0.01): boolean {
   return newEndTime > nextStartTime + tolerance;
 }

@@ -33,7 +33,11 @@ export function ExportTaskRow({ taskId }: { taskId: string }) {
         </span>
         <StatusPill status={task.status} />
         {task.logPath ? (
-          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-log-button" onClick={() => void openPath(task.logPath!)}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+            data-testid="export-task-log-button"
+            onClick={() => void openPath(task.logPath!)}
+          >
             <FileText size={13} className="inline-block" /> {zhCN.exportDialog.viewLog}
           </button>
         ) : null}
@@ -55,11 +59,18 @@ export function ExportTaskRow({ taskId }: { taskId: string }) {
             {zhCN.exportDialog.cancelTask}
           </button>
         ) : task.status === 'success' ? (
-          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={() => void revealExport(task.outputPath)}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+            onClick={() => void revealExport(task.outputPath)}
+          >
             {zhCN.exportDialog.openFolder}
           </button>
         ) : task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted' ? (
-          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-retry-button" onClick={() => retryQueuedExportTask(task.id)}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+            data-testid="export-task-retry-button"
+            onClick={() => retryQueuedExportTask(task.id)}
+          >
             {zhCN.exportDialog.retryTask}
           </button>
         ) : null}
@@ -71,11 +82,18 @@ export function ExportTaskRow({ taskId }: { taskId: string }) {
         <div className="w-9 text-right text-[11px] tabular-nums text-slate-500">{progress}%</div>
       </div>
       {task.progressive ? (
-        <div className="mt-2 grid gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-900" data-testid="export-progressive-state">
+        <div
+          className="mt-2 grid gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-900"
+          data-testid="export-progressive-state"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <div className="font-semibold">{zhCN.exportDialog.progressive.partialPath}</div>
-              <div className="truncate font-mono" title={task.progressive.partialPath} data-testid="export-progressive-partial-path">
+              <div
+                className="truncate font-mono"
+                title={task.progressive.partialPath}
+                data-testid="export-progressive-partial-path"
+              >
                 {task.progressive.partialPath}
               </div>
             </div>
@@ -85,8 +103,19 @@ export function ExportTaskRow({ taskId }: { taskId: string }) {
           </div>
           {progressivePreviewSrc ? (
             <div className="grid gap-2 sm:grid-cols-[160px_auto] sm:items-center">
-              <video className="h-20 w-40 rounded border border-emerald-200 bg-black object-contain" src={progressivePreviewSrc} controls preload="metadata" data-testid="export-progressive-preview" />
-              <button className="justify-self-start rounded-md border border-emerald-300 bg-white px-2 py-1 font-medium hover:bg-emerald-100" type="button" data-testid="export-progressive-open-partial" onClick={() => void openPath(task.progressive!.partialPath)}>
+              <video
+                className="h-20 w-40 rounded border border-emerald-200 bg-black object-contain"
+                src={progressivePreviewSrc}
+                controls
+                preload="metadata"
+                data-testid="export-progressive-preview"
+              />
+              <button
+                className="justify-self-start rounded-md border border-emerald-300 bg-white px-2 py-1 font-medium hover:bg-emerald-100"
+                type="button"
+                data-testid="export-progressive-open-partial"
+                onClick={() => void openPath(task.progressive!.partialPath)}
+              >
                 {zhCN.exportDialog.progressive.preview}
               </button>
             </div>
@@ -98,7 +127,12 @@ export function ExportTaskRow({ taskId }: { taskId: string }) {
           {task.segments.map((segment) => {
             const segmentProgress = Math.round(segment.progress * 100);
             return (
-              <div key={segment.id} className="grid grid-cols-[72px_1fr_42px] items-center gap-2 text-[11px] text-slate-500" data-testid="export-task-segment-row" data-status={segment.status}>
+              <div
+                key={segment.id}
+                className="grid grid-cols-[72px_1fr_42px] items-center gap-2 text-[11px] text-slate-500"
+                data-testid="export-task-segment-row"
+                data-status={segment.status}
+              >
                 <span>{zhCN.exportDialog.renderFarm.segmentLabel(segment.index + 1)}</span>
                 <div className="h-1 overflow-hidden rounded-full bg-slate-200">
                   <div className="h-full bg-sky-500 transition-all" style={{ width: `${segmentProgress}%` }} />
@@ -133,7 +167,11 @@ export function StatusPill({ status }: { status: ExportTaskStatus }) {
               ? 'bg-orange-50 text-orange-700 border-orange-200'
               : 'bg-amber-50 text-amber-700 border-amber-200';
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`} data-testid="export-task-status" data-status={status}>
+    <span
+      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`}
+      data-testid="export-task-status"
+      data-status={status}
+    >
       {zhCN.exportDialog.status[status]}
     </span>
   );
@@ -150,7 +188,10 @@ function ExportDiagnosticsPanel({ error }: { error: string }) {
     });
   };
   return (
-    <div className="mt-1 rounded-md border border-rose-200 bg-rose-50 p-2 text-[11px]" data-testid="export-diagnostics-panel">
+    <div
+      className="mt-1 rounded-md border border-rose-200 bg-rose-50 p-2 text-[11px]"
+      data-testid="export-diagnostics-panel"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 whitespace-pre-wrap text-rose-700">{error}</div>
         <button

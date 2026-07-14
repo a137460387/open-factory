@@ -43,25 +43,167 @@ export interface SpeechUnderstandingOptions {
 // ─── Chinese Stop Words ────────────────────────────────────
 
 const STOP_WORDS = new Set([
-  '的', '了', '在', '是', '我', '有', '和', '就', '不', '人',
-  '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去',
-  '你', '会', '着', '没有', '看', '好', '自己', '这', '他', '她',
-  '它', '们', '那', '里', '为', '什么', '怎么', '如何', '可以',
-  '但是', '而且', '或者', '因为', '所以', '如果', '虽然', '但是',
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare',
-  'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her',
-  'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine',
-  'yours', 'hers', 'ours', 'theirs', 'this', 'that', 'these', 'those',
-  'and', 'but', 'or', 'nor', 'not', 'so', 'yet', 'both', 'either',
-  'neither', 'each', 'every', 'all', 'any', 'few', 'more', 'most',
-  'other', 'some', 'such', 'no', 'only', 'own', 'same', 'than',
-  'too', 'very', 'just', 'because', 'as', 'until', 'while', 'of',
-  'at', 'by', 'for', 'with', 'about', 'against', 'between', 'through',
-  'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up',
-  'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
-  'then', 'once',
+  '的',
+  '了',
+  '在',
+  '是',
+  '我',
+  '有',
+  '和',
+  '就',
+  '不',
+  '人',
+  '都',
+  '一',
+  '一个',
+  '上',
+  '也',
+  '很',
+  '到',
+  '说',
+  '要',
+  '去',
+  '你',
+  '会',
+  '着',
+  '没有',
+  '看',
+  '好',
+  '自己',
+  '这',
+  '他',
+  '她',
+  '它',
+  '们',
+  '那',
+  '里',
+  '为',
+  '什么',
+  '怎么',
+  '如何',
+  '可以',
+  '但是',
+  '而且',
+  '或者',
+  '因为',
+  '所以',
+  '如果',
+  '虽然',
+  '但是',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'must',
+  'shall',
+  'can',
+  'need',
+  'dare',
+  'i',
+  'you',
+  'he',
+  'she',
+  'it',
+  'we',
+  'they',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'its',
+  'our',
+  'their',
+  'mine',
+  'yours',
+  'hers',
+  'ours',
+  'theirs',
+  'this',
+  'that',
+  'these',
+  'those',
+  'and',
+  'but',
+  'or',
+  'nor',
+  'not',
+  'so',
+  'yet',
+  'both',
+  'either',
+  'neither',
+  'each',
+  'every',
+  'all',
+  'any',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'only',
+  'own',
+  'same',
+  'than',
+  'too',
+  'very',
+  'just',
+  'because',
+  'as',
+  'until',
+  'while',
+  'of',
+  'at',
+  'by',
+  'for',
+  'with',
+  'about',
+  'against',
+  'between',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'to',
+  'from',
+  'up',
+  'down',
+  'in',
+  'out',
+  'on',
+  'off',
+  'over',
+  'under',
+  'again',
+  'further',
+  'then',
+  'once',
 ]);
 
 // ─── Core Functions ────────────────────────────────────────
@@ -75,19 +217,13 @@ const STOP_WORDS = new Set([
 export function understandSpeech(
   transcript: string,
   timeAlignment?: { start: number; end: number }[],
-  options: SpeechUnderstandingOptions = {}
+  options: SpeechUnderstandingOptions = {},
 ): SpeechUnderstandingResult {
-  const {
-    maxKeywords = 20,
-    maxTopics = 5,
-    minKeywordFrequency = 2,
-  } = options;
+  const { maxKeywords = 20, maxTopics = 5, minKeywordFrequency = 2 } = options;
 
   // Tokenize and clean
   const tokens = tokenize(transcript);
-  const filteredTokens = tokens.filter(
-    (t) => t.length > 1 && !STOP_WORDS.has(t.toLowerCase())
-  );
+  const filteredTokens = tokens.filter((t) => t.length > 1 && !STOP_WORDS.has(t.toLowerCase()));
 
   // Extract keywords using TF scoring
   const keywords = extractKeywords(filteredTokens, maxKeywords, minKeywordFrequency);
@@ -121,11 +257,7 @@ function tokenize(text: string): string[] {
 
 // ─── Keyword Extraction ────────────────────────────────────
 
-function extractKeywords(
-  tokens: string[],
-  maxKeywords: number,
-  minFrequency: number
-): Keyword[] {
+function extractKeywords(tokens: string[], maxKeywords: number, minFrequency: number): Keyword[] {
   // Count frequencies
   const freqMap = new Map<string, number>();
   for (const token of tokens) {
@@ -152,7 +284,7 @@ function extractKeywords(
 function extractTopics(
   keywords: Keyword[],
   maxTopics: number,
-  timeAlignment?: { start: number; end: number }[]
+  timeAlignment?: { start: number; end: number }[],
 ): Topic[] {
   if (keywords.length === 0) return [];
 
@@ -206,7 +338,7 @@ function areKeywordsRelated(word1: string, word2: string): boolean {
 
 function detectNarrativeMarkers(
   transcript: string,
-  timeAlignment?: { start: number; end: number }[]
+  timeAlignment?: { start: number; end: number }[],
 ): NarrativeMarker[] {
   const markers: NarrativeMarker[] = [];
   const sentences = transcript.split(/[。！？.!?]+/).filter((s) => s.trim().length > 0);
@@ -225,7 +357,21 @@ function detectNarrativeMarkers(
   }
 
   // Climax markers (high emotion words)
-  const climaxPatterns = ['重要', '关键', '核心', '最', '非常', '极其', '特别', 'important', 'key', 'core', 'most', 'very', 'extremely'];
+  const climaxPatterns = [
+    '重要',
+    '关键',
+    '核心',
+    '最',
+    '非常',
+    '极其',
+    '特别',
+    'important',
+    'key',
+    'core',
+    'most',
+    'very',
+    'extremely',
+  ];
   for (let i = 0; i < sentences.length; i++) {
     if (matchesPatterns(sentences[i], climaxPatterns)) {
       const time = timeAlignment?.[i]?.start || (i / sentences.length) * 100;
@@ -288,7 +434,10 @@ function generateSummary(transcript: string, keywords: Keyword[]): string {
 
   // Extract first sentence and top keywords
   const firstSentence = transcript.split(/[。！？.!?]+/)[0] || '';
-  const topKeywords = keywords.slice(0, 5).map((k) => k.word).join('、');
+  const topKeywords = keywords
+    .slice(0, 5)
+    .map((k) => k.word)
+    .join('、');
 
   return `${firstSentence.slice(0, 50)}... 主要内容涉及：${topKeywords}`;
 }

@@ -40,9 +40,7 @@ import { SharePackageProgressDialog } from './SharePackageProgressDialog';
 
 describe('P1-4 extracted dialog render tests', () => {
   it('ProjectEncryptionSaveDialog renders with data-testid', () => {
-    const html = renderToStaticMarkup(
-      <ProjectEncryptionSaveDialog onConfirm={() => {}} onClose={() => {}} />,
-    );
+    const html = renderToStaticMarkup(<ProjectEncryptionSaveDialog onConfirm={() => {}} onClose={() => {}} />);
     expect(html).toContain('data-testid="project-encryption-dialog"');
   });
 
@@ -58,9 +56,7 @@ describe('P1-4 extracted dialog render tests', () => {
   });
 
   it('AutosaveRecoveryDialog renders with data-testid', () => {
-    const html = renderToStaticMarkup(
-      <AutosaveRecoveryDialog onRestore={() => {}} onDiscard={() => {}} />,
-    );
+    const html = renderToStaticMarkup(<AutosaveRecoveryDialog onRestore={() => {}} onDiscard={() => {}} />);
     expect(html).toContain('data-testid="autosave-recovery-dialog"');
   });
 
@@ -93,16 +89,12 @@ describe('P1-4 extracted dialog render tests', () => {
   });
 
   it('ArchiveProgressDialog renders with data-testid', () => {
-    const html = renderToStaticMarkup(
-      <ArchiveProgressDialog progress={{ copied: 5, total: 10 }} />,
-    );
+    const html = renderToStaticMarkup(<ArchiveProgressDialog progress={{ copied: 5, total: 10 }} />);
     expect(html).toContain('data-testid="archive-progress-dialog"');
   });
 
   it('PasteKeyframeDialog renders with data-testid', () => {
-    const html = renderToStaticMarkup(
-      <PasteKeyframeDialog groups={[]} targetClipId="clip-1" onClose={() => {}} />,
-    );
+    const html = renderToStaticMarkup(<PasteKeyframeDialog groups={[]} targetClipId="clip-1" onClose={() => {}} />);
     expect(html).toContain('data-testid="paste-keyframe-dialog"');
   });
 

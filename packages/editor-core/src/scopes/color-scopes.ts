@@ -30,7 +30,7 @@ export function computeColorScopes(frame: RgbaFrame, waveformColumns = frame.wid
   return {
     histogram: computeRgbHistogram(frame),
     waveform: computeWaveform(frame, waveformColumns),
-    vectorscope: computeVectorscope(frame)
+    vectorscope: computeVectorscope(frame),
   };
 }
 
@@ -39,7 +39,7 @@ export function computeRgbHistogram(frame: RgbaFrame): RgbHistogram {
   const histogram: RgbHistogram = {
     r: Array.from({ length: 256 }, () => 0),
     g: Array.from({ length: 256 }, () => 0),
-    b: Array.from({ length: 256 }, () => 0)
+    b: Array.from({ length: 256 }, () => 0),
   };
   forEachPixel(frame, (r, g, b) => {
     histogram.r[r] += 1;
@@ -51,7 +51,9 @@ export function computeRgbHistogram(frame: RgbaFrame): RgbHistogram {
 
 export function computeWaveform(frame: RgbaFrame, columnCount = frame.width): WaveformScope {
   assertFrame(frame);
-  const columns = Array.from({ length: Math.max(1, Math.round(columnCount)) }, () => Array.from({ length: 101 }, () => 0));
+  const columns = Array.from({ length: Math.max(1, Math.round(columnCount)) }, () =>
+    Array.from({ length: 101 }, () => 0),
+  );
   forEachPixel(frame, (r, g, b, _a, x) => {
     const column = Math.min(columns.length - 1, Math.floor((x / Math.max(1, frame.width)) * columns.length));
     const ire = Math.min(100, Math.max(0, Math.round((luma(r, g, b) / 255) * 100)));
@@ -84,15 +86,25 @@ export function rgbToCbCrPoint(r: number, g: number, b: number): { x: number; y:
   const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
   return {
     x: Math.min(1, Math.max(-1, (cb - 128) / 128)),
-    y: Math.min(1, Math.max(-1, (cr - 128) / 128))
+    y: Math.min(1, Math.max(-1, (cr - 128) / 128)),
   };
 }
 
-function forEachPixel(frame: RgbaFrame, visitor: (r: number, g: number, b: number, a: number, x: number, y: number) => void): void {
+function forEachPixel(
+  frame: RgbaFrame,
+  visitor: (r: number, g: number, b: number, a: number, x: number, y: number) => void,
+): void {
   for (let y = 0; y < frame.height; y += 1) {
     for (let x = 0; x < frame.width; x += 1) {
       const index = (y * frame.width + x) * 4;
-      visitor(frame.data[index] ?? 0, frame.data[index + 1] ?? 0, frame.data[index + 2] ?? 0, frame.data[index + 3] ?? 255, x, y);
+      visitor(
+        frame.data[index] ?? 0,
+        frame.data[index + 1] ?? 0,
+        frame.data[index + 2] ?? 0,
+        frame.data[index + 3] ?? 255,
+        x,
+        y,
+      );
     }
   }
 }

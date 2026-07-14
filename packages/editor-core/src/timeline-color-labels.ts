@@ -1,7 +1,20 @@
 import type { Clip, Timeline, TimelineLabelColor, Track } from './model-types';
 export type { TimelineLabelColor } from './model-types';
 
-export const TIMELINE_LABEL_COLORS = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'indigo', 'purple', 'pink'] as const;
+export const TIMELINE_LABEL_COLORS = [
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'teal',
+  'cyan',
+  'blue',
+  'indigo',
+  'purple',
+  'pink',
+] as const;
 
 export const TIMELINE_LABEL_COLOR_HEX: Record<TimelineLabelColor, string> = {
   red: '#ef4444',
@@ -15,7 +28,7 @@ export const TIMELINE_LABEL_COLOR_HEX: Record<TimelineLabelColor, string> = {
   blue: '#3b82f6',
   indigo: '#6366f1',
   purple: '#a855f7',
-  pink: '#ec4899'
+  pink: '#ec4899',
 };
 
 export const DEFAULT_TIMELINE_LABEL_COLOR_HEX = '#94a3b8';
@@ -28,7 +41,10 @@ export function normalizeTimelineLabelColor(value: unknown): TimelineLabelColor 
   return isTimelineLabelColor(value) ? value : null;
 }
 
-export function getEffectiveClipColorLabel(clip: Pick<Clip, 'colorLabel'>, track: Pick<Track, 'color'> | undefined): TimelineLabelColor | null {
+export function getEffectiveClipColorLabel(
+  clip: Pick<Clip, 'colorLabel'>,
+  track: Pick<Track, 'color'> | undefined,
+): TimelineLabelColor | null {
   return normalizeTimelineLabelColor(clip.colorLabel) ?? normalizeTimelineLabelColor(track?.color);
 }
 
@@ -43,6 +59,6 @@ export function filterTimelineClipsByColor(timeline: Timeline, color: TimelineLa
         return true;
       }
       return getEffectiveClipColorLabel(clip, track) === color;
-    })
+    }),
   );
 }

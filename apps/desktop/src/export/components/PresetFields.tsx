@@ -89,7 +89,7 @@ export function WatermarkNumberField({
   step,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   value: number;
@@ -123,7 +123,7 @@ export function PresetNumberField({
   value,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   value?: number;
@@ -134,7 +134,15 @@ export function PresetNumberField({
   return (
     <label className="space-y-1 text-xs font-medium text-slate-600">
       <span>{label}</span>
-      <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" type="number" min={1} value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+      <input
+        className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+        type="number"
+        min={1}
+        value={value ?? ''}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      />
     </label>
   );
 }
@@ -144,7 +152,7 @@ export function PresetFpsField({
   value,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   value?: number;
@@ -177,7 +185,7 @@ export function PresetTextField({
   value,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   value: string;
@@ -188,7 +196,13 @@ export function PresetTextField({
   return (
     <label className="space-y-1 text-xs font-medium text-slate-600">
       <span>{label}</span>
-      <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+      <input
+        className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      />
     </label>
   );
 }
@@ -198,7 +212,7 @@ export function PresetColorField({
   value,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   value: string;
@@ -209,7 +223,14 @@ export function PresetColorField({
   return (
     <label className="space-y-1 text-xs font-medium text-slate-600">
       <span>{label}</span>
-      <input className="h-[34px] w-full rounded-md border border-line px-1 py-1 disabled:bg-slate-100" type="color" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+      <input
+        className="h-[34px] w-full rounded-md border border-line px-1 py-1 disabled:bg-slate-100"
+        type="color"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      />
     </label>
   );
 }
@@ -220,7 +241,7 @@ export function PresetSelectField({
   disabled,
   onChange,
   options,
-  testId
+  testId,
 }: {
   label: string;
   value: string;
@@ -232,7 +253,13 @@ export function PresetSelectField({
   return (
     <label className="space-y-1 text-xs font-medium text-slate-600">
       <span>{label}</span>
-      <select className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId}>
+      <select
+        className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      >
         {options.map((option) => (
           <option key={option} value={option}>
             {formatOptionLabel(option)}
@@ -248,7 +275,7 @@ export function PresetCheckboxField({
   checked,
   disabled,
   onChange,
-  testId
+  testId,
 }: {
   label: string;
   checked: boolean;
@@ -257,8 +284,17 @@ export function PresetCheckboxField({
   testId: string;
 }) {
   return (
-    <label className={`flex min-h-[58px] items-center gap-2 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-600 ${disabled ? 'bg-slate-100 opacity-70' : ''}`}>
-      <input className="h-4 w-4 accent-brand" type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} data-testid={testId} />
+    <label
+      className={`flex min-h-[58px] items-center gap-2 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-600 ${disabled ? 'bg-slate-100 opacity-70' : ''}`}
+    >
+      <input
+        className="h-4 w-4 accent-brand"
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        data-testid={testId}
+      />
       <span>{label}</span>
     </label>
   );

@@ -46,7 +46,7 @@ export function extractDecodedWaveform(input: DecodedWaveformInput): DecodedWave
     channels: channels.length,
     pointsPerSecond,
     samplesPerPoint,
-    isSampled: false
+    isSampled: false,
   };
 }
 
@@ -61,7 +61,8 @@ export function sampleAudioPeaksForPixels(input: PixelPeakInput): number[] {
 
   for (let pixel = 0; pixel < pixelWidth; pixel += 1) {
     const start = Math.floor((pixel / pixelWidth) * maxSamples);
-    const end = pixel === pixelWidth - 1 ? maxSamples : Math.max(start + 1, Math.floor(((pixel + 1) / pixelWidth) * maxSamples));
+    const end =
+      pixel === pixelWidth - 1 ? maxSamples : Math.max(start + 1, Math.floor(((pixel + 1) / pixelWidth) * maxSamples));
     let peak = 0;
     for (const channel of channels) {
       for (let index = start; index < end && index < channel.length; index += 1) {

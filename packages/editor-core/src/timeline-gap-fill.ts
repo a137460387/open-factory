@@ -8,9 +8,14 @@ import {
   type Clip,
   type Timeline,
   type Transition,
-  type TransitionType
+  type TransitionType,
 } from './model';
-import { calculateSpeedCurveSourceDuration, clampTransitionDuration, getClipSourceVisibleDuration, getClipSpeed } from './timeline';
+import {
+  calculateSpeedCurveSourceDuration,
+  clampTransitionDuration,
+  getClipSourceVisibleDuration,
+  getClipSpeed,
+} from './timeline';
 import { round } from './time';
 
 const EPSILON = 0.000001;
@@ -36,7 +41,9 @@ export function findTimelineGapAtTime(timeline: Timeline, trackId: string, time:
   if (!track) {
     return undefined;
   }
-  const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  const sortedClips = [...track.clips].sort(
+    (left, right) => left.start - right.start || left.id.localeCompare(right.id),
+  );
   const target = round(Math.max(0, time));
   let cursor = 0;
   let previousClip: Clip | undefined;
@@ -48,7 +55,7 @@ export function findTimelineGapAtTime(timeline: Timeline, trackId: string, time:
         end: round(clip.start),
         duration: round(clip.start - cursor),
         previousClip,
-        nextClip: clip
+        nextClip: clip,
       };
     }
     if (clip.start + clip.duration >= cursor - EPSILON) {
@@ -59,7 +66,10 @@ export function findTimelineGapAtTime(timeline: Timeline, trackId: string, time:
   return undefined;
 }
 
-export function buildGapFillCommandOperation(strategy: GapFillStrategy, options: { clip?: Clip; transitionType?: TransitionType } = {}): FillGapOperation {
+export function buildGapFillCommandOperation(
+  strategy: GapFillStrategy,
+  options: { clip?: Clip; transitionType?: TransitionType } = {},
+): FillGapOperation {
   if (strategy === 'repeat') {
     return { type: 'repeat-previous' };
   }
@@ -94,7 +104,7 @@ export function createGapFillImageClip(input: {
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
     chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
-    masks: []
+    masks: [],
   };
 }
 
@@ -105,7 +115,10 @@ export function buildRepeatedGapFillClip(gap: TimelineGap, options: { clipId?: s
   }
   const sourceVisibleDuration = getClipSourceVisibleDuration(source);
   const repeatDisplayDuration = Math.min(gap.duration, source.duration);
-  const repeatSourceDuration = Math.min(sourceVisibleDuration, calculateSpeedCurveSourceDuration(repeatDisplayDuration, source.keyframes, getClipSpeed(source)));
+  const repeatSourceDuration = Math.min(
+    sourceVisibleDuration,
+    calculateSpeedCurveSourceDuration(repeatDisplayDuration, source.keyframes, getClipSpeed(source)),
+  );
   const clone = cloneStructured(source);
   return {
     ...clone,
@@ -113,13 +126,17 @@ export function buildRepeatedGapFillClip(gap: TimelineGap, options: { clipId?: s
     name: options.name ?? `${source.name} Repeat`,
     start: gap.start,
     duration: gap.duration,
-    trimStart: source.type === 'image' ? 0 : round(source.trimStart + Math.max(0, sourceVisibleDuration - repeatSourceDuration)),
+    trimStart:
+      source.type === 'image' ? 0 : round(source.trimStart + Math.max(0, sourceVisibleDuration - repeatSourceDuration)),
     trimEnd: source.trimEnd,
-    keyframes: undefined
+    keyframes: undefined,
   } as Clip;
 }
 
-export function buildCrossfadeGapFillTransition(gap: TimelineGap, operation: Extract<FillGapOperation, { type: 'crossfade' }>): Transition {
+export function buildCrossfadeGapFillTransition(
+  gap: TimelineGap,
+  operation: Extract<FillGapOperation, { type: 'crossfade' }>,
+): Transition {
   if (!gap.previousClip || !gap.nextClip) {
     throw new Error('Crossfade gap fill requires adjacent clips around the gap');
   }
@@ -132,7 +149,7 @@ export function buildCrossfadeGapFillTransition(gap: TimelineGap, operation: Ext
     type: operation.transitionType ?? 'dissolve',
     duration,
     fromClipId: gap.previousClip.id,
-    toClipId: gap.nextClip.id
+    toClipId: gap.nextClip.id,
   };
 }
 
@@ -148,11 +165,16 @@ export function buildFreezeFrameFfmpegArgs(sourcePath: string, outputPath: strin
     'select=eq(n\\,0)',
     '-frames:v',
     '1',
-    outputPath
+    outputPath,
   ];
 }
 
-export function buildSolidColorFrameFfmpegArgs(outputPath: string, color: string, width: number, height: number): string[] {
+export function buildSolidColorFrameFfmpegArgs(
+  outputPath: string,
+  color: string,
+  width: number,
+  height: number,
+): string[] {
   const safeWidth = Math.max(16, Math.round(width) || 1920);
   const safeHeight = Math.max(16, Math.round(height) || 1080);
   return [
@@ -164,7 +186,7 @@ export function buildSolidColorFrameFfmpegArgs(outputPath: string, color: string
     `color=c=${normalizeGapFillFfmpegColor(color)}:s=${safeWidth}x${safeHeight}:d=0.04`,
     '-frames:v',
     '1',
-    outputPath
+    outputPath,
   ];
 }
 

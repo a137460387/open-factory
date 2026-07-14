@@ -386,20 +386,18 @@ export function buildDistributionRecommendations(
  * 将 DistributionPlatformId 映射到现有的 ExportPlatformPreset
  * 对于新增的平台，返回最接近的已有预设或 undefined
  */
-export function mapToExportPlatformPreset(
-  id: DistributionPlatformId,
-): ExportPlatformPreset | undefined {
+export function mapToExportPlatformPreset(id: DistributionPlatformId): ExportPlatformPreset | undefined {
   const mapping: Record<DistributionPlatformId, ExportPlatformPreset | undefined> = {
     'youtube-1080p': 'youtube-1080p',
     'youtube-shorts': 'youtube-shorts',
-    'tiktok': 'tiktok',
+    tiktok: 'tiktok',
     'instagram-reels': 'instagram-reels',
-    'instagram-feed': 'instagram-reels',  // 最接近的已有预设
+    'instagram-feed': 'instagram-reels', // 最接近的已有预设
     'twitter-x': 'twitter-x',
-    'bilibili': 'bilibili',
-    'weixin-channels': 'bilibili',         // 最接近的横屏预设
-    'kuaishou': 'tiktok',                  // 最接近的竖屏预设
-    'pinterest': 'instagram-reels',        // 最接近的竖屏预设
+    bilibili: 'bilibili',
+    'weixin-channels': 'bilibili', // 最接近的横屏预设
+    kuaishou: 'tiktok', // 最接近的竖屏预设
+    pinterest: 'instagram-reels', // 最接近的竖屏预设
   };
   return mapping[id];
 }

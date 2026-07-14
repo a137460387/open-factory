@@ -37,7 +37,7 @@ self.onmessage = async (event: MessageEvent<TimelineThumbnailWorkerInput>) => {
     const payload: TimelineThumbnailWorkerOutput = {
       id,
       success: false,
-      error: error instanceof Error ? error.message : zhCN.errors.thumbnailRenderFailed
+      error: error instanceof Error ? error.message : zhCN.errors.thumbnailRenderFailed,
     };
     self.postMessage(payload);
   }

@@ -1,19 +1,26 @@
 import { round } from './time';
-import type { RichTextDocument, RichTextRun, TextArcOptions, TextLayoutOptions, TextOpenTypeFeatures, TextStyle } from './model-types';
+import type {
+  RichTextDocument,
+  RichTextRun,
+  TextArcOptions,
+  TextLayoutOptions,
+  TextOpenTypeFeatures,
+  TextStyle,
+} from './model-types';
 
 export const DEFAULT_TEXT_LAYOUT: TextLayoutOptions = {
   fitMode: 'fixed',
   boxWidth: 640,
   boxHeight: 180,
   paragraphSpacing: 12,
-  firstLineIndent: 0
+  firstLineIndent: 0,
 };
 
 export const DEFAULT_TEXT_OPEN_TYPE_FEATURES: TextOpenTypeFeatures = {
   liga: false,
   smcp: false,
   tnum: false,
-  swsh: false
+  swsh: false,
 };
 
 export const DEFAULT_TEXT_ARC: TextArcOptions = {
@@ -21,7 +28,7 @@ export const DEFAULT_TEXT_ARC: TextArcOptions = {
   radius: 280,
   startAngle: -30,
   clockwise: true,
-  rotateCharacters: true
+  rotateCharacters: true,
 };
 
 export interface RichTextDrawSegment {
@@ -56,14 +63,17 @@ export interface ArcTextCharacterLayout {
   y: number;
 }
 
-export function normalizeRichTextDocument(value: Partial<RichTextDocument> | undefined, fallbackText = ''): RichTextDocument {
+export function normalizeRichTextDocument(
+  value: Partial<RichTextDocument> | undefined,
+  fallbackText = '',
+): RichTextDocument {
   if (!value || !Array.isArray(value.paragraphs)) {
     return plainTextToRichTextDocument(fallbackText);
   }
   const paragraphs = value.paragraphs.map((paragraph) => ({
     runs: Array.isArray(paragraph?.runs)
       ? paragraph.runs.map((run) => normalizeRichTextRun(run)).filter((run) => run.text.length > 0)
-      : []
+      : [],
   }));
   const nonEmpty = paragraphs.filter((paragraph) => paragraph.runs.length > 0);
   return nonEmpty.length > 0 ? { paragraphs: nonEmpty } : plainTextToRichTextDocument(fallbackText);
@@ -89,11 +99,16 @@ export function plainTextToRichTextDocument(text: string): RichTextDocument {
 
 export function normalizeTextLayout(value: Partial<TextLayoutOptions> | undefined): TextLayoutOptions {
   return {
-    fitMode: value?.fitMode === 'auto-height' || value?.fitMode === 'auto-scale' ? value.fitMode : DEFAULT_TEXT_LAYOUT.fitMode,
+    fitMode:
+      value?.fitMode === 'auto-height' || value?.fitMode === 'auto-scale' ? value.fitMode : DEFAULT_TEXT_LAYOUT.fitMode,
     boxWidth: round(Math.min(4096, Math.max(24, finiteOrDefault(value?.boxWidth, DEFAULT_TEXT_LAYOUT.boxWidth)))),
     boxHeight: round(Math.min(4096, Math.max(24, finiteOrDefault(value?.boxHeight, DEFAULT_TEXT_LAYOUT.boxHeight)))),
-    paragraphSpacing: round(Math.min(240, Math.max(0, finiteOrDefault(value?.paragraphSpacing, DEFAULT_TEXT_LAYOUT.paragraphSpacing)))),
-    firstLineIndent: round(Math.min(960, Math.max(-960, finiteOrDefault(value?.firstLineIndent, DEFAULT_TEXT_LAYOUT.firstLineIndent))))
+    paragraphSpacing: round(
+      Math.min(240, Math.max(0, finiteOrDefault(value?.paragraphSpacing, DEFAULT_TEXT_LAYOUT.paragraphSpacing))),
+    ),
+    firstLineIndent: round(
+      Math.min(960, Math.max(-960, finiteOrDefault(value?.firstLineIndent, DEFAULT_TEXT_LAYOUT.firstLineIndent))),
+    ),
   };
 }
 
@@ -102,7 +117,7 @@ export function normalizeTextOpenTypeFeatures(value: Partial<TextOpenTypeFeature
     liga: value?.liga === true,
     smcp: value?.smcp === true,
     tnum: value?.tnum === true,
-    swsh: value?.swsh === true
+    swsh: value?.swsh === true,
   };
 }
 
@@ -112,7 +127,7 @@ export function normalizeTextArc(value: Partial<TextArcOptions> | undefined): Te
     radius: round(Math.min(4000, Math.max(24, finiteOrDefault(value?.radius, DEFAULT_TEXT_ARC.radius)))),
     startAngle: round(Math.min(360, Math.max(-360, finiteOrDefault(value?.startAngle, DEFAULT_TEXT_ARC.startAngle)))),
     clockwise: value?.clockwise !== false,
-    rotateCharacters: value?.rotateCharacters !== false
+    rotateCharacters: value?.rotateCharacters !== false,
   };
 }
 
@@ -140,7 +155,7 @@ export function buildRichTextDrawSegments(input: {
           runIndex,
           xOffset: round(xOffset),
           yOffset: round(yOffset),
-          style
+          style,
         });
       }
       xOffset += estimateTextWidth(run.text, style.fontSize);
@@ -161,15 +176,31 @@ export function calculateTextAutoLayout(input: {
   const segments = buildRichTextDrawSegments(input);
   const paragraphCount = Math.max(1, normalizeRichTextDocument(input.richText, input.plainText).paragraphs.length);
   const contentHeight =
-    segments.reduce((height, segment) => Math.max(height, segment.yOffset + segment.style.fontSize * 1.2), 0) + Math.max(0, paragraphCount - 1) * 0;
-  const contentWidth = segments.reduce((width, segment) => Math.max(width, segment.xOffset + estimateTextWidth(segment.text, segment.style.fontSize)), 0);
+    segments.reduce((height, segment) => Math.max(height, segment.yOffset + segment.style.fontSize * 1.2), 0) +
+    Math.max(0, paragraphCount - 1) * 0;
+  const contentWidth = segments.reduce(
+    (width, segment) => Math.max(width, segment.xOffset + estimateTextWidth(segment.text, segment.style.fontSize)),
+    0,
+  );
   if (layout.fitMode === 'auto-height') {
-    return { fitMode: layout.fitMode, width: layout.boxWidth, height: round(Math.max(layout.boxHeight, contentHeight)), scale: 1, paragraphCount };
+    return {
+      fitMode: layout.fitMode,
+      width: layout.boxWidth,
+      height: round(Math.max(layout.boxHeight, contentHeight)),
+      scale: 1,
+      paragraphCount,
+    };
   }
   if (layout.fitMode === 'auto-scale') {
     const widthScale = contentWidth > 0 ? layout.boxWidth / contentWidth : 1;
     const heightScale = contentHeight > 0 ? layout.boxHeight / contentHeight : 1;
-    return { fitMode: layout.fitMode, width: layout.boxWidth, height: layout.boxHeight, scale: round(Math.min(1, widthScale, heightScale)), paragraphCount };
+    return {
+      fitMode: layout.fitMode,
+      width: layout.boxWidth,
+      height: layout.boxHeight,
+      scale: round(Math.min(1, widthScale, heightScale)),
+      paragraphCount,
+    };
   }
   return { fitMode: layout.fitMode, width: layout.boxWidth, height: layout.boxHeight, scale: 1, paragraphCount };
 }
@@ -204,7 +235,7 @@ export function buildArcTextLayout(input: {
       angle,
       rotation: arc.rotateCharacters ? round(angle + (arc.clockwise ? 90 : -90)) : 0,
       x: round(centerX + Math.cos(radians) * radius),
-      y: round(centerY + Math.sin(radians) * radius)
+      y: round(centerY + Math.sin(radians) * radius),
     };
   });
 }
@@ -225,7 +256,10 @@ function normalizeRichTextRun(run: Partial<RichTextRun> | undefined): RichTextRu
     italic: run?.italic === true || undefined,
     underline: run?.underline === true || undefined,
     color: typeof run?.color === 'string' && run.color.trim() ? run.color.trim() : undefined,
-    fontSize: typeof run?.fontSize === 'number' && Number.isFinite(run.fontSize) ? round(Math.min(512, Math.max(1, run.fontSize))) : undefined
+    fontSize:
+      typeof run?.fontSize === 'number' && Number.isFinite(run.fontSize)
+        ? round(Math.min(512, Math.max(1, run.fontSize)))
+        : undefined,
   };
 }
 
@@ -235,7 +269,7 @@ function mergeRunStyle(run: RichTextRun, baseStyle: TextStyle): RichTextDrawSegm
     color: run.color ?? baseStyle.color,
     bold: run.bold ?? baseStyle.bold,
     italic: run.italic ?? baseStyle.italic,
-    underline: run.underline === true
+    underline: run.underline === true,
   };
 }
 

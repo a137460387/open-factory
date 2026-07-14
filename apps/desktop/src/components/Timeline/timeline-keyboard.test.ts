@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_COLOR_CORRECTION,
-  DEFAULT_TRANSFORM,
-  type Clip
-} from '@open-factory/editor-core';
+import { DEFAULT_COLOR_CORRECTION, DEFAULT_TRANSFORM, type Clip } from '@open-factory/editor-core';
 import {
   buildKeyboardClipMoveStarts,
   buildKeyboardClipTrim,
   getKeyboardSelectedClipIds,
-  getTimelineKeyboardFrameDuration
+  getTimelineKeyboardFrameDuration,
 } from './timeline-keyboard';
 
 describe('timeline keyboard editing helpers', () => {
@@ -53,6 +49,6 @@ function makeClip(patch: Partial<Clip> = {}): Clip {
     muted: false,
     colorCorrection: DEFAULT_COLOR_CORRECTION,
     transform: DEFAULT_TRANSFORM,
-    ...patch
+    ...patch,
   } as Clip;
 }

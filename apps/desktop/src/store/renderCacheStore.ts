@@ -18,5 +18,5 @@ export const useRenderCacheStore = create<RenderCacheState>((set) => ({
   count: 0,
   setSnapshot: (snapshot) => set({ ranges: snapshot.ranges, bytes: snapshot.bytes, count: snapshot.count }),
   setStaleRanges: (staleRanges) => set({ staleRanges }),
-  clear: () => set({ ranges: [], staleRanges: [], bytes: 0, count: 0 })
+  clear: () => set({ ranges: [], staleRanges: [], bytes: 0, count: 0 }),
 }));

@@ -15,7 +15,7 @@ export function getReviewModeShellVisibility(reviewMode: boolean): ReviewModeShe
       showRightPanel: true,
       showTimeline: true,
       showTimelineResizeHandle: true,
-      showExportControls: true
+      showExportControls: true,
     };
   }
   return {
@@ -24,6 +24,6 @@ export function getReviewModeShellVisibility(reviewMode: boolean): ReviewModeShe
     showRightPanel: false,
     showTimeline: false,
     showTimelineResizeHandle: false,
-    showExportControls: false
+    showExportControls: false,
   };
 }

@@ -16,7 +16,7 @@ export const usePrivacyDetectionSettingsStore = create<PrivacyDetectionSettingsS
       console.warn('Unable to save YuNet model path', error);
     });
     set({ modelPath });
-  }
+  },
 }));
 
 function readStoredPath(key: string): string {

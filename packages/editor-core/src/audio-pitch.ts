@@ -13,7 +13,7 @@ const NOTE_COLORS: Record<string, string> = {
   'G#': '#3b82f6',
   A: '#6366f1',
   'A#': '#8b5cf6',
-  B: '#a855f7'
+  B: '#a855f7',
 };
 
 export interface PitchDetectionOptions {
@@ -35,7 +35,11 @@ export interface PitchSummary {
   sampleCount: number;
 }
 
-export function detectPitchYin(samples: ArrayLike<number>, sampleRate: number, options: PitchDetectionOptions = {}): number | undefined {
+export function detectPitchYin(
+  samples: ArrayLike<number>,
+  sampleRate: number,
+  options: PitchDetectionOptions = {},
+): number | undefined {
   const minFrequency = options.minFrequency ?? 60;
   const maxFrequency = options.maxFrequency ?? 1200;
   const threshold = options.threshold ?? 0.15;
@@ -89,7 +93,11 @@ export function detectPitchYin(samples: ArrayLike<number>, sampleRate: number, o
   return Math.round((sampleRate / refinedTau) * 100) / 100;
 }
 
-export function analyzePitchFrames(samples: ArrayLike<number>, sampleRate: number, options: PitchFrameAnalysisOptions = {}): ClipPitchDataPoint[] {
+export function analyzePitchFrames(
+  samples: ArrayLike<number>,
+  sampleRate: number,
+  options: PitchFrameAnalysisOptions = {},
+): ClipPitchDataPoint[] {
   const frameSize = Math.max(256, Math.round(options.frameSize ?? 2048));
   const hopSize = Math.max(128, Math.round(options.hopSize ?? frameSize / 2));
   if (!Number.isFinite(sampleRate) || sampleRate <= 0 || samples.length < frameSize) {
@@ -102,7 +110,7 @@ export function analyzePitchFrames(samples: ArrayLike<number>, sampleRate: numbe
       points.push({
         time: Math.round((start / sampleRate) * 1000) / 1000,
         hz,
-        note: hzToNoteName(hz)
+        note: hzToNoteName(hz),
       });
     }
   }
@@ -137,7 +145,8 @@ export function summarizePitchData(data: readonly ClipPitchDataPoint[] | undefin
   for (const sample of samples) {
     counts.set(sample.note, (counts.get(sample.note) ?? 0) + 1);
   }
-  const [primaryNote, primaryCount] = [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0] ?? [];
+  const [primaryNote, primaryCount] =
+    [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0] ?? [];
   const hzValues = samples.map((sample) => sample.hz);
   const mean = hzValues.reduce((total, value) => total + value, 0) / hzValues.length;
   const variance = hzValues.reduce((total, value) => total + (value - mean) ** 2, 0) / hzValues.length;
@@ -147,7 +156,7 @@ export function summarizePitchData(data: readonly ClipPitchDataPoint[] | undefin
     minHz: Math.min(...hzValues),
     maxHz: Math.max(...hzValues),
     stability: Math.round(Math.max(0, Math.min(1, (primaryCount ?? 0) / samples.length - coefficient)) * 100) / 100,
-    sampleCount: samples.length
+    sampleCount: samples.length,
   };
 }
 
@@ -169,7 +178,7 @@ export function normalizeClipPitchData(data: unknown): ClipPitchDataPoint[] | un
       return {
         time: Math.round(time * 1000) / 1000,
         hz: Math.round(hz * 100) / 100,
-        note: typeof value.note === 'string' && value.note.trim() ? value.note.trim() : hzToNoteName(hz)
+        note: typeof value.note === 'string' && value.note.trim() ? value.note.trim() : hzToNoteName(hz),
       };
     })
     .filter((item): item is ClipPitchDataPoint => Boolean(item))
@@ -179,7 +188,10 @@ export function normalizeClipPitchData(data: unknown): ClipPitchDataPoint[] | un
 
 export function serializePitchDataCsv(data: readonly ClipPitchDataPoint[] | undefined): string {
   const rows = normalizeClipPitchData(data) ?? [];
-  return ['time,hz,note', ...rows.map((point) => `${point.time.toFixed(3)},${point.hz.toFixed(2)},${escapeCsv(point.note)}`)].join('\n');
+  return [
+    'time,hz,note',
+    ...rows.map((point) => `${point.time.toFixed(3)},${point.hz.toFixed(2)},${escapeCsv(point.note)}`),
+  ].join('\n');
 }
 
 function sliceSamples(samples: ArrayLike<number>, start: number, end: number): Float32Array {

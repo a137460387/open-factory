@@ -1,5 +1,9 @@
 import { Download, Square, Timer, X } from 'lucide-react';
-import { formatProfilerFrameReason, type PerformanceProfilerReport, type ProfilerRenderPassName } from '@open-factory/editor-core';
+import {
+  formatProfilerFrameReason,
+  type PerformanceProfilerReport,
+  type ProfilerRenderPassName,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 
 interface ProfilerDialogProps {
@@ -12,19 +16,38 @@ interface ProfilerDialogProps {
   onClose(): void;
 }
 
-export function ProfilerDialog({ recording, elapsedMs, report, onStart, onStop, onExportJson, onClose }: ProfilerDialogProps) {
+export function ProfilerDialog({
+  recording,
+  elapsedMs,
+  report,
+  onStart,
+  onStop,
+  onExportJson,
+  onClose,
+}: ProfilerDialogProps) {
   const t = zhCN.profiler;
   const passLabels = t.passLabels as Record<ProfilerRenderPassName, string>;
-  const flameHeight = Math.max(80, (Math.max(0, ...((report?.flamegraph ?? []).map((node) => node.depth))) + 1) * 22);
+  const flameHeight = Math.max(80, (Math.max(0, ...(report?.flamegraph ?? []).map((node) => node.depth)) + 1) * 22);
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-end p-4" role="dialog" aria-modal="false" data-testid="profiler-dialog">
+    <div
+      className="pointer-events-none fixed inset-0 z-50 flex items-end justify-end p-4"
+      role="dialog"
+      aria-modal="false"
+      data-testid="profiler-dialog"
+    >
       <div className="pointer-events-auto flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-line bg-white shadow-xl">
         <header className="flex items-start justify-between gap-4 border-b border-line px-4 py-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <p className="mt-1 text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} onClick={onClose}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
             <X size={16} />
           </button>
         </header>
@@ -34,7 +57,10 @@ export function ProfilerDialog({ recording, elapsedMs, report, onStart, onStop, 
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase text-slate-500">{t.recording}</div>
-                  <div className="mt-1 font-mono text-2xl tabular-nums text-ink" data-testid="profiler-recording-elapsed">
+                  <div
+                    className="mt-1 font-mono text-2xl tabular-nums text-ink"
+                    data-testid="profiler-recording-elapsed"
+                  >
                     {formatDuration(elapsedMs)}
                   </div>
                 </div>
@@ -86,12 +112,19 @@ export function ProfilerDialog({ recording, elapsedMs, report, onStart, onStop, 
                   <div className="mt-2 space-y-2">
                     {(report?.summary.slowestFrames ?? []).length > 0 ? (
                       report?.summary.slowestFrames.map((frame) => (
-                        <div key={frame.frameIndex} className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-slate-700" data-testid="profiler-slowest-frame">
+                        <div
+                          key={frame.frameIndex}
+                          className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-slate-700"
+                          data-testid="profiler-slowest-frame"
+                        >
                           {formatProfilerFrameReason(frame, passLabels)}
                         </div>
                       ))
                     ) : (
-                      <div className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-slate-500" data-testid="profiler-empty-state">
+                      <div
+                        className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-slate-500"
+                        data-testid="profiler-empty-state"
+                      >
                         {recording ? t.recordingHint : t.empty}
                       </div>
                     )}
@@ -99,12 +132,32 @@ export function ProfilerDialog({ recording, elapsedMs, report, onStart, onStop, 
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-ink">{t.flamegraph}</h3>
-                  <svg className="mt-2 h-48 w-full overflow-hidden rounded-md border border-line bg-slate-950" viewBox={`0 0 1000 ${flameHeight}`} preserveAspectRatio="none" data-testid="profiler-flamegraph" role="img" aria-label={t.flamegraph}>
+                  <svg
+                    className="mt-2 h-48 w-full overflow-hidden rounded-md border border-line bg-slate-950"
+                    viewBox={`0 0 1000 ${flameHeight}`}
+                    preserveAspectRatio="none"
+                    data-testid="profiler-flamegraph"
+                    role="img"
+                    aria-label={t.flamegraph}
+                  >
                     {(report?.flamegraph ?? []).map((node) => (
                       <g key={node.id}>
-                        <rect x={node.x} y={node.y + 1} width={node.width} height={Math.max(1, node.height - 2)} fill={colorForCategory(node.category)} opacity="0.9" />
+                        <rect
+                          x={node.x}
+                          y={node.y + 1}
+                          width={node.width}
+                          height={Math.max(1, node.height - 2)}
+                          fill={colorForCategory(node.category)}
+                          opacity="0.9"
+                        />
                         {node.width > 60 ? (
-                          <text x={node.x + 6} y={node.y + 13} fill="white" fontSize="11" lengthAdjust="spacingAndGlyphs">
+                          <text
+                            x={node.x + 6}
+                            y={node.y + 13}
+                            fill="white"
+                            fontSize="11"
+                            lengthAdjust="spacingAndGlyphs"
+                          >
                             {node.name}
                           </text>
                         ) : null}

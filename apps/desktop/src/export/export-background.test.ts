@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildExportTrayProgressLabel, localDatetimeInputValue, normalizeExportCompletionAction, normalizeScheduledExportStart } from './export-background';
+import {
+  buildExportTrayProgressLabel,
+  localDatetimeInputValue,
+  normalizeExportCompletionAction,
+  normalizeScheduledExportStart,
+} from './export-background';
 
 describe('export background helpers', () => {
   it('normalizes future scheduled export times and rejects past values', () => {

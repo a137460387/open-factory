@@ -7,7 +7,7 @@ export const DEFAULT_AUDIO_RESTORATION: ClipAudioRestoration = {
   declip: { enabled: false },
   dereverb: { enabled: false, strength: 1 },
   dewind: { enabled: false },
-  fill: { enabled: false }
+  fill: { enabled: false },
 };
 
 type PartialAudioRestoration = Partial<{
@@ -29,19 +29,29 @@ export function normalizeAudioRestoration(restoration: PartialAudioRestoration |
     declip: { enabled: restoration?.declip?.enabled === true },
     dereverb: {
       enabled: restoration?.dereverb?.enabled === true,
-      strength: round(clamp(finiteOrDefault(restoration?.dereverb?.strength, DEFAULT_AUDIO_RESTORATION.dereverb.strength), 0, 1))
+      strength: round(
+        clamp(finiteOrDefault(restoration?.dereverb?.strength, DEFAULT_AUDIO_RESTORATION.dereverb.strength), 0, 1),
+      ),
     },
     dewind: { enabled: restoration?.dewind?.enabled === true },
-    fill: { enabled: restoration?.fill?.enabled === true }
+    fill: { enabled: restoration?.fill?.enabled === true },
   };
 }
 
 export function isAudioRestorationEnabled(restoration: PartialAudioRestoration | undefined): boolean {
   const normalized = normalizeAudioRestoration(restoration);
-  return normalized.declip.enabled || (normalized.dereverb.enabled && normalized.dereverb.strength > 0) || normalized.dewind.enabled || normalized.fill.enabled;
+  return (
+    normalized.declip.enabled ||
+    (normalized.dereverb.enabled && normalized.dereverb.strength > 0) ||
+    normalized.dewind.enabled ||
+    normalized.fill.enabled
+  );
 }
 
-export function buildAudioRestorationFilterArgs(restoration: PartialAudioRestoration | undefined, options: AudioRestorationFilterOptions = {}): string[] {
+export function buildAudioRestorationFilterArgs(
+  restoration: PartialAudioRestoration | undefined,
+  options: AudioRestorationFilterOptions = {},
+): string[] {
   const normalized = normalizeAudioRestoration(restoration);
   const filters: string[] = [];
 
@@ -64,24 +74,33 @@ export function buildAudioRestorationFilterArgs(restoration: PartialAudioRestora
   return filters;
 }
 
-export function buildAudioRestorationFilterChain(restoration: PartialAudioRestoration | undefined, options: AudioRestorationFilterOptions = {}): string {
+export function buildAudioRestorationFilterChain(
+  restoration: PartialAudioRestoration | undefined,
+  options: AudioRestorationFilterOptions = {},
+): string {
   return buildAudioRestorationFilterArgs(restoration, options).join(',');
 }
 
-export function detectAudioFillGaps(gaps: ClipAudioRestorationGap[] | undefined, threshold = AUDIO_FILL_GAP_THRESHOLD_SECONDS): ClipAudioRestorationGap[] {
+export function detectAudioFillGaps(
+  gaps: ClipAudioRestorationGap[] | undefined,
+  threshold = AUDIO_FILL_GAP_THRESHOLD_SECONDS,
+): ClipAudioRestorationGap[] {
   if (!Array.isArray(gaps)) {
     return [];
   }
   return gaps
     .map((gap) => ({
       start: round(Math.max(0, finiteOrDefault(gap.start, 0))),
-      duration: round(Math.max(0, finiteOrDefault(gap.duration, 0)))
+      duration: round(Math.max(0, finiteOrDefault(gap.duration, 0))),
     }))
     .filter((gap) => gap.duration > 0 && gap.duration < threshold)
     .sort((left, right) => left.start - right.start || left.duration - right.duration);
 }
 
-export function buildAudioRestorationWaveformComparison(peaks: number[] | undefined, restoration: PartialAudioRestoration | undefined): AudioRestorationWaveformComparison {
+export function buildAudioRestorationWaveformComparison(
+  peaks: number[] | undefined,
+  restoration: PartialAudioRestoration | undefined,
+): AudioRestorationWaveformComparison {
   const before = Array.isArray(peaks) ? peaks.map((value) => clamp(finiteOrDefault(value, 0), 0, 1)) : [];
   if (!isAudioRestorationEnabled(restoration)) {
     return { before, after: [...before], changed: false };

@@ -24,9 +24,7 @@ export function normalizePathPoints(points: PathPoint[] | undefined): PathPoint[
   if (!Array.isArray(points)) {
     return [];
   }
-  return points
-    .map((point) => normalizePathPoint(point))
-    .filter((point): point is PathPoint => Boolean(point));
+  return points.map((point) => normalizePathPoint(point)).filter((point): point is PathPoint => Boolean(point));
 }
 
 export function closePathPoints(points: PathPoint[] | undefined): PathPoint[] {
@@ -34,10 +32,20 @@ export function closePathPoints(points: PathPoint[] | undefined): PathPoint[] {
   if (normalized.length < 3 || isPathMaskClosed(normalized)) {
     return normalized;
   }
-  return [...normalized, { ...normalized[0], handleIn: cloneHandle(normalized[0].handleIn), handleOut: cloneHandle(normalized[0].handleOut) }];
+  return [
+    ...normalized,
+    {
+      ...normalized[0],
+      handleIn: cloneHandle(normalized[0].handleIn),
+      handleOut: cloneHandle(normalized[0].handleOut),
+    },
+  ];
 }
 
-export function samplePathPoints(points: PathPoint[] | undefined, segmentsPerCurve = CURVE_SEGMENTS): PathPointHandle[] {
+export function samplePathPoints(
+  points: PathPoint[] | undefined,
+  segmentsPerCurve = CURVE_SEGMENTS,
+): PathPointHandle[] {
   const normalized = normalizePathPoints(points);
   if (!isPathMaskClosed(normalized)) {
     return [];
@@ -92,8 +100,8 @@ export function pathPointsToSvgPath(points: PathPoint[] | undefined, width = 1, 
       const control2 = point.handleIn ?? point;
       commands.push(
         `C ${formatSvgNumber(control1.x * width)} ${formatSvgNumber(control1.y * height)} ${formatSvgNumber(control2.x * width)} ${formatSvgNumber(control2.y * height)} ${formatSvgNumber(
-          point.x * width
-        )} ${formatSvgNumber(point.y * height)}`
+          point.x * width,
+        )} ${formatSvgNumber(point.y * height)}`,
       );
     } else {
       commands.push(`L ${formatSvgNumber(point.x * width)} ${formatSvgNumber(point.y * height)}`);
@@ -106,12 +114,18 @@ export function pathPointsToSvgPath(points: PathPoint[] | undefined, width = 1, 
 }
 
 function normalizePathPoint(point: Partial<PathPoint> | undefined): PathPoint | undefined {
-  if (!point || typeof point.x !== 'number' || typeof point.y !== 'number' || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+  if (
+    !point ||
+    typeof point.x !== 'number' ||
+    typeof point.y !== 'number' ||
+    !Number.isFinite(point.x) ||
+    !Number.isFinite(point.y)
+  ) {
     return undefined;
   }
   const normalized: PathPoint = {
     x: normalizeUnit(point.x),
-    y: normalizeUnit(point.y)
+    y: normalizeUnit(point.y),
   };
   const handleIn = normalizeHandle(point.handleIn);
   const handleOut = normalizeHandle(point.handleOut);
@@ -125,12 +139,18 @@ function normalizePathPoint(point: Partial<PathPoint> | undefined): PathPoint | 
 }
 
 function normalizeHandle(handle: Partial<PathPointHandle> | undefined): PathPointHandle | undefined {
-  if (!handle || typeof handle.x !== 'number' || typeof handle.y !== 'number' || !Number.isFinite(handle.x) || !Number.isFinite(handle.y)) {
+  if (
+    !handle ||
+    typeof handle.x !== 'number' ||
+    typeof handle.y !== 'number' ||
+    !Number.isFinite(handle.x) ||
+    !Number.isFinite(handle.y)
+  ) {
     return undefined;
   }
   return {
     x: normalizeUnit(handle.x),
-    y: normalizeUnit(handle.y)
+    y: normalizeUnit(handle.y),
   };
 }
 
@@ -142,11 +162,21 @@ function normalizeUnit(value: number): number {
   return round(Math.min(1, Math.max(0, value)));
 }
 
-function sampleCubicBezier(from: PathPointHandle, control1: PathPointHandle, control2: PathPointHandle, to: PathPointHandle, t: number): PathPointHandle {
+function sampleCubicBezier(
+  from: PathPointHandle,
+  control1: PathPointHandle,
+  control2: PathPointHandle,
+  to: PathPointHandle,
+  t: number,
+): PathPointHandle {
   const inverse = 1 - t;
   return {
-    x: round(inverse ** 3 * from.x + 3 * inverse ** 2 * t * control1.x + 3 * inverse * t ** 2 * control2.x + t ** 3 * to.x),
-    y: round(inverse ** 3 * from.y + 3 * inverse ** 2 * t * control1.y + 3 * inverse * t ** 2 * control2.y + t ** 3 * to.y)
+    x: round(
+      inverse ** 3 * from.x + 3 * inverse ** 2 * t * control1.x + 3 * inverse * t ** 2 * control2.x + t ** 3 * to.x,
+    ),
+    y: round(
+      inverse ** 3 * from.y + 3 * inverse ** 2 * t * control1.y + 3 * inverse * t ** 2 * control2.y + t ** 3 * to.y,
+    ),
   };
 }
 

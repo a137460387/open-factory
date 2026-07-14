@@ -8,7 +8,7 @@ export type ExportWarmupUiStatus = { status: 'running' | 'complete' | 'cached'; 
 export function ExportOptimizationPanel({
   suggestions,
   onApply,
-  onDismiss
+  onDismiss,
 }: {
   suggestions: ExportOptimizationSuggestion[];
   onApply(suggestion: ExportOptimizationSuggestion): void;
@@ -22,10 +22,20 @@ export function ExportOptimizationPanel({
           <div className="font-semibold text-slate-800">{t.title}</div>
           <div className="mt-0.5 text-[11px] text-slate-500">{t.description}</div>
         </div>
-        <span className="rounded-full bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600" data-testid="export-optimization-count">{suggestions.length}</span>
+        <span
+          className="rounded-full bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600"
+          data-testid="export-optimization-count"
+        >
+          {suggestions.length}
+        </span>
       </div>
       {suggestions.length === 0 ? (
-        <div className="rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-slate-500" data-testid="export-optimization-empty">{t.empty}</div>
+        <div
+          className="rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-slate-500"
+          data-testid="export-optimization-empty"
+        >
+          {t.empty}
+        </div>
       ) : (
         <div className="space-y-2">
           {suggestions.map((suggestion) => (
@@ -91,7 +101,8 @@ function formatOptimizationSuggestionMessage(suggestion: ExportOptimizationSugge
 export function ExportWarmupStatusPanel({ status }: { status: ExportWarmupUiStatus }) {
   const t = zhCN.exportDialog.warmup;
   const label = status.step ? t.steps[status.step] : undefined;
-  const message = status.status === 'running' ? t.running(label ?? '') : status.status === 'cached' ? t.cached : t.complete;
+  const message =
+    status.status === 'running' ? t.running(label ?? '') : status.status === 'cached' ? t.cached : t.complete;
   return (
     <section
       className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900"

@@ -25,7 +25,7 @@ export interface ColorGradingPresetFile {
 export function createColorGradingPreset(
   name: string,
   graph: ColorGradingGraph,
-  options?: Partial<Omit<ColorGradingPreset, 'id' | 'name' | 'graph' | 'createdAt' | 'updatedAt'>>
+  options?: Partial<Omit<ColorGradingPreset, 'id' | 'name' | 'graph' | 'createdAt' | 'updatedAt'>>,
 ): ColorGradingPreset {
   const now = new Date().toISOString();
   return {

@@ -6,11 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type {
-  SmartCreationResult,
-  SmartCreationProgress,
-  SmartCreationOptions,
-} from '@open-factory/editor-core';
+import type { SmartCreationResult, SmartCreationProgress, SmartCreationOptions } from '@open-factory/editor-core';
 import { orchestrateSmartCreation } from '@open-factory/editor-core';
 import type { MediaAsset } from '@open-factory/editor-core';
 import type { NarrativeGenerationResult } from '@open-factory/editor-core';

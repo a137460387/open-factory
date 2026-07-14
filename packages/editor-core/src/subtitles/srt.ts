@@ -43,7 +43,11 @@ export interface SubtitleCueInput {
 const TIMECODE_PATTERN = /^(\d{1,2}):(\d{2}):(\d{2})[,.](\d{3})$/;
 
 export function parseSrt(contents: string): SrtCue[] {
-  const normalized = contents.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const normalized = contents
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
   if (!normalized) {
     return [];
   }
@@ -63,12 +67,7 @@ export function parseSrtTimecodeMs(value: string): number {
     throw new Error(`Invalid SRT timecode: ${value}`);
   }
   const [, hours, minutes, seconds, milliseconds] = match;
-  return (
-    Number(hours) * 60 * 60 * 1000 +
-    Number(minutes) * 60 * 1000 +
-    Number(seconds) * 1000 +
-    Number(milliseconds)
-  );
+  return Number(hours) * 60 * 60 * 1000 + Number(minutes) * 60 * 1000 + Number(seconds) * 1000 + Number(milliseconds);
 }
 
 export function serializeSrt(cues: Array<Pick<SrtCue, 'startMs' | 'endMs' | 'text'>>): string {
@@ -77,8 +76,8 @@ export function serializeSrt(cues: Array<Pick<SrtCue, 'startMs' | 'endMs' | 'tex
       [
         String(index + 1),
         `${formatSrtTimecode(cue.startMs)} --> ${formatSrtTimecode(cue.endMs)}`,
-        cue.text.trimEnd()
-      ].join('\n')
+        cue.text.trimEnd(),
+      ].join('\n'),
     )
     .join('\n\n')
     .concat(cues.length > 0 ? '\n' : '');
@@ -88,7 +87,7 @@ export function serializeSubtitleClipsToSrt(clips: SubtitleClip[]): string {
   const cues = toSortedSubtitleCueInputs(clips.map(subtitleClipToCueInput)).map((clip) => ({
     startMs: secondsToMs(clip.start),
     endMs: secondsToMs(clip.start + clip.duration),
-    text: formatSrtCueText(clip)
+    text: formatSrtCueText(clip),
   }));
   return serializeSrt(cues);
 }
@@ -98,8 +97,8 @@ export function serializeSubtitleCueInputsToSrt(clips: SubtitleCueInput[]): stri
     toSortedSubtitleCueInputs(clips).map((clip) => ({
       startMs: secondsToMs(clip.start),
       endMs: secondsToMs(clip.start + clip.duration),
-      text: formatSrtCueText(clip)
-    }))
+      text: formatSrtCueText(clip),
+    })),
   );
 }
 
@@ -112,11 +111,20 @@ export function serializeSubtitleCueInputsToVtt(clips: SubtitleCueInput[]): stri
   if (cues.length === 0) {
     return 'WEBVTT\n';
   }
-  return ['WEBVTT', '', cues
-    .map((clip) =>
-      [`${formatVttTimecode(secondsToMs(clip.start))} --> ${formatVttTimecode(secondsToMs(clip.start + clip.duration))} ${buildVttCueSettings(clip.style)}`, formatVttCueText(clip).trimEnd()].join('\n')
-    )
-    .join('\n\n')].join('\n').concat('\n');
+  return [
+    'WEBVTT',
+    '',
+    cues
+      .map((clip) =>
+        [
+          `${formatVttTimecode(secondsToMs(clip.start))} --> ${formatVttTimecode(secondsToMs(clip.start + clip.duration))} ${buildVttCueSettings(clip.style)}`,
+          formatVttCueText(clip).trimEnd(),
+        ].join('\n'),
+      )
+      .join('\n\n'),
+  ]
+    .join('\n')
+    .concat('\n');
 }
 
 export function serializeSubtitleClipsToAss(clips: SubtitleClip[], format: 'ass' | 'ssa' = 'ass'): string {
@@ -136,7 +144,7 @@ export function serializeSubtitleCueInputsToAss(clips: SubtitleCueInput[], forma
           '',
           '[V4 Styles]',
           'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding',
-          `Style: ${buildSsaStyle(styleName, style)}`
+          `Style: ${buildSsaStyle(styleName, style)}`,
         ]
       : [
           '[Script Info]',
@@ -146,12 +154,20 @@ export function serializeSubtitleCueInputsToAss(clips: SubtitleCueInput[], forma
           '',
           '[V4+ Styles]',
           'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-          `Style: ${buildAssStyle(styleName, style)}`
+          `Style: ${buildAssStyle(styleName, style)}`,
         ];
   const events =
     format === 'ssa'
-      ? ['[Events]', 'Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...cues.map((cue) => buildSsaDialogue(cue, styleName))]
-      : ['[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...cues.map((cue) => buildAssDialogue(cue, styleName))];
+      ? [
+          '[Events]',
+          'Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+          ...cues.map((cue) => buildSsaDialogue(cue, styleName)),
+        ]
+      : [
+          '[Events]',
+          'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+          ...cues.map((cue) => buildAssDialogue(cue, styleName)),
+        ];
   return [...header, '', ...events].join('\n').concat('\n');
 }
 
@@ -201,7 +217,12 @@ function parseSrtBlock(block: string, blockIndex: number): SrtCue | undefined {
     index: Number.isFinite(explicitIndex) && explicitIndex > 0 ? explicitIndex : blockIndex + 1,
     startMs,
     endMs,
-    ...parseCaptionCueText(lines.slice(timingIndex + 1).join('\n').trim())
+    ...parseCaptionCueText(
+      lines
+        .slice(timingIndex + 1)
+        .join('\n')
+        .trim(),
+    ),
   };
 }
 
@@ -221,8 +242,8 @@ function subtitleClipToCueInput(clip: SubtitleClip): SubtitleCueInput {
     style: {
       ...clip.style,
       x: clip.transform.x,
-      y: clip.transform.y
-    }
+      y: clip.transform.y,
+    },
   };
 }
 
@@ -287,7 +308,7 @@ function parseCaptionCueText(rawText: string): Pick<SrtCue, 'text' | 'subtitleTy
     text,
     ...(subtitleType ? { subtitleType } : {}),
     ...(speaker ? { speaker } : {}),
-    ...(soundDesc ? { soundDesc } : {})
+    ...(soundDesc ? { soundDesc } : {}),
   };
 }
 
@@ -312,7 +333,8 @@ function escapeVttVoice(value: string): string {
 function buildVttCueSettings(style: SubtitleCueStyle | undefined): string {
   const position = clampPercent(50 + finiteNumber(style?.x, 0) * 50);
   const y = finiteNumber(style?.y, 0);
-  const line = Math.abs(y) > 0.001 ? clampPercent(50 + y * 50) : clampPercent(100 - finiteNumber(style?.yOffset, 72) / 10);
+  const line =
+    Math.abs(y) > 0.001 ? clampPercent(50 + y * 50) : clampPercent(100 - finiteNumber(style?.yOffset, 72) / 10);
   const align = position < 40 ? 'start' : position > 60 ? 'end' : 'center';
   return `line:${formatPercent(line)}% position:${formatPercent(position)}% align:${align}`;
 }
@@ -326,8 +348,10 @@ function buildAssStyle(name: string, style: SubtitleCueStyle | undefined): strin
     cssColorToAss(style?.color ?? '#ffffff'),
     cssColorToAss(style?.outlineColor ?? '#000000'),
     cssColorToAss(
-      finiteNumber(style?.backgroundOpacity, 0) > 0 ? style?.backgroundColor ?? '#000000' : style?.shadowColor ?? style?.backgroundColor ?? '#000000',
-      finiteNumber(style?.backgroundOpacity, 0)
+      finiteNumber(style?.backgroundOpacity, 0) > 0
+        ? (style?.backgroundColor ?? '#000000')
+        : (style?.shadowColor ?? style?.backgroundColor ?? '#000000'),
+      finiteNumber(style?.backgroundOpacity, 0),
     ),
     style?.bold ? '-1' : '0',
     style?.italic ? '-1' : '0',
@@ -344,7 +368,7 @@ function buildAssStyle(name: string, style: SubtitleCueStyle | undefined): strin
     '24',
     '24',
     Math.max(0, Math.round(finiteNumber(style?.yOffset, 72))),
-    '1'
+    '1',
   ].join(',');
 }
 
@@ -357,8 +381,10 @@ function buildSsaStyle(name: string, style: SubtitleCueStyle | undefined): strin
     cssColorToAss(style?.color ?? '#ffffff'),
     cssColorToAss(style?.outlineColor ?? style?.color ?? '#ffffff'),
     cssColorToAss(
-      finiteNumber(style?.backgroundOpacity, 0) > 0 ? style?.backgroundColor ?? '#000000' : style?.shadowColor ?? style?.backgroundColor ?? '#000000',
-      finiteNumber(style?.backgroundOpacity, 0)
+      finiteNumber(style?.backgroundOpacity, 0) > 0
+        ? (style?.backgroundColor ?? '#000000')
+        : (style?.shadowColor ?? style?.backgroundColor ?? '#000000'),
+      finiteNumber(style?.backgroundOpacity, 0),
     ),
     style?.bold ? '-1' : '0',
     style?.italic ? '-1' : '0',
@@ -370,16 +396,38 @@ function buildSsaStyle(name: string, style: SubtitleCueStyle | undefined): strin
     '24',
     Math.max(0, Math.round(finiteNumber(style?.yOffset, 72))),
     '0',
-    '1'
+    '1',
   ].join(',');
 }
 
 function buildAssDialogue(cue: SubtitleCueInput, styleName: string): string {
-  return ['Dialogue: 0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(formatSrtCueText(cue))].join(',');
+  return [
+    'Dialogue: 0',
+    formatAssTimecode(cue.start),
+    formatAssTimecode(cue.start + cue.duration),
+    styleName,
+    '',
+    '0000',
+    '0000',
+    '0000',
+    '',
+    escapeAssText(formatSrtCueText(cue)),
+  ].join(',');
 }
 
 function buildSsaDialogue(cue: SubtitleCueInput, styleName: string): string {
-  return ['Dialogue: Marked=0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(formatSrtCueText(cue))].join(',');
+  return [
+    'Dialogue: Marked=0',
+    formatAssTimecode(cue.start),
+    formatAssTimecode(cue.start + cue.duration),
+    styleName,
+    '',
+    '0000',
+    '0000',
+    '0000',
+    '',
+    escapeAssText(formatSrtCueText(cue)),
+  ].join(',');
 }
 
 function cssColorToAss(value: string, opacity = 1): string {
@@ -400,12 +448,7 @@ function normalizeAssFontName(value: string | undefined): string {
 }
 
 function escapeAssText(value: string): string {
-  return value
-    .trimEnd()
-    .replace(/[{}]/g, '')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/\n/g, '\\N');
+  return value.trimEnd().replace(/[{}]/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\\N');
 }
 
 function finiteNumber(value: number | undefined, fallback: number): number {

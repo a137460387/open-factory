@@ -15,7 +15,7 @@ export const MEDIA_COLOR_TAG_PREFIX = 'color:';
 
 export function buildMediaTagIndex(
   media: MediaAsset[],
-  metadata: Record<string, MediaMetadata>
+  metadata: Record<string, MediaMetadata>,
 ): Map<string, Set<string>> {
   const tagToAssetIds = new Map<string, Set<string>>();
 
@@ -54,16 +54,14 @@ export function collectAssetTags(asset: MediaAsset, meta?: MediaMetadata): strin
   return tags;
 }
 
-export function buildTagFrequencies(
-  tagIndex: Map<string, Set<string>>
-): MediaTagFrequency[] {
+export function buildTagFrequencies(tagIndex: Map<string, Set<string>>): MediaTagFrequency[] {
   const frequencies: MediaTagFrequency[] = [];
 
   for (const [tag, assetIds] of tagIndex) {
     frequencies.push({
       tag,
       count: assetIds.size,
-      isColorTag: tag.startsWith(MEDIA_COLOR_TAG_PREFIX)
+      isColorTag: tag.startsWith(MEDIA_COLOR_TAG_PREFIX),
     });
   }
 
@@ -73,7 +71,7 @@ export function buildTagFrequencies(
 export function filterMediaByTags(
   media: MediaAsset[],
   metadata: Record<string, MediaMetadata>,
-  filter: MediaTagFilter
+  filter: MediaTagFilter,
 ): MediaAsset[] {
   if (filter.tags.length === 0) {
     return media;
@@ -88,7 +86,7 @@ export function filterMediaByTags(
 export function renameTag(
   metadata: Record<string, MediaMetadata>,
   oldTag: string,
-  newTag: string
+  newTag: string,
 ): Record<string, MediaMetadata> {
   if (!oldTag || !newTag || oldTag === newTag) {
     return metadata;
@@ -104,17 +102,14 @@ export function renameTag(
 
     updated[assetId] = {
       ...meta,
-      customTags: meta.customTags.map((t) => (t === oldTag ? newTag : t))
+      customTags: meta.customTags.map((t) => (t === oldTag ? newTag : t)),
     };
   }
 
   return updated;
 }
 
-export function deleteTag(
-  metadata: Record<string, MediaMetadata>,
-  tagToDelete: string
-): Record<string, MediaMetadata> {
+export function deleteTag(metadata: Record<string, MediaMetadata>, tagToDelete: string): Record<string, MediaMetadata> {
   if (!tagToDelete) {
     return metadata;
   }
@@ -130,7 +125,7 @@ export function deleteTag(
     const filtered = meta.customTags.filter((t) => t !== tagToDelete);
     updated[assetId] = {
       ...meta,
-      customTags: filtered.length > 0 ? filtered : undefined
+      customTags: filtered.length > 0 ? filtered : undefined,
     };
   }
 

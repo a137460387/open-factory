@@ -1,4 +1,10 @@
-import { MAX_CHROMA_KEY_COLORS, normalizeChromaKey, type ChromaKeyColor, type Clip, type ClipPatch } from '@open-factory/editor-core';
+import {
+  MAX_CHROMA_KEY_COLORS,
+  normalizeChromaKey,
+  type ChromaKeyColor,
+  type Clip,
+  type ClipPatch,
+} from '@open-factory/editor-core';
 
 const MIN_PREVIEW_ZOOM = 0.25;
 const MAX_PREVIEW_ZOOM = 4;
@@ -38,19 +44,31 @@ export function getWheelPreviewZoom(currentZoom: number, deltaY: number): number
 }
 
 export function calculatePreviewPixelCoordinates(input: PreviewPixelCoordinateInput): PreviewPixelCoordinates {
-  const x = Math.min(input.canvasWidth - 1, Math.max(0, Math.floor((input.offsetX / Math.max(1, input.boundsWidth)) * input.canvasWidth)));
-  const y = Math.min(input.canvasHeight - 1, Math.max(0, Math.floor((input.offsetY / Math.max(1, input.boundsHeight)) * input.canvasHeight)));
+  const x = Math.min(
+    input.canvasWidth - 1,
+    Math.max(0, Math.floor((input.offsetX / Math.max(1, input.boundsWidth)) * input.canvasWidth)),
+  );
+  const y = Math.min(
+    input.canvasHeight - 1,
+    Math.max(0, Math.floor((input.offsetY / Math.max(1, input.boundsHeight)) * input.canvasHeight)),
+  );
   return {
     x,
     y,
     webglY: input.canvasHeight - 1 - y,
     normalizedX: input.canvasWidth <= 1 ? 0 : x / (input.canvasWidth - 1),
-    normalizedY: input.canvasHeight <= 1 ? 0 : y / (input.canvasHeight - 1)
+    normalizedY: input.canvasHeight <= 1 ? 0 : y / (input.canvasHeight - 1),
   };
 }
 
 export function rgbToHex(color: ChromaKeyColor): string {
-  return `#${color.map((channel) => Math.round(Math.min(255, Math.max(0, channel))).toString(16).padStart(2, '0')).join('')}`;
+  return `#${color
+    .map((channel) =>
+      Math.round(Math.min(255, Math.max(0, channel)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 }
 
 export function rgbToHsl([rInput, gInput, bInput]: ChromaKeyColor): HslColor {
@@ -65,16 +83,11 @@ export function rgbToHsl([rInput, gInput, bInput]: ChromaKeyColor): HslColor {
   }
   const d = max - min;
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  const h =
-    max === r
-      ? (g - b) / d + (g < b ? 6 : 0)
-      : max === g
-        ? (b - r) / d + 2
-        : (r - g) / d + 4;
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
   return {
     h: Math.round(h * 60),
     s: Math.round(s * 100),
-    l: Math.round(l * 100)
+    l: Math.round(l * 100),
   };
 }
 
@@ -85,6 +98,6 @@ export function buildChromaKeySamplePatch(clip: Pick<Clip, 'chromaKey'>, color: 
       ? [...chromaKey.colors.slice(0, MAX_CHROMA_KEY_COLORS - 1), color]
       : [...chromaKey.colors, color];
   return {
-    chromaKey: { ...chromaKey, enabled: true, color: colors[0], colors }
+    chromaKey: { ...chromaKey, enabled: true, color: colors[0], colors },
   };
 }

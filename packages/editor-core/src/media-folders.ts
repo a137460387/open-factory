@@ -30,8 +30,13 @@ export interface MediaFolderInput {
   createdAt?: string;
 }
 
-export function createMediaFolder(input: MediaFolderInput = {}, existingFolders: MediaFolder[] = [], now = new Date().toISOString()): MediaFolder {
-  const parentId = input.parentId && existingFolders.some((folder) => folder.id === input.parentId) ? input.parentId : null;
+export function createMediaFolder(
+  input: MediaFolderInput = {},
+  existingFolders: MediaFolder[] = [],
+  now = new Date().toISOString(),
+): MediaFolder {
+  const parentId =
+    input.parentId && existingFolders.some((folder) => folder.id === input.parentId) ? input.parentId : null;
   if (parentId && getMediaFolderDepth(existingFolders, parentId) >= MAX_MEDIA_FOLDER_DEPTH) {
     throw new Error(`Media folder nesting is limited to ${MAX_MEDIA_FOLDER_DEPTH} levels.`);
   }
@@ -40,7 +45,7 @@ export function createMediaFolder(input: MediaFolderInput = {}, existingFolders:
     name: sanitizeMediaFolderName(input.name),
     parentId,
     collapsed: input.collapsed === true,
-    createdAt: isValidDateString(input.createdAt) ? input.createdAt! : now
+    createdAt: isValidDateString(input.createdAt) ? input.createdAt! : now,
   };
 }
 
@@ -60,7 +65,7 @@ export function normalizeMediaFolders(input: MediaFolder[] | undefined): MediaFo
       name: sanitizeMediaFolderName(folder.name),
       parentId,
       collapsed: folder.collapsed === true,
-      createdAt: isValidDateString(folder.createdAt) ? folder.createdAt : new Date(0).toISOString()
+      createdAt: isValidDateString(folder.createdAt) ? folder.createdAt : new Date(0).toISOString(),
     });
   }
   return output;
@@ -92,30 +97,48 @@ export function getMediaFolderDepth(folders: MediaFolder[], folderId: string | n
   return depth;
 }
 
-export function addMediaFolderToProject(project: Project, input: MediaFolderInput = {}, now = new Date().toISOString()): { project: Project; folder: MediaFolder } {
+export function addMediaFolderToProject(
+  project: Project,
+  input: MediaFolderInput = {},
+  now = new Date().toISOString(),
+): { project: Project; folder: MediaFolder } {
   const folders = normalizeMediaFolders(project.mediaFolders);
   const folder = createMediaFolder(input, folders, now);
   const next = {
     ...project,
     mediaFolders: [...folders, folder],
-    updatedAt: now
+    updatedAt: now,
   };
   return { project: next, folder };
 }
 
-export function renameMediaFolder(project: Project, folderId: string, name: string, now = new Date().toISOString()): Project {
+export function renameMediaFolder(
+  project: Project,
+  folderId: string,
+  name: string,
+  now = new Date().toISOString(),
+): Project {
   return {
     ...project,
-    mediaFolders: normalizeMediaFolders(project.mediaFolders).map((folder) => (folder.id === folderId ? { ...folder, name: sanitizeMediaFolderName(name) } : folder)),
-    updatedAt: now
+    mediaFolders: normalizeMediaFolders(project.mediaFolders).map((folder) =>
+      folder.id === folderId ? { ...folder, name: sanitizeMediaFolderName(name) } : folder,
+    ),
+    updatedAt: now,
   };
 }
 
-export function setMediaFolderCollapsed(project: Project, folderId: string, collapsed: boolean, now = new Date().toISOString()): Project {
+export function setMediaFolderCollapsed(
+  project: Project,
+  folderId: string,
+  collapsed: boolean,
+  now = new Date().toISOString(),
+): Project {
   return {
     ...project,
-    mediaFolders: normalizeMediaFolders(project.mediaFolders).map((folder) => (folder.id === folderId ? { ...folder, collapsed } : folder)),
-    updatedAt: now
+    mediaFolders: normalizeMediaFolders(project.mediaFolders).map((folder) =>
+      folder.id === folderId ? { ...folder, collapsed } : folder,
+    ),
+    updatedAt: now,
   };
 }
 
@@ -126,26 +149,45 @@ export function deleteMediaFolder(project: Project, folderId: string, now = new 
   return {
     ...project,
     mediaFolders: folders.filter((folder) => !removed.has(folder.id)),
-    media: project.media.map((asset) => (asset.folderId && removed.has(asset.folderId) ? { ...asset, folderId: null } : asset)),
-    updatedAt: now
+    media: project.media.map((asset) =>
+      asset.folderId && removed.has(asset.folderId) ? { ...asset, folderId: null } : asset,
+    ),
+    updatedAt: now,
   };
 }
 
-export function moveMediaAssetsToFolder(project: Project, assetIds: string[], folderId: string | null | undefined, now = new Date().toISOString()): Project {
+export function moveMediaAssetsToFolder(
+  project: Project,
+  assetIds: string[],
+  folderId: string | null | undefined,
+  now = new Date().toISOString(),
+): Project {
   const ids = new Set(assetIds);
   const folders = normalizeMediaFolders(project.mediaFolders);
   const nextFolderId = normalizeMediaFolderId(folderId, folders);
   return {
     ...project,
     mediaFolders: folders,
-    media: project.media.map((asset) => (ids.has(asset.id) ? { ...asset, folderId: nextFolderId } : { ...asset, folderId: normalizeMediaFolderId(asset.folderId, folders) })),
-    updatedAt: now
+    media: project.media.map((asset) =>
+      ids.has(asset.id)
+        ? { ...asset, folderId: nextFolderId }
+        : { ...asset, folderId: normalizeMediaFolderId(asset.folderId, folders) },
+    ),
+    updatedAt: now,
   };
 }
 
-export interface CollectSmartAlbumsExtras { favoriteIds?: string[]; recentUseIds?: string[]; }
+export interface CollectSmartAlbumsExtras {
+  favoriteIds?: string[];
+  recentUseIds?: string[];
+}
 
-export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}, extras?: CollectSmartAlbumsExtras): SmartAlbum[] {
+export function collectSmartAlbums(
+  media: MediaAsset[],
+  nowMs = Date.now(),
+  metadata: Record<string, MediaMetadata> = {},
+  extras?: CollectSmartAlbumsExtras,
+): SmartAlbum[] {
   const albums: SmartAlbum[] = [
     { id: 'rating-five', assetIds: [] },
     { id: 'flag-green', assetIds: [] },
@@ -159,7 +201,7 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), meta
     { id: 'duration-long', assetIds: [] },
     { id: 'recent-imports', assetIds: [] },
     { id: 'favorites', assetIds: [] },
-    { id: 'recent-use', assetIds: [] }
+    { id: 'recent-use', assetIds: [] },
   ];
   const byId = new Map(albums.map((album) => [album.id, album]));
   for (const asset of media) {
@@ -192,7 +234,12 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), meta
   return albums;
 }
 
-export function getSmartAlbumAssetIds(media: MediaAsset[], albumId: SmartAlbumId, nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}): string[] {
+export function getSmartAlbumAssetIds(
+  media: MediaAsset[],
+  albumId: SmartAlbumId,
+  nowMs = Date.now(),
+  metadata: Record<string, MediaMetadata> = {},
+): string[] {
   return collectSmartAlbums(media, nowMs, metadata).find((album) => album.id === albumId)?.assetIds ?? [];
 }
 
@@ -215,7 +262,10 @@ function collectDescendantFolderIds(folders: MediaFolder[], folderId: string): S
   while (changed) {
     changed = false;
     for (const folder of folders) {
-      if (!removed.has(folder.id) && (folder.parentId === folderId || (folder.parentId && removed.has(folder.parentId)))) {
+      if (
+        !removed.has(folder.id) &&
+        (folder.parentId === folderId || (folder.parentId && removed.has(folder.parentId)))
+      ) {
         removed.add(folder.id);
         changed = true;
       }

@@ -10,20 +10,33 @@ interface MacroHistoryDialogProps {
 export function MacroHistoryDialog({ entries, onClose }: MacroHistoryDialogProps) {
   const t = zhCN.macros.history;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="macro-history-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="macro-history-dialog"
+    >
       <div className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <div className="text-xs text-slate-500">{t.subtitle}</div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="macro-history-close-button" onClick={onClose}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            data-testid="macro-history-close-button"
+            onClick={onClose}
+          >
             <X size={16} />
           </button>
         </div>
         <div className="min-h-0 overflow-auto p-4">
           {entries.length === 0 ? (
-            <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600" data-testid="macro-history-empty">
+            <div
+              className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600"
+              data-testid="macro-history-empty"
+            >
               {t.empty}
             </div>
           ) : (
@@ -42,8 +55,18 @@ export function MacroHistoryDialog({ entries, onClose }: MacroHistoryDialogProps
                     <tr key={entry.id} data-testid="macro-history-row">
                       <td className="px-3 py-2 font-medium text-ink">{entry.macroName}</td>
                       <td className="px-3 py-2 text-slate-600">{formatHistoryTime(entry.triggeredAt)}</td>
-                      <td className="px-3 py-2 text-slate-600">{entry.targetClipName ?? entry.targetClipId ?? zhCN.common.none}</td>
-                      <td className={entry.success ? 'px-3 py-2 font-semibold text-emerald-700' : 'px-3 py-2 font-semibold text-rose-700'}>{entry.success ? t.success : entry.error ?? t.failed}</td>
+                      <td className="px-3 py-2 text-slate-600">
+                        {entry.targetClipName ?? entry.targetClipId ?? zhCN.common.none}
+                      </td>
+                      <td
+                        className={
+                          entry.success
+                            ? 'px-3 py-2 font-semibold text-emerald-700'
+                            : 'px-3 py-2 font-semibold text-rose-700'
+                        }
+                      >
+                        {entry.success ? t.success : (entry.error ?? t.failed)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

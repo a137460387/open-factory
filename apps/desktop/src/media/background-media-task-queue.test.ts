@@ -12,8 +12,8 @@ describe('background media task queue', () => {
           new Promise<number>((resolve) => {
             started.push(index);
             release[index] = () => resolve(index);
-          })
-      )
+          }),
+      ),
     );
 
     await flushMicrotasks();

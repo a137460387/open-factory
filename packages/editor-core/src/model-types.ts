@@ -41,7 +41,17 @@ export type AssetType = 'video' | 'audio' | 'image';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
 
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic' | 'multicam';
+export type ClipType =
+  | 'video'
+  | 'audio'
+  | 'image'
+  | 'text'
+  | 'subtitle'
+  | 'credits'
+  | 'nested-sequence'
+  | 'adjustment'
+  | 'motion-graphic'
+  | 'multicam';
 
 export type TransitionType =
   | 'fade-black'
@@ -61,7 +71,8 @@ export type TransitionType =
   | 'shape-star'
   | 'motion-blur-wipe';
 
-export type TimelineLabelColor = 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink';
+export type TimelineLabelColor =
+  'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink';
 
 export type SubtitleMode = 'burn-in' | 'soft-sub';
 
@@ -281,7 +292,12 @@ export interface WheelAdjustments {
 export interface ClipAILookMatch {
   sourceImageHash: string;
   wheelAdjustments: WheelAdjustments;
-  curveControlPoints: { master: Array<{ x: number; y: number }>; r: Array<{ x: number; y: number }>; g: Array<{ x: number; y: number }>; b: Array<{ x: number; y: number }> };
+  curveControlPoints: {
+    master: Array<{ x: number; y: number }>;
+    r: Array<{ x: number; y: number }>;
+    g: Array<{ x: number; y: number }>;
+    b: Array<{ x: number; y: number }>;
+  };
   confidence: number;
   generatedAt: string;
   blendStrength: number;
@@ -646,7 +662,17 @@ export interface TrackCompressor {
   makeupGain: number;
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip | MotionGraphicClip | MulticamClip;
+export type Clip =
+  | VideoClip
+  | AudioClip
+  | ImageClip
+  | TextClip
+  | SubtitleClip
+  | CreditsClip
+  | NestedSequenceClip
+  | AdjustmentClip
+  | MotionGraphicClip
+  | MulticamClip;
 
 export type AudioChannelRoutingMode =
   | 'normal'

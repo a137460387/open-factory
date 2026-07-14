@@ -1,6 +1,24 @@
-import { hasExportMasterProcessing, normalizeAudioVisualizationTheme, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings, type ExportStemFormat } from '@open-factory/editor-core';
+import {
+  hasExportMasterProcessing,
+  normalizeAudioVisualizationTheme,
+  normalizeExportMasterProcessing,
+  normalizeSubtitleLanguage,
+  normalizeSubtitleLanguageList,
+  type ExportSettings,
+  type ExportStemFormat,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { fsExists, getAppDataDir, getWebdavText, putWebdavText, readFile, writeFile, type WebdavTextPutRequest, type WebdavTextRequest, type WebdavTextResult } from '../lib/tauri-bridge';
+import {
+  fsExists,
+  getAppDataDir,
+  getWebdavText,
+  putWebdavText,
+  readFile,
+  writeFile,
+  type WebdavTextPutRequest,
+  type WebdavTextRequest,
+  type WebdavTextResult,
+} from '../lib/tauri-bridge';
 
 export type ExportPresetSettings = Partial<Omit<ExportSettings, 'outputPath'>>;
 
@@ -82,7 +100,8 @@ export interface ExportPresetSyncResult {
 
 const PRESETS_FILE_NAME = 'presets.json';
 export const EXPORT_PRESET_PACKAGE_EXTENSION = 'ofpreset.json';
-const OFFICIAL_EXPORT_PRESET_PACKAGE_URL = 'https://github.com/open-factory/open-factory/releases/latest/download/export-presets.ofpreset.json';
+const OFFICIAL_EXPORT_PRESET_PACKAGE_URL =
+  'https://github.com/open-factory/open-factory/releases/latest/download/export-presets.ofpreset.json';
 
 export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   {
@@ -104,8 +123,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: '4k',
@@ -126,8 +145,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'youtube-1080p',
@@ -149,8 +168,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetX: 0,
       reframeOffsetY: 0,
       hardwareEncoding: false,
-      platformPreset: 'youtube-1080p'
-    }
+      platformPreset: 'youtube-1080p',
+    },
   },
   {
     id: 'youtube-shorts',
@@ -172,8 +191,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetX: 0,
       reframeOffsetY: 0,
       hardwareEncoding: false,
-      platformPreset: 'youtube-shorts'
-    }
+      platformPreset: 'youtube-shorts',
+    },
   },
   {
     id: 'tiktok',
@@ -196,8 +215,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetY: 0,
       hardwareEncoding: false,
       loudnessNormalization: 'youtube',
-      platformPreset: 'tiktok'
-    }
+      platformPreset: 'tiktok',
+    },
   },
   {
     id: 'instagram-reels',
@@ -219,8 +238,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetX: 0,
       reframeOffsetY: 0,
       hardwareEncoding: false,
-      platformPreset: 'instagram-reels'
-    }
+      platformPreset: 'instagram-reels',
+    },
   },
   {
     id: 'twitter-x',
@@ -242,8 +261,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetX: 0,
       reframeOffsetY: 0,
       hardwareEncoding: false,
-      platformPreset: 'twitter-x'
-    }
+      platformPreset: 'twitter-x',
+    },
   },
   {
     id: 'bilibili',
@@ -266,8 +285,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       reframeOffsetY: 0,
       hardwareEncoding: false,
       platformPreset: 'bilibili',
-      videoProfile: 'high'
-    }
+      videoProfile: 'high',
+    },
   },
   {
     id: 'gif-loop',
@@ -286,8 +305,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'webp-animated',
@@ -306,8 +325,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'apng',
@@ -326,8 +345,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'audio-m4a',
@@ -338,21 +357,21 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       audioCodec: 'aac',
       audioBitrate: '192k',
       format: 'm4a',
-      outputMode: 'audio'
-    }
-  }
+      outputMode: 'audio',
+    },
+  },
 ];
 
 const bridgePresetStorage: ExportPresetStorage = {
   getAppDataDir,
   fsExists,
   readFile,
-  writeFile
+  writeFile,
 };
 
 const bridgeExportPresetSyncClient: ExportPresetSyncClient = {
   getText: getWebdavText,
-  putText: putWebdavText
+  putText: putWebdavText,
 };
 
 export function getExportPreset(id: string, presets: ExportPreset[] = BUILTIN_EXPORT_PRESETS): ExportPreset {
@@ -375,7 +394,7 @@ export async function loadExportPresets(storage: ExportPresetStorage = bridgePre
 export async function saveCustomExportPreset(
   name: string,
   settings: ExportPresetSettings,
-  storage: ExportPresetStorage = bridgePresetStorage
+  storage: ExportPresetStorage = bridgePresetStorage,
 ): Promise<ExportPreset[]> {
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -388,13 +407,16 @@ export async function saveCustomExportPreset(
     description: zhCN.exportPresets.customDescription,
     builtin: false,
     settings: sanitizeExportSettings(settings),
-    updatedAt: new Date(Date.now()).toISOString()
+    updatedAt: new Date(Date.now()).toISOString(),
   };
   await writeCustomExportPresets([...customs, nextPreset], storage);
   return mergeExportPresets([...customs, nextPreset]);
 }
 
-export async function deleteCustomExportPreset(id: string, storage: ExportPresetStorage = bridgePresetStorage): Promise<ExportPreset[]> {
+export async function deleteCustomExportPreset(
+  id: string,
+  storage: ExportPresetStorage = bridgePresetStorage,
+): Promise<ExportPreset[]> {
   if (isBuiltinExportPreset(id)) {
     throw new Error(zhCN.exportPresets.cannotDeleteBuiltin);
   }
@@ -408,7 +430,12 @@ function mergeExportPresets(customPresets: ExportPreset[]): ExportPreset[] {
   const customIds = new Set(BUILTIN_EXPORT_PRESETS.map((preset) => preset.id));
   const sanitizedCustoms = customPresets
     .filter((preset) => !customIds.has(preset.id))
-    .map((preset) => ({ ...preset, builtin: false, settings: sanitizeExportSettings(preset.settings), updatedAt: normalizeIsoString(preset.updatedAt) }));
+    .map((preset) => ({
+      ...preset,
+      builtin: false,
+      settings: sanitizeExportSettings(preset.settings),
+      updatedAt: normalizeIsoString(preset.updatedAt),
+    }));
   return [...BUILTIN_EXPORT_PRESETS, ...sanitizedCustoms];
 }
 
@@ -426,11 +453,12 @@ export function parseStoredExportPresets(contents: string): ExportPreset[] {
         {
           id: preset.id,
           name: preset.name,
-          description: typeof preset.description === 'string' ? preset.description : zhCN.exportPresets.customDescription,
+          description:
+            typeof preset.description === 'string' ? preset.description : zhCN.exportPresets.customDescription,
           builtin: false,
           settings: sanitizeExportSettings(preset.settings),
-          updatedAt: normalizeIsoString((preset as { updatedAt?: unknown }).updatedAt)
-        }
+          updatedAt: normalizeIsoString((preset as { updatedAt?: unknown }).updatedAt),
+        },
       ];
     });
   } catch {
@@ -448,15 +476,15 @@ export function serializeCustomExportPresets(presets: ExportPreset[]): string {
         name: preset.name,
         description: preset.description,
         settings: sanitizeExportSettings(preset.settings),
-        updatedAt: normalizeIsoString(preset.updatedAt)
-      }))
+        updatedAt: normalizeIsoString(preset.updatedAt),
+      })),
   };
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
 export function serializeExportPresetPackage(
   presets: ExportPreset[],
-  options: { exportedAt?: string; creator?: string; ffmpegMetadataArgsTemplate?: string[] } = {}
+  options: { exportedAt?: string; creator?: string; ffmpegMetadataArgsTemplate?: string[] } = {},
 ): string {
   const payload: ExportPresetPackageFile = {
     version: 1,
@@ -465,9 +493,9 @@ export function serializeExportPresetPackage(
       name: preset.name,
       description: preset.description,
       settings: sanitizeExportSettings(preset.settings),
-      updatedAt: normalizeIsoString(preset.updatedAt)
+      updatedAt: normalizeIsoString(preset.updatedAt),
     })),
-    exportedAt: options.exportedAt ?? new Date(Date.now()).toISOString()
+    exportedAt: options.exportedAt ?? new Date(Date.now()).toISOString(),
   };
   if (options.creator?.trim()) {
     payload.creator = options.creator.trim();
@@ -494,8 +522,11 @@ export function parseExportPresetPackage(contents: string): ExportPresetPackageF
     const normalizedPreset: ExportPresetPackagePreset = {
       id: typeof preset.id === 'string' && preset.id.trim() ? preset.id.trim() : undefined,
       name: preset.name.trim(),
-      description: typeof preset.description === 'string' && preset.description.trim() ? preset.description.trim() : zhCN.exportPresets.customDescription,
-      settings: sanitizeExportSettings(preset.settings)
+      description:
+        typeof preset.description === 'string' && preset.description.trim()
+          ? preset.description.trim()
+          : zhCN.exportPresets.customDescription,
+      settings: sanitizeExportSettings(preset.settings),
     };
     const updatedAt = normalizeIsoString(preset.updatedAt);
     if (updatedAt) {
@@ -509,24 +540,36 @@ export function parseExportPresetPackage(contents: string): ExportPresetPackageF
   return {
     version: 1,
     presets,
-    exportedAt: typeof parsed.exportedAt === 'string' && parsed.exportedAt.trim() ? parsed.exportedAt.trim() : new Date(0).toISOString(),
+    exportedAt:
+      typeof parsed.exportedAt === 'string' && parsed.exportedAt.trim()
+        ? parsed.exportedAt.trim()
+        : new Date(0).toISOString(),
     creator: typeof parsed.creator === 'string' && parsed.creator.trim() ? parsed.creator.trim() : undefined,
-    ffmpegMetadataArgsTemplate: sanitizeFfmpegMetadataArgsTemplate(parsed.ffmpegMetadataArgsTemplate)
+    ffmpegMetadataArgsTemplate: sanitizeFfmpegMetadataArgsTemplate(parsed.ffmpegMetadataArgsTemplate),
   };
 }
 
 export function applyExportPresetPackage(
   existingPresets: ExportPreset[],
   packageFile: ExportPresetPackageFile,
-  conflictMode: ExportPresetImportConflictMode
+  conflictMode: ExportPresetImportConflictMode,
 ): ExportPresetImportResult {
-  let customPresets = existingPresets.filter((preset) => !preset.builtin).map((preset) => ({ ...preset, builtin: false as const, settings: sanitizeExportSettings(preset.settings), updatedAt: normalizeIsoString(preset.updatedAt) }));
+  let customPresets = existingPresets
+    .filter((preset) => !preset.builtin)
+    .map((preset) => ({
+      ...preset,
+      builtin: false as const,
+      settings: sanitizeExportSettings(preset.settings),
+      updatedAt: normalizeIsoString(preset.updatedAt),
+    }));
   const builtinNames = new Set(BUILTIN_EXPORT_PRESETS.map((preset) => preset.name.toLowerCase()));
   const result = { imported: 0, skipped: 0, renamed: 0, overwritten: 0 };
 
   for (const preset of packageFile.presets) {
     const normalizedName = preset.name.trim();
-    const existingCustomIndex = customPresets.findIndex((item) => item.name.toLowerCase() === normalizedName.toLowerCase());
+    const existingCustomIndex = customPresets.findIndex(
+      (item) => item.name.toLowerCase() === normalizedName.toLowerCase(),
+    );
     const conflictsWithBuiltin = builtinNames.has(normalizedName.toLowerCase());
     if (existingCustomIndex >= 0 || conflictsWithBuiltin) {
       if (conflictMode === 'skip') {
@@ -540,14 +583,17 @@ export function applyExportPresetPackage(
           description: preset.description ?? zhCN.exportPresets.customDescription,
           builtin: false,
           settings: sanitizeExportSettings(preset.settings),
-          updatedAt: preset.updatedAt
+          updatedAt: preset.updatedAt,
         };
         result.imported += 1;
         result.overwritten += 1;
         continue;
       }
     }
-    const name = existingCustomIndex >= 0 || conflictsWithBuiltin ? nextImportedPresetName(normalizedName, [...BUILTIN_EXPORT_PRESETS, ...customPresets]) : normalizedName;
+    const name =
+      existingCustomIndex >= 0 || conflictsWithBuiltin
+        ? nextImportedPresetName(normalizedName, [...BUILTIN_EXPORT_PRESETS, ...customPresets])
+        : normalizedName;
     if (name !== normalizedName) {
       result.renamed += 1;
     }
@@ -559,31 +605,36 @@ export function applyExportPresetPackage(
         description: preset.description ?? zhCN.exportPresets.customDescription,
         builtin: false,
         settings: sanitizeExportSettings(preset.settings),
-        updatedAt: preset.updatedAt
-      }
+        updatedAt: preset.updatedAt,
+      },
     ];
     result.imported += 1;
   }
 
   return {
     presets: mergeExportPresets(customPresets),
-    ...result
+    ...result,
   };
 }
 
 export async function importExportPresetPackage(
   contents: string,
   conflictMode: ExportPresetImportConflictMode,
-  storage: ExportPresetStorage = bridgePresetStorage
+  storage: ExportPresetStorage = bridgePresetStorage,
 ): Promise<ExportPresetImportResult> {
   const packageFile = parseExportPresetPackage(contents);
   const existing = mergeExportPresets(await loadCustomExportPresets(storage));
   const result = applyExportPresetPackage(existing, packageFile, conflictMode);
-  await writeCustomExportPresets(result.presets.filter((preset) => !preset.builtin), storage);
+  await writeCustomExportPresets(
+    result.presets.filter((preset) => !preset.builtin),
+    storage,
+  );
   return result;
 }
 
-export async function fetchOfficialExportPresetPackage(fetcher: typeof fetch = fetch): Promise<ExportPresetPackageFile | undefined> {
+export async function fetchOfficialExportPresetPackage(
+  fetcher: typeof fetch = fetch,
+): Promise<ExportPresetPackageFile | undefined> {
   try {
     const response = await fetcher(OFFICIAL_EXPORT_PRESET_PACKAGE_URL, { cache: 'no-store' });
     if (!response.ok) {
@@ -597,7 +648,7 @@ export async function fetchOfficialExportPresetPackage(fetcher: typeof fetch = f
 
 export function detectExportPresetSyncConflicts(
   localPackage: ExportPresetPackageFile,
-  remotePackage: ExportPresetPackageFile
+  remotePackage: ExportPresetPackageFile,
 ): ExportPresetSyncConflict[] {
   const localByName = new Map(localPackage.presets.map((preset) => [preset.name.trim().toLowerCase(), preset]));
   return remotePackage.presets.flatMap((remotePreset) => {
@@ -613,8 +664,8 @@ export function detectExportPresetSyncConflicts(
         name: remotePreset.name,
         localUpdatedAt,
         remoteUpdatedAt,
-        newer: comparison > 0 ? 'local' : comparison < 0 ? 'remote' : 'same'
-      }
+        newer: comparison > 0 ? 'local' : comparison < 0 ? 'remote' : 'same',
+      },
     ];
   });
 }
@@ -623,7 +674,7 @@ export function mergeExportPresetPackages(
   localPackage: ExportPresetPackageFile,
   remotePackage: ExportPresetPackageFile,
   conflictResolution: ExportPresetSyncConflictResolution = 'merge',
-  exportedAt: string = new Date(Date.now()).toISOString()
+  exportedAt: string = new Date(Date.now()).toISOString(),
 ): ExportPresetPackageFile {
   const merged = new Map<string, ExportPresetPackagePreset>();
   for (const preset of localPackage.presets) {
@@ -639,7 +690,10 @@ export function mergeExportPresetPackages(
       continue;
     }
     if (exportPresetPackagePresetsEqual(localPreset, sanitizedRemote)) {
-      merged.set(key, selectNewerPackagePreset(localPreset, sanitizedRemote, localPackage.exportedAt, remotePackage.exportedAt));
+      merged.set(
+        key,
+        selectNewerPackagePreset(localPreset, sanitizedRemote, localPackage.exportedAt, remotePackage.exportedAt),
+      );
       continue;
     }
     if (conflictResolution === 'keep-local') {
@@ -649,12 +703,15 @@ export function mergeExportPresetPackages(
       merged.set(key, sanitizedRemote);
       continue;
     }
-    merged.set(key, selectNewerPackagePreset(localPreset, sanitizedRemote, localPackage.exportedAt, remotePackage.exportedAt));
+    merged.set(
+      key,
+      selectNewerPackagePreset(localPreset, sanitizedRemote, localPackage.exportedAt, remotePackage.exportedAt),
+    );
   }
   return {
     version: 1,
     presets: Array.from(merged.values()).sort((left, right) => left.name.localeCompare(right.name)),
-    exportedAt
+    exportedAt,
   };
 }
 
@@ -664,7 +721,7 @@ export async function syncExportPresetsWithWebdav(
     storage?: ExportPresetStorage;
     client?: ExportPresetSyncClient;
     now?: () => Date;
-  } = {}
+  } = {},
 ): Promise<ExportPresetSyncResult> {
   const url = request.url.trim();
   if (!url) {
@@ -683,7 +740,7 @@ export async function syncExportPresetsWithWebdav(
     const remote = await client.getText({
       url,
       username: request.username,
-      password: request.password
+      password: request.password,
     });
     remotePackage = parseExportPresetPackage(remote.contents);
   } catch {
@@ -691,18 +748,23 @@ export async function syncExportPresetsWithWebdav(
     remotePackage = {
       version: 1,
       presets: [],
-      exportedAt: new Date(0).toISOString()
+      exportedAt: new Date(0).toISOString(),
     };
   }
 
   const conflicts = detectExportPresetSyncConflicts(localPackage, remotePackage);
-  const mergedPackage = mergeExportPresetPackages(localPackage, remotePackage, request.conflictResolution ?? 'merge', syncedAt);
+  const mergedPackage = mergeExportPresetPackages(
+    localPackage,
+    remotePackage,
+    request.conflictResolution ?? 'merge',
+    syncedAt,
+  );
   await client.putText({
     url,
     username: request.username,
     password: request.password,
     contents: `${JSON.stringify(mergedPackage, null, 2)}\n`,
-    contentType: 'application/json'
+    contentType: 'application/json',
   });
   const nextCustomPresets = exportPresetPackageToCustomPresets(mergedPackage, localCustomPresets);
   await writeCustomExportPresets(nextCustomPresets, storage);
@@ -711,8 +773,10 @@ export async function syncExportPresetsWithWebdav(
     conflicts,
     syncedAt,
     uploadedCount: mergedPackage.presets.length,
-    importedCount: nextCustomPresets.filter((preset) => !localCustomPresets.some((localPreset) => presetNamesEqual(localPreset.name, preset.name))).length,
-    remoteWasMissing
+    importedCount: nextCustomPresets.filter(
+      (preset) => !localCustomPresets.some((localPreset) => presetNamesEqual(localPreset.name, preset.name)),
+    ).length,
+    remoteWasMissing,
   };
 }
 
@@ -729,7 +793,10 @@ async function writeCustomExportPresets(presets: ExportPreset[], storage: Export
   await storage.writeFile(path, serializeCustomExportPresets(presets));
 }
 
-function buildExportPresetPackageFromCustomPresets(presets: ExportPreset[], exportedAt: string): ExportPresetPackageFile {
+function buildExportPresetPackageFromCustomPresets(
+  presets: ExportPreset[],
+  exportedAt: string,
+): ExportPresetPackageFile {
   return {
     version: 1,
     exportedAt,
@@ -740,12 +807,15 @@ function buildExportPresetPackageFromCustomPresets(presets: ExportPreset[], expo
         name: preset.name,
         description: preset.description,
         settings: sanitizeExportSettings(preset.settings),
-        updatedAt: normalizeIsoString(preset.updatedAt) ?? exportedAt
-      }))
+        updatedAt: normalizeIsoString(preset.updatedAt) ?? exportedAt,
+      })),
   };
 }
 
-function exportPresetPackageToCustomPresets(packageFile: ExportPresetPackageFile, existingCustomPresets: ExportPreset[]): ExportPreset[] {
+function exportPresetPackageToCustomPresets(
+  packageFile: ExportPresetPackageFile,
+  existingCustomPresets: ExportPreset[],
+): ExportPreset[] {
   const builtinNames = new Set(BUILTIN_EXPORT_PRESETS.map((preset) => preset.name.toLowerCase()));
   const existingByName = new Map(existingCustomPresets.map((preset) => [preset.name.trim().toLowerCase(), preset]));
   const nextPresets: ExportPreset[] = [];
@@ -762,19 +832,22 @@ function exportPresetPackageToCustomPresets(packageFile: ExportPresetPackageFile
       description: preset.description ?? zhCN.exportPresets.customDescription,
       builtin: false,
       settings: sanitizeExportSettings(preset.settings),
-      updatedAt: getPackagePresetUpdatedAt(preset, packageFile.exportedAt)
+      updatedAt: getPackagePresetUpdatedAt(preset, packageFile.exportedAt),
     });
   }
   return nextPresets;
 }
 
-function sanitizePackagePreset(preset: ExportPresetPackagePreset, fallbackUpdatedAt: string): ExportPresetPackagePreset {
+function sanitizePackagePreset(
+  preset: ExportPresetPackagePreset,
+  fallbackUpdatedAt: string,
+): ExportPresetPackagePreset {
   return {
     id: typeof preset.id === 'string' && preset.id.trim() ? preset.id.trim() : undefined,
     name: preset.name.trim(),
     description: preset.description?.trim() || zhCN.exportPresets.customDescription,
     settings: sanitizeExportSettings(preset.settings),
-    updatedAt: normalizeIsoString(preset.updatedAt) ?? fallbackUpdatedAt
+    updatedAt: normalizeIsoString(preset.updatedAt) ?? fallbackUpdatedAt,
   };
 }
 
@@ -782,16 +855,20 @@ function selectNewerPackagePreset(
   localPreset: ExportPresetPackagePreset,
   remotePreset: ExportPresetPackagePreset,
   localExportedAt: string,
-  remoteExportedAt: string
+  remoteExportedAt: string,
 ): ExportPresetPackagePreset {
-  const comparison = compareIsoTimestamps(getPackagePresetUpdatedAt(localPreset, localExportedAt), getPackagePresetUpdatedAt(remotePreset, remoteExportedAt));
+  const comparison = compareIsoTimestamps(
+    getPackagePresetUpdatedAt(localPreset, localExportedAt),
+    getPackagePresetUpdatedAt(remotePreset, remoteExportedAt),
+  );
   return comparison >= 0 ? localPreset : remotePreset;
 }
 
 function exportPresetPackagePresetsEqual(left: ExportPresetPackagePreset, right: ExportPresetPackagePreset): boolean {
   return (
     left.name.trim().toLowerCase() === right.name.trim().toLowerCase() &&
-    (left.description ?? zhCN.exportPresets.customDescription) === (right.description ?? zhCN.exportPresets.customDescription) &&
+    (left.description ?? zhCN.exportPresets.customDescription) ===
+      (right.description ?? zhCN.exportPresets.customDescription) &&
     stableStringify(sanitizeExportSettings(left.settings)) === stableStringify(sanitizeExportSettings(right.settings))
   );
 }
@@ -854,7 +931,14 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.scaleMode === 'none' || input.scaleMode === 'fit') {
     output.scaleMode = input.scaleMode;
   }
-  if (input.targetAspectRatio === 'source' || input.targetAspectRatio === '16:9' || input.targetAspectRatio === '9:16' || input.targetAspectRatio === '1:1' || input.targetAspectRatio === '4:5' || input.targetAspectRatio === '21:9') {
+  if (
+    input.targetAspectRatio === 'source' ||
+    input.targetAspectRatio === '16:9' ||
+    input.targetAspectRatio === '9:16' ||
+    input.targetAspectRatio === '1:1' ||
+    input.targetAspectRatio === '4:5' ||
+    input.targetAspectRatio === '21:9'
+  ) {
     output.targetAspectRatio = input.targetAspectRatio;
   }
   copyReframeOffset(input, output, 'reframeOffsetX');
@@ -862,7 +946,12 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.subtitleMode === 'burn-in' || input.subtitleMode === 'soft-sub') {
     output.subtitleMode = input.subtitleMode;
   }
-  if (input.subtitleFormat === 'srt' || input.subtitleFormat === 'vtt' || input.subtitleFormat === 'ass' || input.subtitleFormat === 'ssa') {
+  if (
+    input.subtitleFormat === 'srt' ||
+    input.subtitleFormat === 'vtt' ||
+    input.subtitleFormat === 'ass' ||
+    input.subtitleFormat === 'ssa'
+  ) {
     output.subtitleFormat = input.subtitleFormat;
   }
   if (input.exportSidecarSubtitle === true) {
@@ -878,7 +967,11 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.hardwareEncoding === true) {
     output.hardwareEncoding = true;
   }
-  if (input.loudnessNormalization === 'off' || input.loudnessNormalization === 'youtube' || input.loudnessNormalization === 'ebu-r128') {
+  if (
+    input.loudnessNormalization === 'off' ||
+    input.loudnessNormalization === 'youtube' ||
+    input.loudnessNormalization === 'ebu-r128'
+  ) {
     output.loudnessNormalization = input.loudnessNormalization;
   }
   if (
@@ -949,7 +1042,8 @@ function sanitizeStemTracks(value: unknown): ExportPresetSettings['stemTracks'] 
     if (typeof input.trackIndex !== 'number' || !Number.isFinite(input.trackIndex)) continue;
     const trackName = typeof input.trackName === 'string' ? input.trackName : `Track ${input.trackIndex}`;
     const selected = input.selected !== false;
-    const format: ExportStemFormat = (input.format === 'wav' || input.format === 'aiff' || input.format === 'm4a') ? input.format : 'default';
+    const format: ExportStemFormat =
+      input.format === 'wav' || input.format === 'aiff' || input.format === 'm4a' ? input.format : 'default';
     valid.push({ trackIndex: input.trackIndex, trackName, selected, format });
   }
   return valid.length > 0 ? valid : undefined;
@@ -963,7 +1057,7 @@ function sanitizeColorManagement(value: unknown): ExportPresetSettings['colorMan
   return {
     inputColorSpace: sanitizeExportColorSpace(input.inputColorSpace, 'srgb'),
     outputColorSpace: sanitizeExportColorSpace(input.outputColorSpace, 'srgb'),
-    embedIccProfile: input.embedIccProfile !== false
+    embedIccProfile: input.embedIccProfile !== false,
   };
 }
 
@@ -979,8 +1073,13 @@ function sanitizePostExportScript(value: unknown): ExportPresetSettings['postExp
   return trimmed ? { command: trimmed } : undefined;
 }
 
-function sanitizeExportColorSpace(value: unknown, fallback: NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace']): NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'] {
-  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020' ? value : fallback;
+function sanitizeExportColorSpace(
+  value: unknown,
+  fallback: NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'],
+): NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'] {
+  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020'
+    ? value
+    : fallback;
 }
 
 function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audioVisualization'] | undefined {
@@ -1004,7 +1103,9 @@ function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audio
   return output;
 }
 
-function sanitizeAudioVisualizationBackground(value: unknown): NonNullable<ExportPresetSettings['audioVisualization']>['background'] {
+function sanitizeAudioVisualizationBackground(
+  value: unknown,
+): NonNullable<ExportPresetSettings['audioVisualization']>['background'] {
   if (!value || typeof value !== 'object') {
     return { type: 'solid', color: '#050816' };
   }
@@ -1016,7 +1117,7 @@ function sanitizeAudioVisualizationBackground(value: unknown): NonNullable<Expor
     return {
       type: 'gradient',
       color: sanitizeHexColor(input.color, '#050816'),
-      color2: sanitizeHexColor(input.color2, '#1d4ed8')
+      color2: sanitizeHexColor(input.color2, '#1d4ed8'),
     };
   }
   return { type: 'solid', color: sanitizeHexColor(input.color, '#050816') };
@@ -1042,7 +1143,7 @@ function sanitizeWatermark(value: unknown): ExportPresetSettings['watermark'] | 
       path,
       position,
       scalePercent: clampWatermarkNumber(input.scalePercent, 1, 50, 12),
-      opacity: clampWatermarkNumber(input.opacity, 0, 1, 0.75)
+      opacity: clampWatermarkNumber(input.opacity, 0, 1, 0.75),
     };
   }
   if (input.type === 'text') {
@@ -1057,7 +1158,7 @@ function sanitizeWatermark(value: unknown): ExportPresetSettings['watermark'] | 
       fontFamily: typeof input.fontFamily === 'string' && input.fontFamily.trim() ? input.fontFamily.trim() : 'Arial',
       color: typeof input.color === 'string' && input.color.trim() ? input.color.trim() : '#ffffff',
       fontSize: Math.round(clampWatermarkNumber(input.fontSize, 8, 240, 36)),
-      position
+      position,
     };
   }
   return undefined;
@@ -1077,7 +1178,7 @@ function sanitizeTimecodeBurnIn(value: unknown): ExportPresetSettings['timecodeB
     fontSize: Math.round(clampWatermarkNumber(input.fontSize, 8, 96, 28)),
     color: sanitizeHexColor(input.color, '#ffffff'),
     backgroundColor: sanitizeHexColor(input.backgroundColor, '#000000'),
-    includeFrameNumber: input.includeFrameNumber === true
+    includeFrameNumber: input.includeFrameNumber === true,
   };
 }
 
@@ -1117,28 +1218,44 @@ function sanitizeHexColor(value: unknown, fallback: string): string {
   return fallback;
 }
 
-function copyNumber(input: Record<string, unknown>, output: ExportPresetSettings, key: 'width' | 'height' | 'fps' | 'sampleRate'): void {
+function copyNumber(
+  input: Record<string, unknown>,
+  output: ExportPresetSettings,
+  key: 'width' | 'height' | 'fps' | 'sampleRate',
+): void {
   const value = input[key];
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     output[key] = value;
   }
 }
 
-function copyReframeOffset(input: Record<string, unknown>, output: ExportPresetSettings, key: 'reframeOffsetX' | 'reframeOffsetY'): void {
+function copyReframeOffset(
+  input: Record<string, unknown>,
+  output: ExportPresetSettings,
+  key: 'reframeOffsetX' | 'reframeOffsetY',
+): void {
   const value = input[key];
   if (typeof value === 'number' && Number.isFinite(value)) {
     output[key] = Math.min(1, Math.max(-1, value));
   }
 }
 
-function copyString(input: Record<string, unknown>, output: ExportPresetSettings, key: 'videoCodec' | 'audioCodec' | 'format'): void {
+function copyString(
+  input: Record<string, unknown>,
+  output: ExportPresetSettings,
+  key: 'videoCodec' | 'audioCodec' | 'format',
+): void {
   const value = input[key];
   if (typeof value === 'string' && value.trim()) {
     output[key] = value.trim();
   }
 }
 
-function copyOptionalString(input: Record<string, unknown>, output: ExportPresetSettings, key: 'videoBitrate' | 'audioBitrate'): void {
+function copyOptionalString(
+  input: Record<string, unknown>,
+  output: ExportPresetSettings,
+  key: 'videoBitrate' | 'audioBitrate',
+): void {
   const value = input[key];
   if (typeof value === 'string') {
     output[key] = value.trim() || null;

@@ -39,7 +39,11 @@ export function normalizeFrameRate(frameRate: number): number {
   return Math.min(120, Math.max(1, Math.round(frameRate * 1000) / 1000));
 }
 
-export function isFrameRateMismatch(mediaFrameRate: number | undefined, projectFrameRate: number | undefined, tolerance = 0.01): boolean {
+export function isFrameRateMismatch(
+  mediaFrameRate: number | undefined,
+  projectFrameRate: number | undefined,
+  tolerance = 0.01,
+): boolean {
   if (!isFinitePositiveFrameRate(mediaFrameRate) || !isFinitePositiveFrameRate(projectFrameRate)) {
     return false;
   }

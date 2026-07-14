@@ -168,13 +168,11 @@ export function getBuiltinSpec(id: string): BroadcastSpec | undefined {
 /**
  * 对导出参数执行完整合规检查。
  */
-export function checkCompliance(
-  spec: BroadcastSpec,
-  params: ExportComplianceParams
-): ComplianceCheckResult[] {
+export function checkCompliance(spec: BroadcastSpec, params: ExportComplianceParams): ComplianceCheckResult[] {
   const results: ComplianceCheckResult[] = [];
   if (spec.videoCodec) results.push(checkVideoCodec(spec, params));
-  if (spec.videoBitrateMinMbps !== undefined || spec.videoBitrateMaxMbps !== undefined) results.push(checkVideoBitrate(spec, params));
+  if (spec.videoBitrateMinMbps !== undefined || spec.videoBitrateMaxMbps !== undefined)
+    results.push(checkVideoBitrate(spec, params));
   if (spec.width || spec.height) results.push(checkResolution(spec, params));
   if (spec.fps !== undefined) results.push(checkFps(spec, params));
   if (spec.audioCodec) results.push(checkAudioCodec(spec, params));
@@ -189,10 +187,7 @@ export function checkCompliance(
 /**
  * 从合规检查结果中提取一键修复建议。
  */
-export function buildComplianceFix(
-  spec: BroadcastSpec,
-  results: ComplianceCheckResult[]
-): ComplianceFixResult {
+export function buildComplianceFix(spec: BroadcastSpec, results: ComplianceCheckResult[]): ComplianceFixResult {
   const fix: ComplianceFixResult = {};
   const loudnessResult = results.find((r) => r.autoFix?.type === 'loudness' && r.level === 'fail');
   if (loudnessResult?.autoFix && spec.loudnessTargetLufs !== undefined) {
@@ -229,7 +224,11 @@ function checkVideoCodec(spec: BroadcastSpec, params: ExportComplianceParams): C
     name: '视频编码',
     level: 'fail',
     message: `${params.videoCodec ?? '未设置'} 不符合要求，建议: ${allowed.join('/')}`,
-    autoFix: { type: 'codec-suggest', params: { suggestedCodec: allowed[0] }, confirmMessage: `建议切换为 ${allowed[0]}，是否确认？` },
+    autoFix: {
+      type: 'codec-suggest',
+      params: { suggestedCodec: allowed[0] },
+      confirmMessage: `建议切换为 ${allowed[0]}，是否确认？`,
+    },
   };
 }
 
@@ -275,7 +274,11 @@ function checkAudioCodec(spec: BroadcastSpec, params: ExportComplianceParams): C
     name: '音频编码',
     level: 'fail',
     message: `${params.audioCodec ?? '未设置'} 不符合要求，建议: ${allowed.join('/')}`,
-    autoFix: { type: 'codec-suggest', params: { suggestedCodec: allowed[0] }, confirmMessage: `建议切换为 ${allowed[0]}，是否确认？` },
+    autoFix: {
+      type: 'codec-suggest',
+      params: { suggestedCodec: allowed[0] },
+      confirmMessage: `建议切换为 ${allowed[0]}，是否确认？`,
+    },
   };
 }
 

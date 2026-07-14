@@ -22,7 +22,7 @@ import {
   type ProgressiveExportState,
   type VersionedExportTaskMetadata,
   type RenderFarmSegmentStatus,
-  type RenderFarmTaskConfig
+  type RenderFarmTaskConfig,
 } from '@open-factory/editor-core';
 import { create } from 'zustand';
 
@@ -34,7 +34,17 @@ export interface ExportQueueState {
   queuePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; progressive?: ProgressiveExportState; versionedBatch?: VersionedExportTaskMetadata; scheduledStartAt?: string }) => ExportTask;
+  addTask: (input: {
+    name: string;
+    projectName?: string;
+    outputPath: string;
+    plan: FfmpegExportPlan;
+    priority?: ExportTaskPriority;
+    renderFarm?: RenderFarmTaskConfig;
+    progressive?: ProgressiveExportState;
+    versionedBatch?: VersionedExportTaskMetadata;
+    scheduledStartAt?: string;
+  }) => ExportTask;
   activateScheduledTasks: (now?: string) => void;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
@@ -78,7 +88,9 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
     const startedAt = new Date().toISOString();
     const after = startExportTaskSlots(before, get().maxConcurrent, startedAt);
     const startedIds = after
-      .filter((task) => task.status === 'running' && before.find((previous) => previous.id === task.id)?.status === 'pending')
+      .filter(
+        (task) => task.status === 'running' && before.find((previous) => previous.id === task.id)?.status === 'pending',
+      )
       .map((task) => task.id);
     set({ tasks: after });
     return startedIds;
@@ -102,7 +114,7 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
     const task = get().tasks.find((item) => item.id === taskId);
     set((state) => ({
       tasks: finishExportTask(state.tasks, taskId, report),
-      lastCompletedPath: task?.outputPath ?? state.lastCompletedPath
+      lastCompletedPath: task?.outputPath ?? state.lastCompletedPath,
     }));
   },
   failTask: (taskId, error, report) => {
@@ -121,15 +133,17 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
           ? {
               ...task,
               status: 'pending',
-              progress: task.progressive ? Math.min(0.999, Math.max(0, task.progressive.completedDuration / Math.max(0.001, task.plan.duration))) : 0,
+              progress: task.progressive
+                ? Math.min(0.999, Math.max(0, task.progressive.completedDuration / Math.max(0.001, task.plan.duration)))
+                : 0,
               error: undefined,
               report: undefined,
               segments: undefined,
               startedAt: undefined,
-              finishedAt: undefined
+              finishedAt: undefined,
             }
-          : task
-      )
+          : task,
+      ),
     }));
     set((state) => ({ tasks: sortExportQueueByPriority(state.tasks) }));
   },
@@ -152,18 +166,30 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   },
   clearFinishedTasks: () => {
     set((state) => ({
-      tasks: state.tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
+      tasks: state.tasks.filter(
+        (task) =>
+          task.status === 'scheduled' ||
+          task.status === 'pending' ||
+          task.status === 'running' ||
+          task.status === 'interrupted',
+      ),
     }));
   },
   cancelAllTasks: () => {
     const cancelableIds = get()
-      .tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
+      .tasks.filter(
+        (task) =>
+          task.status === 'scheduled' ||
+          task.status === 'pending' ||
+          task.status === 'running' ||
+          task.status === 'interrupted',
+      )
       .map((task) => task.id);
     set((state) => ({
-      tasks: cancelableIds.reduce((tasks, taskId) => cancelExportTask(tasks, taskId), state.tasks)
+      tasks: cancelableIds.reduce((tasks, taskId) => cancelExportTask(tasks, taskId), state.tasks),
     }));
     return cancelableIds;
-  }
+  },
 }));
 
 export function createHistoryEntryForTask(taskId: string): ExportTaskHistoryEntry | undefined {

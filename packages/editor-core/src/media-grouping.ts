@@ -30,12 +30,12 @@ export interface MediaGroupingSettings {
 
 export const DEFAULT_MEDIA_GROUPING_SETTINGS: MediaGroupingSettings = {
   enabled: true,
-  ignorePreferences: []
+  ignorePreferences: [],
 };
 
 export function detectTimeWindowGroups(
   media: Pick<MediaAsset, 'id' | 'importedAt'>[],
-  windowMs = GROUPING_TIME_WINDOW_MS
+  windowMs = GROUPING_TIME_WINDOW_MS,
 ): MediaGroupingSuggestion[] {
   const sorted = [...media]
     .filter((m) => m.importedAt)
@@ -58,7 +58,7 @@ export function detectTimeWindowGroups(
           reason: 'time-window',
           label: `${cluster.length} files imported within ${Math.round((Date.parse(cluster[cluster.length - 1].importedAt!) - clusterTime) / 1000)}s`,
           confidence: Math.min(1, 0.6 + (cluster.length - GROUPING_MIN_CLUSTER_SIZE) * 0.1),
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         });
       }
       clusterStart = i;
@@ -73,9 +73,7 @@ export function extractFilenameSequencePrefix(name: string): string {
   return match?.[1]?.trim().toLocaleLowerCase() ?? '';
 }
 
-export function detectFilenameSequenceGroups(
-  media: Pick<MediaAsset, 'id' | 'name'>[]
-): MediaGroupingSuggestion[] {
+export function detectFilenameSequenceGroups(media: Pick<MediaAsset, 'id' | 'name'>[]): MediaGroupingSuggestion[] {
   const prefixMap = new Map<string, { id: string; name: string }[]>();
   for (const m of media) {
     const prefix = extractFilenameSequencePrefix(m.name);
@@ -94,7 +92,7 @@ export function detectFilenameSequenceGroups(
         reason: 'filename-sequence',
         label: `${items.length} files matching "${prefix}*" sequence`,
         confidence: Math.min(1, 0.7 + (items.length - GROUPING_FILENAME_SEQUENCE_MIN_MATCH) * 0.05),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     }
   }
@@ -105,7 +103,7 @@ export function detectFilenameSequenceGroups(
 export function detectColorSimilarityGroups(
   media: Pick<MediaAsset, 'id' | 'thumbnail'>[],
   histograms: Record<string, readonly number[] | undefined>,
-  threshold = GROUPING_COLOR_SIMILARITY_THRESHOLD
+  threshold = GROUPING_COLOR_SIMILARITY_THRESHOLD,
 ): MediaGroupingSuggestion[] {
   const items = media.filter((m) => {
     const h = histograms[m.id];
@@ -140,13 +138,11 @@ export function detectColorSimilarityGroups(
     reason: 'color-similarity' as MediaGroupingReason,
     label: `${indices.length} visually similar files`,
     confidence: 0.65,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   }));
 }
 
-export function mergeGroupingSuggestions(
-  ...suggestions: MediaGroupingSuggestion[][]
-): MediaGroupingSuggestion[] {
+export function mergeGroupingSuggestions(...suggestions: MediaGroupingSuggestion[][]): MediaGroupingSuggestion[] {
   const all = suggestions.flat();
   return deduplicateOverlappingGroups(all);
 }
@@ -154,14 +150,14 @@ export function mergeGroupingSuggestions(
 export function recordIgnorePreference(
   preferences: MediaGroupingIgnorePreference[],
   reason: MediaGroupingReason,
-  now?: string
+  now?: string,
 ): MediaGroupingIgnorePreference[] {
   const existing = preferences.find((p) => p.reason === reason);
   if (existing) {
     return preferences.map((p) =>
       p.reason === reason
         ? { ...p, ignoreCount: p.ignoreCount + 1, lastIgnoredAt: now ?? new Date().toISOString() }
-        : p
+        : p,
     );
   }
   return [...preferences, { reason, ignoreCount: 1, lastIgnoredAt: now ?? new Date().toISOString() }];
@@ -170,16 +166,14 @@ export function recordIgnorePreference(
 export function filterSuggestionsByPreferences(
   suggestions: MediaGroupingSuggestion[],
   preferences: MediaGroupingIgnorePreference[],
-  maxIgnoreCount = 3
+  maxIgnoreCount = 3,
 ): MediaGroupingSuggestion[] {
-  const suppressed = new Set(
-    preferences.filter((p) => p.ignoreCount >= maxIgnoreCount).map((p) => p.reason)
-  );
+  const suppressed = new Set(preferences.filter((p) => p.ignoreCount >= maxIgnoreCount).map((p) => p.reason));
   return suggestions.filter((s) => !suppressed.has(s.reason));
 }
 
 export function normalizeMediaGroupingSettings(
-  input: Partial<MediaGroupingSettings> | undefined
+  input: Partial<MediaGroupingSettings> | undefined,
 ): MediaGroupingSettings {
   return {
     enabled: input?.enabled !== false,
@@ -189,9 +183,9 @@ export function normalizeMediaGroupingSettings(
           .map((p) => ({
             reason: p.reason as MediaGroupingReason,
             ignoreCount: Math.max(0, Math.round(p.ignoreCount)),
-            lastIgnoredAt: typeof p.lastIgnoredAt === 'string' ? p.lastIgnoredAt : new Date().toISOString()
+            lastIgnoredAt: typeof p.lastIgnoredAt === 'string' ? p.lastIgnoredAt : new Date().toISOString(),
           }))
-      : []
+      : [],
   };
 }
 

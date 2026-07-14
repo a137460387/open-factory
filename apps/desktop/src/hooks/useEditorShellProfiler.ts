@@ -72,8 +72,8 @@ export function useEditorShellProfiler(): {
           exportSpeed: recording.exportSpeed,
           memory: recording.memory,
           queues: recording.queues,
-          traceEvents: recording.traceEvents
-        })
+          traceEvents: recording.traceEvents,
+        }),
       );
       setProfilerElapsedMs(stoppedAtMs - recording.startedAtMs);
     } catch (error) {
@@ -94,7 +94,7 @@ export function useEditorShellProfiler(): {
         memory: [],
         queues: [],
         traceEvents: [],
-        exportProgressByTaskId: new Map()
+        exportProgressByTaskId: new Map(),
       };
       if (import.meta.env.VITE_E2E === 'true') {
         window.__OPEN_FACTORY_PROFILER_DEBUG__ = { frameCount: 0 };
@@ -123,7 +123,7 @@ export function useEditorShellProfiler(): {
         if (import.meta.env.VITE_E2E === 'true') {
           window.__OPEN_FACTORY_PROFILER_DEBUG__ = {
             frameCount: recording.frames.length,
-            lastFrameIndex: sample.frameIndex
+            lastFrameIndex: sample.frameIndex,
           };
         }
       } catch (error) {
@@ -131,7 +131,7 @@ export function useEditorShellProfiler(): {
         stopProfilerRecording();
       }
     },
-    [stopProfilerRecording]
+    [stopProfilerRecording],
   );
 
   const exportProfilerReportJson = useCallback(async () => {
@@ -141,14 +141,20 @@ export function useEditorShellProfiler(): {
     const project = useEditorStore.getState().project;
     try {
       const fileName = `${sanitizeFileName(project.name || 'open-factory')}-performance-report.json`;
-      const outputPath = await bridgeSaveFileDialog(fileName, [{ name: zhCN.profiler.exportDialogName, extensions: ['json'] }]);
+      const outputPath = await bridgeSaveFileDialog(fileName, [
+        { name: zhCN.profiler.exportDialogName, extensions: ['json'] },
+      ]);
       if (!outputPath) {
         return;
       }
       await bridgeWriteFile(outputPath, `${JSON.stringify(profilerReport, null, 2)}\n`);
       showToast({ kind: 'success', title: zhCN.profiler.exportedTitle, message: outputPath });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.profiler.exportFailedTitle, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+      showToast({
+        kind: 'error',
+        title: zhCN.profiler.exportFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.common.unavailable,
+      });
     }
   }, [profilerReport]);
 
@@ -171,13 +177,21 @@ export function useEditorShellProfiler(): {
         const mediaJobs = useMediaJobStore.getState().jobs;
         const queueSample: ProfilerQueueSample = {
           timestampMs: now,
-          exportPending: exportTasks.filter((task) => task.status === 'pending' || task.status === 'scheduled' || task.status === 'interrupted').length,
+          exportPending: exportTasks.filter(
+            (task) => task.status === 'pending' || task.status === 'scheduled' || task.status === 'interrupted',
+          ).length,
           exportRunning: exportTasks.filter((task) => task.status === 'running').length,
           mediaPending: mediaJobs.filter((job) => job.status === 'pending').length,
-          mediaRunning: mediaJobs.filter((job) => job.status === 'running').length
+          mediaRunning: mediaJobs.filter((job) => job.status === 'running').length,
         };
         recording.queues.push(queueSample);
-        sampleProfilerExportSpeed(recording, exportTasks, now, projectFps, queueSample.exportPending + queueSample.exportRunning);
+        sampleProfilerExportSpeed(
+          recording,
+          exportTasks,
+          now,
+          projectFps,
+          queueSample.exportPending + queueSample.exportRunning,
+        );
         const proxyCacheBytes = await getCacheSize().catch(() => 0);
         if (disposed || !profilerRecordingRef.current) {
           return;
@@ -187,7 +201,7 @@ export function useEditorShellProfiler(): {
           jsHeapBytes: readBrowserJsHeapBytes(),
           webglTextureBytes: latestProfilerTextureBytesRef.current,
           proxyCacheBytes,
-          undoHistoryBytes: estimateUndoHistoryBytes(useEditorStore.getState().historyMeta)
+          undoHistoryBytes: estimateUndoHistoryBytes(useEditorStore.getState().historyMeta),
         });
       } catch (error) {
         console.warn('Unable to sample profiler metrics', error);

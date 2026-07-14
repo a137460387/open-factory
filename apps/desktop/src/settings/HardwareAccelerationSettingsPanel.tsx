@@ -256,12 +256,7 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
       <div className="rounded-md border border-line bg-panel p-3">
         <div className="mb-2 flex items-center justify-between">
           <h4 className="text-xs font-semibold text-slate-700">{t.capabilitiesTitle}</h4>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 text-xs"
-            onClick={() => void refreshCapabilities()}
-          >
+          <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => void refreshCapabilities()}>
             <RefreshCw className="mr-1 h-3 w-3" />
             {t.refresh}
           </Button>
@@ -281,9 +276,7 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
             </div>
           </>
         ) : (
-          <div className="rounded-md bg-slate-50 p-2 text-xs text-slate-500">
-            {error || '正在检测硬件能力...'}
-          </div>
+          <div className="rounded-md bg-slate-50 p-2 text-xs text-slate-500">{error || '正在检测硬件能力...'}</div>
         )}
       </div>
     </div>
@@ -301,9 +294,7 @@ function BackendStatus({ backend }: { backend: HardwareBackendInfo }) {
         )}
         <span className="text-xs font-medium text-slate-700">{getBackendDisplayName(backend.backend)}</span>
       </div>
-      <div className="text-xs text-slate-500">
-        {backend.available ? t.backendAvailable : t.backendUnavailable}
-      </div>
+      <div className="text-xs text-slate-500">{backend.available ? t.backendAvailable : t.backendUnavailable}</div>
     </div>
   );
 }

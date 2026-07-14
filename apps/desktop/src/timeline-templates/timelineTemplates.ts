@@ -1,7 +1,7 @@
 import {
   BUILT_IN_TIMELINE_TEMPLATES,
   normalizeTimelineTemplateDefinition,
-  type TimelineTemplateDefinition
+  type TimelineTemplateDefinition,
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, scanDirectory, writeFile } from '../lib/tauri-bridge';
 
@@ -21,7 +21,7 @@ const bridgeTimelineTemplateStorage: TimelineTemplateStorage = {
   fsExists,
   scanDirectory,
   readFile,
-  writeFile
+  writeFile,
 };
 
 export function getTimelineTemplatesDir(appDataDir: string): string {
@@ -32,13 +32,18 @@ export function getTimelineTemplatePath(appDataDir: string, templateId: string):
   return `${getTimelineTemplatesDir(appDataDir)}/${sanitizeTemplateFileName(templateId)}${TIMELINE_TEMPLATE_EXTENSION}`;
 }
 
-export async function loadTimelineTemplates(storage: TimelineTemplateStorage = bridgeTimelineTemplateStorage): Promise<TimelineTemplateDefinition[]> {
+export async function loadTimelineTemplates(
+  storage: TimelineTemplateStorage = bridgeTimelineTemplateStorage,
+): Promise<TimelineTemplateDefinition[]> {
   const customTemplates = await loadCustomTimelineTemplates(storage);
   const customIds = new Set(customTemplates.map((template) => template.id));
   return [...customTemplates, ...BUILT_IN_TIMELINE_TEMPLATES.filter((template) => !customIds.has(template.id))];
 }
 
-export async function saveTimelineTemplate(template: TimelineTemplateDefinition, storage: TimelineTemplateStorage = bridgeTimelineTemplateStorage): Promise<TimelineTemplateDefinition[]> {
+export async function saveTimelineTemplate(
+  template: TimelineTemplateDefinition,
+  storage: TimelineTemplateStorage = bridgeTimelineTemplateStorage,
+): Promise<TimelineTemplateDefinition[]> {
   const appDataDir = await storage.getAppDataDir();
   const path = getTimelineTemplatePath(appDataDir, template.id);
   await storage.writeFile(path, `${JSON.stringify(template, null, 2)}\n`);
@@ -75,7 +80,9 @@ async function loadCustomTimelineTemplates(storage: TimelineTemplateStorage): Pr
       // Ignore unreadable user templates so one corrupt file does not block the dialog.
     }
   }
-  return templates.sort((left, right) => (right.createdAt ?? '').localeCompare(left.createdAt ?? '') || left.name.localeCompare(right.name));
+  return templates.sort(
+    (left, right) => (right.createdAt ?? '').localeCompare(left.createdAt ?? '') || left.name.localeCompare(right.name),
+  );
 }
 
 function sanitizeTemplateFileName(value: string): string {

@@ -18,36 +18,34 @@ import {
 import { PanelLoading } from '../PanelLoading';
 
 const LutEditorDialog = lazy(() =>
-  import('../../lut-editor/LutEditorDialog').then((m) => ({ default: m.LutEditorDialog }))
+  import('../../lut-editor/LutEditorDialog').then((m) => ({ default: m.LutEditorDialog })),
 );
 const ColorNodeEditorDialog = lazy(() =>
-  import('../../color-node-editor/ColorNodeEditorDialog').then((m) => ({ default: m.ColorNodeEditorDialog }))
+  import('../../color-node-editor/ColorNodeEditorDialog').then((m) => ({ default: m.ColorNodeEditorDialog })),
 );
 const ColorAnalysisDialog = lazy(() =>
-  import('../../color-analysis/ColorAnalysisDialog').then((m) => ({ default: m.ColorAnalysisDialog }))
+  import('../../color-analysis/ColorAnalysisDialog').then((m) => ({ default: m.ColorAnalysisDialog })),
 );
 const AudioSpectrumDialog = lazy(() => import('../../media/AudioSpectrumDialog'));
 const VideoStitchWizardDialog = lazy(() =>
-  import('../../video-stitching/VideoStitchWizardDialog').then((m) => ({ default: m.VideoStitchWizardDialog }))
+  import('../../video-stitching/VideoStitchWizardDialog').then((m) => ({ default: m.VideoStitchWizardDialog })),
 );
 const SceneReorderDialog = lazy(() =>
-  import('../../scene-reorder/SceneReorderDialog').then((m) => ({ default: m.SceneReorderDialog }))
+  import('../../scene-reorder/SceneReorderDialog').then((m) => ({ default: m.SceneReorderDialog })),
 );
 const StyleTransferDialog = lazy(() => import('../../style-transfer/StyleTransferDialog'));
 const OperationReplayDialog = lazy(() => import('../../operation-recording/OperationReplayDialog'));
 const SpeakerDiarizationDialog = lazy(() => import('../../speaker-diarization/SpeakerDiarizationDialog'));
 const SmartRecommendationsDialog = lazy(() => import('../../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() =>
-  import('../../media/ContentAnalysisDialog').then((m) => ({ default: m.ContentAnalysisDialog }))
+  import('../../media/ContentAnalysisDialog').then((m) => ({ default: m.ContentAnalysisDialog })),
 );
-const ProfilerDialog = lazy(() =>
-  import('../../profiler/ProfilerDialog').then((m) => ({ default: m.ProfilerDialog }))
-);
+const ProfilerDialog = lazy(() => import('../../profiler/ProfilerDialog').then((m) => ({ default: m.ProfilerDialog })));
 const RhythmAnalysisDialog = lazy(() =>
-  import('../../analysis/RhythmAnalysisDialog').then((m) => ({ default: m.RhythmAnalysisDialog }))
+  import('../../analysis/RhythmAnalysisDialog').then((m) => ({ default: m.RhythmAnalysisDialog })),
 );
 const SmartMontageDialog = lazy(() =>
-  import('../SmartMontage/SmartMontageDialog').then((m) => ({ default: m.SmartMontageDialog }))
+  import('../SmartMontage/SmartMontageDialog').then((m) => ({ default: m.SmartMontageDialog })),
 );
 
 export interface AnalysisDialogsProps {
@@ -71,7 +69,12 @@ export interface AnalysisDialogsProps {
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
   // Smart montage
-  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
+  generateSmartMontage: (config: {
+    videoAssetIds: string[];
+    audioAssetId: string;
+    beatTimes: number[];
+    sensitivity: BeatSensitivity;
+  }) => void;
   // Operation replay
   operationRecording: OperationRecordingFile | undefined;
   operationRecordingActive: boolean;
@@ -229,7 +232,11 @@ export function AnalysisDialogs({
         />
       ) : null}
       {sceneReorderOpen ? (
-        <SceneReorderDialog project={project} selectedClipIds={selectedClipIds} onClose={() => setSceneReorderOpen(false)} />
+        <SceneReorderDialog
+          project={project}
+          selectedClipIds={selectedClipIds}
+          onClose={() => setSceneReorderOpen(false)}
+        />
       ) : null}
       {styleTransferOpen ? (
         <StyleTransferDialog
@@ -268,7 +275,11 @@ export function AnalysisDialogs({
         />
       ) : null}
       {smartRecommendationsOpen ? (
-        <SmartRecommendationsDialog project={project} onAddToTimeline={addAssetToTimeline} onClose={() => setSmartRecommendationsOpen(false)} />
+        <SmartRecommendationsDialog
+          project={project}
+          onAddToTimeline={addAssetToTimeline}
+          onClose={() => setSmartRecommendationsOpen(false)}
+        />
       ) : null}
       {contentAnalysisOpen ? (
         <ContentAnalysisDialog

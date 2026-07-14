@@ -16,7 +16,7 @@ export const useDemucsSettingsStore = create<DemucsSettingsState>((set) => ({
       console.warn('Unable to save Demucs model path', error);
     });
     set({ executablePath });
-  }
+  },
 }));
 
 function readStoredPath(key: string): string {

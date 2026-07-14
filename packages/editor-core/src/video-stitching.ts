@@ -14,7 +14,7 @@ import {
   normalizeTransitionDuration,
   type Transition,
   type TransitionType,
-  type VideoClip
+  type VideoClip,
 } from './model';
 import { round } from './time';
 
@@ -38,9 +38,14 @@ export interface VideoStitchSequence {
   duration: number;
 }
 
-export function buildVideoStitchSequence(segments: VideoStitchSegmentInput[], options: VideoStitchSequenceOptions): VideoStitchSequence {
+export function buildVideoStitchSequence(
+  segments: VideoStitchSegmentInput[],
+  options: VideoStitchSequenceOptions,
+): VideoStitchSequence {
   const transitionEnabled = options.transitionEnabled === true;
-  const requestedTransitionDuration = normalizeTransitionDuration(options.transitionDuration ?? DEFAULT_TRANSITION_DURATION);
+  const requestedTransitionDuration = normalizeTransitionDuration(
+    options.transitionDuration ?? DEFAULT_TRANSITION_DURATION,
+  );
   const transitionType = options.transitionType ?? 'dissolve';
   let cursor = round(Math.max(0, options.startTime ?? 0));
   const clips: VideoClip[] = [];
@@ -69,7 +74,7 @@ export function buildVideoStitchSequence(segments: VideoStitchSegmentInput[], op
       fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
       fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
       fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-      fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+      fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
     };
     const previous = clips.at(-1);
     clips.push(clip);
@@ -77,7 +82,9 @@ export function buildVideoStitchSequence(segments: VideoStitchSegmentInput[], op
       const durationLimit = Math.max(0, Math.min(previous.duration, clip.duration) * 0.5);
       const duration = round(Math.min(requestedTransitionDuration, durationLimit));
       if (duration > 0) {
-        transitions.push(createTransition({ type: transitionType, duration, fromClipId: previous.id, toClipId: clip.id }));
+        transitions.push(
+          createTransition({ type: transitionType, duration, fromClipId: previous.id, toClipId: clip.id }),
+        );
       }
     }
     cursor = round(cursor + duration);
@@ -87,6 +94,6 @@ export function buildVideoStitchSequence(segments: VideoStitchSegmentInput[], op
   return {
     clips,
     transitions,
-    duration: round(Math.max(0, cursor - (options.startTime ?? 0) - transitionOffset))
+    duration: round(Math.max(0, cursor - (options.startTime ?? 0) - transitionOffset)),
   };
 }

@@ -1,6 +1,12 @@
 import { normalizeCollaborationNotes, type CollaborationNote, type CollaborationNoteType, type Project } from './model';
 import { getTimelineDuration } from './timeline';
-import { formatReportDuration, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './project/report-i18n';
+import {
+  formatReportDuration,
+  normalizeReportLocale,
+  reportHtmlLang,
+  reportLanguageLabel,
+  type ReportLocale,
+} from './project/report-i18n';
 
 export interface CollaborationReportOptions {
   generatedAt?: string;
@@ -49,7 +55,7 @@ const labels: Record<ReportLocale, Record<string, string>> = {
     comment: '时间点评论',
     highlight: '时间段高亮',
     replacement: '建议替换',
-    empty: '无协同标注。'
+    empty: '无协同标注。',
   },
   en: {
     title: 'Collaboration Notes Report',
@@ -71,15 +77,18 @@ const labels: Record<ReportLocale, Record<string, string>> = {
     comment: 'Point Comment',
     highlight: 'Range Highlight',
     replacement: 'Replacement Suggestion',
-    empty: 'No collaboration notes.'
-  }
+    empty: 'No collaboration notes.',
+  },
 };
 
 export function sortCollaborationNotes(notes: readonly CollaborationNote[]): CollaborationNote[] {
   return normalizeCollaborationNotes([...notes]);
 }
 
-export function filterCollaborationNotesByAuthor(notes: readonly CollaborationNote[], authorName?: string): CollaborationNote[] {
+export function filterCollaborationNotesByAuthor(
+  notes: readonly CollaborationNote[],
+  authorName?: string,
+): CollaborationNote[] {
   const normalized = sortCollaborationNotes(notes);
   const filter = authorName?.trim().toLocaleLowerCase();
   if (!filter) {
@@ -88,7 +97,12 @@ export function filterCollaborationNotesByAuthor(notes: readonly CollaborationNo
   return normalized.filter((note) => note.authorName.toLocaleLowerCase() === filter);
 }
 
-export function toggleCollaborationNoteResolved(notes: readonly CollaborationNote[], noteId: string, resolved?: boolean, updatedAt = new Date().toISOString()): CollaborationNote[] {
+export function toggleCollaborationNoteResolved(
+  notes: readonly CollaborationNote[],
+  noteId: string,
+  resolved?: boolean,
+  updatedAt = new Date().toISOString(),
+): CollaborationNote[] {
   return sortCollaborationNotes(
     notes.map((note) => {
       if (note.id !== noteId) {
@@ -97,13 +111,16 @@ export function toggleCollaborationNoteResolved(notes: readonly CollaborationNot
       return {
         ...note,
         resolved: resolved ?? !note.resolved,
-        updatedAt
+        updatedAt,
       };
-    })
+    }),
   );
 }
 
-export function buildCollaborationReport(project: Project, options: CollaborationReportOptions = {}): CollaborationReport {
+export function buildCollaborationReport(
+  project: Project,
+  options: CollaborationReportOptions = {},
+): CollaborationReport {
   const locale = normalizeReportLocale(options.locale);
   return {
     projectName: project.name,
@@ -120,8 +137,8 @@ export function buildCollaborationReport(project: Project, options: Collaboratio
       end: note.end,
       text: note.text,
       mediaPath: note.mediaPath,
-      resolved: note.resolved
-    }))
+      resolved: note.resolved,
+    })),
   };
 }
 
@@ -180,8 +197,13 @@ function renderRows(rows: CollaborationReportRow[], locale: ReportLocale): strin
   return rows
     .map((row) => {
       const typeLabel = t[row.type] ?? row.type;
-      const time = row.end !== undefined && row.end > row.start ? `${formatReportDuration(row.start, locale)} - ${formatReportDuration(row.end, locale)}` : formatReportDuration(row.start, locale);
-      const content = row.mediaPath ? `${escapeHtml(row.text)}<br /><small>${escapeHtml(row.mediaPath)}</small>` : escapeHtml(row.text);
+      const time =
+        row.end !== undefined && row.end > row.start
+          ? `${formatReportDuration(row.start, locale)} - ${formatReportDuration(row.end, locale)}`
+          : formatReportDuration(row.start, locale);
+      const content = row.mediaPath
+        ? `${escapeHtml(row.text)}<br /><small>${escapeHtml(row.mediaPath)}</small>`
+        : escapeHtml(row.text);
       return `<tr data-note-id="${escapeHtml(row.id)}">
         <td>${row.index}</td>
         <td><div class="shot">${escapeHtml(formatReportDuration(row.start, locale))}</div></td>

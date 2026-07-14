@@ -5,7 +5,8 @@ import { round } from './time';
 import type { Clip, Project, Timeline, Track } from './model-types';
 import type { EffectType } from './effects';
 
-export type ComplexityDimensionId = 'timelineDensity' | 'effectComplexity' | 'colorDepth' | 'audioComplexity' | 'keyframeDensity';
+export type ComplexityDimensionId =
+  'timelineDensity' | 'effectComplexity' | 'colorDepth' | 'audioComplexity' | 'keyframeDensity';
 export type ComplexityLevel = 'beginner' | 'intermediate' | 'professional' | 'master';
 
 export interface ComplexityDimensionScore {
@@ -43,7 +44,7 @@ export const COMPLEXITY_WEIGHTS: Record<ComplexityDimensionId, number> = {
   effectComplexity: 0.25,
   colorDepth: 0.2,
   audioComplexity: 0.15,
-  keyframeDensity: 0.2
+  keyframeDensity: 0.2,
 };
 
 export const COMPLEXITY_EFFECT_TYPE_FACTORS: Record<EffectType, number> = {
@@ -54,28 +55,43 @@ export const COMPLEXITY_EFFECT_TYPE_FACTORS: Record<EffectType, number> = {
   'chromatic-aberration': 1.3,
   'audio-spectrum': 1.6,
   'custom-shader': 2.2,
-  'motion-blur': 1.8
+  'motion-blur': 1.8,
 };
 
 export const REFERENCE_COMPLEXITY_PROJECTS: ComplexityReferenceProject[] = [
   { id: 'simple-vlog', name: '简单 Vlog', score: 35 },
   { id: 'documentary', name: '纪录片', score: 62 },
-  { id: 'commercial', name: '商业广告', score: 78 }
+  { id: 'commercial', name: '商业广告', score: 78 },
 ];
 
 export function calculateTimelineDensityScore(timeline: Timeline): ComplexityDimensionScore {
   const durationMinutes = Math.max(getTimelineDuration(timeline) / 60, 1 / 60);
   const clipCount = getTimelineClips(timeline).length;
   const clipsPerMinute = clipCount / durationMinutes;
-  return makeDimensionScore('timelineDensity', clipsPerMinute, clipsPerMinuteToScore(clipsPerMinute), `${round(clipsPerMinute)} clips/min`);
+  return makeDimensionScore(
+    'timelineDensity',
+    clipsPerMinute,
+    clipsPerMinuteToScore(clipsPerMinute),
+    `${round(clipsPerMinute)} clips/min`,
+  );
 }
 
 export function calculateEffectComplexityScore(timeline: Timeline): ComplexityDimensionScore {
   const weightedEffects = getTimelineClips(timeline).reduce((sum, clip) => {
     const effects = clip.effects ?? [];
-    return sum + effects.filter((effect) => effect.enabled !== false).reduce((effectSum, effect) => effectSum + (COMPLEXITY_EFFECT_TYPE_FACTORS[effect.type] ?? 1), 0);
+    return (
+      sum +
+      effects
+        .filter((effect) => effect.enabled !== false)
+        .reduce((effectSum, effect) => effectSum + (COMPLEXITY_EFFECT_TYPE_FACTORS[effect.type] ?? 1), 0)
+    );
   }, 0);
-  return makeDimensionScore('effectComplexity', weightedEffects, Math.min(100, weightedEffects * 12.5), `${round(weightedEffects)} weighted effects`);
+  return makeDimensionScore(
+    'effectComplexity',
+    weightedEffects,
+    Math.min(100, weightedEffects * 12.5),
+    `${round(weightedEffects)} weighted effects`,
+  );
 }
 
 export function calculateColorDepthScore(timeline: Timeline): ComplexityDimensionScore {
@@ -93,11 +109,16 @@ export function calculateColorDepthScore(timeline: Timeline): ComplexityDimensio
         correction.hue !== DEFAULT_COLOR_CORRECTION.hue,
         Boolean(correction.lutPath),
         JSON.stringify(correction.colorCurves) !== JSON.stringify(DEFAULT_COLOR_CORRECTION.colorCurves),
-        JSON.stringify(correction.threeWayColor) !== JSON.stringify(DEFAULT_COLOR_CORRECTION.threeWayColor)
+        JSON.stringify(correction.threeWayColor) !== JSON.stringify(DEFAULT_COLOR_CORRECTION.threeWayColor),
       ].filter(Boolean).length;
       return sum + adjustedFields / 7;
     }, 0) / visualClips.length;
-  return makeDimensionScore('colorDepth', adjustedRatio, adjustedRatio * 100, `${Math.round(adjustedRatio * 100)}% adjusted`);
+  return makeDimensionScore(
+    'colorDepth',
+    adjustedRatio,
+    adjustedRatio * 100,
+    `${Math.round(adjustedRatio * 100)}% adjusted`,
+  );
 }
 
 export function calculateAudioComplexityScore(timeline: Timeline): ComplexityDimensionScore {
@@ -116,7 +137,12 @@ export function calculateKeyframeDensityScore(timeline: Timeline): ComplexityDim
   }
   const keyframeCount = clips.reduce((sum, clip) => sum + countClipKeyframes(clip), 0);
   const keyframesPerClip = keyframeCount / clips.length;
-  return makeDimensionScore('keyframeDensity', keyframesPerClip, Math.min(100, keyframesPerClip * 20), `${round(keyframesPerClip)} keyframes/clip`);
+  return makeDimensionScore(
+    'keyframeDensity',
+    keyframesPerClip,
+    Math.min(100, keyframesPerClip * 20),
+    `${round(keyframesPerClip)} keyframes/clip`,
+  );
 }
 
 export function calculateComplexityScore(project: Pick<Project, 'timeline'>): ComplexityScoreResult {
@@ -125,15 +151,15 @@ export function calculateComplexityScore(project: Pick<Project, 'timeline'>): Co
     effectComplexity: calculateEffectComplexityScore(project.timeline),
     colorDepth: calculateColorDepthScore(project.timeline),
     audioComplexity: calculateAudioComplexityScore(project.timeline),
-    keyframeDensity: calculateKeyframeDensityScore(project.timeline)
+    keyframeDensity: calculateKeyframeDensityScore(project.timeline),
   } satisfies Record<ComplexityDimensionId, ComplexityDimensionScore>;
   const totalScore = round(
-    Object.values(dimensions).reduce((sum, dimension) => sum + dimension.score * dimension.weight, 0)
+    Object.values(dimensions).reduce((sum, dimension) => sum + dimension.score * dimension.weight, 0),
   );
   return {
     totalScore,
     level: getComplexityLevel(totalScore),
-    dimensions
+    dimensions,
   };
 }
 
@@ -151,7 +177,10 @@ export function getComplexityLevel(score: number): ComplexityLevel {
   return 'beginner';
 }
 
-export function createComplexityReport(project: Pick<Project, 'id' | 'name' | 'timeline'>, generatedAt = new Date().toISOString()): ComplexityReport {
+export function createComplexityReport(
+  project: Pick<Project, 'id' | 'name' | 'timeline'>,
+  generatedAt = new Date().toISOString(),
+): ComplexityReport {
   const result = calculateComplexityScore(project);
   return {
     projectId: project.id,
@@ -160,7 +189,7 @@ export function createComplexityReport(project: Pick<Project, 'id' | 'name' | 't
     totalScore: result.totalScore,
     level: result.level,
     dimensions: Object.values(result.dimensions),
-    references: REFERENCE_COMPLEXITY_PROJECTS
+    references: REFERENCE_COMPLEXITY_PROJECTS,
   };
 }
 
@@ -168,13 +197,18 @@ function clipsPerMinuteToScore(clipsPerMinute: number): number {
   return Math.min(100, clipsPerMinute * 5);
 }
 
-function makeDimensionScore(id: ComplexityDimensionId, rawValue: number, score: number, detail: string): ComplexityDimensionScore {
+function makeDimensionScore(
+  id: ComplexityDimensionId,
+  rawValue: number,
+  score: number,
+  detail: string,
+): ComplexityDimensionScore {
   return {
     id,
     score: round(Math.min(100, Math.max(0, Number.isFinite(score) ? score : 0))),
     weight: COMPLEXITY_WEIGHTS[id],
     rawValue: round(Number.isFinite(rawValue) ? rawValue : 0),
-    detail
+    detail,
   };
 }
 
@@ -183,7 +217,9 @@ function getTimelineClips(timeline: Timeline): Clip[] {
 }
 
 function isVisualClip(clip: Clip): boolean {
-  return clip.type === 'video' || clip.type === 'image' || clip.type === 'adjustment' || clip.type === 'nested-sequence';
+  return (
+    clip.type === 'video' || clip.type === 'image' || clip.type === 'adjustment' || clip.type === 'nested-sequence'
+  );
 }
 
 function countTrackAudioProcessingNodes(track: Track): number {
@@ -230,5 +266,8 @@ function countClipAudioProcessingNodes(clip: Clip): number {
 }
 
 function countClipKeyframes(clip: Clip): number {
-  return Object.values(clip.keyframes ?? {}).reduce((sum, keyframes) => sum + (Array.isArray(keyframes) ? keyframes.length : 0), 0);
+  return Object.values(clip.keyframes ?? {}).reduce(
+    (sum, keyframes) => sum + (Array.isArray(keyframes) ? keyframes.length : 0),
+    0,
+  );
 }

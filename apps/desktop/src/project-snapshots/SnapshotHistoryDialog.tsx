@@ -7,7 +7,7 @@ import {
   formatSnapshotSize,
   listProjectSnapshots,
   readProjectSnapshot,
-  type ProjectSnapshotEntry
+  type ProjectSnapshotEntry,
 } from '../lib/projectSnapshots';
 import { showToast } from '../lib/toast';
 
@@ -59,7 +59,11 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
       showToast({ kind: 'success', title: t.restored, message: entry.name });
       onClose();
     } catch (error) {
-      showToast({ kind: 'error', title: t.restoreFailed, message: error instanceof Error ? error.message : t.restoreFailed });
+      showToast({
+        kind: 'error',
+        title: t.restoreFailed,
+        message: error instanceof Error ? error.message : t.restoreFailed,
+      });
     }
   };
 
@@ -69,12 +73,19 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
       showToast({ kind: 'success', title: t.deleted, message: entry.name });
       await refresh();
     } catch (error) {
-      showToast({ kind: 'error', title: t.deleteFailed, message: error instanceof Error ? error.message : t.deleteFailed });
+      showToast({
+        kind: 'error',
+        title: t.deleteFailed,
+        message: error instanceof Error ? error.message : t.deleteFailed,
+      });
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="snapshot-history-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="snapshot-history-dialog"
+    >
       <div className="flex max-h-[86vh] w-full max-w-4xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -84,10 +95,19 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-white" type="button" onClick={() => void refresh()}>
+            <button
+              className="rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-white"
+              type="button"
+              onClick={() => void refresh()}
+            >
               {t.refresh}
             </button>
-            <button className="rounded-md p-2 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+            <button
+              className="rounded-md p-2 text-slate-500 hover:bg-panel"
+              type="button"
+              aria-label={zhCN.common.close}
+              onClick={onClose}
+            >
               <X size={18} />
             </button>
           </div>
@@ -107,7 +127,11 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
                   <div />
                 </div>
                 {snapshots.map((entry) => (
-                  <div key={entry.path} className="grid grid-cols-[minmax(160px,1fr)_190px_90px_160px] items-center gap-2 border-b border-line px-4 py-3 text-sm" data-testid="snapshot-row">
+                  <div
+                    key={entry.path}
+                    className="grid grid-cols-[minmax(160px,1fr)_190px_90px_160px] items-center gap-2 border-b border-line px-4 py-3 text-sm"
+                    data-testid="snapshot-row"
+                  >
                     <div className="min-w-0">
                       <div className="truncate font-medium text-ink" title={entry.name}>
                         {entry.name}
@@ -119,13 +143,25 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
                     <div className="text-xs text-slate-600">{formatSnapshotTime(entry.createdAt)}</div>
                     <div className="text-xs tabular-nums text-slate-600">{formatSnapshotSize(entry.size)}</div>
                     <div className="flex justify-end gap-1">
-                      <IconButton label={t.preview} testId="snapshot-preview-button" onClick={() => void previewSnapshot(entry)}>
+                      <IconButton
+                        label={t.preview}
+                        testId="snapshot-preview-button"
+                        onClick={() => void previewSnapshot(entry)}
+                      >
                         <Eye size={14} />
                       </IconButton>
-                      <IconButton label={t.restore} testId="snapshot-restore-button" onClick={() => void restoreSnapshot(entry)}>
+                      <IconButton
+                        label={t.restore}
+                        testId="snapshot-restore-button"
+                        onClick={() => void restoreSnapshot(entry)}
+                      >
                         <RotateCcw size={14} />
                       </IconButton>
-                      <IconButton label={t.delete} testId="snapshot-delete-button" onClick={() => void deleteSnapshot(entry)}>
+                      <IconButton
+                        label={t.delete}
+                        testId="snapshot-delete-button"
+                        onClick={() => void deleteSnapshot(entry)}
+                      >
                         <Trash2 size={14} />
                       </IconButton>
                     </div>
@@ -146,7 +182,7 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
                     preview.project.name,
                     preview.project.timeline.tracks.length,
                     preview.project.media.length,
-                    formatDuration(getTimelineDuration(preview.project.timeline))
+                    formatDuration(getTimelineDuration(preview.project.timeline)),
                   )}
                 </div>
                 <div className="space-y-1 text-xs text-slate-500">
@@ -167,9 +203,26 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
   );
 }
 
-function IconButton({ label, testId, children, onClick }: { label: string; testId: string; children: React.ReactNode; onClick(): void }) {
+function IconButton({
+  label,
+  testId,
+  children,
+  onClick,
+}: {
+  label: string;
+  testId: string;
+  children: React.ReactNode;
+  onClick(): void;
+}) {
   return (
-    <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel" type="button" title={label} aria-label={label} data-testid={testId} onClick={onClick}>
+    <button
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+      type="button"
+      title={label}
+      aria-label={label}
+      data-testid={testId}
+      onClick={onClick}
+    >
       {children}
     </button>
   );

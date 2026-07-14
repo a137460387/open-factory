@@ -11,8 +11,8 @@ describe('complexity radar geometry', () => {
           score: (index + 1) * 20,
           weight: 0.2,
           rawValue: 0,
-          detail: ''
-        }) as ComplexityDimensionScore
+          detail: '',
+        }) as ComplexityDimensionScore,
     );
 
     const points = calculateComplexityRadarPoints(dimensions, 200, 200, 20);

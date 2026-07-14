@@ -1,4 +1,9 @@
-import { fileNameFromPath, planBatchRelinkByFileName, scoreRelinkCandidate, type MediaAsset } from '@open-factory/editor-core';
+import {
+  fileNameFromPath,
+  planBatchRelinkByFileName,
+  scoreRelinkCandidate,
+  type MediaAsset,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { inferAssetType, probeMediaPath, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS } from '../lib/media';
 import { openDirectoryDialog, openFileDialog, scanDirectory } from '../lib/tauri-bridge';
@@ -31,14 +36,18 @@ export async function relinkMissingMediaInDirectory(media: MediaAsset[]): Promis
     return { media, relinkedCount: 0, warnings: [] };
   }
   const files = (await scanDirectory(directory, 3)).filter((path) => inferAssetType(path));
-  const plan = planBatchRelinkByFileName(media, files.map((path) => ({ path })), {
-    caseInsensitive: isWindowsPath(directory)
-  });
+  const plan = planBatchRelinkByFileName(
+    media,
+    files.map((path) => ({ path })),
+    {
+      caseInsensitive: isWindowsPath(directory),
+    },
+  );
   const replacements = new Map<string, MediaAsset>();
   const warnings = plan.warnings.map((warning) =>
     warning.reason === 'duplicate-candidates'
       ? `${warning.fileName}: skipped because ${warning.candidatePaths.length} files share that name.`
-      : `${warning.fileName}: no matching file found.`
+      : `${warning.fileName}: no matching file found.`,
   );
 
   for (const replacement of plan.replacements) {
@@ -57,7 +66,7 @@ export async function relinkMissingMediaInDirectory(media: MediaAsset[]): Promis
   return {
     media: media.map((asset) => replacements.get(asset.id) ?? asset),
     relinkedCount: replacements.size,
-    warnings
+    warnings,
   };
 }
 
@@ -66,7 +75,7 @@ function mergeRelinkedAsset(original: MediaAsset, probed: MediaAsset): MediaAsse
     ...probed,
     id: original.id,
     missing: false,
-    originalAbsolutePath: original.originalAbsolutePath ?? original.path
+    originalAbsolutePath: original.originalAbsolutePath ?? original.path,
   };
 }
 

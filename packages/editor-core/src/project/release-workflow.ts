@@ -86,7 +86,7 @@ export const DEFAULT_RELEASE_CHECKLIST_OPTIONS: ReleaseChecklistOptions = {
   qualityGate: true,
   mediaRelink: true,
   subtitleProof: true,
-  exportPreset: true
+  exportPreset: true,
 };
 
 export function normalizeProjectReleaseVersion(value: unknown, fallback = DEFAULT_PROJECT_RELEASE_VERSION): string {
@@ -109,19 +109,27 @@ export function buildSemver(major: unknown, minor: unknown, patch: unknown): str
   return `${normalizeSemverPart(major)}.${normalizeSemverPart(minor)}.${normalizeSemverPart(patch)}`;
 }
 
-export function runReleaseChecklist(project: Project, options: Partial<ReleaseChecklistOptions> = {}, context: ReleaseChecklistContext = {}): ReleaseChecklistResult {
+export function runReleaseChecklist(
+  project: Project,
+  options: Partial<ReleaseChecklistOptions> = {},
+  context: ReleaseChecklistContext = {},
+): ReleaseChecklistResult {
   const enabled = { ...DEFAULT_RELEASE_CHECKLIST_OPTIONS, ...options };
   const items: ReleaseChecklistItemResult[] = [
     evaluateQualityGate(enabled.qualityGate, context),
     evaluateMediaRelink(project, enabled.mediaRelink),
-    evaluateSubtitleProof(project, enabled.subtitleProof, context.subtitleMaxChars ?? DEFAULT_SUBTITLE_RELEASE_MAX_CHARS),
-    evaluateExportPreset(enabled.exportPreset, context)
+    evaluateSubtitleProof(
+      project,
+      enabled.subtitleProof,
+      context.subtitleMaxChars ?? DEFAULT_SUBTITLE_RELEASE_MAX_CHARS,
+    ),
+    evaluateExportPreset(enabled.exportPreset, context),
   ];
   const blockingCount = items.filter((item) => item.status === 'blocking').length;
   return {
     items,
     canRelease: blockingCount === 0,
-    blockingCount
+    blockingCount,
   };
 }
 
@@ -142,7 +150,7 @@ export function buildProjectReleaseRecord(input: BuildReleaseRecordInput): Proje
     changelog: normalizeOptionalString(input.changelog),
     snapshotPath: normalizeRequiredString(input.snapshotPath, 'Snapshot path is required'),
     exportPresetId: normalizeOptionalString(input.exportPresetId) || undefined,
-    exportPresetName: normalizeOptionalString(input.exportPresetName) || undefined
+    exportPresetName: normalizeOptionalString(input.exportPresetName) || undefined,
   };
 }
 
@@ -152,7 +160,10 @@ export function createReleaseRecordFileName(version: string, releasedAt = new Da
   return `release_${safeVersion}_${safeTimestamp}.json`;
 }
 
-export function buildReleaseComparisonRequest(base: ProjectReleaseRecord, target: ProjectReleaseRecord): ReleaseComparisonRequest {
+export function buildReleaseComparisonRequest(
+  base: ProjectReleaseRecord,
+  target: ProjectReleaseRecord,
+): ReleaseComparisonRequest {
   if (!base.snapshotPath || !target.snapshotPath) {
     throw new Error('Release comparison requires snapshot paths.');
   }
@@ -160,15 +171,20 @@ export function buildReleaseComparisonRequest(base: ProjectReleaseRecord, target
     baseVersion: base.version,
     targetVersion: target.version,
     baseSnapshotPath: base.snapshotPath,
-    targetSnapshotPath: target.snapshotPath
+    targetSnapshotPath: target.snapshotPath,
   };
 }
 
-export function diffReleaseSnapshots(baseRecord: ProjectReleaseRecord, targetRecord: ProjectReleaseRecord, baseProject: Project, targetProject: Project): ReleaseVersionDiff {
+export function diffReleaseSnapshots(
+  baseRecord: ProjectReleaseRecord,
+  targetRecord: ProjectReleaseRecord,
+  baseProject: Project,
+  targetProject: Project,
+): ReleaseVersionDiff {
   return {
     baseVersion: baseRecord.version,
     targetVersion: targetRecord.version,
-    diff: diffTimelineVersions(baseProject.timeline, targetProject.timeline)
+    diff: diffTimelineVersions(baseProject.timeline, targetProject.timeline),
   };
 }
 
@@ -183,13 +199,13 @@ function evaluateQualityGate(enabled: boolean, context: ReleaseChecklistContext)
         id: 'qualityGate',
         status: 'blocking',
         message: 'Quality report has blocking issues',
-        details: [`Blocking issues: ${Math.max(1, blockingCount)}`]
+        details: [`Blocking issues: ${Math.max(1, blockingCount)}`],
       }
     : {
         id: 'qualityGate',
         status: 'pass',
         message: 'Quality report has no blocking issues',
-        details: context.qualityAssurance?.status ? [`Quality status: ${context.qualityAssurance.status}`] : []
+        details: context.qualityAssurance?.status ? [`Quality status: ${context.qualityAssurance.status}`] : [],
       };
 }
 
@@ -220,13 +236,13 @@ function evaluateMediaRelink(project: Project, enabled: boolean): ReleaseCheckli
         id: 'mediaRelink',
         status: 'blocking',
         message: 'Some media still needs relink',
-        details: uniqueMissing
+        details: uniqueMissing,
       }
     : {
         id: 'mediaRelink',
         status: 'pass',
         message: 'All media is linked',
-        details: []
+        details: [],
       };
 }
 
@@ -256,13 +272,13 @@ function evaluateSubtitleProof(project: Project, enabled: boolean, maxChars: num
         id: 'subtitleProof',
         status: 'blocking',
         message: 'Subtitle proof check found blocking issues',
-        details
+        details,
       }
     : {
         id: 'subtitleProof',
         status: 'pass',
         message: 'Subtitle proof check passed',
-        details: []
+        details: [],
       };
 }
 
@@ -277,13 +293,13 @@ function evaluateExportPreset(enabled: boolean, context: ReleaseChecklistContext
         id: 'exportPreset',
         status: 'pass',
         message: 'Export preset selected',
-        details: [presetName || presetId]
+        details: [presetName || presetId],
       }
     : {
         id: 'exportPreset',
         status: 'blocking',
         message: 'Export preset is required',
-        details: []
+        details: [],
       };
 }
 

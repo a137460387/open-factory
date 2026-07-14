@@ -24,7 +24,11 @@ export function getMediaVersionLabel(index: number): string {
   return `v${Math.max(1, Math.floor(index) + 1)}`;
 }
 
-export function createMediaVersionFromAsset(asset: MediaAsset, index = 1, createdAt = new Date().toISOString()): MediaVersion {
+export function createMediaVersionFromAsset(
+  asset: MediaAsset,
+  index = 1,
+  createdAt = new Date().toISOString(),
+): MediaVersion {
   return {
     id: createMediaVersionId(asset.id, index),
     label: getMediaVersionLabel(index),
@@ -35,7 +39,7 @@ export function createMediaVersionFromAsset(asset: MediaAsset, index = 1, create
     duration: finiteNumber(asset.duration),
     width: finiteNumber(asset.width),
     height: finiteNumber(asset.height),
-    size: finiteNumber(asset.size)
+    size: finiteNumber(asset.size),
   };
 }
 
@@ -63,7 +67,7 @@ export function normalizeMediaVersion(value: unknown): MediaVersion | undefined 
     duration: finiteNumber(record.duration),
     width: finiteNumber(record.width),
     height: finiteNumber(record.height),
-    size: finiteNumber(record.size)
+    size: finiteNumber(record.size),
   };
 }
 
@@ -85,13 +89,17 @@ export function normalizeMediaVersions(value: unknown): MediaVersion[] | undefin
     seen.add(key);
     versions.push({
       ...version,
-      label: version.label || getMediaVersionLabel(versions.length + 1)
+      label: version.label || getMediaVersionLabel(versions.length + 1),
     });
   }
   return versions.length > 0 ? versions : undefined;
 }
 
-export function listMediaVersionEntries(asset: MediaAsset, metadata?: MediaMetadata, media: MediaAsset[] = []): MediaVersionEntry[] {
+export function listMediaVersionEntries(
+  asset: MediaAsset,
+  metadata?: MediaMetadata,
+  media: MediaAsset[] = [],
+): MediaVersionEntry[] {
   const versions = normalizeMediaVersions(metadata?.versions) ?? [];
   const entries: MediaVersionEntry[] = [
     {
@@ -104,8 +112,8 @@ export function listMediaVersionEntries(asset: MediaAsset, metadata?: MediaMetad
       width: finiteNumber(asset.width),
       height: finiteNumber(asset.height),
       size: finiteNumber(asset.size),
-      isOriginal: true
-    }
+      isOriginal: true,
+    },
   ];
   for (const [index, version] of versions.entries()) {
     const referenced = media.find((item) => item.id === version.assetId);
@@ -119,7 +127,7 @@ export function listMediaVersionEntries(asset: MediaAsset, metadata?: MediaMetad
       width: finiteNumber(referenced?.width) ?? version.width,
       height: finiteNumber(referenced?.height) ?? version.height,
       size: finiteNumber(referenced?.size) ?? version.size,
-      isOriginal: false
+      isOriginal: false,
     });
   }
   return entries;
@@ -131,15 +139,17 @@ export function addMediaVersion(metadata: MediaMetadata | undefined, asset: Medi
   const versions = existing ? current : [...current, createMediaVersionFromAsset(asset, current.length + 1)];
   return {
     ...(metadata ?? {}),
-    versions
+    versions,
   };
 }
 
 export function removeMediaVersion(metadata: MediaMetadata | undefined, versionId: string): MediaMetadata | undefined {
-  const versions = (normalizeMediaVersions(metadata?.versions) ?? []).filter((version) => version.id !== versionId && version.assetId !== versionId);
+  const versions = (normalizeMediaVersions(metadata?.versions) ?? []).filter(
+    (version) => version.id !== versionId && version.assetId !== versionId,
+  );
   const next: MediaMetadata = {
     ...(metadata ?? {}),
-    versions: versions.length > 0 ? versions : undefined
+    versions: versions.length > 0 ? versions : undefined,
   };
   if (!next.versions) {
     delete next.versions;
@@ -147,7 +157,10 @@ export function removeMediaVersion(metadata: MediaMetadata | undefined, versionI
   return Object.keys(next).length > 0 ? next : undefined;
 }
 
-export function findMediaVersionOwner(project: Pick<Project, 'media' | 'mediaMetadata'>, mediaId: string): MediaAsset | undefined {
+export function findMediaVersionOwner(
+  project: Pick<Project, 'media' | 'mediaMetadata'>,
+  mediaId: string,
+): MediaAsset | undefined {
   const original = project.media.find((asset) => asset.id === mediaId);
   if (original && project.mediaMetadata[original.id]?.versions) {
     return original;
@@ -161,7 +174,10 @@ export function findMediaVersionOwner(project: Pick<Project, 'media' | 'mediaMet
   return original;
 }
 
-export function findMediaVersionAsset(project: Pick<Project, 'media'>, entry: Pick<MediaVersionEntry, 'assetId'>): MediaAsset | undefined {
+export function findMediaVersionAsset(
+  project: Pick<Project, 'media'>,
+  entry: Pick<MediaVersionEntry, 'assetId'>,
+): MediaAsset | undefined {
   return project.media.find((asset) => asset.id === entry.assetId);
 }
 
@@ -170,7 +186,7 @@ export function buildMediaVersionCompareRequest(
   assetId: string,
   leftVersionId?: string,
   rightVersionId?: string,
-  time = 0
+  time = 0,
 ): MediaVersionCompareRequest | undefined {
   const asset = project.media.find((item) => item.id === assetId);
   if (!asset) {
@@ -186,7 +202,7 @@ export function buildMediaVersionCompareRequest(
     assetId,
     time: Math.max(0, Number.isFinite(time) ? time : 0),
     left,
-    right
+    right,
   };
 }
 

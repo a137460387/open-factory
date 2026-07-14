@@ -29,7 +29,7 @@ export function createInitialSmartRoughCutState(): SmartRoughCutState {
       whisper: { status: 'idle' },
       dialogue: { status: 'idle' },
       broll: { status: 'idle' },
-      rhythm: { status: 'idle' }
+      rhythm: { status: 'idle' },
     },
     report: {
       sceneSplits: 0,
@@ -37,8 +37,8 @@ export function createInitialSmartRoughCutState(): SmartRoughCutState {
       subtitleClips: 0,
       dialogueClips: 0,
       brollClips: 0,
-      rhythmClips: 0
-    }
+      rhythmClips: 0,
+    },
   };
 }
 
@@ -47,35 +47,39 @@ export function markSmartRoughCutStepRunning(state: SmartRoughCutState, step: Sm
     ...state,
     steps: {
       ...state.steps,
-      [step]: { status: 'running' }
-    }
+      [step]: { status: 'running' },
+    },
   };
 }
 
 export function markSmartRoughCutStepComplete(
   state: SmartRoughCutState,
   step: SmartRoughCutStep,
-  reportPatch: Partial<SmartRoughCutReport> = {}
+  reportPatch: Partial<SmartRoughCutReport> = {},
 ): SmartRoughCutState {
   return {
     steps: {
       ...state.steps,
-      [step]: { status: 'complete' }
+      [step]: { status: 'complete' },
     },
     report: {
       ...state.report,
-      ...reportPatch
-    }
+      ...reportPatch,
+    },
   };
 }
 
-export function markSmartRoughCutStepError(state: SmartRoughCutState, step: SmartRoughCutStep, error: string): SmartRoughCutState {
+export function markSmartRoughCutStepError(
+  state: SmartRoughCutState,
+  step: SmartRoughCutStep,
+  error: string,
+): SmartRoughCutState {
   return {
     ...state,
     steps: {
       ...state.steps,
-      [step]: { status: 'error', error }
-    }
+      [step]: { status: 'error', error },
+    },
   };
 }
 
@@ -83,17 +87,24 @@ export function createSmartRoughCutSelection(ids: string[], selected = true): Sm
   return Object.fromEntries(ids.map((id) => [id, selected]));
 }
 
-export function toggleSmartRoughCutSelection(selection: SmartRoughCutSelection, id: string, selected?: boolean): SmartRoughCutSelection {
+export function toggleSmartRoughCutSelection(
+  selection: SmartRoughCutSelection,
+  id: string,
+  selected?: boolean,
+): SmartRoughCutSelection {
   if (!(id in selection)) {
     return selection;
   }
   return {
     ...selection,
-    [id]: selected ?? !selection[id]
+    [id]: selected ?? !selection[id],
   };
 }
 
-export function setAllSmartRoughCutSelection(selection: SmartRoughCutSelection, selected: boolean): SmartRoughCutSelection {
+export function setAllSmartRoughCutSelection(
+  selection: SmartRoughCutSelection,
+  selected: boolean,
+): SmartRoughCutSelection {
   return Object.fromEntries(Object.keys(selection).map((id) => [id, selected]));
 }
 

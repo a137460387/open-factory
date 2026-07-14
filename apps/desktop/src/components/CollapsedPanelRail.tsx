@@ -15,7 +15,11 @@ export function CollapsedPanelRail({
 }) {
   const Icon = side === 'left' ? ChevronRight : ChevronLeft;
   return (
-    <aside className="flex min-h-0 min-w-0 flex-col items-center gap-3 bg-white px-1.5 py-2" data-testid={`${side}-panel`} data-collapsed="true">
+    <aside
+      className="flex min-h-0 min-w-0 flex-col items-center gap-3 bg-white px-1.5 py-2"
+      data-testid={`${side}-panel`}
+      data-collapsed="true"
+    >
       <button
         className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-slate-600 hover:bg-white"
         type="button"

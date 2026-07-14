@@ -7,7 +7,7 @@ import {
   runProjectBackupAfterSave,
   runLocalBackup,
   sanitizeBackupStem,
-  selectExpiredLocalBackups
+  selectExpiredLocalBackups,
 } from './projectBackup';
 
 describe('project backup', () => {
@@ -15,7 +15,7 @@ describe('project backup', () => {
 
   it('creates local backup filenames with a safe project stem and UTC timestamp', () => {
     expect(createLocalBackupPath('C:/Backups/', 'Demo: Cut 01', 'C:/Projects/demo.cutproj.json', backupNow)).toBe(
-      'C:/Backups/Demo-Cut-01-20260612-140506-789.cutproj.json'
+      'C:/Backups/Demo-Cut-01-20260612-140506-789.cutproj.json',
     );
     expect(sanitizeBackupStem('***')).toBe('project');
   });
@@ -24,8 +24,8 @@ describe('project backup', () => {
     const expired = selectExpiredLocalBackups(
       Array.from({ length: 12 }, (_, index) => ({
         path: `C:/Backups/Demo-20260612-120${String(index).padStart(2, '0')}-000.cutproj.json`,
-        mtimeMs: index
-      }))
+        mtimeMs: index,
+      })),
     );
 
     expect(expired.map((entry) => entry.mtimeMs)).toEqual([1, 0]);
@@ -39,7 +39,7 @@ describe('project backup', () => {
     const scanned = [
       expectedPath,
       ...Array.from({ length: 10 }, (_, index) => `C:/Backups/Demo-old-${index}.cutproj.json`),
-      'C:/Backups/Other-old.cutproj.json'
+      'C:/Backups/Other-old.cutproj.json',
     ];
 
     const status = await runLocalBackup(
@@ -52,12 +52,16 @@ describe('project backup', () => {
           writes.push({ path, contents });
         },
         scanDirectory: async () => scanned,
-        getFileStat: async (path) => ({ path, size: 1, mtimeMs: path === expectedPath ? 100 : Number(path.match(/old-(\d+)/)?.[1] ?? 0) }),
+        getFileStat: async (path) => ({
+          path,
+          size: 1,
+          mtimeMs: path === expectedPath ? 100 : Number(path.match(/old-(\d+)/)?.[1] ?? 0),
+        }),
         removeFile: async (path) => {
           removed.push(path);
-        }
+        },
       },
-      () => backupNow
+      () => backupNow,
     );
 
     expect(status).toEqual({ ok: true, path: expectedPath });
@@ -77,7 +81,7 @@ describe('project backup', () => {
       scanDirectory: async () => [],
       getFileStat: async (path) => ({ path, size: 1, mtimeMs: 1 }),
       removeFile: async () => undefined,
-      now: () => backupNow
+      now: () => backupNow,
     });
 
     expect(status.lastBackupAt).toBe(backupNow.toISOString());
@@ -87,19 +91,19 @@ describe('project backup', () => {
   it('builds WebDAV PUT request args without reading password from settings.json', async () => {
     const settings: BackupSettings = {
       local: { enabled: false },
-      webdav: { enabled: true, url: 'https://dav.example.test/projects/demo.cutproj.json', username: 'editor' }
+      webdav: { enabled: true, url: 'https://dav.example.test/projects/demo.cutproj.json', username: 'editor' },
     };
 
     await expect(
       buildWebdavProjectBackupRequest('C:/Projects/demo.cutproj.json', '{"schemaVersion":2}', settings, {
-        readWebdavPassword: async () => 'secret'
-      })
+        readWebdavPassword: async () => 'secret',
+      }),
     ).resolves.toEqual({
       url: 'https://dav.example.test/projects/demo.cutproj.json',
       username: 'editor',
       password: 'secret',
       projectPath: 'C:/Projects/demo.cutproj.json',
-      contents: '{"schemaVersion":2}'
+      contents: '{"schemaVersion":2}',
     });
   });
 
@@ -109,7 +113,7 @@ describe('project backup', () => {
     const status = await runProjectBackupAfterSave(createProject('Demo'), 'C:/Projects/demo.cutproj.json', '{}', {
       readSettings: async () => ({
         local: { enabled: false },
-        webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' }
+        webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
       }),
       saveSettings: async (settings) => {
         savedSettings.push(settings);
@@ -119,7 +123,7 @@ describe('project backup', () => {
       putWebdavProject: async () => {
         throw new Error('PUT 403');
       },
-      warn
+      warn,
     });
 
     expect(status.webdav).toEqual({ ok: false, warning: 'PUT 403' });

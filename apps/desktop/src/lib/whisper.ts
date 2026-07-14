@@ -1,4 +1,11 @@
-import { getClipSourceVisibleDuration, getClipSpeed, type Clip, type MediaAsset, type Timeline, type Track } from '@open-factory/editor-core';
+import {
+  getClipSourceVisibleDuration,
+  getClipSpeed,
+  type Clip,
+  type MediaAsset,
+  type Timeline,
+  type Track,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { markLocalAiModelUsed } from '../settings/appSettings';
 import { buildSubtitleTrackFromSrt } from './subtitles';
@@ -29,7 +36,10 @@ export async function pickWhisperModelPath(): Promise<string | undefined> {
   return path;
 }
 
-export async function getWhisperAvailability(settings: WhisperSettings, exists: (path: string) => Promise<boolean> = fsExists): Promise<WhisperAvailability> {
+export async function getWhisperAvailability(
+  settings: WhisperSettings,
+  exists: (path: string) => Promise<boolean> = fsExists,
+): Promise<WhisperAvailability> {
   try {
     await assertWhisperSettingsReady(settings, exists);
     return { ready: true };
@@ -38,7 +48,10 @@ export async function getWhisperAvailability(settings: WhisperSettings, exists: 
   }
 }
 
-export async function assertWhisperSettingsReady(settings: WhisperSettings, exists: (path: string) => Promise<boolean> = fsExists): Promise<void> {
+export async function assertWhisperSettingsReady(
+  settings: WhisperSettings,
+  exists: (path: string) => Promise<boolean> = fsExists,
+): Promise<void> {
   const executablePath = settings.executablePath.trim();
   const modelPath = settings.modelPath.trim();
   if (!executablePath || !modelPath) {
@@ -53,7 +66,11 @@ export async function assertWhisperSettingsReady(settings: WhisperSettings, exis
   }
 }
 
-export function canGenerateSubtitlesForClip(clip: Clip | undefined, asset: MediaAsset | undefined, whisperReady: boolean): boolean {
+export function canGenerateSubtitlesForClip(
+  clip: Clip | undefined,
+  asset: MediaAsset | undefined,
+  whisperReady: boolean,
+): boolean {
   return Boolean(whisperReady && clip && asset && (clip.type === 'audio' || clip.type === 'video') && !asset.missing);
 }
 
@@ -62,7 +79,7 @@ export async function buildWhisperSubtitleTrackForClip(
   asset: MediaAsset,
   timeline: Timeline,
   settings: WhisperSettings,
-  dependencies: WhisperDependencies = {}
+  dependencies: WhisperDependencies = {},
 ): Promise<Track> {
   await assertWhisperSettingsReady(settings, dependencies.exists ?? fsExists);
   await markLocalAiModelUsed('whisper', settings.modelPath).catch((error) => {
@@ -73,12 +90,12 @@ export async function buildWhisperSubtitleTrackForClip(
     executablePath: settings.executablePath.trim(),
     modelPath: settings.modelPath.trim(),
     audioPath: asset.path,
-    clipId: clip.id
+    clipId: clip.id,
   });
   return buildSubtitleTrackFromSrt(result.srtPath, result.contents, timeline, {
     timelineStart: clip.start,
     sourceStart: clip.trimStart,
     sourceDuration: getClipSourceVisibleDuration(clip),
-    speed: getClipSpeed(clip)
+    speed: getClipSpeed(clip),
   });
 }

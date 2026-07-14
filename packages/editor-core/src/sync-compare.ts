@@ -46,15 +46,21 @@ export function findSyncCompareClipRefs(timeline: Timeline, selectedClipIds: str
         clip,
         track,
         trackIndex,
-        selectedIndex: selectedOrder.get(clip.id)
-      }))
+        selectedIndex: selectedOrder.get(clip.id),
+      })),
     )
-    .filter((item): item is SyncCompareClipRef => item.selectedIndex !== undefined && isSyncCompareVisualClip(item.clip))
+    .filter(
+      (item): item is SyncCompareClipRef => item.selectedIndex !== undefined && isSyncCompareVisualClip(item.clip),
+    )
     .sort((left, right) => left.selectedIndex - right.selectedIndex);
   return refs.length === 2 ? refs : [];
 }
 
-export function calculateSyncCompareRightOffsetSeconds(left: Clip, right: Clip, options: SyncCompareOffsetOptions): number {
+export function calculateSyncCompareRightOffsetSeconds(
+  left: Clip,
+  right: Clip,
+  options: SyncCompareOffsetOptions,
+): number {
   const startAlignedOffset = right.start - left.start;
   if (options.mode === 'in') {
     return round(startAlignedOffset + left.trimStart - right.trimStart);
@@ -71,10 +77,12 @@ export function resolveSyncComparePlaybackState(input: SyncComparePlaybackInput)
   const liveRightTime = clampClipDisplayTime(input.playheadTime - input.right.start + offsetSeconds, input.right);
   return {
     leftTime: input.leftPaused ? clampClipDisplayTime(input.heldLeftTime ?? liveLeftTime, input.left) : liveLeftTime,
-    rightTime: input.rightPaused ? clampClipDisplayTime(input.heldRightTime ?? liveRightTime, input.right) : liveRightTime,
+    rightTime: input.rightPaused
+      ? clampClipDisplayTime(input.heldRightTime ?? liveRightTime, input.right)
+      : liveRightTime,
     leftPlaying: (input.playing ?? true) && !input.leftPaused,
     rightPlaying: (input.playing ?? true) && !input.rightPaused,
-    offsetSeconds
+    offsetSeconds,
   };
 }
 

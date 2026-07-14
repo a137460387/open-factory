@@ -250,9 +250,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       result.current.createMediaFolder();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'warning' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' }));
     });
   });
 
@@ -264,10 +262,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.deleteMediaFolder('folder-to-delete');
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(DeleteMediaFolderCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'folder-to-delete',
-      );
+      expect(DeleteMediaFolderCommand).toHaveBeenCalledWith('mock-project-accessor', 'folder-to-delete');
     });
   });
 
@@ -279,11 +274,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.renameMediaFolder('folder-1', '新名称');
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(RenameMediaFolderCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'folder-1',
-        '新名称',
-      );
+      expect(RenameMediaFolderCommand).toHaveBeenCalledWith('mock-project-accessor', 'folder-1', '新名称');
     });
   });
 
@@ -291,19 +282,19 @@ describe('useEditorShellMediaCallbacks', () => {
 
   describe('relinkMedia', () => {
     it('重链接成功时更新媒体并显示成功 toast', async () => {
-      const relinkedAsset = createMockMediaAsset({ id: 'asset-1', path: '/new/path/test-video.mp4', name: 'test-video.mp4' });
+      const relinkedAsset = createMockMediaAsset({
+        id: 'asset-1',
+        path: '/new/path/test-video.mp4',
+        name: 'test-video.mp4',
+      });
       vi.mocked(relinkSingleMedia).mockResolvedValue(relinkedAsset);
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.relinkMedia('asset-1');
 
-      expect(relinkSingleMedia).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'asset-1' }),
-      );
+      expect(relinkSingleMedia).toHaveBeenCalledWith(expect.objectContaining({ id: 'asset-1' }));
       expect(mockSetMedia).toHaveBeenCalled();
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('资产不存在时不执行任何操作', async () => {
@@ -329,9 +320,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.relinkMedia('asset-1');
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -349,19 +338,13 @@ describe('useEditorShellMediaCallbacks', () => {
 
       expect(BatchRenameMediaCommand).toHaveBeenCalledWith(
         'mock-project-accessor',
-        expect.arrayContaining([
-          expect.objectContaining({ assetId: 'asset-1', name: '重命名后的文件' }),
-        ]),
+        expect.arrayContaining([expect.objectContaining({ assetId: 'asset-1', name: '重命名后的文件' })]),
       );
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('无变更项时不执行命令', async () => {
-      const preview = [
-        { assetId: 'asset-1', changed: false, nextName: '原名' },
-      ];
+      const preview = [{ assetId: 'asset-1', changed: false, nextName: '原名' }];
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.batchRenameMedia(['asset-1'], preview as any, false);
@@ -371,9 +354,7 @@ describe('useEditorShellMediaCallbacks', () => {
 
     it('renameFiles=true 时会移动文件', async () => {
       vi.mocked(bridgeMoveFile).mockResolvedValue(undefined as any);
-      const preview = [
-        { assetId: 'asset-1', changed: true, nextName: '新名称' },
-      ];
+      const preview = [{ assetId: 'asset-1', changed: true, nextName: '新名称' }];
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.batchRenameMedia(['asset-1'], preview as any, true);
@@ -384,16 +365,12 @@ describe('useEditorShellMediaCallbacks', () => {
     it('文件移动失败时回滚命令并显示错误', async () => {
       mockCommandExecute.mockImplementation(() => {}); // 第一次调用成功
       vi.mocked(bridgeMoveFile).mockRejectedValue(new Error('权限不足'));
-      const preview = [
-        { assetId: 'asset-1', changed: true, nextName: '新名称' },
-      ];
+      const preview = [{ assetId: 'asset-1', changed: true, nextName: '新名称' }];
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.batchRenameMedia(['asset-1'], preview as any, true);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -407,9 +384,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.handleAddSubclip(subclip as any);
 
       expect(AddSubclipCommand).toHaveBeenCalledWith('mock-project-accessor', subclip);
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
   });
 
@@ -421,9 +396,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.handleDeleteSubclip('sub-1');
 
       expect(DeleteSubclipCommand).toHaveBeenCalledWith('mock-project-accessor', 'sub-1');
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'info' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'info' }));
     });
   });
 
@@ -440,9 +413,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.mergeDuplicateMediaGroups(selections as any);
 
       expect(MergeMediaCommand).toHaveBeenCalledTimes(2);
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('命令执行失败时显示错误 toast', () => {
@@ -451,13 +422,9 @@ describe('useEditorShellMediaCallbacks', () => {
       });
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
-      result.current.mergeDuplicateMediaGroups([
-        { keepAssetId: 'asset-1', assetIds: ['asset-2'] },
-      ] as any);
+      result.current.mergeDuplicateMediaGroups([{ keepAssetId: 'asset-1', assetIds: ['asset-2'] }] as any);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -473,9 +440,7 @@ describe('useEditorShellMediaCallbacks', () => {
       await result.current.importMedia();
 
       expect(mockAddMedia).toHaveBeenCalled();
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
       expect(defaultDeps.runAutomationForMedia).toHaveBeenCalledWith('on-import', media);
     });
 
@@ -496,9 +461,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.importMedia();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'info' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'info' }));
     });
 
     it('导入失败时显示错误 toast', async () => {
@@ -507,9 +470,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.importMedia();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -542,22 +503,16 @@ describe('useEditorShellMediaCallbacks', () => {
         expect.arrayContaining([expect.objectContaining({ id: 'asset-1' })]),
       );
       expect(mockSetMedia).toHaveBeenCalled();
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('批量重链接失败时显示错误 toast', async () => {
-      vi.mocked(relinkMissingMediaInDirectory).mockRejectedValue(
-        new Error('扫描目录失败'),
-      );
+      vi.mocked(relinkMissingMediaInDirectory).mockRejectedValue(new Error('扫描目录失败'));
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.relinkAllMissing();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -580,22 +535,16 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.scanDuplicateMedia();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'info' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'info' }));
     });
 
     it('扫描失败时显示错误 toast', async () => {
-      vi.mocked(scanDuplicateMediaGroups).mockRejectedValue(
-        new Error('指纹生成失败'),
-      );
+      vi.mocked(scanDuplicateMediaGroups).mockRejectedValue(new Error('指纹生成失败'));
 
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       await result.current.scanDuplicateMedia();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -607,11 +556,7 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.handleUpdateSubclip('sub-1', { name: '更新后的名称' });
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(UpdateSubclipCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'sub-1',
-        { name: '更新后的名称' },
-      );
+      expect(UpdateSubclipCommand).toHaveBeenCalledWith('mock-project-accessor', 'sub-1', { name: '更新后的名称' });
     });
   });
 
@@ -623,22 +568,14 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.setMediaFolderCollapsed('folder-1', true);
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(SetMediaFolderCollapsedCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'folder-1',
-        true,
-      );
+      expect(SetMediaFolderCollapsedCommand).toHaveBeenCalledWith('mock-project-accessor', 'folder-1', true);
     });
 
     it('执行 SetMediaFolderCollapsedCommand 展开文件夹', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       result.current.setMediaFolderCollapsed('folder-1', false);
 
-      expect(SetMediaFolderCollapsedCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'folder-1',
-        false,
-      );
+      expect(SetMediaFolderCollapsedCommand).toHaveBeenCalledWith('mock-project-accessor', 'folder-1', false);
     });
   });
 
@@ -661,11 +598,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       result.current.moveMediaToFolder(['asset-1'], null);
 
-      expect(MoveMediaToFolderCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        ['asset-1'],
-        null,
-      );
+      expect(MoveMediaToFolderCommand).toHaveBeenCalledWith('mock-project-accessor', ['asset-1'], null);
     });
   });
 
@@ -684,9 +617,7 @@ describe('useEditorShellMediaCallbacks', () => {
           expect.objectContaining({ assetId: 'asset-2', metadata: { title: '测试标题' } }),
         ]),
       );
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('空资产列表时不执行命令', () => {
@@ -705,13 +636,8 @@ describe('useEditorShellMediaCallbacks', () => {
       result.current.removeMediaOrganizerReferences(['asset-1', 'asset-2']);
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(RemoveMediaCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        ['asset-1', 'asset-2'],
-      );
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(RemoveMediaCommand).toHaveBeenCalledWith('mock-project-accessor', ['asset-1', 'asset-2']);
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('命令执行失败时显示错误 toast', () => {
@@ -722,9 +648,7 @@ describe('useEditorShellMediaCallbacks', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
       result.current.removeMediaOrganizerReferences(['asset-1']);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 

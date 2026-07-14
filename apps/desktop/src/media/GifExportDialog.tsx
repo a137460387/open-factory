@@ -10,7 +10,7 @@ import {
   estimateGifFileSizeBytes,
   formatGifFileSize,
   normalizeGifWorkflowSettings,
-  type GifWorkflowSettings
+  type GifWorkflowSettings,
 } from './gifWorkflow';
 
 interface GifExportDialogProps {
@@ -27,10 +27,13 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
       {
         ...DEFAULT_GIF_WORKFLOW_SETTINGS,
         scaleWidth: Math.min(480, Math.max(16, asset.width || DEFAULT_GIF_WORKFLOW_SETTINGS.scaleWidth)),
-        duration: Math.min(DEFAULT_GIF_WORKFLOW_SETTINGS.duration, asset.duration || DEFAULT_GIF_WORKFLOW_SETTINGS.duration)
+        duration: Math.min(
+          DEFAULT_GIF_WORKFLOW_SETTINGS.duration,
+          asset.duration || DEFAULT_GIF_WORKFLOW_SETTINGS.duration,
+        ),
       },
-      asset.duration
-    )
+      asset.duration,
+    ),
   );
   const [outputPath, setOutputPath] = useState(() => buildDefaultGifOutputPath(asset.path));
   const [previewPath, setPreviewPath] = useState<string>();
@@ -46,10 +49,10 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
           sourceHeight: asset.height,
           scaleWidth: settings.scaleWidth,
           frameRate: settings.frameRate,
-          duration: settings.duration
-        })
+          duration: settings.duration,
+        }),
       ),
-    [asset.height, asset.width, settings.duration, settings.frameRate, settings.scaleWidth]
+    [asset.height, asset.width, settings.duration, settings.frameRate, settings.scaleWidth],
   );
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
         frameRate: settings.frameRate,
         startTime: settings.startTime,
         duration: settings.duration,
-        dither: settings.dither
+        dither: settings.dither,
       })
         .then((result) => {
           if (previewRunRef.current === runId) {
@@ -102,19 +105,26 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
         startTime: nextSettings.startTime,
         duration: nextSettings.duration,
         loopCount: nextSettings.loopCount,
-        dither: nextSettings.dither
+        dither: nextSettings.dither,
       });
       setCompletedPath(result.outputPath);
       showToast({ kind: 'success', title: t.completedTitle, message: result.outputPath });
     } catch (error) {
-      showToast({ kind: 'error', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'error',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     } finally {
       setExporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="gif-export-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="gif-export-dialog"
+    >
       <div className="grid max-h-[88vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -126,18 +136,66 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
               {asset.name}
             </div>
           </div>
-          <button className="rounded-md p-2 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} data-testid="gif-export-close" onClick={onClose} disabled={exporting}>
+          <button
+            className="rounded-md p-2 text-slate-500 hover:bg-panel"
+            type="button"
+            aria-label={zhCN.common.close}
+            data-testid="gif-export-close"
+            onClick={onClose}
+            disabled={exporting}
+          >
             <X size={18} />
           </button>
         </div>
         <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_260px] gap-px bg-line">
           <div className="min-h-0 overflow-y-auto bg-white p-4">
             <div className="grid grid-cols-2 gap-3">
-              <NumberField label={t.frameRate} testId="gif-frame-rate-input" min={1} max={30} step={1} value={settings.frameRate} onChange={(value) => updateSetting('frameRate', value)} />
-              <NumberField label={t.scaleWidth} testId="gif-scale-input" min={16} max={4096} step={16} value={settings.scaleWidth} onChange={(value) => updateSetting('scaleWidth', value)} />
-              <NumberField label={t.startTime} testId="gif-start-time-input" min={0} max={asset.duration || undefined} step={0.1} value={settings.startTime} onChange={(value) => updateSetting('startTime', value)} />
-              <NumberField label={t.duration} testId="gif-duration-input" min={0.1} max={asset.duration || undefined} step={0.1} value={settings.duration} onChange={(value) => updateSetting('duration', value)} />
-              <NumberField label={t.loopCount} testId="gif-loop-count-input" min={0} max={100} step={1} value={settings.loopCount} onChange={(value) => updateSetting('loopCount', value)} hint={t.loopHint} />
+              <NumberField
+                label={t.frameRate}
+                testId="gif-frame-rate-input"
+                min={1}
+                max={30}
+                step={1}
+                value={settings.frameRate}
+                onChange={(value) => updateSetting('frameRate', value)}
+              />
+              <NumberField
+                label={t.scaleWidth}
+                testId="gif-scale-input"
+                min={16}
+                max={4096}
+                step={16}
+                value={settings.scaleWidth}
+                onChange={(value) => updateSetting('scaleWidth', value)}
+              />
+              <NumberField
+                label={t.startTime}
+                testId="gif-start-time-input"
+                min={0}
+                max={asset.duration || undefined}
+                step={0.1}
+                value={settings.startTime}
+                onChange={(value) => updateSetting('startTime', value)}
+              />
+              <NumberField
+                label={t.duration}
+                testId="gif-duration-input"
+                min={0.1}
+                max={asset.duration || undefined}
+                step={0.1}
+                value={settings.duration}
+                onChange={(value) => updateSetting('duration', value)}
+              />
+              <NumberField
+                label={t.loopCount}
+                testId="gif-loop-count-input"
+                min={0}
+                max={100}
+                step={1}
+                value={settings.loopCount}
+                onChange={(value) => updateSetting('loopCount', value)}
+                hint={t.loopHint}
+              />
               <label className="block text-xs font-semibold text-slate-600">
                 {t.dither}
                 <select
@@ -170,7 +228,16 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
           <div className="flex min-h-0 flex-col bg-panel p-4">
             <div className="text-xs font-semibold uppercase text-slate-500">{t.preview}</div>
             <div className="mt-2 flex aspect-video items-center justify-center overflow-hidden rounded-md border border-line bg-white">
-              {previewPath ? <img className="h-full w-full object-contain" src={convertLocalFileSrc(previewPath)} alt="" data-testid="gif-preview-image" /> : <span className="text-xs text-slate-400">{t.previewUnavailable}</span>}
+              {previewPath ? (
+                <img
+                  className="h-full w-full object-contain"
+                  src={convertLocalFileSrc(previewPath)}
+                  alt=""
+                  data-testid="gif-preview-image"
+                />
+              ) : (
+                <span className="text-xs text-slate-400">{t.previewUnavailable}</span>
+              )}
             </div>
             <div className="mt-2 h-5 text-xs text-slate-500" data-testid="gif-preview-status">
               {previewLoading ? (
@@ -193,10 +260,21 @@ export default function GifExportDialog({ asset, onClose }: GifExportDialogProps
             {completedPath ? t.completedMessage(completedPath) : t.ready}
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50" type="button" disabled={exporting} onClick={onClose}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+              type="button"
+              disabled={exporting}
+              onClick={onClose}
+            >
               {zhCN.common.cancel}
             </button>
-            <button className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" type="button" disabled={exporting || !outputPath.trim()} data-testid="gif-export-button" onClick={() => void exportGif()}>
+            <button
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
+              type="button"
+              disabled={exporting || !outputPath.trim()}
+              data-testid="gif-export-button"
+              onClick={() => void exportGif()}
+            >
               {exporting ? <Loader2 size={15} className="animate-spin" /> : <ImageDown size={15} />}
               {exporting ? t.exporting : t.export}
             </button>
@@ -215,7 +293,7 @@ function NumberField({
   max,
   step,
   hint,
-  onChange
+  onChange,
 }: {
   label: string;
   testId: string;

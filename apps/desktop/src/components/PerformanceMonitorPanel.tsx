@@ -11,15 +11,29 @@ interface PerformanceMonitorPanelProps {
 }
 
 export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPanelProps) {
-  const { alerts, metrics, optimizationPlan, config, executeOptimization, dismissAlert, setConfig, setPanelOpen, sample } = usePerformanceMonitorStore();
+  const {
+    alerts,
+    metrics,
+    optimizationPlan,
+    config,
+    executeOptimization,
+    dismissAlert,
+    setConfig,
+    setPanelOpen,
+    sample,
+  } = usePerformanceMonitorStore();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (config.enabled && open) {
       intervalRef.current = setInterval(() => sample(), config.samplingIntervalMs);
-      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [config.enabled, config.samplingIntervalMs, open, sample]);
 
   if (!open) return null;
@@ -28,13 +42,26 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
   const t = featureStrings.performanceMonitor;
 
   return (
-    <div data-testid="performance-monitor-panel" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[420px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      data-testid="performance-monitor-panel"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[420px] max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-neutral-200 flex items-center gap-2">
             <Activity size={16} /> {t.title}
           </h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200 text-xs" data-testid="perf-panel-close">✕</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-200 text-xs"
+            data-testid="perf-panel-close"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Current metrics */}
@@ -59,13 +86,21 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
         {alerts.length > 0 && (
           <div data-testid="perf-alerts" className="mb-3 space-y-2">
             {alerts.map((alert) => (
-              <div key={alert.id} className="flex items-start gap-2 bg-amber-900/30 border border-amber-700/50 rounded p-2 text-xs">
+              <div
+                key={alert.id}
+                className="flex items-start gap-2 bg-amber-900/30 border border-amber-700/50 rounded p-2 text-xs"
+              >
                 <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
                 <div className="flex-1">
                   <div className="text-amber-200">{alert.message}</div>
                   <div className="text-amber-400/70 mt-1">{alert.suggestion}</div>
                 </div>
-                <button onClick={() => dismissAlert(alert.id)} className="text-neutral-500 hover:text-neutral-300 text-xs">✕</button>
+                <button
+                  onClick={() => dismissAlert(alert.id)}
+                  className="text-neutral-500 hover:text-neutral-300 text-xs"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -108,7 +143,3 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
     </div>
   );
 }
-
-
-
-

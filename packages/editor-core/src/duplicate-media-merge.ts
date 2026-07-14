@@ -37,31 +37,26 @@ export function createEmptyMergeHistory(): MergeHistoryStore {
   return { entries: [] };
 }
 
-export function addMergeHistoryEntry(
-  store: MergeHistoryStore,
-  entry: MergeHistoryEntry
-): MergeHistoryStore {
+export function addMergeHistoryEntry(store: MergeHistoryStore, entry: MergeHistoryEntry): MergeHistoryStore {
   const entries = [entry, ...store.entries].slice(0, MAX_MERGE_HISTORY_ENTRIES);
   return { entries };
 }
 
-export function undoLastMergeEntry(
-  store: MergeHistoryStore
-): { store: MergeHistoryStore; entry: MergeHistoryEntry | undefined } {
+export function undoLastMergeEntry(store: MergeHistoryStore): {
+  store: MergeHistoryStore;
+  entry: MergeHistoryEntry | undefined;
+} {
   const entry = store.entries[0];
   if (!entry) {
     return { store, entry: undefined };
   }
   return {
     store: { entries: store.entries.slice(1) },
-    entry
+    entry,
   };
 }
 
-export function buildQualityComparison(
-  groupId: string,
-  assets: MediaQualityInfo[]
-): MediaQualityComparison {
+export function buildQualityComparison(groupId: string, assets: MediaQualityInfo[]): MediaQualityComparison {
   if (assets.length === 0) {
     return { groupId, assets: [], recommendedKeepAssetId: '' };
   }
@@ -75,7 +70,7 @@ export function buildQualityComparison(
   return {
     groupId,
     assets: sorted,
-    recommendedKeepAssetId: sorted[0].assetId
+    recommendedKeepAssetId: sorted[0].assetId,
   };
 }
 
@@ -85,7 +80,7 @@ export function buildRecycleBinArgs(filePath: string): string[] {
 
 export function detectCrossProjectDuplicates(
   currentMedia: { id: string; path: string; headHash?: string; size?: number }[],
-  sharedLibrary: { id: string; path: string; headHash?: string; size?: number }[]
+  sharedLibrary: { id: string; path: string; headHash?: string; size?: number }[],
 ): { currentAssetId: string; sharedAssetId: string; reason: string }[] {
   const duplicates: { currentAssetId: string; sharedAssetId: string; reason: string }[] = [];
   const sharedByHash = new Map<string, typeof sharedLibrary>();
@@ -109,7 +104,7 @@ export function detectCrossProjectDuplicates(
           duplicates.push({
             currentAssetId: asset.id,
             sharedAssetId: match.id,
-            reason: `文件大小和内容哈希匹配 (${formatBytes(asset.size)})`
+            reason: `文件大小和内容哈希匹配 (${formatBytes(asset.size)})`,
           });
         }
       }
@@ -129,10 +124,11 @@ export function deserializeMergeHistory(json: string): MergeHistoryStore {
     if (parsed && Array.isArray(parsed.entries)) {
       return {
         entries: parsed.entries
-          .filter((e: unknown): e is MergeHistoryEntry =>
-            typeof e === 'object' && e !== null && typeof (e as MergeHistoryEntry).id === 'string'
+          .filter(
+            (e: unknown): e is MergeHistoryEntry =>
+              typeof e === 'object' && e !== null && typeof (e as MergeHistoryEntry).id === 'string',
           )
-          .slice(0, MAX_MERGE_HISTORY_ENTRIES)
+          .slice(0, MAX_MERGE_HISTORY_ENTRIES),
       };
     }
   } catch {

@@ -78,7 +78,7 @@ const DEFAULT_SCENE_DIFFERENCE_THRESHOLDS: Required<SceneColorDifferenceThreshol
   brightness: 48,
   saturation: 0.22,
   contrast: 24,
-  tint: 28
+  tint: 28,
 };
 
 export function analyzeColorFrameSample(sample: ColorMatchFrameSample): ColorAnalysisMetrics {
@@ -118,7 +118,7 @@ export function analyzeColorFrameSample(sample: ColorMatchFrameSample): ColorAna
   const meanRgb = {
     r: round(rSum / pixelCount),
     g: round(gSum / pixelCount),
-    b: round(bSum / pixelCount)
+    b: round(bSum / pixelCount),
   };
   const averageBrightness = round(brightnessSum / pixelCount);
   const contrast = round(Math.sqrt(Math.max(0, brightnessSqSum / pixelCount - averageBrightness * averageBrightness)));
@@ -132,7 +132,7 @@ export function analyzeColorFrameSample(sample: ColorMatchFrameSample): ColorAna
     cbMean,
     crMean,
     tintBias: classifyTintBias(cbMean, crMean),
-    meanRgb
+    meanRgb,
   };
 }
 
@@ -140,7 +140,7 @@ export function estimateColorTemperatureKelvin(meanRgb: RgbMean): number {
   const linear = {
     r: srgbToLinear(clampByte(meanRgb.r) / 255),
     g: srgbToLinear(clampByte(meanRgb.g) / 255),
-    b: srgbToLinear(clampByte(meanRgb.b) / 255)
+    b: srgbToLinear(clampByte(meanRgb.b) / 255),
   };
   const x = linear.r * 0.4124564 + linear.g * 0.3575761 + linear.b * 0.1804375;
   const yLum = linear.r * 0.2126729 + linear.g * 0.7151522 + linear.b * 0.072175;
@@ -151,7 +151,7 @@ export function estimateColorTemperatureKelvin(meanRgb: RgbMean): number {
   }
   const chromaX = x / sum;
   const chromaY = yLum / sum;
-  const n = (chromaX - 0.3320) / (0.1858 - chromaY || 0.000001);
+  const n = (chromaX - 0.332) / (0.1858 - chromaY || 0.000001);
   let kelvin = -449 * n ** 3 + 3525 * n ** 2 - 6823.3 * n + 5520.33;
   const r = clampByte(meanRgb.r);
   const g = clampByte(meanRgb.g);
@@ -176,13 +176,18 @@ export function buildTimelineColorHeatmapData(results: TimelineColorAnalysisResu
       height: round(clamp(result.metrics.averageBrightness / 255, 0, 1)),
       color: colorTemperatureToHeatmapColor(result.metrics.colorTemperatureKelvin),
       brightness: result.metrics.averageBrightness,
-      colorTemperatureKelvin: result.metrics.colorTemperatureKelvin
+      colorTemperatureKelvin: result.metrics.colorTemperatureKelvin,
     }));
 }
 
-export function detectSceneColorJumps(results: TimelineColorAnalysisResult[], thresholds: SceneColorDifferenceThresholds = {}): SceneColorDifference[] {
+export function detectSceneColorJumps(
+  results: TimelineColorAnalysisResult[],
+  thresholds: SceneColorDifferenceThresholds = {},
+): SceneColorDifference[] {
   const resolved = { ...DEFAULT_SCENE_DIFFERENCE_THRESHOLDS, ...thresholds };
-  const ordered = [...results].sort((left, right) => left.start - right.start || left.clipId.localeCompare(right.clipId));
+  const ordered = [...results].sort(
+    (left, right) => left.start - right.start || left.clipId.localeCompare(right.clipId),
+  );
   const differences: SceneColorDifference[] = [];
   for (let index = 1; index < ordered.length; index += 1) {
     const previous = ordered[index - 1];
@@ -202,7 +207,10 @@ export function detectSceneColorJumps(results: TimelineColorAnalysisResult[], th
   return differences;
 }
 
-export function buildColorAlignmentUpdates(samples: ColorAnalysisClipSample[], referenceClipId: string): ColorAlignmentUpdate[] {
+export function buildColorAlignmentUpdates(
+  samples: ColorAnalysisClipSample[],
+  referenceClipId: string,
+): ColorAlignmentUpdate[] {
   const reference = samples.find((item) => item.clipId === referenceClipId);
   if (!reference) {
     return [];
@@ -212,12 +220,15 @@ export function buildColorAlignmentUpdates(samples: ColorAnalysisClipSample[], r
     .map((item) => ({
       clipId: item.clipId,
       colorCorrection: {
-        colorCurves: buildColorMatchCurves(item.sample, reference.sample)
-      }
+        colorCurves: buildColorMatchCurves(item.sample, reference.sample),
+      },
     }));
 }
 
-function calculateSceneColorDifference(left: TimelineColorAnalysisResult, right: TimelineColorAnalysisResult): SceneColorDifference {
+function calculateSceneColorDifference(
+  left: TimelineColorAnalysisResult,
+  right: TimelineColorAnalysisResult,
+): SceneColorDifference {
   const temperatureDelta = Math.abs(left.metrics.colorTemperatureKelvin - right.metrics.colorTemperatureKelvin);
   const brightnessDelta = Math.abs(left.metrics.averageBrightness - right.metrics.averageBrightness);
   const saturationDelta = Math.abs(left.metrics.averageSaturation - right.metrics.averageSaturation);
@@ -228,7 +239,7 @@ function calculateSceneColorDifference(left: TimelineColorAnalysisResult, right:
       clamp(brightnessDelta / 180, 0, 1) * 0.16 +
       clamp(saturationDelta / 0.75, 0, 1) * 0.16 +
       clamp(contrastDelta / 96, 0, 1) * 0.1 +
-      clamp(tintDelta / 72, 0, 1) * 0.24
+      clamp(tintDelta / 72, 0, 1) * 0.24,
   );
   return {
     fromClipId: left.clipId,
@@ -239,7 +250,7 @@ function calculateSceneColorDifference(left: TimelineColorAnalysisResult, right:
     brightnessDelta,
     saturationDelta,
     contrastDelta,
-    tintDelta: round(tintDelta)
+    tintDelta: round(tintDelta),
   };
 }
 
@@ -252,7 +263,7 @@ function calculateHsvSaturation(r: number, g: number, b: number): number {
 function calculateChromaMeans(r: number, g: number, b: number): { cb: number; cr: number } {
   return {
     cb: 128 - 0.168736 * r - 0.331264 * g + 0.5 * b,
-    cr: 128 + 0.5 * r - 0.418688 * g - 0.081312 * b
+    cr: 128 + 0.5 * r - 0.418688 * g - 0.081312 * b,
   };
 }
 

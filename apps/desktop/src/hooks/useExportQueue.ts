@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Project } from '@open-factory/editor-core';
-import { cancelAllQueuedExportTasks, cancelQueuedExportTask, ensureExportQueueRunner, setExportQueuePaused } from '../export/export-queue-runner';
+import {
+  cancelAllQueuedExportTasks,
+  cancelQueuedExportTask,
+  ensureExportQueueRunner,
+  setExportQueuePaused,
+} from '../export/export-queue-runner';
 import { useExportQueueStore } from '../export/export-queue-store';
 import {
   installExportQueuePersistence,
   loadExportQueueRecoveryCandidate,
   persistExportQueueState,
-  type ExportQueueRecoveryCandidate
+  type ExportQueueRecoveryCandidate,
 } from '../export/export-queue-persistence';
 import { zhCN } from '../i18n/strings';
 import { chooseCurrentFrameExportPath, startCurrentFrameExport } from '../lib/exportVideo';
@@ -58,7 +63,11 @@ export function useExportQueue(project: Project): UseExportQueueResult {
       if (command === 'pause') {
         const nextPaused = !useExportQueueStore.getState().queuePaused;
         setExportQueuePaused(nextPaused);
-        showToast({ kind: 'info', title: zhCN.exportDialog.queueTitle, message: nextPaused ? zhCN.exportDialog.queuePausedByUser : zhCN.exportDialog.queueResumedByUser });
+        showToast({
+          kind: 'info',
+          title: zhCN.exportDialog.queueTitle,
+          message: nextPaused ? zhCN.exportDialog.queuePausedByUser : zhCN.exportDialog.queueResumedByUser,
+        });
       }
       if (command === 'cancel-all') {
         await cancelAllQueuedExportTasks();
@@ -122,7 +131,11 @@ export function useExportQueue(project: Project): UseExportQueueResult {
         setLastExportPath(result.outputPath);
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.sharePackage.failed, message: error instanceof Error ? error.message : zhCN.sharePackage.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.sharePackage.failed,
+        message: error instanceof Error ? error.message : zhCN.sharePackage.failedMessage,
+      });
     } finally {
       setSharePackageProgress(undefined);
       setSharePackageBusy(false);
@@ -150,7 +163,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
           if (warnings.length > 0) {
             showToast({ kind: 'warning', title: zhCN.exportDialog.exportWarningTitle, message: warnings.join('\n') });
           }
-        }
+        },
       });
       setLastExportPath(outputPath);
       showToast({ kind: 'success', title: zhCN.editorToasts.currentFrameExported, message: outputPath });
@@ -158,7 +171,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
       showToast({
         kind: 'error',
         title: zhCN.editorToasts.currentFrameExportFailed,
-        message: error instanceof Error ? error.message : zhCN.editorToasts.currentFrameExportFailedMessage
+        message: error instanceof Error ? error.message : zhCN.editorToasts.currentFrameExportFailedMessage,
       });
     }
   }, []);
@@ -179,7 +192,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
         void ensureExportQueueRunner();
       }
     },
-    [exportQueueRecovery]
+    [exportQueueRecovery],
   );
 
   const discardExportQueueRecovery = useCallback(async (): Promise<void> => {
@@ -205,6 +218,6 @@ export function useExportQueue(project: Project): UseExportQueueResult {
     createCurrentSharePackage,
     exportCurrentFrame,
     restoreExportQueueRecovery,
-    discardExportQueueRecovery
+    discardExportQueueRecovery,
   };
 }

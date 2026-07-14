@@ -75,13 +75,13 @@ export function getTimelineVirtualRenderWindow(input: TimelineVirtualRenderWindo
   const endPx = viewportStartPx + viewportWidth * (1 + overscanScreens);
   return {
     start: round(startPx / zoom),
-    end: round(Math.max(endPx, startPx + viewportWidth) / zoom)
+    end: round(Math.max(endPx, startPx + viewportWidth) / zoom),
   };
 }
 
 export function filterTimelineVirtualClips<TClip extends { start: number; duration: number }>(
   clips: TClip[],
-  window: TimelineVirtualRenderWindow
+  window: TimelineVirtualRenderWindow,
 ): TClip[] {
   if (clips.length === 0) return [];
   // 对于小数组（<=32 元素），线性扫描更快
@@ -107,7 +107,7 @@ export function filterTimelineVirtualClips<TClip extends { start: number; durati
  */
 function binarySearchClipStart<TClip extends { start: number; duration: number }>(
   clips: TClip[],
-  windowStart: number
+  windowStart: number,
 ): number {
   let low = 0;
   let high = clips.length - 1;
@@ -175,7 +175,7 @@ export function getTimelineVirtualTrackWindow(input: TimelineVirtualTrackWindowI
     beforeHeight: startIndex * rowHeight,
     afterHeight: Math.max(0, totalHeight - endIndex * rowHeight),
     totalHeight,
-    renderedCount
+    renderedCount,
   };
 }
 
@@ -209,11 +209,14 @@ export function getTimelineLargeProjectMode(input: TimelineLargeProjectModeInput
     minimapClipLimit: extremeMode ? 80 : enabled ? 160 : undefined,
     extremeMode,
     thumbnailLoadDelayMs: extremeMode ? 2400 : enabled ? 1200 : 0,
-    waveformSampleDensity: extremeMode ? 0.3 : enabled ? 0.6 : 1.0
+    waveformSampleDensity: extremeMode ? 0.3 : enabled ? 0.6 : 1.0,
   };
 }
 
-export function getTimelineIncrementalRenderPlan<TClip extends { id: string }>(previousClips: TClip[], nextClips: TClip[]): TimelineIncrementalRenderPlan {
+export function getTimelineIncrementalRenderPlan<TClip extends { id: string }>(
+  previousClips: TClip[],
+  nextClips: TClip[],
+): TimelineIncrementalRenderPlan {
   const previousById = new Map(previousClips.map((clip) => [clip.id, clip]));
   const changedClipIds: string[] = [];
   for (const clip of nextClips) {

@@ -12,20 +12,47 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use super::binaries::ffmpeg_binary;
 
+/// 已取消的降噪任务 ID 集合
 static CANCELED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 fn canceled() -> &'static Mutex<HashSet<String>> { CANCELED.get_or_init(|| Mutex::new(HashSet::new())) }
 
+/// 音频降噪请求参数
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoiseReductionRequest { pub media_path: String, pub clip_id: String, pub strength: f32 }
+pub struct NoiseReductionRequest {
+    /// 媒体文件路径
+    pub media_path: String,
+    /// 片段 ID
+    pub clip_id: String,
+    /// 降噪强度 (0.0 - 1.0)
+    pub strength: f32,
+}
 
+/// 音频降噪结果
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoiseReductionResult { pub output_path: String, pub original_path: String, pub duration_ms: u128, pub noise_reduction_db: f32 }
+pub struct NoiseReductionResult {
+    /// 输出文件路径
+    pub output_path: String,
+    /// 原始文件路径
+    pub original_path: String,
+    /// 处理耗时（毫秒）
+    pub duration_ms: u128,
+    /// 降噪量（分贝）
+    pub noise_reduction_db: f32,
+}
 
+/// 降噪进度事件载荷
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoiseReductionProgressPayload { pub clip_id: String, pub progress: f32, pub stage: String }
+pub struct NoiseReductionProgressPayload {
+    /// 片段 ID
+    pub clip_id: String,
+    /// 进度 (0.0 - 1.0)
+    pub progress: f32,
+    /// 当前阶段（decoding/processing/encoding/complete）
+    pub stage: String,
+}
 
 fn safe_name(v: &str) -> String { v.chars().map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' }).collect() }
 fn norm_path(p: &Path) -> String { p.to_string_lossy().replace('\\', "/") }

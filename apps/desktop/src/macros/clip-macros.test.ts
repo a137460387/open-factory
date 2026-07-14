@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { AddEffectCommand, UpdateClipCommand, createTrack, type Timeline, type TimelineAccessor } from '@open-factory/editor-core';
+import {
+  AddEffectCommand,
+  UpdateClipCommand,
+  createTrack,
+  type Timeline,
+  type TimelineAccessor,
+} from '@open-factory/editor-core';
 import {
   appendMacroHistoryEntry,
   buildMacroCommands,
@@ -14,7 +20,7 @@ import {
   writeClipMacros,
   writeMacroHistory,
   type ClipMacro,
-  type MacroStorage
+  type MacroStorage,
 } from './clip-macros';
 
 function makeStorage(files: Map<string, string>): MacroStorage {
@@ -29,7 +35,7 @@ function makeStorage(files: Map<string, string>): MacroStorage {
     },
     writeFile: (path, contents) => {
       files.set(path, contents);
-    }
+    },
   };
 }
 
@@ -56,7 +62,7 @@ function makeTimeline(): Timeline {
             speed: 1,
             volume: 1,
             colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
-            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 }
+            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 },
           },
           {
             id: 'clip-b',
@@ -71,11 +77,11 @@ function makeTimeline(): Timeline {
             speed: 1,
             volume: 1,
             colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
-            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 }
-          }
-        ]
-      })
-    ]
+            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 },
+          },
+        ],
+      }),
+    ],
   };
 }
 
@@ -86,16 +92,18 @@ function makeTimelineAccessor(timeline = makeTimeline()): TimelineAccessor & { c
     setTimeline: (next) => {
       current = next;
     },
-    current: () => current
+    current: () => current,
   };
 }
 
 describe('clip macros', () => {
   it('detects shortcut conflicts against timeline bindings while allowing the binding', () => {
-    const macros: ClipMacro[] = [{ id: 'macro-scale-150', name: 'Scale', shortcut: 'Space', patch: { transform: { scale: 1.5 } } }];
+    const macros: ClipMacro[] = [
+      { id: 'macro-scale-150', name: 'Scale', shortcut: 'Space', patch: { transform: { scale: 1.5 } } },
+    ];
 
     expect(detectMacroShortcutConflicts(macros, {})['macro-scale-150']).toEqual([
-      { accelerator: 'Space', type: 'timeline', timelineAction: 'toggle-playback' }
+      { accelerator: 'Space', type: 'timeline', timelineAction: 'toggle-playback' },
     ]);
   });
 
@@ -116,15 +124,19 @@ describe('clip macros', () => {
         shortcut: 'cmd+shift+m',
         patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
         steps: [
-          { type: 'update-clip', clipId: '__TARGET_CLIP__', patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 } },
-          { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'vignette', params: { intensity: 0.2 } } }
-        ]
+          {
+            type: 'update-clip',
+            clipId: '__TARGET_CLIP__',
+            patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
+          },
+          { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'vignette', params: { intensity: 0.2 } } },
+        ],
       },
       {
         id: 'macro-invalid',
         name: 'Invalid',
-        patch: {}
-      }
+        patch: {},
+      },
     ]);
 
     expect(parseMacroFile(raw)).toEqual([
@@ -135,10 +147,18 @@ describe('clip macros', () => {
         shortcut: 'Ctrl+Shift+M',
         patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
         steps: [
-          { type: 'update-clip', clipId: '__TARGET_CLIP__', patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 } },
-          { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'vignette', enabled: undefined, id: undefined, params: { intensity: 0.2, radius: 0.6 } } }
-        ]
-      }
+          {
+            type: 'update-clip',
+            clipId: '__TARGET_CLIP__',
+            patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
+          },
+          {
+            type: 'add-effect',
+            clipId: '__TARGET_CLIP__',
+            effect: { type: 'vignette', enabled: undefined, id: undefined, params: { intensity: 0.2, radius: 0.6 } },
+          },
+        ],
+      },
     ]);
   });
 
@@ -146,18 +166,22 @@ describe('clip macros', () => {
     const sourceAccessor = makeTimelineAccessor();
     const recorded = [
       new UpdateClipCommand(sourceAccessor, 'clip-a', { transform: { scale: 1.25 } }),
-      new UpdateClipCommand(sourceAccessor, 'clip-a', { colorCorrection: { contrast: 1.2, saturation: 0.8 } })
+      new UpdateClipCommand(sourceAccessor, 'clip-a', { colorCorrection: { contrast: 1.2, saturation: 0.8 } }),
     ].map((command) => {
       command.execute();
       return snapshotCommand(command);
     });
     expect(recorded).toEqual([
       { type: 'update-clip', clipId: 'clip-a', patch: { transform: { scale: 1.25 } } },
-      { type: 'update-clip', clipId: 'clip-a', patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } } }
+      { type: 'update-clip', clipId: 'clip-a', patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } } },
     ]);
 
     const replayAccessor = makeTimelineAccessor();
-    const macro: ClipMacro = { id: 'macro-recorded', name: 'Recorded', steps: recorded.flatMap((step) => (step ? [step] : [])) };
+    const macro: ClipMacro = {
+      id: 'macro-recorded',
+      name: 'Recorded',
+      steps: recorded.flatMap((step) => (step ? [step] : [])),
+    };
     for (const command of buildMacroCommands(replayAccessor, macro, 'clip-b')) {
       command.execute();
     }
@@ -174,7 +198,7 @@ describe('clip macros', () => {
     expect(replaceMacroTargetClipId(step, 'clip-b')).toEqual({
       type: 'update-clip',
       clipId: 'clip-b',
-      patch: { transform: { opacity: 0.5 } }
+      patch: { transform: { opacity: 0.5 } },
     });
     expect(step.clipId).toBe('clip-a');
   });
@@ -194,14 +218,16 @@ describe('clip macros', () => {
         {
           id: 'macro-effect',
           name: 'Effect',
-          steps: [{ type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } }]
-        }
+          steps: [{ type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } }],
+        },
       ],
-      storage
+      storage,
     );
 
     const raw = files.get('C:/Users/E2E/AppData/Roaming/open-factory/macros.json');
-    expect(JSON.parse(raw!).macros[0].steps).toEqual([{ type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } }]);
+    expect(JSON.parse(raw!).macros[0].steps).toEqual([
+      { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } },
+    ]);
   });
 
   it('records serializable effect commands', () => {
@@ -212,7 +238,7 @@ describe('clip macros', () => {
     expect(snapshotCommand(command)).toEqual({
       type: 'add-effect',
       clipId: 'clip-a',
-      effect: { id: undefined, type: 'blur', enabled: undefined, params: { radius: 9 } }
+      effect: { id: undefined, type: 'blur', enabled: undefined, params: { radius: 9 } },
     });
   });
 
@@ -228,9 +254,9 @@ describe('clip macros', () => {
           macroName: 'Scale',
           targetClipId: `clip-${index}`,
           triggeredAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
-          success: true
+          success: true,
         },
-        storage
+        storage,
       );
     }
 
@@ -254,10 +280,10 @@ describe('clip macros', () => {
           macroName: 'Scale',
           triggeredAt: '2026-01-01T00:00:00.000Z',
           success: true,
-          shortcut: 'cmd+m'
-        }
+          shortcut: 'cmd+m',
+        },
       ],
-      storage
+      storage,
     );
 
     expect(await readMacroHistory(storage)).toEqual([
@@ -267,8 +293,8 @@ describe('clip macros', () => {
         macroName: 'Scale',
         triggeredAt: '2026-01-01T00:00:00.000Z',
         success: true,
-        shortcut: 'Ctrl+M'
-      }
+        shortcut: 'Ctrl+M',
+      },
     ]);
   });
 });

@@ -39,8 +39,13 @@ export interface SemanticSearchHistoryEntry {
  * For items without aiAnalysis, use filename as fallback info.
  */
 export function buildSemanticSearchMediaPayload(
-  media: Array<{ id: string; name: string; type: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>,
-  largeLibraryThreshold = SEMANTIC_SEARCH_LARGE_LIBRARY_THRESHOLD
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>,
+  largeLibraryThreshold = SEMANTIC_SEARCH_LARGE_LIBRARY_THRESHOLD,
 ): SemanticSearchMediaItem[] {
   const shouldFilter = media.length > largeLibraryThreshold;
   if (shouldFilter) {
@@ -50,16 +55,14 @@ export function buildSemanticSearchMediaPayload(
         mediaId: m.id,
         name: m.name,
         type: m.type,
-        aiAnalysis: m.aiAnalysis
+        aiAnalysis: m.aiAnalysis,
       }));
   }
   return media.map((m) => ({
     mediaId: m.id,
     name: m.name,
     type: m.type,
-    aiAnalysis: m.aiAnalysis
-      ? m.aiAnalysis
-      : { tags: [], scene: m.name, mood: '', objects: [] }
+    aiAnalysis: m.aiAnalysis ? m.aiAnalysis : { tags: [], scene: m.name, mood: '', objects: [] },
   }));
 }
 
@@ -68,17 +71,19 @@ export function buildSemanticSearchSystemPrompt(): string {
 }
 
 export function buildSemanticSearchUserPrompt(query: string, mediaItems: SemanticSearchMediaItem[]): string {
-  const mediaInfo = mediaItems.map((m) => {
-    const analysis = m.aiAnalysis;
-    const parts = [`id:${m.mediaId}`, `name:${m.name}`, `type:${m.type}`];
-    if (analysis) {
-      if (analysis.tags && analysis.tags.length > 0) parts.push(`tags:${analysis.tags.join(',')}`);
-      if (analysis.scene) parts.push(`scene:${analysis.scene}`);
-      if (analysis.mood) parts.push(`mood:${analysis.mood}`);
-      if (analysis.objects && analysis.objects.length > 0) parts.push(`objects:${analysis.objects.join(',')}`);
-    }
-    return parts.join(' | ');
-  }).join('\n');
+  const mediaInfo = mediaItems
+    .map((m) => {
+      const analysis = m.aiAnalysis;
+      const parts = [`id:${m.mediaId}`, `name:${m.name}`, `type:${m.type}`];
+      if (analysis) {
+        if (analysis.tags && analysis.tags.length > 0) parts.push(`tags:${analysis.tags.join(',')}`);
+        if (analysis.scene) parts.push(`scene:${analysis.scene}`);
+        if (analysis.mood) parts.push(`mood:${analysis.mood}`);
+        if (analysis.objects && analysis.objects.length > 0) parts.push(`objects:${analysis.objects.join(',')}`);
+      }
+      return parts.join(' | ');
+    })
+    .join('\n');
   return `搜索描述：${query}\n\n媒体库素材信息：\n${mediaInfo}\n\n请返回最相关的素材JSON结果。`;
 }
 
@@ -98,12 +103,12 @@ export function parseSemanticSearchResponse(json: unknown): SemanticSearchResult
         typeof (item as SemanticSearchResult).mediaId === 'string' &&
         typeof (item as SemanticSearchResult).score === 'number' &&
         typeof (item as SemanticSearchResult).reason === 'string' &&
-        (item as SemanticSearchResult).score > 0
+        (item as SemanticSearchResult).score > 0,
     )
     .map((item) => ({
       mediaId: item.mediaId.trim(),
       score: Math.min(1, Math.max(0, item.score)),
-      reason: item.reason.trim()
+      reason: item.reason.trim(),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, SEMANTIC_SEARCH_MAX_RESULTS);
@@ -114,30 +119,29 @@ export function parseSemanticSearchResponse(json: unknown): SemanticSearchResult
  */
 export function getUnanalyzedMediaIds(
   allMedia: Array<{ id: string; aiAnalysis?: unknown }>,
-  resultIds: Set<string>
+  resultIds: Set<string>,
 ): string[] {
-  return allMedia
-    .filter((m) => !m.aiAnalysis && !resultIds.has(m.id))
-    .map((m) => m.id);
+  return allMedia.filter((m) => !m.aiAnalysis && !resultIds.has(m.id)).map((m) => m.id);
 }
 
 export function appendSemanticSearchHistory(
   history: readonly SemanticSearchHistoryEntry[],
   entry: SemanticSearchHistoryEntry,
-  limit = SEMANTIC_SEARCH_HISTORY_LIMIT
+  limit = SEMANTIC_SEARCH_HISTORY_LIMIT,
 ): SemanticSearchHistoryEntry[] {
   const sanitized = sanitizeSemanticSearchHistoryEntry(entry);
   if (!sanitized) {
     return sanitizeSemanticSearchHistory(history, limit);
   }
-  const deduplicated = sanitizeSemanticSearchHistory(history, Number.POSITIVE_INFINITY)
-    .filter((item) => item.query.toLowerCase() !== sanitized.query.toLowerCase());
+  const deduplicated = sanitizeSemanticSearchHistory(history, Number.POSITIVE_INFINITY).filter(
+    (item) => item.query.toLowerCase() !== sanitized.query.toLowerCase(),
+  );
   return [sanitized, ...deduplicated].slice(0, Math.max(1, Math.floor(limit)));
 }
 
 export function sanitizeSemanticSearchHistory(
   input: unknown,
-  limit = SEMANTIC_SEARCH_HISTORY_LIMIT
+  limit = SEMANTIC_SEARCH_HISTORY_LIMIT,
 ): SemanticSearchHistoryEntry[] {
   const values = Array.isArray(input) ? input : [];
   const entries = values.flatMap((value): SemanticSearchHistoryEntry[] => {
@@ -153,8 +157,12 @@ function sanitizeSemanticSearchHistoryEntry(input: unknown): SemanticSearchHisto
   }
   const value = input as Partial<SemanticSearchHistoryEntry>;
   const query = typeof value.query === 'string' ? value.query.trim() : '';
-  const timestamp = typeof value.timestamp === 'number' && Number.isFinite(value.timestamp) ? value.timestamp : Date.now();
-  const resultCount = typeof value.resultCount === 'number' && Number.isFinite(value.resultCount) ? Math.max(0, Math.round(value.resultCount)) : 0;
+  const timestamp =
+    typeof value.timestamp === 'number' && Number.isFinite(value.timestamp) ? value.timestamp : Date.now();
+  const resultCount =
+    typeof value.resultCount === 'number' && Number.isFinite(value.resultCount)
+      ? Math.max(0, Math.round(value.resultCount))
+      : 0;
   if (!query) {
     return undefined;
   }
@@ -165,7 +173,9 @@ function sanitizeSemanticSearchHistoryEntry(input: unknown): SemanticSearchHisto
  * Check if any text provider is configured (for graying out the AI search button).
  * The semantic search only needs a text-capable provider, not vision.
  */
-export function hasAvailableTextProvider(providers: Array<{ enabled: boolean; apiKey?: string; isBuiltIn: boolean; id: string }>): boolean {
+export function hasAvailableTextProvider(
+  providers: Array<{ enabled: boolean; apiKey?: string; isBuiltIn: boolean; id: string }>,
+): boolean {
   return providers.some((p) => {
     if (!p.enabled) return false;
     if (p.isBuiltIn && p.id === 'ollama') return true;
@@ -175,7 +185,7 @@ export function hasAvailableTextProvider(providers: Array<{ enabled: boolean; ap
 
 export async function parseSemanticSearchResponseSafe(
   json: unknown,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<SemanticSearchResult[]>> {
   try {
     const data = parseSemanticSearchResponse(json);

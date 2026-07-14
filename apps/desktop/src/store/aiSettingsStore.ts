@@ -1,11 +1,27 @@
 import { create } from 'zustand';
 import type { AIProvider, AIUsageRecord } from '@open-factory/editor-core';
 import { createAllBuiltInProviders } from '@open-factory/editor-core';
-import { readAiApiKey, writeAiApiKey, checkOllamaReachable, listOllamaModels, testAiConnection } from '../lib/tauri-bridge';
+import {
+  readAiApiKey,
+  writeAiApiKey,
+  checkOllamaReachable,
+  listOllamaModels,
+  testAiConnection,
+} from '../lib/tauri-bridge';
 
 const AI_SETTINGS_STORAGE_KEY = 'open-factory:ai-settings';
 
-export type AIServiceType = 'subtitle-polish' | 'chapter-title' | 'vision-analysis' | 'voiceover' | 'color-grading-suggestion' | 'rough-cut' | 'export-suggestion' | 'chat-editor' | 'video-summary' | 'narration-script';
+export type AIServiceType =
+  | 'subtitle-polish'
+  | 'chapter-title'
+  | 'vision-analysis'
+  | 'voiceover'
+  | 'color-grading-suggestion'
+  | 'rough-cut'
+  | 'export-suggestion'
+  | 'chat-editor'
+  | 'video-summary'
+  | 'narration-script';
 
 interface StoredAIProvider {
   id: string;
@@ -68,7 +84,7 @@ function readStoredSettings(): StoredAISettings {
     return {
       providers: Array.isArray(parsed.providers) ? parsed.providers : [],
       serviceMapping: (parsed.serviceMapping ?? {}) as Record<AIServiceType, string>,
-      usageRecords: Array.isArray(parsed.usageRecords) ? parsed.usageRecords : []
+      usageRecords: Array.isArray(parsed.usageRecords) ? parsed.usageRecords : [],
     };
   } catch {
     return { providers: [], serviceMapping: {} as Record<AIServiceType, string>, usageRecords: [] };
@@ -88,14 +104,14 @@ function writeStoredSettings(settings: StoredAISettings): void {
       defaultModel: p.defaultModel,
       enabled: p.enabled,
       customHeaders: p.customHeaders,
-      isBuiltIn: p.isBuiltIn
+      isBuiltIn: p.isBuiltIn,
     })),
     serviceMapping: settings.serviceMapping,
     usageRecords: settings.usageRecords.slice(-100),
     ttsVoiceId: settings.ttsVoiceId,
     ttsSpeed: settings.ttsSpeed,
     ttsStability: settings.ttsStability,
-    costAlertThreshold: settings.costAlertThreshold
+    costAlertThreshold: settings.costAlertThreshold,
   };
   localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(toStore));
 }
@@ -115,7 +131,7 @@ function mergeStoredProvidersWithBuiltIn(stored: StoredAIProvider[]): AIProvider
         baseUrl: s.baseUrl,
         defaultModel: s.defaultModel,
         enabled: s.enabled,
-        customHeaders: s.customHeaders
+        customHeaders: s.customHeaders,
       });
     } else {
       result.push({ ...preset });
@@ -126,7 +142,7 @@ function mergeStoredProvidersWithBuiltIn(stored: StoredAIProvider[]): AIProvider
     if (!builtIn.some((b) => b.id === s.id)) {
       result.push({
         ...s,
-        apiKey: undefined
+        apiKey: undefined,
       });
     }
   }
@@ -145,7 +161,7 @@ function initializeServiceMapping(): Record<AIServiceType, string> {
     'subtitle-polish': stored.serviceMapping['subtitle-polish'] ?? 'openai',
     'chapter-title': stored.serviceMapping['chapter-title'] ?? 'openai',
     'vision-analysis': stored.serviceMapping['vision-analysis'] ?? 'openai',
-    'voiceover': stored.serviceMapping['voiceover'] ?? 'elevenlabs',
+    voiceover: stored.serviceMapping['voiceover'] ?? 'elevenlabs',
     'color-grading-suggestion': stored.serviceMapping['color-grading-suggestion'] ?? 'openai',
     'rough-cut': stored.serviceMapping['rough-cut'] ?? 'openai',
     'export-suggestion': stored.serviceMapping['export-suggestion'] ?? 'openai',
@@ -193,9 +209,7 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
     try {
       const key = await readAiApiKey(providerId);
       set((state) => {
-        const providers = state.providers.map((p) =>
-          p.id === providerId ? { ...p, apiKey: key ?? '' } : p
-        );
+        const providers = state.providers.map((p) => (p.id === providerId ? { ...p, apiKey: key ?? '' } : p));
         const loadedProviderKeys = new Set(state.loadedProviderKeys);
         loadedProviderKeys.add(providerId);
         return { providers, loadedProviderKeys };
@@ -207,9 +221,7 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
 
   async setProviderApiKey(providerId, apiKey) {
     set((state) => ({
-      providers: state.providers.map((p) =>
-        p.id === providerId ? { ...p, apiKey } : p
-      )
+      providers: state.providers.map((p) => (p.id === providerId ? { ...p, apiKey } : p)),
     }));
     try {
       await writeAiApiKey(providerId, apiKey || undefined);
@@ -221,7 +233,7 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
   updateProvider(providerId, patch) {
     set((state) => {
       const providers = state.providers.map((p) =>
-        p.id === providerId ? { ...p, ...patch, id: providerId, isBuiltIn: p.isBuiltIn } : p
+        p.id === providerId ? { ...p, ...patch, id: providerId, isBuiltIn: p.isBuiltIn } : p,
       );
       const stored = readStoredSettings();
       writeStoredSettings({ ...stored, providers: providers.map(toStoredProvider) });
@@ -275,12 +287,12 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
     try {
       const ok = await testAiConnection(provider.baseUrl, provider.apiKey, provider.id);
       set((state) => ({
-        testResults: { ...state.testResults, [providerId]: { ok, latencyMs: ok ? 0 : undefined } }
+        testResults: { ...state.testResults, [providerId]: { ok, latencyMs: ok ? 0 : undefined } },
       }));
       return ok;
     } catch (error: unknown) {
       set((state) => ({
-        testResults: { ...state.testResults, [providerId]: { ok: false } }
+        testResults: { ...state.testResults, [providerId]: { ok: false } },
       }));
       throw error;
     }
@@ -308,7 +320,7 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
       writeStoredSettings({ ...stored, usageRecords });
       return { usageRecords };
     });
-  }
+  },
 }));
 
 function toStoredProvider(p: AIProvider): StoredAIProvider {
@@ -320,6 +332,6 @@ function toStoredProvider(p: AIProvider): StoredAIProvider {
     defaultModel: p.defaultModel,
     enabled: p.enabled,
     customHeaders: p.customHeaders,
-    isBuiltIn: p.isBuiltIn
+    isBuiltIn: p.isBuiltIn,
   };
 }

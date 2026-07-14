@@ -16,7 +16,7 @@ describe('desktop waveform native analysis', () => {
     const getFileStat = vi.fn(() => ({
       path: 'C:/Media/large.wav',
       size: NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES + 1,
-      mtimeMs: 2_000
+      mtimeMs: 2_000,
     }));
     const analyzeWaveform = vi.fn(() => [0, 0.5, 0.25]);
     const writeCache = vi.fn();
@@ -25,8 +25,8 @@ describe('desktop waveform native analysis', () => {
       __TAURI_MOCKS__: {
         getFileStat,
         analyzeWaveform,
-        writeCache
-      } satisfies TauriMocks
+        writeCache,
+      } satisfies TauriMocks,
     });
 
     const asset: MediaAsset = {
@@ -38,7 +38,7 @@ describe('desktop waveform native analysis', () => {
       width: 0,
       height: 0,
       hasAudio: true,
-      audioChannels: 1
+      audioChannels: 1,
     };
 
     const waveform = await getWaveform(asset, 3);
@@ -50,7 +50,7 @@ describe('desktop waveform native analysis', () => {
       peaks: [0, 0.5, 0.25],
       duration: 3,
       channels: 1,
-      isSampled: true
+      isSampled: true,
     });
   });
 });

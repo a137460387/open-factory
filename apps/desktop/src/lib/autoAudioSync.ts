@@ -4,7 +4,7 @@ import {
   type AutoAudioSyncResult,
   type Clip,
   type MediaAsset,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { analyzeWaveform } from './tauri-bridge';
@@ -23,19 +23,30 @@ export interface AutoAudioSyncAnalysis {
   results: AutoAudioSyncResult[];
 }
 
-export function canUseClipForAutoAudioSync(clip: Clip | undefined, asset: MediaAsset | undefined): clip is Extract<Clip, { type: 'audio' | 'video' }> {
-  return Boolean(clip && asset && (clip.type === 'audio' || clip.type === 'video') && (asset.type === 'audio' || asset.hasAudio) && !asset.missing);
+export function canUseClipForAutoAudioSync(
+  clip: Clip | undefined,
+  asset: MediaAsset | undefined,
+): clip is Extract<Clip, { type: 'audio' | 'video' }> {
+  return Boolean(
+    clip &&
+    asset &&
+    (clip.type === 'audio' || clip.type === 'video') &&
+    (asset.type === 'audio' || asset.hasAudio) &&
+    !asset.missing,
+  );
 }
 
 export async function analyzeAutoAudioSyncTargets(
   primary: AutoAudioSyncTarget,
   secondaryTargets: AutoAudioSyncTarget[],
-  options: AutoAudioSyncOptions = {}
+  options: AutoAudioSyncOptions = {},
 ): Promise<AutoAudioSyncAnalysis> {
   if (!canUseClipForAutoAudioSync(primary.clip, primary.asset)) {
     throw new Error(zhCN.autoAudioSync.unavailableMessage);
   }
-  const candidates = secondaryTargets.slice(0, 4).filter((target) => canUseClipForAutoAudioSync(target.clip, target.asset));
+  const candidates = secondaryTargets
+    .slice(0, 4)
+    .filter((target) => canUseClipForAutoAudioSync(target.clip, target.asset));
   if (candidates.length === 0) {
     throw new Error(zhCN.autoAudioSync.notEnoughTracksMessage);
   }
@@ -44,8 +55,8 @@ export async function analyzeAutoAudioSyncTargets(
     candidates.map(async (target) => ({
       clipId: target.clip.id,
       samples: await readSyncSamples(target.asset),
-      sampleRate: AUTO_AUDIO_SYNC_SAMPLE_RATE
-    }))
+      sampleRate: AUTO_AUDIO_SYNC_SAMPLE_RATE,
+    })),
   );
   return {
     primaryClipId: primary.clip.id,
@@ -55,9 +66,9 @@ export async function analyzeAutoAudioSyncTargets(
       {
         targetSampleRate: AUTO_AUDIO_SYNC_SAMPLE_RATE,
         maxDurationSeconds: AUTO_AUDIO_SYNC_MAX_SECONDS,
-        ...options
-      }
-    )
+        ...options,
+      },
+    ),
   };
 }
 

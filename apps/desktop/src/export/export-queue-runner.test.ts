@@ -14,7 +14,7 @@ describe('export queue sidecar subtitles', () => {
       resourcePaused: false,
       queuePaused: false,
       maxConcurrent: 2,
-      lastCompletedPath: undefined
+      lastCompletedPath: undefined,
     });
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -22,12 +22,16 @@ describe('export queue sidecar subtitles', () => {
 
   it('writes sidecar subtitles next to the exported media with the subtitle extension', () => {
     expect(buildSidecarSubtitlePath('C:/Exports/video.mp4', 'subtitles.ass')).toBe('C:/Exports/video.ass');
-    expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.vtt')).toBe('D:\\Exports\\review.cut.vtt');
+    expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.vtt')).toBe(
+      'D:\\Exports\\review.cut.vtt',
+    );
   });
 
   it('keeps subtitle language suffixes when writing multilingual sidecars', () => {
     expect(buildSidecarSubtitlePath('C:/Exports/video.mp4', 'subtitles.zh.srt')).toBe('C:/Exports/video.zh.srt');
-    expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.en.srt')).toBe('D:\\Exports\\review.cut.en.srt');
+    expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.en.srt')).toBe(
+      'D:\\Exports\\review.cut.en.srt',
+    );
   });
 
   it('falls back to srt when the artifact file has no extension', () => {
@@ -47,17 +51,17 @@ describe('export queue sidecar subtitles', () => {
             blackFrameDurationSeconds: 0.5,
             silenceThresholdDb: -50,
             silenceDurationSeconds: 2,
-            autoRetry: true
-          }
-        })
-      ]
+            autoRetry: true,
+          },
+        }),
+      ],
     ]);
     const runExport = vi.fn(() => ({
       success: true,
       outputPath: 'C:/Exports/retry.mp4',
       durationMs: 1,
       warnings: [],
-      report: {}
+      report: {},
     }));
     let qualityCalls = 0;
     const runPostExportQualityAssurance = vi.fn((): PostExportQualityAssuranceResult => {
@@ -70,9 +74,9 @@ describe('export queue sidecar subtitles', () => {
           {
             id: 'duration',
             status: qualityCalls === 1 ? 'fail' : 'pass',
-            message: qualityCalls === 1 ? '导出时长误差超过 1 帧' : '导出时长在 1 帧误差内'
-          }
-        ]
+            message: qualityCalls === 1 ? '导出时长误差超过 1 帧' : '导出时长在 1 帧误差内',
+          },
+        ],
       };
     });
     vi.stubGlobal('window', {
@@ -92,8 +96,8 @@ describe('export queue sidecar subtitles', () => {
         getAvailableMemoryBytes: () => Number.MAX_SAFE_INTEGER,
         listen: () => () => undefined,
         runExport,
-        runPostExportQualityAssurance
-      } satisfies TauriMocks
+        runPostExportQualityAssurance,
+      } satisfies TauriMocks,
     });
     const plan = {
       projectName: 'QA',
@@ -106,7 +110,7 @@ describe('export queue sidecar subtitles', () => {
       warnings: [],
       textArtifacts: [],
       nestedPlans: [],
-      duration: 10
+      duration: 10,
     } as unknown as FfmpegExportPlan;
 
     const task = useExportQueueStore.getState().addTask({
@@ -114,30 +118,29 @@ describe('export queue sidecar subtitles', () => {
       projectName: 'QA',
       outputPath: 'C:/Exports/retry.mp4',
       plan,
-      priority: 'normal'
+      priority: 'normal',
     });
 
     await ensureExportQueueRunner();
 
     expect(runExport).toHaveBeenCalledTimes(2);
     expect(runPostExportQualityAssurance).toHaveBeenCalledTimes(2);
-    expect(useExportQueueStore.getState().tasks.find((item) => item.id === task.id)?.report?.qualityAssurance?.status).toBe('pass');
+    expect(
+      useExportQueueStore.getState().tasks.find((item) => item.id === task.id)?.report?.qualityAssurance?.status,
+    ).toBe('pass');
     expect(useExportQueueStore.getState().history[0]?.report?.qualityAssurance?.status).toBe('pass');
   });
 
   it('falls back to libx264 after an unsupported codec failure and records recovery history', async () => {
     const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
     const files = new Map<string, string>();
-    const runExport = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('Unknown encoder h264_nvenc'))
-      .mockResolvedValueOnce({
-        success: true,
-        outputPath: 'C:/Exports/recovered.mp4',
-        durationMs: 1,
-        warnings: [],
-        report: {}
-      });
+    const runExport = vi.fn().mockRejectedValueOnce(new Error('Unknown encoder h264_nvenc')).mockResolvedValueOnce({
+      success: true,
+      outputPath: 'C:/Exports/recovered.mp4',
+      durationMs: 1,
+      warnings: [],
+      report: {},
+    });
     vi.stubGlobal('window', {
       __TAURI_MOCKS__: {
         getAppDataDir: () => appDataDir,
@@ -154,8 +157,8 @@ describe('export queue sidecar subtitles', () => {
         },
         getAvailableMemoryBytes: () => Number.MAX_SAFE_INTEGER,
         listen: () => () => undefined,
-        runExport
-      } satisfies TauriMocks
+        runExport,
+      } satisfies TauriMocks,
     });
     const plan = {
       projectName: 'Recovery',
@@ -168,7 +171,7 @@ describe('export queue sidecar subtitles', () => {
       warnings: [],
       textArtifacts: [],
       nestedPlans: [],
-      duration: 10
+      duration: 10,
     } as unknown as FfmpegExportPlan;
 
     const task = useExportQueueStore.getState().addTask({
@@ -176,7 +179,7 @@ describe('export queue sidecar subtitles', () => {
       projectName: 'Recovery',
       outputPath: 'C:/Exports/recovered.mp4',
       plan,
-      priority: 'normal'
+      priority: 'normal',
     });
 
     await ensureExportQueueRunner();
@@ -187,7 +190,9 @@ describe('export queue sidecar subtitles', () => {
     expect(finishedTask?.report?.recovery).toMatchObject({
       healed: true,
       attempts: 1,
-      entries: [expect.objectContaining({ errorKind: 'unsupported-codec', action: 'fallback-codec', result: 'success' })]
+      entries: [
+        expect.objectContaining({ errorKind: 'unsupported-codec', action: 'fallback-codec', result: 'success' }),
+      ],
     });
     expect(useExportQueueStore.getState().history[0]?.report?.recovery?.healed).toBe(true);
   });

@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildProjectReleaseRecord, runReleaseChecklist, createProject } from '@open-factory/editor-core';
-import { getProjectReleaseDir, listProjectReleaseRecords, parseProjectReleaseRecord, saveProjectReleaseRecord } from './projectReleases';
+import {
+  getProjectReleaseDir,
+  listProjectReleaseRecords,
+  parseProjectReleaseRecord,
+  saveProjectReleaseRecord,
+} from './projectReleases';
 import type { TauriMocks } from '../lib/tauri-bridge';
 
 describe('project release record storage', () => {
@@ -27,8 +32,8 @@ describe('project release record storage', () => {
         },
         fsExists: (path) => path.includes('/releases/project-1') || files.has(path),
         scanDirectory: (path) => Array.from(files.keys()).filter((file) => file.startsWith(`${path}/`)),
-        getFileStat: (path) => ({ path, size: files.get(path)?.length ?? 0, mtimeMs: mtimes.get(path) ?? 0 })
-      } satisfies Partial<TauriMocks>
+        getFileStat: (path) => ({ path, size: files.get(path)?.length ?? 0, mtimeMs: mtimes.get(path) ?? 0 }),
+      } satisfies Partial<TauriMocks>,
     });
   });
 
@@ -47,7 +52,7 @@ describe('project release record storage', () => {
       checklist,
       exportPath: 'C:/Exports/release.mp4',
       changelog: '## Release\n- Persisted',
-      snapshotPath: 'C:/Snapshots/release.cutproj.json'
+      snapshotPath: 'C:/Snapshots/release.cutproj.json',
     });
 
     const saved = await saveProjectReleaseRecord(record);

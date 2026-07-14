@@ -8,7 +8,7 @@ import {
   createCustomWorkspaceLayout,
   getEffectivePanelState,
   normalizeStoredLayoutSettings,
-  resolveWorkspaceLayoutShortcut
+  resolveWorkspaceLayoutShortcut,
 } from './layoutSettings';
 
 describe('editor layout settings', () => {
@@ -24,18 +24,21 @@ describe('editor layout settings', () => {
   });
 
   it('auto-collapses panels from workspace visibility and viewport width', () => {
-    const hiddenMediaLayout = applyWorkspaceLayout(DEFAULT_EDITOR_LAYOUT_SETTINGS, BUILT_IN_WORKSPACE_LAYOUTS['color-grading']);
+    const hiddenMediaLayout = applyWorkspaceLayout(
+      DEFAULT_EDITOR_LAYOUT_SETTINGS,
+      BUILT_IN_WORKSPACE_LAYOUTS['color-grading'],
+    );
 
     expect(getEffectivePanelState(hiddenMediaLayout, 1440)).toEqual({
       leftPanelCollapsed: true,
       rightPanelCollapsed: false,
       rightPanelAutoCollapsed: false,
       rightPrimaryPanelVisible: true,
-      audioMixerVisible: false
+      audioMixerVisible: false,
     });
     expect(getEffectivePanelState(DEFAULT_EDITOR_LAYOUT_SETTINGS, 1199)).toMatchObject({
       rightPanelCollapsed: true,
-      rightPanelAutoCollapsed: true
+      rightPanelAutoCollapsed: true,
     });
   });
 
@@ -44,19 +47,21 @@ describe('editor layout settings', () => {
       normalizeStoredLayoutSettings({
         timelineHeightPx: 260.6,
         leftPanelCollapsed: true,
-        rightPanelCollapsed: false
-      })
+        rightPanelCollapsed: false,
+      }),
     ).toEqual({
       ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
       timelineHeightPx: 261,
       leftPanelCollapsed: true,
-      rightPanelCollapsed: false
+      rightPanelCollapsed: false,
     });
-    expect(normalizeStoredLayoutSettings({ timelineHeightPx: -1, leftPanelCollapsed: 'yes', rightPanelCollapsed: true })).toEqual({
+    expect(
+      normalizeStoredLayoutSettings({ timelineHeightPx: -1, leftPanelCollapsed: 'yes', rightPanelCollapsed: true }),
+    ).toEqual({
       ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
       timelineHeightPx: 120,
       leftPanelCollapsed: false,
-      rightPanelCollapsed: true
+      rightPanelCollapsed: true,
     });
   });
 
@@ -73,8 +78,8 @@ describe('editor layout settings', () => {
           audioMixer: expect.any(Boolean),
           colorScopes: expect.any(Boolean),
           history: expect.any(Boolean),
-          bookmarks: expect.any(Boolean)
-        }
+          bookmarks: expect.any(Boolean),
+        },
       });
       expect(layout.leftPanelWidthPx).toBeGreaterThanOrEqual(48);
       expect(layout.rightPanelWidthPx).toBeGreaterThanOrEqual(48);
@@ -85,12 +90,15 @@ describe('editor layout settings', () => {
   });
 
   it('serializes and deserializes custom workspace layouts for settings persistence', () => {
-    const audioSettings = applyWorkspaceLayout(DEFAULT_EDITOR_LAYOUT_SETTINGS, BUILT_IN_WORKSPACE_LAYOUTS['audio-editing']);
+    const audioSettings = applyWorkspaceLayout(
+      DEFAULT_EDITOR_LAYOUT_SETTINGS,
+      BUILT_IN_WORKSPACE_LAYOUTS['audio-editing'],
+    );
     const customLayout = createCustomWorkspaceLayout('音频审核', audioSettings);
     const restored = normalizeStoredLayoutSettings({
       ...audioSettings,
       activeWorkspaceLayoutId: customLayout.id,
-      customWorkspaceLayouts: [customLayout]
+      customWorkspaceLayouts: [customLayout],
     });
 
     expect(restored?.activeWorkspaceLayoutId).toBe(customLayout.id);
@@ -101,8 +109,8 @@ describe('editor layout settings', () => {
         builtIn: false,
         shortcutSlot: 4,
         panels: audioSettings.panels,
-        mixerHeightPx: audioSettings.mixerHeightPx
-      })
+        mixerHeightPx: audioSettings.mixerHeightPx,
+      }),
     ]);
   });
 
@@ -110,8 +118,12 @@ describe('editor layout settings', () => {
     const customLayout = createCustomWorkspaceLayout('审片', DEFAULT_EDITOR_LAYOUT_SETTINGS);
 
     expect(resolveWorkspaceLayoutShortcut({ key: '2', ctrlKey: true, shiftKey: true }, [])).toBe('color-grading');
-    expect(resolveWorkspaceLayoutShortcut({ key: '4', ctrlKey: true, shiftKey: true }, [customLayout])).toBe(customLayout.id);
+    expect(resolveWorkspaceLayoutShortcut({ key: '4', ctrlKey: true, shiftKey: true }, [customLayout])).toBe(
+      customLayout.id,
+    );
     expect(resolveWorkspaceLayoutShortcut({ key: '4', ctrlKey: true }, [customLayout])).toBeUndefined();
-    expect(resolveWorkspaceLayoutShortcut({ key: '4', ctrlKey: true, shiftKey: true, altKey: true }, [customLayout])).toBeUndefined();
+    expect(
+      resolveWorkspaceLayoutShortcut({ key: '4', ctrlKey: true, shiftKey: true, altKey: true }, [customLayout]),
+    ).toBeUndefined();
   });
 });

@@ -43,11 +43,8 @@ export function createDefaultHSLQualifierParams(): HSLQualifierParams {
 }
 
 /** 验证 HSL 限定器参数 */
-export function validateHSLQualifierParams(
-  params: HSLQualifierParams
-): HSLQualifierParams {
-  const clamp = (v: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, v));
+export function validateHSLQualifierParams(params: HSLQualifierParams): HSLQualifierParams {
+  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
   return {
     hueRange: {
@@ -138,11 +135,7 @@ vec4 applyHSLQualifier(vec4 color, vec3 hsl) {
 
 /** 生成 HSL 限定器 FFmpeg 滤镜 */
 export function toFfmpegSelectiveColor(params: HSLQualifierParams): string {
-  if (
-    params.adjustments.hueShift === 0 &&
-    params.adjustments.saturation === 0 &&
-    params.adjustments.brightness === 0
-  ) {
+  if (params.adjustments.hueShift === 0 && params.adjustments.saturation === 0 && params.adjustments.brightness === 0) {
     return '';
   }
 

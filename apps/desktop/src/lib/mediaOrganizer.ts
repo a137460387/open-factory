@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   detectMediaCleanupCandidates,
   detectSmartDuplicateGroups,
@@ -8,20 +8,28 @@ import {
   type MediaMetadata,
   type Project,
   type SmartDuplicateCandidate,
-  type SmartDuplicateGroup
+  type SmartDuplicateGroup,
 } from '@open-factory/editor-core';
 import { generateMediaFingerprint } from './duplicateMedia';
 import { fsExists, getFileStat } from './tauri-bridge';
 
-export async function scanSmartDuplicateMediaGroups(media: MediaAsset[], mediaMetadata: Record<string, MediaMetadata>): Promise<SmartDuplicateGroup[]> {
+export async function scanSmartDuplicateMediaGroups(
+  media: MediaAsset[],
+  mediaMetadata: Record<string, MediaMetadata>,
+): Promise<SmartDuplicateGroup[]> {
   const candidates: SmartDuplicateCandidate[] = [];
   for (const asset of media) {
     if (asset.missing || (asset.type !== 'video' && asset.type !== 'image') || !asset.path.trim()) {
       continue;
     }
-    const stat = await getFileStat(asset.path).catch(logError("mediaOrganizer"));
-    const fingerprint = mediaMetadata[asset.id]?.fingerprint ?? (await generateMediaFingerprint(asset).catch(logError("mediaOrganizer")));
-    const frameHashes = fingerprint?.frameHashes?.length ? fingerprint.frameHashes : fingerprint?.hash ? [fingerprint.hash] : [];
+    const stat = await getFileStat(asset.path).catch(logError('mediaOrganizer'));
+    const fingerprint =
+      mediaMetadata[asset.id]?.fingerprint ?? (await generateMediaFingerprint(asset).catch(logError('mediaOrganizer')));
+    const frameHashes = fingerprint?.frameHashes?.length
+      ? fingerprint.frameHashes
+      : fingerprint?.hash
+        ? [fingerprint.hash]
+        : [];
     if (!stat || frameHashes.length === 0) {
       continue;
     }
@@ -30,7 +38,7 @@ export async function scanSmartDuplicateMediaGroups(media: MediaAsset[], mediaMe
       size: stat.size,
       duration: asset.duration,
       frameHashes,
-      createdAt: asset.importedAt
+      createdAt: asset.importedAt,
     });
   }
   return detectSmartDuplicateGroups(candidates);
@@ -49,7 +57,8 @@ export function buildArchiveDestinationPath(archiveDir: string, asset: MediaAsse
   const name = sanitizeFileName(asset.name || fileNameFromPath(asset.path) || `media-${index + 1}`);
   const suffix = index > 0 ? `-${String(index + 1).padStart(3, '0')}` : '';
   const extensionIndex = name.lastIndexOf('.');
-  const outputName = extensionIndex > 0 ? `${name.slice(0, extensionIndex)}${suffix}${name.slice(extensionIndex)}` : `${name}${suffix}`;
+  const outputName =
+    extensionIndex > 0 ? `${name.slice(0, extensionIndex)}${suffix}${name.slice(extensionIndex)}` : `${name}${suffix}`;
   return `${root}/${outputName}`;
 }
 
@@ -63,7 +72,7 @@ export function buildRenameDestinationPath(asset: MediaAsset, template: string, 
     height: asset.height,
     codec: asset.videoCodec ?? asset.audioCodec,
     index: index + 1,
-    name: originalName.replace(/\.[^.]+$/, '')
+    name: originalName.replace(/\.[^.]+$/, ''),
   });
   return `${directory}/${stem}${extension}`;
 }

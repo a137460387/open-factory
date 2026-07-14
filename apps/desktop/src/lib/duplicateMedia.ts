@@ -1,9 +1,21 @@
-import { createAudioRmsFingerprint, createVideoFingerprint, detectDuplicateMediaGroups, type DuplicateMediaGroup, type MediaAsset, type MediaContentSignature, type MediaFingerprint, type MediaMetadata } from '@open-factory/editor-core';
+import {
+  createAudioRmsFingerprint,
+  createVideoFingerprint,
+  detectDuplicateMediaGroups,
+  type DuplicateMediaGroup,
+  type MediaAsset,
+  type MediaContentSignature,
+  type MediaFingerprint,
+  type MediaMetadata,
+} from '@open-factory/editor-core';
 import { convertLocalFileSrc, getFileStat } from './tauri-bridge';
 
 const DUPLICATE_HASH_BYTES = 4096;
 
-export async function scanDuplicateMediaGroups(media: MediaAsset[], mediaMetadata: Record<string, MediaMetadata> = {}): Promise<DuplicateMediaGroup[]> {
+export async function scanDuplicateMediaGroups(
+  media: MediaAsset[],
+  mediaMetadata: Record<string, MediaMetadata> = {},
+): Promise<DuplicateMediaGroup[]> {
   const signatures: MediaContentSignature[] = [];
   for (const asset of media) {
     if (asset.missing || !asset.path.trim()) {
@@ -18,7 +30,7 @@ export async function scanDuplicateMediaGroups(media: MediaAsset[], mediaMetadat
         path: asset.path,
         size: stat.size,
         headHash,
-        fingerprint: mediaMetadata[asset.id]?.fingerprint
+        fingerprint: mediaMetadata[asset.id]?.fingerprint,
       });
     } catch {
       continue;
@@ -81,7 +93,7 @@ function buildRmsVector(bytes: Uint8Array, bins: number): number[] {
 
 async function readMediaHeadBytes(path: string): Promise<Uint8Array> {
   const response = await fetch(convertLocalFileSrc(path), {
-    headers: { Range: `bytes=0-${DUPLICATE_HASH_BYTES - 1}` }
+    headers: { Range: `bytes=0-${DUPLICATE_HASH_BYTES - 1}` },
   });
   if (!response.ok) {
     throw new Error(`Unable to read media head: ${path}`);

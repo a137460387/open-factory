@@ -26,7 +26,11 @@ export function useCloseGuard(saveProject: () => Promise<void>): void {
           await saveProject();
           await forceCloseWindow();
         } catch (error) {
-          showToast({ kind: 'error', title: zhCN.editorToasts.saveFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.saveFailedMessage });
+          showToast({
+            kind: 'error',
+            title: zhCN.editorToasts.saveFailed,
+            message: error instanceof Error ? error.message : zhCN.editorToasts.saveFailedMessage,
+          });
         }
         return;
       }

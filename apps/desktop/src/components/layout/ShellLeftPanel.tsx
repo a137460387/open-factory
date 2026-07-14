@@ -76,10 +76,16 @@ export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbac
   const recentMediaIds = useEditorMiscStore((s) => s.recentMediaIds);
   const sharedLibraryResources = useEditorSettingsStore((s) => s.sharedLibraryResources);
 
-  const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const effectivePanels = useMemo(
+    () => getEffectivePanelState(layoutSettings, viewportSize.width),
+    [layoutSettings, viewportSize.width],
+  );
   const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
   const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
-  const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
+  const mediaContentAnalysis = useMemo(
+    () => summarizeContentAnalysisByMedia(contentAnalysisTargets),
+    [contentAnalysisTargets],
+  );
 
   if (!reviewVisibility.showLeftPanel) return null;
 
@@ -90,20 +96,28 @@ export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbac
         label={zhCN.layout.mediaPanelCollapsed}
         title={zhCN.layout.expandMediaPanel}
         testId="left-panel-expand-button"
-        onClick={() => persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })}
+        onClick={() =>
+          persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })
+        }
       />
     );
   }
 
   return (
-    <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
+    <section
+      className="relative h-full min-h-0 min-w-0 overflow-hidden"
+      data-testid="left-panel"
+      data-collapsed="false"
+    >
       <button
         className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
         type="button"
         title={zhCN.layout.collapseMediaPanel}
         aria-label={zhCN.layout.collapseMediaPanel}
         data-testid="left-panel-collapse-button"
-        onClick={() => persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })}
+        onClick={() =>
+          persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })
+        }
       >
         <ChevronLeft size={16} />
       </button>
@@ -155,7 +169,9 @@ export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbac
         onDeleteSubclip={callbacks.onDeleteSubclip}
         onAddSubclipToTimeline={callbacks.onAddSubclipToTimeline}
         mediaCollections={project.mediaCollections ?? []}
-        onUpdateMediaCollections={(cols) => commandManager.execute(new UpdateProjectMediaCollectionsCommand(projectAccessor, cols))}
+        onUpdateMediaCollections={(cols) =>
+          commandManager.execute(new UpdateProjectMediaCollectionsCommand(projectAccessor, cols))
+        }
       />
     </section>
   );

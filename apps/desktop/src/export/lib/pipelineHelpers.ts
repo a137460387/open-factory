@@ -34,41 +34,57 @@ export interface ExportJob {
 // Range resolution
 // ---------------------------------------------------------------------------
 
-export function resolveInOutExportRanges(project: Project, inPoint: number | undefined, outPoint: number | undefined): NormalizedExportRenderRange[] {
+export function resolveInOutExportRanges(
+  project: Project,
+  inPoint: number | undefined,
+  outPoint: number | undefined,
+): NormalizedExportRenderRange[] {
   const timelineDuration = getTimelinePlaybackDuration(project.timeline);
   const fps = project.settings.fps || 30;
   const stored = normalizeExportRanges(project.exportRanges, timelineDuration).flatMap((range) => {
     const normalized = normalizeExportRenderRange(
       { id: range.id, label: range.label, start: range.start, duration: range.end - range.start },
       timelineDuration,
-      fps
+      fps,
     );
     return normalized ? [normalized] : [];
   });
   if (stored.length > 0) {
     return stored;
   }
-  const current = exportRenderRangeFromPoints(inPoint, outPoint, timelineDuration, fps, { id: 'current-in-out', label: zhCN.timeline.exportRangeLabel(1) });
+  const current = exportRenderRangeFromPoints(inPoint, outPoint, timelineDuration, fps, {
+    id: 'current-in-out',
+    label: zhCN.timeline.exportRangeLabel(1),
+  });
   return current ? [current] : [];
 }
 
-export function resolveSelectedClipExportRange(project: Project, selectedClipIds: string[]): NormalizedExportRenderRange | null {
+export function resolveSelectedClipExportRange(
+  project: Project,
+  selectedClipIds: string[],
+): NormalizedExportRenderRange | null {
   const selected = new Set(selectedClipIds);
   if (selected.size === 0) return null;
   const clips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => selected.has(clip.id));
   if (clips.length === 0) return null;
   const start = Math.min(...clips.map((clip) => clip.start));
   const end = Math.max(...clips.map((clip) => clip.start + clip.duration));
-  return exportRenderRangeFromPoints(start, end, getTimelinePlaybackDuration(project.timeline), project.settings.fps || 30, {
-    id: 'selected-clips',
-    label: zhCN.exportDialog.range.options['selected-clips']
-  });
+  return exportRenderRangeFromPoints(
+    start,
+    end,
+    getTimelinePlaybackDuration(project.timeline),
+    project.settings.fps || 30,
+    {
+      id: 'selected-clips',
+      label: zhCN.exportDialog.range.options['selected-clips'],
+    },
+  );
 }
 
 export function resolveActiveExportRanges(
   mode: ExportRangeMode,
   inOutRanges: NormalizedExportRenderRange[],
-  selectedClipRange: NormalizedExportRenderRange | null
+  selectedClipRange: NormalizedExportRenderRange | null,
 ): NormalizedExportRenderRange[] {
   if (mode === 'in-out') return inOutRanges;
   if (mode === 'selected-clips') return selectedClipRange ? [selectedClipRange] : [];
@@ -86,7 +102,7 @@ export function buildExportJobs(paths: string[], ranges: NormalizedExportRenderR
   const basePath = paths[0];
   return ranges.map((range, index) => ({
     outputPath: appendExportRangeSequence(basePath, index + 1, ranges.length),
-    range
+    range,
   }));
 }
 
@@ -97,7 +113,7 @@ export function buildExportJobs(paths: string[], ranges: NormalizedExportRenderR
 export function updatePipelineStatus(
   statuses: Record<string, ExportPipelineNodeStatus>,
   nodeId: string,
-  status: ExportPipelineNodeStatus
+  status: ExportPipelineNodeStatus,
 ): Record<string, ExportPipelineNodeStatus> {
   return { ...statuses, [nodeId]: status };
 }
@@ -126,11 +142,12 @@ export function formatDuration(value: number | undefined): string {
 export function formatExportRangeSummary(
   mode: ExportRangeMode,
   ranges: NormalizedExportRenderRange[],
-  selectedClipRange: NormalizedExportRenderRange | null
+  selectedClipRange: NormalizedExportRenderRange | null,
 ): string {
   if (mode === 'all') return zhCN.exportDialog.range.allSummary;
   if (mode === 'selected-clips' && !selectedClipRange) return zhCN.exportDialog.range.unavailable;
   if (ranges.length === 0) return zhCN.exportDialog.range.unavailable;
-  if (ranges.length === 1) return zhCN.exportDialog.range.singleSummary(formatDuration(ranges[0].start), formatDuration(ranges[0].duration));
+  if (ranges.length === 1)
+    return zhCN.exportDialog.range.singleSummary(formatDuration(ranges[0].start), formatDuration(ranges[0].duration));
   return zhCN.exportDialog.range.multiSummary(ranges.length);
 }

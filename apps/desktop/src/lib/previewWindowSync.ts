@@ -11,13 +11,13 @@ export function createPreviewWindowPlaybackState(
   source: PreviewWindowSyncSource,
   playheadTime: number,
   isPlaying: boolean,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): PreviewWindowPlaybackState {
   return {
     source,
     playheadTime: normalizePlayheadTime(playheadTime),
     isPlaying,
-    updatedAt: Number.isFinite(now) ? now : Date.now()
+    updatedAt: Number.isFinite(now) ? now : Date.now(),
   };
 }
 
@@ -36,7 +36,7 @@ export function normalizePreviewWindowPlaybackState(value: unknown): PreviewWind
     source: input.source,
     playheadTime: normalizePlayheadTime(input.playheadTime),
     isPlaying: input.isPlaying === true,
-    updatedAt: typeof input.updatedAt === 'number' && Number.isFinite(input.updatedAt) ? input.updatedAt : Date.now()
+    updatedAt: typeof input.updatedAt === 'number' && Number.isFinite(input.updatedAt) ? input.updatedAt : Date.now(),
   };
 }
 
@@ -44,7 +44,7 @@ export function shouldApplyPreviewWindowPlaybackState(
   current: { playheadTime: number; isPlaying: boolean },
   incoming: PreviewWindowPlaybackState,
   localSource: PreviewWindowSyncSource,
-  frameDuration = 1 / 60
+  frameDuration = 1 / 60,
 ): boolean {
   if (incoming.source === localSource) {
     return false;

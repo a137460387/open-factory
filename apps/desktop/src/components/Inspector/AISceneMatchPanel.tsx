@@ -8,7 +8,7 @@ import {
   buildSceneMatchUserPrompt,
   parseSceneMatchResponse,
   buildSceneMatchDragParams,
-  hasAvailableTextProvider
+  hasAvailableTextProvider,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -29,11 +29,25 @@ export function AISceneMatchPanel({
   clip,
   media,
   timelineClips,
-  selectedClipLocked
+  selectedClipLocked,
 }: {
   clip: Clip;
-  media: Array<{ id: string; name: string; type: string; path?: string; duration?: number; width?: number; height?: number; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>;
-  timelineClips: Array<{ id: string; start: number; mediaId?: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>;
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    path?: string;
+    duration?: number;
+    width?: number;
+    height?: number;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>;
+  timelineClips: Array<{
+    id: string;
+    start: number;
+    mediaId?: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>;
   selectedClipLocked: boolean;
 }) {
   const providers = useAISettingsStore((s) => s.providers);
@@ -82,27 +96,30 @@ export function AISceneMatchPanel({
           name: clip.name,
           type: clip.type,
           mediaId: 'mediaId' in clip ? (clip as { mediaId?: string }).mediaId : undefined,
-          aiAnalysis: clipMedia?.aiAnalysis
+          aiAnalysis: clipMedia?.aiAnalysis,
         },
         timelineClips,
-        media
+        media,
       );
 
       const payload = buildSceneMatchMediaPayload(media);
       const systemPrompt = buildSceneMatchSystemPrompt();
       const userPrompt = buildSceneMatchUserPrompt(context, payload);
 
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        timeoutSecs: 30
-      }, apiKey);
+      const response = await callAiApi(
+        {
+          providerId: selectedProvider.id,
+          baseUrl: selectedProvider.baseUrl,
+          model: selectedProvider.defaultModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+          timeoutSecs: 30,
+        },
+        apiKey,
+      );
 
       if (abortRef.current) return;
 
@@ -129,7 +146,7 @@ export function AISceneMatchPanel({
         showToast({
           kind: 'error',
           title: t.failedTitle,
-          message: err instanceof Error ? err.message : t.failedMessage
+          message: err instanceof Error ? err.message : t.failedMessage,
         });
         setError(err instanceof Error ? err.message : t.failedMessage);
       }
@@ -139,7 +156,9 @@ export function AISceneMatchPanel({
   }, [selectedProvider, available, clip, clipMedia, timelineClips, media]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   const renderCard = (card: SceneMatchCard) => {
@@ -153,7 +172,13 @@ export function AISceneMatchPanel({
           const m = mediaMap.current.get(card.mediaId);
           if (!m) return;
           const params = buildSceneMatchDragParams({
-            id: m.id, name: m.name, type: m.type, path: m.path ?? '', duration: m.duration ?? 0, width: m.width ?? 0, height: m.height ?? 0
+            id: m.id,
+            name: m.name,
+            type: m.type,
+            path: m.path ?? '',
+            duration: m.duration ?? 0,
+            width: m.width ?? 0,
+            height: m.height ?? 0,
           });
           e.dataTransfer.effectAllowed = 'copy';
           e.dataTransfer.setData(MEDIA_CARD_DRAG_MIME, params.mediaId);
@@ -185,9 +210,7 @@ export function AISceneMatchPanel({
       {cards.length === 0 ? (
         <p className="text-xs text-[var(--color-text-muted)]">{t.noResults}</p>
       ) : (
-        <div className="space-y-1">
-          {cards.map(renderCard)}
-        </div>
+        <div className="space-y-1">{cards.map(renderCard)}</div>
       )}
     </div>
   );
@@ -201,10 +224,14 @@ export function AISceneMatchPanel({
       </summary>
       <div className="space-y-2 p-1">
         {!available && (
-          <p className="text-xs text-orange-500" data-testid="ai-scene-match-no-provider">{t.noProvider}</p>
+          <p className="text-xs text-orange-500" data-testid="ai-scene-match-no-provider">
+            {t.noProvider}
+          </p>
         )}
         {!hasAnalysis && available && (
-          <p className="text-xs text-amber-600" data-testid="ai-scene-match-no-analysis">{t.noAnalysis}</p>
+          <p className="text-xs text-amber-600" data-testid="ai-scene-match-no-analysis">
+            {t.noAnalysis}
+          </p>
         )}
 
         {!loading && !hasResults && (
@@ -217,9 +244,13 @@ export function AISceneMatchPanel({
               data-testid="ai-scene-match-provider-select"
             >
               {providers.length === 0 && <option value="">{t.noProvider}</option>}
-              {providers.filter((p) => p.enabled).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
         )}
@@ -238,14 +269,20 @@ export function AISceneMatchPanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-scene-match-loading">
+          <div
+            className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]"
+            data-testid="ai-scene-match-loading"
+          >
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="ai-scene-match-error">
+          <div
+            className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+            data-testid="ai-scene-match-error"
+          >
             {error}
           </div>
         )}

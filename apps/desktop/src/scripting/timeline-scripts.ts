@@ -1,5 +1,14 @@
-import { logError } from "../lib/error-handlers";
-import { fsExists, getAppDataDir, openFileDialog, readFile, removeFile, saveFileDialog, scanDirectory, writeFile } from '../lib/tauri-bridge';
+import { logError } from '../lib/error-handlers';
+import {
+  fsExists,
+  getAppDataDir,
+  openFileDialog,
+  readFile,
+  removeFile,
+  saveFileDialog,
+  scanDirectory,
+  writeFile,
+} from '../lib/tauri-bridge';
 import { zhCN } from '../i18n/strings';
 
 const TIMELINE_SCRIPT_EXTENSION = '.js';
@@ -27,7 +36,7 @@ const defaultStorage: TimelineScriptStorage = {
   readFile,
   writeFile,
   removeFile,
-  scanDirectory
+  scanDirectory,
 };
 
 export function getTimelineScriptsDir(appDataDir: string): string {
@@ -38,42 +47,58 @@ export function getTimelineScriptPath(appDataDir: string, name: string): string 
   return `${getTimelineScriptsDir(appDataDir)}/${sanitizeTimelineScriptName(name)}${TIMELINE_SCRIPT_EXTENSION}`;
 }
 
-export async function loadTimelineScripts(storage: TimelineScriptStorage = defaultStorage): Promise<TimelineScriptFile[]> {
+export async function loadTimelineScripts(
+  storage: TimelineScriptStorage = defaultStorage,
+): Promise<TimelineScriptFile[]> {
   const appDataDir = await storage.getAppDataDir();
   const scriptsDir = getTimelineScriptsDir(appDataDir);
   if (!(await Promise.resolve(storage.fsExists(scriptsDir)).catch(() => false))) {
     return [];
   }
-  const paths = (await storage.scanDirectory(scriptsDir, 1)).filter((path) => path.toLowerCase().endsWith(TIMELINE_SCRIPT_EXTENSION));
+  const paths = (await storage.scanDirectory(scriptsDir, 1)).filter((path) =>
+    path.toLowerCase().endsWith(TIMELINE_SCRIPT_EXTENSION),
+  );
   const scripts = await Promise.all(
     paths.map(async (path) => ({
       id: path,
       name: scriptNameFromPath(path),
       path,
-      code: await storage.readFile(path)
-    }))
+      code: await storage.readFile(path),
+    })),
   );
   return scripts.sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export async function saveTimelineScript(name: string, code: string, previousPath?: string, storage: TimelineScriptStorage = defaultStorage): Promise<TimelineScriptFile> {
+export async function saveTimelineScript(
+  name: string,
+  code: string,
+  previousPath?: string,
+  storage: TimelineScriptStorage = defaultStorage,
+): Promise<TimelineScriptFile> {
   const appDataDir = await storage.getAppDataDir();
   const path = getTimelineScriptPath(appDataDir, name);
   await storage.writeFile(path, code.endsWith('\n') ? code : `${code}\n`);
   if (previousPath && previousPath !== path) {
-    await Promise.resolve(storage.removeFile(previousPath)).catch(logError("timeline-scripts"));
+    await Promise.resolve(storage.removeFile(previousPath)).catch(logError('timeline-scripts'));
   }
   return { id: path, name: scriptNameFromPath(path), path, code };
 }
 
-export async function deleteTimelineScript(path: string, storage: TimelineScriptStorage = defaultStorage): Promise<void> {
+export async function deleteTimelineScript(
+  path: string,
+  storage: TimelineScriptStorage = defaultStorage,
+): Promise<void> {
   if (path.trim()) {
     await storage.removeFile(path);
   }
 }
 
-export async function importTimelineScriptFromDialog(storage: TimelineScriptStorage = defaultStorage): Promise<TimelineScriptFile | undefined> {
-  const [sourcePath] = await openFileDialog(false, [{ name: zhCN.settings.scripts.fileDialogName, extensions: ['js'] }]);
+export async function importTimelineScriptFromDialog(
+  storage: TimelineScriptStorage = defaultStorage,
+): Promise<TimelineScriptFile | undefined> {
+  const [sourcePath] = await openFileDialog(false, [
+    { name: zhCN.settings.scripts.fileDialogName, extensions: ['js'] },
+  ]);
   if (!sourcePath) {
     return undefined;
   }
@@ -82,7 +107,9 @@ export async function importTimelineScriptFromDialog(storage: TimelineScriptStor
 }
 
 export async function exportTimelineScriptToDialog(name: string, code: string): Promise<string | undefined> {
-  const outputPath = await saveFileDialog(`${sanitizeTimelineScriptName(name)}${TIMELINE_SCRIPT_EXTENSION}`, [{ name: zhCN.settings.scripts.fileDialogName, extensions: ['js'] }]);
+  const outputPath = await saveFileDialog(`${sanitizeTimelineScriptName(name)}${TIMELINE_SCRIPT_EXTENSION}`, [
+    { name: zhCN.settings.scripts.fileDialogName, extensions: ['js'] },
+  ]);
   if (!outputPath) {
     return undefined;
   }
@@ -96,6 +123,9 @@ function scriptNameFromPath(path: string): string {
 }
 
 function sanitizeTimelineScriptName(name: string): string {
-  const normalized = name.trim().replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ');
+  const normalized = name
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
+    .replace(/\s+/g, ' ');
   return (normalized || zhCN.settings.scripts.defaultScriptName).slice(0, 80);
 }

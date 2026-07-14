@@ -28,13 +28,17 @@ const PORTRAIT_RATIO_THRESHOLD = 1.1;
 const SHORT_DURATION_THRESHOLD = 60;
 const HDR_COLOR_SPACES: ReadonlySet<ExportColorSpace> = new Set<ExportColorSpace>(['rec2020', 'display-p3', 'dci-p3']);
 
-const SHORT_FORM_PRESETS: ReadonlyArray<{ id: string; orientation: 'portrait' | 'square' | 'landscape'; shortFormBonus: number }> = [
+const SHORT_FORM_PRESETS: ReadonlyArray<{
+  id: string;
+  orientation: 'portrait' | 'square' | 'landscape';
+  shortFormBonus: number;
+}> = [
   { id: 'tiktok', orientation: 'portrait', shortFormBonus: 0.9 },
   { id: 'instagram-reels', orientation: 'portrait', shortFormBonus: 0.85 },
   { id: 'youtube-shorts', orientation: 'portrait', shortFormBonus: 0.8 },
   { id: 'twitter-x', orientation: 'landscape', shortFormBonus: 0.5 },
   { id: 'bilibili', orientation: 'landscape', shortFormBonus: 0.4 },
-  { id: 'youtube-1080p', orientation: 'landscape', shortFormBonus: 0.3 }
+  { id: 'youtube-1080p', orientation: 'landscape', shortFormBonus: 0.3 },
 ];
 
 export function buildExportRecommendationContext(project: Project): ExportRecommendationContext {
@@ -48,7 +52,7 @@ export function buildExportRecommendationContext(project: Project): ExportRecomm
 
 export function buildExportPresetRecommendations(
   context: ExportRecommendationContext,
-  labelFn: (code: ExportRecommendationReasonCode, context: ExportRecommendationContext) => string = defaultLabelFn
+  labelFn: (code: ExportRecommendationReasonCode, context: ExportRecommendationContext) => string = defaultLabelFn,
 ): ExportPresetRecommendation[] {
   const results: ExportPresetRecommendation[] = [];
 

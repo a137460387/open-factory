@@ -10,7 +10,7 @@ import {
   normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeTrackPan,
-  normalizeTransitionDuration
+  normalizeTransitionDuration,
 } from './model';
 import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model-types';
 import { cloneEffects } from './effects';
@@ -26,7 +26,9 @@ export function findClipAtTime(track: Track, time: number): Clip | undefined {
 }
 
 export function getActiveClipsAtTime(timeline: Timeline, time: number): Clip[] {
-  return getRenderableTracks(timeline).flatMap((track) => track.clips.filter((clip) => time >= clip.start && time < clip.start + clip.duration));
+  return getRenderableTracks(timeline).flatMap((track) =>
+    track.clips.filter((clip) => time >= clip.start && time < clip.start + clip.duration),
+  );
 }
 
 export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [TClip, TClip] {
@@ -56,7 +58,7 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration),
     effects: cloneEffects(clip.effects),
-    ...cloneMotionGraphicForDuration(clip, leftDuration)
+    ...cloneMotionGraphicForDuration(clip, leftDuration),
   } as TClip;
   const right = {
     ...clip,
@@ -74,7 +76,7 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: shiftClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration, rightDuration),
     effects: cloneEffects(clip.effects),
-    ...cloneMotionGraphicForDuration(clip, rightDuration)
+    ...cloneMotionGraphicForDuration(clip, rightDuration),
   } as TClip;
 
   return [left, right];
@@ -105,7 +107,7 @@ export function trimClip<TClip extends Clip>(clip: TClip, newTrimStart: number, 
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
     effects: cloneEffects(clip.effects),
-    ...cloneMotionGraphicForDuration(clip, duration)
+    ...cloneMotionGraphicForDuration(clip, duration),
   } as TClip;
 }
 
@@ -123,7 +125,7 @@ export function moveClip<TClip extends Clip>(clip: TClip, newStart: number): TCl
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: cloneClipKeyframes(clip.keyframes),
     effects: cloneEffects(clip.effects),
-    ...cloneMotionGraphicForDuration(clip, clip.duration)
+    ...cloneMotionGraphicForDuration(clip, clip.duration),
   } as TClip;
 }
 
@@ -149,7 +151,7 @@ export function getTimelineDuration(timeline: Timeline): number {
     timeline.tracks.reduce((duration, track) => {
       const trackEnd = track.clips.reduce((end, clip) => Math.max(end, clip.start + clip.duration), 0);
       return Math.max(duration, trackEnd);
-    }, 0)
+    }, 0),
   );
 }
 
@@ -168,11 +170,13 @@ export function getTimelinePlaybackDuration(timeline: Pick<Timeline, 'tracks' | 
         return Math.max(end, playbackStart + clip.duration);
       }, 0);
       return Math.max(duration, trackEnd);
-    }, 0)
+    }, 0),
   );
 }
 
-export function getRenderableTracks<TTrack extends { muted?: boolean; solo?: boolean }>(timeline: { tracks: TTrack[] }): TTrack[] {
+export function getRenderableTracks<TTrack extends { muted?: boolean; solo?: boolean }>(timeline: {
+  tracks: TTrack[];
+}): TTrack[] {
   const hasSolo = timeline.tracks.some((track) => Boolean(track.solo));
   return timeline.tracks.filter((track) => {
     if (track.muted) {
@@ -192,7 +196,7 @@ export function getTrackPan(track: Track): number {
 
 export function getTransitionMaxDuration(
   fromClip: Pick<Clip, 'duration'> | { duration: number },
-  toClip: Pick<Clip, 'duration'> | { duration: number }
+  toClip: Pick<Clip, 'duration'> | { duration: number },
 ): number {
   return round(Math.max(0, Math.min(fromClip.duration, toClip.duration) * 0.5));
 }
@@ -200,14 +204,14 @@ export function getTransitionMaxDuration(
 export function clampTransitionDuration(
   duration: number | undefined,
   fromClip: Pick<Clip, 'duration'> | { duration: number },
-  toClip: Pick<Clip, 'duration'> | { duration: number }
+  toClip: Pick<Clip, 'duration'> | { duration: number },
 ): number {
   return round(Math.min(normalizeTransitionDuration(duration), getTransitionMaxDuration(fromClip, toClip)));
 }
 
 export function areClipsAdjacent(
   fromClip: Pick<Clip, 'start' | 'duration'> | { start: number; duration: number },
-  toClip: Pick<Clip, 'start'> | { start: number }
+  toClip: Pick<Clip, 'start'> | { start: number },
 ): boolean {
   return Math.abs(fromClip.start + fromClip.duration - toClip.start) <= 0.001;
 }
@@ -215,7 +219,7 @@ export function areClipsAdjacent(
 export function findAdjacentTransitionClips(
   timeline: Pick<Timeline, 'tracks' | 'transitions'>,
   fromClipId: string,
-  toClipId: string
+  toClipId: string,
 ): { track: Track; fromClip: Clip; toClip: Clip; fromIndex: number; toIndex: number } | undefined {
   for (const track of timeline.tracks) {
     const clips = sortClipsByTime(track.clips);
@@ -234,7 +238,10 @@ export function findAdjacentTransitionClips(
   return undefined;
 }
 
-export function getClipPlaybackStart(timeline: Pick<Timeline, 'tracks' | 'transitions'>, clipId: string): number | undefined {
+export function getClipPlaybackStart(
+  timeline: Pick<Timeline, 'tracks' | 'transitions'>,
+  clipId: string,
+): number | undefined {
   for (const track of timeline.tracks) {
     const clips = sortClipsByTime(track.clips);
     let transitionOffset = 0;
@@ -255,7 +262,7 @@ export function getClipPlaybackStart(timeline: Pick<Timeline, 'tracks' | 'transi
 
 export function getTransitionPlaybackWindow(
   timeline: Pick<Timeline, 'tracks' | 'transitions'>,
-  transition: Transition
+  transition: Transition,
 ): { start: number; end: number; duration: number; fromClip: Clip; toClip: Clip } | undefined {
   const pair = findAdjacentTransitionClips(timeline, transition.fromClipId, transition.toClipId);
   if (!pair) {
@@ -274,7 +281,7 @@ export function getTransitionPlaybackWindow(
     end: round(toPlaybackStart + duration),
     duration,
     fromClip: pair.fromClip,
-    toClip: pair.toClip
+    toClip: pair.toClip,
   };
 }
 
@@ -282,7 +289,10 @@ export function getClipSpeed(clip: Pick<Clip, 'speed'> | { speed?: number }): nu
   return clampClipSpeed(clip.speed);
 }
 
-export function getClipSpeedAtTime(clip: Pick<Clip, 'speed' | 'keyframes'> | { speed?: number; keyframes?: ClipKeyframes }, localTime: number): number {
+export function getClipSpeedAtTime(
+  clip: Pick<Clip, 'speed' | 'keyframes'> | { speed?: number; keyframes?: ClipKeyframes },
+  localTime: number,
+): number {
   return getSpeedAtTime(clip.keyframes, localTime, getClipSpeed(clip));
 }
 
@@ -291,12 +301,17 @@ export function hasSpeedKeyframes(keyframes: ClipKeyframes | undefined): boolean
 }
 
 export function getClipSourceVisibleDuration(
-  clip: Pick<Clip, 'duration' | 'speed' | 'keyframes'> | { duration: number; speed?: number; keyframes?: ClipKeyframes }
+  clip:
+    Pick<Clip, 'duration' | 'speed' | 'keyframes'> | { duration: number; speed?: number; keyframes?: ClipKeyframes },
 ): number {
   return calculateSpeedCurveSourceDuration(Math.max(0, clip.duration), clip.keyframes, getClipSpeed(clip));
 }
 
-export function getClipDisplayDuration(sourceVisibleDuration: number, speed: number | undefined, keyframes?: ClipKeyframes): number {
+export function getClipDisplayDuration(
+  sourceVisibleDuration: number,
+  speed: number | undefined,
+  keyframes?: ClipKeyframes,
+): number {
   return calculateSpeedCurveDisplayDuration(sourceVisibleDuration, keyframes, getClipSpeed({ speed }));
 }
 
@@ -317,7 +332,7 @@ export function setClipSpeed<TClip extends Clip>(clip: TClip, speed: number): TC
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
     effects: cloneEffects(clip.effects),
-    ...cloneMotionGraphicForDuration(clip, duration)
+    ...cloneMotionGraphicForDuration(clip, duration),
   } as TClip;
 }
 
@@ -332,7 +347,7 @@ export function calculateSpeedCurveSourceDuration(
   displayDuration: number,
   keyframes: ClipKeyframes | undefined,
   fallbackSpeed: number | undefined,
-  steps = SPEED_CURVE_INTEGRATION_STEPS
+  steps = SPEED_CURVE_INTEGRATION_STEPS,
 ): number {
   const duration = Math.max(0, displayDuration);
   const speed = getClipSpeed({ speed: fallbackSpeed });
@@ -356,7 +371,7 @@ export function calculateSpeedCurveDisplayDuration(
   sourceVisibleDuration: number,
   keyframes: ClipKeyframes | undefined,
   fallbackSpeed: number | undefined,
-  steps = SPEED_CURVE_INTEGRATION_STEPS
+  steps = SPEED_CURVE_INTEGRATION_STEPS,
 ): number {
   const sourceDuration = Math.max(0, sourceVisibleDuration);
   const speed = getClipSpeed({ speed: fallbackSpeed });
@@ -367,10 +382,16 @@ export function calculateSpeedCurveDisplayDuration(
     return round(sourceDuration / speed);
   }
 
-  const lastKeyframeTime = Math.max(0, ...(keyframes?.speed ?? []).map((frame) => (Number.isFinite(frame.time) ? frame.time : 0)));
+  const lastKeyframeTime = Math.max(
+    0,
+    ...(keyframes?.speed ?? []).map((frame) => (Number.isFinite(frame.time) ? frame.time : 0)),
+  );
   let low = 0;
   let high = Math.max(sourceDuration / MIN_CLIP_SPEED, lastKeyframeTime, sourceDuration / speed, 1 / 30);
-  while (calculateSpeedCurveSourceDuration(high, keyframes, speed, steps) < sourceDuration && high < sourceDuration / MIN_CLIP_SPEED + lastKeyframeTime + 1) {
+  while (
+    calculateSpeedCurveSourceDuration(high, keyframes, speed, steps) < sourceDuration &&
+    high < sourceDuration / MIN_CLIP_SPEED + lastKeyframeTime + 1
+  ) {
     high *= 2;
   }
   for (let index = 0; index < 32; index += 1) {
@@ -396,14 +417,17 @@ export function replaceClip(timeline: Timeline, replacement: Clip): Timeline {
       track.id === replacement.trackId
         ? {
             ...track,
-            clips: track.clips.map((clip) => (clip.id === replacement.id ? replacement : clip))
+            clips: track.clips.map((clip) => (clip.id === replacement.id ? replacement : clip)),
           }
-        : track
-    )
+        : track,
+    ),
   };
 }
 
-export function removeClip(timeline: Timeline, clipId: string): { timeline: Timeline; clip?: Clip; index: number; trackId?: string } {
+export function removeClip(
+  timeline: Timeline,
+  clipId: string,
+): { timeline: Timeline; clip?: Clip; index: number; trackId?: string } {
   let removed: Clip | undefined;
   let removedIndex = -1;
   let removedTrackId: string | undefined;
@@ -422,11 +446,13 @@ export function removeClip(timeline: Timeline, clipId: string): { timeline: Time
     timeline: {
       ...timeline,
       tracks,
-      transitions: (timeline.transitions ?? []).filter((transition) => transition.fromClipId !== clipId && transition.toClipId !== clipId)
+      transitions: (timeline.transitions ?? []).filter(
+        (transition) => transition.fromClipId !== clipId && transition.toClipId !== clipId,
+      ),
     },
     clip: removed,
     index: removedIndex,
-    trackId: removedTrackId
+    trackId: removedTrackId,
   };
 }
 
@@ -438,7 +464,11 @@ function findPairTransition(transitions: Transition[], fromClipId: string, toCli
   return transitions.find((transition) => transition.fromClipId === fromClipId && transition.toClipId === toClipId);
 }
 
-function shiftClipKeyframes(keyframes: ClipKeyframes | undefined, offset: number, duration: number): ClipKeyframes | undefined {
+function shiftClipKeyframes(
+  keyframes: ClipKeyframes | undefined,
+  offset: number,
+  duration: number,
+): ClipKeyframes | undefined {
   if (!keyframes) {
     return undefined;
   }
@@ -448,7 +478,7 @@ function shiftClipKeyframes(keyframes: ClipKeyframes | undefined, offset: number
     if (frames?.length) {
       shifted[property] = frames.map((frame) => ({
         ...frame,
-        time: round(Math.max(0, frame.time - offset))
+        time: round(Math.max(0, frame.time - offset)),
       }));
     }
   }

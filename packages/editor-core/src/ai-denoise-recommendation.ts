@@ -45,7 +45,7 @@ export function analyzeFrequencyBand(
   samples: Float32Array,
   sampleRate: number,
   freqHz: number,
-  bandwidthHz = 5
+  bandwidthHz = 5,
 ): number {
   if (samples.length === 0 || sampleRate <= 0 || freqHz <= 0) {
     return 0;
@@ -75,7 +75,7 @@ export function analyzeBroadbandEnergy(
   sampleRate: number,
   lowFreq: number,
   highFreq: number,
-  binCount = 8
+  binCount = 8,
 ): number {
   if (samples.length === 0 || sampleRate <= 0 || lowFreq >= highFreq) {
     return 0;
@@ -92,10 +92,7 @@ export function analyzeBroadbandEnergy(
 /**
  * 估算信噪比（SNR）：用信号区间的RMS与静音区间RMS的比值。
  */
-export function estimateSNR(
-  signalSamples: Float32Array,
-  noiseSamples: Float32Array
-): number {
+export function estimateSNR(signalSamples: Float32Array, noiseSamples: Float32Array): number {
   const signalRms = calculateSimpleRms(signalSamples);
   const noiseRms = Math.max(calculateSimpleRms(noiseSamples), SNR_SILENCE_FLOOR);
   if (noiseRms <= 0) {
@@ -120,7 +117,7 @@ function calculateSimpleRms(samples: Float32Array): number {
 export function classifyNoiseProfile(
   noiseSamples: Float32Array,
   sampleRate: number,
-  signalSamples?: Float32Array
+  signalSamples?: Float32Array,
 ): NoiseProfile {
   if (noiseSamples.length === 0 || sampleRate <= 0) {
     return { humScore: 0, hissScore: 0, windScore: 0, snrEstimate: 60 };
@@ -160,7 +157,7 @@ export function recommendDenoiseFilters(profile: NoiseProfile): DenoiseFilterRec
     filters.push({
       filter: 'highpass',
       params: { f: cutoffFreq, poles: 2 },
-      reason: `检测到嗡声干扰（得分${profile.humScore.toFixed(2)}），建议使用高通滤波切除${cutoffFreq}Hz以下低频`
+      reason: `检测到嗡声干扰（得分${profile.humScore.toFixed(2)}），建议使用高通滤波切除${cutoffFreq}Hz以下低频`,
     });
   }
 
@@ -170,7 +167,7 @@ export function recommendDenoiseFilters(profile: NoiseProfile): DenoiseFilterRec
     filters.push({
       filter: 'afftdn',
       params: { nr: round(nr, 2), nt: 'w', om: 'o' },
-      reason: `检测到嘶声/高频噪声（得分${profile.hissScore.toFixed(2)}），建议使用自适应FFT降噪`
+      reason: `检测到嘶声/高频噪声（得分${profile.hissScore.toFixed(2)}），建议使用自适应FFT降噪`,
     });
   }
 
@@ -180,7 +177,7 @@ export function recommendDenoiseFilters(profile: NoiseProfile): DenoiseFilterRec
     filters.push({
       filter: 'lowpass',
       params: { f: lowCutoff, poles: 2 },
-      reason: `检测到风声干扰（得分${profile.windScore.toFixed(2)}），建议使用低通滤波切除${lowCutoff}Hz以上风噪`
+      reason: `检测到风声干扰（得分${profile.windScore.toFixed(2)}），建议使用低通滤波切除${lowCutoff}Hz以上风噪`,
     });
   }
 
@@ -189,7 +186,7 @@ export function recommendDenoiseFilters(profile: NoiseProfile): DenoiseFilterRec
     filters.push({
       filter: 'anlmdn',
       params: { s: round(Math.max(1, 10 - profile.snrEstimate / 3), 1) },
-      reason: `信噪比偏低（${profile.snrEstimate}dB），建议使用非局部均值降噪`
+      reason: `信噪比偏低（${profile.snrEstimate}dB），建议使用非局部均值降噪`,
     });
   }
 
@@ -215,8 +212,11 @@ export function parseDenoiseAiResponse(json: unknown): AIDenoiseResponse {
     })
     .map((item) => ({
       filter: (item as DenoiseFilterRecommendation).filter,
-      params: typeof (item as DenoiseFilterRecommendation).params === 'object' ? (item as DenoiseFilterRecommendation).params : {},
-      reason: ((item as DenoiseFilterRecommendation).reason ?? '').trim()
+      params:
+        typeof (item as DenoiseFilterRecommendation).params === 'object'
+          ? (item as DenoiseFilterRecommendation).params
+          : {},
+      reason: ((item as DenoiseFilterRecommendation).reason ?? '').trim(),
     }));
   return { recommendedFilters, confidence };
 }
@@ -251,13 +251,13 @@ export function buildDenoiseFfmpegArgs(filters: DenoiseFilterRecommendation[]): 
  */
 export function createDenoiseRecommendation(
   noiseProfile: NoiseProfile,
-  recommendedFilters: DenoiseFilterRecommendation[]
+  recommendedFilters: DenoiseFilterRecommendation[],
 ): AIDenoiseRecommendation {
   return {
     noiseProfile,
     recommendedFilters,
     appliedFilters: [],
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -265,7 +265,7 @@ export function createDenoiseRecommendation(
  * 规范化AIDenoiseRecommendation，处理旧项目兼容。
  */
 export function normalizeAIDenoiseRecommendation(
-  input: Partial<AIDenoiseRecommendation> | undefined
+  input: Partial<AIDenoiseRecommendation> | undefined,
 ): AIDenoiseRecommendation | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const np = input.noiseProfile;
@@ -275,11 +275,11 @@ export function normalizeAIDenoiseRecommendation(
       humScore: finiteOrZero(np.humScore),
       hissScore: finiteOrZero(np.hissScore),
       windScore: finiteOrZero(np.windScore),
-      snrEstimate: finiteOrZero(np.snrEstimate)
+      snrEstimate: finiteOrZero(np.snrEstimate),
     },
     recommendedFilters: Array.isArray(input.recommendedFilters) ? input.recommendedFilters : [],
     appliedFilters: Array.isArray(input.appliedFilters) ? input.appliedFilters : [],
-    generatedAt: typeof input.generatedAt === 'string' ? input.generatedAt : ''
+    generatedAt: typeof input.generatedAt === 'string' ? input.generatedAt : '',
   };
 }
 

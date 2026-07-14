@@ -5,20 +5,18 @@ import { useEditorFeatureStore } from '../../store/editorFeatureStore';
 import { PanelLoading } from '../PanelLoading';
 
 const ThumbnailGeneratorDialog = lazy(() =>
-  import('../../thumbnail/ThumbnailGeneratorDialog').then((m) => ({ default: m.ThumbnailGeneratorDialog }))
+  import('../../thumbnail/ThumbnailGeneratorDialog').then((m) => ({ default: m.ThumbnailGeneratorDialog })),
 );
 const MediaVersionComparePanel = lazy(() =>
-  import('../MediaVersionComparePanel').then((m) => ({ default: m.MediaVersionComparePanel }))
+  import('../MediaVersionComparePanel').then((m) => ({ default: m.MediaVersionComparePanel })),
 );
 const MediaPrecheckPanel = lazy(() =>
-  import('../../media/MediaPrecheckPanel').then((m) => ({ default: m.MediaPrecheckPanel }))
+  import('../../media/MediaPrecheckPanel').then((m) => ({ default: m.MediaPrecheckPanel })),
 );
 const SyncComparePanel = lazy(() =>
-  import('../../sync-compare/SyncComparePanel').then((m) => ({ default: m.SyncComparePanel }))
+  import('../../sync-compare/SyncComparePanel').then((m) => ({ default: m.SyncComparePanel })),
 );
-const CollaborationNotesPanel = lazy(() =>
-  import('../../collaboration/CollaborationNotesPanel')
-);
+const CollaborationNotesPanel = lazy(() => import('../../collaboration/CollaborationNotesPanel'));
 
 export interface MediaCompareDialogsProps {
   project: Project;
@@ -47,16 +45,40 @@ export function MediaCompareDialogs({
   return (
     <Suspense fallback={<PanelLoading label="媒体对比" />}>
       {thumbnailGeneratorAssetIds ? (
-        <ThumbnailGeneratorDialog project={project} initialAssetIds={thumbnailGeneratorAssetIds} onClose={() => setThumbnailGeneratorAssetIds(undefined)} />
+        <ThumbnailGeneratorDialog
+          project={project}
+          initialAssetIds={thumbnailGeneratorAssetIds}
+          onClose={() => setThumbnailGeneratorAssetIds(undefined)}
+        />
       ) : null}
       {mediaVersionCompare ? (
-        <MediaVersionComparePanel request={mediaVersionCompare} media={project.media} onClose={() => setMediaVersionCompare(undefined)} />
+        <MediaVersionComparePanel
+          request={mediaVersionCompare}
+          media={project.media}
+          onClose={() => setMediaVersionCompare(undefined)}
+        />
       ) : null}
-      {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
+      {mediaPrecheckOpen ? (
+        <MediaPrecheckPanel
+          project={project}
+          onClose={() => setMediaPrecheckOpen(false)}
+          onJumpToMedia={jumpToMediaAsset}
+        />
+      ) : null}
       {syncCompareOpen && syncCompareClipRefs.length === 2 ? (
-        <SyncComparePanel clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]} project={project} onClose={() => setSyncCompareOpen(false)} />
+        <SyncComparePanel
+          clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]}
+          project={project}
+          onClose={() => setSyncCompareOpen(false)}
+        />
       ) : null}
-      {collaborationNotesOpen ? <CollaborationNotesPanel project={project} playheadTime={playheadTime} onClose={() => setCollaborationNotesOpen(false)} /> : null}
+      {collaborationNotesOpen ? (
+        <CollaborationNotesPanel
+          project={project}
+          playheadTime={playheadTime}
+          onClose={() => setCollaborationNotesOpen(false)}
+        />
+      ) : null}
     </Suspense>
   );
 }

@@ -12,20 +12,28 @@ const TEMPLATE_COPY: Record<ProjectTemplateId, { name: string; description: stri
   'youtube-horizontal': zhCN.projectTemplates.templates.youtubeHorizontal,
   'square-social': zhCN.projectTemplates.templates.squareSocial,
   podcast: zhCN.projectTemplates.templates.podcast,
-  cinema: zhCN.projectTemplates.templates.cinema
+  cinema: zhCN.projectTemplates.templates.cinema,
 };
 
 export function ProjectTemplateDialog({ onSelect, onClose }: ProjectTemplateDialogProps) {
   const t = zhCN.projectTemplates;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4" data-testid="project-template-dialog">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4"
+      data-testid="project-template-dialog"
+    >
       <section className="w-full max-w-2xl rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
             <p className="text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" aria-label={t.close} onClick={onClose} data-testid="project-template-close-button">
+          <button
+            className="rounded p-1 text-slate-500 hover:bg-panel"
+            aria-label={t.close}
+            onClick={onClose}
+            data-testid="project-template-close-button"
+          >
             <X size={18} />
           </button>
         </div>

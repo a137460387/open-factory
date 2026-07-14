@@ -1,7 +1,19 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import type { ExportCostHistorySample, AIExportSuggestion } from '@open-factory/editor-core';
-import { generatePlatformFitSuggestion, ApplyPlatformFitCommand, RestorePlatformFitClipCommand, PLATFORM_LIMITS } from '@open-factory/editor-core';
-import { BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, type BroadcastSpec, type ExportComplianceParams, type ComplianceCheckResult } from '@open-factory/editor-core';
+import {
+  generatePlatformFitSuggestion,
+  ApplyPlatformFitCommand,
+  RestorePlatformFitClipCommand,
+  PLATFORM_LIMITS,
+} from '@open-factory/editor-core';
+import {
+  BUILTIN_BROADCAST_SPECS,
+  checkCompliance,
+  buildComplianceFix,
+  type BroadcastSpec,
+  type ExportComplianceParams,
+  type ComplianceCheckResult,
+} from '@open-factory/editor-core';
 import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
@@ -107,10 +119,24 @@ import {
   parseExportOptimizationResponse,
   sortExportSuggestionsByPriority,
   EXPORT_SUGGESTION_CACHE_TTL_MS,
-  isProviderConfigured
+  isProviderConfigured,
 } from '@open-factory/editor-core';
 import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
-import { Cloud, CloudDownload, Clock3, Download, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
+import {
+  Cloud,
+  CloudDownload,
+  Clock3,
+  Download,
+  FolderOpen,
+  Image as ImageIcon,
+  ListPlus,
+  Loader2,
+  Minimize2,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor } from '../store/commandManager';
@@ -144,7 +170,7 @@ import {
   writeExportUploadWebdavPassword,
   sendNotification,
   type QualityEvaluationProgressEvent,
-  type QualityEvaluationResult
+  type QualityEvaluationResult,
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { useAISettingsStore } from '../store/aiSettingsStore';
@@ -165,13 +191,24 @@ import {
   saveExportUploadSettings,
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
-  type ExportUploadSettings
+  type ExportUploadSettings,
 } from '../settings/appSettings';
 import { drawAudioVisualizationThemePreviewFrame } from '../media/audioVisualizationThemePreview';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
-import { enqueueExport, enqueueStemExport, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
-import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportCompletionAction, normalizeScheduledExportStart, type ExportCompletionAction } from './export-background';
+import {
+  enqueueExport,
+  enqueueStemExport,
+  setExportQueueMaxConcurrent,
+  setExportQueuePaused,
+} from './export-queue-runner';
+import {
+  EXPORT_COMPLETION_ACTIONS,
+  localDatetimeInputValue,
+  normalizeExportCompletionAction,
+  normalizeScheduledExportStart,
+  type ExportCompletionAction,
+} from './export-background';
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
@@ -180,7 +217,11 @@ import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { useMediaJobStore } from '../media/media-job-store';
 import { ExportTaskRow, StatusPill } from './components/ExportTaskRow';
 import { ExportUploadSection, ExportUploadStatusPanel } from './components/ExportUploadSection';
-import { PostExportScriptResultPanel, ExportRecoveryPanel, PostExportQualityAssurancePanel } from './components/PostExportStatusPanels';
+import {
+  PostExportScriptResultPanel,
+  ExportRecoveryPanel,
+  PostExportQualityAssurancePanel,
+} from './components/PostExportStatusPanels';
 import { QualityResultPanel } from './components/QualityResultPanel';
 import { HardwareEncoderSettingsPanel } from './components/HardwareEncoderSettingsPanel';
 import { runExportWarmup } from './export-warmup';
@@ -198,7 +239,7 @@ import {
   syncExportPresetsWithWebdav,
   type ExportPreset,
   type ExportPresetImportConflictMode,
-  type ExportPresetSettings
+  type ExportPresetSettings,
 } from './export-presets';
 import {
   MAX_CODEC_COMPARE_PRESETS,
@@ -216,7 +257,7 @@ import {
   type CodecCompareJob,
   type CodecCompareResult,
   type CodecCompareSortDirection,
-  type CodecCompareSortKey
+  type CodecCompareSortKey,
 } from './codec-compare';
 
 import {
@@ -313,9 +354,22 @@ import {
 } from './lib/pipelineHelpers';
 
 import { ExportCostEstimatePanel } from './components/ExportCostEstimatePanel';
-import { ExportOptimizationPanel, formatOptimizationSuggestionTitle, ExportWarmupStatusPanel, type ExportWarmupUiStatus } from './components/ExportOptimizationPanel';
+import {
+  ExportOptimizationPanel,
+  formatOptimizationSuggestionTitle,
+  ExportWarmupStatusPanel,
+  type ExportWarmupUiStatus,
+} from './components/ExportOptimizationPanel';
 import { PreflightPanel } from './components/PreflightPanel';
-import { WatermarkNumberField, PresetNumberField, PresetFpsField, PresetTextField, PresetColorField, PresetSelectField, PresetCheckboxField } from './components/PresetFields';
+import {
+  WatermarkNumberField,
+  PresetNumberField,
+  PresetFpsField,
+  PresetTextField,
+  PresetColorField,
+  PresetSelectField,
+  PresetCheckboxField,
+} from './components/PresetFields';
 import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel } from './lib/exportFormatHelpers';
 
 interface ExportDialogProps {
@@ -349,9 +403,6 @@ interface VersionedExportRowState {
   watermarkMode: VersionWatermarkMode;
 }
 
-
-
-
 const VERSIONED_BATCH_TEMPLATE_EXTENSION = 'ofbatch.json';
 const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
   {
@@ -366,7 +417,7 @@ const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
     rangeDuration: 5,
     width: 1920,
     height: 1080,
-    watermarkMode: 'inherit'
+    watermarkMode: 'inherit',
   },
   {
     id: 'version-vertical',
@@ -380,8 +431,8 @@ const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
     rangeDuration: 5,
     width: 1080,
     height: 1920,
-    watermarkMode: 'inherit'
-  }
+    watermarkMode: 'inherit',
+  },
 ];
 const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
 
@@ -395,13 +446,12 @@ interface ExportPreviewThumbnail {
   durationMs: number;
 }
 
-
 function PipelineSection({
   pipeline,
   statuses,
   publishLogs,
   onCreateTemplate,
-  onCreatePublishTemplate
+  onCreatePublishTemplate,
 }: {
   pipeline: ExportPipeline;
   statuses: Record<string, ExportPipelineNodeStatus>;
@@ -425,7 +475,10 @@ function PipelineSection({
     return map;
   }, [pipeline.nodes, pipeline.edges]);
   return (
-    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-pipeline-tab">
+    <div
+      className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+      data-testid="export-pipeline-tab"
+    >
       <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
       <div className="space-y-3">
         <p className="text-xs text-slate-500">{t.description}</p>
@@ -451,7 +504,10 @@ function PipelineSection({
           </span>
         </div>
         {pipeline.nodes.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-panel px-3 py-6 text-center text-xs text-slate-500" data-testid="export-pipeline-empty">
+          <div
+            className="rounded-md border border-dashed border-line bg-panel px-3 py-6 text-center text-xs text-slate-500"
+            data-testid="export-pipeline-empty"
+          >
             {t.empty}
           </div>
         ) : (
@@ -460,14 +516,25 @@ function PipelineSection({
               const status = statuses[node.id] ?? 'waiting';
               const downstream = downstreamMap.get(node.id) ?? [];
               return (
-                <div key={node.id} className="rounded-md border border-line bg-white p-3 text-xs" data-testid="export-pipeline-node" data-node-id={node.id}>
+                <div
+                  key={node.id}
+                  className="rounded-md border border-line bg-white p-3 text-xs"
+                  data-testid="export-pipeline-node"
+                  data-node-id={node.id}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-ink">{node.name}</div>
                       <div className="mt-1 text-slate-500">{t.nodeTypes[node.type]}</div>
-                      {downstream.length > 0 ? <div className="mt-1 text-slate-500">{t.downstream(downstream.join(' / '))}</div> : null}
+                      {downstream.length > 0 ? (
+                        <div className="mt-1 text-slate-500">{t.downstream(downstream.join(' / '))}</div>
+                      ) : null}
                     </div>
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineStatusClass(status)}`} data-testid="export-pipeline-node-status" data-status={status}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineStatusClass(status)}`}
+                      data-testid="export-pipeline-node-status"
+                      data-status={status}
+                    >
                       {t.status[status]}
                     </span>
                   </div>
@@ -477,9 +544,17 @@ function PipelineSection({
           </div>
         )}
         {publishLogs.length > 0 ? (
-          <div className="grid gap-1 rounded-md border border-line bg-panel p-2 text-xs" data-testid="export-publish-log-list">
+          <div
+            className="grid gap-1 rounded-md border border-line bg-panel p-2 text-xs"
+            data-testid="export-publish-log-list"
+          >
             {publishLogs.map((log) => (
-              <div key={`${log.nodeId}-${log.finishedAt}`} className="flex items-center justify-between gap-2" data-testid="export-publish-log" data-status={log.status}>
+              <div
+                key={`${log.nodeId}-${log.finishedAt}`}
+                className="flex items-center justify-between gap-2"
+                data-testid="export-publish-log"
+                data-status={log.status}
+              >
                 <span className="min-w-0 truncate">{log.message}</span>
                 <span className="shrink-0 tabular-nums text-slate-500">{log.durationMs} ms</span>
               </div>
@@ -510,13 +585,28 @@ function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] 
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={`${row.batchId}-${row.versionId}`} className="border-t border-line" data-testid="export-version-report-row" data-version-id={row.versionId}>
+            <tr
+              key={`${row.batchId}-${row.versionId}`}
+              className="border-t border-line"
+              data-testid="export-version-report-row"
+              data-version-id={row.versionId}
+            >
               <td className="px-2 py-2 font-medium text-slate-800">{row.versionName}</td>
-              <td className="px-2 py-2 text-slate-600">{[row.platform, row.language].filter(Boolean).join(' / ') || zhCN.common.auto}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{row.width && row.height ? `${row.width} x ${row.height}` : zhCN.common.auto}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-size">{formatBytes(row.fileSizeBytes ?? undefined)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{row.durationSeconds === null ? zhCN.common.auto : formatDuration(row.durationSeconds)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-elapsed">{formatMilliseconds(row.elapsedMs ?? undefined)}</td>
+              <td className="px-2 py-2 text-slate-600">
+                {[row.platform, row.language].filter(Boolean).join(' / ') || zhCN.common.auto}
+              </td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">
+                {row.width && row.height ? `${row.width} x ${row.height}` : zhCN.common.auto}
+              </td>
+              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-size">
+                {formatBytes(row.fileSizeBytes ?? undefined)}
+              </td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">
+                {row.durationSeconds === null ? zhCN.common.auto : formatDuration(row.durationSeconds)}
+              </td>
+              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-elapsed">
+                {formatMilliseconds(row.elapsedMs ?? undefined)}
+              </td>
               <td className="px-2 py-2 text-slate-600">{zhCN.exportDialog.status[row.status] ?? row.status}</td>
             </tr>
           ))}
@@ -526,7 +616,16 @@ function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] 
   );
 }
 
-export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
+export function ExportDialog({
+  project,
+  initialPreset,
+  selectedClipIds = [],
+  inPoint,
+  outPoint,
+  onClose,
+  onCompleted,
+  onRelinkMissing,
+}: ExportDialogProps) {
   const [complianceOpen, setComplianceOpen] = useState(false);
   const [selectedSpecId, setSelectedSpecId] = useState<string>('youtube-1080p');
   const [complianceResults, setComplianceResults] = useState<ComplianceCheckResult[]>([]);
@@ -569,23 +668,42 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
-  const [availableHwEncoders, setAvailableHwEncoders] = useState<import('@open-factory/editor-core').HardwareEncoderInfo[]>([]);
+  const [availableHwEncoders, setAvailableHwEncoders] = useState<
+    import('@open-factory/editor-core').HardwareEncoderInfo[]
+  >([]);
   const [error, setError] = useState<string>();
-  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[]; codecCompareJobs?: CodecCompareJob[] }>();
-  const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
+  const [preflight, setPreflight] = useState<{
+    issues: PreflightResult[];
+    selectedJobs: ExportJob[];
+    codecCompareJobs?: CodecCompareJob[];
+  }>();
+  const [presets, setPresets] = useState<ExportPreset[]>(
+    initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS,
+  );
   const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
   const [platformFitTarget, setPlatformFitTarget] = useState('');
   const [platformFitCustomSeconds, setPlatformFitCustomSeconds] = useState(60);
-  const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
+  const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({
+    ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings),
+  });
   const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('all');
   const [exportMode, setExportMode] = useState<ExportMode>('single');
-  const [pipelineConfig, setPipelineConfig] = useState<ExportPipeline>(() => ({ id: 'pipeline-custom', name: zhCN.exportDialog.pipeline.defaultName, nodes: [], edges: [] }));
+  const [pipelineConfig, setPipelineConfig] = useState<ExportPipeline>(() => ({
+    id: 'pipeline-custom',
+    name: zhCN.exportDialog.pipeline.defaultName,
+    nodes: [],
+    edges: [],
+  }));
   const [pipelineStatuses, setPipelineStatuses] = useState<Record<string, ExportPipelineNodeStatus>>({});
   const [publishPipelineLogs, setPublishPipelineLogs] = useState<ExportPublishNodeLog[]>([]);
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
-  const [versionedBatchTemplate, setVersionedBatchTemplate] = useState('C:/Exports/{version_name}-{platform}-{language}.mp4');
-  const [versionedBatchRows, setVersionedBatchRows] = useState<VersionedExportRowState[]>(() => DEFAULT_VERSIONED_BATCH_ROWS.map((row) => ({ ...row })));
+  const [versionedBatchTemplate, setVersionedBatchTemplate] = useState(
+    'C:/Exports/{version_name}-{platform}-{language}.mp4',
+  );
+  const [versionedBatchRows, setVersionedBatchRows] = useState<VersionedExportRowState[]>(() =>
+    DEFAULT_VERSIONED_BATCH_ROWS.map((row) => ({ ...row })),
+  );
   const [latestVersionedBatchId, setLatestVersionedBatchId] = useState<string>();
   const [versionedBatchFileSizes, setVersionedBatchFileSizes] = useState<Record<string, number>>({});
   const [sequenceBatchTemplate, setSequenceBatchTemplate] = useState('C:/Exports/{sequence}-{index}.mp4');
@@ -593,40 +711,67 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [sequenceBatchOutputOverrides, setSequenceBatchOutputOverrides] = useState<Record<string, string>>({});
   const [sequenceBatchPresetMode, setSequenceBatchPresetMode] = useState<SequenceBatchPresetMode>('shared');
   const [sequenceBatchPresetIds, setSequenceBatchPresetIds] = useState<Record<string, string>>({});
-  const [codecComparePresetIds, setCodecComparePresetIds] = useState<string[]>(() => BUILTIN_EXPORT_PRESETS.slice(0, 2).map((preset) => preset.id));
+  const [codecComparePresetIds, setCodecComparePresetIds] = useState<string[]>(() =>
+    BUILTIN_EXPORT_PRESETS.slice(0, 2).map((preset) => preset.id),
+  );
   const [codecCompareResults, setCodecCompareResults] = useState<CodecCompareResult[]>([]);
-  const [codecCompareSort, setCodecCompareSort] = useState<{ key: CodecCompareSortKey; direction: CodecCompareSortDirection }>({ key: 'presetName', direction: 'asc' });
-  const [codecCompareRecommendationMode, setCodecCompareRecommendationMode] = useState<CodecCompareRecommendationMode>('quality');
+  const [codecCompareSort, setCodecCompareSort] = useState<{
+    key: CodecCompareSortKey;
+    direction: CodecCompareSortDirection;
+  }>({ key: 'presetName', direction: 'asc' });
+  const [codecCompareRecommendationMode, setCodecCompareRecommendationMode] =
+    useState<CodecCompareRecommendationMode>('quality');
   const [codecCompareEvaluatingTaskId, setCodecCompareEvaluatingTaskId] = useState<string>();
-  const [stemTracks, setStemTracks] = useState<Array<{ trackIndex: number; trackName: string; selected: boolean; format: ExportStemFormat }>>([]);
+  const [stemTracks, setStemTracks] = useState<
+    Array<{ trackIndex: number; trackName: string; selected: boolean; format: ExportStemFormat }>
+  >([]);
   const [stemMode, setStemMode] = useState<ExportStemMode>('independent');
   const [stemOutputDir, setStemOutputDir] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
+  const [scheduledStartInput, setScheduledStartInput] = useState(() =>
+    localDatetimeInputValue(new Date(Date.now() + 60_000)),
+  );
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({
+    allowPowerActions: false,
+    postExportScriptAcknowledged: false,
+    lowPowerMode: false,
+  }));
   const [postExportScriptPendingConfirm, setPostExportScriptPendingConfirm] = useState(false);
   const pendingConfirmResolveRef = useRef<((value: boolean) => void) | null>(null);
-  const [exportOptimizationSettings, setExportOptimizationSettings] = useState<ExportOptimizationSettings>(() => ({ ...DEFAULT_EXPORT_OPTIMIZATION_SETTINGS }));
+  const [exportOptimizationSettings, setExportOptimizationSettings] = useState<ExportOptimizationSettings>(() => ({
+    ...DEFAULT_EXPORT_OPTIMIZATION_SETTINGS,
+  }));
   const [exportUploadSettings, setExportUploadSettings] = useState<ExportUploadSettings>(() => ({
     ...DEFAULT_EXPORT_UPLOAD_SETTINGS,
     webdav: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.webdav },
-    local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local }
+    local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local },
   }));
   const [exportUploadPassword, setExportUploadPassword] = useState('');
-  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({ ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS }));
+  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({
+    ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  }));
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
-  const [presetSyncState, setPresetSyncState] = useState<{ status: 'idle' | 'running' | 'success' | 'error'; message?: string }>({ status: 'idle' });
+  const [presetSyncState, setPresetSyncState] = useState<{
+    status: 'idle' | 'running' | 'success' | 'error';
+    message?: string;
+  }>({ status: 'idle' });
   const [warmupStatus, setWarmupStatus] = useState<ExportWarmupUiStatus>();
   const [previewRunning, setPreviewRunning] = useState(false);
   const [previewError, setPreviewError] = useState<string>();
   const [previewSamples, setPreviewSamples] = useState<ExportPreviewThumbnail[]>([]);
   const [qualityTaskId, setQualityTaskId] = useState<string>();
   const [qualityProgress, setQualityProgress] = useState(0);
-  const [qualityResult, setQualityResult] = useState<{ entry: ExportTaskHistoryEntry; result: QualityEvaluationResult }>();
+  const [qualityResult, setQualityResult] = useState<{
+    entry: ExportTaskHistoryEntry;
+    result: QualityEvaluationResult;
+  }>();
   const [qualityError, setQualityError] = useState<string>();
-  const suggestedRenderFarmInstances = useMemo(() => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency), []);
+  const suggestedRenderFarmInstances = useMemo(
+    () => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency),
+    [],
+  );
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
   const [progressiveExportEnabled, setProgressiveExportEnabled] = useState(false);
@@ -636,7 +781,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     if (disableRecommendations) return [];
     return buildExportPresetRecommendations(recommendationContext, (code, ctx) => {
       const tRec = zhCN.exportRecommendations;
-      if (code === 'resolution') return ctx.height > ctx.width ? tRec.reasonResolution('竖屏') : tRec.reasonResolution('横屏');
+      if (code === 'resolution')
+        return ctx.height > ctx.width ? tRec.reasonResolution('竖屏') : tRec.reasonResolution('横屏');
       if (code === 'duration') return tRec.reasonDuration(60);
       if (code === 'subtitles') return tRec.reasonSubtitles;
       if (code === 'hdr') return tRec.reasonHdr;
@@ -664,18 +810,35 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       batchSequences.map((sequence, index) => ({
         sequence,
         selected: selectedSequenceIds.includes(sequence.id),
-        outputPath: sequenceBatchOutputOverrides[sequence.id] ?? expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1),
-        presetId: sequenceBatchPresetIds[sequence.id] ?? presetId
+        outputPath:
+          sequenceBatchOutputOverrides[sequence.id] ??
+          expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1),
+        presetId: sequenceBatchPresetIds[sequence.id] ?? presetId,
       })),
-    [batchSequences, presetId, selectedSequenceIds, sequenceBatchOutputOverrides, sequenceBatchPresetIds, sequenceBatchTemplate]
+    [
+      batchSequences,
+      presetId,
+      selectedSequenceIds,
+      sequenceBatchOutputOverrides,
+      sequenceBatchPresetIds,
+      sequenceBatchTemplate,
+    ],
   );
   const isAudioVisualization = exportSettings.outputMode === 'audio-visualization';
-  const isAudioOnly = !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
+  const isAudioOnly =
+    !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
   const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
   const subtitleLanguageOptions = useMemo(() => collectSubtitleLanguageOptions(project), [project]);
-  const loudnessNormalizationEligible = supportsLoudnessNormalization(exportSettings.format ?? 'mp4', exportSettings.outputMode);
+  const loudnessNormalizationEligible = supportsLoudnessNormalization(
+    exportSettings.format ?? 'mp4',
+    exportSettings.outputMode,
+  );
   const estimatedSize = useMemo(() => {
-    const dimensions = estimateDimensions(exportSettings.width ?? project.settings.width, exportSettings.height ?? project.settings.height, exportSettings.format ?? 'mp4');
+    const dimensions = estimateDimensions(
+      exportSettings.width ?? project.settings.width,
+      exportSettings.height ?? project.settings.height,
+      exportSettings.format ?? 'mp4',
+    );
     return formatEstimatedFileSize(
       estimateExportFileSizeBytes({
         width: dimensions.width,
@@ -685,8 +848,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         format: exportSettings.format ?? 'mp4',
         outputMode: exportSettings.outputMode,
         videoBitrate: exportSettings.videoBitrate,
-        audioBitrate: exportSettings.audioBitrate
-      })
+        audioBitrate: exportSettings.audioBitrate,
+      }),
     );
   }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
   useEffect(() => {
@@ -702,24 +865,28 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           trackIndex: idx,
           trackName: existing?.trackName ?? (track.name || `Track ${idx}`),
           selected: existing?.selected ?? true,
-          format: existing?.format ?? 'default'
+          format: existing?.format ?? 'default',
         };
       });
     });
   }, [project.timeline]);
-  const exportCostEstimate = useMemo(() => estimateExportCost({ project, settings: exportSettings }), [exportSettings, project]);
+  const exportCostEstimate = useMemo(
+    () => estimateExportCost({ project, settings: exportSettings }),
+    [exportSettings, project],
+  );
   const exportOptimizationSuggestions = useMemo(
     () =>
       analyzeExportOptimizationSuggestions(project, exportSettings, exportOptimizationSettings, {
         renderFarmEnabled,
-        suggestedRenderFarmInstances
+        suggestedRenderFarmInstances,
       }),
-    [exportOptimizationSettings, exportSettings, project, renderFarmEnabled, suggestedRenderFarmInstances]
+    [exportOptimizationSettings, exportSettings, project, renderFarmEnabled, suggestedRenderFarmInstances],
   );
   const lastExportDurationSeconds = useMemo(() => getLastExportDurationSeconds(history), [history]);
   const exportCostHistoryError = useMemo(
-    () => calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
-    [exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds]
+    () =>
+      calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
+    [exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds],
   );
   const historyCostSamples = useMemo<ExportCostHistorySample[]>(
     () =>
@@ -728,31 +895,44 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         .slice(0, 10)
         .map((entry) => ({
           exportDurationSeconds: (Date.parse(entry.finishedAt) - Date.parse(entry.startedAt!)) / 1000,
-          timelineDurationSeconds: getTimelinePlaybackDuration(project.timeline)
+          timelineDurationSeconds: getTimelinePlaybackDuration(project.timeline),
         })),
-    [history, project.timeline]
+    [history, project.timeline],
   );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
   const progressiveExportSupported = useMemo(() => isProgressiveExportSupported(exportSettings), [exportSettings]);
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
   const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
-  const inOutExportRanges = useMemo(() => resolveInOutExportRanges(project, inPoint, outPoint), [inPoint, outPoint, project]);
-  const selectedClipExportRange = useMemo(() => resolveSelectedClipExportRange(project, selectedClipIds), [project, selectedClipIds]);
+  const inOutExportRanges = useMemo(
+    () => resolveInOutExportRanges(project, inPoint, outPoint),
+    [inPoint, outPoint, project],
+  );
+  const selectedClipExportRange = useMemo(
+    () => resolveSelectedClipExportRange(project, selectedClipIds),
+    [project, selectedClipIds],
+  );
   const activeExportRanges = useMemo(
     () => resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange),
-    [exportRangeMode, inOutExportRanges, selectedClipExportRange]
+    [exportRangeMode, inOutExportRanges, selectedClipExportRange],
   );
   const rangeModeAvailable = {
     all: true,
     'in-out': inOutExportRanges.length > 0,
-    'selected-clips': Boolean(selectedClipExportRange)
+    'selected-clips': Boolean(selectedClipExportRange),
   } satisfies Record<ExportRangeMode, boolean>;
-  const sortedCodecCompareResults = useMemo(() => sortCodecCompareResults(codecCompareResults, codecCompareSort.key, codecCompareSort.direction), [codecCompareResults, codecCompareSort]);
-  const codecCompareRecommendation = useMemo(() => recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode), [codecCompareRecommendationMode, codecCompareResults]);
+  const sortedCodecCompareResults = useMemo(
+    () => sortCodecCompareResults(codecCompareResults, codecCompareSort.key, codecCompareSort.direction),
+    [codecCompareResults, codecCompareSort],
+  );
+  const codecCompareRecommendation = useMemo(
+    () => recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode),
+    [codecCompareRecommendationMode, codecCompareResults],
+  );
   const versionedBatchReportRows = useMemo(
-    () => buildVersionedExportReportRows(tasks, { batchId: latestVersionedBatchId, fileSizes: versionedBatchFileSizes }),
-    [latestVersionedBatchId, tasks, versionedBatchFileSizes]
+    () =>
+      buildVersionedExportReportRows(tasks, { batchId: latestVersionedBatchId, fileSizes: versionedBatchFileSizes }),
+    [latestVersionedBatchId, tasks, versionedBatchFileSizes],
   );
 
   useEffect(() => {
@@ -769,8 +949,14 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           setError(reason instanceof Error ? reason.message : t.detectFfmpegFailed);
         }
       });
-    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(logError("ExportDialogx"));
-    return () => { canceled = true; };
+    void listHardwareEncoders()
+      .then((encoders) => {
+        if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders);
+      })
+      .catch(logError('ExportDialogx'));
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -842,7 +1028,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
 
   useEffect(() => {
     let canceled = false;
-    void readDisableExportRecommendations().then(setDisableRecommendations).catch((error) => console.warn('Unable to load export recommendation settings', error));
+    void readDisableExportRecommendations()
+      .then(setDisableRecommendations)
+      .catch((error) => console.warn('Unable to load export recommendation settings', error));
     void loadExportPresets()
       .then((nextPresets) => {
         if (canceled) {
@@ -850,7 +1038,11 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         }
         const nextWithInitial = initialPreset ? [initialPreset, ...nextPresets] : nextPresets;
         setPresets(nextWithInitial);
-        setPresetId((current) => (nextWithInitial.some((preset) => preset.id === current) ? current : nextWithInitial[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id));
+        setPresetId((current) =>
+          nextWithInitial.some((preset) => preset.id === current)
+            ? current
+            : (nextWithInitial[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id),
+        );
       })
       .catch((reason) => {
         if (!canceled) {
@@ -877,8 +1069,15 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         showToast({ kind: 'success', title: t.completeTitle, message: task.outputPath });
       }
     }
-    const hasActiveTasks = tasks.some((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running');
-    if (sawNewSuccess && !hasActiveTasks && pendingCompletionAction.current !== 'none' && !completionActionHandled.current) {
+    const hasActiveTasks = tasks.some(
+      (task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running',
+    );
+    if (
+      sawNewSuccess &&
+      !hasActiveTasks &&
+      pendingCompletionAction.current !== 'none' &&
+      !completionActionHandled.current
+    ) {
       completionActionHandled.current = true;
       void runCompletionAction(pendingCompletionAction.current, exportBackgroundSettings);
     }
@@ -909,15 +1108,23 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         taskId: `codec-compare-quality-${request.taskId}`,
         sourcePath: request.sourcePath,
         outputPath: request.outputPath,
-        duration: getTimelinePlaybackDuration(project.timeline)
+        duration: getTimelinePlaybackDuration(project.timeline),
       }),
-      getFileStat(request.outputPath).catch(logError("ExportDialogx"))
+      getFileStat(request.outputPath).catch(logError('ExportDialogx')),
     ])
       .then(([quality, stat]) => {
-        setCodecCompareResults((current) => applyCodecCompareQualityResult(current, request.taskId, quality, stat?.size));
+        setCodecCompareResults((current) =>
+          applyCodecCompareQualityResult(current, request.taskId, quality, stat?.size),
+        );
       })
       .catch((reason) => {
-        setCodecCompareResults((current) => applyCodecCompareQualityError(current, request.taskId, reason instanceof Error ? reason.message : t.quality.failedMessage));
+        setCodecCompareResults((current) =>
+          applyCodecCompareQualityError(
+            current,
+            request.taskId,
+            reason instanceof Error ? reason.message : t.quality.failedMessage,
+          ),
+        );
       })
       .finally(() => {
         setCodecCompareEvaluatingTaskId(undefined);
@@ -928,7 +1135,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     if (!latestVersionedBatchId) {
       return;
     }
-    const pendingStats = tasks.filter((task) => task.versionedBatch?.batchId === latestVersionedBatchId && task.status === 'success' && versionedBatchFileSizes[task.outputPath] === undefined);
+    const pendingStats = tasks.filter(
+      (task) =>
+        task.versionedBatch?.batchId === latestVersionedBatchId &&
+        task.status === 'success' &&
+        versionedBatchFileSizes[task.outputPath] === undefined,
+    );
     if (pendingStats.length === 0) {
       return;
     }
@@ -936,8 +1148,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     void Promise.all(
       pendingStats.map(async (task) => ({
         outputPath: task.outputPath,
-        size: (await getFileStat(task.outputPath).catch(logError("ExportDialogx")))?.size
-      }))
+        size: (await getFileStat(task.outputPath).catch(logError('ExportDialogx')))?.size,
+      })),
     ).then((stats) => {
       if (canceled) {
         return;
@@ -977,7 +1189,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
 
   async function chooseAudioVisualizationBackgroundImage(): Promise<void> {
     try {
-      const [path] = await openFileDialog(false, [{ name: t.audioVisualization.backgroundImageFilter, extensions: ['png', 'jpg', 'jpeg', 'webp'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.audioVisualization.backgroundImageFilter, extensions: ['png', 'jpg', 'jpeg', 'webp'] },
+      ]);
       if (path) {
         updateAudioVisualizationBackgroundImagePath(setDraftSettings, path);
       }
@@ -992,7 +1206,10 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       if (!(await ensurePostExportScriptAcknowledged())) {
         return;
       }
-      const nextPresets = await saveCustomExportPreset(customPresetName || `${selectedPreset.name} ${t.presetCopySuffix}`, exportSettings);
+      const nextPresets = await saveCustomExportPreset(
+        customPresetName || `${selectedPreset.name} ${t.presetCopySuffix}`,
+        exportSettings,
+      );
       const createdPreset = nextPresets.filter((preset) => !preset.builtin).at(-1);
       setPresets(nextPresets);
       setPresetId(createdPreset?.id ?? nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
@@ -1025,22 +1242,33 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       setRenderFarmEnabled(result.renderFarm.enabled);
       setRenderFarmInstances(result.renderFarm.instances);
     }
-    showToast({ kind: 'info', title: t.optimization.appliedTitle, message: formatOptimizationSuggestionTitle(suggestion) });
+    showToast({
+      kind: 'info',
+      title: t.optimization.appliedTitle,
+      message: formatOptimizationSuggestionTitle(suggestion),
+    });
   }
 
   async function dismissOptimizationSuggestion(suggestion: ExportOptimizationSuggestion): Promise<void> {
-    const dismissedSuggestionIds = Array.from(new Set([...exportOptimizationSettings.dismissedSuggestionIds, suggestion.id]));
+    const dismissedSuggestionIds = Array.from(
+      new Set([...exportOptimizationSettings.dismissedSuggestionIds, suggestion.id]),
+    );
     const saved = await saveExportOptimizationSettings({ dismissedSuggestionIds });
     setExportOptimizationSettings(saved);
-    showToast({ kind: 'info', title: t.optimization.dismissedTitle, message: formatOptimizationSuggestionTitle(suggestion) });
+    showToast({
+      kind: 'info',
+      title: t.optimization.dismissedTitle,
+      message: formatOptimizationSuggestionTitle(suggestion),
+    });
   }
 
   async function exportSelectedPresetPackage(): Promise<void> {
     try {
       setError(undefined);
-      const path = await saveFileDialog(`${safePresetPackageFileName(selectedPreset.name)}.${EXPORT_PRESET_PACKAGE_EXTENSION}`, [
-        { name: t.exportPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] }
-      ]);
+      const path = await saveFileDialog(
+        `${safePresetPackageFileName(selectedPreset.name)}.${EXPORT_PRESET_PACKAGE_EXTENSION}`,
+        [{ name: t.exportPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] }],
+      );
       if (!path) {
         return;
       }
@@ -1054,7 +1282,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   async function importPresetPackageFromFile(): Promise<void> {
     try {
       setError(undefined);
-      const [path] = await openFileDialog(false, [{ name: t.importPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.importPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] },
+      ]);
       if (!path) {
         return;
       }
@@ -1078,7 +1308,11 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
-  async function syncPresetPackageFromCloud(settings = exportPresetSyncSettings, password = exportPresetSyncPassword, silent = false): Promise<void> {
+  async function syncPresetPackageFromCloud(
+    settings = exportPresetSyncSettings,
+    password = exportPresetSyncPassword,
+    silent = false,
+  ): Promise<void> {
     if (!settings.url?.trim()) {
       const message = t.presetCloudSyncUrlMissing;
       setPresetSyncState({ status: 'error', message });
@@ -1095,21 +1329,25 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           url: settings.url,
           username: settings.username,
           password: password || undefined,
-          conflictResolution: settings.conflictMode
+          conflictResolution: settings.conflictMode,
         },
         {
           client: {
             getText: getWebdavText,
-            putText: putWebdavText
-          }
-        }
+            putText: putWebdavText,
+          },
+        },
       );
       setPresets(result.presets);
       const latestCustomPreset = result.presets.filter((preset) => !preset.builtin).at(-1);
       if (latestCustomPreset) {
         setPresetId(latestCustomPreset.id);
       }
-      const savedSettings = await saveExportPresetSyncSettings({ ...settings, lastSyncedAt: result.syncedAt, lastSyncWarning: undefined });
+      const savedSettings = await saveExportPresetSyncSettings({
+        ...settings,
+        lastSyncedAt: result.syncedAt,
+        lastSyncWarning: undefined,
+      });
       setExportPresetSyncSettings(savedSettings);
       const message = t.presetCloudSyncCompleteMessage(result.uploadedCount, result.conflicts.length);
       setPresetSyncState({ status: 'success', message });
@@ -1119,7 +1357,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : t.presetPackageFailed;
       setPresetSyncState({ status: 'error', message });
-      setExportPresetSyncSettings(await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(() => settings));
+      setExportPresetSyncSettings(
+        await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(() => settings),
+      );
       if (!silent) {
         showToast({ kind: 'warning', title: t.presetCloudSyncFailedTitle, message });
       }
@@ -1128,7 +1368,10 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
 
   async function importPresetPackageContents(contents: string): Promise<void> {
     const packageFile = parseExportPresetPackage(contents);
-    const conflictMode = choosePresetPackageConflictMode(packageFile.presets.map((preset) => preset.name), presets);
+    const conflictMode = choosePresetPackageConflictMode(
+      packageFile.presets.map((preset) => preset.name),
+      presets,
+    );
     if (!conflictMode) {
       return;
     }
@@ -1138,19 +1381,31 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     if (importedPreset) {
       setPresetId(importedPreset.id);
     }
-    showToast({ kind: 'success', title: t.presetPackageImportedTitle, message: t.presetPackageImportMessage(result.imported, result.skipped) });
+    showToast({
+      kind: 'success',
+      title: t.presetPackageImportedTitle,
+      message: t.presetPackageImportMessage(result.imported, result.skipped),
+    });
   }
 
   async function exportVersionedBatchTemplate(): Promise<void> {
     try {
       setError(undefined);
-      const path = await saveFileDialog(`${safePresetPackageFileName(project.name || 'versioned-batch')}.${VERSIONED_BATCH_TEMPLATE_EXTENSION}`, [
-        { name: t.versionBatch.templateFilter, extensions: [VERSIONED_BATCH_TEMPLATE_EXTENSION, 'json'] }
-      ]);
+      const path = await saveFileDialog(
+        `${safePresetPackageFileName(project.name || 'versioned-batch')}.${VERSIONED_BATCH_TEMPLATE_EXTENSION}`,
+        [{ name: t.versionBatch.templateFilter, extensions: [VERSIONED_BATCH_TEMPLATE_EXTENSION, 'json'] }],
+      );
       if (!path) {
         return;
       }
-      await writeFile(path, serializeVersionedBatchTemplate(project.name || t.versionBatch.title, versionedBatchTemplate, buildVersionDefinitions()));
+      await writeFile(
+        path,
+        serializeVersionedBatchTemplate(
+          project.name || t.versionBatch.title,
+          versionedBatchTemplate,
+          buildVersionDefinitions(),
+        ),
+      );
       showToast({ kind: 'success', title: t.versionBatch.templateSavedTitle, message: path });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.versionBatch.templateFailed);
@@ -1160,7 +1415,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   async function importVersionedBatchTemplate(): Promise<void> {
     try {
       setError(undefined);
-      const [path] = await openFileDialog(false, [{ name: t.versionBatch.templateFilter, extensions: [VERSIONED_BATCH_TEMPLATE_EXTENSION, 'json'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.versionBatch.templateFilter, extensions: [VERSIONED_BATCH_TEMPLATE_EXTENSION, 'json'] },
+      ]);
       if (!path) {
         return;
       }
@@ -1181,12 +1438,15 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       presetId: row.presetId,
       platform: row.platform,
       language: row.language,
-      range: row.rangeMode === 'custom' ? { start: Math.max(0, row.rangeStart || 0), duration: Math.max(0.001, row.rangeDuration || 0.001) } : undefined,
+      range:
+        row.rangeMode === 'custom'
+          ? { start: Math.max(0, row.rangeStart || 0), duration: Math.max(0.001, row.rangeDuration || 0.001) }
+          : undefined,
       settings: buildVersionSettings(row),
       metadata: {
         title: '{version_name}',
-        description: '{platform} / {language}'
-      }
+        description: '{platform} / {language}',
+      },
     }));
   }
 
@@ -1205,9 +1465,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       presetSettingsById,
       metadata: {
         title: '{version_name}',
-        description: '{platform} / {language}'
+        description: '{platform} / {language}',
       },
-      versions: buildVersionDefinitions().filter((version) => version.enabled !== false)
+      versions: buildVersionDefinitions().filter((version) => version.enabled !== false),
     });
     setLatestVersionedBatchId(batchId);
     setVersionedBatchFileSizes({});
@@ -1217,7 +1477,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       settings: job.settings,
       metadata: job.metadata,
       versionedBatch: job.batch,
-      presetName: job.batch.versionName
+      presetName: job.batch.versionName,
     }));
   }
 
@@ -1241,8 +1501,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         rangeDuration: Math.max(1, Math.round(getTimelinePlaybackDuration(project.timeline) || 1)),
         width: exportSettings.width ?? project.settings.width,
         height: exportSettings.height ?? project.settings.height,
-        watermarkMode: 'inherit'
-      }
+        watermarkMode: 'inherit',
+      },
     ]);
   }
 
@@ -1253,7 +1513,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   function buildVersionSettings(row: VersionedExportRowState): ExportPresetSettings {
     const settings: ExportPresetSettings = {
       width: Math.max(1, Math.round(row.width || project.settings.width)),
-      height: Math.max(1, Math.round(row.height || project.settings.height))
+      height: Math.max(1, Math.round(row.height || project.settings.height)),
     };
     const language = row.language.trim();
     if (language) {
@@ -1270,7 +1530,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         fontFamily: 'Arial',
         color: '#ffffff',
         fontSize: 36,
-        position: 'bottom-right'
+        position: 'bottom-right',
       };
     }
     return settings;
@@ -1281,15 +1541,24 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       id: version.id,
       enabled: version.enabled !== false,
       name: version.name,
-      presetId: version.presetId && presets.some((preset) => preset.id === version.presetId) ? version.presetId : presetId,
+      presetId:
+        version.presetId && presets.some((preset) => preset.id === version.presetId) ? version.presetId : presetId,
       platform: version.platform ?? 'Custom',
       language: version.language ?? 'zh',
       rangeMode: version.range ? 'custom' : 'default',
       rangeStart: Math.max(0, version.range?.start ?? 0),
-      rangeDuration: Math.max(0.001, version.range?.duration ?? Math.max(1, Math.round(getTimelinePlaybackDuration(project.timeline) || 1))),
+      rangeDuration: Math.max(
+        0.001,
+        version.range?.duration ?? Math.max(1, Math.round(getTimelinePlaybackDuration(project.timeline) || 1)),
+      ),
       width: Math.max(1, Math.round(version.settings?.width ?? exportSettings.width ?? project.settings.width)),
       height: Math.max(1, Math.round(version.settings?.height ?? exportSettings.height ?? project.settings.height)),
-      watermarkMode: version.settings?.watermark === null ? 'none' : version.settings?.watermark?.type === 'text' ? 'text' : 'inherit'
+      watermarkMode:
+        version.settings?.watermark === null
+          ? 'none'
+          : version.settings?.watermark?.type === 'text'
+            ? 'text'
+            : 'inherit',
     };
   }
 
@@ -1328,7 +1597,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   function toggleCodecCompareSort(key: CodecCompareSortKey): void {
     setCodecCompareSort((current) => ({
       key,
-      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
     }));
   }
 
@@ -1344,8 +1613,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         throw new Error(t.sequenceBatch.missingSequence(sequenceId));
       }
       const rowPreset = getExportPreset(sequenceBatchPresetIds[sequenceId] ?? presetId, presets);
-      const settings = sequenceBatchPresetMode === 'individual' ? normalizeDraftSettings(rowPreset.settings) : exportSettings;
-      const outputPath = (sequenceBatchOutputOverrides[sequenceId] ?? expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1)).trim();
+      const settings =
+        sequenceBatchPresetMode === 'individual' ? normalizeDraftSettings(rowPreset.settings) : exportSettings;
+      const outputPath = (
+        sequenceBatchOutputOverrides[sequenceId] ??
+        expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1)
+      ).trim();
       if (!outputPath) {
         throw new Error(t.sequenceBatch.outputRequired(sequence.name));
       }
@@ -1355,7 +1628,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         project: buildProjectForSequenceExport(project, sequenceId),
         settings,
         presetName: sequenceBatchPresetMode === 'individual' ? rowPreset.name : selectedPreset.name,
-        sequenceName: sequence.name
+        sequenceName: sequence.name,
       };
     });
   }
@@ -1403,12 +1676,16 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           throw new Error(t.codecCompare.selectAtLeastTwo);
         }
         setOutputPath(baseOutputPath);
-        const compareJobs = buildCodecCompareJobs({ baseOutputPath, presets, selectedPresetIds: codecComparePresetIds });
+        const compareJobs = buildCodecCompareJobs({
+          baseOutputPath,
+          presets,
+          selectedPresetIds: codecComparePresetIds,
+        });
         const selectedJobs = compareJobs.map((job) => ({
           outputPath: job.outputPath,
           range: activeExportRanges[0] ?? null,
           settings: job.settings,
-          presetName: job.presetName
+          presetName: job.presetName,
         }));
         setError(undefined);
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
@@ -1437,9 +1714,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           stemTracks: selectedStemTracks.map((track) => ({
             trackIndex: track.trackIndex,
             trackName: track.trackName,
-            format: track.format
+            format: track.format,
           })),
-          stemMode
+          stemMode,
         });
         showToast({ kind: 'info', title: t.queuedTitle, message: t.stem.queuedMessage(tasks.length) });
         return;
@@ -1448,7 +1725,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         .split(/\r?\n/)
         .map((path) => path.trim())
         .filter(Boolean);
-      const selectedPaths = paths.length > 0 ? paths : [outputPath || (await chooseExportPath(project, exportSettings.format))].filter((path): path is string => Boolean(path));
+      const selectedPaths =
+        paths.length > 0
+          ? paths
+          : [outputPath || (await chooseExportPath(project, exportSettings.format))].filter((path): path is string =>
+              Boolean(path),
+            );
       if (selectedPaths.length === 0) {
         return;
       }
@@ -1470,7 +1752,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
             ? t.pipeline.cycleDetected(reason.cycleIds.join(' -> '))
             : reason instanceof Error
               ? reason.message
-              : t.exportFailed
+              : t.exportFailed,
       );
     } finally {
       enqueueInFlight.current = false;
@@ -1482,13 +1764,17 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       throw new Error(t.pipeline.empty);
     }
     const sorted = topologicallySortExportPipeline(pipelineConfig);
-    let snapshot = Object.fromEntries(pipelineConfig.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus]));
+    let snapshot = Object.fromEntries(
+      pipelineConfig.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus]),
+    );
     let publishLogs: ExportPublishNodeLog[] = [];
     setPublishPipelineLogs([]);
     setPipelineStatuses(snapshot);
     let pipelineOutputPath = outputPath;
     for (const node of sorted) {
-      const upstreamStatuses = getPipelineUpstreamNodeIds(pipelineConfig, node.id).map((id) => snapshot[id] ?? 'waiting');
+      const upstreamStatuses = getPipelineUpstreamNodeIds(pipelineConfig, node.id).map(
+        (id) => snapshot[id] ?? 'waiting',
+      );
       if (!shouldRunExportPipelineNode(node, upstreamStatuses)) {
         snapshot = updatePipelineStatus(snapshot, node.id, 'skipped');
         setPipelineStatuses(snapshot);
@@ -1504,7 +1790,11 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           if (publishLog) {
             publishLogs = [...publishLogs, publishLog];
             setPublishPipelineLogs(publishLogs);
-            snapshot = updatePipelineStatus(snapshot, node.id, publishLog.status === 'failed' ? 'failed' : publishLog.status === 'skipped' ? 'skipped' : 'complete');
+            snapshot = updatePipelineStatus(
+              snapshot,
+              node.id,
+              publishLog.status === 'failed' ? 'failed' : publishLog.status === 'skipped' ? 'skipped' : 'complete',
+            );
             setPipelineStatuses(snapshot);
             continue;
           }
@@ -1530,8 +1820,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         outputPath: selectedPath,
         range: activeExportRanges[0] ?? null,
         settings: normalizeDraftSettings({ ...exportSettings, format: 'mp4' }),
-        presetName: selectedPreset.name
-      }
+        presetName: selectedPreset.name,
+      },
     ];
     const issues = await collectPreflightIssuesForJobs(jobs);
     const blocking = issues.find((issue) => issue.severity === 'blocking');
@@ -1541,24 +1831,41 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     await warmupSelectedJobs(jobs);
     const tasks = await enqueueSelectedJobs(jobs);
     await waitForExportTasks(tasks.map((task) => task.id));
-    const latestTasks = useExportQueueStore.getState().tasks.filter((task) => tasks.some((queued) => queued.id === task.id));
-    const failed = latestTasks.find((task) => task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted');
+    const latestTasks = useExportQueueStore
+      .getState()
+      .tasks.filter((task) => tasks.some((queued) => queued.id === task.id));
+    const failed = latestTasks.find(
+      (task) => task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted',
+    );
     if (failed) {
       throw new Error(failed.error ?? t.exportFailed);
     }
     return selectedPath;
   }
 
-  async function runPipelineUtilityNode(node: ExportPipelineNode, currentOutputPath: string, existingLogs: ExportPublishNodeLog[]): Promise<ExportPublishNodeLog | undefined> {
-    if (node.type === 'email-notification' || node.type === 'webhook-callback' || node.type === 'publish-platform' || node.type === 'write-release-record') {
-      const stat = await getFileStat(currentOutputPath).catch(() => ({ path: currentOutputPath, size: 0, mtimeMs: Date.now() }));
+  async function runPipelineUtilityNode(
+    node: ExportPipelineNode,
+    currentOutputPath: string,
+    existingLogs: ExportPublishNodeLog[],
+  ): Promise<ExportPublishNodeLog | undefined> {
+    if (
+      node.type === 'email-notification' ||
+      node.type === 'webhook-callback' ||
+      node.type === 'publish-platform' ||
+      node.type === 'write-release-record'
+    ) {
+      const stat = await getFileStat(currentOutputPath).catch(() => ({
+        path: currentOutputPath,
+        size: 0,
+        mtimeMs: Date.now(),
+      }));
       return runPublishPipelineNode(node, {
         project,
         outputPath: currentOutputPath,
         outputSize: stat.size,
         duration: getTimelinePlaybackDuration(project.timeline),
         existingLogs,
-        messages: zhCN.exportDialog.pipeline.publishMessages
+        messages: zhCN.exportDialog.pipeline.publishMessages,
       });
     }
     await delay(40);
@@ -1598,11 +1905,11 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       const outputPaths = buildExportPreviewOutputPaths(appDataDir);
       const exportProject = buildExportProjectFromProject(project, {
         outputPath: outputPath || outputPaths[0].replace(/\.png$/i, '.mp4'),
-        settings: exportSettings
+        settings: exportSettings,
       });
       const samples = buildFfmpegPreviewSamplePlans(exportProject, outputPaths, nextCapabilities).map((sample) => ({
         ...sample,
-        label: t.preview.sampleLabels[sample.kind]
+        label: t.preview.sampleLabels[sample.kind],
       }));
       const result = await runExportPreviewSamples({ samples, timeoutMs: EXPORT_PREVIEW_TIMEOUT_MS });
       setPreviewSamples(
@@ -1613,8 +1920,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           time: sample.time,
           path: sample.path,
           src: convertLocalFileSrc(sample.path),
-          durationMs: sample.durationMs
-        }))
+          durationMs: sample.durationMs,
+        })),
       );
       showToast({ kind: 'success', title: t.preview.readyTitle, message: t.preview.readyMessage });
     } catch (reason) {
@@ -1641,7 +1948,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         taskId,
         sourcePath: entry.sourcePath,
         outputPath: entry.outputPath,
-        duration: getTimelinePlaybackDuration(project.timeline)
+        duration: getTimelinePlaybackDuration(project.timeline),
       });
       setQualityResult({ entry, result });
     } catch (reason) {
@@ -1676,17 +1983,17 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           checkFonts: (targetProject) => {
             const blockingFontIssue = runExportPreflight(targetProject, {
               ffmpegAvailable: true,
-              isFontFamilyAvailable
+              isFontFamilyAvailable,
             }).find((issue) => issue.type === 'missing-font' && issue.severity === 'blocking');
             if (blockingFontIssue) {
               throw new Error(blockingFontIssue.message);
             }
-          }
+          },
         },
         {
           ffmpegUnavailableMessage: t.warmup.ffmpegMissing,
-          onStep: (step) => setWarmupStatus({ status: 'running', step })
-        }
+          onStep: (step) => setWarmupStatus({ status: 'running', step }),
+        },
       );
       sawColdWarmup ||= !result.cached;
     }
@@ -1720,8 +2027,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         progressiveExportEnabled,
         {
           metadata: job.metadata,
-          versionedBatch: job.versionedBatch
-        }
+          versionedBatch: job.versionedBatch,
+        },
       );
       queuedTasks.push(task);
       for (const warning of task.plan.warnings) {
@@ -1740,7 +2047,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
             ? t.versionBatch.queuedMessage(versionJobCount)
             : sequenceJobCount > 0
               ? t.sequenceBatch.queuedMessage(sequenceJobCount)
-              : t.queuedMessage(selectedJobs.length, selectedPreset.name)
+              : t.queuedMessage(selectedJobs.length, selectedPreset.name),
     });
     return queuedTasks;
   }
@@ -1791,7 +2098,10 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     try {
       const directory = await openDirectoryDialog();
       if (directory) {
-        await updateExportUploadSettings({ ...exportUploadSettings, local: { ...exportUploadSettings.local, directory } });
+        await updateExportUploadSettings({
+          ...exportUploadSettings,
+          local: { ...exportUploadSettings.local, directory },
+        });
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.savePresetFailed);
@@ -1806,21 +2116,24 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
-  async function collectPreflightIssues(targetProject: Project, settings: ExportPresetSettings): Promise<PreflightResult[]> {
-    const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(logError("ExportDialogx")));
+  async function collectPreflightIssues(
+    targetProject: Project,
+    settings: ExportPresetSettings,
+  ): Promise<PreflightResult[]> {
+    const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(logError('ExportDialogx')));
     if (nextCapabilities && !capabilities) {
       setCapabilities(nextCapabilities);
     }
     const whisperAvailability = await getWhisperAvailability({
       executablePath: whisperExecutablePath,
-      modelPath: whisperModelPath
+      modelPath: whisperModelPath,
     });
     return runExportPreflight(targetProject, {
       ffmpegAvailable: nextCapabilities?.available === true,
       whisperReady: whisperAvailability.ready,
       whisperMessage: whisperAvailability.error,
       isFontFamilyAvailable,
-      platformPreset: settings.platformPreset
+      platformPreset: settings.platformPreset,
     });
   }
 
@@ -1863,7 +2176,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
-function relinkFromPreflight(): void {
+  function relinkFromPreflight(): void {
     setPreflight(undefined);
     onClose();
     onRelinkMissing?.();
@@ -1882,21 +2195,65 @@ function relinkFromPreflight(): void {
           </button>
         </div>
         <details className="border-b border-line" data-testid="compliance-checker">
-          <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-panel" data-testid="compliance-checker-toggle" onClick={(e) => { e.preventDefault(); setComplianceOpen(!complianceOpen); }}>{'Broadcast Compliance'}</summary>
+          <summary
+            className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-panel"
+            data-testid="compliance-checker-toggle"
+            onClick={(e) => {
+              e.preventDefault();
+              setComplianceOpen(!complianceOpen);
+            }}
+          >
+            {'Broadcast Compliance'}
+          </summary>
           {complianceOpen ? (
             <div className="space-y-3 px-4 py-3" data-testid="compliance-checker-content">
               <div className="flex items-center gap-2">
-                <select className="rounded border border-line px-2 py-1 text-xs" value={selectedSpecId} onChange={(e) => setSelectedSpecId(e.target.value)} data-testid="compliance-spec-selector">
-                  {BUILTIN_BROADCAST_SPECS.map((spec) => (<option key={spec.id} value={spec.id}>{spec.name}</option>))}
+                <select
+                  className="rounded border border-line px-2 py-1 text-xs"
+                  value={selectedSpecId}
+                  onChange={(e) => setSelectedSpecId(e.target.value)}
+                  data-testid="compliance-spec-selector"
+                >
+                  {BUILTIN_BROADCAST_SPECS.map((spec) => (
+                    <option key={spec.id} value={spec.id}>
+                      {spec.name}
+                    </option>
+                  ))}
                 </select>
-                <button className="rounded bg-brand px-3 py-1 text-xs font-medium text-white hover:bg-brand/90" type="button" onClick={runComplianceCheck} data-testid="compliance-check-button">Check</button>
-                {complianceResults.some((r) => r.level === 'fail' && r.autoFix) ? (<button className="rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600" type="button" onClick={applyComplianceFix} data-testid="compliance-auto-fix-button">Auto Fix</button>) : null}
+                <button
+                  className="rounded bg-brand px-3 py-1 text-xs font-medium text-white hover:bg-brand/90"
+                  type="button"
+                  onClick={runComplianceCheck}
+                  data-testid="compliance-check-button"
+                >
+                  Check
+                </button>
+                {complianceResults.some((r) => r.level === 'fail' && r.autoFix) ? (
+                  <button
+                    className="rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600"
+                    type="button"
+                    onClick={applyComplianceFix}
+                    data-testid="compliance-auto-fix-button"
+                  >
+                    Auto Fix
+                  </button>
+                ) : null}
               </div>
               {complianceResults.length > 0 ? (
                 <div className="space-y-1" data-testid="compliance-results">
                   {complianceResults.map((result, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs" data-testid={`compliance-result-${i}`}>
-                      <span className={result.level === 'pass' ? 'text-emerald-600' : result.level === 'warn' ? 'text-amber-500' : 'text-rose-600'}>{result.level === 'pass' ? '✓' : result.level === 'warn' ? '⚠' : '✗'}</span>
+                      <span
+                        className={
+                          result.level === 'pass'
+                            ? 'text-emerald-600'
+                            : result.level === 'warn'
+                              ? 'text-amber-500'
+                              : 'text-rose-600'
+                        }
+                      >
+                        {result.level === 'pass' ? '✓' : result.level === 'warn' ? '⚠' : '✗'}
+                      </span>
                       <span className="font-medium">{result.name}</span>
                       <span className="text-slate-500">{result.message}</span>
                     </div>
@@ -1909,25 +2266,39 @@ function relinkFromPreflight(): void {
         <div className="max-h-[78vh] space-y-4 overflow-y-auto p-4 text-sm">
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.output}</label>
-            <input className="min-w-0 rounded-md border border-line px-2 py-1.5" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} data-testid="export-output-path" />
-            <button className="rounded-md border border-line p-2 hover:bg-panel" title={t.chooseOutputPath} onClick={() => void choosePath()}>
+            <input
+              className="min-w-0 rounded-md border border-line px-2 py-1.5"
+              value={outputPath}
+              onChange={(event) => setOutputPath(event.target.value)}
+              data-testid="export-output-path"
+            />
+            <button
+              className="rounded-md border border-line p-2 hover:bg-panel"
+              title={t.chooseOutputPath}
+              onClick={() => void choosePath()}
+            >
               <FolderOpen size={16} />
             </button>
           </div>
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
-            <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
-              {(['single', 'version-batch', 'sequence-batch', 'codec-compare', 'pipeline', 'stem'] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`rounded px-3 py-1.5 text-xs font-semibold ${exportMode === mode ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
-                  data-testid={`export-mode-${mode}-tab`}
-                  onClick={() => setExportMode(mode)}
-                >
-                  {t.mode.options[mode]}
-                </button>
-              ))}
+            <div
+              className="inline-flex w-fit rounded-md border border-line bg-panel p-1"
+              data-testid="export-mode-tabs"
+            >
+              {(['single', 'version-batch', 'sequence-batch', 'codec-compare', 'pipeline', 'stem'] as const).map(
+                (mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`rounded px-3 py-1.5 text-xs font-semibold ${exportMode === mode ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+                    data-testid={`export-mode-${mode}-tab`}
+                    onClick={() => setExportMode(mode)}
+                  >
+                    {t.mode.options[mode]}
+                  </button>
+                ),
+              )}
             </div>
           </div>
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
@@ -1987,16 +2358,25 @@ function relinkFromPreflight(): void {
                 type="button"
                 data-testid="platform-fit-apply"
                 onClick={() => {
-                  const limit = platformFitTarget === 'custom' ? platformFitCustomSeconds : (PLATFORM_LIMITS[platformFitTarget as keyof typeof PLATFORM_LIMITS] ?? 60);
-                  const clips = project.timeline.tracks.flatMap((track) => track.clips).map((clip) => ({
-                    clipId: clip.id,
-                    start: clip.start,
-                    end: clip.start + clip.duration,
-                    score: undefined as number | undefined,
-                    sceneChanges: [] as number[],
-                  }));
+                  const limit =
+                    platformFitTarget === 'custom'
+                      ? platformFitCustomSeconds
+                      : (PLATFORM_LIMITS[platformFitTarget as keyof typeof PLATFORM_LIMITS] ?? 60);
+                  const clips = project.timeline.tracks
+                    .flatMap((track) => track.clips)
+                    .map((clip) => ({
+                      clipId: clip.id,
+                      start: clip.start,
+                      end: clip.start + clip.duration,
+                      score: undefined as number | undefined,
+                      sceneChanges: [] as number[],
+                    }));
                   const suggestion = generatePlatformFitSuggestion(clips, limit);
-                  const fullSuggestion = { ...suggestion, targetPlatform: platformFitTarget as 'tiktok' | 'reels' | 'shorts' | 'custom', limitSeconds: limit };
+                  const fullSuggestion = {
+                    ...suggestion,
+                    targetPlatform: platformFitTarget as 'tiktok' | 'reels' | 'shorts' | 'custom',
+                    limitSeconds: limit,
+                  };
                   const cmd = new ApplyPlatformFitCommand(projectAccessor, fullSuggestion);
                   commandManager.execute(cmd);
                 }}
@@ -2006,9 +2386,18 @@ function relinkFromPreflight(): void {
             ) : null}
           </div>
           {project.platformFitSuggestion && project.platformFitSuggestion.removedSegments.length > 0 ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs" data-testid="platform-fit-removed-list">
-              <span className="font-medium text-amber-700">{zhCN.preview.platformFitTitle}{'：'}</span>
-              <span className="text-amber-600">{project.platformFitSuggestion.removedSegments.length}{' 个片段将被裁剪'}</span>
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs"
+              data-testid="platform-fit-removed-list"
+            >
+              <span className="font-medium text-amber-700">
+                {zhCN.preview.platformFitTitle}
+                {'：'}
+              </span>
+              <span className="text-amber-600">
+                {project.platformFitSuggestion.removedSegments.length}
+                {' 个片段将被裁剪'}
+              </span>
               {project.platformFitSuggestion.removedSegments.map((seg) => (
                 <button
                   key={seg.clipId}
@@ -2028,14 +2417,23 @@ function relinkFromPreflight(): void {
           <div className="grid grid-cols-[110px_1fr_auto] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preset}</label>
             <div>
-              <select className="w-full rounded-md border border-line px-2 py-1.5" value={presetId} onChange={(event) => setPresetId(event.target.value)} data-testid="export-preset-select">
+              <select
+                className="w-full rounded-md border border-line px-2 py-1.5"
+                value={presetId}
+                onChange={(event) => setPresetId(event.target.value)}
+                data-testid="export-preset-select"
+              >
                 {recommendations.length > 0 ? (
                   <optgroup label={zhCN.exportRecommendations.groupLabel} data-testid="export-recommendation-group">
                     {recommendations.map((rec) => {
                       const preset = presets.find((p) => p.id === rec.presetId);
                       if (!preset) return null;
                       return (
-                        <option key={`rec-${preset.id}`} value={preset.id} data-testid={`export-recommended-${preset.id}`}>
+                        <option
+                          key={`rec-${preset.id}`}
+                          value={preset.id}
+                          data-testid={`export-recommended-${preset.id}`}
+                        >
                           {zhCN.exportRecommendations.recommended} {preset.name}
                         </option>
                       );
@@ -2064,7 +2462,10 @@ function relinkFromPreflight(): void {
                 </div>
               ) : null}
               {presetSyncState.message ? (
-                <div className={`mt-1 text-[11px] ${presetSyncState.status === 'error' ? 'text-amber-700' : 'text-emerald-700'}`} data-testid="export-preset-cloud-sync-status">
+                <div
+                  className={`mt-1 text-[11px] ${presetSyncState.status === 'error' ? 'text-amber-700' : 'text-emerald-700'}`}
+                  data-testid="export-preset-cloud-sync-status"
+                >
                   {presetSyncState.message}
                 </div>
               ) : null}
@@ -2104,7 +2505,11 @@ function relinkFromPreflight(): void {
                 disabled={presetSyncState.status === 'running' || !exportPresetSyncSettings.url}
                 onClick={() => void syncPresetPackageFromCloud()}
               >
-                {presetSyncState.status === 'running' ? <Loader2 size={13} className="animate-spin" /> : <Cloud size={13} />}
+                {presetSyncState.status === 'running' ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Cloud size={13} />
+                )}
                 {presetSyncState.status === 'running' ? t.cloudSyncRunning : t.cloudSyncPresetPackage}
               </button>
               <button
@@ -2128,7 +2533,11 @@ function relinkFromPreflight(): void {
               onChange={(event) => setCustomPresetName(event.target.value)}
               data-testid="export-preset-name-input"
             />
-            <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" data-testid="export-save-preset-button" onClick={() => void savePreset()}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+              data-testid="export-save-preset-button"
+              onClick={() => void savePreset()}
+            >
               <Save size={13} />
               {t.save}
             </button>
@@ -2141,14 +2550,63 @@ function relinkFromPreflight(): void {
               testId="export-output-mode-select"
               options={['video', 'audio', 'audio-visualization']}
             />
-            <PresetNumberField label={t.fields.width} value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
-            <PresetNumberField label={t.fields.height} value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
-            <PresetFpsField label={t.fields.fps} value={draftSettings.fps ?? project.settings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-select" />
-            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={formatOptions} />
-            <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
-            <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
-            <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
-            <PresetSelectField label={t.fields.subtitleFormat} value={exportSettings.subtitleFormat ?? 'srt'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateSubtitleFormat(setDraftSettings, value)} testId="export-subtitle-format-select" options={SUBTITLE_FORMATS} />
+            <PresetNumberField
+              label={t.fields.width}
+              value={draftSettings.width}
+              disabled={isAudioOnly}
+              onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)}
+              testId="export-width-input"
+            />
+            <PresetNumberField
+              label={t.fields.height}
+              value={draftSettings.height}
+              disabled={isAudioOnly}
+              onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)}
+              testId="export-height-input"
+            />
+            <PresetFpsField
+              label={t.fields.fps}
+              value={draftSettings.fps ?? project.settings.fps}
+              disabled={isAudioOnly}
+              onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)}
+              testId="export-fps-select"
+            />
+            <PresetSelectField
+              label={t.fields.format}
+              value={exportSettings.format ?? 'mp4'}
+              onChange={(value) => updateFormat(setDraftSettings, value)}
+              testId="export-format-select"
+              options={formatOptions}
+            />
+            <PresetTextField
+              label={t.fields.videoBitrate}
+              value={draftSettings.videoBitrate ?? ''}
+              disabled={isAudioOnly}
+              onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)}
+              testId="export-video-bitrate-input"
+            />
+            <PresetTextField
+              label={t.fields.audioBitrate}
+              value={draftSettings.audioBitrate ?? ''}
+              onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)}
+              testId="export-audio-bitrate-input"
+            />
+            <PresetSelectField
+              label={t.fields.subtitles}
+              value={draftSettings.subtitleMode ?? 'default'}
+              disabled={timelineVisualControlsDisabled}
+              onChange={(value) => updateSubtitleMode(setDraftSettings, value)}
+              testId="export-subtitle-mode-select"
+              options={['default', 'burn-in', 'soft-sub']}
+            />
+            <PresetSelectField
+              label={t.fields.subtitleFormat}
+              value={exportSettings.subtitleFormat ?? 'srt'}
+              disabled={timelineVisualControlsDisabled}
+              onChange={(value) => updateSubtitleFormat(setDraftSettings, value)}
+              testId="export-subtitle-format-select"
+              options={SUBTITLE_FORMATS}
+            />
             <PresetCheckboxField
               label={t.fields.exportSidecarSubtitle}
               checked={exportSettings.exportSidecarSubtitle === true}
@@ -2156,7 +2614,14 @@ function relinkFromPreflight(): void {
               onChange={(checked) => updateExportSidecarSubtitle(setDraftSettings, checked)}
               testId="export-subtitle-sidecar-toggle"
             />
-            <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+            <PresetSelectField
+              label={t.fields.scale}
+              value={draftSettings.scaleMode ?? 'none'}
+              disabled={timelineVisualControlsDisabled}
+              onChange={(value) => updateScaleMode(setDraftSettings, value)}
+              testId="export-scale-mode-select"
+              options={['none', 'fit']}
+            />
             <PresetSelectField
               label={t.fields.targetAspectRatio}
               value={exportSettings.targetAspectRatio ?? 'source'}
@@ -2173,7 +2638,12 @@ function relinkFromPreflight(): void {
               testId="export-hardware-encoding-toggle"
             />
             {hardwareEncodingRequested && availableHwEncoders.length > 0 ? (
-              <HardwareEncoderSettingsPanel encoders={availableHwEncoders} settings={exportSettings.hardwareEncoderSettings} setDraftSettings={setDraftSettings} disabled={!hardwareEncodingEligible} />
+              <HardwareEncoderSettingsPanel
+                encoders={availableHwEncoders}
+                settings={exportSettings.hardwareEncoderSettings}
+                setDraftSettings={setDraftSettings}
+                disabled={!hardwareEncodingEligible}
+              />
             ) : null}
           </div>
           <MasterProcessingSection
@@ -2191,7 +2661,12 @@ function relinkFromPreflight(): void {
               setDraftSettings={setDraftSettings}
             />
           ) : null}
-          {!timelineVisualControlsDisabled ? <ColorManagementSection colorManagement={exportSettings.colorManagement} setDraftSettings={setDraftSettings} /> : null}
+          {!timelineVisualControlsDisabled ? (
+            <ColorManagementSection
+              colorManagement={exportSettings.colorManagement}
+              setDraftSettings={setDraftSettings}
+            />
+          ) : null}
           {isAudioVisualization ? (
             <AudioVisualizationSection
               visualization={exportSettings.audioVisualization ?? DEFAULT_AUDIO_VISUALIZATION}
@@ -2199,15 +2674,43 @@ function relinkFromPreflight(): void {
               onChooseImage={() => void chooseAudioVisualizationBackgroundImage()}
             />
           ) : null}
-          {!timelineVisualControlsDisabled && exportSettings.targetAspectRatio && exportSettings.targetAspectRatio !== 'source' ? (
+          {!timelineVisualControlsDisabled &&
+          exportSettings.targetAspectRatio &&
+          exportSettings.targetAspectRatio !== 'source' ? (
             <div className="grid gap-3 rounded-md border border-line p-3 md:grid-cols-[1fr_1fr_160px]">
-              <ReframeOffsetField label={t.fields.reframeOffsetX} value={exportSettings.reframeOffsetX ?? 0} axis="x" setDraftSettings={setDraftSettings} />
-              <ReframeOffsetField label={t.fields.reframeOffsetY} value={exportSettings.reframeOffsetY ?? 0} axis="y" setDraftSettings={setDraftSettings} />
-              <ReframePreviewBox aspect={exportSettings.targetAspectRatio} offsetX={exportSettings.reframeOffsetX ?? 0} offsetY={exportSettings.reframeOffsetY ?? 0} />
+              <ReframeOffsetField
+                label={t.fields.reframeOffsetX}
+                value={exportSettings.reframeOffsetX ?? 0}
+                axis="x"
+                setDraftSettings={setDraftSettings}
+              />
+              <ReframeOffsetField
+                label={t.fields.reframeOffsetY}
+                value={exportSettings.reframeOffsetY ?? 0}
+                axis="y"
+                setDraftSettings={setDraftSettings}
+              />
+              <ReframePreviewBox
+                aspect={exportSettings.targetAspectRatio}
+                offsetX={exportSettings.reframeOffsetX ?? 0}
+                offsetY={exportSettings.reframeOffsetY ?? 0}
+              />
             </div>
           ) : null}
-          {!timelineVisualControlsDisabled ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
-          {!timelineVisualControlsDisabled ? <MonitoringSection timecodeBurnIn={draftSettings.timecodeBurnIn} slate={draftSettings.slate} setDraftSettings={setDraftSettings} /> : null}
+          {!timelineVisualControlsDisabled ? (
+            <WatermarkSection
+              watermark={draftSettings.watermark}
+              setDraftSettings={setDraftSettings}
+              onChooseImage={() => void chooseWatermarkImage()}
+            />
+          ) : null}
+          {!timelineVisualControlsDisabled ? (
+            <MonitoringSection
+              timecodeBurnIn={draftSettings.timecodeBurnIn}
+              slate={draftSettings.slate}
+              setDraftSettings={setDraftSettings}
+            />
+          ) : null}
           <PostExportScriptSection
             script={draftSettings.postExportScript}
             acknowledged={exportBackgroundSettings.postExportScriptAcknowledged}
@@ -2222,26 +2725,73 @@ function relinkFromPreflight(): void {
             onChooseDirectory={() => void chooseExportUploadDirectory()}
           />
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
-            <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
-            <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
+            <Info
+              label={t.info.resolution}
+              value={
+                isAudioOnly
+                  ? zhCN.common.audioOnly
+                  : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`
+              }
+            />
+            <Info
+              label={t.info.fps}
+              value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)}
+            />
             <Info label={t.info.format} value={exportSettings.format ?? 'mp4'} />
-            <Info label={t.info.bitrate} value={`${isAudioOnly ? zhCN.common.noVideo : exportSettings.videoBitrate || zhCN.common.auto} / ${exportSettings.audioBitrate || zhCN.common.auto}`} />
-            <Info label={t.info.videoCodec} value={isAudioOnly ? zhCN.common.none : exportSettings.videoCodec ?? 'libx264'} />
+            <Info
+              label={t.info.bitrate}
+              value={`${isAudioOnly ? zhCN.common.noVideo : exportSettings.videoBitrate || zhCN.common.auto} / ${exportSettings.audioBitrate || zhCN.common.auto}`}
+            />
+            <Info
+              label={t.info.videoCodec}
+              value={isAudioOnly ? zhCN.common.none : (exportSettings.videoCodec ?? 'libx264')}
+            />
             <Info label={t.info.audioCodec} value={exportSettings.audioCodec ?? 'aac'} />
             <Info label={t.info.estimatedSize} value={estimatedSize} />
-            <Info label={t.info.ffmpeg} value={capabilities?.available ? capabilities.version ?? zhCN.common.available : zhCN.common.missing} tone={capabilities?.available ? 'ok' : 'bad'} />
-            <Info label={t.info.drawtext} value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? zhCN.common.available : zhCN.common.unavailable} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
+            <Info
+              label={t.info.ffmpeg}
+              value={capabilities?.available ? (capabilities.version ?? zhCN.common.available) : zhCN.common.missing}
+              tone={capabilities?.available ? 'ok' : 'bad'}
+            />
+            <Info
+              label={t.info.drawtext}
+              value={
+                capabilities?.hasDrawtext && capabilities.hasLibfreetype
+                  ? zhCN.common.available
+                  : zhCN.common.unavailable
+              }
+              tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'}
+            />
             <Info
               label={t.info.hardwareEncoder}
-              value={capabilities?.hardwareEncoderAvailable && capabilities.hardwareEncoder ? capabilities.hardwareEncoder : zhCN.common.unavailable}
+              value={
+                capabilities?.hardwareEncoderAvailable && capabilities.hardwareEncoder
+                  ? capabilities.hardwareEncoder
+                  : zhCN.common.unavailable
+              }
               tone={capabilities?.hardwareEncoderAvailable ? 'ok' : 'warn'}
             />
           </div>
-          <ExportCostEstimatePanel estimate={exportCostEstimate} historyErrorPercent={exportCostHistoryError} historySamples={historyCostSamples} />
-          <ExportOptimizationPanel suggestions={exportOptimizationSuggestions} onApply={applyOptimizationSuggestion} onDismiss={(suggestion) => void dismissOptimizationSuggestion(suggestion)} />
-          <AIExportSuggestionPanel project={project} draftSettings={draftSettings} setDraftSettings={setDraftSettings} />
+          <ExportCostEstimatePanel
+            estimate={exportCostEstimate}
+            historyErrorPercent={exportCostHistoryError}
+            historySamples={historyCostSamples}
+          />
+          <ExportOptimizationPanel
+            suggestions={exportOptimizationSuggestions}
+            onApply={applyOptimizationSuggestion}
+            onDismiss={(suggestion) => void dismissOptimizationSuggestion(suggestion)}
+          />
+          <AIExportSuggestionPanel
+            project={project}
+            draftSettings={draftSettings}
+            setDraftSettings={setDraftSettings}
+          />
           {!isAudioOnly ? (
-            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-preview-panel">
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-preview-panel"
+            >
               <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preview.title}</label>
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -2256,16 +2806,35 @@ function relinkFromPreflight(): void {
                     {previewRunning ? t.preview.running : t.preview.button}
                   </button>
                   <span className="text-xs text-slate-500" data-testid="export-preview-status">
-                    {previewRunning ? t.preview.runningDescription : previewSamples.length === 3 ? t.preview.readyMessage : t.preview.description}
+                    {previewRunning
+                      ? t.preview.runningDescription
+                      : previewSamples.length === 3
+                        ? t.preview.readyMessage
+                        : t.preview.description}
                   </span>
                 </div>
-                {previewError ? <div className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-800">{previewError}</div> : null}
+                {previewError ? (
+                  <div className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-800">
+                    {previewError}
+                  </div>
+                ) : null}
                 {previewSamples.length > 0 ? (
                   <div className="grid gap-2 md:grid-cols-3" data-testid="export-preview-thumbnails">
                     {previewSamples.map((sample) => (
-                      <figure key={sample.id} className="overflow-hidden rounded-md border border-line bg-panel" data-testid="export-preview-thumbnail" data-path={sample.path}>
+                      <figure
+                        key={sample.id}
+                        className="overflow-hidden rounded-md border border-line bg-panel"
+                        data-testid="export-preview-thumbnail"
+                        data-path={sample.path}
+                      >
                         <div className="aspect-video bg-black">
-                          <img className="h-full w-full object-cover" src={sample.src} alt={sample.label} data-testid="export-preview-image" loading="lazy" />
+                          <img
+                            className="h-full w-full object-cover"
+                            src={sample.src}
+                            alt={sample.label}
+                            data-testid="export-preview-image"
+                            loading="lazy"
+                          />
                         </div>
                         <figcaption className="flex items-center justify-between gap-2 px-2 py-1.5 text-[11px] text-slate-600">
                           <span className="font-medium text-slate-700">{sample.label}</span>
@@ -2287,7 +2856,10 @@ function relinkFromPreflight(): void {
               onCreatePublishTemplate={createPublishPipelineTemplate}
             />
           ) : exportMode === 'codec-compare' ? (
-            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-codec-compare-tab">
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-codec-compare-tab"
+            >
               <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">{t.codecCompare.description(MAX_CODEC_COMPARE_PRESETS)}</p>
@@ -2296,7 +2868,11 @@ function relinkFromPreflight(): void {
                     const checked = codecComparePresetIds.includes(preset.id);
                     const disabled = !checked && codecComparePresetIds.length >= MAX_CODEC_COMPARE_PRESETS;
                     return (
-                      <label key={preset.id} className={`flex items-start gap-2 rounded-md border border-line p-2 text-xs ${disabled ? 'opacity-50' : ''}`} data-testid="export-codec-compare-preset-row">
+                      <label
+                        key={preset.id}
+                        className={`flex items-start gap-2 rounded-md border border-line p-2 text-xs ${disabled ? 'opacity-50' : ''}`}
+                        data-testid="export-codec-compare-preset-row"
+                      >
                         <input
                           className="mt-0.5 h-4 w-4 accent-brand"
                           type="checkbox"
@@ -2307,20 +2883,29 @@ function relinkFromPreflight(): void {
                         />
                         <span className="min-w-0">
                           <span className="block font-semibold text-slate-700">{preset.name}</span>
-                          <span className="block text-[11px] text-slate-500">{preset.settings.videoCodec ?? zhCN.common.auto} · {preset.settings.videoBitrate ?? zhCN.common.auto} · {preset.settings.format ?? 'mp4'}</span>
+                          <span className="block text-[11px] text-slate-500">
+                            {preset.settings.videoCodec ?? zhCN.common.auto} ·{' '}
+                            {preset.settings.videoBitrate ?? zhCN.common.auto} · {preset.settings.format ?? 'mp4'}
+                          </span>
                         </span>
                       </label>
                     );
                   })}
                 </div>
-                {codecComparePresetIds.length < 2 ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">{t.codecCompare.selectAtLeastTwo}</div> : null}
+                {codecComparePresetIds.length < 2 ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                    {t.codecCompare.selectAtLeastTwo}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <label className="inline-flex items-center gap-2 font-medium text-slate-600">
                     <span>{t.codecCompare.recommendationMode}</span>
                     <select
                       className="rounded-md border border-line px-2 py-1.5"
                       value={codecCompareRecommendationMode}
-                      onChange={(event) => setCodecCompareRecommendationMode(event.target.value as CodecCompareRecommendationMode)}
+                      onChange={(event) =>
+                        setCodecCompareRecommendationMode(event.target.value as CodecCompareRecommendationMode)
+                      }
                       data-testid="export-codec-compare-recommendation-mode"
                     >
                       <option value="quality">{t.codecCompare.recommendationModes.quality}</option>
@@ -2335,40 +2920,87 @@ function relinkFromPreflight(): void {
                     onClick={() => {
                       if (codecCompareRecommendation) {
                         setPresetId(codecCompareRecommendation.presetId);
-                        showToast({ kind: 'info', title: t.codecCompare.recommendedTitle, message: codecCompareRecommendation.presetName });
+                        showToast({
+                          kind: 'info',
+                          title: t.codecCompare.recommendedTitle,
+                          message: codecCompareRecommendation.presetName,
+                        });
                       }
                     }}
                   >
-                    {codecCompareRecommendation ? t.codecCompare.chooseRecommended(codecCompareRecommendation.presetName) : t.codecCompare.chooseBest}
+                    {codecCompareRecommendation
+                      ? t.codecCompare.chooseRecommended(codecCompareRecommendation.presetName)
+                      : t.codecCompare.chooseBest}
                   </button>
-                  {codecCompareEvaluatingTaskId ? <span className="text-slate-500" data-testid="export-codec-compare-quality-running">{t.codecCompare.evaluating}</span> : null}
+                  {codecCompareEvaluatingTaskId ? (
+                    <span className="text-slate-500" data-testid="export-codec-compare-quality-running">
+                      {t.codecCompare.evaluating}
+                    </span>
+                  ) : null}
                 </div>
                 {codecCompareResults.length > 0 ? (
-                  <div className="overflow-hidden rounded-md border border-line" data-testid="export-codec-compare-results">
+                  <div
+                    className="overflow-hidden rounded-md border border-line"
+                    data-testid="export-codec-compare-results"
+                  >
                     <table className="w-full border-collapse text-xs">
                       <thead className="bg-panel text-slate-600">
                         <tr>
-                          {(['presetName', 'fileSizeBytes', 'durationMs', 'ssim', 'psnr'] as CodecCompareSortKey[]).map((key) => (
-                            <th key={key} className="px-2 py-2 text-left font-semibold">
-                              <button className="inline-flex items-center gap-1 hover:text-ink" type="button" data-testid={`export-codec-compare-sort-${key}`} onClick={() => toggleCodecCompareSort(key)}>
-                                {t.codecCompare.columns[key]}
-                                {codecCompareSort.key === key ? <span>{codecCompareSort.direction === 'asc' ? '↑' : '↓'}</span> : null}
-                              </button>
-                            </th>
-                          ))}
+                          {(['presetName', 'fileSizeBytes', 'durationMs', 'ssim', 'psnr'] as CodecCompareSortKey[]).map(
+                            (key) => (
+                              <th key={key} className="px-2 py-2 text-left font-semibold">
+                                <button
+                                  className="inline-flex items-center gap-1 hover:text-ink"
+                                  type="button"
+                                  data-testid={`export-codec-compare-sort-${key}`}
+                                  onClick={() => toggleCodecCompareSort(key)}
+                                >
+                                  {t.codecCompare.columns[key]}
+                                  {codecCompareSort.key === key ? (
+                                    <span>{codecCompareSort.direction === 'asc' ? '↑' : '↓'}</span>
+                                  ) : null}
+                                </button>
+                              </th>
+                            ),
+                          )}
                           <th className="px-2 py-2 text-left font-semibold">{t.codecCompare.columns.status}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {sortedCodecCompareResults.map((result) => (
-                          <tr key={`${result.presetId}-${result.outputPath}`} className={codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined} data-testid="export-codec-compare-result-row" data-preset-id={result.presetId}>
+                          <tr
+                            key={`${result.presetId}-${result.outputPath}`}
+                            className={
+                              codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined
+                            }
+                            data-testid="export-codec-compare-result-row"
+                            data-preset-id={result.presetId}
+                          >
                             <td className="px-2 py-2 font-medium text-slate-800">{result.presetName}</td>
-                            <td className="px-2 py-2 tabular-nums text-slate-600">{formatBytes(result.fileSizeBytes)}</td>
-                            <td className="px-2 py-2 tabular-nums text-slate-600">{formatMilliseconds(result.durationMs)}</td>
-                            <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-ssim">{formatOptionalNumber(result.ssim, 3)}</td>
-                            <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-psnr">{formatOptionalNumber(result.psnr, 1)}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">
+                              {formatBytes(result.fileSizeBytes)}
+                            </td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">
+                              {formatMilliseconds(result.durationMs)}
+                            </td>
+                            <td
+                              className="px-2 py-2 tabular-nums text-slate-600"
+                              data-testid="export-codec-compare-ssim"
+                            >
+                              {formatOptionalNumber(result.ssim, 3)}
+                            </td>
+                            <td
+                              className="px-2 py-2 tabular-nums text-slate-600"
+                              data-testid="export-codec-compare-psnr"
+                            >
+                              {formatOptionalNumber(result.psnr, 1)}
+                            </td>
                             <td className="px-2 py-2 text-slate-600">
-                              {result.qualityStatus === 'running' ? t.codecCompare.evaluating : result.qualityStatus === 'error' ? result.qualityError ?? t.quality.failedMessage : t.status[result.status as ExportTaskStatus] ?? result.status}
+                              {result.qualityStatus === 'running'
+                                ? t.codecCompare.evaluating
+                                : result.qualityStatus === 'error'
+                                  ? (result.qualityError ?? t.quality.failedMessage)
+                                  : (t.status[result.status as ExportTaskStatus] ?? result.status)}
                             </td>
                           </tr>
                         ))}
@@ -2379,7 +3011,10 @@ function relinkFromPreflight(): void {
               </div>
             </div>
           ) : exportMode === 'version-batch' ? (
-            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-version-batch-tab">
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-version-batch-tab"
+            >
               <label className="pt-1 text-xs font-medium text-slate-600">{t.versionBatch.title}</label>
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">{t.versionBatch.description}</p>
@@ -2438,12 +3073,16 @@ function relinkFromPreflight(): void {
                           presetId: row.presetId,
                           platform: row.platform,
                           language: row.language,
-                          settings: buildVersionSettings(row)
-                        }
-                      ]
+                          settings: buildVersionSettings(row),
+                        },
+                      ],
                     })[0];
                     return (
-                      <div key={row.id} className="grid min-w-[1180px] gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(120px,1fr)_96px_90px_190px_132px_80px_80px_110px_120px_42px]" data-testid="export-version-row">
+                      <div
+                        key={row.id}
+                        className="grid min-w-[1180px] gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(120px,1fr)_96px_90px_190px_132px_80px_80px_110px_120px_42px]"
+                        data-testid="export-version-row"
+                      >
                         <label className="flex min-w-0 items-center gap-2">
                           <input
                             className="h-4 w-4 accent-brand"
@@ -2475,7 +3114,9 @@ function relinkFromPreflight(): void {
                           <select
                             className="rounded-md border border-line px-1 py-1.5"
                             value={row.rangeMode}
-                            onChange={(event) => updateVersionedBatchRow(row.id, { rangeMode: event.target.value as VersionRangeMode })}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, { rangeMode: event.target.value as VersionRangeMode })
+                            }
                             data-testid="export-version-range-mode"
                           >
                             <option value="default">{t.versionBatch.rangeModes.default}</option>
@@ -2488,7 +3129,11 @@ function relinkFromPreflight(): void {
                             step={0.1}
                             disabled={row.rangeMode !== 'custom'}
                             value={row.rangeStart}
-                            onChange={(event) => updateVersionedBatchRow(row.id, { rangeStart: Math.max(0, Number(event.target.value) || 0) })}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, {
+                                rangeStart: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
                             data-testid="export-version-range-start"
                             title={t.versionBatch.rangeStart}
                           />
@@ -2499,12 +3144,21 @@ function relinkFromPreflight(): void {
                             step={0.1}
                             disabled={row.rangeMode !== 'custom'}
                             value={row.rangeDuration}
-                            onChange={(event) => updateVersionedBatchRow(row.id, { rangeDuration: Math.max(0.001, Number(event.target.value) || 0.001) })}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, {
+                                rangeDuration: Math.max(0.001, Number(event.target.value) || 0.001),
+                              })
+                            }
                             data-testid="export-version-range-duration"
                             title={t.versionBatch.rangeDuration}
                           />
                         </div>
-                        <select className="rounded-md border border-line px-2 py-1.5" value={row.presetId} onChange={(event) => updateVersionedBatchRow(row.id, { presetId: event.target.value })} data-testid="export-version-preset-select">
+                        <select
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.presetId}
+                          onChange={(event) => updateVersionedBatchRow(row.id, { presetId: event.target.value })}
+                          data-testid="export-version-preset-select"
+                        >
                           {presets.map((preset) => (
                             <option key={preset.id} value={preset.id}>
                               {preset.name}
@@ -2516,7 +3170,11 @@ function relinkFromPreflight(): void {
                           type="number"
                           min={1}
                           value={row.width}
-                          onChange={(event) => updateVersionedBatchRow(row.id, { width: Math.max(1, Math.round(Number(event.target.value) || 1)) })}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              width: Math.max(1, Math.round(Number(event.target.value) || 1)),
+                            })
+                          }
                           data-testid="export-version-width-input"
                         />
                         <input
@@ -2524,15 +3182,32 @@ function relinkFromPreflight(): void {
                           type="number"
                           min={1}
                           value={row.height}
-                          onChange={(event) => updateVersionedBatchRow(row.id, { height: Math.max(1, Math.round(Number(event.target.value) || 1)) })}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              height: Math.max(1, Math.round(Number(event.target.value) || 1)),
+                            })
+                          }
                           data-testid="export-version-height-input"
                         />
-                        <select className="rounded-md border border-line px-2 py-1.5" value={row.watermarkMode} onChange={(event) => updateVersionedBatchRow(row.id, { watermarkMode: event.target.value as VersionWatermarkMode })} data-testid="export-version-watermark-select">
+                        <select
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.watermarkMode}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              watermarkMode: event.target.value as VersionWatermarkMode,
+                            })
+                          }
+                          data-testid="export-version-watermark-select"
+                        >
                           <option value="inherit">{t.versionBatch.watermarkModes.inherit}</option>
                           <option value="none">{t.versionBatch.watermarkModes.none}</option>
                           <option value="text">{t.versionBatch.watermarkModes.text}</option>
                         </select>
-                        <div className="truncate rounded-md bg-panel px-2 py-1.5 font-mono text-[11px] text-slate-500" title={previewJob?.outputPath} data-testid="export-version-output-preview">
+                        <div
+                          className="truncate rounded-md bg-panel px-2 py-1.5 font-mono text-[11px] text-slate-500"
+                          title={previewJob?.outputPath}
+                          data-testid="export-version-output-preview"
+                        >
                           {previewJob?.outputPath}
                         </div>
                         <button
@@ -2549,15 +3224,25 @@ function relinkFromPreflight(): void {
                     );
                   })}
                 </div>
-                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="export-version-add" onClick={addVersionedBatchRow}>
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                  type="button"
+                  data-testid="export-version-add"
+                  onClick={addVersionedBatchRow}
+                >
                   <ListPlus size={13} />
                   {t.versionBatch.add}
                 </button>
-                {versionedBatchReportRows.length > 0 ? <VersionedBatchReportTable rows={versionedBatchReportRows} /> : null}
+                {versionedBatchReportRows.length > 0 ? (
+                  <VersionedBatchReportTable rows={versionedBatchReportRows} />
+                ) : null}
               </div>
             </div>
           ) : exportMode === 'sequence-batch' ? (
-            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-sequence-batch-tab">
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-sequence-batch-tab"
+            >
               <label className="pt-1 text-xs font-medium text-slate-600">{t.sequenceBatch.title}</label>
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">{t.sequenceBatch.description}</p>
@@ -2589,43 +3274,60 @@ function relinkFromPreflight(): void {
                   {sequenceBatchRows.length === 0 ? (
                     <div className="px-3 py-4 text-center text-xs text-slate-500">{t.sequenceBatch.noSequences}</div>
                   ) : (
-                    sequenceBatchRows.map(({ sequence, selected, outputPath: rowOutputPath, presetId: rowPresetId }) => (
-                      <div key={sequence.id} className="grid gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(220px,1.4fr)_180px]" data-testid="export-sequence-batch-row" data-sequence-id={sequence.id}>
-                        <label className="flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                    sequenceBatchRows.map(
+                      ({ sequence, selected, outputPath: rowOutputPath, presetId: rowPresetId }) => (
+                        <div
+                          key={sequence.id}
+                          className="grid gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(220px,1.4fr)_180px]"
+                          data-testid="export-sequence-batch-row"
+                          data-sequence-id={sequence.id}
+                        >
+                          <label className="flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                            <input
+                              className="h-4 w-4 accent-brand"
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(event) => toggleSequenceBatchSelection(sequence.id, event.target.checked)}
+                              data-testid="export-sequence-checkbox"
+                            />
+                            <span className="truncate">{sequence.name}</span>
+                          </label>
                           <input
-                            className="h-4 w-4 accent-brand"
-                            type="checkbox"
-                            checked={selected}
-                            onChange={(event) => toggleSequenceBatchSelection(sequence.id, event.target.checked)}
-                            data-testid="export-sequence-checkbox"
+                            className="min-w-0 rounded-md border border-line px-2 py-1.5 font-mono text-[11px]"
+                            value={rowOutputPath}
+                            onChange={(event) => updateSequenceBatchOutput(sequence.id, event.target.value)}
+                            data-testid="export-sequence-output-path"
                           />
-                          <span className="truncate">{sequence.name}</span>
-                        </label>
-                        <input
-                          className="min-w-0 rounded-md border border-line px-2 py-1.5 font-mono text-[11px]"
-                          value={rowOutputPath}
-                          onChange={(event) => updateSequenceBatchOutput(sequence.id, event.target.value)}
-                          data-testid="export-sequence-output-path"
-                        />
-                        {sequenceBatchPresetMode === 'individual' ? (
-                          <select className="rounded-md border border-line px-2 py-1.5 text-xs" value={rowPresetId} onChange={(event) => updateSequenceBatchPreset(sequence.id, event.target.value)} data-testid="export-sequence-preset-select">
-                            {presets.map((preset) => (
-                              <option key={preset.id} value={preset.id}>
-                                {preset.name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <div className="rounded-md bg-panel px-2 py-1.5 text-[11px] text-slate-500">{selectedPreset.name}</div>
-                        )}
-                      </div>
-                    ))
+                          {sequenceBatchPresetMode === 'individual' ? (
+                            <select
+                              className="rounded-md border border-line px-2 py-1.5 text-xs"
+                              value={rowPresetId}
+                              onChange={(event) => updateSequenceBatchPreset(sequence.id, event.target.value)}
+                              data-testid="export-sequence-preset-select"
+                            >
+                              {presets.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                  {preset.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="rounded-md bg-panel px-2 py-1.5 text-[11px] text-slate-500">
+                              {selectedPreset.name}
+                            </div>
+                          )}
+                        </div>
+                      ),
+                    )
                   )}
                 </div>
               </div>
             </div>
           ) : exportMode === 'stem' ? (
-            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-stem-tab">
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-stem-tab"
+            >
               <label className="pt-1 text-xs font-medium text-slate-600">{t.stem.title}</label>
               <div className="space-y-3">
                 <p className="text-xs text-slate-500">{t.stem.description}</p>
@@ -2684,8 +3386,10 @@ function relinkFromPreflight(): void {
                             onChange={(event) =>
                               setStemTracks((prev) =>
                                 prev.map((item) =>
-                                  item.trackIndex === track.trackIndex ? { ...item, selected: event.target.checked } : item
-                                )
+                                  item.trackIndex === track.trackIndex
+                                    ? { ...item, selected: event.target.checked }
+                                    : item,
+                                ),
                               )
                             }
                           />
@@ -2698,8 +3402,8 @@ function relinkFromPreflight(): void {
                                 prev.map((item) =>
                                   item.trackIndex === track.trackIndex
                                     ? { ...item, format: event.target.value as ExportStemFormat }
-                                    : item
-                                )
+                                    : item,
+                                ),
                               )
                             }
                             data-testid={`export-stem-format-${track.trackIndex}`}
@@ -2731,7 +3435,12 @@ function relinkFromPreflight(): void {
           )}
           <div className="grid grid-cols-[110px_220px] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.priority}</label>
-            <select className="rounded-md border border-line px-2 py-1.5 text-sm" value={priority} onChange={(event) => setPriority(event.target.value as ExportTaskPriority)} data-testid="export-priority-select">
+            <select
+              className="rounded-md border border-line px-2 py-1.5 text-sm"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as ExportTaskPriority)}
+              data-testid="export-priority-select"
+            >
               {(['high', 'normal', 'low'] as const).map((value) => (
                 <option key={value} value={value}>
                   {t.priorityOptions[value]}
@@ -2743,7 +3452,13 @@ function relinkFromPreflight(): void {
             <label className="pt-1 text-xs font-medium text-slate-600">{t.schedule.title}</label>
             <div className="space-y-2">
               <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
-                <input className="h-4 w-4 accent-brand" type="checkbox" checked={scheduleEnabled} onChange={(event) => setScheduleEnabled(event.target.checked)} data-testid="export-schedule-toggle" />
+                <input
+                  className="h-4 w-4 accent-brand"
+                  type="checkbox"
+                  checked={scheduleEnabled}
+                  onChange={(event) => setScheduleEnabled(event.target.checked)}
+                  data-testid="export-schedule-toggle"
+                />
                 <span>{t.schedule.enabled}</span>
               </label>
               <div className="flex flex-wrap items-center gap-2">
@@ -2775,8 +3490,11 @@ function relinkFromPreflight(): void {
                   </option>
                 ))}
               </select>
-              {(completionAction === 'shutdown' || completionAction === 'hibernate') && !exportBackgroundSettings.allowPowerActions ? (
-                <div className="text-xs text-amber-700" data-testid="export-power-action-disabled-warning">{t.completionAction.powerDisabled}</div>
+              {(completionAction === 'shutdown' || completionAction === 'hibernate') &&
+              !exportBackgroundSettings.allowPowerActions ? (
+                <div className="text-xs text-amber-700" data-testid="export-power-action-disabled-warning">
+                  {t.completionAction.powerDisabled}
+                </div>
               ) : null}
             </div>
           </div>
@@ -2830,33 +3548,66 @@ function relinkFromPreflight(): void {
                   max={4}
                   value={renderFarmInstances}
                   disabled={!renderFarmEnabled || progressiveExportEnabled}
-                  onChange={(event) => setRenderFarmInstances(Math.min(4, Math.max(1, Math.round(Number(event.target.value) || 1))))}
+                  onChange={(event) =>
+                    setRenderFarmInstances(Math.min(4, Math.max(1, Math.round(Number(event.target.value) || 1))))
+                  }
                   data-testid="export-render-farm-instances"
                 />
                 <span>{t.renderFarm.suggested(suggestedRenderFarmInstances)}</span>
               </div>
-              {progressiveExportEnabled ? <div className="text-xs text-slate-500">{t.progressive.renderFarmDisabled}</div> : null}
+              {progressiveExportEnabled ? (
+                <div className="text-xs text-slate-500">{t.progressive.renderFarmDisabled}</div>
+              ) : null}
             </div>
           </div>
-          {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
+          {capabilities?.drawtextWarning ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+              {formatExportWarning(capabilities.drawtextWarning)}
+            </div>
+          ) : null}
           {spatialDenoiseClipCount > 0 ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-spatial-denoise-warning">
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900"
+              data-testid="export-spatial-denoise-warning"
+            >
               {t.spatialDenoiseWarning(spatialDenoiseClipCount)}
             </div>
           ) : null}
-          {preflight ? <PreflightPanel issues={preflight.issues} onDismiss={() => setPreflight(undefined)} onContinue={() => void continueAfterWarnings()} onRelink={onRelinkMissing ? relinkFromPreflight : undefined} /> : null}
+          {preflight ? (
+            <PreflightPanel
+              issues={preflight.issues}
+              onDismiss={() => setPreflight(undefined)}
+              onContinue={() => void continueAfterWarnings()}
+              onRelink={onRelinkMissing ? relinkFromPreflight : undefined}
+            />
+          ) : null}
           {hardwareEncodingRequested && capabilities && !capabilities.hardwareEncoderAvailable ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-hardware-fallback-warning">
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900"
+              data-testid="export-hardware-fallback-warning"
+            >
               {t.hardwareEncodingFallback}
             </div>
           ) : null}
           {warmupStatus ? <ExportWarmupStatusPanel status={warmupStatus} /> : null}
-          {error ? <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">{error}</pre> : null}
+          {error ? (
+            <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">
+              {error}
+            </pre>
+          ) : null}
           <div className="rounded-md border border-line" data-testid="export-queue-list">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <div>
                 <div className="text-xs font-semibold text-slate-700">{t.queueTitle}</div>
-                <div className="text-[11px] text-slate-500">{queuePaused ? t.queuePausedByUser : resourcePaused ? t.queuePausedForMemory : runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
+                <div className="text-[11px] text-slate-500">
+                  {queuePaused
+                    ? t.queuePausedByUser
+                    : resourcePaused
+                      ? t.queuePausedForMemory
+                      : runnerActive
+                        ? t.queueRunning(maxConcurrent)
+                        : zhCN.common.idle}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
@@ -2874,15 +3625,28 @@ function relinkFromPreflight(): void {
                     ))}
                   </select>
                 </label>
-                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+                  onClick={clearFinishedTasks}
+                >
                   <Trash2 size={13} />
                   {t.clearFinished}
                 </button>
-                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" type="button" data-testid="export-queue-pause-button" onClick={() => setExportQueuePaused(!queuePaused)}>
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+                  type="button"
+                  data-testid="export-queue-pause-button"
+                  onClick={() => setExportQueuePaused(!queuePaused)}
+                >
                   <Clock3 size={13} />
                   {queuePaused ? t.resumeQueue : t.pauseQueue}
                 </button>
-                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" type="button" data-testid="export-minimize-to-tray-button" onClick={() => void minimizeToTray()}>
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+                  type="button"
+                  data-testid="export-minimize-to-tray-button"
+                  onClick={() => void minimizeToTray()}
+                >
                   <Minimize2 size={13} />
                   {t.minimizeToTray}
                 </button>
@@ -2903,7 +3667,12 @@ function relinkFromPreflight(): void {
                 <div className="px-3 py-4 text-center text-xs text-slate-500">{t.noHistory}</div>
               ) : (
                 history.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="border-b border-line px-3 py-2 text-xs last:border-b-0" data-testid="export-history-entry" data-status={entry.status}>
+                  <div
+                    key={entry.id}
+                    className="border-b border-line px-3 py-2 text-xs last:border-b-0"
+                    data-testid="export-history-entry"
+                    data-status={entry.status}
+                  >
                     <div className="flex items-center gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium text-slate-800">{entry.name}</div>
@@ -2912,7 +3681,11 @@ function relinkFromPreflight(): void {
                       <span className="shrink-0 text-[11px] text-slate-500">{priorityLabel(entry.priority)}</span>
                       <StatusPill status={entry.status} />
                       {entry.logPath ? (
-                        <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-history-log-button" onClick={() => void openPath(entry.logPath!)}>
+                        <button
+                          className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+                          data-testid="export-history-log-button"
+                          onClick={() => void openPath(entry.logPath!)}
+                        >
                           {t.viewLog}
                         </button>
                       ) : null}
@@ -2928,9 +3701,18 @@ function relinkFromPreflight(): void {
                       </button>
                     </div>
                     {entry.report?.recovery ? <ExportRecoveryPanel report={entry.report.recovery} /> : null}
-                    {entry.report?.qualityAssurance ? <PostExportQualityAssurancePanel result={entry.report.qualityAssurance} /> : null}
-                    {entry.report?.postExportScript ? <PostExportScriptResultPanel result={entry.report.postExportScript} /> : null}
-                    {entry.upload ? <ExportUploadStatusPanel upload={entry.upload} onRetry={entry.upload.status === 'error' ? () => void retryHistoryUpload(entry) : undefined} /> : null}
+                    {entry.report?.qualityAssurance ? (
+                      <PostExportQualityAssurancePanel result={entry.report.qualityAssurance} />
+                    ) : null}
+                    {entry.report?.postExportScript ? (
+                      <PostExportScriptResultPanel result={entry.report.postExportScript} />
+                    ) : null}
+                    {entry.upload ? (
+                      <ExportUploadStatusPanel
+                        upload={entry.upload}
+                        onRetry={entry.upload.status === 'error' ? () => void retryHistoryUpload(entry) : undefined}
+                      />
+                    ) : null}
                   </div>
                 ))
               )}
@@ -2960,20 +3742,32 @@ function relinkFromPreflight(): void {
         </div>
       </section>
       {postExportScriptPendingConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="export-post-script-confirm-overlay">
-          <div className="w-full max-w-md space-y-4 rounded-md border border-line bg-white p-4 shadow-lg" data-testid="export-post-script-confirm-dialog">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          data-testid="export-post-script-confirm-overlay"
+        >
+          <div
+            className="w-full max-w-md space-y-4 rounded-md border border-line bg-white p-4 shadow-lg"
+            data-testid="export-post-script-confirm-dialog"
+          >
             <div>
               <h3 className="text-sm font-semibold">{t.postExportScript.confirmTitle}</h3>
               <p className="mt-1 text-xs text-slate-500">{t.postExportScript.confirmMessage}</p>
             </div>
-            <div className="rounded-md border border-line bg-slate-50 p-3 font-mono text-xs break-all" data-testid="export-post-script-confirm-command">
+            <div
+              className="rounded-md border border-line bg-slate-50 p-3 font-mono text-xs break-all"
+              data-testid="export-post-script-confirm-command"
+            >
               {exportSettings.postExportScript?.command ?? ''}
             </div>
             <div className="flex justify-end gap-2">
               <button
                 className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel"
                 type="button"
-                onClick={() => { setPostExportScriptPendingConfirm(false); pendingConfirmResolveRef.current?.(false); }}
+                onClick={() => {
+                  setPostExportScriptPendingConfirm(false);
+                  pendingConfirmResolveRef.current?.(false);
+                }}
                 data-testid="export-post-script-confirm-cancel"
               >
                 {t.postExportScript.cancelButton}
@@ -2981,7 +3775,10 @@ function relinkFromPreflight(): void {
               <button
                 className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-[#176858]"
                 type="button"
-                onClick={() => { setPostExportScriptPendingConfirm(false); pendingConfirmResolveRef.current?.(true); }}
+                onClick={() => {
+                  setPostExportScriptPendingConfirm(false);
+                  pendingConfirmResolveRef.current?.(true);
+                }}
                 data-testid="export-post-script-confirm-ok"
               >
                 {t.postExportScript.confirmButton}
@@ -2998,13 +3795,14 @@ async function runProxyGenerationWarmup(project: Project): Promise<void> {
   const mediaIds = new Set(project.media.map((asset) => asset.id));
   const hasActiveProxyJobs = useMediaJobStore
     .getState()
-    .jobs.some((job) => job.type === 'proxy' && mediaIds.has(job.assetId) && (job.status === 'pending' || job.status === 'running'));
+    .jobs.some(
+      (job) =>
+        job.type === 'proxy' && mediaIds.has(job.assetId) && (job.status === 'pending' || job.status === 'running'),
+    );
   if (hasActiveProxyJobs) {
     await ensureMediaJobRunner();
   }
 }
-
-
 
 async function waitForExportTasks(taskIds: string[]): Promise<void> {
   const ids = new Set(taskIds);
@@ -3014,7 +3812,16 @@ async function waitForExportTasks(taskIds: string[]): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const tasks = useExportQueueStore.getState().tasks.filter((task) => ids.has(task.id));
-    if (tasks.length === ids.size && tasks.every((task) => task.status === 'success' || task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted')) {
+    if (
+      tasks.length === ids.size &&
+      tasks.every(
+        (task) =>
+          task.status === 'success' ||
+          task.status === 'error' ||
+          task.status === 'canceled' ||
+          task.status === 'interrupted',
+      )
+    ) {
       return;
     }
     await delay(100);
@@ -3027,17 +3834,28 @@ async function runCompletionAction(action: ExportCompletionAction, settings: Exp
     return;
   }
   if (action === 'notification') {
-    showToast({ kind: 'success', title: zhCN.exportDialog.completionAction.notificationTitle, message: zhCN.exportDialog.completionAction.notificationMessage });
+    showToast({
+      kind: 'success',
+      title: zhCN.exportDialog.completionAction.notificationTitle,
+      message: zhCN.exportDialog.completionAction.notificationMessage,
+    });
     if (typeof Notification !== 'undefined') {
-      const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+      const permission =
+        Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
       if (permission === 'granted') {
-        new Notification(zhCN.exportDialog.completionAction.notificationTitle, { body: zhCN.exportDialog.completionAction.notificationMessage });
+        new Notification(zhCN.exportDialog.completionAction.notificationTitle, {
+          body: zhCN.exportDialog.completionAction.notificationMessage,
+        });
       }
     }
     return;
   }
   if (!settings.allowPowerActions) {
-    showToast({ kind: 'warning', title: zhCN.exportDialog.completionAction.powerDisabledTitle, message: zhCN.exportDialog.completionAction.powerDisabled });
+    showToast({
+      kind: 'warning',
+      title: zhCN.exportDialog.completionAction.powerDisabledTitle,
+      message: zhCN.exportDialog.completionAction.powerDisabled,
+    });
     return;
   }
   try {
@@ -3046,7 +3864,7 @@ async function runCompletionAction(action: ExportCompletionAction, settings: Exp
     showToast({
       kind: 'error',
       title: zhCN.exportDialog.completionAction.powerFailedTitle,
-      message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage
+      message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage,
     });
   }
 }
@@ -3055,7 +3873,7 @@ function MasterProcessingSection({
   masterProcessing,
   loudnessNormalization,
   loudnessNormalizationEligible,
-  setDraftSettings
+  setDraftSettings,
 }: {
   masterProcessing: ExportPresetSettings['masterProcessing'];
   loudnessNormalization: ExportLoudnessNormalization;
@@ -3067,15 +3885,33 @@ function MasterProcessingSection({
   const active = hasExportMasterProcessing(master) || loudnessNormalization !== 'off';
   return (
     <details className="rounded-md border border-line p-3" data-testid="export-master-processing-section">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-master-processing-summary">
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700"
+        data-testid="export-master-processing-summary"
+      >
         <span>{t.title}</span>
         <span className="text-[11px] font-normal text-slate-500">{active ? t.on : t.off}</span>
       </summary>
       <div className="mt-3 space-y-3 text-xs">
         <div className="grid gap-3 md:grid-cols-3">
-          <PresetCheckboxField label={t.eqEnabled} checked={master.eq.enabled} onChange={(checked) => updateMasterEqEnabled(setDraftSettings, checked)} testId="export-master-eq-toggle" />
-          <PresetCheckboxField label={t.stereoEnabled} checked={master.stereoEnhancer.enabled} onChange={(checked) => updateMasterStereoEnabled(setDraftSettings, checked)} testId="export-master-stereo-toggle" />
-          <PresetCheckboxField label={t.limiterEnabled} checked={master.limiter.enabled} onChange={(checked) => updateMasterLimiterEnabled(setDraftSettings, checked)} testId="export-master-limiter-toggle" />
+          <PresetCheckboxField
+            label={t.eqEnabled}
+            checked={master.eq.enabled}
+            onChange={(checked) => updateMasterEqEnabled(setDraftSettings, checked)}
+            testId="export-master-eq-toggle"
+          />
+          <PresetCheckboxField
+            label={t.stereoEnabled}
+            checked={master.stereoEnhancer.enabled}
+            onChange={(checked) => updateMasterStereoEnabled(setDraftSettings, checked)}
+            testId="export-master-stereo-toggle"
+          />
+          <PresetCheckboxField
+            label={t.limiterEnabled}
+            checked={master.limiter.enabled}
+            onChange={(checked) => updateMasterLimiterEnabled(setDraftSettings, checked)}
+            testId="export-master-limiter-toggle"
+          />
         </div>
         <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
           <PresetSelectField
@@ -3115,7 +3951,11 @@ function MasterProcessingSection({
             <span>{t.q}</span>
           </div>
           {master.eq.bands.map((band, index) => (
-            <div key={band.id} className="grid grid-cols-[86px_1fr_72px_64px] items-center gap-2 border-b border-line px-2 py-1 last:border-b-0" data-testid="export-master-eq-band">
+            <div
+              key={band.id}
+              className="grid grid-cols-[86px_1fr_72px_64px] items-center gap-2 border-b border-line px-2 py-1 last:border-b-0"
+              data-testid="export-master-eq-band"
+            >
               <div className="truncate font-medium text-slate-600" title={t.bandName(index, band.frequency)}>
                 {t.bandName(index, band.frequency)}
               </div>
@@ -3139,7 +3979,9 @@ function MasterProcessingSection({
                 value={band.frequency}
                 disabled={!master.eq.enabled}
                 data-testid={`export-master-eq-frequency-${index}`}
-                onChange={(event) => updateMasterEqBand(setDraftSettings, index, { frequency: Number(event.target.value) })}
+                onChange={(event) =>
+                  updateMasterEqBand(setDraftSettings, index, { frequency: Number(event.target.value) })
+                }
               />
               <input
                 className="h-7 min-w-0 rounded border border-line bg-white px-1 text-right tabular-nums disabled:bg-slate-100"
@@ -3164,7 +4006,7 @@ function SubtitleLanguageSection({
   options,
   selectedLanguages,
   burnInLanguage,
-  setDraftSettings
+  setDraftSettings,
 }: {
   options: SubtitleLanguageOption[];
   selectedLanguages?: string[];
@@ -3173,7 +4015,9 @@ function SubtitleLanguageSection({
 }) {
   const selected = normalizeSubtitleLanguageList(selectedLanguages);
   const enabledLanguages = selected ? new Set(selected) : new Set(options.map((option) => option.language));
-  const activeBurnInLanguage = burnInLanguage ? normalizeSubtitleLanguage(burnInLanguage) : options[0]?.language ?? 'zh';
+  const activeBurnInLanguage = burnInLanguage
+    ? normalizeSubtitleLanguage(burnInLanguage)
+    : (options[0]?.language ?? 'zh');
   const t = zhCN.exportDialog.subtitleLanguages;
   return (
     <section className="rounded-md border border-line p-3 text-xs" data-testid="export-subtitle-language-section">
@@ -3200,11 +4044,16 @@ function SubtitleLanguageSection({
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {options.map((option) => (
-          <label key={option.language} className="inline-flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-slate-700">
+          <label
+            key={option.language}
+            className="inline-flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-slate-700"
+          >
             <input
               type="checkbox"
               checked={enabledLanguages.has(option.language)}
-              onChange={(event) => updateSubtitleLanguageSelection(setDraftSettings, option.language, event.currentTarget.checked, options)}
+              onChange={(event) =>
+                updateSubtitleLanguageSelection(setDraftSettings, option.language, event.currentTarget.checked, options)
+              }
               data-testid={`export-subtitle-language-${option.language}`}
             />
             <span>{option.label}</span>
@@ -3216,20 +4065,25 @@ function SubtitleLanguageSection({
   );
 }
 
-
 function ColorManagementSection({
   colorManagement,
-  setDraftSettings
+  setDraftSettings,
 }: {
   colorManagement: ExportPresetSettings['colorManagement'];
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
 }) {
   const t = zhCN.exportDialog.colorManagement;
   const normalized = normalizeExportColorManagement(colorManagement);
-  const active = normalized.inputColorSpace !== 'srgb' || normalized.outputColorSpace !== 'srgb' || normalized.embedIccProfile === false;
+  const active =
+    normalized.inputColorSpace !== 'srgb' ||
+    normalized.outputColorSpace !== 'srgb' ||
+    normalized.embedIccProfile === false;
   return (
     <details className="rounded-md border border-line p-3" data-testid="export-color-management-section">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-color-management-summary">
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700"
+        data-testid="export-color-management-summary"
+      >
         <span>{t.title}</span>
         <span className="text-[11px] font-normal text-slate-500">{active ? t.custom : t.default}</span>
       </summary>
@@ -3262,7 +4116,7 @@ function ColorManagementSection({
 function AudioVisualizationSection({
   visualization,
   setDraftSettings,
-  onChooseImage
+  onChooseImage,
 }: {
   visualization: NonNullable<ExportPresetSettings['audioVisualization']>;
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
@@ -3304,7 +4158,7 @@ function AudioVisualizationSection({
         themeId: visualization.themeId,
         theme: visualization.theme,
         color: visualization.color,
-        background: visualization.background.type === 'image' ? undefined : visualization.background
+        background: visualization.background.type === 'image' ? undefined : visualization.background,
       });
       const nextThemes = upsertCustomAudioVisualizationTheme(customThemes, {
         id: name,
@@ -3319,7 +4173,7 @@ function AudioVisualizationSection({
         particleColor: expanded.particleColor,
         border: expanded.border,
         borderColor: expanded.borderColor,
-        borderWidth: expanded.borderWidth
+        borderWidth: expanded.borderWidth,
       });
       const saved = await saveAudioVisualizationThemeSettings({ customThemes: nextThemes });
       setCustomThemes(saved.customThemes);
@@ -3329,7 +4183,11 @@ function AudioVisualizationSection({
       }
       setCustomThemeName('');
     } catch (error) {
-      showToast({ kind: 'warning', title: t.saveThemeFailed, message: error instanceof Error ? error.message : t.saveThemeFailed });
+      showToast({
+        kind: 'warning',
+        title: t.saveThemeFailed,
+        message: error instanceof Error ? error.message : t.saveThemeFailed,
+      });
     }
   };
 
@@ -3366,7 +4224,10 @@ function AudioVisualizationSection({
               key={theme.id}
               label={theme.name}
               selected={selectedThemeId === theme.id}
-              source={{ themeId: theme.id, theme: customThemes.some((item) => item.id === theme.id) ? theme : undefined }}
+              source={{
+                themeId: theme.id,
+                theme: customThemes.some((item) => item.id === theme.id) ? theme : undefined,
+              }}
               style={visualization.style}
               testId={`export-audio-viz-theme-${theme.id}`}
               onSelect={() => updateAudioVisualizationTheme(setDraftSettings, theme, customThemes)}
@@ -3440,7 +4301,12 @@ function AudioVisualizationSection({
                 onChange={(event) => updateAudioVisualizationBackgroundImagePath(setDraftSettings, event.target.value)}
                 data-testid="export-audio-viz-background-image-input"
               />
-              <button className="rounded-md border border-line px-2 py-1.5 text-xs font-medium hover:bg-panel" type="button" data-testid="export-audio-viz-background-image-button" onClick={onChooseImage}>
+              <button
+                className="rounded-md border border-line px-2 py-1.5 text-xs font-medium hover:bg-panel"
+                type="button"
+                data-testid="export-audio-viz-background-image-button"
+                onClick={onChooseImage}
+              >
                 {t.chooseImage}
               </button>
             </div>
@@ -3475,7 +4341,7 @@ function ThemePreviewButton({
   style,
   testId,
   action,
-  onSelect
+  onSelect,
 }: {
   label: string;
   selected: boolean;
@@ -3504,7 +4370,13 @@ function ThemePreviewButton({
         data-testid={testId}
         onClick={onSelect}
       >
-        <canvas ref={canvasRef} className="block aspect-[16/9] w-full bg-slate-950" width={192} height={108} aria-hidden="true" />
+        <canvas
+          ref={canvasRef}
+          className="block aspect-[16/9] w-full bg-slate-950"
+          width={192}
+          height={108}
+          aria-hidden="true"
+        />
         <span className="block truncate bg-white px-2 py-1.5 text-xs font-semibold text-slate-700">{label}</span>
       </button>
       {action ? <div className="absolute right-1 top-1">{action}</div> : null}
@@ -3515,7 +4387,7 @@ function ThemePreviewButton({
 function MonitoringSection({
   timecodeBurnIn,
   slate,
-  setDraftSettings
+  setDraftSettings,
 }: {
   timecodeBurnIn: ExportPresetSettings['timecodeBurnIn'];
   slate: ExportPresetSettings['slate'];
@@ -3529,12 +4401,20 @@ function MonitoringSection({
 
   return (
     <details className="rounded-md border border-line p-3" data-testid="export-monitoring-section">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-monitoring-summary">
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700"
+        data-testid="export-monitoring-summary"
+      >
         <span>{t.title}</span>
         <span className="text-[11px] font-normal text-slate-500">{enabled || slateEnabled ? t.on : t.off}</span>
       </summary>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
-        <PresetCheckboxField label={t.timecodeEnabled} checked={enabled} onChange={(checked) => updateTimecodeBurnInEnabled(setDraftSettings, checked)} testId="export-timecode-toggle" />
+        <PresetCheckboxField
+          label={t.timecodeEnabled}
+          checked={enabled}
+          onChange={(checked) => updateTimecodeBurnInEnabled(setDraftSettings, checked)}
+          testId="export-timecode-toggle"
+        />
         <label className="space-y-1 text-xs font-medium text-slate-600">
           <span>{t.timecodePosition}</span>
           <select
@@ -3582,7 +4462,12 @@ function MonitoringSection({
           onChange={(checked) => updateTimecodeBurnInFrameNumber(setDraftSettings, checked)}
           testId="export-timecode-frame-number-toggle"
         />
-        <PresetCheckboxField label={t.slateEnabled} checked={slateEnabled} onChange={(checked) => updateSlateEnabled(setDraftSettings, checked)} testId="export-slate-toggle" />
+        <PresetCheckboxField
+          label={t.slateEnabled}
+          checked={slateEnabled}
+          onChange={(checked) => updateSlateEnabled(setDraftSettings, checked)}
+          testId="export-slate-toggle"
+        />
       </div>
     </details>
   );
@@ -3592,7 +4477,7 @@ function PostExportScriptSection({
   script,
   acknowledged,
   setDraftSettings,
-  onAcknowledgedChange
+  onAcknowledgedChange,
 }: {
   script: ExportPresetSettings['postExportScript'];
   acknowledged: boolean;
@@ -3604,7 +4489,10 @@ function PostExportScriptSection({
   const enabled = command.trim().length > 0;
   return (
     <details className="rounded-md border border-line p-3" data-testid="export-post-script-section">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-post-script-summary">
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700"
+        data-testid="export-post-script-summary"
+      >
         <span>{t.title}</span>
         <span className="text-[11px] font-normal text-slate-500">{enabled ? t.enabled : t.disabled}</span>
       </summary>
@@ -3619,7 +4507,10 @@ function PostExportScriptSection({
             data-testid="export-post-script-command-input"
           />
         </label>
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-post-script-warning">
+        <div
+          className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900"
+          data-testid="export-post-script-warning"
+        >
           <label className="flex items-start gap-2">
             <input
               className="mt-0.5 h-4 w-4 accent-brand"
@@ -3645,7 +4536,7 @@ function PostExportScriptSection({
 function WatermarkSection({
   watermark,
   setDraftSettings,
-  onChooseImage
+  onChooseImage,
 }: {
   watermark: ExportPresetSettings['watermark'];
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
@@ -3660,13 +4551,21 @@ function WatermarkSection({
 
   return (
     <details className="rounded-md border border-line p-3" data-testid="export-watermark-section">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-watermark-summary">
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700"
+        data-testid="export-watermark-summary"
+      >
         <span>{t.title}</span>
         <span className="text-[11px] font-normal text-slate-500">{enabled ? t.on : t.off}</span>
       </summary>
       <div className="mt-3 grid gap-3">
         <div className="grid gap-3 md:grid-cols-[180px_180px_1fr]">
-          <PresetCheckboxField label={t.enabled} checked={enabled} onChange={(checked) => updateWatermarkEnabled(setDraftSettings, checked)} testId="export-watermark-enabled-toggle" />
+          <PresetCheckboxField
+            label={t.enabled}
+            checked={enabled}
+            onChange={(checked) => updateWatermarkEnabled(setDraftSettings, checked)}
+            testId="export-watermark-enabled-toggle"
+          />
           <label className="space-y-1 text-xs font-medium text-slate-600">
             <span>{t.type}</span>
             <select
@@ -3721,13 +4620,43 @@ function WatermarkSection({
                 </button>
               </div>
             </label>
-            <WatermarkNumberField label={t.scalePercent} value={imageWatermark.scalePercent} min={1} max={50} step={1} disabled={!enabled} testId="export-image-watermark-scale-input" onChange={(value) => updateImageWatermarkScale(setDraftSettings, value)} />
-            <WatermarkNumberField label={t.opacity} value={imageWatermark.opacity} min={0} max={1} step={0.05} disabled={!enabled} testId="export-image-watermark-opacity-input" onChange={(value) => updateImageWatermarkOpacity(setDraftSettings, value)} />
+            <WatermarkNumberField
+              label={t.scalePercent}
+              value={imageWatermark.scalePercent}
+              min={1}
+              max={50}
+              step={1}
+              disabled={!enabled}
+              testId="export-image-watermark-scale-input"
+              onChange={(value) => updateImageWatermarkScale(setDraftSettings, value)}
+            />
+            <WatermarkNumberField
+              label={t.opacity}
+              value={imageWatermark.opacity}
+              min={0}
+              max={1}
+              step={0.05}
+              disabled={!enabled}
+              testId="export-image-watermark-opacity-input"
+              onChange={(value) => updateImageWatermarkOpacity(setDraftSettings, value)}
+            />
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-[1fr_150px_110px_110px]">
-            <PresetTextField label={t.text} value={textWatermark.text} disabled={!enabled} onChange={(value) => updateTextWatermarkText(setDraftSettings, value)} testId="export-text-watermark-input" />
-            <PresetTextField label={t.fontFamily} value={textWatermark.fontFamily} disabled={!enabled} onChange={(value) => updateTextWatermarkFont(setDraftSettings, value)} testId="export-text-watermark-font-input" />
+            <PresetTextField
+              label={t.text}
+              value={textWatermark.text}
+              disabled={!enabled}
+              onChange={(value) => updateTextWatermarkText(setDraftSettings, value)}
+              testId="export-text-watermark-input"
+            />
+            <PresetTextField
+              label={t.fontFamily}
+              value={textWatermark.fontFamily}
+              disabled={!enabled}
+              onChange={(value) => updateTextWatermarkFont(setDraftSettings, value)}
+              testId="export-text-watermark-font-input"
+            />
             <label className="space-y-1 text-xs font-medium text-slate-600">
               <span>{t.color}</span>
               <input
@@ -3739,7 +4668,16 @@ function WatermarkSection({
                 data-testid="export-text-watermark-color-input"
               />
             </label>
-            <WatermarkNumberField label={t.fontSize} value={textWatermark.fontSize} min={8} max={240} step={1} disabled={!enabled} testId="export-text-watermark-size-input" onChange={(value) => updateTextWatermarkSize(setDraftSettings, value)} />
+            <WatermarkNumberField
+              label={t.fontSize}
+              value={textWatermark.fontSize}
+              min={8}
+              max={240}
+              step={1}
+              disabled={!enabled}
+              testId="export-text-watermark-size-input"
+              onChange={(value) => updateTextWatermarkSize(setDraftSettings, value)}
+            />
           </div>
         )}
       </div>
@@ -3751,7 +4689,7 @@ function ReframeOffsetField({
   label,
   value,
   axis,
-  setDraftSettings
+  setDraftSettings,
 }: {
   label: string;
   value: number;
@@ -3778,9 +4716,26 @@ function ReframeOffsetField({
   );
 }
 
-function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectRatio; offsetX: number; offsetY: number }) {
+function ReframePreviewBox({
+  aspect,
+  offsetX,
+  offsetY,
+}: {
+  aspect: TargetAspectRatio;
+  offsetX: number;
+  offsetY: number;
+}) {
   const normalized = normalizeTargetAspectRatio(aspect);
-  const ratioClass = normalized === '9:16' ? 'aspect-[9/16]' : normalized === '1:1' ? 'aspect-square' : normalized === '4:5' ? 'aspect-[4/5]' : normalized === '21:9' ? 'aspect-[21/9]' : 'aspect-video';
+  const ratioClass =
+    normalized === '9:16'
+      ? 'aspect-[9/16]'
+      : normalized === '1:1'
+        ? 'aspect-square'
+        : normalized === '4:5'
+          ? 'aspect-[4/5]'
+          : normalized === '21:9'
+            ? 'aspect-[21/9]'
+            : 'aspect-video';
   const translateX = `${clampReframeOffset(offsetX) * 18}%`;
   const translateY = `${clampReframeOffset(offsetY) * 18}%`;
   return (
@@ -3799,7 +4754,7 @@ function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectR
 function applyExportSuggestionToDraft(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   suggestion: AIExportSuggestion,
-  project: Project
+  project: Project,
 ) {
   const param = suggestion.parameter;
   const value = suggestion.suggestedValue;
@@ -3808,7 +4763,8 @@ function applyExportSuggestionToDraft(
     if (param === 'audioBitrate') return { ...prev, audioBitrate: value };
     if (param === 'fps') return { ...prev, fps: Number(value) || prev.fps };
     if (param === 'encoder') return { ...prev, videoCodec: value };
-    if (param === 'loudnessNormalization') return { ...prev, loudnessNormalization: value as ExportLoudnessNormalization };
+    if (param === 'loudnessNormalization')
+      return { ...prev, loudnessNormalization: value as ExportLoudnessNormalization };
     if (param === 'subtitleFormat') return { ...prev, subtitleFormat: value as ExportSubtitleFormat };
     if (param === 'resolution') {
       const m = value.match(/(\d+)\s*[x×]\s*(\d+)/);
@@ -3824,7 +4780,7 @@ let aiExportSuggestionCache: { key: string; ts: number; data: AIExportSuggestion
 function AIExportSuggestionPanel({
   project,
   draftSettings,
-  setDraftSettings
+  setDraftSettings,
 }: {
   project: Project;
   draftSettings: ExportPresetSettings;
@@ -3842,33 +4798,59 @@ function AIExportSuggestionPanel({
 
   async function runAnalysis() {
     if (!provider) return;
-    const cacheKey = JSON.stringify({ p: project.settings, d: { f: draftSettings.format, vc: draftSettings.videoCodec, vb: draftSettings.videoBitrate, ab: draftSettings.audioBitrate } });
-    if (aiExportSuggestionCache && aiExportSuggestionCache.key === cacheKey && Date.now() - aiExportSuggestionCache.ts < EXPORT_SUGGESTION_CACHE_TTL_MS) {
+    const cacheKey = JSON.stringify({
+      p: project.settings,
+      d: {
+        f: draftSettings.format,
+        vc: draftSettings.videoCodec,
+        vb: draftSettings.videoBitrate,
+        ab: draftSettings.audioBitrate,
+      },
+    });
+    if (
+      aiExportSuggestionCache &&
+      aiExportSuggestionCache.key === cacheKey &&
+      Date.now() - aiExportSuggestionCache.ts < EXPORT_SUGGESTION_CACHE_TTL_MS
+    ) {
       setSuggestions(aiExportSuggestionCache.data);
       return;
     }
     setPhase('analyzing');
     try {
       const apiKey = await readAiApiKey(provider.id);
-      const projectInfo = buildExportProjectInfo(project as unknown as { settings: { width: number; height: number; fps: number }; timeline: { tracks: Array<{ type: string; clips: Array<Record<string, unknown>> }> } });
+      const projectInfo = buildExportProjectInfo(
+        project as unknown as {
+          settings: { width: number; height: number; fps: number };
+          timeline: { tracks: Array<{ type: string; clips: Array<Record<string, unknown>> }> };
+        },
+      );
       const systemPrompt = buildExportOptimizationSystemPrompt();
-      const userPrompt = buildExportOptimizationUserPrompt(projectInfo, { ...draftSettings, videoBitrate: draftSettings.videoBitrate ?? undefined, audioBitrate: draftSettings.audioBitrate ?? undefined });
-      const response = await callAiApi({
-        providerId: provider.id,
-        baseUrl: provider.baseUrl,
-        model: provider.defaultModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        customHeaders: provider.customHeaders,
-        maxTokens: 4096,
-        temperature: 0.3
-      }, apiKey);
+      const userPrompt = buildExportOptimizationUserPrompt(projectInfo, {
+        ...draftSettings,
+        videoBitrate: draftSettings.videoBitrate ?? undefined,
+        audioBitrate: draftSettings.audioBitrate ?? undefined,
+      });
+      const response = await callAiApi(
+        {
+          providerId: provider.id,
+          baseUrl: provider.baseUrl,
+          model: provider.defaultModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          customHeaders: provider.customHeaders,
+          maxTokens: 4096,
+          temperature: 0.3,
+        },
+        apiKey,
+      );
       let parsed: AIExportSuggestion[] = [];
       try {
         parsed = parseExportOptimizationResponse(JSON.parse(response.content));
-      } catch { /* ignore parse errors */ }
+      } catch {
+        /* ignore parse errors */
+      }
       const sorted = sortExportSuggestionsByPriority(parsed);
       setSuggestions(sorted);
       aiExportSuggestionCache = { key: cacheKey, ts: Date.now(), data: sorted };
@@ -3895,7 +4877,10 @@ function AIExportSuggestionPanel({
 
   if (!provider) {
     return (
-      <section className="rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-xs text-slate-500" data-testid="ai-export-suggestion-no-provider">
+      <section
+        className="rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-xs text-slate-500"
+        data-testid="ai-export-suggestion-no-provider"
+      >
         {t.noProvider}
       </section>
     );
@@ -3907,8 +4892,15 @@ function AIExportSuggestionPanel({
   }
 
   return (
-    <details className="rounded-md border border-line bg-white p-3 text-xs" data-testid="ai-export-suggestion-panel" onToggle={handleToggle}>
-      <summary className="cursor-pointer select-none font-semibold text-slate-800" data-testid="ai-export-suggestion-toggle">
+    <details
+      className="rounded-md border border-line bg-white p-3 text-xs"
+      data-testid="ai-export-suggestion-panel"
+      onToggle={handleToggle}
+    >
+      <summary
+        className="cursor-pointer select-none font-semibold text-slate-800"
+        data-testid="ai-export-suggestion-toggle"
+      >
         {t.title}
       </summary>
       <div className="mt-0.5 text-[11px] text-slate-500">{t.description}</div>
@@ -3918,7 +4910,10 @@ function AIExportSuggestionPanel({
           {t.analyzing}
         </div>
       ) : suggestions.length === 0 && expanded ? (
-        <div className="mt-2 rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-slate-500" data-testid="ai-export-suggestion-empty">
+        <div
+          className="mt-2 rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-slate-500"
+          data-testid="ai-export-suggestion-empty"
+        >
           {t.empty}
         </div>
       ) : suggestions.length > 0 ? (
@@ -3928,11 +4923,19 @@ function AIExportSuggestionPanel({
             if (!group || group.length === 0) return null;
             return (
               <div key={pri} data-testid={`ai-export-suggestion-priority-${pri}`}>
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t.priorityLabels[pri]}</div>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  {t.priorityLabels[pri]}
+                </div>
                 <div className="space-y-2">
                   {group.map((s, i) => (
-                    <div key={s.parameter + '-' + i} className="rounded-md border border-line bg-panel/30 p-2" data-testid={'ai-export-suggestion-' + s.parameter}>
-                      <div className="font-medium text-slate-800">{t.parameterLabels[s.parameter as keyof typeof t.parameterLabels] ?? s.parameter}</div>
+                    <div
+                      key={s.parameter + '-' + i}
+                      className="rounded-md border border-line bg-panel/30 p-2"
+                      data-testid={'ai-export-suggestion-' + s.parameter}
+                    >
+                      <div className="font-medium text-slate-800">
+                        {t.parameterLabels[s.parameter as keyof typeof t.parameterLabels] ?? s.parameter}
+                      </div>
                       <div className="mt-0.5 text-slate-600">
                         <span className="text-slate-500">{s.currentValue}</span>
                         <span className="mx-1 text-slate-400">&rarr;</span>
@@ -3967,7 +4970,6 @@ function AIExportSuggestionPanel({
   );
 }
 
-
 function getLastExportDurationSeconds(history: ExportTaskHistoryEntry[]): number | undefined {
   const entry = history.find((item) => item.startedAt && item.finishedAt);
   if (!entry?.startedAt || !entry.finishedAt) {
@@ -3994,7 +4996,7 @@ function estimateDimensions(width: number, height: number, format: string): { wi
   const ratio = 1080 / longest;
   return {
     width: Math.max(1, Math.round(safeWidth * ratio)),
-    height: Math.max(1, Math.round(safeHeight * ratio))
+    height: Math.max(1, Math.round(safeHeight * ratio)),
   };
 }
 
@@ -4003,15 +5005,21 @@ function formatExportWarning(warning: string): string {
   if (textClip) {
     return zhCN.exportDialog.textClipSkippedDrawtext(textClip[1]);
   }
-  const transitionVisual = warning.match(/^Transition (.+) was skipped because both clips must be visual media clips\.$/);
+  const transitionVisual = warning.match(
+    /^Transition (.+) was skipped because both clips must be visual media clips\.$/,
+  );
   if (transitionVisual) {
     return zhCN.exportDialog.transitionSkippedVisualOnly(transitionVisual[1]);
   }
-  const transitionChained = warning.match(/^Transition (.+) was skipped because chained transitions are not yet supported in one export segment\.$/);
+  const transitionChained = warning.match(
+    /^Transition (.+) was skipped because chained transitions are not yet supported in one export segment\.$/,
+  );
   if (transitionChained) {
     return zhCN.exportDialog.transitionSkippedChained(transitionChained[1]);
   }
-  const transitionMissingInput = warning.match(/^Transition (.+) was skipped because one of its clips has no media input\.$/);
+  const transitionMissingInput = warning.match(
+    /^Transition (.+) was skipped because one of its clips has no media input\.$/,
+  );
   if (transitionMissingInput) {
     return zhCN.exportDialog.transitionSkippedMissingInput(transitionMissingInput[1]);
   }
@@ -4019,33 +5027,54 @@ function formatExportWarning(warning: string): string {
   if (missingMedia) {
     return zhCN.exportDialog.clipSkippedMissingMedia(missingMedia[1]);
   }
-  const speedRampFallback = warning.match(/^Speed ramp setpts for clip (.+) exceeded 4096 characters and fell back to average speed\.$/);
+  const speedRampFallback = warning.match(
+    /^Speed ramp setpts for clip (.+) exceeded 4096 characters and fell back to average speed\.$/,
+  );
   if (speedRampFallback) {
     return zhCN.exportDialog.speedRampSetptsFallback(speedRampFallback[1]);
   }
-  const customShaderSlowWarning = warning.match(/^Custom shader effect for clip (.+) will render frame-by-frame and may be slow\.$/);
+  const customShaderSlowWarning = warning.match(
+    /^Custom shader effect for clip (.+) will render frame-by-frame and may be slow\.$/,
+  );
   if (customShaderSlowWarning) {
     return zhCN.exportDialog.customShaderSlowWarning(customShaderSlowWarning[1]);
   }
-  const opticalFlowFallback = warning.match(/^Optical flow slow motion for clip (.+) fell back to blend because the current FFmpeg build did not report minterpolate support\.$/);
+  const opticalFlowFallback = warning.match(
+    /^Optical flow slow motion for clip (.+) fell back to blend because the current FFmpeg build did not report minterpolate support\.$/,
+  );
   if (opticalFlowFallback) {
     return zhCN.exportDialog.opticalFlowFallbackBlend(opticalFlowFallback[1]);
   }
-  const slowMotionSkipped = warning.match(/^Slow motion interpolation for clip (.+) was skipped because the current FFmpeg build does not support minterpolate\.$/);
+  const slowMotionSkipped = warning.match(
+    /^Slow motion interpolation for clip (.+) was skipped because the current FFmpeg build does not support minterpolate\.$/,
+  );
   if (slowMotionSkipped) {
     return zhCN.exportDialog.slowMotionInterpolationSkipped(slowMotionSkipped[1]);
   }
-  if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
+  if (
+    warning ===
+    'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.'
+  ) {
     return zhCN.exportDialog.ffmpegDrawtextUnavailable;
   }
-  if (warning === 'Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.') {
+  if (
+    warning ===
+    'Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.'
+  ) {
     return zhCN.exportDialog.hardwareEncodingFallback;
   }
   return warning;
 }
 
 function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
-  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : tone === 'bad' ? 'text-rose-700' : 'text-slate-700';
+  const toneClass =
+    tone === 'ok'
+      ? 'text-emerald-700'
+      : tone === 'warn'
+        ? 'text-amber-700'
+        : tone === 'bad'
+          ? 'text-rose-700'
+          : 'text-slate-700';
   return (
     <div className="rounded-md bg-panel p-2">
       <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
@@ -4053,4 +5082,3 @@ function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok
     </div>
   );
 }
-

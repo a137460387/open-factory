@@ -25,7 +25,7 @@ vi.mock('../../store/editorStore', () => ({
     },
     {
       getState: () => mockEditorState,
-    }
+    },
   ),
 }));
 
@@ -37,7 +37,7 @@ vi.mock('../../store/editorFeatureStore', () => ({
     },
     {
       getState: () => mockEditorFeatureState,
-    }
+    },
   ),
 }));
 
@@ -49,7 +49,7 @@ vi.mock('../../store/editorUIStore', () => ({
     },
     {
       getState: () => mockEditorUIState,
-    }
+    },
   ),
 }));
 
@@ -221,10 +221,7 @@ describe('useEditorShellMiscCallbacks', () => {
 
   // --- openSyncCompare ---
   it('openSyncCompare 恰好有 2 个 clip 时打开同步对比', () => {
-    const refs = [
-      { clip: { id: 'clip-1', start: 1.0 } },
-      { clip: { id: 'clip-2', start: 2.0 } },
-    ];
+    const refs = [{ clip: { id: 'clip-1', start: 1.0 } }, { clip: { id: 'clip-2', start: 2.0 } }];
     vi.mocked(findSyncCompareClipRefs).mockReturnValue(refs as any);
 
     const { result } = renderHook(() => useEditorShellMiscCallbacks());

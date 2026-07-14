@@ -4,7 +4,7 @@ import {
   calculateStereoCorrelation,
   detectTopFrequencyPeaks,
   mapFftBinsToHz,
-  serializeChannelAnalysisJson
+  serializeChannelAnalysisJson,
 } from './channelAnalysis';
 
 describe('channel analysis', () => {
@@ -14,7 +14,7 @@ describe('channel analysis', () => {
     expect(points).toEqual([
       { index: 1, hz: 1000, magnitude: 0.251 },
       { index: 2, hz: 2000, magnitude: 0.502 },
-      { index: 3, hz: 3000, magnitude: 1 }
+      { index: 3, hz: 3000, magnitude: 1 },
     ]);
   });
 
@@ -30,13 +30,13 @@ describe('channel analysis', () => {
       { index: 3, hz: 300, magnitude: 0.1 },
       { index: 4, hz: 400, magnitude: 0.9 },
       { index: 5, hz: 500, magnitude: 0.2 },
-      { index: 6, hz: 600, magnitude: 0.7 }
+      { index: 6, hz: 600, magnitude: 0.7 },
     ]);
 
     expect(peaks.map((peak) => ({ rank: peak.rank, hz: peak.hz }))).toEqual([
       { rank: 1, hz: 400 },
       { rank: 2, hz: 200 },
-      { rank: 3, hz: 600 }
+      { rank: 3, hz: 600 },
     ]);
   });
 
@@ -46,7 +46,7 @@ describe('channel analysis', () => {
       frequencyData: [0, 255, 0, 128],
       leftTimeDomain: [255, 128, 0],
       rightTimeDomain: [255, 128, 0],
-      recordedAtMs: 123.4
+      recordedAtMs: 123.4,
     });
     const parsed = JSON.parse(serializeChannelAnalysisJson([snapshot])) as {
       version: number;

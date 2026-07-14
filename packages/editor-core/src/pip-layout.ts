@@ -41,7 +41,7 @@ export function calculatePiPTransform(input: PiPLayoutInput): Transform {
     scaleX: scale,
     scaleY: scale,
     rotation: 0,
-    opacity: 1
+    opacity: 1,
   };
 }
 
@@ -53,7 +53,7 @@ export function createFullFrameTransform(): Transform {
     scaleX: 1,
     scaleY: 1,
     rotation: 0,
-    opacity: 1
+    opacity: 1,
   };
 }
 

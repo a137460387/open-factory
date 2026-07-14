@@ -9,7 +9,7 @@ import {
   type SyncCompareAlignMode,
   type SyncCompareClipRef,
   type Timeline,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { drawPreviewDifferenceFrame } from '../lib/preview/compare';
@@ -52,10 +52,16 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
     leftPaused: pausedSides.left,
     rightPaused: pausedSides.right,
     heldLeftTime: heldTimes.left,
-    heldRightTime: heldTimes.right
+    heldRightTime: heldTimes.right,
   });
-  const leftTimeline = useMemo(() => buildSingleClipTimeline(leftRef.clip, leftRef.track.type), [leftRef.clip, leftRef.track.type]);
-  const rightTimeline = useMemo(() => buildSingleClipTimeline(rightRef.clip, rightRef.track.type), [rightRef.clip, rightRef.track.type]);
+  const leftTimeline = useMemo(
+    () => buildSingleClipTimeline(leftRef.clip, leftRef.track.type),
+    [leftRef.clip, leftRef.track.type],
+  );
+  const rightTimeline = useMemo(
+    () => buildSingleClipTimeline(rightRef.clip, rightRef.track.type),
+    [rightRef.clip, rightRef.track.type],
+  );
   const projectFps = project.settings.fps || 30;
 
   useEffect(() => {
@@ -68,21 +74,37 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
 
     void (async () => {
       try {
-        const leftResult = await leftRendererRef.current.render(leftCanvas, leftTimeline, project.media, playback.leftTime, {
-          captureFrame: differenceVisible,
-          sequences: project.sequences
-        });
-        const rightResult = await rightRendererRef.current.render(rightCanvas, rightTimeline, project.media, playback.rightTime, {
-          captureFrame: differenceVisible,
-          sequences: project.sequences
-        });
+        const leftResult = await leftRendererRef.current.render(
+          leftCanvas,
+          leftTimeline,
+          project.media,
+          playback.leftTime,
+          {
+            captureFrame: differenceVisible,
+            sequences: project.sequences,
+          },
+        );
+        const rightResult = await rightRendererRef.current.render(
+          rightCanvas,
+          rightTimeline,
+          project.media,
+          playback.rightTime,
+          {
+            captureFrame: differenceVisible,
+            sequences: project.sequences,
+          },
+        );
         if (canceled || !differenceVisible || !leftResult.frame || !rightResult.frame || !differenceCanvasRef.current) {
           return;
         }
         drawPreviewDifferenceFrame(differenceCanvasRef.current, leftResult.frame, rightResult.frame);
       } catch (error) {
         if (!canceled) {
-          showToast({ kind: 'error', title: t.renderFailedTitle, message: error instanceof Error ? error.message : t.renderFailedMessage });
+          showToast({
+            kind: 'error',
+            title: t.renderFailedTitle,
+            message: error instanceof Error ? error.message : t.renderFailedMessage,
+          });
         }
       }
     })();
@@ -90,7 +112,16 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
     return () => {
       canceled = true;
     };
-  }, [differenceVisible, leftTimeline, playback.leftTime, playback.rightTime, project.media, project.sequences, rightTimeline, t]);
+  }, [
+    differenceVisible,
+    leftTimeline,
+    playback.leftTime,
+    playback.rightTime,
+    project.media,
+    project.sequences,
+    rightTimeline,
+    t,
+  ]);
 
   function toggleSidePaused(side: 'left' | 'right'): void {
     setPausedSides((current) => {
@@ -103,7 +134,10 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-6" data-testid="sync-compare-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-6"
+      data-testid="sync-compare-panel"
+    >
       <section className="flex max-h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-950 text-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
@@ -148,7 +182,9 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
               data-testid="sync-compare-manual-offset"
               onChange={(event) => setManualOffsetSeconds(Number(event.target.value))}
             />
-            <span className="w-14 text-right tabular-nums" data-testid="sync-compare-offset-value">{t.offsetValue(playback.offsetSeconds)}</span>
+            <span className="w-14 text-right tabular-nums" data-testid="sync-compare-offset-value">
+              {t.offsetValue(playback.offsetSeconds)}
+            </span>
           </label>
           <button
             type="button"
@@ -171,7 +207,10 @@ export function SyncComparePanel({ clips, project, onClose }: SyncComparePanelPr
             {isPlaying ? zhCN.toolbar.pause : zhCN.toolbar.play}
           </button>
         </div>
-        <div className="relative grid min-h-0 flex-1 grid-cols-2 gap-px bg-white/10" data-testid="sync-compare-canvas-grid">
+        <div
+          className="relative grid min-h-0 flex-1 grid-cols-2 gap-px bg-white/10"
+          data-testid="sync-compare-canvas-grid"
+        >
           <SyncCompareSideView
             side="left"
             clip={leftRef.clip}
@@ -214,7 +253,7 @@ function SyncCompareSideView({
   playing,
   fps,
   paused,
-  onTogglePaused
+  onTogglePaused,
 }: {
   side: 'left' | 'right';
   clip: Clip;
@@ -227,11 +266,25 @@ function SyncCompareSideView({
 }) {
   const t = zhCN.syncCompare;
   return (
-    <section className="relative min-h-[360px] bg-black" data-testid={`sync-compare-${side}-pane`} data-playback-state={playing ? 'playing' : 'paused'}>
-      <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="h-full w-full object-contain" data-testid={`sync-compare-${side}-canvas`} />
+    <section
+      className="relative min-h-[360px] bg-black"
+      data-testid={`sync-compare-${side}-pane`}
+      data-playback-state={playing ? 'playing' : 'paused'}
+    >
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        className="h-full w-full object-contain"
+        data-testid={`sync-compare-${side}-canvas`}
+      />
       <div className="absolute left-3 top-3 max-w-[calc(100%-96px)] rounded-md bg-black/70 px-3 py-2 text-xs text-white">
-        <div className="truncate font-semibold" data-testid={`sync-compare-${side}-clip-name`}>{clip.name}</div>
-        <div className="mt-0.5 text-slate-300" data-testid={`sync-compare-${side}-timecode`}>{secondsToTimecode(time, fps, 'ndf')}</div>
+        <div className="truncate font-semibold" data-testid={`sync-compare-${side}-clip-name`}>
+          {clip.name}
+        </div>
+        <div className="mt-0.5 text-slate-300" data-testid={`sync-compare-${side}-timecode`}>
+          {secondsToTimecode(time, fps, 'ndf')}
+        </div>
       </div>
       <button
         type="button"
@@ -257,8 +310,8 @@ function buildSingleClipTimeline(clip: Clip, sourceTrackType: Track['type']): Ti
         id: trackId,
         type: sourceTrackType,
         name: clip.name,
-        clips: [{ ...clip, trackId, start: 0 }]
-      })
-    ]
+        clips: [{ ...clip, trackId, start: 0 }],
+      }),
+    ],
   };
 }

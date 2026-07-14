@@ -12,39 +12,37 @@ interface NodeGraphViewProps {
 const NODE_COLORS: Record<ColorGradingNodeType, string> = {
   'primary-wheel': '#3b82f6',
   'primary-slider': '#10b981',
-  'curves': '#f59e0b',
+  curves: '#f59e0b',
   'hsl-qualifier': '#ef4444',
   'window-mask': '#8b5cf6',
   'tracking-mask': '#ec4899',
   'lut-apply': '#06b6d4',
   'color-space': '#6366f1',
   'mixer-node': '#f97316',
-  'output': '#6b7280',
+  output: '#6b7280',
 };
 
 const NODE_LABELS: Record<ColorGradingNodeType, string> = {
   'primary-wheel': '色轮',
   'primary-slider': '滑块',
-  'curves': '曲线',
+  curves: '曲线',
   'hsl-qualifier': 'HSL限定',
   'window-mask': '窗口遮罩',
   'tracking-mask': '跟踪遮罩',
   'lut-apply': 'LUT',
   'color-space': '色彩空间',
   'mixer-node': '混合',
-  'output': '输出',
+  output: '输出',
 };
 
-export const NodeGraphView: React.FC<NodeGraphViewProps> = ({
-  graph,
-  onAddNode,
-  onRemoveNode,
-  onSelectNode,
-}) => {
-  const handleAddNode = useCallback((type: ColorGradingNodeType) => {
-    const node = createColorGradingNode(type, { x: 100 + graph.nodes.length * 150, y: 100 });
-    onAddNode(node);
-  }, [graph.nodes.length, onAddNode]);
+export const NodeGraphView: React.FC<NodeGraphViewProps> = ({ graph, onAddNode, onRemoveNode, onSelectNode }) => {
+  const handleAddNode = useCallback(
+    (type: ColorGradingNodeType) => {
+      const node = createColorGradingNode(type, { x: 100 + graph.nodes.length * 150, y: 100 });
+      onAddNode(node);
+    },
+    [graph.nodes.length, onAddNode],
+  );
 
   return (
     <div className="p-3" data-testid="node-graph-view">
@@ -70,11 +68,9 @@ export const NodeGraphView: React.FC<NodeGraphViewProps> = ({
 
       <div className="relative h-48 bg-gray-900 rounded border border-gray-700 overflow-auto">
         {graph.nodes.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-            点击上方按钮添加调色节点
-          </div>
+          <div className="flex items-center justify-center h-full text-gray-500 text-sm">点击上方按钮添加调色节点</div>
         ) : (
-          graph.nodes.map(node => (
+          graph.nodes.map((node) => (
             <div
               key={node.id}
               className="absolute px-3 py-2 rounded cursor-pointer text-xs text-white shadow-lg"
@@ -88,7 +84,10 @@ export const NodeGraphView: React.FC<NodeGraphViewProps> = ({
             >
               {NODE_LABELS[node.type]}
               <button
-                onClick={(e) => { e.stopPropagation(); onRemoveNode(node.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveNode(node.id);
+                }}
                 className="ml-2 text-white/60 hover:text-white"
               >
                 ×
@@ -99,9 +98,9 @@ export const NodeGraphView: React.FC<NodeGraphViewProps> = ({
 
         {/* 连接线 */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          {graph.connections.map(conn => {
-            const from = graph.nodes.find(n => n.id === conn.fromNodeId);
-            const to = graph.nodes.find(n => n.id === conn.toNodeId);
+          {graph.connections.map((conn) => {
+            const from = graph.nodes.find((n) => n.id === conn.fromNodeId);
+            const to = graph.nodes.find((n) => n.id === conn.toNodeId);
             if (!from || !to) return null;
             return (
               <line

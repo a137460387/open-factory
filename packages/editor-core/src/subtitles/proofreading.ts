@@ -36,18 +36,24 @@ export interface SubtitleProofreadingFix {
   delete?: boolean;
 }
 
-type NormalizedSubtitleProofreadingClip = Required<Pick<SubtitleProofreadingClipInput, 'id' | 'start' | 'duration' | 'text'>> & Pick<SubtitleProofreadingClipInput, 'trackId'>;
+type NormalizedSubtitleProofreadingClip = Required<
+  Pick<SubtitleProofreadingClipInput, 'id' | 'start' | 'duration' | 'text'>
+> &
+  Pick<SubtitleProofreadingClipInput, 'trackId'>;
 
 export const DEFAULT_SUBTITLE_PROOFREADING_SETTINGS = {
   minDuration: 1,
   maxDuration: 7,
   chineseMaxCharsPerSecond: 12,
-  englishMaxCharsPerSecond: 20
+  englishMaxCharsPerSecond: 20,
 } as const satisfies Required<SubtitleProofreadingSettings>;
 
 const EPSILON = 0.000001;
 
-export function analyzeSubtitleProofreading(clips: SubtitleProofreadingClipInput[], settings: SubtitleProofreadingSettings = {}): SubtitleProofreadingIssue[] {
+export function analyzeSubtitleProofreading(
+  clips: SubtitleProofreadingClipInput[],
+  settings: SubtitleProofreadingSettings = {},
+): SubtitleProofreadingIssue[] {
   const normalizedSettings = normalizeSubtitleProofreadingSettings(settings);
   const normalizedClips = normalizeSubtitleProofreadingClips(clips);
   const issues: SubtitleProofreadingIssue[] = [];
@@ -75,36 +81,45 @@ export function analyzeSubtitleProofreading(clips: SubtitleProofreadingClipInput
       const next = trackClips[index + 1];
       const currentEnd = current.start + current.duration;
       if (next.start < currentEnd - EPSILON) {
-        issues.push(createIssue('overlap', current, { relatedClipId: next.id, value: round(currentEnd - next.start), trackId }));
+        issues.push(
+          createIssue('overlap', current, { relatedClipId: next.id, value: round(currentEnd - next.start), trackId }),
+        );
       }
     }
   }
 
-  return issues.sort((left, right) => left.start - right.start || left.clipId.localeCompare(right.clipId) || left.type.localeCompare(right.type));
+  return issues.sort(
+    (left, right) =>
+      left.start - right.start || left.clipId.localeCompare(right.clipId) || left.type.localeCompare(right.type),
+  );
 }
 
 export function calculateSubtitleReadingSpeed(
   text: string,
   duration: number,
-  settings: SubtitleProofreadingSettings = {}
+  settings: SubtitleProofreadingSettings = {},
 ): { speed: number; characterCount: number; language: 'chinese' | 'english'; limit: number } {
   const normalizedSettings = normalizeSubtitleProofreadingSettings(settings);
   const language = hasChineseText(text) ? 'chinese' : 'english';
   const characterCount = countReadableCharacters(text);
   const safeDuration = Number.isFinite(duration) ? Math.max(0, duration) : 0;
-  const speed = safeDuration > EPSILON ? round(characterCount / safeDuration) : characterCount > 0 ? Number.POSITIVE_INFINITY : 0;
+  const speed =
+    safeDuration > EPSILON ? round(characterCount / safeDuration) : characterCount > 0 ? Number.POSITIVE_INFINITY : 0;
   return {
     speed,
     characterCount,
     language,
-    limit: language === 'chinese' ? normalizedSettings.chineseMaxCharsPerSecond : normalizedSettings.englishMaxCharsPerSecond
+    limit:
+      language === 'chinese'
+        ? normalizedSettings.chineseMaxCharsPerSecond
+        : normalizedSettings.englishMaxCharsPerSecond,
   };
 }
 
 export function buildSubtitleProofreadingFixes(
   clips: SubtitleProofreadingClipInput[],
   issues: SubtitleProofreadingIssue[],
-  settings: SubtitleProofreadingSettings = {}
+  settings: SubtitleProofreadingSettings = {},
 ): SubtitleProofreadingFix[] {
   const normalizedSettings = normalizeSubtitleProofreadingSettings(settings);
   const clipsById = new Map(normalizeSubtitleProofreadingClips(clips).map((clip) => [clip.id, clip]));
@@ -138,7 +153,7 @@ export function buildSubtitleProofreadingFixes(
 
 export function serializeSubtitleProofreadingCsv(
   issues: SubtitleProofreadingIssue[],
-  options: { fps?: number; timecodeFormat?: TimecodeFormat } = {}
+  options: { fps?: number; timecodeFormat?: TimecodeFormat } = {},
 ): string {
   const rows = [['timecode', 'issue_type', 'clip_id', 'related_clip_id', 'content']];
   for (const issue of issues) {
@@ -147,24 +162,48 @@ export function serializeSubtitleProofreadingCsv(
       issue.type,
       issue.clipId,
       issue.relatedClipId ?? '',
-      issue.text
+      issue.text,
     ]);
   }
   return rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n') + '\n';
 }
 
-export function normalizeSubtitleProofreadingSettings(settings: SubtitleProofreadingSettings = {}): Required<SubtitleProofreadingSettings> {
-  const minDuration = round(Math.max(1 / 30, finiteOrDefault(settings.minDuration, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.minDuration)));
-  const maxDuration = round(Math.max(minDuration, finiteOrDefault(settings.maxDuration, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.maxDuration)));
+export function normalizeSubtitleProofreadingSettings(
+  settings: SubtitleProofreadingSettings = {},
+): Required<SubtitleProofreadingSettings> {
+  const minDuration = round(
+    Math.max(1 / 30, finiteOrDefault(settings.minDuration, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.minDuration)),
+  );
+  const maxDuration = round(
+    Math.max(minDuration, finiteOrDefault(settings.maxDuration, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.maxDuration)),
+  );
   return {
     minDuration,
     maxDuration,
-    chineseMaxCharsPerSecond: round(Math.max(1, finiteOrDefault(settings.chineseMaxCharsPerSecond, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.chineseMaxCharsPerSecond))),
-    englishMaxCharsPerSecond: round(Math.max(1, finiteOrDefault(settings.englishMaxCharsPerSecond, DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.englishMaxCharsPerSecond)))
+    chineseMaxCharsPerSecond: round(
+      Math.max(
+        1,
+        finiteOrDefault(
+          settings.chineseMaxCharsPerSecond,
+          DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.chineseMaxCharsPerSecond,
+        ),
+      ),
+    ),
+    englishMaxCharsPerSecond: round(
+      Math.max(
+        1,
+        finiteOrDefault(
+          settings.englishMaxCharsPerSecond,
+          DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.englishMaxCharsPerSecond,
+        ),
+      ),
+    ),
   };
 }
 
-function normalizeSubtitleProofreadingClips(clips: SubtitleProofreadingClipInput[]): NormalizedSubtitleProofreadingClip[] {
+function normalizeSubtitleProofreadingClips(
+  clips: SubtitleProofreadingClipInput[],
+): NormalizedSubtitleProofreadingClip[] {
   return clips
     .filter((clip) => clip.id && Number.isFinite(clip.start) && Number.isFinite(clip.duration))
     .map((clip) => ({
@@ -172,12 +211,14 @@ function normalizeSubtitleProofreadingClips(clips: SubtitleProofreadingClipInput
       trackId: clip.trackId,
       start: round(Math.max(0, clip.start)),
       duration: round(Math.max(0, clip.duration)),
-      text: typeof clip.text === 'string' ? clip.text : ''
+      text: typeof clip.text === 'string' ? clip.text : '',
     }))
     .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
 }
 
-function groupSubtitleClipsByTrack(clips: NormalizedSubtitleProofreadingClip[]): Map<string, NormalizedSubtitleProofreadingClip[]> {
+function groupSubtitleClipsByTrack(
+  clips: NormalizedSubtitleProofreadingClip[],
+): Map<string, NormalizedSubtitleProofreadingClip[]> {
   const groups = new Map<string, NormalizedSubtitleProofreadingClip[]>();
   for (const clip of clips) {
     const key = clip.trackId ?? '';
@@ -189,7 +230,7 @@ function groupSubtitleClipsByTrack(clips: NormalizedSubtitleProofreadingClip[]):
 function createIssue(
   type: SubtitleProofreadingIssueType,
   clip: ReturnType<typeof normalizeSubtitleProofreadingClips>[number],
-  extra: Partial<Pick<SubtitleProofreadingIssue, 'relatedClipId' | 'value' | 'limit' | 'trackId'>> = {}
+  extra: Partial<Pick<SubtitleProofreadingIssue, 'relatedClipId' | 'value' | 'limit' | 'trackId'>> = {},
 ): SubtitleProofreadingIssue {
   return {
     id: `${type}:${clip.id}${extra.relatedClipId ? `:${extra.relatedClipId}` : ''}`,
@@ -201,7 +242,7 @@ function createIssue(
     duration: clip.duration,
     text: clip.text,
     value: extra.value,
-    limit: extra.limit
+    limit: extra.limit,
   };
 }
 

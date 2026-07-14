@@ -5,12 +5,12 @@ const STATUS_ORDER: Record<MediaJobStatus, number> = {
   pending: 1,
   error: 2,
   canceled: 3,
-  success: 4
+  success: 4,
 };
 
 const PRIORITY_ORDER = {
   high: 0,
-  low: 1
+  low: 1,
 } as const;
 
 export function sortMediaJobsForMonitor(jobs: MediaJob[]): MediaJob[] {
@@ -42,8 +42,17 @@ export function moveMediaJobBefore(jobs: MediaJob[], jobId: string, targetJobId:
   return next;
 }
 
-export function calculateMediaJobEtaSeconds(job: Pick<MediaJob, 'status' | 'progress' | 'startedAt'>, nowMs = Date.now()): number | undefined {
-  if (job.status !== 'running' || !job.startedAt || typeof job.progress !== 'number' || job.progress <= 0 || job.progress >= 1) {
+export function calculateMediaJobEtaSeconds(
+  job: Pick<MediaJob, 'status' | 'progress' | 'startedAt'>,
+  nowMs = Date.now(),
+): number | undefined {
+  if (
+    job.status !== 'running' ||
+    !job.startedAt ||
+    typeof job.progress !== 'number' ||
+    job.progress <= 0 ||
+    job.progress >= 1
+  ) {
     return undefined;
   }
   const elapsedSeconds = Math.max(0, (nowMs - timestamp(job.startedAt)) / 1000);

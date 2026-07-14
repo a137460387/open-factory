@@ -4,12 +4,14 @@ import {
   getEffectiveUpdaterEndpoint,
   isValidUpdaterEndpointUrl,
   normalizeUpdateSettings,
-  shouldPersistUpdateSettings
+  shouldPersistUpdateSettings,
 } from './update-settings';
 
 describe('update settings', () => {
   it('validates updater endpoint URL formats', () => {
-    expect(isValidUpdaterEndpointUrl('https://github.com/open-factory/open-factory/releases/latest/download/latest.json')).toBe(true);
+    expect(
+      isValidUpdaterEndpointUrl('https://github.com/open-factory/open-factory/releases/latest/download/latest.json'),
+    ).toBe(true);
     expect(isValidUpdaterEndpointUrl('http://updates.intranet/open-factory/latest.json')).toBe(true);
     expect(isValidUpdaterEndpointUrl('file:///tmp/latest.json')).toBe(false);
     expect(isValidUpdaterEndpointUrl('javascript:alert(1)')).toBe(false);
@@ -18,12 +20,12 @@ describe('update settings', () => {
   it('normalizes custom enterprise endpoint URLs', () => {
     const settings = normalizeUpdateSettings({
       autoCheckEnabled: true,
-      customEndpoint: ' https://updates.example.test/open-factory/latest.json '
+      customEndpoint: ' https://updates.example.test/open-factory/latest.json ',
     });
 
     expect(settings).toEqual({
       autoCheckEnabled: true,
-      customEndpoint: 'https://updates.example.test/open-factory/latest.json'
+      customEndpoint: 'https://updates.example.test/open-factory/latest.json',
     });
     expect(getEffectiveUpdaterEndpoint(settings)).toBe('https://updates.example.test/open-factory/latest.json');
   });

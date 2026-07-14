@@ -58,8 +58,14 @@ export interface InstallTemplateResult {
  * 序列化当前项目结构为模板文件（脱敏，不含真实媒体路径）。
  */
 export function serializeProjectAsTemplate(
-  project: { name: string; settings: ProjectSettings; timeline: { tracks: Array<{ type: TrackType; name: string; clips: Array<{ name: string; start: number; duration: number }> }> } },
-  description: string
+  project: {
+    name: string;
+    settings: ProjectSettings;
+    timeline: {
+      tracks: Array<{ type: TrackType; name: string; clips: Array<{ name: string; start: number; duration: number }> }>;
+    };
+  },
+  description: string,
 ): SerializedTemplate {
   return {
     schemaVersion: 1,
@@ -91,7 +97,7 @@ export function parseTemplateCards(json: string): CommunityTemplateCard[] {
         (card: unknown) =>
           card &&
           typeof (card as CommunityTemplateCard).id === 'string' &&
-          typeof (card as CommunityTemplateCard).name === 'string'
+          typeof (card as CommunityTemplateCard).name === 'string',
       );
     }
     return [];
@@ -132,7 +138,7 @@ export function serializeTemplateMarketCache(cache: TemplateMarketCache): string
  */
 export function installTemplate(
   installedIds: string[],
-  templateId: string
+  templateId: string,
 ): { installedIds: string[]; result: InstallTemplateResult } {
   if (installedIds.includes(templateId)) {
     return {

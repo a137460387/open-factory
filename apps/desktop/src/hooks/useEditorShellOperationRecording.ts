@@ -51,8 +51,15 @@ export function useEditorShellOperationRecording(): {
   jumpOperationRecording: (stepIndex: number) => void;
   exportOperationRecordingSlides: () => Promise<void>;
 } {
-  const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
-  const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({ active: false, replaying: false });
+  const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({
+    active: false,
+    replaying: false,
+    steps: [],
+  });
+  const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({
+    active: false,
+    replaying: false,
+  });
   const operationReplayTimersRef = useRef<number[]>([]);
 
   // 拦截命令执行，记录到宏录制或操作录制中
@@ -90,7 +97,11 @@ export function useEditorShellOperationRecording(): {
     macroRecorderRef.current = { active: true, replaying: false, steps: [] };
     useEditorFeatureStore.getState().setMacroRecordingActive(true);
     useEditorFeatureStore.getState().setMacroRecordingStepCount(0);
-    showToast({ kind: 'info', title: zhCN.settings.macros.recordingStarted, message: zhCN.settings.macros.recordingStartedMessage });
+    showToast({
+      kind: 'info',
+      title: zhCN.settings.macros.recordingStarted,
+      message: zhCN.settings.macros.recordingStartedMessage,
+    });
   }, []);
 
   const stopMacroRecording = useCallback(async () => {
@@ -103,10 +114,16 @@ export function useEditorShellOperationRecording(): {
     useEditorFeatureStore.getState().setMacroRecordingStepCount(recorder.steps.length);
     const steps = recorder.steps;
     if (steps.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.settings.macros.recordingStopped, message: zhCN.settings.macros.recordingEmpty });
+      showToast({
+        kind: 'warning',
+        title: zhCN.settings.macros.recordingStopped,
+        message: zhCN.settings.macros.recordingEmpty,
+      });
       return;
     }
-    const defaultName = zhCN.settings.macros.recordingDefaultName(new Date().toLocaleString('zh-CN', { hour12: false }));
+    const defaultName = zhCN.settings.macros.recordingDefaultName(
+      new Date().toLocaleString('zh-CN', { hour12: false }),
+    );
     const name = window.prompt(zhCN.settings.macros.recordNamePrompt, defaultName)?.trim();
     if (!name) {
       return;
@@ -119,53 +136,74 @@ export function useEditorShellOperationRecording(): {
           id: createId('macro'),
           name,
           description: zhCN.settings.macros.savedRecordingMessage(steps.length),
-          steps
-        }
+          steps,
+        },
       ]);
       useEditorSettingsStore.getState().setMacros(saved);
-      showToast({ kind: 'success', title: zhCN.settings.macros.savedRecording, message: zhCN.settings.macros.savedRecordingMessage(steps.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.settings.macros.savedRecording,
+        message: zhCN.settings.macros.savedRecordingMessage(steps.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.settings.macros.saveFailed, message: error instanceof Error ? error.message : zhCN.settings.macros.saveFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.settings.macros.saveFailed,
+        message: error instanceof Error ? error.message : zhCN.settings.macros.saveFailedMessage,
+      });
     }
   }, []);
 
-  const executeMacro = useCallback(async (macro: ClipMacro) => {
-    const state = useEditorStore.getState();
-    const target = findMacroTargetClip(state.project.timeline, state.selectedClipIds, state.playheadTime);
-    const baseEntry = {
-      id: createId('macro-history'),
-      macroId: macro.id,
-      macroName: macro.name,
-      triggeredAt: new Date().toISOString(),
-      shortcut: macro.shortcut
-    };
-    if (!target) {
-      await recordMacroHistory({ ...baseEntry, success: false, error: zhCN.settings.macros.noTargetClip });
-      showToast({ kind: 'warning', title: zhCN.settings.macros.noTargetClip, message: zhCN.settings.macros.noTargetClipMessage });
-      return;
-    }
-    try {
-      const commands = buildMacroCommands(timelineAccessor, macro, target.id);
-      if (commands.length === 0) {
-        throw new Error(zhCN.settings.macros.invalidSteps);
+  const executeMacro = useCallback(
+    async (macro: ClipMacro) => {
+      const state = useEditorStore.getState();
+      const target = findMacroTargetClip(state.project.timeline, state.selectedClipIds, state.playheadTime);
+      const baseEntry = {
+        id: createId('macro-history'),
+        macroId: macro.id,
+        macroName: macro.name,
+        triggeredAt: new Date().toISOString(),
+        shortcut: macro.shortcut,
+      };
+      if (!target) {
+        await recordMacroHistory({ ...baseEntry, success: false, error: zhCN.settings.macros.noTargetClip });
+        showToast({
+          kind: 'warning',
+          title: zhCN.settings.macros.noTargetClip,
+          message: zhCN.settings.macros.noTargetClipMessage,
+        });
+        return;
       }
-      macroRecorderRef.current.replaying = true;
       try {
-        for (const command of commands) {
-          commandManager.execute(command);
+        const commands = buildMacroCommands(timelineAccessor, macro, target.id);
+        if (commands.length === 0) {
+          throw new Error(zhCN.settings.macros.invalidSteps);
         }
-      } finally {
-        macroRecorderRef.current.replaying = false;
+        macroRecorderRef.current.replaying = true;
+        try {
+          for (const command of commands) {
+            commandManager.execute(command);
+          }
+        } finally {
+          macroRecorderRef.current.replaying = false;
+        }
+        useEditorStore.getState().setSelectedClipId(target.id);
+        await recordMacroHistory({ ...baseEntry, targetClipId: target.id, targetClipName: target.name, success: true });
+        showToast({ kind: 'success', title: zhCN.settings.macros.executed, message: `${macro.name} · ${target.name}` });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : zhCN.settings.macros.executeFailed;
+        await recordMacroHistory({
+          ...baseEntry,
+          targetClipId: target.id,
+          targetClipName: target.name,
+          success: false,
+          error: message,
+        });
+        showToast({ kind: 'warning', title: zhCN.settings.macros.executeFailed, message });
       }
-      useEditorStore.getState().setSelectedClipId(target.id);
-      await recordMacroHistory({ ...baseEntry, targetClipId: target.id, targetClipName: target.name, success: true });
-      showToast({ kind: 'success', title: zhCN.settings.macros.executed, message: `${macro.name} · ${target.name}` });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.settings.macros.executeFailed;
-      await recordMacroHistory({ ...baseEntry, targetClipId: target.id, targetClipName: target.name, success: false, error: message });
-      showToast({ kind: 'warning', title: zhCN.settings.macros.executeFailed, message });
-    }
-  }, [recordMacroHistory]);
+    },
+    [recordMacroHistory],
+  );
 
   // ===== 操作录制 =====
   const clearOperationReplayTimers = useCallback(() => {
@@ -179,7 +217,9 @@ export function useEditorShellOperationRecording(): {
     const projectAtStep = getOperationProjectAtStep(recording, stepIndex);
     operationRecorderRef.current.replaying = true;
     try {
-      commandManager.execute(new LoadProjectCommand(projectAccessor, projectAtStep, zhCN.operationRecording.replayCommand));
+      commandManager.execute(
+        new LoadProjectCommand(projectAccessor, projectAtStep, zhCN.operationRecording.replayCommand),
+      );
     } finally {
       operationRecorderRef.current.replaying = false;
     }
@@ -196,7 +236,11 @@ export function useEditorShellOperationRecording(): {
     useEditorFeatureStore.getState().setOperationRecordingActive(true);
     useEditorFeatureStore.getState().setOperationRecordingStep(-1);
     useEditorFeatureStore.getState().setOperationReplayRunning(false);
-    showToast({ kind: 'info', title: zhCN.operationRecording.recordingStarted, message: zhCN.operationRecording.recordingStartedMessage });
+    showToast({
+      kind: 'info',
+      title: zhCN.operationRecording.recordingStarted,
+      message: zhCN.operationRecording.recordingStartedMessage,
+    });
   }, [clearOperationReplayTimers]);
 
   const stopOperationRecording = useCallback(() => {
@@ -205,7 +249,7 @@ export function useEditorShellOperationRecording(): {
     showToast({
       kind: operationRecorderRef.current.recording?.commands.length ? 'success' : 'warning',
       title: zhCN.operationRecording.recordingStopped,
-      message: zhCN.operationRecording.summary(operationRecorderRef.current.recording?.commands.length ?? 0)
+      message: zhCN.operationRecording.summary(operationRecorderRef.current.recording?.commands.length ?? 0),
     });
   }, []);
 
@@ -217,21 +261,31 @@ export function useEditorShellOperationRecording(): {
     }
     try {
       const path = await bridgeSaveFileDialog('timeline-demo.ofrecording.json', [
-        { name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }
+        { name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] },
       ]);
       if (!path) {
         return;
       }
       await bridgeWriteFile(path, serializeOperationRecording(recording));
-      showToast({ kind: 'success', title: zhCN.operationRecording.savedTitle, message: zhCN.operationRecording.savedMessage(path) });
+      showToast({
+        kind: 'success',
+        title: zhCN.operationRecording.savedTitle,
+        message: zhCN.operationRecording.savedMessage(path),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.saveFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.saveFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.operationRecording.saveFailed,
+        message: error instanceof Error ? error.message : zhCN.operationRecording.saveFailedMessage,
+      });
     }
   }, []);
 
   const loadOperationRecording = useCallback(async () => {
     try {
-      const [path] = await bridgeOpenFileDialog(false, [{ name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }]);
+      const [path] = await bridgeOpenFileDialog(false, [
+        { name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] },
+      ]);
       if (!path) {
         return;
       }
@@ -246,9 +300,17 @@ export function useEditorShellOperationRecording(): {
       useEditorFeatureStore.getState().setOperationReplayRunning(false);
       useEditorFeatureStore.getState().setOperationRecordingStep(-1);
       applyOperationRecordingStep(parsed, -1);
-      showToast({ kind: 'success', title: zhCN.operationRecording.loadedTitle, message: zhCN.operationRecording.summary(parsed.commands.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.operationRecording.loadedTitle,
+        message: zhCN.operationRecording.summary(parsed.commands.length),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.loadFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.loadFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.operationRecording.loadFailed,
+        message: error instanceof Error ? error.message : zhCN.operationRecording.loadFailedMessage,
+      });
     }
   }, [applyOperationRecordingStep, clearOperationReplayTimers]);
 
@@ -282,16 +344,19 @@ export function useEditorShellOperationRecording(): {
     }
   }, [applyOperationRecordingStep, clearOperationReplayTimers]);
 
-  const jumpOperationRecording = useCallback((stepIndex: number) => {
-    const operationRecording = useEditorFeatureStore.getState().operationRecording;
-    const recording = operationRecorderRef.current.recording ?? operationRecording;
-    if (!recording) {
-      return;
-    }
-    clearOperationReplayTimers();
-    useEditorFeatureStore.getState().setOperationReplayRunning(false);
-    applyOperationRecordingStep(recording, stepIndex);
-  }, [applyOperationRecordingStep, clearOperationReplayTimers]);
+  const jumpOperationRecording = useCallback(
+    (stepIndex: number) => {
+      const operationRecording = useEditorFeatureStore.getState().operationRecording;
+      const recording = operationRecorderRef.current.recording ?? operationRecording;
+      if (!recording) {
+        return;
+      }
+      clearOperationReplayTimers();
+      useEditorFeatureStore.getState().setOperationReplayRunning(false);
+      applyOperationRecordingStep(recording, stepIndex);
+    },
+    [applyOperationRecordingStep, clearOperationReplayTimers],
+  );
 
   const exportOperationRecordingSlides = useCallback(async () => {
     const operationRecording = useEditorFeatureStore.getState().operationRecording;
@@ -300,14 +365,20 @@ export function useEditorShellOperationRecording(): {
       return;
     }
     try {
-      const path = await bridgeSaveFileDialog('timeline-demo-slides.html', [{ name: zhCN.operationRecording.slidesFileDialogName, extensions: ['html'] }]);
+      const path = await bridgeSaveFileDialog('timeline-demo-slides.html', [
+        { name: zhCN.operationRecording.slidesFileDialogName, extensions: ['html'] },
+      ]);
       if (!path) {
         return;
       }
       await bridgeWriteFile(path, generateOperationRecordingSlidesHtml(recording, 2));
       showToast({ kind: 'success', title: zhCN.operationRecording.exportedTitle, message: path });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.exportFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.exportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.operationRecording.exportFailed,
+        message: error instanceof Error ? error.message : zhCN.operationRecording.exportFailedMessage,
+      });
     }
   }, []);
 

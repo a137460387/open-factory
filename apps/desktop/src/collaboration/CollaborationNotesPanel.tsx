@@ -8,7 +8,7 @@ import {
   secondsToTimecode,
   type CollaborationNote,
   type CollaborationNoteType,
-  type Project
+  type Project,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { saveFileDialog, writeFile } from '../lib/tauri-bridge';
@@ -31,8 +31,17 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
   const [text, setText] = useState('');
   const [mediaPath, setMediaPath] = useState('');
   const [authorFilter, setAuthorFilter] = useState('');
-  const authors = useMemo(() => Array.from(new Set((project.collaborationNotes ?? []).map((note) => note.authorName))).sort((left, right) => left.localeCompare(right)), [project.collaborationNotes]);
-  const notes = useMemo(() => filterCollaborationNotesByAuthor(project.collaborationNotes ?? [], authorFilter), [authorFilter, project.collaborationNotes]);
+  const authors = useMemo(
+    () =>
+      Array.from(new Set((project.collaborationNotes ?? []).map((note) => note.authorName))).sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    [project.collaborationNotes],
+  );
+  const notes = useMemo(
+    () => filterCollaborationNotesByAuthor(project.collaborationNotes ?? [], authorFilter),
+    [authorFilter, project.collaborationNotes],
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -68,40 +77,59 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
           ...(end !== undefined ? { end } : {}),
           text: trimmed,
           ...(type === 'replacement' && mediaPath.trim() ? { mediaPath: mediaPath.trim() } : {}),
-          resolved: false
-        })
+          resolved: false,
+        }),
       );
       setText('');
       setMediaPath('');
       showToast({ kind: 'success', title: t.addedTitle, message: trimmed });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.addFailedTitle, message: error instanceof Error ? error.message : t.addFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.addFailedTitle,
+        message: error instanceof Error ? error.message : t.addFailedMessage,
+      });
     }
   }
 
   function toggleResolved(note: CollaborationNote): void {
     try {
-      commandManager.execute(new UpdateCollaborationNoteCommand(projectAccessor, note.id, { resolved: !note.resolved }));
+      commandManager.execute(
+        new UpdateCollaborationNoteCommand(projectAccessor, note.id, { resolved: !note.resolved }),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: t.updateFailedTitle, message: error instanceof Error ? error.message : t.updateFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.updateFailedTitle,
+        message: error instanceof Error ? error.message : t.updateFailedMessage,
+      });
     }
   }
 
   async function exportReport(): Promise<void> {
     try {
-      const path = await saveFileDialog(`${project.name}-collaboration-notes.html`, [{ name: t.reportFilter, extensions: ['html'] }]);
+      const path = await saveFileDialog(`${project.name}-collaboration-notes.html`, [
+        { name: t.reportFilter, extensions: ['html'] },
+      ]);
       if (!path) {
         return;
       }
       await writeFile(path, buildCollaborationReportHtml(project, { locale: 'zh' }));
       showToast({ kind: 'success', title: t.exportedTitle, message: path });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.exportFailedTitle, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.exportFailedTitle,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="collaboration-notes-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="collaboration-notes-panel"
+    >
       <section className="grid max-h-[88vh] w-full max-w-4xl grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
@@ -128,7 +156,12 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
         <div className="grid gap-3 border-b border-line bg-panel px-4 py-3 sm:grid-cols-[140px_minmax(0,1fr)_140px]">
           <label className="text-xs font-medium text-slate-600">
             {t.type}
-            <select className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 text-sm text-ink" value={type} data-testid="collaboration-type-select" onChange={(event) => setType(event.target.value as CollaborationNoteType)}>
+            <select
+              className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 text-sm text-ink"
+              value={type}
+              data-testid="collaboration-type-select"
+              onChange={(event) => setType(event.target.value as CollaborationNoteType)}
+            >
               {NOTE_TYPES.map((item) => (
                 <option key={item} value={item}>
                   {t.types[item]}
@@ -173,7 +206,12 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <label className="text-xs font-medium text-slate-600">
               {t.authorFilter}
-              <select className="ml-2 h-8 rounded-md border border-line bg-white px-2 text-xs text-ink" value={authorFilter} data-testid="collaboration-author-filter" onChange={(event) => setAuthorFilter(event.target.value)}>
+              <select
+                className="ml-2 h-8 rounded-md border border-line bg-white px-2 text-xs text-ink"
+                value={authorFilter}
+                data-testid="collaboration-author-filter"
+                onChange={(event) => setAuthorFilter(event.target.value)}
+              >
                 <option value="">{t.allAuthors}</option>
                 {authors.map((author) => (
                   <option key={author} value={author}>
@@ -187,18 +225,30 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
             </span>
           </div>
           {notes.length === 0 ? (
-            <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500" data-testid="collaboration-empty">
+            <div
+              className="flex h-40 items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500"
+              data-testid="collaboration-empty"
+            >
               {t.empty}
             </div>
           ) : (
             <div className="space-y-2" data-testid="collaboration-note-list">
               {notes.map((note) => (
-                <article key={note.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="collaboration-note-card" data-note-id={note.id} data-resolved={note.resolved ? 'true' : 'false'}>
+                <article
+                  key={note.id}
+                  className="rounded-md border border-line bg-white p-3 shadow-sm"
+                  data-testid="collaboration-note-card"
+                  data-note-id={note.id}
+                  data-resolved={note.resolved ? 'true' : 'false'}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: note.authorColor }} />
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: note.authorColor }}
+                          />
                           {note.authorName}
                         </span>
                         <span>{t.types[note.type]}</span>

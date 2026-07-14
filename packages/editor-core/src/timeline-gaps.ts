@@ -28,14 +28,9 @@ export interface GapStats {
  * - 相邻 clip 恰好相接的区间不计（duration ≈ 0）
  * - minDuration 用于过滤极小间隙（默认 1帧 @30fps ≈ 0.033s）
  */
-export function detectTrackGaps(
-  track: Track,
-  options?: { minDuration?: number }
-): TrackGap[] {
+export function detectTrackGaps(track: Track, options?: { minDuration?: number }): TrackGap[] {
   const minDuration = options?.minDuration ?? 0;
-  const sorted = [...track.clips].sort(
-    (a, b) => a.start - b.start || a.id.localeCompare(b.id)
-  );
+  const sorted = [...track.clips].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
   const gaps: TrackGap[] = [];
   let cursor = 0;
   let hasFirstClip = false;
@@ -67,13 +62,8 @@ export function detectTrackGaps(
 /**
  * 检测整个时间线的所有轨道间隙。
  */
-export function computeTimelineGaps(
-  timeline: Timeline,
-  options?: { minDuration?: number }
-): TrackGap[] {
-  return timeline.tracks.flatMap((track) =>
-    detectTrackGaps(track, options)
-  );
+export function computeTimelineGaps(timeline: Timeline, options?: { minDuration?: number }): TrackGap[] {
+  return timeline.tracks.flatMap((track) => detectTrackGaps(track, options));
 }
 
 /**
@@ -123,11 +113,7 @@ export function getGapStats(gaps: TrackGap[]): GapStats {
  * @param currentTime 当前播放头时间
  * @param direction 1 = 下一个间隙, -1 = 上一个间隙
  */
-export function navigateGap(
-  gaps: TrackGap[],
-  currentTime: number,
-  direction: 1 | -1
-): TrackGap | undefined {
+export function navigateGap(gaps: TrackGap[], currentTime: number, direction: 1 | -1): TrackGap | undefined {
   if (gaps.length === 0) return undefined;
   const sorted = [...gaps].sort((a, b) => a.start - b.start);
 
@@ -138,8 +124,6 @@ export function navigateGap(
   }
 
   // direction === -1: 找到 start < currentTime 的最后一个间隙
-  const prev = [...sorted]
-    .reverse()
-    .find((g) => g.start < currentTime - EPSILON);
+  const prev = [...sorted].reverse().find((g) => g.start < currentTime - EPSILON);
   return prev ?? sorted[sorted.length - 1]; // 循环回到最后一个
 }

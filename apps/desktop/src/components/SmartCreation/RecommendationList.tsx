@@ -56,9 +56,7 @@ export function RecommendationList({ recommendations, onSelect, onApply }: Recom
   return (
     <div data-testid="recommendation-list" className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-neutral-400">
-          {t.recommendationCount(recommendations.length)}
-        </span>
+        <span className="text-xs text-neutral-400">{t.recommendationCount(recommendations.length)}</span>
         <button
           data-testid="recommendation-apply-all"
           onClick={handleApplyAll}
@@ -68,11 +66,7 @@ export function RecommendationList({ recommendations, onSelect, onApply }: Recom
         </button>
       </div>
 
-      <div
-        ref={parentRef}
-        data-testid="recommendation-list-scroll"
-        className="max-h-[240px] overflow-auto"
-      >
+      <div ref={parentRef} data-testid="recommendation-list-scroll" className="max-h-[240px] overflow-auto">
         <div
           style={{
             height: `${virtualizer.getTotalSize()}px`,
@@ -102,13 +96,9 @@ export function RecommendationList({ recommendations, onSelect, onApply }: Recom
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <Sparkles size={12} className="text-purple-400" />
-                      <span className="text-xs text-neutral-200 font-mono truncate max-w-[120px]">
-                        {rec.clipId}
-                      </span>
+                      <span className="text-xs text-neutral-200 font-mono truncate max-w-[120px]">{rec.clipId}</span>
                     </div>
-                    <span className="text-xs font-medium text-purple-300">
-                      {(rec.score * 100).toFixed(0)}%
-                    </span>
+                    <span className="text-xs font-medium text-purple-300">{(rec.score * 100).toFixed(0)}%</span>
                   </div>
 
                   <div className="flex items-center gap-3 mb-1">

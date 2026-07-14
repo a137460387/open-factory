@@ -27,14 +27,11 @@ export function buildMusicMatchSystemPrompt(): string {
     '  "keywords": ["搜索关键词1", "搜索关键词2"],',
     '  "searchSuggestions": ["建议在免版权音乐平台搜索的完整关键词1", "关键词2"]',
     '}',
-    '只返回JSON对象，不要其他内容。'
+    '只返回JSON对象，不要其他内容。',
   ].join('\n');
 }
 
-export function buildMusicMatchUserPrompt(
-  description: string,
-  mediaInfo: MusicMatchMediaInfo[]
-): string {
+export function buildMusicMatchUserPrompt(description: string, mediaInfo: MusicMatchMediaInfo[]): string {
   const lines = [`视频描述: ${description}`];
   lines.push('');
   lines.push('视频素材信息:');
@@ -55,21 +52,38 @@ export function parseMusicMatchResponse(json: unknown): MusicMatchResult | null 
   const tempoRaw = typeof input.tempo === 'string' ? input.tempo.trim().toLowerCase() : 'medium';
   const tempo: MusicTempo = validTempos.has(tempoRaw) ? (tempoRaw as MusicTempo) : 'medium';
   const genres = Array.isArray(input.genres)
-    ? (input.genres as unknown[]).filter((g): g is string => typeof g === 'string').map((g) => g.trim()).filter(Boolean)
+    ? (input.genres as unknown[])
+        .filter((g): g is string => typeof g === 'string')
+        .map((g) => g.trim())
+        .filter(Boolean)
     : [];
   const keywords = Array.isArray(input.keywords)
-    ? (input.keywords as unknown[]).filter((k): k is string => typeof k === 'string').map((k) => k.trim()).filter(Boolean)
+    ? (input.keywords as unknown[])
+        .filter((k): k is string => typeof k === 'string')
+        .map((k) => k.trim())
+        .filter(Boolean)
     : [];
   const searchSuggestions = Array.isArray(input.searchSuggestions)
-    ? (input.searchSuggestions as unknown[]).filter((s): s is string => typeof s === 'string').map((s) => s.trim()).filter(Boolean)
+    ? (input.searchSuggestions as unknown[])
+        .filter((s): s is string => typeof s === 'string')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
   return { mood, tempo, genres, keywords, searchSuggestions };
 }
 
 export function scoreMediaAudioSimilarity(targetMood: string, audioMood: string): number {
   if (!targetMood || !audioMood) return 0;
-  const targetWords = new Set(targetMood.toLowerCase().split(/[\s,，、;；]+/).filter(Boolean));
-  const audioWords = audioMood.toLowerCase().split(/[\s,，、;；]+/).filter(Boolean);
+  const targetWords = new Set(
+    targetMood
+      .toLowerCase()
+      .split(/[\s,，、;；]+/)
+      .filter(Boolean),
+  );
+  const audioWords = audioMood
+    .toLowerCase()
+    .split(/[\s,，、;；]+/)
+    .filter(Boolean);
   if (targetWords.size === 0 || audioWords.length === 0) return 0;
   let matches = 0;
   for (const word of audioWords) {
@@ -80,7 +94,7 @@ export function scoreMediaAudioSimilarity(targetMood: string, audioMood: string)
 
 export function calculateAudioLoopOrTrimToDuration(
   audioDuration: number,
-  targetDuration: number
+  targetDuration: number,
 ): { loops: number; trimEnd: number } {
   if (audioDuration <= 0 || targetDuration <= 0) {
     return { loops: 0, trimEnd: 0 };
@@ -100,14 +114,14 @@ export interface AudioRecommendation {
 
 export function rankAudioByMoodSimilarity(
   targetMood: string,
-  audioAssets: Array<{ id: string; name: string; aiAnalysis?: { mood?: string } }>
+  audioAssets: Array<{ id: string; name: string; aiAnalysis?: { mood?: string } }>,
 ): AudioRecommendation[] {
   return audioAssets
     .map((a) => ({
       mediaId: a.id,
       filename: a.name,
       mood: a.aiAnalysis?.mood,
-      similarity: a.aiAnalysis?.mood ? scoreMediaAudioSimilarity(targetMood, a.aiAnalysis.mood) : 0
+      similarity: a.aiAnalysis?.mood ? scoreMediaAudioSimilarity(targetMood, a.aiAnalysis.mood) : 0,
     }))
     .sort((a, b) => b.similarity - a.similarity);
 }

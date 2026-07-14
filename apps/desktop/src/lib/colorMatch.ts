@@ -1,10 +1,21 @@
-import { buildColorMatchCurves, getClipSourceVisibleDuration, type Clip, type ColorCurves, type ColorMatchFrameSample, type MediaAsset } from '@open-factory/editor-core';
+import {
+  buildColorMatchCurves,
+  getClipSourceVisibleDuration,
+  type Clip,
+  type ColorCurves,
+  type ColorMatchFrameSample,
+  type MediaAsset,
+} from '@open-factory/editor-core';
 import { sourceUrl } from './media';
 import { readColorMatchFrameSample } from './tauri-bridge';
 
 const SAMPLE_SIZE = 64;
 
-export async function buildClipColorMatchCurves(targetClip: Clip, referenceClip: Clip, media: MediaAsset[]): Promise<ColorCurves> {
+export async function buildClipColorMatchCurves(
+  targetClip: Clip,
+  referenceClip: Clip,
+  media: MediaAsset[],
+): Promise<ColorCurves> {
   const targetSample = await readClipFrameSample(targetClip, media);
   const referenceSample = await readClipFrameSample(referenceClip, media);
   return buildColorMatchCurves(targetSample, referenceSample);
@@ -46,12 +57,19 @@ async function readVideoSample(path: string, time: number): Promise<ColorMatchFr
   video.muted = true;
   video.src = sourceUrl(path);
   await waitForVideoMetadata(video);
-  const seekTime = Math.min(Math.max(0, time), Math.max(0, (Number.isFinite(video.duration) ? video.duration : time) - 0.001));
+  const seekTime = Math.min(
+    Math.max(0, time),
+    Math.max(0, (Number.isFinite(video.duration) ? video.duration : time) - 0.001),
+  );
   await seekVideoFrame(video, seekTime);
   return drawElementSample(video, video.videoWidth, video.videoHeight);
 }
 
-function drawElementSample(element: CanvasImageSource, sourceWidth: number, sourceHeight: number): ColorMatchFrameSample {
+function drawElementSample(
+  element: CanvasImageSource,
+  sourceWidth: number,
+  sourceHeight: number,
+): ColorMatchFrameSample {
   const width = Math.max(1, Math.min(SAMPLE_SIZE, sourceWidth || SAMPLE_SIZE));
   const height = Math.max(1, Math.min(SAMPLE_SIZE, sourceHeight || SAMPLE_SIZE));
   const canvas = document.createElement('canvas');
@@ -72,7 +90,9 @@ function waitForVideoMetadata(video: HTMLVideoElement): Promise<void> {
   }
   return new Promise((resolve, reject) => {
     video.addEventListener('loadedmetadata', () => resolve(), { once: true });
-    video.addEventListener('error', () => reject(new Error('Color match video metadata is unavailable.')), { once: true });
+    video.addEventListener('error', () => reject(new Error('Color match video metadata is unavailable.')), {
+      once: true,
+    });
   });
 }
 

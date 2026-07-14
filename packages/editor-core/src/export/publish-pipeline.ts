@@ -1,7 +1,8 @@
 import type { ProjectReleaseRecord } from '../project/release-workflow';
 
 export type ExportPublishPlatform = 'youtube' | 'bilibili' | 'douyin';
-export type ExportPublishNodeType = 'publish-platform' | 'email-notification' | 'webhook-callback' | 'write-release-record';
+export type ExportPublishNodeType =
+  'publish-platform' | 'email-notification' | 'webhook-callback' | 'write-release-record';
 export type ExportPublishNodeStatus = 'success' | 'failed' | 'skipped';
 
 export interface ExportPublishOutputInfo {
@@ -63,7 +64,7 @@ export function buildSmtpExportEmailHtml(info: ExportPublishOutputInfo): string 
     row('Size', `${Math.max(0, Math.round(info.size))} bytes`),
     row('Exported At', info.exportedAt),
     '</table>',
-    '</body></html>'
+    '</body></html>',
   ].join('');
 }
 
@@ -73,7 +74,7 @@ export function buildWebhookExportCompleteBody(info: ExportPublishOutputInfo): R
     file: info.file,
     duration: roundSeconds(info.duration),
     size: Math.max(0, Math.round(info.size)),
-    project: info.project
+    project: info.project,
   };
 }
 
@@ -104,15 +105,19 @@ export function buildPublishNodeLog(input: {
     status: input.status,
     startedAt: input.startedAt,
     finishedAt: input.finishedAt,
-    durationMs: Number.isFinite(startedMs) && Number.isFinite(finishedMs) ? Math.max(0, Math.round(finishedMs - startedMs)) : 0,
-    message: input.message
+    durationMs:
+      Number.isFinite(startedMs) && Number.isFinite(finishedMs) ? Math.max(0, Math.round(finishedMs - startedMs)) : 0,
+    message: input.message,
   };
 }
 
-export function appendPublishLogsToReleaseRecord(record: ProjectReleaseRecord, logs: ExportPublishNodeLog[]): ProjectReleaseRecord {
+export function appendPublishLogsToReleaseRecord(
+  record: ProjectReleaseRecord,
+  logs: ExportPublishNodeLog[],
+): ProjectReleaseRecord {
   return {
     ...record,
-    publishLogs: [...(record.publishLogs ?? []), ...logs.map((log) => ({ ...log }))]
+    publishLogs: [...(record.publishLogs ?? []), ...logs.map((log) => ({ ...log }))],
   };
 }
 
@@ -120,11 +125,15 @@ export function normalizePublishPlatform(value: unknown): ExportPublishPlatform 
   return value === 'bilibili' || value === 'douyin' ? value : 'youtube';
 }
 
-export function normalizePublishWindow(input: Partial<ExportPublishWindow> | undefined): ExportPublishWindow | undefined {
+export function normalizePublishWindow(
+  input: Partial<ExportPublishWindow> | undefined,
+): ExportPublishWindow | undefined {
   if (!input) {
     return undefined;
   }
-  const daysOfWeek = Array.isArray(input.daysOfWeek) ? input.daysOfWeek.map((value) => Math.round(value)).filter((value) => value >= 1 && value <= 7) : [];
+  const daysOfWeek = Array.isArray(input.daysOfWeek)
+    ? input.daysOfWeek.map((value) => Math.round(value)).filter((value) => value >= 1 && value <= 7)
+    : [];
   if (daysOfWeek.length === 0) {
     return undefined;
   }
@@ -132,11 +141,15 @@ export function normalizePublishWindow(input: Partial<ExportPublishWindow> | und
     daysOfWeek,
     startHour: clampHour(input.startHour ?? 9),
     endHour: clampHour(input.endHour ?? 18),
-    timezoneOffsetMinutes: Number.isFinite(input.timezoneOffsetMinutes) ? Math.round(input.timezoneOffsetMinutes!) : undefined
+    timezoneOffsetMinutes: Number.isFinite(input.timezoneOffsetMinutes)
+      ? Math.round(input.timezoneOffsetMinutes!)
+      : undefined,
   };
 }
 
-export function normalizeSmtpSettings(input: Partial<ExportPublishSmtpSettings> | undefined): ExportPublishSmtpSettings | undefined {
+export function normalizeSmtpSettings(
+  input: Partial<ExportPublishSmtpSettings> | undefined,
+): ExportPublishSmtpSettings | undefined {
   const host = normalizeText(input?.host);
   const from = normalizeText(input?.from);
   const to = Array.isArray(input?.to) ? input.to.map(normalizeText).filter(Boolean) : [];
@@ -151,11 +164,13 @@ export function normalizeSmtpSettings(input: Partial<ExportPublishSmtpSettings> 
     from,
     to,
     subject: normalizeText(input?.subject) || undefined,
-    secure: input?.secure === true
+    secure: input?.secure === true,
   };
 }
 
-export function normalizeWebhookSettings(input: Partial<ExportPublishWebhookSettings> | undefined): ExportPublishWebhookSettings | undefined {
+export function normalizeWebhookSettings(
+  input: Partial<ExportPublishWebhookSettings> | undefined,
+): ExportPublishWebhookSettings | undefined {
   const url = normalizeText(input?.url);
   if (!url) {
     return undefined;
@@ -171,7 +186,7 @@ export function normalizeWebhookSettings(input: Partial<ExportPublishWebhookSett
   return {
     url,
     headers,
-    timeoutMs: Math.max(1, Math.min(5000, Math.round(input?.timeoutMs ?? 5000)))
+    timeoutMs: Math.max(1, Math.min(5000, Math.round(input?.timeoutMs ?? 5000))),
   };
 }
 
@@ -180,7 +195,12 @@ function row(label: string, value: string): string {
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function roundSeconds(value: number): number {

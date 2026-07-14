@@ -12,7 +12,10 @@ export interface CoverFrameBatchTask {
 
 export function buildEvenCoverFrameTimestamps(duration: number, count = DEFAULT_COVER_FRAME_COUNT): number[] {
   const safeDuration = Number.isFinite(duration) ? Math.max(0, duration) : 0;
-  const safeCount = Math.min(MAX_COVER_FRAME_COUNT, Math.max(1, Math.round(Number.isFinite(count) ? count : DEFAULT_COVER_FRAME_COUNT)));
+  const safeCount = Math.min(
+    MAX_COVER_FRAME_COUNT,
+    Math.max(1, Math.round(Number.isFinite(count) ? count : DEFAULT_COVER_FRAME_COUNT)),
+  );
   if (safeDuration <= 0) {
     return Array.from({ length: safeCount }, () => 0);
   }
@@ -22,15 +25,21 @@ export function buildEvenCoverFrameTimestamps(duration: number, count = DEFAULT_
 
 export function buildCoverFrameBatchTasks(media: MediaAsset[]): CoverFrameBatchTask[] {
   return media
-    .filter((asset) => asset.type === 'video' && !asset.missing && typeof asset.path === 'string' && asset.path.trim().length > 0)
+    .filter(
+      (asset) =>
+        asset.type === 'video' && !asset.missing && typeof asset.path === 'string' && asset.path.trim().length > 0,
+    )
     .map((asset, index) => ({
       assetId: asset.id,
       sourcePath: asset.path,
-      outputFileName: `${sanitizeCoverFileStem(asset.name || asset.id || `video-${index + 1}`)}-cover.png`
+      outputFileName: `${sanitizeCoverFileStem(asset.name || asset.id || `video-${index + 1}`)}-cover.png`,
     }));
 }
 
 export function sanitizeCoverFileStem(value: string): string {
-  const stem = value.replace(/\.[^.\\/]+$/, '').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+  const stem = value
+    .replace(/\.[^.\\/]+$/, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return stem || 'cover-frame';
 }

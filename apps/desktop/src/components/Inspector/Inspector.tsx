@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import DOMPurify from 'dompurify';
 import type { Clip, ClipGroup, MediaAsset, Project, ProjectSettings, ProjectSpeaker } from '@open-factory/editor-core';
 import {
@@ -183,9 +191,25 @@ import {
   type MotionGraphicTemplateType,
   type TextBoxFitMode,
   type TextLayoutOptions,
-  type TextOpenTypeFeatures
+  type TextOpenTypeFeatures,
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Loader2, Mic, Palette, Pipette, Plus, SlidersHorizontal, Sparkles, Trash2, Underline, X } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Bold,
+  GripVertical,
+  Italic,
+  Loader2,
+  Mic,
+  Palette,
+  Pipette,
+  Plus,
+  SlidersHorizontal,
+  Sparkles,
+  Trash2,
+  Underline,
+  X,
+} from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
@@ -208,13 +232,28 @@ import {
   writeFile,
   type ClipAnalysisProgressEvent,
   type MotionTrackProgressEvent,
-  type NoiseReductionProgressEvent
+  type NoiseReductionProgressEvent,
 } from '../../lib/tauri-bridge';
-import { buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS } from '../../lib/frameInterpolationComparePreview';
+import {
+  buildFrameInterpolationComparePreviewPlan,
+  FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
+} from '../../lib/frameInterpolationComparePreview';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
-import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
-import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate } from '../../lib/subtitleStyleTemplates';
-import { addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource } from '../../shared-library/sharedLibrary';
+import {
+  acceptTranslationTOS,
+  subtitleClipsToTranslationItems,
+  translateSubtitleItems,
+} from '../../lib/subtitleTranslation';
+import {
+  deleteCustomSubtitleStyleTemplate,
+  loadSubtitleStyleTemplates,
+  saveCustomSubtitleStyleTemplate,
+} from '../../lib/subtitleStyleTemplates';
+import {
+  addSharedLibraryResource,
+  loadSharedSubtitleStyleTemplates,
+  subtitleStyleTemplateToSharedResource,
+} from '../../shared-library/sharedLibrary';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
@@ -246,9 +285,21 @@ interface InspectorProps {
   projectSettings: ProjectSettings;
 }
 
-export function Inspector({ clip, selectedClips = [], selectedCount, selectedClipLocked, selectedKeyframe, selectedKeyframes = [], media, playheadTime, projectSettings }: InspectorProps) {
+export function Inspector({
+  clip,
+  selectedClips = [],
+  selectedCount,
+  selectedClipLocked,
+  selectedKeyframe,
+  selectedKeyframes = [],
+  media,
+  playheadTime,
+  projectSettings,
+}: InspectorProps) {
   const project = useEditorStore((state) => state.project);
-  const selectedSubtitleClips = selectedClips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
+  const selectedSubtitleClips = selectedClips.filter(
+    (item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle',
+  );
   const allTimelineSubtitleClips = useMemo(() => {
     return project.timeline.tracks
       .flatMap((track) => track.clips)
@@ -262,11 +313,13 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
       start: c.start,
       end: c.start + c.duration,
       text: c.text ?? '',
-      zeroCrossingRate: 0.3 + ((c.start * 10) % 5) * 0.1
+      zeroCrossingRate: 0.3 + ((c.start * 10) % 5) * 0.1,
     }));
     const result = performSpeakerDiarization(segments);
     for (const assignment of result.assignments) {
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, assignment.segmentId, { speakerId: assignment.speakerId }));
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, assignment.segmentId, { speakerId: assignment.speakerId }),
+      );
     }
     const existingLabels = project.speakerLabels ?? {};
     const mergedLabels: Record<number, string> = { ...existingLabels };
@@ -276,24 +329,43 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
       }
     }
     commandManager.execute(new UpdateProjectSpeakerLabelsCommand(projectAccessor, mergedLabels));
-    showToast({ kind: 'success', title: zhCN.subtitleSpeakerDiarization.complete(Object.keys(result.speakerLabels).length), message: '' });
+    showToast({
+      kind: 'success',
+      title: zhCN.subtitleSpeakerDiarization.complete(Object.keys(result.speakerLabels).length),
+      message: '',
+    });
   }
   const selectedGroup = useMemo(() => {
-    const groups = normalizeClipGroups(project.clipGroups, project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
-    return findCompleteClipGroup(groups, selectedClips.map((item) => item.id));
+    const groups = normalizeClipGroups(
+      project.clipGroups,
+      project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)),
+    );
+    return findCompleteClipGroup(
+      groups,
+      selectedClips.map((item) => item.id),
+    );
   }, [project.clipGroups, project.timeline.tracks, selectedClips]);
   if (!clip && selectedCount > 1) {
     if (selectedGroup) {
-      return <ClipGroupInspectorPanel group={selectedGroup} clips={selectedClips} selectedClipLocked={selectedClipLocked} />;
+      return (
+        <ClipGroupInspectorPanel group={selectedGroup} clips={selectedClips} selectedClipLocked={selectedClipLocked} />
+      );
     }
     if (selectedSubtitleClips.length === selectedCount) {
       return (
         <aside className="flex min-h-0 flex-col bg-panel">
           <PanelTitle />
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
-            <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
+            <SubtitleProofreadingPanel
+              selectedSubtitleClips={selectedSubtitleClips}
+              selectedClipLocked={selectedClipLocked}
+              projectSettings={projectSettings}
+            />
             <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
-            <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} />
+            <SubtitleAIPolishPanel
+              selectedSubtitleClips={selectedSubtitleClips}
+              selectedClipLocked={selectedClipLocked}
+            />
             {allTimelineSubtitleClips.length > 0 ? (
               <button
                 className="mt-2 w-full rounded border border-line px-3 py-2 text-xs hover:bg-panel"
@@ -303,7 +375,11 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
                 {zhCN.subtitleSpeakerDiarization.button}
               </button>
             ) : null}
-            <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
+            <ChapterTitleAIPanel
+              allSubtitleClips={allTimelineSubtitleClips}
+              totalDuration={getTimelineDuration(project.timeline)}
+              selectedClipLocked={selectedClipLocked}
+            />
           </div>
         </aside>
       );
@@ -311,7 +387,12 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
     return (
       <aside className="flex min-h-0 flex-col bg-panel">
         <PanelTitle />
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]" data-testid="inspector-multiple-selection-state">{zhCN.inspector.multipleSelected(selectedCount)}</div>
+        <div
+          className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]"
+          data-testid="inspector-multiple-selection-state"
+        >
+          {zhCN.inspector.multipleSelected(selectedCount)}
+        </div>
       </aside>
     );
   }
@@ -320,7 +401,12 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
     return (
       <aside className="flex min-h-0 flex-col bg-panel">
         <PanelTitle />
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]" data-testid="inspector-empty-state">{zhCN.inspector.empty}</div>
+        <div
+          className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]"
+          data-testid="inspector-empty-state"
+        >
+          {zhCN.inspector.empty}
+        </div>
       </aside>
     );
   }
@@ -340,17 +426,31 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
   );
 }
 
-function ClipGroupInspectorPanel({ group, clips, selectedClipLocked }: { group: ClipGroup; clips: Clip[]; selectedClipLocked: boolean }) {
+function ClipGroupInspectorPanel({
+  group,
+  clips,
+  selectedClipLocked,
+}: {
+  group: ClipGroup;
+  clips: Clip[];
+  selectedClipLocked: boolean;
+}) {
   const t = zhCN.inspector.clipGroup;
   const firstClip = clips[0];
   const volumeClip = clips.find((item): item is Extract<Clip, { volume: number }> => 'volume' in item);
-  const speedClip = clips.find((item) => item.type === 'video' || item.type === 'audio' || item.type === 'nested-sequence');
+  const speedClip = clips.find(
+    (item) => item.type === 'video' || item.type === 'audio' || item.type === 'nested-sequence',
+  );
   const colorCorrection = normalizeColorCorrection(firstClip?.colorCorrection);
   const commit = (patch: ConstructorParameters<typeof BatchUpdateClipGroupClipsCommand>[2]) => {
     try {
       commandManager.execute(new BatchUpdateClipGroupClipsCommand(projectAccessor, group.id, patch));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
 
@@ -359,7 +459,10 @@ function ClipGroupInspectorPanel({ group, clips, selectedClipLocked }: { group: 
       <PanelTitle />
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3" data-testid="inspector-clip-group-panel">
         <Section title={t.title}>
-          <div className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]" data-testid="inspector-clip-group-state">
+          <div
+            className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]"
+            data-testid="inspector-clip-group-state"
+          >
             <div className="font-semibold">{t.summary(clips.length)}</div>
             <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{group.name}</div>
           </div>
@@ -433,12 +536,14 @@ function ClipInspector({
   media,
   playheadTime,
   projectSettings,
-  selectedSubtitleClips
+  selectedSubtitleClips,
 }: InspectorProps & { clip: Clip; selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>> }) {
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const clipStartTimecode = secondsToTimecode(clip.start, projectSettings.fps, projectSettings.timecodeFormat);
   const clipDurationTimecode = secondsToTimecode(clip.duration, projectSettings.fps, projectSettings.timecodeFormat);
-  const assetDurationTimecode = asset ? secondsToTimecode(asset.duration, projectSettings.fps, projectSettings.timecodeFormat) : undefined;
+  const assetDurationTimecode = asset
+    ? secondsToTimecode(asset.duration, projectSettings.fps, projectSettings.timecodeFormat)
+    : undefined;
   const project = useEditorStore((state) => state.project);
   const allTimelineSubtitleClips = useMemo(() => {
     return project.timeline.tracks
@@ -458,7 +563,7 @@ function ClipInspector({
   const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
   const translationSettings = useMemo(
     () => ({ provider: translationProvider, apiKey: translationApiKey, targetLanguage: translationTargetLanguage }),
-    [translationApiKey, translationProvider, translationTargetLanguage]
+    [translationApiKey, translationProvider, translationTargetLanguage],
   );
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
@@ -471,7 +576,9 @@ function ClipInspector({
   const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
   const [frameInterpolationCompareRunning, setFrameInterpolationCompareRunning] = useState(false);
-  const [frameInterpolationCompareItems, setFrameInterpolationCompareItems] = useState<FrameInterpolationComparePreviewViewItem[]>([]);
+  const [frameInterpolationCompareItems, setFrameInterpolationCompareItems] = useState<
+    FrameInterpolationComparePreviewViewItem[]
+  >([]);
   const [frameInterpolationCompareError, setFrameInterpolationCompareError] = useState<string>();
   const [frameInterpolationExpandedMode, setFrameInterpolationExpandedMode] = useState<FrameInterpolationCompareMode>();
   const [frameInterpolationQualityRunning, setFrameInterpolationQualityRunning] = useState(false);
@@ -479,24 +586,45 @@ function ClipInspector({
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [aiLocalDenoiseProcessing, setAiLocalDenoiseProcessing] = useState(false);
   const [aiLocalDenoiseProgress, setAiLocalDenoiseProgress] = useState(0);
-  const [aiLocalDenoiseStage, setAiLocalDenoiseStage] = useState("");
-  const [aiLocalDenoiseResult, setAiLocalDenoiseResult] = useState<{ outputPath: string; noiseReductionDb: number } | null>(null);
+  const [aiLocalDenoiseStage, setAiLocalDenoiseStage] = useState('');
+  const [aiLocalDenoiseResult, setAiLocalDenoiseResult] = useState<{
+    outputPath: string;
+    noiseReductionDb: number;
+  } | null>(null);
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
-  const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
-  const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
+  const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{
+    completed: number;
+    total: number;
+  }>();
+  const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(
+    BUILTIN_SUBTITLE_STYLE_TEMPLATES,
+  );
   const [customSoundDescOpen, setCustomSoundDescOpen] = useState(false);
   const [pitchAnalyzing, setPitchAnalyzing] = useState(false);
   const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
   const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
   const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
   const projectSpeakers = useMemo(() => normalizeProjectSpeakers(project.speakers), [project.speakers]);
-  const subtitleTrack = clip.type === 'subtitle' ? project.timeline.tracks.find((track) => track.id === clip.trackId && track.type === 'subtitle') : undefined;
-  const subtitleType = clip.type === 'subtitle' ? clip.subtitleType ?? subtitleTrack?.subtitleType ?? 'subtitle' : 'subtitle';
-  const activeSpeaker = clip.type === 'subtitle' ? clip.speaker?.trim() ?? '' : '';
-  const activeSpeakerEntry = activeSpeaker ? projectSpeakers.find((speaker) => speaker.name.toLocaleLowerCase() === activeSpeaker.toLocaleLowerCase()) : undefined;
+  const subtitleTrack =
+    clip.type === 'subtitle'
+      ? project.timeline.tracks.find((track) => track.id === clip.trackId && track.type === 'subtitle')
+      : undefined;
+  const subtitleType =
+    clip.type === 'subtitle' ? (clip.subtitleType ?? subtitleTrack?.subtitleType ?? 'subtitle') : 'subtitle';
+  const activeSpeaker = clip.type === 'subtitle' ? (clip.speaker?.trim() ?? '') : '';
+  const activeSpeakerEntry = activeSpeaker
+    ? projectSpeakers.find((speaker) => speaker.name.toLocaleLowerCase() === activeSpeaker.toLocaleLowerCase())
+    : undefined;
   const soundDescriptionOptions = useMemo(() => Object.values(zhCN.inspector.closedCaptions.soundDescriptions), []);
-  const soundDescSelectValue = clip.type === 'subtitle' ? (clip.soundDesc ? (soundDescriptionOptions.includes(clip.soundDesc) ? clip.soundDesc : 'custom') : '') : '';
+  const soundDescSelectValue =
+    clip.type === 'subtitle'
+      ? clip.soundDesc
+        ? soundDescriptionOptions.includes(clip.soundDesc)
+          ? clip.soundDesc
+          : 'custom'
+        : ''
+      : '';
 
   useEffect(() => {
     void loadTranslationApiKey();
@@ -506,7 +634,11 @@ function ClipInspector({
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   useEffect(() => {
@@ -526,8 +658,18 @@ function ClipInspector({
     setFrameInterpolationExpandedMode(undefined);
     try {
       const outputDir = joinLocalPath(await getAppDataDir(), 'frame-interpolation-preview');
-      const plan = buildFrameInterpolationComparePreviewPlan(project, clip, asset, playheadTime, outputDir, zhCN.inspector.frameInterpolationCompare.modes);
-      const result = await runExportPreviewSamples({ samples: plan.samples, timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS });
+      const plan = buildFrameInterpolationComparePreviewPlan(
+        project,
+        clip,
+        asset,
+        playheadTime,
+        outputDir,
+        zhCN.inspector.frameInterpolationCompare.modes,
+      );
+      const result = await runExportPreviewSamples({
+        samples: plan.samples,
+        timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
+      });
       const resultById = new Map(result.samples.map((sample) => [sample.id, sample]));
       setFrameInterpolationCompareItems(
         plan.items.map((item) => {
@@ -539,9 +681,9 @@ function ClipInspector({
             outputPath,
             src: convertLocalFileSrc(outputPath),
             estimatedMs: item.estimatedMs,
-            slowMotionMode: item.slowMotionMode
+            slowMotionMode: item.slowMotionMode,
           };
-        })
+        }),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
@@ -561,12 +703,30 @@ function ClipInspector({
     try {
       const appDataDir = await getAppDataDir();
       const outputDir = frameInterpolationCachePath(appDataDir, asset.path, frameInterpolation);
-      const plan = buildFrameInterpolationComparePreviewPlan(project, clip, asset, playheadTime, outputDir, zhCN.inspector.frameInterpolationCompare.modes);
-      const preview = await runExportPreviewSamples({ samples: plan.samples, timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS });
+      const plan = buildFrameInterpolationComparePreviewPlan(
+        project,
+        clip,
+        asset,
+        playheadTime,
+        outputDir,
+        zhCN.inspector.frameInterpolationCompare.modes,
+      );
+      const preview = await runExportPreviewSamples({
+        samples: plan.samples,
+        timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
+      });
       const samplesById = new Map(preview.samples.map((sample) => [sample.id, sample]));
-      const selectedMode = frameInterpolation.mode === 'adaptive' ? 'mci' : frameInterpolation.mode === 'copy' ? 'original' : frameInterpolation.mode;
+      const selectedMode =
+        frameInterpolation.mode === 'adaptive'
+          ? 'mci'
+          : frameInterpolation.mode === 'copy'
+            ? 'original'
+            : frameInterpolation.mode;
       const baseline = samplesById.get('frame-interpolation-blend') ?? samplesById.get('frame-interpolation-original');
-      const candidate = samplesById.get(`frame-interpolation-${selectedMode}`) ?? samplesById.get('frame-interpolation-mci') ?? baseline;
+      const candidate =
+        samplesById.get(`frame-interpolation-${selectedMode}`) ??
+        samplesById.get('frame-interpolation-mci') ??
+        baseline;
       if (!baseline || !candidate) {
         throw new Error(zhCN.inspector.frameInterpolationCompare.failedMessage);
       }
@@ -574,7 +734,7 @@ function ClipInspector({
         taskId: `frame-interpolation-quality-${clip.id}`,
         sourcePath: baseline.path,
         outputPath: candidate.path,
-        duration: clip.duration
+        duration: clip.duration,
       });
       const ssim = Number.isFinite(result.ssim) ? result.ssim! : 0;
       commit({
@@ -584,9 +744,9 @@ function ClipInspector({
             ssim,
             grade: mapSsimToFrameInterpolationQualityGrade(ssim),
             sampleCount: 10,
-            evaluatedAt: new Date().toISOString()
-          }
-        }
+            evaluatedAt: new Date().toISOString(),
+          },
+        },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
@@ -601,14 +761,20 @@ function ClipInspector({
       return;
     }
     try {
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, {
-        subtitleType: nextType,
-        speaker: nextType === 'cc' ? clip.speaker : undefined,
-        soundDesc: nextType === 'cc' ? clip.soundDesc : undefined
-      }));
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, clip.id, {
+          subtitleType: nextType,
+          speaker: nextType === 'cc' ? clip.speaker : undefined,
+          soundDesc: nextType === 'cc' ? clip.soundDesc : undefined,
+        }),
+      );
       commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: nextType }));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const commitCcSpeaker = (speaker: string) => {
@@ -618,7 +784,11 @@ function ClipInspector({
         commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const commitCcSoundDesc = (soundDesc?: string) => {
@@ -628,14 +798,22 @@ function ClipInspector({
         commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const updateProjectSpeakers = (speakers: ProjectSpeaker[]) => {
     try {
       commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, speakers));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const addActiveSpeakerToLibrary = () => {
@@ -655,13 +833,19 @@ function ClipInspector({
     if (!activeSpeakerEntry) {
       return;
     }
-    updateProjectSpeakers(projectSpeakers.map((speaker) => (speaker.id === activeSpeakerEntry.id ? { ...speaker, color } : speaker)));
+    updateProjectSpeakers(
+      projectSpeakers.map((speaker) => (speaker.id === activeSpeakerEntry.id ? { ...speaker, color } : speaker)),
+    );
   };
   const runEffectCommand = (command: Parameters<typeof commandManager.execute>[0]) => {
     try {
       commandManager.execute(command);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const chooseLut = async () => {
@@ -672,7 +856,11 @@ function ClipInspector({
         commit({ colorCorrection: { lutPath } });
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.lutUnavailableTitle, message: error instanceof Error ? error.message : zhCN.inspector.lutUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.lutUnavailableTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.lutUnavailableMessage,
+      });
     }
   };
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
@@ -706,9 +894,15 @@ function ClipInspector({
   };
   const addKeyframe = (property: KeyframeProperty, value = getClipKeyframeValue(clip, property, localKeyframeTime)) => {
     try {
-      commandManager.execute(new AddKeyframeCommand(timelineAccessor, clip.id, property, { time: localKeyframeTime, value }));
+      commandManager.execute(
+        new AddKeyframeCommand(timelineAccessor, clip.id, property, { time: localKeyframeTime, value }),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed,
+      });
     }
   };
   const setKenBurns = (enabled: boolean) => {
@@ -723,8 +917,8 @@ function ClipInspector({
       kenBurns: true,
       keyframes: {
         ...clip.keyframes,
-        ...createKenBurnsKeyframes(clip.duration, clip.transform.scale, Math.max(clip.transform.scale + 0.5, 1.5))
-      }
+        ...createKenBurnsKeyframes(clip.duration, clip.transform.scale, Math.max(clip.transform.scale + 0.5, 1.5)),
+      },
     });
   };
   const updateKenBurnsEndScale = (scale: number) => {
@@ -738,16 +932,25 @@ function ClipInspector({
       project.timeline.tracks
         .flatMap((track) => track.clips)
         .filter((item) => item.id !== clip.id && (item.type === 'video' || item.type === 'image')),
-    [clip.id, project.timeline.tracks]
+    [clip.id, project.timeline.tracks],
   );
   const selectedKeyframeFrame =
-    selectedKeyframe?.clipId === clip.id ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId) : undefined;
-  const selectedKeyframeRefs = selectedKeyframes.length > 0 ? selectedKeyframes : selectedKeyframe ? [selectedKeyframe] : [];
-  const selectedKeyframeEntries = useMemo(() => resolveSelectedKeyframeEntries(project, selectedKeyframeRefs), [project, selectedKeyframeRefs]);
+    selectedKeyframe?.clipId === clip.id
+      ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId)
+      : undefined;
+  const selectedKeyframeRefs =
+    selectedKeyframes.length > 0 ? selectedKeyframes : selectedKeyframe ? [selectedKeyframe] : [];
+  const selectedKeyframeEntries = useMemo(
+    () => resolveSelectedKeyframeEntries(project, selectedKeyframeRefs),
+    [project, selectedKeyframeRefs],
+  );
   const batchKeyframesSelected = selectedKeyframeEntries.length > 1;
   const keyframeProperties = useMemo(
-    () => (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).filter((property) => (clip.keyframes?.[property]?.length ?? 0) > 0),
-    [clip.keyframes]
+    () =>
+      (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).filter(
+        (property) => (clip.keyframes?.[property]?.length ?? 0) > 0,
+      ),
+    [clip.keyframes],
   );
   useEffect(() => {
     if (keyframeProperties.length > 0 && !keyframeProperties.includes(curveProperty)) {
@@ -771,7 +974,11 @@ function ClipInspector({
       .catch((error) => {
         if (!canceled) {
           setSubtitleStyleTemplates(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
-          showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.loadFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+          showToast({
+            kind: 'warning',
+            title: zhCN.inspector.subtitleStyleTemplates.loadFailed,
+            message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+          });
         }
       });
     return () => {
@@ -786,12 +993,17 @@ function ClipInspector({
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
   const slowMotionMode = normalizeSlowMotionMode(clip.slowMotionMode);
-  const frameInterpolationExpandedItem = frameInterpolationCompareItems.find((item) => item.mode === frameInterpolationExpandedMode);
+  const frameInterpolationExpandedItem = frameInterpolationCompareItems.find(
+    (item) => item.mode === frameInterpolationExpandedMode,
+  );
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
   const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
-  const audioRestorationComparison = buildAudioRestorationWaveformComparison(buildAudioRestorationPreviewPeaks(clip.pitchData), audioRestoration);
+  const audioRestorationComparison = buildAudioRestorationWaveformComparison(
+    buildAudioRestorationPreviewPeaks(clip.pitchData),
+    audioRestoration,
+  );
   const blendMode = normalizeClipBlendMode(clip.blendMode);
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
@@ -801,7 +1013,8 @@ function ClipInspector({
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
   const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
   const fadeInDuration = 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0;
-  const fadeOutDuration = 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
+  const fadeOutDuration =
+    'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const spatialAudio = 'volume' in clip ? normalizeSpatialAudio(clip.spatialAudio) : DEFAULT_SPATIAL_AUDIO;
@@ -809,9 +1022,11 @@ function ClipInspector({
   const spatialRenderModeOptions: SpatialAudioRenderMode[] = ['panner', 'binaural'];
   const spatialDistanceOptions: SpatialAudioDistance[] = ['near', 'medium', 'far'];
   const spatialRoomOptions: SpatialAudioRoomModel[] = SPATIAL_AUDIO_ROOM_MODELS;
-  const audioChannelRouting = 'volume' in clip ? clip.audioChannelRouting ?? 'normal' : 'normal';
+  const audioChannelRouting = 'volume' in clip ? (clip.audioChannelRouting ?? 'normal') : 'normal';
   const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
-    asset?.audioChannels === 1 ? ['normal', 'mono-left', 'mono-right', 'mono-both'] : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
+    asset?.audioChannels === 1
+      ? ['normal', 'mono-left', 'mono-right', 'mono-both']
+      : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
   const masks = normalizeMasks(clip.masks);
   const privacyRedactions = normalizePrivacyRedactions(clip.privacyRedactions);
   const updatePanorama = (patch: Partial<typeof panorama>) => {
@@ -912,7 +1127,7 @@ function ClipInspector({
   }, []);
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    void listenBridge<NoiseReductionProgressEvent>("noise-reduction-progress", (payload) => {
+    void listenBridge<NoiseReductionProgressEvent>('noise-reduction-progress', (payload) => {
       if (payload.clipId === clip.id) {
         setAiLocalDenoiseProgress(payload.progress);
         setAiLocalDenoiseStage(payload.stage);
@@ -940,7 +1155,11 @@ function ClipInspector({
       setAnalysisProgress(1);
     } catch (error) {
       setAnalysisProgress(undefined);
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const runMotionTrackAnalysis = async () => {
@@ -955,10 +1174,18 @@ function ClipInspector({
       commit({ motionTrack: points });
       setMotionTrackProgress(1);
       if (points.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: zhCN.inspector.motionTrack.noPoints });
+        showToast({
+          kind: 'warning',
+          title: zhCN.inspector.motionTrack.failed,
+          message: zhCN.inspector.motionTrack.noPoints,
+        });
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.motionTrack.failed,
+        message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage,
+      });
       setMotionTrackProgress(undefined);
     } finally {
       setMotionTrackingBusy(false);
@@ -968,7 +1195,11 @@ function ClipInspector({
     try {
       await cancelMotionTracking(clip.id);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.cancelFailed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.motionTrack.cancelFailed,
+        message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage,
+      });
     } finally {
       setMotionTrackingBusy(false);
       setMotionTrackProgress(undefined);
@@ -986,18 +1217,30 @@ function ClipInspector({
       return;
     }
     try {
-      const [path] = await openFileDialog(false, [{ name: zhCN.fileDialogs.subtitleData, extensions: ['csv', 'json'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: zhCN.fileDialogs.subtitleData, extensions: ['csv', 'json'] },
+      ]);
       if (!path) {
         return;
       }
-      const sourceType: Exclude<DataSubtitleSourceType, 'template'> = path.toLowerCase().endsWith('.json') ? 'json' : 'csv';
+      const sourceType: Exclude<DataSubtitleSourceType, 'template'> = path.toLowerCase().endsWith('.json')
+        ? 'json'
+        : 'csv';
       const rows = parseDataSubtitleRows(await readFile(path), sourceType);
       const template = clip.dataSubtitle?.template ?? (clip.text.trim() || '{row.text}');
       const dataSubtitle: DataSubtitleSource = { sourceType, template, rows, filePath: path };
       commit({ dataSubtitle, text: template });
-      showToast({ kind: 'success', title: zhCN.inspector.dataSubtitle.bound, message: zhCN.inspector.dataSubtitle.rowCount(rows.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.dataSubtitle.bound,
+        message: zhCN.inspector.dataSubtitle.rowCount(rows.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.dataSubtitle.failed, message: error instanceof Error ? error.message : zhCN.inspector.dataSubtitle.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.dataSubtitle.failed,
+        message: error instanceof Error ? error.message : zhCN.inspector.dataSubtitle.failedMessage,
+      });
     }
   };
   const updateDataSubtitleTemplate = (template: string) => {
@@ -1008,7 +1251,7 @@ function ClipInspector({
       sourceType: clip.dataSubtitle?.sourceType ?? 'template',
       template: template.trim() || '{row.text}',
       rows: clip.dataSubtitle?.rows ?? [],
-      filePath: clip.dataSubtitle?.filePath
+      filePath: clip.dataSubtitle?.filePath,
     };
     commit({ dataSubtitle, text: dataSubtitle.template });
   };
@@ -1026,12 +1269,24 @@ function ClipInspector({
       const pitchData = await analyzeClipPitch(asset);
       commit({ pitchData });
       if (pitchData.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.noDataTitle, message: zhCN.inspector.pitchAnalysis.noDataMessage });
+        showToast({
+          kind: 'warning',
+          title: zhCN.inspector.pitchAnalysis.noDataTitle,
+          message: zhCN.inspector.pitchAnalysis.noDataMessage,
+        });
       } else {
-        showToast({ kind: 'success', title: zhCN.inspector.pitchAnalysis.completed, message: zhCN.inspector.pitchAnalysis.pointCount(pitchData.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.inspector.pitchAnalysis.completed,
+          message: zhCN.inspector.pitchAnalysis.pointCount(pitchData.length),
+        });
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.failed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.pitchAnalysis.failed,
+        message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage,
+      });
     } finally {
       setPitchAnalyzing(false);
     }
@@ -1040,20 +1295,42 @@ function ClipInspector({
     try {
       const exported = await exportClipPitchCsv(clip);
       if (exported) {
-        showToast({ kind: 'success', title: zhCN.inspector.pitchAnalysis.exported, message: zhCN.inspector.pitchAnalysis.exportedMessage });
+        showToast({
+          kind: 'success',
+          title: zhCN.inspector.pitchAnalysis.exported,
+          message: zhCN.inspector.pitchAnalysis.exportedMessage,
+        });
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.exportFailed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.pitchAnalysis.exportFailed,
+        message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage,
+      });
     }
   };
-  const updateSelectedKeyframe = (patch: Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>) => {
+  const updateSelectedKeyframe = (
+    patch: Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>,
+  ) => {
     if (!selectedKeyframe) {
       return;
     }
     try {
-      commandManager.execute(new UpdateKeyframeCommand(timelineAccessor, clip.id, selectedKeyframe.property, selectedKeyframe.keyframeId, patch));
+      commandManager.execute(
+        new UpdateKeyframeCommand(
+          timelineAccessor,
+          clip.id,
+          selectedKeyframe.property,
+          selectedKeyframe.keyframeId,
+          patch,
+        ),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
+      });
     }
   };
   const removeSelectedKeyframe = () => {
@@ -1061,9 +1338,15 @@ function ClipInspector({
       return;
     }
     try {
-      commandManager.execute(new RemoveKeyframeCommand(timelineAccessor, clip.id, selectedKeyframe.property, selectedKeyframe.keyframeId));
+      commandManager.execute(
+        new RemoveKeyframeCommand(timelineAccessor, clip.id, selectedKeyframe.property, selectedKeyframe.keyframeId),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.removeKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.removeKeyframeFailed,
+      });
     }
   };
   const runBatchKeyframeEdit = (operation: BatchKeyframeEditOperation, clearAfter = false) => {
@@ -1077,7 +1360,11 @@ function ClipInspector({
         setSelectedKeyframes([]);
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
+      });
     }
   };
   const shiftSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'shift', delta: batchShiftSeconds });
@@ -1090,22 +1377,29 @@ function ClipInspector({
     if (!selectedKeyframe || !selectedKeyframeFrame) {
       return;
     }
-    const frames = [...(clip.keyframes?.[selectedKeyframe.property] ?? [])].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+    const frames = [...(clip.keyframes?.[selectedKeyframe.property] ?? [])].sort(
+      (left, right) => left.time - right.time || left.id.localeCompare(right.id),
+    );
     const frameIndex = frames.findIndex((frame) => frame.id === selectedKeyframe.keyframeId);
     const previous = frameIndex > 0 ? frames[frameIndex - 1] : undefined;
     const next = frameIndex >= 0 ? frames[frameIndex + 1] : undefined;
-    const limits = field === 'time' ? { min: 0, max: clip.duration } : KEYFRAME_PROPERTY_LIMITS[selectedKeyframe.property];
+    const limits =
+      field === 'time' ? { min: 0, max: clip.duration } : KEYFRAME_PROPERTY_LIMITS[selectedKeyframe.property];
     try {
       const parsed = parseKeyframeExpression(expression, {
         prev: field === 'time' ? previous?.time : previous?.value,
         current: field === 'time' ? selectedKeyframeFrame.time : selectedKeyframeFrame.value,
         next: field === 'time' ? next?.time : next?.value,
         min: limits.min,
-        max: limits.max
+        max: limits.max,
       });
       updateSelectedKeyframe({ [field]: parsed });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
+      });
     }
   };
   const updateCurveKeyframes = (property: KeyframeProperty, frames: Keyframe<number>[]) => {
@@ -1125,27 +1419,40 @@ function ClipInspector({
                 easing: frame.easing,
                 inHandle: frame.inHandle,
                 outHandle: frame.outHandle,
-                handleMode: frame.handleMode
-              }))
-            }
+                handleMode: frame.handleMode,
+              })),
+            },
           ],
-          'Edit keyframe curve'
-        )
+          'Edit keyframe curve',
+        ),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
+      });
     }
   };
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
-  const updateMask = (maskId: string, patch: MaskPatch) => runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
+  const updateMask = (maskId: string, patch: MaskPatch) =>
+    runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
   const runPrivacyBlurDetection = async () => {
     if (!privacyDetectionModelPath.trim()) {
-      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.modelRequired });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.privacyBlur.failed,
+        message: zhCN.inspector.privacyBlur.modelRequired,
+      });
       return;
     }
     if (!asset?.path || !('mediaId' in clip)) {
-      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.noMedia });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.privacyBlur.failed,
+        message: zhCN.inspector.privacyBlur.noMedia,
+      });
       return;
     }
     try {
@@ -1157,17 +1464,29 @@ function ClipInspector({
         modelPath: privacyDetectionModelPath.trim(),
         mediaPath: asset.path,
         clipId: clip.id,
-        duration: clip.duration
+        duration: clip.duration,
       });
       const newMasks = buildPrivacyMasksFromDetections(result.boxes, { effect: privacyBlurEffect });
       if (newMasks.length === 0) {
-        showToast({ kind: 'info', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.noDetections });
+        showToast({
+          kind: 'info',
+          title: zhCN.inspector.privacyBlur.title,
+          message: zhCN.inspector.privacyBlur.noDetections,
+        });
         return;
       }
       commit({ masks: [...masks, ...newMasks] });
-      showToast({ kind: 'success', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.applied(newMasks.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.privacyBlur.title,
+        message: zhCN.inspector.privacyBlur.applied(newMasks.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.privacyBlur.failed,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     } finally {
       setPrivacyBlurBusy(false);
     }
@@ -1180,18 +1499,22 @@ function ClipInspector({
       new ApplyTextAnimationCommand(timelineAccessor, clip.id, {
         preset: textAnimationPreset,
         duration: textAnimationDuration,
-        direction: textAnimationDirection
-      })
+        direction: textAnimationDirection,
+      }),
     );
   };
   const textAnimationKeyframeCount = ['opacity', 'x', 'y', 'scaleX', 'scaleY'].reduce(
     (total, property) => total + (clip.keyframes?.[property as KeyframeProperty]?.length ?? 0),
-    0
+    0,
   );
   const applyColorMatch = async () => {
     const referenceClip = colorMatchReferenceClips.find((item) => item.id === colorMatchReferenceClipId);
     if (!referenceClip) {
-      showToast({ kind: 'warning', title: zhCN.inspector.colorMatch.failed, message: zhCN.inspector.colorMatch.referenceRequired });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.colorMatch.failed,
+        message: zhCN.inspector.colorMatch.referenceRequired,
+      });
       return;
     }
     try {
@@ -1200,7 +1523,11 @@ function ClipInspector({
       commit({ colorCorrection: { colorCurves } });
       showToast({ kind: 'success', title: zhCN.inspector.colorMatch.applied });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.colorMatch.failed, message: error instanceof Error ? error.message : zhCN.inspector.colorMatch.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.colorMatch.failed,
+        message: error instanceof Error ? error.message : zhCN.inspector.colorMatch.failedMessage,
+      });
     } finally {
       setColorMatchBusy(false);
     }
@@ -1213,13 +1540,20 @@ function ClipInspector({
     if (!sourceTrack || sourceTrack.type !== 'subtitle') {
       return;
     }
-    const sourceClips = sourceTrack.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
+    const sourceClips = sourceTrack.clips.filter(
+      (item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle',
+    );
     try {
       setSubtitleTranslationProgress({ completed: 0, total: sourceClips.length });
       const requestTranslation = () =>
-        translateSubtitleItems(subtitleClipsToTranslationItems(sourceClips), translationSettings, fetch, (completed, total) => {
-          setSubtitleTranslationProgress({ completed, total });
-        });
+        translateSubtitleItems(
+          subtitleClipsToTranslationItems(sourceClips),
+          translationSettings,
+          fetch,
+          (completed, total) => {
+            setSubtitleTranslationProgress({ completed, total });
+          },
+        );
       let translated: Awaited<ReturnType<typeof translateSubtitleItems>>;
       try {
         translated = await requestTranslation();
@@ -1229,7 +1563,7 @@ function ClipInspector({
         }
         const accepted = await bridgeConfirm(zhCN.inspector.translation.tosMessage, {
           title: zhCN.inspector.translation.tosTitle,
-          kind: 'warning'
+          kind: 'warning',
         });
         if (!accepted) {
           return;
@@ -1243,7 +1577,7 @@ function ClipInspector({
         type: 'subtitle',
         language: translationSettings.targetLanguage,
         name: zhCN.inspector.translation.trackName(sourceTrack.name, translationSettings.targetLanguage),
-        clips: []
+        clips: [],
       });
       commandManager.execute(new AddTrackCommand(timelineAccessor, track));
       const addedClipIds: string[] = [];
@@ -1257,7 +1591,7 @@ function ClipInspector({
           text: translatedText,
           style: { ...sourceClip.style },
           transform: { ...sourceClip.transform },
-          colorCorrection: { ...sourceClip.colorCorrection }
+          colorCorrection: { ...sourceClip.colorCorrection },
         };
         commandManager.execute(new AddSubtitleClipCommand(timelineAccessor, translatedClip));
         addedClipIds.push(translatedClip.id);
@@ -1265,9 +1599,17 @@ function ClipInspector({
       if (addedClipIds[0]) {
         setSelectedClipIds([addedClipIds[0]]);
       }
-      showToast({ kind: 'success', title: zhCN.inspector.translation.completeTitle, message: zhCN.inspector.translation.completeMessage(addedClipIds.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.translation.completeTitle,
+        message: zhCN.inspector.translation.completeMessage(addedClipIds.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.translation.failedTitle, message: error instanceof Error ? error.message : zhCN.inspector.translation.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.translation.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.translation.failedMessage,
+      });
     } finally {
       setSubtitleTranslationProgress(undefined);
     }
@@ -1278,9 +1620,17 @@ function ClipInspector({
     }
     try {
       commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, clip.id, template.style));
-      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.applied(getSubtitleStyleTemplateLabel(template)) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.subtitleStyleTemplates.title,
+        message: zhCN.inspector.subtitleStyleTemplates.applied(getSubtitleStyleTemplateLabel(template)),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const saveCurrentSubtitleStyleTemplate = async () => {
@@ -1294,27 +1644,51 @@ function ClipInspector({
     try {
       const templates = await saveCustomSubtitleStyleTemplate(name, clip.style);
       setSubtitleStyleTemplates(templates);
-      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.saved(name.trim()) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.subtitleStyleTemplates.title,
+        message: zhCN.inspector.subtitleStyleTemplates.saved(name.trim()),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.saveFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.subtitleStyleTemplates.saveFailed,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const deleteSubtitleStyleTemplate = async (templateId: string) => {
     try {
       const templates = await deleteCustomSubtitleStyleTemplate(templateId);
       setSubtitleStyleTemplates(templates);
-      showToast({ kind: 'info', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.deleted });
+      showToast({
+        kind: 'info',
+        title: zhCN.inspector.subtitleStyleTemplates.title,
+        message: zhCN.inspector.subtitleStyleTemplates.deleted,
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.deleteFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.subtitleStyleTemplates.deleteFailed,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const addSubtitleStyleTemplateToSharedLibrary = async (template: SubtitleStyleTemplate) => {
     try {
       await addSharedLibraryResource(subtitleStyleTemplateToSharedResource(template), 'overwrite');
       window.dispatchEvent(new CustomEvent('open-factory:shared-library-updated'));
-      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.addedToShared(getSubtitleStyleTemplateLabel(template)) });
+      showToast({
+        kind: 'success',
+        title: zhCN.inspector.subtitleStyleTemplates.title,
+        message: zhCN.inspector.subtitleStyleTemplates.addedToShared(getSubtitleStyleTemplateLabel(template)),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.addToSharedFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.subtitleStyleTemplates.addToSharedFailed,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
 
@@ -1323,26 +1697,53 @@ function ClipInspector({
       <PanelTitle />
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <Section title={zhCN.inspector.sections.clip}>
-          {selectedClipLocked ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.inspector.locked}</div> : null}
+          {selectedClipLocked ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+              {zhCN.inspector.locked}
+            </div>
+          ) : null}
           <TextField label={zhCN.inspector.fields.name} value={clip.name} onCommit={(name) => commit({ name })} />
-          <NumberField label={zhCN.inspector.fields.start} value={clip.start} min={0} step={0.033} onCommit={(start) => commit({ start })} />
-          <NumberField label={zhCN.inspector.fields.duration} value={clip.duration} min={0.033} step={0.033} onCommit={(duration) => commit({ duration })} />
+          <NumberField
+            label={zhCN.inspector.fields.start}
+            value={clip.start}
+            min={0}
+            step={0.033}
+            onCommit={(start) => commit({ start })}
+          />
+          <NumberField
+            label={zhCN.inspector.fields.duration}
+            value={clip.duration}
+            min={0.033}
+            step={0.033}
+            onCommit={(duration) => commit({ duration })}
+          />
           {asset ? (
             <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
               <div className="truncate font-medium text-[var(--color-text-secondary)]">{asset.name}</div>
-              <div>{asset.missing ? zhCN.inspector.missingFile : `${asset.width || '-'} x ${asset.height || '-'} | ${assetDurationTimecode}`}</div>
+              <div>
+                {asset.missing
+                  ? zhCN.inspector.missingFile
+                  : `${asset.width || '-'} x ${asset.height || '-'} | ${assetDurationTimecode}`}
+              </div>
             </div>
           ) : null}
         </Section>
 
-        {clip.type === 'motion-graphic' ? <MotionGraphicPanel clip={clip} selectedClipLocked={selectedClipLocked} playheadTime={playheadTime} /> : null}
+        {clip.type === 'motion-graphic' ? (
+          <MotionGraphicPanel clip={clip} selectedClipLocked={selectedClipLocked} playheadTime={playheadTime} />
+        ) : null}
 
         {clip.type === 'video' || clip.type === 'audio' ? (
           <Section title={zhCN.inspector.sections.speed}>
             <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
-              {zhCN.inspector.timecodeSummary(clipStartTimecode, clipDurationTimecode)} / {zhCN.inspector.speedSummary(getClipSpeed(clip).toFixed(2))}
+              {zhCN.inspector.timecodeSummary(clipStartTimecode, clipDurationTimecode)} /{' '}
+              {zhCN.inspector.speedSummary(getClipSpeed(clip).toFixed(2))}
             </div>
-            <AnimatedField label={zhCN.inspector.fields.speed} onAddKeyframe={() => addKeyframe('speed')} testId="add-speed-keyframe-button">
+            <AnimatedField
+              label={zhCN.inspector.fields.speed}
+              onAddKeyframe={() => addKeyframe('speed')}
+              testId="add-speed-keyframe-button"
+            >
               <RangeNumberField
                 label={zhCN.inspector.fields.speed}
                 value={getClipSpeed(clip)}
@@ -1371,7 +1772,10 @@ function ClipInspector({
                 </select>
               </label>
             ) : null}
-            <SpeedCurveEditor clip={clip} onCommit={(speedFrames) => commit({ keyframes: { ...clip.keyframes, speed: speedFrames } })} />
+            <SpeedCurveEditor
+              clip={clip}
+              onCommit={(speedFrames) => commit({ keyframes: { ...clip.keyframes, speed: speedFrames } })}
+            />
           </Section>
         ) : null}
 
@@ -1396,7 +1800,10 @@ function ClipInspector({
               testId="audio-denoise-strength"
             />
             {audioDenoiseUnavailable ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="audio-denoise-unavailable">
+              <div
+                className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800"
+                data-testid="audio-denoise-unavailable"
+              >
                 {zhCN.inspector.fields.audioDenoiseUnsupported}
               </div>
             ) : null}
@@ -1405,35 +1812,137 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'audio' ? (
           <Section title={zhCN.inspector.sections.aiLocalDenoise}>
-            <ToggleField label={zhCN.inspector.fields.enabled} checked={clip.aiLocalDenoise?.enabled ?? false} onCommit={(enabled) => commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { strength: 0.5 }), enabled } })} testId="ai-local-denoise-toggle" />
-            <RangeNumberField label={zhCN.inspector.fields.strength} value={clip.aiLocalDenoise?.strength ?? 0.5} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)}%`} disabled={!clip.aiLocalDenoise?.enabled} onCommit={(strength) => commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { enabled: false }), strength } })} testId="ai-local-denoise-strength" />
+            <ToggleField
+              label={zhCN.inspector.fields.enabled}
+              checked={clip.aiLocalDenoise?.enabled ?? false}
+              onCommit={(enabled) =>
+                commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { strength: 0.5 }), enabled } })
+              }
+              testId="ai-local-denoise-toggle"
+            />
+            <RangeNumberField
+              label={zhCN.inspector.fields.strength}
+              value={clip.aiLocalDenoise?.strength ?? 0.5}
+              min={0}
+              max={1}
+              step={0.05}
+              format={(v) => `${Math.round(v * 100)}%`}
+              disabled={!clip.aiLocalDenoise?.enabled}
+              onCommit={(strength) =>
+                commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { enabled: false }), strength } })
+              }
+              testId="ai-local-denoise-strength"
+            />
             {aiLocalDenoiseProcessing ? (
               <div className="space-y-2" data-testid="ai-local-denoise-progress">
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]"><Loader2 size={14} className="animate-spin" /><span>{Math.round(aiLocalDenoiseProgress * 100)}%</span><span className="capitalize">{aiLocalDenoiseStage}</span></div>
-                <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" onClick={() => { void cancelAudioNoiseReduction(clip.id); setAiLocalDenoiseProcessing(false); }} data-testid="ai-local-denoise-cancel">取消</button>
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>{Math.round(aiLocalDenoiseProgress * 100)}%</span>
+                  <span className="capitalize">{aiLocalDenoiseStage}</span>
+                </div>
+                <button
+                  className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                  type="button"
+                  onClick={() => {
+                    void cancelAudioNoiseReduction(clip.id);
+                    setAiLocalDenoiseProcessing(false);
+                  }}
+                  data-testid="ai-local-denoise-cancel"
+                >
+                  取消
+                </button>
               </div>
             ) : aiLocalDenoiseResult ? (
               <div className="space-y-2" data-testid="ai-local-denoise-complete">
-                <div className="rounded-md border border-green-200 bg-green-50 p-2 text-xs text-green-700">降噪完成: -{aiLocalDenoiseResult.noiseReductionDb.toFixed(1)} dB</div>
-                <button className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white" type="button" onClick={() => setAiLocalDenoiseResult(null)} data-testid="ai-local-denoise-reset">重新处理</button>
+                <div className="rounded-md border border-green-200 bg-green-50 p-2 text-xs text-green-700">
+                  降噪完成: -{aiLocalDenoiseResult.noiseReductionDb.toFixed(1)} dB
+                </div>
+                <button
+                  className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white"
+                  type="button"
+                  onClick={() => setAiLocalDenoiseResult(null)}
+                  data-testid="ai-local-denoise-reset"
+                >
+                  重新处理
+                </button>
               </div>
             ) : (
-              <button className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!clip.aiLocalDenoise?.enabled || !asset?.path} onClick={async () => { if (!asset?.path) return; setAiLocalDenoiseProcessing(true); setAiLocalDenoiseProgress(0); setAiLocalDenoiseStage('decoding'); setAiLocalDenoiseResult(null); try { const result = await processAudioNoiseReduction({ mediaPath: asset.path, clipId: clip.id, strength: clip.aiLocalDenoise?.strength ?? 0.5 }); setAiLocalDenoiseResult({ outputPath: result.outputPath, noiseReductionDb: result.noiseReductionDb }); commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { enabled: true, strength: 0.5 }), outputPath: result.outputPath, originalPath: result.originalPath, processedAt: Date.now() } }); } catch (error) { showToast({ kind: 'error', title: '降噪失败', message: error instanceof Error ? error.message : String(error) }); } finally { setAiLocalDenoiseProcessing(false); } }} data-testid="ai-local-denoise-process"><Sparkles size={14} className="mr-1 inline" />开始降噪</button>
+              <button
+                className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={!clip.aiLocalDenoise?.enabled || !asset?.path}
+                onClick={async () => {
+                  if (!asset?.path) return;
+                  setAiLocalDenoiseProcessing(true);
+                  setAiLocalDenoiseProgress(0);
+                  setAiLocalDenoiseStage('decoding');
+                  setAiLocalDenoiseResult(null);
+                  try {
+                    const result = await processAudioNoiseReduction({
+                      mediaPath: asset.path,
+                      clipId: clip.id,
+                      strength: clip.aiLocalDenoise?.strength ?? 0.5,
+                    });
+                    setAiLocalDenoiseResult({
+                      outputPath: result.outputPath,
+                      noiseReductionDb: result.noiseReductionDb,
+                    });
+                    commit({
+                      aiLocalDenoise: {
+                        ...(clip.aiLocalDenoise ?? { enabled: true, strength: 0.5 }),
+                        outputPath: result.outputPath,
+                        originalPath: result.originalPath,
+                        processedAt: Date.now(),
+                      },
+                    });
+                  } catch (error) {
+                    showToast({
+                      kind: 'error',
+                      title: '降噪失败',
+                      message: error instanceof Error ? error.message : String(error),
+                    });
+                  } finally {
+                    setAiLocalDenoiseProcessing(false);
+                  }
+                }}
+                data-testid="ai-local-denoise-process"
+              >
+                <Sparkles size={14} className="mr-1 inline" />
+                开始降噪
+              </button>
             )}
           </Section>
         ) : null}
 
         <Section title={zhCN.inspector.sections.transform}>
           <AnimatedField label="X" onAddKeyframe={() => addKeyframe('x')}>
-            <NumberField label="X" value={clip.transform.x} step={1} onCommit={(x) => commit({ transform: { x } })} hideLabel testId="clip-transform-x-input" />
+            <NumberField
+              label="X"
+              value={clip.transform.x}
+              step={1}
+              onCommit={(x) => commit({ transform: { x } })}
+              hideLabel
+              testId="clip-transform-x-input"
+            />
           </AnimatedField>
           <AnimatedField label="Y" onAddKeyframe={() => addKeyframe('y')}>
-            <NumberField label="Y" value={clip.transform.y} step={1} onCommit={(y) => commit({ transform: { y } })} hideLabel testId="clip-transform-y-input" />
+            <NumberField
+              label="Y"
+              value={clip.transform.y}
+              step={1}
+              onCommit={(y) => commit({ transform: { y } })}
+              hideLabel
+              testId="clip-transform-y-input"
+            />
           </AnimatedField>
-          <AnimatedField label={zhCN.inspector.fields.scale} onAddKeyframe={() => {
-            addKeyframe('scaleX', getTransformScaleX(clip.transform));
-            addKeyframe('scaleY', getTransformScaleY(clip.transform));
-          }} testId="add-scale-keyframe-button">
+          <AnimatedField
+            label={zhCN.inspector.fields.scale}
+            onAddKeyframe={() => {
+              addKeyframe('scaleX', getTransformScaleX(clip.transform));
+              addKeyframe('scaleY', getTransformScaleY(clip.transform));
+            }}
+            testId="add-scale-keyframe-button"
+          >
             <RangeField
               label={zhCN.inspector.fields.scale}
               value={clip.transform.scale}
@@ -1478,7 +1987,11 @@ function ClipInspector({
             testId="clip-rotation-input"
           />
           {clip.type !== 'audio' && clip.type !== 'video' && clip.type !== 'image' ? (
-            <AnimatedField label={zhCN.inspector.fields.opacity} onAddKeyframe={() => addKeyframe('opacity')} testId="add-opacity-keyframe-button">
+            <AnimatedField
+              label={zhCN.inspector.fields.opacity}
+              onAddKeyframe={() => addKeyframe('opacity')}
+              testId="add-opacity-keyframe-button"
+            >
               <RangeField
                 label={zhCN.inspector.fields.opacity}
                 value={clip.transform.opacity}
@@ -1496,7 +2009,9 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'image' ? (
           <details className="mb-4" open data-testid="clip-blend-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{t('inspector.sections.blend')}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {t('inspector.sections.blend')}
+            </summary>
             <div className="space-y-3">
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {t('inspector.fields.blendMode')}
@@ -1513,7 +2028,11 @@ function ClipInspector({
                   ))}
                 </select>
               </label>
-              <AnimatedField label={zhCN.inspector.fields.opacity} onAddKeyframe={() => addKeyframe('opacity')} testId="add-opacity-keyframe-button">
+              <AnimatedField
+                label={zhCN.inspector.fields.opacity}
+                onAddKeyframe={() => addKeyframe('opacity')}
+                testId="add-opacity-keyframe-button"
+              >
                 <RangeField
                   label={zhCN.inspector.fields.opacity}
                   value={clip.transform.opacity}
@@ -1532,7 +2051,9 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.projection}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.projection}
+            </summary>
             <div className="space-y-3">
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.projection}
@@ -1555,13 +2076,19 @@ function ClipInspector({
                       className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={panorama.outputProjection}
                       data-testid="clip-panorama-output-select"
-                      onChange={(event) => updatePanorama({ outputProjection: event.target.value as ClipPanoramaOutputProjection })}
+                      onChange={(event) =>
+                        updatePanorama({ outputProjection: event.target.value as ClipPanoramaOutputProjection })
+                      }
                     >
                       <option value="flat">{zhCN.inspector.panoramaOutput.flat}</option>
                       <option value="equirectangular">{zhCN.inspector.panoramaOutput.equirectangular}</option>
                     </select>
                   </label>
-                  <AnimatedField label={zhCN.inspector.fields.yaw} onAddKeyframe={() => addKeyframe('yaw', panorama.yaw)} testId="add-yaw-keyframe-button">
+                  <AnimatedField
+                    label={zhCN.inspector.fields.yaw}
+                    onAddKeyframe={() => addKeyframe('yaw', panorama.yaw)}
+                    testId="add-yaw-keyframe-button"
+                  >
                     <RangeNumberField
                       label={zhCN.inspector.fields.yaw}
                       value={panorama.yaw}
@@ -1573,7 +2100,11 @@ function ClipInspector({
                       testId="clip-panorama-yaw-input"
                     />
                   </AnimatedField>
-                  <AnimatedField label={zhCN.inspector.fields.pitch} onAddKeyframe={() => addKeyframe('pitch', panorama.pitch)} testId="add-pitch-keyframe-button">
+                  <AnimatedField
+                    label={zhCN.inspector.fields.pitch}
+                    onAddKeyframe={() => addKeyframe('pitch', panorama.pitch)}
+                    testId="add-pitch-keyframe-button"
+                  >
                     <RangeNumberField
                       label={zhCN.inspector.fields.pitch}
                       value={panorama.pitch}
@@ -1585,7 +2116,11 @@ function ClipInspector({
                       testId="clip-panorama-pitch-input"
                     />
                   </AnimatedField>
-                  <AnimatedField label={zhCN.inspector.fields.roll} onAddKeyframe={() => addKeyframe('roll', panorama.roll)} testId="add-roll-keyframe-button">
+                  <AnimatedField
+                    label={zhCN.inspector.fields.roll}
+                    onAddKeyframe={() => addKeyframe('roll', panorama.roll)}
+                    testId="add-roll-keyframe-button"
+                  >
                     <RangeNumberField
                       label={zhCN.inspector.fields.roll}
                       value={panorama.roll}
@@ -1623,7 +2158,13 @@ function ClipInspector({
                 data-testid="keying-mode-select"
                 onChange={(event) => {
                   const mode = event.target.value as ChromaKeyMode | 'none';
-                  commit({ chromaKey: { ...chromaKey, enabled: mode !== 'none', mode: mode === 'none' ? chromaKey.mode : mode } });
+                  commit({
+                    chromaKey: {
+                      ...chromaKey,
+                      enabled: mode !== 'none',
+                      mode: mode === 'none' ? chromaKey.mode : mode,
+                    },
+                  });
                 }}
               >
                 <option value="none">{zhCN.inspector.keyingModes.none}</option>
@@ -1634,96 +2175,100 @@ function ClipInspector({
             </label>
             {keyingMode === 'chroma-key' ? (
               <>
-            <div className="space-y-2" data-testid="chroma-key-color-list">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.fields.chromaKeyColor}</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-                    type="button"
-                    title={zhCN.inspector.chromaKey.addSampleColor}
-                    aria-label={zhCN.inspector.chromaKey.addSampleColor}
-                    disabled={chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS}
-                    onClick={addChromaKeyColor}
-                    data-testid="chroma-key-add-color"
-                  >
-                    <Plus size={15} />
-                  </button>
-                  <button
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-[var(--color-text-secondary)] hover:bg-panel ${
-                      chromaKeyPickActive ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'bg-[var(--color-bg-elevated)]'
-                    }`}
-                    type="button"
-                    title={zhCN.inspector.chromaKey.pickFromPreview}
-                    aria-label={zhCN.inspector.chromaKey.pickFromPreview}
-                    onClick={toggleChromaKeyPicker}
-                    data-testid="chroma-key-pick-preview"
-                    data-active={chromaKeyPickActive ? 'true' : 'false'}
-                  >
-                    <Pipette size={15} />
-                  </button>
-                </div>
-              </div>
-              {chromaKey.colors.map((color, index) => (
-                <div key={`chroma-key-color-${index}`} className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <ColorField
-                      label={zhCN.inspector.chromaKey.sampleColor(index + 1)}
-                      value={rgbToHex(color)}
-                      onCommit={(value) => updateChromaKeyColor(index, hexToRgb(value))}
-                      testId={index === 0 ? 'chroma-key-color' : `chroma-key-color-${index}`}
-                    />
+                <div className="space-y-2" data-testid="chroma-key-color-list">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                      {zhCN.inspector.fields.chromaKeyColor}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        title={zhCN.inspector.chromaKey.addSampleColor}
+                        aria-label={zhCN.inspector.chromaKey.addSampleColor}
+                        disabled={chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS}
+                        onClick={addChromaKeyColor}
+                        data-testid="chroma-key-add-color"
+                      >
+                        <Plus size={15} />
+                      </button>
+                      <button
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-[var(--color-text-secondary)] hover:bg-panel ${
+                          chromaKeyPickActive
+                            ? 'bg-emerald-50 ring-1 ring-emerald-300'
+                            : 'bg-[var(--color-bg-elevated)]'
+                        }`}
+                        type="button"
+                        title={zhCN.inspector.chromaKey.pickFromPreview}
+                        aria-label={zhCN.inspector.chromaKey.pickFromPreview}
+                        onClick={toggleChromaKeyPicker}
+                        data-testid="chroma-key-pick-preview"
+                        data-active={chromaKeyPickActive ? 'true' : 'false'}
+                      >
+                        <Pipette size={15} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-                    type="button"
-                    title={zhCN.inspector.chromaKey.removeSampleColor}
-                    aria-label={zhCN.inspector.chromaKey.removeSampleColor}
-                    disabled={chromaKey.colors.length <= 1}
-                    onClick={() => removeChromaKeyColor(index)}
-                    data-testid={`chroma-key-remove-color-${index}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {chromaKey.colors.map((color, index) => (
+                    <div key={`chroma-key-color-${index}`} className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <ColorField
+                          label={zhCN.inspector.chromaKey.sampleColor(index + 1)}
+                          value={rgbToHex(color)}
+                          onCommit={(value) => updateChromaKeyColor(index, hexToRgb(value))}
+                          testId={index === 0 ? 'chroma-key-color' : `chroma-key-color-${index}`}
+                        />
+                      </div>
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        title={zhCN.inspector.chromaKey.removeSampleColor}
+                        aria-label={zhCN.inspector.chromaKey.removeSampleColor}
+                        disabled={chromaKey.colors.length <= 1}
+                        onClick={() => removeChromaKeyColor(index)}
+                        data-testid={`chroma-key-remove-color-${index}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <RangeNumberField
-              label={zhCN.inspector.fields.similarity}
-              value={chromaKey.similarity}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(value) => value.toFixed(2)}
-              onCommit={(similarity) => commit({ chromaKey: { ...chromaKey, similarity } })}
-              testId="chroma-key-similarity"
-            />
-            <RangeNumberField
-              label={zhCN.inspector.fields.blend}
-              value={chromaKey.blend}
-              min={0}
-              max={1}
-              step={0.01}
-              format={(value) => value.toFixed(2)}
-              onCommit={(blend) => commit({ chromaKey: { ...chromaKey, blend } })}
-              testId="chroma-key-blend"
-            />
-            <RangeNumberField
-              label={zhCN.inspector.fields.erosion}
-              value={chromaKey.erosion}
-              min={-5}
-              max={5}
-              step={1}
-              format={(value) => `${value}px`}
-              onCommit={(erosion) => commit({ chromaKey: { ...chromaKey, erosion } })}
-              testId="chroma-key-erosion"
-            />
-            <ToggleField
-              label={zhCN.inspector.fields.spillSuppression}
-              checked={chromaKey.spillSuppression}
-              onCommit={(spillSuppression) => commit({ chromaKey: { ...chromaKey, spillSuppression } })}
-              testId="chroma-key-spill-suppression"
-            />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.similarity}
+                  value={chromaKey.similarity}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(similarity) => commit({ chromaKey: { ...chromaKey, similarity } })}
+                  testId="chroma-key-similarity"
+                />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.blend}
+                  value={chromaKey.blend}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(blend) => commit({ chromaKey: { ...chromaKey, blend } })}
+                  testId="chroma-key-blend"
+                />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.erosion}
+                  value={chromaKey.erosion}
+                  min={-5}
+                  max={5}
+                  step={1}
+                  format={(value) => `${value}px`}
+                  onCommit={(erosion) => commit({ chromaKey: { ...chromaKey, erosion } })}
+                  testId="chroma-key-erosion"
+                />
+                <ToggleField
+                  label={zhCN.inspector.fields.spillSuppression}
+                  checked={chromaKey.spillSuppression}
+                  onCommit={(spillSuppression) => commit({ chromaKey: { ...chromaKey, spillSuppression } })}
+                  testId="chroma-key-spill-suppression"
+                />
               </>
             ) : null}
             {keyingMode === 'luma-key' ? (
@@ -1735,7 +2280,9 @@ function ClipInspector({
                   max={1}
                   step={0.01}
                   format={(value) => value.toFixed(2)}
-                  onCommit={(lumaThreshold) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaThreshold } })}
+                  onCommit={(lumaThreshold) =>
+                    commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaThreshold } })
+                  }
                   testId="luma-key-threshold"
                 />
                 <RangeNumberField
@@ -1745,7 +2292,9 @@ function ClipInspector({
                   max={1}
                   step={0.01}
                   format={(value) => value.toFixed(2)}
-                  onCommit={(lumaTolerance) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaTolerance } })}
+                  onCommit={(lumaTolerance) =>
+                    commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaTolerance } })
+                  }
                   testId="luma-key-tolerance"
                 />
                 <RangeNumberField
@@ -1755,7 +2304,9 @@ function ClipInspector({
                   max={1}
                   step={0.01}
                   format={(value) => value.toFixed(2)}
-                  onCommit={(lumaSoftness) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaSoftness } })}
+                  onCommit={(lumaSoftness) =>
+                    commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaSoftness } })
+                  }
                   testId="luma-key-softness"
                 />
               </div>
@@ -1768,7 +2319,11 @@ function ClipInspector({
                   min={0}
                   max={clip.duration}
                   step={1 / Math.max(1, projectSettings.fps)}
-                  onCommit={(differenceReferenceTime) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceReferenceTime } })}
+                  onCommit={(differenceReferenceTime) =>
+                    commit({
+                      chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceReferenceTime },
+                    })
+                  }
                   testId="difference-matte-reference-time"
                 />
                 <RangeNumberField
@@ -1778,7 +2333,11 @@ function ClipInspector({
                   max={1}
                   step={0.01}
                   format={(value) => value.toFixed(2)}
-                  onCommit={(differenceThreshold) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceThreshold } })}
+                  onCommit={(differenceThreshold) =>
+                    commit({
+                      chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceThreshold },
+                    })
+                  }
                   testId="difference-matte-threshold"
                 />
               </div>
@@ -1799,26 +2358,45 @@ function ClipInspector({
             <MasksEditor masks={masks} onAdd={addMask} onUpdate={updateMask} onRemove={removeMask} />
             {privacyRedactions.length > 0 || true ? (
               <div className="mt-2 space-y-2" data-testid="privacy-redaction-panel">
-                <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.privacyRedaction.title}</div>
+                <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                  {zhCN.inspector.privacyRedaction.title}
+                </div>
                 {privacyRedactions.map((r) => (
-                  <div key={r.id} className="rounded-md border border-line p-2 space-y-1" data-testid={`privacy-redaction-item-${r.id}`}>
+                  <div
+                    key={r.id}
+                    className="rounded-md border border-line p-2 space-y-1"
+                    data-testid={`privacy-redaction-item-${r.id}`}
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-ink">{zhCN.inspector.privacyRedaction.regions[r.type] ?? r.type}</span>
+                      <span className="text-xs font-medium text-ink">
+                        {zhCN.inspector.privacyRedaction.regions[r.type] ?? r.type}
+                      </span>
                       <div className="flex items-center gap-1">
                         <button
                           className="rounded p-1 text-xs hover:bg-panel"
                           type="button"
                           title={zhCN.inspector.privacyRedaction.toggle}
                           data-testid={`privacy-redaction-toggle-${r.id}`}
-                          onClick={() => { const updated = privacyRedactions.map((pr) => pr.id === r.id ? { ...pr, enabled: !pr.enabled } : pr); commit({ privacyRedactions: updated }); }}
-                        >{r.enabled ? '✓' : '✗'}</button>
+                          onClick={() => {
+                            const updated = privacyRedactions.map((pr) =>
+                              pr.id === r.id ? { ...pr, enabled: !pr.enabled } : pr,
+                            );
+                            commit({ privacyRedactions: updated });
+                          }}
+                        >
+                          {r.enabled ? '✓' : '✗'}
+                        </button>
                         <button
                           className="rounded p-1 text-xs text-red-500 hover:bg-red-50"
                           type="button"
                           title={zhCN.inspector.privacyRedaction.remove}
                           data-testid={`privacy-redaction-remove-${r.id}`}
-                          onClick={() => { commit({ privacyRedactions: privacyRedactions.filter((pr) => pr.id !== r.id) }); }}
-                        ><Trash2 size={12} /></button>
+                          onClick={() => {
+                            commit({ privacyRedactions: privacyRedactions.filter((pr) => pr.id !== r.id) });
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </div>
                     <label className="block text-xs text-[var(--color-text-secondary)]">
@@ -1831,7 +2409,12 @@ function ClipInspector({
                         value={r.blurStrength}
                         className="mt-1 w-full"
                         data-testid={`privacy-redaction-blur-${r.id}`}
-                        onChange={(e) => { const updated = privacyRedactions.map((pr) => pr.id === r.id ? { ...pr, blurStrength: Number(e.target.value) } : pr); commit({ privacyRedactions: updated }); }}
+                        onChange={(e) => {
+                          const updated = privacyRedactions.map((pr) =>
+                            pr.id === r.id ? { ...pr, blurStrength: Number(e.target.value) } : pr,
+                          );
+                          commit({ privacyRedactions: updated });
+                        }}
                       />
                     </label>
                   </div>
@@ -1840,8 +2423,23 @@ function ClipInspector({
                   className="w-full rounded-md border border-dashed border-line px-2 py-1.5 text-xs text-[var(--color-text-muted)] hover:border-brand hover:text-brand"
                   type="button"
                   data-testid="privacy-redaction-add"
-                  onClick={() => { commit({ privacyRedactions: [...privacyRedactions, { id: createId('redaction'), type: 'face', keyframes: [{ time: 0, x: 0.25, y: 0.25, w: 0.2, h: 0.25 }], blurStrength: 1, enabled: true }] }); }}
-                >+ {zhCN.inspector.privacyRedaction.addRegion}</button>
+                  onClick={() => {
+                    commit({
+                      privacyRedactions: [
+                        ...privacyRedactions,
+                        {
+                          id: createId('redaction'),
+                          type: 'face',
+                          keyframes: [{ time: 0, x: 0.25, y: 0.25, w: 0.2, h: 0.25 }],
+                          blurStrength: 1,
+                          enabled: true,
+                        },
+                      ],
+                    });
+                  }}
+                >
+                  + {zhCN.inspector.privacyRedaction.addRegion}
+                </button>
               </div>
             ) : null}
           </Section>
@@ -1862,11 +2460,20 @@ function ClipInspector({
                 className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.targetFps}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
-                onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, targetFps: Number(event.target.value) as typeof frameInterpolation.targetFps } })}
+                onChange={(event) =>
+                  commit({
+                    frameInterpolation: {
+                      ...frameInterpolation,
+                      targetFps: Number(event.target.value) as typeof frameInterpolation.targetFps,
+                    },
+                  })
+                }
                 data-testid="frame-interpolation-fps-select"
               >
                 {FRAME_INTERPOLATION_TARGET_FPS.map((fps) => (
-                  <option key={fps} value={fps}>{fps} fps</option>
+                  <option key={fps} value={fps}>
+                    {fps} fps
+                  </option>
                 ))}
               </select>
             </label>
@@ -1876,11 +2483,17 @@ function ClipInspector({
                 className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.mode}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
-                onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, mode: event.target.value as FrameInterpolationMode } })}
+                onChange={(event) =>
+                  commit({
+                    frameInterpolation: { ...frameInterpolation, mode: event.target.value as FrameInterpolationMode },
+                  })
+                }
                 data-testid="frame-interpolation-mode-select"
               >
                 {FRAME_INTERPOLATION_MODES.map((mode) => (
-                  <option key={mode} value={mode}>{zhCN.inspector.frameInterpolationCompare.modeLabels[mode]}</option>
+                  <option key={mode} value={mode}>
+                    {zhCN.inspector.frameInterpolationCompare.modeLabels[mode]}
+                  </option>
                 ))}
               </select>
             </label>
@@ -1891,16 +2504,27 @@ function ClipInspector({
               max={5}
               step={1}
               disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
-              onCommit={(protectionFrames) => commit({ frameInterpolation: { ...frameInterpolation, protectionFrames } })}
+              onCommit={(protectionFrames) =>
+                commit({ frameInterpolation: { ...frameInterpolation, protectionFrames } })
+              }
               testId="frame-interpolation-protection-input"
             />
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="frame-interpolation-quality-status">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="frame-interpolation-quality-status"
+            >
               <div className="font-semibold text-ink">
-                {zhCN.inspector.frameInterpolationCompare.qualityLabel}：{frameInterpolation.quality ? zhCN.inspector.frameInterpolationCompare.qualityGrades[frameInterpolation.quality.grade] : zhCN.inspector.frameInterpolationCompare.qualityNotEvaluated}
+                {zhCN.inspector.frameInterpolationCompare.qualityLabel}：
+                {frameInterpolation.quality
+                  ? zhCN.inspector.frameInterpolationCompare.qualityGrades[frameInterpolation.quality.grade]
+                  : zhCN.inspector.frameInterpolationCompare.qualityNotEvaluated}
               </div>
               {frameInterpolation.quality ? (
                 <div className="mt-1 text-[var(--color-text-secondary)]" data-testid="frame-interpolation-quality-ssim">
-                  {zhCN.inspector.frameInterpolationCompare.qualitySsim(frameInterpolation.quality.ssim, frameInterpolation.quality.sampleCount)}
+                  {zhCN.inspector.frameInterpolationCompare.qualitySsim(
+                    frameInterpolation.quality.ssim,
+                    frameInterpolation.quality.sampleCount,
+                  )}
                 </div>
               ) : null}
             </div>
@@ -1908,18 +2532,31 @@ function ClipInspector({
               className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               data-testid="frame-interpolation-quality-button"
-              disabled={frameInterpolationQualityRunning || frameInterpolationUnavailable || !frameInterpolation.enabled || !asset}
+              disabled={
+                frameInterpolationQualityRunning ||
+                frameInterpolationUnavailable ||
+                !frameInterpolation.enabled ||
+                !asset
+              }
               onClick={() => void runFrameInterpolationQualityEvaluation()}
             >
-              {frameInterpolationQualityRunning ? zhCN.inspector.frameInterpolationCompare.qualityRunning : zhCN.inspector.frameInterpolationCompare.qualityButton}
+              {frameInterpolationQualityRunning
+                ? zhCN.inspector.frameInterpolationCompare.qualityRunning
+                : zhCN.inspector.frameInterpolationCompare.qualityButton}
             </button>
             {frameInterpolationQualityError ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700" data-testid="frame-interpolation-quality-error">
+              <div
+                className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700"
+                data-testid="frame-interpolation-quality-error"
+              >
                 {frameInterpolationQualityError}
               </div>
             ) : null}
             {frameInterpolationUnavailable ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="frame-interpolation-unavailable">
+              <div
+                className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800"
+                data-testid="frame-interpolation-unavailable"
+              >
                 {zhCN.inspector.fields.frameInterpolationUnsupported}
               </div>
             ) : null}
@@ -1930,10 +2567,15 @@ function ClipInspector({
               disabled={frameInterpolationCompareRunning || frameInterpolationUnavailable || !asset}
               onClick={() => void runFrameInterpolationComparePreview()}
             >
-              {frameInterpolationCompareRunning ? zhCN.inspector.frameInterpolationCompare.running : zhCN.inspector.frameInterpolationCompare.button}
+              {frameInterpolationCompareRunning
+                ? zhCN.inspector.frameInterpolationCompare.running
+                : zhCN.inspector.frameInterpolationCompare.button}
             </button>
             {frameInterpolationCompareError ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700" data-testid="frame-interpolation-compare-error">
+              <div
+                className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700"
+                data-testid="frame-interpolation-compare-error"
+              >
                 {frameInterpolationCompareError}
               </div>
             ) : null}
@@ -1961,15 +2603,21 @@ function ClipInspector({
                     <div className="space-y-1 p-2">
                       <div className="flex items-center justify-between gap-2 text-xs font-semibold text-ink">
                         <span>{item.label}</span>
-                        <span className="text-[var(--color-text-muted)]">{formatEstimatedDuration(item.estimatedMs)}</span>
+                        <span className="text-[var(--color-text-muted)]">
+                          {formatEstimatedDuration(item.estimatedMs)}
+                        </span>
                       </div>
                       <button
                         type="button"
                         className="w-full rounded-md border border-line bg-panel px-2 py-1 text-xs font-medium text-ink hover:bg-[var(--color-bg-elevated)]"
                         data-testid={`frame-interpolation-select-${item.mode}`}
-                        onClick={() => commit({ slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(item.mode) })}
+                        onClick={() =>
+                          commit({ slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(item.mode) })
+                        }
                       >
-                        {slowMotionMode === item.slowMotionMode ? zhCN.inspector.frameInterpolationCompare.selected : zhCN.inspector.frameInterpolationCompare.selectMode}
+                        {slowMotionMode === item.slowMotionMode
+                          ? zhCN.inspector.frameInterpolationCompare.selected
+                          : zhCN.inspector.frameInterpolationCompare.selectMode}
                       </button>
                     </div>
                   </div>
@@ -2014,7 +2662,10 @@ function ClipInspector({
               onCommit={(enabled) => commit({ stabilization: { ...stabilization, enabled } })}
               testId="stabilization-toggle"
             />
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="stabilization-status">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="stabilization-status"
+            >
               {analysisProgress !== undefined && analysisProgress < 1
                 ? zhCN.inspector.fields.stabilizationProgress(analysisProgress)
                 : stabilization.analyzed
@@ -2054,15 +2705,22 @@ function ClipInspector({
 
         {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
           <Section title={zhCN.preview.shakeAnalysisTitle}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="shake-analysis-panel">
-              <span data-testid="shake-analysis-severity">{zhCN.preview.shakeAnalysisScore(clip.stabilization?.shakeScore ?? 0)}</span>
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="shake-analysis-panel"
+            >
+              <span data-testid="shake-analysis-severity">
+                {zhCN.preview.shakeAnalysisScore(clip.stabilization?.shakeScore ?? 0)}
+              </span>
             </div>
             <button
               className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               data-testid="apply-shake-stabilization"
               onClick={() => {
-                const cmd = new ApplyShakeStabilizationCommand(projectAccessor, clip.id, { suggestedFilter: 'vidstab' });
+                const cmd = new ApplyShakeStabilizationCommand(projectAccessor, clip.id, {
+                  suggestedFilter: 'vidstab',
+                });
                 commandManager.execute(cmd);
               }}
             >
@@ -2073,7 +2731,10 @@ function ClipInspector({
 
         {clip.type === 'video' && clip.aiPipSuggestion ? (
           <Section title={zhCN.preview.pipAvoidanceTitle}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="pip-avoidance-panel">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="pip-avoidance-panel"
+            >
               <span>{zhCN.preview.pipAvoidanceWarning}</span>
             </div>
             <button
@@ -2081,7 +2742,11 @@ function ClipInspector({
               type="button"
               data-testid="apply-pip-placement"
               onClick={() => {
-                const cmd = new ApplyPipPlacementCommand(projectAccessor, clip.id, clip.aiPipSuggestion!.recommendedCorner);
+                const cmd = new ApplyPipPlacementCommand(
+                  projectAccessor,
+                  clip.id,
+                  clip.aiPipSuggestion!.recommendedCorner,
+                );
                 commandManager.execute(cmd);
               }}
             >
@@ -2092,7 +2757,10 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <Section title={zhCN.inspector.sections.motionTrack}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="motion-track-status">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="motion-track-status"
+            >
               {motionTrackProgress !== undefined && motionTrackProgress < 1
                 ? zhCN.inspector.motionTrack.progress(motionTrackProgress)
                 : motionTrack.length > 0
@@ -2142,9 +2810,13 @@ function ClipInspector({
                 onChange={(event) => setColorMatchReferenceClipId(event.target.value)}
                 data-testid="color-match-reference-select"
               >
-                {colorMatchReferenceClips.length === 0 ? <option value="">{zhCN.inspector.colorMatch.noReference}</option> : null}
+                {colorMatchReferenceClips.length === 0 ? (
+                  <option value="">{zhCN.inspector.colorMatch.noReference}</option>
+                ) : null}
                 {colorMatchReferenceClips.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name}</option>
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
                 ))}
               </select>
             </label>
@@ -2167,12 +2839,17 @@ function ClipInspector({
             </div>
             <RangeNumberField
               label={zhCN.inspector.fields.sequenceFrameRate}
-              value={normalizeSequenceFrameRate(clip.sequenceFrameRate ?? asset.imageSequence.frameRate) ?? asset.imageSequence.frameRate}
+              value={
+                normalizeSequenceFrameRate(clip.sequenceFrameRate ?? asset.imageSequence.frameRate) ??
+                asset.imageSequence.frameRate
+              }
               min={1}
               max={120}
               step={1}
               format={(value) => `${value.toFixed(0)} fps`}
-              onCommit={(frameRate) => commit({ sequenceFrameRate: frameRate, duration: asset.imageSequence!.frameCount / frameRate })}
+              onCommit={(frameRate) =>
+                commit({ sequenceFrameRate: frameRate, duration: asset.imageSequence!.frameCount / frameRate })
+              }
               testId="image-sequence-framerate"
             />
           </Section>
@@ -2180,10 +2857,17 @@ function ClipInspector({
 
         {batchKeyframesSelected ? (
           <Section title={zhCN.inspector.sections.keyframe}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="batch-keyframe-editor">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="batch-keyframe-editor"
+            >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.batchKeyframes.title}</span>
-                <span className="tabular-nums" data-testid="batch-keyframe-count">{zhCN.inspector.batchKeyframes.count(selectedKeyframeEntries.length)}</span>
+                <span className="font-semibold text-[var(--color-text-secondary)]">
+                  {zhCN.inspector.batchKeyframes.title}
+                </span>
+                <span className="tabular-nums" data-testid="batch-keyframe-count">
+                  {zhCN.inspector.batchKeyframes.count(selectedKeyframeEntries.length)}
+                </span>
               </div>
               <div className="grid grid-cols-[1fr_auto] items-end gap-2">
                 <NumberField
@@ -2279,9 +2963,14 @@ function ClipInspector({
 
         {selectedKeyframe && selectedKeyframeFrame ? (
           <Section title={zhCN.inspector.sections.keyframe}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="selected-keyframe-editor">
+            <div
+              className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+              data-testid="selected-keyframe-editor"
+            >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-[var(--color-text-secondary)]">{formatKeyframeProperty(selectedKeyframe.property)}</span>
+                <span className="font-semibold text-[var(--color-text-secondary)]">
+                  {formatKeyframeProperty(selectedKeyframe.property)}
+                </span>
                 <span className="tabular-nums">{selectedKeyframeFrame.time.toFixed(2)}s</span>
               </div>
               <RangeNumberField
@@ -2375,7 +3064,12 @@ function ClipInspector({
 
         {clip.type === 'image' ? (
           <Section title={zhCN.inspector.sections.kenBurns}>
-            <ToggleField label={zhCN.inspector.sections.kenBurns} checked={Boolean(clip.kenBurns)} onCommit={setKenBurns} testId="ken-burns-toggle" />
+            <ToggleField
+              label={zhCN.inspector.sections.kenBurns}
+              checked={Boolean(clip.kenBurns)}
+              onCommit={setKenBurns}
+              testId="ken-burns-toggle"
+            />
             {clip.kenBurns ? (
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
@@ -2401,13 +3095,17 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open data-testid="video-restoration-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.videoRestoration}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.videoRestoration}
+            </summary>
             <div className="space-y-3">
               <div className="rounded-md border border-line bg-panel p-2">
                 <ToggleField
                   label={zhCN.inspector.fields.deinterlace}
                   checked={videoRestoration.deinterlace.enabled}
-                  onCommit={(enabled) => updateVideoRestoration({ deinterlace: { ...videoRestoration.deinterlace, enabled } })}
+                  onCommit={(enabled) =>
+                    updateVideoRestoration({ deinterlace: { ...videoRestoration.deinterlace, enabled } })
+                  }
                   testId="video-restoration-deinterlace-toggle"
                 />
                 <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
@@ -2418,7 +3116,10 @@ function ClipInspector({
                     data-testid="video-restoration-deinterlace-mode"
                     onChange={(event) =>
                       updateVideoRestoration({
-                        deinterlace: { ...videoRestoration.deinterlace, mode: Number(event.target.value) as VideoDeinterlaceMode }
+                        deinterlace: {
+                          ...videoRestoration.deinterlace,
+                          mode: Number(event.target.value) as VideoDeinterlaceMode,
+                        },
                       })
                     }
                   >
@@ -2427,13 +3128,18 @@ function ClipInspector({
                   </select>
                 </label>
                 {deinterlaceSuggestion !== null && !videoRestoration.deinterlace.enabled ? (
-                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800" data-testid="video-restoration-deinterlace-suggestion">
+                  <div
+                    className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800"
+                    data-testid="video-restoration-deinterlace-suggestion"
+                  >
                     <div>{zhCN.inspector.videoRestoration.deinterlaceSuggestion(asset?.fieldOrder ?? '')}</div>
                     <button
                       className="mt-2 rounded-md border border-amber-300 bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
                       type="button"
                       data-testid="video-restoration-apply-deinterlace-suggestion"
-                      onClick={() => updateVideoRestoration({ deinterlace: { enabled: true, mode: deinterlaceSuggestion } })}
+                      onClick={() =>
+                        updateVideoRestoration({ deinterlace: { enabled: true, mode: deinterlaceSuggestion } })
+                      }
                     >
                       {zhCN.inspector.videoRestoration.applySuggestion}
                     </button>
@@ -2450,7 +3156,10 @@ function ClipInspector({
                     data-testid="video-restoration-temporal-preset"
                     onChange={(event) =>
                       updateVideoRestoration({
-                        temporalDenoise: { ...videoRestoration.temporalDenoise, preset: event.target.value as VideoDenoisePreset }
+                        temporalDenoise: {
+                          ...videoRestoration.temporalDenoise,
+                          preset: event.target.value as VideoDenoisePreset,
+                        },
                       })
                     }
                   >
@@ -2470,7 +3179,11 @@ function ClipInspector({
                       max={20}
                       step={0.1}
                       format={(value) => value.toFixed(1)}
-                      onCommit={(lumaSpatial) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, lumaSpatial } })}
+                      onCommit={(lumaSpatial) =>
+                        updateVideoRestoration({
+                          temporalDenoise: { ...videoRestoration.temporalDenoise, lumaSpatial },
+                        })
+                      }
                       testId="video-restoration-luma-spatial"
                     />
                     <RangeNumberField
@@ -2480,7 +3193,11 @@ function ClipInspector({
                       max={20}
                       step={0.1}
                       format={(value) => value.toFixed(1)}
-                      onCommit={(chromaSpatial) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, chromaSpatial } })}
+                      onCommit={(chromaSpatial) =>
+                        updateVideoRestoration({
+                          temporalDenoise: { ...videoRestoration.temporalDenoise, chromaSpatial },
+                        })
+                      }
                       testId="video-restoration-chroma-spatial"
                     />
                     <RangeNumberField
@@ -2490,7 +3207,9 @@ function ClipInspector({
                       max={20}
                       step={0.1}
                       format={(value) => value.toFixed(1)}
-                      onCommit={(lumaTmp) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, lumaTmp } })}
+                      onCommit={(lumaTmp) =>
+                        updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, lumaTmp } })
+                      }
                       testId="video-restoration-luma-tmp"
                     />
                   </div>
@@ -2501,12 +3220,16 @@ function ClipInspector({
                 <ToggleField
                   label={zhCN.inspector.fields.spatialDenoise}
                   checked={videoRestoration.spatialDenoise.enabled}
-                  onCommit={(enabled) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, enabled } })}
+                  onCommit={(enabled) =>
+                    updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, enabled } })
+                  }
                   testId="video-restoration-spatial-toggle"
                 />
                 {videoRestoration.spatialDenoise.enabled ? (
                   <div className="mt-2 space-y-2" data-testid="video-restoration-spatial-controls">
-                    <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">{zhCN.inspector.videoRestoration.spatialWarning}</div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                      {zhCN.inspector.videoRestoration.spatialWarning}
+                    </div>
                     <RangeNumberField
                       label={zhCN.inspector.fields.spatialStrength}
                       value={videoRestoration.spatialDenoise.strength}
@@ -2514,7 +3237,9 @@ function ClipInspector({
                       max={30}
                       step={0.1}
                       format={(value) => value.toFixed(1)}
-                      onCommit={(strength) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, strength } })}
+                      onCommit={(strength) =>
+                        updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, strength } })
+                      }
                       testId="video-restoration-spatial-strength"
                     />
                     <RangeNumberField
@@ -2524,7 +3249,9 @@ function ClipInspector({
                       max={99}
                       step={2}
                       format={(value) => value.toFixed(0)}
-                      onCommit={(patchSize) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, patchSize } })}
+                      onCommit={(patchSize) =>
+                        updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, patchSize } })
+                      }
                       testId="video-restoration-patch-size"
                     />
                     <RangeNumberField
@@ -2534,7 +3261,9 @@ function ClipInspector({
                       max={99}
                       step={2}
                       format={(value) => value.toFixed(0)}
-                      onCommit={(researchSize) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, researchSize } })}
+                      onCommit={(researchSize) =>
+                        updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, researchSize } })
+                      }
                       testId="video-restoration-research-size"
                     />
                   </div>
@@ -2546,7 +3275,9 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open data-testid="quality-enhancement-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.qualityEnhancement}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.qualityEnhancement}
+            </summary>
             <div className="space-y-3 rounded-md border border-line bg-panel p-2">
               <ToggleField
                 label={zhCN.inspector.qualityEnhancement.superResolution}
@@ -2578,14 +3309,18 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.fields.colorCorrection}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.fields.colorCorrection}
+            </summary>
             <div className="space-y-3">
               <label className="block rounded-md border border-line bg-panel p-2 text-xs font-medium text-[var(--color-text-secondary)]">
                 <span>{zhCN.inspector.fields.inputColorSpace}</span>
                 <select
                   className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5"
                   value={colorCorrection.inputColorSpace ?? 'rec709'}
-                  onChange={(event) => commit({ colorCorrection: { inputColorSpace: event.target.value as InputColorSpace } })}
+                  onChange={(event) =>
+                    commit({ colorCorrection: { inputColorSpace: event.target.value as InputColorSpace } })
+                  }
                   data-testid="clip-input-color-space-select"
                 >
                   {INPUT_COLOR_SPACES.map((colorSpace) => (
@@ -2632,7 +3367,10 @@ function ClipInspector({
                 format={(value) => `${Math.round(value)}°`}
                 onCommit={(hue) => commit({ colorCorrection: { hue } })}
               />
-              <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="clip-lut-control">
+              <div
+                className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+                data-testid="clip-lut-control"
+              >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="font-semibold text-[var(--color-text-secondary)]">LUT</span>
                   {colorCorrection.lutPath ? (
@@ -2667,11 +3405,7 @@ function ClipInspector({
               >
                 {zhCN.common.reset}
               </button>
-              <AIColorGradingPanel
-                clip={clip}
-                sourcePath={asset?.path ?? ''}
-                selectedClipLocked={selectedClipLocked}
-              />
+              <AIColorGradingPanel clip={clip} sourcePath={asset?.path ?? ''} selectedClipLocked={selectedClipLocked} />
               <AILookMatchPanel clip={clip} />
             </div>
           </details>
@@ -2679,7 +3413,9 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.curves}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.curves}
+            </summary>
             <CurveEditor
               curves={colorCurves}
               onCommit={(nextCurves) => commit({ colorCorrection: { colorCurves: nextCurves } })}
@@ -2689,14 +3425,21 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.colorWheels}</summary>
-            <ThreeWayColorEditor threeWayColor={threeWayColor} onCommit={(nextColor) => commit({ colorCorrection: { threeWayColor: nextColor } })} />
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.colorWheels}
+            </summary>
+            <ThreeWayColorEditor
+              threeWayColor={threeWayColor}
+              onCommit={(nextColor) => commit({ colorCorrection: { threeWayColor: nextColor } })}
+            />
           </details>
         ) : null}
 
         {clip.type !== 'audio' ? (
           <details className="mb-4">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">调色</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              调色
+            </summary>
             <ColorGradingWorkspace
               graph={clip.colorGradingGraph}
               onGraphChange={(graph) => commit({ colorGradingGraph: graph })}
@@ -2706,10 +3449,14 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">专业调色面板</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              专业调色面板
+            </summary>
             <ProfessionalColorGradingPanel
               clip={clip}
-              onCommitColorCorrection={(patch: Partial<import('@open-factory/editor-core').ColorCorrection>) => commit({ colorCorrection: patch })}
+              onCommitColorCorrection={(patch: Partial<import('@open-factory/editor-core').ColorCorrection>) =>
+                commit({ colorCorrection: patch })
+              }
               onChooseLUT={() => void chooseLut()}
             />
           </details>
@@ -2717,21 +3464,45 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.effects}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
+              {zhCN.inspector.sections.effects}
+            </summary>
             <EffectsEditor
               effects={clip.effects ?? []}
-              onAdd={(type) => runEffectCommand(new AddEffectCommand(timelineAccessor, clip.id, { type, params: DEFAULT_EFFECT_PARAMS[type] }))}
+              onAdd={(type) =>
+                runEffectCommand(
+                  new AddEffectCommand(timelineAccessor, clip.id, { type, params: DEFAULT_EFFECT_PARAMS[type] }),
+                )
+              }
               onRemove={(effectId) => runEffectCommand(new RemoveEffectCommand(timelineAccessor, clip.id, effectId))}
-              onUpdate={(effectId, patch) => runEffectCommand(new UpdateEffectCommand(timelineAccessor, clip.id, effectId, patch))}
-              onReorder={(effectIds) => runEffectCommand(new ReorderEffectsCommand(timelineAccessor, clip.id, effectIds))}
+              onUpdate={(effectId, patch) =>
+                runEffectCommand(new UpdateEffectCommand(timelineAccessor, clip.id, effectId, patch))
+              }
+              onReorder={(effectIds) =>
+                runEffectCommand(new ReorderEffectsCommand(timelineAccessor, clip.id, effectIds))
+              }
             />
           </details>
         ) : null}
 
         {'volume' in clip ? (
           <Section title={zhCN.inspector.sections.audio}>
-            <AnimatedField label={zhCN.inspector.fields.volume} onAddKeyframe={() => addKeyframe('volume')} testId="add-volume-keyframe-button">
-              <RangeField label={zhCN.inspector.fields.volume} value={clip.volume} min={0} max={2} step={0.01} format={(value) => `${Math.round(value * 100)}%`} onCommit={(volume) => commit({ volume })} hideLabel testId="clip-volume-input" />
+            <AnimatedField
+              label={zhCN.inspector.fields.volume}
+              onAddKeyframe={() => addKeyframe('volume')}
+              testId="add-volume-keyframe-button"
+            >
+              <RangeField
+                label={zhCN.inspector.fields.volume}
+                value={clip.volume}
+                min={0}
+                max={2}
+                step={0.01}
+                format={(value) => `${Math.round(value * 100)}%`}
+                onCommit={(volume) => commit({ volume })}
+                hideLabel
+                testId="clip-volume-input"
+              />
             </AnimatedField>
             <RangeNumberField
               label={zhCN.inspector.fields.pitchShift}
@@ -2743,9 +3514,20 @@ function ClipInspector({
               onCommit={(pitchSemitones) => commit({ pitchSemitones })}
               testId="clip-pitch-input"
             />
-            <ToggleField label={zhCN.inspector.fields.reverseAudio} checked={reverseAudio} onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })} testId="clip-reverse-audio-toggle" />
-            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="audio-advanced-restoration-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t('inspector.sections.audioRestoration')}</summary>
+            <ToggleField
+              label={zhCN.inspector.fields.reverseAudio}
+              checked={reverseAudio}
+              onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })}
+              testId="clip-reverse-audio-toggle"
+            />
+            <details
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+              data-testid="audio-advanced-restoration-section"
+              open
+            >
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                {t('inspector.sections.audioRestoration')}
+              </summary>
               <div className="space-y-3 border-t border-line p-2">
                 <ToggleField
                   label={t('inspector.fields.audioRestorationDeclip')}
@@ -2756,7 +3538,9 @@ function ClipInspector({
                 <ToggleField
                   label={t('inspector.fields.audioRestorationDereverb')}
                   checked={audioRestoration.dereverb.enabled}
-                  onCommit={(enabled) => updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, enabled } })}
+                  onCommit={(enabled) =>
+                    updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, enabled } })
+                  }
                   testId="audio-restoration-dereverb-toggle"
                 />
                 <RangeNumberField
@@ -2767,7 +3551,9 @@ function ClipInspector({
                   step={0.05}
                   format={(value) => `${Math.round(value * 100)}%`}
                   disabled={!audioRestoration.dereverb.enabled}
-                  onCommit={(strength) => updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, strength } })}
+                  onCommit={(strength) =>
+                    updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, strength } })
+                  }
                   testId="audio-restoration-dereverb-strength"
                 />
                 <ToggleField
@@ -2782,11 +3568,20 @@ function ClipInspector({
                   onCommit={(enabled) => updateAudioRestoration({ fill: { ...audioRestoration.fill, enabled } })}
                   testId="audio-restoration-fill-toggle"
                 />
-                <AudioRestorationWaveformPreview before={audioRestorationComparison.before} after={audioRestorationComparison.after} />
+                <AudioRestorationWaveformPreview
+                  before={audioRestorationComparison.before}
+                  after={audioRestorationComparison.after}
+                />
               </div>
             </details>
-            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="audio-channel-routing-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.fields.audioChannelRouting}</summary>
+            <details
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+              data-testid="audio-channel-routing-section"
+              open
+            >
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                {zhCN.inspector.fields.audioChannelRouting}
+              </summary>
               <div className="border-t border-line p-2">
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.audioChannelRoutingMode}
@@ -2805,23 +3600,36 @@ function ClipInspector({
                 </label>
               </div>
             </details>
-            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="pitch-analysis-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.pitchAnalysis}</summary>
+            <details
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+              data-testid="pitch-analysis-section"
+              open
+            >
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                {zhCN.inspector.sections.pitchAnalysis}
+              </summary>
               <div className="space-y-2 border-t border-line p-2">
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="rounded bg-panel p-2">
                     <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.primaryPitchNote}</div>
-                    <div className="font-semibold text-ink" data-testid="clip-pitch-primary-note">{pitchSummary.primaryNote ?? zhCN.inspector.pitchAnalysis.noData}</div>
+                    <div className="font-semibold text-ink" data-testid="clip-pitch-primary-note">
+                      {pitchSummary.primaryNote ?? zhCN.inspector.pitchAnalysis.noData}
+                    </div>
                   </div>
                   <div className="rounded bg-panel p-2">
                     <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.pitchRange}</div>
                     <div className="font-semibold text-ink" data-testid="clip-pitch-range">
-                      {pitchSummary.minHz !== undefined && pitchSummary.maxHz !== undefined ? `${Math.round(pitchSummary.minHz)}-${Math.round(pitchSummary.maxHz)} Hz` : zhCN.inspector.pitchAnalysis.noData}
+                      {pitchSummary.minHz !== undefined && pitchSummary.maxHz !== undefined
+                        ? `${Math.round(pitchSummary.minHz)}-${Math.round(pitchSummary.maxHz)} Hz`
+                        : zhCN.inspector.pitchAnalysis.noData}
                     </div>
                   </div>
                   <div className="rounded bg-panel p-2">
                     <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.pitchStability}</div>
-                    <div className="font-semibold text-ink" data-testid="clip-pitch-stability">{`${Math.round(pitchSummary.stability * 100)}%`}</div>
+                    <div
+                      className="font-semibold text-ink"
+                      data-testid="clip-pitch-stability"
+                    >{`${Math.round(pitchSummary.stability * 100)}%`}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -2846,8 +3654,14 @@ function ClipInspector({
                 </div>
               </div>
             </details>
-            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="spatial-audio-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t('inspector.sections.spatialAudio')}</summary>
+            <details
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+              data-testid="spatial-audio-section"
+              open
+            >
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                {t('inspector.sections.spatialAudio')}
+              </summary>
               <div className="space-y-3 border-t border-line p-2">
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialRenderMode')}
@@ -2855,7 +3669,11 @@ function ClipInspector({
                     className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.renderMode}
                     data-testid="clip-spatial-render-mode-select"
-                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, renderMode: event.target.value as SpatialAudioRenderMode } })}
+                    onChange={(event) =>
+                      commit({
+                        spatialAudio: { ...spatialAudio, renderMode: event.target.value as SpatialAudioRenderMode },
+                      })
+                    }
                   >
                     {spatialRenderModeOptions.map((mode) => (
                       <option key={mode} value={mode}>
@@ -2865,7 +3683,11 @@ function ClipInspector({
                   </select>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <AnimatedField label={t('inspector.fields.spatialX')} onAddKeyframe={() => addKeyframe('spatialX', spatialAudio.x)} testId="add-spatial-x-keyframe-button">
+                  <AnimatedField
+                    label={t('inspector.fields.spatialX')}
+                    onAddKeyframe={() => addKeyframe('spatialX', spatialAudio.x)}
+                    testId="add-spatial-x-keyframe-button"
+                  >
                     <RangeNumberField
                       label={t('inspector.fields.spatialX')}
                       value={spatialAudio.x}
@@ -2877,7 +3699,11 @@ function ClipInspector({
                       testId="clip-spatial-x-input"
                     />
                   </AnimatedField>
-                  <AnimatedField label={t('inspector.fields.spatialY')} onAddKeyframe={() => addKeyframe('spatialY', spatialAudio.y)} testId="add-spatial-y-keyframe-button">
+                  <AnimatedField
+                    label={t('inspector.fields.spatialY')}
+                    onAddKeyframe={() => addKeyframe('spatialY', spatialAudio.y)}
+                    testId="add-spatial-y-keyframe-button"
+                  >
                     <RangeNumberField
                       label={t('inspector.fields.spatialY')}
                       value={spatialAudio.y}
@@ -2906,7 +3732,11 @@ function ClipInspector({
                     className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.distance}
                     data-testid="clip-spatial-distance-select"
-                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, distance: event.target.value as SpatialAudioDistance } })}
+                    onChange={(event) =>
+                      commit({
+                        spatialAudio: { ...spatialAudio, distance: event.target.value as SpatialAudioDistance },
+                      })
+                    }
                   >
                     {spatialDistanceOptions.map((distance) => (
                       <option key={distance} value={distance}>
@@ -2916,7 +3746,11 @@ function ClipInspector({
                   </select>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <AnimatedField label={t('inspector.fields.spatialAzimuth')} onAddKeyframe={() => addKeyframe('spatialAzimuth', spatialAudio.azimuth)} testId="add-spatial-azimuth-keyframe-button">
+                  <AnimatedField
+                    label={t('inspector.fields.spatialAzimuth')}
+                    onAddKeyframe={() => addKeyframe('spatialAzimuth', spatialAudio.azimuth)}
+                    testId="add-spatial-azimuth-keyframe-button"
+                  >
                     <RangeNumberField
                       label={t('inspector.fields.spatialAzimuth')}
                       value={spatialAudio.azimuth}
@@ -2924,11 +3758,17 @@ function ClipInspector({
                       max={180}
                       step={1}
                       format={(value) => `${Math.round(value)}°`}
-                      onCommit={(azimuth) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', azimuth } })}
+                      onCommit={(azimuth) =>
+                        commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', azimuth } })
+                      }
                       testId="clip-spatial-azimuth-input"
                     />
                   </AnimatedField>
-                  <AnimatedField label={t('inspector.fields.spatialElevation')} onAddKeyframe={() => addKeyframe('spatialElevation', spatialAudio.elevation)} testId="add-spatial-elevation-keyframe-button">
+                  <AnimatedField
+                    label={t('inspector.fields.spatialElevation')}
+                    onAddKeyframe={() => addKeyframe('spatialElevation', spatialAudio.elevation)}
+                    testId="add-spatial-elevation-keyframe-button"
+                  >
                     <RangeNumberField
                       label={t('inspector.fields.spatialElevation')}
                       value={spatialAudio.elevation}
@@ -2936,12 +3776,18 @@ function ClipInspector({
                       max={90}
                       step={1}
                       format={(value) => `${Math.round(value)}°`}
-                      onCommit={(elevation) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', elevation } })}
+                      onCommit={(elevation) =>
+                        commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', elevation } })
+                      }
                       testId="clip-spatial-elevation-input"
                     />
                   </AnimatedField>
                 </div>
-                <AnimatedField label={t('inspector.fields.spatialDistanceMeters')} onAddKeyframe={() => addKeyframe('spatialDistanceMeters', spatialAudio.distanceMeters)} testId="add-spatial-distance-meters-keyframe-button">
+                <AnimatedField
+                  label={t('inspector.fields.spatialDistanceMeters')}
+                  onAddKeyframe={() => addKeyframe('spatialDistanceMeters', spatialAudio.distanceMeters)}
+                  testId="add-spatial-distance-meters-keyframe-button"
+                >
                   <RangeNumberField
                     label={t('inspector.fields.spatialDistanceMeters')}
                     value={spatialAudio.distanceMeters}
@@ -2949,7 +3795,9 @@ function ClipInspector({
                     max={100}
                     step={0.1}
                     format={(value) => `${value.toFixed(1)} m`}
-                    onCommit={(distanceMeters) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', distanceMeters } })}
+                    onCommit={(distanceMeters) =>
+                      commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', distanceMeters } })
+                    }
                     testId="clip-spatial-distance-meters-input"
                   />
                 </AnimatedField>
@@ -2959,7 +3807,11 @@ function ClipInspector({
                     className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.roomModel}
                     data-testid="clip-spatial-room-model-select"
-                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, roomModel: event.target.value as SpatialAudioRoomModel } })}
+                    onChange={(event) =>
+                      commit({
+                        spatialAudio: { ...spatialAudio, roomModel: event.target.value as SpatialAudioRoomModel },
+                      })
+                    }
                   >
                     {spatialRoomOptions.map((room) => (
                       <option key={room} value={room}>
@@ -3024,7 +3876,15 @@ function ClipInspector({
         ) : null}
 
         {clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits' ? (
-          <Section title={clip.type === 'subtitle' ? zhCN.inspector.sections.subtitle : clip.type === 'credits' ? zhCN.inspector.sections.credits : zhCN.inspector.sections.text}>
+          <Section
+            title={
+              clip.type === 'subtitle'
+                ? zhCN.inspector.sections.subtitle
+                : clip.type === 'credits'
+                  ? zhCN.inspector.sections.credits
+                  : zhCN.inspector.sections.text
+            }
+          >
             {clip.type === 'text' ? (
               <RichTextEditor
                 clip={clip}
@@ -3032,12 +3892,37 @@ function ClipInspector({
                 onCommit={(richText) => commit({ text: richTextToPlainText(richText, clip.text), richText })}
               />
             ) : (
-              <TextAreaField label={zhCN.inspector.fields.text} value={clip.text} onCommit={(text) => commit({ text })} testId="clip-text-input" />
+              <TextAreaField
+                label={zhCN.inspector.fields.text}
+                value={clip.text}
+                onCommit={(text) => commit({ text })}
+                testId="clip-text-input"
+              />
             )}
-            <NumberField label={zhCN.inspector.fields.fontSize} value={clip.style.fontSize} min={8} step={1} onCommit={(fontSize) => commit({ style: { fontSize } })} />
-            <TextField label={zhCN.inspector.fields.fontFamily} value={clip.style.fontFamily} onCommit={(fontFamily) => commit({ style: { fontFamily } })} />
-            <ColorField label={zhCN.inspector.fields.color} value={clip.style.color} onCommit={(color) => commit({ style: { color } })} testId={clip.type === 'subtitle' ? 'subtitle-color-input' : undefined} />
-            <ColorField label={zhCN.inspector.fields.background} value={clip.style.backgroundColor} onCommit={(backgroundColor) => commit({ style: { backgroundColor } })} testId="clip-background-color-input" />
+            <NumberField
+              label={zhCN.inspector.fields.fontSize}
+              value={clip.style.fontSize}
+              min={8}
+              step={1}
+              onCommit={(fontSize) => commit({ style: { fontSize } })}
+            />
+            <TextField
+              label={zhCN.inspector.fields.fontFamily}
+              value={clip.style.fontFamily}
+              onCommit={(fontFamily) => commit({ style: { fontFamily } })}
+            />
+            <ColorField
+              label={zhCN.inspector.fields.color}
+              value={clip.style.color}
+              onCommit={(color) => commit({ style: { color } })}
+              testId={clip.type === 'subtitle' ? 'subtitle-color-input' : undefined}
+            />
+            <ColorField
+              label={zhCN.inspector.fields.background}
+              value={clip.style.backgroundColor}
+              onCommit={(backgroundColor) => commit({ style: { backgroundColor } })}
+              testId="clip-background-color-input"
+            />
             <RangeField
               label={zhCN.inspector.fields.backgroundOpacity}
               value={clip.style.backgroundOpacity}
@@ -3050,14 +3935,41 @@ function ClipInspector({
             />
             {clip.type === 'credits' ? (
               <>
-                <NumberField label={zhCN.inspector.fields.rollSpeed} value={clip.rollSpeed} min={1} max={1000} step={1} onCommit={(rollSpeed) => commit({ rollSpeed })} testId="credits-roll-speed-input" />
-                <NumberField label={zhCN.inspector.fields.lineSpacing} value={clip.style.lineSpacing} min={0} max={120} step={1} onCommit={(lineSpacing) => commit({ style: { lineSpacing } })} testId="credits-line-spacing-input" />
-                <NumberField label={zhCN.inspector.fields.horizontalMargin} value={clip.style.horizontalMargin} min={0} max={960} step={1} onCommit={(horizontalMargin) => commit({ style: { horizontalMargin } })} testId="credits-horizontal-margin-input" />
+                <NumberField
+                  label={zhCN.inspector.fields.rollSpeed}
+                  value={clip.rollSpeed}
+                  min={1}
+                  max={1000}
+                  step={1}
+                  onCommit={(rollSpeed) => commit({ rollSpeed })}
+                  testId="credits-roll-speed-input"
+                />
+                <NumberField
+                  label={zhCN.inspector.fields.lineSpacing}
+                  value={clip.style.lineSpacing}
+                  min={0}
+                  max={120}
+                  step={1}
+                  onCommit={(lineSpacing) => commit({ style: { lineSpacing } })}
+                  testId="credits-line-spacing-input"
+                />
+                <NumberField
+                  label={zhCN.inspector.fields.horizontalMargin}
+                  value={clip.style.horizontalMargin}
+                  min={0}
+                  max={960}
+                  step={1}
+                  onCommit={(horizontalMargin) => commit({ style: { horizontalMargin } })}
+                  testId="credits-horizontal-margin-input"
+                />
               </>
             ) : null}
             {clip.type === 'subtitle' ? (
               <>
-                <div className="space-y-3 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid="subtitle-cc-panel">
+                <div
+                  className="space-y-3 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2"
+                  data-testid="subtitle-cc-panel"
+                >
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.closedCaptions.kind}
                     <select
@@ -3090,7 +4002,9 @@ function ClipInspector({
                       </label>
                       {projectSpeakers.length > 0 ? (
                         <div className="space-y-1" data-testid="subtitle-speaker-library">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{zhCN.inspector.closedCaptions.speakerLibrary}</div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                            {zhCN.inspector.closedCaptions.speakerLibrary}
+                          </div>
                           <div className="flex flex-wrap gap-1">
                             {projectSpeakers.map((speaker) => (
                               <button
@@ -3177,8 +4091,14 @@ function ClipInspector({
                     </>
                   ) : null}
                 </div>
-                <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="data-subtitle-section" open>
-                  <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.dataSubtitle}</summary>
+                <details
+                  className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+                  data-testid="data-subtitle-section"
+                  open
+                >
+                  <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                    {zhCN.inspector.sections.dataSubtitle}
+                  </summary>
                   <div className="space-y-2 border-t border-line p-2">
                     <TextAreaField
                       label={zhCN.inspector.fields.dataSubtitleTemplate}
@@ -3186,8 +4106,16 @@ function ClipInspector({
                       testId="data-subtitle-template-input"
                       onCommit={updateDataSubtitleTemplate}
                     />
-                    <div className="rounded bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="data-subtitle-source-summary">
-                      {clip.dataSubtitle ? zhCN.inspector.dataSubtitle.summary(clip.dataSubtitle.sourceType, clip.dataSubtitle.rows.length) : zhCN.inspector.dataSubtitle.notBound}
+                    <div
+                      className="rounded bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+                      data-testid="data-subtitle-source-summary"
+                    >
+                      {clip.dataSubtitle
+                        ? zhCN.inspector.dataSubtitle.summary(
+                            clip.dataSubtitle.sourceType,
+                            clip.dataSubtitle.rows.length,
+                          )
+                        : zhCN.inspector.dataSubtitle.notBound}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -3224,10 +4152,36 @@ function ClipInspector({
                   subtitleTrack={subtitleTrack}
                   selectedClipLocked={selectedClipLocked}
                 />
-                <ColorField label={zhCN.inspector.fields.outlineColor} value={clip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
-                <NumberField label={zhCN.inspector.fields.outlineWidth} value={clip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
-                <ColorField label={zhCN.inspector.fields.shadowColor} value={clip.style.shadowColor} onCommit={(shadowColor) => commit({ style: { shadowColor } })} testId="subtitle-shadow-color-input" />
-                <NumberField label={zhCN.inspector.fields.shadowOffset} value={clip.style.shadowOffset} min={0} max={24} step={1} onCommit={(shadowOffset) => commit({ style: { shadowOffset } })} testId="subtitle-shadow-offset-input" />
+                <ColorField
+                  label={zhCN.inspector.fields.outlineColor}
+                  value={clip.style.outlineColor}
+                  onCommit={(outlineColor) => commit({ style: { outlineColor } })}
+                  testId="subtitle-outline-color-input"
+                />
+                <NumberField
+                  label={zhCN.inspector.fields.outlineWidth}
+                  value={clip.style.outlineWidth}
+                  min={0}
+                  max={12}
+                  step={1}
+                  onCommit={(outlineWidth) => commit({ style: { outlineWidth } })}
+                  testId="subtitle-outline-width-input"
+                />
+                <ColorField
+                  label={zhCN.inspector.fields.shadowColor}
+                  value={clip.style.shadowColor}
+                  onCommit={(shadowColor) => commit({ style: { shadowColor } })}
+                  testId="subtitle-shadow-color-input"
+                />
+                <NumberField
+                  label={zhCN.inspector.fields.shadowOffset}
+                  value={clip.style.shadowOffset}
+                  min={0}
+                  max={24}
+                  step={1}
+                  onCommit={(shadowOffset) => commit({ style: { shadowOffset } })}
+                  testId="subtitle-shadow-offset-input"
+                />
                 <button
                   className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
@@ -3235,40 +4189,84 @@ function ClipInspector({
                   data-testid="subtitle-translate-button"
                   onClick={() => void translateSubtitleTrack()}
                 >
-                  {subtitleTranslationProgress ? zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total) : zhCN.inspector.translation.button}
+                  {subtitleTranslationProgress
+                    ? zhCN.inspector.translation.progress(
+                        subtitleTranslationProgress.completed,
+                        subtitleTranslationProgress.total,
+                      )
+                    : zhCN.inspector.translation.button}
                 </button>
                 {!isTranslationConfigured(translationSettings) ? (
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="subtitle-translation-not-configured">
+                  <div
+                    className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800"
+                    data-testid="subtitle-translation-not-configured"
+                  >
                     {translationApiKeyError || zhCN.inspector.translation.notConfigured}
                   </div>
                 ) : null}
                 {subtitleTranslationProgress ? (
-                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-translation-progress">
-                    {zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total)}
+                  <div
+                    className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+                    data-testid="subtitle-translation-progress"
+                  >
+                    {zhCN.inspector.translation.progress(
+                      subtitleTranslationProgress.completed,
+                      subtitleTranslationProgress.total,
+                    )}
                   </div>
                 ) : null}
-                <NumberField label={zhCN.inspector.fields.bottomMargin} value={clip.style.yOffset} min={0} step={1} onCommit={(yOffset) => commit({ style: { yOffset } })} />
+                <NumberField
+                  label={zhCN.inspector.fields.bottomMargin}
+                  value={clip.style.yOffset}
+                  min={0}
+                  step={1}
+                  onCommit={(yOffset) => commit({ style: { yOffset } })}
+                />
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.exportMode}
                   <select
                     className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={clip.subtitleMode}
                     data-testid="subtitle-mode-select"
-                    onChange={(event) => commit({ subtitleMode: event.target.value === 'soft-sub' ? 'soft-sub' : 'burn-in' })}
+                    onChange={(event) =>
+                      commit({ subtitleMode: event.target.value === 'soft-sub' ? 'soft-sub' : 'burn-in' })
+                    }
                   >
                     <option value="burn-in">{zhCN.inspector.subtitleMode.burnIn}</option>
                     <option value="soft-sub">{zhCN.inspector.subtitleMode.softSub}</option>
                   </select>
                 </label>
-                <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
-                <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
-                <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} />
-                <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
+                <SubtitleProofreadingPanel
+                  clip={clip}
+                  selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]}
+                  selectedClipLocked={selectedClipLocked}
+                  projectSettings={projectSettings}
+                />
+                <SubtitleRetimingPanel
+                  clip={clip}
+                  selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]}
+                  projectSettings={projectSettings}
+                />
+                <SubtitleAIPolishPanel
+                  selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]}
+                  selectedClipLocked={selectedClipLocked}
+                />
+                <ChapterTitleAIPanel
+                  allSubtitleClips={allTimelineSubtitleClips}
+                  totalDuration={getTimelineDuration(project.timeline)}
+                  selectedClipLocked={selectedClipLocked}
+                />
               </>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="advanced-text-layout-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.typography}</summary>
+              <details
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+                data-testid="advanced-text-layout-section"
+                open
+              >
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                  {zhCN.inspector.sections.typography}
+                </summary>
                 <div className="space-y-3 border-t border-line p-2">
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.textFitMode}
@@ -3285,33 +4283,134 @@ function ClipInspector({
                     </select>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    <NumberField label={zhCN.inspector.fields.boxWidth} value={textLayout?.boxWidth ?? DEFAULT_TEXT_LAYOUT.boxWidth} min={24} max={4096} step={1} disabled={selectedClipLocked} onCommit={(boxWidth) => updateTextLayout({ boxWidth })} testId="text-box-width-input" />
-                    <NumberField label={zhCN.inspector.fields.boxHeight} value={textLayout?.boxHeight ?? DEFAULT_TEXT_LAYOUT.boxHeight} min={24} max={4096} step={1} disabled={selectedClipLocked} onCommit={(boxHeight) => updateTextLayout({ boxHeight })} testId="text-box-height-input" />
+                    <NumberField
+                      label={zhCN.inspector.fields.boxWidth}
+                      value={textLayout?.boxWidth ?? DEFAULT_TEXT_LAYOUT.boxWidth}
+                      min={24}
+                      max={4096}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(boxWidth) => updateTextLayout({ boxWidth })}
+                      testId="text-box-width-input"
+                    />
+                    <NumberField
+                      label={zhCN.inspector.fields.boxHeight}
+                      value={textLayout?.boxHeight ?? DEFAULT_TEXT_LAYOUT.boxHeight}
+                      min={24}
+                      max={4096}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(boxHeight) => updateTextLayout({ boxHeight })}
+                      testId="text-box-height-input"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <NumberField label={zhCN.inspector.fields.paragraphSpacing} value={textLayout?.paragraphSpacing ?? DEFAULT_TEXT_LAYOUT.paragraphSpacing} min={0} max={240} step={1} disabled={selectedClipLocked} onCommit={(paragraphSpacing) => updateTextLayout({ paragraphSpacing })} testId="text-paragraph-spacing-input" />
-                    <NumberField label={zhCN.inspector.fields.firstLineIndent} value={textLayout?.firstLineIndent ?? DEFAULT_TEXT_LAYOUT.firstLineIndent} min={-960} max={960} step={1} disabled={selectedClipLocked} onCommit={(firstLineIndent) => updateTextLayout({ firstLineIndent })} testId="text-first-line-indent-input" />
+                    <NumberField
+                      label={zhCN.inspector.fields.paragraphSpacing}
+                      value={textLayout?.paragraphSpacing ?? DEFAULT_TEXT_LAYOUT.paragraphSpacing}
+                      min={0}
+                      max={240}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(paragraphSpacing) => updateTextLayout({ paragraphSpacing })}
+                      testId="text-paragraph-spacing-input"
+                    />
+                    <NumberField
+                      label={zhCN.inspector.fields.firstLineIndent}
+                      value={textLayout?.firstLineIndent ?? DEFAULT_TEXT_LAYOUT.firstLineIndent}
+                      min={-960}
+                      max={960}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(firstLineIndent) => updateTextLayout({ firstLineIndent })}
+                      testId="text-first-line-indent-input"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <ToggleField label={zhCN.inspector.fields.openTypeLiga} checked={textOpenTypeFeatures?.liga ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.liga} disabled={selectedClipLocked} onCommit={(liga) => updateTextOpenTypeFeatures({ liga })} testId="text-opentype-liga-toggle" />
-                    <ToggleField label={zhCN.inspector.fields.openTypeSmcp} checked={textOpenTypeFeatures?.smcp ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.smcp} disabled={selectedClipLocked} onCommit={(smcp) => updateTextOpenTypeFeatures({ smcp })} testId="text-opentype-smcp-toggle" />
-                    <ToggleField label={zhCN.inspector.fields.openTypeTnum} checked={textOpenTypeFeatures?.tnum ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.tnum} disabled={selectedClipLocked} onCommit={(tnum) => updateTextOpenTypeFeatures({ tnum })} testId="text-opentype-tnum-toggle" />
-                    <ToggleField label={zhCN.inspector.fields.openTypeSwsh} checked={textOpenTypeFeatures?.swsh ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.swsh} disabled={selectedClipLocked} onCommit={(swsh) => updateTextOpenTypeFeatures({ swsh })} testId="text-opentype-swsh-toggle" />
+                    <ToggleField
+                      label={zhCN.inspector.fields.openTypeLiga}
+                      checked={textOpenTypeFeatures?.liga ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.liga}
+                      disabled={selectedClipLocked}
+                      onCommit={(liga) => updateTextOpenTypeFeatures({ liga })}
+                      testId="text-opentype-liga-toggle"
+                    />
+                    <ToggleField
+                      label={zhCN.inspector.fields.openTypeSmcp}
+                      checked={textOpenTypeFeatures?.smcp ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.smcp}
+                      disabled={selectedClipLocked}
+                      onCommit={(smcp) => updateTextOpenTypeFeatures({ smcp })}
+                      testId="text-opentype-smcp-toggle"
+                    />
+                    <ToggleField
+                      label={zhCN.inspector.fields.openTypeTnum}
+                      checked={textOpenTypeFeatures?.tnum ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.tnum}
+                      disabled={selectedClipLocked}
+                      onCommit={(tnum) => updateTextOpenTypeFeatures({ tnum })}
+                      testId="text-opentype-tnum-toggle"
+                    />
+                    <ToggleField
+                      label={zhCN.inspector.fields.openTypeSwsh}
+                      checked={textOpenTypeFeatures?.swsh ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.swsh}
+                      disabled={selectedClipLocked}
+                      onCommit={(swsh) => updateTextOpenTypeFeatures({ swsh })}
+                      testId="text-opentype-swsh-toggle"
+                    />
                   </div>
-                  <ToggleField label={zhCN.inspector.fields.arcTextMode} checked={textArc?.enabled ?? DEFAULT_TEXT_ARC.enabled} disabled={selectedClipLocked} onCommit={(enabled) => updateTextArc({ enabled })} testId="arc-text-toggle" />
+                  <ToggleField
+                    label={zhCN.inspector.fields.arcTextMode}
+                    checked={textArc?.enabled ?? DEFAULT_TEXT_ARC.enabled}
+                    disabled={selectedClipLocked}
+                    onCommit={(enabled) => updateTextArc({ enabled })}
+                    testId="arc-text-toggle"
+                  />
                   <div className="grid grid-cols-2 gap-2">
-                    <NumberField label={zhCN.inspector.fields.arcTextRadius} value={textArc?.radius ?? DEFAULT_TEXT_ARC.radius} min={24} max={4000} step={1} disabled={selectedClipLocked} onCommit={(radius) => updateTextArc({ radius })} testId="arc-text-radius-input" />
-                    <NumberField label={zhCN.inspector.fields.arcTextStartAngle} value={textArc?.startAngle ?? DEFAULT_TEXT_ARC.startAngle} min={-360} max={360} step={1} disabled={selectedClipLocked} onCommit={(startAngle) => updateTextArc({ startAngle })} testId="arc-text-start-angle-input" />
+                    <NumberField
+                      label={zhCN.inspector.fields.arcTextRadius}
+                      value={textArc?.radius ?? DEFAULT_TEXT_ARC.radius}
+                      min={24}
+                      max={4000}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(radius) => updateTextArc({ radius })}
+                      testId="arc-text-radius-input"
+                    />
+                    <NumberField
+                      label={zhCN.inspector.fields.arcTextStartAngle}
+                      value={textArc?.startAngle ?? DEFAULT_TEXT_ARC.startAngle}
+                      min={-360}
+                      max={360}
+                      step={1}
+                      disabled={selectedClipLocked}
+                      onCommit={(startAngle) => updateTextArc({ startAngle })}
+                      testId="arc-text-start-angle-input"
+                    />
                   </div>
-                  <ToggleField label={zhCN.inspector.fields.arcTextRotateCharacters} checked={textArc?.rotateCharacters ?? DEFAULT_TEXT_ARC.rotateCharacters} disabled={selectedClipLocked} onCommit={(rotateCharacters) => updateTextArc({ rotateCharacters })} testId="arc-text-rotate-toggle" />
+                  <ToggleField
+                    label={zhCN.inspector.fields.arcTextRotateCharacters}
+                    checked={textArc?.rotateCharacters ?? DEFAULT_TEXT_ARC.rotateCharacters}
+                    disabled={selectedClipLocked}
+                    onCommit={(rotateCharacters) => updateTextArc({ rotateCharacters })}
+                    testId="arc-text-rotate-toggle"
+                  />
                 </div>
               </details>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="path-text-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.pathText}</summary>
+              <details
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+                data-testid="path-text-section"
+                open
+              >
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                  {zhCN.inspector.sections.pathText}
+                </summary>
                 <div className="space-y-3 border-t border-line p-2">
-                  <ToggleField label={zhCN.inspector.fields.pathTextMode} checked={textPath?.enabled ?? false} onCommit={(enabled) => updateTextPath({ enabled })} testId="path-text-toggle" />
+                  <ToggleField
+                    label={zhCN.inspector.fields.pathTextMode}
+                    checked={textPath?.enabled ?? false}
+                    onCommit={(enabled) => updateTextPath({ enabled })}
+                    testId="path-text-toggle"
+                  />
                   <RangeNumberField
                     label={zhCN.inspector.fields.pathTextStartOffset}
                     value={textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset}
@@ -3332,15 +4431,25 @@ function ClipInspector({
                     onCommit={(letterSpacing) => updateTextPath({ letterSpacing })}
                     testId="path-text-letter-spacing-input"
                   />
-                  <ToggleField label={zhCN.inspector.fields.pathTextRotateCharacters} checked={textPath?.rotateCharacters ?? true} onCommit={(rotateCharacters) => updateTextPath({ rotateCharacters })} testId="path-text-rotate-toggle" />
-                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="path-text-point-summary">
+                  <ToggleField
+                    label={zhCN.inspector.fields.pathTextRotateCharacters}
+                    checked={textPath?.rotateCharacters ?? true}
+                    onCommit={(rotateCharacters) => updateTextPath({ rotateCharacters })}
+                    testId="path-text-rotate-toggle"
+                  />
+                  <div
+                    className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+                    data-testid="path-text-point-summary"
+                  >
                     {zhCN.inspector.fields.pathPointCount(textPath?.path.length ?? DEFAULT_TEXT_PATH.path.length)}
                   </div>
                   <button
                     className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
                     type="button"
                     data-testid="path-text-offset-keyframe-button"
-                    onClick={() => addKeyframe('pathStartOffset', textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset)}
+                    onClick={() =>
+                      addKeyframe('pathStartOffset', textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset)
+                    }
                   >
                     {zhCN.inspector.pathText.addOffsetKeyframe}
                   </button>
@@ -3348,8 +4457,14 @@ function ClipInspector({
               </details>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="text-animation-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.textAnimation}</summary>
+              <details
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+                data-testid="text-animation-section"
+                open
+              >
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                  {zhCN.inspector.sections.textAnimation}
+                </summary>
                 <div className="space-y-3 border-t border-line p-2">
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.animationPreset}
@@ -3391,7 +4506,10 @@ function ClipInspector({
                       ))}
                     </select>
                   </label>
-                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="text-animation-keyframe-summary">
+                  <div
+                    className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+                    data-testid="text-animation-keyframe-summary"
+                  >
                     {zhCN.inspector.textAnimation.keyframeCount(textAnimationKeyframeCount)}
                   </div>
                   <button
@@ -3405,21 +4523,31 @@ function ClipInspector({
                 </div>
               </details>
             ) : null}
-            <ToggleField label={zhCN.inspector.fields.bold} checked={clip.style.bold} onCommit={(bold) => commit({ style: { bold } })} />
-            <ToggleField label={zhCN.inspector.fields.italic} checked={clip.style.italic} onCommit={(italic) => commit({ style: { italic } })} />
-            {(clip.type === 'text' || clip.type === 'subtitle') ? (
+            <ToggleField
+              label={zhCN.inspector.fields.bold}
+              checked={clip.style.bold}
+              onCommit={(bold) => commit({ style: { bold } })}
+            />
+            <ToggleField
+              label={zhCN.inspector.fields.italic}
+              checked={clip.style.italic}
+              onCommit={(italic) => commit({ style: { italic } })}
+            />
+            {clip.type === 'text' || clip.type === 'subtitle' ? (
               <button
                 className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid="text-clip-tts-voiceover"
-                onClick={() => generateTtsVoiceover([{ id: clip.id, text: clip.text, start: clip.start, duration: clip.duration }])}
+                onClick={() =>
+                  generateTtsVoiceover([{ id: clip.id, text: clip.text, start: clip.start, duration: clip.duration }])
+                }
               >
                 <Mic size={14} />
                 {zhCN.aiTts.textToVoiceover}
               </button>
             ) : null}
-           </Section>
-       ) : null}
+          </Section>
+        ) : null}
         {'mediaId' in clip ? (
           <AISceneMatchPanel
             clip={clip}
@@ -3428,20 +4556,18 @@ function ClipInspector({
             selectedClipLocked={selectedClipLocked}
           />
         ) : null}
-        {('mediaId' in clip) && (clip.type === 'audio' || clip.type === 'video') ? (
+        {'mediaId' in clip && (clip.type === 'audio' || clip.type === 'video') ? (
           <AIDenoisePanel
             clip={clip}
             trackId={project.timeline.tracks.find((t) => t.clips.some((c) => c.id === clip.id))?.id ?? ''}
-           onUpdateTrack={(trackId, patch) => {
-             const newTracks = project.timeline.tracks.map((t) =>
-               t.id === trackId ? { ...t, ...patch } : t
-             );
-             useEditorStore.getState().setProject({
-               ...project,
-               timeline: { ...project.timeline, tracks: newTracks },
-             });
+            onUpdateTrack={(trackId, patch) => {
+              const newTracks = project.timeline.tracks.map((t) => (t.id === trackId ? { ...t, ...patch } : t));
+              useEditorStore.getState().setProject({
+                ...project,
+                timeline: { ...project.timeline, tracks: newTracks },
+              });
               useEditorStore.getState().setSelectedClipIds([clip.id]);
-           }}
+            }}
           />
         ) : null}
         {clip.type === 'subtitle' ? (
@@ -3450,56 +4576,58 @@ function ClipInspector({
             trackId={project.timeline.tracks.find((t) => t.clips.some((c) => c.id === clip.id))?.id ?? ''}
             allClips={project.timeline.tracks.flatMap((t) => t.clips.map((c) => ({ ...c, trackId: t.id })))}
             allMedia={media}
-           onInsertSuggestion={(suggestion) => {
-             const newTrack = {
-               id: 'broll-track-' + Date.now(),
-               name: 'B-roll',
-               type: 'video' as const,
-               clips: [{
-                 id: 'broll-clip-' + Date.now(),
-                 type: 'video' as const,
-                 trackId: 'broll-track-' + Date.now(),
-                 start: suggestion.insertTime,
-                 duration: 3,
-                 mediaId: suggestion.mediaId,
-                 name: 'B-roll',
-                 trimStart: 0,
-                 trimEnd: 0,
-                 speed: 1,
-                 volume: 1,
-                 colorCorrection: { brightness: 0, contrast: 0, saturation: 0, hue: 0 },
-                 transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
-               }],
-             };
-             useEditorStore.getState().setProject({
-               ...project,
-               timeline: {
-                 ...project.timeline,
-                 tracks: [...project.timeline.tracks, newTrack],
-                 brollSuggestions: (project.timeline.brollSuggestions ?? []).map((s) =>
-                   s.segmentId === suggestion.segmentId && s.mediaId === suggestion.mediaId
-                     ? { ...s, status: 'accepted' as const }
-                     : s
-                 ),
-               },
-             });
+            onInsertSuggestion={(suggestion) => {
+              const newTrack = {
+                id: 'broll-track-' + Date.now(),
+                name: 'B-roll',
+                type: 'video' as const,
+                clips: [
+                  {
+                    id: 'broll-clip-' + Date.now(),
+                    type: 'video' as const,
+                    trackId: 'broll-track-' + Date.now(),
+                    start: suggestion.insertTime,
+                    duration: 3,
+                    mediaId: suggestion.mediaId,
+                    name: 'B-roll',
+                    trimStart: 0,
+                    trimEnd: 0,
+                    speed: 1,
+                    volume: 1,
+                    colorCorrection: { brightness: 0, contrast: 0, saturation: 0, hue: 0 },
+                    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+                  },
+                ],
+              };
+              useEditorStore.getState().setProject({
+                ...project,
+                timeline: {
+                  ...project.timeline,
+                  tracks: [...project.timeline.tracks, newTrack],
+                  brollSuggestions: (project.timeline.brollSuggestions ?? []).map((s) =>
+                    s.segmentId === suggestion.segmentId && s.mediaId === suggestion.mediaId
+                      ? { ...s, status: 'accepted' as const }
+                      : s,
+                  ),
+                },
+              });
               useEditorStore.getState().setSelectedClipIds([clip.id]);
-           }}
-           onUpdateSuggestions={(suggestions) => {
-             useEditorStore.getState().setProject({
-               ...project,
-               timeline: {
-                 ...project.timeline,
-                 brollSuggestions: suggestions,
-               },
-             });
+            }}
+            onUpdateSuggestions={(suggestions) => {
+              useEditorStore.getState().setProject({
+                ...project,
+                timeline: {
+                  ...project.timeline,
+                  brollSuggestions: suggestions,
+                },
+              });
               useEditorStore.getState().setSelectedClipIds([clip.id]);
-           }}
+            }}
           />
         ) : null}
-     </div>
-   </aside>
- );
+      </div>
+    </aside>
+  );
 }
 
 function PanelTitle() {
@@ -3517,7 +4645,9 @@ function PanelTitle() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mb-3">
-      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{title}</h2>
+      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {title}
+      </h2>
       <div className="space-y-2.5">{children}</div>
     </section>
   );
@@ -3527,20 +4657,32 @@ function AudioRestorationWaveformPreview({ before, after }: { before: number[]; 
   const count = Math.max(before.length, after.length);
   const bars = Array.from({ length: count }, (_, index) => ({
     before: before[index] ?? 0,
-    after: after[index] ?? before[index] ?? 0
+    after: after[index] ?? before[index] ?? 0,
   }));
 
   return (
     <div className="space-y-1.5" data-testid="audio-restoration-waveform-preview">
       <div className="flex items-center gap-3 text-[11px] font-medium text-[var(--color-text-muted)]">
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--color-border)]" />{t('inspector.fields.audioRestorationBefore')}</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t('inspector.fields.audioRestorationAfter')}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-[var(--color-border)]" />
+          {t('inspector.fields.audioRestorationBefore')}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          {t('inspector.fields.audioRestorationAfter')}
+        </span>
       </div>
       <div className="flex h-14 items-end gap-0.5 rounded border border-line bg-panel px-1.5 py-1.5">
         {bars.map((bar, index) => (
           <div key={index} className="relative h-full min-w-0 flex-1">
-            <div className="absolute bottom-0 left-0 right-0 rounded-sm bg-[var(--color-border)]" style={{ height: `${Math.max(4, Math.round(bar.before * 100))}%` }} />
-            <div className="absolute bottom-0 left-1/4 right-1/4 rounded-sm bg-emerald-500/80" style={{ height: `${Math.max(4, Math.round(bar.after * 100))}%` }} />
+            <div
+              className="absolute bottom-0 left-0 right-0 rounded-sm bg-[var(--color-border)]"
+              style={{ height: `${Math.max(4, Math.round(bar.before * 100))}%` }}
+            />
+            <div
+              className="absolute bottom-0 left-1/4 right-1/4 rounded-sm bg-emerald-500/80"
+              style={{ height: `${Math.max(4, Math.round(bar.after * 100))}%` }}
+            />
           </div>
         ))}
       </div>
@@ -3556,7 +4698,9 @@ function buildAudioRestorationPreviewPeaks(pitchData: Clip['pitchData']): number
     const span = Math.max(1, maxHz - minHz);
     return sample.map((point) => 0.2 + ((point.hz - minHz) / span) * 0.75);
   }
-  return Array.from({ length: 32 }, (_, index) => Math.min(0.95, Math.max(0.08, 0.48 + Math.sin(index * 0.72) * 0.22 + Math.cos(index * 0.31) * 0.12)));
+  return Array.from({ length: 32 }, (_, index) =>
+    Math.min(0.95, Math.max(0.08, 0.48 + Math.sin(index * 0.72) * 0.22 + Math.cos(index * 0.31) * 0.12)),
+  );
 }
 
 function SubtitleStyleTemplatesPanel({
@@ -3564,7 +4708,7 @@ function SubtitleStyleTemplatesPanel({
   onApply,
   onSave,
   onDelete,
-  onAddToSharedLibrary
+  onAddToSharedLibrary,
 }: {
   templates: SubtitleStyleTemplate[];
   onApply(template: SubtitleStyleTemplate): void;
@@ -3574,8 +4718,14 @@ function SubtitleStyleTemplatesPanel({
 }) {
   const t = zhCN.inspector.subtitleStyleTemplates;
   return (
-    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-style-template-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+    <details
+      className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      data-testid="subtitle-style-template-section"
+      open
+    >
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+        {t.title}
+      </summary>
       <div className="space-y-3 border-t border-line p-2">
         <button
           className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
@@ -3596,10 +4746,19 @@ function SubtitleStyleTemplatesPanel({
                   data-testid={`subtitle-style-template-${template.id}`}
                   onClick={() => onApply(template)}
                 >
-                  <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} loading="lazy" />
+                  <img
+                    className="block h-12 w-full object-cover"
+                    src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))}
+                    alt={label}
+                    loading="lazy"
+                  />
                   <span className="flex min-h-8 items-center justify-between gap-1 px-1.5 py-1">
                     <span className="min-w-0 truncate">{label}</span>
-                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-[var(--color-bg-elevated)] px-1 text-[10px] font-medium text-[var(--color-text-muted)]">{template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}</span> : null}
+                    {template.kind === 'custom' ? (
+                      <span className="shrink-0 rounded-sm bg-[var(--color-bg-elevated)] px-1 text-[10px] font-medium text-[var(--color-text-muted)]">
+                        {template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
                 <button
@@ -3634,10 +4793,15 @@ function SubtitleStyleTemplatesPanel({
 
 function getSubtitleStyleTemplateLabel(template: SubtitleStyleTemplate): string {
   const builtins = zhCN.inspector.subtitleStyleTemplates.builtins;
-  return template.kind === 'builtin' ? builtins[template.id as keyof typeof builtins] ?? template.name : template.name;
+  return template.kind === 'builtin'
+    ? (builtins[template.id as keyof typeof builtins] ?? template.name)
+    : template.name;
 }
 
-function mergeSubtitleStyleTemplateViews(templates: SubtitleStyleTemplate[], sharedTemplates: SubtitleStyleTemplate[]): SubtitleStyleTemplate[] {
+function mergeSubtitleStyleTemplateViews(
+  templates: SubtitleStyleTemplate[],
+  sharedTemplates: SubtitleStyleTemplate[],
+): SubtitleStyleTemplate[] {
   const seen = new Set<string>();
   const merged: SubtitleStyleTemplate[] = [];
   for (const template of [...templates, ...sharedTemplates]) {
@@ -3668,7 +4832,7 @@ function SubtitleProofreadingPanel({
   clip,
   selectedSubtitleClips,
   selectedClipLocked,
-  projectSettings
+  projectSettings,
 }: {
   clip?: Extract<Clip, { type: 'subtitle' }>;
   selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
@@ -3682,49 +4846,97 @@ function SubtitleProofreadingPanel({
   const trackSubtitleClips = useMemo(() => {
     const trackId = clip?.trackId ?? selectedSubtitleClips[0]?.trackId;
     const track = project.timeline.tracks.find((item) => item.id === trackId && item.type === 'subtitle');
-    return (track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []).sort(
-      (left, right) => left.start - right.start || left.id.localeCompare(right.id)
-    );
+    return (
+      track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []
+    ).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
   }, [clip?.trackId, project.timeline.tracks, selectedSubtitleClips]);
   const settings = useMemo(() => ({ minDuration, maxDuration }), [maxDuration, minDuration]);
-  const issues = useMemo(() => analyzeSubtitleProofreading(trackSubtitleClips, settings), [settings, trackSubtitleClips]);
-  const fixes = useMemo(() => buildSubtitleProofreadingFixes(trackSubtitleClips, issues, settings), [issues, settings, trackSubtitleClips]);
+  const issues = useMemo(
+    () => analyzeSubtitleProofreading(trackSubtitleClips, settings),
+    [settings, trackSubtitleClips],
+  );
+  const fixes = useMemo(
+    () => buildSubtitleProofreadingFixes(trackSubtitleClips, issues, settings),
+    [issues, settings, trackSubtitleClips],
+  );
 
   const applyFixes = () => {
     try {
       commandManager.execute(new BatchProofreadSubtitleCommand(timelineAccessor, fixes));
       showToast({ kind: 'success', title: t.fixedTitle, message: t.fixedMessage(fixes.length) });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   };
 
   const exportCsv = async () => {
     try {
-      const path = await saveFileDialog('subtitle-proofreading.csv', [{ name: zhCN.fileDialogs.csv, extensions: ['csv'] }]);
+      const path = await saveFileDialog('subtitle-proofreading.csv', [
+        { name: zhCN.fileDialogs.csv, extensions: ['csv'] },
+      ]);
       if (!path) {
         return;
       }
-      await writeFile(path, serializeSubtitleProofreadingCsv(issues, { fps: projectSettings.fps, timecodeFormat: projectSettings.timecodeFormat }));
+      await writeFile(
+        path,
+        serializeSubtitleProofreadingCsv(issues, {
+          fps: projectSettings.fps,
+          timecodeFormat: projectSettings.timecodeFormat,
+        }),
+      );
       showToast({ kind: 'success', title: t.exportedTitle, message: t.exportedMessage(path) });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.exportFailedTitle, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.exportFailedTitle,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     }
   };
 
   return (
-    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-proofreading-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+    <details
+      className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      data-testid="subtitle-proofreading-section"
+      open
+    >
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+        {t.title}
+      </summary>
       <div className="space-y-3 border-t border-line p-2">
-        <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-proofreading-summary">
+        <div
+          className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+          data-testid="subtitle-proofreading-summary"
+        >
           {t.summary(trackSubtitleClips.length, issues.length)}
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <NumberField label={t.minDuration} value={minDuration} min={0.1} step={0.1} onCommit={setMinDuration} testId="subtitle-proofreading-min-duration-input" />
-          <NumberField label={t.maxDuration} value={maxDuration} min={0.1} step={0.1} onCommit={setMaxDuration} testId="subtitle-proofreading-max-duration-input" />
+          <NumberField
+            label={t.minDuration}
+            value={minDuration}
+            min={0.1}
+            step={0.1}
+            onCommit={setMinDuration}
+            testId="subtitle-proofreading-min-duration-input"
+          />
+          <NumberField
+            label={t.maxDuration}
+            value={maxDuration}
+            min={0.1}
+            step={0.1}
+            onCommit={setMaxDuration}
+            testId="subtitle-proofreading-max-duration-input"
+          />
         </div>
         {issues.length === 0 ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs font-medium text-emerald-800" data-testid="subtitle-proofreading-no-issues">
+          <div
+            className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs font-medium text-emerald-800"
+            data-testid="subtitle-proofreading-no-issues"
+          >
             {t.noIssues}
           </div>
         ) : (
@@ -3737,14 +4949,18 @@ function SubtitleProofreadingPanel({
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold">{getSubtitleProofreadingIssueLabel(issue)}</span>
-                  <span className="shrink-0 font-mono text-[11px]">{secondsToTimecode(issue.start, projectSettings.fps, projectSettings.timecodeFormat)}</span>
+                  <span className="shrink-0 font-mono text-[11px]">
+                    {secondsToTimecode(issue.start, projectSettings.fps, projectSettings.timecodeFormat)}
+                  </span>
                 </div>
                 <div className="mt-1 truncate" title={issue.text.trim() || t.blankContent}>
                   {issue.text.trim() || t.blankContent}
                 </div>
               </div>
             ))}
-            {issues.length > 10 ? <div className="text-xs text-[var(--color-text-muted)]">{t.moreIssues(issues.length - 10)}</div> : null}
+            {issues.length > 10 ? (
+              <div className="text-xs text-[var(--color-text-muted)]">{t.moreIssues(issues.length - 10)}</div>
+            ) : null}
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
@@ -3790,7 +5006,7 @@ function getSubtitleProofreadingIssueLabel(issue: SubtitleProofreadingIssue): st
 function SubtitleRetimingPanel({
   clip,
   selectedSubtitleClips,
-  projectSettings
+  projectSettings,
 }: {
   clip?: Extract<Clip, { type: 'subtitle' }>;
   selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
@@ -3805,13 +5021,17 @@ function SubtitleRetimingPanel({
   const trackSubtitleClips = useMemo(() => {
     const trackId = clip?.trackId ?? selectedSubtitleClips[0]?.trackId;
     const track = project.timeline.tracks.find((item) => item.id === trackId && item.type === 'subtitle');
-    return (track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []).sort(
-      (left, right) => left.start - right.start || left.id.localeCompare(right.id)
-    );
+    return (
+      track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []
+    ).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
   }, [clip?.trackId, project.timeline.tracks, selectedSubtitleClips]);
   const fullTrackTargets = selectedSubtitleClips.length > 1 ? selectedSubtitleClips : trackSubtitleClips;
   const selectedTargets = selectedSubtitleClips.length > 0 ? selectedSubtitleClips : fullTrackTargets;
-  const projectDuration = Math.max(getTimelineDuration(project.timeline), ...fullTrackTargets.map((item) => item.start + item.duration), 1 / Math.max(1, projectSettings.fps));
+  const projectDuration = Math.max(
+    getTimelineDuration(project.timeline),
+    ...fullTrackTargets.map((item) => item.start + item.duration),
+    1 / Math.max(1, projectSettings.fps),
+  );
   const peakTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
 
   const runRetimingCommand = (command: Parameters<typeof commandManager.execute>[0], successMessage: string) => {
@@ -3819,17 +5039,37 @@ function SubtitleRetimingPanel({
       commandManager.execute(command);
       showToast({ kind: 'success', title: t.title, message: successMessage });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   };
 
   const applyShift = () => {
-    runRetimingCommand(new BatchShiftSubtitleCommand(timelineAccessor, fullTrackTargets.map((item) => item.id), shiftSeconds, projectDuration), t.shiftApplied(fullTrackTargets.length));
+    runRetimingCommand(
+      new BatchShiftSubtitleCommand(
+        timelineAccessor,
+        fullTrackTargets.map((item) => item.id),
+        shiftSeconds,
+        projectDuration,
+      ),
+      t.shiftApplied(fullTrackTargets.length),
+    );
   };
   const applyScale = () => {
     runRetimingCommand(
-      new BatchSubtitleTimingCommand(timelineAccessor, calculateSubtitleScaleUpdates(fullTrackTargets, scaleFactor, projectDuration, 1 / Math.max(1, projectSettings.fps))),
-      t.scaleApplied(fullTrackTargets.length)
+      new BatchSubtitleTimingCommand(
+        timelineAccessor,
+        calculateSubtitleScaleUpdates(
+          fullTrackTargets,
+          scaleFactor,
+          projectDuration,
+          1 / Math.max(1, projectSettings.fps),
+        ),
+      ),
+      t.scaleApplied(fullTrackTargets.length),
     );
   };
   const applyPeakAlign = () => {
@@ -3848,38 +5088,101 @@ function SubtitleRetimingPanel({
   };
   const applyBatchAdjust = () => {
     runRetimingCommand(
-      new BatchSubtitleTimingCommand(timelineAccessor, calculateSubtitleBatchAdjustUpdates(selectedTargets, batchStartDelta, batchEndDelta, projectDuration, 1 / Math.max(1, projectSettings.fps))),
-      t.batchApplied(selectedTargets.length)
+      new BatchSubtitleTimingCommand(
+        timelineAccessor,
+        calculateSubtitleBatchAdjustUpdates(
+          selectedTargets,
+          batchStartDelta,
+          batchEndDelta,
+          projectDuration,
+          1 / Math.max(1, projectSettings.fps),
+        ),
+      ),
+      t.batchApplied(selectedTargets.length),
     );
   };
 
   return (
-    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-retiming-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
+    <details
+      className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      data-testid="subtitle-retiming-section"
+      open
+    >
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+        {t.title}
+      </summary>
       <div className="space-y-3 border-t border-line p-2">
-        <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-retiming-summary">
+        <div
+          className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]"
+          data-testid="subtitle-retiming-summary"
+        >
           {t.summary(fullTrackTargets.length, selectedTargets.length)}
         </div>
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
-          <NumberField label={t.shiftSeconds} value={shiftSeconds} step={0.1} onCommit={setShiftSeconds} testId="subtitle-shift-input" />
-          <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-shift-apply-button" onClick={applyShift}>
+          <NumberField
+            label={t.shiftSeconds}
+            value={shiftSeconds}
+            step={0.1}
+            onCommit={setShiftSeconds}
+            testId="subtitle-shift-input"
+          />
+          <button
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid="subtitle-shift-apply-button"
+            onClick={applyShift}
+          >
             {t.apply}
           </button>
         </div>
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
-          <NumberField label={t.scaleFactor} value={scaleFactor} min={0.01} step={0.01} onCommit={setScaleFactor} testId="subtitle-scale-input" />
-          <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-scale-apply-button" onClick={applyScale}>
+          <NumberField
+            label={t.scaleFactor}
+            value={scaleFactor}
+            min={0.01}
+            step={0.01}
+            onCommit={setScaleFactor}
+            testId="subtitle-scale-input"
+          />
+          <button
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid="subtitle-scale-apply-button"
+            onClick={applyScale}
+          >
             {t.apply}
           </button>
         </div>
-        <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-peak-align-button" onClick={applyPeakAlign}>
+        <button
+          className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
+          type="button"
+          data-testid="subtitle-peak-align-button"
+          onClick={applyPeakAlign}
+        >
           {t.alignToPeak}
         </button>
         <div className="grid grid-cols-2 gap-2">
-          <NumberField label={t.startDelta} value={batchStartDelta} step={0.1} onCommit={setBatchStartDelta} testId="subtitle-batch-start-delta-input" />
-          <NumberField label={t.endDelta} value={batchEndDelta} step={0.1} onCommit={setBatchEndDelta} testId="subtitle-batch-end-delta-input" />
+          <NumberField
+            label={t.startDelta}
+            value={batchStartDelta}
+            step={0.1}
+            onCommit={setBatchStartDelta}
+            testId="subtitle-batch-start-delta-input"
+          />
+          <NumberField
+            label={t.endDelta}
+            value={batchEndDelta}
+            step={0.1}
+            onCommit={setBatchEndDelta}
+            testId="subtitle-batch-end-delta-input"
+          />
         </div>
-        <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-batch-adjust-button" onClick={applyBatchAdjust}>
+        <button
+          className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
+          type="button"
+          data-testid="subtitle-batch-adjust-button"
+          onClick={applyBatchAdjust}
+        >
           {t.batchAdjust}
         </button>
       </div>
@@ -3939,7 +5242,11 @@ function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(frames: Spe
       return;
     }
     const next = [...draftRef.current];
-    next[dragIndex] = { ...next[dragIndex], ...eventToSpeedFrame(event, canvas, duration), id: next[dragIndex]?.id ?? createId('speed-keyframe') };
+    next[dragIndex] = {
+      ...next[dragIndex],
+      ...eventToSpeedFrame(event, canvas, duration),
+      id: next[dragIndex]?.id ?? createId('speed-keyframe'),
+    };
     updateDraft(next);
   };
   const handlePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -4003,7 +5310,7 @@ function KeyframeCurveEditor({
   property,
   selectedKeyframes,
   onSelectionChange,
-  onCommit
+  onCommit,
 }: {
   clip: Clip;
   property: KeyframeProperty;
@@ -4058,7 +5365,12 @@ function KeyframeCurveEditor({
       if (!selectedIds.includes(nearestHandle.keyframeId)) {
         onSelectionChange(refsForIds([nearestHandle.keyframeId]));
       }
-      dragRef.current = { mode: 'handle', keyframeId: nearestHandle.keyframeId, handle: nearestHandle.handle, base: draftRef.current.map((item) => ({ ...item })) };
+      dragRef.current = {
+        mode: 'handle',
+        keyframeId: nearestHandle.keyframeId,
+        handle: nearestHandle.handle,
+        base: draftRef.current.map((item) => ({ ...item })),
+      };
       return;
     }
     const nearest = findNearestCurveFrame(draftRef.current, frame, property, duration, 0.055);
@@ -4068,7 +5380,12 @@ function KeyframeCurveEditor({
       if (!selectedIds.includes(nearestFrame.id)) {
         onSelectionChange(refsForIds(nextSelectedIds));
       }
-      dragRef.current = { mode: 'points', start: frame, base: draftRef.current.map((item) => ({ ...item })), selectedIds: nextSelectedIds };
+      dragRef.current = {
+        mode: 'points',
+        start: frame,
+        base: draftRef.current.map((item) => ({ ...item })),
+        selectedIds: nextSelectedIds,
+      };
       return;
     }
     dragRef.current = { mode: 'box', start: point, current: point };
@@ -4094,10 +5411,14 @@ function KeyframeCurveEditor({
       const handleFrame = eventToCurveEditorFrame(event, canvas, property, duration);
       const handle = {
         dx: roundFinite(handleFrame.time - target.time),
-        dy: roundFinite(handleFrame.value - target.value)
+        dy: roundFinite(handleFrame.value - target.value),
       };
       updateDraft(
-        drag.base.map((item) => (item.id === drag.keyframeId ? applyKeyframeHandlePatch(item, drag.handle, handle, item.handleMode ?? 'independent') : item))
+        drag.base.map((item) =>
+          item.id === drag.keyframeId
+            ? applyKeyframeHandlePatch(item, drag.handle, handle, item.handleMode ?? 'independent')
+            : item,
+        ),
       );
       return;
     }
@@ -4111,10 +5432,10 @@ function KeyframeCurveEditor({
           ? {
               ...item,
               time: roundFinite(Math.min(duration, Math.max(0, item.time + deltaTime))),
-              value: roundFinite(Math.min(limits.max, Math.max(limits.min, item.value + deltaValue)))
+              value: roundFinite(Math.min(limits.max, Math.max(limits.min, item.value + deltaValue))),
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
   const handlePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -4143,11 +5464,15 @@ function KeyframeCurveEditor({
     event.preventDefault();
     const point = eventToCanvasPoint(event, canvas);
     const nearestHandle = findNearestCurveHandle(draftRef.current, property, duration, canvas, point, 10);
-    const targetId = nearestHandle?.keyframeId ?? findNearestCurveFrameIdByPoint(draftRef.current, property, duration, canvas, point, 10);
+    const targetId =
+      nearestHandle?.keyframeId ??
+      findNearestCurveFrameIdByPoint(draftRef.current, property, duration, canvas, point, 10);
     if (!targetId) {
       return;
     }
-    const next = draftRef.current.map((frame) => (frame.id === targetId ? { ...frame, handleMode: nextHandleMode(frame.handleMode) } : frame));
+    const next = draftRef.current.map((frame) =>
+      frame.id === targetId ? { ...frame, handleMode: nextHandleMode(frame.handleMode) } : frame,
+    );
     updateDraft(next);
     onCommit(normalizeCurveEditorFrames(next, property, duration));
     onSelectionChange(refsForIds([targetId]));
@@ -4168,7 +5493,10 @@ function KeyframeCurveEditor({
       />
       <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
         <span>{formatKeyframeProperty(property)}</span>
-        <span>{formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].min)} - {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].max)}</span>
+        <span>
+          {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].min)} -{' '}
+          {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].max)}
+        </span>
       </div>
       <canvas
         ref={canvasRef}
@@ -4187,10 +5515,18 @@ function KeyframeCurveEditor({
 }
 
 function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
-  return normalizeCurveEditorFrames((clip.keyframes?.[property] ?? []) as CurveEditorFrame[], property, Math.max(0.001, clip.duration));
+  return normalizeCurveEditorFrames(
+    (clip.keyframes?.[property] ?? []) as CurveEditorFrame[],
+    property,
+    Math.max(0.001, clip.duration),
+  );
 }
 
-function normalizeCurveEditorFrames(frames: CurveEditorFrame[], property: KeyframeProperty, duration: number): CurveEditorFrame[] {
+function normalizeCurveEditorFrames(
+  frames: CurveEditorFrame[],
+  property: KeyframeProperty,
+  duration: number,
+): CurveEditorFrame[] {
   const limits = KEYFRAME_PROPERTY_LIMITS[property];
   return frames
     .map((frame) => ({
@@ -4200,7 +5536,7 @@ function normalizeCurveEditorFrames(frames: CurveEditorFrame[], property: Keyfra
       easing: frame.easing,
       inHandle: frame.inHandle ? { ...frame.inHandle } : undefined,
       outHandle: frame.outHandle ? { ...frame.outHandle } : undefined,
-      handleMode: frame.handleMode
+      handleMode: frame.handleMode,
     }))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
@@ -4211,7 +5547,7 @@ function drawKeyframeCurveCanvas(
   property: KeyframeProperty,
   duration: number,
   selectedIds: string[],
-  selectionBox: { start: CanvasPoint; current: CanvasPoint } | null
+  selectionBox: { start: CanvasPoint; current: CanvasPoint } | null,
 ): void {
   const context = canvas.getContext('2d');
   if (!context) {
@@ -4246,7 +5582,12 @@ function drawKeyframeCurveCanvas(
       for (let step = 0; step <= 20; step += 1) {
         const sampleTime = left.frame.time + ((right.frame.time - left.frame.time) * step) / 20;
         const sampleValue = getInterpolatedCurveEditorValue(left.frame, right.frame, sampleTime);
-        const point = curveFrameToPoint({ id: 'sample', time: sampleTime, value: sampleValue, easing: 'linear' }, property, duration, canvas);
+        const point = curveFrameToPoint(
+          { id: 'sample', time: sampleTime, value: sampleValue, easing: 'linear' },
+          property,
+          duration,
+          canvas,
+        );
         if (index === 0 && step === 0) {
           context.moveTo(point.x, point.y);
         } else {
@@ -4260,7 +5601,12 @@ function drawKeyframeCurveCanvas(
     if (!selectedIds.includes(frame.id)) {
       continue;
     }
-    const coordinates = calculateBezierHandleCoordinates(frame, points[index - 1]?.frame, points[index + 1]?.frame, frame.handleMode ?? 'independent');
+    const coordinates = calculateBezierHandleCoordinates(
+      frame,
+      points[index - 1]?.frame,
+      points[index + 1]?.frame,
+      frame.handleMode ?? 'independent',
+    );
     context.strokeStyle = 'rgba(251,191,36,0.85)';
     context.fillStyle = '#fbbf24';
     context.lineWidth = 1;
@@ -4268,7 +5614,12 @@ function drawKeyframeCurveCanvas(
       if (!handle) {
         continue;
       }
-      const handlePoint = curveFrameToPoint({ id: 'handle', time: handle.time, value: handle.value, easing: 'linear' }, property, duration, canvas);
+      const handlePoint = curveFrameToPoint(
+        { id: 'handle', time: handle.time, value: handle.value, easing: 'linear' },
+        property,
+        duration,
+        canvas,
+      );
       context.beginPath();
       context.moveTo(point.x, point.y);
       context.lineTo(handlePoint.x, handlePoint.y);
@@ -4301,7 +5652,12 @@ function drawKeyframeCurveCanvas(
   }
 }
 
-function drawKeyframeVelocityCanvas(canvas: HTMLCanvasElement, frames: CurveEditorFrame[], property: KeyframeProperty, duration: number): void {
+function drawKeyframeVelocityCanvas(
+  canvas: HTMLCanvasElement,
+  frames: CurveEditorFrame[],
+  property: KeyframeProperty,
+  duration: number,
+): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -4345,21 +5701,31 @@ function findNearestCurveHandle(
   duration: number,
   canvas: HTMLCanvasElement,
   point: CanvasPoint,
-  maxDistancePx: number
+  maxDistancePx: number,
 ): { keyframeId: string; handle: 'in' | 'out' } | null {
   const sorted = normalizeCurveEditorFrames(frames, property, duration);
   let nearest: { keyframeId: string; handle: 'in' | 'out' } | null = null;
   let nearestDistance = maxDistancePx;
   for (const [index, frame] of sorted.entries()) {
-    const coordinates = calculateBezierHandleCoordinates(frame, sorted[index - 1], sorted[index + 1], frame.handleMode ?? 'independent');
+    const coordinates = calculateBezierHandleCoordinates(
+      frame,
+      sorted[index - 1],
+      sorted[index + 1],
+      frame.handleMode ?? 'independent',
+    );
     for (const [handle, coordinatesPoint] of [
       ['in', coordinates.inHandle],
-      ['out', coordinates.outHandle]
+      ['out', coordinates.outHandle],
     ] as const) {
       if (!coordinatesPoint) {
         continue;
       }
-      const handlePoint = curveFrameToPoint({ id: 'handle', time: coordinatesPoint.time, value: coordinatesPoint.value, easing: 'linear' }, property, duration, canvas);
+      const handlePoint = curveFrameToPoint(
+        { id: 'handle', time: coordinatesPoint.time, value: coordinatesPoint.value, easing: 'linear' },
+        property,
+        duration,
+        canvas,
+      );
       const distance = Math.hypot(handlePoint.x - point.x, handlePoint.y - point.y);
       if (distance <= nearestDistance) {
         nearest = { keyframeId: frame.id, handle };
@@ -4376,7 +5742,7 @@ function findNearestCurveFrameIdByPoint(
   duration: number,
   canvas: HTMLCanvasElement,
   point: CanvasPoint,
-  maxDistancePx: number
+  maxDistancePx: number,
 ): string | null {
   let nearest: string | null = null;
   let nearestDistance = maxDistancePx;
@@ -4402,21 +5768,34 @@ function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMod
 }
 
 function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
-  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY' || property === 'speed') {
+  if (
+    property === 'opacity' ||
+    property === 'volume' ||
+    property === 'scaleX' ||
+    property === 'scaleY' ||
+    property === 'speed'
+  ) {
     return 1;
   }
   return 0;
 }
 
-function eventToCurveEditorFrame(event: ReactPointerEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement, property: KeyframeProperty, duration: number): CurveEditorFrame {
+function eventToCurveEditorFrame(
+  event: ReactPointerEvent<HTMLCanvasElement>,
+  canvas: HTMLCanvasElement,
+  property: KeyframeProperty,
+  duration: number,
+): CurveEditorFrame {
   const point = eventToCanvasPoint(event, canvas);
   const limits = KEYFRAME_PROPERTY_LIMITS[property];
   const valueSpan = Math.max(0.001, limits.max - limits.min);
   return {
     id: createId('keyframe-draft'),
     time: roundFinite(Math.min(duration, Math.max(0, (point.x / Math.max(1, canvas.width)) * duration))),
-    value: roundFinite(Math.min(limits.max, Math.max(limits.min, limits.max - (point.y / Math.max(1, canvas.height)) * valueSpan))),
-    easing: 'linear'
+    value: roundFinite(
+      Math.min(limits.max, Math.max(limits.min, limits.max - (point.y / Math.max(1, canvas.height)) * valueSpan)),
+    ),
+    easing: 'linear',
   };
 }
 
@@ -4424,26 +5803,40 @@ function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas:
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.min(canvas.width, Math.max(0, ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width)),
-    y: Math.min(canvas.height, Math.max(0, ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height))
+    y: Math.min(canvas.height, Math.max(0, ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height)),
   };
 }
 
-function curveFrameToPoint(frame: CurveEditorFrame, property: KeyframeProperty, duration: number, canvas: HTMLCanvasElement): CanvasPoint {
+function curveFrameToPoint(
+  frame: CurveEditorFrame,
+  property: KeyframeProperty,
+  duration: number,
+  canvas: HTMLCanvasElement,
+): CanvasPoint {
   const limits = KEYFRAME_PROPERTY_LIMITS[property];
   const valueSpan = Math.max(0.001, limits.max - limits.min);
   return {
     x: (frame.time / Math.max(0.001, duration)) * canvas.width,
-    y: ((limits.max - frame.value) / valueSpan) * canvas.height
+    y: ((limits.max - frame.value) / valueSpan) * canvas.height,
   };
 }
 
-function findNearestCurveFrame(frames: CurveEditorFrame[], target: CurveEditorFrame, property: KeyframeProperty, duration: number, maxDistance: number): number | null {
+function findNearestCurveFrame(
+  frames: CurveEditorFrame[],
+  target: CurveEditorFrame,
+  property: KeyframeProperty,
+  duration: number,
+  maxDistance: number,
+): number | null {
   const limits = KEYFRAME_PROPERTY_LIMITS[property];
   const valueSpan = Math.max(0.001, limits.max - limits.min);
   let nearest: number | null = null;
   let nearestDistance = maxDistance;
   for (const [index, frame] of frames.entries()) {
-    const distance = Math.hypot((frame.time - target.time) / Math.max(0.001, duration), (frame.value - target.value) / valueSpan);
+    const distance = Math.hypot(
+      (frame.time - target.time) / Math.max(0.001, duration),
+      (frame.value - target.value) / valueSpan,
+    );
     if (distance <= nearestDistance) {
       nearest = index;
       nearestDistance = distance;
@@ -4458,7 +5851,7 @@ function getCurveFrameIdsInBox(
   duration: number,
   canvas: HTMLCanvasElement,
   start: CanvasPoint,
-  current: CanvasPoint
+  current: CanvasPoint,
 ): string[] {
   const left = Math.min(start.x, current.x);
   const right = Math.max(start.x, current.x);
@@ -4471,16 +5864,19 @@ function getCurveFrameIdsInBox(
 }
 
 function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
-  const frames = normalizeSpeedCurveFrames((clip.keyframes?.speed ?? []) as SpeedCurveFrame[], Math.max(0.001, clip.duration));
+  const frames = normalizeSpeedCurveFrames(
+    (clip.keyframes?.speed ?? []) as SpeedCurveFrame[],
+    Math.max(0.001, clip.duration),
+  );
   if (frames.length > 0) {
     return frames;
   }
   return normalizeSpeedCurveFrames(
     [
       { id: createId('speed-keyframe'), time: 0, value: getClipSpeed(clip), easing: 'linear' },
-      { id: createId('speed-keyframe'), time: clip.duration, value: getClipSpeed(clip), easing: 'linear' }
+      { id: createId('speed-keyframe'), time: clip.duration, value: getClipSpeed(clip), easing: 'linear' },
     ],
-    Math.max(0.001, clip.duration)
+    Math.max(0.001, clip.duration),
   );
 }
 
@@ -4490,12 +5886,16 @@ function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number):
       id: frame.id || createId('speed-keyframe'),
       time: Math.min(duration, Math.max(0, roundFinite(frame.time))),
       value: Math.min(MAX_CLIP_SPEED, Math.max(MIN_CLIP_SPEED, roundFinite(frame.value))),
-      easing: frame.easing ?? 'linear'
+      easing: frame.easing ?? 'linear',
     }))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function eventToSpeedFrame(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement, duration: number): SpeedCurveFrame {
+function eventToSpeedFrame(
+  event: { clientX: number; clientY: number },
+  canvas: HTMLCanvasElement,
+  duration: number,
+): SpeedCurveFrame {
   const rect = canvas.getBoundingClientRect();
   const x = clampUnit((event.clientX - rect.left) / rect.width);
   const y = clampUnit((event.clientY - rect.top) / rect.height);
@@ -4503,7 +5903,7 @@ function eventToSpeedFrame(event: { clientX: number; clientY: number }, canvas: 
     id: createId('speed-keyframe'),
     time: roundFinite(x * duration),
     value: roundFinite(MIN_CLIP_SPEED + (1 - y) * (MAX_CLIP_SPEED - MIN_CLIP_SPEED)),
-    easing: 'linear'
+    easing: 'linear',
   };
 }
 
@@ -4554,18 +5954,35 @@ function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame
   }
 }
 
-function speedFrameToPoint(frame: SpeedCurveFrame, duration: number, width: number, height: number): { x: number; y: number } {
+function speedFrameToPoint(
+  frame: SpeedCurveFrame,
+  duration: number,
+  width: number,
+  height: number,
+): { x: number; y: number } {
   return {
     x: (Math.min(duration, Math.max(0, frame.time)) / duration) * width,
-    y: (1 - (Math.min(MAX_CLIP_SPEED, Math.max(MIN_CLIP_SPEED, frame.value)) - MIN_CLIP_SPEED) / (MAX_CLIP_SPEED - MIN_CLIP_SPEED)) * height
+    y:
+      (1 -
+        (Math.min(MAX_CLIP_SPEED, Math.max(MIN_CLIP_SPEED, frame.value)) - MIN_CLIP_SPEED) /
+          (MAX_CLIP_SPEED - MIN_CLIP_SPEED)) *
+      height,
   };
 }
 
-function findNearestSpeedFrame(frames: SpeedCurveFrame[], target: SpeedCurveFrame, duration: number, maxDistance: number): number | null {
+function findNearestSpeedFrame(
+  frames: SpeedCurveFrame[],
+  target: SpeedCurveFrame,
+  duration: number,
+  maxDistance: number,
+): number | null {
   let nearest: number | null = null;
   let nearestDistance = maxDistance;
   for (const [index, frame] of frames.entries()) {
-    const distance = Math.hypot((frame.time - target.time) / duration, (frame.value - target.value) / (MAX_CLIP_SPEED - MIN_CLIP_SPEED));
+    const distance = Math.hypot(
+      (frame.time - target.time) / duration,
+      (frame.value - target.value) / (MAX_CLIP_SPEED - MIN_CLIP_SPEED),
+    );
     if (distance <= nearestDistance) {
       nearest = index;
       nearestDistance = distance;
@@ -4584,7 +6001,7 @@ const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }>
   { key: 'master', label: zhCN.inspector.fields.masterCurve, color: '#f8fafc' },
   { key: 'r', label: zhCN.inspector.fields.redCurve, color: '#ef4444' },
   { key: 'g', label: zhCN.inspector.fields.greenCurve, color: '#22c55e' },
-  { key: 'b', label: zhCN.inspector.fields.blueCurve, color: '#3b82f6' }
+  { key: 'b', label: zhCN.inspector.fields.blueCurve, color: '#3b82f6' },
 ];
 
 function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curves: ColorCurves): void }) {
@@ -4605,7 +6022,11 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
     if (!canvas) {
       return;
     }
-    drawCurveCanvas(canvas, draft[activeChannel], CURVE_CHANNELS.find((item) => item.key === activeChannel)?.color ?? '#e2e8f0');
+    drawCurveCanvas(
+      canvas,
+      draft[activeChannel],
+      CURVE_CHANNELS.find((item) => item.key === activeChannel)?.color ?? '#e2e8f0',
+    );
   }, [activeChannel, draft]);
 
   const setDraftCurves = (next: ColorCurves) => {
@@ -4673,7 +6094,10 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
     if (nearest === null || points.length <= 2) {
       return;
     }
-    updateActivePoints(points.filter((_, index) => index !== nearest), true);
+    updateActivePoints(
+      points.filter((_, index) => index !== nearest),
+      true,
+    );
   };
 
   return (
@@ -4683,7 +6107,9 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
           <button
             key={channel.key}
             className={`rounded-md border px-2 py-1 text-xs font-semibold ${
-              activeChannel === channel.key ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'
+              activeChannel === channel.key
+                ? 'border-brand bg-[var(--color-bg-elevated)] text-brand'
+                : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'
             }`}
             type="button"
             data-testid={`curve-tab-${channel.key}`}
@@ -4726,24 +6152,36 @@ type ThreeWayKey = keyof ThreeWayColor;
 const THREE_WAY_CHANNELS: Array<{ key: ThreeWayKey; label: string }> = [
   { key: 'lift', label: zhCN.inspector.fields.lift },
   { key: 'gamma', label: zhCN.inspector.fields.gamma },
-  { key: 'gain', label: zhCN.inspector.fields.gain }
+  { key: 'gain', label: zhCN.inspector.fields.gain },
 ];
 
-function ThreeWayColorEditor({ threeWayColor, onCommit }: { threeWayColor: ThreeWayColor; onCommit(color: ThreeWayColor): void }) {
+function ThreeWayColorEditor({
+  threeWayColor,
+  onCommit,
+}: {
+  threeWayColor: ThreeWayColor;
+  onCommit(color: ThreeWayColor): void;
+}) {
   const normalized = normalizeThreeWayColor(threeWayColor);
   const updateWheel = (key: ThreeWayKey, patch: Partial<ColorWheelValue>) => {
     onCommit(
       normalizeThreeWayColor({
         ...normalized,
-        [key]: normalizeColorWheelValue({ ...normalized[key], ...patch })
-      })
+        [key]: normalizeColorWheelValue({ ...normalized[key], ...patch }),
+      }),
     );
   };
 
   return (
     <div className="space-y-3 rounded-md border border-line bg-panel p-2" data-testid="three-way-color-editor">
       {THREE_WAY_CHANNELS.map((channel) => (
-        <ColorWheelControl key={channel.key} label={channel.label} value={normalized[channel.key]} onCommit={(patch) => updateWheel(channel.key, patch)} testId={`color-wheel-${channel.key}`} />
+        <ColorWheelControl
+          key={channel.key}
+          label={channel.label}
+          value={normalized[channel.key]}
+          onCommit={(patch) => updateWheel(channel.key, patch)}
+          testId={`color-wheel-${channel.key}`}
+        />
       ))}
       <button
         className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
@@ -4761,7 +6199,7 @@ function ColorWheelControl({
   label,
   value,
   onCommit,
-  testId
+  testId,
 }: {
   label: string;
   value: ColorWheelValue;
@@ -4865,7 +6303,7 @@ function PrivacyBlurPanel({
   busy,
   disabled,
   onEffectChange,
-  onRun
+  onRun,
 }: {
   effect: PrivacyBlurEffect;
   modelConfigured: boolean;
@@ -4891,7 +6329,11 @@ function PrivacyBlurPanel({
           <option value="solid">{t.effects.solid}</option>
         </select>
       </label>
-      {!modelConfigured ? <div className="text-xs font-medium text-amber-700" data-testid="privacy-blur-model-required">{t.modelRequired}</div> : null}
+      {!modelConfigured ? (
+        <div className="text-xs font-medium text-amber-700" data-testid="privacy-blur-model-required">
+          {t.modelRequired}
+        </div>
+      ) : null}
       <button
         className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
@@ -4908,7 +6350,7 @@ function PrivacyBlurPanel({
 function RichTextEditor({
   clip,
   disabled,
-  onCommit
+  onCommit,
 }: {
   clip: Extract<Clip, { type: 'text' }>;
   disabled?: boolean;
@@ -5030,7 +6472,9 @@ function RichTextEditor({
           event.preventDefault();
           document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
         }}
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(richTextToHtml(normalizeRichTextDocument(clip.richText, clip.text))) }}
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(richTextToHtml(normalizeRichTextDocument(clip.richText, clip.text))),
+        }}
       />
     </div>
   );
@@ -5061,7 +6505,11 @@ function collectRichTextRuns(node: Node, inherited: Omit<RichTextRun, 'text'>): 
   if (tag === 'i' || tag === 'em' || node.style.fontStyle === 'italic') {
     next.italic = true;
   }
-  if (tag === 'u' || node.style.textDecorationLine.includes('underline') || node.style.textDecoration.includes('underline')) {
+  if (
+    tag === 'u' ||
+    node.style.textDecorationLine.includes('underline') ||
+    node.style.textDecoration.includes('underline')
+  ) {
     next.underline = true;
   }
   const color = normalizeCssColorForModel(node.style.color);
@@ -5088,7 +6536,7 @@ function richTextRunToHtml(run: RichTextRun): string {
   const styles = [
     run.color ? `color:${escapeHtmlAttribute(run.color)}` : '',
     run.fontSize ? `font-size:${run.fontSize}px` : '',
-    run.underline ? 'text-decoration:underline' : ''
+    run.underline ? 'text-decoration:underline' : '',
   ].filter(Boolean);
   let html = `<span${styles.length > 0 ? ` style="${styles.join(';')}"` : ''}>${escapeHtml(run.text)}</span>`;
   if (run.bold) {
@@ -5127,7 +6575,7 @@ function escapeHtmlAttribute(value: string): string {
 function MotionGraphicPanel({
   clip,
   selectedClipLocked,
-  playheadTime
+  playheadTime,
 }: {
   clip: Extract<Clip, { type: 'motion-graphic' }>;
   selectedClipLocked: boolean;
@@ -5138,11 +6586,17 @@ function MotionGraphicPanel({
   const definition = getMotionGraphicTemplateDefinition(motionGraphic.templateType);
   const selectOptions = motionGraphicsText.selectOptions as Record<string, Record<string, string>>;
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
-  const commitMotionGraphic = (next: Partial<Extract<Clip, { type: 'motion-graphic' }>['motionGraphic']> | undefined) => {
+  const commitMotionGraphic = (
+    next: Partial<Extract<Clip, { type: 'motion-graphic' }>['motionGraphic']> | undefined,
+  ) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { motionGraphic: next }));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
   const commitTemplate = (templateType: MotionGraphicTemplateType) => {
@@ -5161,16 +6615,24 @@ function MotionGraphicPanel({
     }
     try {
       commitMotionGraphic(
-        setMotionGraphicParamKeyframe(motionGraphic, param.key, { time: localKeyframeTime, value }, clip.duration)
+        setMotionGraphicParamKeyframe(motionGraphic, param.key, { time: localKeyframeTime, value }, clip.duration),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.keyframeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed,
+      });
     }
   };
 
   return (
     <Section title={motionGraphicsText.title}>
-      {selectedClipLocked ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.inspector.locked}</div> : null}
+      {selectedClipLocked ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">
+          {zhCN.inspector.locked}
+        </div>
+      ) : null}
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {motionGraphicsText.template}
         <select
@@ -5186,7 +6648,9 @@ function MotionGraphicPanel({
             </option>
           ))}
         </select>
-        <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">{motionGraphicsText.templates[motionGraphic.templateType].description}</div>
+        <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+          {motionGraphicsText.templates[motionGraphic.templateType].description}
+        </div>
       </label>
       <div className="space-y-3">
         {definition.params.map((param) => {
@@ -5194,7 +6658,12 @@ function MotionGraphicPanel({
           const currentValue = motionGraphic.params[param.key];
           const testId = `motion-graphic-param-${param.key}`;
           if (param.type === 'number') {
-            const numberValue = typeof currentValue === 'number' ? currentValue : typeof param.defaultValue === 'number' ? param.defaultValue : 0;
+            const numberValue =
+              typeof currentValue === 'number'
+                ? currentValue
+                : typeof param.defaultValue === 'number'
+                  ? param.defaultValue
+                  : 0;
             const field = (
               <RangeNumberField
                 label={label}
@@ -5271,15 +6740,19 @@ function MotionGraphicPanel({
                   onChange={(event) => commitParam(param, event.target.value)}
                 >
                   {(param.options ?? []).map((option) => (
-                  <option key={option} value={option}>
+                    <option key={option} value={option}>
                       {selectOptions[param.key]?.[option] ?? option}
-                  </option>
+                    </option>
                   ))}
                 </select>
               </label>
             );
           }
-          const value = Array.isArray(currentValue) ? currentValue.join(', ') : Array.isArray(param.defaultValue) ? param.defaultValue.join(', ') : '';
+          const value = Array.isArray(currentValue)
+            ? currentValue.join(', ')
+            : Array.isArray(param.defaultValue)
+              ? param.defaultValue.join(', ')
+              : '';
           return (
             <TextField
               key={param.key}
@@ -5300,7 +6773,7 @@ function MasksEditor({
   masks,
   onAdd,
   onUpdate,
-  onRemove
+  onRemove,
 }: {
   masks: ClipMask[];
   onAdd(): void;
@@ -5319,10 +6792,18 @@ function MasksEditor({
         {zhCN.inspector.fields.addMask}
       </button>
       {masks.map((mask, index) => (
-        <details key={mask.id} className="rounded-md border border-line bg-panel" open data-testid={`mask-item-${mask.id}`}>
+        <details
+          key={mask.id}
+          className="rounded-md border border-line bg-panel"
+          open
+          data-testid={`mask-item-${mask.id}`}
+        >
           <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-[var(--color-text-secondary)]">
             <span className="min-w-0 flex-1 truncate">{`${zhCN.inspector.sections.masks} ${index + 1}`}</span>
-            <label className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]" onClick={(event) => event.stopPropagation()}>
+            <label
+              className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]"
+              onClick={(event) => event.stopPropagation()}
+            >
               {zhCN.inspector.fields.enabled}
               <input
                 className="h-4 w-4 accent-brand"
@@ -5348,16 +6829,68 @@ function MasksEditor({
               </select>
             </label>
             {mask.type === 'path' ? (
-              <div className="rounded-md border border-dashed border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs text-[var(--color-text-muted)]" data-testid={`path-mask-help-${mask.id}`}>
-                <div>{zhCN.inspector.fields.pathPointCount(Math.max(0, (mask.path?.length ?? 0) - (mask.path && mask.path.length > 1 && mask.path[0].x === mask.path.at(-1)?.x && mask.path[0].y === mask.path.at(-1)?.y ? 1 : 0)))}</div>
+              <div
+                className="rounded-md border border-dashed border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs text-[var(--color-text-muted)]"
+                data-testid={`path-mask-help-${mask.id}`}
+              >
+                <div>
+                  {zhCN.inspector.fields.pathPointCount(
+                    Math.max(
+                      0,
+                      (mask.path?.length ?? 0) -
+                        (mask.path &&
+                        mask.path.length > 1 &&
+                        mask.path[0].x === mask.path.at(-1)?.x &&
+                        mask.path[0].y === mask.path.at(-1)?.y
+                          ? 1
+                          : 0),
+                    ),
+                  )}
+                </div>
                 <div>{zhCN.inspector.fields.editPathInPreview}</div>
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-2">
-              <RangeNumberField label="X" value={mask.x} min={0} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(x) => onUpdate(mask.id, { x })} testId={`mask-x-${mask.id}`} />
-              <RangeNumberField label="Y" value={mask.y} min={0} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(y) => onUpdate(mask.id, { y })} testId={`mask-y-${mask.id}`} />
-              <RangeNumberField label="W" value={mask.w} min={0.001} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(w) => onUpdate(mask.id, { w })} testId={`mask-w-${mask.id}`} />
-              <RangeNumberField label="H" value={mask.h} min={0.001} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(h) => onUpdate(mask.id, { h })} testId={`mask-h-${mask.id}`} />
+              <RangeNumberField
+                label="X"
+                value={mask.x}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(value) => value.toFixed(2)}
+                onCommit={(x) => onUpdate(mask.id, { x })}
+                testId={`mask-x-${mask.id}`}
+              />
+              <RangeNumberField
+                label="Y"
+                value={mask.y}
+                min={0}
+                max={1}
+                step={0.01}
+                format={(value) => value.toFixed(2)}
+                onCommit={(y) => onUpdate(mask.id, { y })}
+                testId={`mask-y-${mask.id}`}
+              />
+              <RangeNumberField
+                label="W"
+                value={mask.w}
+                min={0.001}
+                max={1}
+                step={0.01}
+                format={(value) => value.toFixed(2)}
+                onCommit={(w) => onUpdate(mask.id, { w })}
+                testId={`mask-w-${mask.id}`}
+              />
+              <RangeNumberField
+                label="H"
+                value={mask.h}
+                min={0.001}
+                max={1}
+                step={0.01}
+                format={(value) => value.toFixed(2)}
+                onCommit={(h) => onUpdate(mask.id, { h })}
+                testId={`mask-h-${mask.id}`}
+              />
             </div>
             <RangeNumberField
               label={zhCN.inspector.fields.feather}
@@ -5369,8 +6902,16 @@ function MasksEditor({
               onCommit={(feather) => onUpdate(mask.id, { feather })}
               testId={`mask-feather-${mask.id}`}
             />
-            <ToggleField label={zhCN.inspector.fields.inverted} checked={mask.inverted} onCommit={(inverted) => onUpdate(mask.id, { inverted })} testId={`mask-inverted-${mask.id}`} />
-            <div className="space-y-2 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid={`mask-privacy-blur-${mask.id}`}>
+            <ToggleField
+              label={zhCN.inspector.fields.inverted}
+              checked={mask.inverted}
+              onCommit={(inverted) => onUpdate(mask.id, { inverted })}
+              testId={`mask-inverted-${mask.id}`}
+            />
+            <div
+              className="space-y-2 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2"
+              data-testid={`mask-privacy-blur-${mask.id}`}
+            >
               <ToggleField
                 label={zhCN.inspector.fields.privacyBlurEnabled}
                 checked={mask.privacyBlur?.enabled === true}
@@ -5379,8 +6920,8 @@ function MasksEditor({
                     privacyBlur: {
                       enabled,
                       effect: normalizePrivacyBlurEffect(mask.privacyBlur?.effect),
-                      color: mask.privacyBlur?.color
-                    }
+                      color: mask.privacyBlur?.color,
+                    },
                   })
                 }
                 testId={`mask-privacy-blur-enabled-${mask.id}`}
@@ -5397,8 +6938,8 @@ function MasksEditor({
                       privacyBlur: {
                         enabled: true,
                         effect: normalizePrivacyBlurEffect(event.target.value as PrivacyBlurEffect),
-                        color: mask.privacyBlur?.color
-                      }
+                        color: mask.privacyBlur?.color,
+                      },
                     })
                   }
                 >
@@ -5421,8 +6962,8 @@ function MasksEditor({
                         privacyBlur: {
                           enabled: true,
                           effect: 'solid',
-                          color: event.target.value
-                        }
+                          color: event.target.value,
+                        },
                       })
                     }
                   />
@@ -5450,7 +6991,7 @@ function EffectsEditor({
   onAdd,
   onRemove,
   onUpdate,
-  onReorder
+  onReorder,
 }: {
   effects: Effect[];
   onAdd(type: EffectType): void;
@@ -5531,7 +7072,10 @@ function EffectsEditor({
             <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-[var(--color-text-secondary)]">
               <GripVertical size={14} className="shrink-0 text-[var(--color-text-muted)]" />
               <span className="min-w-0 flex-1 truncate">{zhCN.inspector.effectNames[effect.type]}</span>
-              <label className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]" onClick={(event) => event.stopPropagation()}>
+              <label
+                className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]"
+                onClick={(event) => event.stopPropagation()}
+              >
                 {zhCN.inspector.fields.enabled}
                 <input
                   className="h-4 w-4 accent-brand"
@@ -5611,27 +7155,63 @@ function formatMotionGraphicNumberValue(param: MotionGraphicParamDefinition, val
   return `${Math.round(value)}`;
 }
 
-function TextField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
+function TextField({
+  label,
+  value,
+  onCommit,
+  disabled,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onCommit(value: string): void;
+  disabled?: boolean;
+  testId?: string;
+}) {
   return (
     <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
-      <input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
+      <input
+        className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+        defaultValue={value}
+        disabled={disabled}
+        data-testid={testId}
+        onBlur={(event) => onCommit(event.target.value)}
+      />
     </label>
   );
 }
 
-function TextAreaField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
+function TextAreaField({
+  label,
+  value,
+  onCommit,
+  disabled,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onCommit(value: string): void;
+  disabled?: boolean;
+  testId?: string;
+}) {
   return (
     <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
-      <textarea className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} onBlur={(event) => onCommit(event.target.value)} data-testid={testId} />
+      <textarea
+        className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        defaultValue={value}
+        disabled={disabled}
+        onBlur={(event) => onCommit(event.target.value)}
+        data-testid={testId}
+      />
     </label>
   );
 }
 
 function CustomShaderEffectFields({
   effect,
-  onUpdate
+  onUpdate,
 }: {
   effect: Effect;
   onUpdate(effectId: string, patch: EffectPatch): void;
@@ -5653,7 +7233,7 @@ function CustomShaderEffectFields({
       return false;
     }
     const result = validateCustomShaderSource(gl, nextSource);
-    setCompileError(result.ok ? undefined : result.error ?? zhCN.inspector.customShader.compileFailed);
+    setCompileError(result.ok ? undefined : (result.error ?? zhCN.inspector.customShader.compileFailed));
     return result.ok;
   };
 
@@ -5710,7 +7290,10 @@ function CustomShaderEffectFields({
         />
       </label>
       {compileError ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 font-mono text-[11px] leading-4 text-rose-800" data-testid="custom-shader-error">
+        <div
+          className="rounded-md border border-rose-200 bg-rose-50 p-2 font-mono text-[11px] leading-4 text-rose-800"
+          data-testid="custom-shader-error"
+        >
           {compileError}
         </div>
       ) : null}
@@ -5727,7 +7310,7 @@ function NumberField({
   onCommit,
   hideLabel = false,
   testId,
-  disabled
+  disabled,
 }: {
   label: string;
   value: number;
@@ -5779,7 +7362,7 @@ function NumberField({
 
 function AudioSpectrumEffectFields({
   effect,
-  onUpdate
+  onUpdate,
 }: {
   effect: Effect;
   onUpdate(effectId: string, patch: EffectPatch): void;
@@ -5810,7 +7393,9 @@ function AudioSpectrumEffectFields({
           data-testid={`effect-param-${effect.id}-theme`}
           onChange={(event) => onUpdate(effect.id, { params: { themeId: event.target.value } })}
         >
-          <option value={MANUAL_AUDIO_VISUALIZATION_THEME_ID}>{zhCN.exportDialog.audioVisualization.manualTheme}</option>
+          <option value={MANUAL_AUDIO_VISUALIZATION_THEME_ID}>
+            {zhCN.exportDialog.audioVisualization.manualTheme}
+          </option>
           {BUILTIN_AUDIO_VISUALIZATION_THEMES.map((theme) => (
             <option key={theme.id} value={theme.id}>
               {theme.name}
@@ -5877,7 +7462,7 @@ function AudioSpectrumEffectFields({
 
 function MotionBlurEffectFields({
   effect,
-  onUpdate
+  onUpdate,
 }: {
   effect: Effect;
   onUpdate(effectId: string, patch: EffectPatch): void;
@@ -5947,7 +7532,7 @@ function RangeField({
   format,
   onCommit,
   hideLabel = false,
-  testId
+  testId,
 }: {
   label: string;
   value: number;
@@ -5996,7 +7581,7 @@ function RangeNumberField({
   format,
   onCommit,
   disabled,
-  testId
+  testId,
 }: {
   label: string;
   value: number;
@@ -6042,7 +7627,14 @@ function RangeNumberField({
           disabled={disabled}
           onChange={(event) => commitClamped(Number(event.target.value))}
           onKeyDown={(event) => {
-            const next = resolveSliderKeyboardValue({ key: event.key, value, min, max, step, shiftKey: event.shiftKey });
+            const next = resolveSliderKeyboardValue({
+              key: event.key,
+              value,
+              min,
+              max,
+              step,
+              shiftKey: event.shiftKey,
+            });
             if (next === undefined) {
               return;
             }
@@ -6061,7 +7653,7 @@ function ExpressionNumberField({
   value,
   format,
   onCommit,
-  testId
+  testId,
 }: {
   label: string;
   value: number;
@@ -6105,20 +7697,58 @@ function ExpressionNumberField({
   );
 }
 
-function ColorField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
+function ColorField({
+  label,
+  value,
+  onCommit,
+  disabled,
+  testId,
+}: {
+  label: string;
+  value: string;
+  onCommit(value: string): void;
+  disabled?: boolean;
+  testId?: string;
+}) {
   return (
     <label className="flex items-center justify-between text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
-      <input className="h-8 w-12 rounded border border-line disabled:cursor-not-allowed disabled:opacity-60" type="color" value={value} disabled={disabled} onChange={(event) => onCommit(event.target.value)} data-testid={testId} />
+      <input
+        className="h-8 w-12 rounded border border-line disabled:cursor-not-allowed disabled:opacity-60"
+        type="color"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onCommit(event.target.value)}
+        data-testid={testId}
+      />
     </label>
   );
 }
 
-function ToggleField({ label, checked, disabled, onCommit, testId }: { label: string; checked: boolean; disabled?: boolean; onCommit(value: boolean): void; testId?: string }) {
+function ToggleField({
+  label,
+  checked,
+  disabled,
+  onCommit,
+  testId,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCommit(value: boolean): void;
+  testId?: string;
+}) {
   return (
     <label className="flex items-center justify-between text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
-      <input className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-60" type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onCommit(event.target.checked)} data-testid={testId} />
+      <input
+        className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-60"
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onCommit(event.target.checked)}
+        data-testid={testId}
+      />
     </label>
   );
 }
@@ -6182,7 +7812,7 @@ function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: 
   const rect = canvas.getBoundingClientRect();
   return {
     x: clampUnit((event.clientX - rect.left) / rect.width),
-    y: clampUnit(1 - (event.clientY - rect.top) / rect.height)
+    y: clampUnit(1 - (event.clientY - rect.top) / rect.height),
   };
 }
 
@@ -6217,7 +7847,7 @@ function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void
         image.data[offset + 3] = 0;
         continue;
       }
-      const hue = ((Math.atan2(dy, dx) / (Math.PI * 2)) + 1) % 1;
+      const hue = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
       const rgb = hsvToRgb(hue, distance, 1);
       image.data[offset] = Math.round(rgb.r * 255);
       image.data[offset + 1] = Math.round(rgb.g * 255);
@@ -6236,7 +7866,10 @@ function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void
   context.stroke();
 }
 
-function eventToUnitPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): { x: number; y: number } {
+function eventToUnitPoint(
+  event: { clientX: number; clientY: number },
+  canvas: HTMLCanvasElement,
+): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
@@ -6251,7 +7884,7 @@ function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelVa
   return {
     r: clampSigned(point.x),
     g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
-    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y)
+    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y),
   };
 }
 
@@ -6309,16 +7942,28 @@ function formatEstimatedDuration(durationMs: number): string {
 }
 
 function rgbToHex(color: readonly number[]): string {
-  return `#${[color[0], color[1], color[2]].map((channel) => Math.round(Math.min(255, Math.max(0, channel))).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[color[0], color[1], color[2]]
+    .map((channel) =>
+      Math.round(Math.min(255, Math.max(0, channel)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 }
 
 function hexToRgb(value: string): [number, number, number] {
   const match = /^#?([0-9a-fA-F]{6})$/.exec(value.trim());
   const hex = match ? match[1] : '00ff00';
-  return [Number.parseInt(hex.slice(0, 2), 16), Number.parseInt(hex.slice(2, 4), 16), Number.parseInt(hex.slice(4, 6), 16)];
+  return [
+    Number.parseInt(hex.slice(0, 2), 16),
+    Number.parseInt(hex.slice(2, 4), 16),
+    Number.parseInt(hex.slice(4, 6), 16),
+  ];
 }
 
-function getEffectParamConfig(type: EffectType): Array<{ key: string; label: string; min: number; max: number; step: number }> {
+function getEffectParamConfig(
+  type: EffectType,
+): Array<{ key: string; label: string; min: number; max: number; step: number }> {
   if (type === 'blur') {
     return [{ key: 'radius', label: zhCN.inspector.fields.radius, min: 1, max: 50, step: 1 }];
   }
@@ -6328,20 +7973,20 @@ function getEffectParamConfig(type: EffectType): Array<{ key: string; label: str
   if (type === 'vignette') {
     return [
       { key: 'intensity', label: zhCN.inspector.fields.intensity, min: 0, max: 1, step: 0.01 },
-      { key: 'radius', label: zhCN.inspector.fields.radius, min: 0, max: 1, step: 0.01 }
+      { key: 'radius', label: zhCN.inspector.fields.radius, min: 0, max: 1, step: 0.01 },
     ];
   }
   if (type === 'film-grain') {
     return [
       { key: 'strength', label: zhCN.inspector.fields.strength, min: 0, max: 1, step: 0.01 },
-      { key: 'size', label: zhCN.inspector.fields.size, min: 1, max: 5, step: 1 }
+      { key: 'size', label: zhCN.inspector.fields.size, min: 1, max: 5, step: 1 },
     ];
   }
   if (type === 'motion-blur') {
     return [
       { key: 'intensity', label: zhCN.inspector.fields.intensity, min: 0, max: 1, step: 0.01 },
       { key: 'angle', label: zhCN.inspector.fields.angle, min: 0, max: 360, step: 1 },
-      { key: 'jitter', label: zhCN.inspector.fields.jitter, min: 0, max: 1, step: 0.01 }
+      { key: 'jitter', label: zhCN.inspector.fields.jitter, min: 0, max: 1, step: 0.01 },
     ];
   }
   return [{ key: 'strength', label: zhCN.inspector.fields.strength, min: 0, max: 20, step: 1 }];
@@ -6358,7 +8003,19 @@ function formatInputColorSpaceLabel(colorSpace: InputColorSpace): string {
   return zhCN.inspector.inputColorSpaces[colorSpace];
 }
 
-function AnimatedField({ label, children, onAddKeyframe, disabled, testId }: { label: string; children: ReactNode; onAddKeyframe(): void; disabled?: boolean; testId?: string }) {
+function AnimatedField({
+  label,
+  children,
+  onAddKeyframe,
+  disabled,
+  testId,
+}: {
+  label: string;
+  children: ReactNode;
+  onAddKeyframe(): void;
+  disabled?: boolean;
+  testId?: string;
+}) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-end gap-2">
       <div>
@@ -6391,7 +8048,13 @@ function formatKeyframeValue(property: KeyframeProperty, value: number): string 
   if (property === 'speed') {
     return `${value.toFixed(2)}x`;
   }
-  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY' || property === 'pathStartOffset') {
+  if (
+    property === 'opacity' ||
+    property === 'volume' ||
+    property === 'scaleX' ||
+    property === 'scaleY' ||
+    property === 'pathStartOffset'
+  ) {
     return `${Math.round(value * 100)}%`;
   }
   if (property === 'yaw' || property === 'pitch' || property === 'roll') {
@@ -6402,7 +8065,7 @@ function formatKeyframeValue(property: KeyframeProperty, value: number): string 
 
 function resolveSelectedKeyframeEntries(
   project: Project,
-  refs: SelectedKeyframeRef[]
+  refs: SelectedKeyframeRef[],
 ): Array<{ ref: SelectedKeyframeRef; clip: Clip; frame: Keyframe<number> }> {
   const clips = project.timeline.tracks.flatMap((track) => track.clips);
   const seen = new Set<string>();
@@ -6417,4 +8080,3 @@ function resolveSelectedKeyframeEntries(
     return clip && frame ? [{ ref, clip, frame }] : [];
   });
 }
-

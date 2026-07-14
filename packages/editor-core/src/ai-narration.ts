@@ -21,10 +21,13 @@ export interface NarrationChapterInput {
 }
 
 const STYLE_PROMPTS: Record<NarrationStyle, string> = {
-  commentary: '你是一位专业的解说旁白撰稿人。请为每个章节撰写简洁、清晰的旁白文稿，语气正式且专业，注重信息传达的准确性。',
+  commentary:
+    '你是一位专业的解说旁白撰稿人。请为每个章节撰写简洁、清晰的旁白文稿，语气正式且专业，注重信息传达的准确性。',
   advertisement: '你是一位广告文案撰稿人。请为每个章节撰写富有感染力和号召力的旁白文稿，语气积极热情，注重打动观众。',
-  documentary: '你是一位纪录片叙事撰稿人。请为每个章节撰写富有叙事感和深度的旁白文稿，语气沉稳、有深度，注重故事性和情感表达。',
-  'social-media': '你是一位活泼的社媒内容创作者。请为每个章节撰写轻松有趣、口语化的旁白文稿，语气活泼亲切，注重与观众的互动感。',
+  documentary:
+    '你是一位纪录片叙事撰稿人。请为每个章节撰写富有叙事感和深度的旁白文稿，语气沉稳、有深度，注重故事性和情感表达。',
+  'social-media':
+    '你是一位活泼的社媒内容创作者。请为每个章节撰写轻松有趣、口语化的旁白文稿，语气活泼亲切，注重与观众的互动感。',
 };
 
 export function estimateWordCount(durationSeconds: number, isChinese: boolean): { min: number; max: number } {

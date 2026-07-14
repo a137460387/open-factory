@@ -1,4 +1,11 @@
-import { DEFAULT_COLOR_CORRECTION, getTransformScaleX, getTransformScaleY, normalizeColorCorrection, type ColorCorrection, type Transform } from '@open-factory/editor-core';
+import {
+  DEFAULT_COLOR_CORRECTION,
+  getTransformScaleX,
+  getTransformScaleY,
+  normalizeColorCorrection,
+  type ColorCorrection,
+  type Transform,
+} from '@open-factory/editor-core';
 
 export function drawTransformedSource2d(
   context: CanvasRenderingContext2D,
@@ -6,7 +13,7 @@ export function drawTransformedSource2d(
   source: CanvasImageSource,
   dimensions: { width: number; height: number },
   transform: Transform,
-  colorCorrection?: Partial<ColorCorrection>
+  colorCorrection?: Partial<ColorCorrection>,
 ): void {
   const previousFilter = context.filter;
   const correction = normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION);
@@ -27,6 +34,6 @@ function buildCanvasFilter(colorCorrection: ColorCorrection): string {
     `brightness(${brightness})`,
     `contrast(${colorCorrection.contrast})`,
     `saturate(${colorCorrection.saturation})`,
-    `hue-rotate(${colorCorrection.hue}deg)`
+    `hue-rotate(${colorCorrection.hue}deg)`,
   ].join(' ');
 }

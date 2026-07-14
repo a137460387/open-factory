@@ -6,16 +6,16 @@ import type { AutosaveRecoveryCandidate } from '../../lib/projectFiles';
 import { PanelLoading } from '../PanelLoading';
 
 const AutosaveRecoveryDialog = lazy(() =>
-  import('./AutosaveRecoveryDialog').then((m) => ({ default: m.AutosaveRecoveryDialog }))
+  import('./AutosaveRecoveryDialog').then((m) => ({ default: m.AutosaveRecoveryDialog })),
 );
 const ExportQueueRecoveryDialog = lazy(() =>
-  import('./ExportQueueRecoveryDialog').then((m) => ({ default: m.ExportQueueRecoveryDialog }))
+  import('./ExportQueueRecoveryDialog').then((m) => ({ default: m.ExportQueueRecoveryDialog })),
 );
 const ArchiveProgressDialog = lazy(() =>
-  import('./ArchiveProgressDialog').then((m) => ({ default: m.ArchiveProgressDialog }))
+  import('./ArchiveProgressDialog').then((m) => ({ default: m.ArchiveProgressDialog })),
 );
 const SharePackageProgressDialog = lazy(() =>
-  import('./SharePackageProgressDialog').then((m) => ({ default: m.SharePackageProgressDialog }))
+  import('./SharePackageProgressDialog').then((m) => ({ default: m.SharePackageProgressDialog })),
 );
 
 export interface RecoveryDialogsProps {
@@ -42,10 +42,7 @@ export function RecoveryDialogs({
   return (
     <Suspense fallback={<PanelLoading label="恢复" />}>
       {recoveryCandidate ? (
-        <AutosaveRecoveryDialog
-          onRestore={() => void restoreRecovery()}
-          onDiscard={() => void discardRecovery()}
-        />
+        <AutosaveRecoveryDialog onRestore={() => void restoreRecovery()} onDiscard={() => void discardRecovery()} />
       ) : null}
       {exportQueueRecovery ? (
         <ExportQueueRecoveryDialog

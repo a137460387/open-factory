@@ -59,7 +59,7 @@ export function packAnnotationSyncData(
   notes: AnnotationSyncNote[],
   bookmarks: AnnotationSyncBookmark[],
   markers: AnnotationSyncMarker[],
-  syncedAt?: string
+  syncedAt?: string,
 ): AnnotationSyncData {
   return {
     version: 1,
@@ -67,7 +67,7 @@ export function packAnnotationSyncData(
     syncedAt: syncedAt ?? new Date().toISOString(),
     notes: notes.map((n) => ({ ...n, id: n.id || createId('note') })),
     bookmarks: bookmarks.map((b) => ({ ...b, id: b.id || createId('bookmark') })),
-    markers: markers.map((m) => ({ ...m, id: m.id || createId('marker') }))
+    markers: markers.map((m) => ({ ...m, id: m.id || createId('marker') })),
   };
 }
 
@@ -87,7 +87,7 @@ export function parseAnnotationSyncData(contents: string): AnnotationSyncData | 
       syncedAt: typeof parsed.syncedAt === 'string' ? parsed.syncedAt : new Date(0).toISOString(),
       notes: Array.isArray(parsed.notes) ? parsed.notes : [],
       bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : [],
-      markers: Array.isArray(parsed.markers) ? parsed.markers : []
+      markers: Array.isArray(parsed.markers) ? parsed.markers : [],
     };
   } catch {
     return undefined;
@@ -97,32 +97,14 @@ export function parseAnnotationSyncData(contents: string): AnnotationSyncData | 
 export function mergeAnnotationSyncData(
   local: AnnotationSyncData,
   remote: AnnotationSyncData,
-  mergedAt?: string
+  mergedAt?: string,
 ): AnnotationSyncMergeResult {
   const now = mergedAt ?? new Date().toISOString();
   const conflicts: AnnotationSyncConflict[] = [];
 
-  const mergedNotes = mergeById(
-    local.notes,
-    remote.notes,
-    'note',
-    conflicts,
-    now
-  );
-  const mergedBookmarks = mergeById(
-    local.bookmarks,
-    remote.bookmarks,
-    'bookmark',
-    conflicts,
-    now
-  );
-  const mergedMarkers = mergeById(
-    local.markers,
-    remote.markers,
-    'marker',
-    conflicts,
-    now
-  );
+  const mergedNotes = mergeById(local.notes, remote.notes, 'note', conflicts, now);
+  const mergedBookmarks = mergeById(local.bookmarks, remote.bookmarks, 'bookmark', conflicts, now);
+  const mergedMarkers = mergeById(local.markers, remote.markers, 'marker', conflicts, now);
 
   return {
     merged: {
@@ -131,10 +113,10 @@ export function mergeAnnotationSyncData(
       syncedAt: now,
       notes: mergedNotes,
       bookmarks: mergedBookmarks,
-      markers: mergedMarkers
+      markers: mergedMarkers,
     },
     conflicts,
-    mergedAt: now
+    mergedAt: now,
   };
 }
 
@@ -143,7 +125,7 @@ function mergeById<T extends { id: string; updatedAt: string }>(
   remote: T[],
   type: AnnotationSyncConflict['type'],
   conflicts: AnnotationSyncConflict[],
-  now: string
+  now: string,
 ): T[] {
   const localMap = new Map(local.map((item) => [item.id, item]));
   const remoteMap = new Map(remote.map((item) => [item.id, item]));
@@ -162,11 +144,23 @@ function mergeById<T extends { id: string; updatedAt: string }>(
     if (localTime > remoteTime) {
       result.push(localItem);
       if (localTime !== remoteTime) {
-        conflicts.push({ id, type, localUpdatedAt: localItem.updatedAt, remoteUpdatedAt: remoteItem.updatedAt, resolvedTo: 'local' });
+        conflicts.push({
+          id,
+          type,
+          localUpdatedAt: localItem.updatedAt,
+          remoteUpdatedAt: remoteItem.updatedAt,
+          resolvedTo: 'local',
+        });
       }
     } else if (remoteTime > localTime) {
       result.push(remoteItem);
-      conflicts.push({ id, type, localUpdatedAt: localItem.updatedAt, remoteUpdatedAt: remoteItem.updatedAt, resolvedTo: 'remote' });
+      conflicts.push({
+        id,
+        type,
+        localUpdatedAt: localItem.updatedAt,
+        remoteUpdatedAt: remoteItem.updatedAt,
+        resolvedTo: 'remote',
+      });
     } else {
       result.push(localItem);
     }

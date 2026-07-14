@@ -5,8 +5,8 @@ export interface RoutingNode {
   id: string;
   type: 'channel' | 'bus';
   name: string;
-  outputs: string[];  // 输出到的节点ID列表
-  inputs: string[];   // 输入来自的节点ID列表
+  outputs: string[]; // 输出到的节点ID列表
+  inputs: string[]; // 输入来自的节点ID列表
 }
 
 /** 路由图 */
@@ -19,7 +19,7 @@ export interface RoutingGraph {
 export interface RoutingConnection {
   fromId: string;
   toId: string;
-  level: number;  // 0 ~ 1
+  level: number; // 0 ~ 1
 }
 
 /** 路由验证错误 */
@@ -104,7 +104,7 @@ export class BusRouter {
 
     // 建立反向引用
     for (const conn of connections) {
-      const toNode = nodes.find(n => n.id === conn.toId);
+      const toNode = nodes.find((n) => n.id === conn.toId);
       if (toNode && !toNode.inputs.includes(conn.fromId)) {
         toNode.inputs.push(conn.fromId);
       }
@@ -118,12 +118,16 @@ export class BusRouter {
    */
   static validateRouting(graph: RoutingGraph): RoutingValidationError[] {
     const errors: RoutingValidationError[] = [];
-    const nodeIds = new Set(graph.nodes.map(n => n.id));
+    const nodeIds = new Set(graph.nodes.map((n) => n.id));
 
     // 检查悬空引用
     for (const conn of graph.connections) {
       if (!nodeIds.has(conn.fromId)) {
-        errors.push({ type: 'dangling-reference', message: `Source node ${conn.fromId} not found`, nodeId: conn.fromId });
+        errors.push({
+          type: 'dangling-reference',
+          message: `Source node ${conn.fromId} not found`,
+          nodeId: conn.fromId,
+        });
       }
       if (!nodeIds.has(conn.toId)) {
         errors.push({ type: 'dangling-reference', message: `Target node ${conn.toId} not found`, nodeId: conn.toId });
@@ -191,7 +195,7 @@ export class BusRouter {
     }
 
     const sorted: RoutingNode[] = [];
-    const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+    const nodeMap = new Map(graph.nodes.map((n) => [n.id, n]));
 
     while (queue.length > 0) {
       const id = queue.shift()!;
@@ -214,7 +218,7 @@ export class BusRouter {
     if (connections.length === 0) return '';
 
     // 简化的 amerge/amix 滤镜
-    const inputCount = new Set(connections.map(c => c.fromId)).size;
+    const inputCount = new Set(connections.map((c) => c.fromId)).size;
     if (inputCount <= 1) return '';
 
     return `amix=inputs=${inputCount}:duration=longest:dropout_transition=2`;

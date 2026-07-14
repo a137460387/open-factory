@@ -77,7 +77,7 @@ export interface VersionedExportReportRow {
 export function expandVersionedExportVariables(
   template: string,
   variables: Record<string, string>,
-  options: { pathSafe?: boolean } = {}
+  options: { pathSafe?: boolean } = {},
 ): string {
   return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key: string) => {
     const value = variables[key];
@@ -91,12 +91,12 @@ export function expandVersionedExportVariables(
 export function mergeVersionedExportSettings(
   defaultSettings: Partial<Omit<ExportSettings, 'outputPath'>>,
   presetSettings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined,
-  version: Pick<VersionedExportDefinition, 'settings'>
+  version: Pick<VersionedExportDefinition, 'settings'>,
 ): Partial<Omit<ExportSettings, 'outputPath'>> {
   return {
     ...cloneSettings(defaultSettings),
     ...cloneSettings(presetSettings),
-    ...cloneSettings(version.settings)
+    ...cloneSettings(version.settings),
   };
 }
 
@@ -115,13 +115,13 @@ export function createVersionedExportJobs(input: CreateVersionedExportJobsInput)
           versionId: version.id,
           versionName: version.name,
           ...(version.platform?.trim() ? { platform: version.platform.trim() } : {}),
-          ...(version.language?.trim() ? { language: version.language.trim() } : {})
+          ...(version.language?.trim() ? { language: version.language.trim() } : {}),
         },
         outputPath: expandVersionedExportVariables(template, variables, { pathSafe: true }),
-        range: version.range === undefined ? input.defaultRange ?? null : version.range,
+        range: version.range === undefined ? (input.defaultRange ?? null) : version.range,
         settings,
         metadata,
-        presetId: version.presetId
+        presetId: version.presetId,
       };
     });
 }
@@ -130,14 +130,14 @@ export function serializeVersionedBatchTemplate(
   name: string,
   outputPathTemplate: string,
   versions: VersionedExportDefinition[],
-  exportedAt = new Date().toISOString()
+  exportedAt = new Date().toISOString(),
 ): string {
   const payload: VersionedBatchExportTemplateFile = {
     version: 1,
     name: name.trim() || 'Versioned Batch Export',
     outputPathTemplate: outputPathTemplate.trim() || './{version_name}.mp4',
     versions: versions.map(sanitizeVersionDefinition),
-    exportedAt
+    exportedAt,
   };
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
@@ -150,14 +150,20 @@ export function parseVersionedBatchTemplate(contents: string): VersionedBatchExp
   return {
     version: 1,
     name: typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : 'Versioned Batch Export',
-    outputPathTemplate: typeof parsed.outputPathTemplate === 'string' && parsed.outputPathTemplate.trim() ? parsed.outputPathTemplate.trim() : './{version_name}.mp4',
+    outputPathTemplate:
+      typeof parsed.outputPathTemplate === 'string' && parsed.outputPathTemplate.trim()
+        ? parsed.outputPathTemplate.trim()
+        : './{version_name}.mp4',
     versions: parsed.versions.flatMap((version) => {
       if (!version || typeof version.id !== 'string' || typeof version.name !== 'string') {
         return [];
       }
       return [sanitizeVersionDefinition(version)];
     }),
-    exportedAt: typeof parsed.exportedAt === 'string' && parsed.exportedAt.trim() ? parsed.exportedAt.trim() : new Date(0).toISOString()
+    exportedAt:
+      typeof parsed.exportedAt === 'string' && parsed.exportedAt.trim()
+        ? parsed.exportedAt.trim()
+        : new Date(0).toISOString(),
   };
 }
 
@@ -167,10 +173,12 @@ export function countRunningVersionedBatchTasks(tasks: ExportTask[], batchId: st
 
 export function buildVersionedExportReportRows(
   tasks: ExportTask[],
-  options: { batchId?: string; fileSizes?: Record<string, number> } = {}
+  options: { batchId?: string; fileSizes?: Record<string, number> } = {},
 ): VersionedExportReportRow[] {
   return tasks
-    .filter((task) => Boolean(task.versionedBatch) && (!options.batchId || task.versionedBatch?.batchId === options.batchId))
+    .filter(
+      (task) => Boolean(task.versionedBatch) && (!options.batchId || task.versionedBatch?.batchId === options.batchId),
+    )
     .map((task) => {
       const metadata = task.versionedBatch!;
       return {
@@ -185,7 +193,7 @@ export function buildVersionedExportReportRows(
         durationSeconds: normalizeOptionalNumber(task.plan.duration),
         elapsedMs: calculateElapsedMs(task.startedAt, task.finishedAt),
         width: normalizeOptionalNumber(task.plan.settings?.width),
-        height: normalizeOptionalNumber(task.plan.settings?.height)
+        height: normalizeOptionalNumber(task.plan.settings?.height),
       };
     });
 }
@@ -196,11 +204,14 @@ function buildVersionedVariables(version: VersionedExportDefinition, index: numb
     version_name: version.name,
     platform: version.platform?.trim() ?? '',
     language: version.language?.trim() ?? '',
-    index: String(index)
+    index: String(index),
   };
 }
 
-function buildVersionedMetadata(template: VersionedExportMetadataTemplate | undefined, variables: Record<string, string>): ExportProject['metadata'] | undefined {
+function buildVersionedMetadata(
+  template: VersionedExportMetadataTemplate | undefined,
+  variables: Record<string, string>,
+): ExportProject['metadata'] | undefined {
   if (!template) {
     return undefined;
   }
@@ -218,7 +229,7 @@ function sanitizeVersionDefinition(version: VersionedExportDefinition): Versione
   const sanitized: VersionedExportDefinition = {
     id: version.id.trim() || `version-${Date.now()}`,
     name: version.name.trim() || 'Version',
-    enabled: version.enabled !== false
+    enabled: version.enabled !== false,
   };
   copyTrimmed(version, sanitized, 'presetId');
   copyTrimmed(version, sanitized, 'platform');
@@ -231,7 +242,7 @@ function sanitizeVersionDefinition(version: VersionedExportDefinition): Versione
     sanitized.variables = Object.fromEntries(
       Object.entries(version.variables)
         .filter(([key, value]) => key.trim() && typeof value === 'string')
-        .map(([key, value]) => [key.trim(), value])
+        .map(([key, value]) => [key.trim(), value]),
     );
   }
   if (version.settings && typeof version.settings === 'object') {
@@ -254,11 +265,17 @@ function sanitizeMetadataTemplate(template: VersionedExportMetadataTemplate): Ve
   return sanitized;
 }
 
-function cloneSettings(settings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined): Partial<Omit<ExportSettings, 'outputPath'>> {
+function cloneSettings(
+  settings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined,
+): Partial<Omit<ExportSettings, 'outputPath'>> {
   return settings ? { ...settings } : {};
 }
 
-function copyTrimmed(source: VersionedExportDefinition, target: VersionedExportDefinition, key: 'presetId' | 'platform' | 'language' | 'outputPathTemplate'): void {
+function copyTrimmed(
+  source: VersionedExportDefinition,
+  target: VersionedExportDefinition,
+  key: 'presetId' | 'platform' | 'language' | 'outputPathTemplate',
+): void {
   const value = source[key];
   if (typeof value === 'string' && value.trim()) {
     target[key] = value.trim();
@@ -266,7 +283,11 @@ function copyTrimmed(source: VersionedExportDefinition, target: VersionedExportD
 }
 
 function sanitizePathToken(value: string): string {
-  const sanitized = value.replace(/[<>:"/\\|?*\x00-\x1f]+/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '');
+  const sanitized = value
+    .replace(/[<>:"/\\|?*\x00-\x1f]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '');
   return sanitized || 'version';
 }
 

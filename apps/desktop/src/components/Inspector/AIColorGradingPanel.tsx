@@ -5,7 +5,7 @@ import {
   isProviderConfigured,
   parseColorGradingSuggestionResponse,
   buildColorGradingSystemPrompt,
-  buildColorGradingColorCorrectionPatch
+  buildColorGradingColorCorrectionPatch,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -29,14 +29,16 @@ interface SuggestionItem {
 export function AIColorGradingPanel({
   clip,
   sourcePath,
-  selectedClipLocked
+  selectedClipLocked,
 }: {
   clip: Clip;
   sourcePath: string;
   selectedClipLocked: boolean;
 }) {
   const providers = useAISettingsStore((s) => s.providers);
-  const visionProviders = providers.filter((p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel));
+  const visionProviders = providers.filter(
+    (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel),
+  );
   const [selectedProviderId, setSelectedProviderId] = useState<string>(visionProviders[0]?.id ?? '');
   const selectedProvider = visionProviders.find((p) => p.id === selectedProviderId) ?? visionProviders[0];
 
@@ -46,11 +48,21 @@ export function AIColorGradingPanel({
   const [historyIndex, setHistoryIndex] = useState(0);
   const abortRef = useRef(false);
 
-  const aiColorHistory = (clip as unknown as { aiColorHistory?: Array<{ timestamp: number; style: string; issues: string[]; suggestions: Array<{ parameter: string; currentValue?: number; recommendedValue: number; reason: string }> }> }).aiColorHistory ?? [];
+  const aiColorHistory =
+    (
+      clip as unknown as {
+        aiColorHistory?: Array<{
+          timestamp: number;
+          style: string;
+          issues: string[];
+          suggestions: Array<{ parameter: string; currentValue?: number; recommendedValue: number; reason: string }>;
+        }>;
+      }
+    ).aiColorHistory ?? [];
 
   const toggleItem = useCallback((parameter: string) => {
     setItems((prev) =>
-      prev.map((item) => (item.parameter === parameter ? { ...item, selected: !item.selected } : item))
+      prev.map((item) => (item.parameter === parameter ? { ...item, selected: !item.selected } : item)),
     );
   }, []);
 
@@ -70,17 +82,23 @@ export function AIColorGradingPanel({
       setPhase('extracting');
       const { frames } = await extractAiFrames({
         sourcePath,
-        times: [clip.start + clip.duration / 2]
+        times: [clip.start + clip.duration / 2],
       });
-      if (abortRef.current || frames.length === 0) { setPhase('idle'); return; }
+      if (abortRef.current || frames.length === 0) {
+        setPhase('idle');
+        return;
+      }
 
       setPhase('analyzing');
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const imageContent = frames.map((b64: string) => ({
         type: 'image_url' as const,
-        image_url: { url: `data:image/jpeg;base64,${b64}` }
+        image_url: { url: `data:image/jpeg;base64,${b64}` },
       }));
 
       const currentCC = (clip as unknown as { colorCorrection?: Record<string, unknown> }).colorCorrection ?? {};
@@ -89,11 +107,8 @@ export function AIColorGradingPanel({
         { role: 'system' as const, content: systemPrompt },
         {
           role: 'user' as const,
-          content: [
-            ...imageContent,
-            { type: 'text' as const, text: `当前色彩校正参数: ${JSON.stringify(currentCC)}` }
-          ]
-        }
+          content: [...imageContent, { type: 'text' as const, text: `当前色彩校正参数: ${JSON.stringify(currentCC)}` }],
+        },
       ];
 
       const response = await callAiApi(
@@ -104,11 +119,14 @@ export function AIColorGradingPanel({
           messages,
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 4096,
-          temperature: 0.3
+          temperature: 0.3,
         },
-        apiKey
+        apiKey,
       );
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = parseColorGradingSuggestionResponse(JSON.parse(response.content));
       if (!parsed) {
@@ -126,14 +144,27 @@ export function AIColorGradingPanel({
         timestamp: Date.now(),
         style: parsed.style,
         issues: parsed.issues,
-        suggestions: parsed.suggestions
+        suggestions: parsed.suggestions,
       };
-      const existing = (clip as unknown as { aiColorHistory?: Array<{ timestamp: number; style: string; issues: string[]; suggestions: Array<{ parameter: string; currentValue?: number; recommendedValue: number; reason: string }> }> }).aiColorHistory ?? [];
+      const existing =
+        (
+          clip as unknown as {
+            aiColorHistory?: Array<{
+              timestamp: number;
+              style: string;
+              issues: string[];
+              suggestions: Array<{
+                parameter: string;
+                currentValue?: number;
+                recommendedValue: number;
+                reason: string;
+              }>;
+            }>;
+          }
+        ).aiColorHistory ?? [];
       const newHistory = [historyEntry, ...existing].slice(0, 3);
       try {
-        commandManager.execute(
-          new UpdateClipCommand(timelineAccessor, clip.id, { aiColorHistory: newHistory })
-        );
+        commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { aiColorHistory: newHistory }));
       } catch {
         // Don't block the UI if history save fails
       }
@@ -141,7 +172,7 @@ export function AIColorGradingPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('idle');
     }
@@ -163,23 +194,21 @@ export function AIColorGradingPanel({
     }
     try {
       const patch = buildColorGradingColorCorrectionPatch(
-        selected.map((item) => ({ parameter: item.parameter, recommendedValue: item.recommendedValue }))
+        selected.map((item) => ({ parameter: item.parameter, recommendedValue: item.recommendedValue })),
       );
       if (patch) {
-        commandManager.execute(
-          new UpdateClipCommand(timelineAccessor, clip.id, { colorCorrection: patch })
-        );
+        commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { colorCorrection: patch }));
         showToast({
           kind: 'success',
           title: t.appliedTitle,
-          message: t.appliedMessage(selected.length)
+          message: t.appliedMessage(selected.length),
         });
       }
     } catch (error) {
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
     }
     setPhase('idle');
@@ -192,23 +221,24 @@ export function AIColorGradingPanel({
     setPhase('history');
   }, []);
 
-  const applyHistoryItem = useCallback((parameter: string, recommendedValue: number) => {
-    try {
-      const patch = buildColorGradingColorCorrectionPatch([{ parameter, recommendedValue }]);
-      if (patch) {
-        commandManager.execute(
-          new UpdateClipCommand(timelineAccessor, clip.id, { colorCorrection: patch })
-        );
-        showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage(1) });
+  const applyHistoryItem = useCallback(
+    (parameter: string, recommendedValue: number) => {
+      try {
+        const patch = buildColorGradingColorCorrectionPatch([{ parameter, recommendedValue }]);
+        if (patch) {
+          commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { colorCorrection: patch }));
+          showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage(1) });
+        }
+      } catch (error) {
+        showToast({
+          kind: 'error',
+          title: t.failedTitle,
+          message: error instanceof Error ? error.message : t.failedMessage,
+        });
       }
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
-      });
-    }
-  }, [clip.id]);
+    },
+    [clip.id],
+  );
 
   return (
     <div className="mt-2" data-testid="ai-color-suggestion-section">
@@ -225,7 +255,9 @@ export function AIColorGradingPanel({
             >
               {visionProviders.length === 0 && <option value="">{t.noProvider}</option>}
               {visionProviders.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -281,12 +313,14 @@ export function AIColorGradingPanel({
           <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.previewTitle}</div>
           {suggestion.style && (
             <div className="text-xs text-[var(--color-text-secondary)]">
-              <span className="font-medium">{t.style}: </span>{suggestion.style}
+              <span className="font-medium">{t.style}: </span>
+              {suggestion.style}
             </div>
           )}
           {suggestion.issues.length > 0 && (
             <div className="text-xs text-[var(--color-text-secondary)]">
-              <span className="font-medium">{t.issues}: </span>{suggestion.issues.join('、')}
+              <span className="font-medium">{t.issues}: </span>
+              {suggestion.issues.join('、')}
             </div>
           )}
           <div className="max-h-60 space-y-1 overflow-y-auto">
@@ -307,9 +341,13 @@ export function AIColorGradingPanel({
                   <div className="font-medium text-ink">{item.parameter}</div>
                   <div className="text-[var(--color-text-muted)]">
                     {item.currentValue !== undefined && (
-                      <span>{t.currentValue}: {item.currentValue} → </span>
+                      <span>
+                        {t.currentValue}: {item.currentValue} →{' '}
+                      </span>
                     )}
-                    <span>{t.recommendedValue}: {item.recommendedValue}</span>
+                    <span>
+                      {t.recommendedValue}: {item.recommendedValue}
+                    </span>
                   </div>
                   {item.reason && <div className="mt-0.5 text-[var(--color-text-muted)]">{item.reason}</div>}
                 </div>
@@ -348,26 +386,29 @@ export function AIColorGradingPanel({
         <div className="space-y-2" data-testid="ai-color-suggestion-history-view">
           <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.historyTitle}</div>
           <div className="text-xs text-[var(--color-text-secondary)]">
-            <span className="font-medium">{t.style}: </span>{aiColorHistory[historyIndex].style}
+            <span className="font-medium">{t.style}: </span>
+            {aiColorHistory[historyIndex].style}
           </div>
           {aiColorHistory[historyIndex].issues.length > 0 && (
             <div className="text-xs text-[var(--color-text-secondary)]">
-              <span className="font-medium">{t.issues}: </span>{aiColorHistory[historyIndex].issues.join('、')}
+              <span className="font-medium">{t.issues}: </span>
+              {aiColorHistory[historyIndex].issues.join('、')}
             </div>
           )}
           <div className="max-h-60 space-y-1 overflow-y-auto">
             {aiColorHistory[historyIndex].suggestions.map((item) => (
-              <div
-                key={item.parameter}
-                className="flex items-start gap-2 rounded-md border border-line p-2 text-xs"
-              >
+              <div key={item.parameter} className="flex items-start gap-2 rounded-md border border-line p-2 text-xs">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-ink">{item.parameter}</div>
                   <div className="text-[var(--color-text-muted)]">
                     {item.currentValue !== undefined && (
-                      <span>{t.currentValue}: {item.currentValue} → </span>
+                      <span>
+                        {t.currentValue}: {item.currentValue} →{' '}
+                      </span>
                     )}
-                    <span>{t.recommendedValue}: {item.recommendedValue}</span>
+                    <span>
+                      {t.recommendedValue}: {item.recommendedValue}
+                    </span>
                   </div>
                   {item.reason && <div className="mt-0.5 text-[var(--color-text-muted)]">{item.reason}</div>}
                 </div>
@@ -400,18 +441,23 @@ export function AILookMatchPanel({ clip }: { clip: Clip }) {
   const lookMatch = clip.aiLookMatch;
   if (!lookMatch) return null;
   const updateBlend = (blendStrength: number) => {
-    commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, {
-      aiLookMatch: { ...lookMatch, blendStrength },
-    }));
+    commandManager.execute(
+      new UpdateClipCommand(timelineAccessor, clip.id, {
+        aiLookMatch: { ...lookMatch, blendStrength },
+      }),
+    );
   };
   return (
     <div className="mt-2 space-y-2" data-testid="ai-look-match-panel">
       <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.aiLookMatch.title}</div>
       <div className="text-xs text-[var(--color-text-muted)]">
-        {zhCN.inspector.aiLookMatch.reason}: {lookMatch.confidence > 0 ? `置信度 ${(lookMatch.confidence * 100).toFixed(0)}%` : ''}
+        {zhCN.inspector.aiLookMatch.reason}:{' '}
+        {lookMatch.confidence > 0 ? `置信度 ${(lookMatch.confidence * 100).toFixed(0)}%` : ''}
       </div>
       <label className="block text-xs text-[var(--color-text-secondary)]">
-        <span>{zhCN.inspector.aiLookMatch.blendStrength} ({lookMatch.blendStrength}%)</span>
+        <span>
+          {zhCN.inspector.aiLookMatch.blendStrength} ({lookMatch.blendStrength}%)
+        </span>
         <input
           type="range"
           min={0}
@@ -430,7 +476,9 @@ export function AILookMatchPanel({ clip }: { clip: Clip }) {
         className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
         type="button"
         data-testid="ai-look-match-apply"
-        onClick={() => { /* colorCorrection already reflects the look */ }}
+        onClick={() => {
+          /* colorCorrection already reflects the look */
+        }}
       >
         {zhCN.inspector.aiLookMatch.apply}
       </button>

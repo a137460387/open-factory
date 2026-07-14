@@ -1,4 +1,9 @@
-import { calculateTimelineHeatmap, type Timeline, type TimelineHeatmapSegment, type TimelineHeatmapType } from '@open-factory/editor-core';
+import {
+  calculateTimelineHeatmap,
+  type Timeline,
+  type TimelineHeatmapSegment,
+  type TimelineHeatmapType,
+} from '@open-factory/editor-core';
 
 interface HeatmapWorkerRequest {
   id: number;
@@ -19,8 +24,8 @@ self.onmessage = (event: MessageEvent<HeatmapWorkerRequest>) => {
     id: request.id,
     segments: calculateTimelineHeatmap(request.type, request.timeline, {
       duration: request.duration,
-      bucketSeconds: request.bucketSeconds
-    })
+      bucketSeconds: request.bucketSeconds,
+    }),
   };
   self.postMessage(response);
 };

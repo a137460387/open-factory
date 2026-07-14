@@ -1,11 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { zhCN } from '../i18n/strings';
 import { showToast } from '../lib/toast';
-import {
-  readViewportSize,
-  isEditableKeyboardEventTarget,
-  getWorkspaceLayoutDisplayName,
-} from '../lib/ui-helpers';
+import { readViewportSize, isEditableKeyboardEventTarget, getWorkspaceLayoutDisplayName } from '../lib/ui-helpers';
 import { isEditableKeyboardTarget, isShortcutCheatsheetKey } from '../accessibility/keyboard-navigation';
 import {
   applyWorkspaceLayout,
@@ -46,29 +42,26 @@ export function useEditorShellInteractions(): EditorShellInteractions {
   }, []);
 
   // === Ctrl+F 全局搜索 + 工作区布局快捷键 ===
-  const applyWorkspaceLayoutById = useCallback(
-    (layoutId: WorkspaceLayoutId) => {
-      const layoutSettings = useEditorUIStore.getState().layoutSettings;
-      const layout = getWorkspaceLayoutById(layoutSettings, layoutId);
-      if (!layout) {
-        showToast({ kind: 'warning', title: zhCN.layout.workspaceApplyFailed, message: zhCN.layout.workspaceMissing });
-        return;
-      }
-      const next = applyWorkspaceLayout(layoutSettings, layout);
-      useEditorUIStore.getState().setLayoutSettings(next);
-      useEditorUIStore.getState().setHistoryPanelOpen(layout.panels.history);
-      useEditorUIStore.getState().setSmartRoughCutOpen(false);
-      useEditorUIStore.getState().setAiRoughCutOpen(false);
-      useEditorUIStore.getState().setAiChatEditorOpen(false);
-      useEditorUIStore.getState().setVideoSummaryOpen(false);
-      useEditorUIStore.getState().setNarrationOpen(false);
-      void saveLayoutSettings(next).catch((error) => {
-        console.warn('Unable to save workspace layout', error);
-      });
-      showToast({ kind: 'success', title: zhCN.layout.workspaceApplied, message: getWorkspaceLayoutDisplayName(layout) });
-    },
-    []
-  );
+  const applyWorkspaceLayoutById = useCallback((layoutId: WorkspaceLayoutId) => {
+    const layoutSettings = useEditorUIStore.getState().layoutSettings;
+    const layout = getWorkspaceLayoutById(layoutSettings, layoutId);
+    if (!layout) {
+      showToast({ kind: 'warning', title: zhCN.layout.workspaceApplyFailed, message: zhCN.layout.workspaceMissing });
+      return;
+    }
+    const next = applyWorkspaceLayout(layoutSettings, layout);
+    useEditorUIStore.getState().setLayoutSettings(next);
+    useEditorUIStore.getState().setHistoryPanelOpen(layout.panels.history);
+    useEditorUIStore.getState().setSmartRoughCutOpen(false);
+    useEditorUIStore.getState().setAiRoughCutOpen(false);
+    useEditorUIStore.getState().setAiChatEditorOpen(false);
+    useEditorUIStore.getState().setVideoSummaryOpen(false);
+    useEditorUIStore.getState().setNarrationOpen(false);
+    void saveLayoutSettings(next).catch((error) => {
+      console.warn('Unable to save workspace layout', error);
+    });
+    showToast({ kind: 'success', title: zhCN.layout.workspaceApplied, message: getWorkspaceLayoutDisplayName(layout) });
+  }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
@@ -114,7 +107,14 @@ export function useEditorShellInteractions(): EditorShellInteractions {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey || event.key.toLowerCase() !== 'd') {
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        !event.shiftKey ||
+        event.key.toLowerCase() !== 'd'
+      ) {
         return;
       }
       if (isEditableKeyboardTarget(event.target)) {
@@ -166,7 +166,12 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         if (existing) {
           existing.keyframes.push(kf);
         } else {
-          groups.push({ sourceClipId: ref.clipId, sourceClipStart: clip.start, property: ref.property, keyframes: [kf] });
+          groups.push({
+            sourceClipId: ref.clipId,
+            sourceClipStart: clip.start,
+            property: ref.property,
+            keyframes: [kf],
+          });
         }
       }
       if (groups.length > 0) {
@@ -216,11 +221,11 @@ export function useEditorShellInteractions(): EditorShellInteractions {
           for (const asset of latestProject.media.filter((item) => assetIds.includes(item.id))) {
             useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], proxySettings, {
               force: true,
-              priority: projectUsesMediaOnTimeline(latestProject, asset.id) ? 'high' : 'low'
+              priority: projectUsesMediaOnTimeline(latestProject, asset.id) ? 'high' : 'low',
             });
           }
           void ensureMediaJobRunner();
-        }
+        },
       }).catch((error) => {
         console.warn('Unable to run proxy integrity check', error);
       });
@@ -249,7 +254,12 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         }
         useEditorFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
         useEditorFeatureStore.getState().setProjectHealthReport(result.report);
-        if (shouldAutoShowMediaHealthDashboard({ enabled: mediaHealthAutoShowEnabled, issueCount: result.dashboard.issueCount })) {
+        if (
+          shouldAutoShowMediaHealthDashboard({
+            enabled: mediaHealthAutoShowEnabled,
+            issueCount: result.dashboard.issueCount,
+          })
+        ) {
           useEditorUIStore.getState().setMediaHealthDashboardOpen(true);
         }
       })

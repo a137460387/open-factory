@@ -47,14 +47,22 @@ export interface RecommendationRule {
 
 /** Built-in recommendation rules */
 export const RECOMMENDATION_RULES: RecommendationRule[] = [
-  { requiresFeature: 'subtitle-polish', recommendFeature: 'contextual-translation', reasonKey: 'recommendContextualTranslation' },
+  {
+    requiresFeature: 'subtitle-polish',
+    recommendFeature: 'contextual-translation',
+    reasonKey: 'recommendContextualTranslation',
+  },
   { requiresFeature: 'rough-cut', recommendFeature: 'director-mode', reasonKey: 'recommendDirectorMode' },
   { requiresFeature: 'vision-analysis', recommendFeature: 'video-summary', reasonKey: 'recommendVideoSummary' },
   { requiresFeature: 'chapter-title', recommendFeature: 'narration-script', reasonKey: 'recommendNarrationScript' },
   { requiresFeature: 'chat-editor', recommendFeature: 'rough-cut', reasonKey: 'recommendRoughCut' },
   { requiresFeature: 'video-summary', recommendFeature: 'highlight-reel', reasonKey: 'recommendHighlightReel' },
   { requiresFeature: 'voiceover', recommendFeature: 'narration-script', reasonKey: 'recommendNarrationFromVoiceover' },
-  { requiresFeature: 'color-grading-suggestion', recommendFeature: 'vision-analysis', reasonKey: 'recommendVisionAnalysis' },
+  {
+    requiresFeature: 'color-grading-suggestion',
+    recommendFeature: 'vision-analysis',
+    reasonKey: 'recommendVisionAnalysis',
+  },
   { requiresFeature: 'export-suggestion', recommendFeature: 'video-summary', reasonKey: 'recommendSummaryFromExport' },
   { requiresFeature: 'narration-script', recommendFeature: 'voiceover', reasonKey: 'recommendVoiceover' },
 ];

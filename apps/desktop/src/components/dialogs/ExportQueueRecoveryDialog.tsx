@@ -6,7 +6,7 @@ export function ExportQueueRecoveryDialog({
   candidate,
   onRestoreAll,
   onRestoreSelected,
-  onDiscardAll
+  onDiscardAll,
 }: {
   candidate: ExportQueueRecoveryCandidate;
   onRestoreAll(): void;
@@ -18,11 +18,16 @@ export function ExportQueueRecoveryDialog({
   const t = zhCN.exportDialog.recovery;
 
   function toggleTask(taskId: string, checked: boolean): void {
-    setSelectedIds((current) => (checked ? Array.from(new Set([...current, taskId])) : current.filter((id) => id !== taskId)));
+    setSelectedIds((current) =>
+      checked ? Array.from(new Set([...current, taskId])) : current.filter((id) => id !== taskId),
+    );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="export-queue-recovery-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="export-queue-recovery-dialog"
+    >
       <section className="w-full max-w-lg rounded-md border border-line bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{t.title(candidate.tasks.length)}</h2>
@@ -33,7 +38,11 @@ export function ExportQueueRecoveryDialog({
         <div className="max-h-[42vh] overflow-y-auto px-4 py-3">
           <div className="space-y-2">
             {candidate.tasks.map((task) => (
-              <label key={task.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-line px-3 py-2 text-xs" data-testid="export-queue-recovery-task">
+              <label
+                key={task.id}
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-md border border-line px-3 py-2 text-xs"
+                data-testid="export-queue-recovery-task"
+              >
                 <input
                   className="h-4 w-4 accent-brand"
                   type="checkbox"
@@ -45,7 +54,11 @@ export function ExportQueueRecoveryDialog({
                   <span className="block truncate font-medium text-slate-800">{task.name}</span>
                   <span className="block truncate text-[11px] text-slate-500">{task.outputPath}</span>
                 </span>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700" data-testid="export-queue-recovery-task-status" data-status={task.status}>
+                <span
+                  className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700"
+                  data-testid="export-queue-recovery-task-status"
+                  data-status={task.status}
+                >
                   {zhCN.exportDialog.status[task.status]}
                 </span>
               </label>
@@ -53,7 +66,12 @@ export function ExportQueueRecoveryDialog({
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" data-testid="export-queue-discard-all" onClick={onDiscardAll}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            data-testid="export-queue-discard-all"
+            onClick={onDiscardAll}
+          >
             {t.discardAll}
           </button>
           <button
@@ -65,7 +83,12 @@ export function ExportQueueRecoveryDialog({
           >
             {t.restoreSelected}
           </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="export-queue-restore-all" onClick={onRestoreAll}>
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
+            type="button"
+            data-testid="export-queue-restore-all"
+            onClick={onRestoreAll}
+          >
             {t.restoreAll}
           </button>
         </div>

@@ -11,8 +11,8 @@ describe('export file size estimate', () => {
         duration: 10,
         format: 'mp4',
         videoBitrate: '8M',
-        audioBitrate: '192k'
-      })
+        audioBitrate: '192k',
+      }),
     ).toBe(10_240_000);
     expect(
       estimateExportFileSizeBytes({
@@ -22,8 +22,8 @@ describe('export file size estimate', () => {
         duration: 10,
         format: 'm4a',
         outputMode: 'audio',
-        audioBitrate: '192k'
-      })
+        audioBitrate: '192k',
+      }),
     ).toBe(240_000);
   });
 

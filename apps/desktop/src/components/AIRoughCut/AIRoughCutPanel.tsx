@@ -9,7 +9,7 @@ import {
   isProviderConfigured,
   runAlgorithmPipeline,
   type AIRoughCutClip,
-  type AlgorithmStep
+  type AlgorithmStep,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -34,13 +34,7 @@ interface StoryboardClip {
   deleted: boolean;
 }
 
-export function AIRoughCutPanel({
-  media,
-  onClose
-}: {
-  media: MediaAsset[];
-  onClose: () => void;
-}) {
+export function AIRoughCutPanel({ media, onClose }: { media: MediaAsset[]; onClose: () => void }) {
   const providers = useAISettingsStore((s) => s.providers);
   const textProviders = providers.filter((p) => p.enabled && isProviderConfigured(p));
   const [selectedProviderId, setSelectedProviderId] = useState<string>(textProviders[0]?.id ?? '');
@@ -112,7 +106,7 @@ export function AIRoughCutPanel({
       const storyItems: StoryboardClip[] = parsed.map((clip) => ({
         ...clip,
         mediaName: mediaMap.get(clip.mediaId)?.name ?? clip.mediaId,
-        deleted: false
+        deleted: false,
       }));
       setStoryboard(storyItems);
       setPhase('preview');
@@ -120,7 +114,7 @@ export function AIRoughCutPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('input');
     }
@@ -138,7 +132,10 @@ export function AIRoughCutPanel({
     try {
       setPhase('generating');
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('input'); return; }
+      if (abortRef.current) {
+        setPhase('input');
+        return;
+      }
 
       const mediaInfo = buildMediaInfoForAI(media);
       const systemPrompt = buildRoughCutSystemPrompt();
@@ -146,7 +143,7 @@ export function AIRoughCutPanel({
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
-        { role: 'user' as const, content: userPrompt }
+        { role: 'user' as const, content: userPrompt },
       ];
 
       const response = await callAiApi(
@@ -157,11 +154,14 @@ export function AIRoughCutPanel({
           messages,
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 4096,
-          temperature: 0.3
+          temperature: 0.3,
         },
-        apiKey
+        apiKey,
       );
-      if (abortRef.current) { setPhase('input'); return; }
+      if (abortRef.current) {
+        setPhase('input');
+        return;
+      }
 
       const parsed = parseRoughCutAIResponse(JSON.parse(response.content));
       if (parsed.length === 0) {
@@ -174,7 +174,7 @@ export function AIRoughCutPanel({
       const storyItems: StoryboardClip[] = parsed.map((clip) => ({
         ...clip,
         mediaName: mediaMap.get(clip.mediaId)?.name ?? clip.mediaId,
-        deleted: false
+        deleted: false,
       }));
       setStoryboard(storyItems);
       setPhase('preview');
@@ -182,7 +182,7 @@ export function AIRoughCutPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('input');
     }
@@ -194,9 +194,7 @@ export function AIRoughCutPanel({
   }, []);
 
   const toggleDelete = useCallback((index: number) => {
-    setStoryboard((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, deleted: !item.deleted } : item))
-    );
+    setStoryboard((prev) => prev.map((item, i) => (i === index ? { ...item, deleted: !item.deleted } : item)));
   }, []);
 
   const moveClip = useCallback((index: number, direction: -1 | 1) => {
@@ -235,7 +233,10 @@ export function AIRoughCutPanel({
           start: cursor,
           duration: clipDuration,
           trimStart: Math.min(sc.startTime, Math.max(0, asset.duration - clipDuration)),
-          trimEnd: Math.max(0, asset.duration - Math.min(sc.startTime, Math.max(0, asset.duration - clipDuration)) - clipDuration)
+          trimEnd: Math.max(
+            0,
+            asset.duration - Math.min(sc.startTime, Math.max(0, asset.duration - clipDuration)) - clipDuration,
+          ),
         });
         cursor += clipDuration;
 
@@ -244,43 +245,41 @@ export function AIRoughCutPanel({
             ...base,
             type: 'video' as const,
             mediaId: asset.id,
-            volume: 1
+            volume: 1,
           };
         } else if (asset.type === 'image') {
           return {
             ...base,
             type: 'image' as const,
-            mediaId: asset.id
+            mediaId: asset.id,
           };
         } else {
           return {
             ...base,
             type: 'audio' as const,
             mediaId: asset.id,
-            volume: 1
+            volume: 1,
           };
         }
       });
 
-      const trackType = clips.some((c) => c.type === 'video' || c.type === 'image') ? 'video' as const : 'audio' as const;
-      const cmd = new BatchAddClipsCommand(
-        timelineAccessor,
-        clips,
-        [{ id: trackId, name: 'AI粗剪', type: trackType }]
-      );
+      const trackType = clips.some((c) => c.type === 'video' || c.type === 'image')
+        ? ('video' as const)
+        : ('audio' as const);
+      const cmd = new BatchAddClipsCommand(timelineAccessor, clips, [{ id: trackId, name: 'AI粗剪', type: trackType }]);
       commandManager.execute(cmd);
 
       showToast({
         kind: 'success',
         title: t.applied,
-        message: t.appliedMessage(activeClips.length)
+        message: t.appliedMessage(activeClips.length),
       });
       setPhase('done');
     } catch (error) {
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
     }
   }, [storyboard, media]);
@@ -305,21 +304,23 @@ export function AIRoughCutPanel({
         {phase === 'input' && (
           <>
             {inputMode !== 'algorithm' && (
-            <div>
-              <label className="block text-xs text-slate-600 mb-1">{t.selectProvider}</label>
-              <select
-                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
-                value={selectedProviderId}
-                onChange={(e) => setSelectedProviderId(e.target.value)}
-                disabled={textProviders.length === 0}
-                data-testid="ai-rough-cut-provider-select"
-              >
-                {textProviders.length === 0 && <option value="">{t.noProvider}</option>}
-                {textProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">{t.selectProvider}</label>
+                <select
+                  className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                  value={selectedProviderId}
+                  onChange={(e) => setSelectedProviderId(e.target.value)}
+                  disabled={textProviders.length === 0}
+                  data-testid="ai-rough-cut-provider-select"
+                >
+                  {textProviders.length === 0 && <option value="">{t.noProvider}</option>}
+                  {textProviders.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             <div>
@@ -374,7 +375,9 @@ export function AIRoughCutPanel({
                   data-testid="ai-rough-cut-template-select"
                 >
                   {ROUGH_CUT_TEMPLATES.map((tmpl) => (
-                    <option key={tmpl.id} value={tmpl.id}>{tmpl.name}</option>
+                    <option key={tmpl.id} value={tmpl.id}>
+                      {tmpl.name}
+                    </option>
                   ))}
                 </select>
                 <div className="space-y-1.5">
@@ -392,7 +395,7 @@ export function AIRoughCutPanel({
                           onChange={(e) =>
                             setTemplateDurations((prev) => ({
                               ...prev,
-                              [key]: Math.max(1, Number(e.target.value) || seg.defaultDuration)
+                              [key]: Math.max(1, Number(e.target.value) || seg.defaultDuration),
                             }))
                           }
                           data-testid={`ai-rough-cut-template-duration-${seg.label}`}
@@ -409,12 +412,12 @@ export function AIRoughCutPanel({
               <div className="space-y-2">
                 <div className="text-xs text-slate-500">{t.algorithmModeHint}</div>
                 <div className="space-y-1.5">
-                  {([
+                  {[
                     { step: 'highlight' as AlgorithmStep, label: t.stepHighlight, desc: t.stepHighlightDesc },
                     { step: 'scene' as AlgorithmStep, label: t.stepScene, desc: t.stepSceneDesc },
                     { step: 'silence' as AlgorithmStep, label: t.stepSilence, desc: t.stepSilenceDesc },
-                    { step: 'dialogue' as AlgorithmStep, label: t.stepDialogue, desc: t.stepDialogueDesc }
-                  ]).map((item) => (
+                    { step: 'dialogue' as AlgorithmStep, label: t.stepDialogue, desc: t.stepDialogueDesc },
+                  ].map((item) => (
                     <label
                       key={item.step}
                       className="flex items-start gap-2 rounded-md border border-line bg-white p-2 text-xs cursor-pointer hover:bg-panel"
@@ -437,7 +440,10 @@ export function AIRoughCutPanel({
             )}
 
             {!hasAiAnalysis && inputMode !== 'algorithm' && (
-              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700" data-testid="ai-rough-cut-no-analysis-hint">
+              <div
+                className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700"
+                data-testid="ai-rough-cut-no-analysis-hint"
+              >
                 {t.mediaMatchNoAnalysis}
               </div>
             )}
@@ -480,7 +486,8 @@ export function AIRoughCutPanel({
         {phase === 'preview' && (
           <div className="space-y-2" data-testid="ai-rough-cut-storyboard">
             <div className="text-xs font-semibold text-slate-700">
-              {t.storyboard} — {t.clipCount(storyboard.filter((s) => !s.deleted).length)} · {t.totalDuration(storyboard.filter((s) => !s.deleted).reduce((sum, s) => sum + s.duration, 0))}
+              {t.storyboard} — {t.clipCount(storyboard.filter((s) => !s.deleted).length)} ·{' '}
+              {t.totalDuration(storyboard.filter((s) => !s.deleted).reduce((sum, s) => sum + s.duration, 0))}
             </div>
             <div className="text-[11px] text-slate-400">{t.reorderHint}</div>
             <div className="space-y-1.5 max-h-80 overflow-y-auto">

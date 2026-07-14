@@ -1,4 +1,15 @@
-import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, MixerState, ProjectColorPipeline, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import type {
+  AudioSpectrumParams,
+  Clip,
+  Effect,
+  EffectType,
+  MediaAsset,
+  MixerState,
+  ProjectColorPipeline,
+  Sequence,
+  Timeline,
+  Transition,
+} from '@open-factory/editor-core';
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
@@ -12,7 +23,7 @@ import {
   normalizeAudioSpectrumParams,
   expandAudioVisualizationTheme,
   MANUAL_AUDIO_VISUALIZATION_THEME_ID,
-  normalizeColorCorrection
+  normalizeColorCorrection,
 } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewGpuMetrics, recordPreviewMode, recordPreviewReadback } from './debug';
@@ -20,7 +31,14 @@ import type { GpuPreviewMetrics } from './gpu-acceleration';
 import { HardwareDecodeManager } from './hw-decode-manager';
 import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
-import { drawCreditsRoll2d, drawCreditsRollWebGl, drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
+import {
+  drawCreditsRoll2d,
+  drawCreditsRollWebGl,
+  drawMissing2d,
+  drawMissingWebGl,
+  drawText2d,
+  drawTextWebGl,
+} from './text-renderer';
 import { drawVideo2d, drawVideoWebGl } from './video-renderer';
 import { drawTransformedSource2d } from './transform-2d';
 import { WebGlPreviewCompositor } from './webgl-compositor';
@@ -59,7 +77,7 @@ export class PreviewRenderer {
     timeline: Timeline,
     media: MediaAsset[],
     playheadTime: number,
-    options: PreviewRenderOptions = {}
+    options: PreviewRenderOptions = {},
   ): Promise<PreviewRenderResult> {
     const token = ++this.renderToken;
     const mediaById = new Map(media.map((asset) => [asset.id, asset]));
@@ -78,7 +96,20 @@ export class PreviewRenderer {
         if (token !== this.renderToken) {
           return {};
         }
-        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes, colorPipeline);
+        await this.drawClipWebGl(
+          webgl,
+          clip,
+          mediaById,
+          sequenceById,
+          media,
+          clipPlayheadTime,
+          canvas.width,
+          canvas.height,
+          depth,
+          bypassProcessing,
+          disabledEffectTypes,
+          colorPipeline,
+        );
       }
       if (!bypassProcessing) {
         this.drawAudioSpectrumWebGl(webgl, timeline, playheadTime, canvas.width, canvas.height);
@@ -103,20 +134,40 @@ export class PreviewRenderer {
       if (token !== this.renderToken) {
         return {};
       }
-      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth, bypassProcessing, disabledEffectTypes);
+      await this.drawClip2d(
+        context,
+        canvas,
+        clip,
+        mediaById,
+        sequenceById,
+        media,
+        clipPlayheadTime,
+        depth,
+        bypassProcessing,
+        disabledEffectTypes,
+      );
     }
     if (!bypassProcessing) {
       this.drawAudioSpectrum2d(context, timeline, playheadTime, canvas.width, canvas.height);
     }
     try {
-      recordPreviewReadback(Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data));
+      recordPreviewReadback(
+        Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data),
+      );
     } catch (error) {
       recordPreviewReadback(undefined, error instanceof Error ? error.message : String(error));
     }
     return { frame: options.captureFrame ? read2dFrameSafely(context, canvas) : undefined };
   }
 
-  syncAudio(timeline: Timeline, media: MediaAsset[], playheadTime: number, isPlaying: boolean, masterVolume = 1, mixerState?: MixerState): void {
+  syncAudio(
+    timeline: Timeline,
+    media: MediaAsset[],
+    playheadTime: number,
+    isPlaying: boolean,
+    masterVolume = 1,
+    mixerState?: MixerState,
+  ): void {
     this.audioRenderer.syncAudio(timeline, media, playheadTime, isPlaying, masterVolume, mixerState);
   }
 
@@ -243,31 +294,59 @@ export class PreviewRenderer {
     depth: number,
     bypassProcessing: boolean,
     disabledEffectTypes: EffectType[],
-    colorPipeline?: ProjectColorPipeline
+    colorPipeline?: ProjectColorPipeline,
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
     if (renderClip.type === 'adjustment') {
       if (!bypassProcessing) {
         if (renderClip.colorNodeGraph) {
-          compositor.applyColorNodeGraph(renderClip.colorNodeGraph, renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
+          compositor.applyColorNodeGraph(renderClip.colorNodeGraph, renderClip.colorCorrection, renderClip.effects, {
+            disabledEffectTypes,
+            colorPipeline,
+          });
         } else {
-          compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
+          compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, {
+            disabledEffectTypes,
+            colorPipeline,
+          });
         }
       }
       return;
     }
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing, disabledEffectTypes, colorPipeline);
+      const nested = await this.renderNestedCanvas(
+        renderClip,
+        sequenceById,
+        media,
+        playheadTime,
+        canvasWidth,
+        canvasHeight,
+        depth,
+        bypassProcessing,
+        disabledEffectTypes,
+        colorPipeline,
+      );
       if (!nested) {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      compositor.drawSourceWithColorNodeGraph(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorNodeGraph, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
-        bypassProcessing,
-        disabledEffectTypes,
-        colorPipeline,
-        blendMode: renderClip.blendMode
-      });
+      compositor.drawSourceWithColorNodeGraph(
+        nested,
+        canvasWidth,
+        canvasHeight,
+        renderClip.transform,
+        renderClip.colorNodeGraph,
+        renderClip.colorCorrection,
+        renderClip.effects,
+        renderClip.chromaKey,
+        renderClip.masks,
+        {
+          bypassProcessing,
+          disabledEffectTypes,
+          colorPipeline,
+          blendMode: renderClip.blendMode,
+        },
+      );
       return;
     }
     if (renderClip.type === 'video') {
@@ -276,7 +355,19 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, colorPipeline, this.hwDecodeEnabled ? this.hwDecodeManager : null);
+      await drawVideoWebGl(
+        compositor,
+        renderClip,
+        asset,
+        this.getVideo(asset),
+        playheadTime,
+        seekVideo,
+        loadThumbnail,
+        bypassProcessing,
+        disabledEffectTypes,
+        colorPipeline,
+        this.hwDecodeEnabled ? this.hwDecodeManager : null,
+      );
       return;
     }
 
@@ -286,17 +377,39 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing, disabledEffectTypes, colorPipeline);
+      drawImageWebGl(
+        compositor,
+        renderClip,
+        asset,
+        await loadImage(asset),
+        bypassProcessing,
+        disabledEffectTypes,
+        colorPipeline,
+      );
       return;
     }
 
     if (renderClip.type === 'credits') {
-      drawCreditsRollWebGl(compositor, renderClip, canvasWidth, canvasHeight, bypassProcessing, Math.max(0, playheadTime - renderClip.start), colorPipeline);
+      drawCreditsRollWebGl(
+        compositor,
+        renderClip,
+        canvasWidth,
+        canvasHeight,
+        bypassProcessing,
+        Math.max(0, playheadTime - renderClip.start),
+        colorPipeline,
+      );
       return;
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawTextWebGl(compositor, renderClip, bypassProcessing, colorPipeline, Math.max(0, playheadTime - renderClip.start));
+      drawTextWebGl(
+        compositor,
+        renderClip,
+        bypassProcessing,
+        colorPipeline,
+        Math.max(0, playheadTime - renderClip.start),
+      );
     }
   }
 
@@ -310,7 +423,7 @@ export class PreviewRenderer {
     playheadTime: number,
     depth: number,
     bypassProcessing: boolean,
-    disabledEffectTypes: EffectType[]
+    disabledEffectTypes: EffectType[],
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvas.width, canvas.height);
     if (renderClip.type === 'adjustment') {
@@ -320,12 +433,29 @@ export class PreviewRenderer {
       return;
     }
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes);
+      const nested = await this.renderNestedCanvas(
+        renderClip,
+        sequenceById,
+        media,
+        playheadTime,
+        canvas.width,
+        canvas.height,
+        depth,
+        bypassProcessing,
+        disabledEffectTypes,
+      );
       if (!nested) {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      drawTransformedSource2d(context, canvas, nested, { width: canvas.width, height: canvas.height }, renderClip.transform, bypassProcessing ? undefined : renderClip.colorCorrection);
+      drawTransformedSource2d(
+        context,
+        canvas,
+        nested,
+        { width: canvas.width, height: canvas.height },
+        renderClip.transform,
+        bypassProcessing ? undefined : renderClip.colorCorrection,
+      );
       return;
     }
     if (renderClip.type === 'video') {
@@ -334,7 +464,19 @@ export class PreviewRenderer {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideo2d(context, canvas, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, this.hwDecodeEnabled ? this.hwDecodeManager : null);
+      await drawVideo2d(
+        context,
+        canvas,
+        renderClip,
+        asset,
+        this.getVideo(asset),
+        playheadTime,
+        seekVideo,
+        loadThumbnail,
+        bypassProcessing,
+        disabledEffectTypes,
+        this.hwDecodeEnabled ? this.hwDecodeManager : null,
+      );
       return;
     }
 
@@ -372,7 +514,7 @@ export class PreviewRenderer {
     depth: number,
     bypassProcessing: boolean,
     disabledEffectTypes: EffectType[],
-    colorPipeline?: ProjectColorPipeline
+    colorPipeline?: ProjectColorPipeline,
   ): Promise<HTMLCanvasElement | undefined> {
     if (depth >= 3) {
       return undefined;
@@ -390,7 +532,7 @@ export class PreviewRenderer {
       depth: depth + 1,
       bypassProcessing,
       disabledEffectTypes,
-      colorPipeline
+      colorPipeline,
     });
     return canvas;
   }
@@ -418,16 +560,34 @@ export class PreviewRenderer {
     return this.webgl;
   }
 
-  private drawAudioSpectrumWebGl(compositor: WebGlPreviewCompositor, timeline: Timeline, playheadTime: number, width: number, height: number): void {
-    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) => this.audioRenderer.readAnalysisFrame(kind));
+  private drawAudioSpectrumWebGl(
+    compositor: WebGlPreviewCompositor,
+    timeline: Timeline,
+    playheadTime: number,
+    width: number,
+    height: number,
+  ): void {
+    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) =>
+      this.audioRenderer.readAnalysisFrame(kind),
+    );
     if (!overlay) {
       return;
     }
-    compositor.drawSource(overlay, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true });
+    compositor.drawSource(overlay, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, {
+      bypassProcessing: true,
+    });
   }
 
-  private drawAudioSpectrum2d(context: CanvasRenderingContext2D, timeline: Timeline, playheadTime: number, width: number, height: number): void {
-    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) => this.audioRenderer.readAnalysisFrame(kind));
+  private drawAudioSpectrum2d(
+    context: CanvasRenderingContext2D,
+    timeline: Timeline,
+    playheadTime: number,
+    width: number,
+    height: number,
+  ): void {
+    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) =>
+      this.audioRenderer.readAnalysisFrame(kind),
+    );
     if (!overlay) {
       return;
     }
@@ -440,7 +600,7 @@ function drawAudioSpectrumToCanvas(
   playheadTime: number,
   width: number,
   height: number,
-  readAnalysisFrame: (kind: 'frequency' | 'waveform') => Uint8Array | undefined
+  readAnalysisFrame: (kind: 'frequency' | 'waveform') => Uint8Array | undefined,
 ): HTMLCanvasElement | undefined {
   const activeParams = getActiveAudioSpectrumParams(timeline, playheadTime);
   if (activeParams.length === 0) {
@@ -473,16 +633,28 @@ function getActiveAudioSpectrumParams(timeline: Timeline, playheadTime: number):
       }
       const params = normalizeAudioSpectrumParams(effect.params);
       return params.height > 0 ? [params] : [];
-    })
+    }),
   );
 }
 
-function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: number, height: number, params: AudioSpectrumParams, data: Uint8Array): void {
+function drawAudioSpectrumOverlay(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  params: AudioSpectrumParams,
+  data: Uint8Array,
+): void {
   const overlayHeight = Math.max(2, Math.round(height * (params.height / 100)));
   const y = params.position === 'top' ? 0 : height - overlayHeight;
-  const theme = params.themeId && params.themeId !== MANUAL_AUDIO_VISUALIZATION_THEME_ID
-    ? expandAudioVisualizationTheme({ themeId: params.themeId, color: params.color, colorStart: params.colorStart, colorEnd: params.colorEnd })
-    : undefined;
+  const theme =
+    params.themeId && params.themeId !== MANUAL_AUDIO_VISUALIZATION_THEME_ID
+      ? expandAudioVisualizationTheme({
+          themeId: params.themeId,
+          color: params.color,
+          colorStart: params.colorStart,
+          colorEnd: params.colorEnd,
+        })
+      : undefined;
   const paint = context.createLinearGradient(0, y, 0, y + overlayHeight);
   paint.addColorStop(0, params.colorStart);
   paint.addColorStop(1, params.colorEnd);
@@ -521,12 +693,25 @@ function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: numb
     context.globalAlpha = 0.85;
     context.strokeStyle = theme.borderColor;
     context.lineWidth = theme.borderWidth;
-    context.strokeRect(theme.borderWidth / 2, y + theme.borderWidth / 2, width - theme.borderWidth, overlayHeight - theme.borderWidth);
+    context.strokeRect(
+      theme.borderWidth / 2,
+      y + theme.borderWidth / 2,
+      width - theme.borderWidth,
+      overlayHeight - theme.borderWidth,
+    );
   }
   context.restore();
 }
 
-function drawBarSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array, mirror: boolean): void {
+function drawBarSpectrum(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  y: number,
+  sensitivity: number,
+  data: Uint8Array,
+  mirror: boolean,
+): void {
   const bars = Math.min(96, Math.max(16, Math.floor(width / 12)));
   const barWidth = width / bars;
   const centerY = y + height / 2;
@@ -544,7 +729,15 @@ function drawBarSpectrum(context: CanvasRenderingContext2D, width: number, heigh
   }
 }
 
-function drawWaveformSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array, mirror: boolean): void {
+function drawWaveformSpectrum(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  y: number,
+  sensitivity: number,
+  data: Uint8Array,
+  mirror: boolean,
+): void {
   const centerY = y + height / 2;
   for (const direction of mirror ? [1, -1] : [1]) {
     context.beginPath();
@@ -562,7 +755,14 @@ function drawWaveformSpectrum(context: CanvasRenderingContext2D, width: number, 
   }
 }
 
-function drawCircleSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+function drawCircleSpectrum(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  y: number,
+  sensitivity: number,
+  data: Uint8Array,
+): void {
   const centerX = width / 2;
   const centerY = y + height / 2;
   const radius = Math.max(8, height * 0.28);
@@ -592,10 +792,15 @@ function readWebGlFrameSafely(webgl: WebGlPreviewCompositor): PreviewFrameReadba
   }
 }
 
-function read2dFrameSafely(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement): PreviewFrameReadback | undefined {
+function read2dFrameSafely(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+): PreviewFrameReadback | undefined {
   try {
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
-    return image.data.length > 0 ? { width: canvas.width, height: canvas.height, data: image.data, origin: 'top-left' } : undefined;
+    return image.data.length > 0
+      ? { width: canvas.width, height: canvas.height, data: image.data, origin: 'top-left' }
+      : undefined;
   } catch {
     return undefined;
   }
@@ -605,7 +810,7 @@ function applyAdjustmentLayer2d(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   colorCorrection: Clip['colorCorrection'],
-  effects: Effect[] | undefined
+  effects: Effect[] | undefined,
 ): void {
   const snapshot = document.createElement('canvas');
   snapshot.width = canvas.width;
@@ -630,7 +835,7 @@ function buildAdjustmentCanvasFilter(colorCorrection: Clip['colorCorrection'], e
     `brightness(${Math.max(0, 1 + correction.brightness)})`,
     `contrast(${correction.contrast})`,
     `saturate(${correction.saturation})`,
-    `hue-rotate(${correction.hue}deg)`
+    `hue-rotate(${correction.hue}deg)`,
   ];
   for (const effect of effects ?? []) {
     if (!effect.enabled) {
@@ -653,7 +858,10 @@ interface ClipRenderInstance {
 function getTransitionAwareClipInstances(timeline: Timeline, playheadTime: number): ClipRenderInstance[] {
   const windows = (timeline.transitions ?? [])
     .map((transition) => ({ transition, window: getTransitionPlaybackWindow(timeline, transition) }))
-    .filter((item): item is { transition: Transition; window: NonNullable<ReturnType<typeof getTransitionPlaybackWindow>> } => Boolean(item.window));
+    .filter(
+      (item): item is { transition: Transition; window: NonNullable<ReturnType<typeof getTransitionPlaybackWindow>> } =>
+        Boolean(item.window),
+    );
 
   return getRenderableTracks(timeline)
     .flatMap((track, trackIndex) =>
@@ -663,9 +871,9 @@ function getTransitionAwareClipInstances(timeline: Timeline, playheadTime: numbe
           clip,
           playbackStart,
           playbackEnd: playbackStart + clip.duration,
-          trackIndex
+          trackIndex,
         };
-      })
+      }),
     )
     .filter((item) => playheadTime >= item.playbackStart && playheadTime < item.playbackEnd)
     .map((item) => {
@@ -677,20 +885,26 @@ function getTransitionAwareClipInstances(timeline: Timeline, playheadTime: numbe
         clip,
         playheadTime: item.clip.start + localTime,
         trackIndex: item.trackIndex,
-        start: item.playbackStart
+        start: item.playbackStart,
       };
     })
     .filter((item) => item.clip.transform.opacity > 0.001)
-    .sort((left, right) => left.trackIndex - right.trackIndex || left.start - right.start || left.clip.id.localeCompare(right.clip.id));
+    .sort(
+      (left, right) =>
+        left.trackIndex - right.trackIndex || left.start - right.start || left.clip.id.localeCompare(right.clip.id),
+    );
 }
 
 function getTransitionOpacity(
   windows: Array<{ transition: Transition; window: NonNullable<ReturnType<typeof getTransitionPlaybackWindow>> }>,
   clipId: string,
-  playheadTime: number
+  playheadTime: number,
 ): number {
   const active = windows.find(
-    ({ window }) => playheadTime >= window.start && playheadTime < window.end && (window.fromClip.id === clipId || window.toClip.id === clipId)
+    ({ window }) =>
+      playheadTime >= window.start &&
+      playheadTime < window.end &&
+      (window.fromClip.id === clipId || window.toClip.id === clipId),
   );
   if (!active) {
     return 1;
@@ -710,12 +924,16 @@ function withOpacity<TClip extends Clip>(clip: TClip, opacity: number): TClip {
     ...clip,
     transform: {
       ...clip.transform,
-      opacity: clip.transform.opacity * Math.max(0, Math.min(1, opacity))
-    }
+      opacity: clip.transform.opacity * Math.max(0, Math.min(1, opacity)),
+    },
   };
 }
 
-function withCanvasKeyframedPosition<TClip extends Clip>(clip: TClip, canvasWidth: number, canvasHeight: number): TClip {
+function withCanvasKeyframedPosition<TClip extends Clip>(
+  clip: TClip,
+  canvasWidth: number,
+  canvasHeight: number,
+): TClip {
   if (!clip.keyframes?.x && !clip.keyframes?.y) {
     return clip;
   }
@@ -724,7 +942,7 @@ function withCanvasKeyframedPosition<TClip extends Clip>(clip: TClip, canvasWidt
     transform: {
       ...clip.transform,
       x: clip.keyframes?.x ? clip.transform.x * (canvasWidth / 2) : clip.transform.x,
-      y: clip.keyframes?.y ? clip.transform.y * (canvasHeight / 2) : clip.transform.y
-    }
+      y: clip.keyframes?.y ? clip.transform.y * (canvasHeight / 2) : clip.transform.y,
+    },
   } as TClip;
 }

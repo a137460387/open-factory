@@ -45,18 +45,16 @@ export function calculateLuma(r: number, g: number, b: number): number {
  * 检测单帧是否为大面积纯红色闪烁
  */
 export function isRedFlashFrame(r: number, g: number, b: number): boolean {
-  return (
-    r > RED_FLASH_R_THRESHOLD &&
-    (r - g) > RED_FLASH_RG_DIFF_THRESHOLD &&
-    (r - b) > RED_FLASH_RB_DIFF_THRESHOLD
-  );
+  return r > RED_FLASH_R_THRESHOLD && r - g > RED_FLASH_RG_DIFF_THRESHOLD && r - b > RED_FLASH_RB_DIFF_THRESHOLD;
 }
 
 /**
  * 计算luma翻转点。
  * 返回翻转事件数组：{ time, amplitude, isRedFlash }
  */
-export function detectLumaFlips(samples: FlashFrameSample[]): Array<{ time: number; amplitude: number; isRedFlash: boolean }> {
+export function detectLumaFlips(
+  samples: FlashFrameSample[],
+): Array<{ time: number; amplitude: number; isRedFlash: boolean }> {
   if (samples.length < 2) return [];
 
   const flips: Array<{ time: number; amplitude: number; isRedFlash: boolean }> = [];
@@ -69,9 +67,10 @@ export function detectLumaFlips(samples: FlashFrameSample[]): Array<{ time: numb
     if (prevDelta !== 0 && delta !== 0) {
       const directionChanged = (prevDelta > 0 && delta < 0) || (prevDelta < 0 && delta > 0);
       if (directionChanged && amplitude >= FLASH_AMPLITUDE_THRESHOLD) {
-        const isRed = samples[i].r !== undefined && samples[i].g !== undefined && samples[i].b !== undefined
-          ? isRedFlashFrame(samples[i].r!, samples[i].g!, samples[i].b!)
-          : false;
+        const isRed =
+          samples[i].r !== undefined && samples[i].g !== undefined && samples[i].b !== undefined
+            ? isRedFlashFrame(samples[i].r!, samples[i].g!, samples[i].b!)
+            : false;
         flips.push({ time: samples[i].time, amplitude, isRedFlash: isRed });
       }
     }
@@ -152,9 +151,7 @@ export function detectFlashWarnings(samples: FlashFrameSample[]): FlashWarning[]
     const windowEnd = windowStart + WINDOW_DURATION;
 
     // 统计窗口内翻转
-    const flipsInWindow = flips.filter(
-      (f) => f.time >= windowStart && f.time < windowEnd
-    );
+    const flipsInWindow = flips.filter((f) => f.time >= windowStart && f.time < windowEnd);
 
     const flipRate = flipsInWindow.length / WINDOW_DURATION;
 

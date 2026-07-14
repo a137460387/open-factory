@@ -1,10 +1,7 @@
 export type PerformanceAlertType = 'memory' | 'undo-history' | 'render-fps';
 export type PerformanceAlertSeverity = 'warning' | 'critical';
 export type PerformanceOptimizationAction =
-  | 'clear-undo-history'
-  | 'reduce-preview-quality'
-  | 'close-unused-panels'
-  | 'clear-render-cache';
+  'clear-undo-history' | 'reduce-preview-quality' | 'close-unused-panels' | 'clear-render-cache';
 
 export interface PerformanceMonitorMetrics {
   memoryBytes: number;

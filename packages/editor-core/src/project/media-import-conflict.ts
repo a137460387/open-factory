@@ -1,7 +1,7 @@
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export type ImportConflictType = 'duplicate-file' | 'same-name-different-content' | 'special-characters' | 'file-locked';
+export type ImportConflictType =
+  'duplicate-file' | 'same-name-different-content' | 'special-characters' | 'file-locked';
 
 export type ImportConflictAction = 'rename' | 'skip' | 'overwrite' | 'force-import';
 
@@ -48,7 +48,7 @@ export function detectDuplicateFileConflict(
   filePath: string,
   existingPaths: string[],
   existingSizes: Map<string, number>,
-  newFileSize: number
+  newFileSize: number,
 ): ImportConflictItem | undefined {
   const existingPath = existingPaths.find((p) => p.toLowerCase() === filePath.toLowerCase());
   if (!existingPath) {
@@ -56,7 +56,14 @@ export function detectDuplicateFileConflict(
   }
   const existingSize = existingSizes.get(existingPath);
   if (existingSize !== undefined && existingSize === newFileSize) {
-    return createConflictItem('duplicate-file', fileName, filePath, existingPath, 'skip', `文件已存在于媒体库中（相同大小 ${newFileSize} 字节）`);
+    return createConflictItem(
+      'duplicate-file',
+      fileName,
+      filePath,
+      existingPath,
+      'skip',
+      `文件已存在于媒体库中（相同大小 ${newFileSize} 字节）`,
+    );
   }
   return undefined;
 }
@@ -66,7 +73,7 @@ export function detectSameNameDifferentContentConflict(
   filePath: string,
   existingPaths: string[],
   existingSizes: Map<string, number>,
-  newFileSize: number
+  newFileSize: number,
 ): ImportConflictItem | undefined {
   const existingPath = existingPaths.find((p) => {
     const existingName = p.split(/[/\\]/).pop() ?? '';
@@ -78,17 +85,28 @@ export function detectSameNameDifferentContentConflict(
   }
   const existingSize = existingSizes.get(existingPath);
   if (existingSize !== undefined && existingSize !== newFileSize) {
-    return createConflictItem('same-name-different-content', fileName, filePath, existingPath, 'rename', `同名文件已存在但内容不同（现有 ${existingSize} 字节，新 ${newFileSize} 字节）`);
+    return createConflictItem(
+      'same-name-different-content',
+      fileName,
+      filePath,
+      existingPath,
+      'rename',
+      `同名文件已存在但内容不同（现有 ${existingSize} 字节，新 ${newFileSize} 字节）`,
+    );
   }
   return undefined;
 }
 
-export function detectSpecialCharactersConflict(
-  fileName: string,
-  filePath: string
-): ImportConflictItem | undefined {
+export function detectSpecialCharactersConflict(fileName: string, filePath: string): ImportConflictItem | undefined {
   if (FFmpeg_SPECIAL_CHARS.test(filePath)) {
-    return createConflictItem('special-characters', fileName, filePath, undefined, 'rename', `路径包含特殊字符（${FFmpeg_SPECIAL_CHARS.exec(filePath)?.[0] ?? ''}），可能导致 FFmpeg 处理失败`);
+    return createConflictItem(
+      'special-characters',
+      fileName,
+      filePath,
+      undefined,
+      'rename',
+      `路径包含特殊字符（${FFmpeg_SPECIAL_CHARS.exec(filePath)?.[0] ?? ''}），可能导致 FFmpeg 处理失败`,
+    );
   }
   return undefined;
 }
@@ -96,7 +114,7 @@ export function detectSpecialCharactersConflict(
 export function detectFileLockedConflict(
   fileName: string,
   filePath: string,
-  isLocked: boolean
+  isLocked: boolean,
 ): ImportConflictItem | undefined {
   if (isLocked) {
     return createConflictItem('file-locked', fileName, filePath, undefined, 'skip', '文件正被其他程序占用，无法读取');
@@ -123,40 +141,50 @@ export function getRecommendedAction(conflictType: ImportConflictType): ImportCo
 
 export function createConflictWizard(items: ImportConflictItem[]): ImportConflictWizardState {
   return {
-    items: items.map((item) => ({ ...item, recommendedAction: item.recommendedAction ?? getRecommendedAction(item.conflictType) })),
+    items: items.map((item) => ({
+      ...item,
+      recommendedAction: item.recommendedAction ?? getRecommendedAction(item.conflictType),
+    })),
     currentIndex: 0,
     batchApplied: false,
-    completed: items.length === 0
+    completed: items.length === 0,
   };
 }
 
 export function resolveCurrentConflict(
   state: ImportConflictWizardState,
   action: ImportConflictAction,
-  newName?: string
+  newName?: string,
 ): ImportConflictWizardState {
   const items = state.items.map((item, index) =>
     index === state.currentIndex
-      ? { ...item, resolvedAction: action, resolvedNewName: action === 'rename' ? (newName ?? generateRename(item.fileName)) : undefined }
-      : item
+      ? {
+          ...item,
+          resolvedAction: action,
+          resolvedNewName: action === 'rename' ? (newName ?? generateRename(item.fileName)) : undefined,
+        }
+      : item,
   );
   const nextIndex = state.currentIndex + 1;
   return {
     ...state,
     items,
     currentIndex: nextIndex,
-    completed: nextIndex >= items.length
+    completed: nextIndex >= items.length,
   };
 }
 
 export function applyBatchAction(
   state: ImportConflictWizardState,
-  action: ImportConflictAction
+  action: ImportConflictAction,
 ): ImportConflictWizardState {
   const items = state.items.map((item) => ({
     ...item,
     resolvedAction: item.resolvedAction ?? action,
-    resolvedNewName: (item.resolvedAction ?? action) === 'rename' ? (item.resolvedNewName ?? generateRename(item.fileName)) : undefined
+    resolvedNewName:
+      (item.resolvedAction ?? action) === 'rename'
+        ? (item.resolvedNewName ?? generateRename(item.fileName))
+        : undefined,
   }));
   return {
     ...state,
@@ -164,7 +192,7 @@ export function applyBatchAction(
     batchAction: action,
     batchApplied: true,
     currentIndex: items.length,
-    completed: true
+    completed: true,
   };
 }
 
@@ -185,7 +213,7 @@ export function buildConflictReport(items: ImportConflictItem[]): ImportConflict
     'duplicate-file': 0,
     'same-name-different-content': 0,
     'special-characters': 0,
-    'file-locked': 0
+    'file-locked': 0,
   };
   for (const item of items) {
     byType[item.conflictType]++;
@@ -197,7 +225,7 @@ export function buildConflictReport(items: ImportConflictItem[]): ImportConflict
     renamed: resolved.filter((item) => item.resolvedAction === 'rename').length,
     overwritten: resolved.filter((item) => item.resolvedAction === 'overwrite').length,
     forceImported: resolved.filter((item) => item.resolvedAction === 'force-import').length,
-    byType
+    byType,
   };
 }
 
@@ -209,7 +237,7 @@ function createConflictItem(
   filePath: string,
   existingPath: string | undefined,
   recommendedAction: ImportConflictAction,
-  detail: string
+  detail: string,
 ): ImportConflictItem {
   return {
     id: `conflict-${conflictType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -218,7 +246,7 @@ function createConflictItem(
     filePath,
     existingPath,
     detail,
-    recommendedAction
+    recommendedAction,
   };
 }
 

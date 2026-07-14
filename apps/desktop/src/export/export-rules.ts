@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import type { ExportTask } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { copyFile, sendNotification } from '../lib/tauri-bridge';
@@ -42,12 +42,16 @@ export function resolveCopyDestination(rule: ExportConditionRule, event: ExportR
   }
   const directory = replaceExportRuleVariables(rule.targetDirectory, {
     date: event.date,
-    projectName: event.projectName ?? event.task.projectName ?? event.task.name
+    projectName: event.projectName ?? event.task.projectName ?? event.task.name,
   });
   return joinDirectoryAndFile(directory, fileNameFromPath(event.task.outputPath));
 }
 
-export async function runExportRuleEvent(rules: ExportConditionRule[], event: ExportRuleEventContext, dependencies: ExportRuleDependencies): Promise<ExportRuleExecution[]> {
+export async function runExportRuleEvent(
+  rules: ExportConditionRule[],
+  event: ExportRuleEventContext,
+  dependencies: ExportRuleDependencies,
+): Promise<ExportRuleExecution[]> {
   const executions: ExportRuleExecution[] = [];
   for (const rule of getTriggeredExportRules(rules, event.type)) {
     if (rule.action === 'copy-to-directory') {
@@ -77,7 +81,7 @@ export async function runConfiguredExportRules(event: ExportRuleEventContext): P
   await runExportRuleEvent(rules, event, {
     copyFile,
     notify: sendNotification,
-    playTone: playExportRuleTone
+    playTone: playExportRuleTone,
   });
 }
 
@@ -99,7 +103,7 @@ async function playExportRuleTone(): Promise<void> {
   await new Promise<void>((resolve) => {
     oscillator.onended = () => resolve();
   });
-  await context.close().catch(logError("export-rules"));
+  await context.close().catch(logError('export-rules'));
 }
 
 function notificationTitle(event: ExportRuleEventContext): string {
@@ -130,7 +134,12 @@ function formatDateYYYYMMDD(date: Date): string {
 }
 
 function sanitizePathSegment(value: string): string {
-  return value.trim().replace(/[<>:"|?*\u0000-\u001f]/g, '_').replace(/[. ]+$/g, '') || zhCN.project.defaultName;
+  return (
+    value
+      .trim()
+      .replace(/[<>:"|?*\u0000-\u001f]/g, '_')
+      .replace(/[. ]+$/g, '') || zhCN.project.defaultName
+  );
 }
 
 function fileNameFromPath(path: string): string {

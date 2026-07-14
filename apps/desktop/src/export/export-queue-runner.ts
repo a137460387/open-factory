@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   buildExportProjectFromProject,
   buildProgressiveExportPlan,
@@ -29,10 +29,22 @@ import {
   type RenderFarmTaskConfig,
   buildStemExportPlans,
   type ExportStemMode,
-  type ExportStemFormat
+  type ExportStemFormat,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, copyFile, ensureSpatialAudioAssets, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
+import {
+  cancelExport as bridgeCancelExport,
+  copyFile,
+  ensureSpatialAudioAssets,
+  getAvailableMemoryBytes,
+  getFfmpegCapabilities,
+  getTempSegmentsDir,
+  listenBridge,
+  removeFile,
+  runExport,
+  runPostExportQualityAssurance,
+  writeFile,
+} from '../lib/tauri-bridge';
 import { readExportBackgroundSettings, readExportQualityAssuranceSettings } from '../settings/appSettings';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
@@ -59,7 +71,7 @@ export async function enqueueExport(
   scheduledStartAt?: string,
   exportRange?: ExportRenderRange | null,
   progressive = false,
-  options: { metadata?: ExportProject['metadata']; versionedBatch?: VersionedExportTaskMetadata } = {}
+  options: { metadata?: ExportProject['metadata']; versionedBatch?: VersionedExportTaskMetadata } = {},
 ): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -70,11 +82,17 @@ export async function enqueueExport(
   }
   await runExportBeforePlugins(project, outputPath, settings);
   const exportSettings = await withSpatialAudioAssets(project, settings);
-  const exportProject = buildExportProjectFromProject(project, { outputPath, settings: exportSettings, metadata: options.metadata });
-  const backgroundSettings = await readExportBackgroundSettings().catch(logError("export-queue-runner"));
+  const exportProject = buildExportProjectFromProject(project, {
+    outputPath,
+    settings: exportSettings,
+    metadata: options.metadata,
+  });
+  const backgroundSettings = await readExportBackgroundSettings().catch(logError('export-queue-runner'));
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
   const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
-  const progressiveState = progressive ? createProgressiveExportState({ outputPath, settings: exportProject.settings }) : undefined;
+  const progressiveState = progressive
+    ? createProgressiveExportState({ outputPath, settings: exportProject.settings })
+    : undefined;
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     projectName: project.name,
@@ -84,7 +102,7 @@ export async function enqueueExport(
     renderFarm,
     progressive: progressiveState?.supported && !renderFarm?.enabled ? progressiveState : undefined,
     versionedBatch: options.versionedBatch,
-    scheduledStartAt
+    scheduledStartAt,
   });
   signalRunner();
   ensureExportQueueRunner();
@@ -104,14 +122,15 @@ export interface StemExportQueueOptions {
 }
 
 export async function enqueueStemExport(options: StemExportQueueOptions): Promise<ExportTask[]> {
-  const { project, outputDir, stemTracks, stemMode, settings, priority, renderFarm, scheduledStartAt, metadata } = options;
+  const { project, outputDir, stemTracks, stemMode, settings, priority, renderFarm, scheduledStartAt, metadata } =
+    options;
   const capabilities = await getFfmpegCapabilities();
   if (!capabilities.available) {
     throw new Error(zhCN.errors.ffmpegMissing);
   }
   const exportProject = buildExportProjectFromProject(project, { outputPath: outputDir, settings, metadata });
   const stemPlans = buildStemExportPlans(exportProject, capabilities, stemTracks, outputDir);
-  const backgroundSettings = await readExportBackgroundSettings().catch(logError("export-queue-runner"));
+  const backgroundSettings = await readExportBackgroundSettings().catch(logError('export-queue-runner'));
   const queuedTasks: ExportTask[] = [];
 
   for (const stem of stemPlans) {
@@ -125,7 +144,7 @@ export async function enqueueStemExport(options: StemExportQueueOptions): Promis
       renderFarm,
       scheduledStartAt,
       progressive: undefined,
-      versionedBatch: undefined
+      versionedBatch: undefined,
     });
     queuedTasks.push(task);
   }
@@ -133,7 +152,11 @@ export async function enqueueStemExport(options: StemExportQueueOptions): Promis
   if (stemMode === 'combined') {
     const mixedOutputPath = `${outputDir.replace(/[\\/]+$/, '')}/_mixed.mp4`;
     const mixedSettings = { ...settings, outputPath: mixedOutputPath };
-    const mixedProject = buildExportProjectFromProject(project, { outputPath: mixedOutputPath, settings: mixedSettings, metadata });
+    const mixedProject = buildExportProjectFromProject(project, {
+      outputPath: mixedOutputPath,
+      settings: mixedSettings,
+      metadata,
+    });
     const rawPlan = buildFfmpegExportPlan(mixedProject, capabilities, 0, []);
     const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
     const task = useExportQueueStore.getState().addTask({
@@ -145,7 +168,7 @@ export async function enqueueStemExport(options: StemExportQueueOptions): Promis
       renderFarm,
       scheduledStartAt,
       progressive: undefined,
-      versionedBatch: undefined
+      versionedBatch: undefined,
     });
     queuedTasks.push(task);
   }
@@ -155,10 +178,9 @@ export async function enqueueStemExport(options: StemExportQueueOptions): Promis
   return queuedTasks;
 }
 
-
 async function withSpatialAudioAssets(
   project: Project,
-  settings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined
+  settings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined,
 ): Promise<Partial<Omit<ExportSettings, 'outputPath'>> | undefined> {
   if (!projectUsesBinauralSpatialAudio(project)) {
     return settings;
@@ -169,8 +191,8 @@ async function withSpatialAudioAssets(
       ...settings,
       spatialAudioAssets: {
         hrtfPath: assets.hrtfPath,
-        roomImpulseResponses: assets.roomImpulseResponses
-      }
+        roomImpulseResponses: assets.roomImpulseResponses,
+      },
     };
   } catch (error) {
     console.warn('Unable to prepare spatial audio assets; falling back to standard panner export.', error);
@@ -252,7 +274,9 @@ async function runQueue(): Promise<void> {
     const progressTaskId = getProgressTaskId(progress);
     const childTask = progressTaskId ? parseRenderFarmChildTaskId(progressTaskId) : undefined;
     if (childTask?.kind === 'segment') {
-      useExportQueueStore.getState().updateTaskSegment(childTask.parentTaskId, childTask.segmentId, { progress: normalized });
+      useExportQueueStore
+        .getState()
+        .updateTaskSegment(childTask.parentTaskId, childTask.segmentId, { progress: normalized });
       return;
     }
     if (childTask?.kind === 'concat') {
@@ -269,7 +293,9 @@ async function runQueue(): Promise<void> {
       if (latest.progressive) {
         useExportQueueStore
           .getState()
-          .updateTaskProgressive(taskId, { completedDuration: estimateProgressiveCompletedDuration(latest.plan.duration, normalized) });
+          .updateTaskProgressive(taskId, {
+            completedDuration: estimateProgressiveCompletedDuration(latest.plan.duration, normalized),
+          });
       }
     }
   });
@@ -277,7 +303,9 @@ async function runQueue(): Promise<void> {
   try {
     while (true) {
       await startAvailableTasks();
-      const hasWaiting = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending' || task.status === 'scheduled');
+      const hasWaiting = useExportQueueStore
+        .getState()
+        .tasks.some((task) => task.status === 'pending' || task.status === 'scheduled');
       if (!hasWaiting && activeRuns.size === 0) {
         useExportQueueStore.getState().setResourcePaused(false);
         return;
@@ -324,7 +352,7 @@ async function startAvailableTasks(): Promise<void> {
 }
 
 async function runSingleTask(task: ExportTask): Promise<void> {
-  const logPath = await getExportLogPath(task.id).catch(logError("export-queue-runner"));
+  const logPath = await getExportLogPath(task.id).catch(logError('export-queue-runner'));
   if (logPath) {
     useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
   }
@@ -342,7 +370,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           removeFile,
           onSegments: (segments) => useExportQueueStore.getState().setTaskSegments(task.id, segments),
           onSegmentUpdate: (segment) => useExportQueueStore.getState().updateTaskSegment(task.id, segment.id, segment),
-          onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress)
+          onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress),
         })
       : await runRecoverableLocalExportTask(task, (entries) => {
           recoveryEntries = entries;
@@ -352,7 +380,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     if (recoveryReport) {
       report.recovery = recoveryReport;
     }
-    const qualitySettings = await readExportQualityAssuranceSettings().catch(logError("export-queue-runner"));
+    const qualitySettings = await readExportQualityAssuranceSettings().catch(logError('export-queue-runner'));
     if (qualitySettings && hasEnabledPostExportQualityChecks(qualitySettings)) {
       let retryAttempt = 0;
       while (true) {
@@ -373,7 +401,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           blackFrameDurationSeconds: qualitySettings.blackFrameDurationSeconds,
           silenceThresholdDb: qualitySettings.silenceThresholdDb,
           silenceDurationSeconds: qualitySettings.silenceDurationSeconds,
-          autoRetry: qualitySettings.autoRetry
+          autoRetry: qualitySettings.autoRetry,
         });
         report = { ...report, qualityAssurance };
         if (!shouldRetryPostExportQuality(qualityAssurance, qualitySettings, retryAttempt)) {
@@ -381,9 +409,11 @@ async function runSingleTask(task: ExportTask): Promise<void> {
         }
         retryAttempt += 1;
         useExportQueueStore.getState().updateTaskProgress(task.id, 0);
-        result = task.renderFarm?.enabled ? result : await runRecoverableLocalExportTask(task, (entries) => {
-          recoveryEntries = entries;
-        });
+        result = task.renderFarm?.enabled
+          ? result
+          : await runRecoverableLocalExportTask(task, (entries) => {
+              recoveryEntries = entries;
+            });
         report = { ...(result.report ?? {}) };
         const retryRecoveryReport = buildExportRecoveryReport(recoveryEntries, recoveryEntries.length > 0);
         if (retryRecoveryReport) {
@@ -395,31 +425,51 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     if (latest?.status === 'running') {
       const durationMs = 'durationMs' in result ? result.durationMs : undefined;
       if (durationMs !== undefined) {
-        await recordExportSpeedSample(task, durationMs).catch(logError("export-queue-runner"));
+        await recordExportSpeedSample(task, durationMs).catch(logError('export-queue-runner'));
       }
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, report);
       await persistFinishedTaskToHistory(task.id);
       await runConfiguredExportUpload(task.id);
       const finishedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;
-      await runExportRulesSafely({ type: 'export-success', task: finishedTask, projectName: finishedTask.projectName ?? task.projectName });
+      await runExportRulesSafely({
+        type: 'export-success',
+        task: finishedTask,
+        projectName: finishedTask.projectName ?? task.projectName,
+      });
     }
   } catch (error) {
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       const message = error instanceof Error ? error.message : zhCN.errors.exportFailed;
-      const recoveryEntries = isExportRecoveryFailure(error) ? finalizeExportRecoveryLog(error.recoveryEntries, 'failed') : [];
+      const recoveryEntries = isExportRecoveryFailure(error)
+        ? finalizeExportRecoveryLog(error.recoveryEntries, 'failed')
+        : [];
       const recoveryReport = buildExportRecoveryReport(recoveryEntries, false);
-      useExportQueueStore.getState().failTask(task.id, message, recoveryReport ? { recovery: recoveryReport } : undefined);
+      useExportQueueStore
+        .getState()
+        .failTask(task.id, message, recoveryReport ? { recovery: recoveryReport } : undefined);
       await persistFinishedTaskToHistory(task.id);
-      const failedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? { ...task, error: message };
-      await runExportRulesSafely({ type: 'export-failure', task: failedTask, projectName: failedTask.projectName ?? task.projectName });
+      const failedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? {
+        ...task,
+        error: message,
+      };
+      await runExportRulesSafely({
+        type: 'export-failure',
+        task: failedTask,
+        projectName: failedTask.projectName ?? task.projectName,
+      });
     }
   }
 }
 
 async function recordExportSpeedSample(task: ExportTask, durationMs: number): Promise<void> {
-  if (!Number.isFinite(durationMs) || durationMs <= 0 || !Number.isFinite(task.plan.duration) || task.plan.duration <= 0) {
+  if (
+    !Number.isFinite(durationMs) ||
+    durationMs <= 0 ||
+    !Number.isFinite(task.plan.duration) ||
+    task.plan.duration <= 0
+  ) {
     return;
   }
   await appendExportSpeedSample({
@@ -430,12 +480,15 @@ async function recordExportSpeedSample(task: ExportTask, durationMs: number): Pr
     elapsedMs: durationMs,
     width: task.plan.settings?.width,
     height: task.plan.settings?.height,
-    codec: task.plan.settings?.videoCodec
+    codec: task.plan.settings?.videoCodec,
   });
 }
 
 class ExportRecoveryFailure extends Error {
-  constructor(message: string, readonly recoveryEntries: ExportRecoveryLogEntry[]) {
+  constructor(
+    message: string,
+    readonly recoveryEntries: ExportRecoveryLogEntry[],
+  ) {
     super(message);
     this.name = 'ExportRecoveryFailure';
   }
@@ -445,7 +498,10 @@ function isExportRecoveryFailure(error: unknown): error is ExportRecoveryFailure
   return error instanceof ExportRecoveryFailure;
 }
 
-async function runRecoverableLocalExportTask(task: ExportTask, onRecoveryEntries: (entries: ExportRecoveryLogEntry[]) => void): Promise<Awaited<ReturnType<typeof runExport>>> {
+async function runRecoverableLocalExportTask(
+  task: ExportTask,
+  onRecoveryEntries: (entries: ExportRecoveryLogEntry[]) => void,
+): Promise<Awaited<ReturnType<typeof runExport>>> {
   let currentPlan: FfmpegExportPlan = task.plan;
   let recoveryEntries: ExportRecoveryLogEntry[] = [];
   while (true) {
@@ -458,9 +514,10 @@ async function runRecoverableLocalExportTask(task: ExportTask, onRecoveryEntries
       const message = error instanceof Error ? error.message : zhCN.errors.exportFailed;
       const decision = buildExportRecoveryDecision(currentPlan, message, recoveryEntries.length);
       if (!decision.canRetry || !decision.plan) {
-        const failedEntries = recoveryEntries.length > 0
-          ? finalizeExportRecoveryLog(recoveryEntries, 'failed')
-          : appendExportRecoveryLog(recoveryEntries, decision, message, 'failed');
+        const failedEntries =
+          recoveryEntries.length > 0
+            ? finalizeExportRecoveryLog(recoveryEntries, 'failed')
+            : appendExportRecoveryLog(recoveryEntries, decision, message, 'failed');
         throw new ExportRecoveryFailure(message, failedEntries);
       }
       recoveryEntries = appendExportRecoveryLog(recoveryEntries, decision, message);
@@ -468,14 +525,17 @@ async function runRecoverableLocalExportTask(task: ExportTask, onRecoveryEntries
       currentPlan = decision.plan;
       if (decision.action === 'reduce-concurrency') {
         useExportQueueStore.getState().setMaxConcurrent(1);
-        await clearMediaCache().catch(logError("export-queue-runner"));
+        await clearMediaCache().catch(logError('export-queue-runner'));
       }
       useExportQueueStore.getState().updateTaskProgress(task.id, 0);
     }
   }
 }
 
-async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = task.plan): Promise<Awaited<ReturnType<typeof runExport>>> {
+async function runLocalExportTask(
+  task: ExportTask,
+  plan: FfmpegExportPlan = task.plan,
+): Promise<Awaited<ReturnType<typeof runExport>>> {
   if (!task.progressive) {
     return runExport(plan, task.id);
   }
@@ -487,7 +547,7 @@ async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = tas
     const afterRun = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (afterRun?.status === 'running') {
       await copyFile(progressive.partialPath, task.outputPath);
-      await removeFile(progressive.partialPath).catch(logError("export-queue-runner"));
+      await removeFile(progressive.partialPath).catch(logError('export-queue-runner'));
       useExportQueueStore.getState().updateTaskProgressive(task.id, { completedDuration: plan.duration });
       return { ...result, outputPath: task.outputPath };
     }
@@ -497,14 +557,16 @@ async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = tas
     if (afterError?.status !== 'running') {
       throw error;
     }
-    await removeFile(progressive.partialPath).catch(logError("export-queue-runner"));
+    await removeFile(progressive.partialPath).catch(logError('export-queue-runner'));
     return runExport(plan, task.id);
   }
 }
 
 async function runQueueCompleteRulesIfIdle(projectName?: string): Promise<void> {
   const tasks = useExportQueueStore.getState().tasks;
-  const hasOpenTasks = activeRuns.size > 0 || tasks.some((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running');
+  const hasOpenTasks =
+    activeRuns.size > 0 ||
+    tasks.some((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running');
   const hasCompletedTasks = tasks.some((task) => task.status === 'success' || task.status === 'error');
   if (!hasOpenTasks && hasCompletedTasks) {
     await runExportRulesSafely({ type: 'queue-complete', projectName });
@@ -525,10 +587,14 @@ async function shouldPauseForMemory(): Promise<boolean> {
 }
 
 function getProgressTaskId(progress: ExportProgressEvent): string | undefined {
-  return typeof progress === 'object' && progress !== null && typeof progress.taskId === 'string' ? progress.taskId : undefined;
+  return typeof progress === 'object' && progress !== null && typeof progress.taskId === 'string'
+    ? progress.taskId
+    : undefined;
 }
 
-function parseRenderFarmChildTaskId(taskId: string): { parentTaskId: string; kind: 'segment'; segmentId: string } | { parentTaskId: string; kind: 'concat' } | undefined {
+function parseRenderFarmChildTaskId(
+  taskId: string,
+): { parentTaskId: string; kind: 'segment'; segmentId: string } | { parentTaskId: string; kind: 'concat' } | undefined {
   const segment = taskId.match(/^(.+):(segment-\d+)$/);
   if (segment) {
     return { parentTaskId: segment[1], kind: 'segment', segmentId: segment[2] };

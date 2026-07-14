@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-ffc131)](https://tauri.app)
 
-**本地优先的专业桌面视频编辑器** — 基于 Tauri 2、Rust、React、TypeScript 构建。零登录、零遥测、零云端上传，所有媒体文件与项目数据始终保留在您的本地设备上。
+**本地优先的专业桌面视频编辑器** — 基于 Tauri 2、Rust、React、TypeScript 构建，支持 AI 智能编辑和插件扩展。零登录、零遥测、零云端上传，所有媒体文件与项目数据始终保留在您的本地设备上。
 
 ![Open Factory](open-factory-screenshot.png)
 
@@ -215,20 +215,44 @@ open-factory/
 
 ---
 
-## 🛠️ 环境要求
+## 🛠️ 开发环境设置
 
-- **Rust** stable >= 1.77
-- **Bun** >= 1.3
-- **FFmpeg** — 需在 PATH 中
+### 环境要求
+
+- **Bun** >= 1.3 — JavaScript 运行时与包管理器
+- **Rust** stable >= 1.77 — Tauri 后端编译
+- **FFmpeg** — 需在系统 PATH 中，用于视频/音频处理
 - **Windows** — WebView2 Runtime + Visual Studio C++ Build Tools
 - **macOS** — Xcode Command Line Tools
 - **Linux** — WebKitGTK 开发库
 
-## 📥 安装依赖
+### 快速开始
 
 ```bash
+# 1. 克隆仓库
+git clone https://github.com/a137460387/open-factory.git
+cd open-factory
+
+# 2. 安装依赖
 bun install
+
+# 3. 启动开发服务器
+bun run tauri:dev
 ```
+
+## 📏 代码规范
+
+本项目使用 [Prettier](https://prettier.io) 进行代码格式化。提交代码前请确保格式正确：
+
+```bash
+# 自动格式化代码
+bun run format
+
+# 检查格式是否符合规范（CI 中会运行此检查）
+bun run format:check
+```
+
+格式化范围覆盖 `packages/editor-core/src/**/*.ts` 和 `apps/desktop/src/**/*.{ts,tsx}`。
 
 ## 🚀 开发
 

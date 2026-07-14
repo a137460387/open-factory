@@ -154,7 +154,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.toggleSafeFrameGuides();
@@ -172,7 +172,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.toggleThumbnailTrackVisible();
@@ -189,7 +189,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.toggleTimelineMinimapVisible();
@@ -206,7 +206,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.updateTimelineGridSettings({ unit: 'second' });
@@ -224,7 +224,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.toggleTimelineGridSnap();
@@ -241,7 +241,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.changeTimelineGridUnit('second');
@@ -258,7 +258,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.persistPreviewWindowState({
@@ -276,7 +276,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.persistPreviewWindowState({
@@ -295,7 +295,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.updateTimelineHeatmap({ opacity: 0.8 });
@@ -312,7 +312,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.updatePreviewPerformance({ qualityMode: 'half' });
@@ -329,7 +329,7 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       useEditorShellViewSettingsCallbacks({
         layoutSettings: { customWorkspaceLayouts: [], timelineHeightPx: 300 } as any,
         setLayoutSettings: mockSetLayoutSettings,
-      })
+      }),
     );
 
     result.current.updateTimelineInteractionSettings({ reduceMotion: true });

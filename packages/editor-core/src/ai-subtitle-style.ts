@@ -2,9 +2,7 @@ import type { BuiltinSubtitleStyleTemplateId } from './subtitles/style-templates
 import type { AiModuleResult, TranslateFn } from './ai-module-types';
 import { identityTranslator } from './ai-module-types';
 
-export const SUBTITLE_STYLE_LANDSCAPE_ONLY: BuiltinSubtitleStyleTemplateId[] = [
-  'news-lower-third'
-];
+export const SUBTITLE_STYLE_LANDSCAPE_ONLY: BuiltinSubtitleStyleTemplateId[] = ['news-lower-third'];
 
 export interface SubtitleStyleVideoContext {
   width: number;
@@ -29,7 +27,13 @@ export interface SubtitleStyleAIResponse {
  * Build video context for subtitle style AI analysis.
  */
 export function buildSubtitleStyleVideoContext(
-  videoMedia: { width?: number; height?: number; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } } | undefined
+  videoMedia:
+    | {
+        width?: number;
+        height?: number;
+        aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+      }
+    | undefined,
 ): SubtitleStyleVideoContext {
   const width = videoMedia?.width ?? 1920;
   const height = videoMedia?.height ?? 1080;
@@ -41,13 +45,13 @@ export function buildSubtitleStyleVideoContext(
     isPortrait,
     mediaTags: ai?.tags,
     scene: ai?.scene,
-    mood: ai?.mood
+    mood: ai?.mood,
   };
 }
 
 export async function parseSubtitleStyleResponseSafe(
   json: unknown,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<SubtitleStyleAIResponse>> {
   try {
     const data = parseSubtitleStyleResponse(json);
@@ -62,10 +66,12 @@ export async function parseSubtitleStyleResponseSafe(
  */
 export function filterPortraitStyles(
   recommendations: SubtitleStyleRecommendation[],
-  isPortrait: boolean
+  isPortrait: boolean,
 ): SubtitleStyleRecommendation[] {
   if (!isPortrait) return recommendations;
-  return recommendations.filter((r) => !SUBTITLE_STYLE_LANDSCAPE_ONLY.includes(r.templateId as BuiltinSubtitleStyleTemplateId));
+  return recommendations.filter(
+    (r) => !SUBTITLE_STYLE_LANDSCAPE_ONLY.includes(r.templateId as BuiltinSubtitleStyleTemplateId),
+  );
 }
 
 export function buildSubtitleStyleSystemPrompt(): string {
@@ -75,7 +81,7 @@ export function buildSubtitleStyleSystemPrompt(): string {
 export function buildSubtitleStyleUserPrompt(context: SubtitleStyleVideoContext): string {
   const parts: string[] = [
     `视频分辨率：${context.width}x${context.height}`,
-    `视频方向：${context.isPortrait ? '竖版' : '横版'}`
+    `视频方向：${context.isPortrait ? '竖版' : '横版'}`,
   ];
   if (context.mediaTags && context.mediaTags.length > 0) {
     parts.push(`内容标签：${context.mediaTags.join(',')}`);
@@ -104,14 +110,14 @@ export function parseSubtitleStyleResponse(json: unknown): SubtitleStyleAIRespon
           typeof (item as SubtitleStyleRecommendation).templateId === 'string' &&
           typeof (item as SubtitleStyleRecommendation).reason === 'string' &&
           typeof (item as SubtitleStyleRecommendation).confidence === 'number' &&
-          (item as SubtitleStyleRecommendation).confidence > 0
+          (item as SubtitleStyleRecommendation).confidence > 0,
       )
       .map((item) => ({
         templateId: item.templateId.trim(),
         reason: item.reason.trim(),
-        confidence: Math.min(1, Math.max(0, item.confidence))
+        confidence: Math.min(1, Math.max(0, item.confidence)),
       }))
       .sort((a, b) => b.confidence - a.confidence)
-      .slice(0, 3)
+      .slice(0, 3),
   };
 }

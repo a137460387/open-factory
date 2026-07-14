@@ -1,17 +1,9 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { useCallback } from 'react';
 import type { MediaAsset, TimelineGridSettings, TimelineGridUnit } from '@open-factory/editor-core';
-import type {
-  TimelineHeatmapViewSettings,
-  TimelineInteractionSettings,
-} from '../settings/appSettings';
+import type { TimelineHeatmapViewSettings, TimelineInteractionSettings } from '../settings/appSettings';
 import type { PreviewPerformanceSettings } from '../lib/preview/preview-performance';
-import {
-  emitBridge,
-  closePreviewWindow,
-  openPreviewWindow,
-  sendNotification,
-} from '../lib/tauri-bridge';
+import { emitBridge, closePreviewWindow, openPreviewWindow, sendNotification } from '../lib/tauri-bridge';
 import type { PreviewWindowState } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { zhCN } from '../i18n/strings';
@@ -26,11 +18,7 @@ import {
   savePreviewPerformanceSettings,
   readPreviewWindowSettings,
 } from '../settings/appSettings';
-import {
-  clampTimelineHeight,
-  createCustomWorkspaceLayout,
-  type EditorLayoutSettings,
-} from '../layout/layoutSettings';
+import { clampTimelineHeight, createCustomWorkspaceLayout, type EditorLayoutSettings } from '../layout/layoutSettings';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
@@ -66,14 +54,24 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     const next = {
       ...layoutSettings,
       activeWorkspaceLayoutId: customLayout.id,
-      customWorkspaceLayouts: [...layoutSettings.customWorkspaceLayouts, customLayout]
+      customWorkspaceLayouts: [...layoutSettings.customWorkspaceLayouts, customLayout],
     };
     setLayoutSettings(next);
     try {
       await saveLayoutSettings(next);
-      showToast({ kind: 'success', title: zhCN.layout.workspaceSaved, message: customLayout.shortcutSlot ? zhCN.layout.workspaceShortcut(customLayout.shortcutSlot) : customLayout.name });
+      showToast({
+        kind: 'success',
+        title: zhCN.layout.workspaceSaved,
+        message: customLayout.shortcutSlot
+          ? zhCN.layout.workspaceShortcut(customLayout.shortcutSlot)
+          : customLayout.name,
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.layout.workspaceSaveFailed, message: error instanceof Error ? error.message : zhCN.layout.workspaceSaveFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.layout.workspaceSaveFailed,
+        message: error instanceof Error ? error.message : zhCN.layout.workspaceSaveFailedMessage,
+      });
     }
   }, [layoutSettings, setLayoutSettings]);
 
@@ -151,7 +149,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     void savePreviewWindowSettings({
       bounds: state.bounds,
       alwaysOnTop: state.alwaysOnTop,
-      resolutionScale: state.resolutionScale
+      resolutionScale: state.resolutionScale,
     }).catch((error) => {
       console.warn('Unable to save preview window settings', error);
     });
@@ -176,16 +174,20 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
         playheadTime,
         isPlaying,
         previewPerformance,
-        resolutionScale: state.resolutionScale
+        resolutionScale: state.resolutionScale,
       });
       await emitBridge('preview-window-sync', createPreviewWindowPlaybackState('main', playheadTime, isPlaying));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.toolbar.popoutPreview, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+      showToast({
+        kind: 'warning',
+        title: zhCN.toolbar.popoutPreview,
+        message: error instanceof Error ? error.message : zhCN.common.unavailable,
+      });
     }
   }, [persistPreviewWindowState]);
 
   const reembedPreviewWindow = useCallback(async () => {
-    const state = await closePreviewWindow().catch(logError("useEditorShellViewSettingsCallbacks"));
+    const state = await closePreviewWindow().catch(logError('useEditorShellViewSettingsCallbacks'));
     if (state) {
       persistPreviewWindowState(state);
     }
@@ -220,32 +222,40 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     (unit: TimelineGridUnit) => {
       updateTimelineGridSettings({ unit });
     },
-    [updateTimelineGridSettings]
+    [updateTimelineGridSettings],
   );
 
-  const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
-    if (media.length === 0) {
-      return;
-    }
-    const dependencies: AutomationActionDependencies = {
-      enqueueProxy: (asset) => {
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true });
-        void ensureMediaJobRunner();
-      },
-      setLabel: (assetId, labelColor) => {
-        useEditorStore.getState().setMediaMetadata(assetId, { labelColor });
-      },
-      moveToGroup: (asset, groupName) => {
-        moveAutomationMediaToGroup(asset.id, groupName);
-      },
-      notify: (title, body) => sendNotification(title, body)
-    };
-    try {
-      await runConfiguredAutomationForMedia({ trigger, media, projectName: useEditorStore.getState().project.name }, dependencies);
-    } catch (error) {
-      console.warn('Automation rule execution failed', error);
-    }
-  }, []);
+  const runAutomationForMedia = useCallback(
+    async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
+      if (media.length === 0) {
+        return;
+      }
+      const dependencies: AutomationActionDependencies = {
+        enqueueProxy: (asset) => {
+          useMediaJobStore
+            .getState()
+            .enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true });
+          void ensureMediaJobRunner();
+        },
+        setLabel: (assetId, labelColor) => {
+          useEditorStore.getState().setMediaMetadata(assetId, { labelColor });
+        },
+        moveToGroup: (asset, groupName) => {
+          moveAutomationMediaToGroup(asset.id, groupName);
+        },
+        notify: (title, body) => sendNotification(title, body),
+      };
+      try {
+        await runConfiguredAutomationForMedia(
+          { trigger, media, projectName: useEditorStore.getState().project.name },
+          dependencies,
+        );
+      } catch (error) {
+        console.warn('Automation rule execution failed', error);
+      }
+    },
+    [],
+  );
 
   const beginTimelineResize = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
@@ -273,7 +283,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       window.addEventListener('pointerup', finish);
       window.addEventListener('pointercancel', finish);
     },
-    [layoutSettings.timelineHeightPx, setLayoutSettings]
+    [layoutSettings.timelineHeightPx, setLayoutSettings],
   );
 
   return {

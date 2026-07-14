@@ -24,11 +24,18 @@ export function parseAILookMatchResponse(json: unknown): AILookMatchResponse | n
     return {
       r: clamp(typeof t.r === 'number' ? t.r : 0, -1, 1),
       g: clamp(typeof t.g === 'number' ? t.g : 0, -1, 1),
-      b: clamp(typeof t.b === 'number' ? t.b : 0, -1, 1)
+      b: clamp(typeof t.b === 'number' ? t.b : 0, -1, 1),
     };
   };
   const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
-  return { warmth, contrast, saturation, shadowsTint: parseTint(input.shadowsTint), highlightsTint: parseTint(input.highlightsTint), reason };
+  return {
+    warmth,
+    contrast,
+    saturation,
+    shadowsTint: parseTint(input.shadowsTint),
+    highlightsTint: parseTint(input.highlightsTint),
+    reason,
+  };
 }
 
 export function mapLookMatchToWheelAdjustments(response: AILookMatchResponse): WheelAdjustments {
@@ -38,18 +45,18 @@ export function mapLookMatchToWheelAdjustments(response: AILookMatchResponse): W
     lift: {
       r: round(clamp(response.shadowsTint.r * 0.4 - warmthFactor * 0.1, -1, 1)),
       g: round(clamp(response.shadowsTint.g * 0.4, -1, 1)),
-      b: round(clamp(response.shadowsTint.b * 0.4 + warmthFactor * 0.1, -1, 1))
+      b: round(clamp(response.shadowsTint.b * 0.4 + warmthFactor * 0.1, -1, 1)),
     },
     gamma: {
       r: round(clamp(warmthFactor * 0.2 - contrastFactor * 0.05, -1, 1)),
       g: round(clamp(contrastFactor * 0.02, -1, 1)),
-      b: round(clamp(-warmthFactor * 0.2 - contrastFactor * 0.05, -1, 1))
+      b: round(clamp(-warmthFactor * 0.2 - contrastFactor * 0.05, -1, 1)),
     },
     gain: {
       r: round(clamp(response.highlightsTint.r * 0.4 + warmthFactor * 0.15, -1, 1)),
       g: round(clamp(response.highlightsTint.g * 0.4, -1, 1)),
-      b: round(clamp(response.highlightsTint.b * 0.4 - warmthFactor * 0.15, -1, 1))
-    }
+      b: round(clamp(response.highlightsTint.b * 0.4 - warmthFactor * 0.15, -1, 1)),
+    },
   };
 }
 
@@ -62,22 +69,22 @@ export function mapLookMatchToCurveControlPoints(response: AILookMatchResponse):
     { x: 0.25, y: clamp(0.25 - contrastOffset * 1.5, 0, 1) },
     { x: 0.5, y: clamp(0.5 + contrastOffset * 0.3, 0, 1) },
     { x: 0.75, y: clamp(0.75 + contrastOffset * 1.2, 0, 1) },
-    { x: 1, y: 1 }
+    { x: 1, y: 1 },
   ];
   const r: CurvePoint[] = [
     { x: 0, y: 0 },
     { x: 0.5, y: clamp(0.5 + warmOffset + satOffset * 0.3, 0, 1) },
-    { x: 1, y: 1 }
+    { x: 1, y: 1 },
   ];
   const g: CurvePoint[] = [
     { x: 0, y: 0 },
     { x: 0.5, y: clamp(0.5 + satOffset * 0.2, 0, 1) },
-    { x: 1, y: 1 }
+    { x: 1, y: 1 },
   ];
   const b: CurvePoint[] = [
     { x: 0, y: 0 },
     { x: 0.5, y: clamp(0.5 - warmOffset + satOffset * 0.3, 0, 1) },
-    { x: 1, y: 1 }
+    { x: 1, y: 1 },
   ];
   return normalizeColorCurves({ master, r, g, b });
 }
@@ -85,7 +92,7 @@ export function mapLookMatchToCurveControlPoints(response: AILookMatchResponse):
 export function buildAILookMatch(
   response: AILookMatchResponse,
   sourceImageHash: string,
-  confidence = 0.8
+  confidence = 0.8,
 ): ClipAILookMatch {
   return {
     sourceImageHash,
@@ -93,14 +100,14 @@ export function buildAILookMatch(
     curveControlPoints: mapLookMatchToCurveControlPoints(response),
     confidence: clamp(confidence, 0, 1),
     generatedAt: new Date().toISOString(),
-    blendStrength: 100
+    blendStrength: 100,
   };
 }
 
 export function blendWheelAdjustments(
   original: Partial<ThreeWayColor>,
   adjustments: WheelAdjustments,
-  blendStrength: number
+  blendStrength: number,
 ): ThreeWayColor {
   const t = clamp(blendStrength / 100, 0, 1);
   const base = normalizeThreeWayColor(original);
@@ -108,19 +115,19 @@ export function blendWheelAdjustments(
     r: round(base.r + (adj.r - base.r) * t),
     g: round(base.g + (adj.g - base.g) * t),
     b: round(base.b + (adj.b - base.b) * t),
-    intensity: base.intensity
+    intensity: base.intensity,
   });
   return {
     lift: blendWheel(base.lift, adjustments.lift),
     gamma: blendWheel(base.gamma, adjustments.gamma),
-    gain: blendWheel(base.gain, adjustments.gain)
+    gain: blendWheel(base.gain, adjustments.gain),
   };
 }
 
 export function blendCurveControlPoints(
   original: Partial<ColorCurves>,
   target: ColorCurves,
-  blendStrength: number
+  blendStrength: number,
 ): ColorCurves {
   const t = clamp(blendStrength / 100, 0, 1);
   const base = normalizeColorCurves(original);
@@ -137,7 +144,7 @@ export function blendCurveControlPoints(
     master: blendChannel(base.master, target.master),
     r: blendChannel(base.r, target.r),
     g: blendChannel(base.g, target.g),
-    b: blendChannel(base.b, target.b)
+    b: blendChannel(base.b, target.b),
   };
 }
 

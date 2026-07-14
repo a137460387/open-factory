@@ -6,16 +6,25 @@ import { ShellLeftPanel } from './ShellLeftPanel';
 import { ShellRightPanel } from './ShellRightPanel';
 import { zhCN } from '../../i18n/strings';
 import type { WorkspaceLayoutId } from '../../layout/layoutSettings';
-import type { TimelineGridSettings, ProfilerFrameSample, TimelineColorHeatmapPoint, SceneColorDifference } from '@open-factory/editor-core';
+import type {
+  TimelineGridSettings,
+  ProfilerFrameSample,
+  TimelineColorHeatmapPoint,
+  SceneColorDifference,
+} from '@open-factory/editor-core';
 import type { PreviewPerformanceSettings, PreviewQualityMode } from '../../lib/preview/preview-performance';
 import type { TimelineHeatmapViewSettings, TimelineInteractionSettings } from '../../settings/appSettings';
 import type { ReviewAnnotation } from '@open-factory/editor-core';
 import { AngleSwitcherPanel } from '../AngleSwitcher/AngleSwitcherPanel';
 import { useEditorStore, findMulticamClipInProject } from '../../store/editorStore';
 
-const PreviewCanvas = lazy(() => import('../PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
+const PreviewCanvas = lazy(() =>
+  import('../PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })),
+);
 const Timeline = lazy(() => import('../Timeline/Timeline').then((module) => ({ default: module.Timeline })));
-const StoryboardView = lazy(() => import('../Storyboard/StoryboardView').then((module) => ({ default: module.StoryboardView })));
+const StoryboardView = lazy(() =>
+  import('../Storyboard/StoryboardView').then((module) => ({ default: module.StoryboardView })),
+);
 
 interface ShellMainAreaProps {
   // 布局样式
@@ -41,7 +50,9 @@ interface ShellMainAreaProps {
   safeFrameGuides: boolean;
   previewPerformance: PreviewPerformanceSettings;
   handleProfilerFrame: (sample: ProfilerFrameSample) => void;
-  addReviewAnnotationAtPlayhead: (annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) => void;
+  addReviewAnnotationAtPlayhead: (
+    annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>,
+  ) => void;
   createReviewReport: () => Promise<void>;
   reembedPreviewWindow: () => Promise<void>;
   persistPanelVisibilityPatch: (patch: Record<string, boolean>) => void;
@@ -110,9 +121,8 @@ export function ShellMainArea({
   const updateMulticamSwitchPoint = useEditorStore((s) => s.updateMulticamSwitchPoint);
   const detectMulticamDrift = useEditorStore((s) => s.detectMulticamDrift);
 
-  const activeMulticamClip = multicamEditMode && activeMulticamClipId
-    ? findMulticamClipInProject(project, activeMulticamClipId)
-    : null;
+  const activeMulticamClip =
+    multicamEditMode && activeMulticamClipId ? findMulticamClipInProject(project, activeMulticamClipId) : null;
 
   return (
     <>
@@ -130,7 +140,10 @@ export function ShellMainArea({
         <ErrorBoundary name={zhCN.panels.preview}>
           <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
             {previewWindowOpen ? (
-              <section className="grid min-h-0 place-items-center bg-[#111827] p-6 text-center text-white" data-testid="preview-window-placeholder">
+              <section
+                className="grid min-h-0 place-items-center bg-[#111827] p-6 text-center text-white"
+                data-testid="preview-window-placeholder"
+              >
                 <div className="max-w-sm">
                   <div className="text-sm font-semibold">{zhCN.preview.detachedPlaceholderTitle}</div>
                   <div className="mt-2 text-xs leading-5 text-slate-300">{zhCN.preview.detachedPlaceholderMessage}</div>
@@ -189,7 +202,11 @@ export function ShellMainArea({
         </div>
       ) : null}
       {reviewVisibility.showTimeline ? (
-        <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
+        <section
+          className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out"
+          data-testid="timeline-panel"
+          style={{ height: timelineHeightPx }}
+        >
           <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
             {storyboardOpen ? (
               <Suspense fallback={null}>

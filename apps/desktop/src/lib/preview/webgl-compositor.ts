@@ -35,7 +35,7 @@ import {
   type ProjectColorPipeline,
   type SubtitleStyle,
   type TextStyle,
-  type Transform
+  type Transform,
 } from '@open-factory/editor-core';
 
 import type { ColorGradingGraph, UniformValue } from '@open-factory/editor-core';
@@ -48,7 +48,7 @@ import {
   GpuTexturePool,
   calculateInstancedDrawCallCount,
   estimateTextureBytes,
-  type GpuPreviewMetrics
+  type GpuPreviewMetrics,
 } from './gpu-acceleration';
 
 interface ProgramInfo {
@@ -150,7 +150,7 @@ export class WebGlPreviewCompositor {
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
       premultipliedAlpha: false,
-      preserveDrawingBuffer: window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ === true
+      preserveDrawingBuffer: window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ === true,
     });
     if (!gl) {
       throw new Error(zhCN.errors.webglPreviewUnavailable);
@@ -170,7 +170,7 @@ export class WebGlPreviewCompositor {
     this.blendBaseTexture = blendBaseTexture;
     this.texturePool = new GpuTexturePool<WebGLTexture>({
       maxBytes: GPU_TEXTURE_POOL_MAX_BYTES,
-      disposeTexture: (texture) => gl.deleteTexture(texture)
+      disposeTexture: (texture) => gl.deleteTexture(texture),
     });
     this.timerQuerySupported = Boolean(gl.getExtension('EXT_disjoint_timer_query'));
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
@@ -211,13 +211,20 @@ export class WebGlPreviewCompositor {
     effects?: Effect[],
     chromaKey?: Partial<ChromaKey>,
     masks?: ClipMask[],
-    options: WebGlSourceProcessingOptions = {}
+    options: WebGlSourceProcessingOptions = {},
   ): void {
     const gl = this.gl;
-    const texture = this.getTexture(source, options.textureCacheKey, options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight));
+    const texture = this.getTexture(
+      source,
+      options.textureCacheKey,
+      options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight),
+    );
     const disabledEffectTypes = new Set(options.disabledEffectTypes ?? []);
     const blendMode = normalizeClipBlendMode(options.blendMode);
-    const customShader = options.bypassProcessing || disabledEffectTypes.has('custom-shader') ? undefined : getEnabledCustomShaderEffect(effects);
+    const customShader =
+      options.bypassProcessing || disabledEffectTypes.has('custom-shader')
+        ? undefined
+        : getEnabledCustomShaderEffect(effects);
     if (customShader && blendMode === 'normal') {
       const params = normalizeCustomShaderParams(customShader.params);
       if (this.drawCustomShaderSource(source, texture, mediaWidth, mediaHeight, transform, params.source, options)) {
@@ -230,19 +237,56 @@ export class WebGlPreviewCompositor {
       this.finishBlendPass();
     }
     gl.useProgram(this.program.program);
-    const { correction, colorPipeline, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
+    const { correction, colorPipeline, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(
+      colorCorrection,
+      effects,
+      chromaKey,
+      masks,
+      options,
+    );
     const threeWayColor = normalizeThreeWayColor(correction.threeWayColor);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, buildCurveTextureData(correction.colorCurves));
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      256,
+      1,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      buildCurveTextureData(correction.colorCurves),
+    );
     gl.uniform1f(this.program.opacity, Math.max(0, Math.min(1, transform.opacity)));
     gl.uniform1f(this.program.blendMode, clipBlendModeToShaderIndex(blendMode));
     gl.uniform1f(this.program.inputColorSpace, inputColorSpaceIndex(correction.inputColorSpace));
     gl.uniform1f(this.program.colorPipeline, colorPipelineIndex(colorPipeline));
-    gl.uniform4f(this.program.colorCorrection, correction.brightness, correction.contrast, correction.saturation, correction.hue);
-    gl.uniform3f(this.program.lift, wheelOffset(threeWayColor.lift, 'r'), wheelOffset(threeWayColor.lift, 'g'), wheelOffset(threeWayColor.lift, 'b'));
-    gl.uniform3f(this.program.gamma, wheelValue(threeWayColor.gamma, 'r'), wheelValue(threeWayColor.gamma, 'g'), wheelValue(threeWayColor.gamma, 'b'));
-    gl.uniform3f(this.program.gain, wheelValue(threeWayColor.gain, 'r'), wheelValue(threeWayColor.gain, 'g'), wheelValue(threeWayColor.gain, 'b'));
+    gl.uniform4f(
+      this.program.colorCorrection,
+      correction.brightness,
+      correction.contrast,
+      correction.saturation,
+      correction.hue,
+    );
+    gl.uniform3f(
+      this.program.lift,
+      wheelOffset(threeWayColor.lift, 'r'),
+      wheelOffset(threeWayColor.lift, 'g'),
+      wheelOffset(threeWayColor.lift, 'b'),
+    );
+    gl.uniform3f(
+      this.program.gamma,
+      wheelValue(threeWayColor.gamma, 'r'),
+      wheelValue(threeWayColor.gamma, 'g'),
+      wheelValue(threeWayColor.gamma, 'b'),
+    );
+    gl.uniform3f(
+      this.program.gain,
+      wheelValue(threeWayColor.gain, 'r'),
+      wheelValue(threeWayColor.gain, 'g'),
+      wheelValue(threeWayColor.gain, 'b'),
+    );
     gl.uniform3fv(this.program.chromaKeyColors, buildChromaKeyColorUniforms(key));
     const keyParams = buildChromaKeyParamUniforms(key);
     gl.uniform4f(this.program.chromaKeyParams, keyParams[0], keyParams[1], keyParams[2], keyParams[3]);
@@ -253,13 +297,28 @@ export class WebGlPreviewCompositor {
     gl.uniform4fv(this.program.pathTrianglesA, maskUniforms.pathTrianglesA);
     gl.uniform4fv(this.program.pathTrianglesB, maskUniforms.pathTrianglesB);
     gl.uniform1f(this.program.pathMaskInverted, maskUniforms.pathMaskInverted);
-    gl.uniform4f(this.program.effectParams, effectParams.blur, effectParams.grain, effectParams.vignette, effectParams.chromatic);
+    gl.uniform4f(
+      this.program.effectParams,
+      effectParams.blur,
+      effectParams.grain,
+      effectParams.vignette,
+      effectParams.chromatic,
+    );
     gl.uniform1f(this.program.sharpen, effectParams.sharpen);
-    gl.uniform4f(this.program.motionBlur, effectParams.motionX, effectParams.motionY, effectParams.motionSamples, effectParams.motionJitter);
+    gl.uniform4f(
+      this.program.motionBlur,
+      effectParams.motionX,
+      effectParams.motionY,
+      effectParams.motionSamples,
+      effectParams.motionJitter,
+    );
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform), this.program);
+    this.drawQuad(
+      buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform),
+      this.program,
+    );
     this.finishBlendPass();
   }
 
@@ -274,10 +333,20 @@ export class WebGlPreviewCompositor {
     chromaKey?: Partial<ChromaKey>,
     masks?: ClipMask[],
     options: WebGlSourceProcessingOptions = {},
-    colorGradingGraph?: ColorGradingGraph
+    colorGradingGraph?: ColorGradingGraph,
   ): boolean {
     if (options.bypassProcessing || !colorNodeGraph) {
-      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      this.drawSource(
+        source,
+        mediaWidth,
+        mediaHeight,
+        transform,
+        fallbackColorCorrection,
+        effects,
+        chromaKey,
+        masks,
+        options,
+      );
       return true;
     }
 
@@ -286,7 +355,17 @@ export class WebGlPreviewCompositor {
       passes = resolveColorNodeGraphPreviewPasses(colorNodeGraph, fallbackColorCorrection);
     } catch (error) {
       console.warn('Unable to resolve color node graph preview passes', error);
-      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      this.drawSource(
+        source,
+        mediaWidth,
+        mediaHeight,
+        transform,
+        fallbackColorCorrection,
+        effects,
+        chromaKey,
+        masks,
+        options,
+      );
       return false;
     }
 
@@ -301,7 +380,17 @@ export class WebGlPreviewCompositor {
       scratchCompositor = new WebGlPreviewCompositor(scratch);
     } catch (error) {
       console.warn('Unable to allocate color node graph preview compositor', error);
-      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      this.drawSource(
+        source,
+        mediaWidth,
+        mediaHeight,
+        transform,
+        fallbackColorCorrection,
+        effects,
+        chromaKey,
+        masks,
+        options,
+      );
       return false;
     }
 
@@ -309,19 +398,22 @@ export class WebGlPreviewCompositor {
     scratchCompositor.drawSource(source, mediaWidth, mediaHeight, transform, undefined, undefined, chromaKey, masks, {
       ...options,
       blendMode: 'normal',
-      colorPipeline: 'sdr-srgb'
+      colorPipeline: 'sdr-srgb',
     });
     for (const pass of passes) {
       scratchCompositor.applyAdjustmentLayer(pass.correction, undefined, { colorPipeline: 'sdr-srgb' });
     }
     if ((effects?.length ?? 0) > 0 || options.colorPipeline) {
-      scratchCompositor.applyAdjustmentLayer(undefined, effects, { disabledEffectTypes: options.disabledEffectTypes, colorPipeline: options.colorPipeline });
+      scratchCompositor.applyAdjustmentLayer(undefined, effects, {
+        disabledEffectTypes: options.disabledEffectTypes,
+        colorPipeline: options.colorPipeline,
+      });
     }
     scratchCompositor.finish();
 
     this.drawSource(scratch, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, {
       bypassProcessing: true,
-      blendMode: options.blendMode
+      blendMode: options.blendMode,
     });
 
     // Apply color grading graph as a post-processing pass if present
@@ -332,7 +424,14 @@ export class WebGlPreviewCompositor {
     return true;
   }
 
-  drawPanoramaSource(source: TexImageSource, mediaWidth: number, mediaHeight: number, transform: Transform, panorama: ClipPanoramaView, options: WebGlSourceProcessingOptions = {}): boolean {
+  drawPanoramaSource(
+    source: TexImageSource,
+    mediaWidth: number,
+    mediaHeight: number,
+    transform: Transform,
+    panorama: ClipPanoramaView,
+    options: WebGlSourceProcessingOptions = {},
+  ): boolean {
     if (options.bypassProcessing || normalizeClipBlendMode(options.blendMode) !== 'normal') {
       return false;
     }
@@ -341,7 +440,11 @@ export class WebGlPreviewCompositor {
     if (!program) {
       return false;
     }
-    const texture = this.getTexture(source, options.textureCacheKey, options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight));
+    const texture = this.getTexture(
+      source,
+      options.textureCacheKey,
+      options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight),
+    );
     gl.useProgram(program.program);
     if (program.texture) {
       gl.uniform1i(program.texture, 0);
@@ -367,7 +470,16 @@ export class WebGlPreviewCompositor {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, Math.max(1, Number(gl.canvas.width)), Math.max(1, Number(gl.canvas.height)), transform), program);
+    this.drawQuad(
+      buildTransformedQuad(
+        gl.canvas.width,
+        gl.canvas.height,
+        Math.max(1, Number(gl.canvas.width)),
+        Math.max(1, Number(gl.canvas.height)),
+        transform,
+      ),
+      program,
+    );
     return mediaWidth > 0 && mediaHeight > 0;
   }
 
@@ -378,7 +490,7 @@ export class WebGlPreviewCompositor {
     colorCorrection?: Partial<ColorCorrection>,
     effects?: Effect[],
     colorNodeGraph?: Partial<ColorNodeGraph>,
-    options: WebGlSourceProcessingOptions = {}
+    options: WebGlSourceProcessingOptions = {},
   ): void {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -404,7 +516,7 @@ export class WebGlPreviewCompositor {
       effects,
       undefined,
       undefined,
-      options
+      options,
     );
   }
 
@@ -436,7 +548,7 @@ export class WebGlPreviewCompositor {
       instancedDrawCalls: calculateInstancedDrawCallCount(this.drawCalls, true),
       offscreenWorkerSupported: false,
       offscreenWorkerActive: false,
-      timerQuerySupported: this.timerQuerySupported
+      timerQuerySupported: this.timerQuerySupported,
     };
   }
 
@@ -464,7 +576,15 @@ export class WebGlPreviewCompositor {
   readCenterPixel(): number[] {
     const gl = this.gl;
     const pixel = new Uint8Array(4);
-    gl.readPixels(Math.floor(gl.canvas.width / 2), Math.floor(gl.canvas.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    gl.readPixels(
+      Math.floor(gl.canvas.width / 2),
+      Math.floor(gl.canvas.height / 2),
+      1,
+      1,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      pixel,
+    );
     return Array.from(pixel);
   }
 
@@ -477,7 +597,11 @@ export class WebGlPreviewCompositor {
     return { width, height, data: pixels };
   }
 
-  applyAdjustmentLayer(colorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}): void {
+  applyAdjustmentLayer(
+    colorCorrection?: Partial<ColorCorrection>,
+    effects?: Effect[],
+    options: WebGlSourceProcessingOptions = {},
+  ): void {
     const frame = this.readFramePixels();
     const canvas = document.createElement('canvas');
     canvas.width = frame.width;
@@ -494,10 +618,26 @@ export class WebGlPreviewCompositor {
     }
     context.putImageData(image, 0, 0);
     this.begin(frame.width, frame.height);
-    this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects, undefined, undefined, options);
+    this.drawSource(
+      canvas,
+      frame.width,
+      frame.height,
+      DEFAULT_TRANSFORM,
+      colorCorrection,
+      effects,
+      undefined,
+      undefined,
+      options,
+    );
   }
 
-  applyColorNodeGraph(colorNodeGraph: Partial<ColorNodeGraph> | undefined, fallbackColorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}, colorGradingGraph?: ColorGradingGraph): boolean {
+  applyColorNodeGraph(
+    colorNodeGraph: Partial<ColorNodeGraph> | undefined,
+    fallbackColorCorrection?: Partial<ColorCorrection>,
+    effects?: Effect[],
+    options: WebGlSourceProcessingOptions = {},
+    colorGradingGraph?: ColorGradingGraph,
+  ): boolean {
     if (options.bypassProcessing || !colorNodeGraph) {
       this.applyAdjustmentLayer(fallbackColorCorrection, effects, options);
       return true;
@@ -516,7 +656,10 @@ export class WebGlPreviewCompositor {
       this.applyAdjustmentLayer(pass.correction, undefined, { colorPipeline: 'sdr-srgb' });
     }
     if ((effects?.length ?? 0) > 0 || options.colorPipeline) {
-      this.applyAdjustmentLayer(undefined, effects, { disabledEffectTypes: options.disabledEffectTypes, colorPipeline: options.colorPipeline });
+      this.applyAdjustmentLayer(undefined, effects, {
+        disabledEffectTypes: options.disabledEffectTypes,
+        colorPipeline: options.colorPipeline,
+      });
     }
     if (colorGradingGraph && colorGradingGraph.nodes.length > 0 && !options.bypassProcessing) {
       const gl = this.gl;
@@ -562,7 +705,16 @@ export class WebGlPreviewCompositor {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.blendBaseTexture);
-    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, Math.max(1, Number(gl.canvas.width)), Math.max(1, Number(gl.canvas.height)), 0);
+    gl.copyTexImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      0,
+      0,
+      Math.max(1, Number(gl.canvas.width)),
+      Math.max(1, Number(gl.canvas.height)),
+      0,
+    );
     gl.disable(gl.BLEND);
     gl.activeTexture(gl.TEXTURE0);
   }
@@ -580,7 +732,7 @@ export class WebGlPreviewCompositor {
     mediaHeight: number,
     transform: Transform,
     sourceCode: string,
-    options: WebGlSourceProcessingOptions
+    options: WebGlSourceProcessingOptions,
   ): boolean {
     const gl = this.gl;
     const program = this.getCustomProgram(sourceCode);
@@ -637,7 +789,10 @@ export class WebGlPreviewCompositor {
     }
   }
 
-  private drawQuad(points: number[], program: Pick<ProgramInfo, 'position' | 'texCoord'> | Pick<CustomShaderProgramInfo, 'position' | 'texCoord'>): void {
+  private drawQuad(
+    points: number[],
+    program: Pick<ProgramInfo, 'position' | 'texCoord'> | Pick<CustomShaderProgramInfo, 'position' | 'texCoord'>,
+  ): void {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.DYNAMIC_DRAW);
@@ -723,10 +878,13 @@ export class WebGlPreviewCompositor {
          varying vec2 v_texCoord;
          void main() {
            gl_FragColor = texture2D(u_texture, v_texCoord);
-         }`
+         }`,
       );
       const program = gl.createProgram();
-      if (!program) { this.blitProgram = null; return null; }
+      if (!program) {
+        this.blitProgram = null;
+        return null;
+      }
       gl.attachShader(program, vs);
       gl.attachShader(program, fs);
       gl.linkProgram(program);
@@ -742,7 +900,7 @@ export class WebGlPreviewCompositor {
         resolution: gl.getUniformLocation(program, 'u_resolution'),
         texture: gl.getUniformLocation(program, 'u_texture'),
         time: null,
-        progress: null
+        progress: null,
       };
       return this.blitProgram;
     } catch {
@@ -758,7 +916,7 @@ export function resolveWebGlSourceProcessing(
   chromaKey?: Partial<ChromaKey>,
   masks?: ClipMask[],
   options: WebGlSourceProcessingOptions = {},
-  colorGradingGraph?: ColorGradingGraph
+  colorGradingGraph?: ColorGradingGraph,
 ): WebGlResolvedSourceProcessing {
   if (options.bypassProcessing) {
     return {
@@ -766,7 +924,7 @@ export function resolveWebGlSourceProcessing(
       colorPipeline: normalizeProjectColorPipeline(undefined),
       key: normalizeChromaKey(undefined),
       maskUniforms: buildMaskUniforms(undefined),
-      effectParams: buildPreviewEffectParams(undefined)
+      effectParams: buildPreviewEffectParams(undefined),
     };
   }
   return {
@@ -775,13 +933,13 @@ export function resolveWebGlSourceProcessing(
     key: normalizeChromaKey(chromaKey),
     maskUniforms: buildMaskUniforms(masks),
     effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes, colorGradingGraph),
-    colorGradingGraph
+    colorGradingGraph,
   };
 }
 
 export function resolveColorNodeGraphPreviewPasses(
   colorNodeGraph: Partial<ColorNodeGraph> | undefined,
-  fallbackColorCorrection?: Partial<ColorCorrection>
+  fallbackColorCorrection?: Partial<ColorCorrection>,
 ): ColorNodeGraphPreviewPass[] {
   const normalized = normalizeColorNodeGraph(colorNodeGraph, fallbackColorCorrection);
   return topologicallySortColorNodeGraph(normalized)
@@ -791,8 +949,8 @@ export function resolveColorNodeGraphPreviewPasses(
       nodeType: node.type,
       correction: normalizeColorCorrection({
         ...node.correction,
-        lutPath: node.type === 'lut' ? node.lutPath ?? node.correction.lutPath : node.correction.lutPath
-      })
+        lutPath: node.type === 'lut' ? (node.lutPath ?? node.correction.lutPath) : node.correction.lutPath,
+      }),
     }));
 }
 
@@ -825,7 +983,13 @@ function buildChromaKeyParamUniforms(chromaKey: ChromaKey): [number, number, num
   return [1, chromaKey.similarity, chromaKey.blend, chromaKey.colors.length];
 }
 
-function drawTextBackground(context: CanvasRenderingContext2D, centerX: number, centerY: number, text: string, style: TextStyle | SubtitleStyle): void {
+function drawTextBackground(
+  context: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  text: string,
+  style: TextStyle | SubtitleStyle,
+): void {
   if (style.backgroundOpacity <= 0) {
     return;
   }
@@ -840,7 +1004,9 @@ function drawTextBackground(context: CanvasRenderingContext2D, centerX: number, 
   context.restore();
 }
 
-function buildCurveTextureData(colorCurves: Partial<NonNullable<ColorCorrection['colorCurves']>> | undefined): Uint8Array {
+function buildCurveTextureData(
+  colorCurves: Partial<NonNullable<ColorCorrection['colorCurves']>> | undefined,
+): Uint8Array {
   const data = new Uint8Array(256 * 4);
   for (let index = 0; index < 256; index += 1) {
     const sample = sampleColorCurves(colorCurves, index / 255);
@@ -890,8 +1056,44 @@ function colorPipelineIndex(value: ProjectColorPipeline | undefined): number {
   }
 }
 
-function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = [], colorGradingGraph?: ColorGradingGraph): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, UniformValue> } {
-  const params: { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, UniformValue> } = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
+function buildPreviewEffectParams(
+  effects: Effect[] | undefined,
+  disabledEffectTypes: EffectType[] = [],
+  colorGradingGraph?: ColorGradingGraph,
+): {
+  blur: number;
+  grain: number;
+  vignette: number;
+  chromatic: number;
+  sharpen: number;
+  motionX: number;
+  motionY: number;
+  motionSamples: number;
+  motionJitter: number;
+  colorGradingUniforms?: Record<string, UniformValue>;
+} {
+  const params: {
+    blur: number;
+    grain: number;
+    vignette: number;
+    chromatic: number;
+    sharpen: number;
+    motionX: number;
+    motionY: number;
+    motionSamples: number;
+    motionJitter: number;
+    colorGradingUniforms?: Record<string, UniformValue>;
+  } = {
+    blur: 0,
+    grain: 0,
+    vignette: 0,
+    chromatic: 0,
+    sharpen: 0,
+    motionX: 0,
+    motionY: 0,
+    motionSamples: 0,
+    motionJitter: 0,
+  };
   const disabled = new Set(disabledEffectTypes);
   for (const effect of effects ?? []) {
     if (!effect.enabled || disabled.has(effect.type)) {
@@ -900,16 +1102,31 @@ function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectT
     if (effect.type === 'blur') {
       params.blur = Math.max(params.blur, Math.min(12, Math.max(0, getEffectNumberParam(effect.params, 'radius', 0))));
     } else if (effect.type === 'film-grain') {
-      params.grain = Math.max(params.grain, Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
+      params.grain = Math.max(
+        params.grain,
+        Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))),
+      );
     } else if (effect.type === 'vignette') {
-      params.vignette = Math.max(params.vignette, Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'intensity', 0))));
+      params.vignette = Math.max(
+        params.vignette,
+        Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'intensity', 0))),
+      );
     } else if (effect.type === 'chromatic-aberration') {
-      params.chromatic = Math.max(params.chromatic, Math.min(20, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
+      params.chromatic = Math.max(
+        params.chromatic,
+        Math.min(20, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))),
+      );
     } else if (effect.type === 'sharpen') {
-      params.sharpen = Math.max(params.sharpen, Math.min(3, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
+      params.sharpen = Math.max(
+        params.sharpen,
+        Math.min(3, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))),
+      );
     } else if (effect.type === 'motion-blur') {
       const motion = buildMotionBlurPreviewVector(effect.params);
-      if (motion.samples > params.motionSamples || Math.hypot(motion.x, motion.y) > Math.hypot(params.motionX, params.motionY)) {
+      if (
+        motion.samples > params.motionSamples ||
+        Math.hypot(motion.x, motion.y) > Math.hypot(params.motionX, params.motionY)
+      ) {
         params.motionX = motion.x;
         params.motionY = motion.y;
         params.motionSamples = motion.samples;
@@ -977,7 +1194,7 @@ function buildMaskUniforms(masks: ClipMask[] | undefined): {
     pathTriangleCount,
     pathTrianglesA,
     pathTrianglesB,
-    pathMaskInverted: pathMask?.inverted ? 1 : 0
+    pathMaskInverted: pathMask?.inverted ? 1 : 0,
   };
 }
 
@@ -988,11 +1205,17 @@ function resolveTextTransform(canvasHeight: number, transform: Transform, style:
   return {
     ...transform,
     x: 0,
-    y: canvasHeight / 2 - style.yOffset - style.fontSize / 2
+    y: canvasHeight / 2 - style.yOffset - style.fontSize / 2,
   };
 }
 
-function buildTransformedQuad(canvasWidth: number, canvasHeight: number, mediaWidth: number, mediaHeight: number, transform: Transform): number[] {
+function buildTransformedQuad(
+  canvasWidth: number,
+  canvasHeight: number,
+  mediaWidth: number,
+  mediaHeight: number,
+  transform: Transform,
+): number[] {
   const width = Math.max(1, mediaWidth * getTransformScaleX(transform));
   const height = Math.max(1, mediaHeight * getTransformScaleY(transform));
   const centerX = canvasWidth / 2 + transform.x;
@@ -1006,7 +1229,7 @@ function buildTransformedQuad(canvasWidth: number, canvasHeight: number, mediaWi
     [-width / 2, height / 2],
     [-width / 2, height / 2],
     [width / 2, -height / 2],
-    [width / 2, height / 2]
+    [width / 2, height / 2],
   ];
   return corners.flatMap(([x, y]) => [centerX + x * cos - y * sin, centerY + x * sin + y * cos]);
 }
@@ -1090,11 +1313,7 @@ export function buildBlendModeShaderInjection(): string {
 }
 
 function createProgram(gl: WebGLRenderingContext): ProgramInfo {
-  const vertexShader = compileShader(
-    gl,
-    gl.VERTEX_SHADER,
-    VERTEX_SHADER_SOURCE
-  );
+  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE);
   const fragmentShader = compileShader(
     gl,
     gl.FRAGMENT_SHADER,
@@ -1398,7 +1617,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         }
         gl_FragColor = source;
       }
-    `
+    `,
   );
   const program = gl.createProgram();
   if (!program) {
@@ -1489,7 +1708,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     pathMaskInverted,
     effectParams,
     sharpen,
-    motionBlur
+    motionBlur,
   };
 }
 
@@ -1527,7 +1746,7 @@ function createCustomShaderProgram(gl: WebGLRenderingContext, sourceCode: string
     resolution: gl.getUniformLocation(program, 'u_resolution'),
     texture: gl.getUniformLocation(program, 'u_texture'),
     time: gl.getUniformLocation(program, 'u_time'),
-    progress: gl.getUniformLocation(program, 'u_progress')
+    progress: gl.getUniformLocation(program, 'u_progress'),
   };
 }
 
@@ -1580,7 +1799,7 @@ function createPanoramaProgram(gl: WebGLRenderingContext): PanoramaProgramInfo {
         vec4 color = texture2D(u_texture, sampleCoord);
         gl_FragColor = vec4(color.rgb, color.a * u_opacity);
       }
-    `
+    `,
   );
   const program = gl.createProgram();
   if (!program) {
@@ -1602,7 +1821,7 @@ function createPanoramaProgram(gl: WebGLRenderingContext): PanoramaProgramInfo {
     roll: gl.getUniformLocation(program, 'u_roll'),
     fov: gl.getUniformLocation(program, 'u_fov'),
     aspect: gl.getUniformLocation(program, 'u_aspect'),
-    opacity: gl.getUniformLocation(program, 'u_opacity')
+    opacity: gl.getUniformLocation(program, 'u_opacity'),
   };
 }
 

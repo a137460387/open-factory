@@ -9,7 +9,7 @@ import {
   writeFile,
   type FileStat,
   type WebdavProjectBackupRequest,
-  type WebdavProjectBackupResult
+  type WebdavProjectBackupResult,
 } from '../lib/tauri-bridge';
 import { readBackupSettings, saveBackupSettings, type BackupSettings } from '../settings/appSettings';
 
@@ -51,7 +51,7 @@ export async function runProjectBackupAfterSave(
   project: Project,
   projectPath: string,
   serializedProject: string,
-  dependencies: ProjectBackupDependencies = {}
+  dependencies: ProjectBackupDependencies = {},
 ): Promise<ProjectBackupStatus> {
   const readSettingsImpl = dependencies.readSettings ?? readBackupSettings;
   const saveSettingsImpl = dependencies.saveSettings ?? saveBackupSettings;
@@ -62,7 +62,7 @@ export async function runProjectBackupAfterSave(
     const settings = await readSettingsImpl();
     const status: ProjectBackupStatus = {
       attempted: Boolean(settings.local.enabled || settings.webdav.enabled),
-      lastBackupAt: settings.lastBackupAt
+      lastBackupAt: settings.lastBackupAt,
     };
     if (!status.attempted) {
       return status;
@@ -94,7 +94,7 @@ export async function runProjectBackupAfterSave(
     await saveSettingsImpl({
       ...settings,
       lastBackupAt: status.lastBackupAt,
-      lastBackupWarning: status.warning
+      lastBackupWarning: status.warning,
     }).catch((error) => warn(zhCN.settings.backup.statusSaveFailed, error));
     if (status.warning) {
       warn(status.warning);
@@ -113,7 +113,7 @@ export async function runLocalBackup(
   serializedProject: string,
   settings: BackupSettings,
   dependencies: ProjectBackupDependencies = {},
-  now: () => Date = () => new Date()
+  now: () => Date = () => new Date(),
 ): Promise<BackupTargetStatus> {
   const directory = settings.local.directory?.trim();
   if (!directory) {
@@ -134,7 +134,7 @@ async function runWebdavBackup(
   projectPath: string,
   serializedProject: string,
   settings: BackupSettings,
-  dependencies: ProjectBackupDependencies = {}
+  dependencies: ProjectBackupDependencies = {},
 ): Promise<BackupTargetStatus> {
   const url = settings.webdav.url?.trim();
   if (!url) {
@@ -153,7 +153,7 @@ export async function buildWebdavProjectBackupRequest(
   projectPath: string,
   serializedProject: string,
   settings: BackupSettings,
-  dependencies: Pick<ProjectBackupDependencies, 'readWebdavPassword'> = {}
+  dependencies: Pick<ProjectBackupDependencies, 'readWebdavPassword'> = {},
 ): Promise<WebdavProjectBackupRequest> {
   const url = settings.webdav.url?.trim();
   if (!url) {
@@ -165,7 +165,7 @@ export async function buildWebdavProjectBackupRequest(
     username: settings.webdav.username?.trim() || undefined,
     password: password || undefined,
     projectPath,
-    contents: serializedProject
+    contents: serializedProject,
   };
 }
 
@@ -180,14 +180,16 @@ function backupStemForProject(projectName: string, projectPath: string): string 
 }
 
 export function sanitizeBackupStem(value: string): string {
-  return value
-    .trim()
-    .replace(/\.cutproj\.json$/i, '')
-    .replace(/\.[^.]+$/i, '')
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80) || 'project';
+  return (
+    value
+      .trim()
+      .replace(/\.cutproj\.json$/i, '')
+      .replace(/\.[^.]+$/i, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'project'
+  );
 }
 
 function formatBackupTimestampForFile(date: Date): string {
@@ -201,7 +203,7 @@ function formatBackupTimestampForFile(date: Date): string {
     pad(date.getUTCMinutes()),
     pad(date.getUTCSeconds()),
     '-',
-    pad(date.getUTCMilliseconds(), 3)
+    pad(date.getUTCMilliseconds(), 3),
   ].join('');
 }
 
@@ -217,7 +219,11 @@ export function formatBackupDisplayTime(iso: string | undefined): string | undef
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-async function rotateLocalBackups(directory: string, stem: string, dependencies: ProjectBackupDependencies = {}): Promise<string[]> {
+async function rotateLocalBackups(
+  directory: string,
+  stem: string,
+  dependencies: ProjectBackupDependencies = {},
+): Promise<string[]> {
   const scanDirectoryImpl = dependencies.scanDirectory ?? scanDirectory;
   const getFileStatImpl = dependencies.getFileStat ?? getFileStat;
   const removeFileImpl = dependencies.removeFile ?? removeFile;
@@ -225,7 +231,7 @@ async function rotateLocalBackups(directory: string, stem: string, dependencies:
   const backups = await Promise.all(
     files
       .filter((path) => isLocalBackupPathForStem(path, stem))
-      .map(async (path): Promise<LocalBackupFile> => ({ path, mtimeMs: (await getFileStatImpl(path)).mtimeMs }))
+      .map(async (path): Promise<LocalBackupFile> => ({ path, mtimeMs: (await getFileStatImpl(path)).mtimeMs })),
   );
   const expired = selectExpiredLocalBackups(backups);
   for (const backup of expired) {

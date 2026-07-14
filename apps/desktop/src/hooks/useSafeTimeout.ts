@@ -9,7 +9,7 @@ export function useSafeTimeout() {
         clearTimeout(id);
       }
     },
-    []
+    [],
   );
 
   return useCallback((fn: () => void, ms: number) => {

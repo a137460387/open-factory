@@ -37,7 +37,11 @@ export interface CodecCompareEvaluationRequest {
   outputPath: string;
 }
 
-export function buildCodecCompareJobs(input: { baseOutputPath: string; presets: ExportPreset[]; selectedPresetIds: string[] }): CodecCompareJob[] {
+export function buildCodecCompareJobs(input: {
+  baseOutputPath: string;
+  presets: ExportPreset[];
+  selectedPresetIds: string[];
+}): CodecCompareJob[] {
   const baseOutputPath = input.baseOutputPath.trim();
   if (!baseOutputPath) {
     throw new Error('Codec compare output path is required.');
@@ -56,7 +60,7 @@ export function buildCodecCompareJobs(input: { baseOutputPath: string; presets: 
       presetId: preset.id,
       presetName: preset.name,
       outputPath: buildCodecCompareOutputPath(baseOutputPath, preset, index + 1),
-      settings: { ...preset.settings }
+      settings: { ...preset.settings },
     };
   });
 }
@@ -84,12 +88,15 @@ export function createInitialCodecCompareResults(jobs: CodecCompareJob[], tasks:
       status: task?.status ?? 'queued',
       sourcePath: task ? getTaskSourcePath(task) : undefined,
       durationMs: task ? getTaskDurationMs(task) : undefined,
-      qualityStatus: 'idle'
+      qualityStatus: 'idle',
     };
   });
 }
 
-export function syncCodecCompareResultsWithTasks(results: CodecCompareResult[], tasks: ExportTask[]): CodecCompareResult[] {
+export function syncCodecCompareResultsWithTasks(
+  results: CodecCompareResult[],
+  tasks: ExportTask[],
+): CodecCompareResult[] {
   const taskById = new Map(tasks.map((task) => [task.id, task]));
   return results.map((result) => {
     if (!result.taskId) {
@@ -104,22 +111,33 @@ export function syncCodecCompareResultsWithTasks(results: CodecCompareResult[], 
       status: task.status,
       sourcePath: result.sourcePath ?? getTaskSourcePath(task),
       durationMs: getTaskDurationMs(task) ?? result.durationMs,
-      qualityStatus: task.status === 'success' && !result.qualityStatus ? 'idle' : result.qualityStatus
+      qualityStatus: task.status === 'success' && !result.qualityStatus ? 'idle' : result.qualityStatus,
     };
   });
 }
 
 export function collectPendingCodecCompareEvaluations(results: CodecCompareResult[]): CodecCompareEvaluationRequest[] {
   return results
-    .filter((result) => result.status === 'success' && result.taskId && result.sourcePath && (result.qualityStatus === undefined || result.qualityStatus === 'idle'))
+    .filter(
+      (result) =>
+        result.status === 'success' &&
+        result.taskId &&
+        result.sourcePath &&
+        (result.qualityStatus === undefined || result.qualityStatus === 'idle'),
+    )
     .map((result) => ({
       taskId: result.taskId!,
       sourcePath: result.sourcePath!,
-      outputPath: result.outputPath
+      outputPath: result.outputPath,
     }));
 }
 
-export function applyCodecCompareQualityResult(results: CodecCompareResult[], taskId: string, quality: QualityEvaluationResult, fileSizeBytes?: number): CodecCompareResult[] {
+export function applyCodecCompareQualityResult(
+  results: CodecCompareResult[],
+  taskId: string,
+  quality: QualityEvaluationResult,
+  fileSizeBytes?: number,
+): CodecCompareResult[] {
   return results.map((result) =>
     result.taskId === taskId
       ? {
@@ -128,35 +146,55 @@ export function applyCodecCompareQualityResult(results: CodecCompareResult[], ta
           ssim: quality.ssim,
           psnr: quality.psnr,
           qualityStatus: 'complete',
-          qualityError: undefined
+          qualityError: undefined,
         }
-      : result
+      : result,
   );
 }
 
-export function applyCodecCompareQualityError(results: CodecCompareResult[], taskId: string, error: string): CodecCompareResult[] {
-  return results.map((result) => (result.taskId === taskId ? { ...result, qualityStatus: 'error', qualityError: error } : result));
+export function applyCodecCompareQualityError(
+  results: CodecCompareResult[],
+  taskId: string,
+  error: string,
+): CodecCompareResult[] {
+  return results.map((result) =>
+    result.taskId === taskId ? { ...result, qualityStatus: 'error', qualityError: error } : result,
+  );
 }
 
 export function markCodecCompareQualityRunning(results: CodecCompareResult[], taskId: string): CodecCompareResult[] {
-  return results.map((result) => (result.taskId === taskId ? { ...result, qualityStatus: 'running', qualityError: undefined } : result));
+  return results.map((result) =>
+    result.taskId === taskId ? { ...result, qualityStatus: 'running', qualityError: undefined } : result,
+  );
 }
 
-export function recommendCodecCompareResult(results: CodecCompareResult[], mode: CodecCompareRecommendationMode): CodecCompareResult | undefined {
-  const candidates = results.filter((result) => result.qualityStatus === 'complete' && Number.isFinite(result.ssim) && Number.isFinite(result.psnr));
+export function recommendCodecCompareResult(
+  results: CodecCompareResult[],
+  mode: CodecCompareRecommendationMode,
+): CodecCompareResult | undefined {
+  const candidates = results.filter(
+    (result) => result.qualityStatus === 'complete' && Number.isFinite(result.ssim) && Number.isFinite(result.psnr),
+  );
   if (candidates.length === 0) {
     return undefined;
   }
-  const sizes = candidates.map((result) => result.fileSizeBytes).filter((value): value is number => Number.isFinite(value));
+  const sizes = candidates
+    .map((result) => result.fileSizeBytes)
+    .filter((value): value is number => Number.isFinite(value));
   const minSize = sizes.length > 0 ? Math.min(...sizes) : undefined;
   const maxSize = sizes.length > 0 ? Math.max(...sizes) : undefined;
   const weights = mode === 'quality' ? { quality: 0.95, size: 0.05 } : { quality: 0.2, size: 0.8 };
   return candidates
     .map((result) => ({ result, score: codecCompareScore(result, weights, minSize, maxSize) }))
-    .sort((left, right) => right.score - left.score || left.result.presetName.localeCompare(right.result.presetName))[0]?.result;
+    .sort((left, right) => right.score - left.score || left.result.presetName.localeCompare(right.result.presetName))[0]
+    ?.result;
 }
 
-export function sortCodecCompareResults(results: CodecCompareResult[], key: CodecCompareSortKey, direction: CodecCompareSortDirection): CodecCompareResult[] {
+export function sortCodecCompareResults(
+  results: CodecCompareResult[],
+  key: CodecCompareSortKey,
+  direction: CodecCompareSortDirection,
+): CodecCompareResult[] {
   const multiplier = direction === 'asc' ? 1 : -1;
   return [...results].sort((left, right) => {
     const leftValue = left[key];
@@ -172,7 +210,12 @@ export function areCodecCompareResultsEqual(left: CodecCompareResult[], right: C
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function codecCompareScore(result: CodecCompareResult, weights: { quality: number; size: number }, minSize?: number, maxSize?: number): number {
+function codecCompareScore(
+  result: CodecCompareResult,
+  weights: { quality: number; size: number },
+  minSize?: number,
+  maxSize?: number,
+): number {
   const ssimScore = clamp01(result.ssim ?? 0);
   const psnrScore = clamp01(((result.psnr ?? 0) - 20) / 30);
   const qualityScore = ssimScore * 0.65 + psnrScore * 0.35;
@@ -180,7 +223,11 @@ function codecCompareScore(result: CodecCompareResult, weights: { quality: numbe
   return qualityScore * weights.quality + sizeScore * weights.size;
 }
 
-function sizeEfficiencyScore(size: number | undefined, minSize: number | undefined, maxSize: number | undefined): number {
+function sizeEfficiencyScore(
+  size: number | undefined,
+  minSize: number | undefined,
+  maxSize: number | undefined,
+): number {
   if (!Number.isFinite(size) || !Number.isFinite(minSize) || !Number.isFinite(maxSize) || minSize === maxSize) {
     return 0.5;
   }
@@ -211,7 +258,9 @@ function sanitizePathSegment(value: string): string {
 }
 
 function unique(values: string[]): string[] {
-  return Array.from(new Set(values.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim())));
+  return Array.from(
+    new Set(values.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim())),
+  );
 }
 
 function clamp01(value: number): number {

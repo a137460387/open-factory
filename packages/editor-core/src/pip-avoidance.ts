@@ -33,10 +33,7 @@ export interface BoundingBox {
  * Calculate the overlap area between a normalised bounding box and
  * a normalised rectangle, as a percentage of the bbox area.
  */
-export function calculateBboxOverlap(
-  bbox: BoundingBox,
-  rect: { x: number; y: number; w: number; h: number }
-): number {
+export function calculateBboxOverlap(bbox: BoundingBox, rect: { x: number; y: number; w: number; h: number }): number {
   const bboxArea = bbox.w * bbox.h;
   if (bboxArea <= 0) return 0;
 
@@ -60,7 +57,7 @@ export function evaluateCandidatePosition(
   pipW: number,
   pipH: number,
   corner: PipCorner,
-  margin: number = 0.025
+  margin: number = 0.025,
 ): { overlap: number; thirdsScore: number } {
   const normPipW = pipW / canvasW;
   const normPipH = pipH / canvasH;
@@ -128,7 +125,7 @@ export function suggestPipPlacement(
   canvasH: number,
   pipW: number,
   pipH: number,
-  margin?: number
+  margin?: number,
 ): PipPlacementSuggestion {
   if (subjectBboxes.length === 0 || canvasW <= 0 || canvasH <= 0 || pipW <= 0 || pipH <= 0) {
     return { recommendedCorner: 'bottom-right', overlapReduction: 0, confidence: 0 };
@@ -145,7 +142,7 @@ export function suggestPipPlacement(
     return {
       corner,
       avgOverlap: totalOverlap / subjectBboxes.length,
-      avgThirds: totalThirds / subjectBboxes.length
+      avgThirds: totalThirds / subjectBboxes.length,
     };
   });
 
@@ -168,6 +165,6 @@ export function suggestPipPlacement(
   return {
     recommendedCorner: best.corner,
     overlapReduction,
-    confidence
+    confidence,
   };
 }

@@ -1,8 +1,15 @@
-import { readCollaborationIdentitySettings, type CollaborationIdentitySettings, type LocalCoeditingSettings } from '../settings/appSettings';
+import {
+  readCollaborationIdentitySettings,
+  type CollaborationIdentitySettings,
+  type LocalCoeditingSettings,
+} from '../settings/appSettings';
 import { useEditorStore } from '../store/editorStore';
 import { collaborationController } from './local-network';
 
-export async function applyLocalCoeditingSettings(settings: LocalCoeditingSettings, identity?: CollaborationIdentitySettings): Promise<void> {
+export async function applyLocalCoeditingSettings(
+  settings: LocalCoeditingSettings,
+  identity?: CollaborationIdentitySettings,
+): Promise<void> {
   if (!settings.enabled) {
     await collaborationController.disable();
     return;
@@ -17,5 +24,9 @@ export async function applyLocalCoeditingSettings(settings: LocalCoeditingSettin
   } else {
     await collaborationController.enableClient({ permission: settings.permission });
   }
-  collaborationController.updatePresence(useEditorStore.getState().playheadTime, resolvedIdentity.name, resolvedIdentity.color);
+  collaborationController.updatePresence(
+    useEditorStore.getState().playheadTime,
+    resolvedIdentity.name,
+    resolvedIdentity.color,
+  );
 }

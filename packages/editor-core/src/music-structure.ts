@@ -9,8 +9,8 @@ export interface MusicStructurePoint {
 }
 
 /** 阈值常量 */
-export const RMS_CHANGE_THRESHOLD = 0.4;      // 40%
-export const CENTROID_SHIFT_THRESHOLD = 0.3;  // 30%
+export const RMS_CHANGE_THRESHOLD = 0.4; // 40%
+export const CENTROID_SHIFT_THRESHOLD = 0.3; // 30%
 export const MIN_INTERVAL_SECONDS = 8;
 export const STRUCTURE_SNAP_TOLERANCE = 0.3; // 秒
 export const STRUCTURE_WINDOW_DURATION = 4.0;
@@ -32,10 +32,7 @@ export function calculateRMS(samples: Float32Array | number[]): number {
  * magnitudes: 频率bin的幅值数组
  * sampleRate: 采样率
  */
-export function calculateSpectralCentroid(
-  magnitudes: Float32Array | number[],
-  sampleRate: number
-): number {
+export function calculateSpectralCentroid(magnitudes: Float32Array | number[], sampleRate: number): number {
   if (magnitudes.length === 0) return 0;
   let weightedSum = 0;
   let totalMag = 0;
@@ -54,7 +51,7 @@ export function calculateSpectralCentroid(
  */
 export function calculateSpectralFlux(
   prevMagnitudes: Float32Array | number[],
-  currMagnitudes: Float32Array | number[]
+  currMagnitudes: Float32Array | number[],
 ): number {
   const len = Math.min(prevMagnitudes.length, currMagnitudes.length);
   if (len === 0) return 0;
@@ -73,12 +70,11 @@ export function detectStructureBoundary(
   prevRMS: number,
   currRMS: number,
   prevCentroid: number,
-  currCentroid: number
+  currCentroid: number,
 ): { isBoundary: boolean; type: MusicStructureType; confidence: number } {
-  const rmsChange = prevRMS > 0 ? Math.abs(currRMS - prevRMS) / prevRMS : (currRMS > 0 ? 1 : 0);
-  const centroidShift = prevCentroid > 0
-    ? Math.abs(currCentroid - prevCentroid) / prevCentroid
-    : (currCentroid > 0 ? 1 : 0);
+  const rmsChange = prevRMS > 0 ? Math.abs(currRMS - prevRMS) / prevRMS : currRMS > 0 ? 1 : 0;
+  const centroidShift =
+    prevCentroid > 0 ? Math.abs(currCentroid - prevCentroid) / prevCentroid : currCentroid > 0 ? 1 : 0;
 
   // 能量变化检测
   if (rmsChange >= RMS_CHANGE_THRESHOLD) {
@@ -86,7 +82,7 @@ export function detectStructureBoundary(
     return {
       isBoundary: true,
       type: isRise ? 'energy_rise' : 'energy_drop',
-      confidence: Math.min(1, round(rmsChange / RMS_CHANGE_THRESHOLD * 0.5, 2)),
+      confidence: Math.min(1, round((rmsChange / RMS_CHANGE_THRESHOLD) * 0.5, 2)),
     };
   }
 
@@ -95,7 +91,7 @@ export function detectStructureBoundary(
     return {
       isBoundary: true,
       type: 'timbre_shift',
-      confidence: Math.min(1, round(centroidShift / CENTROID_SHIFT_THRESHOLD * 0.5, 2)),
+      confidence: Math.min(1, round((centroidShift / CENTROID_SHIFT_THRESHOLD) * 0.5, 2)),
     };
   }
 
@@ -107,7 +103,7 @@ export function detectStructureBoundary(
  */
 export function filterByMinInterval(
   points: MusicStructurePoint[],
-  minInterval: number = MIN_INTERVAL_SECONDS
+  minInterval: number = MIN_INTERVAL_SECONDS,
 ): MusicStructurePoint[] {
   if (points.length === 0) return [];
 
@@ -132,7 +128,7 @@ export function filterByMinInterval(
  * 输入：每个窗口的 { startTime, rms, centroid }
  */
 export function detectMusicStructure(
-  windows: Array<{ startTime: number; rms: number; centroid: number }>
+  windows: Array<{ startTime: number; rms: number; centroid: number }>,
 ): MusicStructurePoint[] {
   if (windows.length < 2) return [];
 
@@ -143,7 +139,7 @@ export function detectMusicStructure(
       windows[i - 1].rms,
       windows[i].rms,
       windows[i - 1].centroid,
-      windows[i].centroid
+      windows[i].centroid,
     );
 
     if (result.isBoundary) {
@@ -165,7 +161,7 @@ export function detectMusicStructure(
 export function snapToNearestStructure(
   clipTime: number,
   structurePoints: MusicStructurePoint[],
-  tolerance: number = STRUCTURE_SNAP_TOLERANCE
+  tolerance: number = STRUCTURE_SNAP_TOLERANCE,
 ): { snappedTime: number; point: MusicStructurePoint } | null {
   if (structurePoints.length === 0) return null;
 

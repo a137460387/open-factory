@@ -12,7 +12,10 @@ type CsvRow = string[];
 const SOURCE_TYPES: DataSubtitleSourceType[] = ['csv', 'json', 'template'];
 const DEFAULT_TEMPLATE = '{row.text}';
 
-export function parseDataSubtitleRows(contents: string, sourceType: Exclude<DataSubtitleSourceType, 'template'>): DataSubtitleRow[] {
+export function parseDataSubtitleRows(
+  contents: string,
+  sourceType: Exclude<DataSubtitleSourceType, 'template'>,
+): DataSubtitleRow[] {
   return sourceType === 'json' ? parseDataSubtitleJsonRows(contents) : parseDataSubtitleCsvRows(contents);
 }
 
@@ -22,25 +25,29 @@ export function parseDataSubtitleCsvRows(contents: string): DataSubtitleRow[] {
     return [];
   }
   const headers = rows[0].map((cell) => cell.trim());
-  const timeIndex = headers.findIndex((header) => ['time', 'timestamp', 'start', 'start_time'].includes(header.toLowerCase()));
+  const timeIndex = headers.findIndex((header) =>
+    ['time', 'timestamp', 'start', 'start_time'].includes(header.toLowerCase()),
+  );
   if (timeIndex < 0) {
     throw new Error('Data subtitle CSV requires a time column');
   }
-  return normalizeDataSubtitleRows(
-    rows.slice(1).map((row) => {
-      const values: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        if (header && index !== timeIndex) {
-          values[header] = row[index]?.trim() ?? '';
-        }
-      });
-      return {
-        time: parseDataSubtitleTime(row[timeIndex]),
-        text: values.text || values.label || undefined,
-        values
-      };
-    })
-  ) ?? [];
+  return (
+    normalizeDataSubtitleRows(
+      rows.slice(1).map((row) => {
+        const values: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          if (header && index !== timeIndex) {
+            values[header] = row[index]?.trim() ?? '';
+          }
+        });
+        return {
+          time: parseDataSubtitleTime(row[timeIndex]),
+          text: values.text || values.label || undefined,
+          values,
+        };
+      }),
+    ) ?? []
+  );
 }
 
 export function parseDataSubtitleJsonRows(contents: string): DataSubtitleRow[] {
@@ -48,27 +55,29 @@ export function parseDataSubtitleJsonRows(contents: string): DataSubtitleRow[] {
   if (!Array.isArray(value)) {
     throw new Error('Data subtitle JSON must be an array');
   }
-  return normalizeDataSubtitleRows(
-    value.map((entry, index) => {
-      if (!entry || typeof entry !== 'object') {
-        throw new Error(`Data subtitle JSON row ${index + 1} must be an object`);
-      }
-      const input = entry as Record<string, unknown>;
-      const time = parseDataSubtitleTime(input.time ?? input.timestamp ?? input.start ?? input.start_time);
-      const values: Record<string, string> = {};
-      for (const [key, item] of Object.entries(input)) {
-        if (key === 'time' || key === 'timestamp' || key === 'start' || key === 'start_time') {
-          continue;
+  return (
+    normalizeDataSubtitleRows(
+      value.map((entry, index) => {
+        if (!entry || typeof entry !== 'object') {
+          throw new Error(`Data subtitle JSON row ${index + 1} must be an object`);
         }
-        values[key] = item == null ? '' : String(item);
-      }
-      return {
-        time,
-        text: typeof input.text === 'string' && input.text.trim() ? input.text.trim() : undefined,
-        values
-      };
-    })
-  ) ?? [];
+        const input = entry as Record<string, unknown>;
+        const time = parseDataSubtitleTime(input.time ?? input.timestamp ?? input.start ?? input.start_time);
+        const values: Record<string, string> = {};
+        for (const [key, item] of Object.entries(input)) {
+          if (key === 'time' || key === 'timestamp' || key === 'start' || key === 'start_time') {
+            continue;
+          }
+          values[key] = item == null ? '' : String(item);
+        }
+        return {
+          time,
+          text: typeof input.text === 'string' && input.text.trim() ? input.text.trim() : undefined,
+          values,
+        };
+      }),
+    ) ?? []
+  );
 }
 
 export function normalizeDataSubtitleSource(input: unknown): DataSubtitleSource | undefined {
@@ -76,9 +85,12 @@ export function normalizeDataSubtitleSource(input: unknown): DataSubtitleSource 
     return undefined;
   }
   const value = input as Partial<DataSubtitleSource>;
-  const sourceType = SOURCE_TYPES.includes(value.sourceType as DataSubtitleSourceType) ? (value.sourceType as DataSubtitleSourceType) : 'template';
+  const sourceType = SOURCE_TYPES.includes(value.sourceType as DataSubtitleSourceType)
+    ? (value.sourceType as DataSubtitleSourceType)
+    : 'template';
   const rows = normalizeDataSubtitleRows(value.rows) ?? [];
-  const template = typeof value.template === 'string' && value.template.trim() ? value.template.trim() : DEFAULT_TEMPLATE;
+  const template =
+    typeof value.template === 'string' && value.template.trim() ? value.template.trim() : DEFAULT_TEMPLATE;
   if (sourceType !== 'template' && rows.length === 0) {
     return undefined;
   }
@@ -134,28 +146,39 @@ export function findDataSubtitleRowAtTime(rows: readonly DataSubtitleRow[], time
   }, first);
 }
 
-export function expandDataSubtitleTemplate(template: string, row: DataSubtitleRow | undefined, time: number, context: DataSubtitleRenderContext = {}): string {
+export function expandDataSubtitleTemplate(
+  template: string,
+  row: DataSubtitleRow | undefined,
+  time: number,
+  context: DataSubtitleRenderContext = {},
+): string {
   const source = template.trim() || DEFAULT_TEMPLATE;
-  return source.replace(/\{([^}]+)\}/g, (_match, rawKey: string) => {
-    const key = rawKey.trim();
-    if (key.startsWith('row.')) {
-      const field = key.slice(4);
-      return row?.values[field] ?? (field === 'text' ? row?.text ?? '' : '');
-    }
-    if (key === 'frame_count') {
-      return String(Math.max(0, Math.floor(round(time) * Math.max(1, context.fps ?? 30))));
-    }
-    if (key === 'timecode') {
-      return formatDataSubtitleTimecode(time, context.fps ?? 30);
-    }
-    if (key === 'date') {
-      return formatDate(context.date ?? new Date());
-    }
-    return '';
-  }).trim();
+  return source
+    .replace(/\{([^}]+)\}/g, (_match, rawKey: string) => {
+      const key = rawKey.trim();
+      if (key.startsWith('row.')) {
+        const field = key.slice(4);
+        return row?.values[field] ?? (field === 'text' ? (row?.text ?? '') : '');
+      }
+      if (key === 'frame_count') {
+        return String(Math.max(0, Math.floor(round(time) * Math.max(1, context.fps ?? 30))));
+      }
+      if (key === 'timecode') {
+        return formatDataSubtitleTimecode(time, context.fps ?? 30);
+      }
+      if (key === 'date') {
+        return formatDate(context.date ?? new Date());
+      }
+      return '';
+    })
+    .trim();
 }
 
-export function resolveDataSubtitleText(source: DataSubtitleSource | undefined, time: number, context: DataSubtitleRenderContext = {}): string {
+export function resolveDataSubtitleText(
+  source: DataSubtitleSource | undefined,
+  time: number,
+  context: DataSubtitleRenderContext = {},
+): string {
   const normalized = normalizeDataSubtitleSource(source);
   if (!normalized) {
     return '';
@@ -167,38 +190,48 @@ export function resolveDataSubtitleText(source: DataSubtitleSource | undefined, 
   return row ? expandDataSubtitleTemplate(normalized.template, row, time, context) : '';
 }
 
-export function expandDataSubtitleClipToCueInputs(clip: SubtitleClip, context: DataSubtitleRenderContext = {}): SubtitleCueInput[] {
+export function expandDataSubtitleClipToCueInputs(
+  clip: SubtitleClip,
+  context: DataSubtitleRenderContext = {},
+): SubtitleCueInput[] {
   const source = normalizeDataSubtitleSource(clip.dataSubtitle);
   if (!source) {
-    return [{
-      id: clip.id,
-      start: clip.start,
-      duration: clip.duration,
-      text: clip.text,
-      subtitleType: clip.subtitleType,
-      speaker: clip.speaker,
-      soundDesc: clip.soundDesc,
-      style: { ...clip.style, x: clip.transform.x, y: clip.transform.y }
-    }];
+    return [
+      {
+        id: clip.id,
+        start: clip.start,
+        duration: clip.duration,
+        text: clip.text,
+        subtitleType: clip.subtitleType,
+        speaker: clip.speaker,
+        soundDesc: clip.soundDesc,
+        style: { ...clip.style, x: clip.transform.x, y: clip.transform.y },
+      },
+    ];
   }
   const clipEnd = round(clip.start + clip.duration);
-  const cueStarts = [clip.start, ...source.rows.map((row) => row.time).filter((time) => time > clip.start && time < clipEnd)].sort((left, right) => left - right);
+  const cueStarts = [
+    clip.start,
+    ...source.rows.map((row) => row.time).filter((time) => time > clip.start && time < clipEnd),
+  ].sort((left, right) => left - right);
   return cueStarts.flatMap((start, index) => {
     const end = cueStarts[index + 1] ?? clipEnd;
     const text = resolveDataSubtitleText(source, start, context);
     if (!text || end <= start) {
       return [];
     }
-    return [{
-      id: `${clip.id}-data-${index + 1}`,
-      start,
-      duration: round(end - start),
-      text,
-      subtitleType: clip.subtitleType,
-      speaker: clip.speaker,
-      soundDesc: clip.soundDesc,
-      style: { ...clip.style, x: clip.transform.x, y: clip.transform.y }
-    }];
+    return [
+      {
+        id: `${clip.id}-data-${index + 1}`,
+        start,
+        duration: round(end - start),
+        text,
+        subtitleType: clip.subtitleType,
+        speaker: clip.speaker,
+        soundDesc: clip.soundDesc,
+        style: { ...clip.style, x: clip.transform.x, y: clip.transform.y },
+      },
+    ];
   });
 }
 

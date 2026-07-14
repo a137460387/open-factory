@@ -1,11 +1,6 @@
 import { useCallback } from 'react';
-import {
-  buildMediaVersionCompareRequest,
-  findSyncCompareClipRefs,
-} from '@open-factory/editor-core';
-import {
-  revealInTimeline as coreRevealInTimeline,
-} from '@open-factory/editor-core';
+import { buildMediaVersionCompareRequest, findSyncCompareClipRefs } from '@open-factory/editor-core';
+import { revealInTimeline as coreRevealInTimeline } from '@open-factory/editor-core';
 import { clearMediaCache } from '../cache/cache-service';
 import { showToast } from '../lib/toast';
 import { zhCN, t } from '../i18n/strings';
@@ -37,7 +32,11 @@ export function useEditorShellMiscCallbacks() {
         showToast({ kind: 'success', title: zhCN.mediaReport.success, message: outputPath });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.mediaReport.failed, message: error instanceof Error ? error.message : zhCN.mediaReport.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.mediaReport.failed,
+        message: error instanceof Error ? error.message : zhCN.mediaReport.failedMessage,
+      });
     }
   }, []);
 
@@ -49,7 +48,11 @@ export function useEditorShellMiscCallbacks() {
         showToast({ kind: 'success', title: zhCN.clipReport.success, message: outputPath });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.clipReport.failed, message: error instanceof Error ? error.message : zhCN.clipReport.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.clipReport.failed,
+        message: error instanceof Error ? error.message : zhCN.clipReport.failedMessage,
+      });
     }
   }, []);
 
@@ -62,12 +65,16 @@ export function useEditorShellMiscCallbacks() {
       const state = useEditorStore.getState();
       const request = buildMediaVersionCompareRequest(state.project, assetId, undefined, undefined, state.playheadTime);
       if (!request) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionCompareUnavailable, message: zhCN.editorToasts.mediaVersionCompareUnavailableMessage });
+        showToast({
+          kind: 'warning',
+          title: zhCN.editorToasts.mediaVersionCompareUnavailable,
+          message: zhCN.editorToasts.mediaVersionCompareUnavailableMessage,
+        });
         return;
       }
       setMediaVersionCompare(request);
     },
-    [setMediaVersionCompare]
+    [setMediaVersionCompare],
   );
 
   // -----------------------------------------------------------------------
@@ -78,7 +85,11 @@ export function useEditorShellMiscCallbacks() {
     const state = useEditorStore.getState();
     const refs = findSyncCompareClipRefs(state.project.timeline, state.selectedClipIds);
     if (refs.length !== 2) {
-      showToast({ kind: 'warning', title: zhCN.syncCompare.unavailableTitle, message: zhCN.syncCompare.unavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.syncCompare.unavailableTitle,
+        message: zhCN.syncCompare.unavailableMessage,
+      });
       return;
     }
     state.setPlayheadTime(Math.min(refs[0].clip.start, refs[1].clip.start));
@@ -94,7 +105,11 @@ export function useEditorShellMiscCallbacks() {
       await clearMediaCache();
       showToast({ kind: 'success', title: zhCN.editorToasts.cacheCleared });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.cacheClearFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.cacheClearFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.cacheClearFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.cacheClearFailedMessage,
+      });
     }
   }, []);
 
@@ -103,9 +118,11 @@ export function useEditorShellMiscCallbacks() {
   // -----------------------------------------------------------------------
 
   const handleToggleFavorite = useCallback((assetId: string) => {
-    useEditorMiscStore.getState().setFavoriteIds((prev: string[]) =>
-      prev.includes(assetId) ? prev.filter((id: string) => id !== assetId) : [...prev, assetId]
-    );
+    useEditorMiscStore
+      .getState()
+      .setFavoriteIds((prev: string[]) =>
+        prev.includes(assetId) ? prev.filter((id: string) => id !== assetId) : [...prev, assetId],
+      );
   }, []);
 
   const handlePinToSession = useCallback((assetId: string) => {
@@ -122,7 +139,11 @@ export function useEditorShellMiscCallbacks() {
     const result = coreRevealInTimeline(state.project.timeline, assetId, state.project.sequences);
     if (result.instances.length > 0) {
       state.setSelectedClipIds(result.instances.map((inst) => inst.clipId));
-      showToast({ kind: 'info', title: t('matchFrame.revealInTimeline'), message: 'Found ' + result.instances.length + ' instances' });
+      showToast({
+        kind: 'info',
+        title: t('matchFrame.revealInTimeline'),
+        message: 'Found ' + result.instances.length + ' instances',
+      });
     } else {
       showToast({ kind: 'warning', title: t('matchFrame.revealInTimeline'), message: t('matchFrame.noSourceFound') });
     }

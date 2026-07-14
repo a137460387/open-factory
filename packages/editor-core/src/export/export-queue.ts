@@ -77,7 +77,8 @@ export function createExportTask(input: {
   return {
     id: input.id ?? createId('export-task'),
     name: input.name,
-    projectName: typeof input.projectName === 'string' && input.projectName.trim() ? input.projectName.trim() : undefined,
+    projectName:
+      typeof input.projectName === 'string' && input.projectName.trim() ? input.projectName.trim() : undefined,
     outputPath: input.outputPath,
     plan: input.plan,
     priority: normalizeExportTaskPriority(input.priority),
@@ -87,7 +88,7 @@ export function createExportTask(input: {
     status: scheduledStartAt ? 'scheduled' : 'pending',
     progress: 0,
     createdAt: now,
-    scheduledStartAt
+    scheduledStartAt,
   };
 }
 
@@ -102,11 +103,17 @@ export function clampExportConcurrency(value: number): number {
   return Math.min(4, Math.max(1, Math.round(value)));
 }
 
-export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now = new Date().toISOString()): ExportTask[] {
+export function startExportTaskSlots(
+  tasks: ExportTask[],
+  maxConcurrent = 2,
+  now = new Date().toISOString(),
+): ExportTask[] {
   return startResourceAwareExportTaskSlots(tasks, clampExportConcurrency(maxConcurrent), now);
 }
 
-function normalizeVersionedExportTaskMetadata(metadata: VersionedExportTaskMetadata | undefined): VersionedExportTaskMetadata | undefined {
+function normalizeVersionedExportTaskMetadata(
+  metadata: VersionedExportTaskMetadata | undefined,
+): VersionedExportTaskMetadata | undefined {
   if (!metadata?.batchId?.trim() || !metadata.versionId?.trim() || !metadata.versionName?.trim()) {
     return undefined;
   }
@@ -115,7 +122,7 @@ function normalizeVersionedExportTaskMetadata(metadata: VersionedExportTaskMetad
     versionId: metadata.versionId.trim(),
     versionName: metadata.versionName.trim(),
     ...(metadata.platform?.trim() ? { platform: metadata.platform.trim() } : {}),
-    ...(metadata.language?.trim() ? { language: metadata.language.trim() } : {})
+    ...(metadata.language?.trim() ? { language: metadata.language.trim() } : {}),
   };
 }
 
@@ -137,23 +144,38 @@ export function updateExportTaskProgress(tasks: ExportTask[], taskId: string, pr
   return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.min(1, Math.max(0, progress)) } : task));
 }
 
-export function updateExportTaskProgressive(tasks: ExportTask[], taskId: string, patch: Partial<ProgressiveExportState>): ExportTask[] {
+export function updateExportTaskProgressive(
+  tasks: ExportTask[],
+  taskId: string,
+  patch: Partial<ProgressiveExportState>,
+): ExportTask[] {
   return tasks.map((task) => {
     if (task.id !== taskId || !task.progressive) {
       return task;
     }
     return {
       ...task,
-      progressive: normalizeProgressiveExportState({ ...task.progressive, ...patch })
+      progressive: normalizeProgressiveExportState({ ...task.progressive, ...patch }),
     };
   });
 }
 
-export function setExportTaskSegments(tasks: ExportTask[], taskId: string, segments: RenderFarmSegmentStatus[]): ExportTask[] {
-  return tasks.map((task) => (task.id === taskId ? { ...task, segments, progress: calculateRenderFarmProgress(segments) } : task));
+export function setExportTaskSegments(
+  tasks: ExportTask[],
+  taskId: string,
+  segments: RenderFarmSegmentStatus[],
+): ExportTask[] {
+  return tasks.map((task) =>
+    task.id === taskId ? { ...task, segments, progress: calculateRenderFarmProgress(segments) } : task,
+  );
 }
 
-export function updateExportTaskSegment(tasks: ExportTask[], taskId: string, segmentId: string, patch: Partial<RenderFarmSegmentStatus>): ExportTask[] {
+export function updateExportTaskSegment(
+  tasks: ExportTask[],
+  taskId: string,
+  segmentId: string,
+  patch: Partial<RenderFarmSegmentStatus>,
+): ExportTask[] {
   return tasks.map((task) => {
     if (task.id !== taskId || !task.segments) {
       return task;
@@ -163,32 +185,56 @@ export function updateExportTaskSegment(tasks: ExportTask[], taskId: string, seg
   });
 }
 
-export function finishExportTask(tasks: ExportTask[], taskId: string, report?: ExportReport, now = new Date().toISOString()): ExportTask[] {
-  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'success', progress: 1, report, finishedAt: now } : task));
+export function finishExportTask(
+  tasks: ExportTask[],
+  taskId: string,
+  report?: ExportReport,
+  now = new Date().toISOString(),
+): ExportTask[] {
+  return tasks.map((task) =>
+    task.id === taskId ? { ...task, status: 'success', progress: 1, report, finishedAt: now } : task,
+  );
 }
 
-export function failExportTask(tasks: ExportTask[], taskId: string, error: string, now = new Date().toISOString(), report?: ExportReport): ExportTask[] {
-  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'error', error, report, finishedAt: now } : task));
+export function failExportTask(
+  tasks: ExportTask[],
+  taskId: string,
+  error: string,
+  now = new Date().toISOString(),
+  report?: ExportReport,
+): ExportTask[] {
+  return tasks.map((task) =>
+    task.id === taskId ? { ...task, status: 'error', error, report, finishedAt: now } : task,
+  );
 }
 
 export function cancelExportTask(tasks: ExportTask[], taskId: string, now = new Date().toISOString()): ExportTask[] {
   return tasks.map((task) =>
-    task.id === taskId && (task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
+    task.id === taskId &&
+    (task.status === 'scheduled' ||
+      task.status === 'pending' ||
+      task.status === 'running' ||
+      task.status === 'interrupted')
       ? { ...task, status: 'canceled', finishedAt: now }
-      : task
+      : task,
   );
 }
 
-export function interruptExportTask(tasks: ExportTask[], taskId: string, error?: string, now = new Date().toISOString()): ExportTask[] {
+export function interruptExportTask(
+  tasks: ExportTask[],
+  taskId: string,
+  error?: string,
+  now = new Date().toISOString(),
+): ExportTask[] {
   return tasks.map((task) =>
     task.id === taskId && task.status === 'running'
       ? {
           ...task,
           status: 'interrupted',
           error,
-          finishedAt: now
+          finishedAt: now,
         }
-      : task
+      : task,
   );
 }
 
@@ -225,7 +271,7 @@ export function createExportTaskHistoryEntry(task: ExportTask): ExportTaskHistor
     finishedAt: task.finishedAt ?? new Date().toISOString(),
     logPath: task.logPath,
     error: task.error,
-    ...(task.report ? { report: task.report } : {})
+    ...(task.report ? { report: task.report } : {}),
   };
 }
 
@@ -239,7 +285,7 @@ export function updateExportTaskHistoryUpload(
     error?: string;
     progress?: number;
   },
-  now = new Date().toISOString()
+  now = new Date().toISOString(),
 ): ExportTaskHistoryEntry[] {
   return history.map((entry) => {
     if (entry.id !== entryId) {
@@ -252,10 +298,16 @@ export function updateExportTaskHistoryUpload(
       targetType: patch.targetType,
       status: patch.status,
       progress: Math.min(1, Math.max(0, progress)),
-      attempts: startingAttempt ? (previous?.attempts ?? 0) + 1 : previous?.attempts ?? (patch.status === 'running' ? 1 : 0),
+      attempts: startingAttempt
+        ? (previous?.attempts ?? 0) + 1
+        : (previous?.attempts ?? (patch.status === 'running' ? 1 : 0)),
       updatedAt: now,
-      ...(patch.destination ? { destination: patch.destination } : previous?.destination ? { destination: previous.destination } : {}),
-      ...(patch.error ? { error: patch.error } : {})
+      ...(patch.destination
+        ? { destination: patch.destination }
+        : previous?.destination
+          ? { destination: previous.destination }
+          : {}),
+      ...(patch.error ? { error: patch.error } : {}),
     };
     return { ...entry, upload: nextUpload };
   });
@@ -265,17 +317,21 @@ export function normalizeExportTaskPriority(priority: ExportTaskPriority | undef
   return priority === 'high' || priority === 'low' ? priority : 'normal';
 }
 
-export function normalizeRenderFarmTaskConfig(config: RenderFarmTaskConfig | undefined): RenderFarmTaskConfig | undefined {
+export function normalizeRenderFarmTaskConfig(
+  config: RenderFarmTaskConfig | undefined,
+): RenderFarmTaskConfig | undefined {
   if (!config?.enabled) {
     return undefined;
   }
   return {
     enabled: true,
-    maxInstances: Math.min(4, Math.max(1, Math.round(Number.isFinite(config.maxInstances) ? config.maxInstances : 1)))
+    maxInstances: Math.min(4, Math.max(1, Math.round(Number.isFinite(config.maxInstances) ? config.maxInstances : 1))),
   };
 }
 
-export function normalizeProgressiveExportState(state: ProgressiveExportState | undefined): ProgressiveExportState | undefined {
+export function normalizeProgressiveExportState(
+  state: ProgressiveExportState | undefined,
+): ProgressiveExportState | undefined {
   if (!state?.enabled || !state.supported || !state.partialPath.trim()) {
     return undefined;
   }
@@ -283,14 +339,17 @@ export function normalizeProgressiveExportState(state: ProgressiveExportState | 
     enabled: true,
     supported: true,
     partialPath: state.partialPath,
-    completedDuration: Math.max(0, Number.isFinite(state.completedDuration) ? Math.round(state.completedDuration * 1000) / 1000 : 0),
-    ...(state.fallbackReason ? { fallbackReason: state.fallbackReason } : {})
+    completedDuration: Math.max(
+      0,
+      Number.isFinite(state.completedDuration) ? Math.round(state.completedDuration * 1000) / 1000 : 0,
+    ),
+    ...(state.fallbackReason ? { fallbackReason: state.fallbackReason } : {}),
   };
 }
 
 function comparePendingExportTasks(
   left: { task: ExportTask; index: number },
-  right: { task: ExportTask; index: number }
+  right: { task: ExportTask; index: number },
 ): number {
   const priorityDelta = priorityWeight(right.task.priority) - priorityWeight(left.task.priority);
   if (priorityDelta !== 0) {

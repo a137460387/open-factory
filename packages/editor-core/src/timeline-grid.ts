@@ -1,8 +1,14 @@
 import { round } from './time';
 import { calculateBeatGridLines, type BeatGridDensity } from './beats';
-import { findTimelineSnapTarget, type SnapEdge, type TimelineSnapInput, type TimelineSnapTarget } from './timeline-snapping';
+import {
+  findTimelineSnapTarget,
+  type SnapEdge,
+  type TimelineSnapInput,
+  type TimelineSnapTarget,
+} from './timeline-snapping';
 
-export type TimelineGridUnit = 'frame' | '5-frames' | '10-frames' | 'second' | '5-seconds' | 'beat' | 'measure' | 'four-measures';
+export type TimelineGridUnit =
+  'frame' | '5-frames' | '10-frames' | 'second' | '5-seconds' | 'beat' | 'measure' | 'four-measures';
 
 export interface TimelineGridSettings {
   enabled: boolean;
@@ -49,14 +55,17 @@ export interface TimelineGridTimeSnapInput {
 }
 
 export type TimelineSnapInputWithGrid = TimelineSnapInput & {
-  grid?: Omit<TimelineGridSnapInput, 'clipStart' | 'clipDuration' | 'pixelsPerSecond' | 'disabled' | 'thresholdPx' | 'edges'> & {
+  grid?: Omit<
+    TimelineGridSnapInput,
+    'clipStart' | 'clipDuration' | 'pixelsPerSecond' | 'disabled' | 'thresholdPx' | 'edges'
+  > & {
     enabled?: boolean;
   };
 };
 
 export const DEFAULT_TIMELINE_GRID_SETTINGS: TimelineGridSettings = {
   enabled: false,
-  unit: 'frame'
+  unit: 'frame',
 };
 
 const DEFAULT_GRID_MIN_PIXEL_SPACING = 8;
@@ -70,7 +79,7 @@ export function normalizeTimelineGridSettings(value: unknown): TimelineGridSetti
   const input = value as Partial<TimelineGridSettings>;
   return {
     enabled: input.enabled === true,
-    unit: normalizeTimelineGridUnit(input.unit)
+    unit: normalizeTimelineGridUnit(input.unit),
   };
 }
 
@@ -116,12 +125,12 @@ export function buildTimelineGridLines(input: TimelineGridBuildInput): TimelineG
     return filterDenseGridLines(
       buildBeatGridTimes(input.beatTimes, beatGridDensityForUnit(input.unit)).map((time, index) => ({
         time,
-        major: input.unit !== 'beat' || index % 4 === 0
+        major: input.unit !== 'beat' || index % 4 === 0,
       })),
       input.visibleStart,
       Math.min(input.duration, input.visibleEnd),
       input.zoom,
-      input.minPixelSpacing ?? DEFAULT_GRID_MIN_PIXEL_SPACING
+      input.minPixelSpacing ?? DEFAULT_GRID_MIN_PIXEL_SPACING,
     );
   }
 
@@ -160,7 +169,7 @@ export function findTimelineSnapTargetWithGrid(input: TimelineSnapInputWithGrid)
     pixelsPerSecond: input.pixelsPerSecond,
     thresholdPx: input.thresholdPx,
     disabled: input.disabled,
-    edges: input.edges
+    edges: input.edges,
   });
 }
 
@@ -189,7 +198,7 @@ export function findTimelineGridSnapTarget(input: TimelineGridSnapInput): Timeli
       candidate: { time: round(candidateTime), kind: 'grid' },
       snappedStart,
       delta: round(delta),
-      distancePx
+      distancePx,
     };
     if (!best || target.distancePx < best.distancePx - EPSILON) {
       best = target;
@@ -212,7 +221,10 @@ export function snapTimelineTimeToGrid(input: TimelineGridTimeSnapInput): number
   return distancePx <= threshold + EPSILON ? round(candidateTime) : round(input.time);
 }
 
-function nearestGridTime(time: number, input: Pick<TimelineGridSnapInput, 'unit' | 'fps' | 'beatTimes'>): number | undefined {
+function nearestGridTime(
+  time: number,
+  input: Pick<TimelineGridSnapInput, 'unit' | 'fps' | 'beatTimes'>,
+): number | undefined {
   if (isBeatGridUnit(input.unit)) {
     return nearestTime(time, buildBeatGridTimes(input.beatTimes, beatGridDensityForUnit(input.unit)));
   }
@@ -239,19 +251,29 @@ function buildBeatGridTimes(beatTimes: unknown, density: BeatGridDensity): numbe
   }
   return calculateBeatGridLines(
     beatTimes.filter((time): time is number => typeof time === 'number' && Number.isFinite(time) && time >= 0),
-    density
+    density,
   );
 }
 
-function isBeatGridUnit(unit: TimelineGridUnit): unit is Extract<TimelineGridUnit, 'beat' | 'measure' | 'four-measures'> {
+function isBeatGridUnit(
+  unit: TimelineGridUnit,
+): unit is Extract<TimelineGridUnit, 'beat' | 'measure' | 'four-measures'> {
   return unit === 'beat' || unit === 'measure' || unit === 'four-measures';
 }
 
-function beatGridDensityForUnit(unit: Extract<TimelineGridUnit, 'beat' | 'measure' | 'four-measures'>): BeatGridDensity {
+function beatGridDensityForUnit(
+  unit: Extract<TimelineGridUnit, 'beat' | 'measure' | 'four-measures'>,
+): BeatGridDensity {
   return unit === 'four-measures' ? 'four-measures' : unit === 'measure' ? 'measure' : 'beat';
 }
 
-function filterDenseGridLines(lines: TimelineGridLine[], visibleStart: number, visibleEnd: number, zoom: number, minPixelSpacing: number): TimelineGridLine[] {
+function filterDenseGridLines(
+  lines: TimelineGridLine[],
+  visibleStart: number,
+  visibleEnd: number,
+  zoom: number,
+  minPixelSpacing: number,
+): TimelineGridLine[] {
   const result: TimelineGridLine[] = [];
   let lastAccepted = Number.NEGATIVE_INFINITY;
   for (const line of lines) {

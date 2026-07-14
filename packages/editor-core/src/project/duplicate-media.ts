@@ -49,16 +49,20 @@ export function detectDuplicateMediaGroups(signatures: MediaContentSignature[]):
     if (distinctPaths.size < 2) {
       continue;
     }
-    const sorted = [...group].sort((left, right) => left.path.localeCompare(right.path) || left.assetId.localeCompare(right.assetId));
+    const sorted = [...group].sort(
+      (left, right) => left.path.localeCompare(right.path) || left.assetId.localeCompare(right.assetId),
+    );
     groups.push({
       id: `duplicate-media-${groups.length}`,
       size: sorted[0].size,
       headHash: sorted[0].headHash,
       keepAssetId: sorted[0].assetId,
-      assets: sorted.map(({ assetId, name, path }) => ({ assetId, name, path }))
+      assets: sorted.map(({ assetId, name, path }) => ({ assetId, name, path })),
     });
   }
-  return groups.sort((left, right) => left.assets[0].path.localeCompare(right.assets[0].path) || left.id.localeCompare(right.id));
+  return groups.sort(
+    (left, right) => left.assets[0].path.localeCompare(right.assets[0].path) || left.id.localeCompare(right.id),
+  );
 }
 
 function buildFingerprintDuplicateGroups(signatures: MediaContentSignature[]): DuplicateMediaGroup[] {
@@ -68,7 +72,12 @@ function buildFingerprintDuplicateGroups(signatures: MediaContentSignature[]): D
     if (visited.has(signature.assetId)) {
       continue;
     }
-    const matches = signatures.filter((candidate) => !visited.has(candidate.assetId) && candidate.assetId !== signature.assetId && areMediaFingerprintsEquivalent(signature.fingerprint, candidate.fingerprint));
+    const matches = signatures.filter(
+      (candidate) =>
+        !visited.has(candidate.assetId) &&
+        candidate.assetId !== signature.assetId &&
+        areMediaFingerprintsEquivalent(signature.fingerprint, candidate.fingerprint),
+    );
     const group = [signature, ...matches];
     const distinctPaths = new Set(group.map((item) => normalizePathKey(item.path)));
     if (distinctPaths.size < 2) {
@@ -77,14 +86,16 @@ function buildFingerprintDuplicateGroups(signatures: MediaContentSignature[]): D
     for (const item of group) {
       visited.add(item.assetId);
     }
-    const sorted = [...group].sort((left, right) => left.path.localeCompare(right.path) || left.assetId.localeCompare(right.assetId));
+    const sorted = [...group].sort(
+      (left, right) => left.path.localeCompare(right.path) || left.assetId.localeCompare(right.assetId),
+    );
     groups.push({
       id: `duplicate-media-${groups.length}`,
       size: sorted[0].size,
       headHash: sorted[0].headHash,
       fingerprintHash: sorted[0].fingerprint?.hash,
       keepAssetId: sorted[0].assetId,
-      assets: sorted.map(({ assetId, name, path }) => ({ assetId, name, path }))
+      assets: sorted.map(({ assetId, name, path }) => ({ assetId, name, path })),
     });
   }
   return groups;

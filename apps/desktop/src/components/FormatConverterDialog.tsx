@@ -36,24 +36,27 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
     }
   }, [initialFiles]);
 
-  const handlePresetSelect = useCallback((preset: ConversionPreset) => {
-    setSelectedPreset(preset);
-    const newTasks = buildBatchConversionTasks(
-      files.map((f) => ({ path: f.path, format: f.format })),
-      preset,
-      '/output',
-    );
-    setTasks(newTasks);
-    // Check for intermediate format hints
-    const hints = new Set<string>();
-    for (const task of newTasks) {
-      if (task.intermediateFormat) {
-        const path = buildConversionPath(task.sourceFormat, task.targetFormat);
-        if (path.hint) hints.add(path.hint);
+  const handlePresetSelect = useCallback(
+    (preset: ConversionPreset) => {
+      setSelectedPreset(preset);
+      const newTasks = buildBatchConversionTasks(
+        files.map((f) => ({ path: f.path, format: f.format })),
+        preset,
+        '/output',
+      );
+      setTasks(newTasks);
+      // Check for intermediate format hints
+      const hints = new Set<string>();
+      for (const task of newTasks) {
+        if (task.intermediateFormat) {
+          const path = buildConversionPath(task.sourceFormat, task.targetFormat);
+          if (path.hint) hints.add(path.hint);
+        }
       }
-    }
-    setCompatibilityHint(hints.size > 0 ? Array.from(hints).join('; ') : null);
-  }, [files]);
+      setCompatibilityHint(hints.size > 0 ? Array.from(hints).join('; ') : null);
+    },
+    [files],
+  );
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -79,21 +82,38 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
 
   const iconForCategory = (cat: string) => {
     switch (cat) {
-      case 'video': return <FileVideo size={14} />;
-      case 'audio': return <FileAudio size={14} />;
-      case 'image': return <FileImage size={14} />;
-      default: return null;
+      case 'video':
+        return <FileVideo size={14} />;
+      case 'audio':
+        return <FileAudio size={14} />;
+      case 'image':
+        return <FileImage size={14} />;
+      default:
+        return null;
     }
   };
 
   return (
-    <div data-testid="format-converter-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[560px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      data-testid="format-converter-dialog"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[560px] max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-neutral-200 flex items-center gap-2">
             <Wand2 size={16} /> {t.title}
           </h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200 text-xs" data-testid="format-converter-close">✕</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-200 text-xs"
+            data-testid="format-converter-close"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Drop zone */}
@@ -106,9 +126,7 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
           {files.length === 0 ? (
             <div className="text-neutral-400 text-sm">{t.dragHint}</div>
           ) : (
-            <div className="text-sm text-neutral-300">
-              已选择 {files.length} 个文件
-            </div>
+            <div className="text-sm text-neutral-300">已选择 {files.length} 个文件</div>
           )}
         </div>
 
@@ -138,7 +156,10 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
 
         {/* Compatibility hint */}
         {compatibilityHint && (
-          <div data-testid="format-converter-hint" className="mb-3 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/30 rounded p-2">
+          <div
+            data-testid="format-converter-hint"
+            className="mb-3 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/30 rounded p-2"
+          >
             {compatibilityHint}
           </div>
         )}
@@ -147,13 +168,24 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
         {tasks.length > 0 && (
           <div data-testid="format-converter-tasks" className="mb-3 space-y-1">
             {tasks.map((task) => (
-              <div key={task.id} className="flex items-center gap-2 text-xs text-neutral-300 bg-neutral-800 rounded p-2">
+              <div
+                key={task.id}
+                className="flex items-center gap-2 text-xs text-neutral-300 bg-neutral-800 rounded p-2"
+              >
                 {iconForCategory(detectMediaCategory(task.sourceFormat) ?? '')}
                 <span className="flex-1 truncate">{task.sourcePath}</span>
                 <ArrowRight size={12} className="text-neutral-500" />
                 <span className="text-blue-300">.{task.targetFormat}</span>
-                <span className={`text-xs ${task.status === 'running' ? 'text-blue-400' : task.status === 'success' ? 'text-emerald-400' : 'text-neutral-500'}`}>
-                  {task.status === 'pending' ? '待转换' : task.status === 'running' ? '转换中...' : task.status === 'success' ? '完成' : '错误'}
+                <span
+                  className={`text-xs ${task.status === 'running' ? 'text-blue-400' : task.status === 'success' ? 'text-emerald-400' : 'text-neutral-500'}`}
+                >
+                  {task.status === 'pending'
+                    ? '待转换'
+                    : task.status === 'running'
+                      ? '转换中...'
+                      : task.status === 'success'
+                        ? '完成'
+                        : '错误'}
                 </span>
               </div>
             ))}
@@ -174,6 +206,3 @@ export function FormatConverterDialog({ open, onClose, initialFiles }: FormatCon
     </div>
   );
 }
-
-
-

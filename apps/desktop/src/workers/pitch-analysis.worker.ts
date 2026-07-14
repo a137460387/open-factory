@@ -18,7 +18,7 @@ self.onmessage = (event: MessageEvent<PitchAnalysisWorkerInput>) => {
       frameSize: 4096,
       hopSize: 2048,
       minFrequency: 60,
-      maxFrequency: 1200
+      maxFrequency: 1200,
     });
     const payload: PitchAnalysisWorkerOutput = { success: true, points };
     self.postMessage(payload);
@@ -26,7 +26,7 @@ self.onmessage = (event: MessageEvent<PitchAnalysisWorkerInput>) => {
     const payload: PitchAnalysisWorkerOutput = {
       success: false,
       points: [],
-      error: error instanceof Error ? error.message : 'Pitch analysis failed'
+      error: error instanceof Error ? error.message : 'Pitch analysis failed',
     };
     self.postMessage(payload);
   }

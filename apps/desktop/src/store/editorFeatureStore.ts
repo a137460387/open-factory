@@ -147,10 +147,14 @@ export interface EditorFeatureState {
 
   // Speaker diarization setters
   setSpeakerDiarizationRunning: (updater: Updater<boolean>) => void;
-  setSpeakerDiarizationResult: (updater: Updater<{ sourceName: string; segments: SpeakerDiarizationSegment[]; tracks: Track[] } | undefined>) => void;
+  setSpeakerDiarizationResult: (
+    updater: Updater<{ sourceName: string; segments: SpeakerDiarizationSegment[]; tracks: Track[] } | undefined>,
+  ) => void;
 
   // Recording setters
-  setRecordingTask: (updater: Updater<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number } | undefined>) => void;
+  setRecordingTask: (
+    updater: Updater<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number } | undefined>,
+  ) => void;
   setRecordingElapsedSeconds: (updater: Updater<number>) => void;
 
   // Macro recording setters
@@ -278,80 +282,184 @@ export const useEditorFeatureStore = create<EditorFeatureState>((set) => ({
   formatConverterMockFiles: [],
 
   // Profiler setters
-  setProfilerRecording(updater) { set((s) => ({ profilerRecording: applyUpdater(s.profilerRecording, updater) })); },
-  setProfilerElapsedMs(updater) { set((s) => ({ profilerElapsedMs: applyUpdater(s.profilerElapsedMs, updater) })); },
-  setProfilerReport(updater) { set((s) => ({ profilerReport: applyUpdater(s.profilerReport, updater) })); },
+  setProfilerRecording(updater) {
+    set((s) => ({ profilerRecording: applyUpdater(s.profilerRecording, updater) }));
+  },
+  setProfilerElapsedMs(updater) {
+    set((s) => ({ profilerElapsedMs: applyUpdater(s.profilerElapsedMs, updater) }));
+  },
+  setProfilerReport(updater) {
+    set((s) => ({ profilerReport: applyUpdater(s.profilerReport, updater) }));
+  },
 
   // Color analysis setters
-  setColorAnalysisBusy(updater) { set((s) => ({ colorAnalysisBusy: applyUpdater(s.colorAnalysisBusy, updater) })); },
-  setColorAnalysisResults(updater) { set((s) => ({ colorAnalysisResults: applyUpdater(s.colorAnalysisResults, updater) })); },
-  setColorAnalysisJumps(updater) { set((s) => ({ colorAnalysisJumps: applyUpdater(s.colorAnalysisJumps, updater) })); },
-  setColorHeatmapPoints(updater) { set((s) => ({ colorHeatmapPoints: applyUpdater(s.colorHeatmapPoints, updater) })); },
-  setColorAnalysisSamples(updater) { set((s) => ({ colorAnalysisSamples: applyUpdater(s.colorAnalysisSamples, updater) })); },
+  setColorAnalysisBusy(updater) {
+    set((s) => ({ colorAnalysisBusy: applyUpdater(s.colorAnalysisBusy, updater) }));
+  },
+  setColorAnalysisResults(updater) {
+    set((s) => ({ colorAnalysisResults: applyUpdater(s.colorAnalysisResults, updater) }));
+  },
+  setColorAnalysisJumps(updater) {
+    set((s) => ({ colorAnalysisJumps: applyUpdater(s.colorAnalysisJumps, updater) }));
+  },
+  setColorHeatmapPoints(updater) {
+    set((s) => ({ colorHeatmapPoints: applyUpdater(s.colorHeatmapPoints, updater) }));
+  },
+  setColorAnalysisSamples(updater) {
+    set((s) => ({ colorAnalysisSamples: applyUpdater(s.colorAnalysisSamples, updater) }));
+  },
 
   // Project & media health setters
-  setProjectHealthReport(updater) { set((s) => ({ projectHealthReport: applyUpdater(s.projectHealthReport, updater) })); },
-  setProjectHealthRepairReport(updater) { set((s) => ({ projectHealthRepairReport: applyUpdater(s.projectHealthRepairReport, updater) })); },
-  setProjectHealthScanning(updater) { set((s) => ({ projectHealthScanning: applyUpdater(s.projectHealthScanning, updater) })); },
-  setMediaHealthDashboard(updater) { set((s) => ({ mediaHealthDashboard: applyUpdater(s.mediaHealthDashboard, updater) })); },
-  setMediaHealthScanning(updater) { set((s) => ({ mediaHealthScanning: applyUpdater(s.mediaHealthScanning, updater) })); },
-  setMediaHealthAutoShowEnabled(updater) { set((s) => ({ mediaHealthAutoShowEnabled: applyUpdater(s.mediaHealthAutoShowEnabled, updater) })); },
+  setProjectHealthReport(updater) {
+    set((s) => ({ projectHealthReport: applyUpdater(s.projectHealthReport, updater) }));
+  },
+  setProjectHealthRepairReport(updater) {
+    set((s) => ({ projectHealthRepairReport: applyUpdater(s.projectHealthRepairReport, updater) }));
+  },
+  setProjectHealthScanning(updater) {
+    set((s) => ({ projectHealthScanning: applyUpdater(s.projectHealthScanning, updater) }));
+  },
+  setMediaHealthDashboard(updater) {
+    set((s) => ({ mediaHealthDashboard: applyUpdater(s.mediaHealthDashboard, updater) }));
+  },
+  setMediaHealthScanning(updater) {
+    set((s) => ({ mediaHealthScanning: applyUpdater(s.mediaHealthScanning, updater) }));
+  },
+  setMediaHealthAutoShowEnabled(updater) {
+    set((s) => ({ mediaHealthAutoShowEnabled: applyUpdater(s.mediaHealthAutoShowEnabled, updater) }));
+  },
 
   // Duplicate & organizer setters
-  setDuplicateMediaGroups(updater) { set((s) => ({ duplicateMediaGroups: applyUpdater(s.duplicateMediaGroups, updater) })); },
-  setMediaOrganizerGroups(updater) { set((s) => ({ mediaOrganizerGroups: applyUpdater(s.mediaOrganizerGroups, updater) })); },
-  setMediaOrganizerCleanup(updater) { set((s) => ({ mediaOrganizerCleanup: applyUpdater(s.mediaOrganizerCleanup, updater) })); },
-  setMediaOrganizerScanning(updater) { set((s) => ({ mediaOrganizerScanning: applyUpdater(s.mediaOrganizerScanning, updater) })); },
+  setDuplicateMediaGroups(updater) {
+    set((s) => ({ duplicateMediaGroups: applyUpdater(s.duplicateMediaGroups, updater) }));
+  },
+  setMediaOrganizerGroups(updater) {
+    set((s) => ({ mediaOrganizerGroups: applyUpdater(s.mediaOrganizerGroups, updater) }));
+  },
+  setMediaOrganizerCleanup(updater) {
+    set((s) => ({ mediaOrganizerCleanup: applyUpdater(s.mediaOrganizerCleanup, updater) }));
+  },
+  setMediaOrganizerScanning(updater) {
+    set((s) => ({ mediaOrganizerScanning: applyUpdater(s.mediaOrganizerScanning, updater) }));
+  },
 
   // Speaker diarization setters
-  setSpeakerDiarizationRunning(updater) { set((s) => ({ speakerDiarizationRunning: applyUpdater(s.speakerDiarizationRunning, updater) })); },
-  setSpeakerDiarizationResult(updater) { set((s) => ({ speakerDiarizationResult: applyUpdater(s.speakerDiarizationResult, updater) })); },
+  setSpeakerDiarizationRunning(updater) {
+    set((s) => ({ speakerDiarizationRunning: applyUpdater(s.speakerDiarizationRunning, updater) }));
+  },
+  setSpeakerDiarizationResult(updater) {
+    set((s) => ({ speakerDiarizationResult: applyUpdater(s.speakerDiarizationResult, updater) }));
+  },
 
   // Recording setters
-  setRecordingTask(updater) { set((s) => ({ recordingTask: applyUpdater(s.recordingTask, updater) })); },
-  setRecordingElapsedSeconds(updater) { set((s) => ({ recordingElapsedSeconds: applyUpdater(s.recordingElapsedSeconds, updater) })); },
+  setRecordingTask(updater) {
+    set((s) => ({ recordingTask: applyUpdater(s.recordingTask, updater) }));
+  },
+  setRecordingElapsedSeconds(updater) {
+    set((s) => ({ recordingElapsedSeconds: applyUpdater(s.recordingElapsedSeconds, updater) }));
+  },
 
   // Macro recording setters
-  setMacroRecordingActive(updater) { set((s) => ({ macroRecordingActive: applyUpdater(s.macroRecordingActive, updater) })); },
-  setMacroRecordingStepCount(updater) { set((s) => ({ macroRecordingStepCount: applyUpdater(s.macroRecordingStepCount, updater) })); },
+  setMacroRecordingActive(updater) {
+    set((s) => ({ macroRecordingActive: applyUpdater(s.macroRecordingActive, updater) }));
+  },
+  setMacroRecordingStepCount(updater) {
+    set((s) => ({ macroRecordingStepCount: applyUpdater(s.macroRecordingStepCount, updater) }));
+  },
 
   // Audio separation setters
-  setAudioSeparationClipId(updater) { set((s) => ({ audioSeparationClipId: applyUpdater(s.audioSeparationClipId, updater) })); },
-  setAudioSeparationProgress(updater) { set((s) => ({ audioSeparationProgress: applyUpdater(s.audioSeparationProgress, updater) })); },
+  setAudioSeparationClipId(updater) {
+    set((s) => ({ audioSeparationClipId: applyUpdater(s.audioSeparationClipId, updater) }));
+  },
+  setAudioSeparationProgress(updater) {
+    set((s) => ({ audioSeparationProgress: applyUpdater(s.audioSeparationProgress, updater) }));
+  },
 
   // Content analysis setters
-  setContentAnalysisRunningClipId(updater) { set((s) => ({ contentAnalysisRunningClipId: applyUpdater(s.contentAnalysisRunningClipId, updater) })); },
+  setContentAnalysisRunningClipId(updater) {
+    set((s) => ({ contentAnalysisRunningClipId: applyUpdater(s.contentAnalysisRunningClipId, updater) }));
+  },
 
   // Demucs setters
-  setDemucsAvailability(updater) { set((s) => ({ demucsAvailability: applyUpdater(s.demucsAvailability, updater) })); },
+  setDemucsAvailability(updater) {
+    set((s) => ({ demucsAvailability: applyUpdater(s.demucsAvailability, updater) }));
+  },
 
   // Auto audio sync setters
-  setAutoAudioSyncRunning(updater) { set((s) => ({ autoAudioSyncRunning: applyUpdater(s.autoAudioSyncRunning, updater) })); },
-  setAutoAudioSyncPrimaryClipId(updater) { set((s) => ({ autoAudioSyncPrimaryClipId: applyUpdater(s.autoAudioSyncPrimaryClipId, updater) })); },
-  setAutoAudioSyncMode(updater) { set((s) => ({ autoAudioSyncMode: applyUpdater(s.autoAudioSyncMode, updater) })); },
-  setAutoAudioSyncResults(updater) { set((s) => ({ autoAudioSyncResults: applyUpdater(s.autoAudioSyncResults, updater) })); },
+  setAutoAudioSyncRunning(updater) {
+    set((s) => ({ autoAudioSyncRunning: applyUpdater(s.autoAudioSyncRunning, updater) }));
+  },
+  setAutoAudioSyncPrimaryClipId(updater) {
+    set((s) => ({ autoAudioSyncPrimaryClipId: applyUpdater(s.autoAudioSyncPrimaryClipId, updater) }));
+  },
+  setAutoAudioSyncMode(updater) {
+    set((s) => ({ autoAudioSyncMode: applyUpdater(s.autoAudioSyncMode, updater) }));
+  },
+  setAutoAudioSyncResults(updater) {
+    set((s) => ({ autoAudioSyncResults: applyUpdater(s.autoAudioSyncResults, updater) }));
+  },
 
   // Operation recording / replay setters
-  setOperationRecording(updater) { set((s) => ({ operationRecording: applyUpdater(s.operationRecording, updater) })); },
-  setOperationRecordingActive(updater) { set((s) => ({ operationRecordingActive: applyUpdater(s.operationRecordingActive, updater) })); },
-  setOperationRecordingStep(updater) { set((s) => ({ operationRecordingStep: applyUpdater(s.operationRecordingStep, updater) })); },
-  setOperationReplaySpeed(updater) { set((s) => ({ operationReplaySpeed: applyUpdater(s.operationReplaySpeed, updater) })); },
-  setOperationReplayRunning(updater) { set((s) => ({ operationReplayRunning: applyUpdater(s.operationReplayRunning, updater) })); },
+  setOperationRecording(updater) {
+    set((s) => ({ operationRecording: applyUpdater(s.operationRecording, updater) }));
+  },
+  setOperationRecordingActive(updater) {
+    set((s) => ({ operationRecordingActive: applyUpdater(s.operationRecordingActive, updater) }));
+  },
+  setOperationRecordingStep(updater) {
+    set((s) => ({ operationRecordingStep: applyUpdater(s.operationRecordingStep, updater) }));
+  },
+  setOperationReplaySpeed(updater) {
+    set((s) => ({ operationReplaySpeed: applyUpdater(s.operationReplaySpeed, updater) }));
+  },
+  setOperationReplayRunning(updater) {
+    set((s) => ({ operationReplayRunning: applyUpdater(s.operationReplayRunning, updater) }));
+  },
 
   // Misc feature setters
-  setProjectPasswordRequest(updater) { set((s) => ({ projectPasswordRequest: applyUpdater(s.projectPasswordRequest, updater) })); },
-  setTimelineTemplateMode(updater) { set((s) => ({ timelineTemplateMode: applyUpdater(s.timelineTemplateMode, updater) })); },
-  setTemplateExportPreset(updater) { set((s) => ({ templateExportPreset: applyUpdater(s.templateExportPreset, updater) })); },
-  setBatchTranscodeInitialPaths(updater) { set((s) => ({ batchTranscodeInitialPaths: applyUpdater(s.batchTranscodeInitialPaths, updater) })); },
-  setThumbnailGeneratorAssetIds(updater) { set((s) => ({ thumbnailGeneratorAssetIds: applyUpdater(s.thumbnailGeneratorAssetIds, updater) })); },
-  setGifExportAsset(updater) { set((s) => ({ gifExportAsset: applyUpdater(s.gifExportAsset, updater) })); },
-  setSpectrumAsset(updater) { set((s) => ({ spectrumAsset: applyUpdater(s.spectrumAsset, updater) })); },
-  setMediaVersionCompare(updater) { set((s) => ({ mediaVersionCompare: applyUpdater(s.mediaVersionCompare, updater) })); },
-  setRecoveryCandidate(updater) { set((s) => ({ recoveryCandidate: applyUpdater(s.recoveryCandidate, updater) })); },
-  setArchiveProgress(updater) { set((s) => ({ archiveProgress: applyUpdater(s.archiveProgress, updater) })); },
-  setPasteKeyframeDialogGroups(updater) { set((s) => ({ pasteKeyframeDialogGroups: applyUpdater(s.pasteKeyframeDialogGroups, updater) })); },
-  setMacroHistory(updater) { set((s) => ({ macroHistory: applyUpdater(s.macroHistory, updater) })); },
-  setMockExportHistory(updater) { set((s) => ({ mockExportHistory: applyUpdater(s.mockExportHistory, updater) })); },
-  setMockSubtitleClips(updater) { set((s) => ({ mockSubtitleClips: applyUpdater(s.mockSubtitleClips, updater) })); },
-  setFormatConverterMockFiles(updater) { set((s) => ({ formatConverterMockFiles: applyUpdater(s.formatConverterMockFiles, updater) })); },
+  setProjectPasswordRequest(updater) {
+    set((s) => ({ projectPasswordRequest: applyUpdater(s.projectPasswordRequest, updater) }));
+  },
+  setTimelineTemplateMode(updater) {
+    set((s) => ({ timelineTemplateMode: applyUpdater(s.timelineTemplateMode, updater) }));
+  },
+  setTemplateExportPreset(updater) {
+    set((s) => ({ templateExportPreset: applyUpdater(s.templateExportPreset, updater) }));
+  },
+  setBatchTranscodeInitialPaths(updater) {
+    set((s) => ({ batchTranscodeInitialPaths: applyUpdater(s.batchTranscodeInitialPaths, updater) }));
+  },
+  setThumbnailGeneratorAssetIds(updater) {
+    set((s) => ({ thumbnailGeneratorAssetIds: applyUpdater(s.thumbnailGeneratorAssetIds, updater) }));
+  },
+  setGifExportAsset(updater) {
+    set((s) => ({ gifExportAsset: applyUpdater(s.gifExportAsset, updater) }));
+  },
+  setSpectrumAsset(updater) {
+    set((s) => ({ spectrumAsset: applyUpdater(s.spectrumAsset, updater) }));
+  },
+  setMediaVersionCompare(updater) {
+    set((s) => ({ mediaVersionCompare: applyUpdater(s.mediaVersionCompare, updater) }));
+  },
+  setRecoveryCandidate(updater) {
+    set((s) => ({ recoveryCandidate: applyUpdater(s.recoveryCandidate, updater) }));
+  },
+  setArchiveProgress(updater) {
+    set((s) => ({ archiveProgress: applyUpdater(s.archiveProgress, updater) }));
+  },
+  setPasteKeyframeDialogGroups(updater) {
+    set((s) => ({ pasteKeyframeDialogGroups: applyUpdater(s.pasteKeyframeDialogGroups, updater) }));
+  },
+  setMacroHistory(updater) {
+    set((s) => ({ macroHistory: applyUpdater(s.macroHistory, updater) }));
+  },
+  setMockExportHistory(updater) {
+    set((s) => ({ mockExportHistory: applyUpdater(s.mockExportHistory, updater) }));
+  },
+  setMockSubtitleClips(updater) {
+    set((s) => ({ mockSubtitleClips: applyUpdater(s.mockSubtitleClips, updater) }));
+  },
+  setFormatConverterMockFiles(updater) {
+    set((s) => ({ formatConverterMockFiles: applyUpdater(s.formatConverterMockFiles, updater) }));
+  },
 }));

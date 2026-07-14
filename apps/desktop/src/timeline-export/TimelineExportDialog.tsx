@@ -18,7 +18,13 @@ interface TimelineExportDialogProps {
   onImportFcpXml?(contents: string, path: string): TimelineImportSummary | Promise<TimelineImportSummary>;
 }
 
-export function TimelineExportDialog({ project, onClose, onCompleted, onImportEdl, onImportFcpXml }: TimelineExportDialogProps) {
+export function TimelineExportDialog({
+  project,
+  onClose,
+  onCompleted,
+  onImportEdl,
+  onImportFcpXml,
+}: TimelineExportDialogProps) {
   const t = zhCN.timelineExport;
   const [format, setFormat] = useState<TimelineExportFormat>('edl');
   const [busy, setBusy] = useState(false);
@@ -27,7 +33,9 @@ export function TimelineExportDialog({ project, onClose, onCompleted, onImportEd
     try {
       setBusy(true);
       const extension = format === 'edl' ? 'edl' : 'xml';
-      const path = await saveFileDialog(`${project.name || 'timeline'}.${extension}`, [{ name: t.filterName(format), extensions: [extension] }]);
+      const path = await saveFileDialog(`${project.name || 'timeline'}.${extension}`, [
+        { name: t.filterName(format), extensions: [extension] },
+      ]);
       if (!path) {
         return;
       }
@@ -53,10 +61,18 @@ export function TimelineExportDialog({ project, onClose, onCompleted, onImportEd
         return;
       }
       const summary = await onImportEdl(await readFile(path), path);
-      showToast({ kind: 'success', title: t.importSuccess, message: t.importSummary(summary.matchedCount, summary.missingCount) });
+      showToast({
+        kind: 'success',
+        title: t.importSuccess,
+        message: t.importSummary(summary.matchedCount, summary.missingCount),
+      });
       onClose();
     } catch (error) {
-      showToast({ kind: 'error', title: t.importFailed, message: error instanceof Error ? error.message : t.importFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.importFailed,
+        message: error instanceof Error ? error.message : t.importFailedMessage,
+      });
     } finally {
       setBusy(false);
     }
@@ -73,17 +89,28 @@ export function TimelineExportDialog({ project, onClose, onCompleted, onImportEd
         return;
       }
       const summary = await onImportFcpXml(await readFile(path), path);
-      showToast({ kind: 'success', title: t.importFcpXmlSuccess, message: t.importSummary(summary.matchedCount, summary.missingCount) });
+      showToast({
+        kind: 'success',
+        title: t.importFcpXmlSuccess,
+        message: t.importSummary(summary.matchedCount, summary.missingCount),
+      });
       onClose();
     } catch (error) {
-      showToast({ kind: 'error', title: t.importFcpXmlFailed, message: error instanceof Error ? error.message : t.importFcpXmlFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.importFcpXmlFailed,
+        message: error instanceof Error ? error.message : t.importFcpXmlFailedMessage,
+      });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="timeline-export-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="timeline-export-dialog"
+    >
       <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-soft">
         <div className="mb-4">
           <h2 className="text-base font-semibold text-ink">{t.title}</h2>
@@ -131,12 +158,23 @@ export function TimelineExportDialog({ project, onClose, onCompleted, onImportEd
             )}
           </div>
           <div className="flex justify-end gap-2">
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} disabled={busy}>
-            {zhCN.common.cancel}
-          </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50" type="button" onClick={() => void exportFile()} disabled={busy} data-testid="timeline-export-save-button">
-            {busy ? t.exporting : t.export}
-          </button>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+            >
+              {zhCN.common.cancel}
+            </button>
+            <button
+              className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50"
+              type="button"
+              onClick={() => void exportFile()}
+              disabled={busy}
+              data-testid="timeline-export-save-button"
+            >
+              {busy ? t.exporting : t.export}
+            </button>
           </div>
         </div>
       </div>

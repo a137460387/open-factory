@@ -1,4 +1,13 @@
-import { createProject, createTrack, PRIMARY_SEQUENCE_ID, DEFAULT_PRIMARY_SEQUENCE_NAME, type Project, type ProjectSettings, type Track, type TrackType } from '../model';
+import {
+  createProject,
+  createTrack,
+  PRIMARY_SEQUENCE_ID,
+  DEFAULT_PRIMARY_SEQUENCE_NAME,
+  type Project,
+  type ProjectSettings,
+  type Track,
+  type TrackType,
+} from '../model';
 import type { ExportSettings } from '../export/export-types';
 
 export interface MediaFeatureInput {
@@ -60,7 +69,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
-      { id: 'track-text-main', type: 'text', name: 'Text 1' }
+      { id: 'track-text-main', type: 'text', name: 'Text 1' },
     ],
     exportSettings: {
       width: 1080,
@@ -76,8 +85,8 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
       targetAspectRatio: '9:16',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'youtube-horizontal',
@@ -86,7 +95,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
-      { id: 'track-text-main', type: 'text', name: 'Text 1' }
+      { id: 'track-text-main', type: 'text', name: 'Text 1' },
     ],
     exportSettings: {
       width: 1920,
@@ -100,8 +109,8 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
       outputMode: 'video',
       scaleMode: 'none',
       targetAspectRatio: 'source',
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'square-social',
@@ -110,7 +119,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
-      { id: 'track-text-main', type: 'text', name: 'Text 1' }
+      { id: 'track-text-main', type: 'text', name: 'Text 1' },
     ],
     exportSettings: {
       width: 1080,
@@ -126,8 +135,8 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
       targetAspectRatio: '1:1',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
-    }
+      hardwareEncoding: false,
+    },
   },
   {
     id: 'podcast',
@@ -135,15 +144,15 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
     settings: { fps: 30, timecodeFormat: 'ndf', width: 1920, height: 1080 },
     tracks: [
       { id: 'track-host-audio', type: 'audio', name: 'Host Audio' },
-      { id: 'track-music-bed', type: 'audio', name: 'Music Bed' }
+      { id: 'track-music-bed', type: 'audio', name: 'Music Bed' },
     ],
     exportSettings: {
       audioCodec: 'aac',
       audioBitrate: '192k',
       format: 'm4a',
       outputMode: 'audio',
-      loudnessNormalization: 'youtube'
-    }
+      loudnessNormalization: 'youtube',
+    },
   },
   {
     id: 'cinema',
@@ -154,7 +163,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
       { id: 'track-video-overlay', type: 'video', name: 'Overlay Video' },
       { id: 'track-dialogue', type: 'audio', name: 'Dialogue' },
       { id: 'track-music', type: 'audio', name: 'Music' },
-      { id: 'track-text-main', type: 'text', name: 'Titles' }
+      { id: 'track-text-main', type: 'text', name: 'Titles' },
     ],
     exportSettings: {
       width: 3840,
@@ -168,11 +177,10 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
       outputMode: 'video',
       scaleMode: 'none',
       targetAspectRatio: '16:9',
-      hardwareEncoding: false
-    }
-  }
+      hardwareEncoding: false,
+    },
+  },
 ];
-
 
 const ASPECT_VERTICAL_THRESHOLD = 1.2;
 const ASPECT_SQUARE_MIN = 0.9;
@@ -199,10 +207,20 @@ export function classifyMediaAspect(width: number, height: number): MediaAspectC
 }
 
 export function detectMediaFeatures(media: MediaFeatureInput[]): MediaFeatureSummary {
-  const safeMedia = media.filter((item) => Number.isFinite(item.width) && Number.isFinite(item.height) && item.width > 0 && item.height > 0);
+  const safeMedia = media.filter(
+    (item) => Number.isFinite(item.width) && Number.isFinite(item.height) && item.width > 0 && item.height > 0,
+  );
   const count = safeMedia.length;
   if (count === 0) {
-    return { count: 0, hasAudio: false, avgWidth: 0, avgHeight: 0, avgDuration: 0, totalDuration: 0, aspectClass: 'unknown' };
+    return {
+      count: 0,
+      hasAudio: false,
+      avgWidth: 0,
+      avgHeight: 0,
+      avgDuration: 0,
+      totalDuration: 0,
+      aspectClass: 'unknown',
+    };
   }
   const totalWidth = safeMedia.reduce((sum, item) => sum + item.width, 0);
   const totalHeight = safeMedia.reduce((sum, item) => sum + item.height, 0);
@@ -232,9 +250,15 @@ export function detectMediaFeatures(media: MediaFeatureInput[]): MediaFeatureSum
   return { count, hasAudio, avgWidth, avgHeight, avgDuration, totalDuration, aspectClass: bestAspect };
 }
 
-export function suggestTrackCount(mediaCount: number, template: ProjectTemplateDefinition): { videoTracks: number; audioTracks: number } {
+export function suggestTrackCount(
+  mediaCount: number,
+  template: ProjectTemplateDefinition,
+): { videoTracks: number; audioTracks: number } {
   const safeCount = Math.max(1, Math.round(mediaCount));
-  const videoTracks = Math.max(template.tracks.filter((track) => track.type === 'video').length, Math.min(safeCount, 8));
+  const videoTracks = Math.max(
+    template.tracks.filter((track) => track.type === 'video').length,
+    Math.min(safeCount, 8),
+  );
   const audioTracks = Math.max(template.tracks.filter((track) => track.type === 'audio').length, 1);
   return { videoTracks, audioTracks };
 }
@@ -248,7 +272,7 @@ export function recommendTemplate(media: MediaFeatureInput[]): TemplateRecommend
       suggestedVideoTracks: 1,
       suggestedAudioTracks: 1,
       reasonKey: 'noMedia',
-      reasonParams: {}
+      reasonParams: {},
     };
   }
 
@@ -256,7 +280,12 @@ export function recommendTemplate(media: MediaFeatureInput[]): TemplateRecommend
 
   for (const template of PROJECT_TEMPLATES) {
     let score = SCORE_BASE;
-    const templateAspect = template.settings.width > template.settings.height ? 'horizontal' : template.settings.width < template.settings.height ? 'vertical' : 'square';
+    const templateAspect =
+      template.settings.width > template.settings.height
+        ? 'horizontal'
+        : template.settings.width < template.settings.height
+          ? 'vertical'
+          : 'square';
 
     if (summary.aspectClass === 'vertical' && templateAspect === 'vertical') {
       score += 50;
@@ -306,7 +335,7 @@ export function recommendTemplate(media: MediaFeatureInput[]): TemplateRecommend
     suggestedVideoTracks: suggested.videoTracks,
     suggestedAudioTracks: suggested.audioTracks,
     reasonKey,
-    reasonParams
+    reasonParams,
   };
 }
 
@@ -323,13 +352,13 @@ function buildReasonParams(summary: MediaFeatureSummary): Record<string, string 
     count: summary.count,
     width: summary.avgWidth,
     height: summary.avgHeight,
-    duration: Math.round(summary.avgDuration)
+    duration: Math.round(summary.avgDuration),
   };
 }
 
 export function buildRecommendationReason(
   recommendation: TemplateRecommendation,
-  translations: Record<string, string | ((params: Record<string, string | number>) => string)>
+  translations: Record<string, string | ((params: Record<string, string | number>) => string)>,
 ): string {
   const entry = translations[recommendation.reasonKey];
   if (typeof entry === 'function') {
@@ -349,13 +378,16 @@ export function getProjectTemplate(id: ProjectTemplateId): ProjectTemplateDefini
   return template;
 }
 
-export function instantiateProjectTemplate(id: ProjectTemplateId, options: { name?: string } = {}): InstantiatedProjectTemplate {
+export function instantiateProjectTemplate(
+  id: ProjectTemplateId,
+  options: { name?: string } = {},
+): InstantiatedProjectTemplate {
   const template = getProjectTemplate(id);
   const project = createProject(options.name ?? template.defaultName);
   const timeline = {
     markers: [],
     transitions: [],
-    tracks: template.tracks.map(createTemplateTrack)
+    tracks: template.tracks.map(createTemplateTrack),
   };
   const nextProject: Project = {
     ...project,
@@ -363,12 +395,12 @@ export function instantiateProjectTemplate(id: ProjectTemplateId, options: { nam
     settings: { ...template.settings },
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-    activeSequenceId: PRIMARY_SEQUENCE_ID
+    activeSequenceId: PRIMARY_SEQUENCE_ID,
   };
   return {
     template,
     project: nextProject,
-    exportSettings: { ...template.exportSettings }
+    exportSettings: { ...template.exportSettings },
   };
 }
 

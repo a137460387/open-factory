@@ -12,11 +12,7 @@ interface SyncControlsProps {
   isSyncing: boolean;
 }
 
-export const SyncControls: React.FC<SyncControlsProps> = ({
-  onSyncRequest,
-  onDriftDetection,
-  isSyncing
-}) => {
+export const SyncControls: React.FC<SyncControlsProps> = ({ onSyncRequest, onDriftDetection, isSyncing }) => {
   const [selectedMode, setSelectedMode] = useState<MulticamSyncMode>('audio');
   const [driftMessage, setDriftMessage] = useState<string | null>(null);
 
@@ -67,19 +63,11 @@ export const SyncControls: React.FC<SyncControlsProps> = ({
       </div>
 
       <div className="sync-actions">
-        <button
-          onClick={() => onSyncRequest(selectedMode)}
-          disabled={isSyncing}
-          data-testid="sync-button"
-        >
+        <button onClick={() => onSyncRequest(selectedMode)} disabled={isSyncing} data-testid="sync-button">
           {isSyncing ? '同步中...' : '开始同步'}
         </button>
 
-        <button
-          onClick={handleDriftDetection}
-          disabled={isSyncing}
-          data-testid="drift-detection-button"
-        >
+        <button onClick={handleDriftDetection} disabled={isSyncing} data-testid="drift-detection-button">
           检测漂移
         </button>
       </div>

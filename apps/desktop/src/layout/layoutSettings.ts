@@ -65,7 +65,7 @@ const DEFAULT_WORKSPACE_PANEL_VISIBILITY: WorkspacePanelVisibility = {
   audioMixer: true,
   colorScopes: false,
   history: false,
-  bookmarks: true
+  bookmarks: true,
 };
 
 export const BUILT_IN_WORKSPACE_LAYOUTS: Record<BuiltInWorkspaceLayoutId, WorkspaceLayoutDefinition> = {
@@ -79,7 +79,7 @@ export const BUILT_IN_WORKSPACE_LAYOUTS: Record<BuiltInWorkspaceLayoutId, Worksp
     rightPanelWidthPx: WORKSPACE_RIGHT_PANEL_DEFAULT_WIDTH_PX,
     mixerHeightPx: WORKSPACE_MIXER_DEFAULT_HEIGHT_PX,
     timelineHeightPx: TIMELINE_DEFAULT_HEIGHT_PX,
-    previewPosition: 'center'
+    previewPosition: 'center',
   },
   'color-grading': {
     id: 'color-grading',
@@ -92,13 +92,13 @@ export const BUILT_IN_WORKSPACE_LAYOUTS: Record<BuiltInWorkspaceLayoutId, Worksp
       audioMixer: false,
       colorScopes: true,
       history: false,
-      bookmarks: false
+      bookmarks: false,
     },
     leftPanelWidthPx: WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX,
     rightPanelWidthPx: 420,
     mixerHeightPx: WORKSPACE_MIXER_MIN_HEIGHT_PX,
     timelineHeightPx: 220,
-    previewPosition: 'center'
+    previewPosition: 'center',
   },
   'audio-editing': {
     id: 'audio-editing',
@@ -111,23 +111,27 @@ export const BUILT_IN_WORKSPACE_LAYOUTS: Record<BuiltInWorkspaceLayoutId, Worksp
       audioMixer: true,
       colorScopes: false,
       history: false,
-      bookmarks: true
+      bookmarks: true,
     },
     leftPanelWidthPx: 240,
     rightPanelWidthPx: 460,
     mixerHeightPx: 360,
     timelineHeightPx: 340,
-    previewPosition: 'center'
-  }
+    previewPosition: 'center',
+  },
 };
 
-export const BUILT_IN_WORKSPACE_LAYOUT_IDS: BuiltInWorkspaceLayoutId[] = ['standard-editing', 'color-grading', 'audio-editing'];
+export const BUILT_IN_WORKSPACE_LAYOUT_IDS: BuiltInWorkspaceLayoutId[] = [
+  'standard-editing',
+  'color-grading',
+  'audio-editing',
+];
 
 export const DEFAULT_EDITOR_LAYOUT_SETTINGS: EditorLayoutSettings = {
   ...workspaceLayoutToSettings(BUILT_IN_WORKSPACE_LAYOUTS['standard-editing']),
   leftPanelCollapsed: false,
   rightPanelCollapsed: false,
-  customWorkspaceLayouts: []
+  customWorkspaceLayouts: [],
 };
 
 export function clampTimelineHeight(heightPx: number, viewportHeightPx: number): number {
@@ -150,7 +154,10 @@ export function normalizeStoredLayoutSettings(input: unknown): EditorLayoutSetti
   const value = input as Partial<Record<keyof EditorLayoutSettings, unknown>>;
   const customWorkspaceLayouts = normalizeCustomWorkspaceLayouts(value.customWorkspaceLayouts);
   const activeWorkspaceLayoutId = normalizeWorkspaceLayoutId(value.activeWorkspaceLayoutId);
-  const builtIn = activeWorkspaceLayoutId && isBuiltInWorkspaceLayoutId(activeWorkspaceLayoutId) ? BUILT_IN_WORKSPACE_LAYOUTS[activeWorkspaceLayoutId] : undefined;
+  const builtIn =
+    activeWorkspaceLayoutId && isBuiltInWorkspaceLayoutId(activeWorkspaceLayoutId)
+      ? BUILT_IN_WORKSPACE_LAYOUTS[activeWorkspaceLayoutId]
+      : undefined;
   const base = builtIn ?? BUILT_IN_WORKSPACE_LAYOUTS['standard-editing'];
   const panels = normalizeWorkspacePanelVisibility(value.panels, base.panels);
   return {
@@ -159,11 +166,26 @@ export function normalizeStoredLayoutSettings(input: unknown): EditorLayoutSetti
     rightPanelCollapsed: value.rightPanelCollapsed === true,
     activeWorkspaceLayoutId: activeWorkspaceLayoutId ?? base.id,
     panels,
-    leftPanelWidthPx: clampWorkspacePanelWidth(value.leftPanelWidthPx, WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX, WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX, base.leftPanelWidthPx),
-    rightPanelWidthPx: clampWorkspacePanelWidth(value.rightPanelWidthPx, WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX, WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX, base.rightPanelWidthPx),
-    mixerHeightPx: clampWorkspacePanelWidth(value.mixerHeightPx, WORKSPACE_MIXER_MIN_HEIGHT_PX, WORKSPACE_MIXER_MAX_HEIGHT_PX, base.mixerHeightPx),
+    leftPanelWidthPx: clampWorkspacePanelWidth(
+      value.leftPanelWidthPx,
+      WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX,
+      WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX,
+      base.leftPanelWidthPx,
+    ),
+    rightPanelWidthPx: clampWorkspacePanelWidth(
+      value.rightPanelWidthPx,
+      WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX,
+      WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX,
+      base.rightPanelWidthPx,
+    ),
+    mixerHeightPx: clampWorkspacePanelWidth(
+      value.mixerHeightPx,
+      WORKSPACE_MIXER_MIN_HEIGHT_PX,
+      WORKSPACE_MIXER_MAX_HEIGHT_PX,
+      base.mixerHeightPx,
+    ),
     previewPosition: normalizePreviewPosition(value.previewPosition, base.previewPosition),
-    customWorkspaceLayouts
+    customWorkspaceLayouts,
   };
 }
 
@@ -173,15 +195,19 @@ export function getEffectivePanelState(settings: EditorLayoutSettings, viewportW
   const audioMixerVisible = settings.panels.audioMixer;
   return {
     leftPanelCollapsed: settings.leftPanelCollapsed || !settings.panels.mediaLibrary,
-    rightPanelCollapsed: settings.rightPanelCollapsed || rightPanelAutoCollapsed || (!rightPrimaryPanelVisible && !audioMixerVisible),
+    rightPanelCollapsed:
+      settings.rightPanelCollapsed || rightPanelAutoCollapsed || (!rightPrimaryPanelVisible && !audioMixerVisible),
     rightPanelAutoCollapsed,
     rightPrimaryPanelVisible,
-    audioMixerVisible
+    audioMixerVisible,
   };
 }
 
-function workspaceLayoutToSettings(layout: WorkspaceLayoutDefinition): Omit<EditorLayoutSettings, 'leftPanelCollapsed' | 'rightPanelCollapsed' | 'customWorkspaceLayouts'> {
-  const normalized = normalizeWorkspaceLayoutDefinition(layout, layout.id) ?? BUILT_IN_WORKSPACE_LAYOUTS['standard-editing'];
+function workspaceLayoutToSettings(
+  layout: WorkspaceLayoutDefinition,
+): Omit<EditorLayoutSettings, 'leftPanelCollapsed' | 'rightPanelCollapsed' | 'customWorkspaceLayouts'> {
+  const normalized =
+    normalizeWorkspaceLayoutDefinition(layout, layout.id) ?? BUILT_IN_WORKSPACE_LAYOUTS['standard-editing'];
   return {
     timelineHeightPx: normalized.timelineHeightPx,
     activeWorkspaceLayoutId: normalized.id,
@@ -189,28 +215,33 @@ function workspaceLayoutToSettings(layout: WorkspaceLayoutDefinition): Omit<Edit
     leftPanelWidthPx: normalized.leftPanelWidthPx,
     rightPanelWidthPx: normalized.rightPanelWidthPx,
     mixerHeightPx: normalized.mixerHeightPx,
-    previewPosition: normalized.previewPosition
+    previewPosition: normalized.previewPosition,
   };
 }
 
-export function applyWorkspaceLayout(settings: EditorLayoutSettings, layout: WorkspaceLayoutDefinition): EditorLayoutSettings {
+export function applyWorkspaceLayout(
+  settings: EditorLayoutSettings,
+  layout: WorkspaceLayoutDefinition,
+): EditorLayoutSettings {
   return {
     ...settings,
     ...workspaceLayoutToSettings(layout),
     leftPanelCollapsed: !layout.panels.mediaLibrary,
-    rightPanelCollapsed: !(layout.panels.inspector || layout.panels.history || layout.panels.audioMixer)
+    rightPanelCollapsed: !(layout.panels.inspector || layout.panels.history || layout.panels.audioMixer),
   };
 }
 
 export function createCustomWorkspaceLayout(
   name: string,
   settings: EditorLayoutSettings,
-  existingLayouts: WorkspaceLayoutDefinition[] = settings.customWorkspaceLayouts
+  existingLayouts: WorkspaceLayoutDefinition[] = settings.customWorkspaceLayouts,
 ): WorkspaceLayoutDefinition {
   const safeName = name.trim() || '自定义布局';
   const usedIds = new Set([...BUILT_IN_WORKSPACE_LAYOUT_IDS, ...existingLayouts.map((layout) => layout.id)]);
   const id = uniqueWorkspaceLayoutId(safeName, usedIds);
-  const usedSlots = new Set(existingLayouts.map((layout) => layout.shortcutSlot).filter((slot): slot is number => typeof slot === 'number'));
+  const usedSlots = new Set(
+    existingLayouts.map((layout) => layout.shortcutSlot).filter((slot): slot is number => typeof slot === 'number'),
+  );
   const shortcutSlot = [4, 5, 6, 7, 8, 9].find((slot) => !usedSlots.has(slot));
   return {
     id,
@@ -222,11 +253,14 @@ export function createCustomWorkspaceLayout(
     rightPanelWidthPx: settings.rightPanelWidthPx,
     mixerHeightPx: settings.mixerHeightPx,
     timelineHeightPx: settings.timelineHeightPx,
-    previewPosition: settings.previewPosition
+    previewPosition: settings.previewPosition,
   };
 }
 
-function normalizeWorkspaceLayoutDefinition(input: unknown, fallbackId = 'custom-workspace'): WorkspaceLayoutDefinition | undefined {
+function normalizeWorkspaceLayoutDefinition(
+  input: unknown,
+  fallbackId = 'custom-workspace',
+): WorkspaceLayoutDefinition | undefined {
   if (!input || typeof input !== 'object') {
     return undefined;
   }
@@ -241,11 +275,26 @@ function normalizeWorkspaceLayoutDefinition(input: unknown, fallbackId = 'custom
     builtIn: value.builtIn === true,
     shortcutSlot: normalizeShortcutSlot(value.shortcutSlot),
     panels,
-    leftPanelWidthPx: clampWorkspacePanelWidth(value.leftPanelWidthPx, WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX, WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX, fallback.leftPanelWidthPx),
-    rightPanelWidthPx: clampWorkspacePanelWidth(value.rightPanelWidthPx, WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX, WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX, fallback.rightPanelWidthPx),
-    mixerHeightPx: clampWorkspacePanelWidth(value.mixerHeightPx, WORKSPACE_MIXER_MIN_HEIGHT_PX, WORKSPACE_MIXER_MAX_HEIGHT_PX, fallback.mixerHeightPx),
+    leftPanelWidthPx: clampWorkspacePanelWidth(
+      value.leftPanelWidthPx,
+      WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX,
+      WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX,
+      fallback.leftPanelWidthPx,
+    ),
+    rightPanelWidthPx: clampWorkspacePanelWidth(
+      value.rightPanelWidthPx,
+      WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX,
+      WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX,
+      fallback.rightPanelWidthPx,
+    ),
+    mixerHeightPx: clampWorkspacePanelWidth(
+      value.mixerHeightPx,
+      WORKSPACE_MIXER_MIN_HEIGHT_PX,
+      WORKSPACE_MIXER_MAX_HEIGHT_PX,
+      fallback.mixerHeightPx,
+    ),
     timelineHeightPx: normalizeStoredTimelineHeight(value.timelineHeightPx),
-    previewPosition: normalizePreviewPosition(value.previewPosition, fallback.previewPosition)
+    previewPosition: normalizePreviewPosition(value.previewPosition, fallback.previewPosition),
   };
 }
 
@@ -275,7 +324,7 @@ function normalizeCustomWorkspaceLayouts(layouts: unknown): WorkspaceLayoutDefin
 
 export function resolveWorkspaceLayoutShortcut(
   event: { key: string; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; altKey?: boolean },
-  customLayouts: WorkspaceLayoutDefinition[]
+  customLayouts: WorkspaceLayoutDefinition[],
 ): WorkspaceLayoutId | undefined {
   if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey) {
     return undefined;
@@ -291,7 +340,10 @@ export function resolveWorkspaceLayoutShortcut(
   return customLayouts.find((layout) => layout.shortcutSlot === slot)?.id;
 }
 
-export function getWorkspaceLayoutById(settings: EditorLayoutSettings, id: WorkspaceLayoutId): WorkspaceLayoutDefinition | undefined {
+export function getWorkspaceLayoutById(
+  settings: EditorLayoutSettings,
+  id: WorkspaceLayoutId,
+): WorkspaceLayoutDefinition | undefined {
   if (isBuiltInWorkspaceLayoutId(id)) {
     return BUILT_IN_WORKSPACE_LAYOUTS[id];
   }
@@ -305,7 +357,10 @@ function normalizeStoredTimelineHeight(value: unknown): number {
   return Math.max(TIMELINE_MIN_HEIGHT_PX, Math.round(value));
 }
 
-function normalizeWorkspacePanelVisibility(input: unknown, fallback: WorkspacePanelVisibility): WorkspacePanelVisibility {
+function normalizeWorkspacePanelVisibility(
+  input: unknown,
+  fallback: WorkspacePanelVisibility,
+): WorkspacePanelVisibility {
   if (!input || typeof input !== 'object') {
     return { ...fallback };
   }
@@ -316,7 +371,7 @@ function normalizeWorkspacePanelVisibility(input: unknown, fallback: WorkspacePa
     audioMixer: typeof value.audioMixer === 'boolean' ? value.audioMixer : fallback.audioMixer,
     colorScopes: typeof value.colorScopes === 'boolean' ? value.colorScopes : fallback.colorScopes,
     history: typeof value.history === 'boolean' ? value.history : fallback.history,
-    bookmarks: typeof value.bookmarks === 'boolean' ? value.bookmarks : fallback.bookmarks
+    bookmarks: typeof value.bookmarks === 'boolean' ? value.bookmarks : fallback.bookmarks,
   };
 }
 
@@ -324,7 +379,12 @@ function normalizeWorkspaceLayoutId(value: unknown): WorkspaceLayoutId | undefin
   if (typeof value !== 'string') {
     return undefined;
   }
-  const id = value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+  const id = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
   return id || undefined;
 }
 

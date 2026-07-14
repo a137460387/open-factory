@@ -19,9 +19,8 @@ export const PreviewPanel: React.FC = () => {
   } = useEditorStore();
 
   // Find the active multicam clip
-  const activeMulticamClip = multicamEditMode && activeMulticamClipId
-    ? findMulticamClipInProject(project, activeMulticamClipId)
-    : null;
+  const activeMulticamClip =
+    multicamEditMode && activeMulticamClipId ? findMulticamClipInProject(project, activeMulticamClipId) : null;
 
   return (
     <div className="preview-panel">

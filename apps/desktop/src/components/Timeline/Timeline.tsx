@@ -181,11 +181,42 @@ import {
   type FrameAnalysisSample,
   type TransitionClipFeatures,
   type TransitionRecommendation,
-  type TargetAspectRatio
+  type TargetAspectRatio,
 } from '@open-factory/editor-core';
-import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
+import {
+  zoomTimelineByGesture,
+  LONG_PRESS_PAN_THRESHOLD_MS,
+  computeTimelineGaps,
+  getGapStats,
+  BatchUpdateTrackHeightCommand,
+  UpdateSequenceSettingsCommand,
+} from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Eraser, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  AudioWaveform,
+  Bookmark,
+  Captions,
+  CircleDot,
+  Eraser,
+  Flag,
+  Group,
+  Magnet,
+  MessageSquarePlus,
+  MessageSquareText,
+  Mic2,
+  Music2,
+  MoveHorizontal,
+  Plus,
+  Scissors,
+  Settings2,
+  Star,
+  Trash2,
+  Type,
+  Ungroup,
+  Wand2,
+  X,
+} from 'lucide-react';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -195,7 +226,12 @@ import { showToast } from '../../lib/toast';
 import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
 import { detectClipDialogue } from '../../lib/dialogueDetection';
 import { detectClipSilence } from '../../lib/silenceDetection';
-import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
+import {
+  canGenerateSubtitlesForClip,
+  buildWhisperSubtitleTrackForClip,
+  getWhisperAvailability,
+  type WhisperAvailability,
+} from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
 import {
   analyzeWaveform,
@@ -212,14 +248,25 @@ import {
   writeFile,
   type CoverFrameResult,
   type SceneDetectProgressEvent,
-  type WhisperProgressEvent
+  type WhisperProgressEvent,
 } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useCollaborationStore } from '../../store/collaborationStore';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
+import {
+  LABEL_WIDTH,
+  Ruler,
+  ThumbnailTrack,
+  TrackRow,
+  TRACK_HEIGHT,
+  type ClipMenuRequest,
+  type DragState,
+  type GapMenuRequest,
+  type VolumeEnvelopeMenuRequest,
+  type VolumeEnvelopePointRequest,
+} from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 import { buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds } from './timeline-keyboard';
 import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
@@ -229,9 +276,15 @@ function isCreditsTextFile(file: File): boolean {
   return /\.(txt|csv)$/i.test(file.name);
 }
 
-function getTimelineDropStart(event: React.DragEvent<HTMLDivElement>, scroll: HTMLDivElement | null, zoom: number): number | undefined {
+function getTimelineDropStart(
+  event: React.DragEvent<HTMLDivElement>,
+  scroll: HTMLDivElement | null,
+  zoom: number,
+): number | undefined {
   const rect = scroll?.getBoundingClientRect();
-  return rect && scroll ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom)) : undefined;
+  return rect && scroll
+    ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom))
+    : undefined;
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
@@ -250,7 +303,11 @@ type SubtitleAlignmentMediaClip = Extract<Clip, { type: 'audio' | 'video' }>;
 const SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND = 20;
 const SUBTITLE_ALIGNMENT_MAX_DISTANCE = 0.3;
 
-function buildSubtitleAlignmentPeaks(samples: number[], samplesPerSec: number, sourceClip: SubtitleAlignmentMediaClip): number[] {
+function buildSubtitleAlignmentPeaks(
+  samples: number[],
+  samplesPerSec: number,
+  sourceClip: SubtitleAlignmentMediaClip,
+): number[] {
   const sampleRate = Math.max(1, samplesPerSec);
   const peakLevel = samples.reduce((max, value) => (Number.isFinite(value) ? Math.max(max, value) : max), 0);
   const threshold = Math.max(0.05, peakLevel * 0.6);
@@ -294,7 +351,7 @@ export function Timeline({
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
   onBookmarkPanelOpenChange,
   onConvertMediaFrameRate,
-  sceneDetectionRequestId = 0
+  sceneDetectionRequestId = 0,
 }: {
   thumbnailTrackVisible?: boolean;
   minimapVisible?: boolean;
@@ -353,12 +410,17 @@ export function Timeline({
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [coverFrameDialog, setCoverFrameDialog] = useState<CoverFrameDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
-  const [subtitleAlignReport, setSubtitleAlignReport] = useState<{ correctedCount: number; averageOffsetMs: number } | undefined>();
+  const [subtitleAlignReport, setSubtitleAlignReport] = useState<
+    { correctedCount: number; averageOffsetMs: number } | undefined
+  >();
   const [dialoguePanelOpen, setDialoguePanelOpen] = useState(false);
   const [dialogueMarkers, setDialogueMarkers] = useState<DialogueInterval[]>([]);
   const [dialogueMisses, setDialogueMisses] = useState<DialogueWhisperMiss[]>([]);
   const [replaceMediaDialog, setReplaceMediaDialog] = useState<ReplaceMediaDialogState | undefined>();
-  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
+  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({
+    ready: false,
+    error: zhCN.whisper.notConfigured,
+  });
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
   const [slipEditActive, setSlipEditActive] = useState(false);
   const [slideEditActive, setSlideEditActive] = useState(false);
@@ -373,7 +435,9 @@ export function Timeline({
   const bookmarkPanelOpen = controlledBookmarkPanelOpen ?? localBookmarkPanelOpen;
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [reframeDialog, setReframeDialog] = useState<{ clipId: string } | undefined>();
-  const [transitionDialog, setTransitionDialog] = useState<{ clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined>();
+  const [transitionDialog, setTransitionDialog] = useState<
+    { clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined
+  >();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [beatSnapEnabled, setBeatSnapEnabled] = useState(true);
   const [beatSnapPanelOpen, setBeatSnapPanelOpen] = useState(false);
@@ -389,7 +453,9 @@ export function Timeline({
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, scrollTop: 0, viewportWidth: 960 });
   const [timelineViewportHeight, setTimelineViewportHeight] = useState(240);
   useEffect(() => {
-    readTimelineInteractionSettings().then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false)).catch((error) => console.warn('Unable to load timeline interaction settings', error));
+    readTimelineInteractionSettings()
+      .then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false))
+      .catch((error) => console.warn('Unable to load timeline interaction settings', error));
   }, []);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
@@ -405,10 +471,13 @@ export function Timeline({
   const [isPanning, setIsPanning] = useState(false);
   const timelineDuration = Math.max(
     10,
-    ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
+    ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2)),
   );
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
-  const largeProjectMode = useMemo(() => getTimelineLargeProjectMode({ clipCount: allClips.length }), [allClips.length]);
+  const largeProjectMode = useMemo(
+    () => getTimelineLargeProjectMode({ clipCount: allClips.length }),
+    [allClips.length],
+  );
 
   useEffect(() => {
     if (bookmarkPanelOpen && (project.bookmarks?.length ?? 0) > 0) {
@@ -426,7 +495,10 @@ export function Timeline({
   const width = Math.max(960, timelineDuration * zoom);
   const visibleStart = Math.max(0, (scrollViewport.scrollLeft - LABEL_WIDTH) / Math.max(1, zoom));
   const visibleEnd = visibleStart + scrollViewport.viewportWidth / Math.max(1, zoom);
-  const timelineGridBeatTimes = useMemo(() => (project.beatMarkers ?? []).map((marker) => marker.time), [project.beatMarkers]);
+  const timelineGridBeatTimes = useMemo(
+    () => (project.beatMarkers ?? []).map((marker) => marker.time),
+    [project.beatMarkers],
+  );
   const ticks = useMemo(
     () =>
       buildTimelineRulerTicks({
@@ -436,13 +508,21 @@ export function Timeline({
         zoom,
         viewportWidth: Math.max(1, scrollViewport.viewportWidth - LABEL_WIDTH),
         fps: project.settings.fps || 30,
-        timecodeFormat: project.settings.timecodeFormat ?? 'ndf'
+        timecodeFormat: project.settings.timecodeFormat ?? 'ndf',
       }),
-    [project.settings.fps, project.settings.timecodeFormat, scrollViewport.viewportWidth, timelineDuration, visibleEnd, visibleStart, zoom]
+    [
+      project.settings.fps,
+      project.settings.timecodeFormat,
+      scrollViewport.viewportWidth,
+      timelineDuration,
+      visibleEnd,
+      visibleStart,
+      zoom,
+    ],
   );
   const playheadTimecode = useMemo(
     () => secondsToTimecode(playheadTime, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf'),
-    [playheadTime, project.settings.fps, project.settings.timecodeFormat]
+    [playheadTime, project.settings.fps, project.settings.timecodeFormat],
   );
   const gridLines = useMemo(() => {
     if (!timelineGridSettings.enabled) {
@@ -456,16 +536,29 @@ export function Timeline({
       visibleEnd,
       zoom,
       viewportWidth: Math.max(1, scrollViewport.viewportWidth - LABEL_WIDTH),
-      beatTimes: timelineGridBeatTimes
+      beatTimes: timelineGridBeatTimes,
     });
-  }, [project.settings.fps, scrollViewport.viewportWidth, timelineDuration, timelineGridBeatTimes, timelineGridSettings.enabled, timelineGridSettings.unit, visibleEnd, visibleStart, zoom]);
+  }, [
+    project.settings.fps,
+    scrollViewport.viewportWidth,
+    timelineDuration,
+    timelineGridBeatTimes,
+    timelineGridSettings.enabled,
+    timelineGridSettings.unit,
+    visibleEnd,
+    visibleStart,
+    zoom,
+  ]);
   const remoteCollaborationUsers = useMemo(
     () => (collaborationEnabled ? collaborationUsers.filter((user) => user.userId !== collaborationUserId) : []),
-    [collaborationEnabled, collaborationUserId, collaborationUsers]
+    [collaborationEnabled, collaborationUserId, collaborationUsers],
   );
   const collaborationLocksByClipId = useMemo(
-    () => new Map(collaborationLocks.filter((lock) => lock.userId !== collaborationUserId).map((lock) => [lock.clipId, lock])),
-    [collaborationLocks, collaborationUserId]
+    () =>
+      new Map(
+        collaborationLocks.filter((lock) => lock.userId !== collaborationUserId).map((lock) => [lock.clipId, lock]),
+      ),
+    [collaborationLocks, collaborationUserId],
   );
   const activeBeatMarkerId = useMemo(() => {
     if (!isPlaying) {
@@ -475,7 +568,11 @@ export function Timeline({
     return (project.beatMarkers ?? []).find((marker) => Math.abs(marker.time - playheadTime) <= frameWindow * 2)?.id;
   }, [isPlaying, playheadTime, project.beatMarkers, project.settings.fps]);
   const exportRangeHighlights = useMemo(() => {
-    const stored = normalizeExportRanges(project.exportRanges, projectDuration).map((range) => ({ id: range.id, start: range.start, end: range.end }));
+    const stored = normalizeExportRanges(project.exportRanges, projectDuration).map((range) => ({
+      id: range.id,
+      start: range.start,
+      end: range.end,
+    }));
     if (stored.length > 0) {
       return stored;
     }
@@ -494,9 +591,16 @@ export function Timeline({
         maxClips: largeProjectMode.minimapClipLimit,
         markers: project.timeline.markers ?? [],
         bookmarks: project.bookmarks ?? [],
-        exportRanges: exportRangeHighlights
+        exportRanges: exportRangeHighlights,
       }),
-    [exportRangeHighlights, largeProjectMode.minimapClipLimit, minimapHeight, project.bookmarks, project.timeline, timelineDuration]
+    [
+      exportRangeHighlights,
+      largeProjectMode.minimapClipLimit,
+      minimapHeight,
+      project.bookmarks,
+      project.timeline,
+      timelineDuration,
+    ],
   );
   const deferredMinimapLayout = useDeferredValue(minimapLayout);
   const minimapViewport = useMemo(
@@ -507,11 +611,14 @@ export function Timeline({
         labelWidth: LABEL_WIDTH,
         zoom,
         duration: timelineDuration,
-        minimapHeight
+        minimapHeight,
       }),
-    [minimapHeight, scrollViewport.scrollLeft, scrollViewport.viewportWidth, timelineDuration, zoom]
+    [minimapHeight, scrollViewport.scrollLeft, scrollViewport.viewportWidth, timelineDuration, zoom],
   );
-  const protectedRanges = useMemo(() => normalizeProtectedRanges(project.protectedRanges, projectDuration), [project.protectedRanges, projectDuration]);
+  const protectedRanges = useMemo(
+    () => normalizeProtectedRanges(project.protectedRanges, projectDuration),
+    [project.protectedRanges, projectDuration],
+  );
   const timelineNotes = useMemo(() => project.timelineNotes ?? [], [project.timelineNotes]);
   const timelineNoteLayouts = useMemo(() => buildTimelineNoteLayout(timelineNotes), [timelineNotes]);
   const filteredTimelineNotes = useMemo(() => {
@@ -519,7 +626,9 @@ export function Timeline({
     if (!query) {
       return timelineNotes;
     }
-    return timelineNotes.filter((note) => note.text.toLowerCase().includes(query) || note.color.toLowerCase().includes(query));
+    return timelineNotes.filter(
+      (note) => note.text.toLowerCase().includes(query) || note.color.toLowerCase().includes(query),
+    );
   }, [timelineNoteSearch, timelineNotes]);
   const sceneCutOverlays = useMemo(
     () =>
@@ -527,12 +636,19 @@ export function Timeline({
         (clip.scenecuts ?? []).map((time, index) => ({
           id: `${clip.id}-${index}-${time}`,
           clipId: clip.id,
-          time: round(clip.start + time)
-        }))
+          time: round(clip.start + time),
+        })),
       ),
-    [allClips]
+    [allClips],
   );
-  const clipGroups = useMemo(() => normalizeClipGroups(project.clipGroups, allClips.map((clip) => clip.id)), [allClips, project.clipGroups]);
+  const clipGroups = useMemo(
+    () =>
+      normalizeClipGroups(
+        project.clipGroups,
+        allClips.map((clip) => clip.id),
+      ),
+    [allClips, project.clipGroups],
+  );
   const clipGroupByClipId = useMemo(() => {
     const map = new Map<string, ClipGroup>();
     for (const group of clipGroups) {
@@ -542,7 +658,10 @@ export function Timeline({
     }
     return map;
   }, [clipGroups]);
-  const selectedGroup = useMemo(() => findCompleteClipGroup(clipGroups, selectedClipIds), [clipGroups, selectedClipIds]);
+  const selectedGroup = useMemo(
+    () => findCompleteClipGroup(clipGroups, selectedClipIds),
+    [clipGroups, selectedClipIds],
+  );
   const orderedTrackIds = useMemo(() => project.timeline.tracks.map((track) => track.id), [project.timeline.tracks]);
   const virtualWindow = useMemo(
     () =>
@@ -551,9 +670,9 @@ export function Timeline({
         viewportWidth: scrollViewport.viewportWidth,
         zoom,
         labelWidth: LABEL_WIDTH,
-        overscanScreens: largeProjectMode.virtualOverscanScreens
+        overscanScreens: largeProjectMode.virtualOverscanScreens,
       }),
-    [largeProjectMode.virtualOverscanScreens, scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom]
+    [largeProjectMode.virtualOverscanScreens, scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom],
   );
   const virtualTrackWindow = useMemo(
     () =>
@@ -562,18 +681,21 @@ export function Timeline({
         viewportHeight: timelineViewportHeight,
         rowHeight: TRACK_HEIGHT,
         trackCount: project.timeline.tracks.length,
-        overscanRows: 2
+        overscanRows: 2,
       }),
-    [project.timeline.tracks.length, scrollViewport.scrollTop, timelineViewportHeight]
+    [project.timeline.tracks.length, scrollViewport.scrollTop, timelineViewportHeight],
   );
-  const virtualTracks = useMemo(() => filterTimelineVirtualTracks(project.timeline.tracks, virtualTrackWindow), [project.timeline.tracks, virtualTrackWindow]);
+  const virtualTracks = useMemo(
+    () => filterTimelineVirtualTracks(project.timeline.tracks, virtualTrackWindow),
+    [project.timeline.tracks, virtualTrackWindow],
+  );
   const thumbnailTrackSamples = useMemo(() => {
     const samples = buildTimelineThumbnailTrackSamples(project.timeline, {
       zoom,
       trackWidth: width,
       duration: timelineDuration,
       visibleStart,
-      visibleEnd
+      visibleEnd,
     });
     return sortTimelineThumbnailSamplesByPriority(samples, playheadTime);
   }, [playheadTime, project.timeline, timelineDuration, visibleEnd, visibleStart, width, zoom]);
@@ -588,11 +710,13 @@ export function Timeline({
 
   useEffect(() => {
     let disposed = false;
-    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then((availability) => {
-      if (!disposed) {
-        setWhisperAvailability(availability);
-      }
-    });
+    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then(
+      (availability) => {
+        if (!disposed) {
+          setWhisperAvailability(availability);
+        }
+      },
+    );
     return () => {
       disposed = true;
     };
@@ -612,19 +736,38 @@ export function Timeline({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a' && !isEditableKeyboardTarget(event.target)) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === 'a' &&
+        !isEditableKeyboardTarget(event.target)
+      ) {
         event.preventDefault();
         setSelectedTrackIds(orderedTrackIds);
         setTrackSelectionAnchorId(orderedTrackIds[0]);
         return;
       }
-      if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'e' && !isEditableKeyboardTarget(event.target)) {
+      if (
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === 'e' &&
+        !isEditableKeyboardTarget(event.target)
+      ) {
         event.preventDefault();
         setEnvelopeEditMode((active) => !active);
         setVolumeEnvelopeMenu(undefined);
         return;
       }
-      if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'n' && !isEditableKeyboardTarget(event.target)) {
+      if (
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === 'n' &&
+        !isEditableKeyboardTarget(event.target)
+      ) {
         event.preventDefault();
         quickAddTimelineNote();
         return;
@@ -682,7 +825,11 @@ export function Timeline({
     }
     const targetClipId = selectedClipId ?? selectedClipIds[0];
     if (!targetClipId) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.sceneUnavailableTitle,
+        message: zhCN.timeline.sceneUnavailableMessage,
+      });
       return;
     }
     openSceneDetection(targetClipId);
@@ -701,7 +848,7 @@ export function Timeline({
         const worker =
           heatmapWorkerRef.current ??
           new Worker(new URL('../../workers/timeline-heatmap.worker.ts', import.meta.url), {
-            type: 'module'
+            type: 'module',
           });
         heatmapWorkerRef.current = worker;
         worker.onmessage = (event: MessageEvent<HeatmapWorkerResponse>) => {
@@ -714,7 +861,7 @@ export function Timeline({
           type: heatmap.type,
           timeline: project.timeline,
           duration: timelineDuration,
-          bucketSeconds
+          bucketSeconds,
         });
         return undefined;
       } catch {
@@ -723,7 +870,10 @@ export function Timeline({
       }
     }
     const timer = window.setTimeout(() => {
-      const segments = calculateTimelineHeatmap(heatmap.type, project.timeline, { duration: timelineDuration, bucketSeconds });
+      const segments = calculateTimelineHeatmap(heatmap.type, project.timeline, {
+        duration: timelineDuration,
+        bucketSeconds,
+      });
       if (requestId === heatmapRequestIdRef.current) {
         setHeatmapSegments(segments);
       }
@@ -735,16 +885,25 @@ export function Timeline({
 
   function addTrack(type: Track['type']): void {
     commandManager.execute(
-      new AddTrackCommand(timelineAccessor, createTrack({
-        id: createId('track'),
-        type,
-        name: zhCN.timeline.newTrackName(type, project.timeline.tracks.filter((track) => track.type === type).length + 1),
-        clips: []
-      }))
+      new AddTrackCommand(
+        timelineAccessor,
+        createTrack({
+          id: createId('track'),
+          type,
+          name: zhCN.timeline.newTrackName(
+            type,
+            project.timeline.tracks.filter((track) => track.type === type).length + 1,
+          ),
+          clips: [],
+        }),
+      ),
     );
   }
 
-  function updateTrack(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void {
+  function updateTrack(
+    trackId: string,
+    patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>,
+  ): void {
     commandManager.execute(new UpdateTrackCommand(timelineAccessor, trackId, patch));
   }
 
@@ -754,7 +913,7 @@ export function Timeline({
       currentSelection: selectedTrackIds,
       clickedTrackId: trackId,
       anchorTrackId: trackSelectionAnchorId,
-      shiftKey: event.shiftKey
+      shiftKey: event.shiftKey,
     });
     setSelectedTrackIds(result.selectedTrackIds);
     setTrackSelectionAnchorId(result.anchorTrackId);
@@ -774,7 +933,7 @@ export function Timeline({
     setTrackBatchMenu({
       trackId,
       x: Math.min(x, Math.max(0, window.innerWidth - 230)),
-      y: Math.min(y, Math.max(0, window.innerHeight - 260))
+      y: Math.min(y, Math.max(0, window.innerHeight - 260)),
     });
   }
 
@@ -791,12 +950,16 @@ export function Timeline({
     try {
       commandManager.execute(
         new BatchUpdateTrackCommand(timelineAccessor, {
-          patches: Object.fromEntries(tracks.map((track) => [track.id, patchForTrack(track)]))
-        })
+          patches: Object.fromEntries(tracks.map((track) => [track.id, patchForTrack(track)])),
+        }),
       );
       setTrackBatchMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -808,13 +971,21 @@ export function Timeline({
     try {
       commandManager.execute(
         new BatchUpdateTrackCommand(timelineAccessor, {
-          deleteEmptyTrackIds: tracks.map((track) => track.id)
-        })
+          deleteEmptyTrackIds: tracks.map((track) => track.id),
+        }),
       );
-      setSelectedTrackIds((current) => current.filter((trackId) => project.timeline.tracks.some((track) => track.id === trackId && track.clips.length > 0)));
+      setSelectedTrackIds((current) =>
+        current.filter((trackId) =>
+          project.timeline.tracks.some((track) => track.id === trackId && track.clips.length > 0),
+        ),
+      );
       setTrackBatchMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -830,7 +1001,11 @@ export function Timeline({
       setTrackSelectionAnchorId(nextSelectedTrackIds[0]);
       setTrackBatchMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -843,8 +1018,17 @@ export function Timeline({
     const asset = getClipMediaAsset(clip);
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
-    if (!asset || asset.type !== 'video' || (!asset.variableFrameRate && !isFrameRateMismatch(asset.frameRate, project.settings.fps)) || !onConvertMediaFrameRate) {
-      showToast({ kind: 'warning', title: zhCN.timeline.frameRateConvertUnavailableTitle, message: zhCN.timeline.frameRateConvertUnavailableMessage });
+    if (
+      !asset ||
+      asset.type !== 'video' ||
+      (!asset.variableFrameRate && !isFrameRateMismatch(asset.frameRate, project.settings.fps)) ||
+      !onConvertMediaFrameRate
+    ) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.frameRateConvertUnavailableTitle,
+        message: zhCN.timeline.frameRateConvertUnavailableMessage,
+      });
       return;
     }
     onConvertMediaFrameRate(asset.id);
@@ -860,12 +1044,16 @@ export function Timeline({
           type: transitionMenu.type,
           duration: transitionMenu.duration,
           fromClipId: transitionMenu.fromClipId,
-          toClipId: transitionMenu.toClipId
-        })
+          toClipId: transitionMenu.toClipId,
+        }),
       );
       setTransitionMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.transitionUnavailableTitle, message: error instanceof Error ? error.message : zhCN.timeline.transitionUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.transitionUnavailableTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.transitionUnavailableMessage,
+      });
     }
   }
 
@@ -899,7 +1087,11 @@ export function Timeline({
       commandManager.execute(new AddCreditsClipCommand(timelineAccessor, clip));
       setSelectedClipId(clip.id);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -914,12 +1106,16 @@ export function Timeline({
       const clip = instantiateTitleTemplate(templateId, track, project.timeline, {
         name: label.name,
         text: label.defaultText,
-        start
+        start,
       });
       commandManager.execute(new AddClipCommand(timelineAccessor, clip));
       setSelectedClipId(clip.id);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -929,27 +1125,35 @@ export function Timeline({
         new AddTimelineMarkerCommand(timelineAccessor, {
           id: createId('marker'),
           time,
-          label: zhCN.timeline.markerLabel((project.timeline.markers?.length ?? 0) + 1)
-        })
+          label: zhCN.timeline.markerLabel((project.timeline.markers?.length ?? 0) + 1),
+        }),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.markerRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed,
+      });
     }
   }
 
-function addProjectBookmark(time = playheadTime): void {
+  function addProjectBookmark(time = playheadTime): void {
     try {
       commandManager.execute(
         new AddProjectBookmarkCommand(projectAccessor, {
           id: createId('bookmark'),
           time,
-          note: zhCN.timeline.bookmarkLabel((project.bookmarks?.length ?? 0) + 1)
-        })
+          note: zhCN.timeline.bookmarkLabel((project.bookmarks?.length ?? 0) + 1),
+        }),
       );
       setBookmarkPanelVisible(true);
       setAnnotationPanelOpen(false);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarkRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed,
+      });
     }
   }
 
@@ -958,7 +1162,11 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new UpdateProjectBookmarkCommand(projectAccessor, bookmarkId, { note }));
       setBookmarkRename(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.updateBookmarkFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarkRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.updateBookmarkFailed,
+      });
     }
   }
 
@@ -967,7 +1175,11 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new RemoveProjectBookmarkCommand(projectAccessor, bookmarkId));
       setBookmarkRename((current) => (current?.id === bookmarkId ? undefined : current));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeBookmarkFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.bookmarkRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeBookmarkFailed,
+      });
     }
   }
 
@@ -980,20 +1192,31 @@ function addProjectBookmark(time = playheadTime): void {
           id: createId('protected-range'),
           start,
           end: start + duration,
-          label: zhCN.timeline.protectedRangeLabel((project.protectedRanges?.length ?? 0) + 1)
+          label: zhCN.timeline.protectedRangeLabel((project.protectedRanges?.length ?? 0) + 1),
         },
-        Math.max(projectDuration, start + duration)
+        Math.max(projectDuration, start + duration),
       );
       commandManager.execute(new UpdateProjectProtectedRangesCommand(projectAccessor, [...protectedRanges, nextRange]));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
   function toggleProtectedRangeAtPlayhead(): void {
-    const existing = protectedRanges.find((range) => playheadTime >= range.start - 0.000001 && playheadTime <= range.end + 0.000001);
+    const existing = protectedRanges.find(
+      (range) => playheadTime >= range.start - 0.000001 && playheadTime <= range.end + 0.000001,
+    );
     if (existing) {
-      commandManager.execute(new UpdateProjectProtectedRangesCommand(projectAccessor, protectedRanges.filter((range) => range.id !== existing.id)));
+      commandManager.execute(
+        new UpdateProjectProtectedRangesCommand(
+          projectAccessor,
+          protectedRanges.filter((range) => range.id !== existing.id),
+        ),
+      );
       return;
     }
     addProtectedRangeAt(playheadTime);
@@ -1008,7 +1231,7 @@ function addProjectBookmark(time = playheadTime): void {
       x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
       y: Math.min(request.y, Math.max(0, window.innerHeight - 190)),
       time: request.time,
-      timecode: secondsToTimecode(request.time, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf')
+      timecode: secondsToTimecode(request.time, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf'),
     });
   }
 
@@ -1041,9 +1264,16 @@ function addProjectBookmark(time = playheadTime): void {
     if (!rulerMenu) {
       return;
     }
-    const parsed = parseTimecodeToSeconds(rulerMenu.timecode, { fps: project.settings.fps || 30, duration: projectDuration });
+    const parsed = parseTimecodeToSeconds(rulerMenu.timecode, {
+      fps: project.settings.fps || 30,
+      duration: projectDuration,
+    });
     if (!parsed.ok) {
-      showToast({ kind: 'warning', title: zhCN.timeline.invalidTimecodeTitle, message: zhCN.timeline.invalidTimecodeMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.invalidTimecodeTitle,
+        message: zhCN.timeline.invalidTimecodeMessage,
+      });
       return;
     }
     setPlayheadTime(parsed.value.seconds);
@@ -1052,9 +1282,18 @@ function addProjectBookmark(time = playheadTime): void {
 
   function addBeatMarker(): void {
     try {
-      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...(project.beatMarkers ?? []), createBeatMarker(playheadTime)]));
+      commandManager.execute(
+        new UpdateProjectBeatMarkersCommand(projectAccessor, [
+          ...(project.beatMarkers ?? []),
+          createBeatMarker(playheadTime),
+        ]),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.beatMarkerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBeatMarkerFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.beatMarkerRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.addBeatMarkerFailed,
+      });
     }
   }
 
@@ -1063,7 +1302,7 @@ function addProjectBookmark(time = playheadTime): void {
       id: annotation?.id,
       time: annotation?.time ?? Math.max(0, snapTime(time)),
       text: annotation?.text ?? zhCN.timeline.annotationLabel((project.annotations?.length ?? 0) + 1),
-      color: annotation?.color ?? DEFAULT_PROJECT_ANNOTATION_COLOR
+      color: annotation?.color ?? DEFAULT_PROJECT_ANNOTATION_COLOR,
     });
   }
 
@@ -1074,16 +1313,16 @@ function addProjectBookmark(time = playheadTime): void {
           new UpdateProjectAnnotationCommand(projectAccessor, next.id, {
             time: next.time,
             text: next.text,
-            color: next.color
-          })
+            color: next.color,
+          }),
         );
       } else {
         commandManager.execute(
           new AddProjectAnnotationCommand(projectAccessor, {
             time: next.time,
             text: next.text,
-            color: next.color
-          })
+            color: next.color,
+          }),
         );
       }
       setAnnotationEditor(undefined);
@@ -1092,7 +1331,12 @@ function addProjectBookmark(time = playheadTime): void {
       showToast({
         kind: 'warning',
         title: zhCN.timeline.annotationRejectedTitle,
-        message: error instanceof Error ? error.message : next.id ? zhCN.timeline.updateAnnotationFailed : zhCN.timeline.addAnnotationFailed
+        message:
+          error instanceof Error
+            ? error.message
+            : next.id
+              ? zhCN.timeline.updateAnnotationFailed
+              : zhCN.timeline.addAnnotationFailed,
       });
     }
   }
@@ -1101,7 +1345,11 @@ function addProjectBookmark(time = playheadTime): void {
     try {
       commandManager.execute(new RemoveProjectAnnotationCommand(projectAccessor, annotationId));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeAnnotationFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.annotationRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeAnnotationFailed,
+      });
     }
   }
 
@@ -1113,7 +1361,7 @@ function addProjectBookmark(time = playheadTime): void {
       start: note?.start ?? normalizedStart,
       end: note?.end ?? normalizedEnd,
       text: note?.text ?? zhCN.timeline.timelineNoteLabel(timelineNotes.length + 1),
-      color: note?.color ?? DEFAULT_TIMELINE_NOTE_COLOR
+      color: note?.color ?? DEFAULT_TIMELINE_NOTE_COLOR,
     });
   }
 
@@ -1132,8 +1380,8 @@ function addProjectBookmark(time = playheadTime): void {
             start: next.start,
             end: next.end,
             text: next.text,
-            color: next.color
-          })
+            color: next.color,
+          }),
         );
       } else {
         commandManager.execute(
@@ -1142,8 +1390,8 @@ function addProjectBookmark(time = playheadTime): void {
             start: next.start,
             end: next.end,
             text: next.text,
-            color: next.color
-          })
+            color: next.color,
+          }),
         );
       }
       setTimelineNoteEditor(undefined);
@@ -1154,7 +1402,12 @@ function addProjectBookmark(time = playheadTime): void {
       showToast({
         kind: 'warning',
         title: zhCN.timeline.timelineNoteRejectedTitle,
-        message: error instanceof Error ? error.message : next.id ? zhCN.timeline.updateTimelineNoteFailed : zhCN.timeline.addTimelineNoteFailed
+        message:
+          error instanceof Error
+            ? error.message
+            : next.id
+              ? zhCN.timeline.updateTimelineNoteFailed
+              : zhCN.timeline.addTimelineNoteFailed,
       });
     }
   }
@@ -1163,7 +1416,11 @@ function addProjectBookmark(time = playheadTime): void {
     try {
       commandManager.execute(new RemoveTimelineNoteCommand(projectAccessor, noteId));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.timelineNoteRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeTimelineNoteFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.timelineNoteRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeTimelineNoteFailed,
+      });
     }
   }
 
@@ -1183,7 +1440,11 @@ function addProjectBookmark(time = playheadTime): void {
       await writeFile(path, serializeTimelineNotesCsv(timelineNotes, project.settings.fps || 30));
       showToast({ kind: 'success', title: zhCN.timeline.timelineNoteExported, message: path });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.timelineNoteExportFailed, message: error instanceof Error ? error.message : zhCN.timeline.timelineNoteExportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.timelineNoteExportFailed,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineNoteExportFailedMessage,
+      });
     }
   }
 
@@ -1191,7 +1452,11 @@ function addProjectBookmark(time = playheadTime): void {
     try {
       commandManager.execute(new RemoveTimelineMarkerCommand(timelineAccessor, markerId));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeMarkerFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.markerRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeMarkerFailed,
+      });
     }
   }
 
@@ -1202,31 +1467,47 @@ function addProjectBookmark(time = playheadTime): void {
     try {
       commandManager.execute(new SplitClipCommand(timelineAccessor, selectedClipId, playheadTime));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.splitUnavailableTitle, message: error instanceof Error ? error.message : zhCN.timeline.splitUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.splitUnavailableTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.splitUnavailableMessage,
+      });
     }
   }
 
   function createGroupFromSelection(): void {
     if (selectedClipIds.length < 2) {
-      showToast({ kind: 'warning', title: zhCN.timeline.clipGroupCreateUnavailableTitle, message: zhCN.timeline.clipGroupCreateUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.clipGroupCreateUnavailableTitle,
+        message: zhCN.timeline.clipGroupCreateUnavailableMessage,
+      });
       return;
     }
     try {
       const command = new CreateClipGroupCommand(projectAccessor, selectedClipIds, {
         name: zhCN.timeline.clipGroupDefaultName(clipGroups.length + 1),
-        color: CLIP_GROUP_COLORS[clipGroups.length % CLIP_GROUP_COLORS.length]
+        color: CLIP_GROUP_COLORS[clipGroups.length % CLIP_GROUP_COLORS.length],
       });
       commandManager.execute(command);
       setSelectedClipIds(command.group?.clipIds ?? selectedClipIds);
       setClipMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
   function ungroupSelected(group = selectedGroup): void {
     if (!group) {
-      showToast({ kind: 'warning', title: zhCN.timeline.clipGroupUngroupUnavailableTitle, message: zhCN.timeline.clipGroupUngroupUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.clipGroupUngroupUnavailableTitle,
+        message: zhCN.timeline.clipGroupUngroupUnavailableMessage,
+      });
       return;
     }
     try {
@@ -1234,7 +1515,11 @@ function addProjectBookmark(time = playheadTime): void {
       setSelectedClipIds(group.clipIds);
       setClipMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1244,7 +1529,11 @@ function addProjectBookmark(time = playheadTime): void {
       clearSelectedClipIds();
       setClipMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1253,7 +1542,11 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new UpdateClipGroupCommand(projectAccessor, group.id, { color }));
       setClipMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1301,7 +1594,11 @@ function addProjectBookmark(time = playheadTime): void {
       if (drag.keyframeSelectionOnly) {
         return;
       }
-      const nextTime = snapKeyframeTime(drag.clip, Math.min(drag.clip.duration, Math.max(0, drag.previewStart + delta)), event.altKey);
+      const nextTime = snapKeyframeTime(
+        drag.clip,
+        Math.min(drag.clip.duration, Math.max(0, drag.previewStart + delta)),
+        event.altKey,
+      );
       const previewKeyframeDelta = round(nextTime - drag.previewStart);
       const keyframes = drag.keyframes?.length
         ? drag.keyframes
@@ -1316,10 +1613,18 @@ function addProjectBookmark(time = playheadTime): void {
           if (!clip || startTime === undefined) {
             return [];
           }
-          return [[keyframeRefKey(ref), snapTime(Math.min(clip.duration, Math.max(0, startTime + previewKeyframeDelta)))]];
-        })
+          return [
+            [keyframeRefKey(ref), snapTime(Math.min(clip.duration, Math.max(0, startTime + previewKeyframeDelta)))],
+          ];
+        }),
       );
-      setDrag({ ...drag, previewKeyframeTime: nextTime, previewKeyframeDelta, keyframeStartTimes, previewKeyframeTimes });
+      setDrag({
+        ...drag,
+        previewKeyframeTime: nextTime,
+        previewKeyframeDelta,
+        keyframeStartTimes,
+        previewKeyframeTimes,
+      });
       setPlayheadTime(drag.clip.start + nextTime);
       return;
     }
@@ -1328,10 +1633,15 @@ function addProjectBookmark(time = playheadTime): void {
       const draggedStart = startByClipId[drag.clip.id] ?? drag.clip.start;
       const minStart = Math.min(...Object.values(startByClipId));
       const unclampedDelta = Math.max(delta, -minStart);
-      const snappedDraggedStart = snapClipStart(Math.max(0, draggedStart + unclampedDelta), drag.clip.duration, drag.clip, event.altKey);
+      const snappedDraggedStart = snapClipStart(
+        Math.max(0, draggedStart + unclampedDelta),
+        drag.clip.duration,
+        drag.clip,
+        event.altKey,
+      );
       const snappedDelta = round(snappedDraggedStart - draggedStart);
       const previewStartsByClipId = Object.fromEntries(
-        Object.entries(startByClipId).map(([clipId, start]) => [clipId, round(Math.max(0, start + snappedDelta))])
+        Object.entries(startByClipId).map(([clipId, start]) => [clipId, round(Math.max(0, start + snappedDelta))]),
       );
       setDrag({ ...drag, previewStart: snappedDraggedStart, previewStartsByClipId });
       setPreviewTimeline(buildMovedPreviewTimeline(previewStartsByClipId));
@@ -1348,7 +1658,7 @@ function addProjectBookmark(time = playheadTime): void {
         previewTrimStart: preview.trimStart,
         previewTrimEnd: preview.trimEnd,
         previewSlipDelta: delta,
-        previewClipsById: { [preview.id]: preview }
+        previewClipsById: { [preview.id]: preview },
       });
       setPreviewTimeline(replaceClip(project.timeline, preview));
       return;
@@ -1363,8 +1673,8 @@ function addProjectBookmark(time = playheadTime): void {
           previewClipsById: {
             [edit.leftClip.id]: edit.leftClip,
             [edit.clip.id]: edit.clip,
-            [edit.rightClip.id]: edit.rightClip
-          }
+            [edit.rightClip.id]: edit.rightClip,
+          },
         });
         setPreviewTimeline(edit.timeline);
       } catch {
@@ -1380,7 +1690,7 @@ function addProjectBookmark(time = playheadTime): void {
         previewStart: preview.start,
         previewDuration: preview.duration,
         previewTrimStart: preview.trimStart,
-        previewTrimEnd: preview.trimEnd
+        previewTrimEnd: preview.trimEnd,
       });
       setPreviewTimeline(replaceClip(project.timeline, preview));
       return;
@@ -1390,7 +1700,7 @@ function addProjectBookmark(time = playheadTime): void {
       ...drag,
       previewDuration: preview.duration,
       previewTrimStart: preview.trimStart,
-      previewTrimEnd: preview.trimEnd
+      previewTrimEnd: preview.trimEnd,
     });
     setPreviewTimeline(replaceClip(project.timeline, preview));
   }
@@ -1423,15 +1733,23 @@ function addProjectBookmark(time = playheadTime): void {
         const keyframes = current.keyframes?.length
           ? current.keyframes
           : [{ clipId: current.clip.id, property: current.keyframeProperty, keyframeId: current.keyframeId }];
-        const delta = current.previewKeyframeDelta ?? round((current.previewKeyframeTime ?? current.previewStart) - current.previewStart);
+        const delta =
+          current.previewKeyframeDelta ??
+          round((current.previewKeyframeTime ?? current.previewStart) - current.previewStart);
         if (Math.abs(delta) > 0.000001) {
           if (keyframes.length > 1) {
             commandManager.execute(new BatchKeyframeEditCommand(timelineAccessor, keyframes, { type: 'shift', delta }));
           } else {
             commandManager.execute(
-              new UpdateKeyframeCommand(timelineAccessor, current.clip.id, current.keyframeProperty, current.keyframeId, {
-                time: current.previewKeyframeTime ?? current.previewStart
-              })
+              new UpdateKeyframeCommand(
+                timelineAccessor,
+                current.clip.id,
+                current.keyframeProperty,
+                current.keyframeId,
+                {
+                  time: current.previewKeyframeTime ?? current.previewStart,
+                },
+              ),
             );
           }
         }
@@ -1449,17 +1767,29 @@ function addProjectBookmark(time = playheadTime): void {
           const preview = moveClip(current.clip, current.previewStart);
           const track = project.timeline.tracks.find((item) => item.id === preview.trackId);
           if (track && detectOverlap(track, preview, current.clip.id)) {
-            showToast({ kind: 'warning', title: zhCN.timeline.clipOverlapTitle, message: zhCN.timeline.clipOverlapMessage });
+            showToast({
+              kind: 'warning',
+              title: zhCN.timeline.clipOverlapTitle,
+              message: zhCN.timeline.clipOverlapMessage,
+            });
             return;
           }
-          commandManager.execute(new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart, protectedRanges));
+          commandManager.execute(
+            new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart, protectedRanges),
+          );
         }
       } else if (current.mode === 'rolling-trim') {
         if (!current.rightClip || Math.abs(current.previewRollingDelta ?? 0) <= 0.000001) {
           return;
         }
         commandManager.execute(
-          new RollingTrimCommand(timelineAccessor, current.clip.id, current.rightClip.id, current.previewRollingDelta ?? 0, minFrameDuration())
+          new RollingTrimCommand(
+            timelineAccessor,
+            current.clip.id,
+            current.rightClip.id,
+            current.previewRollingDelta ?? 0,
+            minFrameDuration(),
+          ),
         );
       } else if (current.mode === 'slip') {
         if (current.previewTrimStart === current.clip.trimStart && current.previewTrimEnd === current.clip.trimEnd) {
@@ -1470,14 +1800,27 @@ function addProjectBookmark(time = playheadTime): void {
         if (Math.abs(current.previewSlideDelta ?? 0) <= 0.000001) {
           return;
         }
-        commandManager.execute(new SlideClipCommand(timelineAccessor, current.clip.id, current.previewSlideDelta ?? 0, minFrameDuration()));
+        commandManager.execute(
+          new SlideClipCommand(timelineAccessor, current.clip.id, current.previewSlideDelta ?? 0, minFrameDuration()),
+        );
       } else {
         commandManager.execute(
-          new TrimClipCommand(timelineAccessor, current.clip.id, current.previewTrimStart, current.previewTrimEnd, undefined, minFrameDuration())
+          new TrimClipCommand(
+            timelineAccessor,
+            current.clip.id,
+            current.previewTrimStart,
+            current.previewTrimEnd,
+            undefined,
+            minFrameDuration(),
+          ),
         );
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -1501,7 +1844,10 @@ function addProjectBookmark(time = playheadTime): void {
     }
     const clipIds = nextDrag.clipIds?.length ? nextDrag.clipIds : [nextDrag.clip.id];
     const startByClipId = Object.fromEntries(
-      clipIds.map((clipId) => [clipId, allClips.find((clip) => clip.id === clipId)?.start ?? nextDrag.clip?.start ?? 0])
+      clipIds.map((clipId) => [
+        clipId,
+        allClips.find((clip) => clip.id === clipId)?.start ?? nextDrag.clip?.start ?? 0,
+      ]),
     );
     setDrag({ ...nextDrag, clipIds, startByClipId, previewStartsByClipId: startByClipId });
   }
@@ -1547,7 +1893,11 @@ function addProjectBookmark(time = playheadTime): void {
   }
 
   function warnProtectedRangeBlocked(): void {
-    showToast({ kind: 'warning', title: zhCN.timeline.protectedRangeBlockedTitle, message: zhCN.timeline.protectedRangeBlockedMessage });
+    showToast({
+      kind: 'warning',
+      title: zhCN.timeline.protectedRangeBlockedTitle,
+      message: zhCN.timeline.protectedRangeBlockedMessage,
+    });
   }
 
   function getKeyframeTime(ref: SelectedKeyframeRef): number | undefined {
@@ -1560,11 +1910,14 @@ function addProjectBookmark(time = playheadTime): void {
       refs.flatMap((ref) => {
         const time = getKeyframeTime(ref);
         return time === undefined ? [] : [[keyframeRefKey(ref), time]];
-      })
+      }),
     );
   }
 
-  function selectKeyframe(keyframe: { clipId: string; property: KeyframeProperty; keyframeId: string }, additive: boolean): void {
+  function selectKeyframe(
+    keyframe: { clipId: string; property: KeyframeProperty; keyframeId: string },
+    additive: boolean,
+  ): void {
     if (additive) {
       toggleSelectedKeyframe(keyframe);
       return;
@@ -1578,17 +1931,31 @@ function addProjectBookmark(time = playheadTime): void {
     }
     setActiveSequenceId(clip.sequenceId);
     if (isNestedSequenceDepthExceeded(useEditorStore.getState().project)) {
-      showToast({ kind: 'warning', title: zhCN.timeline.nestedSequenceDepthTitle, message: zhCN.timeline.nestedSequenceDepthMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.nestedSequenceDepthTitle,
+        message: zhCN.timeline.nestedSequenceDepthMessage,
+      });
     }
   }
 
   function packClipMenuSelection(clipId: string): void {
     const clipIds = selectedClipIds.includes(clipId) ? selectedClipIds : [clipId];
     try {
-      commandManager.execute(new PackNestedSequenceCommand(projectAccessor, clipIds, zhCN.timeline.nestedSequenceName(project.sequences.length)));
+      commandManager.execute(
+        new PackNestedSequenceCommand(
+          projectAccessor,
+          clipIds,
+          zhCN.timeline.nestedSequenceName(project.sequences.length),
+        ),
+      );
       setClipMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1598,7 +1965,10 @@ function addProjectBookmark(time = playheadTime): void {
     setSelectedClipId(clip.id);
     try {
       const [path] = await openFileDialog(false, [
-        { name: zhCN.fileDialogs.media, extensions: ['mp4', 'mov', 'mkv', 'webm', 'm4a', 'mp3', 'wav', 'png', 'jpg', 'jpeg', 'webp'] }
+        {
+          name: zhCN.fileDialogs.media,
+          extensions: ['mp4', 'mov', 'mkv', 'webm', 'm4a', 'mp3', 'wav', 'png', 'jpg', 'jpeg', 'webp'],
+        },
       ]);
       if (!path) {
         return;
@@ -1609,10 +1979,14 @@ function addProjectBookmark(time = playheadTime): void {
         clipId: clip.id,
         media,
         durationMode: 'trim-to-original',
-        warnings: getReplaceMediaCompatibilityWarnings(clip, media)
+        warnings: getReplaceMediaCompatibilityWarnings(clip, media),
       });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.replaceMediaFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.replaceMediaChooseFailed });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.replaceMediaFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.replaceMediaChooseFailed,
+      });
     }
   }
 
@@ -1621,20 +1995,44 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     try {
-      commandManager.execute(new ReplaceMediaCommand(timelineAccessor, replaceMediaDialog.clipId, replaceMediaDialog.media, replaceMediaDialog.durationMode));
+      commandManager.execute(
+        new ReplaceMediaCommand(
+          timelineAccessor,
+          replaceMediaDialog.clipId,
+          replaceMediaDialog.media,
+          replaceMediaDialog.durationMode,
+        ),
+      );
       setSelectedClipId(replaceMediaDialog.clipId);
       setReplaceMediaDialog(undefined);
-      showToast({ kind: 'success', title: zhCN.timeline.replaceMediaSuccessTitle, message: zhCN.timeline.replaceMediaSuccessMessage });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.replaceMediaSuccessTitle,
+        message: zhCN.timeline.replaceMediaSuccessMessage,
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.replaceMediaFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.replaceMediaFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
   function removeBeatMarker(markerId: string): void {
     try {
-      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, (project.beatMarkers ?? []).filter((marker) => marker.id !== markerId)));
+      commandManager.execute(
+        new UpdateProjectBeatMarkersCommand(
+          projectAccessor,
+          (project.beatMarkers ?? []).filter((marker) => marker.id !== markerId),
+        ),
+      );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.beatMarkerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeBeatMarkerFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.beatMarkerRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeBeatMarkerFailed,
+      });
     }
   }
 
@@ -1646,7 +2044,7 @@ function addProjectBookmark(time = playheadTime): void {
     setGapMenu({
       ...request,
       x: Math.min(request.x, Math.max(0, window.innerWidth - 220)),
-      y: Math.min(request.y, Math.max(0, window.innerHeight - 260))
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 260)),
     });
   }
 
@@ -1658,7 +2056,11 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new CloseGapCommand(timelineAccessor, gapMenu.trackId, gapMenu.time));
       setGapMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.closeGapFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.closeGapFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1669,7 +2071,9 @@ function addProjectBookmark(time = playheadTime): void {
     const menu = gapMenu;
     try {
       if (strategy === 'repeat' || strategy === 'crossfade') {
-        commandManager.execute(new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy)));
+        commandManager.execute(
+          new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy)),
+        );
         setGapMenu(undefined);
         return;
       }
@@ -1684,17 +2088,26 @@ function addProjectBookmark(time = playheadTime): void {
         mediaId: media.id,
         trackId: menu.trackId,
         start: gap.start,
-        duration: gap.duration
+        duration: gap.duration,
       });
-      commandManager.execute(new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy, { clip })));
+      commandManager.execute(
+        new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy, { clip })),
+      );
       setSelectedClipId(clip.id);
       setGapMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.smartGapFillFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.smartGapFillFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
-  async function createGapFillMediaAsset(menu: GapMenuState, strategy: Extract<GapFillStrategy, 'freeze-frame' | 'black' | 'white'>): Promise<MediaAsset> {
+  async function createGapFillMediaAsset(
+    menu: GapMenuState,
+    strategy: Extract<GapFillStrategy, 'freeze-frame' | 'black' | 'white'>,
+  ): Promise<MediaAsset> {
     if (strategy === 'freeze-frame') {
       try {
         const gap = findTimelineGapAtTime(project.timeline, menu.trackId, menu.time);
@@ -1704,13 +2117,16 @@ function addProjectBookmark(time = playheadTime): void {
           throw new Error(zhCN.timeline.freezeFrameUnavailableMessage);
         }
         const frameDuration = 1 / Math.max(1, project.settings.fps || 30);
-        const sourceTime = 'mediaId' in sourceClip ? Math.max(0, sourceClip.trimStart + getClipSourceVisibleDuration(sourceClip) - frameDuration) : 0;
+        const sourceTime =
+          'mediaId' in sourceClip
+            ? Math.max(0, sourceClip.trimStart + getClipSourceVisibleDuration(sourceClip) - frameDuration)
+            : 0;
         const result = await generateGapFillMedia({
           kind: 'freeze-frame',
           sourcePath: sourceAsset.path,
           sourceTime,
           width: sourceAsset.width || project.settings.width,
-          height: sourceAsset.height || project.settings.height
+          height: sourceAsset.height || project.settings.height,
         });
         return buildGapFillAsset(result, zhCN.timeline.gapFillFreezeFrameName);
       } catch {
@@ -1721,12 +2137,18 @@ function addProjectBookmark(time = playheadTime): void {
       kind: 'solid-color',
       color: strategy === 'white' ? '#ffffff' : '#000000',
       width: project.settings.width,
-      height: project.settings.height
+      height: project.settings.height,
     });
-    return buildGapFillAsset(result, strategy === 'white' ? zhCN.timeline.gapFillWhiteName : zhCN.timeline.gapFillBlackName);
+    return buildGapFillAsset(
+      result,
+      strategy === 'white' ? zhCN.timeline.gapFillWhiteName : zhCN.timeline.gapFillBlackName,
+    );
   }
 
-  function buildGapFillAsset(result: { path: string; name: string; width: number; height: number }, fallbackName: string): MediaAsset {
+  function buildGapFillAsset(
+    result: { path: string; name: string; width: number; height: number },
+    fallbackName: string,
+  ): MediaAsset {
     return {
       id: createId('media-gap-fill'),
       type: 'image',
@@ -1735,7 +2157,7 @@ function addProjectBookmark(time = playheadTime): void {
       duration: 0,
       width: result.width || project.settings.width,
       height: result.height || project.settings.height,
-      importedAt: new Date().toISOString()
+      importedAt: new Date().toISOString(),
     };
   }
 
@@ -1758,7 +2180,9 @@ function addProjectBookmark(time = playheadTime): void {
     event.currentTarget.setPointerCapture(event.pointerId);
     rootRef.current?.focus();
     setSelectionStart({ x: event.clientX, y: event.clientY });
-    setSelectionRect(buildSelectionMarqueeRect({ x: event.clientX, y: event.clientY }, { x: event.clientX, y: event.clientY }));
+    setSelectionRect(
+      buildSelectionMarqueeRect({ x: event.clientX, y: event.clientY }, { x: event.clientX, y: event.clientY }),
+    );
   }
 
   function onAnnotationLayerPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
@@ -1783,7 +2207,7 @@ function addProjectBookmark(time = playheadTime): void {
     setClipMenu({
       ...request,
       x: Math.min(request.x, Math.max(0, window.innerWidth - 260)),
-      y: Math.min(request.y, Math.max(0, window.innerHeight - 360))
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 360)),
     });
   }
 
@@ -1793,32 +2217,54 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     try {
-      const keyframe = volumeEnvelopeControlPointToKeyframe({ time: request.time, value: request.value }, clip.duration);
+      const keyframe = volumeEnvelopeControlPointToKeyframe(
+        { time: request.time, value: request.value },
+        clip.duration,
+      );
       commandManager.execute(new AddKeyframeCommand(timelineAccessor, clip.id, 'volume', keyframe));
       setSelectedClipId(clip.id);
       setSelectedKeyframe({ clipId: clip.id, property: 'volume', keyframeId: keyframe.id });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.volumeEnvelopeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage,
+      });
     }
   }
 
   function updateVolumeEnvelopePoint(request: Required<VolumeEnvelopePointRequest>): void {
     try {
-      commandManager.execute(new UpdateKeyframeCommand(timelineAccessor, request.clipId, 'volume', request.keyframeId, { time: request.time, value: request.value }));
+      commandManager.execute(
+        new UpdateKeyframeCommand(timelineAccessor, request.clipId, 'volume', request.keyframeId, {
+          time: request.time,
+          value: request.value,
+        }),
+      );
       setSelectedClipId(request.clipId);
       setSelectedKeyframe({ clipId: request.clipId, property: 'volume', keyframeId: request.keyframeId });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.volumeEnvelopeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage,
+      });
     }
   }
 
-  function removeVolumeEnvelopePoint(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void {
+  function removeVolumeEnvelopePoint(
+    request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>,
+  ): void {
     try {
       commandManager.execute(new RemoveKeyframeCommand(timelineAccessor, request.clipId, 'volume', request.keyframeId));
       setSelectedKeyframes([]);
       setSelectedClipId(request.clipId);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.volumeEnvelopeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage,
+      });
     }
   }
 
@@ -1831,7 +2277,7 @@ function addProjectBookmark(time = playheadTime): void {
     setVolumeEnvelopeMenu({
       ...request,
       x: Math.min(request.x, Math.max(0, window.innerWidth - 180)),
-      y: Math.min(request.y, Math.max(0, window.innerHeight - 170))
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 170)),
     });
   }
 
@@ -1845,12 +2291,22 @@ function addProjectBookmark(time = playheadTime): void {
     }
     try {
       const keyframes = buildVolumeFadeKeyframes(kind, clip.duration, clip.volume, Math.min(1, clip.duration));
-      commandManager.execute(new BatchUpdateKeyframeCommand(timelineAccessor, [{ clipId: clip.id, property: 'volume', keyframes }], zhCN.timeline.volumeEnvelopeFadeCommand));
+      commandManager.execute(
+        new BatchUpdateKeyframeCommand(
+          timelineAccessor,
+          [{ clipId: clip.id, property: 'volume', keyframes }],
+          zhCN.timeline.volumeEnvelopeFadeCommand,
+        ),
+      );
       setSelectedClipId(clip.id);
       setSelectedKeyframes(keyframes.map((frame) => ({ clipId: clip.id, property: 'volume', keyframeId: frame.id })));
       setVolumeEnvelopeMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.volumeEnvelopeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage,
+      });
     }
   }
 
@@ -1859,12 +2315,22 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     try {
-      commandManager.execute(new BatchUpdateKeyframeCommand(timelineAccessor, [{ clipId: volumeEnvelopeMenu.clipId, property: 'volume', keyframes: [], replace: true }], zhCN.timeline.volumeEnvelopeResetCommand));
+      commandManager.execute(
+        new BatchUpdateKeyframeCommand(
+          timelineAccessor,
+          [{ clipId: volumeEnvelopeMenu.clipId, property: 'volume', keyframes: [], replace: true }],
+          zhCN.timeline.volumeEnvelopeResetCommand,
+        ),
+      );
       setSelectedKeyframes([]);
       setSelectedClipId(volumeEnvelopeMenu.clipId);
       setVolumeEnvelopeMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.volumeEnvelopeRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage,
+      });
     }
   }
 
@@ -1874,7 +2340,11 @@ function addProjectBookmark(time = playheadTime): void {
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
     if (!asset || (clip.type === 'video' && !asset.hasAudio) || (clip.type !== 'video' && clip.type !== 'audio')) {
-      showToast({ kind: 'warning', title: zhCN.timeline.silenceUnavailableTitle, message: zhCN.timeline.silenceUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.silenceUnavailableTitle,
+        message: zhCN.timeline.silenceUnavailableMessage,
+      });
       return;
     }
     setSilenceDialog({ clip, asset });
@@ -1882,10 +2352,7 @@ function addProjectBookmark(time = playheadTime): void {
 
   function getDialogueDetectionTarget(): { clip: Clip; asset: MediaAsset } | undefined {
     const selected = new Set(selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []);
-    const candidates = [
-      ...allClips.filter((clip) => selected.has(clip.id)),
-      ...allClips
-    ];
+    const candidates = [...allClips.filter((clip) => selected.has(clip.id)), ...allClips];
     for (const clip of candidates) {
       const asset = getClipMediaAsset(clip);
       if (!asset || (clip.type !== 'audio' && clip.type !== 'video') || (clip.type === 'video' && !asset.hasAudio)) {
@@ -1899,7 +2366,11 @@ function addProjectBookmark(time = playheadTime): void {
   async function runDialogueDetection(sensitivity: DialogueSensitivity): Promise<void> {
     const target = getDialogueDetectionTarget();
     if (!target) {
-      showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionUnavailableTitle, message: zhCN.timeline.dialogueDetectionUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.dialogueDetectionUnavailableTitle,
+        message: zhCN.timeline.dialogueDetectionUnavailableMessage,
+      });
       setDialogueMarkers([]);
       setDialogueMisses([]);
       return;
@@ -1912,22 +2383,33 @@ function addProjectBookmark(time = playheadTime): void {
         id: `dialogue-${target.clip.id}-${index + 1}`,
         start: round(target.clip.start + dialogue.start),
         end: round(target.clip.start + dialogue.end),
-        duration: round(dialogue.end - dialogue.start)
+        duration: round(dialogue.end - dialogue.start),
       }));
       const whisperSegments = project.timeline.tracks
         .filter((track) => track.type === 'subtitle')
         .flatMap((track) =>
           track.clips
-            .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && clip.text.trim().length > 0)
-            .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration), text: clip.text }))
+            .filter(
+              (clip): clip is Extract<Clip, { type: 'subtitle' }> =>
+                clip.type === 'subtitle' && clip.text.trim().length > 0,
+            )
+            .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration), text: clip.text })),
         );
       setDialogueMarkers(absoluteDialogues);
       setDialogueMisses(compareDialogueWithWhisper(absoluteDialogues, whisperSegments));
       if (absoluteDialogues.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionTitle, message: zhCN.timeline.dialogueDetectionNoResults });
+        showToast({
+          kind: 'warning',
+          title: zhCN.timeline.dialogueDetectionTitle,
+          message: zhCN.timeline.dialogueDetectionNoResults,
+        });
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.dialogueDetectionFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.dialogueDetectionFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.dialogueDetectionFailedMessage,
+      });
     }
   }
 
@@ -1936,20 +2418,39 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     const existingTrack = project.timeline.tracks.find((track) => track.type === 'subtitle');
-    const targetTrack = existingTrack ?? createTrack({ id: createId('track'), type: 'subtitle', name: zhCN.timeline.dialogueSubtitleTrackName, clips: [] });
+    const targetTrack =
+      existingTrack ??
+      createTrack({
+        id: createId('track'),
+        type: 'subtitle',
+        name: zhCN.timeline.dialogueSubtitleTrackName,
+        clips: [],
+      });
     const clips = createSubtitleClipsFromDialogues(dialogueMarkers, {
       trackId: targetTrack.id,
       baseId: createId('dialogue-subtitle'),
-      namePrefix: zhCN.timeline.dialogueSubtitleNamePrefix
+      namePrefix: zhCN.timeline.dialogueSubtitleNamePrefix,
     });
     try {
       commandManager.execute(
-        new BatchImportSubtitleCommand(timelineAccessor, { ...targetTrack, clips }, { mode: existingTrack ? 'append' : 'new-track', targetTrackId: existingTrack?.id })
+        new BatchImportSubtitleCommand(
+          timelineAccessor,
+          { ...targetTrack, clips },
+          { mode: existingTrack ? 'append' : 'new-track', targetTrackId: existingTrack?.id },
+        ),
       );
       setSelectedClipIds(clips.map((clip) => clip.id));
-      showToast({ kind: 'success', title: zhCN.timeline.dialogueSubtitlesCreatedTitle, message: zhCN.editorToasts.subtitlesGenerated(clips.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.dialogueSubtitlesCreatedTitle,
+        message: zhCN.editorToasts.subtitlesGenerated(clips.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -1958,9 +2459,17 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new RemoveSilenceCommand(timelineAccessor, clipId, ranges));
       setSilenceDialog(undefined);
       clearSelectedClipIds();
-      showToast({ kind: 'success', title: zhCN.timeline.silenceRemovedTitle, message: zhCN.timeline.silenceRemovedMessage(ranges.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.silenceRemovedTitle,
+        message: zhCN.timeline.silenceRemovedMessage(ranges.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.silenceRemoveFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.silenceRemoveFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -1970,7 +2479,11 @@ function addProjectBookmark(time = playheadTime): void {
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
     if (clip.type !== 'video' || !asset) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.sceneUnavailableTitle,
+        message: zhCN.timeline.sceneUnavailableMessage,
+      });
       return;
     }
     setSceneDialog({
@@ -1984,7 +2497,7 @@ function addProjectBookmark(time = playheadTime): void {
       minSceneSeconds: 1,
       splitAtCuts: true,
       addMarkers: false,
-      syncChapters: false
+      syncChapters: false,
     });
   }
 
@@ -1996,7 +2509,11 @@ function addProjectBookmark(time = playheadTime): void {
     const clip = findClip(current.clip.id);
     const asset = getClipMediaAsset(clip);
     if (clip.type !== 'video' || !asset) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.sceneUnavailableTitle,
+        message: zhCN.timeline.sceneUnavailableMessage,
+      });
       return;
     }
     const speed = getClipSpeed(clip);
@@ -2016,9 +2533,9 @@ function addProjectBookmark(time = playheadTime): void {
             totalFrames: undefined,
             taskId,
             limited: limit.limited,
-            analyzedDuration: limit.analysisDuration
+            analyzedDuration: limit.analysisDuration,
           }
-        : dialog
+        : dialog,
     );
     let unlisten: (() => void) | undefined;
     try {
@@ -2029,9 +2546,9 @@ function addProjectBookmark(time = playheadTime): void {
                 ...dialog,
                 progress: payload.progress,
                 analyzedFrames: payload.analyzedFrames ?? dialog.analyzedFrames,
-                totalFrames: payload.totalFrames ?? dialog.totalFrames
+                totalFrames: payload.totalFrames ?? dialog.totalFrames,
               }
-            : dialog
+            : dialog,
         );
       });
       const result = await detectSceneChanges({
@@ -2039,7 +2556,7 @@ function addProjectBookmark(time = playheadTime): void {
         threshold: current.threshold,
         duration: limit.analysisDuration,
         taskId,
-        frameRate: project.settings.fps
+        frameRate: project.settings.fps,
       });
       const scenecuts = result.sceneTimes
         .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
@@ -2055,20 +2572,28 @@ function addProjectBookmark(time = playheadTime): void {
               scenecuts,
               taskId: undefined,
               limited: result.limited ?? limit.limited,
-              analyzedDuration: result.analyzedDuration ?? limit.analysisDuration
+              analyzedDuration: result.analyzedDuration ?? limit.analysisDuration,
             }
-          : dialog
+          : dialog,
       );
       if (scenecuts.length === 0) {
         showToast({ kind: 'info', title: zhCN.timeline.noSceneCutsTitle });
       }
     } catch (error) {
       if (error instanceof Error && /canceled/i.test(error.message)) {
-        setSceneDialog((dialog) => (dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
+        setSceneDialog((dialog) =>
+          dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog,
+        );
         return;
       }
-      setSceneDialog((dialog) => (dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
-      showToast({ kind: 'error', title: zhCN.timeline.sceneDetectFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage });
+      setSceneDialog((dialog) =>
+        dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog,
+      );
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.sceneDetectFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage,
+      });
     } finally {
       unlisten?.();
     }
@@ -2083,9 +2608,15 @@ function addProjectBookmark(time = playheadTime): void {
     try {
       await cancelSceneDetection(taskId);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneCancelFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.sceneCancelFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage,
+      });
     } finally {
-      setSceneDialog((dialog) => (dialog?.taskId === taskId ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
+      setSceneDialog((dialog) =>
+        dialog?.taskId === taskId ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog,
+      );
     }
   }
 
@@ -2103,24 +2634,42 @@ function addProjectBookmark(time = playheadTime): void {
     }
     try {
       if (current.addMarkers) {
-        const markers = buildSceneMarkerInputs(filteredCuts, current.clip.start, { idPrefix: `scene-${current.clip.id}` });
+        const markers = buildSceneMarkerInputs(filteredCuts, current.clip.start, {
+          idPrefix: `scene-${current.clip.id}`,
+        });
         commandManager.execute(new BatchAddMarkersCommand(timelineAccessor, markers));
       }
       if (current.syncChapters) {
-        const chapters = buildSceneMarkerInputs(filteredCuts, current.clip.start, { idPrefix: `scene-chapter-${current.clip.id}` }).map((marker) => ({
+        const chapters = buildSceneMarkerInputs(filteredCuts, current.clip.start, {
+          idPrefix: `scene-chapter-${current.clip.id}`,
+        }).map((marker) => ({
           id: marker.id ?? createId('bookmark'),
           time: marker.time,
-          note: marker.label
+          note: marker.label,
         }));
-        commandManager.execute(new UpdateProjectBookmarksCommand(projectAccessor, [...(project.bookmarks ?? []), ...chapters]));
+        commandManager.execute(
+          new UpdateProjectBookmarksCommand(projectAccessor, [...(project.bookmarks ?? []), ...chapters]),
+        );
       }
       if (current.splitAtCuts) {
-        commandManager.execute(new BatchSplitAtSceneCutsCommand(timelineAccessor, [{ clipId: current.clip.id, cuts: filteredCuts, minSceneSeconds: 0 }]));
+        commandManager.execute(
+          new BatchSplitAtSceneCutsCommand(timelineAccessor, [
+            { clipId: current.clip.id, cuts: filteredCuts, minSceneSeconds: 0 },
+          ]),
+        );
       }
-      showToast({ kind: 'success', title: zhCN.timeline.sceneSplitTitle, message: zhCN.timeline.sceneApplyMessage(filteredCuts.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.sceneSplitTitle,
+        message: zhCN.timeline.sceneApplyMessage(filteredCuts.length),
+      });
       setSceneDialog(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneSplitFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.sceneSplitFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -2130,14 +2679,20 @@ function addProjectBookmark(time = playheadTime): void {
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
     if (clip.type !== 'video' || !asset) {
-      showToast({ kind: 'warning', title: zhCN.timeline.coverFrameUnavailableTitle, message: zhCN.timeline.coverFrameUnavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.coverFrameUnavailableTitle,
+        message: zhCN.timeline.coverFrameUnavailableMessage,
+      });
       return;
     }
     setCoverFrameDialog({ clip, frames: [], progress: 0, loading: true });
     let unlisten: (() => void) | undefined;
     try {
       unlisten = await listenCoverFrameProgress((payload) => {
-        setCoverFrameDialog((current) => (current?.clip.id === clip.id ? { ...current, progress: payload.progress } : current));
+        setCoverFrameDialog((current) =>
+          current?.clip.id === clip.id ? { ...current, progress: payload.progress } : current,
+        );
       });
       const outputDir = await getCoverFrameOutputDir(projectPath);
       const timestamps = buildEvenCoverFrameTimestamps(asset.duration || clip.duration, 6);
@@ -2148,7 +2703,7 @@ function addProjectBookmark(time = playheadTime): void {
         outputStem: sanitizeCoverFileStem(`${project.name}-${clip.name}-${clip.id}`),
         mode: 'interval',
         count: 6,
-        timestamps
+        timestamps,
       });
       if (result.frames.length === 0) {
         setCoverFrameDialog({ clip, frames: [], progress: 1, loading: false, error: zhCN.timeline.coverFrameEmpty });
@@ -2161,7 +2716,7 @@ function addProjectBookmark(time = playheadTime): void {
         frames: [],
         progress: 1,
         loading: false,
-        error: error instanceof Error ? error.message : zhCN.timeline.coverFrameFailedMessage
+        error: error instanceof Error ? error.message : zhCN.timeline.coverFrameFailedMessage,
       });
     } finally {
       unlisten?.();
@@ -2171,7 +2726,11 @@ function addProjectBookmark(time = playheadTime): void {
   function applyProjectCoverFrame(frame: CoverFrameResult): void {
     commandManager.execute(new UpdateProjectCoverCommand(projectAccessor, frame.path));
     setCoverFrameDialog((current) => (current ? { ...current, selectedPath: frame.path } : current));
-    showToast({ kind: 'success', title: zhCN.timeline.coverFrameSelectedTitle, message: zhCN.timeline.coverFrameSelectedMessage });
+    showToast({
+      kind: 'success',
+      title: zhCN.timeline.coverFrameSelectedTitle,
+      message: zhCN.timeline.coverFrameSelectedMessage,
+    });
   }
 
   async function generateSubtitles(clipId: string): Promise<void> {
@@ -2179,15 +2738,27 @@ function addProjectBookmark(time = playheadTime): void {
     const asset = getClipMediaAsset(clip);
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
-    if (!asset || (clip.type !== 'audio' && clip.type !== 'video') || !canGenerateSubtitlesForClip(clip, asset, whisperAvailability.ready)) {
-      showToast({ kind: 'warning', title: zhCN.timeline.whisperUnavailableTitle, message: whisperAvailability.error ?? zhCN.whisper.notConfigured });
+    if (
+      !asset ||
+      (clip.type !== 'audio' && clip.type !== 'video') ||
+      !canGenerateSubtitlesForClip(clip, asset, whisperAvailability.ready)
+    ) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.whisperUnavailableTitle,
+        message: whisperAvailability.error ?? zhCN.whisper.notConfigured,
+      });
       return;
     }
 
     const settings = useWhisperSettingsStore.getState();
     const currentAvailability = await getWhisperAvailability(settings);
     if (!currentAvailability.ready) {
-      showToast({ kind: 'warning', title: zhCN.timeline.whisperUnavailableTitle, message: currentAvailability.error ?? zhCN.whisper.notConfigured });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.whisperUnavailableTitle,
+        message: currentAvailability.error ?? zhCN.whisper.notConfigured,
+      });
       return;
     }
 
@@ -2195,29 +2766,53 @@ function addProjectBookmark(time = playheadTime): void {
     let unlisten: (() => void) | undefined;
     try {
       unlisten = await listenBridge<WhisperProgressEvent>('whisper-progress', (payload) => {
-        setWhisperDialog((current) => (current?.clip.id === payload.clipId ? { ...current, progress: payload.progress } : current));
+        setWhisperDialog((current) =>
+          current?.clip.id === payload.clipId ? { ...current, progress: payload.progress } : current,
+        );
       });
-      const track = await buildWhisperSubtitleTrackForClip(clip, asset, useEditorStore.getState().project.timeline, settings);
+      const track = await buildWhisperSubtitleTrackForClip(
+        clip,
+        asset,
+        useEditorStore.getState().project.timeline,
+        settings,
+      );
       if (track.clips.length === 0) {
         showToast({ kind: 'warning', title: zhCN.timeline.whisperFailedTitle, message: zhCN.whisper.noSubtitleCues });
         return;
       }
       commandManager.execute(new AddTrackCommand(timelineAccessor, track));
       setSelectedClipId(track.clips[0]?.id);
-      showToast({ kind: 'success', title: zhCN.timeline.whisperCompleteTitle, message: zhCN.editorToasts.subtitlesGenerated(track.clips.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.whisperCompleteTitle,
+        message: zhCN.editorToasts.subtitlesGenerated(track.clips.length),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.whisperFailedTitle, message: error instanceof Error ? error.message : zhCN.whisper.noSubtitleCues });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.whisperFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.whisper.noSubtitleCues,
+      });
     } finally {
       unlisten?.();
       setWhisperDialog(undefined);
     }
   }
 
-  function findSubtitleAlignmentSource(subtitleClips: SubtitleClip[]): { clip: SubtitleAlignmentMediaClip; asset: MediaAsset } | undefined {
-    const rangeStart = Math.max(0, Math.min(...subtitleClips.map((clip) => clip.start)) - SUBTITLE_ALIGNMENT_MAX_DISTANCE);
-    const rangeEnd = Math.max(...subtitleClips.map((clip) => clip.start + clip.duration)) + SUBTITLE_ALIGNMENT_MAX_DISTANCE;
+  function findSubtitleAlignmentSource(
+    subtitleClips: SubtitleClip[],
+  ): { clip: SubtitleAlignmentMediaClip; asset: MediaAsset } | undefined {
+    const rangeStart = Math.max(
+      0,
+      Math.min(...subtitleClips.map((clip) => clip.start)) - SUBTITLE_ALIGNMENT_MAX_DISTANCE,
+    );
+    const rangeEnd =
+      Math.max(...subtitleClips.map((clip) => clip.start + clip.duration)) + SUBTITLE_ALIGNMENT_MAX_DISTANCE;
     for (const clip of allClips) {
-      if (!isSubtitleAlignmentMediaClip(clip) || !timelineRangesOverlap(rangeStart, rangeEnd, clip.start, clip.start + clip.duration)) {
+      if (
+        !isSubtitleAlignmentMediaClip(clip) ||
+        !timelineRangesOverlap(rangeStart, rangeEnd, clip.start, clip.start + clip.duration)
+      ) {
         continue;
       }
       const asset = getClipMediaAsset(clip);
@@ -2232,41 +2827,69 @@ function addProjectBookmark(time = playheadTime): void {
     const clip = findClip(clipId);
     setClipMenu(undefined);
     if (clip.type !== 'subtitle') {
-      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentRequiresSubtitle });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.subtitleAlignmentFailedTitle,
+        message: zhCN.timeline.subtitleAlignmentRequiresSubtitle,
+      });
       return;
     }
     const track = project.timeline.tracks.find((item) => item.id === clip.trackId && item.type === 'subtitle');
-    const subtitleClips = (track?.clips.filter((item): item is SubtitleClip => item.type === 'subtitle') ?? []).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    const subtitleClips = (track?.clips.filter((item): item is SubtitleClip => item.type === 'subtitle') ?? []).sort(
+      (left, right) => left.start - right.start || left.id.localeCompare(right.id),
+    );
     if (subtitleClips.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentNoSubtitles });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.subtitleAlignmentFailedTitle,
+        message: zhCN.timeline.subtitleAlignmentNoSubtitles,
+      });
       return;
     }
     const source = findSubtitleAlignmentSource(subtitleClips);
     if (!source) {
-      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentNoAudioSource });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.subtitleAlignmentFailedTitle,
+        message: zhCN.timeline.subtitleAlignmentNoAudioSource,
+      });
       return;
     }
 
     try {
       const samples = await analyzeWaveform(source.asset.path, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND);
       const peaks = buildSubtitleAlignmentPeaks(samples, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND, source.clip);
-      const projectDuration = Math.max(getTimelineDuration(project.timeline), ...subtitleClips.map((item) => item.start + item.duration), 1 / Math.max(1, project.settings.fps));
+      const projectDuration = Math.max(
+        getTimelineDuration(project.timeline),
+        ...subtitleClips.map((item) => item.start + item.duration),
+        1 / Math.max(1, project.settings.fps),
+      );
       const command = new BatchAlignSubtitleCommand(
         timelineAccessor,
         subtitleClips.map((item) => item.id),
         peaks,
         projectDuration,
-        { maxDistance: SUBTITLE_ALIGNMENT_MAX_DISTANCE, minDuration: 1 / Math.max(1, project.settings.fps) }
+        { maxDistance: SUBTITLE_ALIGNMENT_MAX_DISTANCE, minDuration: 1 / Math.max(1, project.settings.fps) },
       );
       commandManager.execute(command);
       setSelectedClipIds(command.report.updates.map((update) => update.clipId));
-      setSubtitleAlignReport({ correctedCount: command.report.correctedCount, averageOffsetMs: command.report.averageOffsetMs });
-      showToast({ kind: 'success', title: zhCN.timeline.subtitleAlignmentTitle, message: zhCN.timeline.subtitleAlignmentReport(command.report.correctedCount, command.report.averageOffsetMs) });
+      setSubtitleAlignReport({
+        correctedCount: command.report.correctedCount,
+        averageOffsetMs: command.report.averageOffsetMs,
+      });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.subtitleAlignmentTitle,
+        message: zhCN.timeline.subtitleAlignmentReport(command.report.correctedCount, command.report.averageOffsetMs),
+      });
     } catch (error) {
       showToast({
         kind: 'warning',
         title: zhCN.timeline.subtitleAlignmentFailedTitle,
-        message: error instanceof Error && error.message !== 'No subtitle alignment updates' ? error.message : zhCN.timeline.subtitleAlignmentNoPeaks
+        message:
+          error instanceof Error && error.message !== 'No subtitle alignment updates'
+            ? error.message
+            : zhCN.timeline.subtitleAlignmentNoPeaks,
       });
     }
   }
@@ -2301,7 +2924,12 @@ function addProjectBookmark(time = playheadTime): void {
     const mockFrames: ReframeAIFrame[] = sampleTimes.map((time) => ({
       time,
       faceBox: null,
-      subjectBox: { x: Math.round(sourceWidth * 0.25), y: Math.round(sourceHeight * 0.25), w: Math.round(sourceWidth * 0.5), h: Math.round(sourceHeight * 0.5) }
+      subjectBox: {
+        x: Math.round(sourceWidth * 0.25),
+        y: Math.round(sourceHeight * 0.25),
+        w: Math.round(sourceWidth * 0.5),
+        h: Math.round(sourceHeight * 0.5),
+      },
     }));
     const keyframes = generateReframeKeyframes(mockFrames, sourceWidth, sourceHeight, aspect);
     const smoothed = smoothKeyframes(keyframes);
@@ -2322,8 +2950,16 @@ function addProjectBookmark(time = playheadTime): void {
     const idx = sortedClips.findIndex((c) => c.id === clipId);
     const adjacent = idx >= 0 && idx < sortedClips.length - 1 ? sortedClips[idx + 1] : undefined;
     if (!adjacent || adjacent.type !== 'video') return;
-    const featuresA: TransitionClipFeatures = { colorHist: new Array(16).fill(0).map((_, i) => i < 8 ? 0.12 : 0.02), motionScore: 15, sceneTag: '室内' };
-    const featuresB: TransitionClipFeatures = { colorHist: new Array(16).fill(0).map((_, i) => i < 8 ? 0.02 : 0.12), motionScore: 15, sceneTag: '户外' };
+    const featuresA: TransitionClipFeatures = {
+      colorHist: new Array(16).fill(0).map((_, i) => (i < 8 ? 0.12 : 0.02)),
+      motionScore: 15,
+      sceneTag: '室内',
+    };
+    const featuresB: TransitionClipFeatures = {
+      colorHist: new Array(16).fill(0).map((_, i) => (i < 8 ? 0.02 : 0.12)),
+      motionScore: 15,
+      sceneTag: '户外',
+    };
     const result = recommendTransition(featuresA, featuresB);
     setTransitionDialog({ clipId, adjacentClipId: adjacent.id, recommendations: result.recommended });
   }
@@ -2362,7 +2998,11 @@ function addProjectBookmark(time = playheadTime): void {
     const anomalies = detectAnomalies(samples);
     commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { anomalies }));
     if (anomalies.length > 0) {
-      showToast({ kind: 'info', title: zhCN.anomalyDetection.title, message: zhCN.anomalyDetection.complete(anomalies.length) });
+      showToast({
+        kind: 'info',
+        title: zhCN.anomalyDetection.title,
+        message: zhCN.anomalyDetection.complete(anomalies.length),
+      });
     } else {
       showToast({ kind: 'success', title: zhCN.anomalyDetection.title, message: zhCN.anomalyDetection.noAnomalies });
     }
@@ -2371,7 +3011,7 @@ function addProjectBookmark(time = playheadTime): void {
   function removeAnomaly(clipId: string, anomaly: AnomalyInterval): void {
     const clip = findClip(clipId);
     const remaining = (clip.anomalies ?? []).filter(
-      (a) => !(a.startTime === anomaly.startTime && a.endTime === anomaly.endTime && a.type === anomaly.type)
+      (a) => !(a.startTime === anomaly.startTime && a.endTime === anomaly.endTime && a.type === anomaly.type),
     );
     if (remaining.length === (clip.anomalies ?? []).length) return;
     if (anomaly.type === 'black') {
@@ -2447,7 +3087,7 @@ function addProjectBookmark(time = playheadTime): void {
       gestureScaleRef.current = scale;
       const nextZoom = zoomTimelineByGesture(gestureBaseZoom, scale);
       const rect = scroll!.getBoundingClientRect();
-      const anchorX = (event as unknown as { clientX?: number }).clientX ?? (rect.left + rect.width / 2);
+      const anchorX = (event as unknown as { clientX?: number }).clientX ?? rect.left + rect.width / 2;
       applyZoom(nextZoom, anchorX - rect.left);
     }
 
@@ -2549,7 +3189,7 @@ function addProjectBookmark(time = playheadTime): void {
       zoom,
       duration: timelineDuration,
       minimapHeight,
-      mode
+      mode,
     });
     syncScrollViewport();
   }
@@ -2575,7 +3215,11 @@ function addProjectBookmark(time = playheadTime): void {
         .text()
         .then((text) => addCredits(text, start))
         .catch((error) => {
-          showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+          showToast({
+            kind: 'warning',
+            title: zhCN.timeline.editRejectedTitle,
+            message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+          });
         });
       return;
     }
@@ -2587,12 +3231,25 @@ function addProjectBookmark(time = playheadTime): void {
     if (event.defaultPrevented || isEditableKeyboardTarget(event.target)) {
       return;
     }
-    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && selectedClipIds.length > 0 && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    if (
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey &&
+      selectedClipIds.length > 0 &&
+      (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+    ) {
       event.preventDefault();
       moveSelectedClipsByKeyboardFrame(event.key === 'ArrowLeft' ? -1 : 1);
       return;
     }
-    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key === '[' || event.key === ']')) {
+    if (
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey &&
+      (event.key === '[' || event.key === ']')
+    ) {
       event.preventDefault();
       trimSelectedClipByKeyboardFrame(event.key === '[' ? 'in' : 'out');
       return;
@@ -2641,7 +3298,7 @@ function addProjectBookmark(time = playheadTime): void {
       selectedClipIds,
       selectedClipId,
       direction,
-      fps: project.settings.fps || 30
+      fps: project.settings.fps || 30,
     });
     const ids = Object.keys(starts);
     if (ids.length === 0) {
@@ -2660,7 +3317,11 @@ function addProjectBookmark(time = playheadTime): void {
         setSelectedClipId(ids[0]);
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -2672,10 +3333,23 @@ function addProjectBookmark(time = playheadTime): void {
     }
     const nextTrim = buildKeyboardClipTrim({ clip, edge, fps: project.settings.fps || 30 });
     try {
-      commandManager.execute(new TrimClipCommand(timelineAccessor, clip.id, nextTrim.trimStart, nextTrim.trimEnd, undefined, minFrameDuration()));
+      commandManager.execute(
+        new TrimClipCommand(
+          timelineAccessor,
+          clip.id,
+          nextTrim.trimStart,
+          nextTrim.trimEnd,
+          undefined,
+          minFrameDuration(),
+        ),
+      );
       setSelectedClipId(clip.id);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.editRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage,
+      });
     }
   }
 
@@ -2690,14 +3364,14 @@ function addProjectBookmark(time = playheadTime): void {
       anchorViewportX,
       oldZoom: zoom,
       newZoom: nextZoom,
-      labelWidth: LABEL_WIDTH
+      labelWidth: LABEL_WIDTH,
     });
     const nextScrollLeft = ensurePlayheadVisible({
       scrollLeft: anchoredScrollLeft,
       viewportWidth: scroll.clientWidth,
       playheadTime,
       zoom: nextZoom,
-      labelWidth: LABEL_WIDTH
+      labelWidth: LABEL_WIDTH,
     });
     scroll.scrollLeft = nextScrollLeft;
     setTimelineZoom(nextZoom);
@@ -2709,13 +3383,15 @@ function addProjectBookmark(time = playheadTime): void {
   }
 
   function buildMovedPreviewTimeline(previewStartsByClipId: Record<string, number>) {
-    const movedById = new Map(Object.entries(previewStartsByClipId).map(([clipId, start]) => [clipId, moveClip(findClip(clipId), start)]));
+    const movedById = new Map(
+      Object.entries(previewStartsByClipId).map(([clipId, start]) => [clipId, moveClip(findClip(clipId), start)]),
+    );
     return {
       ...project.timeline,
       tracks: project.timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => movedById.get(clip.id) ?? clip)
-      }))
+        clips: track.clips.map((clip) => movedById.get(clip.id) ?? clip),
+      })),
     };
   }
 
@@ -2732,19 +3408,24 @@ function addProjectBookmark(time = playheadTime): void {
       return {
         ...clip,
         trimStart,
-        duration: round(Math.max(minDuration, calculateSpeedCurveDisplayDuration(visibleSourceDuration, clip.keyframes, speed))),
-        transform: { ...clip.transform }
+        duration: round(
+          Math.max(minDuration, calculateSpeedCurveDisplayDuration(visibleSourceDuration, clip.keyframes, speed)),
+        ),
+        transform: { ...clip.transform },
       } as Clip;
     }
     const proposedEnd = snapClipEnd(clip.start + Math.max(minDuration, clip.duration + delta), clip, snappingDisabled);
-    const maxDuration = Math.max(minDuration, calculateSpeedCurveDisplayDuration(sourceDuration - clip.trimStart, clip.keyframes, speed));
+    const maxDuration = Math.max(
+      minDuration,
+      calculateSpeedCurveDisplayDuration(sourceDuration - clip.trimStart, clip.keyframes, speed),
+    );
     const duration = round(Math.min(maxDuration, Math.max(minDuration, proposedEnd - clip.start)));
     const visibleSourceDuration = calculateSpeedCurveSourceDuration(duration, clip.keyframes, speed);
     return {
       ...clip,
       trimEnd: round(Math.max(0, sourceDuration - clip.trimStart - visibleSourceDuration)),
       duration,
-      transform: { ...clip.transform }
+      transform: { ...clip.transform },
     } as Clip;
   }
 
@@ -2778,16 +3459,28 @@ function addProjectBookmark(time = playheadTime): void {
   function switchClipMediaVersion(clipId: string, mediaId: string): void {
     const media = project.media.find((asset) => asset.id === mediaId);
     if (!media) {
-      showToast({ kind: 'error', title: zhCN.timeline.switchMediaVersionFailedTitle, message: zhCN.timeline.switchMediaVersionMissingMedia });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.switchMediaVersionFailedTitle,
+        message: zhCN.timeline.switchMediaVersionMissingMedia,
+      });
       return;
     }
     try {
       commandManager.execute(new SwitchMediaVersionCommand(timelineAccessor, clipId, media));
       setSelectedClipId(clipId);
       setClipMenu(undefined);
-      showToast({ kind: 'success', title: zhCN.timeline.switchMediaVersionSuccessTitle, message: zhCN.timeline.switchMediaVersionSuccessMessage });
+      showToast({
+        kind: 'success',
+        title: zhCN.timeline.switchMediaVersionSuccessTitle,
+        message: zhCN.timeline.switchMediaVersionSuccessMessage,
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.timeline.switchMediaVersionFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.timeline.switchMediaVersionFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }
 
@@ -2828,8 +3521,8 @@ function addProjectBookmark(time = playheadTime): void {
         enabled: timelineGridSettings.enabled,
         unit: timelineGridSettings.unit,
         fps: project.settings.fps || 30,
-        beatTimes: timelineGridBeatTimes
-      }
+        beatTimes: timelineGridBeatTimes,
+      },
     });
     if (target && !disabled) {
       flashSnapHighlight(target.candidate.time);
@@ -2849,8 +3542,8 @@ function addProjectBookmark(time = playheadTime): void {
         enabled: timelineGridSettings.enabled,
         unit: timelineGridSettings.unit,
         fps: project.settings.fps || 30,
-        beatTimes: timelineGridBeatTimes
-      }
+        beatTimes: timelineGridBeatTimes,
+      },
     });
     if (target && !disabled) {
       flashSnapHighlight(target.candidate.time);
@@ -2868,7 +3561,7 @@ function addProjectBookmark(time = playheadTime): void {
       unit: timelineGridSettings.unit,
       fps: project.settings.fps || 30,
       pixelsPerSecond: zoom,
-      beatTimes: timelineGridBeatTimes
+      beatTimes: timelineGridBeatTimes,
     });
     return snapTime(Math.min(clip.duration, Math.max(0, snappedTimelineTime - clip.start)));
   }
@@ -2878,26 +3571,33 @@ function addProjectBookmark(time = playheadTime): void {
       { time: 0, kind: 'timeline-start' },
       { time: playheadTime, kind: 'playhead' },
       ...(project.timeline.markers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
-      ...(beatSnapEnabled ? (project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'beat' as const })) : []),
+      ...(beatSnapEnabled
+        ? (project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'beat' as const }))
+        : []),
       ...project.timeline.tracks.flatMap((track) =>
         track.clips
           .filter((item) => item.id !== clip.id)
           .flatMap((item) => [
             { time: item.start, kind: 'clip-start' as const, clipId: item.id },
-            { time: item.start + item.duration, kind: 'clip-end' as const, clipId: item.id }
-          ])
-      )
+            { time: item.start + item.duration, kind: 'clip-end' as const, clipId: item.id },
+          ]),
+      ),
     ];
   }
 
   return (
     <section
       ref={rootRef}
-      className={clsx('relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-panel focus:outline-none', reduceMotion && 'timeline-reduce-motion')}
+      className={clsx(
+        'relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-panel focus:outline-none',
+        reduceMotion && 'timeline-reduce-motion',
+      )}
       tabIndex={0}
       data-testid="timeline-root"
       data-reduce-motion={reduceMotion ? 'true' : 'false'}
-      data-editing-mode={slideEditActive ? 'slide' : slipEditActive ? 'slip' : rollingTrimActive ? 'rolling-trim' : 'none'}
+      data-editing-mode={
+        slideEditActive ? 'slide' : slipEditActive ? 'slip' : rollingTrimActive ? 'rolling-trim' : 'none'
+      }
       data-timeline-shortcuts-root="true"
       onPointerDown={(event) => {
         const target = event.target as HTMLElement | null;
@@ -2913,43 +3613,101 @@ function addProjectBookmark(time = playheadTime): void {
         <div className="mr-auto min-w-[170px] shrink-0">
           <div className="text-sm font-semibold">{zhCN.timeline.title}</div>
           <div className="whitespace-nowrap text-xs text-[var(--color-text-muted)]">{zhCN.timeline.subtitle}</div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-text-muted)]" data-testid="sequence-breadcrumb">
+          <div
+            className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-text-muted)]"
+            data-testid="sequence-breadcrumb"
+          >
             {isMainSequence ? (
               <span>{zhCN.timeline.mainSequence}</span>
             ) : (
               <>
-                <button className="text-brand hover:underline" type="button" data-testid="sequence-back-main" onClick={() => setActiveSequenceId('sequence-main')}>
+                <button
+                  className="text-brand hover:underline"
+                  type="button"
+                  data-testid="sequence-back-main"
+                  onClick={() => setActiveSequenceId('sequence-main')}
+                >
                   {zhCN.timeline.backToMainSequence}
                 </button>
                 <span>/</span>
-                <span className="font-medium text-[var(--color-text-secondary)]">{activeSequence?.name ?? zhCN.timeline.mainSequence}</span>
+                <span className="font-medium text-[var(--color-text-secondary)]">
+                  {activeSequence?.name ?? zhCN.timeline.mainSequence}
+                </span>
               </>
             )}
-            <button className="ml-2 rounded p-0.5 hover:bg-panel" type="button" title={zhCN.timeline.sequenceSettingsButton} data-testid="sequence-settings-button" onClick={() => setSequenceSettingsDialogOpen(true)}><Settings2 size={12} /></button>
+            <button
+              className="ml-2 rounded p-0.5 hover:bg-panel"
+              type="button"
+              title={zhCN.timeline.sequenceSettingsButton}
+              data-testid="sequence-settings-button"
+              onClick={() => setSequenceSettingsDialogOpen(true)}
+            >
+              <Settings2 size={12} />
+            </button>
           </div>
         </div>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addVideoTrack} data-testid="add-video-track-button" onClick={() => addTrack('video')}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addVideoTrack}
+          data-testid="add-video-track-button"
+          onClick={() => addTrack('video')}
+        >
           <Plus size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addAudioTrack} data-testid="add-audio-track-button" onClick={() => addTrack('audio')}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addAudioTrack}
+          data-testid="add-audio-track-button"
+          onClick={() => addTrack('audio')}
+        >
           <Plus size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addSubtitleTrack} data-testid="add-subtitle-track-button" onClick={() => addTrack('subtitle')}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addSubtitleTrack}
+          data-testid="add-subtitle-track-button"
+          onClick={() => addTrack('subtitle')}
+        >
           <Captions size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addTextClip} data-testid="add-text-clip-button" onClick={addText}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addTextClip}
+          data-testid="add-text-clip-button"
+          onClick={addText}
+        >
           <Type size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addCreditsClip} data-testid="add-credits-clip-button" onClick={() => addCredits()}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addCreditsClip}
+          data-testid="add-credits-clip-button"
+          onClick={() => addCredits()}
+        >
           <Captions size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={() => addTimelineMarker()}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addMarker}
+          data-testid="add-timeline-marker-button"
+          onClick={() => addTimelineMarker()}
+        >
           <Flag size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBookmark} data-testid="add-timeline-bookmark-button" onClick={() => addProjectBookmark()}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addBookmark}
+          data-testid="add-timeline-bookmark-button"
+          onClick={() => addProjectBookmark()}
+        >
           <Bookmark size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBeatMarker} data-testid="add-beat-marker-button" onClick={addBeatMarker}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.addBeatMarker}
+          data-testid="add-beat-marker-button"
+          onClick={addBeatMarker}
+        >
           <Music2 size={16} />
         </button>
         <button
@@ -3017,7 +3775,12 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <MessageSquareText size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.timelineNoteQuickAdd} data-testid="add-timeline-note-button" onClick={quickAddTimelineNote}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.timelineNoteQuickAdd}
+          data-testid="add-timeline-note-button"
+          onClick={quickAddTimelineNote}
+        >
           <MessageSquarePlus size={16} />
         </button>
         <button
@@ -3054,7 +3817,11 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <CircleDot size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.splitSelectedClip}
+          onClick={splitSelected}
+        >
           <Scissors size={16} />
         </button>
         <button
@@ -3075,7 +3842,11 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <Ungroup size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={zhCN.timeline.deleteSelectedClip}
+          onClick={deleteSelected}
+        >
           <Trash2 size={16} />
         </button>
         <button
@@ -3120,7 +3891,9 @@ function addProjectBookmark(time = playheadTime): void {
           data-testid="timeline-zoom-slider"
         />
         <div className="ml-1 flex items-center gap-1 border-l border-line pl-2" data-testid="timeline-color-filter-bar">
-          <span className="text-[11px] font-medium text-[var(--color-text-muted)]">{zhCN.timeline.timelineColorFilter}</span>
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)]">
+            {zhCN.timeline.timelineColorFilter}
+          </span>
           <button
             className={`rounded border px-2 py-1 text-[11px] font-medium ${timelineColorFilter === null ? 'border-brand text-brand' : 'border-line text-[var(--color-text-secondary)] hover:bg-panel'}`}
             type="button"
@@ -3155,88 +3928,98 @@ function addProjectBookmark(time = playheadTime): void {
           onDoubleClick={onTimelineDoubleClick}
           data-testid="timeline-scroll-container"
         >
-        <div className="relative" style={{ width: LABEL_WIDTH + width }}>
-          <Ruler
-            ticks={ticks}
-            zoom={zoom}
-            width={width}
-            currentTimecode={playheadTimecode}
-            cachedRanges={renderCacheRanges}
-            staleRanges={staleRanges}
-            diffRanges={timelineCompareRanges}
-            exportRanges={exportRangeHighlights}
-            protectedRanges={protectedRanges}
-            dialogueMarkers={dialogueMarkers}
-            onSeek={setPlayheadTime}
-            onContextMenu={openRulerMenu}
-            audioScrubEnabled={audioScrubEnabled}
-          />
-          <TimelineNoteLayer
-            width={width}
-            zoom={zoom}
-            notes={timelineNoteLayouts}
-            draft={timelineNoteDraft}
-            onDraftChange={setTimelineNoteDraft}
-            onCreateRange={onTimelineNoteRangeDraft}
-            onSeek={setPlayheadTime}
-            onEdit={(note) => openTimelineNoteEditor(note.start, note.end, note)}
-          />
-          {thumbnailTrackVisible ? <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} /> : null}
-          <div className="relative">
-            {colorHeatmap.length > 0 || colorJumps.length > 0 ? (
-              <TimelineColorHeatmapLayer points={colorHeatmap} jumps={colorJumps} zoom={zoom} width={width} />
+          <div className="relative" style={{ width: LABEL_WIDTH + width }}>
+            <Ruler
+              ticks={ticks}
+              zoom={zoom}
+              width={width}
+              currentTimecode={playheadTimecode}
+              cachedRanges={renderCacheRanges}
+              staleRanges={staleRanges}
+              diffRanges={timelineCompareRanges}
+              exportRanges={exportRangeHighlights}
+              protectedRanges={protectedRanges}
+              dialogueMarkers={dialogueMarkers}
+              onSeek={setPlayheadTime}
+              onContextMenu={openRulerMenu}
+              audioScrubEnabled={audioScrubEnabled}
+            />
+            <TimelineNoteLayer
+              width={width}
+              zoom={zoom}
+              notes={timelineNoteLayouts}
+              draft={timelineNoteDraft}
+              onDraftChange={setTimelineNoteDraft}
+              onCreateRange={onTimelineNoteRangeDraft}
+              onSeek={setPlayheadTime}
+              onEdit={(note) => openTimelineNoteEditor(note.start, note.end, note)}
+            />
+            {thumbnailTrackVisible ? (
+              <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} />
             ) : null}
-            {gridLines.map((line) => (
-              <div
-                key={`${line.time}-${line.major ? 'major' : 'minor'}`}
-                className={line.major ? 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/80' : 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/70'}
-                style={{ left: LABEL_WIDTH + line.time * zoom }}
-                data-testid="timeline-grid-line"
-                data-grid-major={line.major ? 'true' : 'false'}
-              />
-            ))}
-            {snapHighlight && !reduceMotion ? (
-              <div
-                className="pointer-events-none absolute bottom-0 top-0 z-[24] border-l-2 border-yellow-400 bg-yellow-400/10 shadow-[0_0_12px_rgba(250,204,21,0.5)]"
-                style={{ left: LABEL_WIDTH + snapHighlight.time * zoom }}
-                data-testid="timeline-snap-highlight"
-                data-time={snapHighlight.time}
-              />
-            ) : null}
-            {heatmap?.enabled ? (
-              <TimelineHeatmapCanvas
-                segments={deferredHeatmapSegments}
-                zoom={zoom}
-                width={width}
-                height={Math.max(TRACK_HEIGHT, virtualTrackWindow.totalHeight)}
-                opacity={heatmap.opacity}
-                colorScheme={heatmap.colorScheme}
-              />
-            ) : null}
-            {virtualTrackWindow.beforeHeight > 0 ? <div style={{ height: virtualTrackWindow.beforeHeight }} data-testid="timeline-track-virtual-spacer-before" /> : null}
-            {virtualTracks.map((track) => (
-              <TrackRow
-                key={track.id}
-                track={track}
-                zoom={zoom}
-                selectedClipId={selectedClipId}
-                selectedClipIds={selectedClipIds}
-                selectedKeyframe={selectedKeyframe}
-                selectedKeyframes={selectedKeyframes}
-                selectedTrackIds={selectedTrackIds}
-                drag={drag}
-                media={project.media}
-                onSelect={selectClip}
-                onKeyframeSelect={selectKeyframe}
-                onDragStart={onDragStart}
-                onTrackPointerDown={onTrackPointerDown}
-                onTrackUpdate={updateTrack}
-                onTrackHeaderClick={selectTrackHeader}
-                onTrackBatchMenu={openTrackBatchMenu}
-                onTrackReorder={reorderTracks}
-                transitions={project.timeline.transitions ?? []}
-                onTransitionMenu={(request) =>
-                  {
+            <div className="relative">
+              {colorHeatmap.length > 0 || colorJumps.length > 0 ? (
+                <TimelineColorHeatmapLayer points={colorHeatmap} jumps={colorJumps} zoom={zoom} width={width} />
+              ) : null}
+              {gridLines.map((line) => (
+                <div
+                  key={`${line.time}-${line.major ? 'major' : 'minor'}`}
+                  className={
+                    line.major
+                      ? 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/80'
+                      : 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/70'
+                  }
+                  style={{ left: LABEL_WIDTH + line.time * zoom }}
+                  data-testid="timeline-grid-line"
+                  data-grid-major={line.major ? 'true' : 'false'}
+                />
+              ))}
+              {snapHighlight && !reduceMotion ? (
+                <div
+                  className="pointer-events-none absolute bottom-0 top-0 z-[24] border-l-2 border-yellow-400 bg-yellow-400/10 shadow-[0_0_12px_rgba(250,204,21,0.5)]"
+                  style={{ left: LABEL_WIDTH + snapHighlight.time * zoom }}
+                  data-testid="timeline-snap-highlight"
+                  data-time={snapHighlight.time}
+                />
+              ) : null}
+              {heatmap?.enabled ? (
+                <TimelineHeatmapCanvas
+                  segments={deferredHeatmapSegments}
+                  zoom={zoom}
+                  width={width}
+                  height={Math.max(TRACK_HEIGHT, virtualTrackWindow.totalHeight)}
+                  opacity={heatmap.opacity}
+                  colorScheme={heatmap.colorScheme}
+                />
+              ) : null}
+              {virtualTrackWindow.beforeHeight > 0 ? (
+                <div
+                  style={{ height: virtualTrackWindow.beforeHeight }}
+                  data-testid="timeline-track-virtual-spacer-before"
+                />
+              ) : null}
+              {virtualTracks.map((track) => (
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  zoom={zoom}
+                  selectedClipId={selectedClipId}
+                  selectedClipIds={selectedClipIds}
+                  selectedKeyframe={selectedKeyframe}
+                  selectedKeyframes={selectedKeyframes}
+                  selectedTrackIds={selectedTrackIds}
+                  drag={drag}
+                  media={project.media}
+                  onSelect={selectClip}
+                  onKeyframeSelect={selectKeyframe}
+                  onDragStart={onDragStart}
+                  onTrackPointerDown={onTrackPointerDown}
+                  onTrackUpdate={updateTrack}
+                  onTrackHeaderClick={selectTrackHeader}
+                  onTrackBatchMenu={openTrackBatchMenu}
+                  onTrackReorder={reorderTracks}
+                  transitions={project.timeline.transitions ?? []}
+                  onTransitionMenu={(request) => {
                     setGapMenu(undefined);
                     setClipMenu(undefined);
                     setVolumeEnvelopeMenu(undefined);
@@ -3246,289 +4029,400 @@ function addProjectBookmark(time = playheadTime): void {
                       x: Math.min(request.x, Math.max(0, window.innerWidth - 380)),
                       y: Math.min(request.y, Math.max(0, window.innerHeight - 520)),
                       type: request.existingType ?? 'dissolve',
-                      duration: request.existingDuration ?? 0.5
+                      duration: request.existingDuration ?? 0.5,
                     });
+                  }}
+                  onGapMenu={openGapMenu}
+                  onClipMenu={openClipMenu}
+                  onVolumeEnvelopeAdd={addVolumeEnvelopePoint}
+                  onVolumeEnvelopeUpdate={updateVolumeEnvelopePoint}
+                  onVolumeEnvelopeRemove={removeVolumeEnvelopePoint}
+                  onVolumeEnvelopeMenu={openVolumeEnvelopeMenu}
+                  onClipDoubleClick={openNestedSequence}
+                  virtualWindow={virtualWindow}
+                  assetLoadWindow={{
+                    scrollLeft: scrollViewport.scrollLeft,
+                    viewportWidth: scrollViewport.viewportWidth,
+                    labelWidth: LABEL_WIDTH,
+                  }}
+                  largeProjectMode={largeProjectMode}
+                  rollingTrimActive={rollingTrimActive}
+                  slipEditActive={slipEditActive}
+                  slideEditActive={slideEditActive}
+                  clipGroupByClipId={clipGroupByClipId}
+                  colorFilter={timelineColorFilter}
+                  projectFrameRate={project.settings.fps}
+                  envelopeEditMode={envelopeEditMode}
+                  reduceMotion={reduceMotion}
+                  collaborationLocksByClipId={collaborationLocksByClipId}
+                  onRemoveAnomaly={removeAnomaly}
+                  continuityWarnings={project.timeline.continuityWarnings ?? []}
+                  colorConsistencyWarnings={project.timeline.colorConsistencyWarnings ?? []}
+                  sfxSuggestions={project.timeline.sfxSuggestions ?? []}
+                />
+              ))}
+              {virtualTrackWindow.afterHeight > 0 ? (
+                <div
+                  style={{ height: virtualTrackWindow.afterHeight }}
+                  data-testid="timeline-track-virtual-spacer-after"
+                />
+              ) : null}
+              {project.pacingAnalysis
+                ? (() => {
+                    const pa = project.pacingAnalysis;
+                    const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p) => p.cpm), 1) : 1;
+                    return (
+                      <div
+                        className="relative h-10 border-t border-line bg-panel"
+                        style={{ marginLeft: LABEL_WIDTH }}
+                        data-testid="pacing-analysis-chart"
+                      >
+                        {pa.slowSegments.map((seg, si) => (
+                          <div
+                            key={si}
+                            className="absolute top-0 bottom-0 bg-[var(--color-accent)]/15 cursor-pointer"
+                            style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
+                            title={
+                              zhCN.pacingAnalysis.slowSegment +
+                              ' ' +
+                              seg.start.toFixed(1) +
+                              's-' +
+                              seg.end.toFixed(1) +
+                              's: ' +
+                              zhCN.pacingAnalysis.suggestion
+                            }
+                            data-testid={`pacing-slow-segment-${si}`}
+                          />
+                        ))}
+                        {pa.fastSegments.map((seg, fi) => (
+                          <div
+                            key={fi}
+                            className="absolute top-0 bottom-0 bg-[var(--color-danger)]/15"
+                            style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
+                            title={
+                              zhCN.pacingAnalysis.fastSegment +
+                              ' ' +
+                              seg.start.toFixed(1) +
+                              's-' +
+                              seg.end.toFixed(1) +
+                              's'
+                            }
+                            data-testid={`pacing-fast-segment-${fi}`}
+                          />
+                        ))}
+                        <svg
+                          className="absolute inset-0 w-full h-full"
+                          preserveAspectRatio="none"
+                          viewBox={`0 0 ${Math.max(1, pa.cpmCurve.length)} ${maxCpm}`}
+                        >
+                          {pa.cpmCurve.map((pt, i) => {
+                            if (i === 0) return null;
+                            const prev = pa.cpmCurve[i - 1];
+                            return (
+                              <line
+                                key={i}
+                                x1={i - 1}
+                                y1={maxCpm - prev.cpm}
+                                x2={i}
+                                y2={maxCpm - pt.cpm}
+                                stroke="#6366f1"
+                                strokeWidth={maxCpm * 0.03}
+                              />
+                            );
+                          })}
+                        </svg>
+                        <div className="absolute right-1 top-0.5 text-[9px] text-muted" data-testid="pacing-avg-cpm">
+                          {zhCN.pacingAnalysis.avgCpm}: {pa.overallAvgCPM.toFixed(1)}
+                        </div>
+                      </div>
+                    );
+                  })()
+                : null}
+              {protectedRanges.map((range) => (
+                <div
+                  key={range.id}
+                  className="pointer-events-none absolute bottom-0 top-0 z-[8] bg-rose-500/20 outline outline-1 outline-rose-500/50"
+                  style={{
+                    left: LABEL_WIDTH + range.start * zoom,
+                    width: Math.max(2, (range.end - range.start) * zoom),
+                  }}
+                  title={range.label}
+                  data-testid="timeline-protected-range"
+                  data-range-id={range.id}
+                />
+              ))}
+              {annotationMode ? (
+                <div
+                  className="absolute bottom-0 top-0 z-30 cursor-crosshair bg-transparent"
+                  style={{ left: LABEL_WIDTH, width }}
+                  data-testid="timeline-annotation-click-layer"
+                  onPointerDown={onAnnotationLayerPointerDown}
+                />
+              ) : null}
+              {(project.annotations ?? []).map((annotation, index) => (
+                <AnnotationBubble
+                  key={annotation.id}
+                  annotation={annotation}
+                  index={index}
+                  left={LABEL_WIDTH + annotation.time * zoom}
+                  onSeek={setPlayheadTime}
+                  onEdit={openAnnotationEditorAt}
+                />
+              ))}
+              {(project.timeline.markers ?? []).map((marker) => (
+                <TimelineMarkerOverlay
+                  key={marker.id}
+                  marker={marker}
+                  left={LABEL_WIDTH + marker.time * zoom}
+                  onSeek={setPlayheadTime}
+                  onRemove={removeTimelineMarker}
+                />
+              ))}
+              {sceneCutOverlays.map((cut) => (
+                <SceneCutOverlay key={cut.id} cut={cut} left={LABEL_WIDTH + cut.time * zoom} onSeek={setPlayheadTime} />
+              ))}
+              {(project.bookmarks ?? []).map((bookmark) => (
+                <TimelineBookmarkOverlay
+                  key={bookmark.id}
+                  bookmark={bookmark}
+                  left={LABEL_WIDTH + bookmark.time * zoom}
+                  onSeek={setPlayheadTime}
+                  onRemove={removeProjectBookmark}
+                />
+              ))}
+              {(project.beatMarkers ?? []).map((marker) => (
+                <BeatMarkerOverlay
+                  key={marker.id}
+                  marker={marker}
+                  left={LABEL_WIDTH + marker.time * zoom}
+                  active={activeBeatMarkerId === marker.id}
+                  onSeek={setPlayheadTime}
+                  onRemove={removeBeatMarker}
+                />
+              ))}
+              {transitionMenu ? (
+                <TransitionMenu
+                  menu={transitionMenu}
+                  onChange={setTransitionMenu}
+                  onAdd={addTransition}
+                  onRemove={transitionMenu.existingTransitionId ? removeTransition : undefined}
+                  onClose={() => setTransitionMenu(undefined)}
+                />
+              ) : null}
+              {rulerMenu ? (
+                <RulerContextMenu
+                  menu={rulerMenu}
+                  onChange={setRulerMenu}
+                  onAction={runRulerMenuAction}
+                  onJump={jumpToRulerTimecode}
+                  onClose={() => setRulerMenu(undefined)}
+                />
+              ) : null}
+              {gapMenu ? (
+                <GapActionMenu
+                  menu={gapMenu}
+                  onClose={() => setGapMenu(undefined)}
+                  onCloseGap={closeGap}
+                  onFillGap={(strategy) => void fillGap(strategy)}
+                />
+              ) : null}
+              {gapStatsOpen ? (
+                <GapStatsPanel
+                  timeline={project.timeline}
+                  tracks={project.timeline.tracks}
+                  onClose={() => setGapStatsOpen(false)}
+                />
+              ) : null}
+              {sequenceSettingsDialogOpen && activeSequence ? (
+                <SequenceSettingsDialog
+                  sequence={activeSequence}
+                  projectSettings={{
+                    fps: project.settings.fps,
+                    width: project.settings.width ?? 1280,
+                    height: project.settings.height ?? 720,
+                  }}
+                  onSave={(settings) => {
+                    commandManager.execute(
+                      new UpdateSequenceSettingsCommand(projectAccessor, activeSequence.id, settings),
+                    );
+                  }}
+                  onClose={() => setSequenceSettingsDialogOpen(false)}
+                />
+              ) : null}
+              {volumeEnvelopeMenu ? (
+                <VolumeEnvelopeMenu
+                  menu={volumeEnvelopeMenu}
+                  onFade={applyVolumeEnvelopeFade}
+                  onReset={resetVolumeEnvelope}
+                  onClose={() => setVolumeEnvelopeMenu(undefined)}
+                />
+              ) : null}
+              {clipMenu ? (
+                <ClipActionMenu
+                  menu={clipMenu}
+                  clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
+                  asset={
+                    allClips.find((clip) => clip.id === clipMenu.clipId)
+                      ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!)
+                      : undefined
                   }
-                }
-                onGapMenu={openGapMenu}
-                onClipMenu={openClipMenu}
-                onVolumeEnvelopeAdd={addVolumeEnvelopePoint}
-                onVolumeEnvelopeUpdate={updateVolumeEnvelopePoint}
-                onVolumeEnvelopeRemove={removeVolumeEnvelopePoint}
-                onVolumeEnvelopeMenu={openVolumeEnvelopeMenu}
-                onClipDoubleClick={openNestedSequence}
-                virtualWindow={virtualWindow}
-                assetLoadWindow={{ scrollLeft: scrollViewport.scrollLeft, viewportWidth: scrollViewport.viewportWidth, labelWidth: LABEL_WIDTH }}
-                largeProjectMode={largeProjectMode}
-                rollingTrimActive={rollingTrimActive}
-                slipEditActive={slipEditActive}
-                slideEditActive={slideEditActive}
-                clipGroupByClipId={clipGroupByClipId}
-                colorFilter={timelineColorFilter}
-                projectFrameRate={project.settings.fps}
-                envelopeEditMode={envelopeEditMode}
-                reduceMotion={reduceMotion}
-                collaborationLocksByClipId={collaborationLocksByClipId}
-                onRemoveAnomaly={removeAnomaly}
-                continuityWarnings={project.timeline.continuityWarnings ?? []}
-                colorConsistencyWarnings={project.timeline.colorConsistencyWarnings ?? []}
-                sfxSuggestions={project.timeline.sfxSuggestions ?? []}
-              />
-            ))}
-            {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}
-            {project.pacingAnalysis ? (() => {
-              const pa = project.pacingAnalysis;
-              const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p) => p.cpm), 1) : 1;
-              return (
-                <div className="relative h-10 border-t border-line bg-panel" style={{ marginLeft: LABEL_WIDTH }} data-testid="pacing-analysis-chart">
-                  {pa.slowSegments.map((seg, si) => (
-                    <div
-                      key={si}
-                      className="absolute top-0 bottom-0 bg-[var(--color-accent)]/15 cursor-pointer"
-                      style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
-                      title={zhCN.pacingAnalysis.slowSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's: ' + zhCN.pacingAnalysis.suggestion}
-                      data-testid={`pacing-slow-segment-${si}`}
-                    />
-                  ))}
-                  {pa.fastSegments.map((seg, fi) => (
-                    <div
-                      key={fi}
-                      className="absolute top-0 bottom-0 bg-[var(--color-danger)]/15"
-                      style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
-                      title={zhCN.pacingAnalysis.fastSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's'}
-                      data-testid={`pacing-fast-segment-${fi}`}
-                    />
-                  ))}
-                  <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox={`0 0 ${Math.max(1, pa.cpmCurve.length)} ${maxCpm}`}>
-                    {pa.cpmCurve.map((pt, i) => {
-                      if (i === 0) return null;
-                      const prev = pa.cpmCurve[i - 1];
-                      return <line key={i} x1={i - 1} y1={maxCpm - prev.cpm} x2={i} y2={maxCpm - pt.cpm} stroke="#6366f1" strokeWidth={maxCpm * 0.03} />;
-                    })}
-                  </svg>
-                  <div className="absolute right-1 top-0.5 text-[9px] text-muted" data-testid="pacing-avg-cpm">
-                    {zhCN.pacingAnalysis.avgCpm}: {pa.overallAvgCPM.toFixed(1)}
+                  versionEntries={getClipMediaVersionEntries(allClips.find((clip) => clip.id === clipMenu.clipId))}
+                  group={clipGroupByClipId.get(clipMenu.clipId)}
+                  projectFrameRate={project.settings.fps}
+                  canCreateGroup={selectedClipIds.length >= 2}
+                  whisperReady={whisperAvailability.ready}
+                  whisperUnavailableMessage={whisperAvailability.error}
+                  onSilence={() => openSilenceDetection(clipMenu.clipId)}
+                  onScene={() => void openSceneDetection(clipMenu.clipId)}
+                  onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
+                  onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
+                  onAlignSubtitles={() => void alignSubtitlesToWaveform(clipMenu.clipId)}
+                  onTtsVoiceover={() => void ttsVoiceover(clipMenu.clipId)}
+                  onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
+                  onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
+                  onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
+                  onPack={() => packClipMenuSelection(clipMenu.clipId)}
+                  onAiReframe={() => handleAiReframe(clipMenu.clipId)}
+                  onAiTransitionRecommend={() => handleAiTransitionRecommend(clipMenu.clipId)}
+                  onAnomalyDetect={() => handleAnomalyDetect(clipMenu.clipId)}
+                  onCreateGroup={createGroupFromSelection}
+                  onUngroup={(group) => ungroupSelected(group)}
+                  onDeleteGroup={deleteGroup}
+                  onGroupColor={updateGroupColor}
+                  onClipColor={updateClipColor}
+                  onDelete={() => {
+                    deleteSelected();
+                    setClipMenu(undefined);
+                  }}
+                  onRippleDelete={() => {
+                    rippleDeleteSelected();
+                    setClipMenu(undefined);
+                  }}
+                  onClose={() => setClipMenu(undefined)}
+                />
+              ) : null}
+              {trackBatchMenu ? (
+                <TrackBatchMenu
+                  menu={trackBatchMenu}
+                  selectedTracks={selectedTracksForBatch()}
+                  onPatch={applyBatchTrackPatch}
+                  onDeleteEmpty={deleteSelectedEmptyTracks}
+                  onSetEqualHeight={() => {
+                    setEqualHeightPrompt(true);
+                    setTrackBatchMenu(undefined);
+                  }}
+                  onClose={() => setTrackBatchMenu(undefined)}
+                />
+              ) : null}
+
+              {equalHeightPrompt ? (
+                <div
+                  className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30"
+                  data-testid="equal-height-dialog"
+                  onClick={() => setEqualHeightPrompt(false)}
+                >
+                  <div
+                    className="w-72 rounded-lg bg-[var(--color-bg-elevated)] p-4 shadow-lg"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3 className="mb-3 text-sm font-semibold">{zhCN.timeline.trackBatchSetEqualHeight}</h3>
+                    <label className="mb-3 block text-xs text-[var(--color-text-secondary)]">
+                      <span>px</span>
+                      <input
+                        className="mt-1 w-full rounded border border-line px-2 py-1 text-sm"
+                        type="number"
+                        min={24}
+                        max={200}
+                        value={equalHeightValue}
+                        onChange={(e) => setEqualHeightValue(e.target.value)}
+                        data-testid="equal-height-input"
+                      />
+                    </label>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        className="rounded px-3 py-1 text-xs hover:bg-panel"
+                        type="button"
+                        onClick={() => setEqualHeightPrompt(false)}
+                      >
+                        {zhCN.timeline.close}
+                      </button>
+                      <button
+                        className="rounded bg-brand px-3 py-1 text-xs text-white hover:bg-brand/90"
+                        type="button"
+                        data-testid="equal-height-confirm"
+                        onClick={() => {
+                          const h = Number(equalHeightValue);
+                          if (Number.isFinite(h)) {
+                            try {
+                              commandManager.execute(new BatchUpdateTrackHeightCommand(projectAccessor, h));
+                            } catch {}
+                          }
+                          setEqualHeightPrompt(false);
+                        }}
+                      >
+                        {zhCN.timeline.close}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              );
-            })() : null}
-            {protectedRanges.map((range) => (
-              <div
-                key={range.id}
-                className="pointer-events-none absolute bottom-0 top-0 z-[8] bg-rose-500/20 outline outline-1 outline-rose-500/50"
-                style={{ left: LABEL_WIDTH + range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
-                title={range.label}
-                data-testid="timeline-protected-range"
-                data-range-id={range.id}
-              />
-            ))}
-            {annotationMode ? (
-              <div
-                className="absolute bottom-0 top-0 z-30 cursor-crosshair bg-transparent"
-                style={{ left: LABEL_WIDTH, width }}
-                data-testid="timeline-annotation-click-layer"
-                onPointerDown={onAnnotationLayerPointerDown}
-              />
-            ) : null}
-            {(project.annotations ?? []).map((annotation, index) => (
-              <AnnotationBubble
-                key={annotation.id}
-                annotation={annotation}
-                index={index}
-                left={LABEL_WIDTH + annotation.time * zoom}
-                onSeek={setPlayheadTime}
-                onEdit={openAnnotationEditorAt}
-              />
-            ))}
-            {(project.timeline.markers ?? []).map((marker) => (
-              <TimelineMarkerOverlay
-                key={marker.id}
-                marker={marker}
-                left={LABEL_WIDTH + marker.time * zoom}
-                onSeek={setPlayheadTime}
-                onRemove={removeTimelineMarker}
-              />
-            ))}
-            {sceneCutOverlays.map((cut) => (
-              <SceneCutOverlay
-                key={cut.id}
-                cut={cut}
-                left={LABEL_WIDTH + cut.time * zoom}
-                onSeek={setPlayheadTime}
-              />
-            ))}
-            {(project.bookmarks ?? []).map((bookmark) => (
-              <TimelineBookmarkOverlay key={bookmark.id} bookmark={bookmark} left={LABEL_WIDTH + bookmark.time * zoom} onSeek={setPlayheadTime} onRemove={removeProjectBookmark} />
-            ))}
-            {(project.beatMarkers ?? []).map((marker) => (
-              <BeatMarkerOverlay
-                key={marker.id}
-                marker={marker}
-                left={LABEL_WIDTH + marker.time * zoom}
-                active={activeBeatMarkerId === marker.id}
-                onSeek={setPlayheadTime}
-                onRemove={removeBeatMarker}
-              />
-            ))}
-            {transitionMenu ? (
-              <TransitionMenu
-                menu={transitionMenu}
-                onChange={setTransitionMenu}
-                onAdd={addTransition}
-                onRemove={transitionMenu.existingTransitionId ? removeTransition : undefined}
-                onClose={() => setTransitionMenu(undefined)}
-              />
-            ) : null}
-            {rulerMenu ? (
-              <RulerContextMenu
-                menu={rulerMenu}
-                onChange={setRulerMenu}
-                onAction={runRulerMenuAction}
-                onJump={jumpToRulerTimecode}
-                onClose={() => setRulerMenu(undefined)}
-              />
-            ) : null}
-            {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} onFillGap={(strategy) => void fillGap(strategy)} /> : null}
-            {gapStatsOpen ? <GapStatsPanel timeline={project.timeline} tracks={project.timeline.tracks} onClose={() => setGapStatsOpen(false)} /> : null}
-            {sequenceSettingsDialogOpen && activeSequence ? (
-              <SequenceSettingsDialog
-                sequence={activeSequence}
-                projectSettings={{ fps: project.settings.fps, width: project.settings.width ?? 1280, height: project.settings.height ?? 720 }}
-                onSave={(settings) => {
-                  commandManager.execute(new UpdateSequenceSettingsCommand(projectAccessor, activeSequence.id, settings));
-                }}
-                onClose={() => setSequenceSettingsDialogOpen(false)}
-              />
-            ) : null}
-            {volumeEnvelopeMenu ? <VolumeEnvelopeMenu menu={volumeEnvelopeMenu} onFade={applyVolumeEnvelopeFade} onReset={resetVolumeEnvelope} onClose={() => setVolumeEnvelopeMenu(undefined)} /> : null}
-            {clipMenu ? (
-              <ClipActionMenu
-                menu={clipMenu}
-                clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
-                asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
-                versionEntries={getClipMediaVersionEntries(allClips.find((clip) => clip.id === clipMenu.clipId))}
-                group={clipGroupByClipId.get(clipMenu.clipId)}
-                projectFrameRate={project.settings.fps}
-                canCreateGroup={selectedClipIds.length >= 2}
-                whisperReady={whisperAvailability.ready}
-                whisperUnavailableMessage={whisperAvailability.error}
-                onSilence={() => openSilenceDetection(clipMenu.clipId)}
-                onScene={() => void openSceneDetection(clipMenu.clipId)}
-                onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
-                onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
-                onAlignSubtitles={() => void alignSubtitlesToWaveform(clipMenu.clipId)}
-                onTtsVoiceover={() => void ttsVoiceover(clipMenu.clipId)}
-                onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
-                onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
-                onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
-                onPack={() => packClipMenuSelection(clipMenu.clipId)}
-                onAiReframe={() => handleAiReframe(clipMenu.clipId)}
-                onAiTransitionRecommend={() => handleAiTransitionRecommend(clipMenu.clipId)}
-                onAnomalyDetect={() => handleAnomalyDetect(clipMenu.clipId)}
-                onCreateGroup={createGroupFromSelection}
-                onUngroup={(group) => ungroupSelected(group)}
-                onDeleteGroup={deleteGroup}
-                onGroupColor={updateGroupColor}
-                onClipColor={updateClipColor}
-                onDelete={() => { deleteSelected(); setClipMenu(undefined); }}
-                onRippleDelete={() => { rippleDeleteSelected(); setClipMenu(undefined); }}
-                onClose={() => setClipMenu(undefined)}
-              />
-            ) : null}
-            {trackBatchMenu ? (
-              <TrackBatchMenu
-                menu={trackBatchMenu}
-                selectedTracks={selectedTracksForBatch()}
-                onPatch={applyBatchTrackPatch}
-                onDeleteEmpty={deleteSelectedEmptyTracks}
-                onSetEqualHeight={() => { setEqualHeightPrompt(true); setTrackBatchMenu(undefined); }}
-                onClose={() => setTrackBatchMenu(undefined)}
-              />
-            ) : null}
-
-{equalHeightPrompt ? (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" data-testid="equal-height-dialog" onClick={() => setEqualHeightPrompt(false)}>
-    <div className="w-72 rounded-lg bg-[var(--color-bg-elevated)] p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-      <h3 className="mb-3 text-sm font-semibold">{zhCN.timeline.trackBatchSetEqualHeight}</h3>
-      <label className="mb-3 block text-xs text-[var(--color-text-secondary)]">
-        <span>px</span>
-        <input
-          className="mt-1 w-full rounded border border-line px-2 py-1 text-sm"
-          type="number"
-          min={24}
-          max={200}
-          value={equalHeightValue}
-          onChange={(e) => setEqualHeightValue(e.target.value)}
-          data-testid="equal-height-input"
-        />
-      </label>
-      <div className="flex justify-end gap-2">
-        <button className="rounded px-3 py-1 text-xs hover:bg-panel" type="button" onClick={() => setEqualHeightPrompt(false)}>{zhCN.timeline.close}</button>
-        <button
-          className="rounded bg-brand px-3 py-1 text-xs text-white hover:bg-brand/90"
-          type="button"
-          data-testid="equal-height-confirm"
-          onClick={() => {
-            const h = Number(equalHeightValue);
-            if (Number.isFinite(h)) {
-              try { commandManager.execute(new BatchUpdateTrackHeightCommand(projectAccessor, h)); } catch {}
-            }
-            setEqualHeightPrompt(false);
-          }}
-        >
-          {zhCN.timeline.close}
-        </button>
-      </div>
-    </div>
-  </div>
-) : null}
-            {selectionRect ? <SelectionMarquee rect={selectionRect} /> : null}
-            {typeof inPoint === 'number' ? (
-        <div
-                className="absolute bottom-0 top-0 z-10 w-0.5 bg-emerald-500"
-                style={{ left: LABEL_WIDTH + inPoint * zoom }}
-                title={zhCN.timeline.inPoint}
-                data-testid="timeline-in-point-marker"
-              />
-            ) : null}
-            {typeof outPoint === 'number' ? (
-              <div
-                className="absolute bottom-0 top-0 z-10 w-0.5 bg-amber-500"
-                style={{ left: LABEL_WIDTH + outPoint * zoom }}
-                title={zhCN.timeline.outPoint}
-                data-testid="timeline-out-point-marker"
-              />
-            ) : null}
-            {remoteCollaborationUsers.map((user) => (
-              <div
-                key={user.userId}
-                className="pointer-events-none absolute bottom-0 top-0 z-[18] w-0.5"
-                style={{ left: LABEL_WIDTH + Math.max(0, user.playheadTime) * zoom, backgroundColor: user.color ?? '#38bdf8' }}
-                title={zhCN.timeline.remotePlayhead(user.name)}
-                data-testid={`timeline-remote-playhead-${user.userId}`}
-                data-user-id={user.userId}
-                data-playhead-time={user.playheadTime}
-              >
-                <span
-                  className="absolute left-1 top-1 max-w-[120px] truncate rounded-sm px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
-                  style={{ backgroundColor: user.color ?? '#38bdf8' }}
-                  data-testid={`timeline-remote-playhead-label-${user.userId}`}
+              ) : null}
+              {selectionRect ? <SelectionMarquee rect={selectionRect} /> : null}
+              {typeof inPoint === 'number' ? (
+                <div
+                  className="absolute bottom-0 top-0 z-10 w-0.5 bg-emerald-500"
+                  style={{ left: LABEL_WIDTH + inPoint * zoom }}
+                  title={zhCN.timeline.inPoint}
+                  data-testid="timeline-in-point-marker"
+                />
+              ) : null}
+              {typeof outPoint === 'number' ? (
+                <div
+                  className="absolute bottom-0 top-0 z-10 w-0.5 bg-amber-500"
+                  style={{ left: LABEL_WIDTH + outPoint * zoom }}
+                  title={zhCN.timeline.outPoint}
+                  data-testid="timeline-out-point-marker"
+                />
+              ) : null}
+              {remoteCollaborationUsers.map((user) => (
+                <div
+                  key={user.userId}
+                  className="pointer-events-none absolute bottom-0 top-0 z-[18] w-0.5"
+                  style={{
+                    left: LABEL_WIDTH + Math.max(0, user.playheadTime) * zoom,
+                    backgroundColor: user.color ?? '#38bdf8',
+                  }}
+                  title={zhCN.timeline.remotePlayhead(user.name)}
+                  data-testid={`timeline-remote-playhead-${user.userId}`}
+                  data-user-id={user.userId}
+                  data-playhead-time={user.playheadTime}
                 >
-                  {user.name}
-                </span>
-              </div>
-            ))}
-            <div
-              className="absolute bottom-0 top-0 z-20 w-0.5 bg-coral shadow-[0_0_8px_rgba(249,115,22,0.5)]"
-              style={{ left: LABEL_WIDTH + playheadTime * zoom }}
-              data-testid="timeline-playhead"
-              onPointerDown={(event) => {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                setDrag({ mode: 'playhead', startX: event.clientX, previewStart: playheadTime, previewDuration: 0, previewTrimStart: 0, previewTrimEnd: 0 });
-              }}
-            />
+                  <span
+                    className="absolute left-1 top-1 max-w-[120px] truncate rounded-sm px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                    style={{ backgroundColor: user.color ?? '#38bdf8' }}
+                    data-testid={`timeline-remote-playhead-label-${user.userId}`}
+                  >
+                    {user.name}
+                  </span>
+                </div>
+              ))}
+              <div
+                className="absolute bottom-0 top-0 z-20 w-0.5 bg-coral shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+                style={{ left: LABEL_WIDTH + playheadTime * zoom }}
+                data-testid="timeline-playhead"
+                onPointerDown={(event) => {
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setDrag({
+                    mode: 'playhead',
+                    startX: event.clientX,
+                    previewStart: playheadTime,
+                    previewDuration: 0,
+                    previewTrimStart: 0,
+                    previewTrimEnd: 0,
+                  });
+                }}
+              />
+            </div>
           </div>
-        </div>
         </div>
         {minimapVisible ? (
           <TimelineMinimap
@@ -3564,10 +4458,18 @@ function addProjectBookmark(time = playheadTime): void {
           onClose={() => setCoverFrameDialog(undefined)}
         />
       ) : null}
-      {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
+      {whisperDialog ? (
+        <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} />
+      ) : null}
       {subtitleAlignReport ? (
-        <div className="fixed bottom-4 right-4 z-40 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-soft" data-testid="subtitle-align-report">
-          {zhCN.timeline.subtitleAlignmentReport(subtitleAlignReport.correctedCount, subtitleAlignReport.averageOffsetMs)}
+        <div
+          className="fixed bottom-4 right-4 z-40 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-soft"
+          data-testid="subtitle-align-report"
+        >
+          {zhCN.timeline.subtitleAlignmentReport(
+            subtitleAlignReport.correctedCount,
+            subtitleAlignReport.averageOffsetMs,
+          )}
         </div>
       ) : null}
       {dialoguePanelOpen ? (
@@ -3580,19 +4482,35 @@ function addProjectBookmark(time = playheadTime): void {
         />
       ) : null}
       {beatSnapPanelOpen && (project.beatSnapSuggestions ?? []).length > 0 ? (
-        <div className="absolute right-2 top-16 z-40 w-72 rounded-lg border border-line bg-surface p-3 shadow-soft" data-testid="beat-snap-suggestions-panel">
+        <div
+          className="absolute right-2 top-16 z-40 w-72 rounded-lg border border-line bg-surface p-3 shadow-soft"
+          data-testid="beat-snap-suggestions-panel"
+        >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold" data-testid="beat-snap-suggestions-count">
               {zhCN.editorToasts.beatSnapApplyAll} ({(project.beatSnapSuggestions ?? []).length})
             </span>
-            <button className="text-xs text-muted hover:text-foreground" onClick={() => setBeatSnapPanelOpen(false)} data-testid="beat-snap-panel-close">
+            <button
+              className="text-xs text-muted hover:text-foreground"
+              onClick={() => setBeatSnapPanelOpen(false)}
+              data-testid="beat-snap-panel-close"
+            >
               <X size={14} />
             </button>
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {(project.beatSnapSuggestions ?? []).map((suggestion) => (
-              <div key={`${suggestion.clipId}-${suggestion.edge}`} className="flex items-center justify-between rounded border border-line px-2 py-1 text-xs" data-testid={`beat-snap-suggestion-${suggestion.clipId}-${suggestion.edge}`}>
-                <span>{zhCN.editorToasts.beatSnapSuggestHint(suggestion.edge === 'in' ? '入' : '出', suggestion.suggestedTime.toFixed(2) + 's')}</span>
+              <div
+                key={`${suggestion.clipId}-${suggestion.edge}`}
+                className="flex items-center justify-between rounded border border-line px-2 py-1 text-xs"
+                data-testid={`beat-snap-suggestion-${suggestion.clipId}-${suggestion.edge}`}
+              >
+                <span>
+                  {zhCN.editorToasts.beatSnapSuggestHint(
+                    suggestion.edge === 'in' ? '入' : '出',
+                    suggestion.suggestedTime.toFixed(2) + 's',
+                  )}
+                </span>
                 <div className="flex gap-1">
                   <button
                     className="rounded bg-brand px-1.5 py-0.5 text-[10px] text-white hover:opacity-80"
@@ -3603,7 +4521,9 @@ function addProjectBookmark(time = playheadTime): void {
                       const clip = clips.find((c) => c.id === suggestion.clipId);
                       if (!clip) return;
                       const updated = applyBeatSnapToClip(clip, suggestion.edge, suggestion.suggestedTime);
-                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter((s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge));
+                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter(
+                        (s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge),
+                      );
                       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, updated));
                       commandManager.execute(new UpdateProjectBeatSnapSuggestionsCommand(projectAccessor, remaining));
                     }}
@@ -3615,7 +4535,9 @@ function addProjectBookmark(time = playheadTime): void {
                     data-testid={`beat-snap-dismiss-${suggestion.clipId}-${suggestion.edge}`}
                     onClick={() => {
                       const currentProject = useEditorStore.getState().project;
-                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter((s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge));
+                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter(
+                        (s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge),
+                      );
                       commandManager.execute(new UpdateProjectBeatSnapSuggestionsCommand(projectAccessor, remaining));
                     }}
                   >
@@ -3681,7 +4603,10 @@ function addProjectBookmark(time = playheadTime): void {
         </div>
       ) : null}
       {transitionDialog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="transition-dialog">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          data-testid="transition-dialog"
+        >
           <div className="w-[360px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft">
             <h3 className="mb-3 text-sm font-semibold">{zhCN.aiTransitionRecommend.title}</h3>
             <div className="space-y-2">
@@ -3693,7 +4618,9 @@ function addProjectBookmark(time = playheadTime): void {
                   onClick={() => applyAiTransition(transitionDialog.clipId, transitionDialog.adjacentClipId, rec)}
                 >
                   <span className="font-medium">{rec.transitionType}</span>
-                  <span className="text-[var(--color-text-muted)]">{rec.duration}s · {rec.reason}</span>
+                  <span className="text-[var(--color-text-muted)]">
+                    {rec.duration}s · {rec.reason}
+                  </span>
                 </button>
               ))}
             </div>
@@ -3891,7 +4818,7 @@ function TrackBatchMenu({
   onPatch,
   onDeleteEmpty,
   onSetEqualHeight,
-  onClose
+  onClose,
 }: {
   menu: TrackBatchMenuState;
   selectedTracks: Track[];
@@ -3909,24 +4836,62 @@ function TrackBatchMenu({
       data-testid="track-batch-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className="mb-2 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.trackBatchSelectedCount(selectedTracks.length)}</div>
+      <div className="mb-2 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">
+        {zhCN.timeline.trackBatchSelectedCount(selectedTracks.length)}
+      </div>
       <div className="grid grid-cols-2 gap-1">
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-mute" disabled={disabled} onClick={() => onPatch(() => ({ muted: true }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-mute"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ muted: true }))}
+        >
           {zhCN.timeline.trackBatchMute}
         </button>
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unmute" disabled={disabled} onClick={() => onPatch(() => ({ muted: false }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-unmute"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ muted: false }))}
+        >
           {zhCN.timeline.trackBatchUnmute}
         </button>
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-solo" disabled={disabled} onClick={() => onPatch(() => ({ solo: true }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-solo"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ solo: true }))}
+        >
           {zhCN.timeline.trackBatchSolo}
         </button>
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unsolo" disabled={disabled} onClick={() => onPatch(() => ({ solo: false }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-unsolo"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ solo: false }))}
+        >
           {zhCN.timeline.trackBatchUnsolo}
         </button>
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-lock" disabled={disabled} onClick={() => onPatch(() => ({ locked: true }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-lock"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ locked: true }))}
+        >
           {zhCN.timeline.trackBatchLock}
         </button>
-        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unlock" disabled={disabled} onClick={() => onPatch(() => ({ locked: false }))}>
+        <button
+          className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-unlock"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ locked: false }))}
+        >
           {zhCN.timeline.trackBatchUnlock}
         </button>
       </div>
@@ -3940,7 +4905,9 @@ function TrackBatchMenu({
         {zhCN.timeline.trackBatchDeleteEmpty}
       </button>
       <div className="mt-2 border-t border-line pt-2">
-        <div className="mb-1 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.trackBatchSetColor}</div>
+        <div className="mb-1 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">
+          {zhCN.timeline.trackBatchSetColor}
+        </div>
         <div className="grid grid-cols-6 gap-1 px-2">
           {TIMELINE_LABEL_COLORS.map((color) => (
             <button
@@ -3956,7 +4923,13 @@ function TrackBatchMenu({
             />
           ))}
         </div>
-        <button className="mt-2 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-color-default" disabled={disabled} onClick={() => onPatch(() => ({ color: null }))}>
+        <button
+          className="mt-2 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel disabled:opacity-40"
+          type="button"
+          data-testid="track-batch-color-default"
+          disabled={disabled}
+          onClick={() => onPatch(() => ({ color: null }))}
+        >
           {zhCN.timeline.defaultLabelColor}
         </button>
       </div>
@@ -3969,7 +4942,11 @@ function TrackBatchMenu({
       >
         {zhCN.timeline.trackBatchSetEqualHeight}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel"
+        type="button"
+        onClick={onClose}
+      >
         {zhCN.timeline.close}
       </button>
     </div>
@@ -3984,7 +4961,7 @@ function TimelineNoteLayer({
   onDraftChange,
   onCreateRange,
   onSeek,
-  onEdit
+  onEdit,
 }: {
   width: number;
   zoom: number;
@@ -3999,10 +4976,13 @@ function TimelineNoteLayer({
     () =>
       new Map(
         [...notes]
-          .sort((left, right) => left.note.createdAt.localeCompare(right.note.createdAt) || left.note.id.localeCompare(right.note.id))
-          .map((layout, index) => [layout.note.id, index + 1])
+          .sort(
+            (left, right) =>
+              left.note.createdAt.localeCompare(right.note.createdAt) || left.note.id.localeCompare(right.note.id),
+          )
+          .map((layout, index) => [layout.note.id, index + 1]),
       ),
-    [notes]
+    [notes],
   );
 
   function timeFromPointer(event: React.PointerEvent<HTMLDivElement>): number {
@@ -4044,8 +5024,15 @@ function TimelineNoteLayer({
   }
 
   return (
-    <div className="flex h-6 border-b border-line bg-[var(--color-bg-secondary)]/80" data-testid="timeline-note-row" style={{ width: LABEL_WIDTH + width }}>
-      <div className="flex h-6 shrink-0 items-center border-r border-line px-2 text-[11px] font-semibold text-[var(--color-text-muted)]" style={{ width: LABEL_WIDTH }}>
+    <div
+      className="flex h-6 border-b border-line bg-[var(--color-bg-secondary)]/80"
+      data-testid="timeline-note-row"
+      style={{ width: LABEL_WIDTH + width }}
+    >
+      <div
+        className="flex h-6 shrink-0 items-center border-r border-line px-2 text-[11px] font-semibold text-[var(--color-text-muted)]"
+        style={{ width: LABEL_WIDTH }}
+      >
         {zhCN.timeline.timelineNoteLayer}
       </div>
       <div
@@ -4063,7 +5050,12 @@ function TimelineNoteLayer({
             <button
               key={layout.note.id}
               className={`absolute top-[3px] h-[18px] overflow-hidden rounded-[3px] border border-white/80 px-1 text-left text-[10px] font-semibold text-ink shadow-sm ${layout.overlaps ? 'ring-1 ring-[var(--color-border)]/20' : ''}`}
-              style={{ left, width: noteWidth, backgroundColor: layout.note.color, zIndex: createdOrder.get(layout.note.id) ?? 1 }}
+              style={{
+                left,
+                width: noteWidth,
+                backgroundColor: layout.note.color,
+                zIndex: createdOrder.get(layout.note.id) ?? 1,
+              }}
               type="button"
               title={`${layout.note.text} (${layout.note.start.toFixed(2)}s - ${layout.note.end.toFixed(2)}s)`}
               data-testid={`timeline-note-block-${layout.note.id}`}
@@ -4102,7 +5094,7 @@ function TimelineNoteListPanel({
   onSeek,
   onEdit,
   onRemove,
-  onExportCsv
+  onExportCsv,
 }: {
   notes: TimelineNote[];
   search: string;
@@ -4115,7 +5107,10 @@ function TimelineNoteListPanel({
   onExportCsv(): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="timeline-note-panel">
+    <aside
+      className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
+      data-testid="timeline-note-panel"
+    >
       <div className="border-b border-line px-3 py-2">
         <div className="text-sm font-semibold text-ink">{zhCN.timeline.timelineNoteList}</div>
         <div className="mt-2 flex gap-2">
@@ -4126,19 +5121,31 @@ function TimelineNoteListPanel({
             data-testid="timeline-note-search"
             onChange={(event) => onSearch(event.target.value)}
           />
-          <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs font-medium hover:bg-panel" type="button" data-testid="timeline-note-export-csv" onClick={onExportCsv}>
+          <button
+            className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs font-medium hover:bg-panel"
+            type="button"
+            data-testid="timeline-note-export-csv"
+            onClick={onExportCsv}
+          >
             {zhCN.timeline.timelineNoteExportCsv}
           </button>
         </div>
       </div>
       {notes.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="timeline-note-list-empty">
+        <div
+          className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]"
+          data-testid="timeline-note-list-empty"
+        >
           {zhCN.timeline.timelineNoteListEmpty}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto p-2">
           {notes.map((note) => (
-            <div key={note.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`timeline-note-list-row-${note.id}`}>
+            <div
+              key={note.id}
+              className="mb-2 rounded-md border border-line bg-panel p-2 text-xs"
+              data-testid={`timeline-note-list-row-${note.id}`}
+            >
               <button
                 className="flex w-full items-start gap-2 rounded text-left hover:bg-[var(--color-bg-elevated)]"
                 type="button"
@@ -4150,15 +5157,26 @@ function TimelineNoteListPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{note.text}</span>
                   <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">
-                    {secondsToTimecode(note.start, fps, timecodeFormat)} - {secondsToTimecode(note.end, fps, timecodeFormat)}
+                    {secondsToTimecode(note.start, fps, timecodeFormat)} -{' '}
+                    {secondsToTimecode(note.end, fps, timecodeFormat)}
                   </span>
                 </span>
               </button>
               <div className="mt-2 flex justify-end gap-2">
-                <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`timeline-note-edit-${note.id}`} onClick={() => onEdit(note)}>
+                <button
+                  className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel"
+                  type="button"
+                  data-testid={`timeline-note-edit-${note.id}`}
+                  onClick={() => onEdit(note)}
+                >
                   {zhCN.timeline.timelineNoteEditTitle}
                 </button>
-                <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`timeline-note-delete-${note.id}`} onClick={() => onRemove(note.id)}>
+                <button
+                  className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50"
+                  type="button"
+                  data-testid={`timeline-note-delete-${note.id}`}
+                  onClick={() => onRemove(note.id)}
+                >
                   {zhCN.timeline.timelineNoteDelete}
                 </button>
               </div>
@@ -4175,7 +5193,7 @@ function AnnotationBubble({
   index,
   left,
   onSeek,
-  onEdit
+  onEdit,
 }: {
   annotation: ProjectAnnotation;
   index: number;
@@ -4209,7 +5227,7 @@ function AnnotationListPanel({
   annotations,
   onSeek,
   onEdit,
-  onRemove
+  onRemove,
 }: {
   annotations: ProjectAnnotation[];
   onSeek(time: number): void;
@@ -4217,33 +5235,60 @@ function AnnotationListPanel({
   onRemove(annotationId: string): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="annotation-list-panel">
-      <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.annotationList}</div>
+    <aside
+      className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
+      data-testid="annotation-list-panel"
+    >
+      <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">
+        {zhCN.timeline.annotationList}
+      </div>
       {annotations.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="annotation-list-empty">
+        <div
+          className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]"
+          data-testid="annotation-list-empty"
+        >
           {zhCN.timeline.annotationListEmpty}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto p-2">
           {annotations.map((annotation) => (
-            <div key={annotation.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`annotation-list-row-${annotation.id}`}>
+            <div
+              key={annotation.id}
+              className="mb-2 rounded-md border border-line bg-panel p-2 text-xs"
+              data-testid={`annotation-list-row-${annotation.id}`}
+            >
               <button
                 className="flex w-full items-start gap-2 rounded text-left hover:bg-[var(--color-bg-elevated)]"
                 type="button"
                 data-testid={`annotation-list-item-${annotation.id}`}
                 onClick={() => onSeek(annotation.time)}
               >
-                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
+                <span
+                  className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: annotation.color }}
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{annotation.text}</span>
-                  <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">{annotation.time.toFixed(2)}s</span>
+                  <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">
+                    {annotation.time.toFixed(2)}s
+                  </span>
                 </span>
               </button>
               <div className="mt-2 flex justify-end gap-2">
-                <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`annotation-edit-${annotation.id}`} onClick={() => onEdit(annotation)}>
+                <button
+                  className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel"
+                  type="button"
+                  data-testid={`annotation-edit-${annotation.id}`}
+                  onClick={() => onEdit(annotation)}
+                >
                   {zhCN.timeline.annotationEditTitle}
                 </button>
-                <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`annotation-delete-${annotation.id}`} onClick={() => onRemove(annotation.id)}>
+                <button
+                  className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50"
+                  type="button"
+                  data-testid={`annotation-delete-${annotation.id}`}
+                  onClick={() => onRemove(annotation.id)}
+                >
                   {zhCN.timeline.annotationDelete}
                 </button>
               </div>
@@ -4263,7 +5308,7 @@ function BookmarkListPanel({
   onChangeRename,
   onSaveRename,
   onCancelRename,
-  onRemove
+  onRemove,
 }: {
   bookmarks: TimelineBookmark[];
   editing?: BookmarkRenameState;
@@ -4275,16 +5320,26 @@ function BookmarkListPanel({
   onRemove(bookmarkId: string): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="bookmark-panel">
+    <aside
+      className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
+      data-testid="bookmark-panel"
+    >
       <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.bookmarkList}</div>
       {bookmarks.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="bookmark-list-empty">
+        <div
+          className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]"
+          data-testid="bookmark-list-empty"
+        >
           {zhCN.timeline.bookmarkListEmpty}
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto p-2">
           {bookmarks.map((bookmark) => (
-            <div key={bookmark.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`bookmark-list-row-${bookmark.id}`}>
+            <div
+              key={bookmark.id}
+              className="mb-2 rounded-md border border-line bg-panel p-2 text-xs"
+              data-testid={`bookmark-list-row-${bookmark.id}`}
+            >
               {editing?.id === bookmark.id ? (
                 <div className="space-y-2">
                   <input
@@ -4304,10 +5359,19 @@ function BookmarkListPanel({
                     }}
                   />
                   <div className="flex justify-end gap-2">
-                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" onClick={onCancelRename}>
+                    <button
+                      className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel"
+                      type="button"
+                      onClick={onCancelRename}
+                    >
                       {zhCN.common.cancel}
                     </button>
-                    <button className="rounded bg-brand px-2 py-1 font-medium text-white hover:bg-[#176858]" type="button" data-testid={`bookmark-rename-save-${bookmark.id}`} onClick={() => onSaveRename(bookmark.id, editing.note)}>
+                    <button
+                      className="rounded bg-brand px-2 py-1 font-medium text-white hover:bg-[#176858]"
+                      type="button"
+                      data-testid={`bookmark-rename-save-${bookmark.id}`}
+                      onClick={() => onSaveRename(bookmark.id, editing.note)}
+                    >
                       {zhCN.timeline.bookmarkRename}
                     </button>
                   </div>
@@ -4321,17 +5385,32 @@ function BookmarkListPanel({
                     onClick={() => onSeek(bookmark.time)}
                     onDoubleClick={() => onBeginRename(bookmark)}
                   >
-                    <span className="mt-1 h-3 w-3 shrink-0 bg-yellow-400" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
+                    <span
+                      className="mt-1 h-3 w-3 shrink-0 bg-yellow-400"
+                      style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold text-ink">{bookmark.note}</span>
-                      <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">{bookmark.time.toFixed(2)}s</span>
+                      <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">
+                        {bookmark.time.toFixed(2)}s
+                      </span>
                     </span>
                   </button>
                   <div className="mt-2 flex justify-end gap-2">
-                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`bookmark-rename-${bookmark.id}`} onClick={() => onBeginRename(bookmark)}>
+                    <button
+                      className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel"
+                      type="button"
+                      data-testid={`bookmark-rename-${bookmark.id}`}
+                      onClick={() => onBeginRename(bookmark)}
+                    >
                       {zhCN.timeline.bookmarkRename}
                     </button>
-                    <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`bookmark-delete-${bookmark.id}`} onClick={() => onRemove(bookmark.id)}>
+                    <button
+                      className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50"
+                      type="button"
+                      data-testid={`bookmark-delete-${bookmark.id}`}
+                      onClick={() => onRemove(bookmark.id)}
+                    >
                       {zhCN.timeline.bookmarkDelete}
                     </button>
                   </div>
@@ -4349,7 +5428,7 @@ function AnnotationEditorDialog({
   value,
   onChange,
   onCancel,
-  onSave
+  onSave,
 }: {
   value: AnnotationEditorState;
   onChange(value: AnnotationEditorState): void;
@@ -4357,10 +5436,15 @@ function AnnotationEditorDialog({
   onSave(value: AnnotationEditorState): void;
 }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="annotation-editor">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4"
+      data-testid="annotation-editor"
+    >
       <section className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.annotationEditTitle : zhCN.timeline.annotationNewTitle}</h2>
+          <h2 className="text-sm font-semibold">
+            {value.id ? zhCN.timeline.annotationEditTitle : zhCN.timeline.annotationNewTitle}
+          </h2>
           <div className="mt-1 text-xs tabular-nums text-[var(--color-text-muted)]">{value.time.toFixed(2)}s</div>
         </div>
         <div className="space-y-3 px-4 py-3">
@@ -4375,7 +5459,9 @@ function AnnotationEditorDialog({
             />
           </label>
           <div>
-            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.annotationColor}</div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">
+              {zhCN.timeline.annotationColor}
+            </div>
             <div className="flex gap-2">
               {PROJECT_ANNOTATION_COLORS.map((color) => (
                 <button
@@ -4393,10 +5479,19 @@ function AnnotationEditorDialog({
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+          <button
+            className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onCancel}
+          >
             {zhCN.common.cancel}
           </button>
-          <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="annotation-save-button" onClick={() => onSave(value)}>
+          <button
+            className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
+            type="button"
+            data-testid="annotation-save-button"
+            onClick={() => onSave(value)}
+          >
             {zhCN.timeline.annotationSave}
           </button>
         </div>
@@ -4409,7 +5504,7 @@ function TimelineNoteEditorDialog({
   value,
   onChange,
   onCancel,
-  onSave
+  onSave,
 }: {
   value: TimelineNoteEditorState;
   onChange(value: TimelineNoteEditorState): void;
@@ -4417,10 +5512,15 @@ function TimelineNoteEditorDialog({
   onSave(value: TimelineNoteEditorState): void;
 }) {
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="timeline-note-editor">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4"
+      data-testid="timeline-note-editor"
+    >
       <section className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.timelineNoteEditTitle : zhCN.timeline.timelineNoteNewTitle}</h2>
+          <h2 className="text-sm font-semibold">
+            {value.id ? zhCN.timeline.timelineNoteEditTitle : zhCN.timeline.timelineNoteNewTitle}
+          </h2>
           <div className="mt-1 text-xs tabular-nums text-[var(--color-text-muted)]">
             {value.start.toFixed(2)}s - {value.end.toFixed(2)}s
           </div>
@@ -4463,7 +5563,9 @@ function TimelineNoteEditorDialog({
             />
           </label>
           <div>
-            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.timelineNoteColor}</div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">
+              {zhCN.timeline.timelineNoteColor}
+            </div>
             <div className="flex gap-2">
               {TIMELINE_NOTE_COLORS.map((color) => (
                 <button
@@ -4481,10 +5583,19 @@ function TimelineNoteEditorDialog({
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+          <button
+            className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onCancel}
+          >
             {zhCN.common.cancel}
           </button>
-          <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="timeline-note-save-button" onClick={() => onSave(value)}>
+          <button
+            className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
+            type="button"
+            data-testid="timeline-note-save-button"
+            onClick={() => onSave(value)}
+          >
             {zhCN.timeline.timelineNoteSave}
           </button>
         </div>
@@ -4497,7 +5608,7 @@ function TimelineBookmarkOverlay({
   bookmark,
   left,
   onSeek,
-  onRemove
+  onRemove,
 }: {
   bookmark: TimelineBookmark;
   left: number;
@@ -4521,7 +5632,10 @@ function TimelineBookmarkOverlay({
         onRemove(bookmark.id);
       }}
     >
-      <span className="absolute left-1/2 top-0 z-10 h-4 w-4 -translate-x-1/2 border border-white bg-yellow-400 shadow-sm" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
+      <span
+        className="absolute left-1/2 top-0 z-10 h-4 w-4 -translate-x-1/2 border border-white bg-yellow-400 shadow-sm"
+        style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }}
+      />
       <span className="absolute bottom-0 left-1/2 top-4 w-px -translate-x-1/2 bg-yellow-400/70" />
       <span className="sr-only">{bookmark.note}</span>
     </button>
@@ -4532,7 +5646,7 @@ function TimelineMarkerOverlay({
   marker,
   left,
   onSeek,
-  onRemove
+  onRemove,
 }: {
   marker: TimelineMarker;
   left: number;
@@ -4556,8 +5670,14 @@ function TimelineMarkerOverlay({
         onRemove(marker.id);
       }}
     >
-      <span className="absolute left-1/2 top-1 z-10 h-4 w-4 -translate-x-1/2 rounded-sm border border-white shadow-sm" style={{ backgroundColor: marker.color }} />
-      <span className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2" style={{ backgroundColor: marker.color }} />
+      <span
+        className="absolute left-1/2 top-1 z-10 h-4 w-4 -translate-x-1/2 rounded-sm border border-white shadow-sm"
+        style={{ backgroundColor: marker.color }}
+      />
+      <span
+        className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2"
+        style={{ backgroundColor: marker.color }}
+      />
       <span className="sr-only">{marker.label}</span>
     </button>
   );
@@ -4566,7 +5686,7 @@ function TimelineMarkerOverlay({
 function SceneCutOverlay({
   cut,
   left,
-  onSeek
+  onSeek,
 }: {
   cut: { id: string; clipId: string; time: number };
   left: number;
@@ -4597,7 +5717,7 @@ function BeatMarkerOverlay({
   left,
   active,
   onSeek,
-  onRemove
+  onRemove,
 }: {
   marker: BeatMarker;
   left: number;
@@ -4623,8 +5743,12 @@ function BeatMarkerOverlay({
         onRemove(marker.id);
       }}
     >
-      <span className={`absolute left-1/2 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] border border-white shadow-sm ${active ? 'bg-yellow-300 ring-4 ring-yellow-300/40' : 'bg-orange-500'}`} />
-      <span className={`absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 ${active ? 'bg-yellow-300' : 'bg-orange-500/75'}`} />
+      <span
+        className={`absolute left-1/2 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] border border-white shadow-sm ${active ? 'bg-yellow-300 ring-4 ring-yellow-300/40' : 'bg-orange-500'}`}
+      />
+      <span
+        className={`absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 ${active ? 'bg-yellow-300' : 'bg-orange-500/75'}`}
+      />
       <span className="sr-only">{zhCN.timeline.beatMarker}</span>
     </button>
   );
@@ -4635,7 +5759,7 @@ function TransitionMenu({
   onChange,
   onAdd,
   onRemove,
-  onClose
+  onClose,
 }: {
   menu: TransitionMenuState;
   onChange(menu: TransitionMenuState): void;
@@ -4687,7 +5811,7 @@ function TransitionMenu({
               tabIndex={0}
               className={clsx(
                 'group relative min-w-0 rounded-md border p-1 text-left hover:border-brand hover:bg-sky-50',
-                menu.type === type ? 'border-brand bg-sky-50' : 'border-line bg-[var(--color-bg-elevated)]'
+                menu.type === type ? 'border-brand bg-sky-50' : 'border-line bg-[var(--color-bg-elevated)]',
               )}
               data-testid={`transition-preset-${type}`}
               data-favorite={favorite ? 'true' : 'false'}
@@ -4700,11 +5824,16 @@ function TransitionMenu({
               }}
             >
               <TransitionPreviewCanvas type={type} active={menu.type === type} />
-              <span className="mt-1 block truncate text-[11px] font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.transitionNames[type]}</span>
+              <span className="mt-1 block truncate text-[11px] font-medium text-[var(--color-text-secondary)]">
+                {zhCN.timeline.transitionNames[type]}
+              </span>
               {index === 0 && favorite ? <span className="sr-only">{zhCN.timeline.transitionFavorites}</span> : null}
               <button
                 type="button"
-                className={clsx('absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded bg-[var(--color-bg-elevated)]/90 shadow-sm', favorite ? 'text-amber-500' : 'text-[var(--color-text-muted)]')}
+                className={clsx(
+                  'absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded bg-[var(--color-bg-elevated)]/90 shadow-sm',
+                  favorite ? 'text-amber-500' : 'text-[var(--color-text-muted)]',
+                )}
                 aria-label={zhCN.timeline.transitionFavoriteToggle}
                 data-testid={`transition-favorite-${type}`}
                 onClick={(event) => {
@@ -4743,11 +5872,21 @@ function TransitionMenu({
           {zhCN.timeline.close}
         </button>
         {onRemove ? (
-          <button className="rounded border border-rose-300 px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid="transition-remove-button" onClick={onRemove}>
+          <button
+            className="rounded border border-rose-300 px-2 py-1 text-rose-700 hover:bg-rose-50"
+            type="button"
+            data-testid="transition-remove-button"
+            onClick={onRemove}
+          >
             {zhCN.timeline.remove}
           </button>
         ) : null}
-        <button className="rounded bg-brand px-2 py-1 font-medium text-white" type="button" data-testid="transition-add-button" onClick={onAdd}>
+        <button
+          className="rounded bg-brand px-2 py-1 font-medium text-white"
+          type="button"
+          data-testid="transition-add-button"
+          onClick={onAdd}
+        >
           {zhCN.timeline.add}
         </button>
       </div>
@@ -4776,7 +5915,12 @@ function TransitionPreviewCanvas({ type, active }: { type: TransitionType; activ
     const progress = 0.58;
     if (type.startsWith('wipe')) {
       const horizontal = type === 'wipe-left' || type === 'wipe-right';
-      context.fillRect(type === 'wipe-left' ? 0 : horizontal ? width * (1 - progress) : 0, type === 'wipe-up' ? 0 : !horizontal ? height * (1 - progress) : 0, horizontal ? width * progress : width, horizontal ? height : height * progress);
+      context.fillRect(
+        type === 'wipe-left' ? 0 : horizontal ? width * (1 - progress) : 0,
+        type === 'wipe-up' ? 0 : !horizontal ? height * (1 - progress) : 0,
+        horizontal ? width * progress : width,
+        horizontal ? height : height * progress,
+      );
     } else if (type === 'zoom-dissolve') {
       context.globalAlpha = 0.7;
       context.beginPath();
@@ -4824,7 +5968,15 @@ function TransitionPreviewCanvas({ type, active }: { type: TransitionType; activ
     }
   }, [active, type]);
 
-  return <canvas ref={ref} className="block h-12 w-full rounded bg-[var(--color-bg-elevated)]" width={144} height={72} aria-hidden="true" />;
+  return (
+    <canvas
+      ref={ref}
+      className="block h-12 w-full rounded bg-[var(--color-bg-elevated)]"
+      width={144}
+      height={72}
+      aria-hidden="true"
+    />
+  );
 }
 
 function drawPreviewShape(context: CanvasRenderingContext2D, type: TransitionType, width: number, height: number) {
@@ -4862,7 +6014,7 @@ function GapActionMenu({
   menu,
   onCloseGap,
   onFillGap,
-  onClose
+  onClose,
 }: {
   menu: GapMenuState;
   onCloseGap(): void;
@@ -4876,26 +6028,60 @@ function GapActionMenu({
       data-testid="gap-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-close" onClick={onCloseGap}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-close"
+        onClick={onCloseGap}
+      >
         {zhCN.timeline.closeGapAction}
       </button>
       <div className="my-1 border-t border-line" />
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-freeze-frame" onClick={() => onFillGap('freeze-frame')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-freeze-frame"
+        onClick={() => onFillGap('freeze-frame')}
+      >
         {zhCN.timeline.smartGapFillFreezeFrameAction}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-black" onClick={() => onFillGap('black')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-black"
+        onClick={() => onFillGap('black')}
+      >
         {zhCN.timeline.smartGapFillBlackAction}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-white" onClick={() => onFillGap('white')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-white"
+        onClick={() => onFillGap('white')}
+      >
         {zhCN.timeline.smartGapFillWhiteAction}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-repeat" onClick={() => onFillGap('repeat')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-repeat"
+        onClick={() => onFillGap('repeat')}
+      >
         {zhCN.timeline.smartGapFillRepeatAction}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-crossfade" onClick={() => onFillGap('crossfade')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="gap-action-crossfade"
+        onClick={() => onFillGap('crossfade')}
+      >
         {zhCN.timeline.smartGapFillCrossfadeAction}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel"
+        type="button"
+        onClick={onClose}
+      >
         {zhCN.timeline.close}
       </button>
     </div>
@@ -4906,7 +6092,7 @@ function VolumeEnvelopeMenu({
   menu,
   onFade,
   onReset,
-  onClose
+  onClose,
 }: {
   menu: VolumeEnvelopeMenuState;
   onFade(kind: 'in' | 'out'): void;
@@ -4920,16 +6106,35 @@ function VolumeEnvelopeMenu({
       data-testid="volume-envelope-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-fade-in" onClick={() => onFade('in')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="volume-envelope-fade-in"
+        onClick={() => onFade('in')}
+      >
         {zhCN.timeline.volumeEnvelopeFadeIn}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-fade-out" onClick={() => onFade('out')}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="volume-envelope-fade-out"
+        onClick={() => onFade('out')}
+      >
         {zhCN.timeline.volumeEnvelopeFadeOut}
       </button>
-      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-reset" onClick={onReset}>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+        type="button"
+        data-testid="volume-envelope-reset"
+        onClick={onReset}
+      >
         {zhCN.timeline.volumeEnvelopeReset}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel"
+        type="button"
+        onClick={onClose}
+      >
         {zhCN.timeline.close}
       </button>
     </div>
@@ -4941,7 +6146,7 @@ function RulerContextMenu({
   onChange,
   onAction,
   onJump,
-  onClose
+  onClose,
 }: {
   menu: RulerMenuState;
   onChange(menu: RulerMenuState): void;
@@ -4960,7 +6165,13 @@ function RulerContextMenu({
       {items
         .filter((item) => item.action !== 'jump-timecode')
         .map((item) => (
-          <button key={item.action} className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid={item.testId} onClick={() => onAction(item.action)}>
+          <button
+            key={item.action}
+            className="block w-full rounded px-2 py-2 text-left hover:bg-panel"
+            type="button"
+            data-testid={item.testId}
+            onClick={() => onAction(item.action)}
+          >
             {item.label}
           </button>
         ))}
@@ -4981,11 +6192,20 @@ function RulerContextMenu({
             }}
           />
         </label>
-        <button className="mt-2 block w-full rounded bg-brand px-2 py-1.5 text-center font-medium text-white" type="button" data-testid="ruler-timecode-jump-button" onClick={onJump}>
+        <button
+          className="mt-2 block w-full rounded bg-brand px-2 py-1.5 text-center font-medium text-white"
+          type="button"
+          data-testid="ruler-timecode-jump-button"
+          onClick={onJump}
+        >
           {zhCN.timeline.rulerJump}
         </button>
       </div>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel"
+        type="button"
+        onClick={onClose}
+      >
         {zhCN.timeline.close}
       </button>
     </div>
@@ -5022,7 +6242,7 @@ function ClipActionMenu({
   onClipColor,
   onDelete,
   onRippleDelete,
-  onClose
+  onClose,
 }: {
   menu: ClipMenuState;
   clip?: Clip;
@@ -5062,7 +6282,9 @@ function ClipActionMenu({
   const canAlignSubtitles = clip?.type === 'subtitle';
   const canTtsVoiceover = clip?.type === 'subtitle';
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
-  const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
+  const canConvertFrameRate = Boolean(
+    asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)),
+  );
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
   return (
     <div
@@ -5164,14 +6386,18 @@ function ClipActionMenu({
       </button>
       {versionEntries.length > 1 ? (
         <div className="rounded-md border border-line bg-panel px-2 py-2" data-testid="clip-media-version-menu">
-          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.switchMediaVersionAction}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+            {zhCN.timeline.switchMediaVersionAction}
+          </div>
           <div className="grid gap-1">
             {versionEntries.map((entry) => (
               <button
                 key={entry.id}
                 className={clsx(
                   'flex min-w-0 items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[11px] hover:bg-[var(--color-bg-elevated)] disabled:opacity-60',
-                  currentMediaId === entry.assetId ? 'bg-[var(--color-bg-elevated)] font-semibold text-brand' : 'text-[var(--color-text-secondary)]'
+                  currentMediaId === entry.assetId
+                    ? 'bg-[var(--color-bg-elevated)] font-semibold text-brand'
+                    : 'text-[var(--color-text-secondary)]',
                 )}
                 type="button"
                 disabled={currentMediaId === entry.assetId}
@@ -5249,7 +6475,9 @@ function ClipActionMenu({
       </button>
       {clip ? (
         <div className="px-2 pb-1 pt-2" data-testid="clip-label-color-options">
-          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.clipLabelColor}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+            {zhCN.timeline.clipLabelColor}
+          </div>
           <div className="flex flex-wrap gap-1">
             {TIMELINE_LABEL_COLORS.map((color) => (
               <button
@@ -5263,14 +6491,21 @@ function ClipActionMenu({
               />
             ))}
           </div>
-          <button className="mt-1 rounded border border-line px-2 py-1 text-[11px] text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="clip-label-color-clear" onClick={() => onClipColor(clip.id, null)}>
+          <button
+            className="mt-1 rounded border border-line px-2 py-1 text-[11px] text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid="clip-label-color-clear"
+            onClick={() => onClipColor(clip.id, null)}
+          >
             {zhCN.timeline.defaultLabelColor}
           </button>
         </div>
       ) : null}
       {group ? (
         <div className="px-2 pb-1 pt-2" data-testid="clip-group-color-options">
-          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.clipGroupColor}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">
+            {zhCN.timeline.clipGroupColor}
+          </div>
           <div className="flex gap-1">
             {CLIP_GROUP_COLORS.map((color) => (
               <button
@@ -5286,7 +6521,11 @@ function ClipActionMenu({
           </div>
         </div>
       ) : null}
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel"
+        type="button"
+        onClick={onClose}
+      >
         {zhCN.timeline.close}
       </button>
     </div>
@@ -5297,7 +6536,7 @@ function ReplaceMediaDialog({
   value,
   onChange,
   onCancel,
-  onConfirm
+  onConfirm,
 }: {
   value: ReplaceMediaDialogState;
   onChange(value: ReplaceMediaDialogState): void;
@@ -5305,7 +6544,10 @@ function ReplaceMediaDialog({
   onConfirm(): void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4" data-testid="replace-media-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4"
+      data-testid="replace-media-dialog"
+    >
       <div className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft">
         <div className="mb-3">
           <div className="text-sm font-semibold text-ink">{zhCN.timeline.replaceMediaTitle}</div>
@@ -5327,7 +6569,10 @@ function ReplaceMediaDialog({
           </select>
         </label>
         {value.warnings.length > 0 ? (
-          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800" data-testid="replace-media-warning">
+          <div
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800"
+            data-testid="replace-media-warning"
+          >
             <div className="font-semibold">{zhCN.timeline.replaceMediaWarnings.title}</div>
             {value.warnings.map((warning) => (
               <div key={warning} className="mt-1">
@@ -5337,10 +6582,19 @@ function ReplaceMediaDialog({
           </div>
         ) : null}
         <div className="mt-4 flex justify-end gap-2">
-          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+          <button
+            className="rounded-md border border-line px-3 py-1.5 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onCancel}
+          >
             {zhCN.timeline.close}
           </button>
-          <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="replace-media-confirm" onClick={onConfirm}>
+          <button
+            className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-[#176858]"
+            type="button"
+            data-testid="replace-media-confirm"
+            onClick={onConfirm}
+          >
             {zhCN.timeline.replaceMediaConfirm}
           </button>
         </div>
@@ -5353,7 +6607,7 @@ function SilenceDetectionDialog({
   clip,
   asset,
   onClose,
-  onApply
+  onApply,
 }: {
   clip: Clip;
   asset: MediaAsset;
@@ -5375,7 +6629,7 @@ function SilenceDetectionDialog({
       const nextRanges = await detectClipSilence(clip, asset, {
         thresholdDb,
         minSilenceDuration,
-        marginDuration: Math.max(0, marginMs) / 1000
+        marginDuration: Math.max(0, marginMs) / 1000,
       });
       setRanges(nextRanges);
       setStatus('preview');
@@ -5394,7 +6648,10 @@ function SilenceDetectionDialog({
         </div>
         <div className="space-y-3 px-4 py-3 text-sm">
           {status === 'detecting' ? (
-            <div className="rounded border border-line bg-panel px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]" data-testid="silence-loading">
+            <div
+              className="rounded border border-line bg-panel px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]"
+              data-testid="silence-loading"
+            >
               {zhCN.timeline.silenceScanning}
             </div>
           ) : (
@@ -5435,8 +6692,13 @@ function SilenceDetectionDialog({
                 />
               </label>
               {status === 'preview' ? (
-                <div className="rounded border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]" data-testid="silence-preview">
-                  <div className="font-semibold">{zhCN.timeline.silencePreview(ranges.length, totalDuration.toFixed(2))}</div>
+                <div
+                  className="rounded border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]"
+                  data-testid="silence-preview"
+                >
+                  <div className="font-semibold">
+                    {zhCN.timeline.silencePreview(ranges.length, totalDuration.toFixed(2))}
+                  </div>
                   {ranges.length > 0 ? (
                     <div className="mt-2 max-h-24 overflow-auto">
                       {ranges.slice(0, 6).map((range) => (
@@ -5450,16 +6712,27 @@ function SilenceDetectionDialog({
                   )}
                 </div>
               ) : null}
-              {status === 'error' ? <div className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div> : null}
+              {status === 'error' ? (
+                <div className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>
+              ) : null}
             </>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose}>
+          <button
+            className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onClose}
+          >
             {zhCN.timeline.close}
           </button>
           {status === 'preview' && ranges.length > 0 ? (
-            <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white" type="button" data-testid="silence-confirm-button" onClick={() => onApply(ranges)}>
+            <button
+              className="rounded bg-brand px-3 py-2 text-sm font-medium text-white"
+              type="button"
+              data-testid="silence-confirm-button"
+              onClick={() => onApply(ranges)}
+            >
               {zhCN.timeline.confirmSilenceCut}
             </button>
           ) : (
@@ -5485,7 +6758,7 @@ function SceneDetectionDialog({
   onDetect,
   onCancelDetect,
   onApply,
-  onClose
+  onClose,
 }: {
   state: SceneDialogState;
   onChange(state: SceneDialogState): void;
@@ -5495,22 +6768,36 @@ function SceneDetectionDialog({
   onClose(): void;
 }) {
   const estimatedCount = estimateSceneCutCountForThreshold(state.scenecuts, state.threshold, state.clip.duration);
-  const filteredCuts = state.filterShortScenes ? filterShortSceneCuts(state.scenecuts, state.clip.duration, state.minSceneSeconds) : filterShortSceneCuts(state.scenecuts, state.clip.duration, 0);
+  const filteredCuts = state.filterShortScenes
+    ? filterShortSceneCuts(state.scenecuts, state.clip.duration, state.minSceneSeconds)
+    : filterShortSceneCuts(state.scenecuts, state.clip.duration, 0);
   const progressText =
     state.totalFrames && state.totalFrames > 0
       ? zhCN.timeline.sceneProgressFrames(state.analyzedFrames ?? 0, state.totalFrames)
       : zhCN.timeline.sceneProgressPercent(state.progress);
-  const canApply = state.status === 'complete' && filteredCuts.length > 0 && (state.splitAtCuts || state.addMarkers || state.syncChapters);
+  const canApply =
+    state.status === 'complete' &&
+    filteredCuts.length > 0 &&
+    (state.splitAtCuts || state.addMarkers || state.syncChapters);
   const running = state.status === 'running';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="scene-detect-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="scene-detect-dialog"
+    >
       <section className="w-full max-w-lg rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">{zhCN.timeline.sceneDialogTitle}</h2>
             <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{state.clip.name}</div>
           </div>
-          <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={running} onClick={onClose} data-testid="scene-detect-close-button">
+          <button
+            className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={running}
+            onClick={onClose}
+            data-testid="scene-detect-close-button"
+          >
             {zhCN.common.close}
           </button>
         </div>
@@ -5532,34 +6819,55 @@ function SceneDetectionDialog({
               onChange={(event) => onChange({ ...state, threshold: Number(event.target.value) })}
             />
           </label>
-          <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]" data-testid="scene-estimate">
+          <div
+            className="rounded-md border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]"
+            data-testid="scene-estimate"
+          >
             {zhCN.timeline.sceneEstimate(estimatedCount)}
           </div>
           {running ? (
-            <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3" data-testid="scene-progress">
+            <div
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3"
+              data-testid="scene-progress"
+            >
               <div className="mb-2 flex items-center justify-between gap-2 text-xs text-[var(--color-text-secondary)]">
                 <span>{zhCN.timeline.sceneScanning}</span>
                 <span className="tabular-nums">{progressText}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
-                <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
+                <div
+                  className="h-full bg-brand transition-all"
+                  style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }}
+                />
               </div>
             </div>
           ) : null}
           {state.limited ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="scene-limit-warning">
+            <div
+              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+              data-testid="scene-limit-warning"
+            >
               {zhCN.timeline.sceneAnalysisLimited}
             </div>
           ) : null}
           {state.status === 'complete' ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800" data-testid="scene-result-summary">
+            <div
+              className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800"
+              data-testid="scene-result-summary"
+            >
               {zhCN.timeline.sceneDetectedCount(state.scenecuts.length, filteredCuts.length)}
             </div>
           ) : null}
           <div className="grid gap-3 rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-sm text-[var(--color-text-secondary)]">
             <label className="flex items-center justify-between gap-3">
               <span>{zhCN.timeline.sceneFilterShort}</span>
-              <input type="checkbox" checked={state.filterShortScenes} disabled={running} data-testid="scene-filter-short-checkbox" onChange={(event) => onChange({ ...state, filterShortScenes: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={state.filterShortScenes}
+                disabled={running}
+                data-testid="scene-filter-short-checkbox"
+                onChange={(event) => onChange({ ...state, filterShortScenes: event.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-3 text-xs text-[var(--color-text-secondary)]">
               <span>{zhCN.timeline.sceneMinDuration}</span>
@@ -5576,29 +6884,63 @@ function SceneDetectionDialog({
             </label>
             <label className="flex items-center justify-between gap-3">
               <span>{zhCN.timeline.sceneSplitAtCuts}</span>
-              <input type="checkbox" checked={state.splitAtCuts} disabled={running} data-testid="scene-split-checkbox" onChange={(event) => onChange({ ...state, splitAtCuts: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={state.splitAtCuts}
+                disabled={running}
+                data-testid="scene-split-checkbox"
+                onChange={(event) => onChange({ ...state, splitAtCuts: event.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-3">
               <span>{zhCN.timeline.sceneAddMarkers}</span>
-              <input type="checkbox" checked={state.addMarkers} disabled={running} data-testid="scene-marker-checkbox" onChange={(event) => onChange({ ...state, addMarkers: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={state.addMarkers}
+                disabled={running}
+                data-testid="scene-marker-checkbox"
+                onChange={(event) => onChange({ ...state, addMarkers: event.target.checked })}
+              />
             </label>
             <label className="flex items-center justify-between gap-3">
               <span>{zhCN.timeline.sceneSyncChapters}</span>
-              <input type="checkbox" checked={state.syncChapters} disabled={running} data-testid="scene-chapter-checkbox" onChange={(event) => onChange({ ...state, syncChapters: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={state.syncChapters}
+                disabled={running}
+                data-testid="scene-chapter-checkbox"
+                onChange={(event) => onChange({ ...state, syncChapters: event.target.checked })}
+              />
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
           {running ? (
-            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" data-testid="scene-cancel-button" onClick={onCancelDetect}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+              type="button"
+              data-testid="scene-cancel-button"
+              onClick={onCancelDetect}
+            >
               {zhCN.common.cancel}
             </button>
           ) : (
-            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" data-testid="scene-detect-button" onClick={onDetect}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+              type="button"
+              data-testid="scene-detect-button"
+              onClick={onDetect}
+            >
               {state.status === 'complete' ? zhCN.timeline.sceneDetectAgain : zhCN.timeline.startSceneDetect}
             </button>
           )}
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canApply} data-testid="scene-apply-button" onClick={onApply}>
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={!canApply}
+            data-testid="scene-apply-button"
+            onClick={onApply}
+          >
             {zhCN.timeline.sceneApply}
           </button>
         </div>
@@ -5610,34 +6952,53 @@ function SceneDetectionDialog({
 function CoverFramePickerDialog({
   state,
   onSelect,
-  onClose
+  onClose,
 }: {
   state: CoverFrameDialogState;
   onSelect(frame: CoverFrameResult): void;
   onClose(): void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="cover-frame-picker">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="cover-frame-picker"
+    >
       <section className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">{zhCN.timeline.coverFrameDialogTitle}</h2>
             <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{state.clip.name}</div>
           </div>
-          <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="cover-frame-close">
+          <button
+            className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            data-testid="cover-frame-close"
+          >
             {zhCN.timeline.close}
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {state.loading ? (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-[var(--color-text-secondary)]" data-testid="cover-frame-loading">
+            <div
+              className="rounded-md border border-line bg-panel p-4 text-sm text-[var(--color-text-secondary)]"
+              data-testid="cover-frame-loading"
+            >
               <div className="mb-2">{zhCN.timeline.coverFrameGenerating}</div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
-                <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
+                <div
+                  className="h-full bg-brand transition-all"
+                  style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }}
+                />
               </div>
             </div>
           ) : state.error ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800" data-testid="cover-frame-error">{state.error}</div>
+            <div
+              className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+              data-testid="cover-frame-error"
+            >
+              {state.error}
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {state.frames.map((frame, index) => (
@@ -5651,7 +7012,9 @@ function CoverFramePickerDialog({
                   <img className="aspect-video w-full object-cover" src={convertLocalFileSrc(frame.path)} alt="" />
                   <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-[var(--color-text-secondary)]">
                     <span>{zhCN.timeline.coverFrameCandidate(index + 1)}</span>
-                    <span className="tabular-nums">{frame.timestamp === undefined ? '' : `${frame.timestamp.toFixed(2)}s`}</span>
+                    <span className="tabular-nums">
+                      {frame.timestamp === undefined ? '' : `${frame.timestamp.toFixed(2)}s`}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -5677,9 +7040,14 @@ function WhisperGenerationDialog({ progress, clipName }: { progress: number; cli
           <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{clipName}</div>
         </div>
         <div className="px-4 py-5">
-          <div className="mb-2 text-sm text-[var(--color-text-secondary)]">{zhCN.timeline.whisperRunningMessage(progress)}</div>
+          <div className="mb-2 text-sm text-[var(--color-text-secondary)]">
+            {zhCN.timeline.whisperRunningMessage(progress)}
+          </div>
           <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
-            <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
+            <div
+              className="h-full bg-brand transition-all"
+              style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }}
+            />
           </div>
         </div>
       </section>
@@ -5692,7 +7060,7 @@ function DialogueDetectionPanel({
   misses,
   onRun,
   onGenerateSubtitles,
-  onClose
+  onClose,
 }: {
   markers: DialogueInterval[];
   misses: DialogueWhisperMiss[];
@@ -5713,13 +7081,21 @@ function DialogueDetectionPanel({
   }
 
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="dialogue-detection-panel">
+    <aside
+      className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
+      data-testid="dialogue-detection-panel"
+    >
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
         <div>
           <div className="text-sm font-semibold">{zhCN.timeline.dialogueDetectionTitle}</div>
           <div className="text-[11px] text-[var(--color-text-muted)]">{zhCN.timeline.dialogueDetectionSubtitle}</div>
         </div>
-        <button className="rounded border border-line px-2 py-1 text-xs hover:bg-panel" type="button" onClick={onClose} data-testid="dialogue-detection-close">
+        <button
+          className="rounded border border-line px-2 py-1 text-xs hover:bg-panel"
+          type="button"
+          onClick={onClose}
+          data-testid="dialogue-detection-close"
+        >
           {zhCN.timeline.close}
         </button>
       </div>
@@ -5749,17 +7125,26 @@ function DialogueDetectionPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 text-xs">
         <div className="mb-2 flex items-center justify-between">
-          <span className="font-semibold text-[var(--color-text-secondary)]">{zhCN.timeline.dialogueDetectionResults}</span>
+          <span className="font-semibold text-[var(--color-text-secondary)]">
+            {zhCN.timeline.dialogueDetectionResults}
+          </span>
           <span className="tabular-nums text-[var(--color-text-muted)]">{markers.length}</span>
         </div>
         {markers.length === 0 ? (
-          <div className="rounded border border-dashed border-line px-3 py-6 text-center text-[var(--color-text-muted)]" data-testid="dialogue-detection-empty">
+          <div
+            className="rounded border border-dashed border-line px-3 py-6 text-center text-[var(--color-text-muted)]"
+            data-testid="dialogue-detection-empty"
+          >
             {zhCN.timeline.dialogueDetectionNoResults}
           </div>
         ) : (
           <div className="space-y-2">
             {markers.map((marker, index) => (
-              <div key={marker.id} className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5" data-testid="dialogue-detection-result">
+              <div
+                key={marker.id}
+                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5"
+                data-testid="dialogue-detection-result"
+              >
                 <div className="flex items-center justify-between gap-2 font-medium text-emerald-800">
                   <span>{zhCN.timeline.dialogueDetectionRangeLabel(index + 1)}</span>
                   <span>{zhCN.timeline.dialogueDetectionConfidence(marker.confidence)}</span>
@@ -5772,7 +7157,10 @@ function DialogueDetectionPanel({
           </div>
         )}
         {misses.length > 0 ? (
-          <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-2 py-2 text-amber-800" data-testid="dialogue-detection-whisper-misses">
+          <div
+            className="mt-3 rounded border border-amber-200 bg-amber-50 px-2 py-2 text-amber-800"
+            data-testid="dialogue-detection-whisper-misses"
+          >
             <div className="font-semibold">{zhCN.timeline.dialogueDetectionWhisperMissing(misses.length)}</div>
             <div className="mt-1 space-y-1 font-mono tabular-nums">
               {misses.slice(0, 4).map((miss) => (
@@ -5818,7 +7206,7 @@ function TimelineMinimap({
   layout,
   viewport,
   height,
-  onNavigate
+  onNavigate,
 }: {
   layout: TimelineMinimapLayout;
   viewport: TimelineMinimapViewportRect;
@@ -5913,7 +7301,7 @@ function TimelineColorHeatmapLayer({
   points,
   jumps,
   zoom,
-  width
+  width,
 }: {
   points: TimelineColorHeatmapPoint[];
   jumps: SceneColorDifference[];
@@ -5936,7 +7324,7 @@ function TimelineColorHeatmapLayer({
               left: LABEL_WIDTH + point.start * zoom,
               width: Math.max(3, (point.end - point.start) * zoom),
               height: barHeight,
-              backgroundColor: point.color
+              backgroundColor: point.color,
             }}
             title={`${Math.round(point.colorTemperatureKelvin)}K / ${point.brightness.toFixed(1)}`}
             data-testid="timeline-color-heatmap-point"
@@ -5967,7 +7355,7 @@ function TimelineHeatmapCanvas({
   width,
   height,
   opacity,
-  colorScheme
+  colorScheme,
 }: {
   segments: TimelineHeatmapSegment[];
   zoom: number;
@@ -6041,9 +7429,13 @@ function SequenceSettingsDialog({
   sequence,
   projectSettings,
   onSave,
-  onClose
+  onClose,
 }: {
-  sequence: { id: string; name?: string; settings?: { frameRate?: number; width?: number; height?: number; duration?: number } };
+  sequence: {
+    id: string;
+    name?: string;
+    settings?: { frameRate?: number; width?: number; height?: number; duration?: number };
+  };
   projectSettings: { fps: number; width: number; height: number };
   onSave(settings: { frameRate?: number; width?: number; height?: number } | undefined): void;
   onClose(): void;
@@ -6054,50 +7446,123 @@ function SequenceSettingsDialog({
   const [width, setWidth] = useState(String(seqSettings?.width ?? projectSettings.width));
   const [height, setHeight] = useState(String(seqSettings?.height ?? projectSettings.height));
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" data-testid="sequence-settings-dialog" onPointerDown={(e) => { e.stopPropagation(); }}>
-      <div className="w-[360px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-lg" onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      data-testid="sequence-settings-dialog"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+      }}
+    >
+      <div
+        className="w-[360px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-lg"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold">{zhCN.timeline.sequenceSettingsTitle}</span>
-          <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose}><X size={14} /></button>
+          <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose}>
+            <X size={14} />
+          </button>
         </div>
         <label className="mb-3 flex items-center gap-2 text-xs">
-          <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} data-testid="sequence-settings-override" />
+          <input
+            type="checkbox"
+            checked={override}
+            onChange={(e) => setOverride(e.target.checked)}
+            data-testid="sequence-settings-override"
+          />
           {zhCN.timeline.sequenceSettingsOverride}
         </label>
         <div className="space-y-2 text-xs">
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsFps}</span>
-            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="0.001" min="1" max="240" value={fps} disabled={!override} onChange={(e) => setFps(e.target.value)} data-testid="sequence-settings-fps" />
-            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            <input
+              className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50"
+              type="number"
+              step="0.001"
+              min="1"
+              max="240"
+              value={fps}
+              disabled={!override}
+              onChange={(e) => setFps(e.target.value)}
+              data-testid="sequence-settings-fps"
+            />
+            {!override && (
+              <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>
+            )}
           </label>
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsWidth}</span>
-            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={width} disabled={!override} onChange={(e) => setWidth(e.target.value)} data-testid="sequence-settings-width" />
-            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            <input
+              className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50"
+              type="number"
+              step="1"
+              min="1"
+              max="16384"
+              value={width}
+              disabled={!override}
+              onChange={(e) => setWidth(e.target.value)}
+              data-testid="sequence-settings-width"
+            />
+            {!override && (
+              <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>
+            )}
           </label>
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsHeight}</span>
-            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={height} disabled={!override} onChange={(e) => setHeight(e.target.value)} data-testid="sequence-settings-height" />
-            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            <input
+              className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50"
+              type="number"
+              step="1"
+              min="1"
+              max="16384"
+              value={height}
+              disabled={!override}
+              onChange={(e) => setHeight(e.target.value)}
+              data-testid="sequence-settings-height"
+            />
+            {!override && (
+              <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>
+            )}
           </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button className="rounded px-3 py-1.5 text-xs hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>
-          <button className="rounded bg-brand px-3 py-1.5 text-xs text-white hover:opacity-90" type="button" data-testid="sequence-settings-save" onClick={() => {
-            if (override) {
-              onSave({ frameRate: parseFloat(fps) || undefined, width: Number.parseInt(width, 10) || undefined, height: Number.parseInt(height, 10) || undefined });
-            } else {
-              onSave(undefined);
-            }
-            onClose();
-          }}>{zhCN.common.save}</button>
+          <button className="rounded px-3 py-1.5 text-xs hover:bg-panel" type="button" onClick={onClose}>
+            {zhCN.common.cancel}
+          </button>
+          <button
+            className="rounded bg-brand px-3 py-1.5 text-xs text-white hover:opacity-90"
+            type="button"
+            data-testid="sequence-settings-save"
+            onClick={() => {
+              if (override) {
+                onSave({
+                  frameRate: parseFloat(fps) || undefined,
+                  width: Number.parseInt(width, 10) || undefined,
+                  height: Number.parseInt(height, 10) || undefined,
+                });
+              } else {
+                onSave(undefined);
+              }
+              onClose();
+            }}
+          >
+            {zhCN.common.save}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Track[] }; tracks: Track[]; onClose(): void }) {
+function GapStatsPanel({
+  timeline,
+  tracks,
+  onClose,
+}: {
+  timeline: { tracks: Track[] };
+  tracks: Track[];
+  onClose(): void;
+}) {
   const gaps = computeTimelineGaps(timeline);
   const stats = getGapStats(gaps);
   return (
@@ -6109,16 +7574,34 @@ function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Trac
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-sm font-semibold">{zhCN.timeline.gapPanel.title}</span>
-        <button className="rounded p-1 hover:bg-panel" type="button" data-testid="gap-stats-close" onClick={onClose}><X size={14} /></button>
+        <button className="rounded p-1 hover:bg-panel" type="button" data-testid="gap-stats-close" onClick={onClose}>
+          <X size={14} />
+        </button>
       </div>
       {stats.totalCount === 0 ? (
         <div className="py-4 text-center text-[var(--color-text-muted)]">{zhCN.timeline.gapPanel.noGaps}</div>
       ) : (
         <div className="space-y-2">
-          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.totalCount}</span><span className="font-medium">{stats.totalCount}</span></div>
-          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.totalDuration}</span><span className="font-medium">{zhCN.timeline.gapPanel.seconds(stats.totalDuration)}</span></div>
-          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.maxGap}</span><span className="font-medium">{stats.maxGap ? zhCN.timeline.gapPanel.seconds(stats.maxGap.duration) : '-'}</span></div>
-          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.minGap}</span><span className="font-medium">{stats.minGap ? zhCN.timeline.gapPanel.seconds(stats.minGap.duration) : '-'}</span></div>
+          <div className="flex justify-between">
+            <span>{zhCN.timeline.gapPanel.totalCount}</span>
+            <span className="font-medium">{stats.totalCount}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{zhCN.timeline.gapPanel.totalDuration}</span>
+            <span className="font-medium">{zhCN.timeline.gapPanel.seconds(stats.totalDuration)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>{zhCN.timeline.gapPanel.maxGap}</span>
+            <span className="font-medium">
+              {stats.maxGap ? zhCN.timeline.gapPanel.seconds(stats.maxGap.duration) : '-'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>{zhCN.timeline.gapPanel.minGap}</span>
+            <span className="font-medium">
+              {stats.minGap ? zhCN.timeline.gapPanel.seconds(stats.minGap.duration) : '-'}
+            </span>
+          </div>
           {Object.keys(stats.byTrack).length > 1 && (
             <div className="mt-2 border-t border-line pt-2">
               <div className="mb-1 font-semibold">{zhCN.timeline.gapPanel.track}</div>
@@ -6127,7 +7610,10 @@ function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Trac
                 return (
                   <div key={trackId} className="flex justify-between py-0.5">
                     <span className="text-[var(--color-text-secondary)]">{track?.name ?? trackId}</span>
-                    <span>{entry.count}{zhCN.timeline.gapPanel.count} / {zhCN.timeline.gapPanel.seconds(entry.totalDuration)}</span>
+                    <span>
+                      {entry.count}
+                      {zhCN.timeline.gapPanel.count} / {zhCN.timeline.gapPanel.seconds(entry.totalDuration)}
+                    </span>
                   </div>
                 );
               })}

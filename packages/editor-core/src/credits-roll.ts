@@ -13,7 +13,7 @@ export const DEFAULT_CREDITS_STYLE: CreditsStyle = {
   bold: false,
   italic: false,
   lineSpacing: 18,
-  horizontalMargin: 96
+  horizontalMargin: 96,
 };
 
 export function parseCreditsText(input: string): CreditsRow[] {
@@ -39,7 +39,10 @@ export function formatCreditsRowsForTextfile(rows: CreditsRow[]): string {
     .join('\n');
 }
 
-export function calculateCreditsContentHeight(rows: CreditsRow[], style: Pick<CreditsStyle, 'fontSize' | 'lineSpacing'>): number {
+export function calculateCreditsContentHeight(
+  rows: CreditsRow[],
+  style: Pick<CreditsStyle, 'fontSize' | 'lineSpacing'>,
+): number {
   const lineHeight = Math.max(1, style.fontSize + style.lineSpacing);
   return Math.max(lineHeight, rows.length * lineHeight);
 }
@@ -48,21 +51,27 @@ export function buildCreditsRollYExpression(speed: number): string {
   return `h-t*${formatSpeed(speed)}`;
 }
 
-export function calculateCreditsRollYRange(input: { speed: number; duration: number; canvasHeight: number }): { startY: number; endY: number } {
+export function calculateCreditsRollYRange(input: { speed: number; duration: number; canvasHeight: number }): {
+  startY: number;
+  endY: number;
+} {
   const speed = normalizeCreditsRollSpeed(input.speed);
   const duration = Number.isFinite(input.duration) ? Math.max(0, input.duration) : 0;
   const canvasHeight = Number.isFinite(input.canvasHeight) ? Math.max(0, input.canvasHeight) : 0;
   return {
     startY: round(canvasHeight),
-    endY: round(canvasHeight - speed * duration)
+    endY: round(canvasHeight - speed * duration),
   };
 }
 
-export function normalizeCreditsRows(rows: readonly Partial<CreditsRow>[] | undefined, fallbackText = ''): CreditsRow[] {
+export function normalizeCreditsRows(
+  rows: readonly Partial<CreditsRow>[] | undefined,
+  fallbackText = '',
+): CreditsRow[] {
   const normalized = (rows ?? [])
     .map((row) => ({
       role: normalizeCreditsCell(row.role),
-      name: normalizeCreditsCell(row.name)
+      name: normalizeCreditsCell(row.name),
     }))
     .filter((row) => row.role || row.name);
   return normalized.length > 0 ? normalized : parseCreditsText(fallbackText);
@@ -78,9 +87,12 @@ export function normalizeCreditsStyle(style: Partial<CreditsStyle> | undefined):
     horizontalMargin: Math.round(clampNumber(style?.horizontalMargin, DEFAULT_CREDITS_STYLE.horizontalMargin, 0, 960)),
     color: normalizeColor(style?.color, DEFAULT_CREDITS_STYLE.color),
     backgroundColor: normalizeColor(style?.backgroundColor, DEFAULT_CREDITS_STYLE.backgroundColor),
-    fontFamily: typeof style?.fontFamily === 'string' && style.fontFamily.trim() ? style.fontFamily.trim() : DEFAULT_CREDITS_STYLE.fontFamily,
+    fontFamily:
+      typeof style?.fontFamily === 'string' && style.fontFamily.trim()
+        ? style.fontFamily.trim()
+        : DEFAULT_CREDITS_STYLE.fontFamily,
     bold: style?.bold === true,
-    italic: style?.italic === true
+    italic: style?.italic === true,
   };
 }
 
@@ -96,7 +108,7 @@ function parseCreditsLine(line: string): CreditsRow {
   const [role, ...rest] = splitDelimitedLine(line, separator);
   return {
     role: normalizeCreditsCell(role),
-    name: normalizeCreditsCell(rest.join(separator))
+    name: normalizeCreditsCell(rest.join(separator)),
   };
 }
 

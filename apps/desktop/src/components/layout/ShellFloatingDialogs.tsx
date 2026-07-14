@@ -40,23 +40,47 @@ import type { TutorialSignals } from '../../tutorial/tutorialState';
 const ExportDialogs = lazy(() => import('../dialogs/ExportDialogs').then((m) => ({ default: m.ExportDialogs })));
 const AnalysisDialogs = lazy(() => import('../dialogs/AnalysisDialogs').then((m) => ({ default: m.AnalysisDialogs })));
 const SnapshotDialogs = lazy(() => import('../dialogs/SnapshotDialogs').then((m) => ({ default: m.SnapshotDialogs })));
-const MediaCompareDialogs = lazy(() => import('../dialogs/MediaCompareDialogs').then((m) => ({ default: m.MediaCompareDialogs })));
+const MediaCompareDialogs = lazy(() =>
+  import('../dialogs/MediaCompareDialogs').then((m) => ({ default: m.MediaCompareDialogs })),
+);
 const BeatSyncDialog = lazy(() => import('../dialogs/BeatSyncDialog').then((m) => ({ default: m.BeatSyncDialog })));
 const SettingsDialogs = lazy(() => import('../dialogs/SettingsDialogs').then((m) => ({ default: m.SettingsDialogs })));
 const SecurityDialogs = lazy(() => import('../dialogs/SecurityDialogs').then((m) => ({ default: m.SecurityDialogs })));
-const ProjectHealthDialogs = lazy(() => import('../dialogs/ProjectHealthDialogs').then((m) => ({ default: m.ProjectHealthDialogs })));
+const ProjectHealthDialogs = lazy(() =>
+  import('../dialogs/ProjectHealthDialogs').then((m) => ({ default: m.ProjectHealthDialogs })),
+);
 const RecoveryDialogs = lazy(() => import('../dialogs/RecoveryDialogs').then((m) => ({ default: m.RecoveryDialogs })));
 
-const CharacterTimelinePanel = lazy(() => import('../Timeline/CharacterTimelinePanel').then((m) => ({ default: m.CharacterTimelinePanel })));
-const PreflightChecklistPanel = lazy(() => import('../Export/PreflightChecklistPanel').then((m) => ({ default: m.PreflightChecklistPanel })));
-const DubbingAdaptationPanel = lazy(() => import('../Export/DubbingAdaptationPanel').then((m) => ({ default: m.DubbingAdaptationPanel })));
-const ProjectTemplateDialog = lazy(() => import('../../project-templates/ProjectTemplateDialog').then((m) => ({ default: m.ProjectTemplateDialog })));
-const TimelineTemplateDialog = lazy(() => import('../../timeline-templates/TimelineTemplateDialog').then((m) => ({ default: m.TimelineTemplateDialog })));
-const TimelineSearchPanel = lazy(() => import('../../timeline-search/TimelineSearchPanel').then((m) => ({ default: m.TimelineSearchPanel })));
-const ShortcutCheatsheetPanel = lazy(() => import('../ShortcutCheatsheetPanel').then((m) => ({ default: m.ShortcutCheatsheetPanel })));
-const PasteKeyframeDialog = lazy(() => import('../dialogs/PasteKeyframeDialog').then((m) => ({ default: m.PasteKeyframeDialog })));
-const PerformanceMonitorPanel = lazy(() => import('../PerformanceMonitorPanel').then((m) => ({ default: m.PerformanceMonitorPanel })));
-const TutorialOverlay = lazy(() => import('../../tutorial/TutorialOverlay').then((m) => ({ default: m.TutorialOverlay })));
+const CharacterTimelinePanel = lazy(() =>
+  import('../Timeline/CharacterTimelinePanel').then((m) => ({ default: m.CharacterTimelinePanel })),
+);
+const PreflightChecklistPanel = lazy(() =>
+  import('../Export/PreflightChecklistPanel').then((m) => ({ default: m.PreflightChecklistPanel })),
+);
+const DubbingAdaptationPanel = lazy(() =>
+  import('../Export/DubbingAdaptationPanel').then((m) => ({ default: m.DubbingAdaptationPanel })),
+);
+const ProjectTemplateDialog = lazy(() =>
+  import('../../project-templates/ProjectTemplateDialog').then((m) => ({ default: m.ProjectTemplateDialog })),
+);
+const TimelineTemplateDialog = lazy(() =>
+  import('../../timeline-templates/TimelineTemplateDialog').then((m) => ({ default: m.TimelineTemplateDialog })),
+);
+const TimelineSearchPanel = lazy(() =>
+  import('../../timeline-search/TimelineSearchPanel').then((m) => ({ default: m.TimelineSearchPanel })),
+);
+const ShortcutCheatsheetPanel = lazy(() =>
+  import('../ShortcutCheatsheetPanel').then((m) => ({ default: m.ShortcutCheatsheetPanel })),
+);
+const PasteKeyframeDialog = lazy(() =>
+  import('../dialogs/PasteKeyframeDialog').then((m) => ({ default: m.PasteKeyframeDialog })),
+);
+const PerformanceMonitorPanel = lazy(() =>
+  import('../PerformanceMonitorPanel').then((m) => ({ default: m.PerformanceMonitorPanel })),
+);
+const TutorialOverlay = lazy(() =>
+  import('../../tutorial/TutorialOverlay').then((m) => ({ default: m.TutorialOverlay })),
+);
 
 // 所有非 store 内状态的回调和数据通过 props 传入
 export interface ShellFloatingDialogsProps {
@@ -86,7 +110,12 @@ export interface ShellFloatingDialogsProps {
   splitSpectrumAtTime: (asset: MediaAsset, sourceTime: number) => void;
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
-  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
+  generateSmartMontage: (config: {
+    videoAssetIds: string[];
+    audioAssetId: string;
+    beatTimes: number[];
+    sensitivity: BeatSensitivity;
+  }) => void;
   addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => void;
   analyzePreferredContentTargets: () => void;
@@ -152,7 +181,10 @@ export interface ShellFloatingDialogsProps {
   repairFromMediaHealthDashboard: () => Promise<void>;
   openMediaHealthRelinkPanel: () => void;
   refreshMediaOrganizer: () => Promise<void>;
-  confirmMediaOrganizerDuplicateGroups: (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => Promise<void>;
+  confirmMediaOrganizerDuplicateGroups: (
+    selections: MediaOrganizerDuplicateSelection[],
+    moveFilesToTrash: boolean,
+  ) => Promise<void>;
   removeMediaOrganizerReferences: (assetIds: string[]) => void;
   archiveUnusedMedia: () => Promise<void>;
   renameUnusedMedia: (template: string) => Promise<void>;
@@ -227,7 +259,12 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
           onImportFcpXml={props.importFcpXmlTimeline}
           onAddMedia={props.addMedia}
         />
-        {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void props.createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
+        {projectTemplateOpen ? (
+          <ProjectTemplateDialog
+            onSelect={(templateId) => void props.createProjectFromTemplate(templateId)}
+            onClose={() => setProjectTemplateOpen(false)}
+          />
+        ) : null}
         {timelineTemplateMode ? (
           <TimelineTemplateDialog
             mode={timelineTemplateMode}
@@ -308,8 +345,12 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
           detectSelectedBeats={() => void props.detectSelectedBeats()}
           snapSelectedToBeats={props.snapSelectedToBeats}
         />
-        {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
-        {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
+        {timelineSearchOpen ? (
+          <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} />
+        ) : null}
+        {shortcutCheatsheetOpen ? (
+          <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} />
+        ) : null}
         {pasteKeyframeDialogOpen && selectedClipId ? (
           <PasteKeyframeDialog
             groups={[]}

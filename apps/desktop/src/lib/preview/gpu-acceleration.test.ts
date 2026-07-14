@@ -6,7 +6,7 @@ import {
   calculateInstancedDrawCallCount,
   estimateTextureBytes,
   formatTextureMemoryMiB,
-  resolveGpuPreviewCapabilities
+  resolveGpuPreviewCapabilities,
 } from './gpu-acceleration';
 
 const timeline: Timeline = {
@@ -17,11 +17,11 @@ const timeline: Timeline = {
       type: 'video',
       clips: [],
       muted: false,
-      locked: false
-    }
+      locked: false,
+    },
   ],
   transitions: [],
-  markers: []
+  markers: [],
 };
 
 const media: MediaAsset[] = [
@@ -32,8 +32,8 @@ const media: MediaAsset[] = [
     path: 'D:/media/A.mp4',
     duration: 12,
     width: 1920,
-    height: 1080
-  }
+    height: 1080,
+  },
 ];
 
 describe('gpu preview acceleration helpers', () => {
@@ -73,7 +73,7 @@ describe('gpu preview acceleration helpers', () => {
       duration: 20,
       fps: 2,
       width: 1280,
-      height: 720
+      height: 720,
     });
 
     expect(requests[0]).toMatchObject({ frame: 20, time: 10 });
@@ -95,13 +95,13 @@ describe('gpu preview acceleration helpers', () => {
         hasWorker: true,
         hasCreateImageBitmap: true,
         hasWebGl: true,
-        hasTimerQuery: true
-      })
+        hasTimerQuery: true,
+      }),
     ).toEqual({
       offscreenCanvasWorkerSupported: true,
       texturePreloadSupported: true,
       timerQuerySupported: true,
-      fallbackReason: undefined
+      fallbackReason: undefined,
     });
 
     expect(
@@ -110,12 +110,12 @@ describe('gpu preview acceleration helpers', () => {
         hasCanvasTransfer: true,
         hasWorker: true,
         hasCreateImageBitmap: true,
-        hasWebGl: true
-      })
+        hasWebGl: true,
+      }),
     ).toMatchObject({
       offscreenCanvasWorkerSupported: false,
       texturePreloadSupported: true,
-      fallbackReason: 'offscreen-canvas-worker-unavailable'
+      fallbackReason: 'offscreen-canvas-worker-unavailable',
     });
   });
 

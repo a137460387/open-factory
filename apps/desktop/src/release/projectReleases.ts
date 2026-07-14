@@ -31,12 +31,16 @@ export async function listProjectReleaseRecords(projectId: string): Promise<Proj
           if (record.projectId !== projectId) {
             return undefined;
           }
-          const stat = await getFileStat(path).catch(() => ({ path, size: 0, mtimeMs: Date.parse(record.releasedAt) || 0 }));
+          const stat = await getFileStat(path).catch(() => ({
+            path,
+            size: 0,
+            mtimeMs: Date.parse(record.releasedAt) || 0,
+          }));
           return { ...record, path, size: stat.size } satisfies ProjectReleaseEntry;
         } catch {
           return undefined;
         }
-      })
+      }),
   );
   return entries
     .filter((entry): entry is ProjectReleaseEntry => Boolean(entry))
@@ -54,12 +58,18 @@ export async function getProjectReleaseDir(projectId: string): Promise<string> {
 
 export function parseProjectReleaseRecord(contents: string): ProjectReleaseRecord {
   const parsed = JSON.parse(contents) as Partial<ProjectReleaseRecord>;
-  if (parsed.schemaVersion !== 1 || typeof parsed.projectId !== 'string' || typeof parsed.version !== 'string' || typeof parsed.releasedAt !== 'string') {
+  if (
+    parsed.schemaVersion !== 1 ||
+    typeof parsed.projectId !== 'string' ||
+    typeof parsed.version !== 'string' ||
+    typeof parsed.releasedAt !== 'string'
+  ) {
     throw new Error('Invalid release record.');
   }
   return {
     schemaVersion: 1,
-    id: typeof parsed.id === 'string' ? parsed.id : `release-${parsed.projectId}-${parsed.version}-${parsed.releasedAt}`,
+    id:
+      typeof parsed.id === 'string' ? parsed.id : `release-${parsed.projectId}-${parsed.version}-${parsed.releasedAt}`,
     projectId: parsed.projectId,
     projectName: typeof parsed.projectName === 'string' ? parsed.projectName : '',
     version: parsed.version,
@@ -72,7 +82,7 @@ export function parseProjectReleaseRecord(contents: string): ProjectReleaseRecor
     snapshotPath: typeof parsed.snapshotPath === 'string' ? parsed.snapshotPath : '',
     exportPresetId: typeof parsed.exportPresetId === 'string' ? parsed.exportPresetId : undefined,
     exportPresetName: typeof parsed.exportPresetName === 'string' ? parsed.exportPresetName : undefined,
-    publishLogs: Array.isArray(parsed.publishLogs) ? parsed.publishLogs.filter(isPublishLogEntry) : undefined
+    publishLogs: Array.isArray(parsed.publishLogs) ? parsed.publishLogs.filter(isPublishLogEntry) : undefined,
   };
 }
 
@@ -81,7 +91,12 @@ function isPublishLogEntry(value: unknown): boolean {
     return false;
   }
   const item = value as { nodeId?: unknown; nodeType?: unknown; status?: unknown; durationMs?: unknown };
-  return typeof item.nodeId === 'string' && typeof item.nodeType === 'string' && (item.status === 'success' || item.status === 'failed' || item.status === 'skipped') && typeof item.durationMs === 'number';
+  return (
+    typeof item.nodeId === 'string' &&
+    typeof item.nodeType === 'string' &&
+    (item.status === 'success' || item.status === 'failed' || item.status === 'skipped') &&
+    typeof item.durationMs === 'number'
+  );
 }
 
 function isReleaseRecordFileName(fileName: string): boolean {

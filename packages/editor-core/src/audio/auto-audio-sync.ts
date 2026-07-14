@@ -76,11 +76,14 @@ interface LagStats {
 export function prepareAudioSyncSamples(
   samples: ArrayLike<number>,
   sourceSampleRate: number,
-  options: Pick<AutoAudioSyncOptions, 'targetSampleRate' | 'maxDurationSeconds'> = {}
+  options: Pick<AutoAudioSyncOptions, 'targetSampleRate' | 'maxDurationSeconds'> = {},
 ): number[] {
   const sourceRate = Math.max(1, Math.round(finiteOrDefault(sourceSampleRate, DEFAULT_TARGET_SAMPLE_RATE)));
   const targetRate = Math.max(1, Math.round(finiteOrDefault(options.targetSampleRate, DEFAULT_TARGET_SAMPLE_RATE)));
-  const maxSamples = Math.max(1, Math.round(finiteOrDefault(options.maxDurationSeconds, DEFAULT_MAX_DURATION_SECONDS) * sourceRate));
+  const maxSamples = Math.max(
+    1,
+    Math.round(finiteOrDefault(options.maxDurationSeconds, DEFAULT_MAX_DURATION_SECONDS) * sourceRate),
+  );
   const inputLength = Math.min(samples.length, maxSamples);
   if (inputLength <= 0) {
     return [];
@@ -105,11 +108,14 @@ export function findAudioSyncCorrelationPeak(
   referenceSamples: ArrayLike<number>,
   candidateSamples: ArrayLike<number>,
   sampleRate: number,
-  maxOffsetSeconds = DEFAULT_MAX_OFFSET_SECONDS
+  maxOffsetSeconds = DEFAULT_MAX_OFFSET_SECONDS,
 ): AutoAudioSyncCorrelationPeak {
   const rate = Math.max(1, Math.round(finiteOrDefault(sampleRate, DEFAULT_TARGET_SAMPLE_RATE)));
   const context = createCorrelationContext(referenceSamples, candidateSamples);
-  const maxLag = Math.min(context.reference.length + context.candidate.length - 2, Math.max(0, Math.round(finiteOrDefault(maxOffsetSeconds, DEFAULT_MAX_OFFSET_SECONDS) * rate)));
+  const maxLag = Math.min(
+    context.reference.length + context.candidate.length - 2,
+    Math.max(0, Math.round(finiteOrDefault(maxOffsetSeconds, DEFAULT_MAX_OFFSET_SECONDS) * rate)),
+  );
   const minOverlapSamples = calculateMinimumOverlapSamples(context, rate);
   let best: LagStats | undefined;
   for (let lag = -maxLag; lag <= maxLag; lag += 1) {
@@ -117,7 +123,11 @@ export function findAudioSyncCorrelationPeak(
     if (!stats || stats.overlapSamples < minOverlapSamples) {
       continue;
     }
-    if (!best || stats.score > best.score || (Math.abs(stats.score - best.score) < EPSILON && stats.rmsError < best.rmsError)) {
+    if (
+      !best ||
+      stats.score > best.score ||
+      (Math.abs(stats.score - best.score) < EPSILON && stats.rmsError < best.rmsError)
+    ) {
       best = stats;
     }
   }
@@ -125,7 +135,7 @@ export function findAudioSyncCorrelationPeak(
     lagSamples: best?.lagSamples ?? 0,
     offsetSeconds: round((best?.lagSamples ?? 0) / rate),
     score: round(best?.score ?? 0),
-    overlapSamples: best?.overlapSamples ?? 0
+    overlapSamples: best?.overlapSamples ?? 0,
   };
 }
 
@@ -134,12 +144,15 @@ export function refineAudioSyncOffsetByRms(
   candidateSamples: ArrayLike<number>,
   sampleRate: number,
   coarseOffsetSeconds: number,
-  searchWindowSeconds = DEFAULT_FINE_SEARCH_WINDOW_SECONDS
+  searchWindowSeconds = DEFAULT_FINE_SEARCH_WINDOW_SECONDS,
 ): AutoAudioSyncRefinement {
   const rate = Math.max(1, Math.round(finiteOrDefault(sampleRate, DEFAULT_TARGET_SAMPLE_RATE)));
   const context = createCorrelationContext(referenceSamples, candidateSamples);
   const coarseLag = Math.round(finiteOrDefault(coarseOffsetSeconds, 0) * rate);
-  const radius = Math.max(0, Math.round(finiteOrDefault(searchWindowSeconds, DEFAULT_FINE_SEARCH_WINDOW_SECONDS) * rate));
+  const radius = Math.max(
+    0,
+    Math.round(finiteOrDefault(searchWindowSeconds, DEFAULT_FINE_SEARCH_WINDOW_SECONDS) * rate),
+  );
   const minLag = Math.max(-(context.candidate.length - 1), coarseLag - radius);
   const maxLag = Math.min(context.reference.length - 1, coarseLag + radius);
   const minOverlapSamples = calculateMinimumOverlapSamples(context, rate);
@@ -149,7 +162,11 @@ export function refineAudioSyncOffsetByRms(
     if (!stats || stats.overlapSamples < minOverlapSamples) {
       continue;
     }
-    if (!best || stats.rmsError < best.rmsError || (Math.abs(stats.rmsError - best.rmsError) < EPSILON && stats.score > best.score)) {
+    if (
+      !best ||
+      stats.rmsError < best.rmsError ||
+      (Math.abs(stats.rmsError - best.rmsError) < EPSILON && stats.score > best.score)
+    ) {
       best = stats;
     }
   }
@@ -157,7 +174,7 @@ export function refineAudioSyncOffsetByRms(
     lagSamples: best?.lagSamples ?? coarseLag,
     offsetSeconds: round((best?.lagSamples ?? coarseLag) / rate),
     rmsError: round(best?.rmsError ?? 0),
-    overlapSamples: best?.overlapSamples ?? 0
+    overlapSamples: best?.overlapSamples ?? 0,
   };
 }
 
@@ -175,14 +192,28 @@ export function labelAutoAudioSyncConfidence(score: number): AutoAudioSyncConfid
 export function analyzeAutoAudioSyncTracks(
   reference: AutoAudioSyncTrackInput,
   candidates: AutoAudioSyncTrackInput[],
-  options: AutoAudioSyncOptions = {}
+  options: AutoAudioSyncOptions = {},
 ): AutoAudioSyncResult[] {
-  const targetSampleRate = Math.max(1, Math.round(finiteOrDefault(options.targetSampleRate, DEFAULT_TARGET_SAMPLE_RATE)));
+  const targetSampleRate = Math.max(
+    1,
+    Math.round(finiteOrDefault(options.targetSampleRate, DEFAULT_TARGET_SAMPLE_RATE)),
+  );
   const referenceSamples = prepareAudioSyncSamples(reference.samples, reference.sampleRate, options);
   return candidates.slice(0, 4).map((candidate) => {
     const candidateSamples = prepareAudioSyncSamples(candidate.samples, candidate.sampleRate, options);
-    const peak = findAudioSyncCorrelationPeak(referenceSamples, candidateSamples, targetSampleRate, options.maxOffsetSeconds);
-    const refined = refineAudioSyncOffsetByRms(referenceSamples, candidateSamples, targetSampleRate, peak.offsetSeconds, options.fineSearchWindowSeconds);
+    const peak = findAudioSyncCorrelationPeak(
+      referenceSamples,
+      candidateSamples,
+      targetSampleRate,
+      options.maxOffsetSeconds,
+    );
+    const refined = refineAudioSyncOffsetByRms(
+      referenceSamples,
+      candidateSamples,
+      targetSampleRate,
+      peak.offsetSeconds,
+      options.fineSearchWindowSeconds,
+    );
     const confidence = labelAutoAudioSyncConfidence(peak.score);
     return {
       clipId: candidate.clipId,
@@ -192,7 +223,7 @@ export function analyzeAutoAudioSyncTracks(
       refinedOffsetSeconds: refined.offsetSeconds,
       peakScore: peak.score,
       confidence,
-      applied: confidence !== 'low'
+      applied: confidence !== 'low',
     };
   });
 }
@@ -200,7 +231,7 @@ export function analyzeAutoAudioSyncTracks(
 export function resolveAutoAudioSyncApplyRoute(
   primaryClipId: string,
   results: AutoAudioSyncResult[],
-  mode: AutoAudioSyncApplyMode = 'keep-secondary'
+  mode: AutoAudioSyncApplyMode = 'keep-secondary',
 ): AutoAudioSyncApplyRoute {
   const normalizedMode = normalizeAutoAudioSyncApplyMode(mode);
   const offsetsByClipId: Record<string, number> = {};
@@ -216,7 +247,8 @@ export function resolveAutoAudioSyncApplyRoute(
     mode: normalizedMode,
     offsetsByClipId,
     skippedLowConfidenceClipIds,
-    mutePrimaryClipId: normalizedMode === 'replace-primary-audio' && Object.keys(offsetsByClipId).length > 0 ? primaryClipId : undefined
+    mutePrimaryClipId:
+      normalizedMode === 'replace-primary-audio' && Object.keys(offsetsByClipId).length > 0 ? primaryClipId : undefined,
   };
 }
 
@@ -224,7 +256,10 @@ export function normalizeAutoAudioSyncApplyMode(mode: string | undefined): AutoA
   return mode === 'replace-primary-audio' ? 'replace-primary-audio' : 'keep-secondary';
 }
 
-function createCorrelationContext(referenceSamples: ArrayLike<number>, candidateSamples: ArrayLike<number>): CorrelationContext {
+function createCorrelationContext(
+  referenceSamples: ArrayLike<number>,
+  candidateSamples: ArrayLike<number>,
+): CorrelationContext {
   const reference = normalizeForCorrelation(referenceSamples);
   const candidate = normalizeForCorrelation(candidateSamples);
   const reversedCandidate = [...candidate].reverse();
@@ -234,7 +269,7 @@ function createCorrelationContext(referenceSamples: ArrayLike<number>, candidate
     candidateLength: candidate.length,
     correlation: convolve(reference, reversedCandidate),
     referenceEnergy: prefixSquares(reference),
-    candidateEnergy: prefixSquares(candidate)
+    candidateEnergy: prefixSquares(candidate),
   };
 }
 
@@ -261,7 +296,7 @@ function scoreLag(context: CorrelationContext, lagSamples: number): LagStats | u
     lagSamples,
     score,
     rmsError: Math.sqrt(meanSquaredError),
-    overlapSamples
+    overlapSamples,
   };
 }
 
@@ -367,7 +402,10 @@ function prefixSquares(values: number[]): number[] {
 }
 
 function rangeSum(prefix: number[], start: number, end: number): number {
-  return (prefix[Math.max(0, Math.min(prefix.length - 1, end))] ?? 0) - (prefix[Math.max(0, Math.min(prefix.length - 1, start))] ?? 0);
+  return (
+    (prefix[Math.max(0, Math.min(prefix.length - 1, end))] ?? 0) -
+    (prefix[Math.max(0, Math.min(prefix.length - 1, start))] ?? 0)
+  );
 }
 
 function nextPowerOfTwo(value: number): number {

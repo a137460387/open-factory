@@ -8,7 +8,7 @@ export const DEFAULT_BOOKMARK_GROUP: BookmarkGroup = {
   name: '未分组',
   color: '#64748b',
   collapsed: false,
-  sortOrder: 0
+  sortOrder: 0,
 };
 
 export function createBookmarkGroup(input: {
@@ -23,7 +23,7 @@ export function createBookmarkGroup(input: {
     name: input.name.trim().slice(0, 40) || '未命名分组',
     color: normalizeBookmarkGroupColor(input.color),
     collapsed: input.collapsed ?? false,
-    sortOrder: Number.isFinite(input.sortOrder) ? input.sortOrder! : 0
+    sortOrder: Number.isFinite(input.sortOrder) ? input.sortOrder! : 0,
   };
 }
 
@@ -35,7 +35,11 @@ export function normalizeBookmarkAnnotationText(text: string | undefined): strin
   return trimmed.slice(0, BOOKMARK_ANNOTATION_MAX_LENGTH);
 }
 
-export function sortBookmarks(bookmarks: TimelineBookmark[], mode: BookmarkSortMode, groups?: BookmarkGroup[]): TimelineBookmark[] {
+export function sortBookmarks(
+  bookmarks: TimelineBookmark[],
+  mode: BookmarkSortMode,
+  groups?: BookmarkGroup[],
+): TimelineBookmark[] {
   const sorted = [...bookmarks];
   switch (mode) {
     case 'time':
@@ -64,7 +68,10 @@ export function sortBookmarks(bookmarks: TimelineBookmark[], mode: BookmarkSortM
   }
 }
 
-export function groupBookmarks(bookmarks: TimelineBookmark[], groups: BookmarkGroup[]): Map<string, TimelineBookmark[]> {
+export function groupBookmarks(
+  bookmarks: TimelineBookmark[],
+  groups: BookmarkGroup[],
+): Map<string, TimelineBookmark[]> {
   const result = new Map<string, TimelineBookmark[]>();
   result.set(DEFAULT_BOOKMARK_GROUP.id, []);
   for (const group of groups) {
@@ -81,7 +88,7 @@ export function calculateBookmarkNavDots(
   bookmarks: TimelineBookmark[],
   totalDuration: number,
   containerWidth: number,
-  groups?: BookmarkGroup[]
+  groups?: BookmarkGroup[],
 ): Array<{ id: string; left: number; color: string }> {
   if (!totalDuration || totalDuration <= 0 || !containerWidth || containerWidth <= 0) {
     return [];
@@ -95,7 +102,7 @@ export function calculateBookmarkNavDots(
   return bookmarks.map((bookmark) => ({
     id: bookmark.id,
     left: Math.min(containerWidth - 4, Math.max(0, (bookmark.time / totalDuration) * containerWidth)),
-    color: groupColorMap.get(bookmark.groupId ?? '') ?? '#3b82f6'
+    color: groupColorMap.get(bookmark.groupId ?? '') ?? '#3b82f6',
   }));
 }
 
@@ -103,7 +110,11 @@ export function captureBookmarkThumbnail(bookmark: TimelineBookmark, thumbnailPa
   return { ...bookmark, thumbnailPath };
 }
 
-export function applyBookmarkGroupCollapseState(groups: BookmarkGroup[], groupId: string, collapsed: boolean): BookmarkGroup[] {
+export function applyBookmarkGroupCollapseState(
+  groups: BookmarkGroup[],
+  groupId: string,
+  collapsed: boolean,
+): BookmarkGroup[] {
   return groups.map((group) => (group.id === groupId ? { ...group, collapsed } : group));
 }
 
@@ -130,6 +141,6 @@ function normalizeBookmarkGroup(raw: Partial<BookmarkGroup>): BookmarkGroup {
     name: typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 40) : '未命名分组',
     color: normalizeBookmarkGroupColor(raw.color),
     collapsed: raw.collapsed ?? false,
-    sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder! : 0
+    sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder! : 0,
   };
 }

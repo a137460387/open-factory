@@ -4,9 +4,22 @@ import { zhCN } from '../../i18n/strings';
 import { useEditorStore } from '../../store/editorStore';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 
-export function PasteKeyframeDialog({ groups, targetClipId, onClose }: { groups: ClipboardKeyframeGroup[]; targetClipId: string; onClose(): void }) {
-  const targetClip = useEditorStore.getState().project.timeline.tracks.flatMap((t: { clips: Clip[] }) => t.clips).find((c: Clip) => c.id === targetClipId);
-  const hasCrossProperty = targetClip ? groups.some((g) => !Object.keys(targetClip.keyframes ?? {}).includes(g.property)) : false;
+export function PasteKeyframeDialog({
+  groups,
+  targetClipId,
+  onClose,
+}: {
+  groups: ClipboardKeyframeGroup[];
+  targetClipId: string;
+  onClose(): void;
+}) {
+  const targetClip = useEditorStore
+    .getState()
+    .project.timeline.tracks.flatMap((t: { clips: Clip[] }) => t.clips)
+    .find((c: Clip) => c.id === targetClipId);
+  const hasCrossProperty = targetClip
+    ? groups.some((g) => !Object.keys(targetClip.keyframes ?? {}).includes(g.property))
+    : false;
 
   function handlePaste(mode: PasteMode): void {
     commandManager.execute(new PasteKeyframesCommand(timelineAccessor, { groups, targetClipId, mode }));
@@ -14,7 +27,10 @@ export function PasteKeyframeDialog({ groups, targetClipId, onClose }: { groups:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="paste-keyframe-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="paste-keyframe-dialog"
+    >
       <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{zhCN.keyframePaste.title}</h2>
@@ -43,7 +59,11 @@ export function PasteKeyframeDialog({ groups, targetClipId, onClose }: { groups:
           </div>
         </div>
         <div className="flex justify-end border-t border-line px-4 py-2">
-          <button className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-panel" onClick={onClose} data-testid="paste-cancel-button">
+          <button
+            className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-panel"
+            onClick={onClose}
+            data-testid="paste-cancel-button"
+          >
             {zhCN.duplicateMedia.cancel}
           </button>
         </div>

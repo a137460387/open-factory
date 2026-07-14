@@ -14,9 +14,21 @@ import {
   type ColorNodeBlendMode,
   type ColorNodeGraph,
   type ColorNodeType,
-  type InputColorSpace
+  type InputColorSpace,
 } from '@open-factory/editor-core';
-import { ChevronDown, Download, FolderOpen, GitCompareArrows, Link2, Move, Plus, Save, Trash2, Upload, X } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  FolderOpen,
+  GitCompareArrows,
+  Link2,
+  Move,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import { getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -54,13 +66,18 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
   const [dragState, setDragState] = useState<NodeDragState | null>(null);
   const [connectionDrag, setConnectionDrag] = useState<ConnectionDragState | null>(null);
   const cycle = useMemo(() => detectColorNodeGraphCycle(graph), [graph]);
-  const selectedNode = useMemo(() => graph.nodes.find((node) => node.id === selectedNodeId) ?? graph.nodes[0], [graph.nodes, selectedNodeId]);
+  const selectedNode = useMemo(
+    () => graph.nodes.find((node) => node.id === selectedNodeId) ?? graph.nodes[0],
+    [graph.nodes, selectedNodeId],
+  );
   const nodeCycleSummary = cycle ? cycle.join(' → ') : '';
 
   useEffect(() => {
     const next = buildInitialGraph(clip);
     setGraph(next);
-    setSelectedNodeId(next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId);
+    setSelectedNodeId(
+      next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId,
+    );
     setDragState(null);
     setConnectionDrag(null);
   }, [clip.id]);
@@ -89,10 +106,12 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
           normalizeColorNodeGraph(
             {
               ...current,
-              nodes: current.nodes.map((node) => (node.id === dragState.nodeId ? { ...node, position: { x: nextX, y: nextY } } : node))
+              nodes: current.nodes.map((node) =>
+                node.id === dragState.nodeId ? { ...node, position: { x: nextX, y: nextY } } : node,
+              ),
             },
-            clip.colorCorrection
-          )
+            clip.colorCorrection,
+          ),
         );
       }
       if (connectionDrag) {
@@ -117,12 +136,19 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
 
   const patchNode = (nodeId: string, patch: Partial<ColorNode>): void => {
     updateGraph((current) => {
-      const nextNodes = current.nodes.map((node) => (node.id === nodeId ? normalizeNode({ ...node, ...patch }, node, current.nodes.length) : node));
-      const nextOutputNodeId = patch.type === 'output' ? nodeId : current.outputNodeId === nodeId && patch.type ? findOutputNodeId(nextNodes) ?? nodeId : current.outputNodeId;
+      const nextNodes = current.nodes.map((node) =>
+        node.id === nodeId ? normalizeNode({ ...node, ...patch }, node, current.nodes.length) : node,
+      );
+      const nextOutputNodeId =
+        patch.type === 'output'
+          ? nodeId
+          : current.outputNodeId === nodeId && patch.type
+            ? (findOutputNodeId(nextNodes) ?? nodeId)
+            : current.outputNodeId;
       return {
         ...current,
         nodes: nextNodes,
-        outputNodeId: nextOutputNodeId
+        outputNodeId: nextOutputNodeId,
       };
     });
   };
@@ -133,15 +159,26 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
       const anchor = resolveInsertAnchor(current, selectedNodeId);
       const anchorIndex = current.nodes.findIndex((node) => node.id === anchor.id);
       const outgoing = current.connections.filter((connection) => connection.from === anchor.id);
-      const downstreamTargets = outgoing.length > 0 ? outgoing.map((connection) => connection.to) : anchor.type === 'output' ? [findPredecessorNodeId(current, anchor.id) ?? current.nodes[0]?.id ?? anchor.id] : [current.outputNodeId];
-      const newNode = createNode(type, anchor.position.x + NODE_SPACING_X, clamp(anchor.position.y + (type === 'parallel' ? -NODE_SPACING_Y : 0), 16, BOARD_HEIGHT - NODE_HEIGHT - 16), current.nodes.length, newNodeId);
+      const downstreamTargets =
+        outgoing.length > 0
+          ? outgoing.map((connection) => connection.to)
+          : anchor.type === 'output'
+            ? [findPredecessorNodeId(current, anchor.id) ?? current.nodes[0]?.id ?? anchor.id]
+            : [current.outputNodeId];
+      const newNode = createNode(
+        type,
+        anchor.position.x + NODE_SPACING_X,
+        clamp(anchor.position.y + (type === 'parallel' ? -NODE_SPACING_Y : 0), 16, BOARD_HEIGHT - NODE_HEIGHT - 16),
+        current.nodes.length,
+        newNodeId,
+      );
       const nextNodes = [...current.nodes];
       nextNodes.splice(Math.max(0, anchorIndex + 1), 0, newNode);
       const nextConnections = current.connections.filter((connection) => connection.from !== anchor.id);
       nextConnections.push({
         id: createId(`color-connection-${newNode.id}-in`),
         from: anchor.id,
-        to: newNode.id
+        to: newNode.id,
       });
       for (const targetId of downstreamTargets) {
         if (!targetId || targetId === anchor.id) {
@@ -150,11 +187,17 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
         nextConnections.push({
           id: createId(`color-connection-${newNode.id}-${targetId}`),
           from: newNode.id,
-          to: targetId
+          to: targetId,
         });
       }
-      const nextOutputNodeId = current.outputNodeId === anchor.id && outgoing.length === 0 ? newNode.id : current.outputNodeId;
-      return { ...current, nodes: nextNodes, connections: dedupeConnections(nextConnections), outputNodeId: nextOutputNodeId };
+      const nextOutputNodeId =
+        current.outputNodeId === anchor.id && outgoing.length === 0 ? newNode.id : current.outputNodeId;
+      return {
+        ...current,
+        nodes: nextNodes,
+        connections: dedupeConnections(nextConnections),
+        outputNodeId: nextOutputNodeId,
+      };
     });
     setSelectedNodeId(newNodeId);
   };
@@ -164,10 +207,16 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
       return;
     }
     updateGraph((current) => {
-      const incoming = current.connections.filter((connection) => connection.to === selectedNode.id).map((connection) => connection.from);
-      const outgoing = current.connections.filter((connection) => connection.from === selectedNode.id).map((connection) => connection.to);
+      const incoming = current.connections
+        .filter((connection) => connection.to === selectedNode.id)
+        .map((connection) => connection.from);
+      const outgoing = current.connections
+        .filter((connection) => connection.from === selectedNode.id)
+        .map((connection) => connection.to);
       const nextNodes = current.nodes.filter((node) => node.id !== selectedNode.id);
-      const nextConnections = current.connections.filter((connection) => connection.from !== selectedNode.id && connection.to !== selectedNode.id);
+      const nextConnections = current.connections.filter(
+        (connection) => connection.from !== selectedNode.id && connection.to !== selectedNode.id,
+      );
       for (const from of incoming.length > 0 ? incoming : [findPredecessorNodeId(current, selectedNode.id) ?? '']) {
         for (const to of outgoing.length > 0 ? outgoing : [current.outputNodeId]) {
           if (!from || !to || from === to) {
@@ -176,11 +225,19 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
           nextConnections.push({
             id: createId(`color-connection-${from}-${to}`),
             from,
-            to
+            to,
           });
         }
       }
-      return { ...current, nodes: nextNodes, connections: dedupeConnections(nextConnections), outputNodeId: current.outputNodeId === selectedNode.id ? findOutputNodeId(nextNodes) ?? nextNodes[0]?.id ?? current.outputNodeId : current.outputNodeId };
+      return {
+        ...current,
+        nodes: nextNodes,
+        connections: dedupeConnections(nextConnections),
+        outputNodeId:
+          current.outputNodeId === selectedNode.id
+            ? (findOutputNodeId(nextNodes) ?? nextNodes[0]?.id ?? current.outputNodeId)
+            : current.outputNodeId,
+      };
     });
     setSelectedNodeId(graph.nodes.find((node) => node.id !== selectedNode.id)?.id ?? '');
   };
@@ -192,7 +249,7 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
     updateGraph((current) => ({
       ...current,
       outputNodeId: selectedNode.id,
-      nodes: current.nodes.map((node) => (node.id === selectedNode.id ? { ...node, type: 'output' } : node))
+      nodes: current.nodes.map((node) => (node.id === selectedNode.id ? { ...node, type: 'output' } : node)),
     }));
   };
 
@@ -206,7 +263,10 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
       }
       const next = {
         ...current,
-        connections: dedupeConnections([...current.connections, { id: createId(`color-connection-${fromNodeId}-${toNodeId}`), from: fromNodeId, to: toNodeId }])
+        connections: dedupeConnections([
+          ...current.connections,
+          { id: createId(`color-connection-${fromNodeId}-${toNodeId}`), from: fromNodeId, to: toNodeId },
+        ]),
       };
       return next;
     });
@@ -215,7 +275,9 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
   const applyTemplate = (template: (typeof BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES)[number]): void => {
     const next = normalizeColorNodeGraph(template.graph, clip.colorCorrection);
     setGraph(next);
-    setSelectedNodeId(next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId);
+    setSelectedNodeId(
+      next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId,
+    );
   };
 
   const saveToClip = (): void => {
@@ -224,7 +286,11 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
       showToast({ kind: 'success', title: t.savedTitle, message: clip.name });
       onClose();
     } catch (error) {
-      showToast({ kind: 'error', title: t.saveFailed, message: error instanceof Error ? error.message : t.saveFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.saveFailed,
+        message: error instanceof Error ? error.message : t.saveFailedMessage,
+      });
     }
   };
 
@@ -232,30 +298,44 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
     try {
       const appDataDir = await getAppDataDir();
       const defaultPath = `${appDataDir.replace(/[\\/]+$/, '')}/node-graphs/${sanitizeFileBaseName(clip.name)}.ofnodegraph.json`;
-      const path = await saveFileDialog(defaultPath, [{ name: t.nodeGraphFileFilter, extensions: ['ofnodegraph.json', 'json'] }]);
+      const path = await saveFileDialog(defaultPath, [
+        { name: t.nodeGraphFileFilter, extensions: ['ofnodegraph.json', 'json'] },
+      ]);
       if (!path) {
         return;
       }
       await writeFile(path, serializeColorNodeGraphFile(graph, clip.name));
       showToast({ kind: 'success', title: t.exportedTitle, message: path });
     } catch (error) {
-      showToast({ kind: 'error', title: t.exportFailed, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.exportFailed,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     }
   };
 
   const loadTemplateFile = async (): Promise<void> => {
     try {
-      const [path] = await openFileDialog(false, [{ name: t.nodeGraphFileFilter, extensions: ['ofnodegraph.json', 'json'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.nodeGraphFileFilter, extensions: ['ofnodegraph.json', 'json'] },
+      ]);
       if (!path) {
         return;
       }
       const contents = await readFile(path);
       const next = parseColorNodeGraphFile(contents);
       setGraph(next);
-      setSelectedNodeId(next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId);
+      setSelectedNodeId(
+        next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId,
+      );
       showToast({ kind: 'success', title: t.loadedTitle, message: path });
     } catch (error) {
-      showToast({ kind: 'error', title: t.loadFailed, message: error instanceof Error ? error.message : t.loadFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.loadFailed,
+        message: error instanceof Error ? error.message : t.loadFailedMessage,
+      });
     }
   };
 
@@ -269,7 +349,10 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
   const cycleMessage = cycle ? t.cycleWarning(nodeCycleSummary) : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="color-node-editor-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="color-node-editor-dialog"
+    >
       <div className="flex max-h-[92vh] w-full max-w-[1520px] flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -278,23 +361,48 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
               <p className="text-sm text-slate-500">{clip.name}</p>
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={() => void loadTemplateFile()} data-testid="color-node-editor-load-button">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                onClick={() => void loadTemplateFile()}
+                data-testid="color-node-editor-load-button"
+              >
                 <Upload size={15} />
                 {t.loadGraph}
               </button>
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={saveToClip} data-testid="color-node-editor-apply-button">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                onClick={saveToClip}
+                data-testid="color-node-editor-apply-button"
+              >
                 <Save size={15} />
                 {t.saveToClip}
               </button>
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={() => void saveTemplateFile()} data-testid="color-node-editor-save-template-button">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                onClick={() => void saveTemplateFile()}
+                data-testid="color-node-editor-save-template-button"
+              >
                 <Download size={15} />
                 {t.saveTemplate}
               </button>
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={resetGraph} data-testid="color-node-editor-reset-button">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                onClick={resetGraph}
+                data-testid="color-node-editor-reset-button"
+              >
                 <GitCompareArrows size={15} />
                 {t.resetGraph}
               </button>
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} data-testid="color-node-editor-close-button">
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                onClick={onClose}
+                data-testid="color-node-editor-close-button"
+              >
                 <X size={15} />
                 {zhCN.common.close}
               </button>
@@ -318,18 +426,42 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                   {t.nodeTypes[type]}
                 </button>
               ))}
-              <button className="inline-flex h-8 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40" type="button" onClick={deleteNode} disabled={!selectedNode || selectedNode.type === 'input' || selectedNode.type === 'output'} data-testid="color-node-editor-delete-node-button">
+              <button
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                type="button"
+                onClick={deleteNode}
+                disabled={!selectedNode || selectedNode.type === 'input' || selectedNode.type === 'output'}
+                data-testid="color-node-editor-delete-node-button"
+              >
                 <Trash2 size={12} />
                 {t.deleteNode}
               </button>
-              <button className="inline-flex h-8 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40" type="button" onClick={setAsOutputNode} disabled={!selectedNode} data-testid="color-node-editor-set-output-button">
+              <button
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 text-[11px] font-medium text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                type="button"
+                onClick={setAsOutputNode}
+                disabled={!selectedNode}
+                data-testid="color-node-editor-set-output-button"
+              >
                 <Link2 size={12} />
                 {t.setAsOutput}
               </button>
             </div>
-            {cycleMessage ? <div className="border-b border-amber-300/50 bg-amber-300/15 px-4 py-2 text-xs font-medium text-amber-100">{cycleMessage}</div> : null}
-            <div ref={boardRef} className="relative h-[calc(92vh-168px)] min-h-[540px] overflow-hidden" data-testid="color-node-board">
-              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`} aria-hidden="true">
+            {cycleMessage ? (
+              <div className="border-b border-amber-300/50 bg-amber-300/15 px-4 py-2 text-xs font-medium text-amber-100">
+                {cycleMessage}
+              </div>
+            ) : null}
+            <div
+              ref={boardRef}
+              className="relative h-[calc(92vh-168px)] min-h-[540px] overflow-hidden"
+              data-testid="color-node-board"
+            >
+              <svg
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
+                aria-hidden="true"
+              >
                 {graph.connections.map((connection) => {
                   const from = boardPorts.get(connection.from);
                   const to = boardPorts.get(connection.to);
@@ -337,11 +469,23 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                     return null;
                   }
                   const path = buildConnectionPath(from.output, to.input);
-                  return <path key={connection.id} d={path} fill="none" stroke="rgba(148, 163, 184, 0.85)" strokeWidth={2.5} markerEnd="url(#color-node-arrow)" />;
+                  return (
+                    <path
+                      key={connection.id}
+                      d={path}
+                      fill="none"
+                      stroke="rgba(148, 163, 184, 0.85)"
+                      strokeWidth={2.5}
+                      markerEnd="url(#color-node-arrow)"
+                    />
+                  );
                 })}
                 {connectionDrag ? (
                   <path
-                    d={buildConnectionPath(boardPorts.get(connectionDrag.fromNodeId)?.output ?? { x: 0, y: 0 }, { x: connectionDrag.pointerX, y: connectionDrag.pointerY })}
+                    d={buildConnectionPath(boardPorts.get(connectionDrag.fromNodeId)?.output ?? { x: 0, y: 0 }, {
+                      x: connectionDrag.pointerX,
+                      y: connectionDrag.pointerY,
+                    })}
                     fill="none"
                     stroke="rgba(251, 191, 36, 0.95)"
                     strokeDasharray="8 6"
@@ -349,7 +493,15 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                   />
                 ) : null}
                 <defs>
-                  <marker id="color-node-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <marker
+                    id="color-node-arrow"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
                     <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(148, 163, 184, 0.95)" />
                   </marker>
                 </defs>
@@ -370,7 +522,7 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                     setDragState({
                       nodeId: node.id,
                       offsetX: event.clientX - rect.left - node.position.x,
-                      offsetY: event.clientY - rect.top - node.position.y
+                      offsetY: event.clientY - rect.top - node.position.y,
                     });
                     event.preventDefault();
                   }}
@@ -383,7 +535,7 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                     setConnectionDrag({
                       fromNodeId: node.id,
                       pointerX: event.clientX - rect.left,
-                      pointerY: event.clientY - rect.top
+                      pointerY: event.clientY - rect.top,
                     });
                     event.preventDefault();
                   }}
@@ -456,25 +608,87 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                       onChange={(event) => patchNode(selectedNode.id, { type: event.target.value as ColorNodeType })}
                       data-testid="color-node-type-select"
                     >
-                      {(['input', 'sequential', 'parallel', 'layer', 'output', 'lut'] as ColorNodeType[]).map((type) => (
-                        <option key={type} value={type}>
-                          {t.nodeTypes[type]}
-                        </option>
-                      ))}
+                      {(['input', 'sequential', 'parallel', 'layer', 'output', 'lut'] as ColorNodeType[]).map(
+                        (type) => (
+                          <option key={type} value={type}>
+                            {t.nodeTypes[type]}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <NumberInput label={t.positionX} value={selectedNode.position.x} min={0} max={BOARD_WIDTH} step={1} onCommit={(value) => patchNode(selectedNode.id, { position: { ...selectedNode.position, x: value } })} testId="color-node-position-x-input" />
-                    <NumberInput label={t.positionY} value={selectedNode.position.y} min={0} max={BOARD_HEIGHT} step={1} onCommit={(value) => patchNode(selectedNode.id, { position: { ...selectedNode.position, y: value } })} testId="color-node-position-y-input" />
+                    <NumberInput
+                      label={t.positionX}
+                      value={selectedNode.position.x}
+                      min={0}
+                      max={BOARD_WIDTH}
+                      step={1}
+                      onCommit={(value) =>
+                        patchNode(selectedNode.id, { position: { ...selectedNode.position, x: value } })
+                      }
+                      testId="color-node-position-x-input"
+                    />
+                    <NumberInput
+                      label={t.positionY}
+                      value={selectedNode.position.y}
+                      min={0}
+                      max={BOARD_HEIGHT}
+                      step={1}
+                      onCommit={(value) =>
+                        patchNode(selectedNode.id, { position: { ...selectedNode.position, y: value } })
+                      }
+                      testId="color-node-position-y-input"
+                    />
                   </div>
 
                   {selectedNode.type !== 'output' && selectedNode.type !== 'input' ? (
                     <div className="grid grid-cols-2 gap-3">
-                      <NumberInput label={t.brightness} value={selectedNode.correction.brightness} min={-1} max={1} step={0.01} onCommit={(value) => patchNode(selectedNode.id, { correction: { ...selectedNode.correction, brightness: value } })} testId="color-node-brightness-input" />
-                      <NumberInput label={t.contrast} value={selectedNode.correction.contrast} min={0} max={3} step={0.01} onCommit={(value) => patchNode(selectedNode.id, { correction: { ...selectedNode.correction, contrast: value } })} testId="color-node-contrast-input" />
-                      <NumberInput label={t.saturation} value={selectedNode.correction.saturation} min={0} max={3} step={0.01} onCommit={(value) => patchNode(selectedNode.id, { correction: { ...selectedNode.correction, saturation: value } })} testId="color-node-saturation-input" />
-                      <NumberInput label={t.hue} value={selectedNode.correction.hue} min={-180} max={180} step={1} onCommit={(value) => patchNode(selectedNode.id, { correction: { ...selectedNode.correction, hue: value } })} testId="color-node-hue-input" />
+                      <NumberInput
+                        label={t.brightness}
+                        value={selectedNode.correction.brightness}
+                        min={-1}
+                        max={1}
+                        step={0.01}
+                        onCommit={(value) =>
+                          patchNode(selectedNode.id, { correction: { ...selectedNode.correction, brightness: value } })
+                        }
+                        testId="color-node-brightness-input"
+                      />
+                      <NumberInput
+                        label={t.contrast}
+                        value={selectedNode.correction.contrast}
+                        min={0}
+                        max={3}
+                        step={0.01}
+                        onCommit={(value) =>
+                          patchNode(selectedNode.id, { correction: { ...selectedNode.correction, contrast: value } })
+                        }
+                        testId="color-node-contrast-input"
+                      />
+                      <NumberInput
+                        label={t.saturation}
+                        value={selectedNode.correction.saturation}
+                        min={0}
+                        max={3}
+                        step={0.01}
+                        onCommit={(value) =>
+                          patchNode(selectedNode.id, { correction: { ...selectedNode.correction, saturation: value } })
+                        }
+                        testId="color-node-saturation-input"
+                      />
+                      <NumberInput
+                        label={t.hue}
+                        value={selectedNode.correction.hue}
+                        min={-180}
+                        max={180}
+                        step={1}
+                        onCommit={(value) =>
+                          patchNode(selectedNode.id, { correction: { ...selectedNode.correction, hue: value } })
+                        }
+                        testId="color-node-hue-input"
+                      />
                     </div>
                   ) : null}
 
@@ -483,7 +697,14 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                     <select
                       className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                       value={normalizeInputColorSpace(selectedNode.correction.inputColorSpace)}
-                      onChange={(event) => patchNode(selectedNode.id, { correction: { ...selectedNode.correction, inputColorSpace: event.target.value as InputColorSpace } })}
+                      onChange={(event) =>
+                        patchNode(selectedNode.id, {
+                          correction: {
+                            ...selectedNode.correction,
+                            inputColorSpace: event.target.value as InputColorSpace,
+                          },
+                        })
+                      }
                       data-testid="color-node-input-color-space-select"
                     >
                       {INPUT_COLOR_SPACES.map((colorSpace) => (
@@ -500,17 +721,29 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                       <select
                         className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                         value={selectedNode.blendMode ?? 'average'}
-                        onChange={(event) => patchNode(selectedNode.id, { blendMode: event.target.value as ColorNodeBlendMode })}
+                        onChange={(event) =>
+                          patchNode(selectedNode.id, { blendMode: event.target.value as ColorNodeBlendMode })
+                        }
                         data-testid="color-node-blend-mode-select"
                       >
-                        {(['average', 'normal', 'multiply', 'screen', 'overlay', 'addition'] as ColorNodeBlendMode[]).map((mode) => (
+                        {(
+                          ['average', 'normal', 'multiply', 'screen', 'overlay', 'addition'] as ColorNodeBlendMode[]
+                        ).map((mode) => (
                           <option key={mode} value={mode}>
                             {t.blendModes[mode]}
                           </option>
                         ))}
                       </select>
                     </label>
-                    <NumberInput label={t.mix} value={selectedNode.mix ?? 1} min={0} max={1} step={0.01} onCommit={(value) => patchNode(selectedNode.id, { mix: value })} testId="color-node-mix-input" />
+                    <NumberInput
+                      label={t.mix}
+                      value={selectedNode.mix ?? 1}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      onCommit={(value) => patchNode(selectedNode.id, { mix: value })}
+                      testId="color-node-mix-input"
+                    />
                   </div>
 
                   <label className="block text-xs font-medium text-slate-600">
@@ -520,7 +753,12 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                         className="h-9 min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-sm text-ink"
                         value={selectedNode.lutPath ?? ''}
                         placeholder={t.noLut}
-                        onChange={(event) => patchNode(selectedNode.id, { lutPath: event.target.value || null, correction: { ...selectedNode.correction, lutPath: event.target.value || null } })}
+                        onChange={(event) =>
+                          patchNode(selectedNode.id, {
+                            lutPath: event.target.value || null,
+                            correction: { ...selectedNode.correction, lutPath: event.target.value || null },
+                          })
+                        }
                         data-testid="color-node-lut-path-input"
                       />
                       <button
@@ -529,7 +767,14 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                         title={t.chooseLut}
                         aria-label={t.chooseLut}
                         data-testid="color-node-choose-lut-button"
-                        onClick={() => void chooseLutFile((path) => patchNode(selectedNode.id, { lutPath: path, correction: { ...selectedNode.correction, lutPath: path } }))}
+                        onClick={() =>
+                          void chooseLutFile((path) =>
+                            patchNode(selectedNode.id, {
+                              lutPath: path,
+                              correction: { ...selectedNode.correction, lutPath: path },
+                            }),
+                          )
+                        }
                       >
                         <FolderOpen size={14} />
                       </button>
@@ -537,7 +782,9 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                   </label>
                 </section>
               ) : (
-                <div className="rounded-md border border-dashed border-line px-3 py-4 text-sm text-slate-500">{t.emptySelection}</div>
+                <div className="rounded-md border border-dashed border-line px-3 py-4 text-sm text-slate-500">
+                  {t.emptySelection}
+                </div>
               )}
 
               <section>
@@ -545,17 +792,35 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                 <div className="space-y-2">
                   {graph.connections.length > 0 ? (
                     graph.connections.map((connection) => (
-                      <div key={connection.id} className="flex items-center justify-between gap-2 rounded-md border border-line bg-panel px-3 py-2 text-xs" data-testid="color-node-connection-row">
-                        <button className="min-w-0 flex-1 text-left" type="button" onClick={() => setSelectedNodeId(connection.from)} title={connection.from}>
-                          <span className="block truncate font-medium text-ink">{resolveNodeLabel(graph, connection.from)}</span>
-                          <span className="block text-[11px] text-slate-500">{resolveNodeLabel(graph, connection.to)}</span>
+                      <div
+                        key={connection.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-line bg-panel px-3 py-2 text-xs"
+                        data-testid="color-node-connection-row"
+                      >
+                        <button
+                          className="min-w-0 flex-1 text-left"
+                          type="button"
+                          onClick={() => setSelectedNodeId(connection.from)}
+                          title={connection.from}
+                        >
+                          <span className="block truncate font-medium text-ink">
+                            {resolveNodeLabel(graph, connection.from)}
+                          </span>
+                          <span className="block text-[11px] text-slate-500">
+                            {resolveNodeLabel(graph, connection.to)}
+                          </span>
                         </button>
                         <button
                           className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
                           type="button"
                           title={zhCN.common.delete}
                           aria-label={zhCN.common.delete}
-                          onClick={() => updateGraph((current) => ({ ...current, connections: current.connections.filter((item) => item.id !== connection.id) }))}
+                          onClick={() =>
+                            updateGraph((current) => ({
+                              ...current,
+                              connections: current.connections.filter((item) => item.id !== connection.id),
+                            }))
+                          }
                           data-testid={`color-node-delete-connection-${connection.id}`}
                         >
                           <Trash2 size={13} />
@@ -563,7 +828,9 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-md border border-dashed border-line px-3 py-4 text-sm text-slate-500">{t.noConnections}</div>
+                    <div className="rounded-md border border-dashed border-line px-3 py-4 text-sm text-slate-500">
+                      {t.noConnections}
+                    </div>
                   )}
                 </div>
               </section>
@@ -571,9 +838,7 @@ export function ColorNodeEditorDialog({ clip, onApply, onClose }: ColorNodeEdito
           </aside>
         </div>
 
-        <div className="border-t border-line px-4 py-2 text-xs text-slate-500">
-          {t.hint}
-        </div>
+        <div className="border-t border-line px-4 py-2 text-xs text-slate-500">{t.hint}</div>
       </div>
     </div>
   );
@@ -586,7 +851,7 @@ function NodeCard({
   onPatch,
   onBeginDrag,
   onBeginConnection,
-  onEndConnection
+  onEndConnection,
 }: {
   node: ColorNode;
   selected: boolean;
@@ -603,7 +868,7 @@ function NodeCard({
         left: node.position.x,
         top: node.position.y,
         width: NODE_WIDTH,
-        minHeight: NODE_HEIGHT
+        minHeight: NODE_HEIGHT,
       }}
       onMouseDown={onSelect}
       data-testid={`color-node-card-${node.id}`}
@@ -620,17 +885,30 @@ function NodeCard({
         >
           <Move size={13} />
         </button>
-        <button className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-ink" type="button" onClick={onSelect} data-testid={`color-node-select-${node.id}`}>
+        <button
+          className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-ink"
+          type="button"
+          onClick={onSelect}
+          data-testid={`color-node-select-${node.id}`}
+        >
           {node.name}
         </button>
         <label className="inline-flex items-center gap-1 text-[11px] text-slate-500">
-          <input className="h-3.5 w-3.5 accent-brand" type="checkbox" checked={node.enabled !== false} onChange={(event) => onPatch({ enabled: event.target.checked })} data-testid={`color-node-enabled-${node.id}`} />
+          <input
+            className="h-3.5 w-3.5 accent-brand"
+            type="checkbox"
+            checked={node.enabled !== false}
+            onChange={(event) => onPatch({ enabled: event.target.checked })}
+            data-testid={`color-node-enabled-${node.id}`}
+          />
           {zhCN.colorNodeEditor.enabled}
         </label>
       </div>
       <div className="space-y-2 px-3 py-2 text-xs">
         <div className="flex items-center justify-between gap-2">
-          <span className="rounded border border-line px-2 py-1 text-[11px] font-medium text-slate-600">{zhCN.colorNodeEditor.nodeTypes[node.type]}</span>
+          <span className="rounded border border-line px-2 py-1 text-[11px] font-medium text-slate-600">
+            {zhCN.colorNodeEditor.nodeTypes[node.type]}
+          </span>
           <select
             className="h-7 rounded-md border border-line bg-white px-2 text-[11px] font-medium text-slate-700"
             value={node.type}
@@ -645,15 +923,69 @@ function NodeCard({
           </select>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <NumberInput label={zhCN.colorNodeEditor.positionX} value={node.position.x} min={0} max={BOARD_WIDTH} step={1} onCommit={(value) => onPatch({ position: { ...node.position, x: value } })} testId={`color-node-position-x-${node.id}`} compact />
-          <NumberInput label={zhCN.colorNodeEditor.positionY} value={node.position.y} min={0} max={BOARD_HEIGHT} step={1} onCommit={(value) => onPatch({ position: { ...node.position, y: value } })} testId={`color-node-position-y-${node.id}`} compact />
+          <NumberInput
+            label={zhCN.colorNodeEditor.positionX}
+            value={node.position.x}
+            min={0}
+            max={BOARD_WIDTH}
+            step={1}
+            onCommit={(value) => onPatch({ position: { ...node.position, x: value } })}
+            testId={`color-node-position-x-${node.id}`}
+            compact
+          />
+          <NumberInput
+            label={zhCN.colorNodeEditor.positionY}
+            value={node.position.y}
+            min={0}
+            max={BOARD_HEIGHT}
+            step={1}
+            onCommit={(value) => onPatch({ position: { ...node.position, y: value } })}
+            testId={`color-node-position-y-${node.id}`}
+            compact
+          />
         </div>
         {node.type !== 'input' && node.type !== 'output' ? (
           <div className="grid grid-cols-2 gap-2">
-            <NumberInput label={zhCN.colorNodeEditor.brightness} value={node.correction.brightness} min={-1} max={1} step={0.01} onCommit={(value) => onPatch({ correction: { ...node.correction, brightness: value } })} testId={`color-node-brightness-${node.id}`} compact />
-            <NumberInput label={zhCN.colorNodeEditor.contrast} value={node.correction.contrast} min={0} max={3} step={0.01} onCommit={(value) => onPatch({ correction: { ...node.correction, contrast: value } })} testId={`color-node-contrast-${node.id}`} compact />
-            <NumberInput label={zhCN.colorNodeEditor.saturation} value={node.correction.saturation} min={0} max={3} step={0.01} onCommit={(value) => onPatch({ correction: { ...node.correction, saturation: value } })} testId={`color-node-saturation-${node.id}`} compact />
-            <NumberInput label={zhCN.colorNodeEditor.hue} value={node.correction.hue} min={-180} max={180} step={1} onCommit={(value) => onPatch({ correction: { ...node.correction, hue: value } })} testId={`color-node-hue-${node.id}`} compact />
+            <NumberInput
+              label={zhCN.colorNodeEditor.brightness}
+              value={node.correction.brightness}
+              min={-1}
+              max={1}
+              step={0.01}
+              onCommit={(value) => onPatch({ correction: { ...node.correction, brightness: value } })}
+              testId={`color-node-brightness-${node.id}`}
+              compact
+            />
+            <NumberInput
+              label={zhCN.colorNodeEditor.contrast}
+              value={node.correction.contrast}
+              min={0}
+              max={3}
+              step={0.01}
+              onCommit={(value) => onPatch({ correction: { ...node.correction, contrast: value } })}
+              testId={`color-node-contrast-${node.id}`}
+              compact
+            />
+            <NumberInput
+              label={zhCN.colorNodeEditor.saturation}
+              value={node.correction.saturation}
+              min={0}
+              max={3}
+              step={0.01}
+              onCommit={(value) => onPatch({ correction: { ...node.correction, saturation: value } })}
+              testId={`color-node-saturation-${node.id}`}
+              compact
+            />
+            <NumberInput
+              label={zhCN.colorNodeEditor.hue}
+              value={node.correction.hue}
+              min={-180}
+              max={180}
+              step={1}
+              onCommit={(value) => onPatch({ correction: { ...node.correction, hue: value } })}
+              testId={`color-node-hue-${node.id}`}
+              compact
+            />
           </div>
         ) : null}
         <div className="grid grid-cols-2 gap-2">
@@ -665,14 +997,25 @@ function NodeCard({
               onChange={(event) => onPatch({ blendMode: event.target.value as ColorNodeBlendMode })}
               data-testid={`color-node-blend-${node.id}`}
             >
-              {(['average', 'normal', 'multiply', 'screen', 'overlay', 'addition'] as ColorNodeBlendMode[]).map((mode) => (
-                <option key={mode} value={mode}>
-                  {zhCN.colorNodeEditor.blendModes[mode]}
-                </option>
-              ))}
+              {(['average', 'normal', 'multiply', 'screen', 'overlay', 'addition'] as ColorNodeBlendMode[]).map(
+                (mode) => (
+                  <option key={mode} value={mode}>
+                    {zhCN.colorNodeEditor.blendModes[mode]}
+                  </option>
+                ),
+              )}
             </select>
           </label>
-          <NumberInput label={zhCN.colorNodeEditor.mix} value={node.mix ?? 1} min={0} max={1} step={0.01} onCommit={(value) => onPatch({ mix: value })} testId={`color-node-mix-${node.id}`} compact />
+          <NumberInput
+            label={zhCN.colorNodeEditor.mix}
+            value={node.mix ?? 1}
+            min={0}
+            max={1}
+            step={0.01}
+            onCommit={(value) => onPatch({ mix: value })}
+            testId={`color-node-mix-${node.id}`}
+            compact
+          />
         </div>
         {node.type === 'lut' ? (
           <label className="block">
@@ -682,7 +1025,12 @@ function NodeCard({
                 className="h-7 min-w-0 flex-1 rounded-md border border-line px-2 text-[11px] text-ink"
                 value={node.lutPath ?? ''}
                 placeholder={zhCN.colorNodeEditor.noLut}
-                onChange={(event) => onPatch({ lutPath: event.target.value || null, correction: { ...node.correction, lutPath: event.target.value || null } })}
+                onChange={(event) =>
+                  onPatch({
+                    lutPath: event.target.value || null,
+                    correction: { ...node.correction, lutPath: event.target.value || null },
+                  })
+                }
                 data-testid={`color-node-lut-path-${node.id}`}
               />
               <button
@@ -690,7 +1038,11 @@ function NodeCard({
                 type="button"
                 title={zhCN.colorNodeEditor.chooseLut}
                 aria-label={zhCN.colorNodeEditor.chooseLut}
-                onClick={() => void chooseLutFile((path) => onPatch({ lutPath: path, correction: { ...node.correction, lutPath: path } }))}
+                onClick={() =>
+                  void chooseLutFile((path) =>
+                    onPatch({ lutPath: path, correction: { ...node.correction, lutPath: path } }),
+                  )
+                }
                 data-testid={`color-node-choose-lut-${node.id}`}
               >
                 <FolderOpen size={12} />
@@ -735,7 +1087,7 @@ function NumberInput({
   step,
   onCommit,
   testId,
-  compact = false
+  compact = false,
 }: {
   label: string;
   value: number;
@@ -749,7 +1101,9 @@ function NumberInput({
   const safeValue = Number.isFinite(value) ? value : 0;
   return (
     <label className={`block ${compact ? '' : 'text-xs font-medium text-slate-600'}`}>
-      <span className={`mb-1 flex items-center justify-between gap-2 ${compact ? 'text-[11px] font-medium text-slate-500' : ''}`}>
+      <span
+        className={`mb-1 flex items-center justify-between gap-2 ${compact ? 'text-[11px] font-medium text-slate-500' : ''}`}
+      >
         <span>{label}</span>
         {!compact ? <span className="tabular-nums">{formatNumber(value)}</span> : null}
       </span>
@@ -775,16 +1129,31 @@ async function chooseLutFile(applyPath: (path: string) => void): Promise<void> {
     }
     applyPath(path);
   } catch (error) {
-    showToast({ kind: 'warning', title: zhCN.colorNodeEditor.chooseLut, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+    showToast({
+      kind: 'warning',
+      title: zhCN.colorNodeEditor.chooseLut,
+      message: error instanceof Error ? error.message : zhCN.common.unavailable,
+    });
   }
 }
 
 function buildInitialGraph(clip: Clip): ColorNodeGraph {
-  return clip.colorNodeGraph ? normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) : createDefaultColorNodeGraph(clip.colorCorrection);
+  return clip.colorNodeGraph
+    ? normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection)
+    : createDefaultColorNodeGraph(clip.colorCorrection);
 }
 
-function createNode(type: ColorNodeType, x: number, y: number, index: number, id = createId(`color-node-${type}`)): ColorNode {
-  const correction = type === 'input' || type === 'output' ? createDefaultColorNodeGraph().nodes[0].correction : createDefaultColorNodeGraph().nodes[0].correction;
+function createNode(
+  type: ColorNodeType,
+  x: number,
+  y: number,
+  index: number,
+  id = createId(`color-node-${type}`),
+): ColorNode {
+  const correction =
+    type === 'input' || type === 'output'
+      ? createDefaultColorNodeGraph().nodes[0].correction
+      : createDefaultColorNodeGraph().nodes[0].correction;
   return normalizeNode(
     {
       id,
@@ -792,20 +1161,24 @@ function createNode(type: ColorNodeType, x: number, y: number, index: number, id
       name: defaultNodeName(type, index),
       position: { x, y },
       correction,
-      enabled: true
+      enabled: true,
     },
     undefined,
-    index
+    index,
   );
 }
 
 function normalizeNode(node: ColorNode, fallback: ColorNode | undefined, index: number): ColorNode {
-  return normalizeColorNodeGraph({
-    version: 1,
-    outputNodeId: node.id,
-    nodes: [node],
-    connections: []
-  }).nodes[0] ?? fallback ?? node;
+  return (
+    normalizeColorNodeGraph({
+      version: 1,
+      outputNodeId: node.id,
+      nodes: [node],
+      connections: [],
+    }).nodes[0] ??
+    fallback ??
+    node
+  );
 }
 
 function defaultNodeName(type: ColorNodeType, index: number): string {
@@ -815,13 +1188,16 @@ function defaultNodeName(type: ColorNodeType, index: number): string {
     parallel: 'Parallel',
     layer: 'Layer',
     output: 'Output',
-    lut: 'LUT'
+    lut: 'LUT',
   };
   return `${map[type]} ${index + 1}`;
 }
 
 function resolveInsertAnchor(graph: ColorNodeGraph, selectedNodeId: string): ColorNode {
-  const selected = graph.nodes.find((node) => node.id === selectedNodeId) ?? graph.nodes.find((node) => node.type !== 'output') ?? graph.nodes[0];
+  const selected =
+    graph.nodes.find((node) => node.id === selectedNodeId) ??
+    graph.nodes.find((node) => node.type !== 'output') ??
+    graph.nodes[0];
   if (!selected) {
     return createDefaultColorNodeGraph().nodes[0];
   }
@@ -829,7 +1205,11 @@ function resolveInsertAnchor(graph: ColorNodeGraph, selectedNodeId: string): Col
     return selected;
   }
   const predecessorId = findPredecessorNodeId(graph, selected.id);
-  return graph.nodes.find((node) => node.id === predecessorId) ?? graph.nodes.find((node) => node.type !== 'output' && node.id !== selected.id) ?? selected;
+  return (
+    graph.nodes.find((node) => node.id === predecessorId) ??
+    graph.nodes.find((node) => node.type !== 'output' && node.id !== selected.id) ??
+    selected
+  );
 }
 
 function findPredecessorNodeId(graph: ColorNodeGraph, nodeId: string): string | undefined {
@@ -852,18 +1232,20 @@ function dedupeConnections(connections: ColorNodeGraph['connections']): ColorNod
   });
 }
 
-function buildBoardPorts(graph: ColorNodeGraph): Map<string, { input: { x: number; y: number }; output: { x: number; y: number } }> {
+function buildBoardPorts(
+  graph: ColorNodeGraph,
+): Map<string, { input: { x: number; y: number }; output: { x: number; y: number } }> {
   const ports = new Map<string, { input: { x: number; y: number }; output: { x: number; y: number } }>();
   for (const node of graph.nodes) {
     ports.set(node.id, {
       input: {
         x: node.position.x,
-        y: node.position.y + NODE_HEIGHT / 2
+        y: node.position.y + NODE_HEIGHT / 2,
       },
       output: {
         x: node.position.x + NODE_WIDTH,
-        y: node.position.y + NODE_HEIGHT / 2
-      }
+        y: node.position.y + NODE_HEIGHT / 2,
+      },
     });
   }
   return ports;
@@ -898,5 +1280,11 @@ function formatSvgNumber(value: number): string {
 }
 
 function sanitizeFileBaseName(name: string): string {
-  return name.trim().replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_').replace(/\s+/g, ' ').trim() || 'open-factory-node-graph';
+  return (
+    name
+      .trim()
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'open-factory-node-graph'
+  );
 }

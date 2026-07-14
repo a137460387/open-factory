@@ -1,4 +1,11 @@
-import { joinPath, makeRelativePath, normalizePath, serializeProject, type MediaAsset, type Project } from '@open-factory/editor-core';
+import {
+  joinPath,
+  makeRelativePath,
+  normalizePath,
+  serializeProject,
+  type MediaAsset,
+  type Project,
+} from '@open-factory/editor-core';
 
 interface ArchiveCopyTask {
   sourcePath: string;
@@ -40,7 +47,11 @@ export function collectProjectMediaPaths(project: Project): string[] {
   return Array.from(paths.values());
 }
 
-export function createProjectArchivePlan(project: Project, archiveParentDir: string, options: ProjectArchivePlanOptions = {}): ProjectArchivePlan {
+export function createProjectArchivePlan(
+  project: Project,
+  archiveParentDir: string,
+  options: ProjectArchivePlanOptions = {},
+): ProjectArchivePlan {
   const baseName = sanitizeArchiveBaseName(project.name);
   const archiveDir = joinPath(normalizePath(archiveParentDir), `${baseName}_archive`);
   const mediaDir = joinPath(archiveDir, 'media');
@@ -66,7 +77,7 @@ export function createProjectArchivePlan(project: Project, archiveParentDir: str
       sourcePath: normalizedSource,
       destinationPath,
       relativePath,
-      copyRequired: !isInsidePath(normalizedSource, archiveDir)
+      copyRequired: !isInsidePath(normalizedSource, archiveDir),
     });
   }
 
@@ -75,11 +86,15 @@ export function createProjectArchivePlan(project: Project, archiveParentDir: str
     mediaDir,
     projectPath,
     project: relativizeProject(project, mappings, projectPath, mediaDir, archiveDir, skipped),
-    copyTasks: Array.from(mappings.values())
+    copyTasks: Array.from(mappings.values()),
   };
 }
 
-export async function writeProjectArchive(plan: ProjectArchivePlan, dependencies: ProjectArchiveDependencies, onProgress?: (progress: ArchiveProgress) => void): Promise<void> {
+export async function writeProjectArchive(
+  plan: ProjectArchivePlan,
+  dependencies: ProjectArchiveDependencies,
+  onProgress?: (progress: ArchiveProgress) => void,
+): Promise<void> {
   const copyTasks = plan.copyTasks.filter((task) => task.copyRequired);
   for (let index = 0; index < copyTasks.length; index += 1) {
     onProgress?.({ copied: index, total: copyTasks.length });
@@ -93,15 +108,29 @@ export function serializeArchivedProject(project: Project): string {
   return JSON.stringify(serializeProject(project), null, 2);
 }
 
-function relativizeProject(project: Project, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string, skipped: Set<string>): Project {
+function relativizeProject(
+  project: Project,
+  mappings: Map<string, ArchiveCopyTask>,
+  projectPath: string,
+  mediaDir: string,
+  archiveDir: string,
+  skipped: Set<string>,
+): Project {
   return {
     ...project,
     media: project.media.map((asset) => relativizeAsset(asset, mappings, projectPath, mediaDir, archiveDir, skipped)),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function relativizeAsset(asset: MediaAsset, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string, skipped: Set<string>): MediaAsset {
+function relativizeAsset(
+  asset: MediaAsset,
+  mappings: Map<string, ArchiveCopyTask>,
+  projectPath: string,
+  mediaDir: string,
+  archiveDir: string,
+  skipped: Set<string>,
+): MediaAsset {
   const sourcePath = normalizePath(asset.path);
   const mapping = mappings.get(pathKey(sourcePath));
   const relativePath = mapping?.relativePath ?? makeRelativePath(sourcePath, projectPath) ?? sourcePath;
@@ -126,19 +155,28 @@ function relativizeAsset(asset: MediaAsset, mappings: Map<string, ArchiveCopyTas
           pattern: relativizeImageSequencePattern(asset.imageSequence.pattern, projectPath, mediaDir, archiveDir),
           paths: asset.imageSequence.paths.map((framePath) => {
             const normalized = normalizePath(framePath);
-            return mappings.get(pathKey(normalized))?.relativePath ?? makeRelativePath(normalized, projectPath) ?? normalized;
-          })
+            return (
+              mappings.get(pathKey(normalized))?.relativePath ?? makeRelativePath(normalized, projectPath) ?? normalized
+            );
+          }),
         }
-      : undefined
+      : undefined,
   };
 }
 
-function relativizeImageSequencePattern(pattern: string, projectPath: string, mediaDir: string, archiveDir: string): string {
+function relativizeImageSequencePattern(
+  pattern: string,
+  projectPath: string,
+  mediaDir: string,
+  archiveDir: string,
+): string {
   const normalized = normalizePath(pattern);
   if (isInsidePath(normalized, archiveDir)) {
     return makeRelativePath(normalized, projectPath) ?? normalized;
   }
-  return makeRelativePath(joinPath(mediaDir, fileNameFromPath(normalized, 'sequence%04d.png')), projectPath) ?? normalized;
+  return (
+    makeRelativePath(joinPath(mediaDir, fileNameFromPath(normalized, 'sequence%04d.png')), projectPath) ?? normalized
+  );
 }
 
 function addPath(paths: Map<string, string>, path: string | undefined): void {
@@ -151,7 +189,12 @@ function addPath(paths: Map<string, string>, path: string | undefined): void {
 
 function sanitizeArchiveBaseName(name: string): string {
   const trimmed = name.trim().replace(/\.cutproj(?:\.json)?$/i, '') || 'open-factory-project';
-  return trimmed.replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_').replace(/\s+/g, ' ').trim() || 'open-factory-project';
+  return (
+    trimmed
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'open-factory-project'
+  );
 }
 
 function isInsidePath(path: string, parentDir: string): boolean {

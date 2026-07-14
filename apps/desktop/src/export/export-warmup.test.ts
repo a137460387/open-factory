@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createProject, type FfmpegCapabilities } from '@open-factory/editor-core';
-import { EXPORT_WARMUP_CACHE_TTL_MS, resetExportWarmupCache, runExportWarmup, type ExportWarmupDependencies } from './export-warmup';
+import {
+  EXPORT_WARMUP_CACHE_TTL_MS,
+  resetExportWarmupCache,
+  runExportWarmup,
+  type ExportWarmupDependencies,
+} from './export-warmup';
 
 const availableCapabilities: FfmpegCapabilities = {
   available: true,
@@ -14,7 +19,7 @@ const availableCapabilities: FfmpegCapabilities = {
   hasLibvmaf: true,
   hardwareEncoderAvailable: false,
   hardwareEncoder: null,
-  drawtextWarning: null
+  drawtextWarning: null,
 };
 
 describe('export warmup', () => {
@@ -39,7 +44,7 @@ describe('export warmup', () => {
       checkFonts: () => {
         calls.push('fonts');
       },
-      now: () => 1_000
+      now: () => 1_000,
     };
 
     const result = await runExportWarmup(project, deps, { onStep: (step) => steps.push(step) });
@@ -61,7 +66,7 @@ describe('export warmup', () => {
       createTempDirectory: () => 'C:/Temp/open-factory/segments',
       getFfmpegCapabilities: () => availableCapabilities,
       checkFonts: () => undefined,
-      now: () => now
+      now: () => now,
     };
 
     await runExportWarmup(project, deps);
@@ -94,11 +99,15 @@ describe('export warmup', () => {
       checkFonts: () => {
         calls.push('fonts');
       },
-      now: () => 1_000
+      now: () => 1_000,
     };
 
-    await expect(runExportWarmup(project, deps, { ffmpegUnavailableMessage: 'FFmpeg 不可用' })).rejects.toThrow('FFmpeg 不可用');
-    await expect(runExportWarmup(project, deps, { ffmpegUnavailableMessage: 'FFmpeg 不可用' })).rejects.toThrow('FFmpeg 不可用');
+    await expect(runExportWarmup(project, deps, { ffmpegUnavailableMessage: 'FFmpeg 不可用' })).rejects.toThrow(
+      'FFmpeg 不可用',
+    );
+    await expect(runExportWarmup(project, deps, { ffmpegUnavailableMessage: 'FFmpeg 不可用' })).rejects.toThrow(
+      'FFmpeg 不可用',
+    );
 
     expect(calls).toEqual(['proxy', 'temp-dir', 'ffmpeg', 'proxy', 'temp-dir', 'ffmpeg']);
   });

@@ -20,7 +20,13 @@ interface VideoStitchWizardDialogProps {
   onClose(): void;
 }
 
-export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos, onGenerate, onClose }: VideoStitchWizardDialogProps) {
+export function VideoStitchWizardDialog({
+  media,
+  projectSettings,
+  onImportVideos,
+  onGenerate,
+  onClose,
+}: VideoStitchWizardDialogProps) {
   const t = zhCN.videoStitchWizard;
   const videoAssets = useMemo(() => media.filter((asset) => asset.type === 'video'), [media]);
   const [selectedIds, setSelectedIds] = useState(() => videoAssets.map((asset) => asset.id));
@@ -85,14 +91,26 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={t.title} data-testid="video-stitch-wizard-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t.title}
+      data-testid="video-stitch-wizard-dialog"
+    >
       <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <header className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <p className="text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} onClick={onClose}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
             <X size={16} />
           </button>
         </header>
@@ -100,22 +118,44 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
           <section className="min-h-0 overflow-y-auto bg-white p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-700">{t.videoList}</div>
-              <button className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-panel" type="button" data-testid="video-stitch-import-button" onClick={() => void importVideos()}>
+              <button
+                className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="video-stitch-import-button"
+                onClick={() => void importVideos()}
+              >
                 <FolderOpen size={14} />
                 {t.importVideos}
               </button>
             </div>
             {videoAssets.length === 0 ? (
-              <div className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500" data-testid="video-stitch-empty">{t.empty}</div>
+              <div
+                className="rounded-md border border-dashed border-line p-6 text-center text-sm text-slate-500"
+                data-testid="video-stitch-empty"
+              >
+                {t.empty}
+              </div>
             ) : (
               <div className="space-y-2" data-testid="video-stitch-media-list">
                 {videoAssets.map((asset) => {
                   const selected = selectedIds.includes(asset.id);
                   return (
-                    <label key={asset.id} className="flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm text-slate-700" data-testid={`video-stitch-media-${asset.id}`}>
-                      <input className="h-4 w-4 accent-brand" type="checkbox" checked={selected} data-testid={`video-stitch-select-${asset.id}`} onChange={(event) => toggleAsset(asset.id, event.target.checked)} />
+                    <label
+                      key={asset.id}
+                      className="flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm text-slate-700"
+                      data-testid={`video-stitch-media-${asset.id}`}
+                    >
+                      <input
+                        className="h-4 w-4 accent-brand"
+                        type="checkbox"
+                        checked={selected}
+                        data-testid={`video-stitch-select-${asset.id}`}
+                        onChange={(event) => toggleAsset(asset.id, event.target.checked)}
+                      />
                       <span className="min-w-0 flex-1 truncate">{asset.name}</span>
-                      <span className="text-xs tabular-nums text-slate-500">{t.assetDuration(asset.duration || 0)}</span>
+                      <span className="text-xs tabular-nums text-slate-500">
+                        {t.assetDuration(asset.duration || 0)}
+                      </span>
                     </label>
                   );
                 })}
@@ -136,10 +176,24 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
                   <GripVertical size={15} className="text-slate-400" />
                   <span className="w-6 text-xs tabular-nums text-slate-500">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate">{asset.name}</span>
-                  <button className="inline-flex h-7 w-7 items-center justify-center rounded border border-line hover:bg-panel disabled:opacity-40" type="button" title={t.moveUp} aria-label={t.moveUp} disabled={index === 0} onClick={() => moveAsset(asset.id, -1)}>
+                  <button
+                    className="inline-flex h-7 w-7 items-center justify-center rounded border border-line hover:bg-panel disabled:opacity-40"
+                    type="button"
+                    title={t.moveUp}
+                    aria-label={t.moveUp}
+                    disabled={index === 0}
+                    onClick={() => moveAsset(asset.id, -1)}
+                  >
                     <ArrowUp size={14} />
                   </button>
-                  <button className="inline-flex h-7 w-7 items-center justify-center rounded border border-line hover:bg-panel disabled:opacity-40" type="button" title={t.moveDown} aria-label={t.moveDown} disabled={index === selectedAssets.length - 1} onClick={() => moveAsset(asset.id, 1)}>
+                  <button
+                    className="inline-flex h-7 w-7 items-center justify-center rounded border border-line hover:bg-panel disabled:opacity-40"
+                    type="button"
+                    title={t.moveDown}
+                    aria-label={t.moveDown}
+                    disabled={index === selectedAssets.length - 1}
+                    onClick={() => moveAsset(asset.id, 1)}
+                  >
                     <ArrowDown size={14} />
                   </button>
                 </div>
@@ -149,17 +203,46 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
           <aside className="space-y-4 bg-white p-4">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input className="h-4 w-4 accent-brand" type="checkbox" checked={transitionEnabled} data-testid="video-stitch-transition-toggle" onChange={(event) => setTransitionEnabled(event.target.checked)} />
+                <input
+                  className="h-4 w-4 accent-brand"
+                  type="checkbox"
+                  checked={transitionEnabled}
+                  data-testid="video-stitch-transition-toggle"
+                  onChange={(event) => setTransitionEnabled(event.target.checked)}
+                />
                 {t.enableTransition}
               </label>
               <label className="block text-xs font-medium text-slate-600">
                 {t.transitionDuration}
-                <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm" type="number" min={0.1} max={5} step={0.1} value={transitionDuration} data-testid="video-stitch-transition-duration" onChange={(event) => setTransitionDuration(Number(event.target.value))} />
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm"
+                  type="number"
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                  value={transitionDuration}
+                  data-testid="video-stitch-transition-duration"
+                  onChange={(event) => setTransitionDuration(Number(event.target.value))}
+                />
               </label>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <NumberSetting label={t.width} value={width} min={160} max={7680} testId="video-stitch-width" onChange={setWidth} />
-              <NumberSetting label={t.height} value={height} min={160} max={4320} testId="video-stitch-height" onChange={setHeight} />
+              <NumberSetting
+                label={t.width}
+                value={width}
+                min={160}
+                max={7680}
+                testId="video-stitch-width"
+                onChange={setWidth}
+              />
+              <NumberSetting
+                label={t.height}
+                value={height}
+                min={160}
+                max={4320}
+                testId="video-stitch-height"
+                onChange={setHeight}
+              />
               <NumberSetting label={t.fps} value={fps} min={1} max={120} testId="video-stitch-fps" onChange={setFps} />
             </div>
             <button
@@ -174,14 +257,16 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
                   transitionDuration,
                   width,
                   height,
-                  fps
+                  fps,
                 })
               }
             >
               <ListPlus size={16} />
               {t.generate}
             </button>
-            <div className="text-xs text-slate-500" data-testid="video-stitch-summary">{t.summary(selectedAssets.length)}</div>
+            <div className="text-xs text-slate-500" data-testid="video-stitch-summary">
+              {t.summary(selectedAssets.length)}
+            </div>
           </aside>
         </div>
       </div>
@@ -189,11 +274,33 @@ export function VideoStitchWizardDialog({ media, projectSettings, onImportVideos
   );
 }
 
-function NumberSetting({ label, value, min, max, testId, onChange }: { label: string; value: number; min: number; max: number; testId: string; onChange(value: number): void }) {
+function NumberSetting({
+  label,
+  value,
+  min,
+  max,
+  testId,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  testId: string;
+  onChange(value: number): void;
+}) {
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm" type="number" min={min} max={max} value={value} data-testid={testId} onChange={(event) => onChange(Number(event.target.value))} />
+      <input
+        className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm"
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
     </label>
   );
 }

@@ -20,13 +20,7 @@ export interface PreflightIssue {
 }
 
 export type PreflightCategory =
-  | 'flash'
-  | 'continuity'
-  | 'colorConsistency'
-  | 'readingSpeed'
-  | 'loudness'
-  | 'shake'
-  | 'anomaly';
+  'flash' | 'continuity' | 'colorConsistency' | 'readingSpeed' | 'loudness' | 'shake' | 'anomaly';
 
 export interface PreflightReport {
   generatedAt: string;

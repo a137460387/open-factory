@@ -1,9 +1,4 @@
-import {
-  calculateSpeedCurveSourceDuration,
-  getClipSpeed,
-  round,
-  type Clip
-} from '@open-factory/editor-core';
+import { calculateSpeedCurveSourceDuration, getClipSpeed, round, type Clip } from '@open-factory/editor-core';
 
 export type TimelineKeyboardTrimEdge = 'in' | 'out';
 
@@ -35,25 +30,24 @@ export function buildKeyboardClipMoveStarts(input: {
         return [];
       }
       return [[clipId, round(Math.max(0, clip.start + input.direction * frame))]];
-    })
+    }),
   );
 }
 
-export function buildKeyboardClipTrim(input: {
-  clip: Clip;
-  edge: TimelineKeyboardTrimEdge;
-  fps: number;
-}): { trimStart: number; trimEnd: number } {
+export function buildKeyboardClipTrim(input: { clip: Clip; edge: TimelineKeyboardTrimEdge; fps: number }): {
+  trimStart: number;
+  trimEnd: number;
+} {
   const frame = getTimelineKeyboardFrameDuration(input.fps);
   const sourceDelta = calculateSpeedCurveSourceDuration(frame, input.clip.keyframes, getClipSpeed(input.clip));
   if (input.edge === 'in') {
     return {
       trimStart: round(input.clip.trimStart + sourceDelta),
-      trimEnd: input.clip.trimEnd
+      trimEnd: input.clip.trimEnd,
     };
   }
   return {
     trimStart: input.clip.trimStart,
-    trimEnd: round(input.clip.trimEnd + sourceDelta)
+    trimEnd: round(input.clip.trimEnd + sourceDelta),
   };
 }

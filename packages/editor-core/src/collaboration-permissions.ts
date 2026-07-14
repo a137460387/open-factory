@@ -40,19 +40,18 @@ export type PermissionAction =
 
 const ROLE_PERMISSIONS: Record<CollaborationPermissionRole, Set<PermissionAction>> = {
   owner: new Set([
-    'edit-timeline', 'delete-project', 'add-comment', 'add-annotation',
-    'view-project', 'manage-roles', 'export-project', 'modify-settings'
+    'edit-timeline',
+    'delete-project',
+    'add-comment',
+    'add-annotation',
+    'view-project',
+    'manage-roles',
+    'export-project',
+    'modify-settings',
   ]),
-  editor: new Set([
-    'edit-timeline', 'add-comment', 'add-annotation',
-    'view-project', 'export-project'
-  ]),
-  commenter: new Set([
-    'add-comment', 'add-annotation', 'view-project'
-  ]),
-  viewer: new Set([
-    'view-project'
-  ])
+  editor: new Set(['edit-timeline', 'add-comment', 'add-annotation', 'view-project', 'export-project']),
+  commenter: new Set(['add-comment', 'add-annotation', 'view-project']),
+  viewer: new Set(['view-project']),
 };
 
 export const COLLABORATION_ROLES: CollaborationPermissionRole[] = ['owner', 'editor', 'commenter', 'viewer'];
@@ -78,7 +77,7 @@ export function assignRole(
   role: CollaborationPermissionRole,
   changedBy: string,
   changedByName: string,
-  now?: string
+  now?: string,
 ): CollaborationPermissionConfig {
   const timestamp = now ?? new Date().toISOString();
   const previousRole = getRoleForUser(config, userId);
@@ -89,7 +88,7 @@ export function assignRole(
     userName,
     role,
     assignedAt: timestamp,
-    assignedBy: changedBy
+    assignedBy: changedBy,
   };
 
   const logEntry: CollaborationPermissionChangeLogEntry = {
@@ -101,16 +100,13 @@ export function assignRole(
     changedBy,
     changedByName,
     timestamp,
-    action: config.roles.find((r) => r.userId === userId) ? 'changed' : 'assigned'
+    action: config.roles.find((r) => r.userId === userId) ? 'changed' : 'assigned',
   };
 
   return {
     ...config,
-    roles: [
-      ...config.roles.filter((r) => r.userId !== userId),
-      ...(role === 'viewer' ? [] : [assignment])
-    ],
-    changeLog: [...config.changeLog, logEntry]
+    roles: [...config.roles.filter((r) => r.userId !== userId), ...(role === 'viewer' ? [] : [assignment])],
+    changeLog: [...config.changeLog, logEntry],
   };
 }
 
@@ -119,7 +115,7 @@ export function removeUserRole(
   userId: string,
   changedBy: string,
   changedByName: string,
-  now?: string
+  now?: string,
 ): CollaborationPermissionConfig {
   const timestamp = now ?? new Date().toISOString();
   const previousRole = getRoleForUser(config, userId);
@@ -134,13 +130,13 @@ export function removeUserRole(
     changedBy,
     changedByName,
     timestamp,
-    action: 'revoked'
+    action: 'revoked',
   };
 
   return {
     ...config,
     roles: config.roles.filter((r) => r.userId !== userId),
-    changeLog: [...config.changeLog, logEntry]
+    changeLog: [...config.changeLog, logEntry],
   };
 }
 
@@ -150,13 +146,22 @@ export function isActionAllowedForUI(role: CollaborationPermissionRole, action: 
 
 export function getDisabledActionsForRole(role: CollaborationPermissionRole): PermissionAction[] {
   const allActions: PermissionAction[] = [
-    'edit-timeline', 'delete-project', 'add-comment', 'add-annotation',
-    'view-project', 'manage-roles', 'export-project', 'modify-settings'
+    'edit-timeline',
+    'delete-project',
+    'add-comment',
+    'add-annotation',
+    'view-project',
+    'manage-roles',
+    'export-project',
+    'modify-settings',
   ];
   return allActions.filter((action) => !hasPermission(role, action));
 }
 
-export function buildPermissionSyncMessage(config: CollaborationPermissionConfig, targetUserId: string): {
+export function buildPermissionSyncMessage(
+  config: CollaborationPermissionConfig,
+  targetUserId: string,
+): {
   userId: string;
   role: CollaborationPermissionRole;
   permissions: PermissionAction[];
@@ -165,13 +170,13 @@ export function buildPermissionSyncMessage(config: CollaborationPermissionConfig
   return {
     userId: targetUserId,
     role,
-    permissions: Array.from(getRolePermissions(role))
+    permissions: Array.from(getRolePermissions(role)),
   };
 }
 
 export function normalizeCollaborationPermissionConfig(
   input: Partial<CollaborationPermissionConfig> | undefined,
-  ownerUserId: string
+  ownerUserId: string,
 ): CollaborationPermissionConfig {
   return {
     ownerUserId,
@@ -184,7 +189,7 @@ export function normalizeCollaborationPermissionConfig(
             userName: typeof r.userName === 'string' ? r.userName : r.userId,
             role: r.role,
             assignedAt: typeof r.assignedAt === 'string' ? r.assignedAt : new Date().toISOString(),
-            assignedBy: typeof r.assignedBy === 'string' ? r.assignedBy : ownerUserId
+            assignedBy: typeof r.assignedBy === 'string' ? r.assignedBy : ownerUserId,
           }))
       : [],
     changeLog: Array.isArray(input?.changeLog)
@@ -194,13 +199,17 @@ export function normalizeCollaborationPermissionConfig(
             id: e.id,
             userId: e.userId,
             userName: typeof e.userName === 'string' ? e.userName : e.userId,
-            previousRole: COLLABORATION_ROLES.includes(e.previousRole as CollaborationPermissionRole) ? (e.previousRole as CollaborationPermissionRole) : null,
-            newRole: COLLABORATION_ROLES.includes(e.newRole as CollaborationPermissionRole) ? (e.newRole as CollaborationPermissionRole) : 'viewer',
+            previousRole: COLLABORATION_ROLES.includes(e.previousRole as CollaborationPermissionRole)
+              ? (e.previousRole as CollaborationPermissionRole)
+              : null,
+            newRole: COLLABORATION_ROLES.includes(e.newRole as CollaborationPermissionRole)
+              ? (e.newRole as CollaborationPermissionRole)
+              : 'viewer',
             changedBy: typeof e.changedBy === 'string' ? e.changedBy : ownerUserId,
-            changedByName: typeof e.changedByName === 'string' ? e.changedByName : e.changedBy ?? ownerUserId,
+            changedByName: typeof e.changedByName === 'string' ? e.changedByName : (e.changedBy ?? ownerUserId),
             timestamp: typeof e.timestamp === 'string' ? e.timestamp : new Date().toISOString(),
-            action: e.action === 'assigned' || e.action === 'revoked' || e.action === 'changed' ? e.action : 'assigned'
+            action: e.action === 'assigned' || e.action === 'revoked' || e.action === 'changed' ? e.action : 'assigned',
           }))
-      : []
+      : [],
   };
 }

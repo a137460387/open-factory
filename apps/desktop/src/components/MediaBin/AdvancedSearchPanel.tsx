@@ -106,9 +106,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
         )}
         {isSearching && <Loader2 size={14} className="animate-spin text-brand" />}
         {searchResults && (
-          <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
-            {searchResults.total} 个结果
-          </span>
+          <span className="shrink-0 text-xs text-[var(--color-text-muted)]">{searchResults.total} 个结果</span>
         )}
         <button
           type="button"
@@ -134,12 +132,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-1 border-t border-line px-3 py-2">
           {searchQuery.tags?.map((tag) => (
-            <FilterChip
-              key={`tag-${tag}`}
-              label={tag}
-              icon={<Tag size={10} />}
-              onRemove={() => removeTagFilter(tag)}
-            />
+            <FilterChip key={`tag-${tag}`} label={tag} icon={<Tag size={10} />} onRemove={() => removeTagFilter(tag)} />
           ))}
           {searchQuery.assetTypes?.map((type) => (
             <FilterChip
@@ -176,9 +169,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
         <div className="space-y-3 border-t border-line px-3 py-3">
           {/* 标签云 */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-              标签
-            </label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">标签</label>
             {tagsLoading ? (
               <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
                 <Loader2 size={12} className="animate-spin" /> 加载标签中...
@@ -207,9 +198,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
 
           {/* 文件类型 */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-              文件类型
-            </label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">文件类型</label>
             <div className="flex gap-1" data-testid="asset-type-filter">
               {ASSET_TYPE_OPTIONS.map((opt) => (
                 <button
@@ -232,9 +221,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
 
           {/* 分辨率 */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-              分辨率
-            </label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">分辨率</label>
             <div className="flex flex-wrap gap-1" data-testid="resolution-filter">
               {RESOLUTION_PRESETS.map((preset) => {
                 const isActive =
@@ -269,14 +256,11 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
 
           {/* 时长 */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">
-              时长范围
-            </label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--color-text-secondary)]">时长范围</label>
             <div className="flex flex-wrap gap-1" data-testid="duration-filter">
               {DURATION_PRESETS.map((preset) => {
                 const isActive =
-                  searchQuery.minDurationMs === preset.minMs &&
-                  searchQuery.maxDurationMs === preset.maxMs;
+                  searchQuery.minDurationMs === preset.minMs && searchQuery.maxDurationMs === preset.maxMs;
                 return (
                   <button
                     key={preset.label}
@@ -309,24 +293,12 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
 }
 
 /** 筛选条件 Chip */
-function FilterChip({
-  label,
-  icon,
-  onRemove,
-}: {
-  label: string;
-  icon?: React.ReactNode;
-  onRemove: () => void;
-}) {
+function FilterChip({ label, icon, onRemove }: { label: string; icon?: React.ReactNode; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
       {icon}
       {label}
-      <button
-        type="button"
-        className="ml-0.5 rounded-full p-0.5 hover:bg-brand/20"
-        onClick={onRemove}
-      >
+      <button type="button" className="ml-0.5 rounded-full p-0.5 hover:bg-brand/20" onClick={onRemove}>
         <X size={10} />
       </button>
     </span>
@@ -334,15 +306,7 @@ function FilterChip({
 }
 
 /** 标签徽章 */
-function TagBadge({
-  tag,
-  active,
-  onClick,
-}: {
-  tag: TagWithCount;
-  active: boolean;
-  onClick: () => void;
-}) {
+function TagBadge({ tag, active, onClick }: { tag: TagWithCount; active: boolean; onClick: () => void }) {
   return (
     <button
       type="button"

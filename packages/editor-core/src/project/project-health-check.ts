@@ -4,13 +4,14 @@ import {
   type Clip,
   type MediaAsset,
   type Project,
-  type Track
+  type Track,
 } from '../model';
 import { shouldGenerateProxy } from '../proxy/proxy-planner';
 import type { ProxySettings } from '../proxy/proxy-types';
 import { parseFontFamilyList } from '../export/preflight';
 
-export type ProjectHealthIssueType = 'missing-media' | 'duplicate-media' | 'orphan-media' | 'proxy-missing' | 'missing-font';
+export type ProjectHealthIssueType =
+  'missing-media' | 'duplicate-media' | 'orphan-media' | 'proxy-missing' | 'missing-font';
 
 export interface ProjectHealthClipReference {
   clipId: string;
@@ -82,7 +83,17 @@ export interface ProjectHealthCheckOptions {
   proxySettings?: ProxySettings;
 }
 
-const GENERIC_FONT_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace']);
+const GENERIC_FONT_FAMILIES = new Set([
+  'serif',
+  'sans-serif',
+  'monospace',
+  'cursive',
+  'fantasy',
+  'system-ui',
+  'ui-serif',
+  'ui-sans-serif',
+  'ui-monospace',
+]);
 
 export function runProjectHealthCheck(project: Project, options: ProjectHealthCheckOptions = {}): ProjectHealthReport {
   const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
@@ -94,7 +105,9 @@ export function runProjectHealthCheck(project: Project, options: ProjectHealthCh
     if (!asset) {
       return true;
     }
-    return Boolean(asset.missing || !asset.path.trim() || missingMediaAssetIds.has(asset.id) || options.isMediaMissing?.(asset));
+    return Boolean(
+      asset.missing || !asset.path.trim() || missingMediaAssetIds.has(asset.id) || options.isMediaMissing?.(asset),
+    );
   };
 
   return {
@@ -102,12 +115,18 @@ export function runProjectHealthCheck(project: Project, options: ProjectHealthCh
     duplicateMedia: collectDuplicateMedia(syncedProject.media, referencesByMediaId),
     orphanMedia: collectOrphanMedia(syncedProject.media, usedMediaIds, syncedProject.mediaFolders),
     proxyMissing: collectProxyMissingMedia(syncedProject.media, isMissing, options.proxySettings),
-    missingFonts: collectMissingFonts(syncedProject, options.isFontFamilyAvailable)
+    missingFonts: collectMissingFonts(syncedProject, options.isFontFamilyAvailable),
   };
 }
 
 export function getProjectHealthIssueCount(report: ProjectHealthReport): number {
-  return report.missingMedia.length + report.duplicateMedia.length + report.orphanMedia.length + report.proxyMissing.length + report.missingFonts.length;
+  return (
+    report.missingMedia.length +
+    report.duplicateMedia.length +
+    report.orphanMedia.length +
+    report.proxyMissing.length +
+    report.missingFonts.length
+  );
 }
 
 function collectMediaReferences(project: Project): Map<string, ProjectHealthClipReference[]> {
@@ -130,7 +149,7 @@ function collectMediaReferences(project: Project): Map<string, ProjectHealthClip
 function collectMissingMedia(
   mediaById: Map<string, MediaAsset>,
   referencesByMediaId: Map<string, ProjectHealthClipReference[]>,
-  isMissing: (asset: MediaAsset | undefined) => boolean
+  isMissing: (asset: MediaAsset | undefined) => boolean,
 ): MissingMediaIssue[] {
   const issues: MissingMediaIssue[] = [];
   for (const [mediaId, references] of referencesByMediaId) {
@@ -143,13 +162,16 @@ function collectMissingMedia(
       type: 'missing-media',
       id: `missing-media-${mediaId}`,
       ...summary,
-      references
+      references,
     });
   }
   return sortIssuesByName(issues);
 }
 
-function collectDuplicateMedia(media: MediaAsset[], referencesByMediaId: Map<string, ProjectHealthClipReference[]>): DuplicateMediaIssue[] {
+function collectDuplicateMedia(
+  media: MediaAsset[],
+  referencesByMediaId: Map<string, ProjectHealthClipReference[]>,
+): DuplicateMediaIssue[] {
   const bySignature = new Map<string, MediaAsset[]>();
   for (const asset of media) {
     if (asset.missing || !isFiniteNumber(asset.size) || !isFiniteNumber(asset.mtimeMs)) {
@@ -167,7 +189,9 @@ function collectDuplicateMedia(media: MediaAsset[], referencesByMediaId: Map<str
     if (distinctPaths.size < 2) {
       continue;
     }
-    const sorted = [...group].sort((left, right) => left.path.localeCompare(right.path) || left.id.localeCompare(right.id));
+    const sorted = [...group].sort(
+      (left, right) => left.path.localeCompare(right.path) || left.id.localeCompare(right.id),
+    );
     const keepAssetId = sorted[0].id;
     issues.push({
       type: 'duplicate-media',
@@ -177,22 +201,26 @@ function collectDuplicateMedia(media: MediaAsset[], referencesByMediaId: Map<str
       keepAssetId,
       assets: sorted.map((asset) => ({
         ...mediaSummary(asset),
-        references: referencesByMediaId.get(asset.id) ?? []
-      }))
+        references: referencesByMediaId.get(asset.id) ?? [],
+      })),
     });
     index += 1;
   }
   return issues;
 }
 
-function collectOrphanMedia(media: MediaAsset[], usedMediaIds: Set<string>, folders: Project['mediaFolders']): OrphanMediaIssue[] {
+function collectOrphanMedia(
+  media: MediaAsset[],
+  usedMediaIds: Set<string>,
+  folders: Project['mediaFolders'],
+): OrphanMediaIssue[] {
   const unusedFolderIds = new Set(
     folders
       .filter((folder) => {
         const name = folder.name.trim().toLowerCase();
         return name === 'unused' || name === '\u672a\u4f7f\u7528';
       })
-      .map((folder) => folder.id)
+      .map((folder) => folder.id),
   );
   return sortIssuesByName(
     media
@@ -200,15 +228,15 @@ function collectOrphanMedia(media: MediaAsset[], usedMediaIds: Set<string>, fold
       .map((asset) => ({
         type: 'orphan-media' as const,
         id: `orphan-media-${asset.id}`,
-        ...mediaSummary(asset)
-      }))
+        ...mediaSummary(asset),
+      })),
   );
 }
 
 function collectProxyMissingMedia(
   media: MediaAsset[],
   isMissing: (asset: MediaAsset | undefined) => boolean,
-  proxySettings: ProxySettings | undefined
+  proxySettings: ProxySettings | undefined,
 ): ProxyMissingIssue[] {
   return sortIssuesByName(
     media
@@ -219,12 +247,15 @@ function collectProxyMissingMedia(
         ...mediaSummary(asset),
         width: asset.width,
         height: asset.height,
-        proxyStatus: asset.proxyStatus
-      }))
+        proxyStatus: asset.proxyStatus,
+      })),
   );
 }
 
-function collectMissingFonts(project: Project, isFontFamilyAvailable: ProjectHealthCheckOptions['isFontFamilyAvailable']): MissingFontIssue[] {
+function collectMissingFonts(
+  project: Project,
+  isFontFamilyAvailable: ProjectHealthCheckOptions['isFontFamilyAvailable'],
+): MissingFontIssue[] {
   if (!isFontFamilyAvailable) {
     return [];
   }
@@ -237,7 +268,10 @@ function collectMissingFonts(project: Project, isFontFamilyAvailable: ProjectHea
           continue;
         }
         const families = parseFontFamilyList(clip.style.fontFamily);
-        if (families.length === 0 || families.some((family) => isGenericFontFamily(family) || isFontFamilyAvailable(family))) {
+        if (
+          families.length === 0 ||
+          families.some((family) => isGenericFontFamily(family) || isFontFamilyAvailable(family))
+        ) {
           continue;
         }
         const fontFamily = families[0] ?? clip.style.fontFamily;
@@ -250,12 +284,15 @@ function collectMissingFonts(project: Project, isFontFamilyAvailable: ProjectHea
           type: 'missing-font',
           id: `missing-font-${clip.id}-${slug(fontFamily)}`,
           fontFamily,
-          clip: toReference(clip, track, sequence.id, sequence.name)
+          clip: toReference(clip, track, sequence.id, sequence.name),
         });
       }
     }
   }
-  return issues.sort((left, right) => left.fontFamily.localeCompare(right.fontFamily) || left.clip.clipName.localeCompare(right.clip.clipName));
+  return issues.sort(
+    (left, right) =>
+      left.fontFamily.localeCompare(right.fontFamily) || left.clip.clipName.localeCompare(right.clip.clipName),
+  );
 }
 
 function toReference(clip: Clip, track: Track, sequenceId: string, sequenceName: string): ProjectHealthClipReference {
@@ -265,7 +302,7 @@ function toReference(clip: Clip, track: Track, sequenceId: string, sequenceName:
     trackId: track.id,
     trackName: track.name,
     sequenceId,
-    sequenceName
+    sequenceName,
   };
 }
 
@@ -274,7 +311,7 @@ function mediaSummary(asset: MediaAsset): ProjectHealthMediaSummary {
     assetId: asset.id,
     name: asset.name || fileNameFromPath(asset.path) || asset.id,
     path: asset.path,
-    fileName: fileNameFromPath(asset.path || asset.name || asset.id)
+    fileName: fileNameFromPath(asset.path || asset.name || asset.id),
   };
 }
 
@@ -287,7 +324,7 @@ function fallbackMissingAsset(assetId: string, clipName?: string): MediaAsset {
     duration: 0,
     width: 0,
     height: 0,
-    missing: true
+    missing: true,
   };
 }
 
@@ -312,5 +349,10 @@ function sortIssuesByName<T extends { name: string; path: string }>(issues: T[])
 }
 
 function slug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'font';
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'font'
+  );
 }

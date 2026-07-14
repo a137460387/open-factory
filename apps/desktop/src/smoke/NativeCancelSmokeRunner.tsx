@@ -1,10 +1,17 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { useEffect } from 'react';
 import type { ExportTask } from '@open-factory/editor-core';
 import { AddClipCommand } from '@open-factory/editor-core';
 import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { probeMediaPaths } from '../lib/media';
-import { forceCloseWindow, fsExists, getCancelSmokeConfig, getFileStat, listenBridge, writeFile } from '../lib/tauri-bridge';
+import {
+  forceCloseWindow,
+  fsExists,
+  getCancelSmokeConfig,
+  getFileStat,
+  listenBridge,
+  writeFile,
+} from '../lib/tauri-bridge';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
@@ -59,7 +66,7 @@ async function runNativeCancelSmoke(): Promise<void> {
     exportStartedEventSeen: false,
     cancelButtonClicked: false,
     runnerInactiveAfterCancel: false,
-    durationMs: 0
+    durationMs: 0,
   };
   let unlistenStarted: (() => void) | undefined;
 
@@ -79,7 +86,7 @@ async function runNativeCancelSmoke(): Promise<void> {
       duration: asset.duration,
       width: asset.width,
       height: asset.height,
-      hasAudio: asset.hasAudio
+      hasAudio: asset.hasAudio,
     };
 
     useEditorStore.getState().addMedia([asset]);
@@ -99,26 +106,34 @@ async function runNativeCancelSmoke(): Promise<void> {
     const runningTask = await waitFor(
       () => useExportQueueStore.getState().tasks.find((task) => task.status === 'running'),
       15_000,
-      'Export task did not enter running state.'
+      'Export task did not enter running state.',
     );
     report.task = {
       id: runningTask.id,
       statusBeforeCancel: runningTask.status,
-      canceledStatusSeen: false
+      canceledStatusSeen: false,
     };
 
-    await waitFor(() => (report.exportStartedEventSeen ? true : undefined), 20_000, 'Rust export-started event was not observed.');
+    await waitFor(
+      () => (report.exportStartedEventSeen ? true : undefined),
+      20_000,
+      'Rust export-started event was not observed.',
+    );
     await clickByTestId('export-task-cancel-button', 'Running export cancel button was not available.');
     report.cancelButtonClicked = true;
 
     const canceledTask = await waitFor(
       () => findTask(runningTask.id, (task) => task.status === 'canceled'),
       15_000,
-      'Export task did not enter canceled state.'
+      'Export task did not enter canceled state.',
     );
     report.task.canceledStatusSeen = canceledTask.status === 'canceled';
 
-    await waitFor(() => (!useExportQueueStore.getState().runnerActive ? true : undefined), 30_000, 'Export runner did not become idle after cancellation.');
+    await waitFor(
+      () => (!useExportQueueStore.getState().runnerActive ? true : undefined),
+      30_000,
+      'Export runner did not become idle after cancellation.',
+    );
     report.runnerInactiveAfterCancel = true;
 
     report.partialOutputExistsAfterCancel = await fsExists(config.outputPath);
@@ -130,7 +145,7 @@ async function runNativeCancelSmoke(): Promise<void> {
     const retriedTask = await waitFor(
       () => findTask(runningTask.id, (task) => task.status === 'success'),
       120_000,
-      'Canceled export task did not retry successfully.'
+      'Canceled export task did not retry successfully.',
     );
     report.task.retryStatus = retriedTask.status;
     report.finalOutputExists = await fsExists(config.outputPath);
@@ -161,10 +176,14 @@ async function runNativeCancelSmoke(): Promise<void> {
 }
 
 async function clickExportToolbarButton(): Promise<void> {
-  const button = await waitFor(() => {
-    const item = document.querySelector<HTMLButtonElement>('[data-testid="toolbar-export-button"]');
-    return item && !item.disabled ? item : undefined;
-  }, 10_000, 'Export toolbar button was not enabled.');
+  const button = await waitFor(
+    () => {
+      const item = document.querySelector<HTMLButtonElement>('[data-testid="toolbar-export-button"]');
+      return item && !item.disabled ? item : undefined;
+    },
+    10_000,
+    'Export toolbar button was not enabled.',
+  );
   button.click();
   await waitFor(() => document.querySelector('[data-testid="export-dialog"]'), 20_000, 'Export dialog did not open.');
 }
@@ -173,7 +192,7 @@ async function fillOutputPath(path: string): Promise<void> {
   const input = await waitFor(
     () => document.querySelector<HTMLInputElement>('[data-testid="export-output-path"]'),
     5_000,
-    'Export output path input was not available.'
+    'Export output path input was not available.',
   );
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
   setter?.call(input, path);
@@ -181,7 +200,11 @@ async function fillOutputPath(path: string): Promise<void> {
 }
 
 async function clickByTestId(testId: string, failureMessage: string): Promise<void> {
-  const button = await waitFor(() => document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`), 10_000, failureMessage);
+  const button = await waitFor(
+    () => document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`),
+    10_000,
+    failureMessage,
+  );
   button.click();
 }
 
@@ -192,7 +215,7 @@ function findTask(taskId: string, predicate: (task: ExportTask) => boolean): Exp
 async function getOutputSize(path: string): Promise<number | undefined> {
   return getFileStat(path)
     .then((stat) => stat.size)
-    .catch(logError("NativeCancelSmokeRunnerx"));
+    .catch(logError('NativeCancelSmokeRunnerx'));
 }
 
 async function waitFor<T>(read: () => T | undefined | null, timeoutMs: number, failureMessage: string): Promise<T> {

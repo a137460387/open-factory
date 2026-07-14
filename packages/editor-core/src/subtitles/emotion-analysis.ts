@@ -25,10 +25,75 @@ export interface EmotionStyledSubtitle {
 
 /** Keyword dictionaries per emotion (Chinese + common punctuation signals). */
 const EMOTION_KEYWORDS: Record<SubtitleEmotionType, string[]> = {
-  anger: ['愤怒', '气死', '混蛋', '可恶', '滚', '去死', '该死', '讨厌', '恨', '怒', '暴怒', '狂怒', '火大', '受不了', '忍无可忍'],
-  joy: ['太棒了', '开心', '高兴', '快乐', '幸福', '哈哈', '嘻嘻', '耶', '好极了', '棒', '笑', '乐', '赞', '美好', '甜蜜', '欢笑'],
-  sadness: ['伤心', '难过', '悲伤', '痛苦', '哭', '泪', '寂寞', '孤独', '心碎', '离别', '思念', '遗憾', '绝望', '哀', '凄', '惆怅'],
-  surprise: ['天哪', '哇', '啊', '不会吧', '竟然', '居然', '没想到', '意外', '震惊', '吃惊', '不可思议', '难以置信', '吓', '惊'],
+  anger: [
+    '愤怒',
+    '气死',
+    '混蛋',
+    '可恶',
+    '滚',
+    '去死',
+    '该死',
+    '讨厌',
+    '恨',
+    '怒',
+    '暴怒',
+    '狂怒',
+    '火大',
+    '受不了',
+    '忍无可忍',
+  ],
+  joy: [
+    '太棒了',
+    '开心',
+    '高兴',
+    '快乐',
+    '幸福',
+    '哈哈',
+    '嘻嘻',
+    '耶',
+    '好极了',
+    '棒',
+    '笑',
+    '乐',
+    '赞',
+    '美好',
+    '甜蜜',
+    '欢笑',
+  ],
+  sadness: [
+    '伤心',
+    '难过',
+    '悲伤',
+    '痛苦',
+    '哭',
+    '泪',
+    '寂寞',
+    '孤独',
+    '心碎',
+    '离别',
+    '思念',
+    '遗憾',
+    '绝望',
+    '哀',
+    '凄',
+    '惆怅',
+  ],
+  surprise: [
+    '天哪',
+    '哇',
+    '啊',
+    '不会吧',
+    '竟然',
+    '居然',
+    '没想到',
+    '意外',
+    '震惊',
+    '吃惊',
+    '不可思议',
+    '难以置信',
+    '吓',
+    '惊',
+  ],
   neutral: [],
 };
 
@@ -41,13 +106,13 @@ export function scoreEmotionFromText(text: string): Record<SubtitleEmotionType, 
   const normalized = text.toLowerCase();
   const scores: Record<SubtitleEmotionType, number> = {
     anger: 0,
-  joy: 0,
+    joy: 0,
     sadness: 0,
     surprise: 0,
     neutral: 0,
   };
 
-  for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS) as Array<[SubtitleEmotionType, string[]]> ) {
+  for (const [emotion, keywords] of Object.entries(EMOTION_KEYWORDS) as Array<[SubtitleEmotionType, string[]]>) {
     for (const kw of keywords) {
       if (normalized.includes(kw)) {
         scores[emotion] += 1;
@@ -157,7 +222,13 @@ export function calculateEmotionHeatmap(
     const score = scoreMap.get(clip.id);
     if (!score) continue;
     // Emotion intensity = 1 - neutral ratio
-    const nonNeutral = 1 - (score.scores.neutral / Math.max(1, Object.values(score.scores).reduce((a, b) => a + b, 0)));
+    const nonNeutral =
+      1 -
+      score.scores.neutral /
+        Math.max(
+          1,
+          Object.values(score.scores).reduce((a, b) => a + b, 0),
+        );
     const intensity = round(nonNeutral);
     const startBucket = Math.floor(clip.start / bucketSec);
     const endBucket = Math.floor((clip.start + clip.duration) / bucketSec);
@@ -172,7 +243,7 @@ export function calculateEmotionHeatmap(
     start: b.start,
     end: b.end,
     value: b.count > 0 ? round(b.total / b.count) : 0,
-    normalized: b.count > 0 ? round((b.total / b.count) / maxVal) : 0,
+    normalized: b.count > 0 ? round(b.total / b.count / maxVal) : 0,
   }));
 }
 

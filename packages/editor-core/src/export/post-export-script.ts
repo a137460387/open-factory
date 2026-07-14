@@ -38,5 +38,7 @@ export function formatPostExportDuration(durationSeconds: number): string {
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
     return '0';
   }
-  return Number.isInteger(durationSeconds) ? durationSeconds.toFixed(0) : durationSeconds.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+  return Number.isInteger(durationSeconds)
+    ? durationSeconds.toFixed(0)
+    : durationSeconds.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
 }

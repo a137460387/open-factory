@@ -125,7 +125,12 @@ export function NarrativeTimeline({ narrative, storyline }: NarrativeTimelinePro
             <path d={arcPoints} fill="none" stroke="#8b5cf6" strokeWidth={1.5} strokeLinejoin="round" />
             {/* Peak marker */}
             <circle
-              cx={4 + (narrative.arc.peakTime / Math.max(narrative.arc.points[narrative.arc.points.length - 1]?.time ?? 1, 1)) * 392}
+              cx={
+                4 +
+                (narrative.arc.peakTime /
+                  Math.max(narrative.arc.points[narrative.arc.points.length - 1]?.time ?? 1, 1)) *
+                  392
+              }
               cy={4 + (1 - (narrative.arc.points.find((p) => p.time === narrative.arc.peakTime)?.tension ?? 0.5)) * 52}
               r={4}
               fill="#ef4444"
@@ -150,7 +155,18 @@ export function NarrativeTimeline({ narrative, storyline }: NarrativeTimelinePro
             >
               <div
                 className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: ACT_COLORS[seg.purpose === 'setup' ? 'setup' : seg.purpose === 'climax' ? 'climax' : seg.purpose === 'resolution' ? 'resolution' : 'development'] }}
+                style={{
+                  backgroundColor:
+                    ACT_COLORS[
+                      seg.purpose === 'setup'
+                        ? 'setup'
+                        : seg.purpose === 'climax'
+                          ? 'climax'
+                          : seg.purpose === 'resolution'
+                            ? 'resolution'
+                            : 'development'
+                    ],
+                }}
               />
               <span className="text-neutral-300 flex-1 truncate">{seg.purpose}</span>
               <span className="text-neutral-500 font-mono">{seg.duration.toFixed(1)}s</span>

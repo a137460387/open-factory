@@ -8,7 +8,7 @@ import {
   resolveReframeDimensions,
   type ReframeCrop,
   type ReframeSettings,
-  type TargetAspectRatio
+  type TargetAspectRatio,
 } from './reframe';
 import { round } from './time';
 
@@ -67,24 +67,24 @@ export function resolveCustomRatioValue(width: number, height: number): number {
 export function smartAnchorForClip(
   clip: { id: string; name?: string },
   sourceWidth: number,
-  sourceHeight: number
+  sourceHeight: number,
 ): BatchCropAnchor {
   return {
     mode: 'smart',
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
   };
 }
 
 export function calculateBatchCropPreview(
   target: BatchCropTarget,
   targetAspectRatio: TargetAspectRatio,
-  anchor: BatchCropAnchor
+  anchor: BatchCropAnchor,
 ): BatchCropPreview {
   const settings: ReframeSettings = {
     targetAspectRatio,
     reframeOffsetX: anchor.mode === 'center' ? 0 : anchor.offsetX,
-    reframeOffsetY: anchor.mode === 'center' ? 0 : anchor.offsetY
+    reframeOffsetY: anchor.mode === 'center' ? 0 : anchor.offsetY,
   };
 
   const reframeCrop = calculateReframeCrop(settings);
@@ -95,8 +95,14 @@ export function calculateBatchCropPreview(
   const offsetX = anchor.mode === 'center' ? 0 : anchor.offsetX;
   const offsetY = anchor.mode === 'center' ? 0 : anchor.offsetY;
 
-  const cropX = Math.max(0, Math.round((target.sourceWidth - cropWidth) / 2 + (target.sourceWidth - cropWidth) / 2 * offsetX));
-  const cropY = Math.max(0, Math.round((target.sourceHeight - cropHeight) / 2 + (target.sourceHeight - cropHeight) / 2 * offsetY));
+  const cropX = Math.max(
+    0,
+    Math.round((target.sourceWidth - cropWidth) / 2 + ((target.sourceWidth - cropWidth) / 2) * offsetX),
+  );
+  const cropY = Math.max(
+    0,
+    Math.round((target.sourceHeight - cropHeight) / 2 + ((target.sourceHeight - cropHeight) / 2) * offsetY),
+  );
 
   return {
     clipId: target.clipId,
@@ -107,14 +113,14 @@ export function calculateBatchCropPreview(
     cropHeight,
     cropX,
     cropY,
-    reframeCrop
+    reframeCrop,
   };
 }
 
 export function calculateBatchCropPreviews(
   targets: BatchCropTarget[],
   targetAspectRatio: TargetAspectRatio,
-  anchors: Map<string, BatchCropAnchor>
+  anchors: Map<string, BatchCropAnchor>,
 ): BatchCropPreview[] {
   return targets.map((target) => {
     const anchor = anchors.get(target.clipId) ?? { mode: 'center', offsetX: 0, offsetY: 0 };
@@ -125,7 +131,7 @@ export function calculateBatchCropPreviews(
 export function buildBatchCropResults(
   targets: BatchCropTarget[],
   targetAspectRatio: TargetAspectRatio,
-  anchors: Map<string, BatchCropAnchor>
+  anchors: Map<string, BatchCropAnchor>,
 ): BatchCropResult[] {
   return targets.map((target) => {
     const anchor = anchors.get(target.clipId) ?? { mode: 'center', offsetX: 0, offsetY: 0 };
@@ -133,16 +139,12 @@ export function buildBatchCropResults(
       clipId: target.clipId,
       targetAspectRatio,
       offsetX: anchor.mode === 'center' ? 0 : anchor.offsetX,
-      offsetY: anchor.mode === 'center' ? 0 : anchor.offsetY
+      offsetY: anchor.mode === 'center' ? 0 : anchor.offsetY,
     };
   });
 }
 
-export function collectBatchCropTargets(
-  timeline: Timeline,
-  clipIds: string[],
-  media: MediaAsset[]
-): BatchCropTarget[] {
+export function collectBatchCropTargets(timeline: Timeline, clipIds: string[], media: MediaAsset[]): BatchCropTarget[] {
   const mediaMap = new Map(media.map((asset) => [asset.id, asset]));
   const targets: BatchCropTarget[] = [];
 
@@ -159,7 +161,7 @@ export function collectBatchCropTargets(
         clipId: clip.id,
         sourceWidth: Math.max(1, Math.round(sourceWidth)),
         sourceHeight: Math.max(1, Math.round(sourceHeight)),
-        name: clip.name
+        name: clip.name,
       });
     }
   }

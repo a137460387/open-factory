@@ -18,12 +18,12 @@ export function buildSubtitleGlossarySystemPrompt(): string {
     '    {"original": "原词", "type": "person|product|place|organization|terminology|slang|other"}',
     '  ]',
     '}',
-    '只返回JSON对象，不要其他内容。'
+    '只返回JSON对象，不要其他内容。',
   ].join('\n');
 }
 
 export function buildGlossaryExtractionUserPrompt(
-  subtitleLines: Array<{ index: number; time: string; text: string }>
+  subtitleLines: Array<{ index: number; time: string; text: string }>,
 ): string {
   const lines = ['字幕内容:'];
   for (const s of subtitleLines) {
@@ -55,14 +55,14 @@ export function parseSubtitleGlossaryResponse(json: unknown): SubtitleGlossary {
 export function buildContextualTranslationSystemPrompt(
   glossary: GlossaryTerm[],
   targetLanguage: string,
-  speakerStyle?: string
+  speakerStyle?: string,
 ): string {
   const lines = [
     `你是一个专业的字幕翻译助手。请将以下字幕翻译为${targetLanguage}。`,
     '翻译要求:',
     '- 保持对话语气和风格一致',
     '- 字幕翻译要简洁自然，适合在屏幕上阅读',
-    '- 时间码格式保持不变'
+    '- 时间码格式保持不变',
   ];
   if (speakerStyle) {
     lines.push(`- 说话人风格: ${speakerStyle}`);
@@ -92,13 +92,14 @@ export function parseContextualTranslationResponse(json: unknown): ContextualTra
   return json
     .filter(
       (item): item is Record<string, unknown> =>
-        item !== null && typeof item === 'object' &&
+        item !== null &&
+        typeof item === 'object' &&
         typeof (item as Record<string, unknown>).index === 'number' &&
-        typeof (item as Record<string, unknown>).translatedText === 'string'
+        typeof (item as Record<string, unknown>).translatedText === 'string',
     )
     .map((item) => ({
       index: Math.max(0, Math.round(item.index as number)),
-      translatedText: (item.translatedText as string).trim()
+      translatedText: (item.translatedText as string).trim(),
     }))
     .filter((item) => item.translatedText.length > 0);
 }
@@ -117,7 +118,7 @@ export interface TranslationComparison {
 export function compareTranslationVersions(
   originalTexts: string[],
   withoutContext: string[],
-  withContext: string[]
+  withContext: string[],
 ): TranslationComparison[] {
   const maxLen = Math.max(originalTexts.length, withoutContext.length, withContext.length);
   const results: TranslationComparison[] = [];
@@ -130,16 +131,13 @@ export function compareTranslationVersions(
       original,
       withoutContext: noCtx,
       withContext: ctx,
-      hasDifference: noCtx !== ctx
+      hasDifference: noCtx !== ctx,
     });
   }
   return results;
 }
 
-export function calculateContextualTranslationBatches(
-  subtitleCount: number,
-  maxBatchSize = 50
-): number[] {
+export function calculateContextualTranslationBatches(subtitleCount: number, maxBatchSize = 50): number[] {
   if (subtitleCount <= 0) return [];
   const batches: number[] = [];
   let remaining = subtitleCount;

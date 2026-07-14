@@ -57,7 +57,7 @@ interface MediaTagInfo {
 export function detectCoverageGaps(
   subtitleSegments: SubtitleSegmentInfo[],
   brollTrackClipRanges: Array<{ start: number; end: number }>,
-  minDuration = 3
+  minDuration = 3,
 ): CoverageGap[] {
   if (subtitleSegments.length === 0) return [];
   const gaps: CoverageGap[] = [];
@@ -67,16 +67,14 @@ export function detectCoverageGaps(
     if (duration < minDuration) continue;
 
     // 检查该区间是否有B-roll覆盖
-    const hasBroll = brollTrackClipRanges.some(
-      (range) => range.start < seg.end && range.end > seg.start
-    );
+    const hasBroll = brollTrackClipRanges.some((range) => range.start < seg.end && range.end > seg.start);
     if (!hasBroll) {
       gaps.push({
         segmentId: seg.id,
         trackId: 'subtitle',
         start: seg.start,
         end: seg.end,
-        duration
+        duration,
       });
     }
   }
@@ -87,11 +85,7 @@ export function detectCoverageGaps(
  * 关键词匹配：对文本做子串/模糊匹配。
  * 返回匹配到的关键词列表。
  */
-export function matchKeywords(
-  text: string,
-  tags: string[],
-  fuzzyThreshold = 0.6
-): string[] {
+export function matchKeywords(text: string, tags: string[], fuzzyThreshold = 0.6): string[] {
   if (!text || !tags.length) return [];
   const normalized = text.toLowerCase();
   const matched: string[] = [];
@@ -154,7 +148,7 @@ export function parseBrollAiResponse(json: unknown): BrollAiResponse {
       mediaId: item.mediaId,
       insertTime: Math.max(0, item.insertTime),
       reason: item.reason.trim(),
-      confidence: Math.min(1, Math.max(0, item.confidence))
+      confidence: Math.min(1, Math.max(0, item.confidence)),
     }));
 
   return { suggestions };
@@ -170,26 +164,20 @@ export function createBrollSuggestions(response: BrollAiResponse): BrollSuggesti
     insertTime: s.insertTime,
     reason: s.reason,
     confidence: s.confidence,
-    status: 'pending' as BrollSuggestionStatus
+    status: 'pending' as BrollSuggestionStatus,
   }));
 }
 
 /**
  * 规范化BrollSuggestion数组，处理旧项目兼容。
  */
-export function normalizeBrollSuggestions(
-  input: unknown
-): BrollSuggestion[] | undefined {
+export function normalizeBrollSuggestions(input: unknown): BrollSuggestion[] | undefined {
   if (!Array.isArray(input)) return undefined;
   return input
     .filter((item: unknown): item is BrollSuggestion => {
       if (!item || typeof item !== 'object') return false;
       const i = item as Record<string, unknown>;
-      return (
-        typeof i.segmentId === 'string' &&
-        typeof i.mediaId === 'string' &&
-        typeof i.insertTime === 'number'
-      );
+      return typeof i.segmentId === 'string' && typeof i.mediaId === 'string' && typeof i.insertTime === 'number';
     })
     .map((item) => ({
       segmentId: item.segmentId,
@@ -197,6 +185,8 @@ export function normalizeBrollSuggestions(
       insertTime: typeof item.insertTime === 'number' ? item.insertTime : 0,
       reason: typeof item.reason === 'string' ? item.reason : '',
       confidence: typeof item.confidence === 'number' ? item.confidence : 0,
-      status: (['pending', 'accepted', 'rejected'].includes(item.status) ? item.status : 'pending') as BrollSuggestionStatus
+      status: (['pending', 'accepted', 'rejected'].includes(item.status)
+        ? item.status
+        : 'pending') as BrollSuggestionStatus,
     }));
 }

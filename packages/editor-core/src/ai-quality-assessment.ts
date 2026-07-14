@@ -60,13 +60,13 @@ export function parseQualityAssessmentResponse(json: unknown): QualityAssessment
         typeof (item as QualityAssessmentIssue).type === 'string' &&
         isValidSeverity((item as QualityAssessmentIssue).severity) &&
         typeof (item as QualityAssessmentIssue).description === 'string' &&
-        typeof (item as QualityAssessmentIssue).suggestedFix === 'string'
+        typeof (item as QualityAssessmentIssue).suggestedFix === 'string',
     )
     .map((item) => ({
       type: item.type.trim(),
       severity: item.severity,
       description: item.description.trim(),
-      suggestedFix: item.suggestedFix.trim()
+      suggestedFix: item.suggestedFix.trim(),
     }));
   return { overallScore, issues };
 }
@@ -127,10 +127,7 @@ export function buildQualityAssessmentUserPrompt(mediaInfo: {
   duration?: number;
   hasAudio?: boolean;
 }): string {
-  const parts: string[] = [
-    `媒体名称：${mediaInfo.name}`,
-    `类型：${mediaInfo.type}`,
-  ];
+  const parts: string[] = [`媒体名称：${mediaInfo.name}`, `类型：${mediaInfo.type}`];
   if (mediaInfo.width && mediaInfo.height) {
     parts.push(`分辨率：${mediaInfo.width}x${mediaInfo.height}`);
   }
@@ -173,7 +170,11 @@ export function detectFrameShake(frames: Uint8Array[], threshold = 30): boolean 
  * Analyze audio RMS level to determine if it's in a normal range.
  * Returns { rms, isQuiet, isClipping }.
  */
-export function analyzeAudioRms(samples: Float32Array, quietDb = -40, clipDb = -1): {
+export function analyzeAudioRms(
+  samples: Float32Array,
+  quietDb = -40,
+  clipDb = -1,
+): {
   rms: number;
   rmsDb: number;
   isQuiet: boolean;
@@ -192,13 +193,13 @@ export function analyzeAudioRms(samples: Float32Array, quietDb = -40, clipDb = -
     rms,
     rmsDb,
     isQuiet: rmsDb < quietDb,
-    isClipping: rmsDb > clipDb
+    isClipping: rmsDb > clipDb,
   };
 }
 
 export async function parseQualityAssessmentResponseSafe(
   json: unknown,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<QualityAssessmentResult>> {
   try {
     const data = parseQualityAssessmentResponse(json);

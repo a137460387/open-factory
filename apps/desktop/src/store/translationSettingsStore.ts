@@ -35,7 +35,7 @@ export const TRANSLATION_API_KEY_REENTRY_MESSAGE = '请重新输入 API Key';
 export const DEFAULT_TRANSLATION_SETTINGS: TranslationSettings = {
   provider: 'deepl',
   apiKey: '',
-  targetLanguage: 'ZH'
+  targetLanguage: 'ZH',
 };
 
 export const useTranslationSettingsStore = create<TranslationSettingsState>((set, get) => ({
@@ -101,14 +101,14 @@ export const useTranslationSettingsStore = create<TranslationSettingsState>((set
     } catch {
       set({ apiKeyError: TRANSLATION_API_KEY_REENTRY_MESSAGE });
     }
-  }
+  },
 }));
 
 export function readTranslationSettings(): TranslationSettings {
   const { settings } = readStoredTranslationSettings();
   return {
     ...settings,
-    apiKey: ''
+    apiKey: '',
   };
 }
 
@@ -121,13 +121,15 @@ function readStoredTranslationSettings(): StoredTranslationSettingsSnapshot {
     return { settings: storedDefaults() };
   }
   try {
-    const parsed = JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_STORAGE_KEY) ?? '{}') as Partial<TranslationSettings>;
+    const parsed = JSON.parse(
+      localStorage.getItem(TRANSLATION_SETTINGS_STORAGE_KEY) ?? '{}',
+    ) as Partial<TranslationSettings>;
     return {
       settings: {
         provider: parsed.provider === 'google' ? 'google' : 'deepl',
-        targetLanguage: normalizeTargetLanguage(parsed.targetLanguage)
+        targetLanguage: normalizeTargetLanguage(parsed.targetLanguage),
       },
-      legacyApiKey: typeof parsed.apiKey === 'string' && parsed.apiKey.trim() ? parsed.apiKey : undefined
+      legacyApiKey: typeof parsed.apiKey === 'string' && parsed.apiKey.trim() ? parsed.apiKey : undefined,
     };
   } catch {
     return { settings: storedDefaults() };
@@ -152,15 +154,15 @@ function writeTranslationSettings(settings: Pick<TranslationSettings, 'provider'
     TRANSLATION_SETTINGS_STORAGE_KEY,
     JSON.stringify({
       provider: settings.provider,
-      targetLanguage: normalizeTargetLanguage(settings.targetLanguage)
-    })
+      targetLanguage: normalizeTargetLanguage(settings.targetLanguage),
+    }),
   );
 }
 
 function storedDefaults(): StoredTranslationSettings {
   return {
     provider: DEFAULT_TRANSLATION_SETTINGS.provider,
-    targetLanguage: DEFAULT_TRANSLATION_SETTINGS.targetLanguage
+    targetLanguage: DEFAULT_TRANSLATION_SETTINGS.targetLanguage,
   };
 }
 

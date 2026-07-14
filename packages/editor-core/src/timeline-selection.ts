@@ -10,7 +10,7 @@ export function normalizeSelectionRect(rect: SelectionRect): SelectionRect {
     left: Math.min(rect.left, rect.right),
     top: Math.min(rect.top, rect.bottom),
     right: Math.max(rect.left, rect.right),
-    bottom: Math.max(rect.top, rect.bottom)
+    bottom: Math.max(rect.top, rect.bottom),
   };
 }
 

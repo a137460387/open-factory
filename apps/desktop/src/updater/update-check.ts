@@ -34,7 +34,7 @@ interface EndpointUpdatePayload {
 export async function checkForAvailableUpdate(
   settings: UpdateSettings,
   currentVersion: string,
-  client: UpdateCheckClient
+  client: UpdateCheckClient,
 ): Promise<AppUpdateNotice | undefined> {
   if (!settings.autoCheckEnabled) {
     return undefined;
@@ -50,7 +50,7 @@ export async function checkForAvailableUpdate(
         releaseNotes: releaseNotes?.body || nativeUpdate.body,
         releaseUrl: releaseNotes?.url,
         source: 'tauri-updater',
-        install: client.installNativeUpdate ? () => client.installNativeUpdate!(nativeUpdate) : undefined
+        install: client.installNativeUpdate ? () => client.installNativeUpdate!(nativeUpdate) : undefined,
       };
     }
   } catch {
@@ -70,7 +70,7 @@ export async function checkForAvailableUpdate(
       date: endpointUpdate.date ?? releaseNotes?.publishedAt,
       releaseNotes: releaseNotes?.body || endpointUpdate.body,
       releaseUrl: releaseNotes?.url || endpointUpdate.url,
-      source: 'endpoint'
+      source: 'endpoint',
     };
   } catch {
     return undefined;
@@ -111,7 +111,7 @@ export function parseUpdateEndpointPayload(payload: unknown): EndpointUpdatePayl
     version: normalizeVersion(input.version ?? input.tag_name ?? input.name),
     body: normalizeText(input.notes ?? input.body ?? input.releaseNotes ?? input.changelog),
     date: normalizeText(input.pub_date ?? input.pubDate ?? input.date ?? input.published_at),
-    url: normalizeText(input.html_url ?? input.releaseUrl ?? input.url)
+    url: normalizeText(input.html_url ?? input.releaseUrl ?? input.url),
   };
 }
 
@@ -124,7 +124,7 @@ export function parseReleaseNotesPayload(payload: unknown): ReleaseNotes {
     version: normalizeVersion(input.tag_name ?? input.version ?? input.name),
     body: normalizeText(input.body ?? input.notes ?? input.releaseNotes),
     url: normalizeText(input.html_url ?? input.url),
-    publishedAt: normalizeText(input.published_at ?? input.pub_date ?? input.date)
+    publishedAt: normalizeText(input.published_at ?? input.pub_date ?? input.date),
   };
 }
 
@@ -148,7 +148,7 @@ function parseSemanticVersion(value: string): { parts: [number, number, number];
   }
   return {
     parts: [Number(match[1] ?? 0), Number(match[2] ?? 0), Number(match[3] ?? 0)],
-    prerelease: match[4]
+    prerelease: match[4],
   };
 }
 

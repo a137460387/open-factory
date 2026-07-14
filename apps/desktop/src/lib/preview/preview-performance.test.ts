@@ -8,7 +8,7 @@ import {
   normalizePreviewPerformanceSettings,
   resolveAdaptivePreviewPerformance,
   resolveEffectivePreviewPerformance,
-  shouldRenderPreviewFrame
+  shouldRenderPreviewFrame,
 } from './preview-performance';
 
 describe('preview performance settings', () => {
@@ -28,27 +28,35 @@ describe('preview performance settings', () => {
 
   it('normalizes unknown persisted values to full quality defaults', () => {
     expect(normalizePreviewPerformanceSettings(undefined)).toEqual(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
-    expect(normalizePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false })).toEqual({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
-    expect(normalizePreviewPerformanceSettings({ qualityMode: 'tiny', skipFrames: 3 })).toEqual(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
+    expect(normalizePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false })).toEqual(
+      { qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false },
+    );
+    expect(normalizePreviewPerformanceSettings({ qualityMode: 'tiny', skipFrames: 3 })).toEqual(
+      DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+    );
   });
 
   it('disables expensive effects in low quality modes', () => {
     expect(getDisabledPreviewEffectTypes({ qualityMode: 'full', skipFrames: 1 })).toEqual([]);
-    expect(getDisabledPreviewEffectTypes({ qualityMode: 'half', skipFrames: 1 })).toEqual(['film-grain', 'chromatic-aberration', 'custom-shader']);
+    expect(getDisabledPreviewEffectTypes({ qualityMode: 'half', skipFrames: 1 })).toEqual([
+      'film-grain',
+      'chromatic-aberration',
+      'custom-shader',
+    ]);
   });
 
   it('calculates the moving fps window average', () => {
     const samples = appendPreviewFpsSample(
       [
         { timestampMs: 0, fps: 60 },
-        { timestampMs: 1000, fps: 30 }
+        { timestampMs: 1000, fps: 30 },
       ],
-      { timestampMs: 4000, fps: 18 }
+      { timestampMs: 4000, fps: 18 },
     );
 
     expect(samples).toEqual([
       { timestampMs: 1000, fps: 30 },
-      { timestampMs: 4000, fps: 18 }
+      { timestampMs: 4000, fps: 18 },
     ]);
     expect(calculatePreviewFpsAverage(samples)).toBe(24);
   });
@@ -59,12 +67,12 @@ describe('preview performance settings', () => {
     expect(resolveAdaptivePreviewPerformance({ averageFps: 20, current: full, elapsedMs: 1000 })).toMatchObject({
       qualityMode: 'half',
       skipFrames: 2,
-      status: 'degraded'
+      status: 'degraded',
     });
     expect(resolveAdaptivePreviewPerformance({ averageFps: 12, current: full, elapsedMs: 1000 })).toMatchObject({
       qualityMode: 'quarter',
       skipFrames: 4,
-      status: 'low'
+      status: 'low',
     });
   });
 
@@ -77,22 +85,31 @@ describe('preview performance settings', () => {
       qualityMode: 'full',
       skipFrames: 1,
       stableMs: 0,
-      status: 'full'
+      status: 'full',
     });
   });
 
   it('keeps the manual quality when adaptive control is disabled', () => {
     const adaptiveLow = { qualityMode: 'quarter', skipFrames: 4, averageFps: 8, stableMs: 0, status: 'low' } as const;
 
-    expect(resolveEffectivePreviewPerformance({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false }, adaptiveLow)).toEqual({
+    expect(
+      resolveEffectivePreviewPerformance({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false }, adaptiveLow),
+    ).toEqual({
       qualityMode: 'half',
       skipFrames: 2,
-      adaptiveEnabled: false
+      adaptiveEnabled: false,
     });
-    expect(resolveAdaptivePreviewPerformance({ averageFps: 8, current: adaptiveLow, elapsedMs: 1000, adaptiveEnabled: false })).toMatchObject({
+    expect(
+      resolveAdaptivePreviewPerformance({
+        averageFps: 8,
+        current: adaptiveLow,
+        elapsedMs: 1000,
+        adaptiveEnabled: false,
+      }),
+    ).toMatchObject({
       qualityMode: 'full',
       skipFrames: 1,
-      status: 'full'
+      status: 'full',
     });
   });
 });

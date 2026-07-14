@@ -157,9 +157,7 @@ export function ExportStage({ exportState, onUpdate, onComplete }: ExportStagePr
       </div>
 
       {/* Clip count */}
-      <div className="text-xs text-[var(--color-text-muted)]">
-        {subtitleClips.length} 条字幕
-      </div>
+      <div className="text-xs text-[var(--color-text-muted)]">{subtitleClips.length} 条字幕</div>
 
       {/* Export button */}
       {exportState.status !== 'done' && (
@@ -176,14 +174,20 @@ export function ExportStage({ exportState, onUpdate, onComplete }: ExportStagePr
 
       {/* Error state */}
       {exportState.status === 'error' && exportState.error && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-700" data-testid="subtitle-workflow-export-error">
+        <div
+          className="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-700"
+          data-testid="subtitle-workflow-export-error"
+        >
           {exportState.error}
         </div>
       )}
 
       {/* Result display */}
       {exportState.status === 'done' && exportState.outputPath && (
-        <div className="space-y-2 rounded-md border border-emerald-300 bg-emerald-50 p-3" data-testid="subtitle-workflow-export-result">
+        <div
+          className="space-y-2 rounded-md border border-emerald-300 bg-emerald-50 p-3"
+          data-testid="subtitle-workflow-export-result"
+        >
           <div className="text-xs font-medium text-emerald-700">{t.exportComplete}</div>
           <div className="break-all text-xs text-[var(--color-text-secondary)]">
             <span className="text-[var(--color-text-muted)]">{t.outputPath}: </span>

@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { serializeTimelineTemplate, type Project } from '@open-factory/editor-core';
-import { getTimelineTemplatePath, getTimelineTemplatesDir, loadTimelineTemplates, parseTimelineTemplateFile, saveTimelineTemplate, type TimelineTemplateStorage } from './timelineTemplates';
+import {
+  getTimelineTemplatePath,
+  getTimelineTemplatesDir,
+  loadTimelineTemplates,
+  parseTimelineTemplateFile,
+  saveTimelineTemplate,
+  type TimelineTemplateStorage,
+} from './timelineTemplates';
 
 describe('timeline template storage', () => {
   it('writes templates into the AppData timeline-templates directory', async () => {
     const files = new Map<string, string>();
     const storage = makeStorage(files);
-    const template = serializeTimelineTemplate(makeProject(), { id: 'demo-template', name: 'Demo Template', createdAt: '2026-06-16T00:00:00.000Z' });
+    const template = serializeTimelineTemplate(makeProject(), {
+      id: 'demo-template',
+      name: 'Demo Template',
+      createdAt: '2026-06-16T00:00:00.000Z',
+    });
 
     const templates = await saveTimelineTemplate(template, storage);
 
@@ -19,9 +30,19 @@ describe('timeline template storage', () => {
   it('loads custom templates with built-ins and skips corrupt files', async () => {
     const files = new Map<string, string>();
     const storage = makeStorage(files);
-    const custom = serializeTimelineTemplate(makeProject(), { id: 'custom-template', name: 'Custom Template', createdAt: '2026-06-16T00:00:00.000Z' });
-    files.set(getTimelineTemplatePath('C:/Users/E2E/AppData/Roaming/open-factory', 'custom-template'), JSON.stringify(custom));
-    files.set(`${getTimelineTemplatesDir('C:/Users/E2E/AppData/Roaming/open-factory')}/broken.oftimeline.json`, 'not-json');
+    const custom = serializeTimelineTemplate(makeProject(), {
+      id: 'custom-template',
+      name: 'Custom Template',
+      createdAt: '2026-06-16T00:00:00.000Z',
+    });
+    files.set(
+      getTimelineTemplatePath('C:/Users/E2E/AppData/Roaming/open-factory', 'custom-template'),
+      JSON.stringify(custom),
+    );
+    files.set(
+      `${getTimelineTemplatesDir('C:/Users/E2E/AppData/Roaming/open-factory')}/broken.oftimeline.json`,
+      'not-json',
+    );
 
     const templates = await loadTimelineTemplates(storage);
 
@@ -43,7 +64,7 @@ function makeStorage(files: Map<string, string>): TimelineTemplateStorage {
     readFile: (path) => files.get(path) ?? '',
     writeFile: (path, contents) => {
       files.set(path, contents);
-    }
+    },
   };
 }
 
@@ -73,6 +94,6 @@ function makeProject(): Project {
     documentation: {},
     timeline: { tracks: [] },
     sequences: [],
-    activeSequenceId: 'sequence-main'
+    activeSequenceId: 'sequence-main',
   };
 }

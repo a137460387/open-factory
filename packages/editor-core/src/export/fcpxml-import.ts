@@ -26,11 +26,16 @@ import {
   type Track,
   type TrackType,
   type Transition,
-  type VideoClip
+  type VideoClip,
 } from '../model';
 import { normalizePath } from '../project/relative-paths';
 import { round } from '../time';
-import { matchEdlEventsToMedia, type Cmx3600EdlEvent, type EdlMediaMatch, type EdlMediaMatchKind } from './timeline-import';
+import {
+  matchEdlEventsToMedia,
+  type Cmx3600EdlEvent,
+  type EdlMediaMatch,
+  type EdlMediaMatchKind,
+} from './timeline-import';
 
 // ─── Public types ────────────────────────────────────────────
 
@@ -124,7 +129,7 @@ function parseTrackItems(
   trackType: TrackType,
   fps: number,
   clipItems: FcpXmlClipItem[],
-  transitions: FcpXmlTransitionItem[]
+  transitions: FcpXmlTransitionItem[],
 ): void {
   let clipIndex = 0;
   for (const child of Array.from(track.children)) {
@@ -166,7 +171,7 @@ function parseClipItem(element: Element, trackType: TrackType, fps: number, inde
     outPoint: framesToSeconds(outPoint, fps),
     filePath: filePath ? decodeFileUrl(filePath) : undefined,
     fileName,
-    trackType
+    trackType,
   };
 }
 
@@ -175,7 +180,7 @@ function parseTransitionItem(element: Element, fps: number): FcpXmlTransitionIte
   const start = parseNumber(getTextContent(element, 'start'), 0);
   const end = parseNumber(getTextContent(element, 'end'), 0);
   const effectEl = element.querySelector(':scope > effect');
-  const effectId = effectEl ? getTextContent(effectEl, 'effectid') ?? undefined : undefined;
+  const effectId = effectEl ? (getTextContent(effectEl, 'effectid') ?? undefined) : undefined;
   const id = element.getAttribute('id') ?? '';
 
   return {
@@ -184,13 +189,17 @@ function parseTransitionItem(element: Element, fps: number): FcpXmlTransitionIte
     start: framesToSeconds(start, fps),
     end: framesToSeconds(end, fps),
     effectId,
-    duration: framesToSeconds(end - start, fps)
+    duration: framesToSeconds(end - start, fps),
   };
 }
 
 // ─── Import builder ──────────────────────────────────────────
 
-export function buildFcpXmlImport(project: Project, contents: string, options: FcpXmlImportOptions = {}): FcpXmlImportResult {
+export function buildFcpXmlImport(
+  project: Project,
+  contents: string,
+  options: FcpXmlImportOptions = {},
+): FcpXmlImportResult {
   const parsed = parseFcpXml(contents);
   const fps = normalizeFps(options.fps ?? parsed.fps ?? project.settings.fps);
   const title = normalizeImportTitle(options.sequenceName ?? parsed.sequenceName);
@@ -209,18 +218,25 @@ export function buildFcpXmlImport(project: Project, contents: string, options: F
     recordEnd: item.end,
     clipName: item.name,
     sourceFile: item.filePath,
-    comments: []
+    comments: [],
   }));
 
   const validEvents = events
     .filter((event) => event.recordEnd > event.recordStart && event.sourceEnd >= event.sourceStart)
-    .sort((left, right) => left.recordStart - right.recordStart || left.trackType.localeCompare(right.trackType) || left.id.localeCompare(right.id));
+    .sort(
+      (left, right) =>
+        left.recordStart - right.recordStart ||
+        left.trackType.localeCompare(right.trackType) ||
+        left.id.localeCompare(right.id),
+    );
 
   const matches = matchEdlEventsToMedia(validEvents, project.media);
   const usedIds = new Set<string>([
     ...project.media.map((asset) => asset.id),
     ...getProjectSequences(project).map((sequence) => sequence.id),
-    ...getProjectSequences(project).flatMap((sequence) => sequence.timeline.tracks.flatMap((track) => [track.id, ...track.clips.map((clip) => clip.id)]))
+    ...getProjectSequences(project).flatMap((sequence) =>
+      sequence.timeline.tracks.flatMap((track) => [track.id, ...track.clips.map((clip) => clip.id)]),
+    ),
   ]);
 
   const missingMediaByKey = new Map<string, MediaAsset>();
@@ -244,7 +260,7 @@ export function buildFcpXmlImport(project: Project, contents: string, options: F
   const sequence = createSequence({
     id: uniqueId(`sequence-fcpxml-${slug(title)}`, usedSequenceIds),
     name: title,
-    timeline
+    timeline,
   });
 
   return {
@@ -253,7 +269,7 @@ export function buildFcpXmlImport(project: Project, contents: string, options: F
     media: importedMedia,
     matches,
     matchedCount: matches.filter((match) => match.kind !== 'missing').length,
-    missingCount: matches.filter((match) => match.kind === 'missing').length
+    missingCount: matches.filter((match) => match.kind === 'missing').length,
   };
 }
 
@@ -261,14 +277,17 @@ export function applyFcpXmlImport(project: Project, result: FcpXmlImportResult):
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const existingMediaIds = new Set(synced.media.map((asset) => asset.id));
   const media = [...synced.media, ...result.media.filter((asset) => !existingMediaIds.has(asset.id))];
-  const sequences = [...getProjectSequences(synced).filter((sequence) => sequence.id !== result.sequence.id), result.sequence];
+  const sequences = [
+    ...getProjectSequences(synced).filter((sequence) => sequence.id !== result.sequence.id),
+    result.sequence,
+  ];
   return {
     ...synced,
     media,
     sequences,
     timeline: result.sequence.timeline,
     activeSequenceId: result.sequence.id,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -309,9 +328,7 @@ function framesToSeconds(frames: number, fps: number): number {
 
 function decodeFileUrl(url: string): string {
   // Convert file:// URL to local path
-  const withoutScheme = url
-    .replace(/^file:\/\/localhost\//i, '')
-    .replace(/^file:\/\//i, '');
+  const withoutScheme = url.replace(/^file:\/\/localhost\//i, '').replace(/^file:\/\//i, '');
   try {
     return normalizePath(decodeURIComponent(withoutScheme).replace(/^([A-Za-z])%3A/i, '$1:'));
   } catch {
@@ -332,14 +349,21 @@ function getOrCreateMissingMedia(
   event: Cmx3600EdlEvent,
   project: Project,
   usedIds: Set<string>,
-  missingMediaByKey: Map<string, MediaAsset>
+  missingMediaByKey: Map<string, MediaAsset>,
 ): MediaAsset {
   const key = normalizeSearchName(event.clipName ?? event.sourceFile ?? event.reel);
   const existing = missingMediaByKey.get(key);
   if (existing) return existing;
 
   const name = event.clipName ?? (event.sourceFile ? basename(event.sourceFile) : event.reel);
-  const duration = round(Math.max(event.sourceEnd, event.sourceEnd - event.sourceStart, event.recordEnd - event.recordStart, 1 / normalizeFps(project.settings.fps)));
+  const duration = round(
+    Math.max(
+      event.sourceEnd,
+      event.sourceEnd - event.sourceStart,
+      event.recordEnd - event.recordStart,
+      1 / normalizeFps(project.settings.fps),
+    ),
+  );
   const asset: MediaAsset = {
     id: uniqueId(`media-fcpxml-${slug(name)}`, usedIds),
     type: event.trackType === 'audio' ? 'audio' : 'video',
@@ -349,13 +373,18 @@ function getOrCreateMissingMedia(
     width: event.trackType === 'video' ? project.settings.width : 0,
     height: event.trackType === 'video' ? project.settings.height : 0,
     missing: true,
-    hasAudio: event.trackType === 'audio'
+    hasAudio: event.trackType === 'audio',
   };
   missingMediaByKey.set(key, asset);
   return asset;
 }
 
-function createClipForImportedEvent(event: Cmx3600EdlEvent, asset: MediaAsset, usedIds: Set<string>, _fps: number): Clip {
+function createClipForImportedEvent(
+  event: Cmx3600EdlEvent,
+  asset: MediaAsset,
+  usedIds: Set<string>,
+  _fps: number,
+): Clip {
   const id = uniqueId(`clip-fcpxml-${event.editNumber}-${slug(event.clipName ?? asset.name)}`, usedIds);
   const duration = round(event.recordEnd - event.recordStart);
   const trimEnd = round(Math.max(0, asset.duration - event.sourceEnd));
@@ -378,7 +407,7 @@ function createClipForImportedEvent(event: Cmx3600EdlEvent, asset: MediaAsset, u
     masks: [],
     motionTrack: undefined,
     keyframes: undefined,
-    effects: undefined
+    effects: undefined,
   };
   if (event.trackType === 'video' && asset.type === 'image') {
     return { ...base, type: 'image', trackId: 'track-fcpxml-video' } satisfies ImageClip;
@@ -391,7 +420,7 @@ function createClipForImportedEvent(event: Cmx3600EdlEvent, asset: MediaAsset, u
     fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
   };
   if (event.trackType === 'audio') {
     return { ...base, ...audioDefaults, type: 'audio', trackId: 'track-fcpxml-audio' } satisfies AudioClip;
@@ -411,20 +440,22 @@ function buildImportedTracks(inputs: Array<{ event: Cmx3600EdlEvent; clip: Clip 
   return [
     createTrack({ id: 'track-fcpxml-video', type: 'video', name: 'FCPXML Video', clips: videoClips }),
     createTrack({ id: 'track-fcpxml-audio', type: 'audio', name: 'FCPXML Audio', clips: audioClips }),
-    createTrack({ id: 'track-fcpxml-text', type: 'text', name: 'FCPXML Text', clips: [] })
+    createTrack({ id: 'track-fcpxml-text', type: 'text', name: 'FCPXML Text', clips: [] }),
   ];
 }
 
 function buildImportedTransitions(
   inputs: Array<{ event: Cmx3600EdlEvent; clip: Clip }>,
   parsedTransitions: FcpXmlTransitionItem[],
-  fps: number
+  fps: number,
 ): Transition[] {
   const transitions: Transition[] = [];
 
   // If we have parsed transition items, use them to create transitions
   if (parsedTransitions.length > 0) {
-    const videoInputs = inputs.filter((input) => input.event.trackType === 'video').sort((left, right) => sortClips(left.clip, right.clip));
+    const videoInputs = inputs
+      .filter((input) => input.event.trackType === 'video')
+      .sort((left, right) => sortClips(left.clip, right.clip));
 
     for (let i = 1; i < videoInputs.length; i++) {
       const previous = videoInputs[i - 1];
@@ -435,17 +466,19 @@ function buildImportedTransitions(
       if (Math.abs(previousEnd - current.clip.start) < 0.001) {
         // Look for a matching parsed transition
         const matchingTransition = parsedTransitions.find(
-          (t) => Math.abs(t.start - current.clip.start) < 0.001 || Math.abs(t.end - previousEnd) < 0.001
+          (t) => Math.abs(t.start - current.clip.start) < 0.001 || Math.abs(t.end - previousEnd) < 0.001,
         );
         if (matchingTransition && matchingTransition.duration > 0) {
-          const duration = round(Math.min(previous.clip.duration, current.clip.duration, Math.max(1 / fps, matchingTransition.duration)));
+          const duration = round(
+            Math.min(previous.clip.duration, current.clip.duration, Math.max(1 / fps, matchingTransition.duration)),
+          );
           const transitionType = normalizeTransitionEffectId(matchingTransition.effectId);
           transitions.push({
             id: `transition-fcpxml-${previous.clip.id}-${current.clip.id}`,
             type: transitionType,
             duration,
             fromClipId: previous.clip.id,
-            toClipId: current.clip.id
+            toClipId: current.clip.id,
           });
         }
       }

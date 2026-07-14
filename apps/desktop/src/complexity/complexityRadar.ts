@@ -8,7 +8,12 @@ export interface ComplexityRadarPoint {
   angle: number;
 }
 
-export function calculateComplexityRadarPoints(dimensions: readonly ComplexityDimensionScore[], width: number, height: number, padding = 24): ComplexityRadarPoint[] {
+export function calculateComplexityRadarPoints(
+  dimensions: readonly ComplexityDimensionScore[],
+  width: number,
+  height: number,
+  padding = 24,
+): ComplexityRadarPoint[] {
   const centerX = width / 2;
   const centerY = height / 2;
   const radius = Math.max(1, Math.min(width, height) / 2 - padding);
@@ -20,7 +25,7 @@ export function calculateComplexityRadarPoints(dimensions: readonly ComplexityDi
       value,
       angle,
       x: roundPoint(centerX + Math.cos(angle) * radius * value),
-      y: roundPoint(centerY + Math.sin(angle) * radius * value)
+      y: roundPoint(centerY + Math.sin(angle) * radius * value),
     };
   });
 }

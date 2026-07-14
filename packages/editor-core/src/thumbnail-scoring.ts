@@ -16,7 +16,7 @@ export interface ThumbnailPlatformSize {
 export const THUMBNAIL_PLATFORM_SIZES: Record<ThumbnailPlatformPreset, ThumbnailPlatformSize> = {
   youtube: { width: 1280, height: 720, label: 'YouTube 1280x720', aspectRatio: '16:9' },
   bilibili: { width: 1920, height: 1080, label: 'B站 1920x1080', aspectRatio: '16:9' },
-  douyin: { width: 1080, height: 1920, label: '抖音 1080x1920', aspectRatio: '9:16' }
+  douyin: { width: 1080, height: 1920, label: '抖音 1080x1920', aspectRatio: '9:16' },
 };
 
 export interface ThumbnailExportSettings {
@@ -76,17 +76,29 @@ export function buildThumbnailExportSettings(value: unknown, crop = true): Thumb
     outputMode: 'video',
     audioCodec: 'aac',
     scaleMode: crop ? 'none' : 'fit',
-    targetAspectRatio: crop ? size.aspectRatio : 'source'
+    targetAspectRatio: crop ? size.aspectRatio : 'source',
   };
 }
 
-export function rankThumbnailCandidates(candidates: readonly ThumbnailCandidate[], limit = THUMBNAIL_TOP_CANDIDATE_COUNT): ThumbnailCandidate[] {
+export function rankThumbnailCandidates(
+  candidates: readonly ThumbnailCandidate[],
+  limit = THUMBNAIL_TOP_CANDIDATE_COUNT,
+): ThumbnailCandidate[] {
   return [...candidates]
-    .sort((left, right) => right.score.total - left.score.total || right.score.face - left.score.face || right.score.clarity - left.score.clarity || left.timestamp - right.timestamp)
+    .sort(
+      (left, right) =>
+        right.score.total - left.score.total ||
+        right.score.face - left.score.face ||
+        right.score.clarity - left.score.clarity ||
+        left.timestamp - right.timestamp,
+    )
     .slice(0, Math.max(1, Math.round(limit)));
 }
 
-export function scoreThumbnailFrame(sample: ThumbnailFrameSample, neighbors: { previous?: ThumbnailFrameSample; next?: ThumbnailFrameSample } = {}): ThumbnailScoreBreakdown {
+export function scoreThumbnailFrame(
+  sample: ThumbnailFrameSample,
+  neighbors: { previous?: ThumbnailFrameSample; next?: ThumbnailFrameSample } = {},
+): ThumbnailScoreBreakdown {
   const face = sample.faceDetected ? 40 : 0;
   const clarity = clampScore(laplacianVarianceScore(sample), 25);
   const color = clampScore(colorRichnessScore(sample), 20);
@@ -96,7 +108,7 @@ export function scoreThumbnailFrame(sample: ThumbnailFrameSample, neighbors: { p
     clarity,
     color,
     motion,
-    total: round(face + clarity + color + motion)
+    total: round(face + clarity + color + motion),
   };
 }
 
@@ -134,7 +146,12 @@ function laplacianVarianceScore(sample: ThumbnailFrameSample): number {
   for (let y = 1; y + 1 < height; y += 1) {
     for (let x = 1; x + 1 < width; x += 1) {
       const center = gray[y * width + x] ?? 0;
-      const laplacian = 4 * center - (gray[y * width + (x - 1)] ?? 0) - (gray[y * width + (x + 1)] ?? 0) - (gray[(y - 1) * width + x] ?? 0) - (gray[(y + 1) * width + x] ?? 0);
+      const laplacian =
+        4 * center -
+        (gray[y * width + (x - 1)] ?? 0) -
+        (gray[y * width + (x + 1)] ?? 0) -
+        (gray[(y - 1) * width + x] ?? 0) -
+        (gray[(y + 1) * width + x] ?? 0);
       values.push(laplacian);
     }
   }
@@ -167,7 +184,11 @@ function colorRichnessScore(sample: ThumbnailFrameSample): number {
   return Math.min(20, average * 20);
 }
 
-function lowMotionScore(sample: ThumbnailFrameSample, previous?: ThumbnailFrameSample, next?: ThumbnailFrameSample): number {
+function lowMotionScore(
+  sample: ThumbnailFrameSample,
+  previous?: ThumbnailFrameSample,
+  next?: ThumbnailFrameSample,
+): number {
   const currentGray = toGrayscale(sample);
   const source = previous ? toGrayscale(previous) : next ? toGrayscale(next) : undefined;
   if (!source || source.length === 0 || currentGray.length === 0) {

@@ -49,7 +49,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
 
   const selectedProvider = useMemo(
     () => providers.find((p) => p.enabled && hasAvailableTextProvider([p])) ?? providers[0],
-    [providers]
+    [providers],
   );
 
   const [loading, setLoading] = useState(false);
@@ -58,13 +58,12 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
 
   const firstVideoMedia = useMemo(() => media.find((m) => m.type === 'video'), [media]);
 
-  const subtitleTracks = useMemo(
-    () => timeline.tracks.filter((track) => track.type === 'subtitle'),
-    [timeline]
-  );
+  const subtitleTracks = useMemo(() => timeline.tracks.filter((track) => track.type === 'subtitle'), [timeline]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   const handleRecommend = useCallback(async () => {
@@ -93,7 +92,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
           temperature: 0.3,
           timeoutSecs: 30,
         },
-        apiKey
+        apiKey,
       );
 
       if (abortRef.current) return;
@@ -143,9 +142,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
         for (const track of subtitleTracks) {
           for (const clip of track.clips) {
             if (clip.type === 'subtitle') {
-              commandManager.execute(
-                new UpdateSubtitleStyleCommand(timelineAccessor, clip.id, template.style)
-              );
+              commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, clip.id, template.style));
             }
           }
         }
@@ -158,7 +155,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
         onUpdate({ status: 'error', error: message });
       }
     },
-    [subtitleTracks, onUpdate, onComplete]
+    [subtitleTracks, onUpdate, onComplete],
   );
 
   const handleSkip = useCallback(() => {
@@ -167,9 +164,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
 
   return (
     <div className="space-y-3" data-testid="subtitle-workflow-style-stage">
-      <div className="text-xs text-[var(--color-text-secondary)]">
-        {zhCN.aiSubtitleWorkflow.stages.style}
-      </div>
+      <div className="text-xs text-[var(--color-text-secondary)]">{zhCN.aiSubtitleWorkflow.stages.style}</div>
 
       {!available && (
         <p className="text-xs text-orange-500" data-testid="subtitle-workflow-style-no-provider">
@@ -223,14 +218,20 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="subtitle-workflow-style-loading">
+        <div
+          className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]"
+          data-testid="subtitle-workflow-style-loading"
+        >
           <Loader2 size={16} className="animate-spin" />
           {t.analyzing}
         </div>
       )}
 
       {styleState.status === 'error' && styleState.error && !loading && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="subtitle-workflow-style-error">
+        <div
+          className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+          data-testid="subtitle-workflow-style-error"
+        >
           {styleState.error}
         </div>
       )}
@@ -256,9 +257,7 @@ export function StyleStage({ styleState, onUpdate, onComplete, media }: StyleSta
                       {Math.round(card.confidence * 100)}%
                     </span>
                   </div>
-                  <div className="mt-0.5 text-[var(--color-text-muted)] line-clamp-2">
-                    {card.reason}
-                  </div>
+                  <div className="mt-0.5 text-[var(--color-text-muted)] line-clamp-2">{card.reason}</div>
                 </div>
               </div>
               <button

@@ -8,7 +8,9 @@ export interface TimelineNoteLayout {
 }
 
 export function buildTimelineNoteLayout(notes: TimelineNote[]): TimelineNoteLayout[] {
-  const sorted = normalizeTimelineNotes(notes).sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+  const sorted = normalizeTimelineNotes(notes).sort(
+    (left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id),
+  );
   const laneEnds: number[] = [];
   const overlapIds = new Set<string>();
   const rows: TimelineNoteLayout[] = [];
@@ -30,17 +32,31 @@ export function buildTimelineNoteLayout(notes: TimelineNote[]): TimelineNoteLayo
   }
   return rows
     .map((row) => ({ ...row, overlaps: overlapIds.has(row.note.id) }))
-    .sort((left, right) => left.note.start - right.note.start || left.note.end - right.note.end || left.note.createdAt.localeCompare(right.note.createdAt) || left.note.id.localeCompare(right.note.id));
+    .sort(
+      (left, right) =>
+        left.note.start - right.note.start ||
+        left.note.end - right.note.end ||
+        left.note.createdAt.localeCompare(right.note.createdAt) ||
+        left.note.id.localeCompare(right.note.id),
+    );
 }
 
-export function timelineNotesOverlap(left: Pick<TimelineNote, 'start' | 'end'>, right: Pick<TimelineNote, 'start' | 'end'>): boolean {
+export function timelineNotesOverlap(
+  left: Pick<TimelineNote, 'start' | 'end'>,
+  right: Pick<TimelineNote, 'start' | 'end'>,
+): boolean {
   return left.start < right.end - 0.000001 && right.start < left.end - 0.000001;
 }
 
 export function serializeTimelineNotesCsv(notes: TimelineNote[], fps = 30): string {
   const rows = [['start_timecode', 'end_timecode', 'text', 'color']];
   for (const note of normalizeTimelineNotes(notes)) {
-    rows.push([secondsToTimecode(note.start, fps, 'ndf'), secondsToTimecode(note.end, fps, 'ndf'), note.text, note.color]);
+    rows.push([
+      secondsToTimecode(note.start, fps, 'ndf'),
+      secondsToTimecode(note.end, fps, 'ndf'),
+      note.text,
+      note.color,
+    ]);
   }
   return `${rows.map((row) => row.map(escapeCsvCell).join(',')).join('\n')}\n`;
 }

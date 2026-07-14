@@ -26,7 +26,8 @@ export function EmotionCurveChart({ curve }: EmotionCurveChartProps) {
   const plotH = CHART_HEIGHT - PADDING.top - PADDING.bottom;
 
   const { pathD, areaD, points } = useMemo(() => {
-    if (curve.length === 0) return { pathD: '', areaD: '', points: [] as Array<{ x: number; y: number; index: number }> };
+    if (curve.length === 0)
+      return { pathD: '', areaD: '', points: [] as Array<{ x: number; y: number; index: number }> };
 
     const maxTime = Math.max(...curve.map((p) => p.time), 1);
     const pts = curve.map((p, i) => ({
@@ -118,9 +119,7 @@ export function EmotionCurveChart({ curve }: EmotionCurveChartProps) {
         {areaD && <path d={areaD} fill="url(#emotionGradient)" opacity={0.3} />}
 
         {/* Line */}
-        {pathD && (
-          <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth={1.5} strokeLinejoin="round" />
-        )}
+        {pathD && <path d={pathD} fill="none" stroke="#8b5cf6" strokeWidth={1.5} strokeLinejoin="round" />}
 
         {/* Data points */}
         {points.map((p, i) => (
@@ -165,9 +164,15 @@ export function EmotionCurveChart({ curve }: EmotionCurveChartProps) {
             top: Math.max(hoveredPt.y - 36, 0),
           }}
         >
-          <div>{t.time}: {formatTime(hovered.time)}</div>
-          <div>{t.emotionValue}: {hovered.value.toFixed(2)}</div>
-          <div>{t.arousal}: {hovered.arousal.toFixed(2)}</div>
+          <div>
+            {t.time}: {formatTime(hovered.time)}
+          </div>
+          <div>
+            {t.emotionValue}: {hovered.value.toFixed(2)}
+          </div>
+          <div>
+            {t.arousal}: {hovered.arousal.toFixed(2)}
+          </div>
           <div className="text-neutral-500">{hovered.source}</div>
         </div>
       )}

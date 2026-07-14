@@ -65,9 +65,7 @@ describe('useContentAnalysisCallbacks', () => {
 
     mockProjectState = {
       timeline: { tracks: [{ id: 'track-1', clips: [] }] },
-      media: [
-        { id: 'media-1', name: 'video.mp4', type: 'video' },
-      ],
+      media: [{ id: 'media-1', name: 'video.mp4', type: 'video' }],
     };
 
     mockEditorState = {
@@ -78,7 +76,7 @@ describe('useContentAnalysisCallbacks', () => {
 
   it('导出所有预期的函数', () => {
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     expect(result.current.runSingleContentAnalysis).toBeDefined();
@@ -93,7 +91,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockResolvedValue(mockAnalysis);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     const target = {
@@ -115,7 +113,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockRejectedValue(error);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     const target = {
@@ -135,7 +133,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     const target = {
@@ -146,7 +144,8 @@ describe('useContentAnalysisCallbacks', () => {
     await result.current.runSingleContentAnalysis(target as any);
 
     // 最后一次调用应该是清除
-    const lastCall = mockSetContentAnalysisRunningClipId.mock.calls[mockSetContentAnalysisRunningClipId.mock.calls.length - 1];
+    const lastCall =
+      mockSetContentAnalysisRunningClipId.mock.calls[mockSetContentAnalysisRunningClipId.mock.calls.length - 1];
     expect(lastCall).toEqual([undefined]);
   });
 
@@ -155,7 +154,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(findContentAnalysisTarget).mockReturnValue(undefined);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.analyzeContentClip('nonexistent-clip');
@@ -173,7 +172,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.analyzeContentClip('clip-1');
@@ -188,7 +187,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(collectContentAnalysisTargets).mockReturnValue([]);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.analyzePreferredContentTargets();
@@ -204,7 +203,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.analyzePreferredContentTargets();
@@ -222,7 +221,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.analyzePreferredContentTargets();
@@ -239,7 +238,7 @@ describe('useContentAnalysisCallbacks', () => {
     } as any);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.exportContentAnalysis('clip-1');
@@ -257,7 +256,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(exportClipContentAnalysisJson).mockResolvedValue('/output/analysis.json');
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.exportContentAnalysis('clip-1');
@@ -270,7 +269,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(findContentAnalysisTarget).mockReturnValue(undefined);
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.exportContentAnalysis('nonexistent');
@@ -286,7 +285,7 @@ describe('useContentAnalysisCallbacks', () => {
     vi.mocked(exportClipContentAnalysisJson).mockRejectedValue(new Error('导出失败'));
 
     const { result } = renderHook(() =>
-      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
+      useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId }),
     );
 
     await result.current.exportContentAnalysis('clip-1');

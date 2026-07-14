@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { extractDecodedWaveform, type MediaAsset, type WaveformCacheEntry } from '@open-factory/editor-core';
 import { readWaveformFromCache, writeWaveformToCache } from '../cache/cache-service';
 import { zhCN } from '../i18n/strings';
@@ -19,7 +19,10 @@ export const NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES = 50 * 1024 * 1024;
 const WORKER_THRESHOLD_BYTES = 50 * 1024 * 1024;
 const SAMPLED_THRESHOLD_BYTES = 500 * 1024 * 1024;
 
-export async function getWaveform(asset: MediaAsset, pointsPerSecond = DEFAULT_POINTS_PER_SECOND): Promise<WaveformResult> {
+export async function getWaveform(
+  asset: MediaAsset,
+  pointsPerSecond = DEFAULT_POINTS_PER_SECOND,
+): Promise<WaveformResult> {
   const cached = await readWaveformFromCache(asset);
   if (cached && cached.pointsPerSecond >= pointsPerSecond) {
     return toResult(cached);
@@ -27,7 +30,10 @@ export async function getWaveform(asset: MediaAsset, pointsPerSecond = DEFAULT_P
   return runBackgroundMediaTask(() => getWaveformUnthrottled(asset, pointsPerSecond));
 }
 
-async function getWaveformUnthrottled(asset: MediaAsset, pointsPerSecond = DEFAULT_POINTS_PER_SECOND): Promise<WaveformResult> {
+async function getWaveformUnthrottled(
+  asset: MediaAsset,
+  pointsPerSecond = DEFAULT_POINTS_PER_SECOND,
+): Promise<WaveformResult> {
   const cached = await readWaveformFromCache(asset);
   if (cached && cached.pointsPerSecond >= pointsPerSecond) {
     return toResult(cached);
@@ -41,7 +47,7 @@ async function getWaveformUnthrottled(asset: MediaAsset, pointsPerSecond = DEFAU
       duration: result.duration,
       channels: result.channels,
       pointsPerSecond,
-      isSampled: true
+      isSampled: true,
     });
     return result;
   }
@@ -53,7 +59,9 @@ async function getWaveformUnthrottled(asset: MediaAsset, pointsPerSecond = DEFAU
   const result = isSampled
     ? await extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration)
     : await decodeWaveform(arrayBuffer.slice(0), pointsPerSecond).catch(() =>
-        size >= WORKER_THRESHOLD_BYTES ? extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration) : extractPeaks(new Uint8Array(arrayBuffer), pointsPerSecond, asset.duration, false)
+        size >= WORKER_THRESHOLD_BYTES
+          ? extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration)
+          : extractPeaks(new Uint8Array(arrayBuffer), pointsPerSecond, asset.duration, false),
       );
 
   await writeWaveformToCache(asset, {
@@ -61,7 +69,7 @@ async function getWaveformUnthrottled(asset: MediaAsset, pointsPerSecond = DEFAU
     duration: result.duration,
     channels: result.channels,
     pointsPerSecond,
-    isSampled
+    isSampled,
   });
   return { ...result, isSampled: isSampled || result.isSampled };
 }
@@ -72,7 +80,7 @@ async function getNativeWaveform(asset: MediaAsset, pointsPerSecond: number): Pr
     peaks,
     duration: asset.duration || Math.max(0.001, peaks.length / Math.max(1, pointsPerSecond)),
     channels: asset.audioChannels ?? 1,
-    isSampled: true
+    isSampled: true,
   };
 }
 
@@ -92,20 +100,27 @@ async function decodeWaveform(arrayBuffer: ArrayBuffer, pointsPerSecond: number)
   const context = new AudioContextCtor();
   try {
     const decoded = await context.decodeAudioData(arrayBuffer);
-    const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) => decoded.getChannelData(index).slice());
+    const channels = Array.from({ length: decoded.numberOfChannels }, (_, index) =>
+      decoded.getChannelData(index).slice(),
+    );
     const waveform = extractDecodedWaveform({ channels, sampleRate: decoded.sampleRate, pointsPerSecond });
     return {
       peaks: waveform.peaks,
       duration: waveform.duration,
       channels: waveform.channels,
-      isSampled: false
+      isSampled: false,
     };
   } finally {
-    await context.close().catch(logError("waveform"));
+    await context.close().catch(logError('waveform'));
   }
 }
 
-function extractPeaks(bytes: Uint8Array, pointsPerSecond: number, durationHint: number, isSampled = false): WaveformResult {
+function extractPeaks(
+  bytes: Uint8Array,
+  pointsPerSecond: number,
+  durationHint: number,
+  isSampled = false,
+): WaveformResult {
   const duration = Math.max(durationHint || bytes.length / 44_100, 0.001);
   const totalPoints = Math.max(32, Math.ceil(duration * pointsPerSecond));
   const stride = isSampled ? Math.max(1, Math.floor(bytes.length / (totalPoints * 8))) : 1;
@@ -123,7 +138,11 @@ function extractPeaks(bytes: Uint8Array, pointsPerSecond: number, durationHint: 
   return { peaks, duration, channels: 1, isSampled };
 }
 
-function extractWithWorker(arrayBuffer: ArrayBuffer, pointsPerSecond: number, durationHint: number): Promise<WaveformResult> {
+function extractWithWorker(
+  arrayBuffer: ArrayBuffer,
+  pointsPerSecond: number,
+  durationHint: number,
+): Promise<WaveformResult> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('../workers/waveform.worker.ts', import.meta.url), { type: 'module' });
     worker.onmessage = (event: MessageEvent<WaveformWorkerOutput>) => {
@@ -132,7 +151,12 @@ function extractWithWorker(arrayBuffer: ArrayBuffer, pointsPerSecond: number, du
         reject(new Error(event.data.error ?? zhCN.errors.waveformWorkerFailed));
         return;
       }
-      resolve({ peaks: event.data.peaks, duration: event.data.duration, channels: event.data.channels, isSampled: true });
+      resolve({
+        peaks: event.data.peaks,
+        duration: event.data.duration,
+        channels: event.data.channels,
+        isSampled: true,
+      });
     };
     worker.onerror = (event) => {
       worker.terminate();
@@ -148,6 +172,6 @@ function toResult(entry: WaveformCacheEntry): WaveformResult {
     peaks: entry.peaks,
     duration: entry.duration,
     channels: entry.channels,
-    isSampled: entry.isSampled
+    isSampled: entry.isSampled,
   };
 }

@@ -1,25 +1,25 @@
 /** 音频效果类型 */
 export type AudioEffectType =
-  | 'eq-4band'           // 4频段参量EQ
-  | 'eq-8band'           // 8频段参量EQ
-  | 'compressor'         // 压缩器
-  | 'limiter'            // 限制器
-  | 'gate'               // 噪声门
-  | 'expander'           // 扩展器
-  | 'reverb'             // 混响
-  | 'delay'              // 延迟
-  | 'chorus'             // 合唱
-  | 'flanger'            // 镶边
-  | 'distortion'         // 失真
-  | 'de-esser'           // 齿音消除
-  | 'noise-reduction'    // 降噪
-  | 'pitch-shift'        // 变调
-  | 'stereo-widener'     // 立体声增强
-  | 'mid-side'           // M/S处理
-  | 'gain'               // 增益
-  | 'phase-invert'       // 相位反转
-  | 'high-pass'          // 高通滤波
-  | 'low-pass';          // 低通滤波
+  | 'eq-4band' // 4频段参量EQ
+  | 'eq-8band' // 8频段参量EQ
+  | 'compressor' // 压缩器
+  | 'limiter' // 限制器
+  | 'gate' // 噪声门
+  | 'expander' // 扩展器
+  | 'reverb' // 混响
+  | 'delay' // 延迟
+  | 'chorus' // 合唱
+  | 'flanger' // 镶边
+  | 'distortion' // 失真
+  | 'de-esser' // 齿音消除
+  | 'noise-reduction' // 降噪
+  | 'pitch-shift' // 变调
+  | 'stereo-widener' // 立体声增强
+  | 'mid-side' // M/S处理
+  | 'gain' // 增益
+  | 'phase-invert' // 相位反转
+  | 'high-pass' // 高通滤波
+  | 'low-pass'; // 低通滤波
 
 /** 音频效果槽 */
 export interface AudioEffectSlot {
@@ -27,8 +27,8 @@ export interface AudioEffectSlot {
   effectType: AudioEffectType;
   enabled: boolean;
   params: Record<string, number>;
-  wetDry: number;  // 0 ~ 1 干湿比
-  order: number;   // 在效果链中的顺序
+  wetDry: number; // 0 ~ 1 干湿比
+  order: number; // 在效果链中的顺序
 }
 
 /** 总线类型 */
@@ -37,7 +37,7 @@ export type BusType = 'submix' | 'send' | 'aux' | 'master';
 /** 总线分配 */
 export interface BusAssignment {
   busId: string;
-  level: number;   // 0 ~ 1
+  level: number; // 0 ~ 1
   enabled: boolean;
 }
 
@@ -50,9 +50,9 @@ export interface AudioBus {
   volume: number;
   pan: number;
   muted: boolean;
-  sendLevel?: number;    // 发送电平 0~1（发送总线特有）
+  sendLevel?: number; // 发送电平 0~1（发送总线特有）
   sendPrePost?: 'pre' | 'post';
-  outputBusId: string | null;  // 输出到哪条总线（master为null）
+  outputBusId: string | null; // 输出到哪条总线（master为null）
 }
 
 /** 自动化点 */
@@ -81,8 +81,8 @@ export interface ChannelAutomation {
 export interface MixerChannel {
   trackId: string;
   name: string;
-  volume: number;        // dB (-∞ ~ +12)
-  pan: number;           // -100 ~ 100 (L/R)
+  volume: number; // dB (-∞ ~ +12)
+  pan: number; // -100 ~ 100 (L/R)
   muted: boolean;
   solo: boolean;
   busAssignments: BusAssignment[];
@@ -90,8 +90,8 @@ export interface MixerChannel {
   effectsChain: AudioEffectSlot[];
   automation: ChannelAutomation;
   metering: {
-    peakLevel: number;    // dB
-    rmsLevel: number;     // dB
+    peakLevel: number; // dB
+    rmsLevel: number; // dB
     clipCount: number;
   };
 }
@@ -109,9 +109,35 @@ export interface MixerState {
 export function createDefaultEffectParams(effectType: AudioEffectType): Record<string, number> {
   switch (effectType) {
     case 'eq-4band':
-      return { lowFreq: 80, lowGain: 0, lowMidFreq: 500, lowMidGain: 0, highMidFreq: 2000, highMidGain: 0, highFreq: 8000, highGain: 0 };
+      return {
+        lowFreq: 80,
+        lowGain: 0,
+        lowMidFreq: 500,
+        lowMidGain: 0,
+        highMidFreq: 2000,
+        highMidGain: 0,
+        highFreq: 8000,
+        highGain: 0,
+      };
     case 'eq-8band':
-      return { freq1: 31, gain1: 0, freq2: 63, gain2: 0, freq3: 125, gain3: 0, freq4: 250, gain4: 0, freq5: 500, gain5: 0, freq6: 1000, gain6: 0, freq7: 4000, gain7: 0, freq8: 16000, gain8: 0 };
+      return {
+        freq1: 31,
+        gain1: 0,
+        freq2: 63,
+        gain2: 0,
+        freq3: 125,
+        gain3: 0,
+        freq4: 250,
+        gain4: 0,
+        freq5: 500,
+        gain5: 0,
+        freq6: 1000,
+        gain6: 0,
+        freq7: 4000,
+        gain7: 0,
+        freq8: 16000,
+        gain8: 0,
+      };
     case 'compressor':
       return { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 };
     case 'limiter':

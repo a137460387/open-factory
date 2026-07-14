@@ -6,11 +6,7 @@
  * Combines audio energy analysis with visual feature mapping.
  */
 
-import type {
-  ContentAnalysisVisualSample,
-  ContentAnalysisAudioSample,
-  ContentEmotionPoint,
-} from './content-analysis';
+import type { ContentAnalysisVisualSample, ContentAnalysisAudioSample, ContentEmotionPoint } from './content-analysis';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -23,7 +19,7 @@ export interface EmotionAnalysisResult {
 
 export interface EmotionPoint {
   time: number;
-  value: number;   // -1 to 1, negative to positive
+  value: number; // -1 to 1, negative to positive
   arousal: number; // 0 to 1, calm to excited
   source: 'audio' | 'visual' | 'fused';
 }
@@ -52,24 +48,15 @@ export interface EmotionAnalysisOptions {
 export function analyzeEmotion(
   visualSamples: ContentAnalysisVisualSample[],
   audioSamples?: ContentAnalysisAudioSample[],
-  options: EmotionAnalysisOptions = {}
+  options: EmotionAnalysisOptions = {},
 ): EmotionAnalysisResult {
-  const {
-    windowSize = 5,
-    peakThreshold = 0.3,
-    audioWeight = 0.6,
-    visualWeight = 0.4,
-  } = options;
+  const { windowSize = 5, peakThreshold = 0.3, audioWeight = 0.6, visualWeight = 0.4 } = options;
 
   // Generate visual emotion points
-  const visualEmotions = visualSamples.map((sample) =>
-    mapVisualToEmotion(sample)
-  );
+  const visualEmotions = visualSamples.map((sample) => mapVisualToEmotion(sample));
 
   // Generate audio emotion points if available
-  const audioEmotions = audioSamples?.map((sample) =>
-    mapAudioToEmotion(sample)
-  );
+  const audioEmotions = audioSamples?.map((sample) => mapAudioToEmotion(sample));
 
   // Fuse emotions
   const curve = fuseEmotions(visualEmotions, audioEmotions, audioWeight, visualWeight);
@@ -142,7 +129,7 @@ function fuseEmotions(
   visualEmotions: EmotionPoint[],
   audioEmotions: EmotionPoint[] | undefined,
   audioWeight: number,
-  visualWeight: number
+  visualWeight: number,
 ): EmotionPoint[] {
   if (!audioEmotions || audioEmotions.length === 0) {
     return visualEmotions;
@@ -279,7 +266,7 @@ function determineOverallMood(curve: EmotionPoint[]): string {
 
 function determineEmotionalArc(
   curve: EmotionPoint[],
-  peaks: EmotionPeak[]
+  peaks: EmotionPeak[],
 ): 'rising' | 'falling' | 'stable' | 'peak' | 'valley' {
   if (curve.length < 2) return 'stable';
 

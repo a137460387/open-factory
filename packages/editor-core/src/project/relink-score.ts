@@ -64,7 +64,10 @@ export function scoreRelinkCandidate(asset: MediaAsset, candidate: RelinkCandida
   return { score: Math.min(1, Number(score.toFixed(3))), reasons };
 }
 
-export function sortRelinkCandidates(asset: MediaAsset, candidates: RelinkCandidate[]): Array<RelinkCandidate & RelinkScore> {
+export function sortRelinkCandidates(
+  asset: MediaAsset,
+  candidates: RelinkCandidate[],
+): Array<RelinkCandidate & RelinkScore> {
   return candidates
     .map((candidate) => ({ ...candidate, ...scoreRelinkCandidate(asset, candidate) }))
     .sort((left, right) => right.score - left.score);

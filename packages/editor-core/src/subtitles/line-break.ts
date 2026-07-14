@@ -1,4 +1,3 @@
-
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface SubtitleLineBreakConfig {
@@ -39,17 +38,38 @@ const CHINESE_CHAR_PATTERN = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
 const CHINESE_PUNCTUATION = /[，。！？、；：…—～·「」『』【】《》〈〉（）\(\)\[\]]/;
 const ENGLISH_PUNCTUATION = /[,.!?;:—\-\u2014\u2013]/;
 const PREPOSITIONS_EN = new Set([
-  'and', 'but', 'or', 'so', 'for', 'yet',
-  'in', 'on', 'at', 'to', 'by', 'of', 'with', 'from',
-  'into', 'onto', 'upon', 'about', 'above', 'below',
-  'between', 'through', 'during', 'before', 'after'
+  'and',
+  'but',
+  'or',
+  'so',
+  'for',
+  'yet',
+  'in',
+  'on',
+  'at',
+  'to',
+  'by',
+  'of',
+  'with',
+  'from',
+  'into',
+  'onto',
+  'upon',
+  'about',
+  'above',
+  'below',
+  'between',
+  'through',
+  'during',
+  'before',
+  'after',
 ]);
 
 const DEFAULT_CONFIG: SubtitleLineBreakConfig = {
   chineseMaxCharsPerLine: DEFAULT_CHINESE_MAX_CHARS,
   englishMaxCharsPerLine: DEFAULT_ENGLISH_MAX_CHARS,
   preferPunctuationBreak: true,
-  preferPrepositionBreak: true
+  preferPrepositionBreak: true,
 };
 
 // ── Character Classification ───────────────────────────────────────────────
@@ -101,7 +121,11 @@ interface BreakCandidate {
   score: number;
 }
 
-export function findBestBreakPoint(text: string, maxChars: number, config: SubtitleLineBreakConfig = DEFAULT_CONFIG): number {
+export function findBestBreakPoint(
+  text: string,
+  maxChars: number,
+  config: SubtitleLineBreakConfig = DEFAULT_CONFIG,
+): number {
   if (text.length <= maxChars) {
     return text.length;
   }
@@ -198,7 +222,7 @@ function breakSingleLine(line: string, config: SubtitleLineBreakConfig): string[
 
 export function detectLineBreakIssues(
   subtitles: Array<{ id: string; text: string }>,
-  config: SubtitleLineBreakConfig = DEFAULT_CONFIG
+  config: SubtitleLineBreakConfig = DEFAULT_CONFIG,
 ): SubtitleLineBreakIssue[] {
   const issues: SubtitleLineBreakIssue[] = [];
 
@@ -215,7 +239,7 @@ export function detectLineBreakIssues(
           issueType: 'line-too-long',
           detail: `行 ${i + 1} 长度 ${line.length} 超过阈值 ${maxChars}`,
           maxLineLength: line.length,
-          threshold: maxChars
+          threshold: maxChars,
         });
         break; // One issue per subtitle
       }
@@ -230,14 +254,19 @@ export function detectLineBreakIssues(
           const lastChar = lineEnd[lineEnd.length - 1];
           const firstChar = nextLineStart[0];
           // Check if break happens in middle of English word
-          if (/[a-zA-Z]/.test(lastChar) && /[a-zA-Z]/.test(firstChar) && !/\s/.test(lineEnd) && !ENGLISH_PUNCTUATION.test(lastChar)) {
+          if (
+            /[a-zA-Z]/.test(lastChar) &&
+            /[a-zA-Z]/.test(firstChar) &&
+            !/\s/.test(lineEnd) &&
+            !ENGLISH_PUNCTUATION.test(lastChar)
+          ) {
             issues.push({
               subtitleId: subtitle.id,
               text: subtitle.text,
               issueType: 'bad-break-point',
               detail: `在第 ${i + 1} 和 ${i + 2} 行之间断行位置不合理（断在单词中间）`,
               maxLineLength: Math.max(...lines.map((l) => l.length)),
-              threshold: maxChars
+              threshold: maxChars,
             });
             break;
           }
@@ -253,7 +282,7 @@ export function detectLineBreakIssues(
 
 export function batchRebreakSubtitles(
   subtitles: Array<{ id: string; text: string }>,
-  config: SubtitleLineBreakConfig = DEFAULT_CONFIG
+  config: SubtitleLineBreakConfig = DEFAULT_CONFIG,
 ): SubtitleLineBreakResult[] {
   return subtitles.map((subtitle) => {
     const rebroken = smartLineBreak(subtitle.text, config);
@@ -261,19 +290,22 @@ export function batchRebreakSubtitles(
       subtitleId: subtitle.id,
       originalText: subtitle.text,
       rebrokenText: rebroken,
-      changed: rebroken !== subtitle.text
+      changed: rebroken !== subtitle.text,
     };
   });
 }
 
 // ── Preview ────────────────────────────────────────────────────────────────
 
-export function previewLineBreak(text: string, config: SubtitleLineBreakConfig = DEFAULT_CONFIG): SubtitleLineBreakPreview {
+export function previewLineBreak(
+  text: string,
+  config: SubtitleLineBreakConfig = DEFAULT_CONFIG,
+): SubtitleLineBreakPreview {
   const preview = smartLineBreak(text, config);
   return {
     originalText: text,
     previewText: preview,
-    lines: preview.split('\n')
+    lines: preview.split('\n'),
   };
 }
 
@@ -283,12 +315,14 @@ export function applyLineBreakToWhisperOutput(text: string, config: SubtitleLine
   return smartLineBreak(text, config);
 }
 
-export function normalizeLineBreakConfig(config: Partial<SubtitleLineBreakConfig> | undefined): SubtitleLineBreakConfig {
+export function normalizeLineBreakConfig(
+  config: Partial<SubtitleLineBreakConfig> | undefined,
+): SubtitleLineBreakConfig {
   return {
     chineseMaxCharsPerLine: clampPositive(config?.chineseMaxCharsPerLine, DEFAULT_CHINESE_MAX_CHARS),
     englishMaxCharsPerLine: clampPositive(config?.englishMaxCharsPerLine, DEFAULT_ENGLISH_MAX_CHARS),
     preferPunctuationBreak: config?.preferPunctuationBreak ?? true,
-    preferPrepositionBreak: config?.preferPrepositionBreak ?? true
+    preferPrepositionBreak: config?.preferPrepositionBreak ?? true,
   };
 }
 

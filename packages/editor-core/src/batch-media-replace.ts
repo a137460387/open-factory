@@ -67,7 +67,7 @@ export function checkClipCompatibility(
   clip: Pick<Clip, 'id' | 'name'> & { duration: number },
   oldAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration' | 'videoCodec'> | undefined,
   newAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration' | 'videoCodec'>,
-  durationStrategy: DurationStrategy = 'keep'
+  durationStrategy: DurationStrategy = 'keep',
 ): ClipCompatResult {
   const issues: CompatIssue[] = [];
 
@@ -75,7 +75,7 @@ export function checkClipCompatibility(
     issues.push({
       type: 'missing',
       severity: 'warning',
-      message: `原始媒体资产未找到`
+      message: `原始媒体资产未找到`,
     });
   }
 
@@ -86,7 +86,7 @@ export function checkClipCompatibility(
       severity: 'error',
       message: `分辨率不匹配: ${newAsset.width}x${newAsset.height} (原 ${oldAsset.width}x${oldAsset.height})`,
       expected: `${oldAsset.width}x${oldAsset.height}`,
-      actual: `${newAsset.width}x${newAsset.height}`
+      actual: `${newAsset.width}x${newAsset.height}`,
     });
   }
 
@@ -99,7 +99,7 @@ export function checkClipCompatibility(
         severity,
         message: `新媒体时长不足: ${newAsset.duration.toFixed(2)}s < clip ${clip.duration.toFixed(2)}s`,
         expected: `>= ${clip.duration.toFixed(2)}s`,
-        actual: `${newAsset.duration.toFixed(2)}s`
+        actual: `${newAsset.duration.toFixed(2)}s`,
       });
     }
   }
@@ -114,7 +114,7 @@ export function checkClipCompatibility(
         severity: 'warning',
         message: `编解码器变更: ${newCodec} (原 ${oldCodec})`,
         expected: oldCodec,
-        actual: newCodec
+        actual: newCodec,
       });
     }
   }
@@ -126,10 +126,7 @@ export function checkClipCompatibility(
 /**
  * 按文件名匹配规则，在新目录中寻找同名文件。
  */
-export function matchByFilename(
-  oldAsset: Pick<MediaAsset, 'name'>,
-  newAssets: MediaAsset[]
-): MediaAsset | undefined {
+export function matchByFilename(oldAsset: Pick<MediaAsset, 'name'>, newAssets: MediaAsset[]): MediaAsset | undefined {
   const oldBase = stripExtension(oldAsset.name).toLowerCase();
   return newAssets.find((a) => stripExtension(a.name).toLowerCase() === oldBase);
 }
@@ -144,7 +141,7 @@ function stripExtension(name: string): string {
  */
 export function buildBatchReplacePrecheckReport(
   mappings: ReplaceMapping[],
-  getOldAsset: (assetId: string) => MediaAsset | undefined
+  getOldAsset: (assetId: string) => MediaAsset | undefined,
 ): BatchReplacePrecheckReport {
   const results = mappings.map((mapping) => {
     const oldAsset = getOldAsset(mapping.oldAssetId);
@@ -152,7 +149,7 @@ export function buildBatchReplacePrecheckReport(
       { id: mapping.clipId, name: '', duration: 0 },
       oldAsset,
       mapping.newAsset,
-      mapping.durationStrategy
+      mapping.durationStrategy,
     );
   });
 
@@ -162,7 +159,7 @@ export function buildBatchReplacePrecheckReport(
     warningClips: results.filter((r) => r.severity === 'warning').length,
     errorClips: results.filter((r) => r.severity === 'error').length,
     results,
-    canProceed: results.every((r) => r.severity !== 'error')
+    canProceed: results.every((r) => r.severity !== 'error'),
   };
 }
 
@@ -170,17 +167,30 @@ export function buildBatchReplacePrecheckReport(
  * 检测替换后关键帧/特效因新媒体属性差异而失效的情况。
  */
 export function detectPostReplaceWarnings(
- clip: { id: string; name: string; duration: number; keyframes?: ClipKeyframes },
- newAsset: Pick<MediaAsset, 'duration'>
+  clip: { id: string; name: string; duration: number; keyframes?: ClipKeyframes },
+  newAsset: Pick<MediaAsset, 'duration'>,
 ): PostReplaceWarning[] {
   const warnings: PostReplaceWarning[] = [];
   if (!clip.keyframes) return warnings;
 
   const maxTime = newAsset.duration;
   const props: Array<keyof ClipKeyframes> = [
-    'opacity', 'volume', 'x', 'y', 'scaleX', 'scaleY', 'speed',
-    'yaw', 'pitch', 'roll', 'spatialX', 'spatialY',
-    'spatialAzimuth', 'spatialElevation', 'spatialDistanceMeters', 'pathStartOffset'
+    'opacity',
+    'volume',
+    'x',
+    'y',
+    'scaleX',
+    'scaleY',
+    'speed',
+    'yaw',
+    'pitch',
+    'roll',
+    'spatialX',
+    'spatialY',
+    'spatialAzimuth',
+    'spatialElevation',
+    'spatialDistanceMeters',
+    'pathStartOffset',
   ];
 
   for (const prop of props) {
@@ -193,7 +203,7 @@ export function detectPostReplaceWarnings(
         clipName: clip.name,
         warningType: 'keyframe-out-of-range',
         message: `关键帧属性 "${prop}" 有 ${outOfRange.length} 个超出新媒体时长 (${maxTime.toFixed(2)}s)`,
-        detail: outOfRange.map((kf) => `${prop}@${kf.time.toFixed(2)}s`).join(', ')
+        detail: outOfRange.map((kf) => `${prop}@${kf.time.toFixed(2)}s`).join(', '),
       });
     }
   }

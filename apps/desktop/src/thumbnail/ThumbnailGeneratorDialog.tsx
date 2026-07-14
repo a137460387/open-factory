@@ -18,11 +18,18 @@ import {
   type ThumbnailCandidate,
   type ThumbnailFrameSample,
   type ThumbnailPlatformPreset,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { Check, ImageDown, Loader2, X } from 'lucide-react';
 import { createClipFromAsset, createTextClip } from '../lib/clipFactory';
-import { getFfmpegCapabilities, detectPrivacyRegions, convertLocalFileSrc, openDirectoryDialog, runExport, saveFileDialog } from '../lib/tauri-bridge';
+import {
+  getFfmpegCapabilities,
+  detectPrivacyRegions,
+  convertLocalFileSrc,
+  openDirectoryDialog,
+  runExport,
+  saveFileDialog,
+} from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { zhCN } from '../i18n/strings';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
@@ -46,7 +53,10 @@ const PREVIEW_WIDTH = 320;
 export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClose }: ThumbnailGeneratorDialogProps) {
   const t = zhCN.thumbnailGenerator;
   const modelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
-  const videoAssets = useMemo(() => project.media.filter((asset) => asset.type === 'video' && !asset.missing), [project.media]);
+  const videoAssets = useMemo(
+    () => project.media.filter((asset) => asset.type === 'video' && !asset.missing),
+    [project.media],
+  );
   const initialVideos = useMemo(() => {
     const ids = new Set(initialAssetIds);
     return ids.size > 0 ? videoAssets.filter((asset) => ids.has(asset.id)) : [];
@@ -77,14 +87,18 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
         platform,
         crop,
         titleText,
-        modelPath
+        modelPath,
       });
       setCandidates(nextCandidates);
       setSelectedId(nextCandidates[0]?.id);
       setStatus(t.candidateCount(nextCandidates.length));
     } catch (error) {
       setStatus(error instanceof Error ? error.message : t.analyzeFailedMessage);
-      showToast({ kind: 'error', title: t.analyzeFailed, message: error instanceof Error ? error.message : t.analyzeFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.analyzeFailed,
+        message: error instanceof Error ? error.message : t.analyzeFailedMessage,
+      });
     } finally {
       setBusy(undefined);
     }
@@ -96,10 +110,13 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
       setStatus(t.selectCandidateFirst);
       return;
     }
-    const outputPath = await saveFileDialog(buildThumbnailOutputFileName(selected.asset.name).replace(/\.jpg$/i, '.png'), [
-      { name: t.pngFilter, extensions: ['png'] },
-      { name: t.jpegFilter, extensions: ['jpg', 'jpeg'] }
-    ]);
+    const outputPath = await saveFileDialog(
+      buildThumbnailOutputFileName(selected.asset.name).replace(/\.jpg$/i, '.png'),
+      [
+        { name: t.pngFilter, extensions: ['png'] },
+        { name: t.jpegFilter, extensions: ['jpg', 'jpeg'] },
+      ],
+    );
     if (!outputPath) {
       return;
     }
@@ -113,13 +130,17 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
         time: selected.timestamp,
         platform,
         crop,
-        titleText
+        titleText,
       });
       setStatus(t.exported(outputPath));
       showToast({ kind: 'success', title: t.exportedTitle, message: t.exported(outputPath) });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : t.exportFailedMessage);
-      showToast({ kind: 'error', title: t.exportFailed, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.exportFailed,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     } finally {
       setBusy(undefined);
     }
@@ -145,7 +166,7 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
             platform,
             crop,
             titleText,
-            modelPath
+            modelPath,
           })
         )[0];
         const outputPath = buildThumbnailOutputPath(directory, asset.name);
@@ -156,7 +177,7 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
           time: topCandidate?.timestamp ?? 0,
           platform,
           crop,
-          titleText
+          titleText,
         });
         completed += 1;
         setStatus(t.batchRunning(completed, batchAssets.length));
@@ -165,21 +186,33 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
       showToast({ kind: 'success', title: t.batchCompletedTitle, message: t.batchCompleted(completed) });
     } catch (error) {
       setStatus(error instanceof Error ? error.message : t.exportFailedMessage);
-      showToast({ kind: 'error', title: t.exportFailed, message: error instanceof Error ? error.message : t.exportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: t.exportFailed,
+        message: error instanceof Error ? error.message : t.exportFailedMessage,
+      });
     } finally {
       setBusy(undefined);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" data-testid="thumbnail-generator-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+      data-testid="thumbnail-generator-dialog"
+    >
       <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <div className="text-xs text-slate-500">{t.canvasSize(size.width, size.height)}</div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel"
+            type="button"
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
             <X size={17} />
           </button>
         </div>
@@ -187,7 +220,12 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
           <aside className="space-y-3 overflow-y-auto bg-panel p-4 text-sm">
             <label className="block text-xs font-semibold text-slate-600">
               {t.source}
-              <select className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm" value={assetId} data-testid="thumbnail-source-select" onChange={(event) => setAssetId(event.target.value)}>
+              <select
+                className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm"
+                value={assetId}
+                data-testid="thumbnail-source-select"
+                onChange={(event) => setAssetId(event.target.value)}
+              >
                 {videoAssets.map((asset) => (
                   <option key={asset.id} value={asset.id}>
                     {asset.name}
@@ -197,7 +235,12 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
             </label>
             <label className="block text-xs font-semibold text-slate-600">
               {t.platform}
-              <select className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm" value={platform} data-testid="thumbnail-platform-select" onChange={(event) => setPlatform(event.target.value as ThumbnailPlatformPreset)}>
+              <select
+                className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm"
+                value={platform}
+                data-testid="thumbnail-platform-select"
+                onChange={(event) => setPlatform(event.target.value as ThumbnailPlatformPreset)}
+              >
                 {(['youtube', 'bilibili', 'douyin'] as ThumbnailPlatformPreset[]).map((preset) => (
                   <option key={preset} value={preset}>
                     {t.platforms[preset]}
@@ -207,11 +250,21 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
             </label>
             <label className="flex items-center justify-between gap-3 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700">
               <span>{t.crop}</span>
-              <input type="checkbox" checked={crop} data-testid="thumbnail-crop-checkbox" onChange={(event) => setCrop(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={crop}
+                data-testid="thumbnail-crop-checkbox"
+                onChange={(event) => setCrop(event.target.checked)}
+              />
             </label>
             <label className="block text-xs font-semibold text-slate-600">
               {t.titleText}
-              <input className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm" value={titleText} data-testid="thumbnail-title-input" onChange={(event) => setTitleText(event.target.value)} />
+              <input
+                className="mt-1 h-9 w-full rounded border border-line bg-white px-2 text-sm"
+                value={titleText}
+                data-testid="thumbnail-title-input"
+                onChange={(event) => setTitleText(event.target.value)}
+              />
             </label>
             <button
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50"
@@ -243,11 +296,21 @@ export function ThumbnailGeneratorDialog({ project, initialAssetIds = [], onClos
               {busy === 'batch' ? <Loader2 className="animate-spin" size={15} /> : <ImageDown size={15} />}
               {t.exportBatch(batchAssets.length)}
             </button>
-            {status ? <div className="rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-600" data-testid="thumbnail-generator-status">{status}</div> : null}
+            {status ? (
+              <div
+                className="rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-600"
+                data-testid="thumbnail-generator-status"
+              >
+                {status}
+              </div>
+            ) : null}
           </aside>
           <main className="min-h-0 overflow-y-auto bg-white p-4">
             {candidates.length === 0 ? (
-              <div className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500" data-testid="thumbnail-candidate-empty">
+              <div
+                className="flex h-full min-h-[320px] items-center justify-center rounded-md border border-dashed border-line bg-panel text-sm text-slate-500"
+                data-testid="thumbnail-candidate-empty"
+              >
                 {t.emptyCandidates}
               </div>
             ) : (
@@ -291,7 +354,7 @@ async function analyzeThumbnailCandidates({
   platform,
   crop,
   titleText,
-  modelPath
+  modelPath,
 }: {
   asset: MediaAsset;
   platform: ThumbnailPlatformPreset;
@@ -307,14 +370,14 @@ async function analyzeThumbnailCandidates({
     ...sample,
     score: scoreThumbnailFrame(sample, {
       previous: samples[index - 1],
-      next: samples[index + 1]
-    })
+      next: samples[index + 1],
+    }),
   }));
   return rankThumbnailCandidates(scored).map((candidate, index) => ({
     ...candidate,
     id: `${asset.id}-${index}-${candidate.timestamp}`,
     asset,
-    dataUrl: renderPreviewFromSample(candidate, platform, crop, titleText)
+    dataUrl: renderPreviewFromSample(candidate, platform, crop, titleText),
   }));
 }
 
@@ -327,10 +390,12 @@ async function detectFaceTimes(asset: MediaAsset, timestamps: number[], modelPat
       modelPath,
       mediaPath: asset.path,
       clipId: asset.id,
-      duration: asset.duration
+      duration: asset.duration,
     });
     const tolerance = Math.max(0.2, (asset.duration || timestamps.length) / Math.max(1, timestamps.length) / 2);
-    return new Set(timestamps.filter((timestamp) => result.boxes.some((box) => Math.abs(box.time - timestamp) <= tolerance)));
+    return new Set(
+      timestamps.filter((timestamp) => result.boxes.some((box) => Math.abs(box.time - timestamp) <= tolerance)),
+    );
   } catch {
     return new Set();
   }
@@ -342,7 +407,7 @@ async function sampleAssetFrames(
   faceTimes: Set<number>,
   platform: ThumbnailPlatformPreset,
   crop: boolean,
-  titleText: string
+  titleText: string,
 ): Promise<ThumbnailFrameSample[]> {
   try {
     const video = await loadVideo(asset);
@@ -359,11 +424,19 @@ async function sampleAssetFrames(
       drawVideoFrame(context, video, SAMPLE_WIDTH, SAMPLE_HEIGHT, crop);
       drawPreviewTitle(context, SAMPLE_WIDTH, SAMPLE_HEIGHT, titleText);
       const image = context.getImageData(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT);
-      samples.push({ timestamp, width: SAMPLE_WIDTH, height: SAMPLE_HEIGHT, data: image.data, faceDetected: faceTimes.has(timestamp) });
+      samples.push({
+        timestamp,
+        width: SAMPLE_WIDTH,
+        height: SAMPLE_HEIGHT,
+        data: image.data,
+        faceDetected: faceTimes.has(timestamp),
+      });
     }
     return samples;
   } catch {
-    return timestamps.map((timestamp, index) => makeFallbackSample(asset, timestamp, index, faceTimes.has(timestamp), platform));
+    return timestamps.map((timestamp, index) =>
+      makeFallbackSample(asset, timestamp, index, faceTimes.has(timestamp), platform),
+    );
   }
 }
 
@@ -419,7 +492,13 @@ function seekVideo(video: HTMLVideoElement, timestamp: number): Promise<void> {
   });
 }
 
-function makeFallbackSample(asset: MediaAsset, timestamp: number, index: number, faceDetected: boolean, platform: ThumbnailPlatformPreset): ThumbnailFrameSample {
+function makeFallbackSample(
+  asset: MediaAsset,
+  timestamp: number,
+  index: number,
+  faceDetected: boolean,
+  platform: ThumbnailPlatformPreset,
+): ThumbnailFrameSample {
   const size = getThumbnailPlatformSize(platform);
   const data: number[] = [];
   const seed = hashText(`${asset.id}:${asset.name}:${index}`);
@@ -433,7 +512,12 @@ function makeFallbackSample(asset: MediaAsset, timestamp: number, index: number,
   return { timestamp, width: SAMPLE_WIDTH, height: SAMPLE_HEIGHT, data, faceDetected };
 }
 
-function renderPreviewFromSample(sample: ThumbnailFrameSample, platform: ThumbnailPlatformPreset, crop: boolean, titleText: string): string {
+function renderPreviewFromSample(
+  sample: ThumbnailFrameSample,
+  platform: ThumbnailPlatformPreset,
+  crop: boolean,
+  titleText: string,
+): string {
   const size = getThumbnailPlatformSize(platform);
   const width = PREVIEW_WIDTH;
   const height = Math.max(120, Math.round((PREVIEW_WIDTH * size.height) / size.width));
@@ -456,16 +540,44 @@ function renderPreviewFromSample(sample: ThumbnailFrameSample, platform: Thumbna
   return canvas.toDataURL('image/png');
 }
 
-function drawVideoFrame(context: CanvasRenderingContext2D, video: HTMLVideoElement, width: number, height: number, crop: boolean): void {
+function drawVideoFrame(
+  context: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  width: number,
+  height: number,
+  crop: boolean,
+): void {
   context.fillStyle = '#020617';
   context.fillRect(0, 0, width, height);
   drawCanvasSource(context, video, width, height, crop);
 }
 
-function drawCanvasSource(context: CanvasRenderingContext2D, source: CanvasImageSource, width: number, height: number, crop: boolean): void {
-  const sourceWidth = 'videoWidth' in source ? source.videoWidth || width : 'naturalWidth' in source ? source.naturalWidth || width : 'width' in source ? Number(source.width) || width : width;
-  const sourceHeight = 'videoHeight' in source ? source.videoHeight || height : 'naturalHeight' in source ? source.naturalHeight || height : 'height' in source ? Number(source.height) || height : height;
-  const scale = crop ? Math.max(width / sourceWidth, height / sourceHeight) : Math.min(width / sourceWidth, height / sourceHeight);
+function drawCanvasSource(
+  context: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  crop: boolean,
+): void {
+  const sourceWidth =
+    'videoWidth' in source
+      ? source.videoWidth || width
+      : 'naturalWidth' in source
+        ? source.naturalWidth || width
+        : 'width' in source
+          ? Number(source.width) || width
+          : width;
+  const sourceHeight =
+    'videoHeight' in source
+      ? source.videoHeight || height
+      : 'naturalHeight' in source
+        ? source.naturalHeight || height
+        : 'height' in source
+          ? Number(source.height) || height
+          : height;
+  const scale = crop
+    ? Math.max(width / sourceWidth, height / sourceHeight)
+    : Math.min(width / sourceWidth, height / sourceHeight);
   const drawWidth = sourceWidth * scale;
   const drawHeight = sourceHeight * scale;
   context.drawImage(source, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
@@ -493,7 +605,7 @@ async function exportThumbnailFrame({
   time,
   platform,
   crop,
-  titleText
+  titleText,
 }: {
   baseProject: Project;
   asset: MediaAsset;
@@ -507,19 +619,24 @@ async function exportThumbnailFrame({
   const capabilities = await getFfmpegCapabilities();
   const exportProject = buildExportProjectFromProject(project, {
     outputPath,
-    settings: buildThumbnailExportSettings(platform, crop)
+    settings: buildThumbnailExportSettings(platform, crop),
   });
   const plan = buildFfmpegCurrentFrameExportPlan(exportProject, time, capabilities);
   await runExport(plan);
 }
 
-function buildThumbnailProject(baseProject: Project, asset: MediaAsset, platform: ThumbnailPlatformPreset, titleText: string): Project {
+function buildThumbnailProject(
+  baseProject: Project,
+  asset: MediaAsset,
+  platform: ThumbnailPlatformPreset,
+  titleText: string,
+): Project {
   const size = getThumbnailPlatformSize(platform);
   const project = buildSingleAssetProject(asset, titleText);
   project.settings = {
     ...project.settings,
     width: size.width,
-    height: size.height
+    height: size.height,
   };
   return project;
 }
@@ -527,7 +644,12 @@ function buildThumbnailProject(baseProject: Project, asset: MediaAsset, platform
 function buildSingleAssetProject(asset: MediaAsset, titleText: string): Project {
   const project = createProject(`${asset.name} Thumbnail`);
   const videoTrack = createTrack({ id: createId('track'), type: 'video', name: zhCN.panels.preview, clips: [] });
-  const textTrack = createTrack({ id: createId('track'), type: 'text', name: zhCN.thumbnailGenerator.titleTrack, clips: [] });
+  const textTrack = createTrack({
+    id: createId('track'),
+    type: 'text',
+    name: zhCN.thumbnailGenerator.titleTrack,
+    clips: [],
+  });
   const timeline = { tracks: [videoTrack, textTrack], transitions: [] };
   const clip = createClipFromAsset(asset, videoTrack, timeline);
   videoTrack.clips = [{ ...clip, start: 0, duration: Math.max(asset.duration || 1, 1), trimStart: 0, trimEnd: 0 }];
@@ -546,7 +668,7 @@ function buildSingleAssetProject(asset: MediaAsset, titleText: string): Project 
           y: -96,
           scale: 1,
           rotation: 0,
-          opacity: 1
+          opacity: 1,
         },
         style: {
           fontSize: 72,
@@ -555,15 +677,15 @@ function buildSingleAssetProject(asset: MediaAsset, titleText: string): Project 
           backgroundOpacity: 0.45,
           fontFamily: 'Inter',
           bold: true,
-          italic: false
-        }
-      }
+          italic: false,
+        },
+      },
     ];
   }
   return {
     ...project,
     media: [asset],
-    timeline
+    timeline,
   };
 }
 

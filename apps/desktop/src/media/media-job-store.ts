@@ -1,9 +1,14 @@
 import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { shouldGenerateProxy } from '@open-factory/editor-core';
 import { create } from 'zustand';
-import { compareMediaJobPriority, moveMediaJobBefore as reorderMediaJobs, normalizeMediaJobProgress } from './media-job-monitor';
+import {
+  compareMediaJobPriority,
+  moveMediaJobBefore as reorderMediaJobs,
+  normalizeMediaJobProgress,
+} from './media-job-monitor';
 
-export type MediaJobType = 'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
+export type MediaJobType =
+  'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
 export type MediaJobStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
 type MediaJobPriority = 'high' | 'low';
 
@@ -72,7 +77,9 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   runnerActive: false,
   enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
-    const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset, proxySettings, { priority: 'low' })).filter((job) => !existingKeys.has(job.key));
+    const jobsToAdd = media
+      .flatMap((asset) => buildJobsForAsset(asset, proxySettings, { priority: 'low' }))
+      .filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;
     }
@@ -81,11 +88,25 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   enqueueProxyJobsForMedia: (media, proxySettings, options) => {
     const jobsToAdd = media
       .flatMap((asset) => buildJobsForAsset(asset, proxySettings, options).filter((job) => job.type === 'proxy'))
-      .filter((job) => !get().jobs.some((existing) => existing.key === job.key && existing.priority === job.priority && existing.sourceStart === job.sourceStart && existing.sourceDuration === job.sourceDuration));
+      .filter(
+        (job) =>
+          !get().jobs.some(
+            (existing) =>
+              existing.key === job.key &&
+              existing.priority === job.priority &&
+              existing.sourceStart === job.sourceStart &&
+              existing.sourceDuration === job.sourceDuration,
+          ),
+      );
     if (jobsToAdd.length === 0) {
       return;
     }
-    set((state) => ({ jobs: sortQueueJobs([...upgradeExistingProxyJobs(state.jobs, jobsToAdd), ...jobsToAdd.filter((job) => !state.jobs.some((existing) => existing.key === job.key))]) }));
+    set((state) => ({
+      jobs: sortQueueJobs([
+        ...upgradeExistingProxyJobs(state.jobs, jobsToAdd),
+        ...jobsToAdd.filter((job) => !state.jobs.some((existing) => existing.key === job.key)),
+      ]),
+    }));
   },
   enqueueMonitorJob: (input) => {
     const now = new Date().toISOString();
@@ -102,9 +123,10 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
       startedAt: input.status === 'running' ? now : undefined,
-      finishedAt: input.status === 'success' || input.status === 'error' || input.status === 'canceled' ? now : undefined,
+      finishedAt:
+        input.status === 'success' || input.status === 'error' || input.status === 'canceled' ? now : undefined,
       canceledAt: input.status === 'canceled' ? now : undefined,
-      error: input.error
+      error: input.error,
     };
     set((state) => ({ jobs: sortQueueJobs([...state.jobs.filter((item) => item.id !== id), job]) }));
     return id;
@@ -116,38 +138,70 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
     }
     const startedAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.id === next.id ? { ...job, status: 'running', startedAt, updatedAt: startedAt, finishedAt: undefined, canceledAt: undefined, progress: Math.max(job.progress, 0.01) } : job))
+      jobs: state.jobs.map((job) =>
+        job.id === next.id
+          ? {
+              ...job,
+              status: 'running',
+              startedAt,
+              updatedAt: startedAt,
+              finishedAt: undefined,
+              canceledAt: undefined,
+              progress: Math.max(job.progress, 0.01),
+            }
+          : job,
+      ),
     }));
     return { ...next, status: 'running', startedAt, updatedAt: startedAt, progress: Math.max(next.progress, 0.01) };
   },
   updateJobProgress: (jobId, progress) => {
     const updatedAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.id === jobId && job.status === 'running' ? { ...job, progress: normalizeMediaJobProgress(progress), updatedAt } : job))
+      jobs: state.jobs.map((job) =>
+        job.id === jobId && job.status === 'running'
+          ? { ...job, progress: normalizeMediaJobProgress(progress), updatedAt }
+          : job,
+      ),
     }));
   },
   finishJob: (jobId) => {
     const finishedAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.id === jobId && job.status !== 'canceled' ? { ...job, status: 'success', progress: 1, finishedAt, updatedAt: finishedAt, error: undefined } : job))
+      jobs: state.jobs.map((job) =>
+        job.id === jobId && job.status !== 'canceled'
+          ? { ...job, status: 'success', progress: 1, finishedAt, updatedAt: finishedAt, error: undefined }
+          : job,
+      ),
     }));
   },
   failJob: (jobId, error) => {
     const finishedAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.id === jobId && job.status !== 'canceled' ? { ...job, status: 'error', finishedAt, updatedAt: finishedAt, error } : job))
+      jobs: state.jobs.map((job) =>
+        job.id === jobId && job.status !== 'canceled'
+          ? { ...job, status: 'error', finishedAt, updatedAt: finishedAt, error }
+          : job,
+      ),
     }));
   },
   cancelJob: (jobId) => {
     const canceledAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.id === jobId && (job.status === 'pending' || job.status === 'running') ? { ...job, status: 'canceled', canceledAt, finishedAt: canceledAt, updatedAt: canceledAt } : job))
+      jobs: state.jobs.map((job) =>
+        job.id === jobId && (job.status === 'pending' || job.status === 'running')
+          ? { ...job, status: 'canceled', canceledAt, finishedAt: canceledAt, updatedAt: canceledAt }
+          : job,
+      ),
     }));
   },
   cancelAllJobs: () => {
     const canceledAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.status === 'pending' || job.status === 'running' ? { ...job, status: 'canceled', canceledAt, finishedAt: canceledAt, updatedAt: canceledAt } : job))
+      jobs: state.jobs.map((job) =>
+        job.status === 'pending' || job.status === 'running'
+          ? { ...job, status: 'canceled', canceledAt, finishedAt: canceledAt, updatedAt: canceledAt }
+          : job,
+      ),
     }));
   },
   retryJob: (jobId) => {
@@ -155,25 +209,50 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
     set((state) => ({
       jobs: state.jobs.map((job) =>
         job.id === jobId && (job.status === 'error' || job.status === 'canceled')
-          ? { ...job, status: 'pending', progress: 0, startedAt: undefined, finishedAt: undefined, canceledAt: undefined, updatedAt, error: undefined }
-          : job
-      )
+          ? {
+              ...job,
+              status: 'pending',
+              progress: 0,
+              startedAt: undefined,
+              finishedAt: undefined,
+              canceledAt: undefined,
+              updatedAt,
+              error: undefined,
+            }
+          : job,
+      ),
     }));
   },
   retryFailedJobs: () => {
     const updatedAt = new Date().toISOString();
     set((state) => ({
-      jobs: state.jobs.map((job) => (job.status === 'error' ? { ...job, status: 'pending', progress: 0, startedAt: undefined, finishedAt: undefined, updatedAt, error: undefined } : job))
+      jobs: state.jobs.map((job) =>
+        job.status === 'error'
+          ? {
+              ...job,
+              status: 'pending',
+              progress: 0,
+              startedAt: undefined,
+              finishedAt: undefined,
+              updatedAt,
+              error: undefined,
+            }
+          : job,
+      ),
     }));
   },
   moveJobBefore: (jobId, targetJobId) => set((state) => ({ jobs: reorderMediaJobs(state.jobs, jobId, targetJobId) })),
   setRunnerActive: (runnerActive) => set({ runnerActive }),
   clearFinishedJobs: () => {
     set((state) => ({ jobs: state.jobs.filter((job) => job.status === 'pending' || job.status === 'running') }));
-  }
+  },
 }));
 
-function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, options: MediaJobOptions = {}): MediaJob[] {
+function buildJobsForAsset(
+  asset: MediaAsset,
+  proxySettings?: ProxySettings,
+  options: MediaJobOptions = {},
+): MediaJob[] {
   if (asset.missing) {
     return [];
   }
@@ -188,11 +267,22 @@ function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, opt
   return jobs;
 }
 
-function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings, options: MediaJobOptions = {}): MediaJob {
+function createJob(
+  asset: MediaAsset,
+  type: MediaJobType,
+  proxySettings?: ProxySettings,
+  options: MediaJobOptions = {},
+): MediaJob {
   const sourceStamp = `${asset.path}|${asset.size ?? 0}|${asset.mtimeMs ?? 0}`;
   const cfrStamp = type === 'proxy' && options.cfrFrameRate ? `|cfr=${options.cfrFrameRate}` : '';
-  const segmentStamp = type === 'proxy' && (options.sourceStart !== undefined || options.sourceDuration !== undefined) ? `|seg=${options.sourceStart ?? 0}:${options.sourceDuration ?? 0}` : '';
-  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}${cfrStamp}${segmentStamp}` : '';
+  const segmentStamp =
+    type === 'proxy' && (options.sourceStart !== undefined || options.sourceDuration !== undefined)
+      ? `|seg=${options.sourceStart ?? 0}:${options.sourceDuration ?? 0}`
+      : '';
+  const settingsStamp =
+    type === 'proxy' && proxySettings
+      ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}${cfrStamp}${segmentStamp}`
+      : '';
   return {
     id: `${type}-${asset.id}-${Math.random().toString(36).slice(2)}`,
     key: `${type}|${asset.id}|${sourceStamp}${settingsStamp}`,
@@ -207,7 +297,7 @@ function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxyS
     sourceStart: options.sourceStart,
     sourceDuration: options.sourceDuration,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -224,13 +314,15 @@ function upgradeExistingProxyJobs(jobs: MediaJob[], incoming: MediaJob[]): Media
       cfrFrameRate: matching.cfrFrameRate ?? job.cfrFrameRate,
       sourceStart: matching.sourceStart ?? job.sourceStart,
       sourceDuration: matching.sourceDuration ?? job.sourceDuration,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   });
 }
 
 function sortQueueJobs(jobs: MediaJob[]): MediaJob[] {
-  const activeOrPending = jobs.filter((job) => job.status === 'running' || job.status === 'pending').sort(compareMediaJobPriority);
+  const activeOrPending = jobs
+    .filter((job) => job.status === 'running' || job.status === 'pending')
+    .sort(compareMediaJobPriority);
   const rest = jobs.filter((job) => job.status !== 'running' && job.status !== 'pending');
   return [...activeOrPending, ...rest];
 }

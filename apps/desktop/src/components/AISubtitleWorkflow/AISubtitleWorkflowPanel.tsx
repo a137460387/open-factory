@@ -39,10 +39,7 @@ export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubt
   };
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--color-bg-primary)]"
-      data-testid="ai-subtitle-workflow-panel"
-    >
+    <div className="flex h-full flex-col bg-[var(--color-bg-primary)]" data-testid="ai-subtitle-workflow-panel">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
         <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
@@ -91,26 +88,13 @@ export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubt
           />
         )}
         {state.currentStage === 'polish' && (
-          <PolishStage
-            polishState={state.polish}
-            onUpdate={updatePolish}
-            onComplete={completePolish}
-          />
+          <PolishStage polishState={state.polish} onUpdate={updatePolish} onComplete={completePolish} />
         )}
         {state.currentStage === 'style' && (
-          <StyleStage
-            styleState={state.style}
-            onUpdate={updateStyle}
-            onComplete={completeStyle}
-            media={media}
-          />
+          <StyleStage styleState={state.style} onUpdate={updateStyle} onComplete={completeStyle} media={media} />
         )}
         {state.currentStage === 'export' && (
-          <ExportStage
-            exportState={state.export}
-            onUpdate={updateExport}
-            onComplete={completeExport}
-          />
+          <ExportStage exportState={state.export} onUpdate={updateExport} onComplete={completeExport} />
         )}
       </div>
 

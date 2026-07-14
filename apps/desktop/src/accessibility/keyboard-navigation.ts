@@ -6,7 +6,7 @@ const CORE_KEYBOARD_FOCUS_ORDER = [
   'media-filter-all',
   'media-view-grid',
   'timeline-root',
-  'inspector-empty-state'
+  'inspector-empty-state',
 ] as const;
 
 export function getCoreKeyboardFocusOrder(): readonly string[] {
@@ -21,7 +21,9 @@ export function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   return element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
 }
 
-export function isShortcutCheatsheetKey(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'altKey'>): boolean {
+export function isShortcutCheatsheetKey(
+  event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'altKey'>,
+): boolean {
   if (event.ctrlKey || event.metaKey || event.altKey) {
     return false;
   }
@@ -36,7 +38,12 @@ export function resolveSliderKeyboardValue(input: {
   step: number;
   shiftKey?: boolean;
 }): number | undefined {
-  const direction = input.key === 'ArrowLeft' || input.key === 'ArrowDown' ? -1 : input.key === 'ArrowRight' || input.key === 'ArrowUp' ? 1 : 0;
+  const direction =
+    input.key === 'ArrowLeft' || input.key === 'ArrowDown'
+      ? -1
+      : input.key === 'ArrowRight' || input.key === 'ArrowUp'
+        ? 1
+        : 0;
   if (direction === 0) {
     return undefined;
   }

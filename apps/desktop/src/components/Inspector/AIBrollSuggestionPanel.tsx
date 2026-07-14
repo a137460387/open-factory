@@ -7,7 +7,7 @@ import {
   parseBrollAiResponse,
   createBrollSuggestions,
   normalizeBrollSuggestions,
-  hasAvailableTextProvider
+  hasAvailableTextProvider,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -63,13 +63,13 @@ export function AIBrollSuggestionPanel({
           id: c.id,
           start: c.start,
           end: c.start + c.duration,
-          text: (c as Record<string, unknown>).text as string || '',
+          text: ((c as Record<string, unknown>).text as string) || '',
         }));
 
       const gaps = detectCoverageGaps(
         subtitleSegments.map((s) => ({ ...s, trackId })),
         allClips.filter((c) => c.trackId !== trackId).map((c) => ({ start: c.start, end: c.start + c.duration })),
-        3
+        3,
       );
 
       if (gaps.length === 0) {
@@ -86,9 +86,7 @@ export function AIBrollSuggestionPanel({
 
       const segmentTexts = subtitleSegments.map((s) => s.text).filter(Boolean);
       const matchedKeywords = segmentTexts.flatMap((text) =>
-        mediaTags.flatMap((mt) =>
-          matchKeywords(text, mt.tags).map((kw) => ({ keyword: kw, mediaId: mt.id }))
-        )
+        mediaTags.flatMap((mt) => matchKeywords(text, mt.tags).map((kw) => ({ keyword: kw, mediaId: mt.id }))),
       );
 
       const apiKey = await readAiApiKey(selectedProvider.id);
@@ -101,17 +99,20 @@ export function AIBrollSuggestionPanel({
         currentClipId: clip.id,
       });
 
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: 'B-roll推荐助手' },
-          { role: 'user', content: payload },
-        ],
-        temperature: 0.3,
-        timeoutSecs: 30,
-      }, apiKey);
+      const response = await callAiApi(
+        {
+          providerId: selectedProvider.id,
+          baseUrl: selectedProvider.baseUrl,
+          model: selectedProvider.defaultModel,
+          messages: [
+            { role: 'system', content: 'B-roll推荐助手' },
+            { role: 'user', content: payload },
+          ],
+          temperature: 0.3,
+          timeoutSecs: 30,
+        },
+        apiKey,
+      );
 
       if (abortRef.current) return;
 
@@ -143,7 +144,9 @@ export function AIBrollSuggestionPanel({
   }, [selectedProvider, available, clip, trackId, allClips, allMedia, onUpdateSuggestions]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   const handleInsert = (suggestion: BrollSuggestion) => {
@@ -151,7 +154,7 @@ export function AIBrollSuggestionPanel({
     const updated = suggestions.map((s) =>
       s.segmentId === suggestion.segmentId && s.mediaId === suggestion.mediaId
         ? { ...s, status: 'accepted' as const }
-        : s
+        : s,
     );
     setSuggestions(updated);
     showToast({ kind: 'success', title: t.inserted });
@@ -161,7 +164,7 @@ export function AIBrollSuggestionPanel({
     const updated = suggestions.map((s) =>
       s.segmentId === suggestion.segmentId && s.mediaId === suggestion.mediaId
         ? { ...s, status: 'rejected' as const }
-        : s
+        : s,
     );
     setSuggestions(updated);
     onUpdateSuggestions(updated);
@@ -178,7 +181,9 @@ export function AIBrollSuggestionPanel({
       </summary>
       <div className="space-y-2 p-1">
         {!available && (
-          <p className="text-xs text-orange-500" data-testid="ai-broll-no-provider">{t.noProvider}</p>
+          <p className="text-xs text-orange-500" data-testid="ai-broll-no-provider">
+            {t.noProvider}
+          </p>
         )}
 
         {!loading && !hasResults && (
@@ -191,9 +196,13 @@ export function AIBrollSuggestionPanel({
               data-testid="ai-broll-provider-select"
             >
               {providers.length === 0 && <option value="">{t.noProvider}</option>}
-              {providers.filter((p) => p.enabled).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
         )}
@@ -212,14 +221,20 @@ export function AIBrollSuggestionPanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-broll-loading">
+          <div
+            className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]"
+            data-testid="ai-broll-loading"
+          >
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="ai-broll-error">
+          <div
+            className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+            data-testid="ai-broll-error"
+          >
             {error}
           </div>
         )}
@@ -239,9 +254,13 @@ export function AIBrollSuggestionPanel({
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-ink">{media?.name ?? s.mediaId}</span>
-                    <span className="text-[var(--color-text-muted)]">{t.confidence}: {Math.round(s.confidence * 100)}%</span>
+                    <span className="text-[var(--color-text-muted)]">
+                      {t.confidence}: {Math.round(s.confidence * 100)}%
+                    </span>
                   </div>
-                  <div className="mt-0.5 text-[var(--color-text-muted)]">{t.reason}: {s.reason}</div>
+                  <div className="mt-0.5 text-[var(--color-text-muted)]">
+                    {t.reason}: {s.reason}
+                  </div>
                   {!isAccepted && !isRejected && (
                     <div className="mt-2 flex gap-2">
                       <button
@@ -273,4 +292,3 @@ export function AIBrollSuggestionPanel({
     </details>
   );
 }
-

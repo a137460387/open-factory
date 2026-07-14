@@ -3,10 +3,13 @@ import {
   TIMELINE_RENDER_CACHE_RETAIN_SECONDS,
   TimelineRenderFrameCache,
   type TimelineRenderFrameCacheSnapshot,
-  type TimelineRenderRange
+  type TimelineRenderRange,
 } from '@open-factory/editor-core';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
-import type { TimelineRenderCacheWorkerInput, TimelineRenderCacheWorkerOutput } from '../../workers/timeline-render-cache.worker';
+import type {
+  TimelineRenderCacheWorkerInput,
+  TimelineRenderCacheWorkerOutput,
+} from '../../workers/timeline-render-cache.worker';
 
 interface PutTimelineRenderFrameInput {
   key: string;
@@ -24,7 +27,7 @@ class TimelineRenderCacheController {
   private readonly pending = new Map<string, { resolve(bitmap?: ImageBitmap): void; reject(error: Error): void }>();
   private readonly localCache = new TimelineRenderFrameCache<ImageBitmap>({
     maxBytes: TIMELINE_RENDER_CACHE_DEFAULT_MEMORY_BYTES,
-    disposeBitmap: (bitmap) => bitmap.close()
+    disposeBitmap: (bitmap) => bitmap.close(),
   });
 
   async getFrame(key: string): Promise<ImageBitmap | undefined> {
@@ -50,8 +53,8 @@ class TimelineRenderCacheController {
           bitmap: input.bitmap,
           time: input.time,
           duration: input.duration,
-          bytes: input.bytes
-        })
+          bytes: input.bytes,
+        }),
       );
       this.updateSnapshot(this.localCache.retainAround(input.playheadTime, TIMELINE_RENDER_CACHE_RETAIN_SECONDS));
       return;
@@ -65,9 +68,9 @@ class TimelineRenderCacheController {
         time: input.time,
         duration: input.duration,
         bytes: input.bytes,
-        playheadTime: input.playheadTime
+        playheadTime: input.playheadTime,
       } satisfies TimelineRenderCacheWorkerInput,
-      [input.bitmap]
+      [input.bitmap],
     );
   }
 
@@ -113,8 +116,11 @@ class TimelineRenderCacheController {
       return this.worker;
     }
     try {
-      this.worker = new Worker(new URL('../../workers/timeline-render-cache.worker.ts', import.meta.url), { type: 'module' });
-      this.worker.onmessage = (event: MessageEvent<TimelineRenderCacheWorkerOutput>) => this.onWorkerMessage(event.data);
+      this.worker = new Worker(new URL('../../workers/timeline-render-cache.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+      this.worker.onmessage = (event: MessageEvent<TimelineRenderCacheWorkerOutput>) =>
+        this.onWorkerMessage(event.data);
       this.worker.onerror = (event) => {
         this.workerUnavailable = true;
         this.worker?.terminate();

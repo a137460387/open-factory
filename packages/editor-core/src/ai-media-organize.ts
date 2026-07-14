@@ -11,8 +11,12 @@ export interface AIMediaOrganizeResponse {
   collections: AIMediaOrganizeSuggestion[];
 }
 
-export function buildMediaTagPrompt(media: Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string } }>): string {
-  const analyzed = media.filter((m) => m.aiAnalysis && ((m.aiAnalysis.tags && m.aiAnalysis.tags.length > 0) || m.aiAnalysis.scene));
+export function buildMediaTagPrompt(
+  media: Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string } }>,
+): string {
+  const analyzed = media.filter(
+    (m) => m.aiAnalysis && ((m.aiAnalysis.tags && m.aiAnalysis.tags.length > 0) || m.aiAnalysis.scene),
+  );
   if (analyzed.length === 0) return '';
   const lines = analyzed.map((m) => {
     const parts = [`ID: ${m.id}`];
@@ -33,7 +37,9 @@ export function parseAIMediaOrganizeResponse(json: unknown): AIMediaOrganizeResp
     const entry = item as Record<string, unknown>;
     if (typeof entry.name !== 'string' || !entry.name.trim()) continue;
     if (!Array.isArray(entry.mediaIds)) continue;
-    const mediaIds = (entry.mediaIds as unknown[]).filter((id): id is string => typeof id === 'string' && id.trim().length > 0);
+    const mediaIds = (entry.mediaIds as unknown[]).filter(
+      (id): id is string => typeof id === 'string' && id.trim().length > 0,
+    );
     if (mediaIds.length === 0) continue;
     const reason = typeof entry.reason === 'string' ? entry.reason.trim() : '';
     collections.push({ name: entry.name.trim(), mediaIds, reason });
@@ -43,21 +49,23 @@ export function parseAIMediaOrganizeResponse(json: unknown): AIMediaOrganizeResp
 
 export function buildMediaCollectionsFromAI(
   suggestions: AIMediaOrganizeSuggestion[],
-  existingCollections: MediaCollection[] = []
+  existingCollections: MediaCollection[] = [],
 ): MediaCollection[] {
   const existingMediaIds = new Set(existingCollections.flatMap((c) => c.mediaIds));
-  return suggestions.map((s) => ({
-    id: createId('media-collection'),
-    name: s.name,
-    mediaIds: s.mediaIds.filter((id) => !existingMediaIds.has(id)),
-    source: 'ai' as const,
-    createdAt: new Date().toISOString()
-  })).filter((c) => c.mediaIds.length > 0);
+  return suggestions
+    .map((s) => ({
+      id: createId('media-collection'),
+      name: s.name,
+      mediaIds: s.mediaIds.filter((id) => !existingMediaIds.has(id)),
+      source: 'ai' as const,
+      createdAt: new Date().toISOString(),
+    }))
+    .filter((c) => c.mediaIds.length > 0);
 }
 
 export function mergeCollectionsWithExisting(
   aiCollections: MediaCollection[],
-  existingCollections: MediaCollection[]
+  existingCollections: MediaCollection[],
 ): MediaCollection[] {
   const result = [...existingCollections];
   for (const aiCol of aiCollections) {
@@ -74,8 +82,13 @@ export function mergeCollectionsWithExisting(
 
 export function filterAlreadyCategorizedMedia(
   media: Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string } }>,
-  existingCollections: MediaCollection[]
+  existingCollections: MediaCollection[],
 ): Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string } }> {
   const categorizedIds = new Set(existingCollections.flatMap((c) => c.mediaIds));
-  return media.filter((m) => !categorizedIds.has(m.id) && m.aiAnalysis && ((m.aiAnalysis.tags && m.aiAnalysis.tags.length > 0) || m.aiAnalysis.scene));
+  return media.filter(
+    (m) =>
+      !categorizedIds.has(m.id) &&
+      m.aiAnalysis &&
+      ((m.aiAnalysis.tags && m.aiAnalysis.tags.length > 0) || m.aiAnalysis.scene),
+  );
 }

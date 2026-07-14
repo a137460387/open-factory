@@ -38,13 +38,7 @@ export interface DistributionSchedule {
   error?: string;
 }
 
-export type DistributionScheduleStatus =
-  | 'pending'
-  | 'ready'
-  | 'publishing'
-  | 'published'
-  | 'failed'
-  | 'canceled';
+export type DistributionScheduleStatus = 'pending' | 'ready' | 'publishing' | 'published' | 'failed' | 'canceled';
 
 // ─── 发布配置 ────────────────────────────────────────────
 
@@ -186,9 +180,7 @@ export function isScheduleReady(schedule: DistributionSchedule): boolean {
 /**
  * 获取所有待发布的计划，按发布时间排序
  */
-export function getPendingSchedules(
-  schedules: DistributionSchedule[],
-): DistributionSchedule[] {
+export function getPendingSchedules(schedules: DistributionSchedule[]): DistributionSchedule[] {
   return schedules
     .filter((s) => s.status === 'pending')
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
@@ -197,9 +189,7 @@ export function getPendingSchedules(
 /**
  * 获取所有已到期的计划
  */
-export function getDueSchedules(
-  schedules: DistributionSchedule[],
-): DistributionSchedule[] {
+export function getDueSchedules(schedules: DistributionSchedule[]): DistributionSchedule[] {
   return schedules.filter(isScheduleReady);
 }
 
@@ -216,9 +206,7 @@ export interface DistributionScheduleStats {
 }
 
 /** 获取调度统计 */
-export function getScheduleStats(
-  schedules: DistributionSchedule[],
-): DistributionScheduleStats {
+export function getScheduleStats(schedules: DistributionSchedule[]): DistributionScheduleStats {
   return {
     total: schedules.length,
     pending: schedules.filter((s) => s.status === 'pending').length,
@@ -252,10 +240,7 @@ export function filterHistoryByPlatform(
 }
 
 /** 获取最近的历史记录 */
-export function getRecentHistory(
-  history: DistributionHistoryEntry[],
-  count: number = 10,
-): DistributionHistoryEntry[] {
+export function getRecentHistory(history: DistributionHistoryEntry[], count: number = 10): DistributionHistoryEntry[] {
   return history.slice(0, count);
 }
 
@@ -277,78 +262,78 @@ export interface OptimalTimeSuggestion {
  * - Instagram: 中午 11-1 点或晚上 7-9 点
  * - Bilibili: 晚上 6-10 点
  */
-export function suggestOptimalPublishTime(
-  platformId: string,
-): OptimalTimeSuggestion {
+export function suggestOptimalPublishTime(platformId: string): OptimalTimeSuggestion {
   const suggestions: Record<string, OptimalTimeSuggestion> = {
     'youtube-1080p': {
       platform: 'YouTube',
       suggestedHour: 15,
-      suggestedDayOfWeek: 6,  // 周六
+      suggestedDayOfWeek: 6, // 周六
       reason: '周末下午是 YouTube 观看高峰',
     },
     'youtube-shorts': {
       platform: 'YouTube Shorts',
       suggestedHour: 19,
-      suggestedDayOfWeek: 5,  // 周五
+      suggestedDayOfWeek: 5, // 周五
       reason: '工作日晚上短视频观看量高',
     },
-    'tiktok': {
+    tiktok: {
       platform: 'TikTok',
       suggestedHour: 20,
-      suggestedDayOfWeek: 3,  // 周三
+      suggestedDayOfWeek: 3, // 周三
       reason: '晚上 7-9 点是 TikTok 活跃高峰',
     },
     'instagram-reels': {
       platform: 'Instagram Reels',
       suggestedHour: 12,
-      suggestedDayOfWeek: 2,  // 周二
+      suggestedDayOfWeek: 2, // 周二
       reason: '午休时间 Instagram 浏览量高',
     },
     'instagram-feed': {
       platform: 'Instagram Feed',
       suggestedHour: 11,
-      suggestedDayOfWeek: 1,  // 周一
+      suggestedDayOfWeek: 1, // 周一
       reason: '上午是 Instagram Feed 互动高峰',
     },
     'twitter-x': {
       platform: 'Twitter/X',
       suggestedHour: 9,
-      suggestedDayOfWeek: 2,  // 周二
+      suggestedDayOfWeek: 2, // 周二
       reason: '工作日上午推文阅读量高',
     },
-    'bilibili': {
+    bilibili: {
       platform: 'Bilibili',
       suggestedHour: 19,
-      suggestedDayOfWeek: 5,  // 周五
+      suggestedDayOfWeek: 5, // 周五
       reason: '晚上 7-10 点是 B 站观看高峰',
     },
     'weixin-channels': {
       platform: '微信视频号',
       suggestedHour: 20,
-      suggestedDayOfWeek: 0,  // 周日
+      suggestedDayOfWeek: 0, // 周日
       reason: '周末晚上微信活跃度最高',
     },
-    'kuaishou': {
+    kuaishou: {
       platform: '快手',
       suggestedHour: 19,
-      suggestedDayOfWeek: 5,  // 周五
+      suggestedDayOfWeek: 5, // 周五
       reason: '晚上是快手用户活跃高峰',
     },
-    'pinterest': {
+    pinterest: {
       platform: 'Pinterest',
       suggestedHour: 14,
-      suggestedDayOfWeek: 6,  // 周六
+      suggestedDayOfWeek: 6, // 周六
       reason: '周末下午 Pinterest 浏览量高',
     },
   };
 
-  return suggestions[platformId] ?? {
-    platform: platformId,
-    suggestedHour: 12,
-    suggestedDayOfWeek: 1,
-    reason: '默认推荐中午发布',
-  };
+  return (
+    suggestions[platformId] ?? {
+      platform: platformId,
+      suggestedHour: 12,
+      suggestedDayOfWeek: 1,
+      reason: '默认推荐中午发布',
+    }
+  );
 }
 
 // ─── 工具函数 ────────────────────────────────────────────

@@ -61,10 +61,7 @@ export const TRIM_DELTA_THRESHOLD = 0.1;
 /**
  * 对比两个时间线快照，生成结构化diff。
  */
-export function diffVersionSnapshots(
-  from: TimelineSnapshot,
-  to: TimelineSnapshot
-): SnapshotDiffItem[] {
+export function diffVersionSnapshots(from: TimelineSnapshot, to: TimelineSnapshot): SnapshotDiffItem[] {
   const items: SnapshotDiffItem[] = [];
 
   // 轨道数量变化
@@ -73,7 +70,7 @@ export function diffVersionSnapshots(
   if (fromTrackCount !== toTrackCount) {
     items.push({
       type: 'track-count-changed',
-      detail: `轨道数量从 ${fromTrackCount} 变为 ${toTrackCount}`
+      detail: `轨道数量从 ${fromTrackCount} 变为 ${toTrackCount}`,
     });
   }
 
@@ -98,7 +95,7 @@ export function diffVersionSnapshots(
       items.push({
         type: 'added',
         clipId: id,
-        detail: `新增剪辑 ${id}（时长${clip.duration.toFixed(1)}秒）`
+        detail: `新增剪辑 ${id}（时长${clip.duration.toFixed(1)}秒）`,
       });
     }
   }
@@ -109,7 +106,7 @@ export function diffVersionSnapshots(
       items.push({
         type: 'removed',
         clipId: id,
-        detail: `删除剪辑 ${id}`
+        detail: `删除剪辑 ${id}`,
       });
     }
   }
@@ -129,14 +126,14 @@ export function diffVersionSnapshots(
         type: 'modified',
         clipId: id,
         detail: `剪辑 ${id} 修剪点变化（最大变化 ${maxDelta.toFixed(2)}秒）`,
-        delta: maxDelta
+        delta: maxDelta,
       });
     } else if (startDelta > TRIM_DELTA_THRESHOLD) {
       items.push({
         type: 'modified',
         clipId: id,
         detail: `剪辑 ${id} 位置变化（移动 ${startDelta.toFixed(2)}秒）`,
-        delta: startDelta
+        delta: startDelta,
       });
     }
   }
@@ -148,12 +145,14 @@ export function diffVersionSnapshots(
  * 将diff结果序列化为AI提示词用的JSON字符串。
  */
 export function serializeDiffForAi(items: SnapshotDiffItem[]): string {
-  return JSON.stringify(items.map((item) => ({
-    type: item.type,
-    clipId: item.clipId,
-    detail: item.detail,
-    delta: item.delta
-  })));
+  return JSON.stringify(
+    items.map((item) => ({
+      type: item.type,
+      clipId: item.clipId,
+      detail: item.detail,
+      delta: item.delta,
+    })),
+  );
 }
 
 /**
@@ -177,31 +176,29 @@ export function createVersionDiffSummary(
   fromId: string,
   toId: string,
   items: SnapshotDiffItem[],
-  aiResponse: VersionDiffAiResponse
+  aiResponse: VersionDiffAiResponse,
 ): VersionDiffSummary {
   return {
     fromSnapshotId: fromId,
     toSnapshotId: toId,
     diff: items,
     aiSummary: aiResponse.summary,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 }
 
 /**
  * 规范化VersionDiffSummary，处理旧项目兼容。
  */
-export function normalizeVersionDiffSummary(
-  input: unknown
-): VersionDiffSummary | undefined {
+export function normalizeVersionDiffSummary(input: unknown): VersionDiffSummary | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   if (typeof obj.fromSnapshotId !== 'string' || typeof obj.toSnapshotId !== 'string') return undefined;
   return {
     fromSnapshotId: obj.fromSnapshotId,
     toSnapshotId: obj.toSnapshotId,
-    diff: Array.isArray(obj.diff) ? obj.diff as SnapshotDiffItem[] : [],
+    diff: Array.isArray(obj.diff) ? (obj.diff as SnapshotDiffItem[]) : [],
     aiSummary: typeof obj.aiSummary === 'string' ? obj.aiSummary : '',
-    generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : ''
+    generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : '',
   };
 }

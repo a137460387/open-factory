@@ -6,7 +6,7 @@ import {
   type AutomationAction,
   type AutomationCondition,
   type AutomationRule,
-  type AutomationTrigger
+  type AutomationTrigger,
 } from '../settings/appSettings';
 
 export interface AutomationEventContext {
@@ -28,7 +28,9 @@ export interface AutomationExecution {
   action: AutomationAction['type'];
 }
 
-export function parseAutomationRulesJson(contents: string): { ok: true; rules: AutomationRule[] } | { ok: false; error: string } {
+export function parseAutomationRulesJson(
+  contents: string,
+): { ok: true; rules: AutomationRule[] } | { ok: false; error: string } {
   try {
     const parsed = JSON.parse(contents) as unknown;
     const rules = normalizeAutomationRules(Array.isArray(parsed) ? parsed : [parsed]);
@@ -53,7 +55,9 @@ function automationRuleMatchesMedia(rule: AutomationRule, asset: MediaAsset): bo
 export function evaluateAutomationCondition(asset: MediaAsset, condition: AutomationCondition): boolean {
   const fieldValue = getAutomationFieldValue(asset, condition.field);
   if (condition.op === 'contains') {
-    return String(fieldValue ?? '').toLowerCase().includes(String(condition.value).toLowerCase());
+    return String(fieldValue ?? '')
+      .toLowerCase()
+      .includes(String(condition.value).toLowerCase());
   }
   if (condition.op === '==' || condition.op === '!=') {
     const equal = String(fieldValue ?? '').toLowerCase() === String(condition.value).toLowerCase();
@@ -79,7 +83,7 @@ export function evaluateAutomationCondition(asset: MediaAsset, condition: Automa
 export async function runAutomationRulesForMedia(
   rules: AutomationRule[],
   event: AutomationEventContext,
-  dependencies: AutomationActionDependencies
+  dependencies: AutomationActionDependencies,
 ): Promise<AutomationExecution[]> {
   const executions: AutomationExecution[] = [];
   for (const rule of getTriggeredAutomationRules(rules, event.trigger)) {
@@ -93,7 +97,10 @@ export async function runAutomationRulesForMedia(
   return executions;
 }
 
-export async function runConfiguredAutomationForMedia(event: AutomationEventContext, dependencies: AutomationActionDependencies): Promise<AutomationExecution[]> {
+export async function runConfiguredAutomationForMedia(
+  event: AutomationEventContext,
+  dependencies: AutomationActionDependencies,
+): Promise<AutomationExecution[]> {
   const rules = await readAutomationRules();
   return runAutomationRulesForMedia(rules, event, dependencies);
 }
@@ -101,7 +108,7 @@ export async function runConfiguredAutomationForMedia(event: AutomationEventCont
 async function executeAutomationActions(
   rule: AutomationRule,
   asset: MediaAsset,
-  dependencies: AutomationActionDependencies
+  dependencies: AutomationActionDependencies,
 ): Promise<AutomationExecution[]> {
   const executions: AutomationExecution[] = [];
   for (const action of rule.actions) {
@@ -129,14 +136,20 @@ async function executeAutomationActions(
       continue;
     }
     if (action.type === 'send-notification') {
-      await dependencies.notify(zhCN.automationRules.notificationTitle, zhCN.automationRules.notificationBody(asset.name));
+      await dependencies.notify(
+        zhCN.automationRules.notificationTitle,
+        zhCN.automationRules.notificationBody(asset.name),
+      );
       executions.push({ ruleId: rule.id, assetId: asset.id, action: action.type });
     }
   }
   return executions;
 }
 
-function getAutomationFieldValue(asset: MediaAsset, field: AutomationCondition['field']): string | number | boolean | undefined {
+function getAutomationFieldValue(
+  asset: MediaAsset,
+  field: AutomationCondition['field'],
+): string | number | boolean | undefined {
   if (field === 'duration') {
     return asset.duration;
   }
@@ -162,7 +175,14 @@ function getAutomationFieldValue(asset: MediaAsset, field: AutomationCondition['
 }
 
 function normalizeAutomationLabelColor(value: string | undefined): MediaLabelColor | undefined {
-  if (value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple') {
+  if (
+    value === 'red' ||
+    value === 'orange' ||
+    value === 'yellow' ||
+    value === 'green' ||
+    value === 'blue' ||
+    value === 'purple'
+  ) {
     return value;
   }
   return value?.trim() ? 'blue' : undefined;

@@ -25,7 +25,11 @@ export interface SubtitleAlignmentReport {
 
 const EPSILON = 0.000001;
 
-export function calculateSubtitleShiftUpdates(clips: SubtitleTimingInput[], offsetSeconds: number, projectDuration: number): SubtitleTimingUpdate[] {
+export function calculateSubtitleShiftUpdates(
+  clips: SubtitleTimingInput[],
+  offsetSeconds: number,
+  projectDuration: number,
+): SubtitleTimingUpdate[] {
   const normalized = normalizeSubtitleTimingInputs(clips);
   if (normalized.length === 0) {
     return [];
@@ -39,7 +43,7 @@ export function calculateSubtitleShiftUpdates(clips: SubtitleTimingInput[], offs
   const offset = Math.min(maxOffset, Math.max(minOffset, requestedOffset));
   return normalized.map((clip) => ({
     clipId: clip.id,
-    ...clampSubtitleTiming(clip.start + offset, clip.duration, projectDuration)
+    ...clampSubtitleTiming(clip.start + offset, clip.duration, projectDuration),
   }));
 }
 
@@ -47,7 +51,7 @@ export function calculateSubtitleScaleUpdates(
   clips: SubtitleTimingInput[],
   scale: number,
   projectDuration: number,
-  minDuration = 1 / 30
+  minDuration = 1 / 30,
 ): SubtitleTimingUpdate[] {
   const normalized = normalizeSubtitleTimingInputs(clips);
   if (normalized.length === 0) {
@@ -61,7 +65,7 @@ export function calculateSubtitleScaleUpdates(
     const duration = Math.max(minDuration, end - start);
     return {
       clipId: clip.id,
-      ...clampSubtitleTiming(start, duration, projectDuration, minDuration)
+      ...clampSubtitleTiming(start, duration, projectDuration, minDuration),
     };
   });
 }
@@ -90,7 +94,7 @@ export function calculateSubtitlePeakAlignUpdate(
   clip: SubtitleTimingInput,
   peakTimes: number[],
   projectDuration: number,
-  maxDistance = 0.5
+  maxDistance = 0.5,
 ): SubtitleTimingUpdate | undefined {
   const peak = findNearestSubtitlePeak(clip.start, peakTimes, maxDistance);
   if (peak === undefined) {
@@ -98,7 +102,7 @@ export function calculateSubtitlePeakAlignUpdate(
   }
   return {
     clipId: clip.id,
-    ...clampSubtitleTiming(peak, clip.duration, projectDuration)
+    ...clampSubtitleTiming(peak, clip.duration, projectDuration),
   };
 }
 
@@ -106,7 +110,7 @@ export function calculateSubtitleAlignmentUpdates(
   clips: SubtitleTimingInput[],
   peakTimes: number[],
   projectDuration: number,
-  options: SubtitleAlignmentOptions = {}
+  options: SubtitleAlignmentOptions = {},
 ): SubtitleAlignmentReport {
   const normalizedClips = normalizeSubtitleTimingInputs(clips);
   const normalizedPeaks = normalizeSubtitlePeakTimes(peakTimes);
@@ -119,12 +123,12 @@ export function calculateSubtitleAlignmentUpdates(
   const alignment = alignSubtitleStartsToPeaks(normalizedClips, normalizedPeaks, limit);
   const updates = alignment.pairs.map((pair) => ({
     clipId: normalizedClips[pair.clipIndex].id,
-    ...clampSubtitleTiming(pair.peak, normalizedClips[pair.clipIndex].duration, projectDuration, minDuration)
+    ...clampSubtitleTiming(pair.peak, normalizedClips[pair.clipIndex].duration, projectDuration, minDuration),
   }));
   return {
     correctedCount: updates.length,
     averageOffsetMs: updates.length === 0 ? 0 : Math.round((alignment.totalDistance / updates.length) * 1000),
-    updates
+    updates,
   };
 }
 
@@ -133,7 +137,7 @@ export function calculateSubtitleBatchAdjustUpdates(
   startDelta: number,
   endDelta: number,
   projectDuration: number,
-  minDuration = 1 / 30
+  minDuration = 1 / 30,
 ): SubtitleTimingUpdate[] {
   const startOffset = Number.isFinite(startDelta) ? startDelta : 0;
   const endOffset = Number.isFinite(endDelta) ? endDelta : 0;
@@ -142,7 +146,7 @@ export function calculateSubtitleBatchAdjustUpdates(
     const end = clip.start + clip.duration + endOffset;
     return {
       clipId: clip.id,
-      ...clampSubtitleTiming(start, end - start, projectDuration, minDuration)
+      ...clampSubtitleTiming(start, end - start, projectDuration, minDuration),
     };
   });
 }
@@ -159,8 +163,14 @@ interface SubtitleAlignmentState {
   pairs: SubtitlePeakPair[];
 }
 
-function alignSubtitleStartsToPeaks(clips: SubtitleTimingInput[], peakTimes: number[], maxDistance: number): SubtitleAlignmentState {
-  const states: Array<Array<SubtitleAlignmentState | undefined>> = Array.from({ length: clips.length + 1 }, () => Array<SubtitleAlignmentState | undefined>(peakTimes.length + 1));
+function alignSubtitleStartsToPeaks(
+  clips: SubtitleTimingInput[],
+  peakTimes: number[],
+  maxDistance: number,
+): SubtitleAlignmentState {
+  const states: Array<Array<SubtitleAlignmentState | undefined>> = Array.from({ length: clips.length + 1 }, () =>
+    Array<SubtitleAlignmentState | undefined>(peakTimes.length + 1),
+  );
   states[0][0] = { correctedCount: 0, totalDistance: 0, pairs: [] };
 
   for (let clipIndex = 0; clipIndex <= clips.length; clipIndex += 1) {
@@ -181,7 +191,7 @@ function alignSubtitleStartsToPeaks(clips: SubtitleTimingInput[], peakTimes: num
           setBetterSubtitleAlignmentState(states, clipIndex + 1, peakIndex + 1, {
             correctedCount: current.correctedCount + 1,
             totalDistance: current.totalDistance + distance,
-            pairs: [...current.pairs, { clipIndex, peak: peakTimes[peakIndex], distance }]
+            pairs: [...current.pairs, { clipIndex, peak: peakTimes[peakIndex], distance }],
           });
         }
       }
@@ -191,7 +201,12 @@ function alignSubtitleStartsToPeaks(clips: SubtitleTimingInput[], peakTimes: num
   return states[clips.length][peakTimes.length] ?? { correctedCount: 0, totalDistance: 0, pairs: [] };
 }
 
-function setBetterSubtitleAlignmentState(states: Array<Array<SubtitleAlignmentState | undefined>>, clipIndex: number, peakIndex: number, candidate: SubtitleAlignmentState): void {
+function setBetterSubtitleAlignmentState(
+  states: Array<Array<SubtitleAlignmentState | undefined>>,
+  clipIndex: number,
+  peakIndex: number,
+  candidate: SubtitleAlignmentState,
+): void {
   const current = states[clipIndex][peakIndex];
   if (!current || isBetterSubtitleAlignmentState(candidate, current)) {
     states[clipIndex][peakIndex] = candidate;
@@ -228,17 +243,30 @@ function emptySubtitleAlignmentReport(): SubtitleAlignmentReport {
 
 function normalizeSubtitleTimingInputs(clips: SubtitleTimingInput[]): SubtitleTimingInput[] {
   return clips
-    .filter((clip) => clip.id && Number.isFinite(clip.start) && Number.isFinite(clip.duration) && clip.duration > EPSILON)
+    .filter(
+      (clip) => clip.id && Number.isFinite(clip.start) && Number.isFinite(clip.duration) && clip.duration > EPSILON,
+    )
     .map((clip) => ({ id: clip.id, start: Math.max(0, clip.start), duration: Math.max(EPSILON, clip.duration) }))
     .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
 }
 
-function clampSubtitleTiming(start: number, duration: number, projectDuration: number, minDuration = 1 / 30): { start: number; duration: number } {
+function clampSubtitleTiming(
+  start: number,
+  duration: number,
+  projectDuration: number,
+  minDuration = 1 / 30,
+): { start: number; duration: number } {
   const timelineDuration = Math.max(minDuration, Number.isFinite(projectDuration) ? projectDuration : minDuration);
-  const safeDuration = Math.min(timelineDuration, Math.max(minDuration, Number.isFinite(duration) ? duration : minDuration));
-  const safeStart = Math.min(Math.max(0, timelineDuration - safeDuration), Math.max(0, Number.isFinite(start) ? start : 0));
+  const safeDuration = Math.min(
+    timelineDuration,
+    Math.max(minDuration, Number.isFinite(duration) ? duration : minDuration),
+  );
+  const safeStart = Math.min(
+    Math.max(0, timelineDuration - safeDuration),
+    Math.max(0, Number.isFinite(start) ? start : 0),
+  );
   return {
     start: round(safeStart),
-    duration: round(safeDuration)
+    duration: round(safeDuration),
   };
 }

@@ -10,14 +10,14 @@ const entry: ExportTaskHistoryEntry = {
   status: 'success',
   priority: 'normal',
   createdAt: 'created',
-  finishedAt: 'finished'
+  finishedAt: 'finished',
 };
 
 const webdavSettings: ExportUploadSettings = {
   enabled: true,
   targetType: 'webdav',
   webdav: { url: 'https://dav.example.test/exports/out.mp4', username: 'editor' },
-  local: {}
+  local: {},
 };
 
 describe('export upload hook', () => {
@@ -34,15 +34,18 @@ describe('export upload hook', () => {
         throw new Error('PUT 503');
       }),
       readWebdavPassword: vi.fn(async () => 'secret'),
-      updateHistoryUpload
+      updateHistoryUpload,
     });
 
-    expect(updateHistoryUpload).toHaveBeenCalledWith('task-upload', expect.objectContaining({ status: 'running', targetType: 'webdav' }));
+    expect(updateHistoryUpload).toHaveBeenCalledWith(
+      'task-upload',
+      expect.objectContaining({ status: 'running', targetType: 'webdav' }),
+    );
     expect(result?.finished).toMatchObject({
       targetType: 'webdav',
       status: 'error',
       error: 'PUT 503',
-      attempts: 1
+      attempts: 1,
     });
   });
 
@@ -57,9 +60,9 @@ describe('export upload hook', () => {
           attempts: 1,
           destination: 'https://dav.example.test/exports/out.mp4',
           error: 'PUT 503',
-          updatedAt: 'previous'
-        }
-      }
+          updatedAt: 'previous',
+        },
+      },
     ];
     const renderExport = vi.fn();
     const putWebdavExportFile = vi.fn(async () => ({ status: 201, bytes: 4096 }));
@@ -71,7 +74,7 @@ describe('export upload hook', () => {
       updateHistoryUpload: async (entryId, patch) => {
         history = updateExportTaskHistoryUpload(history, entryId, patch, `retry-${patch.status}`);
         return history[0];
-      }
+      },
     });
 
     expect(renderExport).not.toHaveBeenCalled();
@@ -85,8 +88,8 @@ describe('export upload hook', () => {
         enabled: true,
         targetType: 'local',
         webdav: {},
-        local: { directory: 'D:/Uploaded' }
-      })
+        local: { directory: 'D:/Uploaded' },
+      }),
     ).toEqual({ targetType: 'local', destination: 'D:/Uploaded/out.mp4' });
   });
 });

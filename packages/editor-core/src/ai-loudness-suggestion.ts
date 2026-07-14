@@ -5,7 +5,7 @@ export const PLATFORM_TARGETS = {
   tiktok: -14,
   youtube: -14,
   broadcast: -23,
-  podcast: -16
+  podcast: -16,
 } as const;
 
 export type PlatformTarget = keyof typeof PLATFORM_TARGETS;
@@ -25,10 +25,7 @@ export interface LoudnessSuggestion {
  * 对低频做衰减（约-4dB@100Hz），对高频做适度提升（约+1dB@10kHz）。
  * 使用一阶IIR滤波器近似。
  */
-export function applyKWeighting(
-  samples: Float32Array,
-  sampleRate: number
-): Float32Array {
+export function applyKWeighting(samples: Float32Array, sampleRate: number): Float32Array {
   if (samples.length === 0 || sampleRate <= 0) return new Float32Array(0);
 
   const output = new Float32Array(samples.length);
@@ -71,10 +68,7 @@ export function calculateBlockRms(samples: Float32Array): number {
  * 使用简化K-weighting + 门限RMS测量。
  * 注：这是近似值，不声称完全符合EBU R128。
  */
-export function estimateLoudness(
-  samples: Float32Array,
-  sampleRate: number
-): number {
+export function estimateLoudness(samples: Float32Array, sampleRate: number): number {
   if (samples.length === 0 || sampleRate <= 0) return -70;
 
   // 应用K-weighting
@@ -124,20 +118,14 @@ export function estimateLoudness(
 /**
  * 计算建议增益（dB）。
  */
-export function calculateGainDelta(
-  measuredLUFS: number,
-  targetLUFS: number
-): number {
+export function calculateGainDelta(measuredLUFS: number, targetLUFS: number): number {
   return Math.round((targetLUFS - measuredLUFS) * 100) / 100;
 }
 
 /**
  * 判断是否应该生成增益建议（|增益| > threshold dB）。
  */
-export function shouldSuggestGain(
-  gainDb: number,
-  threshold = 1
-): boolean {
+export function shouldSuggestGain(gainDb: number, threshold = 1): boolean {
   return Math.abs(gainDb) > threshold;
 }
 
@@ -147,23 +135,21 @@ export function shouldSuggestGain(
 export function createLoudnessSuggestion(
   measuredLUFS: number,
   targetPlatform: PlatformTarget,
-  suggestedGainDb: number
+  suggestedGainDb: number,
 ): LoudnessSuggestion {
   return {
     measuredLUFS,
     targetPlatform,
     targetLUFS: PLATFORM_TARGETS[targetPlatform],
     suggestedGainDb,
-    appliedAt: null
+    appliedAt: null,
   };
 }
 
 /**
  * 规范化LoudnessSuggestion，处理旧项目兼容。
  */
-export function normalizeLoudnessSuggestion(
-  input: unknown
-): LoudnessSuggestion | undefined {
+export function normalizeLoudnessSuggestion(input: unknown): LoudnessSuggestion | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   if (typeof obj.measuredLUFS !== 'number' || !Number.isFinite(obj.measuredLUFS)) return undefined;
@@ -175,6 +161,6 @@ export function normalizeLoudnessSuggestion(
     targetPlatform: platform,
     targetLUFS: typeof obj.targetLUFS === 'number' ? obj.targetLUFS : PLATFORM_TARGETS[platform],
     suggestedGainDb: typeof obj.suggestedGainDb === 'number' ? obj.suggestedGainDb : 0,
-    appliedAt: typeof obj.appliedAt === 'number' ? obj.appliedAt : null
+    appliedAt: typeof obj.appliedAt === 'number' ? obj.appliedAt : null,
   };
 }

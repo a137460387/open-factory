@@ -4,7 +4,7 @@ import {
   eventToAccelerator,
   resolveTimelineShortcutAction,
   type TimelineShortcutAction,
-  type TimelineShortcutKey
+  type TimelineShortcutKey,
 } from './timeline-shortcuts';
 
 describe('timeline shortcut mapping', () => {
@@ -32,7 +32,7 @@ describe('timeline shortcut mapping', () => {
     ['Ctrl+Alt+Z', { key: 'z', ctrlKey: true, altKey: true }, 'switch-previous-branch'],
     ['Cmd+Shift+Z', { key: 'z', metaKey: true, shiftKey: true }, 'redo'],
     ['Ctrl+S', { key: 's', ctrlKey: true }, 'save'],
-    ['Shift+E', { key: 'E', shiftKey: true }, 'export-current-frame']
+    ['Shift+E', { key: 'E', shiftKey: true }, 'export-current-frame'],
   ])('maps %s', (_name, event, action) => {
     expect(resolveTimelineShortcutAction(event)).toBe(action);
   });

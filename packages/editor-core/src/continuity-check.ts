@@ -3,9 +3,9 @@ export type ContinuityWarningType = 'axis_jump' | 'jump_cut';
 
 /** 主体边界框 */
 export interface SubjectBox {
-  x: number;      // 0-1 归一化
-  y: number;      // 0-1 归一化
-  width: number;  // 0-1
+  x: number; // 0-1 归一化
+  y: number; // 0-1 归一化
+  width: number; // 0-1
   height: number; // 0-1
 }
 
@@ -54,12 +54,7 @@ export function subjectBoxCenterDistance(boxA: SubjectBox, boxB: SubjectBox): nu
 /**
  * 判定是否为跳切（构图几乎不变的硬切）
  */
-export function isJumpCut(
-  boxA: SubjectBox,
-  boxB: SubjectBox,
-  durationA: number,
-  durationB: number
-): boolean {
+export function isJumpCut(boxA: SubjectBox, boxB: SubjectBox, durationA: number, durationB: number): boolean {
   const centerDiff = subjectBoxCenterDistance(boxA, boxB);
   const durationDiff = Math.abs(durationA - durationB);
   return centerDiff < JUMP_CUT_CENTER_DIFF_THRESHOLD && durationDiff < JUMP_CUT_DURATION_DIFF_THRESHOLD;
@@ -69,7 +64,7 @@ export function isJumpCut(
  * 解析Vision AI返回的分析结果
  */
 export function parseAIAnalysisResponse(
-  response: unknown
+  response: unknown,
 ): { clipA: ClipFrameAnalysis; clipB: ClipFrameAnalysis } | null {
   if (!response || typeof response !== 'object') return null;
   const obj = response as Record<string, unknown>;
@@ -86,9 +81,10 @@ export function parseAIAnalysisResponse(
     if (typeof box.x !== 'number' || typeof box.y !== 'number') return null;
     if (typeof box.width !== 'number' || typeof box.height !== 'number') return null;
 
-    const dir = typeof data.facingDirection === 'string' && validDirs.includes(data.facingDirection as FacingDirection)
-      ? data.facingDirection as FacingDirection
-      : 'unknown';
+    const dir =
+      typeof data.facingDirection === 'string' && validDirs.includes(data.facingDirection as FacingDirection)
+        ? (data.facingDirection as FacingDirection)
+        : 'unknown';
 
     return {
       clipId,
@@ -108,10 +104,7 @@ export function parseAIAnalysisResponse(
 /**
  * 对一对相邻clip分析连续性
  */
-export function checkContinuity(
-  analysisA: ClipFrameAnalysis,
-  analysisB: ClipFrameAnalysis
-): ContinuityWarning[] {
+export function checkContinuity(analysisA: ClipFrameAnalysis, analysisB: ClipFrameAnalysis): ContinuityWarning[] {
   const warnings: ContinuityWarning[] = [];
   const sameScene = analysisA.sceneTag && analysisA.sceneTag === analysisB.sceneTag;
 
@@ -132,7 +125,7 @@ export function checkContinuity(
       clipAId: analysisA.clipId,
       clipBId: analysisB.clipId,
       type: 'jump_cut',
-      confidence: 0.80,
+      confidence: 0.8,
       reason: '构图几乎不变的硬切',
     });
   }
@@ -143,9 +136,7 @@ export function checkContinuity(
 /**
  * 批量检测时间线相邻clip对
  */
-export function checkTimelineContinuity(
-  analyses: ClipFrameAnalysis[]
-): ContinuityWarning[] {
+export function checkTimelineContinuity(analyses: ClipFrameAnalysis[]): ContinuityWarning[] {
   const warnings: ContinuityWarning[] = [];
   for (let i = 0; i < analyses.length - 1; i++) {
     warnings.push(...checkContinuity(analyses[i], analyses[i + 1]));

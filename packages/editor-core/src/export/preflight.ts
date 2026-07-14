@@ -4,7 +4,14 @@ import { isFrameRateMismatch } from '../vfr';
 import type { ExportPlatformPreset } from './export-types';
 
 export type PreflightSeverity = 'blocking' | 'warning';
-export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration' | 'vfr-media' | 'frame-rate-mismatch';
+export type PreflightIssueType =
+  | 'missing-media'
+  | 'missing-font'
+  | 'whisper-path'
+  | 'ffmpeg'
+  | 'platform-duration'
+  | 'vfr-media'
+  | 'frame-rate-mismatch';
 
 export interface PreflightResult {
   id: string;
@@ -28,10 +35,20 @@ export interface ExportPreflightOptions {
   platformPreset?: ExportPlatformPreset;
 }
 
-const GENERIC_FONT_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace']);
+const GENERIC_FONT_FAMILIES = new Set([
+  'serif',
+  'sans-serif',
+  'monospace',
+  'cursive',
+  'fantasy',
+  'system-ui',
+  'ui-serif',
+  'ui-sans-serif',
+  'ui-monospace',
+]);
 const PLATFORM_DURATION_LIMIT_SECONDS: Partial<Record<ExportPlatformPreset, number>> = {
   'instagram-reels': 90,
-  'twitter-x': 140
+  'twitter-x': 140,
 };
 
 export function runExportPreflight(project: Project, options: ExportPreflightOptions = {}): PreflightResult[] {
@@ -46,7 +63,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       message: 'Missing media must be relinked before export.',
       items: missingMedia.items,
       clipIds: missingMedia.clipIds,
-      mediaIds: missingMedia.mediaIds
+      mediaIds: missingMedia.mediaIds,
     });
   }
 
@@ -58,7 +75,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       severity: 'warning',
       message: 'Some text clips use fonts that were not found on this system.',
       items: missingFonts.items,
-      clipIds: missingFonts.clipIds
+      clipIds: missingFonts.clipIds,
     });
   }
 
@@ -69,7 +86,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       severity: 'warning',
       message: options.whisperMessage ?? 'Whisper is not configured.',
       items: [options.whisperMessage ?? 'Whisper is not configured.'],
-      clipIds: clips.filter((clip) => clip.type === 'subtitle').map((clip) => clip.id)
+      clipIds: clips.filter((clip) => clip.type === 'subtitle').map((clip) => clip.id),
     });
   }
 
@@ -79,7 +96,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       type: 'ffmpeg',
       severity: 'blocking',
       message: 'FFmpeg was not found on PATH.',
-      items: ['ffmpeg']
+      items: ['ffmpeg'],
     });
   }
 
@@ -97,7 +114,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       message: 'Timeline contains variable frame rate media.',
       items: vfrWarning.items,
       clipIds: vfrWarning.clipIds,
-      mediaIds: vfrWarning.mediaIds
+      mediaIds: vfrWarning.mediaIds,
     });
   }
 
@@ -111,7 +128,7 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       items: frameRateWarning.items,
       clipIds: frameRateWarning.clipIds,
       mediaIds: frameRateWarning.mediaIds,
-      projectFrameRate: project.settings.fps
+      projectFrameRate: project.settings.fps,
     });
   }
 
@@ -122,7 +139,10 @@ export function getPlatformDurationLimitSeconds(platformPreset: ExportPlatformPr
   return platformPreset ? PLATFORM_DURATION_LIMIT_SECONDS[platformPreset] : undefined;
 }
 
-function buildPlatformDurationWarning(project: Project, platformPreset: ExportPlatformPreset | undefined): PreflightResult | undefined {
+function buildPlatformDurationWarning(
+  project: Project,
+  platformPreset: ExportPlatformPreset | undefined,
+): PreflightResult | undefined {
   const limitSeconds = getPlatformDurationLimitSeconds(platformPreset);
   if (!platformPreset || limitSeconds === undefined) {
     return undefined;
@@ -139,7 +159,7 @@ function buildPlatformDurationWarning(project: Project, platformPreset: ExportPl
     items: [],
     platformPreset,
     durationSeconds,
-    limitSeconds
+    limitSeconds,
   };
 }
 
@@ -165,7 +185,10 @@ function collectReachableTimelineClips(project: Project): Clip[] {
   return clips;
 }
 
-function collectMissingMedia(project: Project, clips: Clip[]): { items: string[]; clipIds: string[]; mediaIds: string[] } {
+function collectMissingMedia(
+  project: Project,
+  clips: Clip[],
+): { items: string[]; clipIds: string[]; mediaIds: string[] } {
   const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
   const itemByMediaId = new Map<string, string>();
   const clipIds = new Set<string>();
@@ -184,7 +207,7 @@ function collectMissingMedia(project: Project, clips: Clip[]): { items: string[]
   return {
     items: Array.from(itemByMediaId.values()).sort((left, right) => left.localeCompare(right)),
     clipIds: Array.from(clipIds),
-    mediaIds: Array.from(itemByMediaId.keys())
+    mediaIds: Array.from(itemByMediaId.keys()),
   };
 }
 
@@ -206,11 +229,14 @@ function collectVfrMedia(project: Project, clips: Clip[]): { items: string[]; cl
   return {
     items: Array.from(itemByMediaId.values()).sort((left, right) => left.localeCompare(right)),
     clipIds: Array.from(clipIds),
-    mediaIds: Array.from(itemByMediaId.keys())
+    mediaIds: Array.from(itemByMediaId.keys()),
   };
 }
 
-function collectFrameRateMismatchedMedia(project: Project, clips: Clip[]): { items: string[]; clipIds: string[]; mediaIds: string[] } {
+function collectFrameRateMismatchedMedia(
+  project: Project,
+  clips: Clip[],
+): { items: string[]; clipIds: string[]; mediaIds: string[] } {
   const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
   const itemByMediaId = new Map<string, string>();
   const clipIds = new Set<string>();
@@ -228,24 +254,30 @@ function collectFrameRateMismatchedMedia(project: Project, clips: Clip[]): { ite
   return {
     items: Array.from(itemByMediaId.values()).sort((left, right) => left.localeCompare(right)),
     clipIds: Array.from(clipIds),
-    mediaIds: Array.from(itemByMediaId.keys())
+    mediaIds: Array.from(itemByMediaId.keys()),
   };
 }
 
 function collectMissingFonts(
   clips: Clip[],
-  isFontFamilyAvailable: ExportPreflightOptions['isFontFamilyAvailable']
+  isFontFamilyAvailable: ExportPreflightOptions['isFontFamilyAvailable'],
 ): { items: string[]; clipIds: string[] } {
   if (!isFontFamilyAvailable) {
     return { items: [], clipIds: [] };
   }
   const missing = new Map<string, Set<string>>();
   for (const clip of clips) {
-    if ((clip.type !== 'text' && clip.type !== 'subtitle' && clip.type !== 'credits') || !clip.style.fontFamily.trim()) {
+    if (
+      (clip.type !== 'text' && clip.type !== 'subtitle' && clip.type !== 'credits') ||
+      !clip.style.fontFamily.trim()
+    ) {
       continue;
     }
     const families = parseFontFamilyList(clip.style.fontFamily);
-    if (families.length === 0 || families.some((family) => isGenericFontFamily(family) || isFontFamilyAvailable(family))) {
+    if (
+      families.length === 0 ||
+      families.some((family) => isGenericFontFamily(family) || isFontFamilyAvailable(family))
+    ) {
       continue;
     }
     const label = families[0] ?? clip.style.fontFamily;
@@ -255,7 +287,7 @@ function collectMissingFonts(
   }
   return {
     items: Array.from(missing.keys()).sort((left, right) => left.localeCompare(right)),
-    clipIds: Array.from(new Set(Array.from(missing.values()).flatMap((ids) => Array.from(ids))))
+    clipIds: Array.from(new Set(Array.from(missing.values()).flatMap((ids) => Array.from(ids)))),
   };
 }
 

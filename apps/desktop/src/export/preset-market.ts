@@ -7,7 +7,7 @@ import {
   type ExportPresetImportResult,
   type ExportPresetPackageFile,
   type ExportPresetPackagePreset,
-  type ExportPresetStorage
+  type ExportPresetStorage,
 } from './export-presets';
 
 type PresetMarketFilterValue = 'all' | string;
@@ -58,13 +58,14 @@ const MARKET_PRESETS_FILE = 'presets.json';
 const MARKET_RATINGS_FILE = 'ratings.json';
 const MARKET_INSTALLED_DIR = 'installed';
 
-const EXPORT_PRESET_MARKET_URL = 'https://gist.githubusercontent.com/open-factory/export-preset-market/raw/presets.json';
+const EXPORT_PRESET_MARKET_URL =
+  'https://gist.githubusercontent.com/open-factory/export-preset-market/raw/presets.json';
 
 const bridgePresetMarketStorage: PresetMarketStorage = {
   getAppDataDir,
   fsExists,
   readFile,
-  writeFile
+  writeFile,
 };
 
 export function getPresetMarketCachePath(appDataDir: string): string {
@@ -87,10 +88,17 @@ export function parsePresetMarketJson(contents: string): PresetMarketCard[] {
   return parsed.presets.flatMap((card) => normalizePresetMarketCard(card));
 }
 
-export function filterPresetMarketCards(cards: PresetMarketCard[], filters: PresetMarketFilters = {}): PresetMarketCard[] {
+export function filterPresetMarketCards(
+  cards: PresetMarketCard[],
+  filters: PresetMarketFilters = {},
+): PresetMarketCard[] {
   return cards.filter((card) => {
     const tags = card.tags.map((tag) => tag.toLowerCase());
-    return matchesFilter(tags, filters.platform) && matchesFilter(tags, filters.quality) && matchesFilter(tags, filters.format);
+    return (
+      matchesFilter(tags, filters.platform) &&
+      matchesFilter(tags, filters.quality) &&
+      matchesFilter(tags, filters.format)
+    );
   });
 }
 
@@ -111,18 +119,20 @@ export async function loadPresetMarket(options: PresetMarketLoadOptions = {}): P
       return {
         cards: parsePresetMarketJson(await storage.readFile(cachePath)),
         source: 'cache',
-        warning: error instanceof Error ? error.message : zhCN.presetMarket.loadFailedMessage
+        warning: error instanceof Error ? error.message : zhCN.presetMarket.loadFailedMessage,
       };
     }
     return {
       cards: [],
       source: 'empty',
-      warning: error instanceof Error ? error.message : zhCN.presetMarket.loadFailedMessage
+      warning: error instanceof Error ? error.message : zhCN.presetMarket.loadFailedMessage,
     };
   }
 }
 
-export async function readPresetMarketRatings(storage: PresetMarketStorage = bridgePresetMarketStorage): Promise<Record<string, number>> {
+export async function readPresetMarketRatings(
+  storage: PresetMarketStorage = bridgePresetMarketStorage,
+): Promise<Record<string, number>> {
   const path = getPresetMarketRatingsPath(await storage.getAppDataDir());
   if (!(await storage.fsExists(path))) {
     return {};
@@ -133,14 +143,20 @@ export async function readPresetMarketRatings(storage: PresetMarketStorage = bri
       return {};
     }
     return Object.fromEntries(
-      Object.entries(parsed.ratings).flatMap(([id, rating]) => (typeof rating === 'number' && Number.isFinite(rating) ? [[id, clampRating(rating)]] : []))
+      Object.entries(parsed.ratings).flatMap(([id, rating]) =>
+        typeof rating === 'number' && Number.isFinite(rating) ? [[id, clampRating(rating)]] : [],
+      ),
     );
   } catch {
     return {};
   }
 }
 
-export async function writePresetMarketRating(cardId: string, rating: number, storage: PresetMarketStorage = bridgePresetMarketStorage): Promise<Record<string, number>> {
+export async function writePresetMarketRating(
+  cardId: string,
+  rating: number,
+  storage: PresetMarketStorage = bridgePresetMarketStorage,
+): Promise<Record<string, number>> {
   const appDataDir = await storage.getAppDataDir();
   const path = getPresetMarketRatingsPath(appDataDir);
   const ratings = await readPresetMarketRatings(storage);
@@ -155,7 +171,10 @@ export function presetMarketCardHasCustomConflict(card: PresetMarketCard, existi
   return existingPresets.some((preset) => !preset.builtin && preset.name.trim().toLowerCase() === name);
 }
 
-function buildPresetMarketPackage(card: PresetMarketCard, exportedAt: string = new Date(Date.now()).toISOString()): ExportPresetPackageFile {
+function buildPresetMarketPackage(
+  card: PresetMarketCard,
+  exportedAt: string = new Date(Date.now()).toISOString(),
+): ExportPresetPackageFile {
   return {
     version: 1,
     creator: card.author,
@@ -165,9 +184,9 @@ function buildPresetMarketPackage(card: PresetMarketCard, exportedAt: string = n
         ...card.preset,
         id: card.preset.id?.trim() || `market-${card.id}`,
         name: getPresetMarketInstallName(card),
-        description: card.preset.description?.trim() || card.description
-      }
-    ]
+        description: card.preset.description?.trim() || card.description,
+      },
+    ],
   };
 }
 
@@ -178,7 +197,7 @@ function serializePresetMarketPackage(card: PresetMarketCard): string {
 export async function installPresetMarketCard(
   card: PresetMarketCard,
   conflictMode: ExportPresetImportConflictMode,
-  storage: PresetMarketStorage = bridgePresetMarketStorage
+  storage: PresetMarketStorage = bridgePresetMarketStorage,
 ): Promise<ExportPresetImportResult> {
   const appDataDir = await storage.getAppDataDir();
   const contents = serializePresetMarketPackage(card);
@@ -196,7 +215,11 @@ function normalizePresetMarketCard(input: unknown): PresetMarketCard[] {
   if (!id || !name) {
     return [];
   }
-  const preset = normalizeMarketPreset(raw.preset, name, normalizeString(raw.description) || zhCN.exportPresets.customDescription);
+  const preset = normalizeMarketPreset(
+    raw.preset,
+    name,
+    normalizeString(raw.description) || zhCN.exportPresets.customDescription,
+  );
   if (!preset) {
     return [];
   }
@@ -209,23 +232,30 @@ function normalizePresetMarketCard(input: unknown): PresetMarketCard[] {
       tags: normalizeTags(raw.tags),
       downloads: Math.max(0, Math.round(finiteOrDefault(raw.downloads, 0))),
       rating: clampRating(finiteOrDefault(raw.rating, 0)),
-      preset
-    }
+      preset,
+    },
   ];
 }
 
-function normalizeMarketPreset(input: unknown, fallbackName: string, fallbackDescription: string): ExportPresetPackagePreset | undefined {
+function normalizeMarketPreset(
+  input: unknown,
+  fallbackName: string,
+  fallbackDescription: string,
+): ExportPresetPackagePreset | undefined {
   if (!input || typeof input !== 'object') {
     return undefined;
   }
   const raw = input as Record<string, unknown>;
-  const settings = raw.settings && typeof raw.settings === 'object' ? (raw.settings as ExportPresetPackagePreset['settings']) : undefined;
+  const settings =
+    raw.settings && typeof raw.settings === 'object'
+      ? (raw.settings as ExportPresetPackagePreset['settings'])
+      : undefined;
   return {
     id: normalizeString(raw.id) || undefined,
     name: normalizeString(raw.name) || fallbackName,
     description: normalizeString(raw.description) || fallbackDescription,
     settings,
-    updatedAt: normalizeString(raw.updatedAt) || undefined
+    updatedAt: normalizeString(raw.updatedAt) || undefined,
   };
 }
 
@@ -260,5 +290,10 @@ function finiteOrDefault(value: unknown, fallback: number): number {
 }
 
 function sanitizeFileSegment(value: string): string {
-  return value.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'preset';
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'preset'
+  );
 }

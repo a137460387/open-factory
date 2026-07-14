@@ -10,7 +10,7 @@ import {
   parseVideoSummaryResponse,
   generateSummaryHtml,
   generateSummaryFilename,
-  type VideoSummaryResult
+  type VideoSummaryResult,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -26,7 +26,7 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
   const providers = useAISettingsStore((s) => s.providers);
   const serviceMapping = useAISettingsStore((s) => s.serviceMapping);
   const visionProviders = providers.filter(
-    (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel)
+    (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel),
   );
   const defaultProviderId = serviceMapping['video-summary'] ?? serviceMapping['vision-analysis'] ?? '';
   const defaultProvider = visionProviders.find((p) => p.id === defaultProviderId) ?? visionProviders[0];
@@ -39,7 +39,9 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
 
   const selectedProvider = visionProviders.find((p) => p.id === selectedProviderId) ?? defaultProvider;
 
-  const duration = project.timeline.tracks.flatMap((tr) => tr.clips).reduce((max, c) => Math.max(max, c.start + c.duration), 0);
+  const duration = project.timeline.tracks
+    .flatMap((tr) => tr.clips)
+    .reduce((max, c) => Math.max(max, c.start + c.duration), 0);
   const frameTimes = buildSummaryFrameTimestamps(duration, SUMMARY_FRAME_COUNT);
 
   const startGeneration = useCallback(async () => {
@@ -50,10 +52,16 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const { frames } = await extractAiFrames({ sourcePath: project.media[0]?.path ?? '', times: frameTimes });
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       setPhase('analyzing');
       setProgress({ done: SUMMARY_FRAME_COUNT, total: SUMMARY_FRAME_COUNT + 1 });
@@ -61,18 +69,15 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
       const dataPack = buildSummaryDataPack(project);
       const imageContent = frames.map((b64) => ({
         type: 'image_url' as const,
-        image_url: { url: `data:image/jpeg;base64,${b64}` }
+        image_url: { url: `data:image/jpeg;base64,${b64}` },
       }));
 
       const messages = [
         { role: 'system' as const, content: buildSummarySystemPrompt() },
         {
           role: 'user' as const,
-          content: [
-            { type: 'text' as const, text: buildSummaryUserPrompt(dataPack) },
-            ...imageContent
-          ]
-        }
+          content: [{ type: 'text' as const, text: buildSummaryUserPrompt(dataPack) }, ...imageContent],
+        },
       ];
 
       const response = await callAiApi(
@@ -84,12 +89,15 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 4096,
           temperature: 0.3,
-          timeoutSecs: 120
+          timeoutSecs: 120,
         },
-        apiKey
+        apiKey,
       );
 
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = parseVideoSummaryResponse(JSON.parse(response.content));
       setResult(parsed);
@@ -98,7 +106,7 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
       showToast({
         kind: 'error',
         title: t.errorTitle,
-        message: error instanceof Error ? error.message : t.errorMessage
+        message: error instanceof Error ? error.message : t.errorMessage,
       });
       setPhase('idle');
     }
@@ -122,7 +130,7 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
       showToast({
         kind: 'error',
         title: t.saveFailed,
-        message: error instanceof Error ? error.message : t.saveFailedMessage
+        message: error instanceof Error ? error.message : t.saveFailedMessage,
       });
     }
   }, [result, project.name]);
@@ -155,13 +163,13 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
               >
                 {visionProviders.length === 0 && <option value="">{t.noProvider}</option>}
                 {visionProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-500">
-              抽帧: {frameTimes.length} 帧
-            </div>
+            <div className="text-xs text-slate-500">抽帧: {frameTimes.length} 帧</div>
             <button
               className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
@@ -233,7 +241,10 @@ export function AIVideoSummaryPanel({ project, onClose }: { project: Project; on
             {result.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {result.tags.map((tag, i) => (
-                  <span key={i} className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                  <span
+                    key={i}
+                    className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                  >
                     {tag}
                   </span>
                 ))}

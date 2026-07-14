@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   buildSpeakerDiarizationTracks,
   detectSpeakerSegments,
@@ -9,7 +9,7 @@ import {
   type MediaAsset,
   type SpeakerDiarizationFrame,
   type SpeakerDiarizationSegment,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { getAudioPreviewMediaPath } from '../media/proxy';
@@ -25,13 +25,19 @@ export interface SpeakerDiarizationAnalysis {
 }
 
 export function canDiarizeSpeakersForClip(clip: Clip | undefined, asset: MediaAsset | undefined): boolean {
-  return Boolean(clip && asset && (clip.type === 'audio' || clip.type === 'video') && (asset.type === 'audio' || asset.hasAudio) && !asset.missing);
+  return Boolean(
+    clip &&
+    asset &&
+    (clip.type === 'audio' || clip.type === 'video') &&
+    (asset.type === 'audio' || asset.hasAudio) &&
+    !asset.missing,
+  );
 }
 
 export async function analyzeSpeakerDiarizationForClip(
   clip: Extract<Clip, { type: 'audio' | 'video' }>,
   asset: MediaAsset,
-  dialogueIntervals: Array<Pick<DialogueInterval, 'start' | 'end'>> = []
+  dialogueIntervals: Array<Pick<DialogueInterval, 'start' | 'end'>> = [],
 ): Promise<SpeakerDiarizationAnalysis> {
   if (!canDiarizeSpeakersForClip(clip, asset)) {
     throw new Error(zhCN.speakerDiarization.unavailableMessage);
@@ -51,7 +57,10 @@ export async function analyzeSpeakerDiarizationForClip(
   }
 }
 
-function buildSpeakerFramesFromAudioBuffer(decoded: AudioBuffer, clip: Extract<Clip, { type: 'audio' | 'video' }>): SpeakerDiarizationFrame[] {
+function buildSpeakerFramesFromAudioBuffer(
+  decoded: AudioBuffer,
+  clip: Extract<Clip, { type: 'audio' | 'video' }>,
+): SpeakerDiarizationFrame[] {
   const speed = Math.max(0.001, getClipSpeed(clip));
   const sourceStart = Math.max(0, clip.trimStart);
   const sourceEnd = Math.min(decoded.duration, sourceStart + clip.duration * speed);
@@ -68,7 +77,7 @@ function buildSpeakerFramesFromAudioBuffer(decoded: AudioBuffer, clip: Extract<C
       duration: round((frameEnd - sourceTime) / speed),
       loudness: round(calculateFrameRms(mixed, startSample, endSample)),
       pitchHz,
-      spectralCentroidHz: pitchHz > 0 ? round(pitchHz * 8) : 0
+      spectralCentroidHz: pitchHz > 0 ? round(pitchHz * 8) : 0,
     });
   }
   return frames;
@@ -77,13 +86,13 @@ function buildSpeakerFramesFromAudioBuffer(decoded: AudioBuffer, clip: Extract<C
 function buildAnalysisFromFrames(
   clip: Extract<Clip, { type: 'audio' | 'video' }>,
   frames: SpeakerDiarizationFrame[],
-  dialogueIntervals: Array<Pick<DialogueInterval, 'start' | 'end'>>
+  dialogueIntervals: Array<Pick<DialogueInterval, 'start' | 'end'>>,
 ): SpeakerDiarizationAnalysis {
   const segments = detectSpeakerSegments(frames, { dialogueIntervals });
   const tracks = buildSpeakerDiarizationTracks(clip, segments, {
     baseId: `speaker-${clip.id}`,
     speakerNamePrefix: zhCN.speakerDiarization.speakerNamePrefix,
-    clipNamePrefix: clip.name
+    clipNamePrefix: clip.name,
   });
   return { segments, tracks };
 }
@@ -152,7 +161,7 @@ async function decodeAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
   try {
     return await context.decodeAudioData(arrayBuffer.slice(0));
   } finally {
-    await context.close().catch(logError("speakerDiarization"));
+    await context.close().catch(logError('speakerDiarization'));
   }
 }
 
@@ -161,7 +170,7 @@ function buildE2eSpeakerFrames(duration: number): SpeakerDiarizationFrame[] {
   const ranges = [
     { start: 0, end: Math.min(total, 0.75), pitchHz: 120 },
     { start: Math.min(total, 0.95), end: Math.min(total, 1.75), pitchHz: 235 },
-    { start: Math.min(total, 1.95), end: Math.min(total, 2.7), pitchHz: 124 }
+    { start: Math.min(total, 1.95), end: Math.min(total, 2.7), pitchHz: 124 },
   ];
   const frames: SpeakerDiarizationFrame[] = [];
   for (let time = 0; time < total; time += FRAME_DURATION) {
@@ -171,7 +180,7 @@ function buildE2eSpeakerFrames(duration: number): SpeakerDiarizationFrame[] {
       duration: FRAME_DURATION,
       loudness: range ? 0.42 : 0.03,
       pitchHz: range?.pitchHz ?? 0,
-      spectralCentroidHz: range ? range.pitchHz * 8 : 0
+      spectralCentroidHz: range ? range.pitchHz * 8 : 0,
     });
   }
   return frames;

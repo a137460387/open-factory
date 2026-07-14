@@ -23,7 +23,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     showToast({
       kind: 'error',
       title: zhCN.errors.panelCrashed(this.props.name),
-      message: error instanceof Error ? error.message : zhCN.errors.panelUnexpected
+      message: error instanceof Error ? error.message : zhCN.errors.panelUnexpected,
     });
   }
 

@@ -22,30 +22,22 @@ import { bridgeConfirm } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { zhCN } from '../i18n/strings';
 import { dirname } from '@open-factory/editor-core';
-import {
-  readBackupSettings,
-} from '../settings/appSettings';
-import {
-  createProjectArchivePlan,
-  writeProjectArchive,
-} from '../lib/projectArchive';
+import { readBackupSettings } from '../settings/appSettings';
+import { createProjectArchivePlan, writeProjectArchive } from '../lib/projectArchive';
 import { collectProjectArchivePreflight } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
-import {
-  applyTimelineVersionDiffSelection,
-  replaceProjectActiveTimeline,
-} from '@open-factory/editor-core';
+import { applyTimelineVersionDiffSelection, replaceProjectActiveTimeline } from '@open-factory/editor-core';
 import { commandManager, projectAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { useEditorFeatureStore } from '../store/editorFeatureStore';
 import { useEditorUIStore } from '../store/editorUIStore';
+import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import {
-  copyFile as bridgeCopyFile,
-  openDirectoryDialog,
-  writeFile as bridgeWriteFile,
-} from '../lib/tauri-bridge';
-import { normalizeTutorialProgressSettings, skipTutorialProgress, DEFAULT_TUTORIAL_SIGNALS } from '../tutorial/tutorialState';
+  normalizeTutorialProgressSettings,
+  skipTutorialProgress,
+  DEFAULT_TUTORIAL_SIGNALS,
+} from '../tutorial/tutorialState';
 import { saveTutorialProgressSettings } from '../settings/appSettings';
 import type { ExportPreset } from '../export/export-presets';
 import type { ProjectTemplateId } from '@open-factory/editor-core';
@@ -85,7 +77,10 @@ export function useEditorShellProjectCallbacks() {
     const nextPath =
       projectPath && !encryptedSave
         ? projectPath
-        : await chooseProjectSavePath(`${project.name}${encryptedSave ? '.cutproj.enc' : '.cutproj.json'}`, encryptedSave);
+        : await chooseProjectSavePath(
+            `${project.name}${encryptedSave ? '.cutproj.enc' : '.cutproj.json'}`,
+            encryptedSave,
+          );
     if (!nextPath && !projectPath) {
       return;
     }
@@ -93,7 +88,10 @@ export function useEditorShellProjectCallbacks() {
     if (!targetPath) {
       return;
     }
-    await writeProjectFile(project, targetPath, { ...options, encrypted: encryptedSave || isEncryptedProjectPath(targetPath) });
+    await writeProjectFile(project, targetPath, {
+      ...options,
+      encrypted: encryptedSave || isEncryptedProjectPath(targetPath),
+    });
     await deleteAutosaveAfterSave(targetPath, projectPath);
     try {
       useEditorSettingsStore.getState().setLastBackupAt((await readBackupSettings()).lastBackupAt);
@@ -111,7 +109,11 @@ export function useEditorShellProjectCallbacks() {
   }, []);
 
   const startTutorial = useCallback(() => {
-    const nextProgress = normalizeTutorialProgressSettings({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
+    const nextProgress = normalizeTutorialProgressSettings({
+      tutorialStep: 0,
+      tutorialSkipped: false,
+      tutorialCompleted: false,
+    });
     useEditorSettingsStore.getState().setTutorialCelebrationVisible(false);
     useEditorSettingsStore.getState().setTutorialSignals(DEFAULT_TUTORIAL_SIGNALS);
     useEditorSettingsStore.getState().setTutorialProgress(nextProgress);
@@ -140,7 +142,7 @@ export function useEditorShellProjectCallbacks() {
       useEditorUIStore.getState().setProjectEncryptionSaveOpen(false);
       await saveProject(options);
     },
-    [saveProject]
+    [saveProject],
   );
 
   const archiveCurrentProject = useCallback(async () => {
@@ -150,10 +152,13 @@ export function useEditorShellProjectCallbacks() {
       const projectPath = state.projectPath;
       const preflight = await collectProjectArchivePreflight(project);
       if (preflight.missingRows.length > 0) {
-        const shouldContinue = await bridgeConfirm(zhCN.projectArchive.missingMediaConfirm(preflight.missingRows.length), {
-          title: zhCN.projectArchive.title,
-          kind: 'warning'
-        });
+        const shouldContinue = await bridgeConfirm(
+          zhCN.projectArchive.missingMediaConfirm(preflight.missingRows.length),
+          {
+            title: zhCN.projectArchive.title,
+            kind: 'warning',
+          },
+        );
         if (!shouldContinue) {
           return;
         }
@@ -163,15 +168,23 @@ export function useEditorShellProjectCallbacks() {
         return;
       }
       const plan = createProjectArchivePlan(project, archiveParentDir, { skipSourcePaths: preflight.missingPaths });
-      useEditorFeatureStore.getState().setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
-      await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, (progress) => useEditorFeatureStore.getState().setArchiveProgress(progress));
+      useEditorFeatureStore
+        .getState()
+        .setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
+      await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, (progress) =>
+        useEditorFeatureStore.getState().setArchiveProgress(progress),
+      );
       commandManager.clear();
       state.setProject(plan.project, plan.projectPath);
       state.setProjectPath(plan.projectPath);
       state.setDirty(false);
       showToast({ kind: 'success', title: zhCN.projectArchive.success, message: plan.projectPath });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectArchive.failed, message: error instanceof Error ? error.message : zhCN.projectArchive.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.projectArchive.failed,
+        message: error instanceof Error ? error.message : zhCN.projectArchive.failedMessage,
+      });
     } finally {
       useEditorFeatureStore.getState().setArchiveProgress(undefined);
     }
@@ -184,11 +197,11 @@ export function useEditorShellProjectCallbacks() {
         new NewProjectCommand(
           {
             getProject: projectAccessor.getProject,
-            setProject: (project) => state.setProject(project, undefined)
+            setProject: (project) => state.setProject(project, undefined),
           },
           nextProject,
-          zhCN.toolbar.newProject
-        )
+          zhCN.toolbar.newProject,
+        ),
       );
       commandManager.clear();
       setActiveProjectEncryptionPassword(undefined);
@@ -196,7 +209,7 @@ export function useEditorShellProjectCallbacks() {
       state.setDirty(false);
       useEditorFeatureStore.getState().setTemplateExportPreset(nextTemplatePreset);
     },
-    []
+    [],
   );
 
   const newProject = useCallback(async () => {
@@ -220,11 +233,11 @@ export function useEditorShellProjectCallbacks() {
         name: copy.name,
         description: copy.description,
         builtin: true,
-        settings: instance.exportSettings
+        settings: instance.exportSettings,
       });
       useEditorUIStore.getState().setProjectTemplateOpen(false);
     },
-    [executeNewProject]
+    [executeNewProject],
   );
 
   const createProjectFromTimelineTemplate = useCallback(
@@ -236,7 +249,7 @@ export function useEditorShellProjectCallbacks() {
       executeNewProject(nextProject);
       useEditorFeatureStore.getState().setTimelineTemplateMode(undefined);
     },
-    [executeNewProject]
+    [executeNewProject],
   );
 
   const openProject = useCallback(async () => {
@@ -262,47 +275,48 @@ export function useEditorShellProjectCallbacks() {
       useEditorFeatureStore.getState().setTemplateExportPreset(undefined);
       showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.openFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage,
+      });
     }
   }, [requestProjectPassword]);
 
   // --- 快照 ---
-  const saveNamedSnapshot = useCallback(
-    async (name: string) => {
-      try {
-        const state = useEditorStore.getState();
-        const snapshot = await saveProjectSnapshot(state.project, name, state.projectPath);
-        useEditorUIStore.getState().setSnapshotNameOpen(false);
-        showToast({ kind: 'success', title: zhCN.projectSnapshots.saved, message: snapshot.name });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectSnapshots.saveFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.saveFailed });
-      }
-    },
-    []
-  );
-
-  const restoreSnapshotProject = useCallback(
-    (snapshotProject: Project) => {
+  const saveNamedSnapshot = useCallback(async (name: string) => {
+    try {
       const state = useEditorStore.getState();
-      commandManager.execute(new LoadProjectCommand(projectAccessor, snapshotProject, zhCN.projectSnapshots.restoreCommand));
-      state.clearSelectedClipIds();
-      state.setPlayheadTime(0);
-    },
-    []
-  );
+      const snapshot = await saveProjectSnapshot(state.project, name, state.projectPath);
+      useEditorUIStore.getState().setSnapshotNameOpen(false);
+      showToast({ kind: 'success', title: zhCN.projectSnapshots.saved, message: snapshot.name });
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.projectSnapshots.saveFailed,
+        message: error instanceof Error ? error.message : zhCN.projectSnapshots.saveFailed,
+      });
+    }
+  }, []);
 
-  const applySnapshotDiffSelection = useCallback(
-    (sourceProject: Project, itemIds: string[]) => {
-      const state = useEditorStore.getState();
-      const currentProject = state.project;
-      const nextTimeline = applyTimelineVersionDiffSelection(currentProject.timeline, sourceProject.timeline, itemIds);
-      const nextProject = replaceProjectActiveTimeline(currentProject, nextTimeline);
-      commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.projectSnapshots.appliedDiffs));
-      state.clearSelectedClipIds();
-      state.setPlayheadTime(0);
-    },
-    []
-  );
+  const restoreSnapshotProject = useCallback((snapshotProject: Project) => {
+    const state = useEditorStore.getState();
+    commandManager.execute(
+      new LoadProjectCommand(projectAccessor, snapshotProject, zhCN.projectSnapshots.restoreCommand),
+    );
+    state.clearSelectedClipIds();
+    state.setPlayheadTime(0);
+  }, []);
+
+  const applySnapshotDiffSelection = useCallback((sourceProject: Project, itemIds: string[]) => {
+    const state = useEditorStore.getState();
+    const currentProject = state.project;
+    const nextTimeline = applyTimelineVersionDiffSelection(currentProject.timeline, sourceProject.timeline, itemIds);
+    const nextProject = replaceProjectActiveTimeline(currentProject, nextTimeline);
+    commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.projectSnapshots.appliedDiffs));
+    state.clearSelectedClipIds();
+    state.setPlayheadTime(0);
+  }, []);
 
   return {
     requestProjectPassword,

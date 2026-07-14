@@ -13,7 +13,7 @@ import {
   type FileDialogFilter,
   type SharePackageProgressEvent,
   type SharePackageRequest,
-  type SharePackageResult
+  type SharePackageResult,
 } from './tauri-bridge';
 
 type SharePackageWorkflowStage = 'exporting' | SharePackageProgressEvent['stage'];
@@ -42,7 +42,7 @@ export async function createSharePackageFromProject(
   options: {
     onProgress?: (progress: SharePackageWorkflowProgress) => void;
     dependencies?: Partial<SharePackageWorkflowDependencies>;
-  } = {}
+  } = {},
 ): Promise<SharePackageResult | undefined> {
   const dependencies = { ...defaultSharePackageDependencies, ...options.dependencies };
   const outputPath = await dependencies.chooseOutputPath(project);
@@ -51,7 +51,10 @@ export async function createSharePackageFromProject(
   }
 
   const appDataDir = await dependencies.getAppDataDir();
-  const temporaryVideoPath = joinPath(appDataDir, `${sanitizeFileBaseName(project.name)}-share-${dependencies.now()}.mp4`);
+  const temporaryVideoPath = joinPath(
+    appDataDir,
+    `${sanitizeFileBaseName(project.name)}-share-${dependencies.now()}.mp4`,
+  );
   const normalizedOutputPath = normalizePath(outputPath);
   let cleanupTemporaryVideo = false;
 
@@ -65,7 +68,7 @@ export async function createSharePackageFromProject(
         progress: updatedTask.progress,
         current: updatedTask.status === 'success' ? 1 : 0,
         total: 1,
-        outputPath: normalizedOutputPath
+        outputPath: normalizedOutputPath,
       });
     });
 
@@ -79,7 +82,7 @@ export async function createSharePackageFromProject(
         progress: progress.progress,
         current: progress.current,
         total: progress.total,
-        outputPath: normalizedOutputPath
+        outputPath: normalizedOutputPath,
       });
     });
     try {
@@ -96,7 +99,11 @@ export async function createSharePackageFromProject(
   }
 }
 
-export function buildSharePackageRequest(project: Project, outputPath: string, exportedVideoPath: string): SharePackageRequest {
+export function buildSharePackageRequest(
+  project: Project,
+  outputPath: string,
+  exportedVideoPath: string,
+): SharePackageRequest {
   const normalizedOutputPath = normalizePath(outputPath);
   const plan = createProjectArchivePlan(project, dirname(normalizedOutputPath));
   const projectFileName = fileNameFromPath(plan.projectPath) || `${sanitizeFileBaseName(project.name)}.cutproj.json`;
@@ -108,12 +115,12 @@ export function buildSharePackageRequest(project: Project, outputPath: string, e
     readmeContents: zhCN.sharePackage.readme(project.name, projectFileName, exportedVideoArchivePath),
     exportedVideo: {
       sourcePath: normalizePath(exportedVideoPath),
-      archivePath: exportedVideoArchivePath
+      archivePath: exportedVideoArchivePath,
     },
     mediaFiles: plan.copyTasks.map((task) => ({
       sourcePath: task.sourcePath,
-      archivePath: task.relativePath
-    }))
+      archivePath: task.relativePath,
+    })),
   };
 }
 
@@ -162,7 +169,7 @@ function sharePackageExportSettings(): ExportPresetSettings {
     ...BUILTIN_EXPORT_PRESETS[0].settings,
     format: 'mp4',
     outputMode: 'video',
-    hardwareEncoding: false
+    hardwareEncoding: false,
   };
 }
 
@@ -181,7 +188,12 @@ function fileNameFromPath(path: string): string {
 
 function sanitizeFileBaseName(name: string): string {
   const trimmed = name.trim().replace(/\.cutproj(?:\.json)?$/i, '') || 'open-factory-project';
-  return trimmed.replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_').replace(/\s+/g, ' ').trim() || 'open-factory-project';
+  return (
+    trimmed
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'open-factory-project'
+  );
 }
 
 const defaultSharePackageDependencies: SharePackageWorkflowDependencies = {
@@ -192,5 +204,5 @@ const defaultSharePackageDependencies: SharePackageWorkflowDependencies = {
   createSharePackageZip,
   removeFile,
   listenToPackageProgress,
-  now: () => Date.now()
+  now: () => Date.now(),
 };

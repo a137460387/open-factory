@@ -27,22 +27,25 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
   onSwitchPointDelete,
   onSwitchPointUpdate,
   onDriftDetection,
-  isSyncing
+  isSyncing,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   // 键盘快捷键处理
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    const key = event.key;
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.key;
 
-    // 数字键1-9切换机位
-    if (key >= '1' && key <= '9') {
-      const angleIndex = parseInt(key) - 1;
-      if (angleIndex < multicamClip.angles.length) {
-        onAngleSwitch(angleIndex, currentTime);
+      // 数字键1-9切换机位
+      if (key >= '1' && key <= '9') {
+        const angleIndex = parseInt(key) - 1;
+        if (angleIndex < multicamClip.angles.length) {
+          onAngleSwitch(angleIndex, currentTime);
+        }
       }
-    }
-  }, [multicamClip.angles.length, currentTime, onAngleSwitch]);
+    },
+    [multicamClip.angles.length, currentTime, onAngleSwitch],
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -50,10 +53,7 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
   }, [handleKeyDown]);
 
   return (
-    <div
-      className={`angle-switcher-panel ${isExpanded ? 'expanded' : 'collapsed'}`}
-      data-testid="angle-switcher-panel"
-    >
+    <div className={`angle-switcher-panel ${isExpanded ? 'expanded' : 'collapsed'}`} data-testid="angle-switcher-panel">
       <div className="panel-header">
         <button
           className="toggle-button"
@@ -72,11 +72,7 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
             onAngleSwitch={(angleIndex) => onAngleSwitch(angleIndex, currentTime)}
           />
 
-          <SyncControls
-            onSyncRequest={onSyncRequest}
-            onDriftDetection={onDriftDetection}
-            isSyncing={isSyncing}
-          />
+          <SyncControls onSyncRequest={onSyncRequest} onDriftDetection={onDriftDetection} isSyncing={isSyncing} />
 
           <SwitchPointEditor
             switchPoints={multicamClip.switchPoints}

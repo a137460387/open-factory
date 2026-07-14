@@ -63,7 +63,9 @@ export function calculatePhashSimilarity(left: string, right: string): number {
   for (let index = 0; index < length; index += 1) {
     const leftNibble = Number.parseInt(normalizedLeft[index] ?? '0', 16);
     const rightNibble = Number.parseInt(normalizedRight[index] ?? '0', 16);
-    distance += countBits((Number.isFinite(leftNibble) ? leftNibble : 0) ^ (Number.isFinite(rightNibble) ? rightNibble : 0));
+    distance += countBits(
+      (Number.isFinite(leftNibble) ? leftNibble : 0) ^ (Number.isFinite(rightNibble) ? rightNibble : 0),
+    );
   }
   return clamp01(1 - distance / (length * 4));
 }
@@ -82,11 +84,17 @@ export function calculateMultiFramePhashSimilarity(left: string[], right: string
 
 export function detectSmartDuplicateGroups(
   candidates: SmartDuplicateCandidate[],
-  threshold = DUPLICATE_SIMILARITY_THRESHOLD
+  threshold = DUPLICATE_SIMILARITY_THRESHOLD,
 ): SmartDuplicateGroup[] {
   const buckets = new Map<string, SmartDuplicateCandidate[]>();
   for (const candidate of candidates) {
-    if (!Number.isFinite(candidate.size) || candidate.size <= 0 || !Number.isFinite(candidate.duration) || candidate.duration < 0 || candidate.frameHashes.length === 0) {
+    if (
+      !Number.isFinite(candidate.size) ||
+      candidate.size <= 0 ||
+      !Number.isFinite(candidate.duration) ||
+      candidate.duration < 0 ||
+      candidate.frameHashes.length === 0
+    ) {
       continue;
     }
     const key = `${Math.round(candidate.size)}|${Math.round(candidate.duration / DURATION_BUCKET_SECONDS)}`;
@@ -106,7 +114,7 @@ export function detectSmartDuplicateGroups(
         .filter((other) => other.asset.id !== candidate.asset.id && !visited.has(other.asset.id))
         .map((other) => ({
           candidate: other,
-          similarity: calculateMultiFramePhashSimilarity(candidate.frameHashes, other.frameHashes)
+          similarity: calculateMultiFramePhashSimilarity(candidate.frameHashes, other.frameHashes),
         }))
         .filter((match) => match.similarity >= threshold);
       if (matches.length === 0) {
@@ -121,23 +129,35 @@ export function detectSmartDuplicateGroups(
         visited.add(item.asset.id);
       }
       const minimumSimilarity = Math.min(...matches.map((match) => match.similarity));
-      const assets = groupCandidates.map((item) => toSmartDuplicateAsset(item, item.asset.id === candidate.asset.id ? 1 : calculateMultiFramePhashSimilarity(candidate.frameHashes, item.frameHashes)));
+      const assets = groupCandidates.map((item) =>
+        toSmartDuplicateAsset(
+          item,
+          item.asset.id === candidate.asset.id
+            ? 1
+            : calculateMultiFramePhashSimilarity(candidate.frameHashes, item.frameHashes),
+        ),
+      );
       const sortedAssets = assets.sort(compareDuplicateAssets);
       groups.push({
         id: `media-organizer-duplicate-${groups.length}`,
         keepAssetId: sortedAssets[0].assetId,
         assets: sortedAssets,
-        similarity: minimumSimilarity
+        similarity: minimumSimilarity,
       });
     }
   }
 
-  return groups.sort((left, right) => left.assets[0].path.localeCompare(right.assets[0].path) || left.id.localeCompare(right.id));
+  return groups.sort(
+    (left, right) => left.assets[0].path.localeCompare(right.assets[0].path) || left.id.localeCompare(right.id),
+  );
 }
 
 export function expandRenameTemplate(template: string, context: RenameTemplateContext): string {
   const date = formatTemplateDate(context.date);
-  const resolution = context.width && context.height ? `${Math.round(context.width)}x${Math.round(context.height)}` : 'unknown-resolution';
+  const resolution =
+    context.width && context.height
+      ? `${Math.round(context.width)}x${Math.round(context.height)}`
+      : 'unknown-resolution';
   const codec = sanitizePathSegment(context.codec || 'unknown-codec');
   const index = String(Math.max(1, Math.round(context.index ?? 1))).padStart(3, '0');
   const name = sanitizePathSegment(context.name || 'media');
@@ -152,7 +172,10 @@ export function expandRenameTemplate(template: string, context: RenameTemplateCo
     .replace(/^\/+|\/+$/g, '');
 }
 
-export function detectMediaCleanupCandidates(project: Project, existsByPath: Record<string, boolean>): MediaCleanupReport {
+export function detectMediaCleanupCandidates(
+  project: Project,
+  existsByPath: Record<string, boolean>,
+): MediaCleanupReport {
   const usedIds = collectUsedMediaIds(project);
   const orphaned = project.media.filter((asset) => existsByPath[asset.path] === false);
   const orphanedIds = new Set(orphaned.map((asset) => asset.id));
@@ -164,7 +187,11 @@ export function applyArchiveRelinkPlan(project: Project, entries: ArchiveRelinkE
   if (entries.length === 0) {
     return project;
   }
-  const replacements = new Map(entries.map((entry) => [entry.assetId, entry.newPath.trim()]).filter((entry): entry is [string, string] => Boolean(entry[0] && entry[1])));
+  const replacements = new Map(
+    entries
+      .map((entry) => [entry.assetId, entry.newPath.trim()])
+      .filter((entry): entry is [string, string] => Boolean(entry[0] && entry[1])),
+  );
   if (replacements.size === 0) {
     return project;
   }
@@ -174,7 +201,7 @@ export function applyArchiveRelinkPlan(project: Project, entries: ArchiveRelinkE
       const newPath = replacements.get(asset.id);
       return newPath ? { ...asset, path: newPath, relativePath: undefined } : asset;
     }),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -198,7 +225,8 @@ function collectTimelineMediaIds(timeline: Timeline, ids: Set<string>): void {
 function toSmartDuplicateAsset(candidate: SmartDuplicateCandidate, similarity: number): SmartDuplicateAsset {
   const width = candidate.asset.width;
   const height = candidate.asset.height;
-  const resolutionScore = Number.isFinite(width) && Number.isFinite(height) ? Math.max(0, Math.round((width ?? 0) * (height ?? 0))) : 0;
+  const resolutionScore =
+    Number.isFinite(width) && Number.isFinite(height) ? Math.max(0, Math.round((width ?? 0) * (height ?? 0))) : 0;
   return {
     assetId: candidate.asset.id,
     name: candidate.asset.name,
@@ -208,14 +236,21 @@ function toSmartDuplicateAsset(candidate: SmartDuplicateCandidate, similarity: n
     ...(width ? { width } : {}),
     ...(height ? { height } : {}),
     resolutionScore,
-    ...(candidate.asset.videoCodec || candidate.asset.audioCodec ? { codec: candidate.asset.videoCodec ?? candidate.asset.audioCodec } : {}),
+    ...(candidate.asset.videoCodec || candidate.asset.audioCodec
+      ? { codec: candidate.asset.videoCodec ?? candidate.asset.audioCodec }
+      : {}),
     ...(candidate.createdAt ? { createdAt: candidate.createdAt } : {}),
-    similarity
+    similarity,
   };
 }
 
 function compareDuplicateAssets(left: SmartDuplicateAsset, right: SmartDuplicateAsset): number {
-  return right.resolutionScore - left.resolutionScore || right.size - left.size || left.path.localeCompare(right.path) || left.assetId.localeCompare(right.assetId);
+  return (
+    right.resolutionScore - left.resolutionScore ||
+    right.size - left.size ||
+    left.path.localeCompare(right.path) ||
+    left.assetId.localeCompare(right.assetId)
+  );
 }
 
 function formatTemplateDate(value: string | Date | undefined): string {
@@ -227,11 +262,20 @@ function formatTemplateDate(value: string | Date | undefined): string {
 }
 
 function sanitizePathSegment(value: string): string {
-  return value.trim().replace(/[<>:"\\|?*]+/g, '_').replace(/\s+/g, '-').replace(/^-+|-+$/g, '') || 'media';
+  return (
+    value
+      .trim()
+      .replace(/[<>:"\\|?*]+/g, '_')
+      .replace(/\s+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'media'
+  );
 }
 
 function normalizeHash(value: string): string {
-  return value.trim().toLowerCase().replace(/[^0-9a-f]/g, '');
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^0-9a-f]/g, '');
 }
 
 function normalizePathKey(path: string): string {

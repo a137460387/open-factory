@@ -48,7 +48,7 @@ export const EXPORT_COST_EFFECT_COMPLEXITY_FACTORS: Record<EffectType, number> =
   'chromatic-aberration': 1.35,
   'audio-spectrum': 1.7,
   'custom-shader': 2.5,
-  'motion-blur': 2.2
+  'motion-blur': 2.2,
 };
 
 // --- P0-1: realtime estimate enhancements ---
@@ -98,7 +98,7 @@ export function calculateEstimateConfidence(sampleCount: number): ExportEstimate
 }
 
 export function buildEstimateHistoryComparison(
-  samples: ExportCostHistorySample[]
+  samples: ExportCostHistorySample[],
 ): ExportEstimateHistoryComparisonEntry[] {
   return samples
     .filter(
@@ -106,7 +106,7 @@ export function buildEstimateHistoryComparison(
         Number.isFinite(s.estimatedDurationSeconds) &&
         (s.estimatedDurationSeconds as number) > 0 &&
         Number.isFinite(s.exportDurationSeconds) &&
-        s.exportDurationSeconds > 0
+        s.exportDurationSeconds > 0,
     )
     .slice(0, MAX_HISTORY_COMPARISON_ENTRIES)
     .map((s, index) => {
@@ -116,14 +116,14 @@ export function buildEstimateHistoryComparison(
         id: `entry-${index}`,
         estimatedSeconds: roundTo(estimated, 1),
         actualSeconds: roundTo(actual, 1),
-        errorPercent: roundTo(((actual - estimated) / estimated) * 100, 1)
+        errorPercent: roundTo(((actual - estimated) / estimated) * 100, 1),
       };
     });
 }
 
 export function learnComplexityCoefficients(
   historySamples: ExportCostHistorySample[],
-  currentFactors: Record<string, number> = {}
+  currentFactors: Record<string, number> = {},
 ): LearnedComplexityCoefficient[] {
   const result: LearnedComplexityCoefficient[] = [];
   const allEffectTypes = Object.keys(EXPORT_COST_EFFECT_COMPLEXITY_FACTORS);
@@ -142,7 +142,7 @@ export function learnComplexityCoefficients(
         effectType,
         defaultFactor,
         learnedFactor: Number.isFinite(stored) && stored! > 0 ? roundTo(stored!, 2) : defaultFactor,
-        sampleCount: relevantSamples.length
+        sampleCount: relevantSamples.length,
       });
       continue;
     }
@@ -162,9 +162,7 @@ export function learnComplexityCoefficients(
   return result;
 }
 
-export function applyLearnedCoefficients(
-  learned: LearnedComplexityCoefficient[]
-): Record<string, number> {
+export function applyLearnedCoefficients(learned: LearnedComplexityCoefficient[]): Record<string, number> {
   const result: Record<string, number> = {};
   for (const item of learned) {
     if (item.sampleCount >= LEARNING_MIN_SAMPLES && item.learnedFactor !== item.defaultFactor) {
@@ -176,7 +174,7 @@ export function applyLearnedCoefficients(
 
 export function createDebouncedEstimator<TArgs, TResult>(
   fn: (args: TArgs) => TResult,
-  delayMs: number
+  delayMs: number,
 ): {
   call: (args: TArgs) => void;
   flush: () => TResult | undefined;
@@ -194,11 +192,14 @@ export function createDebouncedEstimator<TArgs, TResult>(
       if (timer !== undefined) {
         clearTimeout(timer);
       }
-      timer = setTimeout(() => {
-        timer = undefined;
-        result = fn(args);
-        hasResult = true;
-      }, Math.max(0, delayMs));
+      timer = setTimeout(
+        () => {
+          timer = undefined;
+          result = fn(args);
+          hasResult = true;
+        },
+        Math.max(0, delayMs),
+      );
     },
     flush() {
       if (timer !== undefined && lastArgs !== undefined) {
@@ -217,7 +218,7 @@ export function createDebouncedEstimator<TArgs, TResult>(
     },
     lastResult() {
       return hasResult ? result : undefined;
-    }
+    },
   };
 }
 
@@ -230,8 +231,18 @@ export function estimateExportCost(input: ExportCostEstimateInput): ExportCostEs
   const width = positiveNumber(settings.width, input.project.settings.width);
   const height = positiveNumber(settings.height, input.project.settings.height);
   const fps = positiveNumber(settings.fps, input.project.settings.fps);
-  const filterComplexity = calculateFilterComplexityFactor(input.project.timeline, settings, input.qualityEvaluation === true);
-  const outputFactor = calculateOutputThroughputFactor({ width, height, fps, format: settings.format, outputMode: settings.outputMode });
+  const filterComplexity = calculateFilterComplexityFactor(
+    input.project.timeline,
+    settings,
+    input.qualityEvaluation === true,
+  );
+  const outputFactor = calculateOutputThroughputFactor({
+    width,
+    height,
+    fps,
+    format: settings.format,
+    outputMode: settings.outputMode,
+  });
   const codecFactor = calculateCodecThroughputFactor(settings);
   const complexityFactor = roundTo(filterComplexity.factor * outputFactor * codecFactor, 2);
   const speed = calculateHistoricalExportSpeed(input.history) ?? DEFAULT_EXPORT_SECONDS_PER_TIMELINE_SECOND;
@@ -244,7 +255,7 @@ export function estimateExportCost(input: ExportCostEstimateInput): ExportCostEs
     format: settings.format,
     outputMode: settings.outputMode,
     videoBitrate: settings.videoBitrate,
-    audioBitrate: settings.audioBitrate
+    audioBitrate: settings.audioBitrate,
   });
   const nowMs = normalizeNowMs(input.now);
   const lastErrorPercent = calculateLastHistoricalEstimateError(input.history);
@@ -253,22 +264,27 @@ export function estimateExportCost(input: ExportCostEstimateInput): ExportCostEs
     timelineDurationSeconds: roundTo(timelineDurationSeconds, 3),
     estimatedDurationSeconds,
     estimatedFileSizeMb,
-    cpuLoad: classifyExportCpuLoad({ complexityFactor, codec: settings.videoCodec, format: settings.format, outputMode: settings.outputMode }),
+    cpuLoad: classifyExportCpuLoad({
+      complexityFactor,
+      codec: settings.videoCodec,
+      format: settings.format,
+      outputMode: settings.outputMode,
+    }),
     estimatedCompletionIso: new Date(nowMs + estimatedDurationSeconds * 1000).toISOString(),
     complexityFactor,
     factorBreakdown: [
       ...filterComplexity.breakdown,
       { id: 'output-resolution', factor: outputFactor, weight: 1 },
-      { id: 'codec', factor: codecFactor, weight: 1 }
+      { id: 'codec', factor: codecFactor, weight: 1 },
     ],
-    ...(lastErrorPercent === undefined ? {} : { lastErrorPercent })
+    ...(lastErrorPercent === undefined ? {} : { lastErrorPercent }),
   };
 }
 
 export function calculateFilterComplexityFactor(
   timeline: Timeline,
   settings: Partial<Omit<ExportSettings, 'outputPath'>> = {},
-  qualityEvaluation = false
+  qualityEvaluation = false,
 ): { factor: number; breakdown: ExportCostFactorBreakdown[] } {
   const duration = Math.max(0.001, getTimelinePlaybackDuration(timeline));
   const breakdown: ExportCostFactorBreakdown[] = [];
@@ -287,7 +303,11 @@ export function calculateFilterComplexityFactor(
     }
     if (!isDefaultColorCorrection(clip.colorCorrection)) {
       offset += (COLOR_CORRECTION_COMPLEXITY_FACTOR - 1) * clipWeight;
-      breakdown.push({ id: 'color-correction', factor: COLOR_CORRECTION_COMPLEXITY_FACTOR, weight: roundTo(clipWeight, 3) });
+      breakdown.push({
+        id: 'color-correction',
+        factor: COLOR_CORRECTION_COMPLEXITY_FACTOR,
+        weight: roundTo(clipWeight, 3),
+      });
     }
     offset += clipProcessingOffset(clip, clipWeight, breakdown);
   }
@@ -300,7 +320,7 @@ export function calculateFilterComplexityFactor(
 
   return {
     factor: Math.max(NO_EFFECT_COMPLEXITY_FACTOR, roundTo(NO_EFFECT_COMPLEXITY_FACTOR + offset, 2)),
-    breakdown
+    breakdown,
   };
 }
 
@@ -320,7 +340,8 @@ export function estimateExportFileSizeMb(input: {
   if (input.outputMode !== 'audio-visualization' && (input.outputMode === 'audio' || format === 'm4a')) {
     return roundTo((audioBitsPerSecond * duration) / 8 / 1_000_000, 1);
   }
-  const videoBitsPerSecond = parseExportBitrate(input.videoBitrate) ?? defaultVideoBitsPerSecond(input.width, input.height, input.fps, format);
+  const videoBitsPerSecond =
+    parseExportBitrate(input.videoBitrate) ?? defaultVideoBitsPerSecond(input.width, input.height, input.fps, format);
   return roundTo(((videoBitsPerSecond + audioBitsPerSecond) * duration) / 8 / 1_000_000, 1);
 }
 
@@ -328,7 +349,9 @@ export function calculateHistoricalExportSpeed(samples: ExportCostHistorySample[
   const ratios = (samples ?? [])
     .map((sample) => {
       const timelineDuration = sample.timelineDurationSeconds;
-      return Number.isFinite(timelineDuration) && timelineDuration! > 0 && sample.exportDurationSeconds > 0 ? sample.exportDurationSeconds / timelineDuration! : undefined;
+      return Number.isFinite(timelineDuration) && timelineDuration! > 0 && sample.exportDurationSeconds > 0
+        ? sample.exportDurationSeconds / timelineDuration!
+        : undefined;
     })
     .filter((value): value is number => value !== undefined && Number.isFinite(value) && value > 0);
   if (ratios.length === 0) {
@@ -337,8 +360,18 @@ export function calculateHistoricalExportSpeed(samples: ExportCostHistorySample[
   return roundTo(ratios.reduce((total, value) => total + value, 0) / ratios.length, 3);
 }
 
-export function calculateHistoricalEstimateErrorPercent(estimatedSeconds: number | undefined, actualSeconds: number | undefined): number | undefined {
-  if (!Number.isFinite(estimatedSeconds) || !Number.isFinite(actualSeconds) || !estimatedSeconds || !actualSeconds || estimatedSeconds <= 0 || actualSeconds < 0) {
+export function calculateHistoricalEstimateErrorPercent(
+  estimatedSeconds: number | undefined,
+  actualSeconds: number | undefined,
+): number | undefined {
+  if (
+    !Number.isFinite(estimatedSeconds) ||
+    !Number.isFinite(actualSeconds) ||
+    !estimatedSeconds ||
+    !actualSeconds ||
+    estimatedSeconds <= 0 ||
+    actualSeconds < 0
+  ) {
     return undefined;
   }
   return roundTo((Math.abs(actualSeconds - estimatedSeconds) / estimatedSeconds) * 100, 1);
@@ -401,7 +434,10 @@ function clipProcessingOffset(clip: Clip, clipWeight: number, breakdown: ExportC
   return offset;
 }
 
-function collectSettingsFactors(settings: Partial<Omit<ExportSettings, 'outputPath'>>, qualityEvaluation: boolean): ExportCostFactorBreakdown[] {
+function collectSettingsFactors(
+  settings: Partial<Omit<ExportSettings, 'outputPath'>>,
+  qualityEvaluation: boolean,
+): ExportCostFactorBreakdown[] {
   const factors: ExportCostFactorBreakdown[] = [];
   if (qualityEvaluation) {
     factors.push({ id: 'vmaf-quality-evaluation', factor: VMAF_QUALITY_COMPLEXITY_FACTOR, weight: 1 });
@@ -428,7 +464,13 @@ function hasMasterProcessing(input: ExportMasterProcessingSettings | null | unde
   return Boolean(input?.eq.enabled || input?.stereoEnhancer.enabled || input?.limiter.enabled);
 }
 
-function calculateOutputThroughputFactor(input: { width: number; height: number; fps: number; format?: string | null; outputMode?: ExportSettings['outputMode'] }): number {
+function calculateOutputThroughputFactor(input: {
+  width: number;
+  height: number;
+  fps: number;
+  format?: string | null;
+  outputMode?: ExportSettings['outputMode'];
+}): number {
   if (input.outputMode === 'audio') {
     return 0.35;
   }
@@ -465,12 +507,18 @@ function calculateCodecThroughputFactor(settings: Partial<Omit<ExportSettings, '
   return roundTo(Math.max(0.35, factor), 2);
 }
 
-function classifyExportCpuLoad(input: { complexityFactor: number; codec?: string; format?: string | null; outputMode?: ExportSettings['outputMode'] }): ExportCostCpuLoad {
+function classifyExportCpuLoad(input: {
+  complexityFactor: number;
+  codec?: string;
+  format?: string | null;
+  outputMode?: ExportSettings['outputMode'];
+}): ExportCostCpuLoad {
   if (input.outputMode === 'audio') {
     return input.complexityFactor > 1.2 ? 'medium' : 'light';
   }
   const codec = (input.codec ?? '').toLowerCase();
-  const codecPenalty = codec.includes('265') || codec.includes('hevc') || codec.includes('vp9') || codec.includes('av1') ? 0.4 : 0;
+  const codecPenalty =
+    codec.includes('265') || codec.includes('hevc') || codec.includes('vp9') || codec.includes('av1') ? 0.4 : 0;
   const formatPenalty = input.format === 'gif' || input.format === 'webp' || input.format === 'apng' ? 0.3 : 0;
   const score = input.complexityFactor + codecPenalty + formatPenalty;
   if (score < 1.6) {
@@ -483,8 +531,12 @@ function classifyExportCpuLoad(input: { complexityFactor: number; codec?: string
 }
 
 function calculateLastHistoricalEstimateError(samples: ExportCostHistorySample[] | undefined): number | undefined {
-  const sample = (samples ?? []).find((item) => item.estimatedDurationSeconds !== undefined && item.exportDurationSeconds > 0);
-  return sample ? calculateHistoricalEstimateErrorPercent(sample.estimatedDurationSeconds, sample.exportDurationSeconds) : undefined;
+  const sample = (samples ?? []).find(
+    (item) => item.estimatedDurationSeconds !== undefined && item.exportDurationSeconds > 0,
+  );
+  return sample
+    ? calculateHistoricalEstimateErrorPercent(sample.estimatedDurationSeconds, sample.exportDurationSeconds)
+    : undefined;
 }
 
 function defaultVideoBitsPerSecond(width: number, height: number, fps: number, format: string): number {

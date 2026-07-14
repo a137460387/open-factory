@@ -1,4 +1,10 @@
-import { PrimaryWheels, PrimarySliders, generateHSLQualifierGLSL, generateCircleMaskGLSL, generateGradientMaskGLSL } from '@open-factory/editor-core';
+import {
+  PrimaryWheels,
+  PrimarySliders,
+  generateHSLQualifierGLSL,
+  generateCircleMaskGLSL,
+  generateGradientMaskGLSL,
+} from '@open-factory/editor-core';
 import type { ColorGradingGraph, WindowMaskParams } from '@open-factory/editor-core';
 
 type ColorGradingNode = ColorGradingGraph['nodes'][number];
@@ -28,10 +34,10 @@ export function compileColorGradingShader(nodes: ColorGradingNode[]): CompiledCo
   const uniforms: string[] = [];
   const calls: string[] = [];
 
-  const hasWheel = nodes.some(n => n.type === 'primary-wheel');
-  const hasSlider = nodes.some(n => n.type === 'primary-slider');
-  const hasHslQualifier = nodes.some(n => n.type === 'hsl-qualifier');
-  const hasWindowMask = nodes.some(n => n.type === 'window-mask');
+  const hasWheel = nodes.some((n) => n.type === 'primary-wheel');
+  const hasSlider = nodes.some((n) => n.type === 'primary-slider');
+  const hasHslQualifier = nodes.some((n) => n.type === 'hsl-qualifier');
+  const hasWindowMask = nodes.some((n) => n.type === 'window-mask');
 
   if (hasWheel) {
     functions.push(PrimaryWheels.generateGlslFunction());
@@ -42,11 +48,12 @@ export function compileColorGradingShader(nodes: ColorGradingNode[]): CompiledCo
 
   // 为第一个 HSL 限定器节点生成 GLSL 函数定义
   if (hasHslQualifier) {
-    const firstHsl = nodes.find(n => n.type === 'hsl-qualifier')!;
+    const firstHsl = nodes.find((n) => n.type === 'hsl-qualifier')!;
     const hslPrefix = `cg_${firstHsl.id.replace(/-/g, '_')}`;
     functions.push(generateHSLQualifierGLSL(hslPrefix));
     // 添加 rgb2hsl 辅助函数（如果尚未定义）
-    functions.unshift(`
+    functions.unshift(
+      `
 vec3 rgb2hsl(vec3 c) {
   float maxC = max(max(c.r, c.g), c.b);
   float minC = min(min(c.r, c.g), c.b);
@@ -59,12 +66,13 @@ vec3 rgb2hsl(vec3 c) {
   else if (maxC == c.g) h = (c.b - c.r) / d + 2.0;
   else h = (c.r - c.g) / d + 4.0;
   return vec3(h * 60.0, s * 100.0, l * 100.0);
-}`.trim());
+}`.trim(),
+    );
   }
 
   // 为窗口遮罩生成 GLSL 函数定义
   if (hasWindowMask) {
-    const firstMask = nodes.find(n => n.type === 'window-mask')!;
+    const firstMask = nodes.find((n) => n.type === 'window-mask')!;
     const maskPrefix = `cg_${firstMask.id.replace(/-/g, '_')}`;
     const params = firstMask.params as WindowMaskParams;
     if (params.shape === 'circle') {
@@ -103,7 +111,8 @@ vec3 rgb2hsl(vec3 c) {
     } else if (node.type === 'curves') {
       // 曲线节点 - 256x1 纹理查找表
       uniforms.push(`uniform sampler2D u_curvesLUT_${node.id};`);
-      functions.push(`
+      functions.push(
+        `
 vec4 applyCurves_${node.id}(vec4 color) {
   float r = texture2D(u_curvesLUT_${node.id}, vec2(color.r, 0.5)).r;
   float g = texture2D(u_curvesLUT_${node.id}, vec2(color.g, 0.5)).g;
@@ -112,17 +121,20 @@ vec4 applyCurves_${node.id}(vec4 color) {
     dot(color.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.5
   )).a;
   return vec4(r + m - 0.5, g + m - 0.5, b + m - 0.5, color.a);
-}`.trim());
+}`.trim(),
+      );
       calls.push(`color = applyCurves_${node.id}(color);`);
     } else if (node.type === 'lut-apply') {
       // LUT 3D 纹理采样
       uniforms.push(`uniform sampler3D u_lut3D_${node.id};`);
       uniforms.push(`uniform float u_lutIntensity_${node.id};`);
-      functions.push(`
+      functions.push(
+        `
 vec4 applyLUT_${node.id}(vec4 color) {
   vec3 lutColor = texture3D(u_lut3D_${node.id}, color.rgb).rgb;
   return vec4(mix(color.rgb, lutColor, u_lutIntensity_${node.id}), color.a);
-}`.trim());
+}`.trim(),
+      );
       calls.push(`color = applyLUT_${node.id}(color);`);
     } else if (node.type === 'window-mask') {
       // 窗口遮罩着色器

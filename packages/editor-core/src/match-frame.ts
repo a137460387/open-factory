@@ -49,7 +49,7 @@ export function calculateSourceTime(
   clipStart: number,
   clipTrimStart: number,
   clipSpeed: number,
-  playheadTime: number
+  playheadTime: number,
 ): number {
   const safeSpeed = clipSpeed > 0 ? clipSpeed : 1;
   const raw = clipTrimStart + (playheadTime - clipStart) / safeSpeed;
@@ -114,23 +114,19 @@ export function matchFrameFromClip(options: MatchFrameOptions): MatchFrameResult
   }
 
   return {
-      mediaId,
-      sourceTime: calculateSourceTime(clip.start, clip.trimStart, clip.speed, playheadTime),
-      subclipId: clip.subclipId,
-      clipId: clip.id,
-      sequenceId: activeSequenceId,
-    };
+    mediaId,
+    sourceTime: calculateSourceTime(clip.start, clip.trimStart, clip.speed, playheadTime),
+    subclipId: clip.subclipId,
+    clipId: clip.id,
+    sequenceId: activeSequenceId,
+  };
 }
 
 /**
  * 查找媒体在时间线中所有使用位置（反向 Reveal in Timeline）。
  * 遍历所有序列中的所有 clip，匹配 mediaId。
  */
-export function revealInTimeline(
-  timeline: Timeline,
-  mediaId: string,
-  sequences?: Sequence[]
-): RevealResult {
+export function revealInTimeline(timeline: Timeline, mediaId: string, sequences?: Sequence[]): RevealResult {
   const instances: RevealInstance[] = [];
   collectInstancesFromTimeline(timeline, mediaId, instances);
   if (sequences) {
@@ -149,7 +145,7 @@ export function getMediaInstanceNavigation(
   timeline: Timeline,
   mediaId: string,
   currentClipId: string,
-  sequences?: Sequence[]
+  sequences?: Sequence[],
 ): { currentIndex: number; total: number } {
   const { instances } = revealInTimeline(timeline, mediaId, sequences);
   const total = instances.length;
@@ -165,7 +161,7 @@ export function navigateToNextInstance(
   timeline: Timeline,
   mediaId: string,
   currentClipId: string,
-  sequences?: Sequence[]
+  sequences?: Sequence[],
 ): string | undefined {
   const { instances } = revealInTimeline(timeline, mediaId, sequences);
   if (instances.length <= 1) {
@@ -182,7 +178,7 @@ function collectInstancesFromTimeline(
   timeline: Timeline,
   mediaId: string,
   out: RevealInstance[],
-  sequenceId?: string
+  sequenceId?: string,
 ): void {
   for (const track of timeline.tracks) {
     for (const clip of track.clips) {
@@ -220,4 +216,3 @@ function findClipAtTime(timeline: Timeline, time: number): Clip | undefined {
   }
   return undefined;
 }
-

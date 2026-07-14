@@ -47,7 +47,12 @@ export interface PathTextFrameLayout {
 
 const TEXT_PATH_SEGMENTS_PER_CURVE = 24;
 
-export function sampleTextPath(points: PathPoint[] | undefined, width = 1, height = 1, segmentsPerCurve = TEXT_PATH_SEGMENTS_PER_CURVE): TextPathSample[] {
+export function sampleTextPath(
+  points: PathPoint[] | undefined,
+  width = 1,
+  height = 1,
+  segmentsPerCurve = TEXT_PATH_SEGMENTS_PER_CURVE,
+): TextPathSample[] {
   const normalized = normalizePathPoints(points);
   if (normalized.length < 2) {
     return [];
@@ -90,7 +95,10 @@ export function layoutTextAlongPath(input: TextPathLayoutInput): TextPathCharact
   const offsetY = finiteOrDefault(input.offsetY, 0);
   const output: TextPathCharacterLayout[] = [];
   chars.forEach((char, index) => {
-    const advance = Math.max(1, input.measureCharacter?.(char, index) ?? estimateCharacterAdvance(char, input.fontSize));
+    const advance = Math.max(
+      1,
+      input.measureCharacter?.(char, index) ?? estimateCharacterAdvance(char, input.fontSize),
+    );
     const distance = cursor + advance / 2;
     if (distance >= 0 && distance <= totalLength) {
       const point = sampleTextPathAtDistance(samples, distance);
@@ -100,7 +108,7 @@ export function layoutTextAlongPath(input: TextPathLayoutInput): TextPathCharact
         x: round(point.x + offsetX),
         y: round(point.y + offsetY),
         angle: input.rotateCharacters ? point.angle : 0,
-        distance: round(distance)
+        distance: round(distance),
       });
     }
     cursor += advance + spacing;
@@ -121,13 +129,17 @@ export function buildPathTextFrameLayouts(input: PathTextFrameLayoutInput): Path
         path: input.pathText.path,
         startOffset,
         letterSpacing: input.pathText.letterSpacing,
-        rotateCharacters: input.pathText.rotateCharacters
-      })
+        rotateCharacters: input.pathText.rotateCharacters,
+      }),
     };
   });
 }
 
-export function resolvePathTextStartOffset(pathText: TextPathOptions, keyframes: ClipKeyframes | null | undefined, localTime: number): number {
+export function resolvePathTextStartOffset(
+  pathText: TextPathOptions,
+  keyframes: ClipKeyframes | null | undefined,
+  localTime: number,
+): number {
   return normalizeUnit(interpolateKeyframes(keyframes?.pathStartOffset, localTime, pathText.startOffset));
 }
 
@@ -151,7 +163,7 @@ function sampleTextPathAtDistance(samples: TextPathSample[], distance: number): 
       x: round(left.x + (right.x - left.x) * progress),
       y: round(left.y + (right.y - left.y) * progress),
       distance: round(distance),
-      angle: right.angle
+      angle: right.angle,
     };
   }
   return last;
@@ -172,27 +184,36 @@ function buildDistanceSamples(points: PathPointHandle[]): TextPathSample[] {
       x: round(point.x),
       y: round(point.y),
       distance: round(distance),
-      angle: round((Math.atan2(next.y - previous.y, next.x - previous.x) * 180) / Math.PI)
+      angle: round((Math.atan2(next.y - previous.y, next.x - previous.x) * 180) / Math.PI),
     };
   });
 }
 
 function removeDuplicateSamples(points: PathPointHandle[]): PathPointHandle[] {
-  return points.filter((point, index) => index === 0 || Math.hypot(point.x - points[index - 1].x, point.y - points[index - 1].y) > 0.000001);
+  return points.filter(
+    (point, index) =>
+      index === 0 || Math.hypot(point.x - points[index - 1].x, point.y - points[index - 1].y) > 0.000001,
+  );
 }
 
 function scalePoint(point: PathPointHandle, width: number, height: number): PathPointHandle {
   return {
     x: point.x * Math.max(1, width),
-    y: point.y * Math.max(1, height)
+    y: point.y * Math.max(1, height),
   };
 }
 
-function sampleCubicBezier(from: PathPointHandle, control1: PathPointHandle, control2: PathPointHandle, to: PathPointHandle, t: number): PathPointHandle {
+function sampleCubicBezier(
+  from: PathPointHandle,
+  control1: PathPointHandle,
+  control2: PathPointHandle,
+  to: PathPointHandle,
+  t: number,
+): PathPointHandle {
   const inverse = 1 - t;
   return {
     x: inverse ** 3 * from.x + 3 * inverse ** 2 * t * control1.x + 3 * inverse * t ** 2 * control2.x + t ** 3 * to.x,
-    y: inverse ** 3 * from.y + 3 * inverse ** 2 * t * control1.y + 3 * inverse * t ** 2 * control2.y + t ** 3 * to.y
+    y: inverse ** 3 * from.y + 3 * inverse ** 2 * t * control1.y + 3 * inverse * t ** 2 * control2.y + t ** 3 * to.y,
   };
 }
 

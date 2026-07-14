@@ -1,4 +1,10 @@
-import type { Clip, ClipPatch, TimelineScriptExecutionPlan, TimelineScriptOperation, TimelineScriptSnapshot } from '@open-factory/editor-core';
+import type {
+  Clip,
+  ClipPatch,
+  TimelineScriptExecutionPlan,
+  TimelineScriptOperation,
+  TimelineScriptSnapshot,
+} from '@open-factory/editor-core';
 
 export const TIMELINE_SCRIPT_TIMEOUT_MS = 10_000;
 export const TIMELINE_SCRIPT_DISABLED_GLOBALS = ['fetch', 'XMLHttpRequest'] as const;
@@ -34,7 +40,10 @@ interface TimelineScriptWorkerDependencies {
   revokeObjectUrl?: (url: string) => void;
 }
 
-export async function runTimelineScriptInWorker(request: TimelineScriptRunRequest, dependencies: TimelineScriptWorkerDependencies = {}): Promise<TimelineScriptRunResult> {
+export async function runTimelineScriptInWorker(
+  request: TimelineScriptRunRequest,
+  dependencies: TimelineScriptWorkerDependencies = {},
+): Promise<TimelineScriptRunResult> {
   const WorkerCtor = dependencies.WorkerCtor ?? (typeof Worker === 'undefined' ? undefined : Worker);
   if (!WorkerCtor) {
     return executeTimelineScriptInIsolatedScope(request.script, request.snapshot);
@@ -79,12 +88,17 @@ export async function runTimelineScriptInWorker(request: TimelineScriptRunReques
   });
 }
 
-export async function executeTimelineScriptInIsolatedScope(script: string, snapshot: TimelineScriptSnapshot): Promise<TimelineScriptRunResult> {
+export async function executeTimelineScriptInIsolatedScope(
+  script: string,
+  snapshot: TimelineScriptSnapshot,
+): Promise<TimelineScriptRunResult> {
   const startedAt = Date.now();
   const state = createRuntimeState(snapshot);
   const api = createRuntimeApi(state);
   const sandboxGlobal = createSandboxGlobal();
-  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (...args: string[]) => (...values: unknown[]) => Promise<void>;
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
+    ...args: string[]
+  ) => (...values: unknown[]) => Promise<void>;
   const run = new AsyncFunction(
     'getClips',
     'updateClip',
@@ -99,13 +113,27 @@ export async function executeTimelineScriptInIsolatedScope(script: string, snaps
     'globalThis',
     'window',
     'self',
-    '"use strict";\n' + script
+    '"use strict";\n' + script,
   );
-  await run(api.getClips, api.updateClip, api.addClip, api.deleteClip, api.getMarkers, api.addMarker, api.exportProject, api.console, undefined, undefined, sandboxGlobal, undefined, undefined);
+  await run(
+    api.getClips,
+    api.updateClip,
+    api.addClip,
+    api.deleteClip,
+    api.getMarkers,
+    api.addMarker,
+    api.exportProject,
+    api.console,
+    undefined,
+    undefined,
+    sandboxGlobal,
+    undefined,
+    undefined,
+  );
   return {
     operations: state.operations,
     logs: state.logs,
-    durationMs: Date.now() - startedAt
+    durationMs: Date.now() - startedAt,
   };
 }
 
@@ -129,7 +157,7 @@ function createRuntimeState(snapshot: TimelineScriptSnapshot): RuntimeState {
     operations: [],
     logs: [],
     nextClipIndex: 1,
-    nextMarkerIndex: 1
+    nextMarkerIndex: 1,
   };
 }
 
@@ -146,7 +174,7 @@ function createRuntimeApi(state: RuntimeState) {
       const input = record(opts, 'clip');
       const clip = {
         ...input,
-        id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `script-clip-${state.nextClipIndex++}`
+        id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `script-clip-${state.nextClipIndex++}`,
       };
       state.operations.push({ type: 'addClip', clip: clip as Clip });
       state.clips.push(clip);
@@ -166,7 +194,7 @@ function createRuntimeApi(state: RuntimeState) {
       const marker = {
         id: `script-marker-${state.nextMarkerIndex++}`,
         time,
-        ...(typeof labelValue === 'string' ? { label: labelValue } : {})
+        ...(typeof labelValue === 'string' ? { label: labelValue } : {}),
       };
       state.operations.push({ type: 'addMarker', marker });
       state.markers.push(marker);
@@ -178,8 +206,8 @@ function createRuntimeApi(state: RuntimeState) {
     console: {
       log: (...values: unknown[]) => {
         state.logs.push(values.map(formatLogValue).join(' '));
-      }
-    }
+      },
+    },
   };
 }
 
@@ -188,7 +216,7 @@ function createSandboxGlobal(): Record<string, unknown> {
     console: undefined,
     fetch: undefined,
     XMLHttpRequest: undefined,
-    WebSocket: undefined
+    WebSocket: undefined,
   };
 }
 
@@ -211,7 +239,9 @@ function timelineScriptWorkerEntrypoint() {
     }
   }
 
-  workerSelf.onmessage = async (event: MessageEvent<{ script: string; snapshot: { clips: unknown[]; markers: unknown[] } }>) => {
+  workerSelf.onmessage = async (
+    event: MessageEvent<{ script: string; snapshot: { clips: unknown[]; markers: unknown[] } }>,
+  ) => {
     const startedAt = Date.now();
     const state = {
       clips: cloneJson(event.data.snapshot.clips),
@@ -219,7 +249,7 @@ function timelineScriptWorkerEntrypoint() {
       operations: [] as unknown[],
       logs: [] as string[],
       nextClipIndex: 1,
-      nextMarkerIndex: 1
+      nextMarkerIndex: 1,
     };
     const api = {
       getClips: () => cloneJson(state.clips),
@@ -227,13 +257,16 @@ function timelineScriptWorkerEntrypoint() {
         const clipId = requiredString(id, 'clip id');
         const normalizedPatch = record(patch, 'clip patch');
         state.operations.push({ type: 'updateClip', clipId, patch: normalizedPatch });
-        state.clips = state.clips.map((clip) => ((clip as { id?: unknown }).id === clipId ? { ...(clip as object), ...normalizedPatch } : clip));
+        state.clips = state.clips.map((clip) =>
+          (clip as { id?: unknown }).id === clipId ? { ...(clip as object), ...normalizedPatch } : clip,
+        );
       },
       addClip: (opts: unknown) => {
         const input = record(opts, 'clip');
         const clip = {
           ...input,
-          id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `script-clip-${state.nextClipIndex++}`
+          id:
+            typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `script-clip-${state.nextClipIndex++}`,
         };
         state.operations.push({ type: 'addClip', clip });
         state.clips.push(clip);
@@ -253,7 +286,7 @@ function timelineScriptWorkerEntrypoint() {
         const marker = {
           id: `script-marker-${state.nextMarkerIndex++}`,
           time,
-          ...(typeof labelValue === 'string' ? { label: labelValue } : {})
+          ...(typeof labelValue === 'string' ? { label: labelValue } : {}),
         };
         state.operations.push({ type: 'addMarker', marker });
         state.markers.push(marker);
@@ -265,8 +298,8 @@ function timelineScriptWorkerEntrypoint() {
       console: {
         log: (...values: unknown[]) => {
           state.logs.push(values.map(formatLogValue).join(' '));
-        }
-      }
+        },
+      },
     };
     try {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -284,16 +317,30 @@ function timelineScriptWorkerEntrypoint() {
         'globalThis',
         'window',
         'self',
-        '"use strict";\n' + event.data.script
+        '"use strict";\n' + event.data.script,
       );
-      await run(api.getClips, api.updateClip, api.addClip, api.deleteClip, api.getMarkers, api.addMarker, api.exportProject, api.console, undefined, undefined, { fetch: undefined, XMLHttpRequest: undefined }, undefined, undefined);
+      await run(
+        api.getClips,
+        api.updateClip,
+        api.addClip,
+        api.deleteClip,
+        api.getMarkers,
+        api.addMarker,
+        api.exportProject,
+        api.console,
+        undefined,
+        undefined,
+        { fetch: undefined, XMLHttpRequest: undefined },
+        undefined,
+        undefined,
+      );
       workerSelf.postMessage({
         ok: true,
         result: {
           operations: state.operations,
           logs: state.logs,
-          durationMs: Date.now() - startedAt
-        }
+          durationMs: Date.now() - startedAt,
+        },
       });
     } catch (error) {
       workerSelf.postMessage({ ok: false, error: error instanceof Error ? error.message : String(error) });

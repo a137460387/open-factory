@@ -9,7 +9,7 @@ import {
   loadLocalEffectPresets,
   parseEffectPresetCommunityJson,
   saveLocalEffectPreset,
-  type EffectPresetLibraryStorage
+  type EffectPresetLibraryStorage,
 } from './effect-preset-library';
 
 describe('effect preset library', () => {
@@ -43,10 +43,12 @@ describe('effect preset library', () => {
   it('filters community cards by style and use tags', () => {
     const cards = [
       ...parseEffectPresetCommunityJson(makeCommunityJson('film-face', ['cinematic', 'portrait'])),
-      ...parseEffectPresetCommunityJson(makeCommunityJson('cyber-food', ['cyber', 'food']))
+      ...parseEffectPresetCommunityJson(makeCommunityJson('cyber-food', ['cyber', 'food'])),
     ];
 
-    expect(filterEffectPresetCommunityCards(cards, { style: 'cinematic' }).map((card) => card.id)).toEqual(['film-face']);
+    expect(filterEffectPresetCommunityCards(cards, { style: 'cinematic' }).map((card) => card.id)).toEqual([
+      'film-face',
+    ]);
     expect(filterEffectPresetCommunityCards(cards, { use: 'food' }).map((card) => card.id)).toEqual(['cyber-food']);
   });
 
@@ -83,10 +85,10 @@ function makeCommunityJson(id: string, tags: string[]): string {
           author: 'Ada',
           tags,
           thumbnail: 'data:image/png;base64,AAAA',
-          now: '2026-06-18T00:00:00.000Z'
-        })
-      }
-    ]
+          now: '2026-06-18T00:00:00.000Z',
+        }),
+      },
+    ],
   });
 }
 
@@ -105,7 +107,7 @@ function makeClip() {
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 },
     blendMode: 'normal' as const,
-    volume: 1
+    volume: 1,
   };
 }
 
@@ -124,6 +126,6 @@ function createMemoryStorage(): EffectPresetLibraryStorage & { appDataDir: strin
     scanDirectory: (path) => {
       const root = path.replace(/[\\/]+$/, '');
       return Array.from(files.keys()).filter((candidate) => candidate.startsWith(`${root}/`));
-    }
+    },
   };
 }

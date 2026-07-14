@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, RefreshCw, Trash2, X } from 'lucide-react';
-import { expandRenameTemplate, type MediaAsset, type MediaCleanupReport, type SmartDuplicateGroup } from '@open-factory/editor-core';
+import {
+  expandRenameTemplate,
+  type MediaAsset,
+  type MediaCleanupReport,
+  type SmartDuplicateGroup,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 
 export interface MediaOrganizerDuplicateSelection {
@@ -30,7 +35,7 @@ export function MediaOrganizerDialog({
   onConfirmDuplicateGroups,
   onRemoveMediaReferences,
   onArchiveUnused,
-  onApplyRenameTemplate
+  onApplyRenameTemplate,
 }: MediaOrganizerDialogProps) {
   const t = zhCN.mediaOrganizer;
   const [confirmedGroups, setConfirmedGroups] = useState<Record<string, boolean>>({});
@@ -44,9 +49,9 @@ export function MediaOrganizerDialog({
       Object.fromEntries(
         groups.map((group) => [
           group.id,
-          Object.fromEntries(group.assets.map((asset) => [asset.assetId, asset.assetId !== group.keepAssetId]))
-        ])
-      )
+          Object.fromEntries(group.assets.map((asset) => [asset.assetId, asset.assetId !== group.keepAssetId])),
+        ]),
+      ),
     );
   }, [groups]);
 
@@ -57,10 +62,12 @@ export function MediaOrganizerDialog({
         .map((group) => ({
           groupId: group.id,
           keepAssetId: group.keepAssetId,
-          removeAssetIds: group.assets.filter((asset) => asset.assetId !== group.keepAssetId && removeByGroup[group.id]?.[asset.assetId]).map((asset) => asset.assetId)
+          removeAssetIds: group.assets
+            .filter((asset) => asset.assetId !== group.keepAssetId && removeByGroup[group.id]?.[asset.assetId])
+            .map((asset) => asset.assetId),
         }))
         .filter((selection) => selection.removeAssetIds.length > 0),
-    [confirmedGroups, groups, removeByGroup]
+    [confirmedGroups, groups, removeByGroup],
   );
   const renamePreviewAsset = groups[0]?.assets[0];
   const renamePreview = renamePreviewAsset
@@ -70,14 +77,17 @@ export function MediaOrganizerDialog({
         height: renamePreviewAsset.height,
         codec: renamePreviewAsset.codec,
         index: 1,
-        name: renamePreviewAsset.name
+        name: renamePreviewAsset.name,
       })
     : expandRenameTemplate(renameTemplate, { index: 1 });
   const orphaned = cleanup?.orphaned ?? [];
   const unused = cleanup?.unused ?? [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="media-organizer-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="media-organizer-dialog"
+    >
       <section className="flex max-h-[88vh] w-full max-w-5xl flex-col rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
@@ -95,7 +105,12 @@ export function MediaOrganizerDialog({
               <RefreshCw size={15} />
               {scanning ? t.scanning : t.rescan}
             </button>
-            <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+            <button
+              className="rounded p-1 text-slate-500 hover:bg-panel"
+              type="button"
+              aria-label={zhCN.common.close}
+              onClick={onClose}
+            >
               <X size={18} />
             </button>
           </div>
@@ -109,28 +124,43 @@ export function MediaOrganizerDialog({
                   {t.groupCount(groups.length)}
                 </span>
               </div>
-              {groups.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{scanning ? t.scanning : t.noDuplicates}</div> : null}
+              {groups.length === 0 ? (
+                <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
+                  {scanning ? t.scanning : t.noDuplicates}
+                </div>
+              ) : null}
               <div className="space-y-3">
                 {groups.map((group) => (
-                  <div key={group.id} className="rounded-md border border-line p-3" data-testid="media-organizer-duplicate-group">
+                  <div
+                    key={group.id}
+                    className="rounded-md border border-line p-3"
+                    data-testid="media-organizer-duplicate-group"
+                  >
                     <label className="mb-3 flex items-start gap-2 text-sm font-medium text-slate-800">
                       <input
                         className="mt-1 accent-brand"
                         type="checkbox"
                         checked={Boolean(confirmedGroups[group.id])}
                         data-testid="media-organizer-confirm-group"
-                        onChange={(event) => setConfirmedGroups((current) => ({ ...current, [group.id]: event.target.checked }))}
+                        onChange={(event) =>
+                          setConfirmedGroups((current) => ({ ...current, [group.id]: event.target.checked }))
+                        }
                       />
                       <span>
                         {t.confirmGroup}
-                        <span className="block text-xs font-normal text-slate-500">{t.similarity(group.similarity)}</span>
+                        <span className="block text-xs font-normal text-slate-500">
+                          {t.similarity(group.similarity)}
+                        </span>
                       </span>
                     </label>
                     <div className="space-y-2">
                       {group.assets.map((asset) => {
                         const keep = asset.assetId === group.keepAssetId;
                         return (
-                          <label key={asset.assetId} className="grid grid-cols-[auto_1fr] gap-2 rounded-md bg-panel px-2 py-2 text-xs text-slate-600">
+                          <label
+                            key={asset.assetId}
+                            className="grid grid-cols-[auto_1fr] gap-2 rounded-md bg-panel px-2 py-2 text-xs text-slate-600"
+                          >
                             <input
                               className="mt-1 accent-brand"
                               type="checkbox"
@@ -142,21 +172,26 @@ export function MediaOrganizerDialog({
                                   ...current,
                                   [group.id]: {
                                     ...current[group.id],
-                                    [asset.assetId]: event.target.checked
-                                  }
+                                    [asset.assetId]: event.target.checked,
+                                  },
                                 }))
                               }
                             />
                             <span className="min-w-0">
                               <span className="flex flex-wrap items-center gap-2">
                                 <span className="truncate font-medium text-slate-800">{asset.name}</span>
-                                {keep ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700">{t.keep}</span> : null}
+                                {keep ? (
+                                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                    {t.keep}
+                                  </span>
+                                ) : null}
                               </span>
                               <span className="block truncate" title={asset.path}>
                                 {asset.path}
                               </span>
                               <span className="mt-1 block text-slate-500">
-                                {formatResolution(asset.width, asset.height)} · {formatBytes(asset.size)} · {asset.codec ?? t.unknown}
+                                {formatResolution(asset.width, asset.height)} · {formatBytes(asset.size)} ·{' '}
+                                {asset.codec ?? t.unknown}
                               </span>
                             </span>
                           </label>
@@ -219,7 +254,10 @@ export function MediaOrganizerDialog({
                   onChange={(event) => setRenameTemplate(event.target.value)}
                 />
               </label>
-              <div className="mt-2 rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="media-organizer-rename-preview">
+              <div
+                className="mt-2 rounded-md bg-panel p-2 text-xs text-slate-600"
+                data-testid="media-organizer-rename-preview"
+              >
                 {renamePreview}
               </div>
               <button
@@ -245,7 +283,11 @@ export function MediaOrganizerDialog({
             />
             {t.moveFilesToTrash}
           </label>
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+            type="button"
+            onClick={onClose}
+          >
             {t.cancel}
           </button>
           <button

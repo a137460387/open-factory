@@ -3,7 +3,7 @@ import {
   TIMELINE_RENDER_CACHE_RETAIN_SECONDS,
   TimelineRenderFrameCache,
   type TimelineRenderFrameCacheSnapshot,
-  type TimelineRenderRange
+  type TimelineRenderRange,
 } from '@open-factory/editor-core';
 
 export type TimelineRenderCacheWorkerInput =
@@ -28,7 +28,7 @@ export type TimelineRenderCacheWorkerOutput =
 
 const cache = new TimelineRenderFrameCache<ImageBitmap>({
   maxBytes: TIMELINE_RENDER_CACHE_DEFAULT_MEMORY_BYTES,
-  disposeBitmap: (bitmap) => bitmap.close()
+  disposeBitmap: (bitmap) => bitmap.close(),
 });
 
 self.onmessage = async (event: MessageEvent<TimelineRenderCacheWorkerInput>) => {
@@ -40,7 +40,7 @@ self.onmessage = async (event: MessageEvent<TimelineRenderCacheWorkerInput>) => 
         bitmap: message.bitmap,
         time: message.time,
         duration: message.duration,
-        bytes: message.bytes
+        bytes: message.bytes,
       });
       postSnapshot(cache.retainAround(message.playheadTime, TIMELINE_RENDER_CACHE_RETAIN_SECONDS));
       return;
@@ -49,11 +49,22 @@ self.onmessage = async (event: MessageEvent<TimelineRenderCacheWorkerInput>) => 
     if (message.type === 'get') {
       const bitmap = cache.get(message.key);
       if (!bitmap) {
-        postMessage({ type: 'frame', requestId: message.requestId, key: message.key, hit: false } satisfies TimelineRenderCacheWorkerOutput);
+        postMessage({
+          type: 'frame',
+          requestId: message.requestId,
+          key: message.key,
+          hit: false,
+        } satisfies TimelineRenderCacheWorkerOutput);
         return;
       }
       const copy = await createImageBitmap(bitmap);
-      postMessage({ type: 'frame', requestId: message.requestId, key: message.key, hit: true, bitmap: copy } satisfies TimelineRenderCacheWorkerOutput);
+      postMessage({
+        type: 'frame',
+        requestId: message.requestId,
+        key: message.key,
+        hit: true,
+        bitmap: copy,
+      } satisfies TimelineRenderCacheWorkerOutput);
       return;
     }
 
@@ -76,7 +87,7 @@ self.onmessage = async (event: MessageEvent<TimelineRenderCacheWorkerInput>) => 
     postMessage({
       type: 'error',
       requestId: 'requestId' in event.data ? event.data.requestId : undefined,
-      message: error instanceof Error ? error.message : String(error)
+      message: error instanceof Error ? error.message : String(error),
     } satisfies TimelineRenderCacheWorkerOutput);
   }
 };

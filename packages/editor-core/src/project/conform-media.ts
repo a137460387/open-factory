@@ -94,7 +94,7 @@ export interface ConformMediaReportOptions {
 
 const PROXY_SUFFIX_PATTERNS = [
   /(?:[\s._-]+(?:proxy|prox|offline|lowres|low-res|low_resolution|preview|draft))(?:[\s._-]*(?:\d{3,4}p|uhd|hd|hq|lq|cfr|edit))?$/i,
-  /(?:[\s._-]+(?:\d{3,4}p|uhd|hd|hq|lq|draft|edit))(?:[\s._-]+(?:proxy|prox|offline|lowres|low-res|low_resolution|preview))$/i
+  /(?:[\s._-]+(?:\d{3,4}p|uhd|hd|hq|lq|draft|edit))(?:[\s._-]+(?:proxy|prox|offline|lowres|low-res|low_resolution|preview))$/i,
 ];
 
 export function stripProxySuffix(pathOrName: string): string {
@@ -115,13 +115,13 @@ export function stripProxySuffix(pathOrName: string): string {
 
 export function buildConformFilenameKey(pathOrName: string, options: { caseInsensitive?: boolean } = {}): string {
   const key = stripProxySuffix(pathOrName).replace(/\s+/g, ' ').trim();
-  return options.caseInsensitive ?? true ? key.toLocaleLowerCase() : key;
+  return (options.caseInsensitive ?? true) ? key.toLocaleLowerCase() : key;
 }
 
 export function matchConformByFilename(
   media: MediaAsset[],
   candidates: ConformMediaCandidate[],
-  options: { caseInsensitive?: boolean } = {}
+  options: { caseInsensitive?: boolean } = {},
 ): ConformMediaMatch[] {
   const candidateIndex = new Map<string, ConformMediaCandidate[]>();
   for (const candidate of candidates) {
@@ -142,7 +142,7 @@ export function matchConformByFilename(
         assetId: asset.id,
         strategy: 'filename',
         failureReason: 'duplicate-candidates',
-        candidatePaths: matches.map((candidate) => candidate.path)
+        candidatePaths: matches.map((candidate) => candidate.path),
       };
     }
     return { assetId: asset.id, strategy: 'filename', candidate: matches[0], candidatePaths: [matches[0].path] };
@@ -163,7 +163,7 @@ export function matchConformByTimecode(media: MediaAsset[], candidates: ConformM
 
   return media.map((asset) => {
     const timecode = normalizeTimecode(readTimecode(asset));
-    const matches = timecode ? candidateIndex.get(timecode) ?? [] : [];
+    const matches = timecode ? (candidateIndex.get(timecode) ?? []) : [];
     if (matches.length === 0) {
       return { assetId: asset.id, strategy: 'timecode', failureReason: 'not-found', candidatePaths: [] };
     }
@@ -172,27 +172,29 @@ export function matchConformByTimecode(media: MediaAsset[], candidates: ConformM
         assetId: asset.id,
         strategy: 'timecode',
         failureReason: 'duplicate-candidates',
-        candidatePaths: matches.map((candidate) => candidate.path)
+        candidatePaths: matches.map((candidate) => candidate.path),
       };
     }
     return { assetId: asset.id, strategy: 'timecode', candidate: matches[0], candidatePaths: [matches[0].path] };
   });
 }
 
-export function buildManualConformMatches(pairings: Array<{ assetId: string; candidate?: ConformMediaCandidate }>): ConformMediaMatch[] {
+export function buildManualConformMatches(
+  pairings: Array<{ assetId: string; candidate?: ConformMediaCandidate }>,
+): ConformMediaMatch[] {
   return pairings.map((pairing) => ({
     assetId: pairing.assetId,
     strategy: 'manual',
     candidate: pairing.candidate,
     candidatePaths: pairing.candidate ? [pairing.candidate.path] : [],
-    failureReason: pairing.candidate ? undefined : 'not-found'
+    failureReason: pairing.candidate ? undefined : 'not-found',
   }));
 }
 
 export function buildConformPreflight(
   media: MediaAsset[],
   matches: ConformMediaMatch[],
-  options: ConformMediaPreflightOptions = {}
+  options: ConformMediaPreflightOptions = {},
 ): ConformMediaPreflightItem[] {
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const selectedAssetIds = options.selectedAssetIds ? new Set(options.selectedAssetIds) : undefined;
@@ -211,10 +213,13 @@ export function buildConformPreflight(
         status: 'failed',
         warnings: [],
         failureReason: 'not-found',
-        candidatePaths
+        candidatePaths,
       };
     }
-    const warnings = match.failureReason || !match.candidate ? [] : collectPreflightWarnings(asset, match.candidate, options.fallbackFrameRate);
+    const warnings =
+      match.failureReason || !match.candidate
+        ? []
+        : collectPreflightWarnings(asset, match.candidate, options.fallbackFrameRate);
     const selected = selectedAssetIds ? selectedAssetIds.has(match.assetId) : true;
     const failureReason = match.failureReason ?? (match.candidate ? undefined : 'not-found');
     return {
@@ -227,7 +232,7 @@ export function buildConformPreflight(
       status: failureReason ? 'failed' : warnings.length > 0 ? 'warning' : 'success',
       warnings,
       failureReason,
-      candidatePaths
+      candidatePaths,
     };
   });
 }
@@ -238,11 +243,14 @@ export function buildConformMediaReplacements(items: ConformMediaPreflightItem[]
     .map((item) => ({
       assetId: item.assetId,
       replacementPath: item.candidatePath!,
-      strategy: item.strategy
+      strategy: item.strategy,
     }));
 }
 
-export function buildConformReport(items: ConformMediaPreflightItem[], options: ConformMediaReportOptions = {}): ConformMediaReport {
+export function buildConformReport(
+  items: ConformMediaPreflightItem[],
+  options: ConformMediaReportOptions = {},
+): ConformMediaReport {
   const reportItems = options.selectedOnly ? items.filter((item) => item.selected) : items;
   const successes: ConformMediaReportSuccess[] = [];
   const warnings: ConformMediaReportWarning[] = [];
@@ -254,7 +262,7 @@ export function buildConformReport(items: ConformMediaPreflightItem[], options: 
         assetId: item.assetId,
         proxyPath: item.proxyPath,
         reason: item.failureReason,
-        candidatePaths: item.candidatePaths
+        candidatePaths: item.candidatePaths,
       });
       continue;
     }
@@ -263,14 +271,14 @@ export function buildConformReport(items: ConformMediaPreflightItem[], options: 
         assetId: item.assetId,
         fromPath: item.proxyPath,
         toPath: item.candidatePath,
-        strategy: item.strategy
+        strategy: item.strategy,
       });
     }
     for (const warning of item.warnings) {
       warnings.push({
         ...warning,
         proxyPath: item.proxyPath,
-        originalPath: item.candidatePath ?? ''
+        originalPath: item.candidatePath ?? '',
       });
     }
   }
@@ -282,7 +290,7 @@ export function buildConformReport(items: ConformMediaPreflightItem[], options: 
     failureCount: failures.length,
     successes,
     warnings,
-    failures
+    failures,
   };
 }
 
@@ -301,13 +309,17 @@ export function applyConformMedia(project: Project, replacements: ConformMediaRe
       return {
         ...asset,
         path: replacement.replacementPath,
-        missing: false
+        missing: false,
       };
-    })
+    }),
   };
 }
 
-function collectPreflightWarnings(asset: MediaAsset, candidate: ConformMediaCandidate, fallbackFrameRate?: number): ConformMediaWarning[] {
+function collectPreflightWarnings(
+  asset: MediaAsset,
+  candidate: ConformMediaCandidate,
+  fallbackFrameRate?: number,
+): ConformMediaWarning[] {
   const warnings: ConformMediaWarning[] = [];
   const proxyDuration = finiteNumber(asset.duration);
   const originalDuration = finiteNumber(candidate.duration);
@@ -320,19 +332,23 @@ function collectPreflightWarnings(asset: MediaAsset, candidate: ConformMediaCand
         reason: 'duration-mismatch',
         proxyValue: proxyDuration,
         originalValue: originalDuration,
-        threshold
+        threshold,
       });
     }
   }
 
   const proxyFrameRate = getFrameRate(asset);
   const originalFrameRate = getFrameRate(candidate);
-  if (proxyFrameRate !== undefined && originalFrameRate !== undefined && Math.abs(proxyFrameRate - originalFrameRate) > 0.01) {
+  if (
+    proxyFrameRate !== undefined &&
+    originalFrameRate !== undefined &&
+    Math.abs(proxyFrameRate - originalFrameRate) > 0.01
+  ) {
     warnings.push({
       assetId: asset.id,
       reason: 'frame-rate-mismatch',
       proxyValue: proxyFrameRate,
-      originalValue: originalFrameRate
+      originalValue: originalFrameRate,
     });
   }
 
@@ -347,14 +363,16 @@ function collectPreflightWarnings(asset: MediaAsset, candidate: ConformMediaCand
       assetId: asset.id,
       reason: 'resolution-mismatch',
       proxyValue: `${asset.width}x${asset.height}`,
-      originalValue: `${candidate.width}x${candidate.height}`
+      originalValue: `${candidate.width}x${candidate.height}`,
     });
   }
 
   return warnings;
 }
 
-function getFrameRate(media: Pick<MediaAsset, 'frameRate' | 'avgFrameRate' | 'realFrameRate'> | ConformMediaCandidate): number | undefined {
+function getFrameRate(
+  media: Pick<MediaAsset, 'frameRate' | 'avgFrameRate' | 'realFrameRate'> | ConformMediaCandidate,
+): number | undefined {
   return finiteNumber(media.frameRate) ?? parseFrameRate(media.realFrameRate) ?? parseFrameRate(media.avgFrameRate);
 }
 

@@ -12,12 +12,15 @@ const ColorWheel: React.FC<{
   value: { r: number; g: number; b: number; y: number };
   onChange: (value: { r: number; g: number; b: number; y: number }) => void;
 }> = ({ label, value, onChange }) => {
-  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    onChange({ ...value, r: Math.max(-1, Math.min(1, x)), b: Math.max(-1, Math.min(1, -y)) });
-  }, [value, onChange]);
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+      onChange({ ...value, r: Math.max(-1, Math.min(1, x)), b: Math.max(-1, Math.min(1, -y)) });
+    },
+    [value, onChange],
+  );
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -52,7 +55,7 @@ const MasterSlider: React.FC<{
       min={-100}
       max={100}
       value={value * 100}
-      onChange={e => onChange(Number(e.target.value) / 100)}
+      onChange={(e) => onChange(Number(e.target.value) / 100)}
       className="flex-1"
       data-testid={`master-slider-${label.toLowerCase()}`}
     />
@@ -62,21 +65,33 @@ const MasterSlider: React.FC<{
 
 /** 一级色轮面板 */
 export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChange }) => {
-  const updateLift = useCallback((value: { r: number; g: number; b: number; y: number }) => {
-    onChange({ ...params, lift: value });
-  }, [params, onChange]);
+  const updateLift = useCallback(
+    (value: { r: number; g: number; b: number; y: number }) => {
+      onChange({ ...params, lift: value });
+    },
+    [params, onChange],
+  );
 
-  const updateGamma = useCallback((value: { r: number; g: number; b: number; y: number }) => {
-    onChange({ ...params, gamma: value });
-  }, [params, onChange]);
+  const updateGamma = useCallback(
+    (value: { r: number; g: number; b: number; y: number }) => {
+      onChange({ ...params, gamma: value });
+    },
+    [params, onChange],
+  );
 
-  const updateGain = useCallback((value: { r: number; g: number; b: number; y: number }) => {
-    onChange({ ...params, gain: value });
-  }, [params, onChange]);
+  const updateGain = useCallback(
+    (value: { r: number; g: number; b: number; y: number }) => {
+      onChange({ ...params, gain: value });
+    },
+    [params, onChange],
+  );
 
-  const updateOffset = useCallback((value: { r: number; g: number; b: number; y: number }) => {
-    onChange({ ...params, offset: value });
-  }, [params, onChange]);
+  const updateOffset = useCallback(
+    (value: { r: number; g: number; b: number; y: number }) => {
+      onChange({ ...params, offset: value });
+    },
+    [params, onChange],
+  );
 
   return (
     <div className="p-3 space-y-4" data-testid="color-wheel-panel">
@@ -88,10 +103,18 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChan
         <ColorWheel label="Offset (偏移)" value={params.offset} onChange={updateOffset} />
       </div>
       <div className="space-y-2">
-        <MasterSlider label="Lift" value={params.liftMaster} onChange={v => onChange({ ...params, liftMaster: v })} />
-        <MasterSlider label="Gamma" value={params.gammaMaster} onChange={v => onChange({ ...params, gammaMaster: v })} />
-        <MasterSlider label="Gain" value={params.gainMaster} onChange={v => onChange({ ...params, gainMaster: v })} />
-        <MasterSlider label="Offset" value={params.offsetMaster} onChange={v => onChange({ ...params, offsetMaster: v })} />
+        <MasterSlider label="Lift" value={params.liftMaster} onChange={(v) => onChange({ ...params, liftMaster: v })} />
+        <MasterSlider
+          label="Gamma"
+          value={params.gammaMaster}
+          onChange={(v) => onChange({ ...params, gammaMaster: v })}
+        />
+        <MasterSlider label="Gain" value={params.gainMaster} onChange={(v) => onChange({ ...params, gainMaster: v })} />
+        <MasterSlider
+          label="Offset"
+          value={params.offsetMaster}
+          onChange={(v) => onChange({ ...params, offsetMaster: v })}
+        />
       </div>
     </div>
   );

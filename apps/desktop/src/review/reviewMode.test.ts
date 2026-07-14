@@ -9,7 +9,7 @@ describe('review mode shell visibility', () => {
       showRightPanel: false,
       showTimeline: false,
       showTimelineResizeHandle: false,
-      showExportControls: false
+      showExportControls: false,
     });
   });
 
@@ -20,7 +20,7 @@ describe('review mode shell visibility', () => {
       showRightPanel: true,
       showTimeline: true,
       showTimelineResizeHandle: true,
-      showExportControls: true
+      showExportControls: true,
     });
   });
 });

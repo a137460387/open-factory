@@ -18,7 +18,8 @@ export function normalizeSceneCutTimes(cuts: readonly number[] | undefined, maxT
   if (!Array.isArray(cuts)) {
     return undefined;
   }
-  const limit = typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
+  const limit =
+    typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
   const normalized = cuts
     .filter((time) => typeof time === 'number' && Number.isFinite(time))
     .map((time) => round(Math.min(limit, Math.max(0, time))))
@@ -38,10 +39,15 @@ export function buildScdetFilterArg(threshold: number | undefined): string {
   return `scdet=threshold=${formatFilterNumber(mapSceneDetectThreshold(threshold))}`;
 }
 
-export function filterShortSceneCuts(cuts: readonly number[], clipDuration: number, minSceneSeconds = DEFAULT_MIN_SCENE_SECONDS): number[] {
+export function filterShortSceneCuts(
+  cuts: readonly number[],
+  clipDuration: number,
+  minSceneSeconds = DEFAULT_MIN_SCENE_SECONDS,
+): number[] {
   const duration = Math.max(0, Number.isFinite(clipDuration) ? clipDuration : 0);
   const minDuration = Math.max(0, Number.isFinite(minSceneSeconds) ? minSceneSeconds : DEFAULT_MIN_SCENE_SECONDS);
-  const points = normalizeSceneCutTimes(cuts, duration)?.filter((time) => time > 0.000001 && time < duration - 0.000001) ?? [];
+  const points =
+    normalizeSceneCutTimes(cuts, duration)?.filter((time) => time > 0.000001 && time < duration - 0.000001) ?? [];
   if (minDuration <= 0) {
     return points;
   }
@@ -59,7 +65,11 @@ export function filterShortSceneCuts(cuts: readonly number[], clipDuration: numb
   return accepted;
 }
 
-export function buildSceneMarkerInputs(cuts: readonly number[], clipStart = 0, options: { idPrefix?: string; labelPrefix?: string; color?: string } = {}): SceneMarkerInput[] {
+export function buildSceneMarkerInputs(
+  cuts: readonly number[],
+  clipStart = 0,
+  options: { idPrefix?: string; labelPrefix?: string; color?: string } = {},
+): SceneMarkerInput[] {
   const start = Number.isFinite(clipStart) ? clipStart : 0;
   const labelPrefix = options.labelPrefix ?? '场景';
   const color = options.color ?? SCENE_CUT_MARKER_COLOR;
@@ -69,7 +79,7 @@ export function buildSceneMarkerInputs(cuts: readonly number[], clipStart = 0, o
       ...(options.idPrefix ? { id: `${options.idPrefix}-${index + 1}` } : {}),
       time,
       label: `${labelPrefix} ${index + 1}`,
-      color
+      color,
     };
   });
 }
@@ -81,17 +91,24 @@ export function buildYoutubeChapterLines(markers: readonly Pick<TimelineMarker, 
     .map((marker) => `${formatYoutubeChapterTime(marker.time)} ${marker.label.trim()}`);
 }
 
-export function getSceneDetectionAnalysisLimit(clipDuration: number, maxDuration = SCENE_DETECTION_MAX_SECONDS): SceneDetectionAnalysisLimit {
+export function getSceneDetectionAnalysisLimit(
+  clipDuration: number,
+  maxDuration = SCENE_DETECTION_MAX_SECONDS,
+): SceneDetectionAnalysisLimit {
   const duration = Math.max(0, Number.isFinite(clipDuration) ? clipDuration : 0);
   const max = Math.max(1, Number.isFinite(maxDuration) ? maxDuration : SCENE_DETECTION_MAX_SECONDS);
   return {
     analysisDuration: round(Math.min(duration, max)),
     limited: duration > max + 0.000001,
-    maxDuration: max
+    maxDuration: max,
   };
 }
 
-export function estimateSceneCutCountForThreshold(previousCuts: readonly number[] | undefined, threshold: number | undefined, duration?: number): number {
+export function estimateSceneCutCountForThreshold(
+  previousCuts: readonly number[] | undefined,
+  threshold: number | undefined,
+  duration?: number,
+): number {
   const normalizedThreshold = mapSceneDetectThreshold(threshold);
   const cuts = normalizeSceneCutTimes(previousCuts, duration);
   if (cuts?.length) {

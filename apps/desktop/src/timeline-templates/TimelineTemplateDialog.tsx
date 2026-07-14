@@ -6,7 +6,7 @@ import {
   serializeTimelineTemplate,
   type Project,
   type TimelineTemplateDefinition,
-  type TimelineTemplatePlaceholderBindings
+  type TimelineTemplatePlaceholderBindings,
 } from '@open-factory/editor-core';
 import DOMPurify from 'dompurify';
 import { X } from 'lucide-react';
@@ -25,15 +25,27 @@ interface TimelineTemplateDialogProps {
   onClose(): void;
 }
 
-export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreate, onSaved, onClose }: TimelineTemplateDialogProps) {
+export function TimelineTemplateDialog({
+  mode,
+  project,
+  selectedClipIds,
+  onCreate,
+  onSaved,
+  onClose,
+}: TimelineTemplateDialogProps) {
   const copy = zhCN.timelineTemplates;
   const [name, setName] = useState(project.name || copy.defaultName);
   const [templates, setTemplates] = useState<TimelineTemplateDefinition[]>([...BUILT_IN_TIMELINE_TEMPLATES]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(BUILT_IN_TIMELINE_TEMPLATES[0]?.id ?? '');
   const [bindings, setBindings] = useState<TimelineTemplatePlaceholderBindings>({});
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0];
-  const previewSvg = useMemo(() => (selectedTemplate ? renderTimelineTemplatePreviewSvg(selectedTemplate, { width: 560 }) : ''), [selectedTemplate]);
-  const missingPlaceholders = selectedTemplate ? getMissingTimelineTemplatePlaceholders(selectedTemplate, bindings) : [];
+  const previewSvg = useMemo(
+    () => (selectedTemplate ? renderTimelineTemplatePreviewSvg(selectedTemplate, { width: 560 }) : ''),
+    [selectedTemplate],
+  );
+  const missingPlaceholders = selectedTemplate
+    ? getMissingTimelineTemplatePlaceholders(selectedTemplate, bindings)
+    : [];
 
   useEffect(() => {
     if (mode !== 'new') {
@@ -49,7 +61,11 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
       })
       .catch((error) => {
         console.warn('Unable to load timeline templates', error);
-        showToast({ kind: 'warning', title: copy.loadFailed, message: error instanceof Error ? error.message : copy.loadFailedMessage });
+        showToast({
+          kind: 'warning',
+          title: copy.loadFailed,
+          message: error instanceof Error ? error.message : copy.loadFailedMessage,
+        });
       });
     return () => {
       canceled = true;
@@ -60,18 +76,24 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
     try {
       const template = serializeTimelineTemplate(project, {
         name,
-        clipIds: selectedClipIds.length > 0 ? selectedClipIds : undefined
+        clipIds: selectedClipIds.length > 0 ? selectedClipIds : undefined,
       });
       await saveTimelineTemplate(template);
       showToast({ kind: 'success', title: copy.savedTitle, message: copy.savedMessage(template.name) });
       onSaved();
     } catch (error) {
-      showToast({ kind: 'warning', title: copy.saveFailed, message: error instanceof Error ? error.message : copy.saveFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: copy.saveFailed,
+        message: error instanceof Error ? error.message : copy.saveFailedMessage,
+      });
     }
   };
 
   const choosePlaceholderFile = async (placeholderId: string) => {
-    const paths = await openFileDialog(false, [{ name: zhCN.fileDialogs.media, extensions: ['mp4', 'mov', 'webm', 'mkv', 'mp3', 'wav', 'png', 'jpg', 'jpeg'] }]);
+    const paths = await openFileDialog(false, [
+      { name: zhCN.fileDialogs.media, extensions: ['mp4', 'mov', 'webm', 'mkv', 'mp3', 'wav', 'png', 'jpg', 'jpeg'] },
+    ]);
     const path = paths[0];
     if (!path) {
       return;
@@ -91,14 +113,23 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4" data-testid="timeline-template-dialog">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4"
+      data-testid="timeline-template-dialog"
+    >
       <section className="grid max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-ink">{mode === 'save' ? copy.saveTitle : copy.newTitle}</h2>
             <p className="text-xs text-slate-500">{mode === 'save' ? copy.saveSubtitle : copy.newSubtitle}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={copy.close} data-testid="timeline-template-close-button" onClick={onClose}>
+          <button
+            className="rounded p-1 text-slate-500 hover:bg-panel"
+            type="button"
+            aria-label={copy.close}
+            data-testid="timeline-template-close-button"
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -114,8 +145,13 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
                   onChange={(event) => setName(event.target.value)}
                 />
               </label>
-              <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="timeline-template-selection-summary">
-                {selectedClipIds.length > 0 ? copy.selectedClipSummary(selectedClipIds.length) : copy.wholeTimelineSummary}
+              <div
+                className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+                data-testid="timeline-template-selection-summary"
+              >
+                {selectedClipIds.length > 0
+                  ? copy.selectedClipSummary(selectedClipIds.length)
+                  : copy.wholeTimelineSummary}
               </div>
               <button
                 className="inline-flex h-9 items-center rounded-md bg-brand px-3 text-sm font-semibold text-white hover:bg-[#176858]"
@@ -142,20 +178,31 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
                   >
                     <div className="text-sm font-semibold text-ink">{template.name}</div>
                     <div className="mt-1 text-xs text-slate-500">{template.description ?? copy.customTemplate}</div>
-                    <div className="mt-2 text-[11px] font-medium text-slate-500">{copy.trackCount(template.tracks.length)}</div>
+                    <div className="mt-2 text-[11px] font-medium text-slate-500">
+                      {copy.trackCount(template.tracks.length)}
+                    </div>
                   </button>
                 ))}
               </div>
               {selectedTemplate ? (
                 <div className="min-w-0 space-y-3">
-                  <div className="overflow-hidden rounded-md border border-line bg-panel p-2" data-testid="timeline-template-preview" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSvg) }} />
+                  <div
+                    className="overflow-hidden rounded-md border border-line bg-panel p-2"
+                    data-testid="timeline-template-preview"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSvg) }}
+                  />
                   {selectedTemplate.placeholders.length > 0 ? (
                     <div className="space-y-2" data-testid="timeline-template-placeholders">
                       {selectedTemplate.placeholders.map((placeholder) => (
-                        <div key={placeholder.id} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-line bg-white p-2">
+                        <div
+                          key={placeholder.id}
+                          className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-line bg-white p-2"
+                        >
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-ink">{placeholder.name}</div>
-                            <div className="truncate text-xs text-slate-500">{bindingLabel(bindings[placeholder.id]) ?? placeholder.originalPath ?? copy.notSelected}</div>
+                            <div className="truncate text-xs text-slate-500">
+                              {bindingLabel(bindings[placeholder.id]) ?? placeholder.originalPath ?? copy.notSelected}
+                            </div>
                           </div>
                           <button
                             className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white"

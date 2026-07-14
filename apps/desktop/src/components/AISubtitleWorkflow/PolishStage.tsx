@@ -39,14 +39,11 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
   const project = useEditorStore((s) => s.project);
   const timeline = project.timeline;
 
-  const enabledProviders = useMemo(
-    () => providers.filter((p) => p.enabled && isProviderConfigured(p)),
-    [providers]
-  );
+  const enabledProviders = useMemo(() => providers.filter((p) => p.enabled && isProviderConfigured(p)), [providers]);
   const defaultProviderId = serviceMapping['subtitle-polish'] ?? '';
   const defaultProvider = useMemo(
     () => enabledProviders.find((p) => p.id === defaultProviderId) ?? enabledProviders[0],
-    [enabledProviders, defaultProviderId]
+    [enabledProviders, defaultProviderId],
   );
 
   const [selectedProviderId, setSelectedProviderId] = useState<string>(defaultProvider?.id ?? '');
@@ -58,29 +55,23 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
 
   const selectedProvider = useMemo(
     () => enabledProviders.find((p) => p.id === selectedProviderId) ?? defaultProvider,
-    [enabledProviders, selectedProviderId, defaultProvider]
+    [enabledProviders, selectedProviderId, defaultProvider],
   );
 
-  const subtitleTracks = useMemo(
-    () => timeline.tracks.filter((t) => t.type === 'subtitle'),
-    [timeline]
-  );
+  const subtitleTracks = useMemo(() => timeline.tracks.filter((t) => t.type === 'subtitle'), [timeline]);
 
   const selectedTrack = useMemo(
     () => subtitleTracks.find((t) => t.id === polishState.selectedTrackId),
-    [subtitleTracks, polishState.selectedTrackId]
+    [subtitleTracks, polishState.selectedTrackId],
   );
 
-  const selectedClips = useMemo(
-    () => (selectedTrack?.clips ?? []) as SubtitleClip[],
-    [selectedTrack]
-  );
+  const selectedClips = useMemo(() => (selectedTrack?.clips ?? []) as SubtitleClip[], [selectedTrack]);
 
   const handleTrackSelect = useCallback(
     (trackId: string) => {
       onUpdate({ selectedTrackId: trackId });
     },
-    [onUpdate]
+    [onUpdate],
   );
 
   const startPolish = useCallback(async () => {
@@ -132,7 +123,7 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
             maxTokens: 4096,
             temperature: 0.3,
           },
-          apiKey
+          apiKey,
         );
 
         if (abortRef.current) {
@@ -185,7 +176,7 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
 
   const toggleItem = useCallback((clipId: string) => {
     setPolishedItems((prev) =>
-      prev.map((item) => (item.clipId === clipId ? { ...item, accepted: !item.accepted } : item))
+      prev.map((item) => (item.clipId === clipId ? { ...item, accepted: !item.accepted } : item)),
     );
   }, []);
 
@@ -210,8 +201,8 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
       commandManager.execute(
         new BatchUpdateSubtitleTextCommand(
           timelineAccessor,
-          accepted.map((item) => ({ clipId: item.clipId, text: item.polishedText }))
-        )
+          accepted.map((item) => ({ clipId: item.clipId, text: item.polishedText })),
+        ),
       );
       showToast({
         kind: 'success',
@@ -251,11 +242,7 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
       </div>
 
       {/* Clip count info */}
-      {selectedTrack && (
-        <div className="text-xs text-[var(--color-text-muted)]">
-          {selectedClips.length} 条字幕
-        </div>
-      )}
+      {selectedTrack && <div className="text-xs text-[var(--color-text-muted)]">{selectedClips.length} 条字幕</div>}
 
       {phase === 'idle' && (
         <>
@@ -271,7 +258,9 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
             >
               {enabledProviders.length === 0 && <option value="">{t.noProvider}</option>}
               {enabledProviders.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -339,9 +328,7 @@ export function PolishStage({ polishState, onUpdate, onComplete }: PolishStagePr
                   </div>
                   <button
                     className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-medium ${
-                      item.accepted
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-red-100 text-red-700'
+                      item.accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                     }`}
                     type="button"
                     onClick={() => toggleItem(item.clipId)}

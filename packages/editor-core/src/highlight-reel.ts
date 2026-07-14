@@ -22,7 +22,7 @@ export interface HighlightScore {
 export const DEFAULT_HIGHLIGHT_WEIGHTS: HighlightScoreWeights = {
   visual: 0.4,
   loudness: 0.3,
-  aiContent: 0.3
+  aiContent: 0.3,
 };
 
 /**
@@ -30,7 +30,7 @@ export const DEFAULT_HIGHLIGHT_WEIGHTS: HighlightScoreWeights = {
  */
 export function scoreHighlightClip(
   input: HighlightScoreInput,
-  weights: HighlightScoreWeights = DEFAULT_HIGHLIGHT_WEIGHTS
+  weights: HighlightScoreWeights = DEFAULT_HIGHLIGHT_WEIGHTS,
 ): HighlightScore {
   const totalScore =
     Math.max(0, Math.min(1, input.visualScore)) * weights.visual +
@@ -41,7 +41,7 @@ export function scoreHighlightClip(
     visualScore: input.visualScore,
     loudnessScore: input.loudnessScore,
     aiScore: input.aiScore,
-    totalScore: Math.round(totalScore * 1000) / 1000
+    totalScore: Math.round(totalScore * 1000) / 1000,
   };
 }
 
@@ -50,11 +50,9 @@ export function scoreHighlightClip(
  */
 export function scoreAllHighlightClips(
   inputs: HighlightScoreInput[],
-  weights: HighlightScoreWeights = DEFAULT_HIGHLIGHT_WEIGHTS
+  weights: HighlightScoreWeights = DEFAULT_HIGHLIGHT_WEIGHTS,
 ): HighlightScore[] {
-  return inputs
-    .map((input) => scoreHighlightClip(input, weights))
-    .sort((a, b) => b.totalScore - a.totalScore);
+  return inputs.map((input) => scoreHighlightClip(input, weights)).sort((a, b) => b.totalScore - a.totalScore);
 }
 
 export interface HighlightSelection {
@@ -71,7 +69,7 @@ export function extractTopHighlightClips(
   scores: HighlightScore[],
   clipDurations: Map<string, number>,
   targetDuration: number,
-  tolerance = 0.1
+  tolerance = 0.1,
 ): HighlightSelection {
   const selected: HighlightScore[] = [];
   let totalDuration = 0;
@@ -87,7 +85,7 @@ export function extractTopHighlightClips(
 
   return {
     selected,
-    totalDuration: Math.round(totalDuration * 100) / 100
+    totalDuration: Math.round(totalDuration * 100) / 100,
   };
 }
 
@@ -114,13 +112,13 @@ export function buildHighlightReelSystemPrompt(): string {
     '  "selectedIds": ["clipId1", "clipId2", ...],',
     '  "transitionNotes": ["片段1→片段2过渡说明", "片段2→片段3过渡说明"]',
     '}',
-    'selectedIds必须来自提供的候选列表。只返回JSON对象，不要其他内容。'
+    'selectedIds必须来自提供的候选列表。只返回JSON对象，不要其他内容。',
   ].join('\n');
 }
 
 export function buildHighlightReelUserPrompt(
   description: string,
-  candidates: Array<{ clipId: string; duration: number; totalScore: number; mood?: string }>
+  candidates: Array<{ clipId: string; duration: number; totalScore: number; mood?: string }>,
 ): string {
   const lines = [`集锦目标: ${description}`];
   lines.push('');
@@ -137,10 +135,16 @@ export function parseHighlightReelResponse(json: unknown): { selectedIds: string
   if (!json || typeof json !== 'object') return { selectedIds: [], transitionNotes: [] };
   const input = json as Record<string, unknown>;
   const selectedIds = Array.isArray(input.selectedIds)
-    ? (input.selectedIds as unknown[]).filter((id): id is string => typeof id === 'string').map((id) => id.trim()).filter(Boolean)
+    ? (input.selectedIds as unknown[])
+        .filter((id): id is string => typeof id === 'string')
+        .map((id) => id.trim())
+        .filter(Boolean)
     : [];
   const transitionNotes = Array.isArray(input.transitionNotes)
-    ? (input.transitionNotes as unknown[]).filter((n): n is string => typeof n === 'string').map((n) => n.trim()).filter(Boolean)
+    ? (input.transitionNotes as unknown[])
+        .filter((n): n is string => typeof n === 'string')
+        .map((n) => n.trim())
+        .filter(Boolean)
     : [];
   return { selectedIds, transitionNotes };
 }

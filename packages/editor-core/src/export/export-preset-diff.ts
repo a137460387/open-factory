@@ -73,7 +73,7 @@ const DIFF_FIELD_DEFINITIONS: Array<{ key: string; label: string; type: ExportPr
   { key: 'colorManagement', label: '色彩管理', type: 'colorManagement' },
   { key: 'postExportScript', label: '导出后脚本', type: 'postExportScript' },
   { key: 'masterProcessing', label: '母带处理', type: 'masterProcessing' },
-  { key: 'audioVisualization', label: '音频可视化', type: 'audioVisualization' }
+  { key: 'audioVisualization', label: '音频可视化', type: 'audioVisualization' },
 ];
 
 export function extractPresetDiffFields(
@@ -82,7 +82,7 @@ export function extractPresetDiffFields(
   presetIdA: string,
   presetIdB: string,
   presetNameA: string,
-  presetNameB: string
+  presetNameB: string,
 ): ExportPresetDiffResult {
   const fields: ExportPresetDiffField[] = [];
   const recordA = settingsA as Record<string, unknown>;
@@ -98,7 +98,7 @@ export function extractPresetDiffFields(
       type: def.type,
       valueA,
       valueB,
-      equal
+      equal,
     });
   }
 
@@ -109,7 +109,7 @@ export function extractPresetDiffFields(
 export function mergePresetDiffs(
   baseSettings: ExportPresetSettings,
   sourceSettings: ExportPresetSettings,
-  selectedKeys: string[]
+  selectedKeys: string[],
 ): ExportPresetSettings {
   const merged: Record<string, unknown> = { ...baseSettings };
   const sourceRecord = sourceSettings as Record<string, unknown>;
@@ -124,7 +124,7 @@ export function mergePresetDiffs(
 export function buildPresetChangeLog(
   oldSettings: ExportPresetSettings,
   newSettings: ExportPresetSettings,
-  now?: () => Date
+  now?: () => Date,
 ): ExportPresetChangeLogEntry[] {
   const entries: ExportPresetChangeLogEntry[] = [];
   const timestamp = (now ?? (() => new Date()))().toISOString();
@@ -161,7 +161,7 @@ export function parsePresetChangeLog(contents: string): ExportPresetChangeLogEnt
 export function buildPresetInheritance(
   existingInheritances: Map<string, ExportPresetInheritance>,
   parentId: string,
-  childId: string
+  childId: string,
 ): Map<string, ExportPresetInheritance> {
   const next = new Map(existingInheritances);
   const parentEntry = next.get(parentId) ?? { childPresetIds: [] };
@@ -173,10 +173,7 @@ export function buildPresetInheritance(
   return next;
 }
 
-export function getChildPresetIds(
-  inheritances: Map<string, ExportPresetInheritance>,
-  parentId: string
-): string[] {
+export function getChildPresetIds(inheritances: Map<string, ExportPresetInheritance>, parentId: string): string[] {
   return inheritances.get(parentId)?.childPresetIds ?? [];
 }
 

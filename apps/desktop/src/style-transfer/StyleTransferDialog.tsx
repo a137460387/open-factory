@@ -9,7 +9,7 @@ import {
   type CutProjectFile,
   type Project,
   type StyleSummary,
-  type StyleTransferScope
+  type StyleTransferScope,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { openFileDialog, readFile } from '../lib/tauri-bridge';
@@ -26,7 +26,12 @@ interface StyleTransferDialogProps {
 
 const ALL_SOURCE_CLIPS = '__all__';
 
-export default function StyleTransferDialog({ project, selectedClipId, selectedClipIds, onClose }: StyleTransferDialogProps) {
+export default function StyleTransferDialog({
+  project,
+  selectedClipId,
+  selectedClipIds,
+  onClose,
+}: StyleTransferDialogProps) {
   const t = zhCN.styleTransfer;
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const [sourceProject, setSourceProject] = useState<Project>();
@@ -45,7 +50,8 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
   const activeSummary = summary;
 
   function buildSummary(): StyleSummary | undefined {
-    const clips = sourceClipId === ALL_SOURCE_CLIPS ? sourceClips : sourceClips.filter((clip) => clip.id === sourceClipId);
+    const clips =
+      sourceClipId === ALL_SOURCE_CLIPS ? sourceClips : sourceClips.filter((clip) => clip.id === sourceClipId);
     if (clips.length === 0) {
       showToast({ kind: 'warning', title: t.failedTitle, message: t.noSourceClips });
       return undefined;
@@ -58,7 +64,9 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
 
   async function chooseSourceProject(): Promise<void> {
     try {
-      const [path] = await openFileDialog(false, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] },
+      ]);
       if (!path) {
         return;
       }
@@ -71,7 +79,11 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
       setPreviewClip(undefined);
       showToast({ kind: 'success', title: t.sourceLoadedTitle, message: loaded.name });
     } catch (error) {
-      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   }
 
@@ -92,12 +104,18 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
       return;
     }
     try {
-      commandManager.execute(new ApplyStyleCommand(timelineAccessor, nextSummary, { strength, scope, clipIds: [target.id] }));
+      commandManager.execute(
+        new ApplyStyleCommand(timelineAccessor, nextSummary, { strength, scope, clipIds: [target.id] }),
+      );
       setSelectedClipIds([target.id]);
       showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage(target.name) });
       onClose();
     } catch (error) {
-      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   }
 
@@ -106,7 +124,10 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="style-transfer-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="style-transfer-dialog"
+    >
       <section className="grid max-h-[88vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -169,7 +190,10 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
                 <WandSparkles size={15} />
                 {t.extract}
               </button>
-              <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="style-transfer-summary">
+              <div
+                className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+                data-testid="style-transfer-summary"
+              >
                 {summary ? t.summary(summary.clipCount, summary.effects.length, summary.lutPath ? 1 : 0) : t.noSummary}
               </div>
             </section>
@@ -215,15 +239,33 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
               </label>
               <div className="grid grid-cols-3 gap-2 text-xs text-slate-600">
                 <label className="flex items-center gap-2 rounded-md border border-line px-2 py-2">
-                  <input type="checkbox" className="h-4 w-4 accent-brand" checked={scope.color} data-testid="style-transfer-color-checkbox" onChange={(event) => updateScope('color', event.target.checked)} />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand"
+                    checked={scope.color}
+                    data-testid="style-transfer-color-checkbox"
+                    onChange={(event) => updateScope('color', event.target.checked)}
+                  />
                   {t.color}
                 </label>
                 <label className="flex items-center gap-2 rounded-md border border-line px-2 py-2">
-                  <input type="checkbox" className="h-4 w-4 accent-brand" checked={scope.effects} data-testid="style-transfer-effects-checkbox" onChange={(event) => updateScope('effects', event.target.checked)} />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand"
+                    checked={scope.effects}
+                    data-testid="style-transfer-effects-checkbox"
+                    onChange={(event) => updateScope('effects', event.target.checked)}
+                  />
                   {t.effects}
                 </label>
                 <label className="flex items-center gap-2 rounded-md border border-line px-2 py-2">
-                  <input type="checkbox" className="h-4 w-4 accent-brand" checked={scope.lut} data-testid="style-transfer-lut-checkbox" onChange={(event) => updateScope('lut', event.target.checked)} />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand"
+                    checked={scope.lut}
+                    data-testid="style-transfer-lut-checkbox"
+                    onChange={(event) => updateScope('lut', event.target.checked)}
+                  />
                   {t.lut}
                 </label>
               </div>
@@ -237,14 +279,22 @@ export default function StyleTransferDialog({ project, selectedClipId, selectedC
                 <Eye size={15} />
                 {t.preview}
               </button>
-              <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="style-transfer-preview-result">
+              <div
+                className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+                data-testid="style-transfer-preview-result"
+              >
                 {previewClip ? formatPreviewDelta(activeTargetClip, previewClip) : t.noPreview}
               </div>
             </section>
           </div>
         </div>
         <footer className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
-          <button type="button" className="h-9 rounded-md border border-line px-3 text-sm text-slate-700 hover:bg-panel" data-testid="style-transfer-cancel-button" onClick={onClose}>
+          <button
+            type="button"
+            className="h-9 rounded-md border border-line px-3 text-sm text-slate-700 hover:bg-panel"
+            data-testid="style-transfer-cancel-button"
+            onClick={onClose}
+          >
             {zhCN.common.cancel}
           </button>
           <button

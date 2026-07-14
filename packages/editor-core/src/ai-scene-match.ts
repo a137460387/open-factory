@@ -55,9 +55,20 @@ export interface SceneMatchDragParams {
  * Build the context for scene match analysis from the selected clip and its timeline neighbors.
  */
 export function buildSceneMatchContext(
-  clip: { id: string; name: string; type: string; mediaId?: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } },
-  timelineClips: Array<{ id: string; start: number; mediaId?: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>,
-  media: Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>
+  clip: {
+    id: string;
+    name: string;
+    type: string;
+    mediaId?: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  },
+  timelineClips: Array<{
+    id: string;
+    start: number;
+    mediaId?: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>,
+  media: Array<{ id: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>,
 ): SceneMatchClipContext {
   const sorted = [...timelineClips].sort((a, b) => a.start - b.start);
   const idx = sorted.findIndex((c) => c.id === clip.id);
@@ -67,17 +78,20 @@ export function buildSceneMatchContext(
 
   if (idx > 0) {
     const prev = sorted[idx - 1];
-    const prevAnalysis = prev.aiAnalysis ?? (prev.mediaId ? media.find((m) => m.id === prev.mediaId)?.aiAnalysis : undefined);
+    const prevAnalysis =
+      prev.aiAnalysis ?? (prev.mediaId ? media.find((m) => m.id === prev.mediaId)?.aiAnalysis : undefined);
     prevScene = prevAnalysis?.scene;
   }
   if (idx >= 0 && idx < sorted.length - 1) {
     const next = sorted[idx + 1];
-    const nextAnalysis = next.aiAnalysis ?? (next.mediaId ? media.find((m) => m.id === next.mediaId)?.aiAnalysis : undefined);
+    const nextAnalysis =
+      next.aiAnalysis ?? (next.mediaId ? media.find((m) => m.id === next.mediaId)?.aiAnalysis : undefined);
     nextScene = nextAnalysis?.scene;
   }
 
   // Resolve aiAnalysis from media if clip doesn't have it directly
-  const clipAnalysis = clip.aiAnalysis ?? (clip.mediaId ? media.find((m) => m.id === clip.mediaId)?.aiAnalysis : undefined);
+  const clipAnalysis =
+    clip.aiAnalysis ?? (clip.mediaId ? media.find((m) => m.id === clip.mediaId)?.aiAnalysis : undefined);
 
   return {
     clipId: clip.id,
@@ -85,7 +99,7 @@ export function buildSceneMatchContext(
     clipType: clip.type,
     aiAnalysis: clipAnalysis,
     prevScene,
-    nextScene
+    nextScene,
   };
 }
 
@@ -93,8 +107,13 @@ export function buildSceneMatchContext(
  * Build media pool payload for scene match. Only includes items with aiAnalysis when library is large.
  */
 export function buildSceneMatchMediaPayload(
-  media: Array<{ id: string; name: string; type: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>,
-  largeLibraryThreshold = 200
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>,
+  largeLibraryThreshold = 200,
 ): SceneMatchMediaItem[] {
   const shouldFilter = media.length > largeLibraryThreshold;
   if (shouldFilter) {
@@ -104,16 +123,14 @@ export function buildSceneMatchMediaPayload(
         mediaId: m.id,
         name: m.name,
         type: m.type,
-        aiAnalysis: m.aiAnalysis
+        aiAnalysis: m.aiAnalysis,
       }));
   }
   return media.map((m) => ({
     mediaId: m.id,
     name: m.name,
     type: m.type,
-    aiAnalysis: m.aiAnalysis
-      ? m.aiAnalysis
-      : { tags: [], scene: m.name, mood: '', objects: [] }
+    aiAnalysis: m.aiAnalysis ? m.aiAnalysis : { tags: [], scene: m.name, mood: '', objects: [] },
   }));
 }
 
@@ -139,17 +156,19 @@ export function buildSceneMatchUserPrompt(context: SceneMatchClipContext, mediaI
   if (context.prevScene) parts.push(`前一片段场景：${context.prevScene}`);
   if (context.nextScene) parts.push(`后一片段场景：${context.nextScene}`);
 
-  const mediaInfo = mediaItems.map((m) => {
-    const analysis = m.aiAnalysis;
-    const mParts = [`id:${m.mediaId}`, `name:${m.name}`, `type:${m.type}`];
-    if (analysis) {
-      if (analysis.tags && analysis.tags.length > 0) mParts.push(`tags:${analysis.tags.join(',')}`);
-      if (analysis.scene) mParts.push(`scene:${analysis.scene}`);
-      if (analysis.mood) mParts.push(`mood:${analysis.mood}`);
-      if (analysis.objects && analysis.objects.length > 0) mParts.push(`objects:${analysis.objects.join(',')}`);
-    }
-    return mParts.join(' | ');
-  }).join('\n');
+  const mediaInfo = mediaItems
+    .map((m) => {
+      const analysis = m.aiAnalysis;
+      const mParts = [`id:${m.mediaId}`, `name:${m.name}`, `type:${m.type}`];
+      if (analysis) {
+        if (analysis.tags && analysis.tags.length > 0) mParts.push(`tags:${analysis.tags.join(',')}`);
+        if (analysis.scene) mParts.push(`scene:${analysis.scene}`);
+        if (analysis.mood) mParts.push(`mood:${analysis.mood}`);
+        if (analysis.objects && analysis.objects.length > 0) mParts.push(`objects:${analysis.objects.join(',')}`);
+      }
+      return mParts.join(' | ');
+    })
+    .join('\n');
 
   parts.push(`\n媒体库素材：\n${mediaInfo}`);
   parts.push('\n请返回similar和contrast两组推荐结果JSON。');
@@ -172,28 +191,34 @@ export function parseSceneMatchResponse(json: unknown): SceneMatchResponse {
           typeof (item as SceneMatchResult).mediaId === 'string' &&
           typeof (item as SceneMatchResult).score === 'number' &&
           typeof (item as SceneMatchResult).reason === 'string' &&
-          (item as SceneMatchResult).score > 0
+          (item as SceneMatchResult).score > 0,
       )
       .map((item) => ({
         mediaId: item.mediaId.trim(),
         score: Math.min(1, Math.max(0, item.score)),
-        reason: item.reason.trim()
+        reason: item.reason.trim(),
       }))
       .sort((a, b) => b.score - a.score);
   };
 
   return {
     similar: parseGroup(obj.similar).slice(0, SCENE_MATCH_MAX_SIMILAR),
-    contrast: parseGroup(obj.contrast).slice(0, SCENE_MATCH_MAX_CONTRAST)
+    contrast: parseGroup(obj.contrast).slice(0, SCENE_MATCH_MAX_CONTRAST),
   };
 }
 
 /**
  * Build drag parameters for adding a recommended media asset to the timeline.
  */
-export function buildSceneMatchDragParams(
-  asset: { id: string; name: string; type: string; path: string; duration: number; width: number; height: number }
-): SceneMatchDragParams {
+export function buildSceneMatchDragParams(asset: {
+  id: string;
+  name: string;
+  type: string;
+  path: string;
+  duration: number;
+  width: number;
+  height: number;
+}): SceneMatchDragParams {
   return {
     mediaId: asset.id,
     name: asset.name,
@@ -201,7 +226,7 @@ export function buildSceneMatchDragParams(
     path: asset.path,
     duration: asset.duration,
     width: asset.width,
-    height: asset.height
+    height: asset.height,
   };
 }
 
@@ -210,16 +235,14 @@ export function buildSceneMatchDragParams(
  */
 export function getUnanalyzedMediaIdsForSceneMatch(
   allMedia: Array<{ id: string; aiAnalysis?: unknown }>,
-  resultIds: Set<string>
+  resultIds: Set<string>,
 ): string[] {
-  return allMedia
-    .filter((m) => !m.aiAnalysis && !resultIds.has(m.id))
-    .map((m) => m.id);
+  return allMedia.filter((m) => !m.aiAnalysis && !resultIds.has(m.id)).map((m) => m.id);
 }
 
 export async function parseSceneMatchResponseSafe(
   json: unknown,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<SceneMatchResponse>> {
   try {
     const data = parseSceneMatchResponse(json);

@@ -16,7 +16,7 @@ export const SwitchPointEditor: React.FC<SwitchPointEditorProps> = ({
   currentTime,
   onSwitchPointAdd,
   onSwitchPointDelete,
-  onSwitchPointUpdate
+  onSwitchPointUpdate,
 }) => {
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
@@ -29,10 +29,7 @@ export const SwitchPointEditor: React.FC<SwitchPointEditorProps> = ({
     <div className="switch-point-editor" data-testid="multicam-switch-point-editor">
       <div className="editor-header">
         <h4>切换点</h4>
-        <button
-          onClick={() => onSwitchPointAdd(currentTime, 0)}
-          data-testid="add-switch-point-button"
-        >
+        <button onClick={() => onSwitchPointAdd(currentTime, 0)} data-testid="add-switch-point-button">
           + 添加
         </button>
       </div>
@@ -42,26 +39,22 @@ export const SwitchPointEditor: React.FC<SwitchPointEditorProps> = ({
           <div className="empty-state">无切换点</div>
         ) : (
           switchPoints.map((sp, index) => (
-            <div
-              key={index}
-              className="switch-point-item"
-              data-testid={`switch-point-${index}`}
-            >
+            <div key={index} className="switch-point-item" data-testid={`switch-point-${index}`}>
               <div className="switch-point-info">
                 <span className="time">{formatTime(sp.time)}</span>
                 <span className="arrow">&rarr;</span>
-                <span className="angle">
-                  {angles[sp.targetAngle]?.name || `机位 ${sp.targetAngle + 1}`}
-                </span>
+                <span className="angle">{angles[sp.targetAngle]?.name || `机位 ${sp.targetAngle + 1}`}</span>
                 <span className="transition">{sp.transition}</span>
               </div>
 
               <div className="switch-point-actions">
                 <select
                   value={sp.targetAngle}
-                  onChange={(e) => onSwitchPointUpdate(index, {
-                    targetAngle: parseInt(e.target.value)
-                  })}
+                  onChange={(e) =>
+                    onSwitchPointUpdate(index, {
+                      targetAngle: parseInt(e.target.value),
+                    })
+                  }
                 >
                   {angles.map((angle, i) => (
                     <option key={angle.id} value={i}>
@@ -72,9 +65,11 @@ export const SwitchPointEditor: React.FC<SwitchPointEditorProps> = ({
 
                 <select
                   value={sp.transition}
-                  onChange={(e) => onSwitchPointUpdate(index, {
-                    transition: e.target.value as SwitchTransition
-                  })}
+                  onChange={(e) =>
+                    onSwitchPointUpdate(index, {
+                      transition: e.target.value as SwitchTransition,
+                    })
+                  }
                 >
                   <option value="cut">切换</option>
                   <option value="dissolve">溶解</option>

@@ -11,7 +11,7 @@ const plan: FfmpegExportPlan = {
   warnings: [],
   textArtifacts: [],
   nestedPlans: [],
-  duration: 8
+  duration: 8,
 };
 
 function interruptedProgressiveTask(): ExportTask {
@@ -29,8 +29,8 @@ function interruptedProgressiveTask(): ExportTask {
       enabled: true,
       supported: true,
       partialPath: 'C:/Exports/output.partial.mp4',
-      completedDuration: 4
-    }
+      completedDuration: 4,
+    },
   };
 }
 
@@ -43,7 +43,7 @@ describe('export queue store progressive resume', () => {
       resourcePaused: false,
       queuePaused: false,
       maxConcurrent: 2,
-      lastCompletedPath: undefined
+      lastCompletedPath: undefined,
     });
   });
 

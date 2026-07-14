@@ -21,7 +21,7 @@ export const VU_PEAK_HOLD_MS = 2000;
 export function createVuMeterState(): VuMeterState {
   return {
     peakDb: VU_MIN_DB,
-    peakHeldAtMs: 0
+    peakHeldAtMs: 0,
   };
 }
 
@@ -29,7 +29,7 @@ export function readVuMeter(
   analyser: AnalyserLike,
   state: VuMeterState = createVuMeterState(),
   nowMs = 0,
-  peakHoldMs = VU_PEAK_HOLD_MS
+  peakHoldMs = VU_PEAK_HOLD_MS,
 ): VuMeterReading {
   const size = Math.max(1, analyser.fftSize || 1024);
   const samples = new Uint8Array(size);
@@ -53,7 +53,7 @@ export function readVuMeter(
   return {
     levelDb,
     peakDb: clampDb(peakDb),
-    peakHeldAtMs
+    peakHeldAtMs,
   };
 }
 

@@ -4,7 +4,7 @@ import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
   type Clip,
-  type MediaAsset
+  type MediaAsset,
 } from '@open-factory/editor-core';
 import type { TauriMocks } from './tauri-bridge';
 import { detectClipSilence, NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES } from './silenceDetection';
@@ -22,15 +22,15 @@ describe('desktop silence native detection', () => {
     const getFileStat = vi.fn(() => ({
       path: 'C:/Media/large.wav',
       size: NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES + 1,
-      mtimeMs: 2_000
+      mtimeMs: 2_000,
     }));
     const detectSilence = vi.fn(() => [[1, 1.5] satisfies [number, number]]);
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('window', {
       __TAURI_MOCKS__: {
         getFileStat,
-        detectSilence
-      } satisfies TauriMocks
+        detectSilence,
+      } satisfies TauriMocks,
     });
 
     const clip: Clip = {
@@ -46,7 +46,7 @@ describe('desktop silence native detection', () => {
       speed: DEFAULT_CLIP_SPEED,
       colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
       transform: { ...DEFAULT_TRANSFORM },
-      volume: 1
+      volume: 1,
     };
     const asset: MediaAsset = {
       id: 'asset-large-audio',
@@ -56,13 +56,13 @@ describe('desktop silence native detection', () => {
       duration: 2,
       width: 0,
       height: 0,
-      hasAudio: true
+      hasAudio: true,
     };
 
     const ranges = await detectClipSilence(clip, asset, {
       thresholdDb: -40,
       minSilenceDuration: 0.5,
-      marginDuration: 0
+      marginDuration: 0,
     });
 
     expect(getFileStat).toHaveBeenCalledWith('C:/Media/large.wav');

@@ -9,7 +9,7 @@ export function ExportUploadSection({
   password,
   onSettingsChange,
   onPasswordChange,
-  onChooseDirectory
+  onChooseDirectory,
 }: {
   settings: ExportUploadSettings;
   password: string;
@@ -18,11 +18,16 @@ export function ExportUploadSection({
   onChooseDirectory(): void;
 }) {
   const t = zhCN.exportDialog.upload;
-  const updateWebdav = (patch: Partial<ExportUploadSettings['webdav']>) => onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
-  const updateLocal = (patch: Partial<ExportUploadSettings['local']>) => onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
+  const updateWebdav = (patch: Partial<ExportUploadSettings['webdav']>) =>
+    onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
+  const updateLocal = (patch: Partial<ExportUploadSettings['local']>) =>
+    onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
 
   return (
-    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-upload-section">
+    <div
+      className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+      data-testid="export-upload-section"
+    >
       <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
       <div className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -45,7 +50,9 @@ export function ExportUploadSection({
               className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
               value={settings.targetType}
               data-testid="export-upload-target-select"
-              onChange={(event) => onSettingsChange({ ...settings, targetType: event.target.value as ExportUploadTargetType })}
+              onChange={(event) =>
+                onSettingsChange({ ...settings, targetType: event.target.value as ExportUploadTargetType })
+              }
             >
               <option value="webdav">{t.targets.webdav}</option>
               <option value="local">{t.targets.local}</option>
@@ -61,7 +68,10 @@ export function ExportUploadSection({
                   data-testid="export-upload-webdav-url"
                   onChange={(event) => updateWebdav({ url: event.target.value })}
                 />
-                <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="export-upload-webdav-https-warning">
+                <span
+                  className="mt-1 block text-[11px] font-normal text-amber-700"
+                  data-testid="export-upload-webdav-https-warning"
+                >
                   {t.httpsRequiredNote}
                 </span>
               </label>
@@ -119,7 +129,11 @@ export function ExportUploadStatusPanel({ upload, onRetry }: { upload: ExportUpl
   const t = zhCN.exportDialog.upload;
   const progress = Math.round(upload.progress * 100);
   return (
-    <div className={`mt-2 rounded-md border p-2 text-[11px] ${uploadStatusClass(upload.status)}`} data-testid="export-upload-status" data-status={upload.status}>
+    <div
+      className={`mt-2 rounded-md border p-2 text-[11px] ${uploadStatusClass(upload.status)}`}
+      data-testid="export-upload-status"
+      data-status={upload.status}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="font-semibold">
           {t.statusLabel}: {t.status[upload.status]}
@@ -136,9 +150,18 @@ export function ExportUploadStatusPanel({ upload, onRetry }: { upload: ExportUpl
           {upload.destination}
         </div>
       ) : null}
-      {upload.error ? <div className="mt-1 whitespace-pre-wrap text-rose-800" data-testid="export-upload-error">{upload.error}</div> : null}
+      {upload.error ? (
+        <div className="mt-1 whitespace-pre-wrap text-rose-800" data-testid="export-upload-error">
+          {upload.error}
+        </div>
+      ) : null}
       {onRetry ? (
-        <button className="mt-2 rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid="export-upload-retry-button" onClick={onRetry}>
+        <button
+          className="mt-2 rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="export-upload-retry-button"
+          onClick={onRetry}
+        >
           {t.retry}
         </button>
       ) : null}

@@ -104,10 +104,7 @@ export function calculateJaccardSimilarity(a: string[], b: string[]): number {
  * Adjacent frames with box IOU > IOU_THRESHOLD are considered the same character.
  * Returns clustered characters with merged descriptor tags and time ranges.
  */
-export function clusterCharactersInClip(
-  frames: CharacterFrameResult[],
-  clipId: string
-): ClusteredCharacter[] {
+export function clusterCharactersInClip(frames: CharacterFrameResult[], clipId: string): ClusteredCharacter[] {
   if (frames.length === 0) return [];
 
   // Each cluster tracks: id, merged tags, last-seen box, appearances
@@ -189,7 +186,7 @@ export function clusterCharactersInClip(
  * Returns a CharacterTimeline suitable for storing in the project.
  */
 export function matchCharactersAcrossClips(
-  clipClusters: Array<{ clipId: string; characters: ClusteredCharacter[] }>
+  clipClusters: Array<{ clipId: string; characters: ClusteredCharacter[] }>,
 ): CharacterTimeline {
   const characters: Record<string, CharacterEntry> = {};
   let nextCharId = 1;
@@ -207,7 +204,10 @@ export function matchCharactersAcrossClips(
       for (const [charId, entry] of Object.entries(characters)) {
         const existingTags = entry.appearances.flatMap(() => {
           // Collect tags from the character's tag set
-          return entry.label.split(',').map((t) => t.trim()).filter(Boolean);
+          return entry.label
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean);
         });
         // Use the character's label as a proxy for its tags
         // Actually, we need to store tags separately. For matching, use the descriptorTags directly.
@@ -263,7 +263,7 @@ function generateLabel(tags: string[]): string {
 function collectCharacterTags(
   charId: string,
   clipClusters: Array<{ clipId: string; characters: ClusteredCharacter[] }>,
-  assignments: Map<string, string>
+  assignments: Map<string, string>,
 ): string[] {
   const tags: string[] = [];
   for (const clip of clipClusters) {
@@ -355,11 +355,7 @@ export function parseCharacterDetectionResponse(json: string): CharacterAIRespon
  * Rename a character label in the timeline.
  * Returns a new CharacterTimeline with the updated label.
  */
-export function renameCharacter(
-  timeline: CharacterTimeline,
-  characterId: string,
-  newLabel: string
-): CharacterTimeline {
+export function renameCharacter(timeline: CharacterTimeline, characterId: string, newLabel: string): CharacterTimeline {
   if (!timeline.characters[characterId]) return timeline;
   return {
     ...timeline,

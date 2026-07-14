@@ -32,7 +32,7 @@ export interface PreviewAdaptiveQualityState {
 export const DEFAULT_PREVIEW_PERFORMANCE_SETTINGS: PreviewPerformanceSettings = {
   qualityMode: 'full',
   skipFrames: 1,
-  adaptiveEnabled: true
+  adaptiveEnabled: true,
 };
 
 export const DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE: PreviewAdaptiveQualityState = {
@@ -40,7 +40,7 @@ export const DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE: PreviewAdaptiveQualityState
   skipFrames: 1,
   averageFps: 60,
   stableMs: 0,
-  status: 'full'
+  status: 'full',
 };
 
 export const PREVIEW_QUALITY_MODES: PreviewQualityMode[] = ['full', 'half', 'quarter', 'audio-only'];
@@ -66,7 +66,7 @@ export function normalizePreviewPerformanceSettings(value: unknown): PreviewPerf
   return {
     qualityMode: normalizePreviewQualityMode(input.qualityMode),
     skipFrames: normalizePreviewSkipFrames(input.skipFrames),
-    adaptiveEnabled: input.adaptiveEnabled !== false
+    adaptiveEnabled: input.adaptiveEnabled !== false,
   };
 }
 
@@ -85,7 +85,7 @@ export function calculatePreviewRenderSize(width: number, height: number, mode: 
   return {
     width: Math.max(1, Math.round(width * scale)),
     height: Math.max(1, Math.round(height * scale)),
-    scale
+    scale,
   };
 }
 
@@ -108,7 +108,10 @@ export function getDisabledPreviewEffectTypes(settings: PreviewPerformanceSettin
   return isPreviewLowQuality(settings) ? LOW_QUALITY_DISABLED_EFFECTS : [];
 }
 
-export function resolveEffectivePreviewPerformance(settings: PreviewPerformanceSettings, adaptiveState: PreviewAdaptiveQualityState): PreviewPerformanceSettings {
+export function resolveEffectivePreviewPerformance(
+  settings: PreviewPerformanceSettings,
+  adaptiveState: PreviewAdaptiveQualityState,
+): PreviewPerformanceSettings {
   const normalized = normalizePreviewPerformanceSettings(settings);
   if (normalized.adaptiveEnabled === false) {
     return normalized;
@@ -116,11 +119,15 @@ export function resolveEffectivePreviewPerformance(settings: PreviewPerformanceS
   return {
     qualityMode: adaptiveState.qualityMode,
     skipFrames: adaptiveState.skipFrames,
-    adaptiveEnabled: true
+    adaptiveEnabled: true,
   };
 }
 
-export function appendPreviewFpsSample(samples: PreviewFpsSample[], sample: PreviewFpsSample, windowMs = PREVIEW_FPS_WINDOW_MS): PreviewFpsSample[] {
+export function appendPreviewFpsSample(
+  samples: PreviewFpsSample[],
+  sample: PreviewFpsSample,
+  windowMs = PREVIEW_FPS_WINDOW_MS,
+): PreviewFpsSample[] {
   const fps = Number.isFinite(sample.fps) ? Math.max(0, Math.min(240, sample.fps)) : 0;
   const timestampMs = Number.isFinite(sample.timestampMs) ? sample.timestampMs : 0;
   const cutoff = timestampMs - Math.max(0, windowMs);
@@ -157,7 +164,7 @@ export function resolveAdaptivePreviewPerformance(input: {
     return {
       ...DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE,
       averageFps,
-      status: 'full'
+      status: 'full',
     };
   }
   if (averageFps < 15) {
@@ -166,7 +173,7 @@ export function resolveAdaptivePreviewPerformance(input: {
       skipFrames: 4,
       averageFps,
       stableMs: 0,
-      status: 'low'
+      status: 'low',
     };
   }
   if (averageFps <= 25) {
@@ -178,7 +185,7 @@ export function resolveAdaptivePreviewPerformance(input: {
       skipFrames: 2,
       averageFps,
       stableMs: 0,
-      status: 'degraded'
+      status: 'degraded',
     };
   }
   if (input.current.qualityMode === 'quarter') {
@@ -192,7 +199,7 @@ export function resolveAdaptivePreviewPerformance(input: {
     skipFrames: 1,
     averageFps,
     stableMs: 0,
-    status: 'full'
+    status: 'full',
   };
 }
 
@@ -201,7 +208,7 @@ function maybeUpgradeAdaptivePreview(
   averageFps: number,
   elapsedMs: number,
   nextQualityMode: Exclude<PreviewQualityMode, 'audio-only'>,
-  nextSkipFrames: PreviewSkipFrames
+  nextSkipFrames: PreviewSkipFrames,
 ): PreviewAdaptiveQualityState {
   const stableMs = current.stableMs + elapsedMs;
   if (stableMs >= PREVIEW_STABLE_UPGRADE_MS) {
@@ -210,13 +217,13 @@ function maybeUpgradeAdaptivePreview(
       skipFrames: nextSkipFrames,
       averageFps,
       stableMs: 0,
-      status: getPreviewAdaptiveQualityStatus(nextQualityMode)
+      status: getPreviewAdaptiveQualityStatus(nextQualityMode),
     };
   }
   return {
     ...current,
     averageFps,
     stableMs,
-    status: getPreviewAdaptiveQualityStatus(current.qualityMode)
+    status: getPreviewAdaptiveQualityStatus(current.qualityMode),
   };
 }

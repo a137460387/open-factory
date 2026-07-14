@@ -67,7 +67,11 @@ export function buildTimelineThumbnailCacheKey(mediaPath: string, timestamp: num
   return `${normalizeCachePath(mediaPath)}|t=${round(Math.max(0, timestamp)).toFixed(3)}`;
 }
 
-export function planTimelineThumbnailCache(mediaPath: string, timestamps: number[], cachedKeys: ReadonlySet<string>): TimelineThumbnailCachePlan {
+export function planTimelineThumbnailCache(
+  mediaPath: string,
+  timestamps: number[],
+  cachedKeys: ReadonlySet<string>,
+): TimelineThumbnailCachePlan {
   const hits: number[] = [];
   const misses: number[] = [];
   const keys = timestamps.map((timestamp, index) => {
@@ -82,7 +86,9 @@ export function planTimelineThumbnailCache(mediaPath: string, timestamps: number
   return { hits, misses, keys };
 }
 
-export function calculateTimelineThumbnailTrackInterval(input: Pick<TimelineThumbnailTrackSamplingInput, 'zoom' | 'trackWidth'>): number {
+export function calculateTimelineThumbnailTrackInterval(
+  input: Pick<TimelineThumbnailTrackSamplingInput, 'zoom' | 'trackWidth'>,
+): number {
   const zoom = Number.isFinite(input.zoom) ? Math.max(0.001, input.zoom) : 0.001;
   const targetIntervals = [1, 2, 5, 10];
   return targetIntervals.find((interval) => interval * zoom >= TIMELINE_THUMBNAIL_TRACK_MIN_SPACING_PX) ?? 10;
@@ -96,8 +102,11 @@ export function calculateTimelineThumbnailTrackTimestamps(input: TimelineThumbna
     return [];
   }
   const intervalSeconds = calculateTimelineThumbnailTrackInterval(input);
-  const visibleStart = Math.max(0, Number.isFinite(input.visibleStart) ? input.visibleStart ?? 0 : 0);
-  const visibleEnd = Math.min(duration, Math.max(visibleStart, Number.isFinite(input.visibleEnd) ? input.visibleEnd ?? duration : duration));
+  const visibleStart = Math.max(0, Number.isFinite(input.visibleStart) ? (input.visibleStart ?? 0) : 0);
+  const visibleEnd = Math.min(
+    duration,
+    Math.max(visibleStart, Number.isFinite(input.visibleEnd) ? (input.visibleEnd ?? duration) : duration),
+  );
   const start = Math.max(0, Math.floor(visibleStart / intervalSeconds) * intervalSeconds);
   const timestamps: number[] = [];
   for (let time = start; time <= visibleEnd + 0.0001; time += intervalSeconds) {
@@ -109,7 +118,10 @@ export function calculateTimelineThumbnailTrackTimestamps(input: TimelineThumbna
   return Array.from(new Set(timestamps));
 }
 
-export function buildTimelineThumbnailTrackSamples(timeline: Timeline, input: TimelineThumbnailTrackSamplingInput): TimelineThumbnailTrackSample[] {
+export function buildTimelineThumbnailTrackSamples(
+  timeline: Timeline,
+  input: TimelineThumbnailTrackSamplingInput,
+): TimelineThumbnailTrackSample[] {
   const mainVideoTrack = timeline.tracks.find((track) => track.type === 'video');
   const intervalSeconds = calculateTimelineThumbnailTrackInterval(input);
   return calculateTimelineThumbnailTrackTimestamps(input).map((time) => {
@@ -121,14 +133,19 @@ export function buildTimelineThumbnailTrackSamples(timeline: Timeline, input: Ti
       clipId: clip?.id,
       mediaId: clip?.mediaId,
       sourceTimestamp: clip ? timelineTimeToClipSourceTimestamp(clip, time) : undefined,
-      trackColor: mainVideoTrack?.color ?? null
+      trackColor: mainVideoTrack?.color ?? null,
     };
   });
 }
 
-export function sortTimelineThumbnailSamplesByPriority(samples: TimelineThumbnailTrackSample[], playheadTime: number): TimelineThumbnailTrackSample[] {
+export function sortTimelineThumbnailSamplesByPriority(
+  samples: TimelineThumbnailTrackSample[],
+  playheadTime: number,
+): TimelineThumbnailTrackSample[] {
   const target = Number.isFinite(playheadTime) ? Math.max(0, playheadTime) : 0;
-  return [...samples].sort((left, right) => Math.abs(left.time - target) - Math.abs(right.time - target) || left.time - right.time);
+  return [...samples].sort(
+    (left, right) => Math.abs(left.time - target) - Math.abs(right.time - target) || left.time - right.time,
+  );
 }
 
 function findVideoClipAtTime(track: Track | undefined, time: number): VideoClip | undefined {
@@ -141,5 +158,7 @@ function findVideoClipAtTime(track: Track | undefined, time: number): VideoClip 
 function timelineTimeToClipSourceTimestamp(clip: VideoClip, timelineTime: number): number {
   const localTime = Math.max(0, timelineTime - clip.start);
   const speed = Math.max(0.001, clip.speed ?? 1);
-  return round(Math.max(0, (clip.trimStart ?? 0) + calculateSpeedCurveSourceDuration(localTime, clip.keyframes, speed)));
+  return round(
+    Math.max(0, (clip.trimStart ?? 0) + calculateSpeedCurveSourceDuration(localTime, clip.keyframes, speed)),
+  );
 }

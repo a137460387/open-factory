@@ -48,7 +48,7 @@ import {
   saveTimelineInteractionSettings,
   saveTimelineGridSettings,
   saveUpdateSettings,
-  saveViewSettings
+  saveViewSettings,
 } from './appSettings';
 
 describe('app settings storage', () => {
@@ -63,9 +63,9 @@ describe('app settings storage', () => {
       ...patch,
       panels: {
         ...DEFAULT_EDITOR_LAYOUT_SETTINGS.panels,
-        ...(patch.panels ?? {})
+        ...(patch.panels ?? {}),
       },
-      customWorkspaceLayouts: patch.customWorkspaceLayouts ?? DEFAULT_EDITOR_LAYOUT_SETTINGS.customWorkspaceLayouts
+      customWorkspaceLayouts: patch.customWorkspaceLayouts ?? DEFAULT_EDITOR_LAYOUT_SETTINGS.customWorkspaceLayouts,
     };
   }
 
@@ -85,13 +85,13 @@ describe('app settings storage', () => {
         },
         writeFile: (path, contents) => {
           files.set(path, contents);
-        }
+        },
       } satisfies TauriMocks,
       localStorage: {
         getItem: (key: string) => browserStorage.get(key) ?? null,
         setItem: (key: string, value: string) => browserStorage.set(key, value),
-        removeItem: (key: string) => browserStorage.delete(key)
-      }
+        removeItem: (key: string) => browserStorage.delete(key),
+      },
     });
   });
 
@@ -104,17 +104,17 @@ describe('app settings storage', () => {
     const saved = await saveLayoutSettings({
       timelineHeightPx: 340,
       leftPanelCollapsed: true,
-      rightPanelCollapsed: true
+      rightPanelCollapsed: true,
     });
 
     const expected = expectedLayout({
       timelineHeightPx: 340,
       leftPanelCollapsed: true,
-      rightPanelCollapsed: true
+      rightPanelCollapsed: true,
     });
     expect(saved).toEqual(expected);
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
-      layout: expected
+      layout: expected,
     });
     await expect(readLayoutSettings()).resolves.toEqual(saved);
   });
@@ -125,7 +125,7 @@ describe('app settings storage', () => {
 
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      layout: expectedLayout({ leftPanelCollapsed: true })
+      layout: expectedLayout({ leftPanelCollapsed: true }),
     });
   });
 
@@ -133,20 +133,20 @@ describe('app settings storage', () => {
     await saveBackupSettings({
       local: { enabled: true, directory: 'C:/Backups' },
       webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
-      lastBackupAt: '2026-06-12T14:05:06.789Z'
+      lastBackupAt: '2026-06-12T14:05:06.789Z',
     });
 
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       backup: {
         local: { enabled: true, directory: 'C:/Backups' },
         webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
-        lastBackupAt: '2026-06-12T14:05:06.789Z'
-      }
+        lastBackupAt: '2026-06-12T14:05:06.789Z',
+      },
     });
     expect(files.get(settingsPath)).not.toContain('password');
     await expect(readBackupSettings()).resolves.toMatchObject({
       local: { enabled: true, directory: 'C:/Backups' },
-      webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' }
+      webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
     });
   });
 
@@ -160,8 +160,8 @@ describe('app settings storage', () => {
       layout: expectedLayout({ rightPanelCollapsed: true }),
       backup: {
         local: { enabled: true, directory: 'D:/Backups' },
-        webdav: { enabled: false }
-      }
+        webdav: { enabled: false },
+      },
     });
   });
 
@@ -171,7 +171,7 @@ describe('app settings storage', () => {
 
     const theme = await saveThemeSettings({
       activeThemeId: 'light',
-      customThemes: []
+      customThemes: [],
     });
 
     expect(theme).toEqual({ activeThemeId: 'light', customThemes: [] });
@@ -180,27 +180,43 @@ describe('app settings storage', () => {
       layout: expectedLayout({ leftPanelCollapsed: true }),
       theme: {
         activeThemeId: 'light',
-        customThemes: []
-      }
+        customThemes: [],
+      },
     });
     await expect(readThemeSettings()).resolves.toEqual(theme);
   });
 
   it('defaults export power actions off and persists explicit opt-in', async () => {
-    await expect(readExportBackgroundSettings()).resolves.toEqual({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false });
+    await expect(readExportBackgroundSettings()).resolves.toEqual({
+      allowPowerActions: false,
+      postExportScriptAcknowledged: false,
+      lowPowerMode: false,
+    });
 
     await saveLanguageSetting('en');
-    const exportBackground = await saveExportBackgroundSettings({ allowPowerActions: true, postExportScriptAcknowledged: true, lowPowerMode: true });
+    const exportBackground = await saveExportBackgroundSettings({
+      allowPowerActions: true,
+      postExportScriptAcknowledged: true,
+      lowPowerMode: true,
+    });
 
-    expect(exportBackground).toEqual({ allowPowerActions: true, postExportScriptAcknowledged: true, lowPowerMode: true });
+    expect(exportBackground).toEqual({
+      allowPowerActions: true,
+      postExportScriptAcknowledged: true,
+      lowPowerMode: true,
+    });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportBackground: { allowPowerActions: true, postExportScriptAcknowledged: true, lowPowerMode: true }
+      exportBackground: { allowPowerActions: true, postExportScriptAcknowledged: true, lowPowerMode: true },
     });
   });
 
   it('persists tutorial progress in settings.json', async () => {
-    await expect(readTutorialProgressSettings()).resolves.toEqual({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
+    await expect(readTutorialProgressSettings()).resolves.toEqual({
+      tutorialStep: 0,
+      tutorialSkipped: false,
+      tutorialCompleted: false,
+    });
 
     await saveLanguageSetting('en');
     const progress = await saveTutorialProgressSettings({ tutorialStep: 3 });
@@ -210,7 +226,7 @@ describe('app settings storage', () => {
       language: 'en',
       tutorialStep: 3,
       tutorialSkipped: false,
-      tutorialCompleted: false
+      tutorialCompleted: false,
     });
     expect(await readTutorialProgressSettings()).toEqual(progress);
   });
@@ -222,7 +238,7 @@ describe('app settings storage', () => {
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       tutorialStep: 1,
       tutorialSkipped: true,
-      tutorialCompleted: false
+      tutorialCompleted: false,
     });
   });
 
@@ -244,10 +260,10 @@ describe('app settings storage', () => {
           particleColor: '#ffffff',
           border: true,
           borderColor: '#123456',
-          borderWidth: 2
+          borderWidth: 2,
         },
-        { id: 'retro-vu', name: 'built-in collision' } as never
-      ]
+        { id: 'retro-vu', name: 'built-in collision' } as never,
+      ],
     });
 
     expect(themes.customThemes).toEqual([
@@ -261,8 +277,8 @@ describe('app settings storage', () => {
         glowColor: '#ff00ff',
         border: true,
         borderColor: '#123456',
-        borderWidth: 2
-      })
+        borderWidth: 2,
+      }),
     ]);
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ audioVisualizationThemes: themes });
   });
@@ -272,7 +288,7 @@ describe('app settings storage', () => {
       enabled: false,
       targetType: 'webdav',
       webdav: {},
-      local: {}
+      local: {},
     });
 
     await saveLanguageSetting('en');
@@ -281,19 +297,19 @@ describe('app settings storage', () => {
       targetType: 'webdav',
       webdav: { url: 'https://dav.example.test/exports/out.mp4', username: 'editor' },
       local: { directory: 'D:/Uploaded' },
-      password: 'should-not-persist'
+      password: 'should-not-persist',
     } as never);
 
     expect(upload).toEqual({
       enabled: true,
       targetType: 'webdav',
       webdav: { url: 'https://dav.example.test/exports/out.mp4', username: 'editor' },
-      local: { directory: 'D:/Uploaded' }
+      local: { directory: 'D:/Uploaded' },
     });
     expect(files.get(settingsPath)).not.toContain('password');
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportUpload: upload
+      exportUpload: upload,
     });
   });
 
@@ -301,7 +317,7 @@ describe('app settings storage', () => {
     await expect(readExportPresetSyncSettings()).resolves.toEqual({
       enabled: false,
       syncOnStartup: false,
-      conflictMode: 'merge'
+      conflictMode: 'merge',
     });
 
     await saveLanguageSetting('en');
@@ -312,7 +328,7 @@ describe('app settings storage', () => {
       syncOnStartup: true,
       conflictMode: 'keep-remote',
       lastSyncedAt: '2026-06-15T02:00:00.000Z',
-      password: 'should-not-persist'
+      password: 'should-not-persist',
     } as never);
 
     expect(sync).toEqual({
@@ -321,12 +337,12 @@ describe('app settings storage', () => {
       username: 'editor',
       syncOnStartup: true,
       conflictMode: 'keep-remote',
-      lastSyncedAt: '2026-06-15T02:00:00.000Z'
+      lastSyncedAt: '2026-06-15T02:00:00.000Z',
     });
     expect(files.get(settingsPath)).not.toContain('password');
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportPresetSync: sync
+      exportPresetSync: sync,
     });
   });
 
@@ -349,7 +365,7 @@ describe('app settings storage', () => {
       fileSize: true,
       minFileSizeBytes: 1024,
       maxFileSizeBytes: 4096,
-      autoRetry: true
+      autoRetry: true,
     });
 
     expect(qualityAssurance).toEqual({
@@ -360,11 +376,11 @@ describe('app settings storage', () => {
       fileSize: true,
       minFileSizeBytes: 1024,
       maxFileSizeBytes: 4096,
-      autoRetry: true
+      autoRetry: true,
     });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportQualityAssurance: qualityAssurance
+      exportQualityAssurance: qualityAssurance,
     });
   });
 
@@ -372,7 +388,7 @@ describe('app settings storage', () => {
     await expect(readExportOptimizationSettings()).resolves.toEqual({ dismissedSuggestionIds: [] });
 
     const optimization = await saveExportOptimizationSettings({
-      dismissedSuggestionIds: ['normalize-loudness', 'normalize-loudness', 'invalid'] as never
+      dismissedSuggestionIds: ['normalize-loudness', 'normalize-loudness', 'invalid'] as never,
     });
 
     expect(optimization).toEqual({ dismissedSuggestionIds: ['normalize-loudness'] });
@@ -387,14 +403,14 @@ describe('app settings storage', () => {
         enabled: true,
         trigger: 'export-success',
         action: 'copy-to-directory',
-        targetDirectory: 'C:/Exports/{date}/{project}'
+        targetDirectory: 'C:/Exports/{date}/{project}',
       },
       {
         id: 'invalid',
         enabled: true,
         trigger: 'unknown' as never,
-        action: 'copy-to-directory'
-      }
+        action: 'copy-to-directory',
+      },
     ]);
 
     expect(rules).toEqual([
@@ -403,13 +419,13 @@ describe('app settings storage', () => {
         enabled: true,
         trigger: 'export-success',
         action: 'copy-to-directory',
-        targetDirectory: 'C:/Exports/{date}/{project}'
-      }
+        targetDirectory: 'C:/Exports/{date}/{project}',
+      },
     ]);
     expect(await readExportRules()).toEqual(rules);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportRules: rules
+      exportRules: rules,
     });
   });
 
@@ -421,17 +437,17 @@ describe('app settings storage', () => {
         cells: [
           { x: 0, y: 0, width: 0.6, height: 1 },
           { x: 0.6, y: 0, width: 0.5, height: 0.5 },
-          { x: 0.6, y: 0.5, width: 0.5, height: 0.5 }
-        ]
+          { x: 0.6, y: 0.5, width: 0.5, height: 0.5 },
+        ],
       },
       {
         id: 'review',
         name: 'duplicate',
         cells: [
           { x: 0, y: 0, width: 0.5, height: 1 },
-          { x: 0.5, y: 0, width: 0.5, height: 1 }
-        ]
-      }
+          { x: 0.5, y: 0, width: 0.5, height: 1 },
+        ],
+      },
     ]);
 
     expect(saved).toEqual([
@@ -441,9 +457,9 @@ describe('app settings storage', () => {
         cells: [
           { x: 0, y: 0, width: 0.6, height: 1 },
           { x: 0.6, y: 0, width: 0.4, height: 0.5 },
-          { x: 0.6, y: 0.5, width: 0.4, height: 0.5 }
-        ]
-      }
+          { x: 0.6, y: 0.5, width: 0.4, height: 0.5 },
+        ],
+      },
     ]);
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ customSplitLayouts: saved });
     await expect(readCustomSplitLayouts()).resolves.toEqual(saved);
@@ -452,28 +468,73 @@ describe('app settings storage', () => {
   it('persists safe frame guide visibility in view settings', async () => {
     const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'asc' };
     const defaultTimelineHeatmap = { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' };
-    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    await expect(readViewSettings()).resolves.toEqual({
+      safeFrameGuides: false,
+      thumbnailTrackVisible: true,
+      timelineMinimapVisible: true,
+      timelineHeatmap: defaultTimelineHeatmap,
+      mediaLibrary: defaultMediaLibrary,
+    });
 
     await saveLanguageSetting('en');
-    const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false });
+    const view = await saveViewSettings({
+      safeFrameGuides: true,
+      thumbnailTrackVisible: false,
+      timelineMinimapVisible: false,
+    });
 
-    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    expect(view).toEqual({
+      safeFrameGuides: true,
+      thumbnailTrackVisible: false,
+      timelineMinimapVisible: false,
+      timelineHeatmap: defaultTimelineHeatmap,
+      mediaLibrary: defaultMediaLibrary,
+    });
+    expect(await readViewSettings()).toEqual({
+      safeFrameGuides: true,
+      thumbnailTrackVisible: false,
+      timelineMinimapVisible: false,
+      timelineHeatmap: defaultTimelineHeatmap,
+      mediaLibrary: defaultMediaLibrary,
+    });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      view: { safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
+      view: {
+        safeFrameGuides: true,
+        thumbnailTrackVisible: false,
+        timelineMinimapVisible: false,
+        timelineHeatmap: defaultTimelineHeatmap,
+        mediaLibrary: defaultMediaLibrary,
+      },
     });
 
     await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    expect(await readViewSettings()).toEqual({
+      safeFrameGuides: false,
+      thumbnailTrackVisible: true,
+      timelineMinimapVisible: true,
+      timelineHeatmap: defaultTimelineHeatmap,
+      mediaLibrary: defaultMediaLibrary,
+    });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      view: { safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
+      view: {
+        safeFrameGuides: false,
+        thumbnailTrackVisible: true,
+        timelineMinimapVisible: true,
+        timelineHeatmap: defaultTimelineHeatmap,
+        mediaLibrary: defaultMediaLibrary,
+      },
     });
   });
 
   it('persists media library view mode and sorting in settings.json', async () => {
-    const mediaLibrary = { mode: 'list' as const, gridSize: 'large' as const, sortKey: 'duration' as const, sortDirection: 'asc' as const };
+    const mediaLibrary = {
+      mode: 'list' as const,
+      gridSize: 'large' as const,
+      sortKey: 'duration' as const,
+      sortDirection: 'asc' as const,
+    };
     const defaultTimelineHeatmap = { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' };
 
     await saveViewSettings({ mediaLibrary });
@@ -483,7 +544,7 @@ describe('app settings storage', () => {
       thumbnailTrackVisible: true,
       timelineMinimapVisible: true,
       timelineHeatmap: defaultTimelineHeatmap,
-      mediaLibrary
+      mediaLibrary,
     });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       view: {
@@ -491,8 +552,8 @@ describe('app settings storage', () => {
         thumbnailTrackVisible: true,
         timelineMinimapVisible: true,
         timelineHeatmap: defaultTimelineHeatmap,
-        mediaLibrary
-      }
+        mediaLibrary,
+      },
     });
   });
 
@@ -506,7 +567,7 @@ describe('app settings storage', () => {
       thumbnailTrackVisible: true,
       timelineMinimapVisible: true,
       timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
-      mediaLibrary
+      mediaLibrary,
     });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       view: {
@@ -514,8 +575,8 @@ describe('app settings storage', () => {
         thumbnailTrackVisible: true,
         timelineMinimapVisible: true,
         timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
-        mediaLibrary
-      }
+        mediaLibrary,
+      },
     });
   });
 
@@ -524,31 +585,43 @@ describe('app settings storage', () => {
     const localModels = await saveLocalAiModelsSettings({
       whisper: { path: ' C:/Models/base.bin ', version: ' whisper.cpp ' },
       demucs: { path: 'C:/Tools/demucs.exe', version: 'demucs' },
-      yunet: { path: '', version: '' }
+      yunet: { path: '', version: '' },
     });
 
     expect(localModels).toEqual({
       whisper: { path: 'C:/Models/base.bin', version: 'whisper.cpp' },
-      demucs: { path: 'C:/Tools/demucs.exe', version: 'demucs' }
+      demucs: { path: 'C:/Tools/demucs.exe', version: 'demucs' },
     });
     expect(await readLocalAiModelsSettings()).toEqual(localModels);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      localModels
+      localModels,
     });
   });
 
   it('persists preview performance settings in settings.json', async () => {
-    await expect(readPreviewPerformanceSettings()).resolves.toEqual({ qualityMode: 'full', skipFrames: 1, adaptiveEnabled: true });
+    await expect(readPreviewPerformanceSettings()).resolves.toEqual({
+      qualityMode: 'full',
+      skipFrames: 1,
+      adaptiveEnabled: true,
+    });
 
     await saveLanguageSetting('en');
-    const previewPerformance = await savePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
+    const previewPerformance = await savePreviewPerformanceSettings({
+      qualityMode: 'half',
+      skipFrames: 2,
+      adaptiveEnabled: false,
+    });
 
     expect(previewPerformance).toEqual({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
-    expect(await readPreviewPerformanceSettings()).toEqual({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
+    expect(await readPreviewPerformanceSettings()).toEqual({
+      qualityMode: 'half',
+      skipFrames: 2,
+      adaptiveEnabled: false,
+    });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      previewPerformance: { qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false }
+      previewPerformance: { qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false },
     });
 
     await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1, adaptiveEnabled: true });
@@ -565,7 +638,7 @@ describe('app settings storage', () => {
     expect(await readTimelineInteractionSettings()).toEqual({ reduceMotion: true, audioScrubEnabled: true });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      timelineInteraction: { reduceMotion: true, audioScrubEnabled: true }
+      timelineInteraction: { reduceMotion: true, audioScrubEnabled: true },
     });
 
     await saveTimelineInteractionSettings({ reduceMotion: false });
@@ -582,7 +655,7 @@ describe('app settings storage', () => {
     expect(await readDisplaySettings()).toEqual(display);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      display
+      display,
     });
 
     await saveDisplaySettings({ colorGamut: 'srgb' });
@@ -599,14 +672,14 @@ describe('app settings storage', () => {
     expect(await readCollaborationIdentitySettings()).toEqual(identity);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      collaborationIdentity: identity
+      collaborationIdentity: identity,
     });
 
     const fallbackColor = await saveCollaborationIdentitySettings({ color: 'not-a-color' });
     expect(fallbackColor).toEqual({ name: 'Alice', color: '#38bdf8' });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      collaborationIdentity: { name: 'Alice', color: '#38bdf8' }
+      collaborationIdentity: { name: 'Alice', color: '#38bdf8' },
     });
 
     await saveCollaborationIdentitySettings({ name: '我' });
@@ -617,38 +690,38 @@ describe('app settings storage', () => {
     await expect(readPreviewWindowSettings()).resolves.toEqual({
       bounds: { width: 960, height: 540 },
       alwaysOnTop: false,
-      resolutionScale: 1
+      resolutionScale: 1,
     });
 
     await saveLanguageSetting('en');
     const previewWindow = await savePreviewWindowSettings({
       bounds: { x: 52.4, y: -20.2, width: 1920.8, height: 1080.2 },
       alwaysOnTop: true,
-      resolutionScale: 0.5
+      resolutionScale: 0.5,
     });
 
     expect(previewWindow).toEqual({
       bounds: { x: 52, y: -20, width: 1921, height: 1080 },
       alwaysOnTop: true,
-      resolutionScale: 0.5
+      resolutionScale: 0.5,
     });
     expect(await readPreviewWindowSettings()).toEqual(previewWindow);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      previewWindow
+      previewWindow,
     });
   });
 
   it('clamps invalid detached preview window settings to safe defaults', async () => {
     const previewWindow = await savePreviewWindowSettings({
       bounds: { x: Number.NaN, y: 99, width: 12, height: 99 },
-      resolutionScale: 0.75
+      resolutionScale: 0.75,
     } as never);
 
     expect(previewWindow).toEqual({
       bounds: { y: 99, width: 320, height: 240 },
       alwaysOnTop: false,
-      resolutionScale: 1
+      resolutionScale: 1,
     });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ previewWindow });
   });
@@ -663,7 +736,7 @@ describe('app settings storage', () => {
     expect(await readTimelineGridSettings()).toEqual(grid);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      timelineGrid: grid
+      timelineGrid: grid,
     });
 
     const normalized = await saveTimelineGridSettings({ unit: 'unknown' as never });
@@ -680,18 +753,18 @@ describe('app settings storage', () => {
     expect(await readUpdateSettings()).toEqual(update);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      update
+      update,
     });
   });
 
   it('persists custom updater endpoint urls', async () => {
     const update = await saveUpdateSettings({
-      customEndpoint: ' http://updates.intranet/open-factory/latest.json '
+      customEndpoint: ' http://updates.intranet/open-factory/latest.json ',
     });
 
     expect(update).toEqual({
       autoCheckEnabled: true,
-      customEndpoint: 'http://updates.intranet/open-factory/latest.json'
+      customEndpoint: 'http://updates.intranet/open-factory/latest.json',
     });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ update });
   });
@@ -705,18 +778,15 @@ describe('app settings storage', () => {
         enabled: true,
         trigger: 'on-import',
         conditions: [{ field: 'duration', op: '>', value: 300 }],
-        actions: [
-          { type: 'generate-proxy' },
-          { type: 'add-tag', value: 'green' }
-        ]
+        actions: [{ type: 'generate-proxy' }, { type: 'add-tag', value: 'green' }],
       },
       {
         id: 'invalid',
         enabled: true,
         trigger: 'unknown' as never,
         conditions: [],
-        actions: [{ type: 'generate-proxy' }]
-      }
+        actions: [{ type: 'generate-proxy' }],
+      },
     ]);
 
     expect(rules).toEqual([
@@ -726,16 +796,13 @@ describe('app settings storage', () => {
         enabled: true,
         trigger: 'on-import',
         conditions: [{ field: 'duration', op: '>', value: 300 }],
-        actions: [
-          { type: 'generate-proxy' },
-          { type: 'add-tag', value: 'green' }
-        ]
-      }
+        actions: [{ type: 'generate-proxy' }, { type: 'add-tag', value: 'green' }],
+      },
     ]);
     expect(await readAutomationRules()).toEqual(rules);
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      automationRules: rules
+      automationRules: rules,
     });
   });
 });

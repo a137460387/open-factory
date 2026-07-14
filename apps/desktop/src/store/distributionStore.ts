@@ -1,17 +1,8 @@
 import { create } from 'zustand';
-import type {
-  DistributionPlatformId,
-  DistributionPlatformSpec,
-} from '@open-factory/editor-core';
+import type { DistributionPlatformId, DistributionPlatformSpec } from '@open-factory/editor-core';
 import type { SmartCropResult } from '@open-factory/editor-core';
-import type {
-  DistributionTask,
-  DistributionBatchResult,
-} from '@open-factory/editor-core';
-import type {
-  DistributionSchedule,
-  DistributionHistoryEntry,
-} from '@open-factory/editor-core';
+import type { DistributionTask, DistributionBatchResult } from '@open-factory/editor-core';
+import type { DistributionSchedule, DistributionHistoryEntry } from '@open-factory/editor-core';
 
 type Updater<T> = T | ((current: T) => T);
 
@@ -134,33 +125,25 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
 
   updateTaskProgress(taskId, progress) {
     set((s) => ({
-      tasks: s.tasks.map((t) =>
-        t.id === taskId ? { ...t, progress: Math.max(0, Math.min(1, progress)) } : t,
-      ),
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, progress: Math.max(0, Math.min(1, progress)) } : t)),
     }));
   },
 
   finishTask(taskId) {
     set((s) => ({
-      tasks: s.tasks.map((t) =>
-        t.id === taskId ? { ...t, status: 'success' as const, progress: 1 } : t,
-      ),
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status: 'success' as const, progress: 1 } : t)),
     }));
   },
 
   failTask(taskId, error) {
     set((s) => ({
-      tasks: s.tasks.map((t) =>
-        t.id === taskId ? { ...t, status: 'error' as const, error } : t,
-      ),
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status: 'error' as const, error } : t)),
     }));
   },
 
   cancelTask(taskId) {
     set((s) => ({
-      tasks: s.tasks.map((t) =>
-        t.id === taskId ? { ...t, status: 'canceled' as const } : t,
-      ),
+      tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status: 'canceled' as const } : t)),
     }));
   },
 
@@ -171,9 +154,7 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
   updateScheduleStatus(scheduleId, status, error) {
     set((s) => ({
       schedules: s.schedules.map((sch) =>
-        sch.id === scheduleId
-          ? { ...sch, status, error, updatedAt: new Date().toISOString() }
-          : sch,
+        sch.id === scheduleId ? { ...sch, status, error, updatedAt: new Date().toISOString() } : sch,
       ),
     }));
   },

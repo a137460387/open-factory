@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
 import { PLUGIN_API_HOST_FUNCTIONS, type PluginAPI } from '@open-factory/plugin-sdk';
-import { createBuiltinExamplePlugin, extractManifestPermissions, formatPluginError, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
+import {
+  createBuiltinExamplePlugin,
+  extractManifestPermissions,
+  formatPluginError,
+  loadPluginFiles,
+  normalizePluginMetadata,
+  type PluginRuntime,
+  type PluginSourceFile,
+} from './plugin-loader';
 
 type MissingPluginApiHostFunctions = Exclude<keyof PluginAPI, (typeof PLUGIN_API_HOST_FUNCTIONS)[number]>;
 const assertAllPluginApiHostFunctionsAreListed: MissingPluginApiHostFunctions extends never ? true : never = true;
@@ -11,7 +19,7 @@ describe('plugin loader', () => {
   it('loads valid plugins and isolates load errors', async () => {
     const files: PluginSourceFile[] = [
       { path: 'C:/Plugins/good.js', code: 'good' },
-      { path: 'C:/Plugins/bad.js', code: 'bad' }
+      { path: 'C:/Plugins/bad.js', code: 'bad' },
     ];
     const registry = await loadPluginFiles(files, async (source) => {
       if (source.code === 'bad') {
@@ -34,13 +42,13 @@ describe('plugin loader', () => {
         name: 'Hook Plugin',
         version: '1.0.0',
         permissions: ['export-hook'],
-        hooks: { onExportBefore: hook }
-      })
+        hooks: { onExportBefore: hook },
+      }),
     );
 
     const result = await registry.plugins[0].runtime.invokeHook('onExportBefore', {
       project: createProject('Plugin Test'),
-      outputPath: 'C:/Exports/out.mp4'
+      outputPath: 'C:/Exports/out.mp4',
     });
 
     expect(result).toEqual({ ok: true });
@@ -52,7 +60,7 @@ describe('plugin loader', () => {
       name: expect.any(String),
       version: '0.0.0',
       description: '',
-      permissions: []
+      permissions: [],
     });
 
     const builtin = createBuiltinExamplePlugin();
@@ -72,15 +80,15 @@ describe('plugin loader', () => {
         name: 'No Permission',
         version: '1.0.0',
         permissions: [],
-        hooks: { onExportBefore: () => ({ ok: true }) }
-      })
+        hooks: { onExportBefore: () => ({ ok: true }) },
+      }),
     );
 
     await expect(
       registry.plugins[0].runtime.invokeHook('onExportBefore', {
         project: createProject('Permission Test'),
-        outputPath: 'C:/Exports/out.mp4'
-      })
+        outputPath: 'C:/Exports/out.mp4',
+      }),
     ).rejects.toThrow('export-hook permission');
   });
 
@@ -94,7 +102,7 @@ describe('plugin loader', () => {
       '  hooks: {',
       '    onExportBefore() { throw new Error("should not run"); }',
       '  }',
-      '};'
+      '};',
     ].join('\n');
 
     expect(extractManifestPermissions(source)).toEqual(['export-hook', 'menu-register']);
@@ -102,7 +110,9 @@ describe('plugin loader', () => {
 
   it('returns undefined when source has no static manifest permissions', () => {
     expect(extractManifestPermissions('module.exports = { hooks: {} };')).toBeUndefined();
-    expect(extractManifestPermissions('module.exports = { manifest: { permissions: makePermissions() } };')).toBeUndefined();
+    expect(
+      extractManifestPermissions('module.exports = { manifest: { permissions: makePermissions() } };'),
+    ).toBeUndefined();
   });
 
   it('exports a complete PluginAPI host function list for SDK consumers', () => {
@@ -114,7 +124,7 @@ describe('plugin loader', () => {
       'readTextFile',
       'writeTextFile',
       'sendMessage',
-      'onMessage'
+      'onMessage',
     ]);
   });
 
@@ -126,11 +136,14 @@ describe('plugin loader', () => {
   });
 });
 
-function makeRuntime(plugin: Omit<PluginRuntime['plugin'], 'description' | 'permissions'> & Partial<Pick<PluginRuntime['plugin'], 'description' | 'permissions'>>): PluginRuntime {
+function makeRuntime(
+  plugin: Omit<PluginRuntime['plugin'], 'description' | 'permissions'> &
+    Partial<Pick<PluginRuntime['plugin'], 'description' | 'permissions'>>,
+): PluginRuntime {
   const normalized = {
     description: '',
     permissions: [],
-    ...plugin
+    ...plugin,
   };
   return {
     plugin: normalized,
@@ -140,6 +153,6 @@ function makeRuntime(plugin: Omit<PluginRuntime['plugin'], 'description' | 'perm
     },
     dispose() {
       return undefined;
-    }
+    },
   };
 }

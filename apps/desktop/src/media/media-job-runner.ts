@@ -51,12 +51,20 @@ async function runJobs(): Promise<void> {
 async function runJobWithStatus(job: MediaJob): Promise<void> {
   try {
     await runJob(job);
-    if (shouldIgnoreMediaJobCompletion(useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status)) {
+    if (
+      shouldIgnoreMediaJobCompletion(
+        useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status,
+      )
+    ) {
       return;
     }
     useMediaJobStore.getState().finishJob(job.id);
   } catch (error) {
-    if (shouldIgnoreMediaJobCompletion(useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status)) {
+    if (
+      shouldIgnoreMediaJobCompletion(
+        useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status,
+      )
+    ) {
       return;
     }
     useMediaJobStore.getState().failJob(job.id, error instanceof Error ? error.message : zhCN.errors.mediaJobFailed);
@@ -64,7 +72,7 @@ async function runJobWithStatus(job: MediaJob): Promise<void> {
       updateMediaAsset(job.assetId, (asset) => ({
         ...asset,
         proxyStatus: 'error',
-        proxyError: error instanceof Error ? error.message : zhCN.errors.proxyGenerationFailed
+        proxyError: error instanceof Error ? error.message : zhCN.errors.proxyGenerationFailed,
       }));
     }
   }
@@ -77,12 +85,16 @@ async function runJob(job: MediaJob): Promise<void> {
   }
   if (job.type === 'proxy') {
     updateMediaAsset(job.assetId, (item) => ({ ...item, proxyStatus: 'pending', proxyError: undefined }));
-    const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, useProxySettingsStore.getState().settings, {
-      force: job.force,
-      cfrFrameRate: job.cfrFrameRate,
-      sourceStart: job.sourceStart,
-      sourceDuration: job.sourceDuration
-    });
+    const proxyAsset = await createProxyForAsset(
+      { ...asset, proxyStatus: 'pending', proxyError: undefined },
+      useProxySettingsStore.getState().settings,
+      {
+        force: job.force,
+        cfrFrameRate: job.cfrFrameRate,
+        sourceStart: job.sourceStart,
+        sourceDuration: job.sourceDuration,
+      },
+    );
     updateMediaAsset(job.assetId, () => proxyAsset);
     return;
   }

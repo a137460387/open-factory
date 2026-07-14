@@ -1,4 +1,9 @@
-import type { QualityLevel, ExportTaskPriority, ExportUploadState, PostExportQualityCheckResult } from '@open-factory/editor-core';
+import type {
+  QualityLevel,
+  ExportTaskPriority,
+  ExportUploadState,
+  PostExportQualityCheckResult,
+} from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 
 export function formatQualityMetricValue(value: number | undefined, suffix: string): string {

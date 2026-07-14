@@ -33,7 +33,7 @@ export interface ClipWithDurationAndScore {
 export const PLATFORM_LIMITS: Record<Exclude<PlatformFitTarget, 'custom'>, number> = {
   tiktok: 60,
   reels: 90,
-  shorts: 60
+  shorts: 60,
 };
 
 // -- Importance scoring ------------------------------------------
@@ -42,10 +42,7 @@ export const PLATFORM_LIMITS: Record<Exclude<PlatformFitTarget, 'custom'>, numbe
  * Calculate clip importance score, using AI highlight score if available
  * or falling back to the provided median default.
  */
-export function calculateClipImportance(
-  clip: ClipWithDurationAndScore,
-  defaultScore = 0.5
-): number {
+export function calculateClipImportance(clip: ClipWithDurationAndScore, defaultScore = 0.5): number {
   if (typeof clip.score === 'number' && Number.isFinite(clip.score)) {
     return round(Math.max(0, Math.min(1, clip.score)));
   }
@@ -58,11 +55,7 @@ export function calculateClipImportance(
  * Snap a time value to the nearest scene-change boundary within
  * the given tolerance.
  */
-export function snapToSceneChange(
-  time: number,
-  sceneChangeTimes: readonly number[],
-  tolerance = 0.5
-): number {
+export function snapToSceneChange(time: number, sceneChangeTimes: readonly number[], tolerance = 0.5): number {
   if (sceneChangeTimes.length === 0) return time;
   let bestTime = time;
   let bestDist = Infinity;
@@ -90,7 +83,7 @@ export function generatePlatformFitSuggestion(
   clips: ClipWithDurationAndScore[],
   limitSeconds: number,
   sceneChangeTimes?: readonly number[],
-  snapTolerance?: number
+  snapTolerance?: number,
 ): PlatformFitSuggestion {
   if (clips.length === 0 || limitSeconds <= 0) {
     return {
@@ -101,8 +94,8 @@ export function generatePlatformFitSuggestion(
         clipId: c.clipId,
         start: c.start,
         end: c.end,
-        score: calculateClipImportance(c)
-      }))
+        score: calculateClipImportance(c),
+      })),
     };
   }
 
@@ -111,14 +104,12 @@ export function generatePlatformFitSuggestion(
     .map((c) => c.score)
     .filter((s): s is number => typeof s === 'number' && Number.isFinite(s))
     .sort((a, b) => a - b);
-  const medianScore = explicitScores.length > 0
-    ? explicitScores[Math.floor(explicitScores.length / 2)]
-    : 0.5;
+  const medianScore = explicitScores.length > 0 ? explicitScores[Math.floor(explicitScores.length / 2)] : 0.5;
 
   // Score all clips
   const scored = clips.map((c) => ({
     ...c,
-    effectiveScore: calculateClipImportance(c, medianScore)
+    effectiveScore: calculateClipImportance(c, medianScore),
   }));
 
   // Sort by score descending for greedy selection
@@ -145,7 +136,7 @@ export function generatePlatformFitSuggestion(
       clipId: clip.clipId,
       start: clip.start,
       end: clip.end,
-      score: clip.effectiveScore
+      score: clip.effectiveScore,
     };
 
     if (keptIds.has(clip.clipId)) {
@@ -173,6 +164,6 @@ export function generatePlatformFitSuggestion(
     targetPlatform: 'custom',
     limitSeconds,
     keptSegments,
-    removedSegments
+    removedSegments,
   };
 }

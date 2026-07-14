@@ -43,7 +43,11 @@ export function makeRelativePath(mediaPath: string, projectPath: string): string
   const mediaParts = stripDrive(media).split('/').filter(Boolean);
   const projectParts = stripDrive(projectDir).split('/').filter(Boolean);
   let shared = 0;
-  while (shared < mediaParts.length && shared < projectParts.length && compareSegment(mediaParts[shared], projectParts[shared], Boolean(mediaDrive))) {
+  while (
+    shared < mediaParts.length &&
+    shared < projectParts.length &&
+    compareSegment(mediaParts[shared], projectParts[shared], Boolean(mediaDrive))
+  ) {
     shared += 1;
   }
 

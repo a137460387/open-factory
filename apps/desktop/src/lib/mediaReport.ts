@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   buildOfflineMediaReportHtml,
   buildClipReportHtml,
@@ -6,7 +6,7 @@ import {
   collectOfflineMediaReportPaths,
   type OfflineMediaFileStatus,
   type Project,
-  type ProjectArchivePreflight
+  type ProjectArchivePreflight,
 } from '@open-factory/editor-core';
 import { getLanguage, zhCN } from '../i18n/strings';
 import { fsExists, getFileStat, saveFileDialog, writeClipReport, writeFile } from './tauri-bridge';
@@ -19,14 +19,16 @@ async function collectOfflineMediaFileStatuses(project: Project): Promise<Offlin
       if (!exists) {
         return { path, exists: false };
       }
-      const stat = await getFileStat(path).catch(logError("mediaReport"));
+      const stat = await getFileStat(path).catch(logError('mediaReport'));
       return { path, exists: true, size: stat?.size };
-    })
+    }),
   );
 }
 
 export async function saveOfflineMediaReport(project: Project): Promise<string | undefined> {
-  const outputPath = await saveFileDialog(`${project.name}-素材使用分析.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
+  const outputPath = await saveFileDialog(`${project.name}-素材使用分析.html`, [
+    { name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] },
+  ]);
   if (!outputPath) {
     return undefined;
   }
@@ -36,11 +38,16 @@ export async function saveOfflineMediaReport(project: Project): Promise<string |
 }
 
 export async function saveClipReport(project: Project): Promise<string | undefined> {
-  const outputPath = await saveFileDialog(`${project.name}-剪辑报告.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
+  const outputPath = await saveFileDialog(`${project.name}-剪辑报告.html`, [
+    { name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] },
+  ]);
   if (!outputPath) {
     return undefined;
   }
-  await writeClipReport(outputPath, buildClipReportHtml(project, { exportPresetName: zhCN.clipReport.defaultExportPreset, locale: getLanguage() }));
+  await writeClipReport(
+    outputPath,
+    buildClipReportHtml(project, { exportPresetName: zhCN.clipReport.defaultExportPreset, locale: getLanguage() }),
+  );
   return outputPath;
 }
 

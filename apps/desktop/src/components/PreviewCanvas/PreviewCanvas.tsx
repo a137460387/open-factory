@@ -1,5 +1,30 @@
-import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, Gauge, GitCompareArrows, MousePointer2, Pause, Pipette, Play, RectangleHorizontal, Rows2, Type as TypeIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
+import {
+  ArrowUpRight,
+  BarChart3,
+  Blend,
+  Columns2,
+  FileDown,
+  Gauge,
+  GitCompareArrows,
+  MousePointer2,
+  Pause,
+  Pipette,
+  Play,
+  RectangleHorizontal,
+  Rows2,
+  Type as TypeIcon,
+} from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type WheelEvent as ReactWheelEvent,
+} from 'react';
 import {
   RecordAngleCutCommand,
   ApplyMulticamAiCutSuggestionsCommand,
@@ -48,7 +73,7 @@ import {
   type MulticamSwitchHistoryEntry,
   type ProfilerFrameSample,
   type Transform,
-  type Timeline
+  type Timeline,
 } from '@open-factory/editor-core';
 import { isEditableKeyboardTarget } from '../../accessibility/keyboard-navigation';
 import {
@@ -57,7 +82,7 @@ import {
   getWheelPreviewZoom,
   rgbToHex,
   rgbToHsl,
-  type PreviewPixelCoordinates
+  type PreviewPixelCoordinates,
 } from '../../lib/preview/frame-inspector';
 import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
 import { zhCN } from '../../i18n/strings';
@@ -66,7 +91,7 @@ import {
   buildPreviewCompareOverlayStyle,
   calculatePreviewCompareSplitRatio,
   drawPreviewDifferenceFrame,
-  type PreviewCompareMode
+  type PreviewCompareMode,
 } from '../../lib/preview/compare';
 import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../../lib/projectSnapshots';
 import { appendFrameSearchHistory, readFrameSearchHistory } from '../../lib/frameSearchHistory';
@@ -85,7 +110,7 @@ import {
   resolveEffectivePreviewPerformance,
   shouldRenderPreviewFrame,
   type PreviewFpsSample,
-  type PreviewPerformanceSettings
+  type PreviewPerformanceSettings,
 } from '../../lib/preview/preview-performance';
 import {
   DEFAULT_GPU_PREVIEW_METRICS,
@@ -93,7 +118,7 @@ import {
   buildGpuPrefetchFrameRequests,
   detectGpuPreviewCapabilities,
   formatTextureMemoryMiB,
-  type GpuPreviewMetrics
+  type GpuPreviewMetrics,
 } from '../../lib/preview/gpu-acceleration';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
@@ -128,7 +153,7 @@ export function PreviewCanvas({
   reviewMode = false,
   onProfilerFrame,
   onAddReviewAnnotation,
-  onExportReviewReport
+  onExportReviewReport,
 }: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
@@ -199,8 +224,11 @@ export function PreviewCanvas({
     return clip?.type === 'nested-sequence' && clip.multicam ? clip : undefined;
   }, [project.timeline.tracks, selectedClipId]);
   const selectedMulticamSequence = useMemo(
-    () => (selectedMulticamClip ? project.sequences.find((sequence) => sequence.id === selectedMulticamClip.sequenceId) : undefined),
-    [project.sequences, selectedMulticamClip]
+    () =>
+      selectedMulticamClip
+        ? project.sequences.find((sequence) => sequence.id === selectedMulticamClip.sequenceId)
+        : undefined,
+    [project.sequences, selectedMulticamClip],
   );
   const recordMulticamAngleCut = (angleId: string) => {
     if (!selectedMulticamClip) {
@@ -211,7 +239,9 @@ export function PreviewCanvas({
       if (multicamLiveMode && existingSession?.clipId === selectedMulticamClip.id) {
         existingSession.command.record(playheadTime, angleId);
       } else {
-        const command = new RecordAngleCutCommand(projectAccessor, selectedMulticamClip.id, [{ sceneTime: playheadTime, angleId }]);
+        const command = new RecordAngleCutCommand(projectAccessor, selectedMulticamClip.id, [
+          { sceneTime: playheadTime, angleId },
+        ]);
         commandManager.execute(command);
         liveCutSessionRef.current = multicamLiveMode ? { clipId: selectedMulticamClip.id, command } : null;
       }
@@ -219,7 +249,7 @@ export function PreviewCanvas({
       showToast({
         kind: 'warning',
         title: t.multicamCutFailedTitle,
-        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+        message: error instanceof Error ? error.message : t.multicamCutFailedMessage,
       });
     }
   };
@@ -228,28 +258,44 @@ export function PreviewCanvas({
       return;
     }
     try {
-      commandManager.execute(new TrimMulticamSwitchCommand(projectAccessor, selectedMulticamClip.id, switchId, frameDelta, fps));
+      commandManager.execute(
+        new TrimMulticamSwitchCommand(projectAccessor, selectedMulticamClip.id, switchId, frameDelta, fps),
+      );
       liveCutSessionRef.current = null;
     } catch (error) {
       showToast({
         kind: 'warning',
         title: t.multicamCutFailedTitle,
-        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+        message: error instanceof Error ? error.message : t.multicamCutFailedMessage,
       });
     }
   };
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
-  const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
+  const selectedEditableClip = useMemo(
+    () => editableCanvasClips.find((item) => item.clip.id === selectedClipId),
+    [editableCanvasClips, selectedClipId],
+  );
   const selectedInspectorClip = useMemo(() => selectedEditableClip?.clip, [selectedEditableClip]);
   const selectedPanoramaClip = useMemo(() => {
     const clip = project.timeline.tracks.flatMap((track) => track.clips).find((item) => item.id === selectedClipId);
     return clip?.type === 'video' && normalizeClipProjection(clip.projection) === 'equirectangular' ? clip : undefined;
   }, [project.timeline.tracks, selectedClipId]);
-  const chromaKeyPickTarget = useMemo(() => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId), [chromaKeyPickClipId, editableCanvasClips]);
-  const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
-  const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
-  const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isFrameJumpLikeQuery(frameSearchQuery);
-  const showFrameSearchHistory = frameSearchFocused && frameSearchQuery.trim().length === 0 && frameSearchHistory.length > 0;
+  const chromaKeyPickTarget = useMemo(
+    () => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId),
+    [chromaKeyPickClipId, editableCanvasClips],
+  );
+  const selectedPathMask = useMemo(
+    () => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'),
+    [selectedEditableClip],
+  );
+  const frameSearchCandidates = useMemo(
+    () => buildFrameSearchCandidates(project, frameSearchQuery),
+    [frameSearchQuery, project],
+  );
+  const showFrameSearchCandidates =
+    frameSearchFocused && frameSearchQuery.trim().length > 0 && !isFrameJumpLikeQuery(frameSearchQuery);
+  const showFrameSearchHistory =
+    frameSearchFocused && frameSearchQuery.trim().length === 0 && frameSearchHistory.length > 0;
 
   useEffect(() => {
     setFrameSearchHistory(readFrameSearchHistory());
@@ -262,7 +308,7 @@ export function PreviewCanvas({
       ...current,
       offscreenWorkerSupported: capabilities.offscreenCanvasWorkerSupported,
       timerQuerySupported: capabilities.timerQuerySupported,
-      fallbackReason: capabilities.fallbackReason
+      fallbackReason: capabilities.fallbackReason,
     }));
   }, []);
 
@@ -273,7 +319,15 @@ export function PreviewCanvas({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!multicamLiveMode || !isPlaying || !selectedMulticamClip?.multicam || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+      if (
+        !multicamLiveMode ||
+        !isPlaying ||
+        !selectedMulticamClip?.multicam ||
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey
+      ) {
         return;
       }
       if (isEditableKeyboardTarget(event.target)) {
@@ -312,7 +366,10 @@ export function PreviewCanvas({
       frame += 1;
       const elapsedMs = now - lastSampleAt;
       if (elapsedMs >= 1000) {
-        const overrideFps = typeof window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ === 'number' ? window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ : undefined;
+        const overrideFps =
+          typeof window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ === 'number'
+            ? window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__
+            : undefined;
         const measuredFps = overrideFps ?? (frame * 1000) / elapsedMs;
         samples = appendPreviewFpsSample(samples, { timestampMs: now, fps: measuredFps });
         const averageFps = calculatePreviewFpsAverage(samples);
@@ -321,8 +378,8 @@ export function PreviewCanvas({
             averageFps,
             current,
             elapsedMs,
-            adaptiveEnabled: previewPerformance.adaptiveEnabled !== false
-          })
+            adaptiveEnabled: previewPerformance.adaptiveEnabled !== false,
+          }),
         );
         frame = 0;
         lastSampleAt = now;
@@ -344,28 +401,44 @@ export function PreviewCanvas({
   }, [reviewMode, setChromaKeyPickClipId]);
   const snapshotCompareRanges = useMemo(
     () => (snapshotCompareProject ? diffTimelineSnapshots(project.timeline, snapshotCompareProject.timeline) : []),
-    [project.timeline, snapshotCompareProject]
+    [project.timeline, snapshotCompareProject],
   );
   const previewZoomPercent = Math.round(previewZoom * 100);
-  const effectivePreviewPerformance = useMemo<PreviewPerformanceSettings>(() => resolveEffectivePreviewPerformance(previewPerformance, adaptivePreviewState), [adaptivePreviewState, previewPerformance]);
-  const previewRenderSize = useMemo(
-    () => calculatePreviewRenderSize(PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT, effectivePreviewPerformance.qualityMode),
-    [effectivePreviewPerformance.qualityMode]
+  const effectivePreviewPerformance = useMemo<PreviewPerformanceSettings>(
+    () => resolveEffectivePreviewPerformance(previewPerformance, adaptivePreviewState),
+    [adaptivePreviewState, previewPerformance],
   );
-  const previewDisabledEffectTypes = useMemo(() => getDisabledPreviewEffectTypes(effectivePreviewPerformance), [effectivePreviewPerformance]);
+  const previewRenderSize = useMemo(
+    () =>
+      calculatePreviewRenderSize(PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT, effectivePreviewPerformance.qualityMode),
+    [effectivePreviewPerformance.qualityMode],
+  );
+  const previewDisabledEffectTypes = useMemo(
+    () => getDisabledPreviewEffectTypes(effectivePreviewPerformance),
+    [effectivePreviewPerformance],
+  );
   const audioOnlyPreview = isPreviewAudioOnly(effectivePreviewPerformance.qualityMode);
   const lowQualityPreview = isPreviewLowQuality(effectivePreviewPerformance);
   const adaptiveIndicatorStatus = getPreviewAdaptiveQualityStatus(effectivePreviewPerformance.qualityMode);
   const adaptiveIndicatorTitle =
     previewPerformance.adaptiveEnabled === false
       ? t.adaptiveQualityLocked(t.qualityLabels[effectivePreviewPerformance.qualityMode])
-      : t.adaptiveQualityTooltip(adaptivePreviewState.averageFps, t.qualityLabels[effectivePreviewPerformance.qualityMode]);
-  const showGpuMetricsPanel = import.meta.env.DEV || import.meta.env.VITE_E2E === 'true' || window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ === true;
-  const gpuTextureMemoryLabel = t.gpuTextureMemory(formatTextureMemoryMiB(gpuPreviewMetrics.textureBytes), formatTextureMemoryMiB(GPU_TEXTURE_POOL_MAX_BYTES));
+      : t.adaptiveQualityTooltip(
+          adaptivePreviewState.averageFps,
+          t.qualityLabels[effectivePreviewPerformance.qualityMode],
+        );
+  const showGpuMetricsPanel =
+    import.meta.env.DEV ||
+    import.meta.env.VITE_E2E === 'true' ||
+    window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ === true;
+  const gpuTextureMemoryLabel = t.gpuTextureMemory(
+    formatTextureMemoryMiB(gpuPreviewMetrics.textureBytes),
+    formatTextureMemoryMiB(GPU_TEXTURE_POOL_MAX_BYTES),
+  );
   const previewCanvasSizeLabel = t.canvasSize(previewRenderSize.width, previewRenderSize.height);
   const previewSurfaceStyle: CSSProperties = {
     transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
-    transformOrigin: 'center'
+    transformOrigin: 'center',
   };
 
   const resolveGpuMetrics = (metrics?: GpuPreviewMetrics): GpuPreviewMetrics => ({
@@ -374,10 +447,15 @@ export function PreviewCanvas({
     offscreenWorkerSupported: gpuCapabilities.offscreenCanvasWorkerSupported,
     offscreenWorkerActive: false,
     timerQuerySupported: metrics?.timerQuerySupported ?? gpuCapabilities.timerQuerySupported,
-    fallbackReason: metrics?.fallbackReason ?? gpuCapabilities.fallbackReason
+    fallbackReason: metrics?.fallbackReason ?? gpuCapabilities.fallbackReason,
   });
 
-  const emitProfilerFrame = (metrics: GpuPreviewMetrics | undefined, elapsedMs: number, timeline: Timeline, cached = false) => {
+  const emitProfilerFrame = (
+    metrics: GpuPreviewMetrics | undefined,
+    elapsedMs: number,
+    timeline: Timeline,
+    cached = false,
+  ) => {
     if (!onProfilerFrame) {
       return;
     }
@@ -388,7 +466,7 @@ export function PreviewCanvas({
       totalMs,
       drawCalls: safeMetrics.drawCalls,
       effectCount,
-      overlayActive: scopesOpen || compareEnabled
+      overlayActive: scopesOpen || compareEnabled,
     });
     const customShaderActive = hasActiveCustomShader(timeline, playheadTime);
     const reason = customShaderActive
@@ -404,7 +482,7 @@ export function PreviewCanvas({
       render,
       drawCalls: safeMetrics.drawCalls,
       textureBytes: safeMetrics.textureBytes,
-      reason
+      reason,
     });
   };
 
@@ -424,7 +502,11 @@ export function PreviewCanvas({
     try {
       setSnapshotEntries(await listProjectSnapshots(project.id));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.projectSnapshots.loadFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.projectSnapshots.loadFailed,
+        message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed,
+      });
     } finally {
       setSnapshotCompareLoading(false);
     }
@@ -449,7 +531,11 @@ export function PreviewCanvas({
     } catch (error) {
       setSnapshotComparePath('');
       setSnapshotCompareProject(undefined);
-      showToast({ kind: 'warning', title: zhCN.projectSnapshots.loadFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed });
+      showToast({
+        kind: 'warning',
+        title: zhCN.projectSnapshots.loadFailed,
+        message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed,
+      });
     } finally {
       setSnapshotCompareLoading(false);
     }
@@ -489,7 +575,8 @@ export function PreviewCanvas({
     const shouldCaptureScopes = scopesOpen && (!isPlaying || scopeFrameCounterRef.current % 4 === 0);
     const shouldCaptureDifference = compareShowsDifference && Boolean(differenceCanvas);
     const frame = Math.max(0, Math.round(playheadTime * fps));
-    const shouldRenderVideoFrame = !audioOnlyPreview && shouldRenderPreviewFrame(isPlaying, frame, effectivePreviewPerformance.skipFrames);
+    const shouldRenderVideoFrame =
+      !audioOnlyPreview && shouldRenderPreviewFrame(isPlaying, frame, effectivePreviewPerformance.skipFrames);
     const canUseRenderCache = shouldRenderVideoFrame && !previewTimeline && !shouldCaptureScopes && !compareEnabled;
     const frameTime = frame / fps;
     const frameKey = buildTimelineRenderFrameKey({
@@ -501,7 +588,7 @@ export function PreviewCanvas({
       fps,
       width: canvas.width,
       height: canvas.height,
-      colorPipeline: project.settings.colorPipeline
+      colorPipeline: project.settings.colorPipeline,
     });
     let canceled = false;
     scopeFrameCounterRef.current += 1;
@@ -515,74 +602,91 @@ export function PreviewCanvas({
       }
     } else if (shouldRenderVideoFrame) {
       void (async () => {
-      try {
-        if (canUseRenderCache) {
-          const cached = await getTimelineRenderCacheController().getFrame(frameKey);
-          if (cached) {
-            try {
-              if (!canceled) {
-                const cachedStartedAt = performance.now();
-                rendererRef.current.drawCachedFrame(canvas, cached);
-                const metrics = resolveGpuMetrics(rendererRef.current.getGpuMetrics());
-                setGpuPreviewMetrics(metrics);
-                emitProfilerFrame(metrics, performance.now() - cachedStartedAt, timeline, true);
+        try {
+          if (canUseRenderCache) {
+            const cached = await getTimelineRenderCacheController().getFrame(frameKey);
+            if (cached) {
+              try {
+                if (!canceled) {
+                  const cachedStartedAt = performance.now();
+                  rendererRef.current.drawCachedFrame(canvas, cached);
+                  const metrics = resolveGpuMetrics(rendererRef.current.getGpuMetrics());
+                  setGpuPreviewMetrics(metrics);
+                  emitProfilerFrame(metrics, performance.now() - cachedStartedAt, timeline, true);
+                }
+              } finally {
+                cached.close();
               }
-            } finally {
-              cached.close();
+              return;
             }
-            return;
           }
-        }
-        const renderStartedAt = performance.now();
-        const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
-          captureFrame: shouldCaptureScopes || shouldCaptureDifference,
-          disabledEffectTypes: previewDisabledEffectTypes,
-          sequences: project.sequences,
-          colorPipeline: project.settings.colorPipeline
-        });
-        if (canceled) {
-          return;
-        }
-        const metrics = resolveGpuMetrics(result.gpuMetrics);
-        setGpuPreviewMetrics(metrics);
-        emitProfilerFrame(metrics, performance.now() - renderStartedAt, timeline);
-        if (result.frame && shouldCaptureScopes) {
-          setScopeFrame(result.frame);
-        }
-        if (compareEnabled && originalCanvas) {
-          const compareProject = snapshotCompareProject ?? project;
-          const compareTimeline = snapshotCompareProject?.timeline ?? timeline;
-          const originalResult = await originalRendererRef.current.render(originalCanvas, compareTimeline, compareProject.media, playheadTime, {
-            bypassProcessing: !snapshotCompareProject,
-            captureFrame: shouldCaptureDifference,
+          const renderStartedAt = performance.now();
+          const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
+            captureFrame: shouldCaptureScopes || shouldCaptureDifference,
             disabledEffectTypes: previewDisabledEffectTypes,
-            sequences: compareProject.sequences,
-            colorPipeline: compareProject.settings.colorPipeline
+            sequences: project.sequences,
+            colorPipeline: project.settings.colorPipeline,
           });
           if (canceled) {
             return;
           }
-          if (shouldCaptureDifference && result.frame && originalResult.frame && differenceCanvas) {
-            drawPreviewDifferenceFrame(differenceCanvas, result.frame, originalResult.frame);
+          const metrics = resolveGpuMetrics(result.gpuMetrics);
+          setGpuPreviewMetrics(metrics);
+          emitProfilerFrame(metrics, performance.now() - renderStartedAt, timeline);
+          if (result.frame && shouldCaptureScopes) {
+            setScopeFrame(result.frame);
           }
-        }
-        if (canUseRenderCache) {
-          const bitmap = await createImageBitmap(canvas);
-          getTimelineRenderCacheController().putFrame({
-            key: frameKey,
-            bitmap,
-            time: frameTime,
-            duration: 1 / fps,
-            bytes: canvas.width * canvas.height * 4,
-            playheadTime
+          if (compareEnabled && originalCanvas) {
+            const compareProject = snapshotCompareProject ?? project;
+            const compareTimeline = snapshotCompareProject?.timeline ?? timeline;
+            const originalResult = await originalRendererRef.current.render(
+              originalCanvas,
+              compareTimeline,
+              compareProject.media,
+              playheadTime,
+              {
+                bypassProcessing: !snapshotCompareProject,
+                captureFrame: shouldCaptureDifference,
+                disabledEffectTypes: previewDisabledEffectTypes,
+                sequences: compareProject.sequences,
+                colorPipeline: compareProject.settings.colorPipeline,
+              },
+            );
+            if (canceled) {
+              return;
+            }
+            if (shouldCaptureDifference && result.frame && originalResult.frame && differenceCanvas) {
+              drawPreviewDifferenceFrame(differenceCanvas, result.frame, originalResult.frame);
+            }
+          }
+          if (canUseRenderCache) {
+            const bitmap = await createImageBitmap(canvas);
+            getTimelineRenderCacheController().putFrame({
+              key: frameKey,
+              bitmap,
+              time: frameTime,
+              duration: 1 / fps,
+              bytes: canvas.width * canvas.height * 4,
+              playheadTime,
+            });
+          }
+        } catch (error) {
+          showToast({
+            kind: 'error',
+            title: t.renderFailedTitle,
+            message: error instanceof Error ? error.message : t.renderFailedMessage,
           });
         }
-      } catch (error) {
-        showToast({ kind: 'error', title: t.renderFailedTitle, message: error instanceof Error ? error.message : t.renderFailedMessage });
-      }
       })();
     }
-    rendererRef.current.syncAudio(timeline, project.media, playheadTime, isPlaying && playbackRate > 0, project.masterVolume, project.mixerState);
+    rendererRef.current.syncAudio(
+      timeline,
+      project.media,
+      playheadTime,
+      isPlaying && playbackRate > 0,
+      project.masterVolume,
+      project.mixerState,
+    );
     const levels = rendererRef.current.getAudioLevels();
     setAudioLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands, levels.trackAnalysisFrames);
     return () => {
@@ -609,13 +713,15 @@ export function PreviewCanvas({
     audioOnlyPreview,
     previewDisabledEffectTypes,
     effectivePreviewPerformance.skipFrames,
-    t
+    t,
   ]);
 
   useEffect(() => {
     const previous = previousTimelineRef.current;
     if (previous && previous !== project.timeline) {
-      getTimelineRenderCacheController().invalidateRanges(getTimelineRenderInvalidationRanges(previous, project.timeline));
+      getTimelineRenderCacheController().invalidateRanges(
+        getTimelineRenderInvalidationRanges(previous, project.timeline),
+      );
     }
     previousTimelineRef.current = project.timeline;
   }, [project.timeline]);
@@ -638,7 +744,9 @@ export function PreviewCanvas({
       if (!canceled) {
         setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
       }
-    })().catch((error) => { console.error("PreviewCanvas", error); }); // GPU texture preload is best-effort; live rendering remains the source of truth.
+    })().catch((error) => {
+      console.error('PreviewCanvas', error);
+    }); // GPU texture preload is best-effort; live rendering remains the source of truth.
     return () => {
       canceled = true;
     };
@@ -665,9 +773,11 @@ export function PreviewCanvas({
         duration,
         fps,
         width: canvas.width,
-        height: canvas.height
+        height: canvas.height,
       };
-      const requests = isPlaying ? buildGpuPrefetchFrameRequests(requestInput) : buildTimelineRenderFrameRequests(requestInput);
+      const requests = isPlaying
+        ? buildGpuPrefetchFrameRequests(requestInput)
+        : buildTimelineRenderFrameRequests(requestInput);
 
       void (async () => {
         for (const request of requests) {
@@ -679,7 +789,10 @@ export function PreviewCanvas({
             cached.close();
             continue;
           }
-          await renderer.render(canvas, project.timeline, project.media, request.time, { sequences: project.sequences, colorPipeline: project.settings.colorPipeline });
+          await renderer.render(canvas, project.timeline, project.media, request.time, {
+            sequences: project.sequences,
+            colorPipeline: project.settings.colorPipeline,
+          });
           if (canceled) {
             break;
           }
@@ -690,18 +803,30 @@ export function PreviewCanvas({
             time: request.time,
             duration: 1 / fps,
             bytes: canvas.width * canvas.height * 4,
-            playheadTime: prerenderCenter
+            playheadTime: prerenderCenter,
           });
           await waitForIdleFrame();
         }
-      })().catch((error) => { console.error("PreviewCanvas", error); }); // Live preview rendering already reports user-facing errors; prerender misses are best-effort.
+      })().catch((error) => {
+        console.error('PreviewCanvas', error);
+      }); // Live preview rendering already reports user-facing errors; prerender misses are best-effort.
     }, 80);
 
     return () => {
       canceled = true;
       window.clearTimeout(timer);
     };
-  }, [fps, isPlaying, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);
+  }, [
+    fps,
+    isPlaying,
+    prerenderCenter,
+    previewTimeline,
+    project.activeSequenceId,
+    project.media,
+    project.sequences,
+    project.settings.colorPipeline,
+    project.timeline,
+  ]);
 
   useEffect(() => {
     getTimelineRenderCacheController().retainAround(playheadTime);
@@ -709,7 +834,11 @@ export function PreviewCanvas({
 
   useEffect(() => {
     if (isNestedSequenceDepthExceeded(project)) {
-      showToast({ kind: 'warning', title: zhCN.timeline.nestedSequenceDepthTitle, message: zhCN.timeline.nestedSequenceDepthMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.nestedSequenceDepthTitle,
+        message: zhCN.timeline.nestedSequenceDepthMessage,
+      });
     }
   }, [project]);
 
@@ -735,7 +864,7 @@ export function PreviewCanvas({
       query: candidate.label,
       label: candidate.label,
       time: candidate.time,
-      ...(candidate.type === 'clip' ? { selectedClipIds: [candidate.id] } : {})
+      ...(candidate.type === 'clip' ? { selectedClipIds: [candidate.id] } : {}),
     });
     setFrameSearchError(undefined);
     setFrameSearchQuery(candidate.label);
@@ -767,7 +896,11 @@ export function PreviewCanvas({
       return;
     }
     if (isFrameJumpLikeQuery(query)) {
-      const parsed = parseFrameJumpQuery(query, { fps, duration: getTimelinePlaybackDuration(project.timeline), timecodeFormat: project.settings.timecodeFormat ?? 'ndf' });
+      const parsed = parseFrameJumpQuery(query, {
+        fps,
+        duration: getTimelinePlaybackDuration(project.timeline),
+        timecodeFormat: project.settings.timecodeFormat ?? 'ndf',
+      });
       if (!parsed.ok) {
         setFrameSearchError(frameSearchErrorMessage(parsed.error, fps));
         return;
@@ -777,8 +910,11 @@ export function PreviewCanvas({
       recordFrameSearchHistory({
         type: parsed.value.kind,
         query,
-        label: parsed.value.kind === 'frame' ? t.frameSearchFrameLabel(parsed.value.frameNumber ?? parsed.value.totalFrames) : parsed.value.timecode,
-        time: parsed.value.seconds
+        label:
+          parsed.value.kind === 'frame'
+            ? t.frameSearchFrameLabel(parsed.value.frameNumber ?? parsed.value.totalFrames)
+            : parsed.value.timecode,
+        time: parsed.value.seconds,
       });
       setFrameSearchError(undefined);
       frameSearchInputRef.current?.blur();
@@ -822,7 +958,14 @@ export function PreviewCanvas({
   }
 
   function beginPreviewPan(event: ReactPointerEvent<HTMLDivElement>): void {
-    if (previewZoom <= 1 || canvasEditMode || frameInspectMode || chromaKeyPickTarget || compareEnabled || event.button !== 0) {
+    if (
+      previewZoom <= 1 ||
+      canvasEditMode ||
+      frameInspectMode ||
+      chromaKeyPickTarget ||
+      compareEnabled ||
+      event.button !== 0
+    ) {
       return;
     }
     event.preventDefault();
@@ -832,7 +975,7 @@ export function PreviewCanvas({
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startPan: previewPan
+      startPan: previewPan,
     };
   }
 
@@ -844,7 +987,7 @@ export function PreviewCanvas({
     event.preventDefault();
     setPreviewPan({
       x: drag.startPan.x + event.clientX - drag.startClientX,
-      y: drag.startPan.y + event.clientY - drag.startClientY
+      y: drag.startPan.y + event.clientY - drag.startClientY,
     });
   }
 
@@ -887,10 +1030,20 @@ export function PreviewCanvas({
       return;
     }
     try {
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedInspectorClip.id, buildChromaKeySamplePatch(selectedInspectorClip, sample.rgb)));
+      commandManager.execute(
+        new UpdateClipCommand(
+          timelineAccessor,
+          selectedInspectorClip.id,
+          buildChromaKeySamplePatch(selectedInspectorClip, sample.rgb),
+        ),
+      );
       showToast({ kind: 'success', title: t.frameInspectorApplied, message: sample.hex });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
@@ -912,8 +1065,8 @@ export function PreviewCanvas({
       hex: rgbToHex(result.rgb),
       position: {
         x: Math.min(Math.max(12, event.clientX - frameBounds.left + 12), Math.max(12, frameBounds.width - 230)),
-        y: Math.min(Math.max(12, event.clientY - frameBounds.top + 12), Math.max(12, frameBounds.height - 210))
-      }
+        y: Math.min(Math.max(12, event.clientY - frameBounds.top + 12), Math.max(12, frameBounds.height - 210)),
+      },
     };
   }
 
@@ -931,8 +1084,8 @@ export function PreviewCanvas({
         width: bounds.width,
         height: bounds.height,
         canvasWidth: canvas.width,
-        canvasHeight: canvas.height
-      }
+        canvasHeight: canvas.height,
+      },
     );
   }
 
@@ -940,13 +1093,16 @@ export function PreviewCanvas({
     return reviewText.trim() || t.reviewDefaultText((project.reviewAnnotations?.length ?? 0) + 1);
   }
 
-  function addReviewAnnotation(type: ReviewAnnotationType, geometry: Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'>): void {
+  function addReviewAnnotation(
+    type: ReviewAnnotationType,
+    geometry: Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'>,
+  ): void {
     onAddReviewAnnotation?.({
       time: playheadTime,
       type,
       text: getReviewAnnotationText(),
       color: '#facc15',
-      ...geometry
+      ...geometry,
     });
   }
 
@@ -966,7 +1122,7 @@ export function PreviewCanvas({
         x: point.x / canvas.width,
         y: point.y / canvas.height,
         width: 0.22,
-        height: 0.08
+        height: 0.08,
       });
       return;
     }
@@ -976,7 +1132,7 @@ export function PreviewCanvas({
       type: reviewTool,
       startPoint: point,
       canvasWidth: canvas.width,
-      canvasHeight: canvas.height
+      canvasHeight: canvas.height,
     };
   }
 
@@ -1004,17 +1160,31 @@ export function PreviewCanvas({
     const bounds = previewSurfaceRef.current?.getBoundingClientRect();
     const sample = canvas && bounds ? readPreviewCanvasPixel(canvas, bounds, event) : undefined;
     if (!sample) {
-      showToast({ kind: 'warning', title: zhCN.inspector.chromaKey.pickFailedTitle, message: zhCN.inspector.chromaKey.pickFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.chromaKey.pickFailedTitle,
+        message: zhCN.inspector.chromaKey.pickFailedMessage,
+      });
       setChromaKeyPickClipId(undefined);
       return;
     }
     event.preventDefault();
     event.stopPropagation();
     try {
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, chromaKeyPickTarget.clip.id, buildChromaKeySamplePatch(chromaKeyPickTarget.clip, sample.rgb)));
+      commandManager.execute(
+        new UpdateClipCommand(
+          timelineAccessor,
+          chromaKeyPickTarget.clip.id,
+          buildChromaKeySamplePatch(chromaKeyPickTarget.clip, sample.rgb),
+        ),
+      );
       setSelectedClipIds([chromaKeyPickTarget.clip.id]);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     } finally {
       setChromaKeyPickClipId(undefined);
     }
@@ -1024,7 +1194,7 @@ export function PreviewCanvas({
     event: ReactPointerEvent<HTMLElement>,
     item: EditableCanvasClip,
     type: CanvasTransformDrag['type'],
-    handle?: CanvasTransformHandle
+    handle?: CanvasTransformHandle,
   ): void {
     if (!canvasEditMode) {
       return;
@@ -1049,7 +1219,7 @@ export function PreviewCanvas({
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
       startPoint: point,
-      startTransform: normalizeTransform(item.clip.transform)
+      startTransform: normalizeTransform(item.clip.transform),
     };
   }
 
@@ -1108,7 +1278,7 @@ export function PreviewCanvas({
       clipId: selectedPanoramaClip.id,
       startClientX: event.clientX,
       startClientY: event.clientY,
-      startPanorama: panorama
+      startPanorama: panorama,
     };
   }
 
@@ -1121,7 +1291,7 @@ export function PreviewCanvas({
     const next = normalizeClipPanoramaView({
       ...drag.startPanorama,
       yaw: drag.startPanorama.yaw + (event.clientX - drag.startClientX) * 0.25,
-      pitch: drag.startPanorama.pitch - (event.clientY - drag.startClientY) * 0.25
+      pitch: drag.startPanorama.pitch - (event.clientY - drag.startClientY) * 0.25,
     });
     commitPanoramaDrag(drag, next);
   }
@@ -1147,11 +1317,15 @@ export function PreviewCanvas({
     try {
       commandManager.execute(
         new UpdateClipCommand(timelineAccessor, selectedPanoramaClip.id, {
-          panorama: normalizeClipPanoramaView({ ...panorama, fov: panorama.fov + delta })
-        })
+          panorama: normalizeClipPanoramaView({ ...panorama, fov: panorama.fov + delta }),
+        }),
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
@@ -1181,7 +1355,10 @@ export function PreviewCanvas({
     const rawPath = selectedPathMask.path ?? [];
     const lastPoint = rawPath.at(-1);
     const path =
-      doubleClickPoint && lastPoint && rawPath.length > 3 && Math.hypot(lastPoint.x - doubleClickPoint.x, lastPoint.y - doubleClickPoint.y) < 0.02
+      doubleClickPoint &&
+      lastPoint &&
+      rawPath.length > 3 &&
+      Math.hypot(lastPoint.x - doubleClickPoint.x, lastPoint.y - doubleClickPoint.y) < 0.02
         ? rawPath.slice(0, -1)
         : rawPath;
     if (path.length < 3 || isPathMaskClosed(path)) {
@@ -1196,7 +1373,7 @@ export function PreviewCanvas({
     item: EditableCanvasClip,
     mask: ClipMask,
     pointIndex: number,
-    target: PathMaskDrag['target']
+    target: PathMaskDrag['target'],
   ): void {
     if (!canvasEditMode) {
       return;
@@ -1215,7 +1392,7 @@ export function PreviewCanvas({
       pointIndex,
       target,
       startPoint: canvasPointToPathPoint(point, item),
-      startPath: clonePathPoints(mask.path ?? [])
+      startPath: clonePathPoints(mask.path ?? []),
     };
   }
 
@@ -1259,7 +1436,11 @@ export function PreviewCanvas({
       drag.command.execute();
     } catch (error) {
       transformDragRef.current = null;
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
@@ -1267,7 +1448,11 @@ export function PreviewCanvas({
     try {
       commandManager.execute(new UpdateMaskCommand(timelineAccessor, clipId, maskId, patch));
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
@@ -1284,7 +1469,11 @@ export function PreviewCanvas({
       drag.command.execute();
     } catch (error) {
       pathMaskDragRef.current = null;
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
@@ -1302,20 +1491,31 @@ export function PreviewCanvas({
       drag.command.execute();
     } catch (error) {
       panoramaDragRef.current = null;
-      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   }
 
-  function getDragTransform(drag: CanvasTransformDrag, point: CanvasPoint, modifiers: { keepAspectRatio: boolean; fromCenter: boolean }): Transform {
+  function getDragTransform(
+    drag: CanvasTransformDrag,
+    point: CanvasPoint,
+    modifiers: { keepAspectRatio: boolean; fromCenter: boolean },
+  ): Transform {
     if (drag.type === 'move') {
-      return moveTransformByCanvasDelta(drag.startTransform, { x: point.x - drag.startPoint.x, y: point.y - drag.startPoint.y });
+      return moveTransformByCanvasDelta(drag.startTransform, {
+        x: point.x - drag.startPoint.x,
+        y: point.y - drag.startPoint.y,
+      });
     }
     if (drag.type === 'rotate') {
       return rotateClipTransform({
         transform: drag.startTransform,
         canvasWidth: drag.canvasWidth,
         canvasHeight: drag.canvasHeight,
-        currentPoint: point
+        currentPoint: point,
       });
     }
     return resizeClipTransform({
@@ -1327,7 +1527,7 @@ export function PreviewCanvas({
       handle: drag.handle ?? 'se',
       currentPoint: point,
       keepAspectRatio: modifiers.keepAspectRatio,
-      fromCenter: modifiers.fromCenter
+      fromCenter: modifiers.fromCenter,
     });
   }
 
@@ -1367,7 +1567,10 @@ export function PreviewCanvas({
       data-theme-canvas-background={theme.colors.canvasBackground}
       style={{ backgroundColor: theme.colors.canvasBackground, color: theme.colors.textPrimary }}
     >
-      <div className="relative z-40 flex items-center justify-between border-b px-3 py-2" style={{ borderColor: theme.colors.border }}>
+      <div
+        className="relative z-40 flex items-center justify-between border-b px-3 py-2"
+        style={{ borderColor: theme.colors.border }}
+      >
         <div>
           <div className="text-sm font-semibold">{t.title}</div>
           <div className="text-xs text-slate-300">{previewCanvasSizeLabel}</div>
@@ -1405,7 +1608,10 @@ export function PreviewCanvas({
                 ))}
               </select>
               {compareEnabled ? (
-                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5" data-testid="preview-compare-mode-group">
+                <div
+                  className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5"
+                  data-testid="preview-compare-mode-group"
+                >
                   <button
                     className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'left-right' ? 'bg-emerald-500/30' : ''}`}
                     title={t.compareLeftRight}
@@ -1522,12 +1728,20 @@ export function PreviewCanvas({
           </button>
         </div>
       </div>
-      <div className={scopesOpen ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_180px]' : 'flex min-h-0 flex-1 items-center justify-center p-5'}>
+      <div
+        className={
+          scopesOpen
+            ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_180px]'
+            : 'flex min-h-0 flex-1 items-center justify-center p-5'
+        }
+      >
         <div className={scopesOpen ? 'flex min-h-0 items-center justify-center p-4' : 'contents'}>
           <div
             ref={compareFrameRef}
             className={`relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md shadow-soft ${
-              previewZoom > 1 && !canvasEditMode && !frameInspectMode && !chromaKeyPickTarget && !compareEnabled ? 'cursor-grab active:cursor-grabbing' : ''
+              previewZoom > 1 && !canvasEditMode && !frameInspectMode && !chromaKeyPickTarget && !compareEnabled
+                ? 'cursor-grab active:cursor-grabbing'
+                : ''
             }`}
             style={{ backgroundColor: theme.colors.canvasBackground }}
             onWheel={updatePreviewZoomFromWheel}
@@ -1546,7 +1760,10 @@ export function PreviewCanvas({
               data-adaptive={previewPerformance.adaptiveEnabled === false ? 'false' : 'true'}
             />
             {lowQualityPreview ? (
-              <div className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white" data-testid="preview-simplified-effects-hint">
+              <div
+                className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white"
+                data-testid="preview-simplified-effects-hint"
+              >
                 {audioOnlyPreview ? t.audioOnlyPreview : t.simplifiedEffects}
               </div>
             ) : null}
@@ -1578,11 +1795,18 @@ export function PreviewCanvas({
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-white/60">{t.gpuOffscreenWorker}</span>
-                  <span className="font-mono tabular-nums">{gpuPreviewMetrics.offscreenWorkerSupported ? t.gpuOffscreenReady : t.gpuOffscreenFallback}</span>
+                  <span className="font-mono tabular-nums">
+                    {gpuPreviewMetrics.offscreenWorkerSupported ? t.gpuOffscreenReady : t.gpuOffscreenFallback}
+                  </span>
                 </div>
               </div>
             ) : null}
-            <div ref={previewSurfaceRef} className="absolute inset-0" style={previewSurfaceStyle} data-testid="preview-surface">
+            <div
+              ref={previewSurfaceRef}
+              className="absolute inset-0"
+              style={previewSurfaceStyle}
+              data-testid="preview-surface"
+            >
               <canvas
                 ref={canvasRef}
                 width={previewRenderSize.width}
@@ -1602,7 +1826,13 @@ export function PreviewCanvas({
                 />
               ) : null}
               {compareShowsDifference ? (
-                <canvas ref={differenceCanvasRef} width={previewRenderSize.width} height={previewRenderSize.height} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
+                <canvas
+                  ref={differenceCanvasRef}
+                  width={previewRenderSize.width}
+                  height={previewRenderSize.height}
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  data-testid="preview-compare-difference-canvas"
+                />
               ) : null}
               {safeFrameGuides ? <SafeFrameGuides /> : null}
               {compareEnabled && !compareShowsDifference ? (
@@ -1633,7 +1863,12 @@ export function PreviewCanvas({
                   onPointerCancel={() => setCompareDividerDragging(false)}
                 />
               ) : null}
-              {selectedPanoramaClip && !reviewMode && !canvasEditMode && !frameInspectMode && !compareEnabled && !chromaKeyPickTarget ? (
+              {selectedPanoramaClip &&
+              !reviewMode &&
+              !canvasEditMode &&
+              !frameInspectMode &&
+              !compareEnabled &&
+              !chromaKeyPickTarget ? (
                 <div
                   className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
                   title={t.panoramaDrag}
@@ -1674,7 +1909,11 @@ export function PreviewCanvas({
                   onPointerUp={endPathMaskDrag}
                   onPointerCancel={endPathMaskDrag}
                 >
-                  <PathMaskControls item={selectedEditableClip} mask={selectedPathMask} onBeginDrag={beginPathMaskDrag} />
+                  <PathMaskControls
+                    item={selectedEditableClip}
+                    mask={selectedPathMask}
+                    onBeginDrag={beginPathMaskDrag}
+                  />
                 </div>
               ) : !reviewMode && canvasEditMode ? (
                 <div
@@ -1786,12 +2025,18 @@ export function PreviewCanvas({
             }}
           />
           {frameSearchError ? (
-            <div className="absolute left-0 top-8 z-50 rounded border border-red-400/50 bg-red-950 px-2 py-1 text-[11px] text-red-100 shadow-soft" data-testid="frame-search-error">
+            <div
+              className="absolute left-0 top-8 z-50 rounded border border-red-400/50 bg-red-950 px-2 py-1 text-[11px] text-red-100 shadow-soft"
+              data-testid="frame-search-error"
+            >
               {frameSearchError}
             </div>
           ) : null}
           {showFrameSearchCandidates && frameSearchCandidates.length > 0 ? (
-            <div className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft" data-testid="frame-search-candidates">
+            <div
+              className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft"
+              data-testid="frame-search-candidates"
+            >
               {frameSearchCandidates.map((candidate) => (
                 <button
                   key={`${candidate.type}-${candidate.id}`}
@@ -1807,13 +2052,18 @@ export function PreviewCanvas({
                     </span>
                     {candidate.label}
                   </span>
-                  <span className="shrink-0 font-mono tabular-nums text-slate-400">{secondsToTimecode(candidate.time, fps, project.settings.timecodeFormat ?? 'ndf')}</span>
+                  <span className="shrink-0 font-mono tabular-nums text-slate-400">
+                    {secondsToTimecode(candidate.time, fps, project.settings.timecodeFormat ?? 'ndf')}
+                  </span>
                 </button>
               ))}
             </div>
           ) : null}
           {showFrameSearchHistory ? (
-            <div className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft" data-testid="frame-search-history">
+            <div
+              className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft"
+              data-testid="frame-search-history"
+            >
               {frameSearchHistory.map((entry, index) => (
                 <button
                   key={`${entry.type}-${entry.query}-${entry.time}`}
@@ -1824,10 +2074,14 @@ export function PreviewCanvas({
                   onClick={() => jumpToFrameSearchHistoryEntry(entry)}
                 >
                   <span className="min-w-0 truncate">
-                    <span className="mr-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-slate-300">{frameSearchHistoryTypeLabel(entry.type)}</span>
+                    <span className="mr-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-slate-300">
+                      {frameSearchHistoryTypeLabel(entry.type)}
+                    </span>
                     {entry.label}
                   </span>
-                  <span className="shrink-0 font-mono tabular-nums text-slate-400">{secondsToTimecode(entry.time, fps, project.settings.timecodeFormat ?? 'ndf')}</span>
+                  <span className="shrink-0 font-mono tabular-nums text-slate-400">
+                    {secondsToTimecode(entry.time, fps, project.settings.timecodeFormat ?? 'ndf')}
+                  </span>
                 </button>
               ))}
             </div>
@@ -1840,12 +2094,33 @@ export function PreviewCanvas({
 
 function SafeFrameGuides() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20" data-testid="preview-safe-frame-guides" aria-hidden="true">
-      <div className="absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={SAFE_FRAME_ACTION_STYLE} data-testid="preview-safe-frame-action" />
-      <div className="absolute border border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={SAFE_FRAME_TITLE_STYLE} data-testid="preview-safe-frame-title" />
-      <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-vertical" />
-      <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-horizontal" />
-      <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" data-testid="preview-safe-frame-center" />
+    <div
+      className="pointer-events-none absolute inset-0 z-20"
+      data-testid="preview-safe-frame-guides"
+      aria-hidden="true"
+    >
+      <div
+        className="absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]"
+        style={SAFE_FRAME_ACTION_STYLE}
+        data-testid="preview-safe-frame-action"
+      />
+      <div
+        className="absolute border border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]"
+        style={SAFE_FRAME_TITLE_STYLE}
+        data-testid="preview-safe-frame-title"
+      />
+      <div
+        className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
+        data-testid="preview-safe-frame-center-vertical"
+      />
+      <div
+        className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
+        data-testid="preview-safe-frame-center-horizontal"
+      />
+      <div
+        className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]"
+        data-testid="preview-safe-frame-center"
+      />
     </div>
   );
 }
@@ -1853,7 +2128,7 @@ function SafeFrameGuides() {
 function FrameInspectorPopover({
   sample,
   canApplyChroma,
-  onApplyChroma
+  onApplyChroma,
 }: {
   sample: FrameInspectorSample;
   canApplyChroma: boolean;
@@ -1869,7 +2144,10 @@ function FrameInspectorPopover({
       onPointerMove={(event) => event.stopPropagation()}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className="h-7 w-7 shrink-0 rounded border border-white/20" style={{ backgroundColor: rgbCss(sample.rgb) }} />
+        <span
+          className="h-7 w-7 shrink-0 rounded border border-white/20"
+          style={{ backgroundColor: rgbCss(sample.rgb) }}
+        />
         <div className="min-w-0">
           <div className="font-mono text-[13px] font-semibold uppercase text-white" data-testid="frame-inspector-hex">
             {sample.hex}
@@ -1893,7 +2171,10 @@ function FrameInspectorPopover({
           {sample.coordinates.normalizedX.toFixed(3)}, {sample.coordinates.normalizedY.toFixed(3)}
         </span>
       </div>
-      <div className="mt-2 grid h-20 w-20 grid-cols-5 overflow-hidden rounded border border-white/15" data-testid="frame-inspector-magnifier">
+      <div
+        className="mt-2 grid h-20 w-20 grid-cols-5 overflow-hidden rounded border border-white/15"
+        data-testid="frame-inspector-magnifier"
+      >
         {sample.swatches.map((color, index) => (
           <span
             key={`${index}-${color.join('-')}`}
@@ -1979,7 +2260,7 @@ function buildFrameSearchCandidates(project: Project, query: string): FrameSearc
         const asset = getClipMediaAsset(project, clip);
         return [clip.name, asset?.name, asset?.path].some((value) => value?.toLowerCase().includes(normalizedQuery));
       })
-      .map((clip): FrameSearchCandidate => ({ id: clip.id, type: 'clip', label: clip.name, time: clip.start }))
+      .map((clip): FrameSearchCandidate => ({ id: clip.id, type: 'clip', label: clip.name, time: clip.start })),
   );
   return [...markerCandidates, ...clipCandidates]
     .sort((left, right) => {
@@ -2052,7 +2333,11 @@ interface PreviewPixelRead {
   swatches: ChromaKeyColor[];
 }
 
-function readPreviewCanvasPixel(canvas: HTMLCanvasElement, bounds: DOMRect, event: { clientX: number; clientY: number }): PreviewPixelRead | undefined {
+function readPreviewCanvasPixel(
+  canvas: HTMLCanvasElement,
+  bounds: DOMRect,
+  event: { clientX: number; clientY: number },
+): PreviewPixelRead | undefined {
   const gl = canvas.getContext('webgl');
   if (!gl) {
     return undefined;
@@ -2063,18 +2348,23 @@ function readPreviewCanvasPixel(canvas: HTMLCanvasElement, bounds: DOMRect, even
     boundsWidth: bounds.width,
     boundsHeight: bounds.height,
     offsetX: event.clientX - bounds.left,
-    offsetY: event.clientY - bounds.top
+    offsetY: event.clientY - bounds.top,
   });
   const pixel = new Uint8Array(4);
   gl.readPixels(coordinates.x, coordinates.webglY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
   return {
     coordinates,
     rgb: [pixel[0], pixel[1], pixel[2]],
-    swatches: readPreviewCanvasPixelSwatches(gl, coordinates, canvas.width, canvas.height)
+    swatches: readPreviewCanvasPixelSwatches(gl, coordinates, canvas.width, canvas.height),
   };
 }
 
-function readPreviewCanvasPixelSwatches(gl: WebGLRenderingContext, coordinates: PreviewPixelCoordinates, width: number, height: number): ChromaKeyColor[] {
+function readPreviewCanvasPixelSwatches(
+  gl: WebGLRenderingContext,
+  coordinates: PreviewPixelCoordinates,
+  width: number,
+  height: number,
+): ChromaKeyColor[] {
   const swatches: ChromaKeyColor[] = [];
   for (let dy = -2; dy <= 2; dy += 1) {
     for (let dx = -2; dx <= 2; dx += 1) {
@@ -2108,7 +2398,7 @@ function ReviewAnnotationToolbar({
   text,
   onToolChange,
   onTextChange,
-  onExportReport
+  onExportReport,
 }: {
   tool: ReviewAnnotationType;
   text: string;
@@ -2120,9 +2410,27 @@ function ReviewAnnotationToolbar({
   return (
     <div className="flex items-center gap-2" data-testid="review-annotation-tools" aria-label={t.reviewAnnotationMode}>
       <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5">
-        <ReviewToolButton tool="rectangle" activeTool={tool} title={t.reviewToolRectangle} onToolChange={onToolChange} icon={<RectangleHorizontal size={16} />} />
-        <ReviewToolButton tool="arrow" activeTool={tool} title={t.reviewToolArrow} onToolChange={onToolChange} icon={<ArrowUpRight size={16} />} />
-        <ReviewToolButton tool="text" activeTool={tool} title={t.reviewToolText} onToolChange={onToolChange} icon={<TypeIcon size={16} />} />
+        <ReviewToolButton
+          tool="rectangle"
+          activeTool={tool}
+          title={t.reviewToolRectangle}
+          onToolChange={onToolChange}
+          icon={<RectangleHorizontal size={16} />}
+        />
+        <ReviewToolButton
+          tool="arrow"
+          activeTool={tool}
+          title={t.reviewToolArrow}
+          onToolChange={onToolChange}
+          icon={<ArrowUpRight size={16} />}
+        />
+        <ReviewToolButton
+          tool="text"
+          activeTool={tool}
+          title={t.reviewToolText}
+          onToolChange={onToolChange}
+          icon={<TypeIcon size={16} />}
+        />
       </div>
       <label className="sr-only" htmlFor="review-annotation-text-input">
         {t.reviewAnnotationText}
@@ -2155,7 +2463,7 @@ function ReviewToolButton({
   activeTool,
   title,
   icon,
-  onToolChange
+  onToolChange,
 }: {
   tool: ReviewAnnotationType;
   activeTool: ReviewAnnotationType;
@@ -2182,7 +2490,11 @@ function countActivePreviewEffects(timeline: Timeline, playheadTime: number): nu
   return getRenderableTracks(timeline)
     .flatMap((track) => track.clips)
     .filter((clip) => playheadTime >= clip.start && playheadTime < clip.start + clip.duration)
-    .reduce((total, clip) => total + (clip.effects ?? []).filter((effect) => effect.enabled).length + (clip.colorNodeGraph ? 1 : 0), 0);
+    .reduce(
+      (total, clip) =>
+        total + (clip.effects ?? []).filter((effect) => effect.enabled).length + (clip.colorNodeGraph ? 1 : 0),
+      0,
+    );
 }
 
 function hasActiveCustomShader(timeline: Timeline, playheadTime: number): boolean {
@@ -2197,7 +2509,7 @@ function ReviewAnnotationOverlay({
   playheadTime,
   onPointerDown,
   onPointerUp,
-  onPointerCancel
+  onPointerCancel,
 }: {
   annotations: ReviewAnnotation[];
   playheadTime: number;
@@ -2214,9 +2526,22 @@ function ReviewAnnotationOverlay({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 1 1"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
         <defs>
-          <marker id="review-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+          <marker
+            id="review-arrowhead"
+            markerWidth="8"
+            markerHeight="8"
+            refX="6"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
             <path d="M0,0 L0,6 L7,3 z" fill="#facc15" />
           </marker>
         </defs>
@@ -2264,7 +2589,7 @@ function ReviewAnnotationOverlay({
               left: `${annotation.x * 100}%`,
               top: `${annotation.y * 100}%`,
               width: `${Math.max(8, annotation.width * 100)}%`,
-              minHeight: `${Math.max(5, annotation.height * 100)}%`
+              minHeight: `${Math.max(5, annotation.height * 100)}%`,
             }}
             data-testid={`review-annotation-${annotation.id}`}
           >
@@ -2279,13 +2604,16 @@ function ReviewAnnotationOverlay({
           >
             {annotation.text}
           </div>
-        )
+        ),
       )}
     </div>
   );
 }
 
-function buildReviewAnnotationGeometry(drag: ReviewAnnotationDrag, point: CanvasPoint): Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'> {
+function buildReviewAnnotationGeometry(
+  drag: ReviewAnnotationDrag,
+  point: CanvasPoint,
+): Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'> {
   if (drag.type === 'arrow') {
     const width = (point.x - drag.startPoint.x) / drag.canvasWidth;
     const height = (point.y - drag.startPoint.y) / drag.canvasHeight;
@@ -2293,7 +2621,7 @@ function buildReviewAnnotationGeometry(drag: ReviewAnnotationDrag, point: Canvas
       x: drag.startPoint.x / drag.canvasWidth,
       y: drag.startPoint.y / drag.canvasHeight,
       width: Math.abs(width) < 0.01 ? 0.12 : width,
-      height: Math.abs(height) < 0.01 ? 0.12 : height
+      height: Math.abs(height) < 0.01 ? 0.12 : height,
     };
   }
   const startX = drag.startPoint.x / drag.canvasWidth;
@@ -2306,7 +2634,7 @@ function buildReviewAnnotationGeometry(drag: ReviewAnnotationDrag, point: Canvas
     x: Math.min(startX, endX),
     y: Math.min(startY, endY),
     width: width < 0.01 ? 0.18 : width,
-    height: height < 0.01 ? 0.12 : height
+    height: height < 0.01 ? 0.12 : height,
   };
 }
 
@@ -2332,10 +2660,15 @@ interface PathMaskDrag {
 
 function CanvasTransformControls({
   item,
-  onBeginDrag
+  onBeginDrag,
 }: {
   item: EditableCanvasClip;
-  onBeginDrag(event: ReactPointerEvent<HTMLElement>, item: EditableCanvasClip, type: CanvasTransformDrag['type'], handle?: CanvasTransformHandle): void;
+  onBeginDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    item: EditableCanvasClip,
+    type: CanvasTransformDrag['type'],
+    handle?: CanvasTransformHandle,
+  ): void;
 }) {
   const t = zhCN.preview;
   return (
@@ -2382,11 +2715,17 @@ function CanvasTransformControls({
 function PathMaskControls({
   item,
   mask,
-  onBeginDrag
+  onBeginDrag,
 }: {
   item: EditableCanvasClip;
   mask: ClipMask;
-  onBeginDrag(event: ReactPointerEvent<HTMLElement>, item: EditableCanvasClip, mask: ClipMask, pointIndex: number, target: PathMaskDrag['target']): void;
+  onBeginDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    item: EditableCanvasClip,
+    mask: ClipMask,
+    pointIndex: number,
+    target: PathMaskDrag['target'],
+  ): void;
 }) {
   const path = mask.path ?? [];
   const t = zhCN.preview;
@@ -2395,8 +2734,20 @@ function PathMaskControls({
   const svgPath = buildCanvasPathMaskSvgPath(path, item);
   return (
     <>
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${PREVIEW_CANVAS_WIDTH} ${PREVIEW_CANVAS_HEIGHT}`} data-testid="path-mask-svg">
-        {svgPath ? <path d={svgPath} fill={closed ? 'rgba(16,185,129,0.22)' : 'none'} stroke="rgb(110,231,183)" strokeDasharray={closed ? undefined : '6 6'} strokeWidth={2} /> : null}
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox={`0 0 ${PREVIEW_CANVAS_WIDTH} ${PREVIEW_CANVAS_HEIGHT}`}
+        data-testid="path-mask-svg"
+      >
+        {svgPath ? (
+          <path
+            d={svgPath}
+            fill={closed ? 'rgba(16,185,129,0.22)' : 'none'}
+            stroke="rgb(110,231,183)"
+            strokeDasharray={closed ? undefined : '6 6'}
+            strokeWidth={2}
+          />
+        ) : null}
         {anchors.map((point, index) => {
           const handleIn = resolvePathHandle(point, 'handleIn');
           const handleOut = resolvePathHandle(point, 'handleOut');
@@ -2405,8 +2756,22 @@ function PathMaskControls({
           const handleOutCanvas = pathPointToCanvasPoint(handleOut, item);
           return (
             <g key={`${mask.id}-handles-${index}`}>
-              <line x1={anchorCanvas.x} y1={anchorCanvas.y} x2={handleInCanvas.x} y2={handleInCanvas.y} stroke="rgba(191,219,254,0.75)" strokeWidth={1} />
-              <line x1={anchorCanvas.x} y1={anchorCanvas.y} x2={handleOutCanvas.x} y2={handleOutCanvas.y} stroke="rgba(191,219,254,0.75)" strokeWidth={1} />
+              <line
+                x1={anchorCanvas.x}
+                y1={anchorCanvas.y}
+                x2={handleInCanvas.x}
+                y2={handleInCanvas.y}
+                stroke="rgba(191,219,254,0.75)"
+                strokeWidth={1}
+              />
+              <line
+                x1={anchorCanvas.x}
+                y1={anchorCanvas.y}
+                x2={handleOutCanvas.x}
+                y2={handleOutCanvas.y}
+                stroke="rgba(191,219,254,0.75)"
+                strokeWidth={1}
+              />
             </g>
           );
         })}
@@ -2457,30 +2822,37 @@ function PathMaskControls({
 }
 
 function buildEditableCanvasClips(project: Project, playheadTime: number): EditableCanvasClip[] {
-  return getRenderableTracks(project.timeline)
-    .flatMap((track) =>
-      track.clips
-        .filter((clip) => isCanvasEditableClip(clip) && playheadTime >= clip.start && playheadTime < clip.start + clip.duration)
-        .map((clip) => {
-          const dimensions = getCanvasClipSourceDimensions(project, clip);
-          return {
-            clip,
+  return getRenderableTracks(project.timeline).flatMap((track) =>
+    track.clips
+      .filter(
+        (clip) => isCanvasEditableClip(clip) && playheadTime >= clip.start && playheadTime < clip.start + clip.duration,
+      )
+      .map((clip) => {
+        const dimensions = getCanvasClipSourceDimensions(project, clip);
+        return {
+          clip,
+          sourceWidth: dimensions.width,
+          sourceHeight: dimensions.height,
+          box: buildClipTransformBox({
+            transform: clip.transform,
             sourceWidth: dimensions.width,
             sourceHeight: dimensions.height,
-            box: buildClipTransformBox({
-              transform: clip.transform,
-              sourceWidth: dimensions.width,
-              sourceHeight: dimensions.height,
-              canvasWidth: PREVIEW_CANVAS_WIDTH,
-              canvasHeight: PREVIEW_CANVAS_HEIGHT
-            })
-          };
-        })
-    );
+            canvasWidth: PREVIEW_CANVAS_WIDTH,
+            canvasHeight: PREVIEW_CANVAS_HEIGHT,
+          }),
+        };
+      }),
+  );
 }
 
 function isCanvasEditableClip(clip: Clip): boolean {
-  return clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'credits' || clip.type === 'nested-sequence';
+  return (
+    clip.type === 'video' ||
+    clip.type === 'image' ||
+    clip.type === 'text' ||
+    clip.type === 'credits' ||
+    clip.type === 'nested-sequence'
+  );
 }
 
 function getCanvasClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
@@ -2494,7 +2866,7 @@ function getCanvasClipSourceDimensions(project: Project, clip: Clip): { width: n
     const asset = project.media.find((item) => item.id === clip.mediaId);
     return {
       width: Math.max(1, asset?.width || PREVIEW_CANVAS_WIDTH),
-      height: Math.max(1, asset?.height || PREVIEW_CANVAS_HEIGHT)
+      height: Math.max(1, asset?.height || PREVIEW_CANVAS_HEIGHT),
     };
   }
   return { width: PREVIEW_CANVAS_WIDTH, height: PREVIEW_CANVAS_HEIGHT };
@@ -2504,7 +2876,7 @@ function canvasPointToPathPoint(point: CanvasPoint, item: EditableCanvasClip): P
   const local = canvasPointToClipLocal(point, item.box);
   return {
     x: clampPathUnit((local.x + item.box.width / 2) / Math.max(1, item.box.width)),
-    y: clampPathUnit((local.y + item.box.height / 2) / Math.max(1, item.box.height))
+    y: clampPathUnit((local.y + item.box.height / 2) / Math.max(1, item.box.height)),
   };
 }
 
@@ -2512,9 +2884,9 @@ function pathPointToCanvasPoint(point: PathPointHandle, item: EditableCanvasClip
   return clipLocalToCanvasPoint(
     {
       x: point.x * item.box.width - item.box.width / 2,
-      y: point.y * item.box.height - item.box.height / 2
+      y: point.y * item.box.height - item.box.height / 2,
     },
-    item.box
+    item.box,
   );
 }
 
@@ -2526,7 +2898,7 @@ function canvasPointToClipLocal(point: CanvasPoint, box: Pick<ClipTransformBox, 
   const y = point.y - box.center.y;
   return {
     x: roundCanvasValue(x * cos - y * sin),
-    y: roundCanvasValue(x * sin + y * cos)
+    y: roundCanvasValue(x * sin + y * cos),
   };
 }
 
@@ -2536,7 +2908,7 @@ function clipLocalToCanvasPoint(point: CanvasPoint, box: Pick<ClipTransformBox, 
   const sin = Math.sin(radians);
   return {
     x: roundCanvasValue(box.center.x + point.x * cos - point.y * sin),
-    y: roundCanvasValue(box.center.y + point.x * sin + point.y * cos)
+    y: roundCanvasValue(box.center.y + point.x * sin + point.y * cos),
   };
 }
 
@@ -2561,7 +2933,7 @@ function buildPathMaskDragPatch(drag: PathMaskDrag, point: PathPointHandle): { p
   }
   path[drag.pointIndex] = {
     ...current,
-    [drag.target]: { x: clampPathUnit(point.x), y: clampPathUnit(point.y) }
+    [drag.target]: { x: clampPathUnit(point.x), y: clampPathUnit(point.y) },
   };
   return { path };
 }
@@ -2571,8 +2943,12 @@ function movePathAnchor(point: PathPoint, next: PathPointHandle, delta: PathPoin
     ...point,
     x: clampPathUnit(next.x),
     y: clampPathUnit(next.y),
-    handleIn: point.handleIn ? { x: clampPathUnit(point.handleIn.x + delta.x), y: clampPathUnit(point.handleIn.y + delta.y) } : undefined,
-    handleOut: point.handleOut ? { x: clampPathUnit(point.handleOut.x + delta.x), y: clampPathUnit(point.handleOut.y + delta.y) } : undefined
+    handleIn: point.handleIn
+      ? { x: clampPathUnit(point.handleIn.x + delta.x), y: clampPathUnit(point.handleIn.y + delta.y) }
+      : undefined,
+    handleOut: point.handleOut
+      ? { x: clampPathUnit(point.handleOut.x + delta.x), y: clampPathUnit(point.handleOut.y + delta.y) }
+      : undefined,
   };
 }
 
@@ -2581,7 +2957,7 @@ function clonePathPoints(points: PathPoint[]): PathPoint[] {
     x: point.x,
     y: point.y,
     ...(point.handleIn ? { handleIn: { ...point.handleIn } } : {}),
-    ...(point.handleOut ? { handleOut: { ...point.handleOut } } : {})
+    ...(point.handleOut ? { handleOut: { ...point.handleOut } } : {}),
   }));
 }
 
@@ -2604,7 +2980,7 @@ function buildCanvasPathMaskSvgPath(points: PathPoint[], item: EditableCanvasCli
       const control1 = pathPointToCanvasPoint(previous.handleOut ?? previous, item);
       const control2 = pathPointToCanvasPoint(point.handleIn ?? point, item);
       commands.push(
-        `C ${formatSvgNumber(control1.x)} ${formatSvgNumber(control1.y)} ${formatSvgNumber(control2.x)} ${formatSvgNumber(control2.y)} ${formatSvgNumber(target.x)} ${formatSvgNumber(target.y)}`
+        `C ${formatSvgNumber(control1.x)} ${formatSvgNumber(control1.y)} ${formatSvgNumber(control2.x)} ${formatSvgNumber(control2.y)} ${formatSvgNumber(target.x)} ${formatSvgNumber(target.y)}`,
       );
     } else {
       commands.push(`L ${formatSvgNumber(target.x)} ${formatSvgNumber(target.y)}`);
@@ -2635,7 +3011,7 @@ function canvasPointStyle(point: CanvasPoint): CSSProperties {
   return {
     left: `${(point.x / PREVIEW_CANVAS_WIDTH) * 100}%`,
     top: `${(point.y / PREVIEW_CANVAS_HEIGHT) * 100}%`,
-    transform: 'translate(-50%, -50%)'
+    transform: 'translate(-50%, -50%)',
   };
 }
 
@@ -2645,7 +3021,7 @@ function canvasBoxStyle(box: ClipTransformBox): CSSProperties {
     top: `${(box.center.y / PREVIEW_CANVAS_HEIGHT) * 100}%`,
     width: `${(box.width / PREVIEW_CANVAS_WIDTH) * 100}%`,
     height: `${(box.height / PREVIEW_CANVAS_HEIGHT) * 100}%`,
-    transform: `translate(-50%, -50%) rotate(${box.rotation}deg)`
+    transform: `translate(-50%, -50%) rotate(${box.rotation}deg)`,
   };
 }
 
@@ -2677,7 +3053,20 @@ interface MulticamPreviewGridProps {
   onTrimSwitch(switchId: string, frameDelta: number): void;
 }
 
-function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, playheadTime, fps, liveMode, isPlaying, onLiveModeChange, onSelectAngle, onTrimSwitch }: MulticamPreviewGridProps) {
+function MulticamPreviewGrid({
+  clip,
+  sequence,
+  media,
+  sequences,
+  colorPipeline,
+  playheadTime,
+  fps,
+  liveMode,
+  isPlaying,
+  onLiveModeChange,
+  onSelectAngle,
+  onTrimSwitch,
+}: MulticamPreviewGridProps) {
   const t = zhCN.preview;
   const canvasRefs = useRef(new Map<string, HTMLCanvasElement>());
   const renderersRef = useRef(new Map<string, PreviewRenderer>());
@@ -2690,8 +3079,14 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
     }
   }, [clip.multicam, localTime]);
   const columns = (clip.multicam?.angles.length ?? 0) <= 4 ? 2 : 3;
-  const history = useMemo(() => (clip.multicam ? buildMulticamSwitchHistory(clip.multicam, clip.duration, fps) : []), [clip.duration, clip.multicam, fps]);
-  const warnings = useMemo(() => (clip.multicam ? findFrequentMulticamSwitchWarnings(clip.multicam, clip.duration, fps) : []), [clip.duration, clip.multicam, fps]);
+  const history = useMemo(
+    () => (clip.multicam ? buildMulticamSwitchHistory(clip.multicam, clip.duration, fps) : []),
+    [clip.duration, clip.multicam, fps],
+  );
+  const warnings = useMemo(
+    () => (clip.multicam ? findFrequentMulticamSwitchWarnings(clip.multicam, clip.duration, fps) : []),
+    [clip.duration, clip.multicam, fps],
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -2706,7 +3101,7 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
         const angleTimeline: Timeline = {
           tracks: [{ ...track, solo: false, muted: false }],
           transitions: [],
-          markers: []
+          markers: [],
         };
         try {
           await renderer.render(canvas, angleTimeline, media, localTime, { sequences, colorPipeline });
@@ -2738,13 +3133,19 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
       aria-label={t.multicamGrid}
       data-live-mode={liveMode ? 'true' : 'false'}
     >
-      <div className="grid min-h-0 gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} data-testid="multicam-angle-grid">
+      <div
+        className="grid min-h-0 gap-2"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+        data-testid="multicam-angle-grid"
+      >
         {clip.multicam.angles.map((angle, index) => (
           <button
             key={angle.id}
             type="button"
             className={`group relative min-h-0 overflow-hidden rounded-md border bg-black text-left ${
-              activeAngleId === angle.id ? 'border-amber-300 ring-2 ring-amber-300/60' : 'border-white/15 hover:border-white/40'
+              activeAngleId === angle.id
+                ? 'border-amber-300 ring-2 ring-amber-300/60'
+                : 'border-white/15 hover:border-white/40'
             }`}
             title={t.multicamAngle(angle.name)}
             aria-label={t.multicamAngle(angle.name)}
@@ -2771,13 +3172,18 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
           </button>
         ))}
       </div>
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-md border border-white/15 bg-black/55 text-white" data-testid="multicam-cut-history-panel">
+      <aside
+        className="flex min-h-0 flex-col overflow-hidden rounded-md border border-white/15 bg-black/55 text-white"
+        data-testid="multicam-cut-history-panel"
+      >
         <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
           <span className="text-xs font-semibold uppercase text-white/75">{t.multicamHistory}</span>
           <button
             type="button"
             className={`inline-flex h-7 shrink-0 items-center rounded border px-2 text-[11px] font-semibold ${
-              liveMode ? 'border-amber-300 bg-amber-300 text-black' : 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+              liveMode
+                ? 'border-amber-300 bg-amber-300 text-black'
+                : 'border-white/20 bg-white/10 text-white hover:bg-white/15'
             }`}
             data-testid="multicam-live-mode-toggle"
             data-active={liveMode ? 'true' : 'false'}
@@ -2787,11 +3193,18 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
           </button>
         </div>
         {warnings.length > 0 ? (
-          <div className="border-b border-amber-300/25 bg-amber-300/15 px-3 py-2 text-[11px] font-medium text-amber-100" data-testid="multicam-frequency-warning">
+          <div
+            className="border-b border-amber-300/25 bg-amber-300/15 px-3 py-2 text-[11px] font-medium text-amber-100"
+            data-testid="multicam-frequency-warning"
+          >
             {t.multicamTooFrequent}
           </div>
         ) : null}
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2" data-testid="multicam-history-list" data-playing={isPlaying ? 'true' : 'false'}>
+        <div
+          className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
+          data-testid="multicam-history-list"
+          data-playing={isPlaying ? 'true' : 'false'}
+        >
           {history.map((entry) => (
             <MulticamHistoryRow key={entry.switchId} entry={entry} onTrimSwitch={onTrimSwitch} />
           ))}
@@ -2805,7 +3218,11 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
                 className="inline-flex h-6 shrink-0 items-center rounded border border-amber-300/40 bg-amber-300/20 px-2 text-[10px] font-semibold text-amber-100 hover:bg-amber-300/30"
                 data-testid="multicam-ai-cut-apply-all"
                 onClick={() => {
-                  const cmd = new ApplyMulticamAiCutSuggestionsCommand(projectAccessor, clip.id, clip.multicam!.aiCutSuggestions!);
+                  const cmd = new ApplyMulticamAiCutSuggestionsCommand(
+                    projectAccessor,
+                    clip.id,
+                    clip.multicam!.aiCutSuggestions!,
+                  );
                   commandManager.execute(cmd);
                 }}
               >
@@ -2814,9 +3231,14 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
             </div>
             <div className="flex max-h-24 flex-col gap-1 overflow-y-auto">
               {clip.multicam.aiCutSuggestions.map((suggestion, index) => {
-                const angleName = clip.multicam?.angles.find((a) => a.id === suggestion.angleId)?.name ?? suggestion.angleId;
+                const angleName =
+                  clip.multicam?.angles.find((a) => a.id === suggestion.angleId)?.name ?? suggestion.angleId;
                 return (
-                  <div key={`${suggestion.time}-${suggestion.angleId}`} className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px]" data-testid={`multicam-ai-cut-suggestion-${index}`}>
+                  <div
+                    key={`${suggestion.time}-${suggestion.angleId}`}
+                    className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px]"
+                    data-testid={`multicam-ai-cut-suggestion-${index}`}
+                  >
                     <span className="font-mono text-white/70">{secondsToTimecode(suggestion.time, fps)}</span>
                     {` `}
                     <span className="font-medium text-white">{angleName}</span>
@@ -2833,7 +3255,13 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
   );
 }
 
-function MulticamHistoryRow({ entry, onTrimSwitch }: { entry: MulticamSwitchHistoryEntry; onTrimSwitch(switchId: string, frameDelta: number): void }) {
+function MulticamHistoryRow({
+  entry,
+  onTrimSwitch,
+}: {
+  entry: MulticamSwitchHistoryEntry;
+  onTrimSwitch(switchId: string, frameDelta: number): void;
+}) {
   const t = zhCN.preview;
   return (
     <div
@@ -2898,7 +3326,9 @@ function getAdaptiveQualityIndicatorClass(status: ReturnType<typeof getPreviewAd
 
 function waitForIdleFrame(): Promise<void> {
   return new Promise((resolve) => {
-    const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
+    const idle = (
+      window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }
+    ).requestIdleCallback;
     if (idle) {
       idle(() => resolve(), { timeout: 50 });
       return;

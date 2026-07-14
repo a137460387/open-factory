@@ -14,7 +14,7 @@ import {
   type SubtitleDataCue,
   type SubtitleDataImportFormat,
   type Timeline,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { fileNameFromPath } from './tauri';
@@ -42,14 +42,20 @@ export interface SubtitleTimingOptions {
   speed?: number;
 }
 
-export function buildSubtitleTrackFromSrt(path: string, contents: string, timeline: Timeline, timing: SubtitleTimingOptions = {}): Track {
+export function buildSubtitleTrackFromSrt(
+  path: string,
+  contents: string,
+  timeline: Timeline,
+  timing: SubtitleTimingOptions = {},
+): Track {
   const cues = parseSrt(contents);
   const trackId = createId('track');
   const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || zhCN.inspector.sections.subtitle;
   const trackNumber = timeline.tracks.filter((track) => track.type === 'subtitle').length + 1;
   const timelineStart = round(Math.max(0, timing.timelineStart ?? 0));
   const sourceStart = round(Math.max(0, timing.sourceStart ?? 0));
-  const sourceEnd = typeof timing.sourceDuration === 'number' ? round(sourceStart + Math.max(0, timing.sourceDuration)) : undefined;
+  const sourceEnd =
+    typeof timing.sourceDuration === 'number' ? round(sourceStart + Math.max(0, timing.sourceDuration)) : undefined;
   const speed = getClipSpeed({ speed: timing.speed });
   const subtitleType = cues.some((cue) => cue.subtitleType === 'cc') ? 'cc' : 'subtitle';
   return createTrack({
@@ -83,10 +89,10 @@ export function buildSubtitleTrackFromSrt(path: string, contents: string, timeli
           speaker: cue.speaker,
           soundDesc: cue.soundDesc,
           style: { ...DEFAULT_SUBTITLE_STYLE },
-          subtitleMode: DEFAULT_SUBTITLE_MODE
+          subtitleMode: DEFAULT_SUBTITLE_MODE,
         };
       })
-      .filter((clip): clip is NonNullable<typeof clip> => Boolean(clip))
+      .filter((clip): clip is NonNullable<typeof clip> => Boolean(clip)),
   });
 }
 
@@ -112,7 +118,12 @@ export function parseSubtitleDataFile(path: string, contents: string): SubtitleD
   return parseSubtitleDataImport(contents, inferSubtitleDataFormat(path));
 }
 
-export function buildSubtitleTrackFromDataCues(path: string, cues: SubtitleDataCue[], timeline: Timeline, targetTrackId?: string): Track {
+export function buildSubtitleTrackFromDataCues(
+  path: string,
+  cues: SubtitleDataCue[],
+  timeline: Timeline,
+  targetTrackId?: string,
+): Track {
   const trackId = targetTrackId ?? createId('track');
   const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || zhCN.inspector.sections.subtitle;
   const trackNumber = timeline.tracks.filter((track) => track.type === 'subtitle').length + 1;
@@ -134,8 +145,8 @@ export function buildSubtitleTrackFromDataCues(path: string, cues: SubtitleDataC
       transform: { ...DEFAULT_TRANSFORM },
       text: cue.text,
       style: { ...DEFAULT_SUBTITLE_STYLE, ...cue.style },
-      subtitleMode: DEFAULT_SUBTITLE_MODE
-    }))
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
+    })),
   });
 }
 

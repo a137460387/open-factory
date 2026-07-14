@@ -64,20 +64,104 @@ export interface BuiltInProviderPreset {
 
 export const BUILT_IN_PROVIDER_PRESETS: BuiltInProviderPreset[] = [
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', needsKey: true },
-  { id: 'anthropic', name: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1', defaultModel: 'claude-sonnet-4-5', needsKey: true },
-  { id: 'gemini', name: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', defaultModel: 'gemini-2.0-flash', needsKey: true },
-  { id: 'mimo', name: '小米 MiMo', baseUrl: 'https://api.xiaomimimo.com/v1', defaultModel: 'mimo-v2-flash', needsKey: true },
-  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', defaultModel: 'deepseek-chat', needsKey: true },
-  { id: 'glm', name: '智谱AI (GLM)', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', defaultModel: 'glm-4-flash', needsKey: true },
-  { id: 'qwen', name: '阿里通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', defaultModel: 'qwen-plus', needsKey: true },
-  { id: 'kimi', name: '月之暗面 (Kimi)', baseUrl: 'https://api.moonshot.cn/v1', defaultModel: 'moonshot-v1-8k', needsKey: true },
-  { id: 'ernie', name: '百度文心', baseUrl: 'https://qianfan.baidubce.com/v2', defaultModel: 'ernie-4.0', needsKey: true },
-  { id: 'spark', name: '讯飞星火', baseUrl: 'https://spark-api-open.xf-yun.com/v1', defaultModel: 'spark-max', needsKey: true },
-  { id: 'doubao', name: '字节豆包', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', defaultModel: 'doubao-pro-32k', needsKey: true },
-  { id: 'groq', name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', defaultModel: 'llama-3.3-70b', needsKey: true },
-  { id: 'together', name: 'Together AI', baseUrl: 'https://api.together.xyz/v1', defaultModel: 'meta-llama/Llama-3-70b', needsKey: true },
-  { id: 'elevenlabs', name: 'ElevenLabs', baseUrl: 'https://api.elevenlabs.io/v1', defaultModel: 'eleven_multilingual_v2', needsKey: true },
-  { id: 'ollama', name: 'Ollama（本地）', baseUrl: 'http://localhost:11434/v1', defaultModel: 'llama3.2', needsKey: false }
+  {
+    id: 'anthropic',
+    name: 'Anthropic Claude',
+    baseUrl: 'https://api.anthropic.com/v1',
+    defaultModel: 'claude-sonnet-4-5',
+    needsKey: true,
+  },
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    defaultModel: 'gemini-2.0-flash',
+    needsKey: true,
+  },
+  {
+    id: 'mimo',
+    name: '小米 MiMo',
+    baseUrl: 'https://api.xiaomimimo.com/v1',
+    defaultModel: 'mimo-v2-flash',
+    needsKey: true,
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    needsKey: true,
+  },
+  {
+    id: 'glm',
+    name: '智谱AI (GLM)',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModel: 'glm-4-flash',
+    needsKey: true,
+  },
+  {
+    id: 'qwen',
+    name: '阿里通义千问',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen-plus',
+    needsKey: true,
+  },
+  {
+    id: 'kimi',
+    name: '月之暗面 (Kimi)',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    defaultModel: 'moonshot-v1-8k',
+    needsKey: true,
+  },
+  {
+    id: 'ernie',
+    name: '百度文心',
+    baseUrl: 'https://qianfan.baidubce.com/v2',
+    defaultModel: 'ernie-4.0',
+    needsKey: true,
+  },
+  {
+    id: 'spark',
+    name: '讯飞星火',
+    baseUrl: 'https://spark-api-open.xf-yun.com/v1',
+    defaultModel: 'spark-max',
+    needsKey: true,
+  },
+  {
+    id: 'doubao',
+    name: '字节豆包',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    defaultModel: 'doubao-pro-32k',
+    needsKey: true,
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    defaultModel: 'llama-3.3-70b',
+    needsKey: true,
+  },
+  {
+    id: 'together',
+    name: 'Together AI',
+    baseUrl: 'https://api.together.xyz/v1',
+    defaultModel: 'meta-llama/Llama-3-70b',
+    needsKey: true,
+  },
+  {
+    id: 'elevenlabs',
+    name: 'ElevenLabs',
+    baseUrl: 'https://api.elevenlabs.io/v1',
+    defaultModel: 'eleven_multilingual_v2',
+    needsKey: true,
+  },
+  {
+    id: 'ollama',
+    name: 'Ollama（本地）',
+    baseUrl: 'http://localhost:11434/v1',
+    defaultModel: 'llama3.2',
+    needsKey: false,
+  },
 ];
 
 export const VISION_KEYWORDS = ['vision', 'omni', '4o', 'gemini', 'vl', 'gpt-4o', 'claude-3', 'qwen-vl', 'glm-4v'];
@@ -90,7 +174,7 @@ export function createBuiltInProvider(preset: BuiltInProviderPreset): AIProvider
     baseUrl: preset.baseUrl,
     defaultModel: preset.defaultModel,
     enabled: preset.id === 'openai' || preset.id === 'ollama',
-    isBuiltIn: true
+    isBuiltIn: true,
   };
 }
 
@@ -105,10 +189,14 @@ export function normalizeAIProvider(input: Partial<AIProvider> & { id: string })
     protocol: input.protocol === 'custom' ? 'custom' : 'openai-compatible',
     baseUrl: typeof input.baseUrl === 'string' && input.baseUrl.trim() ? input.baseUrl.trim().slice(0, 500) : '',
     apiKey: typeof input.apiKey === 'string' ? input.apiKey : undefined,
-    defaultModel: typeof input.defaultModel === 'string' && input.defaultModel.trim() ? input.defaultModel.trim().slice(0, 200) : 'gpt-4o',
+    defaultModel:
+      typeof input.defaultModel === 'string' && input.defaultModel.trim()
+        ? input.defaultModel.trim().slice(0, 200)
+        : 'gpt-4o',
     enabled: input.enabled !== false,
-    customHeaders: input.customHeaders && typeof input.customHeaders === 'object' ? { ...input.customHeaders } : undefined,
-    isBuiltIn: input.isBuiltIn === true
+    customHeaders:
+      input.customHeaders && typeof input.customHeaders === 'object' ? { ...input.customHeaders } : undefined,
+    isBuiltIn: input.isBuiltIn === true,
   };
 }
 
@@ -147,10 +235,16 @@ export function parseSubtitlePolishResponse(json: unknown): AISubtitlePolishItem
     return [];
   }
   return json
-    .filter((item) => item && typeof item === 'object' && typeof (item as AISubtitlePolishItem).index === 'number' && typeof (item as AISubtitlePolishItem).text === 'string')
+    .filter(
+      (item) =>
+        item &&
+        typeof item === 'object' &&
+        typeof (item as AISubtitlePolishItem).index === 'number' &&
+        typeof (item as AISubtitlePolishItem).text === 'string',
+    )
     .map((item) => ({
       index: Math.max(0, Math.round((item as AISubtitlePolishItem).index)),
-      text: ((item as AISubtitlePolishItem).text || '').trim()
+      text: ((item as AISubtitlePolishItem).text || '').trim(),
     }))
     .filter((item) => item.text.length > 0);
 }
@@ -162,10 +256,17 @@ export function removeFillerWords(text: string, fillers: string[] = FILLER_WORDS
   for (const filler of fillers) {
     result = result.replace(new RegExp(`${filler}(?=[，。！？、\\s]|$)`, 'g'), '');
   }
-  return result.replace(/^[，。！？、\s]+/, '').replace(/\s{2,}/g, ' ').trim();
+  return result
+    .replace(/^[，。！？、\s]+/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
-export function splitChapterSegments(durationSeconds: number, segmentMinSeconds = 60, segmentMaxSeconds = 90): Array<{ start: number; end: number }> {
+export function splitChapterSegments(
+  durationSeconds: number,
+  segmentMinSeconds = 60,
+  segmentMaxSeconds = 90,
+): Array<{ start: number; end: number }> {
   if (durationSeconds <= 0) {
     return [];
   }
@@ -176,7 +277,7 @@ export function splitChapterSegments(durationSeconds: number, segmentMinSeconds 
   for (let i = 0; i < segmentCount; i++) {
     segments.push({
       start: Math.round(i * segmentDuration * 100) / 100,
-      end: Math.round(Math.min((i + 1) * segmentDuration, durationSeconds) * 100) / 100
+      end: Math.round(Math.min((i + 1) * segmentDuration, durationSeconds) * 100) / 100,
     });
   }
   return segments;
@@ -207,10 +308,16 @@ export function parseChapterResponse(json: unknown): AIChapterResult[] {
     return [];
   }
   return json
-    .filter((item) => item && typeof item === 'object' && typeof (item as AIChapterResult).time === 'number' && typeof (item as AIChapterResult).title === 'string')
+    .filter(
+      (item) =>
+        item &&
+        typeof item === 'object' &&
+        typeof (item as AIChapterResult).time === 'number' &&
+        typeof (item as AIChapterResult).title === 'string',
+    )
     .map((item) => ({
       time: Math.max(0, (item as AIChapterResult).time),
-      title: ((item as AIChapterResult).title || '').trim().slice(0, 15)
+      title: ((item as AIChapterResult).title || '').trim().slice(0, 15),
     }))
     .filter((item) => item.title.length > 0)
     .sort((a, b) => a.time - b.time);
@@ -254,10 +361,20 @@ export function parseVisionAnalysisResponse(json: unknown): AIVisionAnalysisResu
     return { tags: [], scene: '', mood: '', objects: [] };
   }
   const input = json as Record<string, unknown>;
-  const tags = Array.isArray(input.tags) ? (input.tags as unknown[]).filter((t): t is string => typeof t === 'string').map((t) => t.trim()).filter(Boolean) : [];
+  const tags = Array.isArray(input.tags)
+    ? (input.tags as unknown[])
+        .filter((t): t is string => typeof t === 'string')
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
   const scene = typeof input.scene === 'string' ? input.scene.trim() : '';
   const mood = typeof input.mood === 'string' ? input.mood.trim() : '';
-  const objects = Array.isArray(input.objects) ? (input.objects as unknown[]).filter((o): o is string => typeof o === 'string').map((o) => o.trim()).filter(Boolean) : [];
+  const objects = Array.isArray(input.objects)
+    ? (input.objects as unknown[])
+        .filter((o): o is string => typeof o === 'string')
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : [];
   return { tags, scene, mood, objects };
 }
 
@@ -313,7 +430,7 @@ export const COLOR_GRADING_PARAMETER_LIMITS: Record<string, { min: number; max: 
   lift_b: { min: -1, max: 1 },
   gain_r: { min: -1, max: 1 },
   gain_g: { min: -1, max: 1 },
-  gain_b: { min: -1, max: 1 }
+  gain_b: { min: -1, max: 1 },
 };
 
 export function parseColorGradingSuggestionResponse(json: unknown): AIColorGradingSuggestion | null {
@@ -321,7 +438,10 @@ export function parseColorGradingSuggestionResponse(json: unknown): AIColorGradi
   const input = json as Record<string, unknown>;
   const style = typeof input.style === 'string' ? input.style.trim() : '';
   const issues = Array.isArray(input.issues)
-    ? (input.issues as unknown[]).filter((i): i is string => typeof i === 'string').map((i) => i.trim()).filter(Boolean)
+    ? (input.issues as unknown[])
+        .filter((i): i is string => typeof i === 'string')
+        .map((i) => i.trim())
+        .filter(Boolean)
     : [];
   if (!Array.isArray(input.suggestions)) return null;
   const suggestions: AIColorGradingSuggestionItem[] = [];
@@ -331,11 +451,15 @@ export function parseColorGradingSuggestionResponse(json: unknown): AIColorGradi
     const parameter = typeof entry.parameter === 'string' ? entry.parameter.trim().toLowerCase() : '';
     if (!parameter || !(parameter in COLOR_GRADING_PARAMETER_LIMITS)) continue;
     const limits = COLOR_GRADING_PARAMETER_LIMITS[parameter];
-    const recommendedRaw = typeof entry.recommendedValue === 'number' ? entry.recommendedValue : Number(entry.recommendedValue);
+    const recommendedRaw =
+      typeof entry.recommendedValue === 'number' ? entry.recommendedValue : Number(entry.recommendedValue);
     if (!Number.isFinite(recommendedRaw)) continue;
     const recommendedValue = Math.min(limits.max, Math.max(limits.min, Math.round(recommendedRaw * 100) / 100));
     const currentRaw = typeof entry.currentValue === 'number' ? entry.currentValue : undefined;
-    const currentValue = currentRaw !== undefined ? Math.min(limits.max, Math.max(limits.min, Math.round(currentRaw * 100) / 100)) : undefined;
+    const currentValue =
+      currentRaw !== undefined
+        ? Math.min(limits.max, Math.max(limits.min, Math.round(currentRaw * 100) / 100))
+        : undefined;
     const reason = typeof entry.reason === 'string' ? entry.reason.trim() : '';
     suggestions.push({ parameter, currentValue, recommendedValue, reason });
   }
@@ -349,25 +473,42 @@ export function buildColorGradingSystemPrompt(): string {
 
 export function mapColorParameterToColorCorrection(
   parameter: string,
-  value: number
-): { brightness?: number; contrast?: number; saturation?: number; hue?: number; threeWayColor?: { lift?: { r?: number; g?: number; b?: number }; gain?: { r?: number; g?: number; b?: number } } } | null {
+  value: number,
+): {
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  hue?: number;
+  threeWayColor?: { lift?: { r?: number; g?: number; b?: number }; gain?: { r?: number; g?: number; b?: number } };
+} | null {
   switch (parameter) {
-    case 'brightness': return { brightness: value };
-    case 'contrast': return { contrast: value };
-    case 'saturation': return { saturation: value };
-    case 'hue': return { hue: value };
-    case 'lift_r': return { threeWayColor: { lift: { r: value } } };
-    case 'lift_g': return { threeWayColor: { lift: { g: value } } };
-    case 'lift_b': return { threeWayColor: { lift: { b: value } } };
-    case 'gain_r': return { threeWayColor: { gain: { r: value } } };
-    case 'gain_g': return { threeWayColor: { gain: { g: value } } };
-    case 'gain_b': return { threeWayColor: { gain: { b: value } } };
-    default: return null;
+    case 'brightness':
+      return { brightness: value };
+    case 'contrast':
+      return { contrast: value };
+    case 'saturation':
+      return { saturation: value };
+    case 'hue':
+      return { hue: value };
+    case 'lift_r':
+      return { threeWayColor: { lift: { r: value } } };
+    case 'lift_g':
+      return { threeWayColor: { lift: { g: value } } };
+    case 'lift_b':
+      return { threeWayColor: { lift: { b: value } } };
+    case 'gain_r':
+      return { threeWayColor: { gain: { r: value } } };
+    case 'gain_g':
+      return { threeWayColor: { gain: { g: value } } };
+    case 'gain_b':
+      return { threeWayColor: { gain: { b: value } } };
+    default:
+      return null;
   }
 }
 
 export function buildColorGradingColorCorrectionPatch(
-  selectedItems: Array<{ parameter: string; recommendedValue: number }>
+  selectedItems: Array<{ parameter: string; recommendedValue: number }>,
 ): Record<string, unknown> | null {
   if (selectedItems.length === 0) return null;
   const patch: Record<string, unknown> = {};
@@ -416,7 +557,15 @@ export interface AIRoughCutMediaInfo {
   mood?: string;
 }
 
-export function buildMediaInfoForAI(media: Array<{ id: string; name: string; type: string; duration: number; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string } }>): AIRoughCutMediaInfo[] {
+export function buildMediaInfoForAI(
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    duration: number;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string };
+  }>,
+): AIRoughCutMediaInfo[] {
   return media.map((m) => ({
     mediaId: m.id,
     filename: m.name,
@@ -424,7 +573,7 @@ export function buildMediaInfoForAI(media: Array<{ id: string; name: string; typ
     duration: m.duration,
     tags: m.aiAnalysis?.tags,
     scene: m.aiAnalysis?.scene,
-    mood: m.aiAnalysis?.mood
+    mood: m.aiAnalysis?.mood,
   }));
 }
 
@@ -442,16 +591,20 @@ export function parseRoughCutAIResponse(json: unknown): AIRoughCutClip[] {
         item &&
         typeof item === 'object' &&
         typeof (item as AIRoughCutClip).mediaId === 'string' &&
-        typeof (item as AIRoughCutClip).duration === 'number'
+        typeof (item as AIRoughCutClip).duration === 'number',
     )
     .map((item) => {
       const entry = item as AIRoughCutClip;
       return {
         mediaId: String(entry.mediaId).trim(),
-        startTime: typeof entry.startTime === 'number' && Number.isFinite(entry.startTime) ? Math.max(0, entry.startTime) : 0,
+        startTime:
+          typeof entry.startTime === 'number' && Number.isFinite(entry.startTime) ? Math.max(0, entry.startTime) : 0,
         duration: Math.max(0.1, Number.isFinite(entry.duration) ? entry.duration : 3),
-        trackIndex: typeof entry.trackIndex === 'number' && Number.isFinite(entry.trackIndex) ? Math.max(0, Math.round(entry.trackIndex)) : 0,
-        reason: typeof entry.reason === 'string' ? entry.reason.trim() : ''
+        trackIndex:
+          typeof entry.trackIndex === 'number' && Number.isFinite(entry.trackIndex)
+            ? Math.max(0, Math.round(entry.trackIndex))
+            : 0,
+        reason: typeof entry.reason === 'string' ? entry.reason.trim() : '',
       };
     })
     .filter((item) => item.mediaId.length > 0);
@@ -471,7 +624,11 @@ export function buildRoughCutUserPrompt(description: string, mediaInfo: AIRoughC
   return lines.join('\n');
 }
 
-export const ROUGH_CUT_TEMPLATES: Array<{ id: string; name: string; segments: Array<{ label: string; defaultDuration: number }> }> = [
+export const ROUGH_CUT_TEMPLATES: Array<{
+  id: string;
+  name: string;
+  segments: Array<{ label: string; defaultDuration: number }>;
+}> = [
   {
     id: 'promo',
     name: '产品宣传片',
@@ -479,8 +636,8 @@ export const ROUGH_CUT_TEMPLATES: Array<{ id: string; name: string; segments: Ar
       { label: '开场', defaultDuration: 5 },
       { label: '产品展示', defaultDuration: 20 },
       { label: '使用场景', defaultDuration: 15 },
-      { label: '结尾', defaultDuration: 5 }
-    ]
+      { label: '结尾', defaultDuration: 5 },
+    ],
   },
   {
     id: 'story',
@@ -489,8 +646,8 @@ export const ROUGH_CUT_TEMPLATES: Array<{ id: string; name: string; segments: Ar
       { label: '起', defaultDuration: 10 },
       { label: '承', defaultDuration: 20 },
       { label: '转', defaultDuration: 15 },
-      { label: '合', defaultDuration: 10 }
-    ]
+      { label: '合', defaultDuration: 10 },
+    ],
   },
   {
     id: 'problem-solution',
@@ -498,9 +655,9 @@ export const ROUGH_CUT_TEMPLATES: Array<{ id: string; name: string; segments: Ar
     segments: [
       { label: '问题', defaultDuration: 10 },
       { label: '解决方案', defaultDuration: 25 },
-      { label: '行动号召', defaultDuration: 10 }
-    ]
-  }
+      { label: '行动号召', defaultDuration: 10 },
+    ],
+  },
 ];
 
 // ─── TTS 配音 ──────────────────────────────────────────────────
@@ -557,15 +714,15 @@ export function buildTtsRequestBody(text: string, config: TTSConfig): Record<str
       model_id: config.model ?? 'eleven_multilingual_v2',
       voice_settings: {
         stability: config.stability ?? 0.5,
-        speed: config.speed
-      }
+        speed: config.speed,
+      },
     };
   }
   return {
     model: config.model ?? 'tts-1',
     input: text,
     voice: config.voiceId,
-    speed: config.speed
+    speed: config.speed,
   };
 }
 
@@ -598,7 +755,6 @@ export function detectTtsEngine(baseUrl: string, providerId: string): TTSEngine 
   if (providerId === 'elevenlabs') return 'elevenlabs';
   return 'compatible';
 }
-
 
 // ── AI Export Optimization Suggestions ─────────────────────────────────────
 
@@ -636,7 +792,12 @@ export function buildExportProjectInfo(project: {
   const tracks = project.timeline.tracks;
   const allClips = tracks.flatMap((t) => t.clips);
   const hasSubtitle = tracks.some((t) => t.type === 'subtitle');
-  const effectCount = allClips.filter((c) => 'effects' in c && Array.isArray((c as Record<string, unknown>).effects) && ((c as Record<string, unknown>).effects as unknown[]).length > 0).length;
+  const effectCount = allClips.filter(
+    (c) =>
+      'effects' in c &&
+      Array.isArray((c as Record<string, unknown>).effects) &&
+      ((c as Record<string, unknown>).effects as unknown[]).length > 0,
+  ).length;
   const hasHDR = allClips.some((c) => {
     const style = (c as Record<string, unknown>).style as Record<string, unknown> | undefined;
     return Boolean(style && style.hdr);
@@ -654,7 +815,7 @@ export function buildExportProjectInfo(project: {
     effectCount,
     hasSubtitle,
     hasHDR,
-    clipCount: allClips.length
+    clipCount: allClips.length,
   };
 }
 
@@ -665,7 +826,7 @@ export function buildExportOptimizationSystemPrompt(): string {
   return [
     'You are an expert video encoding advisor. Analyze the current export preset and project info, then suggest parameter improvements.',
     'Return a JSON array of suggestion objects with exactly these fields:',
-    '[{parameter: string, currentValue: string, suggestedValue: string, reason: string, priority: \'high\'|\'medium\'|\'low\'}]',
+    "[{parameter: string, currentValue: string, suggestedValue: string, reason: string, priority: 'high'|'medium'|'low'}]",
     '',
     'Cover these areas when relevant:',
     '* videoBitrate: whether bitrate matches content complexity (action-heavy vs talking-head)',
@@ -678,7 +839,7 @@ export function buildExportOptimizationSystemPrompt(): string {
     '* hardwareEncoding: whether GPU encoding is beneficial',
     '',
     'Only suggest changes that would genuinely improve the output. Return an empty array if the current settings are already optimal.',
-    'Return ONLY the JSON array, no markdown fences or explanation.'
+    'Return ONLY the JSON array, no markdown fences or explanation.',
   ].join('\n');
 }
 
@@ -700,7 +861,7 @@ export function buildExportOptimizationUserPrompt(
     subtitleFormat?: string;
     hardwareEncoding?: boolean;
     outputMode?: string;
-  }
+  },
 ): string {
   return [
     'Project info:',
@@ -718,12 +879,15 @@ export function buildExportOptimizationUserPrompt(
     '  Audio codec: ' + (presetSettings.audioCodec ?? 'aac'),
     '  Video bitrate: ' + (presetSettings.videoBitrate ?? 'auto'),
     '  Audio bitrate: ' + (presetSettings.audioBitrate ?? 'auto'),
-    '  Output resolution: ' + (presetSettings.width ?? projectInfo.width) + 'x' + (presetSettings.height ?? projectInfo.height),
+    '  Output resolution: ' +
+      (presetSettings.width ?? projectInfo.width) +
+      'x' +
+      (presetSettings.height ?? projectInfo.height),
     '  Output FPS: ' + (presetSettings.fps ?? projectInfo.fps),
     '  Loudness normalization: ' + (presetSettings.loudnessNormalization ?? 'off'),
     '  Subtitle format: ' + (presetSettings.subtitleFormat ?? 'none'),
     '  Hardware encoding: ' + (presetSettings.hardwareEncoding ? 'yes' : 'no'),
-    '  Output mode: ' + (presetSettings.outputMode ?? 'video')
+    '  Output mode: ' + (presetSettings.outputMode ?? 'video'),
   ].join('\n');
 }
 
@@ -734,20 +898,22 @@ export function parseExportOptimizationResponse(json: unknown): AIExportSuggesti
   if (!Array.isArray(json)) return [];
   const validPriorities = new Set<AIExportSuggestionPriority>(['high', 'medium', 'low']);
   return json
-    .filter((item): item is Record<string, unknown> =>
-      typeof item === 'object' && item !== null &&
-      typeof (item as Record<string, unknown>).parameter === 'string' &&
-      typeof (item as Record<string, unknown>).currentValue === 'string' &&
-      typeof (item as Record<string, unknown>).suggestedValue === 'string' &&
-      typeof (item as Record<string, unknown>).reason === 'string' &&
-      validPriorities.has((item as Record<string, unknown>).priority as AIExportSuggestionPriority)
+    .filter(
+      (item): item is Record<string, unknown> =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as Record<string, unknown>).parameter === 'string' &&
+        typeof (item as Record<string, unknown>).currentValue === 'string' &&
+        typeof (item as Record<string, unknown>).suggestedValue === 'string' &&
+        typeof (item as Record<string, unknown>).reason === 'string' &&
+        validPriorities.has((item as Record<string, unknown>).priority as AIExportSuggestionPriority),
     )
     .map((item) => ({
       parameter: item.parameter as string,
       currentValue: item.currentValue as string,
       suggestedValue: item.suggestedValue as string,
       reason: item.reason as string,
-      priority: item.priority as AIExportSuggestionPriority
+      priority: item.priority as AIExportSuggestionPriority,
     }));
 }
 

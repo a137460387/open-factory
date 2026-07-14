@@ -10,7 +10,7 @@ import {
   hasAvailableTextProvider,
   getBuiltinSubtitleStyleTemplate,
   renderSubtitleStyleTemplatePreview,
-  UpdateSubtitleStyleCommand
+  UpdateSubtitleStyleCommand,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -35,10 +35,19 @@ export function AISubtitleStylePanel({
   clip,
   media,
   subtitleTrack,
-  selectedClipLocked
+  selectedClipLocked,
 }: {
   clip: Clip;
-  media: Array<{ id: string; name: string; type: string; path?: string; duration?: number; width?: number; height?: number; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>;
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    path?: string;
+    duration?: number;
+    width?: number;
+    height?: number;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>;
   subtitleTrack?: { id: string; type: string; clips: Array<{ id: string; type: string; trackId: string }> };
   selectedClipLocked: boolean;
 }) {
@@ -77,17 +86,20 @@ export function AISubtitleStylePanel({
       const systemPrompt = buildSubtitleStyleSystemPrompt();
       const userPrompt = buildSubtitleStyleUserPrompt(context);
 
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        timeoutSecs: 30
-      }, apiKey);
+      const response = await callAiApi(
+        {
+          providerId: selectedProvider.id,
+          baseUrl: selectedProvider.baseUrl,
+          model: selectedProvider.defaultModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3,
+          timeoutSecs: 30,
+        },
+        apiKey,
+      );
 
       if (abortRef.current) return;
 
@@ -117,7 +129,7 @@ export function AISubtitleStylePanel({
         showToast({
           kind: 'error',
           title: t.failedTitle,
-          message: err instanceof Error ? err.message : t.failedMessage
+          message: err instanceof Error ? err.message : t.failedMessage,
         });
         setError(err instanceof Error ? err.message : t.failedMessage);
       }
@@ -127,22 +139,31 @@ export function AISubtitleStylePanel({
   }, [selectedProvider, available, firstVideoMedia]);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
-  const handleApplyToTrack = useCallback((template: SubtitleStyleTemplate) => {
-    if (!subtitleTrack) return;
-    try {
-      for (const subClip of subtitleTrack.clips) {
-        if (subClip.type === 'subtitle') {
-          commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, subClip.id, template.style));
+  const handleApplyToTrack = useCallback(
+    (template: SubtitleStyleTemplate) => {
+      if (!subtitleTrack) return;
+      try {
+        for (const subClip of subtitleTrack.clips) {
+          if (subClip.type === 'subtitle') {
+            commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, subClip.id, template.style));
+          }
         }
+        showToast({ kind: 'success', title: t.applied, message: template.name });
+      } catch (err) {
+        showToast({
+          kind: 'error',
+          title: t.failedTitle,
+          message: err instanceof Error ? err.message : t.failedMessage,
+        });
       }
-      showToast({ kind: 'success', title: t.applied, message: template.name });
-    } catch (err) {
-      showToast({ kind: 'error', title: t.failedTitle, message: err instanceof Error ? err.message : t.failedMessage });
-    }
-  }, [subtitleTrack]);
+    },
+    [subtitleTrack],
+  );
 
   return (
     <details className="mb-4" data-testid="ai-subtitle-style-section">
@@ -151,7 +172,9 @@ export function AISubtitleStylePanel({
       </summary>
       <div className="space-y-2 p-1">
         {!available && (
-          <p className="text-xs text-orange-500" data-testid="ai-subtitle-style-no-provider">{t.noProvider}</p>
+          <p className="text-xs text-orange-500" data-testid="ai-subtitle-style-no-provider">
+            {t.noProvider}
+          </p>
         )}
 
         {!loading && results.length === 0 && (
@@ -164,9 +187,13 @@ export function AISubtitleStylePanel({
               data-testid="ai-subtitle-style-provider-select"
             >
               {providers.length === 0 && <option value="">{t.noProvider}</option>}
-              {providers.filter((p) => p.enabled).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
         )}
@@ -185,18 +212,26 @@ export function AISubtitleStylePanel({
         )}
 
         {!subtitleTrack && !loading && results.length === 0 && (
-          <p className="text-xs text-[var(--color-text-muted)]" data-testid="ai-subtitle-style-no-track">{t.noSubtitleTrack}</p>
+          <p className="text-xs text-[var(--color-text-muted)]" data-testid="ai-subtitle-style-no-track">
+            {t.noSubtitleTrack}
+          </p>
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-subtitle-style-loading">
+          <div
+            className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]"
+            data-testid="ai-subtitle-style-loading"
+          >
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="ai-subtitle-style-error">
+          <div
+            className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+            data-testid="ai-subtitle-style-error"
+          >
             {error}
           </div>
         )}

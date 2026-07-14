@@ -6,7 +6,7 @@ import {
   type ClipKeyframes,
   type ColorCorrection,
   type KeyframeProperty,
-  normalizeColorCorrection
+  normalizeColorCorrection,
 } from './model';
 
 export const EFFECT_PRESET_SCHEMA_VERSION = 1;
@@ -77,7 +77,7 @@ export function createEffectPresetFromClip(clip: Clip, input: EffectPresetCreate
     thumbnail: input.thumbnail,
     createdAt: timestamp,
     updatedAt: timestamp,
-    stack: extractEffectPresetStack(clip)
+    stack: extractEffectPresetStack(clip),
   });
 }
 
@@ -86,11 +86,14 @@ export function extractEffectPresetStack(clip: Clip): EffectPresetStack {
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
     effects: cloneEffects(clip.effects),
     blendMode: normalizeClipBlendMode(clip.blendMode),
-    keyframes: cloneClipKeyframes(clip.keyframes)
+    keyframes: cloneClipKeyframes(clip.keyframes),
   };
 }
 
-export function buildEffectPresetClipPatch(preset: EffectPreset | EffectPresetFile, clipDuration: number): {
+export function buildEffectPresetClipPatch(
+  preset: EffectPreset | EffectPresetFile,
+  clipDuration: number,
+): {
   colorCorrection: ColorCorrection;
   effects?: Effect[];
   blendMode: ClipBlendMode;
@@ -101,7 +104,7 @@ export function buildEffectPresetClipPatch(preset: EffectPreset | EffectPresetFi
     colorCorrection: normalizeColorCorrection(normalized.stack.colorCorrection),
     effects: cloneEffects(normalized.stack.effects),
     blendMode: normalizeClipBlendMode(normalized.stack.blendMode),
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(normalized.stack.keyframes), clipDuration)
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(normalized.stack.keyframes), clipDuration),
   };
 }
 
@@ -109,7 +112,7 @@ export function serializeEffectPresetFile(preset: EffectPreset): string {
   const file: EffectPresetFile = {
     schemaVersion: EFFECT_PRESET_SCHEMA_VERSION,
     kind: EFFECT_PRESET_FILE_KIND,
-    preset: normalizeEffectPreset(preset)
+    preset: normalizeEffectPreset(preset),
   };
   return `${JSON.stringify(file, null, 2)}\n`;
 }
@@ -117,7 +120,11 @@ export function serializeEffectPresetFile(preset: EffectPreset): string {
 export function parseEffectPresetJson(contents: string): EffectPreset {
   const parsed = JSON.parse(contents) as Partial<EffectPresetFile> | Partial<EffectPreset>;
   if (parsed && typeof parsed === 'object' && 'preset' in parsed) {
-    if (parsed.schemaVersion !== EFFECT_PRESET_SCHEMA_VERSION || parsed.kind !== EFFECT_PRESET_FILE_KIND || !parsed.preset) {
+    if (
+      parsed.schemaVersion !== EFFECT_PRESET_SCHEMA_VERSION ||
+      parsed.kind !== EFFECT_PRESET_FILE_KIND ||
+      !parsed.preset
+    ) {
       throw new Error('Invalid effect preset file.');
     }
     return normalizeEffectPreset(parsed.preset);
@@ -146,18 +153,24 @@ export function normalizeEffectPreset(input: unknown): EffectPreset {
     thumbnail: normalizeText(raw.thumbnail, 4000) || undefined,
     createdAt,
     updatedAt: normalizeIsoDate(raw.updatedAt) ?? createdAt,
-    stack
+    stack,
   };
 }
 
-export function filterEffectPresets<T extends Pick<EffectPreset, 'tags'>>(presets: T[], filters: EffectPresetFilters = {}): T[] {
+export function filterEffectPresets<T extends Pick<EffectPreset, 'tags'>>(
+  presets: T[],
+  filters: EffectPresetFilters = {},
+): T[] {
   return presets.filter((preset) => {
     const tags = preset.tags.map((tag) => tag.toLowerCase());
     return matchesTagFilter(tags, filters.style) && matchesTagFilter(tags, filters.use);
   });
 }
 
-export function buildEffectPresetPreviewArgs(preset: EffectPreset | EffectPresetFile, options: EffectPresetPreviewArgsOptions): string[] {
+export function buildEffectPresetPreviewArgs(
+  preset: EffectPreset | EffectPresetFile,
+  options: EffectPresetPreviewArgsOptions,
+): string[] {
   const normalized = normalizeEffectPreset('preset' in preset ? preset.preset : preset);
   const width = clampInteger(options.width, 320, 64, 4096);
   const height = clampInteger(options.height, 180, 64, 4096);
@@ -185,7 +198,7 @@ function normalizeEffectPresetStack(input: unknown): EffectPresetStack | undefin
     colorCorrection: normalizeColorCorrection(raw.colorCorrection),
     effects: cloneEffects(raw.effects),
     blendMode: normalizeClipBlendMode(raw.blendMode),
-    keyframes
+    keyframes,
   };
 }
 
@@ -207,7 +220,9 @@ function normalizePresetKeyframes(keyframes: ClipKeyframes | undefined): ClipKey
 function buildEffectPresetPreviewFilters(preset: EffectPreset): string[] {
   const filters: string[] = [];
   const color = preset.stack.colorCorrection;
-  filters.push(`eq=brightness=${roundFilterNumber(color.brightness)}:contrast=${roundFilterNumber(color.contrast)}:saturation=${roundFilterNumber(color.saturation)}`);
+  filters.push(
+    `eq=brightness=${roundFilterNumber(color.brightness)}:contrast=${roundFilterNumber(color.contrast)}:saturation=${roundFilterNumber(color.saturation)}`,
+  );
   if (color.hue) {
     filters.push(`hue=h=${roundFilterNumber(color.hue)}`);
   }
@@ -263,7 +278,10 @@ function slugifyEffectPresetName(name: string): string {
 }
 
 function clampInteger(value: number | undefined, fallback: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Math.round(typeof value === 'number' && Number.isFinite(value) ? value : fallback)));
+  return Math.min(
+    max,
+    Math.max(min, Math.round(typeof value === 'number' && Number.isFinite(value) ? value : fallback)),
+  );
 }
 
 function roundFilterNumber(value: number): string {

@@ -67,12 +67,15 @@ export function calculateTimelineMinimapViewportRect(input: TimelineMinimapViewp
   const viewportDuration = calculateViewportDuration(input.viewportWidth, input.labelWidth, zoom, duration);
   const start = clamp((input.scrollLeft - input.labelWidth) / zoom, 0, Math.max(0, duration - viewportDuration));
   const end = clamp(start + viewportDuration, start, duration);
-  const height = Math.max(TIMELINE_MINIMAP_MIN_VIEWPORT_HEIGHT, (viewportDuration / duration) * Math.max(1, input.minimapHeight));
+  const height = Math.max(
+    TIMELINE_MINIMAP_MIN_VIEWPORT_HEIGHT,
+    (viewportDuration / duration) * Math.max(1, input.minimapHeight),
+  );
   return {
     y: clamp((start / duration) * Math.max(1, input.minimapHeight), 0, Math.max(0, input.minimapHeight - height)),
     height,
     start,
-    end
+    end,
   };
 }
 
@@ -96,7 +99,7 @@ export function buildTimelineMinimapLayout(
     markers?: TimelineMarker[];
     bookmarks?: TimelineBookmark[];
     exportRanges?: Array<Pick<ExportRange, 'id' | 'start' | 'end'>>;
-  }
+  },
 ): TimelineMinimapLayout {
   const width = Math.max(1, options.width ?? TIMELINE_MINIMAP_WIDTH);
   const height = Math.max(1, options.height);
@@ -109,7 +112,7 @@ export function buildTimelineMinimapLayout(
     id: track.id,
     x: gutter + index * (laneWidth + laneGap),
     width: laneWidth,
-    color: track.color ? getTimelineLabelColorHex(track.color) : '#94a3b8'
+    color: track.color ? getTimelineLabelColorHex(track.color) : '#94a3b8',
   }));
   const trackById = new Map(tracks.map((track) => [track.id, track]));
   const allClips = timeline.tracks.flatMap((track) => {
@@ -125,17 +128,37 @@ export function buildTimelineMinimapLayout(
       y: timeToMinimapY(clip.start, duration, height),
       width: lane.width,
       height: Math.max(2, ((Math.max(0, clip.duration) || 0) / duration) * height),
-      color
+      color,
     }));
   });
   const clips = sampleMinimapClips(allClips, options.maxClips);
   const markers: TimelineMinimapMarkerLine[] = [
     ...(options.exportRanges ?? []).flatMap((range) => [
-      { id: `${range.id}-start`, y: timeToMinimapY(range.start, duration, height), color: '#0ea5e9', kind: 'export-range-start' as const },
-      { id: `${range.id}-end`, y: timeToMinimapY(range.end, duration, height), color: '#0284c7', kind: 'export-range-end' as const }
+      {
+        id: `${range.id}-start`,
+        y: timeToMinimapY(range.start, duration, height),
+        color: '#0ea5e9',
+        kind: 'export-range-start' as const,
+      },
+      {
+        id: `${range.id}-end`,
+        y: timeToMinimapY(range.end, duration, height),
+        color: '#0284c7',
+        kind: 'export-range-end' as const,
+      },
     ]),
-    ...(options.markers ?? []).map((marker) => ({ id: marker.id, y: timeToMinimapY(marker.time, duration, height), color: marker.color || '#f97316', kind: 'marker' as const })),
-    ...(options.bookmarks ?? []).map((bookmark) => ({ id: bookmark.id, y: timeToMinimapY(bookmark.time, duration, height), color: '#a855f7', kind: 'bookmark' as const }))
+    ...(options.markers ?? []).map((marker) => ({
+      id: marker.id,
+      y: timeToMinimapY(marker.time, duration, height),
+      color: marker.color || '#f97316',
+      kind: 'marker' as const,
+    })),
+    ...(options.bookmarks ?? []).map((bookmark) => ({
+      id: bookmark.id,
+      y: timeToMinimapY(bookmark.time, duration, height),
+      color: '#a855f7',
+      kind: 'bookmark' as const,
+    })),
   ];
   return { tracks, clips, markers };
 }

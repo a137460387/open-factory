@@ -4,10 +4,7 @@ export class PrimarySliders {
   /**
    * 将滑块参数转换为 WebGL uniform 值
    */
-  static toUniforms(
-    params: PrimarySliderParams,
-    prefix: string
-  ): Record<string, number> {
+  static toUniforms(params: PrimarySliderParams, prefix: string): Record<string, number> {
     return {
       [`${prefix}_temperature`]: params.temperature / 100,
       [`${prefix}_tint`]: params.tint / 100,

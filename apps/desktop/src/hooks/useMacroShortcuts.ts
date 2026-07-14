@@ -20,9 +20,9 @@ export function useMacroShortcuts(macros: ClipMacro[], onExecute: (macro: ClipMa
           metaKey: event.metaKey,
           altKey: event.altKey,
           shiftKey: event.shiftKey,
-          isTyping
+          isTyping,
         },
-        macros
+        macros,
       );
       if (!macro) {
         return;

@@ -26,7 +26,7 @@ export async function translateSubtitleItems(
   items: SubtitleTranslationItem[],
   settings: TranslationSettings,
   fetchImpl: FetchLike = fetch,
-  onProgress?: TranslationProgress
+  onProgress?: TranslationProgress,
 ): Promise<TranslatedSubtitleItem[]> {
   const batches = buildSubtitleTranslationBatches(items, 50);
   const translated: TranslatedSubtitleItem[] = [];
@@ -34,7 +34,10 @@ export async function translateSubtitleItems(
   onProgress?.(completed, items.length);
   for (const batch of batches) {
     const texts = batch.cues.map((cue) => cue.text);
-    const batchTexts = settings.provider === 'google' ? await translateWithGoogle(texts, settings, fetchImpl) : await translateWithDeepL(texts, settings, fetchImpl);
+    const batchTexts =
+      settings.provider === 'google'
+        ? await translateWithGoogle(texts, settings, fetchImpl)
+        : await translateWithDeepL(texts, settings, fetchImpl);
     if (batchTexts.length !== batch.cues.length) {
       throw new Error('Translation response count did not match request count');
     }
@@ -42,7 +45,7 @@ export async function translateSubtitleItems(
       translated.push({
         id: cue.id,
         text: cue.text,
-        translatedText: batchTexts[index]
+        translatedText: batchTexts[index],
       });
       completed += 1;
       onProgress?.(completed, items.length);
@@ -51,17 +54,23 @@ export async function translateSubtitleItems(
   return translated;
 }
 
-export function subtitleClipsToTranslationItems(clips: Array<Extract<Clip, { type: 'subtitle' }>>): SubtitleTranslationItem[] {
+export function subtitleClipsToTranslationItems(
+  clips: Array<Extract<Clip, { type: 'subtitle' }>>,
+): SubtitleTranslationItem[] {
   return clips
     .slice()
     .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
     .map((clip) => ({
       id: clip.id,
-      text: clip.text
+      text: clip.text,
     }));
 }
 
-async function translateWithDeepL(texts: string[], settings: TranslationSettings, fetchImpl: FetchLike): Promise<string[]> {
+async function translateWithDeepL(
+  texts: string[],
+  settings: TranslationSettings,
+  fetchImpl: FetchLike,
+): Promise<string[]> {
   if (!hasAcceptedTranslationTOS()) {
     throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
   }
@@ -75,9 +84,9 @@ async function translateWithDeepL(texts: string[], settings: TranslationSettings
     method: 'POST',
     headers: {
       Authorization: `DeepL-Auth-Key ${apiKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body
+    body,
   });
   if (!response.ok) {
     throw new Error(`DeepL translation failed: ${response.status}`);
@@ -86,22 +95,29 @@ async function translateWithDeepL(texts: string[], settings: TranslationSettings
   return (payload.translations ?? []).map((item) => String(item.text ?? ''));
 }
 
-async function translateWithGoogle(texts: string[], settings: TranslationSettings, fetchImpl: FetchLike): Promise<string[]> {
+async function translateWithGoogle(
+  texts: string[],
+  settings: TranslationSettings,
+  fetchImpl: FetchLike,
+): Promise<string[]> {
   if (!hasAcceptedTranslationTOS()) {
     throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
   }
   const apiKey = requireTranslationApiKey(settings);
-  const response = await fetchImpl(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
+  const response = await fetchImpl(
+    `https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: texts,
+        target: settings.targetLanguage,
+        format: 'text',
+      }),
     },
-    body: JSON.stringify({
-      q: texts,
-      target: settings.targetLanguage,
-      format: 'text'
-    })
-  });
+  );
   if (!response.ok) {
     throw new Error(`Google translation failed: ${response.status}`);
   }

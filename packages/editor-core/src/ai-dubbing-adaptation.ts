@@ -85,10 +85,7 @@ export function computeTimingAdaptation(
 /**
  * 检查 outpoint 是否与下一 segment 冲突
  */
-export function hasOutpointConflict(
-  suggestedOutPoint: number,
-  nextSegmentStart: number,
-): boolean {
+export function hasOutpointConflict(suggestedOutPoint: number, nextSegmentStart: number): boolean {
   return suggestedOutPoint > nextSegmentStart;
 }
 
@@ -96,9 +93,7 @@ export function hasOutpointConflict(
  * 对项目中所有 TTS segments 批量生成适配建议
  * 返回更新后的 segments 数组（不修改原数组）
  */
-export function batchComputeAdaptations(
-  segments: TtsSegment[],
-): TtsSegment[] {
+export function batchComputeAdaptations(segments: TtsSegment[]): TtsSegment[] {
   return segments.map((seg, index) => {
     const nextSeg = segments[index + 1];
     const adaptation = computeTimingAdaptation(
@@ -125,7 +120,7 @@ export async function computeTimingAdaptationSafe(
   originalDuration: number,
   dubbedDuration: number,
   nextSegmentStart?: number,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<TimingAdaptation>> {
   try {
     const data = computeTimingAdaptation(originalDuration, dubbedDuration, nextSegmentStart);

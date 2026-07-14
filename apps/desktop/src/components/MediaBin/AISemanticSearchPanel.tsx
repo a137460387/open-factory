@@ -11,7 +11,7 @@ import {
   sanitizeSemanticSearchHistory,
   hasAvailableTextProvider,
   type SemanticSearchHistoryEntry,
-  type SemanticSearchResult
+  type SemanticSearchResult,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -34,7 +34,9 @@ function loadHistory(): SemanticSearchHistoryEntry[] {
 function saveHistory(history: SemanticSearchHistoryEntry[]) {
   try {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 interface AISearchResultWithMedia extends SemanticSearchResult {
@@ -43,7 +45,12 @@ interface AISearchResultWithMedia extends SemanticSearchResult {
 }
 
 interface AISemanticSearchPanelProps {
-  media: Array<{ id: string; name: string; type: string; aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] } }>;
+  media: Array<{
+    id: string;
+    name: string;
+    type: string;
+    aiAnalysis?: { tags?: string[]; scene?: string; mood?: string; objects?: string[] };
+  }>;
   onSelectMedia: (mediaId: string) => void;
 }
 
@@ -67,88 +74,100 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
     mediaMap.current = new Map(media.map((m) => [m.id, m]));
   }, [media]);
 
-  const executeSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim() || !available) return;
-    const selectedProvider = providers.find((p) => p.enabled && hasAvailableTextProvider([p])) ?? providers[0];
-    if (!selectedProvider) return;
+  const executeSearch = useCallback(
+    async (searchQuery: string) => {
+      if (!searchQuery.trim() || !available) return;
+      const selectedProvider = providers.find((p) => p.enabled && hasAvailableTextProvider([p])) ?? providers[0];
+      if (!selectedProvider) return;
 
-    abortRef.current = false;
-    setLoading(true);
-    setError(undefined);
-    setResults([]);
-    setUnanalyzedIds([]);
+      abortRef.current = false;
+      setLoading(true);
+      setError(undefined);
+      setResults([]);
+      setUnanalyzedIds([]);
 
-    try {
-      const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) return;
-
-      const payload = buildSemanticSearchMediaPayload(media);
-      const systemPrompt = buildSemanticSearchSystemPrompt();
-      const userPrompt = buildSemanticSearchUserPrompt(searchQuery, payload);
-
-      const response = await callAiApi({
-        providerId: selectedProvider.id,
-        baseUrl: selectedProvider.baseUrl,
-        model: selectedProvider.defaultModel,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        timeoutSecs: 30
-      }, apiKey);
-
-      if (abortRef.current) return;
-
-      let parsed: Record<string, unknown>;
       try {
-        parsed = JSON.parse(response.content);
-      } catch {
-        setError('AI返回格式无效');
-        setLoading(false);
-        return;
-      }
+        const apiKey = await readAiApiKey(selectedProvider.id);
+        if (abortRef.current) return;
 
-      const searchResults = parseSemanticSearchResponse(parsed);
-      const resultIds = new Set(searchResults.map((r) => r.mediaId));
-      const unanalyzed = getUnanalyzedMediaIds(media, resultIds);
+        const payload = buildSemanticSearchMediaPayload(media);
+        const systemPrompt = buildSemanticSearchSystemPrompt();
+        const userPrompt = buildSemanticSearchUserPrompt(searchQuery, payload);
 
-      const resultsWithMedia: AISearchResultWithMedia[] = searchResults
-        .filter((r) => mediaMap.current.has(r.mediaId))
-        .map((r) => {
-          const m = mediaMap.current.get(r.mediaId)!;
-          return { ...r, name: m.name, type: m.type };
+        const response = await callAiApi(
+          {
+            providerId: selectedProvider.id,
+            baseUrl: selectedProvider.baseUrl,
+            model: selectedProvider.defaultModel,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0.3,
+            timeoutSecs: 30,
+          },
+          apiKey,
+        );
+
+        if (abortRef.current) return;
+
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(response.content);
+        } catch {
+          setError('AI返回格式无效');
+          setLoading(false);
+          return;
+        }
+
+        const searchResults = parseSemanticSearchResponse(parsed);
+        const resultIds = new Set(searchResults.map((r) => r.mediaId));
+        const unanalyzed = getUnanalyzedMediaIds(media, resultIds);
+
+        const resultsWithMedia: AISearchResultWithMedia[] = searchResults
+          .filter((r) => mediaMap.current.has(r.mediaId))
+          .map((r) => {
+            const m = mediaMap.current.get(r.mediaId)!;
+            return { ...r, name: m.name, type: m.type };
+          });
+
+        setResults(resultsWithMedia);
+        setUnanalyzedIds(unanalyzed);
+
+        const newHistory = appendSemanticSearchHistory(history, {
+          query: searchQuery,
+          timestamp: Date.now(),
+          resultCount: searchResults.length,
         });
-
-      setResults(resultsWithMedia);
-      setUnanalyzedIds(unanalyzed);
-
-      const newHistory = appendSemanticSearchHistory(history, {
-        query: searchQuery,
-        timestamp: Date.now(),
-        resultCount: searchResults.length
-      });
-      setHistory(newHistory);
-      saveHistory(newHistory);
-    } catch (err) {
-      if (!abortRef.current) {
-        setError(err instanceof Error ? err.message : '搜索失败');
+        setHistory(newHistory);
+        saveHistory(newHistory);
+      } catch (err) {
+        if (!abortRef.current) {
+          setError(err instanceof Error ? err.message : '搜索失败');
+        }
+      } finally {
+        if (!abortRef.current) setLoading(false);
       }
-    } finally {
-      if (!abortRef.current) setLoading(false);
-    }
-  }, [available, providers, media, history]);
+    },
+    [available, providers, media, history],
+  );
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    executeSearch(query);
-  }, [query, executeSearch]);
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      executeSearch(query);
+    },
+    [query, executeSearch],
+  );
 
-  const handleHistorySelect = useCallback((q: string) => {
-    setQuery(q);
-    setShowHistory(false);
-    executeSearch(q);
-  }, [executeSearch]);
+  const handleHistorySelect = useCallback(
+    (q: string) => {
+      setQuery(q);
+      setShowHistory(false);
+      executeSearch(q);
+    },
+    [executeSearch],
+  );
 
   const handleClearHistory = useCallback(() => {
     setHistory([]);
@@ -157,7 +176,9 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
   }, []);
 
   useEffect(() => {
-    return () => { abortRef.current = true; };
+    return () => {
+      abortRef.current = true;
+    };
   }, []);
 
   return (
@@ -184,14 +205,21 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
       </form>
 
       {!available && (
-        <p className="text-xs text-orange-500" data-testid="ai-search-no-provider">{t.noProvider}</p>
+        <p className="text-xs text-orange-500" data-testid="ai-search-no-provider">
+          {t.noProvider}
+        </p>
       )}
 
       {showHistory && history.length > 0 && (
-        <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-sm" data-testid="ai-search-history">
+        <div
+          className="rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-sm"
+          data-testid="ai-search-history"
+        >
           <div className="flex items-center justify-between px-2 py-1">
             <span className="text-xs text-[var(--color-text-muted)]">{t.historyLabel}</span>
-            <button onClick={handleClearHistory} className="text-xs text-[var(--color-text-muted)] hover:text-red-500">{t.clearHistory}</button>
+            <button onClick={handleClearHistory} className="text-xs text-[var(--color-text-muted)] hover:text-red-500">
+              {t.clearHistory}
+            </button>
           </div>
           {history.map((h, i) => (
             <button
@@ -208,20 +236,28 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]" data-testid="ai-search-loading">
+        <div
+          className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]"
+          data-testid="ai-search-loading"
+        >
           <Loader2 size={16} className="animate-spin" />
           {t.searching}
         </div>
       )}
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600" data-testid="ai-search-error">
+        <div
+          className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-600"
+          data-testid="ai-search-error"
+        >
           {error}
         </div>
       )}
 
       {!loading && !error && results.length === 0 && query.trim() && (
-        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="ai-search-no-results">{t.noResults}</p>
+        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="ai-search-no-results">
+          {t.noResults}
+        </p>
       )}
 
       {results.length > 0 && (
@@ -246,7 +282,9 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
 
       {unanalyzedIds.length > 0 && (
         <div className="mt-2 rounded-md border border-dashed border-slate-300 p-2" data-testid="ai-search-unanalyzed">
-          <p className="text-xs font-medium text-[var(--color-text-muted)]">{t.unanalyzedGroup} ({unanalyzedIds.length})</p>
+          <p className="text-xs font-medium text-[var(--color-text-muted)]">
+            {t.unanalyzedGroup} ({unanalyzedIds.length})
+          </p>
           <p className="text-[11px] text-[var(--color-text-muted)]">{t.unanalyzedHint}</p>
         </div>
       )}

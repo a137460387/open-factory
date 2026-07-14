@@ -1,6 +1,12 @@
 import type { ExportTaskHistoryEntry, ExportUploadState, ExportUploadTargetType } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { copyFile, putWebdavExportFile, readExportUploadWebdavPassword, type WebdavExportUploadRequest, type WebdavExportUploadResult } from '../lib/tauri-bridge';
+import {
+  copyFile,
+  putWebdavExportFile,
+  readExportUploadWebdavPassword,
+  type WebdavExportUploadRequest,
+  type WebdavExportUploadResult,
+} from '../lib/tauri-bridge';
 import { readExportUploadSettings, type ExportUploadSettings } from '../settings/appSettings';
 import { readExportHistoryEntry, updateExportHistoryUpload } from './export-history';
 
@@ -10,7 +16,7 @@ export interface ExportUploadDependencies {
   readWebdavPassword(): Promise<string | undefined> | string | undefined;
   updateHistoryUpload?(
     entryId: string,
-    patch: Parameters<typeof updateExportHistoryUpload>[1]
+    patch: Parameters<typeof updateExportHistoryUpload>[1],
   ): Promise<ExportTaskHistoryEntry | undefined> | ExportTaskHistoryEntry | undefined;
 }
 
@@ -30,7 +36,7 @@ export async function runConfiguredExportUpload(entryId: string): Promise<Export
   return runExportUploadForHistoryEntry(entry, settings, {
     copyFile,
     putWebdavExportFile,
-    readWebdavPassword: readExportUploadWebdavPassword
+    readWebdavPassword: readExportUploadWebdavPassword,
   });
 }
 
@@ -41,7 +47,7 @@ export async function retryExportUploadFromHistory(entryId: string): Promise<Exp
 export async function runExportUploadForHistoryEntry(
   entry: ExportTaskHistoryEntry,
   settings: ExportUploadSettings,
-  dependencies: ExportUploadDependencies
+  dependencies: ExportUploadDependencies,
 ): Promise<ExportUploadExecution | undefined> {
   const target = resolveExportUploadTarget(entry, settings);
   if (!target) {
@@ -52,7 +58,7 @@ export async function runExportUploadForHistoryEntry(
     targetType: target.targetType,
     status: 'running',
     destination: target.destination,
-    progress: 0.25
+    progress: 0.25,
   });
   const started = startedEntry?.upload;
   try {
@@ -62,7 +68,7 @@ export async function runExportUploadForHistoryEntry(
         url: target.destination,
         username: settings.webdav.username,
         password,
-        sourcePath: entry.outputPath
+        sourcePath: entry.outputPath,
       });
     } else {
       await dependencies.copyFile(entry.outputPath, target.destination);
@@ -71,10 +77,12 @@ export async function runExportUploadForHistoryEntry(
       targetType: target.targetType,
       status: 'success',
       destination: target.destination,
-      progress: 1
+      progress: 1,
     });
     const finished = finishedEntry?.upload;
-    return started && finished ? { targetType: target.targetType, destination: target.destination, started, finished } : undefined;
+    return started && finished
+      ? { targetType: target.targetType, destination: target.destination, started, finished }
+      : undefined;
   } catch (error) {
     const message = error instanceof Error ? error.message : zhCN.exportDialog.upload.failedMessage;
     const finishedEntry = await updateUpload(entry.id, {
@@ -82,23 +90,27 @@ export async function runExportUploadForHistoryEntry(
       status: 'error',
       destination: target.destination,
       error: message,
-      progress: 1
+      progress: 1,
     });
     const finished = finishedEntry?.upload;
-    return started && finished ? { targetType: target.targetType, destination: target.destination, started, finished } : undefined;
+    return started && finished
+      ? { targetType: target.targetType, destination: target.destination, started, finished }
+      : undefined;
   }
 }
 
 export function resolveExportUploadTarget(
   entry: Pick<ExportTaskHistoryEntry, 'outputPath'>,
-  settings: ExportUploadSettings
+  settings: ExportUploadSettings,
 ): { targetType: ExportUploadTargetType; destination: string } | undefined {
   if (!settings.enabled) {
     return undefined;
   }
   if (settings.targetType === 'local') {
     const directory = settings.local.directory?.trim();
-    return directory ? { targetType: 'local', destination: joinDirectoryAndFile(directory, fileNameFromPath(entry.outputPath)) } : undefined;
+    return directory
+      ? { targetType: 'local', destination: joinDirectoryAndFile(directory, fileNameFromPath(entry.outputPath)) }
+      : undefined;
   }
   const url = settings.webdav.url?.trim();
   return url ? { targetType: 'webdav', destination: url } : undefined;

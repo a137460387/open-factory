@@ -7,7 +7,7 @@ import {
   calculateExtractFrameTimes,
   estimateVisionCost,
   parseVisionAnalysisResponse,
-  mergeAITags
+  mergeAITags,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -19,18 +19,12 @@ const t = zhCN.inspector.aiContentAnalysis;
 
 type AnalysisPhase = 'idle' | 'extracting' | 'analyzing' | 'preview' | 'done';
 
-export function MediaAIAnalysisDialog({
-  asset,
-  onClose
-}: {
-  asset: MediaAsset;
-  onClose(): void;
-}) {
+export function MediaAIAnalysisDialog({ asset, onClose }: { asset: MediaAsset; onClose(): void }) {
   const providers = useAISettingsStore((s) => s.providers);
   const serviceMapping = useAISettingsStore((s) => s.serviceMapping);
   const safeTimeout = useSafeTimeout();
   const visionProviders = providers.filter(
-    (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel)
+    (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel),
   );
   const defaultProviderId = serviceMapping['vision-analysis'] ?? '';
   const defaultProvider = visionProviders.find((p) => p.id === defaultProviderId) ?? visionProviders[0];
@@ -58,31 +52,35 @@ export function MediaAIAnalysisDialog({
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const { frames } = await extractAiFrames({ sourcePath: asset.path, times: frameTimes });
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       setPhase('analyzing');
       setProgress({ done: frameTimes.length, total: frameTimes.length + 1 });
 
       const imageContent = frames.map((b64) => ({
         type: 'image_url' as const,
-        image_url: { url: `data:image/jpeg;base64,${b64}` }
+        image_url: { url: `data:image/jpeg;base64,${b64}` },
       }));
 
       const messages = [
         {
           role: 'system' as const,
-          content: '你是一个视频内容分析助手。用户会给你一段视频的截帧。请分析这些画面并返回JSON格式：{"tags": ["标签1","标签2"], "scene": "场景描述", "mood": "氛围描述", "objects": ["物体1","物体2"]}。标签不超过10个，场景和氛围各一句话。只返回JSON，不要其他内容。'
+          content:
+            '你是一个视频内容分析助手。用户会给你一段视频的截帧。请分析这些画面并返回JSON格式：{"tags": ["标签1","标签2"], "scene": "场景描述", "mood": "氛围描述", "objects": ["物体1","物体2"]}。标签不超过10个，场景和氛围各一句话。只返回JSON，不要其他内容。',
         },
         {
           role: 'user' as const,
-          content: [
-            { type: 'text' as const, text: `分析这段视频的内容，文件名：${asset.name}` },
-            ...imageContent
-          ]
-        }
+          content: [{ type: 'text' as const, text: `分析这段视频的内容，文件名：${asset.name}` }, ...imageContent],
+        },
       ];
 
       const response = await callAiApi(
@@ -94,19 +92,22 @@ export function MediaAIAnalysisDialog({
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 2048,
           temperature: 0.3,
-          timeoutSecs: 60
+          timeoutSecs: 60,
         },
-        apiKey
+        apiKey,
       );
 
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = parseVisionAnalysisResponse(JSON.parse(response.content));
       const analysis: MediaAIAnalysis = {
         ...parsed,
         tags: mergeAITags([], parsed.tags),
         analysisTime: new Date().toISOString(),
-        providerId: selectedProvider.id
+        providerId: selectedProvider.id,
       };
 
       setResult(analysis);
@@ -115,7 +116,7 @@ export function MediaAIAnalysisDialog({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('idle');
     }
@@ -131,11 +132,7 @@ export function MediaAIAnalysisDialog({
 
     const setMedia = useEditorStore.getState().setMedia;
     const currentMedia = useEditorStore.getState().project.media;
-    setMedia(
-      currentMedia.map((item) =>
-        item.id === asset.id ? { ...item, aiAnalysis: result } : item
-      )
-    );
+    setMedia(currentMedia.map((item) => (item.id === asset.id ? { ...item, aiAnalysis: result } : item)));
 
     showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage });
     setPhase('done');
@@ -160,7 +157,9 @@ export function MediaAIAnalysisDialog({
           </button>
         </div>
 
-        <div className="mb-3 text-xs text-[var(--color-text-muted)] truncate" title={asset.name}>{asset.name}</div>
+        <div className="mb-3 text-xs text-[var(--color-text-muted)] truncate" title={asset.name}>
+          {asset.name}
+        </div>
 
         {phase === 'idle' && (
           <div className="space-y-3">
@@ -175,7 +174,9 @@ export function MediaAIAnalysisDialog({
               >
                 {visionProviders.length === 0 && <option value="">{t.noProvider}</option>}
                 {visionProviders.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>

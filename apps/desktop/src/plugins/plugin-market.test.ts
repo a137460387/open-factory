@@ -5,7 +5,7 @@ import {
   installCatalogPlugin,
   loadPluginCatalog,
   parsePluginCatalogJson,
-  type PluginCatalogEntry
+  type PluginCatalogEntry,
 } from './plugin-market';
 import type { PluginRegistry } from './plugin-manager';
 
@@ -14,11 +14,11 @@ const tauriMocks = vi.hoisted(() => ({
   copyFile: vi.fn(),
   getAppDataDir: vi.fn(async () => 'C:/AppData/open-factory'),
   readFile: vi.fn(),
-  writeFile: vi.fn(async () => undefined)
+  writeFile: vi.fn(async () => undefined),
 }));
 
 const pluginManagerMocks = vi.hoisted(() => ({
-  refreshPluginRegistry: vi.fn(async () => undefined)
+  refreshPluginRegistry: vi.fn(async () => undefined),
 }));
 
 vi.mock('../lib/tauri-bridge', () => tauriMocks);
@@ -43,7 +43,7 @@ describe('plugin market', () => {
             description: 'Adds export checks.',
             permissions: ['export-hook', 'network' as never],
             downloadUrl: '/plugins/clean-cuts.js',
-            sha256: 'A'.repeat(64)
+            sha256: 'A'.repeat(64),
           },
           {
             id: 'invalid-hash',
@@ -52,11 +52,11 @@ describe('plugin market', () => {
             version: '1.0.0',
             permissions: [],
             downloadUrl: '/plugins/invalid.js',
-            sha256: 'not-a-sha'
+            sha256: 'not-a-sha',
           },
-          { id: 'missing-required-fields' }
-        ]
-      })
+          { id: 'missing-required-fields' },
+        ],
+      }),
     );
 
     expect(entries).toEqual([
@@ -68,8 +68,8 @@ describe('plugin market', () => {
         description: 'Adds export checks.',
         permissions: ['export-hook'],
         downloadUrl: '/plugins/clean-cuts.js',
-        sha256: 'a'.repeat(64)
-      }
+        sha256: 'a'.repeat(64),
+      },
     ]);
   });
 
@@ -86,7 +86,7 @@ describe('plugin market', () => {
         throw new Error('offline');
       }),
       readCache: async () => cached,
-      writeCache: async () => undefined
+      writeCache: async () => undefined,
     });
 
     expect(result.source).toBe('cache');
@@ -101,35 +101,58 @@ describe('plugin market', () => {
           sourcePath: 'C:/Plugins/e2e.js',
           rootPath: 'C:/Plugins',
           dev: false,
-          plugin: { id: 'market.plugin', name: 'Market Plugin', version: '1.0.0', description: '', permissions: ['export-hook'], hooks: {} },
-          runtime: { plugin: { id: 'market.plugin', name: 'Market Plugin', version: '1.0.0', description: '', permissions: ['export-hook'], hooks: {} }, invokeHook: async () => undefined, dispose: () => undefined },
+          plugin: {
+            id: 'market.plugin',
+            name: 'Market Plugin',
+            version: '1.0.0',
+            description: '',
+            permissions: ['export-hook'],
+            hooks: {},
+          },
+          runtime: {
+            plugin: {
+              id: 'market.plugin',
+              name: 'Market Plugin',
+              version: '1.0.0',
+              description: '',
+              permissions: ['export-hook'],
+              hooks: {},
+            },
+            invokeHook: async () => undefined,
+            dispose: () => undefined,
+          },
           errors: [],
           builtin: false,
-          enabled: true
-        }
-      ]
+          enabled: true,
+        },
+      ],
     };
 
     expect(getCatalogEntryInstallState(catalogEntry({ id: 'market.plugin', version: '1.0.0' }), registry)).toEqual({
       status: 'installed',
-      installedVersion: '1.0.0'
+      installedVersion: '1.0.0',
     });
     expect(getCatalogEntryInstallState(catalogEntry({ id: 'market.plugin', version: '1.1.0' }), registry)).toEqual({
       status: 'update-available',
-      installedVersion: '1.0.0'
+      installedVersion: '1.0.0',
     });
-    expect(getCatalogEntryInstallState(catalogEntry({ id: 'new.plugin' }), registry)).toEqual({ status: 'not-installed' });
+    expect(getCatalogEntryInstallState(catalogEntry({ id: 'new.plugin' }), registry)).toEqual({
+      status: 'not-installed',
+    });
   });
 
   it('installs catalog plugins only after hash, manifest permission, and user confirmation checks pass', async () => {
     const source = pluginSource(['export-hook']);
     const path = await installCatalogPlugin(catalogEntry(), {
       fetcher: fetcherFor(source),
-      hashProvider: async () => 'a'.repeat(64)
+      hashProvider: async () => 'a'.repeat(64),
     });
 
     expect(path).toBe('C:/AppData/open-factory/plugins/market.plugin.js');
-    expect(tauriMocks.bridgeConfirm).toHaveBeenCalledWith(expect.stringContaining('此插件来自第三方，请确认来源可信'), expect.objectContaining({ kind: 'warning' }));
+    expect(tauriMocks.bridgeConfirm).toHaveBeenCalledWith(
+      expect.stringContaining('此插件来自第三方，请确认来源可信'),
+      expect.objectContaining({ kind: 'warning' }),
+    );
     const [confirmMessage] = tauriMocks.bridgeConfirm.mock.calls[0] as unknown as [string, unknown];
     expect(confirmMessage).toContain('Market Plugin');
     expect(confirmMessage).toContain('/plugins/market-plugin.js');
@@ -141,8 +164,8 @@ describe('plugin market', () => {
     await expect(
       installCatalogPlugin(catalogEntry(), {
         fetcher: fetcherFor(pluginSource(['export-hook'])),
-        hashProvider: async () => 'b'.repeat(64)
-      })
+        hashProvider: async () => 'b'.repeat(64),
+      }),
     ).rejects.toThrow('SHA-256 mismatch');
 
     expect(tauriMocks.bridgeConfirm).not.toHaveBeenCalled();
@@ -154,8 +177,8 @@ describe('plugin market', () => {
     await expect(
       installCatalogPlugin(catalogEntry(), {
         fetcher: fetcherFor('module.exports = { hooks: {} };'),
-        hashProvider: async () => 'a'.repeat(64)
-      })
+        hashProvider: async () => 'a'.repeat(64),
+      }),
     ).rejects.toThrow('manifest permissions');
 
     expect(tauriMocks.writeFile).not.toHaveBeenCalled();
@@ -165,8 +188,8 @@ describe('plugin market', () => {
     await expect(
       installCatalogPlugin(catalogEntry({ permissions: ['export-hook'] }), {
         fetcher: fetcherFor(pluginSource(['read-project'])),
-        hashProvider: async () => 'a'.repeat(64)
-      })
+        hashProvider: async () => 'a'.repeat(64),
+      }),
     ).rejects.toThrow('permissions do not match');
 
     expect(tauriMocks.writeFile).not.toHaveBeenCalled();
@@ -178,8 +201,8 @@ describe('plugin market', () => {
     await expect(
       installCatalogPlugin(catalogEntry(), {
         fetcher: fetcherFor(pluginSource(['export-hook'])),
-        hashProvider: async () => 'a'.repeat(64)
-      })
+        hashProvider: async () => 'a'.repeat(64),
+      }),
     ).rejects.toThrow('canceled');
 
     expect(tauriMocks.writeFile).not.toHaveBeenCalled();
@@ -197,7 +220,7 @@ function catalogEntry(overrides: Partial<PluginCatalogEntry> = {}): PluginCatalo
     permissions: ['export-hook'],
     downloadUrl: '/plugins/market-plugin.js',
     sha256: 'a'.repeat(64),
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -211,13 +234,13 @@ function pluginSource(permissions: string[]): string {
     `    permissions: [${permissions.map((permission) => `"${permission}"`).join(', ')}]`,
     '  },',
     '  hooks: {}',
-    '};'
+    '};',
   ].join('\n');
 }
 
 function fetcherFor(source: string) {
   return vi.fn(async () => ({
     ok: true,
-    text: async () => source
+    text: async () => source,
   }));
 }

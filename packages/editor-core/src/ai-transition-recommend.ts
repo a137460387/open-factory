@@ -34,7 +34,7 @@ const VALID_TRANSITION_TYPES: TransitionType[] = [
   'wipe-left',
   'wipe-right',
   'wipe-up',
-  'wipe-down'
+  'wipe-down',
 ];
 
 export function calculateRGBHistogramChiSquareDistance(histA: readonly number[], histB: readonly number[]): number {
@@ -55,7 +55,7 @@ export function calculateRGBHistogramChiSquareDistance(histA: readonly number[],
 export function estimateMotionFromFrameDifferences(
   framePixels: readonly (readonly number[])[],
   width: number,
-  height: number
+  height: number,
 ): number {
   if (framePixels.length < 2) return 0;
   let totalDiff = 0;
@@ -99,7 +99,7 @@ export function mapToValidTransitionType(type: string): TransitionType {
 
 export function recommendTransition(
   clipA: TransitionClipFeatures,
-  clipB: TransitionClipFeatures
+  clipB: TransitionClipFeatures,
 ): TransitionRecommendationResult {
   const colorDist = calculateRGBHistogramChiSquareDistance(clipA.colorHist, clipB.colorHist);
   const avgMotion = (clipA.motionScore + clipB.motionScore) / 2;
@@ -110,7 +110,7 @@ export function recommendTransition(
       transitionType: 'dissolve',
       duration: 0.8,
       reason: '颜色差异较大，推荐交叉溶解过渡',
-      confidence: round(Math.min(0.95, 0.6 + colorDist * 0.3))
+      confidence: round(Math.min(0.95, 0.6 + colorDist * 0.3)),
     });
   }
 
@@ -119,14 +119,14 @@ export function recommendTransition(
       transitionType: 'flash-white',
       duration: 0.3,
       reason: '运动幅度高，推荐闪白过渡',
-      confidence: round(Math.min(0.9, 0.5 + avgMotion * 0.02))
+      confidence: round(Math.min(0.9, 0.5 + avgMotion * 0.02)),
     });
   } else if (avgMotion < MOTION_LOW_THRESHOLD) {
     recommendations.push({
       transitionType: 'fade-black',
       duration: 1.0,
       reason: '画面静止，推荐黑场过渡',
-      confidence: round(0.7 - avgMotion * 0.05)
+      confidence: round(0.7 - avgMotion * 0.05),
     });
   }
 
@@ -135,7 +135,7 @@ export function recommendTransition(
       transitionType: 'wipe-left',
       duration: 0.5,
       reason: '场景类型变化，推荐擦除过渡',
-      confidence: 0.75
+      confidence: 0.75,
     });
   }
 
@@ -144,12 +144,12 @@ export function recommendTransition(
       transitionType: 'dissolve',
       duration: 0.5,
       reason: '默认过渡',
-      confidence: 0.5
+      confidence: 0.5,
     });
   }
 
   return {
-    recommended: recommendations.sort((a, b) => b.confidence - a.confidence)
+    recommended: recommendations.sort((a, b) => b.confidence - a.confidence),
   };
 }
 
@@ -158,13 +158,13 @@ const REASON_KEY_MAP: Record<string, string> = {
   '运动幅度高，推荐闪白过渡': 'aiTransitionRecommend.reasons.highMotion',
   '画面静止，推荐黑场过渡': 'aiTransitionRecommend.reasons.staticScene',
   '场景类型变化，推荐擦除过渡': 'aiTransitionRecommend.reasons.sceneChange',
-  '默认过渡': 'aiTransitionRecommend.reasons.fallback',
+  默认过渡: 'aiTransitionRecommend.reasons.fallback',
 };
 
 export async function recommendTransitionSafe(
   clipA: TransitionClipFeatures,
   clipB: TransitionClipFeatures,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<TransitionRecommendationResult>> {
   try {
     const result = recommendTransition(clipA, clipB);

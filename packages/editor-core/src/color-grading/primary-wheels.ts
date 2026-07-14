@@ -4,10 +4,7 @@ export class PrimaryWheels {
   /**
    * 将色轮参数转换为 WebGL uniform 值
    */
-  static toUniforms(
-    params: PrimaryWheelParams,
-    prefix: string
-  ): Record<string, number[]> {
+  static toUniforms(params: PrimaryWheelParams, prefix: string): Record<string, number[]> {
     return {
       [`${prefix}_lift`]: [params.lift.r, params.lift.g, params.lift.b, params.liftMaster],
       [`${prefix}_gamma`]: [params.gamma.r, params.gamma.g, params.gamma.b, params.gammaMaster],
@@ -72,13 +69,12 @@ vec4 applyLiftGammaGain(vec4 color, vec4 lift, vec4 gamma, vec4 gain, vec4 offse
       const gh = params.gain.g + params.gainMaster;
       const bh = params.gain.b + params.gainMaster;
 
-      filters.push(
-        `colorbalance=rs=${rs}:gs=${gs}:bs=${bs}:rm=${rm}:gm=${gm}:bm=${bm}:rh=${rh}:gh=${gh}:bh=${bh}`
-      );
+      filters.push(`colorbalance=rs=${rs}:gs=${gs}:bs=${bs}:rm=${rm}:gm=${gm}:bm=${bm}:rh=${rh}:gh=${gh}:bh=${bh}`);
     }
 
     // Offset 使用 curves 滤镜
-    const hasOffset = params.offset.r !== 0 || params.offset.g !== 0 || params.offset.b !== 0 || params.offsetMaster !== 0;
+    const hasOffset =
+      params.offset.r !== 0 || params.offset.g !== 0 || params.offset.b !== 0 || params.offsetMaster !== 0;
     if (hasOffset) {
       const or = 0.5 + params.offset.r + params.offsetMaster;
       const og = 0.5 + params.offset.g + params.offsetMaster;

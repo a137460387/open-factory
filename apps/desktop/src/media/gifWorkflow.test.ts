@@ -8,10 +8,34 @@ describe('gif workflow helpers', () => {
   });
 
   it('estimates larger GIF files for more frames and pixels', () => {
-    const small = estimateGifFileSizeBytes({ sourceWidth: 1920, sourceHeight: 1080, scaleWidth: 320, frameRate: 12, duration: 2 });
-    const longer = estimateGifFileSizeBytes({ sourceWidth: 1920, sourceHeight: 1080, scaleWidth: 320, frameRate: 12, duration: 4 });
-    const faster = estimateGifFileSizeBytes({ sourceWidth: 1920, sourceHeight: 1080, scaleWidth: 320, frameRate: 24, duration: 2 });
-    const wider = estimateGifFileSizeBytes({ sourceWidth: 1920, sourceHeight: 1080, scaleWidth: 640, frameRate: 12, duration: 2 });
+    const small = estimateGifFileSizeBytes({
+      sourceWidth: 1920,
+      sourceHeight: 1080,
+      scaleWidth: 320,
+      frameRate: 12,
+      duration: 2,
+    });
+    const longer = estimateGifFileSizeBytes({
+      sourceWidth: 1920,
+      sourceHeight: 1080,
+      scaleWidth: 320,
+      frameRate: 12,
+      duration: 4,
+    });
+    const faster = estimateGifFileSizeBytes({
+      sourceWidth: 1920,
+      sourceHeight: 1080,
+      scaleWidth: 320,
+      frameRate: 24,
+      duration: 2,
+    });
+    const wider = estimateGifFileSizeBytes({
+      sourceWidth: 1920,
+      sourceHeight: 1080,
+      scaleWidth: 640,
+      frameRate: 12,
+      duration: 2,
+    });
 
     expect(longer).toBeGreaterThan(small);
     expect(faster).toBeGreaterThan(small);
@@ -27,17 +51,17 @@ describe('gif workflow helpers', () => {
           startTime: 12,
           duration: 10,
           loopCount: 200,
-          dither: 'bad' as never
+          dither: 'bad' as never,
         },
-        5
-      )
+        5,
+      ),
     ).toEqual({
       frameRate: 30,
       scaleWidth: 16,
       startTime: 5,
       duration: 0.1,
       loopCount: 100,
-      dither: 'floyd_steinberg'
+      dither: 'floyd_steinberg',
     });
   });
 });

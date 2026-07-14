@@ -71,9 +71,14 @@ export function findTimelineSnapTarget(input: TimelineSnapInput): TimelineSnapTa
         candidate,
         snappedStart: round(Math.max(0, snappedStart)),
         delta: round(delta),
-        distancePx
+        distancePx,
       };
-      if (!best || target.distancePx < best.distancePx - EPSILON_PX || (Math.abs(target.distancePx - best.distancePx) <= EPSILON_PX && snapCandidatePriority(target.candidate) > snapCandidatePriority(best.candidate))) {
+      if (
+        !best ||
+        target.distancePx < best.distancePx - EPSILON_PX ||
+        (Math.abs(target.distancePx - best.distancePx) <= EPSILON_PX &&
+          snapCandidatePriority(target.candidate) > snapCandidatePriority(best.candidate))
+      ) {
         best = target;
       }
     }
@@ -94,13 +99,21 @@ export function snapCandidatePriority(candidate: TimelineSnapCandidate): number 
 /** Human-readable label for snap candidate kind (zh-CN). */
 export function snapCandidateKindLabel(kind: SnapCandidateKind | undefined): string {
   switch (kind) {
-    case 'beat': return '节拍';
-    case 'marker': return '标记点';
-    case 'grid': return '网格';
-    case 'playhead': return '播放头';
-    case 'timeline-start': return '时间线起点';
-    case 'clip-start': return 'clip起点';
-    case 'clip-end': return 'clip终点';
-    default: return '吸附';
+    case 'beat':
+      return '节拍';
+    case 'marker':
+      return '标记点';
+    case 'grid':
+      return '网格';
+    case 'playhead':
+      return '播放头';
+    case 'timeline-start':
+      return '时间线起点';
+    case 'clip-start':
+      return 'clip起点';
+    case 'clip-end':
+      return 'clip终点';
+    default:
+      return '吸附';
   }
 }

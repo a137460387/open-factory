@@ -10,7 +10,7 @@ import {
   type ExportPreviewSamplePlan,
   type FrameInterpolationCompareMode,
   type MediaAsset,
-  type Project
+  type Project,
 } from '@open-factory/editor-core';
 
 interface FrameInterpolationComparePreviewItem {
@@ -35,7 +35,7 @@ export function buildFrameInterpolationComparePreviewPlan(
   asset: MediaAsset,
   playheadTime: number,
   outputDir: string,
-  labels: Record<FrameInterpolationCompareMode, string>
+  labels: Record<FrameInterpolationCompareMode, string>,
 ): FrameInterpolationComparePreviewPlan {
   if (!asset.path) {
     throw new Error('Missing media path for frame interpolation preview.');
@@ -58,7 +58,7 @@ export function buildFrameInterpolationComparePreviewPlan(
       outputPath,
       estimatedMs: estimateFrameInterpolationModeDurationMs(clipFrameCount, mode),
       sourceFrameTimes,
-      slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(mode)
+      slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(mode),
     };
   });
 
@@ -78,9 +78,9 @@ export function buildFrameInterpolationComparePreviewPlan(
         width: outputWidth,
         height: outputHeight,
         targetFps,
-        mode: item.mode
-      })
-    }))
+        mode: item.mode,
+      }),
+    })),
   };
 }
 
@@ -92,7 +92,7 @@ function buildSingleClipPreviewPlan({
   width,
   height,
   targetFps,
-  mode
+  mode,
 }: {
   mediaPath: string;
   sourceStart: number;
@@ -111,10 +111,23 @@ function buildSingleClipPreviewPlan({
     ...buildFrameInterpolationCompareArgs(mode, targetFps),
     `scale=${width}:${height}:force_original_aspect_ratio=decrease`,
     `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`,
-    'format=rgba'
+    'format=rgba',
   ];
   const filterComplex = `[0:v]${filterChain.join(',')}[vout]`;
-  const fullArgs = ['-y', '-i', inputPath, '-filter_complex', filterComplex, '-map', '[vout]', '-frames:v', '1', '-f', 'image2', normalizedOutput];
+  const fullArgs = [
+    '-y',
+    '-i',
+    inputPath,
+    '-filter_complex',
+    filterComplex,
+    '-map',
+    '[vout]',
+    '-frames:v',
+    '1',
+    '-f',
+    'image2',
+    normalizedOutput,
+  ];
   return {
     inputs: [{ index: 0, path: inputPath, args: ['-i', inputPath] }],
     filterComplex,
@@ -124,7 +137,7 @@ function buildSingleClipPreviewPlan({
     warnings: [],
     textArtifacts: [],
     nestedPlans: [],
-    duration: frameWindowDuration
+    duration: frameWindowDuration,
   };
 }
 

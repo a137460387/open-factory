@@ -12,7 +12,11 @@ export function HistoryPanel() {
     try {
       commandManager.jumpToEntry(entryId);
     } catch (error) {
-      showToast({ kind: 'warning', title: t.jumpFailed, message: error instanceof Error ? error.message : t.jumpFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.jumpFailed,
+        message: error instanceof Error ? error.message : t.jumpFailedMessage,
+      });
       commandManager.jumpTo(index);
     }
   };
@@ -28,7 +32,10 @@ export function HistoryPanel() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {historyMeta.entries.length === 0 ? (
-          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-slate-500" data-testid="history-empty-state">
+          <div
+            className="flex h-full items-center justify-center p-6 text-center text-sm text-slate-500"
+            data-testid="history-empty-state"
+          >
             {t.empty}
           </div>
         ) : (
@@ -67,14 +74,19 @@ export function HistoryPanel() {
                         <MousePointer2 size={12} />
                         <span>{t.affectedClips(entry.affectedClipCount)}</span>
                         {isBranched ? (
-                          <span className="inline-flex items-center gap-1 rounded border border-line bg-panel px-1.5 py-0.5" data-testid="history-branch-badge">
+                          <span
+                            className="inline-flex items-center gap-1 rounded border border-line bg-panel px-1.5 py-0.5"
+                            data-testid="history-branch-badge"
+                          >
                             <GitBranch size={11} />
                             {t.branchLabel((entry.branchIndex ?? 0) + 1, entry.siblingCount ?? 1)}
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <time className="shrink-0 text-xs tabular-nums text-slate-500">{formatHistoryTime(entry.timestamp)}</time>
+                    <time className="shrink-0 text-xs tabular-nums text-slate-500">
+                      {formatHistoryTime(entry.timestamp)}
+                    </time>
                   </div>
                 </button>
               );

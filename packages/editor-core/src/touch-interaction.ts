@@ -40,10 +40,13 @@ export const DEFAULT_TOUCH_OPTIMIZATION_SETTINGS: TouchOptimizationSettings = {
   trimHandleScale: TOUCH_TRIM_HANDLE_SCALE,
   uiSpacingMultiplier: TOUCH_UI_SPACING_MULTIPLIER,
   longPressMs: TOUCH_LONG_PRESS_MS,
-  doubleTapMs: TOUCH_DOUBLE_TAP_MS
+  doubleTapMs: TOUCH_DOUBLE_TAP_MS,
 };
 
-export function detectInputDevice(event: { pointerType?: string; sourceCapabilities?: { firesTouchEvents?: boolean } }): InputDeviceType {
+export function detectInputDevice(event: {
+  pointerType?: string;
+  sourceCapabilities?: { firesTouchEvents?: boolean };
+}): InputDeviceType {
   const pt = event.pointerType?.toLowerCase();
   if (pt === 'touch') return 'touch';
   if (pt === 'pen') return 'pen';
@@ -56,7 +59,7 @@ export function classifyTouchGesture(
   startPoints: TouchPoint[],
   currentPoints: TouchPoint[],
   elapsedMs: number,
-  longPressThresholdMs = TOUCH_LONG_PRESS_MS
+  longPressThresholdMs = TOUCH_LONG_PRESS_MS,
 ): TouchGestureType {
   if (startPoints.length >= 2 && currentPoints.length >= 2) {
     return 'pinch-zoom';
@@ -76,7 +79,7 @@ export function isDoubleTap(
   lastTapPosition: { x: number; y: number },
   currentPosition: { x: number; y: number },
   maxMs = TOUCH_DOUBLE_TAP_MS,
-  maxDistancePx = 24
+  maxDistancePx = 24,
 ): boolean {
   const dt = currentTime - lastTapTime;
   if (dt > maxMs || dt < 0) return false;
@@ -87,7 +90,7 @@ export function isDoubleTap(
 
 export function calculatePinchScale(
   startPoints: [TouchPoint, TouchPoint],
-  currentPoints: [TouchPoint, TouchPoint]
+  currentPoints: [TouchPoint, TouchPoint],
 ): number {
   const startDist = distanceBetween(startPoints[0], startPoints[1]);
   const currentDist = distanceBetween(currentPoints[0], currentPoints[1]);
@@ -95,7 +98,11 @@ export function calculatePinchScale(
   return currentDist / startDist;
 }
 
-export function calculateTouchTrimHandleSize(baseSize: number, deviceType: InputDeviceType, settings?: Partial<TouchOptimizationSettings>): number {
+export function calculateTouchTrimHandleSize(
+  baseSize: number,
+  deviceType: InputDeviceType,
+  settings?: Partial<TouchOptimizationSettings>,
+): number {
   const isTouch = deviceType === 'touch' || deviceType === 'pen';
   if (!isTouch) return baseSize;
   const scale = settings?.trimHandleScale ?? TOUCH_TRIM_HANDLE_SCALE;
@@ -109,17 +116,17 @@ export function calculateTouchUISpacing(baseSpacing: number, touchMode: boolean,
 
 export function normalizeTouchOptimizationSettings(
   input: Partial<TouchOptimizationSettings> | undefined,
-  hasTouchHardware?: boolean
+  hasTouchHardware?: boolean,
 ): TouchOptimizationSettings {
   const autoDetect = input?.autoDetect !== false;
-  const enabled = autoDetect ? (hasTouchHardware === true) : (input?.enabled === true);
+  const enabled = autoDetect ? hasTouchHardware === true : input?.enabled === true;
   return {
     enabled,
     autoDetect,
     trimHandleScale: positiveFinite(input?.trimHandleScale, TOUCH_TRIM_HANDLE_SCALE),
     uiSpacingMultiplier: positiveFinite(input?.uiSpacingMultiplier, TOUCH_UI_SPACING_MULTIPLIER),
     longPressMs: positiveInt(input?.longPressMs, TOUCH_LONG_PRESS_MS),
-    doubleTapMs: positiveInt(input?.doubleTapMs, TOUCH_DOUBLE_TAP_MS)
+    doubleTapMs: positiveInt(input?.doubleTapMs, TOUCH_DOUBLE_TAP_MS),
   };
 }
 

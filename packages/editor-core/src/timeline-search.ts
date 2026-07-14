@@ -75,7 +75,7 @@ export function searchTimeline(project: Project, options: TimelineSearchOptions)
         clipType: clip.type,
         mediaId: asset?.id,
         mediaName: asset?.name,
-        matchReasons: reasons.length > 0 ? reasons : ['filter']
+        matchReasons: reasons.length > 0 ? reasons : ['filter'],
       });
     }
   }
@@ -89,7 +89,10 @@ export function searchTimeline(project: Project, options: TimelineSearchOptions)
   }
 
   return {
-    results: results.sort((left, right) => left.start - right.start || kindSort(left.kind) - kindSort(right.kind) || left.label.localeCompare(right.label))
+    results: results.sort(
+      (left, right) =>
+        left.start - right.start || kindSort(left.kind) - kindSort(right.kind) || left.label.localeCompare(right.label),
+    ),
   };
 }
 
@@ -110,7 +113,10 @@ export function buildTimelineSearchMatcher(query: string, useRegex = false): Tim
   return { empty: false, matches: (value) => Boolean(value?.toLowerCase().includes(normalized)) };
 }
 
-export function clipPassesTimelineSearchFilters(clip: Clip, options: Pick<TimelineSearchOptions, 'mediaFilter' | 'effectFilter' | 'keyframeFilter'>): boolean {
+export function clipPassesTimelineSearchFilters(
+  clip: Clip,
+  options: Pick<TimelineSearchOptions, 'mediaFilter' | 'effectFilter' | 'keyframeFilter'>,
+): boolean {
   const mediaFilter = options.mediaFilter ?? 'all';
   if (mediaFilter !== 'all' && clip.type !== mediaFilter) {
     return false;
@@ -135,18 +141,36 @@ export function clipPassesTimelineSearchFilters(clip: Clip, options: Pick<Timeli
 export function createTimelineSearchJump(result: TimelineSearchResult): TimelineSearchJump {
   return {
     playheadTime: result.start,
-    selectedClipIds: result.kind === 'clip' && result.clipId ? [result.clipId] : []
+    selectedClipIds: result.kind === 'clip' && result.clipId ? [result.clipId] : [],
   };
 }
 
-function collectClipSearchReasons(clip: Clip, track: Track, asset: MediaAsset | undefined, groupNames: string[], matcher: TimelineSearchMatcher): string[] {
+function collectClipSearchReasons(
+  clip: Clip,
+  track: Track,
+  asset: MediaAsset | undefined,
+  groupNames: string[],
+  matcher: TimelineSearchMatcher,
+): string[] {
   const reasons: string[] = [];
   addReason(reasons, matcher.matches(clip.name), 'clip-name');
   addReason(reasons, matcher.matches(asset?.name) || matcher.matches(asset?.path), 'file-name');
-  addReason(reasons, matcher.matches(clip.colorLabel ?? undefined) || matcher.matches(track.color ?? undefined), 'color-label');
-  addReason(reasons, (clip.effects ?? []).some((effect) => matcher.matches(effect.type)), 'effect-type');
+  addReason(
+    reasons,
+    matcher.matches(clip.colorLabel ?? undefined) || matcher.matches(track.color ?? undefined),
+    'color-label',
+  );
+  addReason(
+    reasons,
+    (clip.effects ?? []).some((effect) => matcher.matches(effect.type)),
+    'effect-type',
+  );
   addReason(reasons, clip.type === 'subtitle' && matcher.matches(clip.text), 'subtitle-text');
-  addReason(reasons, groupNames.some((name) => matcher.matches(name)), 'group-name');
+  addReason(
+    reasons,
+    groupNames.some((name) => matcher.matches(name)),
+    'group-name',
+  );
   return reasons;
 }
 
@@ -175,7 +199,7 @@ function markerToSearchResult(marker: TimelineMarker): TimelineSearchResult {
     label: marker.label,
     start: marker.time,
     trackName: 'Markers',
-    matchReasons: ['marker-name']
+    matchReasons: ['marker-name'],
   };
 }
 
@@ -183,8 +207,14 @@ function clipHasTimelineSearchKeyframes(clip: Clip): boolean {
   return Object.values(clip.keyframes ?? {}).some((frames) => Array.isArray(frames) && frames.length > 0);
 }
 
-function hasTimelineSearchFilter(options: Pick<TimelineSearchOptions, 'mediaFilter' | 'effectFilter' | 'keyframeFilter'>): boolean {
-  return (options.mediaFilter ?? 'all') !== 'all' || (options.effectFilter ?? 'all') !== 'all' || (options.keyframeFilter ?? 'all') !== 'all';
+function hasTimelineSearchFilter(
+  options: Pick<TimelineSearchOptions, 'mediaFilter' | 'effectFilter' | 'keyframeFilter'>,
+): boolean {
+  return (
+    (options.mediaFilter ?? 'all') !== 'all' ||
+    (options.effectFilter ?? 'all') !== 'all' ||
+    (options.keyframeFilter ?? 'all') !== 'all'
+  );
 }
 
 function kindSort(kind: TimelineSearchResultKind): number {

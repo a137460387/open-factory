@@ -30,7 +30,11 @@ export function clampPreviewCompareSplitRatio(value: number): number {
   return Math.min(0.9, Math.max(0.1, value));
 }
 
-export function calculatePreviewCompareSplitRatio(mode: PreviewCompareMode, pointer: PreviewComparePointer, bounds: PreviewCompareBounds): number {
+export function calculatePreviewCompareSplitRatio(
+  mode: PreviewCompareMode,
+  pointer: PreviewComparePointer,
+  bounds: PreviewCompareBounds,
+): number {
   if (mode === 'top-bottom') {
     return clampPreviewCompareSplitRatio((pointer.clientY - bounds.top) / Math.max(1, bounds.height));
   }
@@ -56,7 +60,7 @@ export function buildPreviewCompareDividerStyle(mode: PreviewCompareMode, splitR
       left: '0',
       width: '100%',
       height: '2px',
-      transform: 'translateY(-1px)'
+      transform: 'translateY(-1px)',
     };
   }
   return {
@@ -64,11 +68,15 @@ export function buildPreviewCompareDividerStyle(mode: PreviewCompareMode, splitR
     top: '0',
     width: '2px',
     height: '100%',
-    transform: 'translateX(-1px)'
+    transform: 'translateX(-1px)',
   };
 }
 
-export function drawPreviewDifferenceFrame(canvas: HTMLCanvasElement, processed: PreviewFrameReadback, original: PreviewFrameReadback): void {
+export function drawPreviewDifferenceFrame(
+  canvas: HTMLCanvasElement,
+  processed: PreviewFrameReadback,
+  original: PreviewFrameReadback,
+): void {
   const width = Math.min(processed.width, original.width);
   const height = Math.min(processed.height, original.height);
   const context = canvas.getContext('2d');
@@ -87,9 +95,18 @@ export function drawPreviewDifferenceFrame(canvas: HTMLCanvasElement, processed:
       const processedOffset = getFrameOffset(processed, x, y);
       const originalOffset = getFrameOffset(original, x, y);
       const outputOffset = (y * width + x) * 4;
-      image.data[outputOffset] = Math.min(255, Math.abs(processed.data[processedOffset] - original.data[originalOffset]) * 2);
-      image.data[outputOffset + 1] = Math.min(255, Math.abs(processed.data[processedOffset + 1] - original.data[originalOffset + 1]) * 2);
-      image.data[outputOffset + 2] = Math.min(255, Math.abs(processed.data[processedOffset + 2] - original.data[originalOffset + 2]) * 2);
+      image.data[outputOffset] = Math.min(
+        255,
+        Math.abs(processed.data[processedOffset] - original.data[originalOffset]) * 2,
+      );
+      image.data[outputOffset + 1] = Math.min(
+        255,
+        Math.abs(processed.data[processedOffset + 1] - original.data[originalOffset + 1]) * 2,
+      );
+      image.data[outputOffset + 2] = Math.min(
+        255,
+        Math.abs(processed.data[processedOffset + 2] - original.data[originalOffset + 2]) * 2,
+      );
       image.data[outputOffset + 3] = 255;
     }
   }

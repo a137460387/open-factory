@@ -8,7 +8,7 @@ import {
   cancelBatchTranscodeTask,
   listenBatchTranscodeProgress,
   type BatchTranscodePreset,
-  type BatchTranscodeProgressEvent
+  type BatchTranscodeProgressEvent,
 } from '../lib/tauri-bridge';
 import { fileNameFromPath } from '../lib/tauri';
 import { showToast } from '../lib/toast';
@@ -33,7 +33,12 @@ interface BatchTranscodeJob {
 
 const PRESETS: BatchTranscodePreset[] = ['h264-720p', 'h264-1080p', 'prores-proxy'];
 
-export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImport, onClose }: BatchTranscodeDialogProps) {
+export function BatchTranscodeDialog({
+  initialPaths = [],
+  existingMedia,
+  onImport,
+  onClose,
+}: BatchTranscodeDialogProps) {
   const t = zhCN.batchTranscode;
   const [paths, setPaths] = useState(() => uniquePaths(initialPaths));
   const [preset, setPreset] = useState<BatchTranscodePreset>('h264-720p');
@@ -43,14 +48,16 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
   const failedCount = jobs.filter((job) => job.status === 'failed').length;
   const canceledCount = jobs.filter((job) => job.status === 'canceled').length;
   const hasStarted = jobs.length > 0;
-  const visibleJobs: BatchTranscodeJob[] = hasStarted ? jobs : paths.map((sourcePath) => ({ taskId: sourcePath, sourcePath, status: 'pending', progress: 0 }));
+  const visibleJobs: BatchTranscodeJob[] = hasStarted
+    ? jobs
+    : paths.map((sourcePath) => ({ taskId: sourcePath, sourcePath, status: 'pending', progress: 0 }));
   const canStart = !busy && paths.length > 0;
   const summary = useMemo(
     () =>
       hasStarted
         ? `${t.status.completed} ${completedCount} · ${t.status.failed} ${failedCount} · ${t.status.canceled} ${canceledCount}`
         : t.noFiles,
-    [canceledCount, completedCount, failedCount, hasStarted, t]
+    [canceledCount, completedCount, failedCount, hasStarted, t],
   );
 
   useEffect(() => {
@@ -94,7 +101,7 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
     }
     const taskRequests = paths.map((sourcePath) => ({
       taskId: createId('transcode'),
-      sourcePath
+      sourcePath,
     }));
     setJobs(taskRequests.map((task) => ({ ...task, status: 'pending', progress: 0 })));
     setBusy(true);
@@ -109,10 +116,10 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
                 outputPath: result.outputPath ?? job.outputPath,
                 status: result.status,
                 progress: result.status === 'completed' ? 1 : job.progress,
-                error: result.error
+                error: result.error,
               }
             : job;
-        })
+        }),
       );
       const outputPaths = response.results
         .filter((result) => result.status === 'completed' && result.outputPath)
@@ -124,23 +131,37 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
       const imported = await probeMediaPaths(outputPaths, existingMedia);
       if (imported.media.length > 0) {
         onImport(imported.media);
-        showToast({ kind: 'success', title: t.completedToast, message: t.completedToastMessage(imported.media.length) });
+        showToast({
+          kind: 'success',
+          title: t.completedToast,
+          message: t.completedToastMessage(imported.media.length),
+        });
       } else {
         showToast({ kind: 'warning', title: t.completedToast, message: t.failedMessage });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: t.failedToast, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'error',
+        title: t.failedToast,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     } finally {
       setBusy(false);
     }
   };
 
   const cancelTask = async (taskId: string) => {
-    setJobs((current) => current.map((job) => (job.taskId === taskId ? { ...job, status: 'canceled', progress: 0 } : job)));
+    setJobs((current) =>
+      current.map((job) => (job.taskId === taskId ? { ...job, status: 'canceled', progress: 0 } : job)),
+    );
     try {
       await cancelBatchTranscodeTask(taskId);
     } catch (error) {
-      showToast({ kind: 'error', title: t.failedToast, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'error',
+        title: t.failedToast,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     }
   };
 
@@ -153,15 +174,18 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
               sourcePath: payload.sourcePath,
               outputPath: payload.outputPath ?? job.outputPath,
               status: payload.status,
-              progress: payload.progress
+              progress: payload.progress,
             }
-          : job
-      )
+          : job,
+      ),
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="batch-transcode-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="batch-transcode-dialog"
+    >
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -228,7 +252,12 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
               ) : (
                 <div className="space-y-2" data-testid="batch-transcode-file-list">
                   {visibleJobs.map((job) => (
-                    <div key={job.taskId} className="rounded-md border border-line bg-white p-3" data-testid={`batch-transcode-task-${fileNameFromPath(job.sourcePath)}`} data-status={job.status}>
+                    <div
+                      key={job.taskId}
+                      className="rounded-md border border-line bg-white p-3"
+                      data-testid={`batch-transcode-task-${fileNameFromPath(job.sourcePath)}`}
+                      data-status={job.status}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-ink" title={job.sourcePath}>
@@ -237,7 +266,9 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
                           <div className="truncate text-xs text-slate-500">{job.outputPath ?? job.sourcePath}</div>
                         </div>
                         {hasStarted ? (
-                          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusTone(job.status)}`}>
+                          <span
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusTone(job.status)}`}
+                          >
                             {job.status === 'running' ? <Loader2 className="animate-spin" size={12} /> : null}
                             {t.status[job.status]}
                           </span>
@@ -257,9 +288,14 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
                       {hasStarted ? (
                         <div className="mt-3 flex items-center gap-2">
                           <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
-                            <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(job.progress * 100)}%` }} />
+                            <div
+                              className="h-full bg-brand transition-all"
+                              style={{ width: `${Math.round(job.progress * 100)}%` }}
+                            />
                           </div>
-                          <div className="w-10 text-right text-xs tabular-nums text-slate-600">{Math.round(job.progress * 100)}%</div>
+                          <div className="w-10 text-right text-xs tabular-nums text-slate-600">
+                            {Math.round(job.progress * 100)}%
+                          </div>
                           {(job.status === 'pending' || job.status === 'running') && busy ? (
                             <button
                               className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
@@ -283,7 +319,12 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50" type="button" disabled={busy} onClick={onClose}>
+          <button
+            className="rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+          >
             {t.closeWhenDone}
           </button>
           <button

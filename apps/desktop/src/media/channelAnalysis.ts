@@ -30,7 +30,12 @@ export interface ChannelAnalysisSnapshot {
   correlation: number;
 }
 
-export function mapFftBinsToHz(data: ArrayLike<number>, sampleRate: number, minHz = 20, maxHz = 20_000): FrequencyPoint[] {
+export function mapFftBinsToHz(
+  data: ArrayLike<number>,
+  sampleRate: number,
+  minHz = 20,
+  maxHz = 20_000,
+): FrequencyPoint[] {
   const length = Math.max(0, data.length);
   if (length === 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
     return [];
@@ -47,7 +52,7 @@ export function mapFftBinsToHz(data: ArrayLike<number>, sampleRate: number, minH
     points.push({
       index,
       hz: roundNumber(hz, 2),
-      magnitude: normalizeMagnitude(data[index] ?? 0)
+      magnitude: normalizeMagnitude(data[index] ?? 0),
     });
   }
   return points;
@@ -100,7 +105,7 @@ function buildPhasePoints(left: ArrayLike<number>, right: ArrayLike<number>, max
   for (let index = 0; index < length && points.length < maxPoints; index += step) {
     points.push({
       left: roundNumber(normalizeWaveSample(left[index] ?? 0), 3),
-      right: roundNumber(normalizeWaveSample(right[index] ?? 0), 3)
+      right: roundNumber(normalizeWaveSample(right[index] ?? 0), 3),
     });
   }
   return points;
@@ -114,21 +119,25 @@ export function buildChannelAnalysisSnapshot(trackId: string, frame: ChannelAnal
     frequency,
     peaks: detectTopFrequencyPeaks(frequency, 3),
     phase: buildPhasePoints(frame.leftTimeDomain, frame.rightTimeDomain),
-    correlation: calculateStereoCorrelation(frame.leftTimeDomain, frame.rightTimeDomain)
+    correlation: calculateStereoCorrelation(frame.leftTimeDomain, frame.rightTimeDomain),
   };
 }
 
 export function serializeChannelAnalysisJson(snapshots: ChannelAnalysisSnapshot[]): string {
-  return `${JSON.stringify({
-    version: 1,
-    snapshots: snapshots.map((snapshot) => ({
-      timeMs: snapshot.timeMs,
-      trackId: snapshot.trackId,
-      correlation: snapshot.correlation,
-      peaks: snapshot.peaks.map((peak) => ({ rank: peak.rank, hz: peak.hz, loudness: peak.magnitude })),
-      frequencyBands: snapshot.frequency.map((point) => ({ hz: point.hz, loudness: point.magnitude }))
-    }))
-  }, null, 2)}\n`;
+  return `${JSON.stringify(
+    {
+      version: 1,
+      snapshots: snapshots.map((snapshot) => ({
+        timeMs: snapshot.timeMs,
+        trackId: snapshot.trackId,
+        correlation: snapshot.correlation,
+        peaks: snapshot.peaks.map((peak) => ({ rank: peak.rank, hz: peak.hz, loudness: peak.magnitude })),
+        frequencyBands: snapshot.frequency.map((point) => ({ hz: point.hz, loudness: point.magnitude })),
+      })),
+    },
+    null,
+    2,
+  )}\n`;
 }
 
 function normalizeMagnitude(value: number): number {

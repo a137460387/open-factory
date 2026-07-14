@@ -65,7 +65,7 @@ export function buildClipContentDigest(clips: ClipDigestInput[]): string {
         c.colorHue.toFixed(4),
         JSON.stringify(c.effects),
         c.keyframeSnapshot,
-      ].join(':')
+      ].join(':'),
     )
     .join('|');
 }
@@ -78,7 +78,7 @@ export async function calculateSelectionRenderHash(
   startSec: number,
   endSec: number,
   clips: ClipDigestInput[],
-  sha256Fn?: (data: string) => Promise<string> | string
+  sha256Fn?: (data: string) => Promise<string> | string,
 ): Promise<string> {
   const digest = buildClipContentDigest(clips);
   const payload = `${startSec.toFixed(6)}:${endSec.toFixed(6)}:${digest}`;
@@ -86,7 +86,7 @@ export async function calculateSelectionRenderHash(
     return sha256Fn(payload);
   }
   // browser/node SHA-256 fallback
- if (typeof globalThis.crypto?.subtle !== 'undefined') {
+  if (typeof globalThis.crypto?.subtle !== 'undefined') {
     const encoder = new TextEncoder();
     const data = encoder.encode(payload);
     const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
@@ -121,7 +121,7 @@ export function doesPropertyChangeTriggerStale(property: KeyframeProperty | stri
  */
 export function checkSelectionCacheStatus(
   currentHash: string,
-  cachedEntry: SelectionRenderCacheEntry | undefined
+  cachedEntry: SelectionRenderCacheEntry | undefined,
 ): SelectionCacheStatus {
   if (!cachedEntry) {
     return 'none';

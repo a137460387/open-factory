@@ -1,7 +1,14 @@
 import type { Clip, MediaAsset, Project, TimelineMarker, Track } from '../model';
 import { getTimelineDuration } from '../timeline';
 import { normalizePath } from './relative-paths';
-import { formatReportDuration, formatReportNumber, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './report-i18n';
+import {
+  formatReportDuration,
+  formatReportNumber,
+  normalizeReportLocale,
+  reportHtmlLang,
+  reportLanguageLabel,
+  type ReportLocale,
+} from './report-i18n';
 
 export interface ClipReportOptions {
   generatedAt?: string;
@@ -101,7 +108,7 @@ const clipReportLabels: Record<ReportLocale, Record<string, string>> = {
     emptyClips: '无 clip。',
     emptyMedia: '无使用媒体。',
     emptySubtitles: '无字幕。',
-    emptyMarkers: '无标记点。'
+    emptyMarkers: '无标记点。',
   },
   en: {
     title: 'Clip Report',
@@ -137,8 +144,8 @@ const clipReportLabels: Record<ReportLocale, Record<string, string>> = {
     emptyClips: 'No clips.',
     emptyMedia: 'No media used.',
     emptySubtitles: 'No subtitles.',
-    emptyMarkers: 'No markers.'
-  }
+    emptyMarkers: 'No markers.',
+  },
 };
 
 export function buildClipReport(project: Project, options: ClipReportOptions = {}): ClipReport {
@@ -146,7 +153,12 @@ export function buildClipReport(project: Project, options: ClipReportOptions = {
   const locale = normalizeReportLocale(options.locale);
   const clips = tracks.flatMap((track) => track.clips.map((clip) => clipToReportRow(clip, track, 0)));
   const indexedClips = clips
-    .sort((left, right) => left.start - right.start || left.trackName.localeCompare(right.trackName) || left.name.localeCompare(right.name))
+    .sort(
+      (left, right) =>
+        left.start - right.start ||
+        left.trackName.localeCompare(right.trackName) ||
+        left.name.localeCompare(right.name),
+    )
     .map((row, index) => ({ ...row, index: index + 1 }));
   return {
     overview: {
@@ -157,12 +169,12 @@ export function buildClipReport(project: Project, options: ClipReportOptions = {
       clipCount: indexedClips.length,
       exportPresetName: options.exportPresetName?.trim() || clipReportLabels[locale].unspecified,
       generatedAt: options.generatedAt ?? new Date().toISOString(),
-      locale
+      locale,
     },
     clips: indexedClips,
     media: buildClipReportMediaRows(project),
     subtitles: buildClipReportSubtitleRows(tracks),
-    markers: buildClipReportMarkerRows(project.timeline.markers ?? [])
+    markers: buildClipReportMarkerRows(project.timeline.markers ?? []),
   };
 }
 
@@ -248,7 +260,7 @@ function clipToReportRow(clip: Clip, track: Track, index: number): ClipReportCli
     start: clip.start,
     duration: clip.duration,
     effectTypes: (clip.effects ?? []).map((effect) => effect.type),
-    keyframeCount: countClipKeyframes(clip)
+    keyframeCount: countClipKeyframes(clip),
   };
 }
 
@@ -267,7 +279,9 @@ function buildClipReportMediaRows(project: Project): ClipReportMediaRow[] {
       rows.set(key, current);
     }
   }
-  return Array.from(rows.values()).sort((left, right) => left.fileName.localeCompare(right.fileName) || left.mediaId.localeCompare(right.mediaId));
+  return Array.from(rows.values()).sort(
+    (left, right) => left.fileName.localeCompare(right.fileName) || left.mediaId.localeCompare(right.mediaId),
+  );
 }
 
 function buildClipReportSubtitleRows(tracks: Track[]): ClipReportSubtitleRow[] {
@@ -280,11 +294,11 @@ function buildClipReportSubtitleRows(tracks: Track[]): ClipReportSubtitleRow[] {
               text: clip.text,
               trackName: track.name,
               start: clip.start,
-              duration: clip.duration
-            }
+              duration: clip.duration,
+            },
           ]
-        : []
-    )
+        : [],
+    ),
   );
 }
 
@@ -294,7 +308,7 @@ function buildClipReportMarkerRows(markers: TimelineMarker[]): ClipReportMarkerR
       markerId: marker.id,
       name: marker.label,
       time: marker.time,
-      color: marker.color
+      color: marker.color,
     }))
     .sort((left, right) => left.time - right.time || left.name.localeCompare(right.name));
 }
@@ -306,12 +320,14 @@ function assetToMediaRow(asset: MediaAsset): ClipReportMediaRow {
     format: getMediaFormat(asset),
     resolution: asset.width > 0 && asset.height > 0 ? `${asset.width} x ${asset.height}` : '-',
     duration: asset.duration,
-    useCount: 0
+    useCount: 0,
   };
 }
 
 function getClipMediaAsset(clip: Clip, assetsById: Map<string, MediaAsset>): MediaAsset | undefined {
-  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image' ? assetsById.get(clip.mediaId) : undefined;
+  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'
+    ? assetsById.get(clip.mediaId)
+    : undefined;
 }
 
 function resolveClipOutPoint(clip: Clip): number {
@@ -322,7 +338,10 @@ function resolveClipOutPoint(clip: Clip): number {
 }
 
 function countClipKeyframes(clip: Clip): number {
-  return Object.values(clip.keyframes ?? {}).reduce((count, frames) => count + (Array.isArray(frames) ? frames.length : 0), 0);
+  return Object.values(clip.keyframes ?? {}).reduce(
+    (count, frames) => count + (Array.isArray(frames) ? frames.length : 0),
+    0,
+  );
 }
 
 function renderClipRows(rows: ClipReportClipRow[], locale: ReportLocale): string {
@@ -341,7 +360,7 @@ function renderClipRows(rows: ClipReportClipRow[], locale: ReportLocale): string
         <td>${formatReportDuration(row.duration, locale)}</td>
         <td>${row.effectTypes.length > 0 ? row.effectTypes.map(escapeHtml).join(', ') : labels.none}</td>
         <td>${row.keyframeCount}</td>
-      </tr>`
+      </tr>`,
     )
     .join('');
 }
@@ -359,7 +378,7 @@ function renderMediaRows(rows: ClipReportMediaRow[], locale: ReportLocale): stri
         <td>${escapeHtml(row.resolution)}</td>
         <td>${formatReportDuration(row.duration, locale)}</td>
         <td>${row.useCount}</td>
-      </tr>`
+      </tr>`,
     )
     .join('');
 }
@@ -376,7 +395,7 @@ function renderSubtitleRows(rows: ClipReportSubtitleRow[], locale: ReportLocale)
         <td>${escapeHtml(row.trackName)}</td>
         <td>${formatReportDuration(row.start, locale)}</td>
         <td>${formatReportDuration(row.duration, locale)}</td>
-      </tr>`
+      </tr>`,
     )
     .join('');
 }
@@ -392,7 +411,7 @@ function renderMarkerRows(rows: ClipReportMarkerRow[], locale: ReportLocale): st
         <td>${escapeHtml(row.name)}</td>
         <td>${formatReportDuration(row.time, locale)}</td>
         <td>${escapeHtml(row.color)}</td>
-      </tr>`
+      </tr>`,
     )
     .join('');
 }

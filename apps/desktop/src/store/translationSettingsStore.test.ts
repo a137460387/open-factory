@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const bridgeMocks = vi.hoisted(() => ({
   readTranslationApiKey: vi.fn(),
-  writeTranslationApiKey: vi.fn()
+  writeTranslationApiKey: vi.fn(),
 }));
 
 vi.mock('../lib/tauri-bridge', () => bridgeMocks);
@@ -19,7 +19,7 @@ function installLocalStorage() {
     }),
     clear: vi.fn(() => {
       storage.clear();
-    })
+    }),
   });
 }
 
@@ -40,7 +40,10 @@ describe('translation settings store', () => {
   });
 
   it('does not expose legacy localStorage API keys through readTranslationSettings', async () => {
-    localStorage.setItem('open-factory:translation-settings', JSON.stringify({ provider: 'google', apiKey: 'legacy-key', targetLanguage: 'ja' }));
+    localStorage.setItem(
+      'open-factory:translation-settings',
+      JSON.stringify({ provider: 'google', apiKey: 'legacy-key', targetLanguage: 'ja' }),
+    );
     const { readTranslationSettings } = await loadStoreModule();
 
     expect(readTranslationSettings()).toEqual({ provider: 'google', apiKey: '', targetLanguage: 'JA' });
@@ -48,31 +51,45 @@ describe('translation settings store', () => {
 
   it('migrates a legacy localStorage API key into the keychain and clears the old field', async () => {
     bridgeMocks.writeTranslationApiKey.mockResolvedValue(undefined);
-    localStorage.setItem('open-factory:translation-settings', JSON.stringify({ provider: 'deepl', apiKey: 'legacy-key', targetLanguage: 'ZH' }));
+    localStorage.setItem(
+      'open-factory:translation-settings',
+      JSON.stringify({ provider: 'deepl', apiKey: 'legacy-key', targetLanguage: 'ZH' }),
+    );
     const { useTranslationSettingsStore } = await loadStoreModule();
 
     await useTranslationSettingsStore.getState().loadApiKey();
 
     expect(bridgeMocks.writeTranslationApiKey).toHaveBeenCalledWith('deepl', 'legacy-key');
     expect(useTranslationSettingsStore.getState().apiKey).toBe('legacy-key');
-    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toEqual({ provider: 'deepl', targetLanguage: 'ZH' });
+    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toEqual({
+      provider: 'deepl',
+      targetLanguage: 'ZH',
+    });
   });
 
   it('keeps the legacy field and asks for re-entry when migration fails', async () => {
     bridgeMocks.writeTranslationApiKey.mockRejectedValue(new Error('keychain unavailable'));
-    localStorage.setItem('open-factory:translation-settings', JSON.stringify({ provider: 'deepl', apiKey: 'legacy-key', targetLanguage: 'ZH' }));
+    localStorage.setItem(
+      'open-factory:translation-settings',
+      JSON.stringify({ provider: 'deepl', apiKey: 'legacy-key', targetLanguage: 'ZH' }),
+    );
     const { TRANSLATION_API_KEY_REENTRY_MESSAGE, useTranslationSettingsStore } = await loadStoreModule();
 
     await useTranslationSettingsStore.getState().loadApiKey();
 
     expect(useTranslationSettingsStore.getState().apiKey).toBe('');
     expect(useTranslationSettingsStore.getState().apiKeyError).toBe(TRANSLATION_API_KEY_REENTRY_MESSAGE);
-    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toMatchObject({ apiKey: 'legacy-key' });
+    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toMatchObject({
+      apiKey: 'legacy-key',
+    });
   });
 
   it('loads API keys from the keychain when no legacy key exists', async () => {
     bridgeMocks.readTranslationApiKey.mockResolvedValue('google-key');
-    localStorage.setItem('open-factory:translation-settings', JSON.stringify({ provider: 'google', targetLanguage: 'JA' }));
+    localStorage.setItem(
+      'open-factory:translation-settings',
+      JSON.stringify({ provider: 'google', targetLanguage: 'JA' }),
+    );
     const { useTranslationSettingsStore } = await loadStoreModule();
 
     await useTranslationSettingsStore.getState().loadApiKey();
@@ -94,13 +111,19 @@ describe('translation settings store', () => {
 
   it('resets non-sensitive settings and clears both provider API keys', async () => {
     bridgeMocks.writeTranslationApiKey.mockResolvedValue(undefined);
-    localStorage.setItem('open-factory:translation-settings', JSON.stringify({ provider: 'google', targetLanguage: 'JA' }));
+    localStorage.setItem(
+      'open-factory:translation-settings',
+      JSON.stringify({ provider: 'google', targetLanguage: 'JA' }),
+    );
     const { useTranslationSettingsStore } = await loadStoreModule();
 
     await useTranslationSettingsStore.getState().reset();
 
     expect(bridgeMocks.writeTranslationApiKey).toHaveBeenCalledWith('deepl', undefined);
     expect(bridgeMocks.writeTranslationApiKey).toHaveBeenCalledWith('google', undefined);
-    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toEqual({ provider: 'deepl', targetLanguage: 'ZH' });
+    expect(JSON.parse(localStorage.getItem('open-factory:translation-settings') ?? '{}')).toEqual({
+      provider: 'deepl',
+      targetLanguage: 'ZH',
+    });
   });
 });

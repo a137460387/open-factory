@@ -5,12 +5,20 @@ import {
   getClipSpeed,
   type Clip,
   type MediaAsset,
-  type Track
+  type Track,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { markLocalAiModelUsed } from '../settings/appSettings';
 import { createClipFromAsset } from './clipFactory';
-import { fsExists, getFileStat, openFileDialog, runDemucs, type DemucsRequest, type DemucsResult, type FileStat } from './tauri-bridge';
+import {
+  fsExists,
+  getFileStat,
+  openFileDialog,
+  runDemucs,
+  type DemucsRequest,
+  type DemucsResult,
+  type FileStat,
+} from './tauri-bridge';
 
 export interface DemucsSettings {
   executablePath: string;
@@ -38,7 +46,10 @@ export async function pickDemucsExecutablePath(): Promise<string | undefined> {
   return path;
 }
 
-export async function getDemucsAvailability(settings: DemucsSettings, exists: (path: string) => Promise<boolean> = fsExists): Promise<DemucsAvailability> {
+export async function getDemucsAvailability(
+  settings: DemucsSettings,
+  exists: (path: string) => Promise<boolean> = fsExists,
+): Promise<DemucsAvailability> {
   try {
     await assertDemucsSettingsReady(settings, exists);
     return { ready: true };
@@ -47,7 +58,10 @@ export async function getDemucsAvailability(settings: DemucsSettings, exists: (p
   }
 }
 
-export async function assertDemucsSettingsReady(settings: DemucsSettings, exists: (path: string) => Promise<boolean> = fsExists): Promise<void> {
+export async function assertDemucsSettingsReady(
+  settings: DemucsSettings,
+  exists: (path: string) => Promise<boolean> = fsExists,
+): Promise<void> {
   const executablePath = settings.executablePath.trim();
   if (!executablePath) {
     throw new Error(zhCN.demucs.notConfigured);
@@ -57,15 +71,26 @@ export async function assertDemucsSettingsReady(settings: DemucsSettings, exists
   }
 }
 
-export function canSeparateAudioForClip(clip: Clip | undefined, asset: MediaAsset | undefined, demucsReady: boolean): boolean {
-  return Boolean(demucsReady && clip && asset && (clip.type === 'audio' || clip.type === 'video') && (asset.type === 'audio' || asset.hasAudio) && !asset.missing);
+export function canSeparateAudioForClip(
+  clip: Clip | undefined,
+  asset: MediaAsset | undefined,
+  demucsReady: boolean,
+): boolean {
+  return Boolean(
+    demucsReady &&
+    clip &&
+    asset &&
+    (clip.type === 'audio' || clip.type === 'video') &&
+    (asset.type === 'audio' || asset.hasAudio) &&
+    !asset.missing,
+  );
 }
 
 export async function separateAudioForClip(
   clip: Extract<Clip, { type: 'audio' | 'video' }>,
   asset: MediaAsset,
   settings: DemucsSettings,
-  dependencies: DemucsDependencies = {}
+  dependencies: DemucsDependencies = {},
 ): Promise<DemucsSeparationResult> {
   await assertDemucsSettingsReady(settings, dependencies.exists ?? fsExists);
   await markLocalAiModelUsed('demucs', settings.executablePath).catch((error) => {
@@ -75,7 +100,7 @@ export async function separateAudioForClip(
   const result = await execute({
     executablePath: settings.executablePath.trim(),
     mediaPath: asset.path,
-    clipId: clip.id
+    clipId: clip.id,
   });
   const media = await buildSeparatedAudioMediaAssets(clip, asset, result, dependencies.stat ?? getFileStat);
   const tracks = buildSeparatedAudioTracksForClip(clip, media);
@@ -86,25 +111,34 @@ export async function buildSeparatedAudioMediaAssets(
   clip: Extract<Clip, { type: 'audio' | 'video' }>,
   sourceAsset: MediaAsset,
   result: DemucsResult,
-  stat: (path: string) => Promise<FileStat> = getFileStat
+  stat: (path: string) => Promise<FileStat> = getFileStat,
 ): Promise<[MediaAsset, MediaAsset]> {
-  const [vocalsStat, accompanimentStat] = await Promise.all([safeStat(result.vocalsPath, stat), safeStat(result.accompanimentPath, stat)]);
+  const [vocalsStat, accompanimentStat] = await Promise.all([
+    safeStat(result.vocalsPath, stat),
+    safeStat(result.accompanimentPath, stat),
+  ]);
   return [
     createSeparatedAsset(clip, sourceAsset, result.vocalsPath, zhCN.demucs.vocalsSuffix, vocalsStat),
-    createSeparatedAsset(clip, sourceAsset, result.accompanimentPath, zhCN.demucs.accompanimentSuffix, accompanimentStat)
+    createSeparatedAsset(
+      clip,
+      sourceAsset,
+      result.accompanimentPath,
+      zhCN.demucs.accompanimentSuffix,
+      accompanimentStat,
+    ),
   ];
 }
 
 export function buildSeparatedAudioTracksForClip(
   clip: Extract<Clip, { type: 'audio' | 'video' }>,
-  media: [MediaAsset, MediaAsset]
+  media: [MediaAsset, MediaAsset],
 ): [Track, Track] {
   return media.map((asset, index) => {
     const track = createTrack({
       id: createId('track'),
       type: 'audio',
       name: index === 0 ? zhCN.demucs.vocalsTrackName : zhCN.demucs.accompanimentTrackName,
-      clips: []
+      clips: [],
     });
     const baseClip = createClipFromAsset(asset, track, { tracks: [track], transitions: [], markers: [] });
     return createTrack({
@@ -118,9 +152,9 @@ export function buildSeparatedAudioTracksForClip(
           duration: clip.duration,
           trimStart: clip.trimStart,
           trimEnd: 0,
-          speed: getClipSpeed(clip)
-        }
-      ]
+          speed: getClipSpeed(clip),
+        },
+      ],
     });
   }) as [Track, Track];
 }
@@ -130,7 +164,7 @@ function createSeparatedAsset(
   sourceAsset: MediaAsset,
   path: string,
   suffix: string,
-  stat?: FileStat
+  stat?: FileStat,
 ): MediaAsset {
   return {
     id: createId('asset'),
@@ -146,7 +180,7 @@ function createSeparatedAsset(
     hasAudio: true,
     audioChannels: sourceAsset.audioChannels ?? 2,
     audioSampleRate: sourceAsset.audioSampleRate ?? 44_100,
-    audioCodec: 'pcm_s16le'
+    audioCodec: 'pcm_s16le',
   };
 }
 

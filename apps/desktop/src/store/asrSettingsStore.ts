@@ -1,1 +1,3 @@
-export function useASRSettings() { return { language: 'zh', model: 'base' }; }
+export function useASRSettings() {
+  return { language: 'zh', model: 'base' };
+}

@@ -22,7 +22,12 @@ const MIN_TEXT_ANIMATION_DURATION = 0.1;
 const MAX_TEXT_ANIMATION_DURATION = 2;
 
 export function normalizeTextAnimationDuration(duration: number): number {
-  return round(Math.min(MAX_TEXT_ANIMATION_DURATION, Math.max(MIN_TEXT_ANIMATION_DURATION, Number.isFinite(duration) ? duration : 0.5)));
+  return round(
+    Math.min(
+      MAX_TEXT_ANIMATION_DURATION,
+      Math.max(MIN_TEXT_ANIMATION_DURATION, Number.isFinite(duration) ? duration : 0.5),
+    ),
+  );
 }
 
 export function normalizeTextAnimationPreset(preset: unknown): TextAnimationPreset {
@@ -30,7 +35,9 @@ export function normalizeTextAnimationPreset(preset: unknown): TextAnimationPres
 }
 
 export function normalizeTextAnimationDirection(direction: unknown): TextAnimationDirection {
-  return TEXT_ANIMATION_DIRECTIONS.includes(direction as TextAnimationDirection) ? (direction as TextAnimationDirection) : 'in';
+  return TEXT_ANIMATION_DIRECTIONS.includes(direction as TextAnimationDirection)
+    ? (direction as TextAnimationDirection)
+    : 'in';
 }
 
 export function buildTextAnimationKeyframes(input: TextAnimationInput): ClipKeyframes {
@@ -46,13 +53,26 @@ export function buildTextAnimationKeyframes(input: TextAnimationInput): ClipKeyf
     appendPresetFrames(output, preset, 'in', 0, segmentDuration, clipDuration, base, input.text);
   }
   if (direction === 'out' || direction === 'both') {
-    appendPresetFrames(output, preset, 'out', round(clipDuration - segmentDuration), clipDuration, clipDuration, base, input.text);
+    appendPresetFrames(
+      output,
+      preset,
+      'out',
+      round(clipDuration - segmentDuration),
+      clipDuration,
+      clipDuration,
+      base,
+      input.text,
+    );
   }
 
   return normalizeClipKeyframes(output, clipDuration) ?? {};
 }
 
-export function mergeTextAnimationKeyframes(existing: ClipKeyframes | undefined, generated: ClipKeyframes, clipDuration: number): ClipKeyframes | undefined {
+export function mergeTextAnimationKeyframes(
+  existing: ClipKeyframes | undefined,
+  generated: ClipKeyframes,
+  clipDuration: number,
+): ClipKeyframes | undefined {
   const next = cloneClipKeyframes(existing) ?? {};
   for (const property of TEXT_ANIMATION_PROPERTIES) {
     delete next[property];
@@ -72,7 +92,7 @@ function appendPresetFrames(
   end: number,
   clipDuration: number,
   base: Required<Pick<Transform, 'x' | 'y' | 'opacity' | 'scaleX' | 'scaleY'>>,
-  text: string | undefined
+  text: string | undefined,
 ): void {
   const isIn = phase === 'in';
   const yOffset = 0.25;
@@ -83,7 +103,7 @@ function appendPresetFrames(
   if (preset === 'fade') {
     add(output, 'opacity', clipDuration, preset, phase, [
       [start, isIn ? 0 : base.opacity, isIn ? 'ease-out' : 'ease-in'],
-      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in']
+      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in'],
     ]);
     return;
   }
@@ -91,11 +111,11 @@ function appendPresetFrames(
   if (preset === 'fly-up') {
     add(output, 'opacity', clipDuration, preset, phase, [
       [start, isIn ? 0 : base.opacity, isIn ? 'ease-out' : 'ease-in'],
-      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in']
+      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in'],
     ]);
     add(output, 'y', clipDuration, preset, phase, [
       [start, isIn ? base.y + yOffset : base.y, isIn ? 'ease-out' : 'ease-in'],
-      [end, isIn ? base.y : base.y + yOffset, isIn ? 'ease-out' : 'ease-in']
+      [end, isIn ? base.y : base.y + yOffset, isIn ? 'ease-out' : 'ease-in'],
     ]);
     return;
   }
@@ -103,11 +123,11 @@ function appendPresetFrames(
   if (preset === 'slide-left') {
     add(output, 'opacity', clipDuration, preset, phase, [
       [start, isIn ? 0 : base.opacity, isIn ? 'ease-out' : 'ease-in'],
-      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in']
+      [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in'],
     ]);
     add(output, 'x', clipDuration, preset, phase, [
       [start, isIn ? base.x - xOffset : base.x, isIn ? 'ease-out' : 'ease-in'],
-      [end, isIn ? base.x : base.x - xOffset, isIn ? 'ease-out' : 'ease-in']
+      [end, isIn ? base.x : base.x - xOffset, isIn ? 'ease-out' : 'ease-in'],
     ]);
     return;
   }
@@ -123,7 +143,7 @@ function appendPresetFrames(
     add(output, 'scaleX', clipDuration, preset, phase, frames);
     add(output, 'opacity', clipDuration, preset, phase, [
       [start, base.opacity, 'linear'],
-      [end, base.opacity, 'linear']
+      [end, base.opacity, 'linear'],
     ]);
     return;
   }
@@ -131,20 +151,20 @@ function appendPresetFrames(
   if (preset === 'bounce') {
     add(output, 'opacity', clipDuration, preset, phase, [
       [start, isIn ? 0 : base.opacity, 'ease-out'],
-      [end, isIn ? base.opacity : 0, 'ease-in']
+      [end, isIn ? base.opacity : 0, 'ease-in'],
     ]);
     if (isIn) {
       add(output, 'y', clipDuration, preset, phase, [
         [start, base.y + 0.22, 'ease-out'],
         [round(start + (end - start) * 0.6), base.y - 0.08, 'ease-out'],
         [round(start + (end - start) * 0.82), base.y + 0.03, 'ease-in-out'],
-        [end, base.y, 'ease-in-out']
+        [end, base.y, 'ease-in-out'],
       ]);
     } else {
       add(output, 'y', clipDuration, preset, phase, [
         [start, base.y, 'ease-in'],
         [round(start + (end - start) * 0.3), base.y - 0.05, 'ease-in'],
-        [end, base.y + 0.22, 'ease-in']
+        [end, base.y + 0.22, 'ease-in'],
       ]);
     }
     return;
@@ -152,18 +172,18 @@ function appendPresetFrames(
 
   add(output, 'opacity', clipDuration, preset, phase, [
     [start, isIn ? 0 : base.opacity, isIn ? 'ease-out' : 'ease-in'],
-    [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in']
+    [end, isIn ? base.opacity : 0, isIn ? 'ease-out' : 'ease-in'],
   ]);
   const scaleFrames: FrameTuple[] = isIn
     ? [
         [start, minScale, 'ease-out'],
         [round(start + (end - start) * 0.72), Math.max(base.scaleX, overshoot), 'ease-out'],
-        [end, base.scaleX, 'ease-in-out']
+        [end, base.scaleX, 'ease-in-out'],
       ]
     : [
         [start, base.scaleX, 'ease-in-out'],
         [round(start + (end - start) * 0.28), Math.max(base.scaleX, overshoot), 'ease-in'],
-        [end, minScale, 'ease-in']
+        [end, minScale, 'ease-in'],
       ];
   add(output, 'scaleX', clipDuration, preset, phase, scaleFrames);
   add(
@@ -172,7 +192,7 @@ function appendPresetFrames(
     clipDuration,
     preset,
     phase,
-    scaleFrames.map(([time, value, easing]) => [time, value === base.scaleX ? base.scaleY : value, easing])
+    scaleFrames.map(([time, value, easing]) => [time, value === base.scaleX ? base.scaleY : value, easing]),
   );
 }
 
@@ -184,24 +204,30 @@ function add(
   clipDuration: number,
   preset: TextAnimationPreset,
   phase: Extract<TextAnimationDirection, 'in' | 'out'>,
-  frames: FrameTuple[]
+  frames: FrameTuple[],
 ): void {
   output[property] = [
     ...(output[property] ?? []),
     ...frames.map(([time, value, easing], index) =>
-      createKeyframe(property, { id: `text-animation-${preset}-${phase}-${property}-${index}`, time, value, easing }, clipDuration)
-    )
+      createKeyframe(
+        property,
+        { id: `text-animation-${preset}-${phase}-${property}-${index}`, time, value, easing },
+        clipDuration,
+      ),
+    ),
   ];
 }
 
-function normalizeTextAnimationTransform(transform: Partial<Transform>): Required<Pick<Transform, 'x' | 'y' | 'opacity' | 'scaleX' | 'scaleY'>> {
+function normalizeTextAnimationTransform(
+  transform: Partial<Transform>,
+): Required<Pick<Transform, 'x' | 'y' | 'opacity' | 'scaleX' | 'scaleY'>> {
   const scale = finiteOrDefault(transform.scale, 1);
   return {
     x: round(finiteOrDefault(transform.x, 0)),
     y: round(finiteOrDefault(transform.y, 0)),
     opacity: round(Math.min(1, Math.max(0, finiteOrDefault(transform.opacity, 1)))),
     scaleX: round(Math.min(4, Math.max(0.01, finiteOrDefault(transform.scaleX, scale)))),
-    scaleY: round(Math.min(4, Math.max(0.01, finiteOrDefault(transform.scaleY, scale))))
+    scaleY: round(Math.min(4, Math.max(0.01, finiteOrDefault(transform.scaleY, scale)))),
   };
 }
 

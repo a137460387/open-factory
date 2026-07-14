@@ -12,7 +12,11 @@ import { identityTranslator } from './ai-module-types';
 export const SKIN_TONE_DISTANCE_THRESHOLD = 30;
 export const MAX_LIFT_COMPENSATION = 0.5;
 
-export interface SkinToneSample { r: number; g: number; b: number; }
+export interface SkinToneSample {
+  r: number;
+  g: number;
+  b: number;
+}
 export type WhiteBalanceEstimate = 'warm' | 'neutral' | 'cool';
 
 export interface ClipColorInfo {
@@ -35,18 +39,14 @@ export interface ColorConsistencyResult {
   reason: string;
 }
 
-export function calculateSkinToneEuclideanDistance(
-  a: SkinToneSample, b: SkinToneSample
-): number {
+export function calculateSkinToneEuclideanDistance(a: SkinToneSample, b: SkinToneSample): number {
   const dr = a.r - b.r;
   const dg = a.g - b.g;
   const db = a.b - b.b;
   return Math.sqrt(dr * dr + dg * dg + db * db);
 }
 
-export function checkColorConsistency(
-  input: ColorConsistencyInput
-): ColorConsistencyResult | null {
+export function checkColorConsistency(input: ColorConsistencyInput): ColorConsistencyResult | null {
   const { clipAId, clipBId, clipA, clipB } = input;
   const bothHaveSkin = clipA.skinToneRGB !== null && clipB.skinToneRGB !== null;
   const wbMismatch = clipA.whiteBalanceEstimate !== clipB.whiteBalanceEstimate;
@@ -66,7 +66,14 @@ export function checkColorConsistency(
 
   if (skinToneInconsistent && wbMismatch) {
     type = 'both';
-    reason = 'skin_tone delta=' + (deltaRGB ?? 0).toFixed(1) + ' + wb mismatch (' + clipA.whiteBalanceEstimate + ' vs ' + clipB.whiteBalanceEstimate + ')';
+    reason =
+      'skin_tone delta=' +
+      (deltaRGB ?? 0).toFixed(1) +
+      ' + wb mismatch (' +
+      clipA.whiteBalanceEstimate +
+      ' vs ' +
+      clipB.whiteBalanceEstimate +
+      ')';
   } else if (skinToneInconsistent) {
     type = 'skin_tone';
     reason = 'skin_tone delta=' + (deltaRGB ?? 0).toFixed(1) + ' > ' + SKIN_TONE_DISTANCE_THRESHOLD;
@@ -78,9 +85,7 @@ export function checkColorConsistency(
   return { clipAId, clipBId, type, deltaRGB, reason };
 }
 
-export function generateCompensationWheel(
-  clipA: SkinToneSample, clipB: SkinToneSample
-): { lift: ColorWheelValue } {
+export function generateCompensationWheel(clipA: SkinToneSample, clipB: SkinToneSample): { lift: ColorWheelValue } {
   const dr = clipA.r - clipB.r;
   const dg = clipA.g - clipB.g;
   const db = clipA.b - clipB.b;
@@ -92,14 +97,14 @@ export function generateCompensationWheel(
       r: Math.max(-1, Math.min(1, (dr / dist) * scale)),
       g: Math.max(-1, Math.min(1, (dg / dist) * scale)),
       b: Math.max(-1, Math.min(1, (db / dist) * scale)),
-      intensity: 1
-    }
+      intensity: 1,
+    },
   };
 }
 
 export async function checkColorConsistencySafe(
   input: ColorConsistencyInput,
-  t: TranslateFn = identityTranslator
+  t: TranslateFn = identityTranslator,
 ): Promise<AiModuleResult<ColorConsistencyResult | null>> {
   try {
     const data = checkColorConsistency(input);

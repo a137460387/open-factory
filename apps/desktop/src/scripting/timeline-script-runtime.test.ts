@@ -6,7 +6,7 @@ import {
   createTimelineScriptWorkerSource,
   executeTimelineScriptInIsolatedScope,
   runTimelineScriptInWorker,
-  type TimelineScriptWorkerLike
+  type TimelineScriptWorkerLike,
 } from './timeline-script-runtime';
 
 const snapshot: TimelineScriptSnapshot = {
@@ -24,11 +24,11 @@ const snapshot: TimelineScriptSnapshot = {
       speed: 1,
       colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
       transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
-      volume: 1
-    }
+      volume: 1,
+    },
   ],
   markers: [],
-  duration: 2
+  duration: 2,
 };
 
 describe('timeline script runtime', () => {
@@ -37,7 +37,10 @@ describe('timeline script runtime', () => {
   });
 
   it('captures console.log output and queued timeline operations', async () => {
-    const result = await executeTimelineScriptInIsolatedScope('console.log("clips", getClips().length); updateClip("clip-a", { speed: 1.25 });', snapshot);
+    const result = await executeTimelineScriptInIsolatedScope(
+      'console.log("clips", getClips().length); updateClip("clip-a", { speed: 1.25 });',
+      snapshot,
+    );
 
     expect(result.logs).toEqual(['clips 1']);
     expect(result.operations).toEqual([{ type: 'updateClip', clipId: 'clip-a', patch: { speed: 1.25 } }]);
@@ -46,7 +49,10 @@ describe('timeline script runtime', () => {
   it('isolates fetch and XMLHttpRequest from scripts', async () => {
     expect(TIMELINE_SCRIPT_DISABLED_GLOBALS).toEqual(['fetch', 'XMLHttpRequest']);
 
-    const result = await executeTimelineScriptInIsolatedScope('console.log(typeof fetch); console.log(typeof XMLHttpRequest);', snapshot);
+    const result = await executeTimelineScriptInIsolatedScope(
+      'console.log(typeof fetch); console.log(typeof XMLHttpRequest);',
+      snapshot,
+    );
 
     expect(result.logs).toEqual(['undefined', 'undefined']);
     expect(createTimelineScriptWorkerSource()).toContain('XMLHttpRequest');
@@ -76,8 +82,8 @@ describe('timeline script runtime', () => {
       {
         WorkerCtor: HangingWorker,
         createObjectUrl: () => 'blob:timeline-script-test',
-        revokeObjectUrl: () => undefined
-      }
+        revokeObjectUrl: () => undefined,
+      },
     );
     const assertion = expect(promise).rejects.toThrow('10s');
 

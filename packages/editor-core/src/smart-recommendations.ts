@@ -71,11 +71,19 @@ export function calculateColorHistogramSimilarity(left: readonly number[], right
   return round(1 - calculateColorHistogramDistance(left, right));
 }
 
-export function durationMatchesGap(assetDuration: number, gapDuration: number, tolerance = DEFAULT_DURATION_TOLERANCE): boolean {
+export function durationMatchesGap(
+  assetDuration: number,
+  gapDuration: number,
+  tolerance = DEFAULT_DURATION_TOLERANCE,
+): boolean {
   return calculateDurationMatchScore(assetDuration, gapDuration, tolerance) > 0;
 }
 
-export function calculateDurationMatchScore(assetDuration: number, gapDuration: number, tolerance = DEFAULT_DURATION_TOLERANCE): number {
+export function calculateDurationMatchScore(
+  assetDuration: number,
+  gapDuration: number,
+  tolerance = DEFAULT_DURATION_TOLERANCE,
+): number {
   if (!Number.isFinite(assetDuration) || !Number.isFinite(gapDuration) || assetDuration <= 0 || gapDuration <= 0) {
     return 0;
   }
@@ -108,7 +116,7 @@ export function detectTimelineGaps(timeline: Timeline, minGapDuration = 0.1): Sm
           trackName: track.name,
           start,
           end,
-          duration: round(end - start)
+          duration: round(end - start),
         });
       }
       cursor = round(Math.max(cursor, clip.start + clip.duration));
@@ -117,7 +125,10 @@ export function detectTimelineGaps(timeline: Timeline, minGapDuration = 0.1): Sm
   return gaps;
 }
 
-export function buildSmartTimelineContext(project: Project, options: SmartSegmentRecommendationOptions = {}): SmartTimelineContext {
+export function buildSmartTimelineContext(
+  project: Project,
+  options: SmartSegmentRecommendationOptions = {},
+): SmartTimelineContext {
   const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
   const usedClips = project.timeline.tracks.flatMap((track) => track.clips).filter(isMediaClip);
   const visualUsedClips = usedClips.filter(isVisualMediaClip);
@@ -126,16 +137,20 @@ export function buildSmartTimelineContext(project: Project, options: SmartSegmen
     new Set(
       usedClips
         .map((clip) => mediaById.get(clip.mediaId)?.type)
-        .filter((type): type is MediaAsset['type'] => Boolean(type))
-    )
+        .filter((type): type is MediaAsset['type'] => Boolean(type)),
+    ),
   ).sort();
   const timelineDuration = getTimelineDuration(project.timeline);
-  const averageClipDuration = usedClips.length > 0 ? round(usedClips.reduce((sum, clip) => sum + clip.duration, 0) / usedClips.length) : 0;
-  const rhythmCutsPerMinute = timelineDuration > 0 ? round((Math.max(usedClips.length - 1, 0) / timelineDuration) * 60) : 0;
+  const averageClipDuration =
+    usedClips.length > 0 ? round(usedClips.reduce((sum, clip) => sum + clip.duration, 0) / usedClips.length) : 0;
+  const rhythmCutsPerMinute =
+    timelineDuration > 0 ? round((Math.max(usedClips.length - 1, 0) / timelineDuration) * 60) : 0;
   const weightedHistograms = visualUsedClips
     .map((clip) => {
       const asset = mediaById.get(clip.mediaId);
-      return asset ? { histogram: getAssetHistogram(asset, options.histograms), weight: Math.max(clip.duration, 0.001) } : undefined;
+      return asset
+        ? { histogram: getAssetHistogram(asset, options.histograms), weight: Math.max(clip.duration, 0.001) }
+        : undefined;
     })
     .filter((item): item is { histogram: number[]; weight: number } => Boolean(item));
   const colorHistogram = averageHistograms(weightedHistograms);
@@ -145,14 +160,19 @@ export function buildSmartTimelineContext(project: Project, options: SmartSegmen
     rhythmCutsPerMinute,
     averageClipDuration,
     colorHistogram,
-    gaps: detectTimelineGaps(project.timeline, options.minGapDuration)
+    gaps: detectTimelineGaps(project.timeline, options.minGapDuration),
   };
 }
 
-export function buildSmartSegmentRecommendations(project: Project, options: SmartSegmentRecommendationOptions = {}): SmartSegmentRecommendation[] {
+export function buildSmartSegmentRecommendations(
+  project: Project,
+  options: SmartSegmentRecommendationOptions = {},
+): SmartSegmentRecommendation[] {
   const context = buildSmartTimelineContext(project, options);
   const used = new Set(context.usedMediaIds);
-  const candidates = project.media.filter((asset) => !used.has(asset.id) && (asset.type === 'video' || asset.type === 'image'));
+  const candidates = project.media.filter(
+    (asset) => !used.has(asset.id) && (asset.type === 'video' || asset.type === 'image'),
+  );
   const maxRecommendations = Math.max(1, Math.floor(options.maxRecommendations ?? DEFAULT_MAX_RECOMMENDATIONS));
   const tolerance = options.durationTolerance ?? DEFAULT_DURATION_TOLERANCE;
   return candidates
@@ -161,22 +181,34 @@ export function buildSmartSegmentRecommendations(project: Project, options: Smar
     .slice(0, maxRecommendations);
 }
 
-export function sortRecommendationsBySimilarity(recommendations: readonly SmartSegmentRecommendation[]): SmartSegmentRecommendation[] {
-  return [...recommendations].sort((left, right) => right.colorSimilarity - left.colorSimilarity || right.score - left.score || left.assetName.localeCompare(right.assetName));
+export function sortRecommendationsBySimilarity(
+  recommendations: readonly SmartSegmentRecommendation[],
+): SmartSegmentRecommendation[] {
+  return [...recommendations].sort(
+    (left, right) =>
+      right.colorSimilarity - left.colorSimilarity ||
+      right.score - left.score ||
+      left.assetName.localeCompare(right.assetName),
+  );
 }
 
 function buildRecommendationForAsset(
   asset: MediaAsset,
   context: SmartTimelineContext,
   histograms: SmartSegmentRecommendationOptions['histograms'],
-  tolerance: number
+  tolerance: number,
 ): SmartSegmentRecommendation {
   const histogram = getAssetHistogram(asset, histograms);
-  const colorSimilarity = context.colorHistogram.length > 0 ? calculateColorHistogramSimilarity(context.colorHistogram, histogram) : 0;
+  const colorSimilarity =
+    context.colorHistogram.length > 0 ? calculateColorHistogramSimilarity(context.colorHistogram, histogram) : 0;
   const gapMatch = findBestGapMatch(asset, context.gaps, tolerance);
   const typeScore = calculateTypeScore(asset.type, context.usedTypes);
   const durationScore = gapMatch?.score ?? 0;
-  const score = round(context.gaps.length > 0 ? colorSimilarity * 0.58 + durationScore * 0.32 + typeScore * 0.1 : colorSimilarity * 0.82 + typeScore * 0.18);
+  const score = round(
+    context.gaps.length > 0
+      ? colorSimilarity * 0.58 + durationScore * 0.32 + typeScore * 0.1
+      : colorSimilarity * 0.82 + typeScore * 0.18,
+  );
   return {
     id: `recommendation:${asset.id}:${gapMatch?.gap.id ?? 'style'}`,
     assetId: asset.id,
@@ -189,11 +221,15 @@ function buildRecommendationForAsset(
     durationScore,
     typeScore,
     reasons: buildReasons(colorSimilarity, durationScore, typeScore),
-    ...(gapMatch ? { gap: gapMatch.gap } : {})
+    ...(gapMatch ? { gap: gapMatch.gap } : {}),
   };
 }
 
-function findBestGapMatch(asset: MediaAsset, gaps: readonly SmartTimelineGap[], tolerance: number): { gap: SmartTimelineGap; score: number } | undefined {
+function findBestGapMatch(
+  asset: MediaAsset,
+  gaps: readonly SmartTimelineGap[],
+  tolerance: number,
+): { gap: SmartTimelineGap; score: number } | undefined {
   let best: { gap: SmartTimelineGap; score: number } | undefined;
   for (const gap of gaps) {
     const score = calculateDurationMatchScore(asset.duration, gap.duration, tolerance);
@@ -309,7 +345,7 @@ function parseHexColor(hex: string): { r: number; g: number; b: number } | undef
     return {
       r: Number.parseInt(clean.slice(0, 2), 16),
       g: Number.parseInt(clean.slice(2, 4), 16),
-      b: Number.parseInt(clean.slice(4, 6), 16)
+      b: Number.parseInt(clean.slice(4, 6), 16),
     };
   }
   return undefined;

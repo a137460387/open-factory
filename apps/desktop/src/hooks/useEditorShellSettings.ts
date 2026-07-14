@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { useEffect } from 'react';
 import { normalizeTutorialProgressSettings } from '../tutorial/tutorialState';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
@@ -70,7 +70,7 @@ export function useEditorShellSettings(): void {
           useEditorSettingsStore.getState().setPreviewWindowResolutionScale(state.resolutionScale);
         }
       })
-      .catch(logError("useEditorShellSettings"));
+      .catch(logError('useEditorShellSettings'));
     return () => {
       canceled = true;
     };

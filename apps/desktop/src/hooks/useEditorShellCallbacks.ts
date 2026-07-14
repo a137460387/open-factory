@@ -53,14 +53,8 @@ import { separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import { analyzeSpeakerDiarizationForClip } from '../lib/speakerDiarization';
 import { analyzeAutoAudioSyncTargets, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
 import { collectSpeakerDiarizationDialogueIntervals } from '../lib/content-analysis-helpers';
-import {
-  buildProjectHealthAutoRepairInput,
-  scanProjectHealth,
-} from '../lib/projectHealth';
-import {
-  scanMediaHealthDashboard,
-  writeMediaHealthAutoShowEnabled,
-} from '../lib/mediaHealthDashboard';
+import { buildProjectHealthAutoRepairInput, scanProjectHealth } from '../lib/projectHealth';
+import { scanMediaHealthDashboard, writeMediaHealthAutoShowEnabled } from '../lib/mediaHealthDashboard';
 import { relinkSingleMedia } from '../media/relink';
 import { probeMediaPaths } from '../lib/media';
 
@@ -81,14 +75,14 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
     try {
       useEditorFeatureStore.getState().setProjectHealthScanning(true);
       const state = useEditorStore.getState();
-      useEditorFeatureStore.getState().setProjectHealthReport(
-        await scanProjectHealth(state.project, useProxySettingsStore.getState().settings)
-      );
+      useEditorFeatureStore
+        .getState()
+        .setProjectHealthReport(await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
     } catch (error) {
       showToast({
         kind: 'error',
         title: zhCN.projectHealth.toasts.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.scanFailedMessage
+        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.scanFailedMessage,
       });
     } finally {
       useEditorFeatureStore.getState().setProjectHealthScanning(false);
@@ -113,7 +107,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
       showToast({
         kind: 'error',
         title: zhCN.mediaHealthDashboard.toasts.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaHealthDashboard.toasts.scanFailedMessage
+        message: error instanceof Error ? error.message : zhCN.mediaHealthDashboard.toasts.scanFailedMessage,
       });
       return undefined;
     } finally {
@@ -152,10 +146,14 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         }
         await refreshProjectHealth();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.relinkFailed,
+          message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage,
+        });
       }
     },
-    [refreshProjectHealth]
+    [refreshProjectHealth],
   );
 
   const removeOrphanFromHealth = useCallback(
@@ -165,23 +163,37 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         showToast({ kind: 'success', title: zhCN.projectHealth.toasts.orphanRemoved, message: issue.name });
         await refreshProjectHealth();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshProjectHealth]
+    [refreshProjectHealth],
   );
 
   const mergeDuplicateFromHealth = useCallback(
     async (issue: DuplicateMediaIssue) => {
       try {
-        commandManager.execute(new MergeMediaCommand(projectAccessor, issue.keepAssetId, issue.assets.map((asset) => asset.assetId)));
+        commandManager.execute(
+          new MergeMediaCommand(
+            projectAccessor,
+            issue.keepAssetId,
+            issue.assets.map((asset) => asset.assetId),
+          ),
+        );
         showToast({ kind: 'success', title: zhCN.projectHealth.toasts.duplicateMerged });
         await refreshProjectHealth();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshProjectHealth]
+    [refreshProjectHealth],
   );
 
   const queueProxyFromHealth = useCallback(
@@ -196,22 +208,27 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         showToast({ kind: 'success', title: zhCN.projectHealth.toasts.proxyQueued, message: issue.name });
         await refreshProjectHealth();
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.projectHealth.toasts.fixFailed,
+          message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+        });
       }
     },
-    [refreshProjectHealth]
+    [refreshProjectHealth],
   );
 
   const autoRepairProjectHealth = useCallback(async () => {
     try {
       const state = useEditorStore.getState();
-      const report = projectHealthReport ?? (await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
+      const report =
+        projectHealthReport ?? (await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
       const input = await buildProjectHealthAutoRepairInput(state.project, report);
       let duplicateIssues = input.duplicateIssues ?? [];
       const manualEntries = [...(input.manualEntries ?? [])];
       if (duplicateIssues.length > 0) {
         const confirmed = await bridgeConfirm(zhCN.projectHealth.autoRepairDuplicateConfirm(duplicateIssues.length), {
-          title: zhCN.projectHealth.actions.autoRepair
+          title: zhCN.projectHealth.actions.autoRepair,
         });
         if (!confirmed) {
           manualEntries.push(
@@ -219,8 +236,8 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
               type: 'duplicate-media' as const,
               status: 'manual' as const,
               assetId: issue.keepAssetId,
-              message: `${issue.id}: ${zhCN.common.cancel}`
-            }))
+              message: `${issue.id}: ${zhCN.common.cancel}`,
+            })),
           );
           duplicateIssues = [];
         }
@@ -229,12 +246,26 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
       const current = useEditorStore.getState();
       const proxyAssets = current.project.media.filter((asset) => (input.proxyAssetIds ?? []).includes(asset.id));
       if (proxyAssets.length > 0) {
-        useMediaJobStore.getState().enqueueProxyJobsForMedia(proxyAssets, useProxySettingsStore.getState().settings, { force: true });
+        useMediaJobStore
+          .getState()
+          .enqueueProxyJobsForMedia(proxyAssets, useProxySettingsStore.getState().settings, { force: true });
       }
-      const frameRateAssets = current.project.media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, current.project.settings.fps)));
+      const frameRateAssets = current.project.media.filter(
+        (asset) =>
+          asset.type === 'video' &&
+          (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, current.project.settings.fps)),
+      );
       for (const asset of frameRateAssets) {
-        const cfrFrameRate = getProjectFrameRateConversionTarget(current.project.settings.fps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true, cfrFrameRate });
+        const cfrFrameRate = getProjectFrameRateConversionTarget(
+          current.project.settings.fps,
+          getCfrTargetFrameRate(
+            { avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate },
+            asset.frameRate ?? 30,
+          ),
+        );
+        useMediaJobStore
+          .getState()
+          .enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true, cfrFrameRate });
       }
       if (proxyAssets.length > 0 || frameRateAssets.length > 0) {
         void ensureMediaJobRunner();
@@ -246,18 +277,28 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         manualEntries,
         proxyAssetIds: proxyAssets.map((asset) => asset.id),
         frameRateProxyAssetIds: frameRateAssets.map((asset) => asset.id),
-        unusedFolderName: zhCN.projectHealth.unusedFolder
+        unusedFolderName: zhCN.projectHealth.unusedFolder,
       });
       commandManager.execute(command);
       useEditorFeatureStore.getState().setProjectHealthRepairReport(command.report);
       showToast({
         kind: command.report?.successCount ? 'success' : 'warning',
         title: zhCN.projectHealth.toasts.autoRepairComplete,
-        message: command.report ? zhCN.projectHealth.repairReportSummary(command.report.successCount, command.report.skippedCount, command.report.manualCount) : undefined
+        message: command.report
+          ? zhCN.projectHealth.repairReportSummary(
+              command.report.successCount,
+              command.report.skippedCount,
+              command.report.manualCount,
+            )
+          : undefined,
       });
       await refreshProjectHealth();
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.projectHealth.toasts.fixFailed,
+        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage,
+      });
     }
   }, [projectHealthReport, refreshProjectHealth]);
 
@@ -330,25 +371,39 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       return;
     }
     if (!demucsAvailability.ready) {
-      showToast({ kind: 'warning', title: zhCN.demucs.unavailableTitle, message: demucsAvailability.error ?? zhCN.demucs.notConfigured });
+      showToast({
+        kind: 'warning',
+        title: zhCN.demucs.unavailableTitle,
+        message: demucsAvailability.error ?? zhCN.demucs.notConfigured,
+      });
       return;
     }
     useEditorFeatureStore.getState().setAudioSeparationClipId(selectedClip.id);
     useEditorFeatureStore.getState().setAudioSeparationProgress(0);
     showToast({ kind: 'info', title: zhCN.demucs.runningTitle, message: zhCN.demucs.runningMessage(0) });
     try {
-      const separation = await separateAudioForClip(selectedClip, selectedClipMedia, { executablePath: demucsExecutablePath });
+      const separation = await separateAudioForClip(selectedClip, selectedClipMedia, {
+        executablePath: demucsExecutablePath,
+      });
       addMedia(separation.media);
       for (const track of separation.tracks) {
         commandManager.execute(new AddTrackCommand(timelineAccessor, track));
       }
       const separatedClipIds = separation.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
       setSelectedClipIds(separatedClipIds);
-      showToast({ kind: 'success', title: zhCN.demucs.completeTitle, message: zhCN.demucs.completeMessage(separation.media.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.demucs.completeTitle,
+        message: zhCN.demucs.completeMessage(separation.media.length),
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.demucs.failedMessage;
       const canceled = message.toLowerCase().includes('canceled') || message.includes('取消');
-      showToast({ kind: canceled ? 'warning' : 'error', title: canceled ? zhCN.demucs.canceledTitle : zhCN.demucs.failedTitle, message });
+      showToast({
+        kind: canceled ? 'warning' : 'error',
+        title: canceled ? zhCN.demucs.canceledTitle : zhCN.demucs.failedTitle,
+        message,
+      });
     } finally {
       useEditorFeatureStore.getState().setAudioSeparationClipId(undefined);
       useEditorFeatureStore.getState().setAudioSeparationProgress(undefined);
@@ -358,27 +413,43 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
   const runSpeakerDiarization = useCallback(async () => {
     const target = speakerDiarizationTarget;
     if (!target) {
-      showToast({ kind: 'warning', title: zhCN.speakerDiarization.unavailableTitle, message: zhCN.speakerDiarization.unavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.speakerDiarization.unavailableTitle,
+        message: zhCN.speakerDiarization.unavailableMessage,
+      });
       return;
     }
     useEditorFeatureStore.getState().setSpeakerDiarizationRunning(true);
-    showToast({ kind: 'info', title: zhCN.speakerDiarization.runningTitle, message: zhCN.speakerDiarization.runningMessage });
+    showToast({
+      kind: 'info',
+      title: zhCN.speakerDiarization.runningTitle,
+      message: zhCN.speakerDiarization.runningMessage,
+    });
     try {
       const dialogueIntervals = collectSpeakerDiarizationDialogueIntervals(project, target.clip);
       const analysis = await analyzeSpeakerDiarizationForClip(target.clip, target.asset, dialogueIntervals);
       if (analysis.segments.length === 0 || analysis.tracks.length === 0) {
         useEditorFeatureStore.getState().setSpeakerDiarizationResult(undefined);
-        showToast({ kind: 'warning', title: zhCN.speakerDiarization.noResultsTitle, message: zhCN.speakerDiarization.noResultsMessage });
+        showToast({
+          kind: 'warning',
+          title: zhCN.speakerDiarization.noResultsTitle,
+          message: zhCN.speakerDiarization.noResultsMessage,
+        });
         return;
       }
       setSelectedClipId(target.clip.id);
       useEditorFeatureStore.getState().setSpeakerDiarizationResult({
         sourceName: target.clip.name || target.asset.name,
         segments: analysis.segments,
-        tracks: analysis.tracks
+        tracks: analysis.tracks,
       });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.speakerDiarization.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage,
+      });
     } finally {
       useEditorFeatureStore.getState().setSpeakerDiarizationRunning(false);
     }
@@ -392,7 +463,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       const lowCount = speakerDiarizationResult.segments.filter((segment) => segment.confidenceLabel === 'low').length;
       const accepted = await bridgeConfirm(zhCN.speakerDiarization.lowConfidenceConfirm(lowCount), {
         title: zhCN.speakerDiarization.title,
-        kind: 'warning'
+        kind: 'warning',
       });
       if (!accepted) {
         return;
@@ -404,29 +475,52 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       showToast({
         kind: 'success',
         title: zhCN.speakerDiarization.completeTitle,
-        message: zhCN.speakerDiarization.completeMessage(speakerDiarizationResult.tracks.length, speakerDiarizationResult.segments.length)
+        message: zhCN.speakerDiarization.completeMessage(
+          speakerDiarizationResult.tracks.length,
+          speakerDiarizationResult.segments.length,
+        ),
       });
       useEditorFeatureStore.getState().setSpeakerDiarizationResult(undefined);
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.speakerDiarization.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage,
+      });
     }
   }, [setSelectedClipIds, speakerDiarizationResult]);
 
   const openAutoAudioSync = useCallback(() => {
     if (autoAudioSyncTargets.length < 2 || autoAudioSyncTargets.length > 5) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.unavailableMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.autoAudioSync.unavailableTitle,
+        message: zhCN.autoAudioSync.unavailableMessage,
+      });
       return;
     }
-    useEditorFeatureStore.getState().setAutoAudioSyncPrimaryClipId((current) => (current && autoAudioSyncTargets.some((target) => target.clip.id === current) ? current : autoAudioSyncTargets[0].clip.id));
+    useEditorFeatureStore
+      .getState()
+      .setAutoAudioSyncPrimaryClipId((current) =>
+        current && autoAudioSyncTargets.some((target) => target.clip.id === current)
+          ? current
+          : autoAudioSyncTargets[0].clip.id,
+      );
     useEditorFeatureStore.getState().setAutoAudioSyncResults([]);
     useEditorUIStore.getState().setAutoAudioSyncOpen(true);
   }, [autoAudioSyncTargets]);
 
   const runAutoAudioSync = useCallback(async () => {
     const primary = autoAudioSyncTargets.find((target) => target.clip.id === resolvedAutoAudioSyncPrimaryClipId);
-    const secondaryTargets = autoAudioSyncTargets.filter((target) => target.clip.id !== resolvedAutoAudioSyncPrimaryClipId).slice(0, 4);
+    const secondaryTargets = autoAudioSyncTargets
+      .filter((target) => target.clip.id !== resolvedAutoAudioSyncPrimaryClipId)
+      .slice(0, 4);
     if (!primary || secondaryTargets.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.notEnoughTracksMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.autoAudioSync.unavailableTitle,
+        message: zhCN.autoAudioSync.notEnoughTracksMessage,
+      });
       return;
     }
     useEditorFeatureStore.getState().setAutoAudioSyncRunning(true);
@@ -436,20 +530,36 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       useEditorFeatureStore.getState().setAutoAudioSyncResults(analysis.results);
       const lowCount = analysis.results.filter((result) => result.confidence === 'low' || !result.applied).length;
       if (lowCount > 0) {
-        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(lowCount) });
+        showToast({
+          kind: 'warning',
+          title: zhCN.autoAudioSync.unavailableTitle,
+          message: zhCN.autoAudioSync.skippedLowConfidence(lowCount),
+        });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.autoAudioSync.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage,
+      });
     } finally {
       useEditorFeatureStore.getState().setAutoAudioSyncRunning(false);
     }
   }, [autoAudioSyncTargets, resolvedAutoAudioSyncPrimaryClipId]);
 
   const applyAutoAudioSync = useCallback(() => {
-    const route = resolveAutoAudioSyncApplyRoute(resolvedAutoAudioSyncPrimaryClipId, autoAudioSyncResults, autoAudioSyncMode);
+    const route = resolveAutoAudioSyncApplyRoute(
+      resolvedAutoAudioSyncPrimaryClipId,
+      autoAudioSyncResults,
+      autoAudioSyncMode,
+    );
     const shiftedClipIds = Object.keys(route.offsetsByClipId);
     if (shiftedClipIds.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.noApplicableResults });
+      showToast({
+        kind: 'warning',
+        title: zhCN.autoAudioSync.unavailableTitle,
+        message: zhCN.autoAudioSync.noApplicableResults,
+      });
       return;
     }
     try {
@@ -458,13 +568,25 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
         commandManager.execute(new UpdateClipCommand(timelineAccessor, route.mutePrimaryClipId, { muted: true }));
       }
       setSelectedClipIds(shiftedClipIds);
-      showToast({ kind: 'success', title: zhCN.autoAudioSync.completeTitle, message: zhCN.autoAudioSync.completeMessage(shiftedClipIds.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.autoAudioSync.completeTitle,
+        message: zhCN.autoAudioSync.completeMessage(shiftedClipIds.length),
+      });
       if (route.skippedLowConfidenceClipIds.length > 0) {
-        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(route.skippedLowConfidenceClipIds.length) });
+        showToast({
+          kind: 'warning',
+          title: zhCN.autoAudioSync.unavailableTitle,
+          message: zhCN.autoAudioSync.skippedLowConfidence(route.skippedLowConfidenceClipIds.length),
+        });
       }
       useEditorUIStore.getState().setAutoAudioSyncOpen(false);
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.autoAudioSync.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage,
+      });
     }
   }, [autoAudioSyncMode, autoAudioSyncResults, resolvedAutoAudioSyncPrimaryClipId, setSelectedClipIds]);
 
@@ -475,7 +597,11 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
     try {
       await cancelDemucs(audioSeparationClipId);
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.demucs.cancelFailedTitle, message: error instanceof Error ? error.message : zhCN.demucs.failedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.demucs.cancelFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.demucs.failedMessage,
+      });
     }
   }, [audioSeparationClipId]);
 
@@ -525,8 +651,17 @@ export function useBeatSyncCallbacks(deps: BeatSyncCallbacksDeps) {
   } = deps;
 
   const detectSelectedBeats = useCallback(async () => {
-    if (!selectedClip || !selectedClipMedia || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || (selectedClipMedia.type !== 'audio' && !selectedClipMedia.hasAudio)) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoClip });
+    if (
+      !selectedClip ||
+      !selectedClipMedia ||
+      (selectedClip.type !== 'audio' && selectedClip.type !== 'video') ||
+      (selectedClipMedia.type !== 'audio' && !selectedClipMedia.hasAudio)
+    ) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatDetectFailed,
+        message: zhCN.editorToasts.beatDetectNoClip,
+      });
       return;
     }
     showToast({ kind: 'info', title: zhCN.editorToasts.beatDetectRunning, message: selectedClip.name });
@@ -543,75 +678,136 @@ export function useBeatSyncCallbacks(deps: BeatSyncCallbacksDeps) {
         })
         .filter((marker): marker is ReturnType<typeof createBeatMarker> => Boolean(marker));
       if (localBeatMarkers.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoMarkers });
+        showToast({
+          kind: 'warning',
+          title: zhCN.editorToasts.beatDetectFailed,
+          message: zhCN.editorToasts.beatDetectNoMarkers,
+        });
         return;
       }
       const detectedBpm = estimateBpmFromBeatMarkers(localBeatMarkers);
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { beatMarkers: localBeatMarkers, detectedBpm }));
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, selectedClip.id, { beatMarkers: localBeatMarkers, detectedBpm }),
+      );
       const clipStart = selectedClip.start;
       const clipEnd = selectedClip.start + selectedClip.duration;
-      const preserved = (projectBeatMarkers ?? []).filter((marker) => marker.time < clipStart - 0.000001 || marker.time > clipEnd + 0.000001);
-      const timelineMarkers = localBeatMarkers.map((marker, index) => createBeatMarker(selectedClip.start + marker.time, `${selectedClip.id}-beat-${index + 1}`));
+      const preserved = (projectBeatMarkers ?? []).filter(
+        (marker) => marker.time < clipStart - 0.000001 || marker.time > clipEnd + 0.000001,
+      );
+      const timelineMarkers = localBeatMarkers.map((marker, index) =>
+        createBeatMarker(selectedClip.start + marker.time, `${selectedClip.id}-beat-${index + 1}`),
+      );
       commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...preserved, ...timelineMarkers]));
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatDetectComplete(localBeatMarkers.length), message: detectedBpm ? zhCN.editorToasts.beatDetectBpm(detectedBpm) : undefined });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.beatDetectComplete(localBeatMarkers.length),
+        message: detectedBpm ? zhCN.editorToasts.beatDetectBpm(detectedBpm) : undefined,
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.beatDetectFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.beatDetectNoMarkers });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.beatDetectFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.beatDetectNoMarkers,
+      });
     }
   }, [beatSensitivity, projectBeatMarkers, selectedClip, selectedClipMedia]);
 
   const snapSelectedToBeats = useCallback(() => {
     const ids = selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : [];
     if (ids.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSnapUnavailable,
+        message: zhCN.editorToasts.beatSnapNoSelection,
+      });
       return;
     }
     const beatTimes = beatSyncBeatTimes;
     if (beatTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSnapUnavailable,
+        message: zhCN.editorToasts.beatSnapNoMarkers,
+      });
       return;
     }
     try {
-      const command = new BatchAlignToBeatCommand(timelineAccessor, ids, beatTimes, { maxDistance: 0.05, syncSpeed: beatSyncSpeedEnabled });
+      const command = new BatchAlignToBeatCommand(timelineAccessor, ids, beatTimes, {
+        maxDistance: 0.05,
+        syncSpeed: beatSyncSpeedEnabled,
+      });
       commandManager.execute(command);
       setSelectedClipIds(ids);
       showToast({ kind: 'success', title: zhCN.editorToasts.beatSnapComplete(command.appliedUpdates.length) });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSnapUnavailable,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }, [beatSyncBeatTimes, beatSyncSpeedEnabled, selectedClipId, selectedClipIds, setSelectedClipIds]);
 
   const splitSelectedToBeats = useCallback(() => {
     if (!selectedClip) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoSelection });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSplitUnavailable,
+        message: zhCN.editorToasts.beatSplitNoSelection,
+      });
       return;
     }
     const beatTimes = beatSyncBeatTimes;
     if (beatTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSplitUnavailable,
+        message: zhCN.editorToasts.beatSnapNoMarkers,
+      });
       return;
     }
     const splitTimes = calculateBeatSplitTimesForClip(selectedClip, beatTimes);
     if (splitTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoMarkers });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSplitUnavailable,
+        message: zhCN.editorToasts.beatSplitNoMarkers,
+      });
       return;
     }
     try {
       commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, selectedClip.id, splitTimes));
       clearSelectedClipIds();
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatSplitComplete(splitTimes.length + 1), message: zhCN.editorToasts.beatSplitCompleteMessage(splitTimes.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.beatSplitComplete(splitTimes.length + 1),
+        message: zhCN.editorToasts.beatSplitCompleteMessage(splitTimes.length),
+      });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSplitUnavailable,
+        message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+      });
     }
   }, [beatSyncBeatTimes, clearSelectedClipIds, selectedClip]);
 
   const applyManualBeatBpm = useCallback(() => {
     if (!selectedClip) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatSnapUnavailable,
+        message: zhCN.editorToasts.beatSnapNoSelection,
+      });
       return;
     }
     const bpm = Number(beatSyncManualBpm);
     if (!Number.isFinite(bpm) || bpm <= 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatBpmInvalid });
+      showToast({
+        kind: 'warning',
+        title: zhCN.editorToasts.beatDetectFailed,
+        message: zhCN.editorToasts.beatBpmInvalid,
+      });
       return;
     }
     commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { detectedBpm: bpm }));
@@ -653,15 +849,21 @@ export function useRecordingCallbacks(deps: RecordingCallbacksDeps) {
           source,
           width: recordingSettings.width,
           height: recordingSettings.height,
-          frameRate: recordingSettings.frameRate
+          frameRate: recordingSettings.frameRate,
         });
-        useEditorFeatureStore.getState().setRecordingTask({ taskId: result.taskId, source, outputPath: result.outputPath, startedAt: Date.now() });
+        useEditorFeatureStore
+          .getState()
+          .setRecordingTask({ taskId: result.taskId, source, outputPath: result.outputPath, startedAt: Date.now() });
         showToast({ kind: 'info', title: zhCN.recording.startedTitle, message: zhCN.recording.startedMessage(source) });
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.recording.startFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.recording.startFailedTitle,
+          message: error instanceof Error ? error.message : zhCN.recording.failedMessage,
+        });
       }
     },
-    [recordingSettings, recordingTask]
+    [recordingSettings, recordingTask],
   );
 
   const stopEditorRecording = useCallback(async () => {
@@ -676,9 +878,17 @@ export function useRecordingCallbacks(deps: RecordingCallbacksDeps) {
         addMedia(imported.media);
         await persistMediaFingerprints(imported.media);
       }
-      showToast({ kind: 'success', title: zhCN.recording.stoppedTitle, message: zhCN.recording.importedMessage(imported.media.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.recording.stoppedTitle,
+        message: zhCN.recording.importedMessage(imported.media.length),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.recording.stopFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.recording.stopFailedTitle,
+        message: error instanceof Error ? error.message : zhCN.recording.failedMessage,
+      });
     } finally {
       useEditorFeatureStore.getState().setRecordingTask(undefined);
       useEditorFeatureStore.getState().setRecordingElapsedSeconds(0);

@@ -11,7 +11,7 @@ import {
   resolvePathTextStartOffset,
   richTextToPlainText,
   type Clip,
-  type ProjectColorPipeline
+  type ProjectColorPipeline,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
@@ -21,7 +21,13 @@ import type { WebGlPreviewCompositor } from './webgl-compositor';
 type TextClip = Extract<Clip, { type: 'text' }> | Extract<Clip, { type: 'subtitle' }>;
 type CreditsClip = Extract<Clip, { type: 'credits' }>;
 
-export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false, localTime = 0): void {
+export function drawText2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  clip: TextClip,
+  bypassProcessing = false,
+  localTime = 0,
+): void {
   if (clip.type === 'text' && normalizeTextArc(clip.arcText).enabled) {
     drawArcText2d(context, canvas, clip, bypassProcessing);
     return;
@@ -52,7 +58,14 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   context.font = `${clip.style.italic ? 'italic ' : ''}${clip.style.bold ? '700 ' : '400 '}${clip.style.fontSize}px ${clip.style.fontFamily}`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  drawTextBackground(context, text, clip.style.fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+  drawTextBackground(
+    context,
+    text,
+    clip.style.fontSize,
+    clip.style.backgroundColor,
+    clip.style.backgroundOpacity,
+    transform.opacity,
+  );
   context.globalAlpha = transform.opacity;
   context.fillStyle = clip.style.color;
   context.fillText(text, 0, 0);
@@ -61,16 +74,32 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   recordPreviewDraw(clip.type, 'text', text);
 }
 
-export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false, colorPipeline?: ProjectColorPipeline, localTime = 0): void {
-  const text = clip.type === 'text' ? richTextToPlainText(clip.richText, clip.text) : resolveTextContent(clip, localTime);
+export function drawTextWebGl(
+  compositor: WebGlPreviewCompositor,
+  clip: TextClip,
+  bypassProcessing = false,
+  colorPipeline?: ProjectColorPipeline,
+  localTime = 0,
+): void {
+  const text =
+    clip.type === 'text' ? richTextToPlainText(clip.richText, clip.text) : resolveTextContent(clip, localTime);
   if (clip.type === 'subtitle' && !text) {
     return;
   }
-  compositor.drawText(text, clip.transform, clip.style, clip.colorCorrection, clip.effects, clip.colorNodeGraph, { bypassProcessing, colorPipeline });
+  compositor.drawText(text, clip.transform, clip.style, clip.colorCorrection, clip.effects, clip.colorNodeGraph, {
+    bypassProcessing,
+    colorPipeline,
+  });
   recordPreviewDraw(clip.type, 'text', text);
 }
 
-export function drawCreditsRoll2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: CreditsClip, bypassProcessing = false, localTime = 0): void {
+export function drawCreditsRoll2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  clip: CreditsClip,
+  bypassProcessing = false,
+  localTime = 0,
+): void {
   const previousFilter = context.filter;
   const transform = clip.transform;
   const correction = clip.colorCorrection;
@@ -86,7 +115,8 @@ export function drawCreditsRoll2d(context: CanvasRenderingContext2D, canvas: HTM
     ? 'none'
     : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
   if (clip.style.backgroundOpacity > 0) {
-    context.globalAlpha = Math.min(1, Math.max(0, clip.style.backgroundOpacity)) * Math.min(1, Math.max(0, transform.opacity));
+    context.globalAlpha =
+      Math.min(1, Math.max(0, clip.style.backgroundOpacity)) * Math.min(1, Math.max(0, transform.opacity));
     context.fillStyle = clip.style.backgroundColor;
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -127,7 +157,7 @@ export function drawCreditsRollWebGl(
   height: number,
   bypassProcessing = false,
   localTime = 0,
-  colorPipeline?: ProjectColorPipeline
+  colorPipeline?: ProjectColorPipeline,
 ): void {
   const layer = document.createElement('canvas');
   layer.width = width;
@@ -137,10 +167,26 @@ export function drawCreditsRollWebGl(
     return;
   }
   drawCreditsRoll2d(context, layer, clip, bypassProcessing || Boolean(clip.colorNodeGraph), localTime);
-  compositor.drawSourceWithColorNodeGraph(layer, width, height, DEFAULT_TRANSFORM, clip.colorNodeGraph, undefined, undefined, undefined, undefined, { colorPipeline });
+  compositor.drawSourceWithColorNodeGraph(
+    layer,
+    width,
+    height,
+    DEFAULT_TRANSFORM,
+    clip.colorNodeGraph,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    { colorPipeline },
+  );
 }
 
-export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, name: string, clipType: Clip['type']): void {
+export function drawMissing2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  name: string,
+  clipType: Clip['type'],
+): void {
   const missing = document.createElement('canvas');
   missing.width = 680;
   missing.height = 136;
@@ -155,7 +201,13 @@ export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCan
   missingContext.textBaseline = 'middle';
   missingContext.font = '600 36px Inter, Arial, sans-serif';
   missingContext.fillText(zhCN.preview.missingMedia(name), missing.width / 2, missing.height / 2);
-  drawTransformedSource2d(context, canvas, missing, { width: 340, height: 68 }, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
+  drawTransformedSource2d(
+    context,
+    canvas,
+    missing,
+    { width: 340, height: 68 },
+    { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+  );
   recordPreviewDraw(clipType, 'missing');
 }
 
@@ -170,7 +222,7 @@ function drawTextBackground(
   fontSize: number,
   backgroundColor: string,
   backgroundOpacity: number,
-  transformOpacity: number
+  transformOpacity: number,
 ): void {
   if (backgroundOpacity <= 0) {
     return;
@@ -184,7 +236,12 @@ function drawTextBackground(
   context.fillRect(-width / 2, -height / 2, width, height);
 }
 
-function drawRichText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean): void {
+function drawRichText2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  clip: Extract<Clip, { type: 'text' }>,
+  bypassProcessing: boolean,
+): void {
   const previousFilter = context.filter;
   const transform = clip.transform;
   const correction = clip.colorCorrection;
@@ -192,13 +249,13 @@ function drawRichText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasEle
     richText: clip.richText,
     plainText: clip.text,
     baseStyle: clip.style,
-    layout: clip.textLayout
+    layout: clip.textLayout,
   });
   const segments = buildRichTextDrawSegments({
     richText: clip.richText,
     plainText: clip.text,
     baseStyle: clip.style,
-    layout: normalizeTextLayout(clip.textLayout)
+    layout: normalizeTextLayout(clip.textLayout),
   });
   context.save();
   context.filter = bypassProcessing
@@ -217,7 +274,16 @@ function drawRichText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasEle
     context.globalAlpha = transform.opacity;
     const x = segment.xOffset - layout.width / 2;
     const y = segment.yOffset - layout.height / 2;
-    drawTextRunBackground(context, segment.text, x, y, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    drawTextRunBackground(
+      context,
+      segment.text,
+      x,
+      y,
+      fontSize,
+      clip.style.backgroundColor,
+      clip.style.backgroundOpacity,
+      transform.opacity,
+    );
     context.globalAlpha = transform.opacity;
     context.fillText(segment.text, x, y);
     if (segment.style.underline) {
@@ -230,7 +296,12 @@ function drawRichText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasEle
   recordPreviewDraw(clip.type, 'text', richTextToPlainText(clip.richText, clip.text));
 }
 
-function drawArcText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean): void {
+function drawArcText2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  clip: Extract<Clip, { type: 'text' }>,
+  bypassProcessing: boolean,
+): void {
   const previousFilter = context.filter;
   const transform = clip.transform;
   const correction = clip.colorCorrection;
@@ -244,7 +315,7 @@ function drawArcText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElem
     fontSize,
     letterSpacing: pathText.letterSpacing,
     centerX: canvas.width / 2 + transform.x,
-    centerY: canvas.height / 2 + transform.y
+    centerY: canvas.height / 2 + transform.y,
   });
   context.save();
   context.filter = bypassProcessing
@@ -261,7 +332,14 @@ function drawArcText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElem
     if (arcText.rotateCharacters) {
       context.rotate((item.rotation * Math.PI) / 180);
     }
-    drawTextBackground(context, item.char, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    drawTextBackground(
+      context,
+      item.char,
+      fontSize,
+      clip.style.backgroundColor,
+      clip.style.backgroundOpacity,
+      transform.opacity,
+    );
     context.globalAlpha = transform.opacity;
     context.fillStyle = clip.style.color;
     context.fillText(item.char, 0, 0);
@@ -280,7 +358,7 @@ function drawTextRunBackground(
   fontSize: number,
   backgroundColor: string,
   backgroundOpacity: number,
-  transformOpacity: number
+  transformOpacity: number,
 ): void {
   if (backgroundOpacity <= 0) {
     return;
@@ -289,7 +367,12 @@ function drawTextRunBackground(
   const padding = Math.max(6, fontSize * 0.25);
   context.globalAlpha = Math.min(1, Math.max(0, backgroundOpacity)) * Math.min(1, Math.max(0, transformOpacity));
   context.fillStyle = backgroundColor;
-  context.fillRect(x - padding, y - padding / 2, Math.max(fontSize, metrics.width) + padding * 2, fontSize * 1.35 + padding);
+  context.fillRect(
+    x - padding,
+    y - padding / 2,
+    Math.max(fontSize, metrics.width) + padding * 2,
+    fontSize * 1.35 + padding,
+  );
 }
 
 function shouldDrawRichTextPreview(clip: Extract<Clip, { type: 'text' }>): boolean {
@@ -298,21 +381,34 @@ function shouldDrawRichTextPreview(clip: Extract<Clip, { type: 'text' }>): boole
   const defaultLayout = normalizeTextLayout(undefined);
   return Boolean(
     richText &&
-      (richText.paragraphs.length > 1 ||
-        richText.paragraphs.some(
-          (paragraph) =>
-            paragraph.runs.length > 1 ||
-            paragraph.runs.some((run) => run.bold !== undefined || run.italic !== undefined || run.underline !== undefined || run.color !== undefined || run.fontSize !== undefined)
-        ) ||
-        layout.fitMode !== defaultLayout.fitMode ||
-        layout.boxWidth !== defaultLayout.boxWidth ||
-        layout.boxHeight !== defaultLayout.boxHeight ||
-        layout.paragraphSpacing !== defaultLayout.paragraphSpacing ||
-        layout.firstLineIndent !== defaultLayout.firstLineIndent)
+    (richText.paragraphs.length > 1 ||
+      richText.paragraphs.some(
+        (paragraph) =>
+          paragraph.runs.length > 1 ||
+          paragraph.runs.some(
+            (run) =>
+              run.bold !== undefined ||
+              run.italic !== undefined ||
+              run.underline !== undefined ||
+              run.color !== undefined ||
+              run.fontSize !== undefined,
+          ),
+      ) ||
+      layout.fitMode !== defaultLayout.fitMode ||
+      layout.boxWidth !== defaultLayout.boxWidth ||
+      layout.boxHeight !== defaultLayout.boxHeight ||
+      layout.paragraphSpacing !== defaultLayout.paragraphSpacing ||
+      layout.firstLineIndent !== defaultLayout.firstLineIndent),
   );
 }
 
-function drawPathText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean, localTime: number): void {
+function drawPathText2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  clip: Extract<Clip, { type: 'text' }>,
+  bypassProcessing: boolean,
+  localTime: number,
+): void {
   const previousFilter = context.filter;
   const transform = clip.transform;
   const correction = clip.colorCorrection;
@@ -338,7 +434,7 @@ function drawPathText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasEle
     rotateCharacters: pathText.rotateCharacters,
     offsetX: clip.transform.x,
     offsetY: clip.transform.y,
-    measureCharacter: (char) => context.measureText(char).width
+    measureCharacter: (char) => context.measureText(char).width,
   });
   for (const item of chars) {
     context.save();
@@ -346,7 +442,14 @@ function drawPathText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasEle
     if (pathText.rotateCharacters) {
       context.rotate((item.angle * Math.PI) / 180);
     }
-    drawTextBackground(context, item.char, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    drawTextBackground(
+      context,
+      item.char,
+      fontSize,
+      clip.style.backgroundColor,
+      clip.style.backgroundOpacity,
+      transform.opacity,
+    );
     context.globalAlpha = transform.opacity;
     context.fillStyle = clip.style.color;
     context.fillText(item.char, 0, 0);
@@ -364,7 +467,7 @@ function resolveTextTransform(canvasHeight: number, clip: TextClip): TextClip['t
   return {
     ...clip.transform,
     x: 0,
-    y: canvasHeight / 2 - clip.style.yOffset - clip.style.fontSize / 2
+    y: canvasHeight / 2 - clip.style.yOffset - clip.style.fontSize / 2,
   };
 }
 
@@ -372,5 +475,7 @@ function resolveTextContent(clip: TextClip, localTime: number): string {
   if (clip.type !== 'subtitle') {
     return clip.text;
   }
-  return clip.dataSubtitle ? resolveDataSubtitleText(clip.dataSubtitle, clip.start + Math.max(0, localTime)) : clip.text;
+  return clip.dataSubtitle
+    ? resolveDataSubtitleText(clip.dataSubtitle, clip.start + Math.max(0, localTime))
+    : clip.text;
 }

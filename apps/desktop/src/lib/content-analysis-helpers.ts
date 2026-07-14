@@ -23,7 +23,10 @@ export function collectContentAnalysisTargets(project: Project): ContentAnalysis
   return targets;
 }
 
-export function findSpeakerDiarizationTarget(project: Project, preferredClipIds: string[]): { clip: Extract<Clip, { type: 'audio' | 'video' }>; asset: MediaAsset } | undefined {
+export function findSpeakerDiarizationTarget(
+  project: Project,
+  preferredClipIds: string[],
+): { clip: Extract<Clip, { type: 'audio' | 'video' }>; asset: MediaAsset } | undefined {
   const preferred = new Set(preferredClipIds);
   const clips = project.timeline.tracks.flatMap((track) => track.clips);
   const candidates = [...clips.filter((clip) => preferred.has(clip.id)), ...clips];
@@ -64,7 +67,10 @@ export function collectAutoAudioSyncTargets(project: Project, preferredClipIds: 
   return targets;
 }
 
-export function collectSpeakerDiarizationDialogueIntervals(project: Project, clip: Extract<Clip, { type: 'audio' | 'video' }>): Array<{ start: number; end: number }> {
+export function collectSpeakerDiarizationDialogueIntervals(
+  project: Project,
+  clip: Extract<Clip, { type: 'audio' | 'video' }>,
+): Array<{ start: number; end: number }> {
   const clipStart = clip.start;
   const clipEnd = round(clip.start + clip.duration);
   return project.timeline.tracks
@@ -73,12 +79,12 @@ export function collectSpeakerDiarizationDialogueIntervals(project: Project, cli
     .filter((subtitle): subtitle is Extract<Clip, { type: 'subtitle' }> => subtitle.type === 'subtitle')
     .map((subtitle) => ({
       start: Math.max(clipStart, subtitle.start),
-      end: Math.min(clipEnd, round(subtitle.start + subtitle.duration))
+      end: Math.min(clipEnd, round(subtitle.start + subtitle.duration)),
     }))
     .filter((interval) => interval.end > interval.start)
     .map((interval) => ({
       start: round(interval.start - clipStart),
-      end: round(interval.end - clipStart)
+      end: round(interval.end - clipStart),
     }));
 }
 

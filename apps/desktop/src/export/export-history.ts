@@ -1,4 +1,10 @@
-import { joinPath, updateExportTaskHistoryUpload, type ExportTaskHistoryEntry, type ExportUploadTargetType, type ExportUploadStatus } from '@open-factory/editor-core';
+import {
+  joinPath,
+  updateExportTaskHistoryUpload,
+  type ExportTaskHistoryEntry,
+  type ExportUploadTargetType,
+  type ExportUploadStatus,
+} from '@open-factory/editor-core';
 import { getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { createHistoryEntryForTask, useExportQueueStore } from './export-queue-store';
 
@@ -19,7 +25,10 @@ export async function persistFinishedTaskToHistory(taskId: string): Promise<void
   if (!entry) {
     return;
   }
-  const nextHistory = [entry, ...(await readExportHistory()).filter((item) => item.id !== entry.id)].slice(0, MAX_HISTORY_ENTRIES);
+  const nextHistory = [entry, ...(await readExportHistory()).filter((item) => item.id !== entry.id)].slice(
+    0,
+    MAX_HISTORY_ENTRIES,
+  );
   await writeFile(await getExportHistoryPath(), JSON.stringify(nextHistory, null, 2));
   useExportQueueStore.getState().setHistory(nextHistory);
 }
@@ -32,7 +41,7 @@ export async function updateExportHistoryUpload(
     destination?: string;
     error?: string;
     progress?: number;
-  }
+  },
 ): Promise<ExportTaskHistoryEntry | undefined> {
   const history = await readExportHistory();
   const nextHistory = updateExportTaskHistoryUpload(history, entryId, patch);

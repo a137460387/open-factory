@@ -1,5 +1,35 @@
-import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup, MulticamClip, MulticamSyncMode, SwitchPoint } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode, SwitchMulticamAngleCommand, DeleteSwitchPointCommand, UpdateSwitchPointCommand, SyncMulticamClipCommand, syncMulticamByAudio, syncMulticamByTimecode, detectMulticamDrift } from '@open-factory/editor-core';
+import type {
+  Clip,
+  HistoryMeta,
+  KeyframeProperty,
+  MediaAsset,
+  MediaMetadata,
+  Project,
+  Timeline,
+  TimelineDiffRange,
+  ClipboardKeyframeGroup,
+  MulticamClip,
+  MulticamSyncMode,
+  SwitchPoint,
+} from '@open-factory/editor-core';
+import {
+  clampTimelineZoom,
+  createProject,
+  getTimelineDuration,
+  normalizeMediaMetadataEntry,
+  replaceProjectActiveTimeline,
+  switchProjectActiveSequence,
+  resolveZoomForContext,
+  saveZoomMemoryEntry,
+  type ZoomEditMode,
+  SwitchMulticamAngleCommand,
+  DeleteSwitchPointCommand,
+  UpdateSwitchPointCommand,
+  SyncMulticamClipCommand,
+  syncMulticamByAudio,
+  syncMulticamByTimecode,
+  detectMulticamDrift,
+} from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
 import { analyzeWaveform } from '../lib/tauri-bridge';
@@ -103,12 +133,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   replaceProject: (project) =>
     set({
       project: { ...project, updatedAt: new Date().toISOString() },
-      dirty: true
+      dirty: true,
     }),
   replaceTimeline: (timeline) =>
     set((state) => ({
       project: { ...replaceProjectActiveTimeline(state.project, timeline), updatedAt: new Date().toISOString() },
-      dirty: true
+      dirty: true,
     })),
   setActiveSequenceId: (sequenceId) =>
     set((state) => ({
@@ -122,7 +152,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       previewTimeline: undefined,
       timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
-      dirty: state.dirty
+      dirty: state.dirty,
     })),
   setProject: (project, projectPath) =>
     set({
@@ -140,7 +170,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       previewTimeline: undefined,
       timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
-      dirty: false
+      dirty: false,
     }),
   resetProject: () =>
     set({
@@ -158,12 +188,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       previewTimeline: undefined,
       timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
-      dirty: false
+      dirty: false,
     }),
   setMedia: (media) =>
     set((state) => ({
       project: { ...state.project, media, updatedAt: new Date().toISOString() },
-      dirty: true
+      dirty: true,
     })),
   addMedia: (media) =>
     set((state) => {
@@ -171,7 +201,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const nextMedia = [...state.project.media, ...media.filter((asset) => !existingPaths.has(asset.path))];
       return {
         project: { ...state.project, media: nextMedia, updatedAt: new Date().toISOString() },
-        dirty: nextMedia.length !== state.project.media.length || state.dirty
+        dirty: nextMedia.length !== state.project.media.length || state.dirty,
       };
     }),
   setMediaMetadata: (assetId, metadata) =>
@@ -185,13 +215,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
       return {
         project: { ...state.project, mediaMetadata, updatedAt: new Date().toISOString() },
-        dirty: true
+        dirty: true,
       };
     }),
-  setSelectedClipId: (selectedClipId) => set({ selectedClipId, selectedClipIds: selectedClipId ? [selectedClipId] : [], selectedKeyframe: undefined, selectedKeyframes: [] }),
+  setSelectedClipId: (selectedClipId) =>
+    set({
+      selectedClipId,
+      selectedClipIds: selectedClipId ? [selectedClipId] : [],
+      selectedKeyframe: undefined,
+      selectedKeyframes: [],
+    }),
   setSelectedClipIds: (selectedClipIds) => {
     const unique = Array.from(new Set(selectedClipIds));
-    set({ selectedClipIds: unique, selectedClipId: unique.length === 1 ? unique[0] : undefined, selectedKeyframe: undefined, selectedKeyframes: [] });
+    set({
+      selectedClipIds: unique,
+      selectedClipId: unique.length === 1 ? unique[0] : undefined,
+      selectedKeyframe: undefined,
+      selectedKeyframes: [],
+    });
   },
   toggleSelectedClipId: (clipId) =>
     set((state) => {
@@ -202,15 +243,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         selected.add(clipId);
       }
       const selectedClipIds = Array.from(selected);
-      return { selectedClipIds, selectedClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : undefined, selectedKeyframe: undefined, selectedKeyframes: [] };
+      return {
+        selectedClipIds,
+        selectedClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : undefined,
+        selectedKeyframe: undefined,
+        selectedKeyframes: [],
+      };
     }),
-  clearSelectedClipIds: () => set({ selectedClipId: undefined, selectedClipIds: [], selectedKeyframe: undefined, selectedKeyframes: [] }),
+  clearSelectedClipIds: () =>
+    set({ selectedClipId: undefined, selectedClipIds: [], selectedKeyframe: undefined, selectedKeyframes: [] }),
   setSelectedKeyframe: (selectedKeyframe) =>
     set({
       selectedKeyframe,
       selectedKeyframes: selectedKeyframe ? [selectedKeyframe] : [],
       selectedClipIds: selectedKeyframe ? [selectedKeyframe.clipId] : [],
-      selectedClipId: selectedKeyframe?.clipId
+      selectedClipId: selectedKeyframe?.clipId,
     }),
   setSelectedKeyframes: (selectedKeyframes) => {
     const unique = uniqueSelectedKeyframes(selectedKeyframes);
@@ -226,7 +273,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         : [...state.selectedKeyframes, selectedKeyframe];
       const nextSelectedKeyframe = selectedKeyframes.at(-1);
       const selectedClipIds = uniqueSelectedClipIdsForKeyframes(selectedKeyframes);
-      return { selectedKeyframes, selectedKeyframe: nextSelectedKeyframe, selectedClipIds, selectedClipId: nextSelectedKeyframe?.clipId };
+      return {
+        selectedKeyframes,
+        selectedKeyframe: nextSelectedKeyframe,
+        selectedClipIds,
+        selectedClipId: nextSelectedKeyframe?.clipId,
+      };
     }),
   setPlayheadTime: (time) => {
     const duration = getTimelineDuration(get().project.timeline);
@@ -242,10 +294,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       project: {
         ...state.project,
-        zoomMemory: saveZoomMemoryEntry(state.project.zoomMemory, state.project.activeSequenceId, state.zoomEditMode, state.timelineZoom),
-        updatedAt: new Date().toISOString()
+        zoomMemory: saveZoomMemoryEntry(
+          state.project.zoomMemory,
+          state.project.activeSequenceId,
+          state.zoomEditMode,
+          state.timelineZoom,
+        ),
+        updatedAt: new Date().toISOString(),
       },
-      dirty: true
+      dirty: true,
     })),
   switchZoomEditMode: (mode) =>
     set((state) => {
@@ -260,8 +317,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setIsExporting: (isExporting) => set({ isExporting }),
   setPreviewTimeline: (previewTimeline) => set({ previewTimeline }),
   setTimelineCompareRanges: (timelineCompareRanges) => set({ timelineCompareRanges }),
-  setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId })
-  ,
+  setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId }),
   setClipboardKeyframes: (clipboardKeyframes) => set({ clipboardKeyframes }),
   enterMulticamEditMode: (clipId) => {
     set({ multicamEditMode: true, activeMulticamClipId: clipId });
@@ -277,20 +333,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       activeMulticamClipId,
       playheadTime,
       angleIndex,
-      'cut'
+      'cut',
     );
     commandManager.execute(command);
   },
   addMulticamSwitchPoint: (time, targetAngle) => {
     const { activeMulticamClipId } = get();
     if (!activeMulticamClipId) return;
-    const command = new SwitchMulticamAngleCommand(
-      projectAccessor,
-      activeMulticamClipId,
-      time,
-      targetAngle,
-      'cut'
-    );
+    const command = new SwitchMulticamAngleCommand(projectAccessor, activeMulticamClipId, time, targetAngle, 'cut');
     commandManager.execute(command);
   },
   deleteMulticamSwitchPoint: (index) => {
@@ -327,12 +377,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           break;
       }
       if (syncResult) {
-        const command = new SyncMulticamClipCommand(
-          projectAccessor,
-          activeMulticamClipId,
-          mode,
-          syncResult.offsets
-        );
+        const command = new SyncMulticamClipCommand(projectAccessor, activeMulticamClipId, mode, syncResult.offsets);
         commandManager.execute(command);
       }
     } catch (error) {
@@ -372,13 +417,24 @@ export function findMulticamClipInProject(project: Project, clipId: string): Mul
   return undefined;
 }
 
-async function fetchMulticamAudioSamples(multicamClip: MulticamClip, mediaAssets: MediaAsset[], samplesPerSec = 100): Promise<Map<string, ArrayLike<number>>> {
+async function fetchMulticamAudioSamples(
+  multicamClip: MulticamClip,
+  mediaAssets: MediaAsset[],
+  samplesPerSec = 100,
+): Promise<Map<string, ArrayLike<number>>> {
   const result = new Map<string, ArrayLike<number>>();
   for (const angle of multicamClip.angles) {
     const asset = mediaAssets.find((m) => m.id === angle.mediaId);
-    if (!asset || !asset.path || asset.missing) { result.set(angle.id, new Float32Array(0)); continue; }
-    try { const samples = await analyzeWaveform(asset.path, samplesPerSec); result.set(angle.id, samples); }
-    catch { result.set(angle.id, new Float32Array(0)); }
+    if (!asset || !asset.path || asset.missing) {
+      result.set(angle.id, new Float32Array(0));
+      continue;
+    }
+    try {
+      const samples = await analyzeWaveform(asset.path, samplesPerSec);
+      result.set(angle.id, samples);
+    } catch {
+      result.set(angle.id, new Float32Array(0));
+    }
   }
   return result;
 }

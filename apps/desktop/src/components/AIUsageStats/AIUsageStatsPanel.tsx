@@ -123,7 +123,9 @@ export function AIUsageStatsPanel() {
   const pieSlices = useMemo(() => {
     if (providerStats.length === 0) return [];
     const total = providerStats.reduce((sum, s) => sum + s.callCount, 0);
-    const cx = 50, cy = 50, r = 40;
+    const cx = 50,
+      cy = 50,
+      r = 40;
     let angle = 0;
     return providerStats.map((stat, i) => {
       const fraction = stat.callCount / total;
@@ -135,10 +137,16 @@ export function AIUsageStatsPanel() {
       const y1 = cy + r * Math.sin(startAngle);
       const x2 = cx + r * Math.cos(endAngle);
       const y2 = cy + r * Math.sin(endAngle);
-      const d = fraction >= 1
-        ? `M${cx},${cy - r} A${r},${r} 0 1,1 ${cx - 0.01},${cy - r} Z`
-        : `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`;
-      return { d, color: CHART_COLORS[i % CHART_COLORS.length], label: stat.providerId, pct: (fraction * 100).toFixed(1) };
+      const d =
+        fraction >= 1
+          ? `M${cx},${cy - r} A${r},${r} 0 1,1 ${cx - 0.01},${cy - r} Z`
+          : `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`;
+      return {
+        d,
+        color: CHART_COLORS[i % CHART_COLORS.length],
+        label: stat.providerId,
+        pct: (fraction * 100).toFixed(1),
+      };
     });
   }, [providerStats]);
 
@@ -159,7 +167,9 @@ export function AIUsageStatsPanel() {
           <div className="text-[10px] text-slate-500">{t.monthlyCalls}</div>
         </div>
         <div className="rounded-md border border-line bg-panel p-2">
-          <div className="text-lg font-semibold text-ink">{monthlyCost.toFixed(2)} {t.costUnit}</div>
+          <div className="text-lg font-semibold text-ink">
+            {monthlyCost.toFixed(2)} {t.costUnit}
+          </div>
           <div className="text-[10px] text-slate-500">{t.monthlyCost}</div>
         </div>
       </div>
@@ -207,8 +217,14 @@ export function AIUsageStatsPanel() {
           <h5 className="text-xs font-semibold text-ink mb-1">{t.recommendations}</h5>
           <div className="space-y-1">
             {recommendations.map((rec, i) => (
-              <div key={i} className="rounded-md border border-line bg-panel px-2 py-1.5 text-[11px] text-slate-700" data-testid={`ai-recommendation-${i}`}>
-                <span className="font-medium">{t.serviceLabels[rec.feature as keyof typeof t.serviceLabels] ?? rec.feature}</span>
+              <div
+                key={i}
+                className="rounded-md border border-line bg-panel px-2 py-1.5 text-[11px] text-slate-700"
+                data-testid={`ai-recommendation-${i}`}
+              >
+                <span className="font-medium">
+                  {t.serviceLabels[rec.feature as keyof typeof t.serviceLabels] ?? rec.feature}
+                </span>
                 <span className="ml-1 text-slate-500">
                   {(t as unknown as Record<string, string>)[rec.reasonKey] ?? rec.reasonKey}
                 </span>

@@ -18,7 +18,11 @@ export function normalizeExportProgressPayload(payload: ExportProgressEvent): nu
   if (typeof payload.progressPct === 'number') {
     return clampProgress(payload.progressPct / 100);
   }
-  if (typeof payload.outTimeUs === 'number' && typeof payload.expectedDurationUs === 'number' && payload.expectedDurationUs > 0) {
+  if (
+    typeof payload.outTimeUs === 'number' &&
+    typeof payload.expectedDurationUs === 'number' &&
+    payload.expectedDurationUs > 0
+  ) {
     return clampProgress(payload.outTimeUs / payload.expectedDurationUs);
   }
   return 0;

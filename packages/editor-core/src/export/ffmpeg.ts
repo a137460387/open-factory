@@ -24,11 +24,11 @@ export interface ExportPlan {
   limitation: string;
 }
 
-
 export function buildSingleVideoTrackExportPlan(project: Project): ExportPlan {
   const videoTrack = project.timeline.tracks.find((track) => track.type === 'video');
-  const clips = (videoTrack?.clips ?? []).filter((clip): clip is Clip & { type: 'video' | 'image'; mediaId: string } =>
-    clip.type === 'video' || clip.type === 'image'
+  const clips = (videoTrack?.clips ?? []).filter(
+    (clip): clip is Clip & { type: 'video' | 'image'; mediaId: string } =>
+      clip.type === 'video' || clip.type === 'image',
   );
   const assetsById = new Map(project.media.map((asset) => [asset.id, asset]));
   const segments = clips
@@ -43,7 +43,7 @@ export function buildSingleVideoTrackExportPlan(project: Project): ExportPlan {
         inputPath: normalizeFfmpegPath(asset.path),
         start: clip.trimStart,
         duration: clip.duration,
-        name: clip.name
+        name: clip.name,
       };
     });
 
@@ -53,13 +53,24 @@ export function buildSingleVideoTrackExportPlan(project: Project): ExportPlan {
     width: project.settings.width,
     height: project.settings.height,
     fps: project.settings.fps,
-    limitation: 'Current MVP exports the first video track only. Multi-track compositing and text export are planned for a later version.'
+    limitation:
+      'Current MVP exports the first video track only. Multi-track compositing and text export are planned for a later version.',
   };
 }
 
 export function timelineHasExportableVideo(timeline: Timeline): boolean {
   return timeline.tracks.some((track) =>
-    track.clips.some((clip) => clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits' || clip.type === 'audio' || clip.type === 'nested-sequence' || clip.type === 'motion-graphic')
+    track.clips.some(
+      (clip) =>
+        clip.type === 'video' ||
+        clip.type === 'image' ||
+        clip.type === 'text' ||
+        clip.type === 'subtitle' ||
+        clip.type === 'credits' ||
+        clip.type === 'audio' ||
+        clip.type === 'nested-sequence' ||
+        clip.type === 'motion-graphic',
+    ),
   );
 }
 

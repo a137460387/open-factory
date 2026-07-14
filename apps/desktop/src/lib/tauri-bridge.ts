@@ -6,7 +6,17 @@ import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { relaunch as relaunchProcess } from '@tauri-apps/plugin-process';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
 import { check as checkTauriUpdate, type DownloadEvent as TauriUpdateDownloadEvent } from '@tauri-apps/plugin-updater';
-import type { BeatSensitivity, ColorMatchFrameSample, ExportPreviewSamplePlan, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, PostExportQualityAssuranceResult, ProxyPlan } from '@open-factory/editor-core';
+import type {
+  BeatSensitivity,
+  ColorMatchFrameSample,
+  ExportPreviewSamplePlan,
+  ExportReport,
+  FfmpegCapabilities,
+  FfmpegExportPlan,
+  MotionTrackPoint,
+  PostExportQualityAssuranceResult,
+  ProxyPlan,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 import desktopPackage from '../../package.json';
@@ -691,7 +701,10 @@ export type TauriMocks = Partial<{
   confirm(message: string, options?: unknown): Promise<boolean> | boolean;
   chooseUnsavedCloseAction(): Promise<UnsavedCloseAction> | UnsavedCloseAction;
   openFileDialog(options: { multiple: boolean; filters: FileDialogFilter[] }): Promise<string[]> | string[];
-  saveFileDialog(options: { defaultPath?: string; filters: FileDialogFilter[] }): Promise<string | undefined> | string | undefined;
+  saveFileDialog(options: {
+    defaultPath?: string;
+    filters: FileDialogFilter[];
+  }): Promise<string | undefined> | string | undefined;
   openDirectoryDialog(): Promise<string | undefined> | string | undefined;
   readFile(path: string): Promise<string> | string;
   readFileHeaderBytes(path: string, byteCount?: number): Promise<Uint8Array> | Uint8Array;
@@ -708,7 +721,9 @@ export type TauriMocks = Partial<{
   moveFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
   ensureSpatialAudioAssets(): Promise<SpatialAudioAssets> | SpatialAudioAssets;
-  readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
+  readColorMatchFrameSample(
+    path: string,
+  ): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
   getAppDataDir(): Promise<string> | string;
   getTempSegmentsDir(): Promise<string> | string;
   getFileStat(path: string): Promise<FileStat> | FileStat;
@@ -719,10 +734,16 @@ export type TauriMocks = Partial<{
   getAvailableMemoryBytes(): Promise<number> | number;
   getSystemResourceSnapshot(): Promise<SystemResourceSnapshot> | SystemResourceSnapshot;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
-  runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
+  runExportPreviewSamples(
+    request: ExportPreviewSamplesRequest,
+  ): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
-  createSharedLibraryArchive(request: SharedLibraryArchiveRequest): Promise<SharedLibraryArchiveResult> | SharedLibraryArchiveResult;
-  importSharedLibraryArchive(request: SharedLibraryImportRequest): Promise<SharedLibraryImportResult> | SharedLibraryImportResult;
+  createSharedLibraryArchive(
+    request: SharedLibraryArchiveRequest,
+  ): Promise<SharedLibraryArchiveResult> | SharedLibraryArchiveResult;
+  importSharedLibraryArchive(
+    request: SharedLibraryImportRequest,
+  ): Promise<SharedLibraryImportResult> | SharedLibraryImportResult;
   putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
   putWebdavExportFile(request: WebdavExportUploadRequest): Promise<WebdavExportUploadResult> | WebdavExportUploadResult;
   getWebdavText(request: WebdavTextRequest): Promise<WebdavTextResult> | WebdavTextResult;
@@ -750,7 +771,9 @@ export type TauriMocks = Partial<{
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
-  runPostExportQualityAssurance(request: PostExportQualityAssuranceRequest): Promise<PostExportQualityAssuranceResult> | PostExportQualityAssuranceResult;
+  runPostExportQualityAssurance(
+    request: PostExportQualityAssuranceRequest,
+  ): Promise<PostExportQualityAssuranceResult> | PostExportQualityAssuranceResult;
   exportMediaGif(request: GifExportRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
   generateGifPreview(request: GifPreviewRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
   cancelExport(taskId?: string): Promise<void> | void;
@@ -771,7 +794,9 @@ export type TauriMocks = Partial<{
   getPreviewWindowState(): Promise<PreviewWindowState> | PreviewWindowState;
   setPreviewWindowAlwaysOnTop(alwaysOnTop: boolean): Promise<PreviewWindowState> | PreviewWindowState;
   setPreviewWindowFullscreen(fullscreen: boolean): Promise<PreviewWindowState> | PreviewWindowState;
-  setPreviewWindowResolutionScale(resolutionScale: PreviewWindowResolutionScale): Promise<PreviewWindowState> | PreviewWindowState;
+  setPreviewWindowResolutionScale(
+    resolutionScale: PreviewWindowResolutionScale,
+  ): Promise<PreviewWindowState> | PreviewWindowState;
   minimizeToTray(labels?: ExportTrayLabels): Promise<void> | void;
   showMainWindow(): Promise<void> | void;
   updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
@@ -783,17 +808,27 @@ export type TauriMocks = Partial<{
   startCollaborationHost(request: CollaborationHostRequest): Promise<CollaborationHostState> | CollaborationHostState;
   stopCollaborationHost(): Promise<void> | void;
   broadcastCollaborationMessage(message: string): Promise<void> | void;
-  probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
+  probeMediaPath(
+    path: string,
+  ):
+    | Promise<Partial<import('@open-factory/editor-core').MediaAsset>>
+    | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
   scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;
   analyzeAudioSpectrum(path: string): Promise<AudioSpectrumAnalysis> | AudioSpectrumAnalysis;
   generateGapFillMedia(request: GapFillMediaRequest): Promise<GapFillMediaResult> | GapFillMediaResult;
-  extractCoverFrames(request: CoverFrameExtractionRequest): Promise<CoverFrameExtractionResult> | CoverFrameExtractionResult;
+  extractCoverFrames(
+    request: CoverFrameExtractionRequest,
+  ): Promise<CoverFrameExtractionResult> | CoverFrameExtractionResult;
   batchExtractCoverFrames(request: CoverFrameBatchRequest): Promise<CoverFrameBatchResult> | CoverFrameBatchResult;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
-  detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
+  detectSilence(
+    path: string,
+    thresholdDb: number,
+    minGapMs: number,
+  ): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
   cancelSceneDetection(taskId: string): Promise<void> | void;
@@ -856,7 +891,7 @@ export async function chooseUnsavedCloseAction(): Promise<UnsavedCloseAction> {
     const result = await dialogMessage(zhCN.closeGuard.message, {
       title: zhCN.closeGuard.title,
       kind: 'warning',
-      buttons: { yes: zhCN.closeGuard.save, no: zhCN.closeGuard.discard, cancel: zhCN.closeGuard.cancel }
+      buttons: { yes: zhCN.closeGuard.save, no: zhCN.closeGuard.discard, cancel: zhCN.closeGuard.cancel },
     });
     if (result === 'Yes' || result === 'Save' || result === zhCN.closeGuard.save) {
       return 'save';
@@ -888,7 +923,10 @@ export function convertLocalFileSrc(path: string): string {
   return path;
 }
 
-export async function saveFileDialog(defaultPath: string | undefined, filters: FileDialogFilter[]): Promise<string | undefined> {
+export async function saveFileDialog(
+  defaultPath: string | undefined,
+  filters: FileDialogFilter[],
+): Promise<string | undefined> {
   const mock = getTauriMocks()?.saveFileDialog;
   if (mock) {
     return mock({ defaultPath, filters });
@@ -1186,7 +1224,11 @@ export async function detectBeats(path: string, sensitivity: BeatSensitivity): P
   return invoke<number[]>('detect_beats', { path, sensitivity });
 }
 
-export async function detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> {
+export async function detectSilence(
+  path: string,
+  thresholdDb: number,
+  minGapMs: number,
+): Promise<NativeSilenceRange[]> {
   const mock = getTauriMocks()?.detectSilence;
   if (mock) {
     return mock(path, thresholdDb, minGapMs);
@@ -1358,7 +1400,9 @@ export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promis
   return invoke<ExportResult>('run_export', taskId ? { plan, taskId } : { plan });
 }
 
-export async function runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> {
+export async function runExportPreviewSamples(
+  request: ExportPreviewSamplesRequest,
+): Promise<ExportPreviewSamplesResult> {
   const mock = getTauriMocks()?.runExportPreviewSamples;
   if (mock) {
     return mock(request);
@@ -1374,7 +1418,9 @@ export async function createSharePackageZip(request: SharePackageRequest): Promi
   return invoke<SharePackageResult>('create_share_package', { request });
 }
 
-export async function createSharedLibraryArchive(request: SharedLibraryArchiveRequest): Promise<SharedLibraryArchiveResult> {
+export async function createSharedLibraryArchive(
+  request: SharedLibraryArchiveRequest,
+): Promise<SharedLibraryArchiveResult> {
   const mock = getTauriMocks()?.createSharedLibraryArchive;
   if (mock) {
     return mock(request);
@@ -1382,7 +1428,9 @@ export async function createSharedLibraryArchive(request: SharedLibraryArchiveRe
   return invoke<SharedLibraryArchiveResult>('create_shared_library_archive', { request });
 }
 
-export async function importSharedLibraryArchive(request: SharedLibraryImportRequest): Promise<SharedLibraryImportResult> {
+export async function importSharedLibraryArchive(
+  request: SharedLibraryImportRequest,
+): Promise<SharedLibraryImportResult> {
   const mock = getTauriMocks()?.importSharedLibraryArchive;
   if (mock) {
     return mock(request);
@@ -1554,7 +1602,9 @@ export async function evaluateExportQuality(request: QualityEvaluationRequest): 
   return invoke<QualityEvaluationResult>('evaluate_export_quality', { request });
 }
 
-export async function runPostExportQualityAssurance(request: PostExportQualityAssuranceRequest): Promise<PostExportQualityAssuranceResult> {
+export async function runPostExportQualityAssurance(
+  request: PostExportQualityAssuranceRequest,
+): Promise<PostExportQualityAssuranceResult> {
   const mock = getTauriMocks()?.runPostExportQualityAssurance;
   if (mock) {
     return mock(request);
@@ -1762,7 +1812,14 @@ export async function openPreviewWindow(request: PreviewWindowRequest): Promise<
     return mock(request);
   }
   if (!isTauriRuntime()) {
-    return { open: true, label: 'preview', bounds: request.bounds, alwaysOnTop: request.alwaysOnTop, fullscreen: false, resolutionScale: request.resolutionScale };
+    return {
+      open: true,
+      label: 'preview',
+      bounds: request.bounds,
+      alwaysOnTop: request.alwaysOnTop,
+      fullscreen: false,
+      resolutionScale: request.resolutionScale,
+    };
   }
   return invoke<PreviewWindowState>('open_preview_window', { request });
 }
@@ -1811,7 +1868,9 @@ export async function setPreviewWindowFullscreen(fullscreen: boolean): Promise<P
   return invoke<PreviewWindowState>('set_preview_window_fullscreen', { fullscreen });
 }
 
-export async function setPreviewWindowResolutionScale(resolutionScale: PreviewWindowResolutionScale): Promise<PreviewWindowState> {
+export async function setPreviewWindowResolutionScale(
+  resolutionScale: PreviewWindowResolutionScale,
+): Promise<PreviewWindowState> {
   const mock = getTauriMocks()?.setPreviewWindowResolutionScale;
   if (mock) {
     return mock(resolutionScale);
@@ -1856,7 +1915,10 @@ export async function updateExportTrayProgress(progress: number, runningCount: n
   }
 }
 
-export async function runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> {
+export async function runExportPowerAction(
+  action: 'shutdown' | 'hibernate',
+  allowPowerActions: boolean,
+): Promise<void> {
   const mock = getTauriMocks()?.runExportPowerAction;
   if (mock) {
     await mock(action, allowPowerActions);
@@ -1886,7 +1948,7 @@ export async function checkAppUpdate(options?: AppUpdateCheckOptions): Promise<A
     body: update.body,
     rawJson: update.rawJson,
     downloadAndInstall: (onEvent) => update.downloadAndInstall(onEvent),
-    close: () => update.close()
+    close: () => update.close(),
   };
 }
 
@@ -1938,19 +2000,27 @@ export async function listenCollaborationMessage(handler: (message: string) => v
   return listenBridge<string>('collaboration-message', handler);
 }
 
-export async function listenBatchTranscodeProgress(handler: (payload: BatchTranscodeProgressEvent) => void): Promise<() => void> {
+export async function listenBatchTranscodeProgress(
+  handler: (payload: BatchTranscodeProgressEvent) => void,
+): Promise<() => void> {
   return listenBridge<BatchTranscodeProgressEvent>('batch-transcode-progress', handler);
 }
 
-export async function listenCoverFrameProgress(handler: (payload: CoverFrameProgressEvent) => void): Promise<() => void> {
+export async function listenCoverFrameProgress(
+  handler: (payload: CoverFrameProgressEvent) => void,
+): Promise<() => void> {
   return listenBridge<CoverFrameProgressEvent>('cover-frame-progress', handler);
 }
 
-async function listenRenderPreviewCacheProgress(handler: (payload: RenderPreviewCacheProgressEvent) => void): Promise<() => void> {
+async function listenRenderPreviewCacheProgress(
+  handler: (payload: RenderPreviewCacheProgressEvent) => void,
+): Promise<() => void> {
   return listenBridge<RenderPreviewCacheProgressEvent>('render-preview-cache-progress', handler);
 }
 
-export async function listenDragDrop(handler: (event: { type: string; paths?: string[] }) => void): Promise<() => void> {
+export async function listenDragDrop(
+  handler: (event: { type: string; paths?: string[] }) => void,
+): Promise<() => void> {
   if (!isTauriRuntime()) {
     return () => undefined;
   }

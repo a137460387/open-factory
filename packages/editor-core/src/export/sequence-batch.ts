@@ -3,7 +3,7 @@ import {
   getProjectSequences,
   replaceProjectActiveTimeline,
   type Project,
-  type Sequence
+  type Sequence,
 } from '../model';
 
 export class SequenceDependencyCycleError extends Error {
@@ -18,7 +18,7 @@ export class SequenceDependencyCycleError extends Error {
 
 export function getSequenceDependencyIds(sequence: Sequence): string[] {
   const ids = sequence.timeline.tracks.flatMap((track) =>
-    track.clips.flatMap((clip) => (clip.type === 'nested-sequence' ? [clip.sequenceId] : []))
+    track.clips.flatMap((clip) => (clip.type === 'nested-sequence' ? [clip.sequenceId] : [])),
   );
   return Array.from(new Set(ids));
 }
@@ -27,7 +27,9 @@ export function sortBatchSequenceIds(project: Project, selectedSequenceIds: stri
   const sequences = getSyncedProjectSequences(project);
   const knownIds = new Set(sequences.map((sequence) => sequence.id));
   const selected = new Set(selectedSequenceIds.filter((id) => knownIds.has(id)));
-  const dependencies = new Map(sequences.map((sequence) => [sequence.id, getSequenceDependencyIds(sequence).filter((id) => selected.has(id))]));
+  const dependencies = new Map(
+    sequences.map((sequence) => [sequence.id, getSequenceDependencyIds(sequence).filter((id) => selected.has(id))]),
+  );
   const sorted: string[] = [];
   const visiting: string[] = [];
   const visited = new Set<string>();
@@ -57,13 +59,18 @@ export function sortBatchSequenceIds(project: Project, selectedSequenceIds: stri
   return sorted;
 }
 
-export function expandSequenceBatchOutputPath(template: string, sequence: Pick<Sequence, 'name'>, index: number, now = new Date()): string {
+export function expandSequenceBatchOutputPath(
+  template: string,
+  sequence: Pick<Sequence, 'name'>,
+  index: number,
+  now = new Date(),
+): string {
   const fallback = `./{sequence}-{index}.mp4`;
   const base = template.trim() || fallback;
   const replacements: Record<string, string> = {
     sequence: sanitizeSequenceFileName(sequence.name),
     index: String(Math.max(1, Math.floor(index))),
-    date: formatSequenceBatchDate(now)
+    date: formatSequenceBatchDate(now),
   };
   return base.replace(/\{(sequence|index|date)\}/g, (_match, key: keyof typeof replacements) => replacements[key]);
 }
@@ -71,7 +78,8 @@ export function expandSequenceBatchOutputPath(template: string, sequence: Pick<S
 export function buildProjectForSequenceExport(project: Project, sequenceId: string): Project {
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const sequences = getProjectSequences(synced);
-  const sequence = sequences.find((item) => item.id === sequenceId) ?? sequences.find((item) => item.id === PRIMARY_SEQUENCE_ID);
+  const sequence =
+    sequences.find((item) => item.id === sequenceId) ?? sequences.find((item) => item.id === PRIMARY_SEQUENCE_ID);
   if (!sequence) {
     return synced;
   }
@@ -83,7 +91,7 @@ export function buildProjectForSequenceExport(project: Project, sequenceId: stri
     ...synced,
     timeline: sequence.timeline,
     sequences: [primarySequence, ...nonPrimary],
-    activeSequenceId: PRIMARY_SEQUENCE_ID
+    activeSequenceId: PRIMARY_SEQUENCE_ID,
   };
 }
 
@@ -92,7 +100,11 @@ export function getSyncedProjectSequences(project: Project): Sequence[] {
 }
 
 function sanitizeSequenceFileName(name: string): string {
-  const sanitized = name.replace(/[<>:"/\\|?*\x00-\x1f]+/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/g, '');
+  const sanitized = name
+    .replace(/[<>:"/\\|?*\x00-\x1f]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[. ]+$/g, '');
   return sanitized || 'sequence';
 }
 

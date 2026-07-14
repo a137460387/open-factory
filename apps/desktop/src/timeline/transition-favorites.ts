@@ -7,7 +7,9 @@ export interface TransitionFavoriteStorage {
   setItem(key: string, value: string): void;
 }
 
-export function readTransitionFavorites(storage: TransitionFavoriteStorage | undefined = getDefaultStorage()): TransitionType[] {
+export function readTransitionFavorites(
+  storage: TransitionFavoriteStorage | undefined = getDefaultStorage(),
+): TransitionType[] {
   if (!storage) {
     return [];
   }
@@ -16,21 +18,33 @@ export function readTransitionFavorites(storage: TransitionFavoriteStorage | und
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.filter((value): value is TransitionType => typeof value === 'string' && TRANSITION_TYPES.includes(value as TransitionType));
+    return parsed.filter(
+      (value): value is TransitionType =>
+        typeof value === 'string' && TRANSITION_TYPES.includes(value as TransitionType),
+    );
   } catch {
     return [];
   }
 }
 
-export function writeTransitionFavorites(favorites: TransitionType[], storage: TransitionFavoriteStorage | undefined = getDefaultStorage()): TransitionType[] {
+export function writeTransitionFavorites(
+  favorites: TransitionType[],
+  storage: TransitionFavoriteStorage | undefined = getDefaultStorage(),
+): TransitionType[] {
   const normalized = Array.from(new Set(favorites.filter((value) => TRANSITION_TYPES.includes(value))));
   storage?.setItem(TRANSITION_FAVORITES_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 
-export function toggleTransitionFavorite(type: TransitionType, storage: TransitionFavoriteStorage | undefined = getDefaultStorage()): TransitionType[] {
+export function toggleTransitionFavorite(
+  type: TransitionType,
+  storage: TransitionFavoriteStorage | undefined = getDefaultStorage(),
+): TransitionType[] {
   const favorites = readTransitionFavorites(storage);
-  return writeTransitionFavorites(favorites.includes(type) ? favorites.filter((item) => item !== type) : [type, ...favorites], storage);
+  return writeTransitionFavorites(
+    favorites.includes(type) ? favorites.filter((item) => item !== type) : [type, ...favorites],
+    storage,
+  );
 }
 
 function getDefaultStorage(): TransitionFavoriteStorage | undefined {

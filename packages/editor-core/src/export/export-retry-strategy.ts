@@ -36,7 +36,7 @@ export const DEFAULT_RETRY_CONFIG: ExportRetryConfig = {
   backoffMode: 'exponential',
   baseIntervalMs: 2000,
   retryableErrorKinds: ['out-of-memory', 'unsupported-codec', 'disk-space'],
-  autoDegradeOnRetry: true
+  autoDegradeOnRetry: true,
 };
 
 /** 最大允许重试次数 */
@@ -49,7 +49,7 @@ export const MAX_ALLOWED_RETRIES = 5;
  */
 export function calculateRetryInterval(
   config: Pick<ExportRetryConfig, 'backoffMode' | 'baseIntervalMs'>,
-  attempt: number
+  attempt: number,
 ): number {
   if (attempt <= 0) return 0;
   if (config.backoffMode === 'fixed') return config.baseIntervalMs;
@@ -63,7 +63,7 @@ export function calculateRetryInterval(
 export function shouldAutoRetry(
   config: Pick<ExportRetryConfig, 'retryableErrorKinds' | 'maxRetries'>,
   errorKind: ExportRecoveryErrorKind,
-  currentAttempt: number
+  currentAttempt: number,
 ): boolean {
   if (currentAttempt >= config.maxRetries) return false;
   if (errorKind === 'ffmpeg-crash') return false;
@@ -82,14 +82,14 @@ export function decideRetryDegrade(attempt: number): RetryDegradeDecision {
     return {
       shouldDegrade: true,
       degradeType: 'reduce-concurrency',
-      reason: '第二次重试，自动降低并行数以减少资源竞争'
+      reason: '第二次重试，自动降低并行数以减少资源竞争',
     };
   }
   if (attempt === 3) {
     return {
       shouldDegrade: true,
       degradeType: 'fallback-codec',
-      reason: '第三次重试，切换为软件编码以提高兼容性'
+      reason: '第三次重试，切换为软件编码以提高兼容性',
     };
   }
   return { shouldDegrade: false, degradeType: 'none', reason: '' };
@@ -99,7 +99,7 @@ export function decideRetryDegrade(attempt: number): RetryDegradeDecision {
  * 创建重试历史时间线的渲染数据。
  */
 export function buildRetryTimelineData(
-  entries: RetryHistoryEntry[]
+  entries: RetryHistoryEntry[],
 ): Array<{ label: string; timestamp: string; status: 'success' | 'failed' | 'pending'; detail: string }> {
   return entries.map((entry) => {
     const degradeTag = entry.degraded ? `（降级: ${entry.degradeReason ?? '自动'}）` : '';
@@ -115,7 +115,7 @@ export function buildRetryTimelineData(
       label: `${label}${degradeTag}`,
       timestamp: entry.timestamp,
       status: entry.result,
-      detail: entry.errorMessage ?? ''
+      detail: entry.errorMessage ?? '',
     };
   });
 }
@@ -128,7 +128,9 @@ export function normalizeRetryConfig(config: Partial<ExportRetryConfig>): Export
     maxRetries: Math.min(MAX_ALLOWED_RETRIES, Math.max(0, config.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries)),
     backoffMode: config.backoffMode === 'fixed' ? 'fixed' : 'exponential',
     baseIntervalMs: Math.max(500, config.baseIntervalMs ?? DEFAULT_RETRY_CONFIG.baseIntervalMs),
-    retryableErrorKinds: Array.isArray(config.retryableErrorKinds) ? config.retryableErrorKinds : DEFAULT_RETRY_CONFIG.retryableErrorKinds,
-    autoDegradeOnRetry: config.autoDegradeOnRetry !== false
+    retryableErrorKinds: Array.isArray(config.retryableErrorKinds)
+      ? config.retryableErrorKinds
+      : DEFAULT_RETRY_CONFIG.retryableErrorKinds,
+    autoDegradeOnRetry: config.autoDegradeOnRetry !== false,
   };
 }

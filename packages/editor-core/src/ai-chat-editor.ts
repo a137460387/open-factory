@@ -38,7 +38,7 @@ export const CHAT_ACTION_WHITELIST: ReadonlySet<ChatActionType> = new Set<ChatAc
   'applyColorPreset',
   'jumpTo',
   'selectClip',
-  'query'
+  'query',
 ]);
 
 // ─── Chat Command 类型定义 ─────────────────────────────────────────
@@ -246,10 +246,7 @@ export interface TimelineContext {
 /**
  * 将当前项目状态打包为 AI 可理解的简要上下文。
  */
-export function buildTimelineContext(
-  project: Project,
-  selectedClipId?: string
-): TimelineContext {
+export function buildTimelineContext(project: Project, selectedClipId?: string): TimelineContext {
   const timeline = project.timeline;
   const allClips: Clip[] = [];
   for (const track of timeline.tracks) {
@@ -257,9 +254,7 @@ export function buildTimelineContext(
       allClips.push(clip);
     }
   }
-  const totalDuration = allClips.length > 0
-    ? round(Math.max(...allClips.map((c) => c.start + c.duration)))
-    : 0;
+  const totalDuration = allClips.length > 0 ? round(Math.max(...allClips.map((c) => c.start + c.duration))) : 0;
 
   const clipSummaries = allClips.map((clip) => ({
     id: clip.id,
@@ -268,7 +263,7 @@ export function buildTimelineContext(
     start: round(clip.start),
     duration: round(clip.duration),
     speed: clip.speed,
-    ...(('volume' in clip) ? { volume: (clip as { volume?: number }).volume } : {})
+    ...('volume' in clip ? { volume: (clip as { volume?: number }).volume } : {}),
   }));
 
   let selectedClipInfo: TimelineContext['selectedClipInfo'];
@@ -281,14 +276,14 @@ export function buildTimelineContext(
         start: round(selected.start),
         duration: round(selected.duration),
         speed: selected.speed,
-        ...(('volume' in selected) ? { volume: (selected as { volume?: number }).volume } : {})
+        ...('volume' in selected ? { volume: (selected as { volume?: number }).volume } : {}),
       };
     }
   }
 
   const markers = timeline.markers?.map((m) => ({
     time: round(m.time),
-    label: m.label ?? ''
+    label: m.label ?? '',
   }));
 
   return {
@@ -298,7 +293,7 @@ export function buildTimelineContext(
     selectedClipId,
     selectedClipInfo,
     clips: clipSummaries,
-    ...(markers && markers.length > 0 ? { markers } : {})
+    ...(markers && markers.length > 0 ? { markers } : {}),
   };
 }
 
@@ -329,7 +324,7 @@ export function buildChatSystemPrompt(): string {
     '- 如果用户的问题只需要信息回答，使用 query action',
     '- 如果用户的指令模糊或信息不足，使用 query action 请求澄清',
     '- clipId 必须使用上下文中提供的真实ID，不要编造',
-    '- 返回纯JSON，不要包含markdown代码块标记或其他说明文字'
+    '- 返回纯JSON，不要包含markdown代码块标记或其他说明文字',
   ].join('\n');
 }
 

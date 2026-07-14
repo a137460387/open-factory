@@ -18,7 +18,7 @@ export interface RecordingSettingsState {
 const DEFAULT_RECORDING_SETTINGS: RecordingSettings = {
   width: 1280,
   height: 720,
-  frameRate: 30
+  frameRate: 30,
 };
 
 export const useRecordingSettingsStore = create<RecordingSettingsState>((set, get) => ({
@@ -29,14 +29,14 @@ export const useRecordingSettingsStore = create<RecordingSettingsState>((set, ge
     writeNumber(RECORDING_HEIGHT_KEY, next.height);
     writeNumber(RECORDING_FRAME_RATE_KEY, next.frameRate);
     set({ settings: next });
-  }
+  },
 }));
 
 function readRecordingSettings(): RecordingSettings {
   return normalizeRecordingSettings({
     width: readNumber(RECORDING_WIDTH_KEY),
     height: readNumber(RECORDING_HEIGHT_KEY),
-    frameRate: readNumber(RECORDING_FRAME_RATE_KEY)
+    frameRate: readNumber(RECORDING_FRAME_RATE_KEY),
   });
 }
 
@@ -44,7 +44,7 @@ function normalizeRecordingSettings(settings: Partial<RecordingSettings>): Recor
   return {
     width: clampInteger(settings.width, 320, 7680, DEFAULT_RECORDING_SETTINGS.width),
     height: clampInteger(settings.height, 240, 4320, DEFAULT_RECORDING_SETTINGS.height),
-    frameRate: clampInteger(settings.frameRate, 1, 120, DEFAULT_RECORDING_SETTINGS.frameRate)
+    frameRate: clampInteger(settings.frameRate, 1, 120, DEFAULT_RECORDING_SETTINGS.frameRate),
   };
 }
 

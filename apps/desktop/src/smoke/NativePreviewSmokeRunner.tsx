@@ -91,11 +91,21 @@ async function runNativePreviewSmoke(): Promise<void> {
     useEditorStore.getState().setSelectedClipId(clip.id);
     useEditorStore.getState().setPlayheadTime(Math.min(0.35, Math.max(0, clip.duration / 2)));
 
-    const canvas = await waitFor(() => document.querySelector<HTMLCanvasElement>('[data-testid="preview-canvas"]'), 5_000, 'Preview canvas was not mounted.');
-    const debug = await waitFor(() => {
-      const value = window.__OPEN_FACTORY_PREVIEW_DEBUG__;
-      return value?.sourceKinds?.includes('video') && value.readback?.hasNonBackgroundPixels === true ? value : undefined;
-    }, 15_000, 'A non-background video pixel was not read back from the preview canvas.');
+    const canvas = await waitFor(
+      () => document.querySelector<HTMLCanvasElement>('[data-testid="preview-canvas"]'),
+      5_000,
+      'Preview canvas was not mounted.',
+    );
+    const debug = await waitFor(
+      () => {
+        const value = window.__OPEN_FACTORY_PREVIEW_DEBUG__;
+        return value?.sourceKinds?.includes('video') && value.readback?.hasNonBackgroundPixels === true
+          ? value
+          : undefined;
+      },
+      15_000,
+      'A non-background video pixel was not read back from the preview canvas.',
+    );
     const latePixelReadback = readCanvasCenterPixelSafely(canvas);
     const mediaUrl = sourceUrl(asset.path);
     const previewMediaPath = getPreviewMediaPath(asset);
@@ -117,12 +127,14 @@ async function runNativePreviewSmoke(): Promise<void> {
         height: asset.height,
         hasAudio: asset.hasAudio,
         proxyStatus: asset.proxyStatus,
-        proxyPath: asset.proxyPath
+        proxyPath: asset.proxyPath,
       },
       timeline: {
-        clipAdded: useEditorStore.getState().project.timeline.tracks.some((item) => item.clips.some((itemClip) => itemClip.id === clip.id)),
+        clipAdded: useEditorStore
+          .getState()
+          .project.timeline.tracks.some((item) => item.clips.some((itemClip) => itemClip.id === clip.id)),
         clipType: clip.type,
-        duration: getTimelineDuration(useEditorStore.getState().project.timeline)
+        duration: getTimelineDuration(useEditorStore.getState().project.timeline),
       },
       preview: {
         mode: debug.mode,
@@ -140,9 +152,9 @@ async function runNativePreviewSmoke(): Promise<void> {
         proxyMediaPath: config.proxyMediaPath,
         proxySourceUrl: previewMediaUrl,
         proxyWidth: proxyProbe?.width,
-        proxyHeight: proxyProbe?.height
+        proxyHeight: proxyProbe?.height,
       },
-      durationMs: Math.round(performance.now() - startedAt)
+      durationMs: Math.round(performance.now() - startedAt),
     });
   } catch (error) {
     await writeSmokeReport(config.reportPath, {
@@ -151,7 +163,7 @@ async function runNativePreviewSmoke(): Promise<void> {
       fixturePath: config.mediaPath,
       proxyFixturePath: config.proxyMediaPath,
       error: error instanceof Error ? error.message : String(error),
-      durationMs: Math.round(performance.now() - startedAt)
+      durationMs: Math.round(performance.now() - startedAt),
     });
   } finally {
     window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ = false;
@@ -168,7 +180,15 @@ function readCanvasCenterPixelSafely(canvas: HTMLCanvasElement): { pixel?: numbe
     const gl = canvas.getContext('webgl');
     if (gl) {
       const pixel = new Uint8Array(4);
-      gl.readPixels(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      gl.readPixels(
+        Math.floor(canvas.width / 2),
+        Math.floor(canvas.height / 2),
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        pixel,
+      );
       return { pixel: Array.from(pixel) };
     }
 
@@ -176,7 +196,9 @@ function readCanvasCenterPixelSafely(canvas: HTMLCanvasElement): { pixel?: numbe
     if (!context) {
       return { error: 'Preview canvas has no readable rendering context.' };
     }
-    return { pixel: Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data) };
+    return {
+      pixel: Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data),
+    };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }

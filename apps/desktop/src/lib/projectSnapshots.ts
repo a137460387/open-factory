@@ -1,7 +1,12 @@
 import { deserializeProject, serializeProject, type CutProjectFile, type Project } from '@open-factory/editor-core';
 import { fileNameFromPath } from './tauri';
 import { fsExists, getAppDataDir, getFileStat, readFile, removeFile, scanDirectory } from './tauri-bridge';
-import { getActiveProjectEncryptionPassword, isEncryptedProjectPath, readProjectFile, writeSerializedProjectFile } from './projectFiles';
+import {
+  getActiveProjectEncryptionPassword,
+  isEncryptedProjectPath,
+  readProjectFile,
+  writeSerializedProjectFile,
+} from './projectFiles';
 
 const SNAPSHOT_LIMIT = 20;
 const SNAPSHOT_SUFFIX = '.cutproj.json';
@@ -15,7 +20,12 @@ export interface ProjectSnapshotEntry {
   size: number;
 }
 
-export async function saveProjectSnapshot(project: Project, name: string, projectPath?: string, limit = SNAPSHOT_LIMIT): Promise<ProjectSnapshotEntry> {
+export async function saveProjectSnapshot(
+  project: Project,
+  name: string,
+  projectPath?: string,
+  limit = SNAPSHOT_LIMIT,
+): Promise<ProjectSnapshotEntry> {
   const snapshotName = normalizeSnapshotName(name);
   const dir = await getSnapshotDir(project.id);
   const encryptedPassword = getActiveProjectEncryptionPassword();
@@ -30,7 +40,7 @@ export async function saveProjectSnapshot(project: Project, name: string, projec
     name: snapshotName,
     createdAt: parseSnapshotTimestamp(fileName)?.toISOString() ?? new Date(stat.mtimeMs).toISOString(),
     path,
-    size: stat.size
+    size: stat.size,
   };
 }
 
@@ -55,18 +65,23 @@ export async function listProjectSnapshots(projectId: string): Promise<ProjectSn
           name: parsed.name,
           createdAt: parsed.createdAt.toISOString(),
           path,
-          size: stat.size
+          size: stat.size,
         } satisfies ProjectSnapshotEntry;
-      })
+      }),
   );
   return entries
     .filter((entry): entry is ProjectSnapshotEntry => Boolean(entry))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || right.path.localeCompare(left.path));
 }
 
-export async function readProjectSnapshot(snapshot: Pick<ProjectSnapshotEntry, 'path'>, projectPathForMedia?: string): Promise<Project> {
+export async function readProjectSnapshot(
+  snapshot: Pick<ProjectSnapshotEntry, 'path'>,
+  projectPathForMedia?: string,
+): Promise<Project> {
   if (isEncryptedProjectPath(snapshot.path)) {
-    return readProjectFile(snapshot.path, projectPathForMedia ?? snapshot.path, { password: getActiveProjectEncryptionPassword() });
+    return readProjectFile(snapshot.path, projectPathForMedia ?? snapshot.path, {
+      password: getActiveProjectEncryptionPassword(),
+    });
   }
   const raw = await readFile(snapshot.path);
   return deserializeProject(JSON.parse(raw) as CutProjectFile, projectPathForMedia);
@@ -76,7 +91,10 @@ export async function deleteProjectSnapshot(snapshot: Pick<ProjectSnapshotEntry,
   await removeFile(snapshot.path);
 }
 
-export async function pruneProjectSnapshots(projectId: string, limit = SNAPSHOT_LIMIT): Promise<ProjectSnapshotEntry[]> {
+export async function pruneProjectSnapshots(
+  projectId: string,
+  limit = SNAPSHOT_LIMIT,
+): Promise<ProjectSnapshotEntry[]> {
   const snapshots = await listProjectSnapshots(projectId);
   const removed = snapshots.slice(Math.max(0, limit));
   for (const snapshot of removed) {
@@ -111,7 +129,11 @@ export function formatSnapshotSize(bytes: number): string {
 }
 
 function parseSnapshotFileName(fileName: string): { name: string; createdAt: Date } | undefined {
-  const suffix = fileName.endsWith(ENCRYPTED_SNAPSHOT_SUFFIX) ? ENCRYPTED_SNAPSHOT_SUFFIX : fileName.endsWith(SNAPSHOT_SUFFIX) ? SNAPSHOT_SUFFIX : undefined;
+  const suffix = fileName.endsWith(ENCRYPTED_SNAPSHOT_SUFFIX)
+    ? ENCRYPTED_SNAPSHOT_SUFFIX
+    : fileName.endsWith(SNAPSHOT_SUFFIX)
+      ? SNAPSHOT_SUFFIX
+      : undefined;
   if (!suffix) {
     return undefined;
   }
@@ -128,12 +150,14 @@ function parseSnapshotFileName(fileName: string): { name: string; createdAt: Dat
   }
   return {
     name: decodeSnapshotName(encodedName),
-    createdAt
+    createdAt,
   };
 }
 
 function parseSnapshotTimestamp(fileNameOrTimestamp: string): Date | undefined {
-  const timestamp = fileNameOrTimestamp.includes('_') ? fileNameOrTimestamp.slice(0, fileNameOrTimestamp.indexOf('_')) : fileNameOrTimestamp;
+  const timestamp = fileNameOrTimestamp.includes('_')
+    ? fileNameOrTimestamp.slice(0, fileNameOrTimestamp.indexOf('_'))
+    : fileNameOrTimestamp;
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/.exec(timestamp);
   if (!match) {
     return undefined;

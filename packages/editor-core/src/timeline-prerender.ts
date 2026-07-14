@@ -1,4 +1,9 @@
-import { buildTimelineThumbnailCacheKey, calculateTimelineThumbnailTimestamps, planTimelineThumbnailCache, TIMELINE_THUMBNAIL_WIDTH } from './timeline-thumbnails';
+import {
+  buildTimelineThumbnailCacheKey,
+  calculateTimelineThumbnailTimestamps,
+  planTimelineThumbnailCache,
+  TIMELINE_THUMBNAIL_WIDTH,
+} from './timeline-thumbnails';
 import type { Timeline, Track, VideoClip } from './model';
 import { round } from './time';
 
@@ -51,7 +56,7 @@ export function buildThumbnailPrerenderPlan(
   clips: PrerenderClipInput[],
   cachedKeys: ReadonlySet<string>,
   visibleRange?: PrerenderVisibleRange,
-  thumbWidth?: number
+  thumbWidth?: number,
 ): ThumbnailPrerenderPlan {
   const isLargeProject = clips.length > PRERENDER_LARGE_PROJECT_CLIP_THRESHOLD;
   const effectiveThumbWidth = isLargeProject ? PRERENDER_LOW_RES_WIDTH : (thumbWidth ?? TIMELINE_THUMBNAIL_WIDTH);
@@ -64,7 +69,7 @@ export function buildThumbnailPrerenderPlan(
       clipPixelWidth: clip.clipPixelWidth,
       thumbWidth: effectiveThumbWidth,
       trimStart: clip.trimStart,
-      speed: clip.speed
+      speed: clip.speed,
     });
 
     const plan = planTimelineThumbnailCache(clip.mediaPath, timestamps, cachedKeys);
@@ -82,7 +87,7 @@ export function buildThumbnailPrerenderPlan(
         timestamp,
         cacheKey,
         priority,
-        zone
+        zone,
       });
     }
   }
@@ -93,28 +98,25 @@ export function buildThumbnailPrerenderPlan(
     tasks,
     totalCount: tasks.length + cachedCount,
     cachedCount,
-    lowResolution: isLargeProject
+    lowResolution: isLargeProject,
   };
 }
 
-export function buildThumbnailPrerenderProgress(
-  completed: number,
-  total: number
-): ThumbnailPrerenderProgress {
+export function buildThumbnailPrerenderProgress(completed: number, total: number): ThumbnailPrerenderProgress {
   const safeTotal = Math.max(0, total);
   const safeCompleted = Math.min(Math.max(0, completed), safeTotal);
   return {
     completed: safeCompleted,
     total: safeTotal,
     fraction: safeTotal > 0 ? round(safeCompleted / safeTotal) : 0,
-    active: safeCompleted < safeTotal && safeTotal > 0
+    active: safeCompleted < safeTotal && safeTotal > 0,
   };
 }
 
 export function filterUncachedThumbnails(
   mediaPath: string,
   timestamps: number[],
-  cachedKeys: ReadonlySet<string>
+  cachedKeys: ReadonlySet<string>,
 ): { uncachedTimestamps: number[]; uncachedKeys: string[] } {
   const uncachedTimestamps: number[] = [];
   const uncachedKeys: string[] = [];
@@ -131,7 +133,7 @@ export function filterUncachedThumbnails(
 function classifyZone(
   timestamp: number,
   clipId: string,
-  visibleRange?: PrerenderVisibleRange
+  visibleRange?: PrerenderVisibleRange,
 ): ThumbnailPrerenderPriorityZone {
   if (!visibleRange) {
     return 'remaining';

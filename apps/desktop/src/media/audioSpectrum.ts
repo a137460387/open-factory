@@ -10,27 +10,46 @@ export interface SpectrumContextMenuState {
 }
 
 export function resolveSpectrumTime(clientX: number, rectLeft: number, rectWidth: number, duration: number): number {
-  if (!Number.isFinite(clientX) || !Number.isFinite(rectLeft) || !Number.isFinite(rectWidth) || !Number.isFinite(duration) || rectWidth <= 0 || duration <= 0) {
+  if (
+    !Number.isFinite(clientX) ||
+    !Number.isFinite(rectLeft) ||
+    !Number.isFinite(rectWidth) ||
+    !Number.isFinite(duration) ||
+    rectWidth <= 0 ||
+    duration <= 0
+  ) {
     return 0;
   }
   const ratio = Math.min(1, Math.max(0, (clientX - rectLeft) / rectWidth));
   return roundSeconds(ratio * duration);
 }
 
-export function resolveSpectrumSelection(startX: number, endX: number, rectLeft: number, rectWidth: number, duration: number): SpectrumSelectionRange {
+export function resolveSpectrumSelection(
+  startX: number,
+  endX: number,
+  rectLeft: number,
+  rectWidth: number,
+  duration: number,
+): SpectrumSelectionRange {
   const start = resolveSpectrumTime(startX, rectLeft, rectWidth, duration);
   const end = resolveSpectrumTime(endX, rectLeft, rectWidth, duration);
   return {
     inPoint: Math.min(start, end),
-    outPoint: Math.max(start, end)
+    outPoint: Math.max(start, end),
   };
 }
 
-export function resolveSpectrumContextMenu(clientX: number, clientY: number, rectLeft: number, rectWidth: number, duration: number): SpectrumContextMenuState {
+export function resolveSpectrumContextMenu(
+  clientX: number,
+  clientY: number,
+  rectLeft: number,
+  rectWidth: number,
+  duration: number,
+): SpectrumContextMenuState {
   return {
     x: Number.isFinite(clientX) ? Math.round(clientX) : 0,
     y: Number.isFinite(clientY) ? Math.round(clientY) : 0,
-    time: resolveSpectrumTime(clientX, rectLeft, rectWidth, duration)
+    time: resolveSpectrumTime(clientX, rectLeft, rectWidth, duration),
   };
 }
 

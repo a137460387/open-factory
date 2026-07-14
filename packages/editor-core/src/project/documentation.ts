@@ -5,7 +5,7 @@ export const PROJECT_DOCUMENTATION_SECTIONS = [
   { id: 'description', title: '项目说明' },
   { id: 'notes', title: '制作备注' },
   { id: 'copyright', title: '版权信息' },
-  { id: 'approvals', title: '审批记录' }
+  { id: 'approvals', title: '审批记录' },
 ] as const;
 
 export type ProjectDocumentationSectionId = (typeof PROJECT_DOCUMENTATION_SECTIONS)[number]['id'];
@@ -130,9 +130,5 @@ function renderInlineMarkdown(value: string): string {
 }
 
 function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

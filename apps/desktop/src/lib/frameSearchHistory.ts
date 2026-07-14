@@ -1,7 +1,7 @@
 import {
   appendFrameSearchHistoryEntry,
   sanitizeFrameSearchHistory,
-  type FrameSearchHistoryEntry
+  type FrameSearchHistoryEntry,
 } from '@open-factory/editor-core';
 
 export const FRAME_SEARCH_HISTORY_STORAGE_KEY = 'open-factory:frame-search-history';
@@ -23,7 +23,10 @@ export function readFrameSearchHistory(storage = resolveFrameSearchHistoryStorag
   }
 }
 
-export function writeFrameSearchHistory(entries: readonly FrameSearchHistoryEntry[], storage = resolveFrameSearchHistoryStorage()): FrameSearchHistoryEntry[] {
+export function writeFrameSearchHistory(
+  entries: readonly FrameSearchHistoryEntry[],
+  storage = resolveFrameSearchHistoryStorage(),
+): FrameSearchHistoryEntry[] {
   const sanitized = sanitizeFrameSearchHistory(entries);
   if (!storage) {
     return sanitized;
@@ -32,7 +35,10 @@ export function writeFrameSearchHistory(entries: readonly FrameSearchHistoryEntr
   return sanitized;
 }
 
-export function appendFrameSearchHistory(entry: FrameSearchHistoryEntry, storage = resolveFrameSearchHistoryStorage()): FrameSearchHistoryEntry[] {
+export function appendFrameSearchHistory(
+  entry: FrameSearchHistoryEntry,
+  storage = resolveFrameSearchHistoryStorage(),
+): FrameSearchHistoryEntry[] {
   const next = appendFrameSearchHistoryEntry(readFrameSearchHistory(storage), entry);
   return writeFrameSearchHistory(next, storage);
 }

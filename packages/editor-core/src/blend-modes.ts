@@ -7,7 +7,7 @@ export const CLIP_BLEND_MODES = [
   'color-burn',
   'color-dodge',
   'hard-light',
-  'soft-light'
+  'soft-light',
 ] as const;
 
 export type ClipBlendMode = (typeof CLIP_BLEND_MODES)[number];
@@ -73,7 +73,7 @@ export function blendPixels(mode: ClipBlendMode, base: RgbPixel, top: RgbPixel):
   return {
     r: round6(blendChannel(mode, base.r, top.r)),
     g: round6(blendChannel(mode, base.g, top.g)),
-    b: round6(blendChannel(mode, base.b, top.b))
+    b: round6(blendChannel(mode, base.b, top.b)),
   };
 }
 

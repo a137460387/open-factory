@@ -49,30 +49,28 @@ export const ACTION_DELTA_RATIO_THRESHOLD = 0.5;
 export const MIN_SUGGESTION_CONFIDENCE = 0.3;
 
 const CATEGORY_ALIASES: Record<string, string> = {
-  'footstep': 'footstep',
-  'footsteps': 'footstep',
-  'door': 'door',
-  'door_open': 'door',
-  'door_close': 'door',
-  'collision': 'collision',
-  'impact': 'collision',
-  'page_turn': 'page_turn',
-  'pageturn': 'page_turn',
-  'whoosh': 'whoosh',
-  'swoosh': 'whoosh',
-  'click': 'click',
-  'tap': 'click',
-  'splash': 'splash',
-  'water': 'splash',
-  'glass': 'glass_break',
-  'glass_break': 'glass_break',
-  'thud': 'collision',
-  'slam': 'door'
+  footstep: 'footstep',
+  footsteps: 'footstep',
+  door: 'door',
+  door_open: 'door',
+  door_close: 'door',
+  collision: 'collision',
+  impact: 'collision',
+  page_turn: 'page_turn',
+  pageturn: 'page_turn',
+  whoosh: 'whoosh',
+  swoosh: 'whoosh',
+  click: 'click',
+  tap: 'click',
+  splash: 'splash',
+  water: 'splash',
+  glass: 'glass_break',
+  glass_break: 'glass_break',
+  thud: 'collision',
+  slam: 'door',
 };
 
-export function detectActionCandidatePoints(
-  motionMagnitudes: number[]
-): ActionCandidatePoint[] {
+export function detectActionCandidatePoints(motionMagnitudes: number[]): ActionCandidatePoint[] {
   if (motionMagnitudes.length < 2) return [];
   const candidates: ActionCandidatePoint[] = [];
   for (let i = 1; i < motionMagnitudes.length; i += 1) {
@@ -104,7 +102,7 @@ export function buildSfxMatchPrompt(moments: SfxCandidateMoment[]): string {
     '  ]',
     '}',
     '',
-    '候选时刻:'
+    '候选时刻:',
   ];
   for (const m of moments) {
     let line = `  - 时间: ${m.time}s`;
@@ -125,7 +123,7 @@ export function parseSfxMatchResponse(json: string): SfxAISuggestion[] {
         time: s.time,
         soundEffectCategory: normalizeCategory(s.soundEffectCategory),
         reason: s.reason ?? '',
-        confidence: s.confidence
+        confidence: s.confidence,
       }));
   } catch {
     return [];
@@ -133,21 +131,21 @@ export function parseSfxMatchResponse(json: string): SfxAISuggestion[] {
 }
 
 export function normalizeCategory(raw: string): string {
-  const lower = raw.toLowerCase().trim().replace(/[\s-]+/g, '_');
+  const lower = raw
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, '_');
   return CATEGORY_ALIASES[lower] ?? lower;
 }
 
-export function matchLocalSfxLibrary(
-  category: string,
-  library: SfxLibraryEntry[]
-): SfxLibraryEntry | null {
+export function matchLocalSfxLibrary(category: string, library: SfxLibraryEntry[]): SfxLibraryEntry | null {
   const normalized = normalizeCategory(category);
   return library.find((entry) => normalizeCategory(entry.category) === normalized) ?? null;
 }
 
 export function buildSfxSuggestions(
   aiSuggestions: SfxAISuggestion[],
-  library: SfxLibraryEntry[]
+  library: SfxLibraryEntry[],
 ): SfxMatchSuggestion[] {
   return aiSuggestions.map((s) => {
     const match = matchLocalSfxLibrary(s.soundEffectCategory, library);
@@ -156,7 +154,7 @@ export function buildSfxSuggestions(
       category: s.soundEffectCategory,
       confidence: s.confidence,
       matchedAssetId: match?.id ?? null,
-      status: 'pending' as const
+      status: 'pending' as const,
     };
   });
 }

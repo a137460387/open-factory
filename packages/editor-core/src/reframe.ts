@@ -25,7 +25,7 @@ const TARGET_ASPECT_RATIO_VALUES: Record<Exclude<TargetAspectRatio, 'source'>, n
   '9:16': 9 / 16,
   '1:1': 1,
   '4:5': 4 / 5,
-  '21:9': 21 / 9
+  '21:9': 21 / 9,
 };
 
 export function normalizeTargetAspectRatio(value: unknown): TargetAspectRatio {
@@ -45,7 +45,11 @@ export function getTargetAspectRatioValue(value: Exclude<TargetAspectRatio, 'sou
   return TARGET_ASPECT_RATIO_VALUES[value];
 }
 
-export function resolveReframeDimensions(width: number, height: number, targetAspectRatio: TargetAspectRatio | undefined): { width: number; height: number } {
+export function resolveReframeDimensions(
+  width: number,
+  height: number,
+  targetAspectRatio: TargetAspectRatio | undefined,
+): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(width || 1));
   const safeHeight = Math.max(1, Math.round(height || 1));
   const normalized = normalizeTargetAspectRatio(targetAspectRatio);
@@ -57,12 +61,12 @@ export function resolveReframeDimensions(width: number, height: number, targetAs
   if (ratio >= 1) {
     return {
       width: makeEven(longest),
-      height: makeEven(longest / ratio)
+      height: makeEven(longest / ratio),
     };
   }
   return {
     width: makeEven(longest * ratio),
-    height: makeEven(longest)
+    height: makeEven(longest),
   };
 }
 
@@ -83,7 +87,7 @@ export function calculateReframeCrop(settings: ReframeSettings): ReframeCrop | u
     cropWidthExpression: `if(gte(iw/ih\\,${ratioText})\\,ih*${ratioText}\\,iw)`,
     cropHeightExpression: `if(gte(iw/ih\\,${ratioText})\\,ih\\,iw/${ratioText})`,
     cropXExpression: `(iw-ow)/2+(iw-ow)/2*${formatFilterNumber(offsetX)}`,
-    cropYExpression: `(ih-oh)/2+(ih-oh)/2*${formatFilterNumber(offsetY)}`
+    cropYExpression: `(ih-oh)/2+(ih-oh)/2*${formatFilterNumber(offsetY)}`,
   };
 }
 

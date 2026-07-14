@@ -14,11 +14,7 @@ export function ASRStage(props: ASRStageProps) {
   const clipName = props.selectedClip?.name;
   return (
     <div data-testid="subtitle-workflow-asr-stage">
-      {clipName ? (
-        <span>{clipName}</span>
-      ) : (
-        <span>请在时间线上选择一个音频或视频片段</span>
-      )}
+      {clipName ? <span>{clipName}</span> : <span>请在时间线上选择一个音频或视频片段</span>}
     </div>
   );
 }

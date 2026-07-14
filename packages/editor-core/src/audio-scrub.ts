@@ -26,7 +26,7 @@ export type ScrubSpeedTier = 'slow' | 'medium' | 'fast';
  */
 export function getScrubSpeedTier(
   speedPxPerSec: number,
-  options?: Pick<AudioScrubOptions, 'slowSpeedPxPerSec' | 'fastSpeedPxPerSec'>
+  options?: Pick<AudioScrubOptions, 'slowSpeedPxPerSec' | 'fastSpeedPxPerSec'>,
 ): ScrubSpeedTier {
   const slow = options?.slowSpeedPxPerSec ?? DEFAULT_SCRUB_SLOW_SPEED;
   const fast = options?.fastSpeedPxPerSec ?? DEFAULT_SCRUB_FAST_SPEED;
@@ -41,19 +41,19 @@ export function getScrubSpeedTier(
  */
 export function getScrubSampleIntervalMultiplier(tier: ScrubSpeedTier): number {
   switch (tier) {
-    case 'slow': return 1.0;
-    case 'medium': return 0.5;
-    case 'fast': return 0.25;
+    case 'slow':
+      return 1.0;
+    case 'medium':
+      return 0.5;
+    case 'fast':
+      return 0.25;
   }
 }
 
 /**
  * 计算采样窗口对应的 AudioBuffer 帧数
  */
-export function getScrubSampleFrames(
-  sampleRate: number,
-  options?: Pick<AudioScrubOptions, 'sampleWindowSec'>
-): number {
+export function getScrubSampleFrames(sampleRate: number, options?: Pick<AudioScrubOptions, 'sampleWindowSec'>): number {
   const windowSec = options?.sampleWindowSec ?? DEFAULT_SCRUB_SAMPLE_WINDOW;
   return Math.max(1, Math.round(sampleRate * windowSec));
 }
@@ -64,7 +64,7 @@ export function getScrubSampleFrames(
 export function shouldTriggerScrub(
   lastTriggerMs: number,
   nowMs: number,
-  options?: Pick<AudioScrubOptions, 'minIntervalMs'>
+  options?: Pick<AudioScrubOptions, 'minIntervalMs'>,
 ): boolean {
   const minInterval = options?.minIntervalMs ?? DEFAULT_SCRUB_MIN_INTERVAL_MS;
   return nowMs - lastTriggerMs >= minInterval;
@@ -76,7 +76,7 @@ export function shouldTriggerScrub(
  * @returns 可播放的轨道 id 列表
  */
 export function filterScrubTracks<T extends { id: string; type: string; muted?: boolean; solo?: boolean }>(
-  tracks: readonly T[]
+  tracks: readonly T[],
 ): string[] {
   const hasSolo = tracks.some((t) => t.solo);
   if (hasSolo) {

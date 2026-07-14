@@ -20,7 +20,9 @@ export function joinLocalPath(baseDir: string, child: string): string {
 }
 
 export function getWorkspaceLayoutDisplayName(layout: WorkspaceLayoutDefinition): string {
-  return layout.builtIn ? zhCN.toolbar.workspaceLayouts[layout.id as keyof typeof zhCN.toolbar.workspaceLayouts] ?? layout.name : layout.name;
+  return layout.builtIn
+    ? (zhCN.toolbar.workspaceLayouts[layout.id as keyof typeof zhCN.toolbar.workspaceLayouts] ?? layout.name)
+    : layout.name;
 }
 
 export function moveAutomationMediaToGroup(assetId: string, groupName: string): void {

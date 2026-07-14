@@ -20,16 +20,12 @@ export function estimateExportFileSizeBytes(input: ExportSizeEstimateInput): num
   if (format === 'gif' || format === 'webp' || format === 'apng') {
     const pixels = Math.max(1, Math.round(input.width) * Math.round(input.height));
     const frames = Math.max(1, Math.ceil(Math.min(120, Math.max(1, input.fps)) * duration));
-    const bytesPerPixel =
-      format === 'gif'
-        ? 0.08
-        : format === 'webp'
-          ? 0.045
-          : 0.12;
+    const bytesPerPixel = format === 'gif' ? 0.08 : format === 'webp' ? 0.045 : 0.12;
     return Math.max(1024, Math.round(pixels * frames * bytesPerPixel));
   }
 
-  const videoBitsPerSecond = parseBitrate(input.videoBitrate) ?? defaultVideoBitsPerSecond(input.width, input.height, input.fps);
+  const videoBitsPerSecond =
+    parseBitrate(input.videoBitrate) ?? defaultVideoBitsPerSecond(input.width, input.height, input.fps);
   return Math.max(1024, Math.round(((videoBitsPerSecond + audioBitsPerSecond) * duration) / 8));
 }
 

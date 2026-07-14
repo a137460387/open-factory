@@ -29,11 +29,14 @@ export function normalizeMotionBlurParams(params: EffectParams | undefined): Mot
     intensity: normalizeNumber(params?.intensity, DEFAULT_MOTION_BLUR_PARAMS.intensity, 0, 1),
     angle: normalizeAngle(params?.angle, DEFAULT_MOTION_BLUR_PARAMS.angle),
     samples: normalizeMotionBlurSampleCount(params?.samples, DEFAULT_MOTION_BLUR_PARAMS.samples),
-    jitter: normalizeNumber(params?.jitter, DEFAULT_MOTION_BLUR_PARAMS.jitter, 0, 1)
+    jitter: normalizeNumber(params?.jitter, DEFAULT_MOTION_BLUR_PARAMS.jitter, 0, 1),
   };
 }
 
-export function calculateMotionBlurSampleOffsets(params: Partial<MotionBlurParams>, radiusPixels = 24): MotionBlurSampleOffset[] {
+export function calculateMotionBlurSampleOffsets(
+  params: Partial<MotionBlurParams>,
+  radiusPixels = 24,
+): MotionBlurSampleOffset[] {
   const normalized = normalizeMotionBlurParams(params as EffectParams);
   const span = Math.max(0, radiusPixels) * normalized.intensity;
   if (span <= 0) {
@@ -46,12 +49,15 @@ export function calculateMotionBlurSampleOffsets(params: Partial<MotionBlurParam
     const offset = index / (normalized.samples - 1) - 0.5;
     return {
       x: round(dx * offset, 4),
-      y: round(dy * offset, 4)
+      y: round(dy * offset, 4),
     };
   });
 }
 
-export function buildMotionBlurConvolutionKernel(params: Partial<MotionBlurParams>, maxSize = 7): MotionBlurConvolutionKernel {
+export function buildMotionBlurConvolutionKernel(
+  params: Partial<MotionBlurParams>,
+  maxSize = 7,
+): MotionBlurConvolutionKernel {
   const normalized = normalizeMotionBlurParams(params as EffectParams);
   const size = normalizeKernelSize(maxSize);
   const center = Math.floor(size / 2);
@@ -71,7 +77,14 @@ export function buildMotionBlurConvolutionKernel(params: Partial<MotionBlurParam
     matrix[y * size + x] += blurWeight;
   }
   const rounded = matrix.map((value) => round(value, 6));
-  return { size, matrix: rounded, sum: round(rounded.reduce((total, value) => total + value, 0), 6) };
+  return {
+    size,
+    matrix: rounded,
+    sum: round(
+      rounded.reduce((total, value) => total + value, 0),
+      6,
+    ),
+  };
 }
 
 export function buildMotionBlurConvolutionFilter(params: Partial<MotionBlurParams>): string | undefined {
@@ -81,17 +94,20 @@ export function buildMotionBlurConvolutionFilter(params: Partial<MotionBlurParam
   }
   const kernel = buildMotionBlurConvolutionKernel(normalized, 3);
   const coefficients = kernel.matrix.map((value) => Math.max(0, Math.round(value * 1000)));
-  const coefficientSum = Math.max(1, coefficients.reduce((total, value) => total + value, 0));
+  const coefficientSum = Math.max(
+    1,
+    coefficients.reduce((total, value) => total + value, 0),
+  );
   const matrix = formatKernelMatrix(coefficients);
   const alpha = formatKernelMatrix(buildIdentityKernel(kernel.size));
   const filters = [
-    `convolution=0m='${matrix}':1m='${matrix}':2m='${matrix}':3m='${alpha}':0rdiv=${coefficientSum}:1rdiv=${coefficientSum}:2rdiv=${coefficientSum}:3rdiv=1`
+    `convolution=0m='${matrix}':1m='${matrix}':2m='${matrix}':3m='${alpha}':0rdiv=${coefficientSum}:1rdiv=${coefficientSum}:2rdiv=${coefficientSum}:3rdiv=1`,
   ];
   if (normalized.jitter > 0) {
     const inset = Math.max(2, Math.round(normalized.jitter * 12));
     const amplitude = formatFfmpegNumber(Math.max(0.5, normalized.jitter * inset));
     filters.push(
-      `crop=w='iw-${inset * 2}':h='ih-${inset * 2}':x='${inset}+sin(n*12.9898)*${amplitude}':y='${inset}+cos(n*78.233)*${amplitude}',scale=iw+${inset * 2}:ih+${inset * 2}`
+      `crop=w='iw-${inset * 2}':h='ih-${inset * 2}':x='${inset}+sin(n*12.9898)*${amplitude}':y='${inset}+cos(n*78.233)*${amplitude}',scale=iw+${inset * 2}:ih+${inset * 2}`,
     );
   }
   return filters.join(',');
@@ -105,18 +121,24 @@ export function buildMotionBlurExportFilter(params: Partial<MotionBlurParams>, f
   const safeFps = Math.max(1, Math.round(Number.isFinite(fps) ? fps : 30));
   const interpolationMultiplier = normalized.samples >= 32 ? 4 : normalized.samples >= 16 ? 3 : 2;
   const interpolationFps = Math.max(safeFps + 1, safeFps * interpolationMultiplier);
-  const filters = [`minterpolate=fps=${interpolationFps}:mi_mode=blend`, `tblend=all_mode=average:all_opacity=${formatFfmpegNumber(normalized.intensity)}`];
+  const filters = [
+    `minterpolate=fps=${interpolationFps}:mi_mode=blend`,
+    `tblend=all_mode=average:all_opacity=${formatFfmpegNumber(normalized.intensity)}`,
+  ];
   if (normalized.jitter > 0) {
     const inset = Math.max(2, Math.round(normalized.jitter * 12));
     const amplitude = formatFfmpegNumber(Math.max(0.5, normalized.jitter * inset));
     filters.push(
-      `crop=w='iw-${inset * 2}':h='ih-${inset * 2}':x='${inset}+sin(n*12.9898)*${amplitude}':y='${inset}+cos(n*78.233)*${amplitude}',scale=iw+${inset * 2}:ih+${inset * 2}`
+      `crop=w='iw-${inset * 2}':h='ih-${inset * 2}':x='${inset}+sin(n*12.9898)*${amplitude}':y='${inset}+cos(n*78.233)*${amplitude}',scale=iw+${inset * 2}:ih+${inset * 2}`,
     );
   }
   return filters.join(',');
 }
 
-export function buildMotionBlurPreviewVector(params: Partial<MotionBlurParams>, maxPixels = 24): { x: number; y: number; samples: number; jitter: number } {
+export function buildMotionBlurPreviewVector(
+  params: Partial<MotionBlurParams>,
+  maxPixels = 24,
+): { x: number; y: number; samples: number; jitter: number } {
   const normalized = normalizeMotionBlurParams(params as EffectParams);
   const radians = (normalized.angle * Math.PI) / 180;
   const span = Math.max(0, maxPixels) * normalized.intensity;
@@ -124,7 +146,7 @@ export function buildMotionBlurPreviewVector(params: Partial<MotionBlurParams>, 
     x: round(Math.cos(radians) * span, 4),
     y: round(Math.sin(radians) * span, 4),
     samples: normalized.intensity <= 0 ? 0 : normalized.samples,
-    jitter: round(normalized.jitter * 8, 4)
+    jitter: round(normalized.jitter * 8, 4),
   };
 }
 
@@ -137,9 +159,15 @@ function normalizeAngle(value: EffectParamValue | undefined, fallback: number): 
   return round(((raw % 360) + 360) % 360);
 }
 
-function normalizeMotionBlurSampleCount(value: EffectParamValue | undefined, fallback: MotionBlurSampleCount): MotionBlurSampleCount {
+function normalizeMotionBlurSampleCount(
+  value: EffectParamValue | undefined,
+  fallback: MotionBlurSampleCount,
+): MotionBlurSampleCount {
   const numeric = typeof value === 'number' && Number.isFinite(value) ? value : Number(value);
-  const nearest = MOTION_BLUR_SAMPLE_COUNTS.reduce((best, candidate) => (Math.abs(candidate - numeric) < Math.abs(best - numeric) ? candidate : best), fallback);
+  const nearest = MOTION_BLUR_SAMPLE_COUNTS.reduce(
+    (best, candidate) => (Math.abs(candidate - numeric) < Math.abs(best - numeric) ? candidate : best),
+    fallback,
+  );
   return MOTION_BLUR_SAMPLE_COUNTS.includes(nearest) ? nearest : fallback;
 }
 

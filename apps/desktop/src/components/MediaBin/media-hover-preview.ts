@@ -11,7 +11,7 @@ export function computeMediaPreviewDelay(delayMs = MEDIA_PREVIEW_DELAY_MS) {
     },
     cancel(timerId: ReturnType<typeof setTimeout> | undefined): void {
       if (timerId !== undefined) clearTimeout(timerId);
-    }
+    },
   };
 }
 

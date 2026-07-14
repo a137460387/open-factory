@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   detectDialogueIntervals,
   getClipSpeed,
@@ -7,7 +7,7 @@ import {
   type DialogueDetectionFrame,
   type DialogueInterval,
   type DialogueSensitivity,
-  type MediaAsset
+  type MediaAsset,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { getAudioPreviewMediaPath } from '../media/proxy';
@@ -16,7 +16,11 @@ import { sourceUrl } from './media';
 const FRAME_DURATION = 0.1;
 const SPECTRUM_FREQUENCIES = [120, 300, 500, 1000, 2400, 3400, 6000, 9000];
 
-export async function detectClipDialogue(clip: Clip, asset: MediaAsset, sensitivity: DialogueSensitivity): Promise<DialogueInterval[]> {
+export async function detectClipDialogue(
+  clip: Clip,
+  asset: MediaAsset,
+  sensitivity: DialogueSensitivity,
+): Promise<DialogueInterval[]> {
   if (clip.type !== 'audio' && clip.type !== 'video') {
     throw new Error(zhCN.errors.silenceNeedsAudio);
   }
@@ -59,7 +63,10 @@ export function buildDialogueFramesFromAudioBuffer(decoded: AudioBuffer, clip: C
       time: timelineTime,
       duration: timelineDuration,
       loudness: round(calculateFrameRms(mixed, startSample, endSample)),
-      frequencyBins: SPECTRUM_FREQUENCIES.map((hz) => ({ hz, energy: round(estimateFrequencyEnergy(mixed, decoded.sampleRate, startSample, endSample, hz)) }))
+      frequencyBins: SPECTRUM_FREQUENCIES.map((hz) => ({
+        hz,
+        energy: round(estimateFrequencyEnergy(mixed, decoded.sampleRate, startSample, endSample, hz)),
+      })),
     });
   }
   return frames;
@@ -89,7 +96,13 @@ function calculateFrameRms(samples: Float32Array, startSample: number, endSample
   return count > 0 ? Math.sqrt(sum / count) : 0;
 }
 
-function estimateFrequencyEnergy(samples: Float32Array, sampleRate: number, startSample: number, endSample: number, hz: number): number {
+function estimateFrequencyEnergy(
+  samples: Float32Array,
+  sampleRate: number,
+  startSample: number,
+  endSample: number,
+  hz: number,
+): number {
   const count = Math.max(0, endSample - startSample);
   if (count === 0 || sampleRate <= 0 || hz <= 0 || hz >= sampleRate / 2) {
     return 0;
@@ -124,7 +137,7 @@ async function decodeAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
   try {
     return await context.decodeAudioData(arrayBuffer.slice(0));
   } finally {
-    await context.close().catch(logError("dialogueDetection"));
+    await context.close().catch(logError('dialogueDetection'));
   }
 }
 
@@ -132,7 +145,7 @@ function buildE2eDialogueFrames(duration: number): DialogueDetectionFrame[] {
   const total = Math.max(1.2, Math.min(6, duration || 3));
   const ranges = [
     { start: Math.min(0.4, total * 0.15), end: Math.min(total, 1.6) },
-    { start: Math.min(total, Math.max(1.8, total * 0.68)), end: Math.min(total, Math.max(2.4, total * 0.95)) }
+    { start: Math.min(total, Math.max(1.8, total * 0.68)), end: Math.min(total, Math.max(2.4, total * 0.95)) },
   ];
   const frames: DialogueDetectionFrame[] = [];
   for (let time = 0; time < total; time += FRAME_DURATION) {
@@ -146,13 +159,13 @@ function buildE2eDialogueFrames(duration: number): DialogueDetectionFrame[] {
             { hz: 120, energy: 6 },
             { hz: 800, energy: 34 },
             { hz: 2200, energy: 24 },
-            { hz: 6800, energy: 8 }
+            { hz: 6800, energy: 8 },
           ]
         : [
             { hz: 120, energy: 14 },
             { hz: 900, energy: 4 },
-            { hz: 4200, energy: 18 }
-          ]
+            { hz: 4200, energy: 18 },
+          ],
     });
   }
   return frames;

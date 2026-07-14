@@ -36,27 +36,31 @@ export interface BeatAlignmentUpdate {
 const SENSITIVITY_THRESHOLD: Record<BeatSensitivity, number> = {
   low: 0.72,
   medium: 0.55,
-  high: 0.38
+  high: 0.38,
 };
 
 const SENSITIVITY_MIN_GAP: Record<BeatSensitivity, number> = {
   low: 0.35,
   medium: 0.25,
-  high: 0.18
+  high: 0.18,
 };
 
 export function createBeatMarker(time: number, id = createId('beat')): BeatMarker {
   return {
     id,
-    time: round(Math.max(0, finiteOrDefault(time, 0)))
+    time: round(Math.max(0, finiteOrDefault(time, 0))),
   };
 }
 
 export function normalizeBeatMarkers(markers: BeatMarker[] | undefined, maxTime?: number): BeatMarker[] {
-  const limit = typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
+  const limit =
+    typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
   return [...(markers ?? [])]
     .filter((marker) => marker && typeof marker.time === 'number' && Number.isFinite(marker.time))
-    .map((marker) => ({ id: typeof marker.id === 'string' && marker.id ? marker.id : createId('beat'), time: round(Math.min(limit, Math.max(0, marker.time))) }))
+    .map((marker) => ({
+      id: typeof marker.id === 'string' && marker.id ? marker.id : createId('beat'),
+      time: round(Math.min(limit, Math.max(0, marker.time))),
+    }))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
@@ -75,7 +79,12 @@ export function detectRmsBeatPeaks(samples: RmsSample[], options: RmsBeatDetecti
 
   const windowSeconds = Math.max(0.01, finiteOrDefault(options.windowSeconds ?? 0.1, 0.1));
   const halfWindow = windowSeconds / 2;
-  const threshold = maxRms * Math.min(1, Math.max(0, finiteOrDefault(options.threshold ?? SENSITIVITY_THRESHOLD.medium, SENSITIVITY_THRESHOLD.medium)));
+  const threshold =
+    maxRms *
+    Math.min(
+      1,
+      Math.max(0, finiteOrDefault(options.threshold ?? SENSITIVITY_THRESHOLD.medium, SENSITIVITY_THRESHOLD.medium)),
+    );
   const minGap = Math.max(0, finiteOrDefault(options.minGapSeconds ?? windowSeconds, windowSeconds));
   const beats: number[] = [];
   let lastBeat = Number.NEGATIVE_INFINITY;
@@ -157,7 +166,12 @@ export function calculateBeatGridLines(beatTimes: number[], density: BeatGridDen
   return normalizeBeatTimes(beatTimes).filter((_time, index) => index % step === 0);
 }
 
-export function calculateBeatSnapUpdates(timeline: Timeline, clipIds: string[], beatTimes: number[], maxDistance = 0.25): BeatSnapUpdate[] {
+export function calculateBeatSnapUpdates(
+  timeline: Timeline,
+  clipIds: string[],
+  beatTimes: number[],
+  maxDistance = 0.25,
+): BeatSnapUpdate[] {
   const beats = [...beatTimes].filter((time) => Number.isFinite(time) && time >= 0).sort((left, right) => left - right);
   if (beats.length === 0 || clipIds.length === 0) {
     return [];
@@ -168,11 +182,18 @@ export function calculateBeatSnapUpdates(timeline: Timeline, clipIds: string[], 
     .filter((clip) => selected.has(clip.id))
     .flatMap((clip) => {
       const beat = findNearestBeat(clip.start, beats, maxDistance);
-      return beat === undefined || Math.abs(beat - clip.start) <= 0.000001 ? [] : [{ clipId: clip.id, from: clip.start, to: beat }];
+      return beat === undefined || Math.abs(beat - clip.start) <= 0.000001
+        ? []
+        : [{ clipId: clip.id, from: clip.start, to: beat }];
     });
 }
 
-export function calculateBeatAlignmentUpdates(timeline: Timeline, clipIds: string[], beatTimes: number[], maxDistance = 0.05): BeatAlignmentUpdate[] {
+export function calculateBeatAlignmentUpdates(
+  timeline: Timeline,
+  clipIds: string[],
+  beatTimes: number[],
+  maxDistance = 0.05,
+): BeatAlignmentUpdate[] {
   const beats = normalizeBeatTimes(beatTimes);
   if (beats.length === 0 || clipIds.length === 0) {
     return [];
@@ -202,8 +223,8 @@ export function calculateBeatAlignmentUpdates(timeline: Timeline, clipIds: strin
           fromEnd: clipEnd,
           toEnd: round(toEnd),
           startError: round(Math.abs(toStart - clip.start)),
-          endError: round(Math.abs(toEnd - clipEnd))
-        }
+          endError: round(Math.abs(toEnd - clipEnd)),
+        },
       ];
     });
 }
@@ -261,7 +282,7 @@ export function buildBeatSyncSpeedKeyframes(clip: Clip, beatTimes: number[]): Ke
       id: `${clip.id}-beat-speed-${index + 1}`,
       time: round(points[index]),
       value: speed,
-      easing: 'linear'
+      easing: 'linear',
     });
   }
   return frames;
@@ -281,7 +302,9 @@ function findNearestBeat(time: number, beatTimes: number[], maxDistance: number)
 }
 
 function normalizeBeatTimes(beatTimes: number[]): number[] {
-  return Array.from(new Set(beatTimes.filter((time) => Number.isFinite(time) && time >= 0).map((time) => round(time)))).sort((left, right) => left - right);
+  return Array.from(
+    new Set(beatTimes.filter((time) => Number.isFinite(time) && time >= 0).map((time) => round(time))),
+  ).sort((left, right) => left - right);
 }
 
 function finiteOrDefault(value: number, fallback: number): number {

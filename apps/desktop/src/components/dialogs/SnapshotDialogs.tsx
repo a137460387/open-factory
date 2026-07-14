@@ -4,19 +4,21 @@ import { useEditorUIStore } from '../../store/editorUIStore';
 import { PanelLoading } from '../PanelLoading';
 
 const SnapshotNameDialog = lazy(() =>
-  import('../../project-snapshots/SnapshotNameDialog').then((m) => ({ default: m.SnapshotNameDialog }))
+  import('../../project-snapshots/SnapshotNameDialog').then((m) => ({ default: m.SnapshotNameDialog })),
 );
 const SnapshotHistoryDialog = lazy(() =>
-  import('../../project-snapshots/SnapshotHistoryDialog').then((m) => ({ default: m.SnapshotHistoryDialog }))
+  import('../../project-snapshots/SnapshotHistoryDialog').then((m) => ({ default: m.SnapshotHistoryDialog })),
 );
 const SnapshotVersionCompareDialog = lazy(() =>
-  import('../../project-snapshots/SnapshotVersionCompareDialog').then((m) => ({ default: m.SnapshotVersionCompareDialog }))
+  import('../../project-snapshots/SnapshotVersionCompareDialog').then((m) => ({
+    default: m.SnapshotVersionCompareDialog,
+  })),
 );
 const TimelineCompareDialog = lazy(() =>
-  import('../../timeline-compare/TimelineCompareDialog').then((m) => ({ default: m.TimelineCompareDialog }))
+  import('../../timeline-compare/TimelineCompareDialog').then((m) => ({ default: m.TimelineCompareDialog })),
 );
 const ReleaseWorkflowDialog = lazy(() =>
-  import('../../release/ReleaseWorkflowDialog').then((m) => ({ default: m.ReleaseWorkflowDialog }))
+  import('../../release/ReleaseWorkflowDialog').then((m) => ({ default: m.ReleaseWorkflowDialog })),
 );
 
 export interface SnapshotDialogsProps {
@@ -51,15 +53,36 @@ export function SnapshotDialogs({
 
   return (
     <Suspense fallback={<PanelLoading label="快照" />}>
-      {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name: string) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
+      {snapshotNameOpen ? (
+        <SnapshotNameDialog
+          defaultName={project.name}
+          onConfirm={(name: string) => void saveNamedSnapshot(name)}
+          onClose={() => setSnapshotNameOpen(false)}
+        />
+      ) : null}
       {snapshotHistoryOpen ? (
-        <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />
+        <SnapshotHistoryDialog
+          projectId={project.id}
+          projectPath={projectPath}
+          onRestore={restoreSnapshotProject}
+          onClose={() => setSnapshotHistoryOpen(false)}
+        />
       ) : null}
       {snapshotCompareOpen ? (
-        <SnapshotVersionCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setSnapshotCompareOpen(false)} />
+        <SnapshotVersionCompareDialog
+          project={project}
+          projectPath={projectPath}
+          onApply={applySnapshotDiffSelection}
+          onClose={() => setSnapshotCompareOpen(false)}
+        />
       ) : null}
       {timelineCompareOpen ? (
-        <TimelineCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setTimelineCompareOpen(false)} />
+        <TimelineCompareDialog
+          project={project}
+          projectPath={projectPath}
+          onApply={applySnapshotDiffSelection}
+          onClose={() => setTimelineCompareOpen(false)}
+        />
       ) : null}
       {releaseWorkflowOpen ? (
         <ReleaseWorkflowDialog

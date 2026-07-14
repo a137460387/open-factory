@@ -10,7 +10,7 @@ import {
   calculateContextualTranslationBatches,
   isProviderConfigured,
   type GlossaryTerm,
-  type TranslationComparison
+  type TranslationComparison,
 } from '@open-factory/editor-core';
 import { BatchUpdateSubtitleTextCommand } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
@@ -30,12 +30,12 @@ const TARGET_LANGUAGES = [
   { code: 'zh', label: '中文' },
   { code: 'fr', label: 'Français' },
   { code: 'de', label: 'Deutsch' },
-  { code: 'es', label: 'Español' }
+  { code: 'es', label: 'Español' },
 ];
 
 export function ContextualTranslationPanel({
   subtitleClips,
-  onClose
+  onClose,
 }: {
   subtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
   onClose: () => void;
@@ -59,7 +59,7 @@ export function ContextualTranslationPanel({
   const subtitleLines = subtitleClips.map((clip, index) => ({
     index,
     time: formatTime(clip.start),
-    text: clip.text
+    text: clip.text,
   }));
 
   const extractGlossary = useCallback(async () => {
@@ -69,7 +69,10 @@ export function ContextualTranslationPanel({
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const systemPrompt = buildSubtitleGlossarySystemPrompt();
       const userPrompt = buildGlossaryExtractionUserPrompt(subtitleLines);
@@ -81,15 +84,18 @@ export function ContextualTranslationPanel({
           model: selectedProvider.defaultModel,
           messages: [
             { role: 'system' as const, content: systemPrompt },
-            { role: 'user' as const, content: userPrompt }
+            { role: 'user' as const, content: userPrompt },
           ],
           customHeaders: selectedProvider.customHeaders,
           maxTokens: 4096,
-          temperature: 0.2
+          temperature: 0.2,
         },
-        apiKey
+        apiKey,
       );
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = parseSubtitleGlossaryResponse(JSON.parse(response.content));
       setGlossary(parsed.terms);
@@ -100,7 +106,7 @@ export function ContextualTranslationPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('idle');
     }
@@ -113,7 +119,10 @@ export function ContextualTranslationPanel({
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('editing'); return; }
+      if (abortRef.current) {
+        setPhase('editing');
+        return;
+      }
 
       const batches = calculateContextualTranslationBatches(subtitleClips.length, 50);
       const withCtx: string[] = [];
@@ -125,7 +134,11 @@ export function ContextualTranslationPanel({
         const batch = subtitleLines.slice(offset, offset + batchSize);
 
         // With context
-        const ctxSystemPrompt = buildContextualTranslationSystemPrompt(editingGlossary, targetLanguage, speakerStyle || undefined);
+        const ctxSystemPrompt = buildContextualTranslationSystemPrompt(
+          editingGlossary,
+          targetLanguage,
+          speakerStyle || undefined,
+        );
         const ctxResponse = await callAiApi(
           {
             providerId: selectedProvider.id,
@@ -133,15 +146,18 @@ export function ContextualTranslationPanel({
             model: selectedProvider.defaultModel,
             messages: [
               { role: 'system' as const, content: ctxSystemPrompt },
-              { role: 'user' as const, content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text }))) }
+              { role: 'user' as const, content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text }))) },
             ],
             customHeaders: selectedProvider.customHeaders,
             maxTokens: 4096,
-            temperature: 0.2
+            temperature: 0.2,
           },
-          apiKey
+          apiKey,
         );
-        if (abortRef.current) { setPhase('editing'); return; }
+        if (abortRef.current) {
+          setPhase('editing');
+          return;
+        }
 
         const ctxParsed = parseContextualTranslationResponse(JSON.parse(ctxResponse.content));
         for (const item of ctxParsed) {
@@ -157,15 +173,18 @@ export function ContextualTranslationPanel({
             model: selectedProvider.defaultModel,
             messages: [
               { role: 'system' as const, content: basicSystemPrompt },
-              { role: 'user' as const, content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text }))) }
+              { role: 'user' as const, content: JSON.stringify(batch.map((b) => ({ index: b.index, text: b.text }))) },
             ],
             customHeaders: selectedProvider.customHeaders,
             maxTokens: 4096,
-            temperature: 0.2
+            temperature: 0.2,
           },
-          apiKey
+          apiKey,
         );
-        if (abortRef.current) { setPhase('editing'); return; }
+        if (abortRef.current) {
+          setPhase('editing');
+          return;
+        }
 
         const basicParsed = parseContextualTranslationResponse(JSON.parse(basicResponse.content));
         for (const item of basicParsed) {
@@ -187,7 +206,7 @@ export function ContextualTranslationPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
       setPhase('editing');
     }
@@ -212,7 +231,7 @@ export function ContextualTranslationPanel({
       showToast({
         kind: 'error',
         title: t.failedTitle,
-        message: error instanceof Error ? error.message : t.failedMessage
+        message: error instanceof Error ? error.message : t.failedMessage,
       });
     }
   }, [withContextTranslations, subtitleClips]);
@@ -222,9 +241,7 @@ export function ContextualTranslationPanel({
   }, []);
 
   const updateGlossaryTranslation = useCallback((index: number, translation: string) => {
-    setEditingGlossary((prev) =>
-      prev.map((term, i) => (i === index ? { ...term, translation } : term))
-    );
+    setEditingGlossary((prev) => prev.map((term, i) => (i === index ? { ...term, translation } : term)));
   }, []);
 
   if (subtitleClips.length === 0) {
@@ -232,7 +249,14 @@ export function ContextualTranslationPanel({
       <div className="flex flex-col h-full" data-testid="contextual-translation-panel">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
           <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
-          <button className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-panel" type="button" onClick={onClose} data-testid="contextual-translation-close">{zhCN.common.close}</button>
+          <button
+            className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            data-testid="contextual-translation-close"
+          >
+            {zhCN.common.close}
+          </button>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-xs text-slate-500">{t.noSubtitles}</div>
@@ -245,7 +269,14 @@ export function ContextualTranslationPanel({
     <div className="flex flex-col h-full" data-testid="contextual-translation-panel">
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
         <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
-        <button className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-panel" type="button" onClick={onClose} data-testid="contextual-translation-close">{zhCN.common.close}</button>
+        <button
+          className="rounded px-2 py-1 text-xs text-slate-500 hover:bg-panel"
+          type="button"
+          onClick={onClose}
+          data-testid="contextual-translation-close"
+        >
+          {zhCN.common.close}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -253,27 +284,65 @@ export function ContextualTranslationPanel({
           <>
             <div>
               <label className="block text-xs text-slate-600 mb-1">{t.selectProvider}</label>
-              <select className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm" value={selectedProviderId} onChange={(e) => setSelectedProviderId(e.target.value)} disabled={textProviders.length === 0} data-testid="contextual-translation-provider">
+              <select
+                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                value={selectedProviderId}
+                onChange={(e) => setSelectedProviderId(e.target.value)}
+                disabled={textProviders.length === 0}
+                data-testid="contextual-translation-provider"
+              >
                 {textProviders.length === 0 && <option value="">{t.noProvider}</option>}
-                {textProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {textProviders.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs text-slate-600 mb-1">{t.targetLanguage}</label>
-              <select className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm" value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} data-testid="contextual-translation-language">
-                {TARGET_LANGUAGES.map((lang) => <option key={lang.code} value={lang.code}>{lang.label}</option>)}
+              <select
+                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                data-testid="contextual-translation-language"
+              >
+                {TARGET_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="text-xs text-slate-500">{subtitleClips.length} 条字幕待翻译</div>
-            <button className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50" type="button" disabled={!selectedProvider} onClick={() => void extractGlossary()} data-testid="contextual-translation-extract">{t.extractGlossary}</button>
+            <button
+              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              disabled={!selectedProvider}
+              onClick={() => void extractGlossary()}
+              data-testid="contextual-translation-extract"
+            >
+              {t.extractGlossary}
+            </button>
           </>
         )}
 
         {phase === 'extracting' && (
           <div className="space-y-2">
-            <div className="text-xs text-slate-600" data-testid="contextual-translation-extracting">{t.extracting}</div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-blue-600 animate-pulse" style={{ width: '60%' }} /></div>
-            <button className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={cancelOperation} data-testid="contextual-translation-cancel">{zhCN.common.cancel}</button>
+            <div className="text-xs text-slate-600" data-testid="contextual-translation-extracting">
+              {t.extracting}
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+              <div className="h-full bg-blue-600 animate-pulse" style={{ width: '60%' }} />
+            </div>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              type="button"
+              onClick={cancelOperation}
+              data-testid="contextual-translation-cancel"
+            >
+              {zhCN.common.cancel}
+            </button>
           </div>
         )}
 
@@ -287,10 +356,24 @@ export function ContextualTranslationPanel({
               ) : (
                 <div className="space-y-1.5 max-h-60 overflow-y-auto">
                   {editingGlossary.map((term, i) => (
-                    <div key={`${term.original}-${i}`} className="flex items-center gap-2 rounded-md border border-line p-2 text-xs" data-testid={`contextual-translation-glossary-${i}`}>
+                    <div
+                      key={`${term.original}-${i}`}
+                      className="flex items-center gap-2 rounded-md border border-line p-2 text-xs"
+                      data-testid={`contextual-translation-glossary-${i}`}
+                    >
                       <div className="min-w-0 flex-1">
                         <span className="font-medium text-slate-800">{term.original}</span>
-                        <span className="ml-1 text-slate-400">[{(typeof t[`type${term.type.charAt(0).toUpperCase()}${term.type.slice(1)}` as keyof typeof t] === 'string' ? t[`type${term.type.charAt(0).toUpperCase()}${term.type.slice(1)}` as keyof typeof t] : term.type) as string}]</span>
+                        <span className="ml-1 text-slate-400">
+                          [
+                          {
+                            (typeof t[
+                              `type${term.type.charAt(0).toUpperCase()}${term.type.slice(1)}` as keyof typeof t
+                            ] === 'string'
+                              ? t[`type${term.type.charAt(0).toUpperCase()}${term.type.slice(1)}` as keyof typeof t]
+                              : term.type) as string
+                          }
+                          ]
+                        </span>
                       </div>
                       <input
                         type="text"
@@ -308,10 +391,25 @@ export function ContextualTranslationPanel({
 
             <div>
               <label className="block text-xs text-slate-600 mb-1">说话人风格（可选）</label>
-              <input type="text" className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm" placeholder="例如：正式、口语化、幽默" value={speakerStyle} onChange={(e) => setSpeakerStyle(e.target.value)} data-testid="contextual-translation-speaker-style" />
+              <input
+                type="text"
+                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                placeholder="例如：正式、口语化、幽默"
+                value={speakerStyle}
+                onChange={(e) => setSpeakerStyle(e.target.value)}
+                data-testid="contextual-translation-speaker-style"
+              />
             </div>
 
-            <button className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50" type="button" disabled={!selectedProvider} onClick={() => void startTranslation()} data-testid="contextual-translation-start">{t.startTranslation}</button>
+            <button
+              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              type="button"
+              disabled={!selectedProvider}
+              onClick={() => void startTranslation()}
+              data-testid="contextual-translation-start"
+            >
+              {t.startTranslation}
+            </button>
           </>
         )}
 
@@ -321,9 +419,19 @@ export function ContextualTranslationPanel({
               {t.batchProgress(Math.min(progress.done, progress.total), progress.total)}
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full bg-blue-600 transition-all" style={{ width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%` }} />
+              <div
+                className="h-full bg-blue-600 transition-all"
+                style={{ width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%` }}
+              />
             </div>
-            <button className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={cancelOperation} data-testid="contextual-translation-cancel-translate">{zhCN.common.cancel}</button>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              type="button"
+              onClick={cancelOperation}
+              data-testid="contextual-translation-cancel-translate"
+            >
+              {zhCN.common.cancel}
+            </button>
           </div>
         )}
 
@@ -338,7 +446,11 @@ export function ContextualTranslationPanel({
 
             <div className="space-y-1.5 max-h-72 overflow-y-auto">
               {comparisons.map((comp, i) => (
-                <div key={i} className={`rounded-md border p-2 text-xs ${comp.hasDifference ? 'border-amber-200 bg-amber-50' : 'border-line bg-white'}`} data-testid={`contextual-translation-compare-${i}`}>
+                <div
+                  key={i}
+                  className={`rounded-md border p-2 text-xs ${comp.hasDifference ? 'border-amber-200 bg-amber-50' : 'border-line bg-white'}`}
+                  data-testid={`contextual-translation-compare-${i}`}
+                >
                   <div className="text-slate-500 mb-1">{comp.original}</div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -350,14 +462,33 @@ export function ContextualTranslationPanel({
                       <div className="text-slate-700 font-medium">{comp.withContext || '—'}</div>
                     </div>
                   </div>
-                  {comp.hasDifference && <div className="mt-1 text-[10px] text-amber-600">{t.compareHasDifference}</div>}
+                  {comp.hasDifference && (
+                    <div className="mt-1 text-[10px] text-amber-600">{t.compareHasDifference}</div>
+                  )}
                 </div>
               ))}
             </div>
 
             <div className="flex gap-2">
-              <button className="flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={() => { setPhase('editing'); setComparisons([]); }} data-testid="contextual-translation-back">{zhCN.common.back}</button>
-              <button className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700" type="button" onClick={applyWithContext} data-testid="contextual-translation-apply">{t.confirmApply}</button>
+              <button
+                className="flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                type="button"
+                onClick={() => {
+                  setPhase('editing');
+                  setComparisons([]);
+                }}
+                data-testid="contextual-translation-back"
+              >
+                {zhCN.common.back}
+              </button>
+              <button
+                className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                type="button"
+                onClick={applyWithContext}
+                data-testid="contextual-translation-apply"
+              >
+                {t.confirmApply}
+              </button>
             </div>
           </div>
         )}
@@ -365,7 +496,14 @@ export function ContextualTranslationPanel({
         {phase === 'done' && (
           <div className="text-center py-8" data-testid="contextual-translation-done">
             <div className="text-sm text-green-700 font-medium">{t.translated}</div>
-            <button className="mt-4 rounded-md border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="contextual-translation-done-close">{zhCN.common.close}</button>
+            <button
+              className="mt-4 rounded-md border border-line bg-white px-3 py-1.5 text-sm font-medium hover:bg-panel"
+              type="button"
+              onClick={onClose}
+              data-testid="contextual-translation-done-close"
+            >
+              {zhCN.common.close}
+            </button>
           </div>
         )}
       </div>

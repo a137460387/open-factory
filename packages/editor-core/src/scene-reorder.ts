@@ -1,7 +1,8 @@
 import type { Timeline } from './model';
 import { buildStoryboardReorderStarts, getStoryboardCards } from './storyboard';
 
-export type SceneReorderStrategy = 'brightness-asc' | 'brightness-desc' | 'color-similar' | 'motion-rhythm' | 'duration-balance';
+export type SceneReorderStrategy =
+  'brightness-asc' | 'brightness-desc' | 'color-similar' | 'motion-rhythm' | 'duration-balance';
 
 export interface SceneFrameSample {
   pixels: Array<readonly [number, number, number]>;
@@ -77,7 +78,7 @@ export function extractSceneClipFeatures(input: SceneClipFeatureInput): SceneCli
     brightness: totalWeight > EPSILON ? clamp01(weightedBrightness / totalWeight) : 0,
     motion: motionWeight > EPSILON ? clamp01(motionTotal / motionWeight) : 0,
     duration: Math.max(0, input.duration),
-    analyzed: pixelCount > 0
+    analyzed: pixelCount > 0,
   };
 }
 
@@ -99,16 +100,24 @@ export function createFallbackSceneClipFeatures(input: {
     brightness: clamp01(input.brightness ?? luminance(clampByte(color[0]), clampByte(color[1]), clampByte(color[2]))),
     motion: clamp01(input.motion ?? 0),
     duration: Math.max(0, input.duration),
-    analyzed: false
+    analyzed: false,
   };
 }
 
-export function orderSceneClipFeatures(features: SceneClipFeatures[], strategy: SceneReorderStrategy): SceneClipFeatures[] {
+export function orderSceneClipFeatures(
+  features: SceneClipFeatures[],
+  strategy: SceneReorderStrategy,
+): SceneClipFeatures[] {
   const stable = features.map((feature, index) => ({ feature, index }));
   if (strategy === 'brightness-asc' || strategy === 'brightness-desc') {
     const direction = strategy === 'brightness-asc' ? 1 : -1;
     return stable
-      .sort((left, right) => direction * (left.feature.brightness - right.feature.brightness) || left.index - right.index || left.feature.clipId.localeCompare(right.feature.clipId))
+      .sort(
+        (left, right) =>
+          direction * (left.feature.brightness - right.feature.brightness) ||
+          left.index - right.index ||
+          left.feature.clipId.localeCompare(right.feature.clipId),
+      )
       .map((item) => item.feature);
   }
   if (strategy === 'color-similar') {
@@ -120,7 +129,11 @@ export function orderSceneClipFeatures(features: SceneClipFeatures[], strategy: 
   return orderByDurationBalance(features);
 }
 
-export function buildSceneReorderClipIds(currentIds: string[], selectedIds: string[], orderedSelectedIds: string[]): string[] {
+export function buildSceneReorderClipIds(
+  currentIds: string[],
+  selectedIds: string[],
+  orderedSelectedIds: string[],
+): string[] {
   const selected = new Set(selectedIds);
   const ordered = orderedSelectedIds.filter((id) => selected.has(id));
   const orderedSet = new Set(ordered);
@@ -137,7 +150,11 @@ export function buildSceneReorderClipIds(currentIds: string[], selectedIds: stri
   });
 }
 
-export function buildSceneReorderStarts(timeline: Timeline, selectedClipIds: string[], orderedSelectedClipIds: string[]): Record<string, number> {
+export function buildSceneReorderStarts(
+  timeline: Timeline,
+  selectedClipIds: string[],
+  orderedSelectedClipIds: string[],
+): Record<string, number> {
   const currentIds = getStoryboardCards(timeline).map((card) => card.clip.id);
   const nextIds = buildSceneReorderClipIds(currentIds, selectedClipIds, orderedSelectedClipIds);
   return buildStoryboardReorderStarts(timeline, nextIds);
@@ -166,7 +183,11 @@ function orderByGreedyColorSimilarity(features: SceneClipFeatures[]): SceneClipF
     for (let index = 0; index < remaining.length; index += 1) {
       const candidate = remaining[index];
       const distance = sceneHistogramDistance(current, candidate);
-      if (distance < bestDistance - EPSILON || (Math.abs(distance - bestDistance) <= EPSILON && candidate.clipId.localeCompare(remaining[bestIndex].clipId) < 0)) {
+      if (
+        distance < bestDistance - EPSILON ||
+        (Math.abs(distance - bestDistance) <= EPSILON &&
+          candidate.clipId.localeCompare(remaining[bestIndex].clipId) < 0)
+      ) {
         bestDistance = distance;
         bestIndex = index;
       }
@@ -177,7 +198,9 @@ function orderByGreedyColorSimilarity(features: SceneClipFeatures[]): SceneClipF
 }
 
 function orderByMotionRhythm(features: SceneClipFeatures[]): SceneClipFeatures[] {
-  const sorted = [...features].sort((left, right) => left.motion - right.motion || left.clipId.localeCompare(right.clipId));
+  const sorted = [...features].sort(
+    (left, right) => left.motion - right.motion || left.clipId.localeCompare(right.clipId),
+  );
   const positions: number[] = [];
   let left = 0;
   let right = sorted.length - 1;
@@ -198,7 +221,9 @@ function orderByMotionRhythm(features: SceneClipFeatures[]): SceneClipFeatures[]
 }
 
 function orderByDurationBalance(features: SceneClipFeatures[]): SceneClipFeatures[] {
-  const sorted = [...features].sort((left, right) => right.duration - left.duration || left.clipId.localeCompare(right.clipId));
+  const sorted = [...features].sort(
+    (left, right) => right.duration - left.duration || left.clipId.localeCompare(right.clipId),
+  );
   const output: SceneClipFeatures[] = [];
   let longIndex = 0;
   let shortIndex = sorted.length - 1;

@@ -5,7 +5,7 @@ import {
   buildProjectDocumentationHtml,
   renderSimpleMarkdown,
   type Project,
-  type ProjectDocumentation
+  type ProjectDocumentation,
 } from '@open-factory/editor-core';
 import DOMPurify from 'dompurify';
 import { Download } from 'lucide-react';
@@ -32,14 +32,20 @@ export function ProjectDocumentationPanel({ project }: ProjectDocumentationPanel
 
   const exportHtml = async () => {
     try {
-      const outputPath = await saveFileDialog(`${project.name || 'open-factory'}-项目文档.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
+      const outputPath = await saveFileDialog(`${project.name || 'open-factory'}-项目文档.html`, [
+        { name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] },
+      ]);
       if (!outputPath) {
         return;
       }
       await writeFile(outputPath, buildProjectDocumentationHtml({ ...project, documentation: draft }));
       showToast({ kind: 'success', title: zhCN.projectDocumentation.exported, message: outputPath });
     } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.projectDocumentation.exportFailed, message: error instanceof Error ? error.message : zhCN.projectDocumentation.exportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: zhCN.projectDocumentation.exportFailed,
+        message: error instanceof Error ? error.message : zhCN.projectDocumentation.exportFailedMessage,
+      });
     }
   };
 
@@ -66,8 +72,15 @@ export function ProjectDocumentationPanel({ project }: ProjectDocumentationPanel
           const value = draft[section.id] ?? '';
           const sectionTitle = zhCN.projectDocumentation.sections[section.id];
           return (
-            <details key={section.id} className="rounded-md border border-line bg-white" open data-testid={`project-documentation-section-${section.id}`}>
-              <summary className="cursor-pointer px-2 py-2 text-xs font-semibold text-slate-700">{sectionTitle}</summary>
+            <details
+              key={section.id}
+              className="rounded-md border border-line bg-white"
+              open
+              data-testid={`project-documentation-section-${section.id}`}
+            >
+              <summary className="cursor-pointer px-2 py-2 text-xs font-semibold text-slate-700">
+                {sectionTitle}
+              </summary>
               <div className="space-y-2 border-t border-line p-2">
                 <textarea
                   className="min-h-28 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -80,7 +93,11 @@ export function ProjectDocumentationPanel({ project }: ProjectDocumentationPanel
                 <div
                   className="prose prose-sm max-w-none rounded-md bg-panel p-2 text-xs text-slate-700"
                   data-testid={`project-documentation-preview-${section.id}`}
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderSimpleMarkdown(value) || `<p>${zhCN.projectDocumentation.emptyPreview}</p>`) }}
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(
+                      renderSimpleMarkdown(value) || `<p>${zhCN.projectDocumentation.emptyPreview}</p>`,
+                    ),
+                  }}
                 />
               </div>
             </details>

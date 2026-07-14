@@ -2,13 +2,18 @@ import type { ClipSlowMotionMode } from '../model-types';
 
 export type FrameInterpolationCompareMode = 'original' | 'blend' | 'mci' | 'optical-flow';
 
-export const FRAME_INTERPOLATION_COMPARE_MODES: readonly FrameInterpolationCompareMode[] = ['original', 'blend', 'mci', 'optical-flow'];
+export const FRAME_INTERPOLATION_COMPARE_MODES: readonly FrameInterpolationCompareMode[] = [
+  'original',
+  'blend',
+  'mci',
+  'optical-flow',
+];
 
 export const FRAME_INTERPOLATION_ESTIMATE_COEFFICIENTS: Record<FrameInterpolationCompareMode, number> = {
   original: 0.3,
   blend: 0.9,
   mci: 1.8,
-  'optical-flow': 2.4
+  'optical-flow': 2.4,
 };
 
 export function buildFrameInterpolationCompareArgs(mode: FrameInterpolationCompareMode, targetFps: number): string[] {
@@ -25,7 +30,10 @@ export function buildFrameInterpolationCompareArgs(mode: FrameInterpolationCompa
   return [`minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1`];
 }
 
-export function estimateFrameInterpolationModeDurationMs(frameCount: number, mode: FrameInterpolationCompareMode): number {
+export function estimateFrameInterpolationModeDurationMs(
+  frameCount: number,
+  mode: FrameInterpolationCompareMode,
+): number {
   const safeFrameCount = Math.max(0, Math.round(Number.isFinite(frameCount) ? frameCount : 0));
   return Math.round(safeFrameCount * FRAME_INTERPOLATION_ESTIMATE_COEFFICIENTS[mode]);
 }
@@ -43,7 +51,12 @@ export function frameInterpolationCompareModeToSlowMotionMode(mode: FrameInterpo
   return 'none';
 }
 
-export function buildFrameInterpolationCompareFrameTimes(clipStart: number, clipDuration: number, playheadTime: number, fps: number): number[] {
+export function buildFrameInterpolationCompareFrameTimes(
+  clipStart: number,
+  clipDuration: number,
+  playheadTime: number,
+  fps: number,
+): number[] {
   const safeFps = Math.max(1, Math.round(Number.isFinite(fps) ? fps : 30));
   const duration = Math.max(0, Number.isFinite(clipDuration) ? clipDuration : 0);
   const start = Math.max(0, Number.isFinite(clipStart) ? clipStart : 0);

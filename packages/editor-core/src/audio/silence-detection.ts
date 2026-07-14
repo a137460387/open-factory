@@ -61,12 +61,14 @@ export function amplitudeToDb(amplitude: number): number {
   return 20 * Math.log10(amplitude);
 }
 
-export function normalizeSilenceDetectionOptions(options: SilenceDetectionOptions = {}): NormalizedSilenceDetectionOptions {
+export function normalizeSilenceDetectionOptions(
+  options: SilenceDetectionOptions = {},
+): NormalizedSilenceDetectionOptions {
   return {
     thresholdDb: finiteOrDefault(options.thresholdDb, DEFAULT_THRESHOLD_DB),
     minSilenceDuration: Math.max(0, finiteOrDefault(options.minSilenceDuration, DEFAULT_MIN_SILENCE_DURATION)),
     marginDuration: Math.max(0, finiteOrDefault(options.marginDuration, DEFAULT_MARGIN_DURATION)),
-    frameDuration: Math.max(0.001, finiteOrDefault(options.frameDuration, DEFAULT_FRAME_DURATION))
+    frameDuration: Math.max(0.001, finiteOrDefault(options.frameDuration, DEFAULT_FRAME_DURATION)),
   };
 }
 
@@ -99,7 +101,11 @@ export function findSilentRanges(audio: DecodedAudioSamples, options: SilenceDet
     }
   }
 
-  return applySilenceMargins(mergeCloseSilentRanges(rawRanges, normalized.marginDuration), duration, normalized.marginDuration);
+  return applySilenceMargins(
+    mergeCloseSilentRanges(rawRanges, normalized.marginDuration),
+    duration,
+    normalized.marginDuration,
+  );
 }
 
 export function mergeCloseSilentRanges(ranges: SilentRange[], marginDuration: number): SilentRange[] {
@@ -128,7 +134,7 @@ export function applySilenceMargins(ranges: SilentRange[], maxDuration: number, 
       }
       return [{ start, end, duration: end - start }];
     }),
-    duration
+    duration,
   );
 }
 

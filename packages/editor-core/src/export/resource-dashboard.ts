@@ -65,9 +65,9 @@ export function createEmptyDashboardState(): ResourceDashboardState {
       runningCount: 0,
       recommendedMax: 0,
       cpuCores: 0,
-      overloadCoefficient: DEFAULT_OVERLOAD_COEFFICIENT
+      overloadCoefficient: DEFAULT_OVERLOAD_COEFFICIENT,
     },
-    enabled: false
+    enabled: false,
   };
 }
 
@@ -75,7 +75,7 @@ export function appendResourceSample(
   samples: ResourceSample[],
   sample: ResourceSample,
   nowMs: number,
-  windowDurationMs = ROLLING_WINDOW_DURATION_MS
+  windowDurationMs = ROLLING_WINDOW_DURATION_MS,
 ): ResourceSample[] {
   const cutoff = nowMs - windowDurationMs;
   const filtered = samples.filter((s) => s.timestamp >= cutoff);
@@ -87,7 +87,7 @@ export function appendResourceSample(
 export function calculateOverloadStatus(
   runningTaskCount: number,
   cpuCores: number,
-  coefficient = DEFAULT_OVERLOAD_COEFFICIENT
+  coefficient = DEFAULT_OVERLOAD_COEFFICIENT,
 ): OverloadStatus {
   const clampedCoefficient = clampCoefficient(coefficient);
   const cores = Math.max(1, Math.floor(cpuCores));
@@ -97,11 +97,15 @@ export function calculateOverloadStatus(
     runningCount: runningTaskCount,
     recommendedMax,
     cpuCores: cores,
-    overloadCoefficient: clampedCoefficient
+    overloadCoefficient: clampedCoefficient,
   };
 }
 
-export function isOverloaded(runningTaskCount: number, cpuCores: number, coefficient = DEFAULT_OVERLOAD_COEFFICIENT): boolean {
+export function isOverloaded(
+  runningTaskCount: number,
+  cpuCores: number,
+  coefficient = DEFAULT_OVERLOAD_COEFFICIENT,
+): boolean {
   return calculateOverloadStatus(runningTaskCount, cpuCores, coefficient).overloaded;
 }
 
@@ -125,7 +129,7 @@ export function estimateTaskResourceUsage(tasks: ExportTask[]): TaskResourceEsti
         cpuCost: estimate.cpuCost,
         memoryMb: estimate.memoryMb,
         memoryClass: estimate.memoryClass,
-        parallelEligible: estimate.parallelEligible
+        parallelEligible: estimate.parallelEligible,
       };
     });
 }
@@ -139,7 +143,12 @@ export function estimateSingleTaskCpuPercent(task: ExportTask, cpuCores: number)
 
 // ── Export History Recording ────────────────────────────────────────────────
 
-export function startExportRecording(snapshots: ExportResourceSnapshot[], exportId: string, taskNames: string[], nowMs: number): ExportResourceSnapshot[] {
+export function startExportRecording(
+  snapshots: ExportResourceSnapshot[],
+  exportId: string,
+  taskNames: string[],
+  nowMs: number,
+): ExportResourceSnapshot[] {
   if (snapshots.length >= MAX_EXPORT_HISTORY_COUNT) {
     const trimmed = snapshots.slice(snapshots.length - MAX_EXPORT_HISTORY_COUNT + 1);
     return [...trimmed, { exportId, startedAt: nowMs, finishedAt: nowMs, samples: [], taskNames }];
@@ -150,17 +159,25 @@ export function startExportRecording(snapshots: ExportResourceSnapshot[], export
 export function appendExportSample(
   snapshots: ExportResourceSnapshot[],
   exportId: string,
-  sample: ResourceSample
+  sample: ResourceSample,
 ): ExportResourceSnapshot[] {
   return snapshots.map((snapshot) => {
     if (snapshot.exportId !== exportId) {
       return snapshot;
     }
-    return { ...snapshot, samples: [...snapshot.samples, sample], finishedAt: Math.max(snapshot.finishedAt, sample.timestamp) };
+    return {
+      ...snapshot,
+      samples: [...snapshot.samples, sample],
+      finishedAt: Math.max(snapshot.finishedAt, sample.timestamp),
+    };
   });
 }
 
-export function finishExportRecording(snapshots: ExportResourceSnapshot[], exportId: string, nowMs: number): ExportResourceSnapshot[] {
+export function finishExportRecording(
+  snapshots: ExportResourceSnapshot[],
+  exportId: string,
+  nowMs: number,
+): ExportResourceSnapshot[] {
   return snapshots.map((snapshot) => (snapshot.exportId === exportId ? { ...snapshot, finishedAt: nowMs } : snapshot));
 }
 
@@ -193,7 +210,7 @@ export function extractExportCurve(snapshot: ExportResourceSnapshot): ResourceCu
     memoryUsedMb: sample.memoryUsedMb,
     diskReadMbPerSec: sample.diskReadMbPerSec,
     diskWriteMbPerSec: sample.diskWriteMbPerSec,
-    elapsedSeconds: Math.round(((sample.timestamp - startMs) / 1000) * 10) / 10
+    elapsedSeconds: Math.round(((sample.timestamp - startMs) / 1000) * 10) / 10,
   }));
 }
 

@@ -34,7 +34,7 @@ import type {
   TransitionType,
   TrackCompressor,
   TrackEQ,
-  TrackEQBandType
+  TrackEQBandType,
 } from '../model';
 import type { ClipContentAnalysis } from '../content-analysis';
 import type { CreditsRow } from '../credits-roll';
@@ -43,10 +43,36 @@ import type { ClipSpatialAudio } from '../spatial-audio';
 import type { MotionGraphic } from '../motion-graphics';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
-export type HardwareEncoderId = 'h264_nvenc' | 'h264_amf' | 'h264_qsv' | 'h264_videotoolbox' | 'h264_vaapi' | 'hevc_nvenc' | 'hevc_amf' | 'hevc_qsv' | 'hevc_videotoolbox';
+export type HardwareEncoderId =
+  | 'h264_nvenc'
+  | 'h264_amf'
+  | 'h264_qsv'
+  | 'h264_videotoolbox'
+  | 'h264_vaapi'
+  | 'hevc_nvenc'
+  | 'hevc_amf'
+  | 'hevc_qsv'
+  | 'hevc_videotoolbox';
 export type HardwareRateControlMode = 'cqp' | 'vbr' | 'cbr';
-export interface HardwareEncoderSettings { encoderId?: HardwareEncoderId; preset?: string; rateControlMode?: HardwareRateControlMode; cq?: number; videoBitrate?: string; maxBitrate?: string; gopSize?: number; bFrames?: number; }
-export interface HardwareEncoderInfo { id: HardwareEncoderId; name: string; vendor: 'nvidia' | 'amd' | 'intel' | 'apple' | 'vaapi'; supportsHevc: boolean; presets: Array<{ value: string; label: string }>; defaultCq: number; supportsBFrames: boolean; }
+export interface HardwareEncoderSettings {
+  encoderId?: HardwareEncoderId;
+  preset?: string;
+  rateControlMode?: HardwareRateControlMode;
+  cq?: number;
+  videoBitrate?: string;
+  maxBitrate?: string;
+  gopSize?: number;
+  bFrames?: number;
+}
+export interface HardwareEncoderInfo {
+  id: HardwareEncoderId;
+  name: string;
+  vendor: 'nvidia' | 'amd' | 'intel' | 'apple' | 'vaapi';
+  supportsHevc: boolean;
+  presets: Array<{ value: string; label: string }>;
+  defaultCq: number;
+  supportsBFrames: boolean;
+}
 export type ExportPlatformPreset =
   | 'youtube-1080p'
   | 'youtube-shorts'
@@ -241,7 +267,11 @@ export function buildStemOutputFileName(ctx: ExportStemNamingContext): string {
 }
 
 function sanitizeStemName(name: string): string {
-  return name.replace(/[<>:"/\\|?*() ]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').trim();
+  return name
+    .replace(/[<>:"/\\|?*() ]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .trim();
 }
 
 export interface ExportTransform {
@@ -388,7 +418,8 @@ export interface ExportTextPathOptions {
 
 export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
 export type ExportSubtitleFormat = 'srt' | 'vtt' | 'ass' | 'ssa';
-export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'path-text-sequence' | 'motion-graphic-sequence' | 'sidecar';
+export type TextArtifactPathMode =
+  'filter' | 'argument' | 'shader-sequence' | 'path-text-sequence' | 'motion-graphic-sequence' | 'sidecar';
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
@@ -405,7 +436,17 @@ export interface ExportCreditsStyle extends ExportTextStyle {
   horizontalMargin: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic' | 'multicam';
+export type ExportClipType =
+  | 'video'
+  | 'audio'
+  | 'image'
+  | 'text'
+  | 'subtitle'
+  | 'credits'
+  | 'nested-sequence'
+  | 'adjustment'
+  | 'motion-graphic'
+  | 'multicam';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = TransitionType;
 
@@ -603,8 +644,10 @@ export interface ExportLoudnessReport {
   integratedLoudness: number;
 }
 
-export type ExportRecoveryErrorKind = 'ffmpeg-crash' | 'unsupported-codec' | 'out-of-memory' | 'disk-space' | 'missing-font' | 'unknown';
-export type ExportRecoveryAction = 'retry-same' | 'fallback-codec' | 'reduce-concurrency' | 'prompt-disk-cleanup' | 'skip-drawtext' | 'none';
+export type ExportRecoveryErrorKind =
+  'ffmpeg-crash' | 'unsupported-codec' | 'out-of-memory' | 'disk-space' | 'missing-font' | 'unknown';
+export type ExportRecoveryAction =
+  'retry-same' | 'fallback-codec' | 'reduce-concurrency' | 'prompt-disk-cleanup' | 'skip-drawtext' | 'none';
 
 export interface ExportRecoveryLogEntry {
   attempt: number;

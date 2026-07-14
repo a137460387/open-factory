@@ -16,9 +16,16 @@ import {
   type EffectType,
   type Timeline,
   type TimelineAccessor,
-  type Transform
+  type Transform,
 } from '@open-factory/editor-core';
-import { eventToAccelerator, getEffectiveTimelineShortcutBindings, normalizeAccelerator, type TimelineShortcutAction, type TimelineShortcutBindings, type TimelineShortcutKey } from '../shortcuts/timeline-shortcuts';
+import {
+  eventToAccelerator,
+  getEffectiveTimelineShortcutBindings,
+  normalizeAccelerator,
+  type TimelineShortcutAction,
+  type TimelineShortcutBindings,
+  type TimelineShortcutKey,
+} from '../shortcuts/timeline-shortcuts';
 import { getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
 
 const MACRO_TARGET_CLIP_ID = '__TARGET_CLIP__';
@@ -76,7 +83,7 @@ const DEFAULT_CLIP_MACROS: ClipMacro[] = [
     name: '放大 150%',
     description: '将目标片段缩放到 150%。',
     patch: { transform: { scale: 1.5 } },
-    steps: [{ type: 'update-clip', clipId: MACRO_TARGET_CLIP_ID, patch: { transform: { scale: 1.5 } } }]
+    steps: [{ type: 'update-clip', clipId: MACRO_TARGET_CLIP_ID, patch: { transform: { scale: 1.5 } } }],
   },
   {
     id: 'macro-cinematic-grade',
@@ -86,21 +93,21 @@ const DEFAULT_CLIP_MACROS: ClipMacro[] = [
       {
         type: 'update-clip',
         clipId: MACRO_TARGET_CLIP_ID,
-        patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } }
+        patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } },
       },
       {
         type: 'add-effect',
         clipId: MACRO_TARGET_CLIP_ID,
-        effect: { type: 'vignette', params: { intensity: 0.25, radius: 0.72 } }
-      }
-    ]
-  }
+        effect: { type: 'vignette', params: { intensity: 0.25, radius: 0.72 } },
+      },
+    ],
+  },
 ];
 
 const DEFAULT_STORAGE: MacroStorage = {
   getAppDataDir,
   readFile,
-  writeFile
+  writeFile,
 };
 
 export async function readClipMacros(storage: MacroStorage = DEFAULT_STORAGE): Promise<ClipMacro[]> {
@@ -113,7 +120,10 @@ export async function readClipMacros(storage: MacroStorage = DEFAULT_STORAGE): P
   }
 }
 
-export async function writeClipMacros(macros: ClipMacro[], storage: MacroStorage = DEFAULT_STORAGE): Promise<ClipMacro[]> {
+export async function writeClipMacros(
+  macros: ClipMacro[],
+  storage: MacroStorage = DEFAULT_STORAGE,
+): Promise<ClipMacro[]> {
   const root = normalizePath(await storage.getAppDataDir());
   const sanitized = sanitizeClipMacros(macros);
   const next = sanitized.length > 0 ? sanitized : cloneDefaultMacros();
@@ -121,8 +131,12 @@ export async function writeClipMacros(macros: ClipMacro[], storage: MacroStorage
   return next;
 }
 
-export async function importClipMacrosFromDialog(storage: MacroStorage = DEFAULT_STORAGE): Promise<ClipMacro[] | undefined> {
-  const [path] = await openFileDialog(false, [{ name: 'Open Factory Macro', extensions: [MACRO_FILE_EXTENSION, 'json'] }]);
+export async function importClipMacrosFromDialog(
+  storage: MacroStorage = DEFAULT_STORAGE,
+): Promise<ClipMacro[] | undefined> {
+  const [path] = await openFileDialog(false, [
+    { name: 'Open Factory Macro', extensions: [MACRO_FILE_EXTENSION, 'json'] },
+  ]);
   if (!path) {
     return undefined;
   }
@@ -134,7 +148,9 @@ export async function importClipMacrosFromDialog(storage: MacroStorage = DEFAULT
 }
 
 export async function exportClipMacrosToDialog(macros: ClipMacro[]): Promise<string | undefined> {
-  const path = await saveFileDialog('open-factory.macros.macro.json', [{ name: 'Open Factory Macro', extensions: [MACRO_FILE_EXTENSION, 'json'] }]);
+  const path = await saveFileDialog('open-factory.macros.macro.json', [
+    { name: 'Open Factory Macro', extensions: [MACRO_FILE_EXTENSION, 'json'] },
+  ]);
   if (!path) {
     return undefined;
   }
@@ -170,7 +186,12 @@ function sanitizeClipMacros(input: unknown): ClipMacro[] {
     const name = typeof record.name === 'string' && record.name.trim() ? record.name.trim() : id;
     const patch = sanitizeClipPatch(record.patch);
     const steps = sanitizeCommandSnapshots(record.steps);
-    const effectiveSteps = steps.length > 0 ? steps : Object.keys(patch).length > 0 ? [{ type: 'update-clip' as const, clipId: MACRO_TARGET_CLIP_ID, patch }] : [];
+    const effectiveSteps =
+      steps.length > 0
+        ? steps
+        : Object.keys(patch).length > 0
+          ? [{ type: 'update-clip' as const, clipId: MACRO_TARGET_CLIP_ID, patch }]
+          : [];
     if (!id || seen.has(id) || effectiveSteps.length === 0) {
       continue;
     }
@@ -179,10 +200,11 @@ function sanitizeClipMacros(input: unknown): ClipMacro[] {
     macros.push({
       id,
       name,
-      description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : undefined,
+      description:
+        typeof record.description === 'string' && record.description.trim() ? record.description.trim() : undefined,
       shortcut: shortcut || undefined,
       patch: Object.keys(patch).length > 0 ? patch : undefined,
-      steps: effectiveSteps
+      steps: effectiveSteps,
     });
   }
   return macros;
@@ -230,7 +252,9 @@ export function snapshotCommand(command: Command): CommandSnapshot | undefined {
     const clipId = sanitizeIdentifier(record.clipId, 'clip');
     const effectId = sanitizeIdentifier(record.effectId, 'effect');
     const patch = sanitizeEffectPatch(record.patch);
-    return clipId && effectId && Object.keys(patch).length > 0 ? { type: 'update-effect', clipId, effectId, patch } : undefined;
+    return clipId && effectId && Object.keys(patch).length > 0
+      ? { type: 'update-effect', clipId, effectId, patch }
+      : undefined;
   }
   if (command instanceof ReorderEffectsCommand) {
     const clipId = sanitizeIdentifier(record.clipId, 'clip');
@@ -278,7 +302,11 @@ export function buildMacroCommands(accessor: TimelineAccessor, macro: ClipMacro,
   return commands;
 }
 
-export function findMacroTargetClip(timeline: Timeline, selectedClipIds: string[], playheadTime: number): Clip | undefined {
+export function findMacroTargetClip(
+  timeline: Timeline,
+  selectedClipIds: string[],
+  playheadTime: number,
+): Clip | undefined {
   const selected = new Set(selectedClipIds);
   if (selected.size > 0) {
     const selectedClip = timeline.tracks.flatMap((track) => track.clips).find((clip) => selected.has(clip.id));
@@ -290,7 +318,12 @@ export function findMacroTargetClip(timeline: Timeline, selectedClipIds: string[
   return timeline.tracks
     .flatMap((track, trackIndex) => track.clips.map((clip) => ({ clip, trackIndex })))
     .filter(({ clip }) => targetTime >= clip.start && targetTime < clip.start + clip.duration)
-    .sort((left, right) => left.trackIndex - right.trackIndex || left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id))[0]?.clip;
+    .sort(
+      (left, right) =>
+        left.trackIndex - right.trackIndex ||
+        left.clip.start - right.clip.start ||
+        left.clip.id.localeCompare(right.clip.id),
+    )[0]?.clip;
 }
 
 export function resolveClipMacroShortcut(event: TimelineShortcutKey, macros: ClipMacro[]): ClipMacro | undefined {
@@ -304,11 +337,16 @@ export function resolveClipMacroShortcut(event: TimelineShortcutKey, macros: Cli
   return macros.find((macro) => macro.shortcut && normalizeAccelerator(macro.shortcut) === accelerator);
 }
 
-export function detectMacroShortcutConflicts(macros: ClipMacro[], timelineBindings: TimelineShortcutBindings): Record<string, MacroShortcutConflict[]> {
+export function detectMacroShortcutConflicts(
+  macros: ClipMacro[],
+  timelineBindings: TimelineShortcutBindings,
+): Record<string, MacroShortcutConflict[]> {
   const conflicts: Record<string, MacroShortcutConflict[]> = Object.fromEntries(macros.map((macro) => [macro.id, []]));
   const timelineByAccelerator = new Map<string, TimelineShortcutAction[]>();
   const effectiveTimelineBindings = getEffectiveTimelineShortcutBindings(timelineBindings);
-  for (const [action, bindings] of Object.entries(effectiveTimelineBindings) as Array<[TimelineShortcutAction, string[]]>) {
+  for (const [action, bindings] of Object.entries(effectiveTimelineBindings) as Array<
+    [TimelineShortcutAction, string[]]
+  >) {
     for (const binding of bindings) {
       const accelerator = normalizeAccelerator(binding);
       const actions = timelineByAccelerator.get(accelerator) ?? [];
@@ -348,14 +386,20 @@ export async function readMacroHistory(storage: MacroStorage = DEFAULT_STORAGE):
   }
 }
 
-export async function writeMacroHistory(entries: MacroHistoryEntry[], storage: MacroStorage = DEFAULT_STORAGE): Promise<MacroHistoryEntry[]> {
+export async function writeMacroHistory(
+  entries: MacroHistoryEntry[],
+  storage: MacroStorage = DEFAULT_STORAGE,
+): Promise<MacroHistoryEntry[]> {
   const root = normalizePath(await storage.getAppDataDir());
   const sanitized = sanitizeMacroHistory(entries);
   await storage.writeFile(joinConfigPath(root, MACRO_HISTORY_FILE), JSON.stringify({ entries: sanitized }, null, 2));
   return sanitized;
 }
 
-export async function appendMacroHistoryEntry(entry: MacroHistoryEntry, storage: MacroStorage = DEFAULT_STORAGE): Promise<MacroHistoryEntry[]> {
+export async function appendMacroHistoryEntry(
+  entry: MacroHistoryEntry,
+  storage: MacroStorage = DEFAULT_STORAGE,
+): Promise<MacroHistoryEntry[]> {
   const current = await readMacroHistory(storage);
   return writeMacroHistory([entry, ...current], storage);
 }
@@ -381,8 +425,12 @@ function sanitizeMacroHistory(input: unknown): MacroHistoryEntry[] {
       const record = value as Record<string, unknown>;
       const id = sanitizeIdentifier(record.id, 'macro-history');
       const macroId = sanitizeIdentifier(record.macroId, 'macro');
-      const macroName = typeof record.macroName === 'string' && record.macroName.trim() ? record.macroName.trim() : macroId;
-      const triggeredAt = typeof record.triggeredAt === 'string' && record.triggeredAt.trim() ? record.triggeredAt.trim() : new Date(0).toISOString();
+      const macroName =
+        typeof record.macroName === 'string' && record.macroName.trim() ? record.macroName.trim() : macroId;
+      const triggeredAt =
+        typeof record.triggeredAt === 'string' && record.triggeredAt.trim()
+          ? record.triggeredAt.trim()
+          : new Date(0).toISOString();
       if (!id || !macroId) {
         return [];
       }
@@ -392,12 +440,21 @@ function sanitizeMacroHistory(input: unknown): MacroHistoryEntry[] {
           macroId,
           macroName,
           triggeredAt,
-          targetClipId: typeof record.targetClipId === 'string' && record.targetClipId.trim() ? record.targetClipId.trim() : undefined,
-          targetClipName: typeof record.targetClipName === 'string' && record.targetClipName.trim() ? record.targetClipName.trim() : undefined,
-          shortcut: typeof record.shortcut === 'string' && record.shortcut.trim() ? normalizeAccelerator(record.shortcut) : undefined,
+          targetClipId:
+            typeof record.targetClipId === 'string' && record.targetClipId.trim()
+              ? record.targetClipId.trim()
+              : undefined,
+          targetClipName:
+            typeof record.targetClipName === 'string' && record.targetClipName.trim()
+              ? record.targetClipName.trim()
+              : undefined,
+          shortcut:
+            typeof record.shortcut === 'string' && record.shortcut.trim()
+              ? normalizeAccelerator(record.shortcut)
+              : undefined,
           success: record.success === true,
-          error: typeof record.error === 'string' && record.error.trim() ? record.error.trim() : undefined
-        }
+          error: typeof record.error === 'string' && record.error.trim() ? record.error.trim() : undefined,
+        },
       ];
     })
     .sort((left, right) => right.triggeredAt.localeCompare(left.triggeredAt))
@@ -411,7 +468,15 @@ function sanitizeClipPatch(input: unknown): ClipPatch {
   const record = input as Record<string, unknown>;
   const patch: ClipPatch = {};
   if (record.transform && typeof record.transform === 'object') {
-    const transform = pickFiniteNumbers<Transform>(record.transform as Record<string, unknown>, ['x', 'y', 'scale', 'scaleX', 'scaleY', 'rotation', 'opacity']);
+    const transform = pickFiniteNumbers<Transform>(record.transform as Record<string, unknown>, [
+      'x',
+      'y',
+      'scale',
+      'scaleX',
+      'scaleY',
+      'rotation',
+      'opacity',
+    ]);
     if (Object.keys(transform).length > 0) {
       patch.transform = transform;
     }
@@ -494,7 +559,7 @@ function sanitizeAddEffectInput(input: unknown): AddEffectInput | undefined {
     id,
     type,
     enabled: typeof record.enabled === 'boolean' ? record.enabled : undefined,
-    params: sanitizeEffectParams(type, record.params)
+    params: sanitizeEffectParams(type, record.params),
   };
 }
 
@@ -567,7 +632,7 @@ function cloneMacro(macro: ClipMacro): ClipMacro {
   return {
     ...macro,
     patch: macro.patch ? cloneJson(macro.patch) : undefined,
-    steps: macro.steps ? cloneCommandSnapshots(macro.steps) : undefined
+    steps: macro.steps ? cloneCommandSnapshots(macro.steps) : undefined,
   };
 }
 

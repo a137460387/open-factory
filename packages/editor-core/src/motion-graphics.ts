@@ -4,7 +4,14 @@ import { round } from './time';
 export const MOTION_GRAPHIC_FILE_FORMAT = 'open-factory-motion-graphic';
 export const MOTION_GRAPHIC_SEQUENCE_KIND = 'motion-graphic-sequence';
 
-export const MOTION_GRAPHIC_TEMPLATE_TYPES = ['scoreboard', 'progress-bar', 'data-chart', 'countdown', 'social-lower-third', 'map-route'] as const;
+export const MOTION_GRAPHIC_TEMPLATE_TYPES = [
+  'scoreboard',
+  'progress-bar',
+  'data-chart',
+  'countdown',
+  'social-lower-third',
+  'map-route',
+] as const;
 export type MotionGraphicTemplateType = (typeof MOTION_GRAPHIC_TEMPLATE_TYPES)[number];
 
 export const MOTION_GRAPHIC_CHART_KINDS = ['bar', 'line', 'pie'] as const;
@@ -62,8 +69,8 @@ export const MOTION_GRAPHIC_TEMPLATE_DEFINITIONS: Record<MotionGraphicTemplateTy
       { key: 'awayScore', type: 'number', defaultValue: 1, min: 0, max: 999, step: 1, keyframeable: true },
       { key: 'periodLabel', type: 'string', defaultValue: 'Q4' },
       { key: 'accentColor', type: 'color', defaultValue: '#22d3ee' },
-      { key: 'backgroundOpacity', type: 'number', defaultValue: 0.82, min: 0, max: 1, step: 0.01, keyframeable: true }
-    ]
+      { key: 'backgroundOpacity', type: 'number', defaultValue: 0.82, min: 0, max: 1, step: 0.01, keyframeable: true },
+    ],
   },
   'progress-bar': {
     type: 'progress-bar',
@@ -73,8 +80,8 @@ export const MOTION_GRAPHIC_TEMPLATE_DEFINITIONS: Record<MotionGraphicTemplateTy
       { key: 'barColor', type: 'color', defaultValue: '#34d399' },
       { key: 'backgroundColor', type: 'color', defaultValue: '#0f172a' },
       { key: 'height', type: 'number', defaultValue: 48, min: 12, max: 180, step: 1, keyframeable: true },
-      { key: 'cornerRadius', type: 'number', defaultValue: 14, min: 0, max: 80, step: 1, keyframeable: true }
-    ]
+      { key: 'cornerRadius', type: 'number', defaultValue: 14, min: 0, max: 80, step: 1, keyframeable: true },
+    ],
   },
   'data-chart': {
     type: 'data-chart',
@@ -85,8 +92,8 @@ export const MOTION_GRAPHIC_TEMPLATE_DEFINITIONS: Record<MotionGraphicTemplateTy
       { key: 'maxValue', type: 'number', defaultValue: 100, min: 1, max: 10000, step: 1, keyframeable: true },
       { key: 'primaryColor', type: 'color', defaultValue: '#60a5fa' },
       { key: 'secondaryColor', type: 'color', defaultValue: '#f97316' },
-      { key: 'showLabels', type: 'boolean', defaultValue: true }
-    ]
+      { key: 'showLabels', type: 'boolean', defaultValue: true },
+    ],
   },
   countdown: {
     type: 'countdown',
@@ -97,20 +104,33 @@ export const MOTION_GRAPHIC_TEMPLATE_DEFINITIONS: Record<MotionGraphicTemplateTy
       { key: 'fontSize', type: 'number', defaultValue: 112, min: 16, max: 360, step: 1, keyframeable: true },
       { key: 'color', type: 'color', defaultValue: '#ffffff' },
       { key: 'backgroundColor', type: 'color', defaultValue: '#111827' },
-      { key: 'ringThickness', type: 'number', defaultValue: 16, min: 0, max: 80, step: 1, keyframeable: true }
-    ]
+      { key: 'ringThickness', type: 'number', defaultValue: 16, min: 0, max: 80, step: 1, keyframeable: true },
+    ],
   },
   'social-lower-third': {
     type: 'social-lower-third',
     params: [
       { key: 'displayName', type: 'string', defaultValue: 'Open Factory' },
       { key: 'handle', type: 'string', defaultValue: '@openfactory' },
-      { key: 'platform', type: 'select', defaultValue: 'youtube', options: ['youtube', 'bilibili', 'douyin', 'custom'] },
-      { key: 'followerCount', type: 'number', defaultValue: 12800, min: 0, max: 1000000000, step: 1, keyframeable: true },
+      {
+        key: 'platform',
+        type: 'select',
+        defaultValue: 'youtube',
+        options: ['youtube', 'bilibili', 'douyin', 'custom'],
+      },
+      {
+        key: 'followerCount',
+        type: 'number',
+        defaultValue: 12800,
+        min: 0,
+        max: 1000000000,
+        step: 1,
+        keyframeable: true,
+      },
       { key: 'accentColor', type: 'color', defaultValue: '#ff4fd8' },
       { key: 'avatarInitials', type: 'string', defaultValue: 'OF' },
-      { key: 'showIcon', type: 'boolean', defaultValue: true }
-    ]
+      { key: 'showIcon', type: 'boolean', defaultValue: true },
+    ],
   },
   'map-route': {
     type: 'map-route',
@@ -121,9 +141,9 @@ export const MOTION_GRAPHIC_TEMPLATE_DEFINITIONS: Record<MotionGraphicTemplateTy
       { key: 'mapTintColor', type: 'color', defaultValue: '#1e293b' },
       { key: 'waypointCount', type: 'number', defaultValue: 5, min: 2, max: 12, step: 1, keyframeable: true },
       { key: 'showPins', type: 'boolean', defaultValue: true },
-      { key: 'zoom', type: 'number', defaultValue: 1, min: 0.5, max: 3, step: 0.05, keyframeable: true }
-    ]
-  }
+      { key: 'zoom', type: 'number', defaultValue: 1, min: 0.5, max: 3, step: 0.05, keyframeable: true },
+    ],
+  },
 };
 
 export function isMotionGraphicTemplateType(value: unknown): value is MotionGraphicTemplateType {
@@ -139,7 +159,10 @@ export function createDefaultMotionGraphic(templateType: MotionGraphicTemplateTy
   return normalizeMotionGraphic({ version: 1, templateType, params: {} });
 }
 
-export function normalizeMotionGraphic(input: Partial<MotionGraphic> | undefined, duration = Number.POSITIVE_INFINITY): MotionGraphic {
+export function normalizeMotionGraphic(
+  input: Partial<MotionGraphic> | undefined,
+  duration = Number.POSITIVE_INFINITY,
+): MotionGraphic {
   const definition = getMotionGraphicTemplateDefinition(input?.templateType);
   const params: MotionGraphicParams = {};
   for (const param of definition.params) {
@@ -150,18 +173,23 @@ export function normalizeMotionGraphic(input: Partial<MotionGraphic> | undefined
     version: 1,
     templateType: definition.type,
     params,
-    ...(paramKeyframes ? { paramKeyframes } : {})
+    ...(paramKeyframes ? { paramKeyframes } : {}),
   };
 }
 
 export function getMotionGraphicNumericParamKeys(graphic: Partial<MotionGraphic> | undefined): string[] {
   const normalized = normalizeMotionGraphic(graphic);
-  return getMotionGraphicTemplateDefinition(normalized.templateType).params
-    .filter((param) => param.type === 'number' && param.keyframeable)
+  return getMotionGraphicTemplateDefinition(normalized.templateType)
+    .params.filter((param) => param.type === 'number' && param.keyframeable)
     .map((param) => param.key);
 }
 
-export function setMotionGraphicParam(graphic: Partial<MotionGraphic> | undefined, key: string, value: MotionGraphicParamValue, duration = Number.POSITIVE_INFINITY): MotionGraphic {
+export function setMotionGraphicParam(
+  graphic: Partial<MotionGraphic> | undefined,
+  key: string,
+  value: MotionGraphicParamValue,
+  duration = Number.POSITIVE_INFINITY,
+): MotionGraphic {
   const normalized = normalizeMotionGraphic(graphic, duration);
   const definition = getMotionGraphicTemplateDefinition(normalized.templateType);
   const param = definition.params.find((item) => item.key === key);
@@ -173,10 +201,10 @@ export function setMotionGraphicParam(graphic: Partial<MotionGraphic> | undefine
       ...normalized,
       params: {
         ...normalized.params,
-        [key]: normalizeMotionGraphicParamValue(param, value)
-      }
+        [key]: normalizeMotionGraphicParamValue(param, value),
+      },
     },
-    duration
+    duration,
   );
 }
 
@@ -184,7 +212,7 @@ export function setMotionGraphicParamKeyframe(
   graphic: Partial<MotionGraphic> | undefined,
   key: string,
   input: { id?: string; time: number; value: number; easing?: KeyframeEasing },
-  duration: number
+  duration: number,
 ): MotionGraphic {
   const normalized = normalizeMotionGraphic(graphic, duration);
   const definition = getMotionGraphicTemplateDefinition(normalized.templateType);
@@ -201,14 +229,19 @@ export function setMotionGraphicParamKeyframe(
       ...normalized,
       paramKeyframes: {
         ...normalized.paramKeyframes,
-        [key]: nextFrames
-      }
+        [key]: nextFrames,
+      },
     },
-    duration
+    duration,
   );
 }
 
-export function getMotionGraphicParamValueAtTime(graphic: Partial<MotionGraphic> | undefined, key: string, time: number, duration = Number.POSITIVE_INFINITY): MotionGraphicParamValue | undefined {
+export function getMotionGraphicParamValueAtTime(
+  graphic: Partial<MotionGraphic> | undefined,
+  key: string,
+  time: number,
+  duration = Number.POSITIVE_INFINITY,
+): MotionGraphicParamValue | undefined {
   const normalized = normalizeMotionGraphic(graphic, duration);
   const definition = getMotionGraphicTemplateDefinition(normalized.templateType);
   const param = definition.params.find((item) => item.key === key);
@@ -224,7 +257,7 @@ export function getMotionGraphicParamValueAtTime(graphic: Partial<MotionGraphic>
 
 export function buildMotionGraphicTemplateFile(
   graphic: Partial<MotionGraphic> | undefined,
-  options: { duration?: number; width?: number; height?: number } = {}
+  options: { duration?: number; width?: number; height?: number } = {},
 ): MotionGraphicTemplateFile {
   const normalized = normalizeMotionGraphic(graphic, options.duration);
   return {
@@ -235,13 +268,13 @@ export function buildMotionGraphicTemplateFile(
     ...(normalized.paramKeyframes ? { paramKeyframes: normalized.paramKeyframes } : {}),
     ...(Number.isFinite(options.duration) ? { duration: round(Math.max(0.001, options.duration!)) } : {}),
     ...(Number.isFinite(options.width) ? { width: Math.max(1, Math.round(options.width!)) } : {}),
-    ...(Number.isFinite(options.height) ? { height: Math.max(1, Math.round(options.height!)) } : {})
+    ...(Number.isFinite(options.height) ? { height: Math.max(1, Math.round(options.height!)) } : {}),
   };
 }
 
 export function serializeMotionGraphicTemplate(
   graphic: Partial<MotionGraphic> | undefined,
-  options: { duration?: number; width?: number; height?: number } = {}
+  options: { duration?: number; width?: number; height?: number } = {},
 ): string {
   return `${JSON.stringify(buildMotionGraphicTemplateFile(graphic, options), null, 2)}\n`;
 }
@@ -266,20 +299,28 @@ export function parseMotionGraphicTemplate(contents: string): MotionGraphicTempl
       version: 1,
       templateType: input.templateType,
       params: input.params,
-      paramKeyframes: input.paramKeyframes
+      paramKeyframes: input.paramKeyframes,
     },
-    duration
+    duration,
   );
   return buildMotionGraphicTemplateFile(graphic, {
     duration,
     width: input.width,
-    height: input.height
+    height: input.height,
   });
 }
 
-function normalizeMotionGraphicParamValue(param: MotionGraphicParamDefinition, value: MotionGraphicParamValue | undefined): MotionGraphicParamValue {
+function normalizeMotionGraphicParamValue(
+  param: MotionGraphicParamDefinition,
+  value: MotionGraphicParamValue | undefined,
+): MotionGraphicParamValue {
   if (param.type === 'number') {
-    return normalizeNumber(value, typeof param.defaultValue === 'number' ? param.defaultValue : 0, param.min, param.max);
+    return normalizeNumber(
+      value,
+      typeof param.defaultValue === 'number' ? param.defaultValue : 0,
+      param.min,
+      param.max,
+    );
   }
   if (param.type === 'boolean') {
     return value === true;
@@ -316,7 +357,7 @@ function normalizeMotionGraphicParamKeyframes(
   input: MotionGraphicParamKeyframes | undefined,
   definition: MotionGraphicTemplateDefinition,
   params: MotionGraphicParams,
-  duration: number
+  duration: number,
 ): MotionGraphicParamKeyframes | undefined {
   if (!input || typeof input !== 'object') {
     return undefined;
@@ -348,14 +389,19 @@ function normalizeMotionGraphicParamKeyframes(
 function normalizeMotionGraphicKeyframe(
   input: { id?: string; time: number; value: number; easing?: KeyframeEasing },
   param: MotionGraphicParamDefinition,
-  duration: number
+  duration: number,
 ): Keyframe<number> {
   const maxTime = Number.isFinite(duration) ? Math.max(0, duration) : Number.POSITIVE_INFINITY;
   return {
     id: typeof input.id === 'string' && input.id ? input.id : createLocalId('motion-param'),
     time: round(Math.min(maxTime, Math.max(0, input.time))),
-    value: normalizeNumber(input.value, typeof param.defaultValue === 'number' ? param.defaultValue : 0, param.min, param.max),
-    easing: normalizeEasing(input.easing)
+    value: normalizeNumber(
+      input.value,
+      typeof param.defaultValue === 'number' ? param.defaultValue : 0,
+      param.min,
+      param.max,
+    ),
+    easing: normalizeEasing(input.easing),
   };
 }
 
@@ -382,10 +428,16 @@ function normalizeColor(value: unknown, fallback: string): string {
 }
 
 function normalizeEasing(easing: unknown): KeyframeEasing {
-  return easing === 'ease-in' || easing === 'ease-out' || easing === 'ease-in-out' || easing === 'linear' ? easing : 'linear';
+  return easing === 'ease-in' || easing === 'ease-out' || easing === 'ease-in-out' || easing === 'linear'
+    ? easing
+    : 'linear';
 }
 
-function interpolateMotionGraphicKeyframes(frames: Keyframe<number>[] | undefined, time: number, fallback: number): number {
+function interpolateMotionGraphicKeyframes(
+  frames: Keyframe<number>[] | undefined,
+  time: number,
+  fallback: number,
+): number {
   if (!frames || frames.length === 0) {
     return fallback;
   }

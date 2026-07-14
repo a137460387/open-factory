@@ -46,7 +46,7 @@ export function calculateTimelineRulerScale(input: TimelineRulerScaleInput): Tim
         unit: stepFrames === 10 ? 'ten-frames' : 'frame',
         stepFrames,
         stepSeconds: framesToSeconds(stepFrames, fps),
-        tickSpacingPx
+        tickSpacingPx,
       };
     }
   }
@@ -57,7 +57,7 @@ export function calculateTimelineRulerScale(input: TimelineRulerScaleInput): Tim
       return {
         unit: stepSeconds >= 60 ? 'minutes' : 'seconds',
         stepSeconds,
-        tickSpacingPx
+        tickSpacingPx,
       };
     }
   }
@@ -66,7 +66,7 @@ export function calculateTimelineRulerScale(input: TimelineRulerScaleInput): Tim
   return {
     unit: 'minutes',
     stepSeconds: fallbackSeconds,
-    tickSpacingPx: fallbackSeconds * zoom
+    tickSpacingPx: fallbackSeconds * zoom,
   };
 }
 
@@ -96,7 +96,7 @@ export function buildTimelineRulerTicks(input: TimelineRulerTickInput): Timeline
         time,
         label: formatTimelineRulerTickLabel(time, scale.unit, fps, input.timecodeFormat),
         unit: scale.unit,
-        major: frame % Math.max(1, Math.round(fps)) === 0
+        major: frame % Math.max(1, Math.round(fps)) === 0,
       });
     }
     return ticks;
@@ -110,13 +110,18 @@ export function buildTimelineRulerTicks(input: TimelineRulerTickInput): Timeline
       time,
       label: formatTimelineRulerTickLabel(time, scale.unit, fps, input.timecodeFormat),
       unit: scale.unit,
-      major: scale.unit === 'minutes' ? Math.round(time) % 300 === 0 : Math.round(time) % 10 === 0
+      major: scale.unit === 'minutes' ? Math.round(time) % 300 === 0 : Math.round(time) % 10 === 0,
     });
   }
   return dedupeTicks(ticks).filter((tick) => tick.time <= duration + 0.000001);
 }
 
-export function formatTimelineRulerTickLabel(time: number, unit: TimelineRulerTickUnit, fps = 30, timecodeFormat: TimecodeFormat = 'ndf'): string {
+export function formatTimelineRulerTickLabel(
+  time: number,
+  unit: TimelineRulerTickUnit,
+  fps = 30,
+  timecodeFormat: TimecodeFormat = 'ndf',
+): string {
   if (unit === 'frame' || unit === 'ten-frames') {
     return `${secondsToFrames(time, fps)}f`;
   }
@@ -129,7 +134,8 @@ function normalizeZoom(zoom: number): number {
 
 function normalizeMinSpacing(minTickSpacingPx: number | undefined, viewportWidth: number): number {
   const requested = Number.isFinite(minTickSpacingPx) ? minTickSpacingPx! : DEFAULT_MIN_TICK_SPACING_PX;
-  const viewportLimit = Number.isFinite(viewportWidth) && viewportWidth > 0 ? Math.max(48, viewportWidth / 10) : requested;
+  const viewportLimit =
+    Number.isFinite(viewportWidth) && viewportWidth > 0 ? Math.max(48, viewportWidth / 10) : requested;
   return Math.max(48, Math.min(requested, viewportLimit));
 }
 

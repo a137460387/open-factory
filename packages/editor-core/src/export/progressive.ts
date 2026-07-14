@@ -37,7 +37,9 @@ export function isProgressiveExportSupported(input: ProgressiveExportSupportInpu
   if (format !== 'mp4') {
     return false;
   }
-  return codec.includes('264') || codec.includes('265') || codec.includes('hevc') || codec === 'h264' || codec === 'h265';
+  return (
+    codec.includes('264') || codec.includes('265') || codec.includes('hevc') || codec === 'h264' || codec === 'h265'
+  );
 }
 
 export function createProgressiveExportState(input: {
@@ -49,7 +51,7 @@ export function createProgressiveExportState(input: {
     enabled: true,
     supported: isProgressiveExportSupported(input.settings),
     partialPath: buildProgressivePartialPath(input.outputPath),
-    completedDuration: clampCompletedDuration(input.completedDuration ?? 0)
+    completedDuration: clampCompletedDuration(input.completedDuration ?? 0),
   };
 }
 
@@ -65,7 +67,11 @@ export function estimateProgressiveCompletedDuration(duration: number, progress:
   return clampCompletedDuration(duration * Math.min(0.999, Math.max(0, Number.isFinite(progress) ? progress : 0)));
 }
 
-export function buildProgressiveExportPlan(plan: FfmpegExportPlan, partialPath: string, completedDuration = 0): FfmpegExportPlan {
+export function buildProgressiveExportPlan(
+  plan: FfmpegExportPlan,
+  partialPath: string,
+  completedDuration = 0,
+): FfmpegExportPlan {
   const normalizedPartial = normalizeFfmpegPath(partialPath);
   const originalOutput = plan.fullArgs.at(-1);
   const resumeArgs = buildProgressiveResumeArgs(completedDuration);
@@ -76,7 +82,10 @@ export function buildProgressiveExportPlan(plan: FfmpegExportPlan, partialPath: 
     ...plan,
     outputArgs: resumeArgs.length > 0 ? insertResumeArgsBeforeOutput(outputArgs, resumeArgs) : outputArgs,
     fullArgs: withResume,
-    displayCommand: plan.displayCommand && originalOutput ? plan.displayCommand.replace(originalOutput, normalizedPartial) : plan.displayCommand
+    displayCommand:
+      plan.displayCommand && originalOutput
+        ? plan.displayCommand.replace(originalOutput, normalizedPartial)
+        : plan.displayCommand,
   };
 }
 
@@ -86,11 +95,12 @@ export function getPlayablePartialMovFlags(): string {
 
 export function buildProgressiveSegmentOutputPath(partialPath: string, completedDuration: number): string {
   const directory = dirname(partialPath);
-  const stem = partialPath
-    .split(/[\\/]/)
-    .pop()
-    ?.replace(/\.partial\.mp4$/i, '')
-    .replace(/\.[^.]+$/i, '') || 'export';
+  const stem =
+    partialPath
+      .split(/[\\/]/)
+      .pop()
+      ?.replace(/\.partial\.mp4$/i, '')
+      .replace(/\.[^.]+$/i, '') || 'export';
   return joinPath(directory, `${stem}.resume-${Math.max(0, Math.floor(completedDuration))}.partial.mp4`);
 }
 
@@ -135,5 +145,7 @@ function clampCompletedDuration(value: number): number {
 }
 
 function formatFfmpegSeconds(value: number): string {
-  return clampCompletedDuration(value).toFixed(3).replace(/\.?0+$/u, '');
+  return clampCompletedDuration(value)
+    .toFixed(3)
+    .replace(/\.?0+$/u, '');
 }

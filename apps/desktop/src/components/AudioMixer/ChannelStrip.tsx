@@ -9,22 +9,26 @@ interface ChannelStripProps {
   onMuteToggle: () => void;
 }
 
-export const ChannelStrip: React.FC<ChannelStripProps> = ({
-  channel,
-  onChange,
-  onSoloToggle,
-  onMuteToggle,
-}) => {
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ volume: Number(e.target.value) });
-  }, [onChange]);
+export const ChannelStrip: React.FC<ChannelStripProps> = ({ channel, onChange, onSoloToggle, onMuteToggle }) => {
+  const handleVolumeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({ volume: Number(e.target.value) });
+    },
+    [onChange],
+  );
 
-  const handlePanChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange({ pan: Number(e.target.value) });
-  }, [onChange]);
+  const handlePanChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({ pan: Number(e.target.value) });
+    },
+    [onChange],
+  );
 
   return (
-    <div className="flex flex-col items-center w-16 bg-gray-800 rounded p-1" data-testid={`channel-strip-${channel.trackId}`}>
+    <div
+      className="flex flex-col items-center w-16 bg-gray-800 rounded p-1"
+      data-testid={`channel-strip-${channel.trackId}`}
+    >
       {/* 通道名 */}
       <span className="text-xs text-gray-300 truncate w-full text-center mb-1">{channel.name}</span>
 

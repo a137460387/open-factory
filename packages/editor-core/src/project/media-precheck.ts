@@ -2,8 +2,10 @@ import type { MediaAsset } from '../model';
 
 export type MediaPrecheckStatus = 'pass' | 'warning' | 'error';
 export type MediaPrecheckProjectColorSpace = 'sdr' | 'hdr';
-export type FfprobePrecheckErrorCategory = 'unsupported-codec' | 'invalid-data' | 'missing-file' | 'permission' | 'unknown';
-export type MediaPrecheckIssueType = 'ffprobe-error' | 'codec' | 'av-sync' | 'integrity' | 'hdr-sdr' | 'file-header-mismatch';
+export type FfprobePrecheckErrorCategory =
+  'unsupported-codec' | 'invalid-data' | 'missing-file' | 'permission' | 'unknown';
+export type MediaPrecheckIssueType =
+  'ffprobe-error' | 'codec' | 'av-sync' | 'integrity' | 'hdr-sdr' | 'file-header-mismatch';
 
 export interface MediaPrecheckVideoStream {
   codecName?: string;
@@ -69,7 +71,7 @@ export function buildMediaPrecheckResult(input: MediaPrecheckInput): MediaPreche
       type: 'ffprobe-error',
       severity: 'error',
       details: input.ffprobeError.trim(),
-      ffprobeError: parseFfprobePrecheckError(input.ffprobeError)
+      ffprobeError: parseFfprobePrecheckError(input.ffprobeError),
     });
   } else if (input.analysis) {
     const codecIssue = detectCodecPrecheckIssue(input.analysis);
@@ -89,14 +91,14 @@ export function buildMediaPrecheckResult(input: MediaPrecheckInput): MediaPreche
     issues.push({
       type: 'integrity',
       severity: 'error',
-      details: input.integrityErrorOutput.trim()
+      details: input.integrityErrorOutput.trim(),
     });
   }
   if (input.fileSniff?.status === 'mismatch') {
     issues.push({
       type: 'file-header-mismatch',
       severity: 'warning',
-      details: `${input.fileSniff.extension} -> ${input.fileSniff.detectedLabel ?? 'unknown'}`
+      details: `${input.fileSniff.extension} -> ${input.fileSniff.detectedLabel ?? 'unknown'}`,
     });
   }
   if (input.forcedImport) {
@@ -106,7 +108,7 @@ export function buildMediaPrecheckResult(input: MediaPrecheckInput): MediaPreche
       path: input.asset.path,
       type: input.asset.type,
       status: 'warning',
-      issues: [...issues, { type: 'file-header-mismatch', severity: 'warning', details: 'force-imported' }]
+      issues: [...issues, { type: 'file-header-mismatch', severity: 'warning', details: 'force-imported' }],
     };
   }
   return {
@@ -115,14 +117,22 @@ export function buildMediaPrecheckResult(input: MediaPrecheckInput): MediaPreche
     path: input.asset.path,
     type: input.asset.type,
     status: summarizeMediaPrecheckStatus(issues),
-    issues
+    issues,
   };
 }
 
-export function detectAudioVideoSyncIssue(analysis: MediaPrecheckAnalysis, thresholdSeconds = 0.5): MediaPrecheckIssue | undefined {
+export function detectAudioVideoSyncIssue(
+  analysis: MediaPrecheckAnalysis,
+  thresholdSeconds = 0.5,
+): MediaPrecheckIssue | undefined {
   const videoDuration = firstFiniteDuration(analysis.videoStreams[0]?.duration, analysis.format?.duration);
   const audioDuration = firstFiniteDuration(analysis.audioStreams[0]?.duration, analysis.format?.duration);
-  if (videoDuration === undefined || audioDuration === undefined || analysis.videoStreams.length === 0 || analysis.audioStreams.length === 0) {
+  if (
+    videoDuration === undefined ||
+    audioDuration === undefined ||
+    analysis.videoStreams.length === 0 ||
+    analysis.audioStreams.length === 0
+  ) {
     return undefined;
   }
   const deltaSeconds = Math.abs(videoDuration - audioDuration);
@@ -134,13 +144,13 @@ export function detectAudioVideoSyncIssue(analysis: MediaPrecheckAnalysis, thres
     severity: 'warning',
     videoDuration,
     audioDuration,
-    deltaSeconds
+    deltaSeconds,
   };
 }
 
 export function detectColorSpacePrecheckIssue(
   analysis: MediaPrecheckAnalysis,
-  projectColorSpace: MediaPrecheckProjectColorSpace = 'sdr'
+  projectColorSpace: MediaPrecheckProjectColorSpace = 'sdr',
 ): MediaPrecheckIssue | undefined {
   if (projectColorSpace === 'hdr') {
     return undefined;
@@ -150,7 +160,7 @@ export function detectColorSpacePrecheckIssue(
     ? {
         type: 'hdr-sdr',
         severity: 'warning',
-        details: [hdrStream.colorPrimaries, hdrStream.colorTransfer, hdrStream.colorSpace].filter(Boolean).join(' / ')
+        details: [hdrStream.colorPrimaries, hdrStream.colorTransfer, hdrStream.colorSpace].filter(Boolean).join(' / '),
       }
     : undefined;
 }
@@ -158,13 +168,25 @@ export function detectColorSpacePrecheckIssue(
 export function parseFfprobePrecheckError(error: string): ParsedFfprobePrecheckError {
   const details = error.trim();
   const normalized = details.toLowerCase();
-  if (normalized.includes('unknown decoder') || normalized.includes('unsupported codec') || normalized.includes('decoder not found')) {
+  if (
+    normalized.includes('unknown decoder') ||
+    normalized.includes('unsupported codec') ||
+    normalized.includes('decoder not found')
+  ) {
     return { category: 'unsupported-codec', details };
   }
-  if (normalized.includes('invalid data') || normalized.includes('moov atom not found') || normalized.includes('could not find codec parameters')) {
+  if (
+    normalized.includes('invalid data') ||
+    normalized.includes('moov atom not found') ||
+    normalized.includes('could not find codec parameters')
+  ) {
     return { category: 'invalid-data', details };
   }
-  if (normalized.includes('no such file') || normalized.includes('cannot find the file') || normalized.includes('not found')) {
+  if (
+    normalized.includes('no such file') ||
+    normalized.includes('cannot find the file') ||
+    normalized.includes('not found')
+  ) {
     return { category: 'missing-file', details };
   }
   if (normalized.includes('permission denied') || normalized.includes('access is denied')) {
@@ -182,7 +204,7 @@ function detectCodecPrecheckIssue(analysis: MediaPrecheckAnalysis): MediaPrechec
   return {
     type: 'codec',
     severity: 'warning',
-    details: missingVideoCodec && missingAudioCodec ? 'video,audio' : missingVideoCodec ? 'video' : 'audio'
+    details: missingVideoCodec && missingAudioCodec ? 'video,audio' : missingVideoCodec ? 'video' : 'audio',
   };
 }
 
@@ -201,7 +223,19 @@ function firstFiniteDuration(...values: Array<number | undefined>): number | und
 }
 
 function isHdrVideoStream(stream: MediaPrecheckVideoStream): boolean {
-  const values = [stream.colorTransfer, stream.colorPrimaries, stream.colorSpace, stream.pixelFormat, ...(stream.hdrMetadata ?? [])].map((value) => value?.toLowerCase() ?? '');
-  return values.some((value) => value.includes('smpte2084') || value.includes('arib-std-b67') || value.includes('bt2020') || value.includes('hdr'));
+  const values = [
+    stream.colorTransfer,
+    stream.colorPrimaries,
+    stream.colorSpace,
+    stream.pixelFormat,
+    ...(stream.hdrMetadata ?? []),
+  ].map((value) => value?.toLowerCase() ?? '');
+  return values.some(
+    (value) =>
+      value.includes('smpte2084') ||
+      value.includes('arib-std-b67') ||
+      value.includes('bt2020') ||
+      value.includes('hdr'),
+  );
 }
 import type { FileSniffResult } from '../media-file-sniff';

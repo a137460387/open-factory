@@ -67,17 +67,23 @@ export interface VersionedPreset {
 // ---------- 版本规则注册表 ----------
 
 const DEPRECATED_FIELDS_BY_VERSION: Map<number, DeprecatedFieldRule[]> = new Map([
-  [2, [
-    { key: 'legacyEncoder', reason: '字段 legacyEncoder 已废弃，请使用 videoCodec', transform: () => 'libx264' },
-    { key: 'oldBitrateMode', reason: '字段 oldBitrateMode 已废弃，新版本使用 videoBitrate/audioBitrate' },
-  ]],
+  [
+    2,
+    [
+      { key: 'legacyEncoder', reason: '字段 legacyEncoder 已废弃，请使用 videoCodec', transform: () => 'libx264' },
+      { key: 'oldBitrateMode', reason: '字段 oldBitrateMode 已废弃，新版本使用 videoBitrate/audioBitrate' },
+    ],
+  ],
 ]);
 
 const REQUIRED_DEFAULTS_BY_VERSION: Map<number, RequiredFieldDefault[]> = new Map([
-  [2, [
-    { key: 'scaleMode', defaultValue: 'none' },
-    { key: 'hardwareEncoding', defaultValue: false },
-  ]],
+  [
+    2,
+    [
+      { key: 'scaleMode', defaultValue: 'none' },
+      { key: 'hardwareEncoding', defaultValue: false },
+    ],
+  ],
   [1, []],
 ]);
 
@@ -93,9 +99,7 @@ export function stampPresetVersion(settings: Record<string, unknown>): Record<st
 /**
  * 检查单个预设的兼容性。
  */
-export function checkPresetCompatibility(
-  preset: VersionedPreset
-): PresetCompatibilityReport {
+export function checkPresetCompatibility(preset: VersionedPreset): PresetCompatibilityReport {
   const issues: PresetCompatibilityIssue[] = [];
   const checkedVersion = preset.presetSchemaVersion ?? 0;
 
@@ -148,7 +152,7 @@ export function checkPresetCompatibility(
  */
 export function upgradePreset(
   preset: VersionedPreset,
-  now?: () => Date
+  now?: () => Date,
 ): { settings: Record<string, unknown>; log: PresetUpgradeLogEntry } {
   const report = checkPresetCompatibility(preset);
   const settings = { ...preset.settings };
@@ -182,9 +186,7 @@ export function upgradePreset(
 /**
  * 批量检查所有预设兼容性。
  */
-export function batchCheckPresetCompatibility(
-  presets: VersionedPreset[]
-): BatchPresetCompatibilityResult {
+export function batchCheckPresetCompatibility(presets: VersionedPreset[]): BatchPresetCompatibilityResult {
   const reports = presets.map(checkPresetCompatibility);
   return {
     totalChecked: reports.length,
@@ -207,9 +209,7 @@ export function parseUpgradeLogs(contents: string): PresetUpgradeLogEntry[] {
   try {
     const parsed = JSON.parse(contents);
     if (parsed && parsed.version === 1 && Array.isArray(parsed.entries)) {
-      return parsed.entries.filter(
-        (e: unknown) => e && typeof (e as PresetUpgradeLogEntry).presetId === 'string'
-      );
+      return parsed.entries.filter((e: unknown) => e && typeof (e as PresetUpgradeLogEntry).presetId === 'string');
     }
     return [];
   } catch {

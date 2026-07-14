@@ -3,7 +3,7 @@ import {
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
   type Project,
-  type SubtitleStyle
+  type SubtitleStyle,
 } from '@open-factory/editor-core';
 import { ClipboardList, FolderOpen, Loader2, Play, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -22,7 +22,7 @@ import {
   type ProjectBatchReport,
   type ProjectBatchTask,
   type ProjectBatchTaskResult,
-  type ProjectBatchTaskStatus
+  type ProjectBatchTaskStatus,
 } from './projectBatch';
 
 interface BatchProjectProcessingDialogProps {
@@ -48,7 +48,7 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
 
   const subtitleStylePatch = useMemo<Partial<SubtitleStyle>>(
     () => ({ fontSize: subtitleFontSize, color: subtitleColor, bold: subtitleBold }),
-    [subtitleBold, subtitleColor, subtitleFontSize]
+    [subtitleBold, subtitleColor, subtitleFontSize],
   );
   const tasks = useMemo(
     () =>
@@ -56,13 +56,15 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
         operation,
         outputDirectory,
         pathPrefix: { from: fromPrefix, to: toPrefix },
-        subtitleStylePatch
+        subtitleStylePatch,
       }),
-    [fromPrefix, operation, outputDirectory, paths, subtitleStylePatch, toPrefix]
+    [fromPrefix, operation, outputDirectory, paths, subtitleStylePatch, toPrefix],
   );
 
   const chooseProjects = async () => {
-    const picked = await openFileDialog(true, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]);
+    const picked = await openFileDialog(true, [
+      { name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] },
+    ]);
     if (picked.length > 0) {
       setPaths((current) => uniquePaths([...current, ...picked]));
       setReport(undefined);
@@ -96,9 +98,17 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
       setReport(nextReport);
       setStatuses(Object.fromEntries(nextReport.results.map((result) => [result.task.id, result.status])));
       setReportText(serializeProjectBatchReport(nextReport));
-      showToast({ kind: 'success', title: t.completedTitle, message: t.completedMessage(nextReport.succeeded, nextReport.failed, nextReport.skipped) });
+      showToast({
+        kind: 'success',
+        title: t.completedTitle,
+        message: t.completedMessage(nextReport.succeeded, nextReport.failed, nextReport.skipped),
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+      showToast({
+        kind: 'error',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage,
+      });
     } finally {
       setBusy(false);
     }
@@ -112,7 +122,10 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="batch-project-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="batch-project-dialog"
+    >
       <div className="grid max-h-[88vh] w-full max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
@@ -124,7 +137,14 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
               {t.summary(tasks.length, report?.succeeded ?? 0, report?.failed ?? 0)}
             </div>
           </div>
-          <button className="rounded-md p-2 text-slate-500 hover:bg-panel disabled:opacity-50" type="button" aria-label={zhCN.common.close} data-testid="batch-project-close" disabled={busy} onClick={onClose}>
+          <button
+            className="rounded-md p-2 text-slate-500 hover:bg-panel disabled:opacity-50"
+            type="button"
+            aria-label={zhCN.common.close}
+            data-testid="batch-project-close"
+            disabled={busy}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -132,14 +152,25 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
           <div className="flex min-h-0 flex-col bg-white">
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
               <div className="text-sm font-semibold text-ink">{t.projectFiles}</div>
-              <button className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50" type="button" disabled={busy} data-testid="batch-project-select-files-button" onClick={() => void chooseProjects()}>
+              <button
+                className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-white disabled:opacity-50"
+                type="button"
+                disabled={busy}
+                data-testid="batch-project-select-files-button"
+                onClick={() => void chooseProjects()}
+              >
                 <FolderOpen size={14} />
                 {paths.length > 0 ? t.addProjects : t.chooseProjects}
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
               {paths.length === 0 ? (
-                <button className="flex min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-slate-600" type="button" data-testid="batch-project-empty" onClick={() => void chooseProjects()}>
+                <button
+                  className="flex min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-slate-600"
+                  type="button"
+                  data-testid="batch-project-empty"
+                  onClick={() => void chooseProjects()}
+                >
                   <ClipboardList className="mb-3 text-slate-500" size={30} />
                   {t.empty}
                 </button>
@@ -148,7 +179,12 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
                   {tasks.map((task) => {
                     const status = statuses[task.id] ?? 'pending';
                     return (
-                      <div key={task.id} className="rounded-md border border-line bg-white p-3" data-testid={`batch-project-task-${fileNameFromPath(task.projectPath)}`} data-status={status}>
+                      <div
+                        key={task.id}
+                        className="rounded-md border border-line bg-white p-3"
+                        data-testid={`batch-project-task-${fileNameFromPath(task.projectPath)}`}
+                        data-status={status}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-sm font-medium text-ink" title={task.projectPath}>
@@ -157,9 +193,18 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
                             <div className="truncate text-xs text-slate-500">{task.outputPath ?? task.projectPath}</div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusTone(status)}`}>{t.status[status]}</span>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusTone(status)}`}
+                            >
+                              {t.status[status]}
+                            </span>
                             {!busy ? (
-                              <button className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel" type="button" data-testid="batch-project-remove-file" onClick={() => removePath(task.projectPath)}>
+                              <button
+                                className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel"
+                                type="button"
+                                data-testid="batch-project-remove-file"
+                                onClick={() => removePath(task.projectPath)}
+                              >
                                 {zhCN.common.delete}
                               </button>
                             ) : null}
@@ -176,7 +221,13 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
             <div className="space-y-3">
               <label className="block text-xs font-semibold text-slate-600">
                 {t.operation}
-                <select className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 text-sm text-slate-700" value={operation} data-testid="batch-project-operation-select" disabled={busy} onChange={(event) => setOperation(event.target.value as ProjectBatchOperation)}>
+                <select
+                  className="mt-1 h-9 w-full rounded-md border border-line bg-white px-2 text-sm text-slate-700"
+                  value={operation}
+                  data-testid="batch-project-operation-select"
+                  disabled={busy}
+                  onChange={(event) => setOperation(event.target.value as ProjectBatchOperation)}
+                >
                   {OPERATIONS.map((item) => (
                     <option key={item} value={item}>
                       {t.operations[item]}
@@ -188,8 +239,22 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
                 <label className="block text-xs font-semibold text-slate-600">
                   {t.outputDirectory}
                   <div className="mt-1 flex gap-2">
-                    <input className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-sm text-slate-700" value={outputDirectory} data-testid="batch-project-output-directory-input" disabled={busy} onChange={(event) => setOutputDirectory(event.target.value)} />
-                    <button className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel disabled:opacity-50" type="button" title={t.chooseDirectory} aria-label={t.chooseDirectory} disabled={busy} data-testid="batch-project-output-directory-button" onClick={() => void chooseOutputDirectory()}>
+                    <input
+                      className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-sm text-slate-700"
+                      value={outputDirectory}
+                      data-testid="batch-project-output-directory-input"
+                      disabled={busy}
+                      onChange={(event) => setOutputDirectory(event.target.value)}
+                    />
+                    <button
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel disabled:opacity-50"
+                      type="button"
+                      title={t.chooseDirectory}
+                      aria-label={t.chooseDirectory}
+                      disabled={busy}
+                      data-testid="batch-project-output-directory-button"
+                      onClick={() => void chooseOutputDirectory()}
+                    >
                       <FolderOpen size={15} />
                     </button>
                   </div>
@@ -199,11 +264,23 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold text-slate-600">
                     {t.fromPrefix}
-                    <input className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700" value={fromPrefix} data-testid="batch-project-from-prefix-input" disabled={busy} onChange={(event) => setFromPrefix(event.target.value)} />
+                    <input
+                      className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700"
+                      value={fromPrefix}
+                      data-testid="batch-project-from-prefix-input"
+                      disabled={busy}
+                      onChange={(event) => setFromPrefix(event.target.value)}
+                    />
                   </label>
                   <label className="block text-xs font-semibold text-slate-600">
                     {t.toPrefix}
-                    <input className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700" value={toPrefix} data-testid="batch-project-to-prefix-input" disabled={busy} onChange={(event) => setToPrefix(event.target.value)} />
+                    <input
+                      className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700"
+                      value={toPrefix}
+                      data-testid="batch-project-to-prefix-input"
+                      disabled={busy}
+                      onChange={(event) => setToPrefix(event.target.value)}
+                    />
                   </label>
                 </div>
               ) : null}
@@ -211,27 +288,59 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block text-xs font-semibold text-slate-600">
                     {t.subtitleFontSize}
-                    <input className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700" type="number" min={12} max={120} value={subtitleFontSize} data-testid="batch-project-subtitle-font-size-input" disabled={busy} onChange={(event) => setSubtitleFontSize(Number(event.target.value))} />
+                    <input
+                      className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700"
+                      type="number"
+                      min={12}
+                      max={120}
+                      value={subtitleFontSize}
+                      data-testid="batch-project-subtitle-font-size-input"
+                      disabled={busy}
+                      onChange={(event) => setSubtitleFontSize(Number(event.target.value))}
+                    />
                   </label>
                   <label className="block text-xs font-semibold text-slate-600">
                     {t.subtitleColor}
-                    <input className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700" type="color" value={subtitleColor} data-testid="batch-project-subtitle-color-input" disabled={busy} onChange={(event) => setSubtitleColor(event.target.value)} />
+                    <input
+                      className="mt-1 h-9 w-full rounded-md border border-line px-2 text-sm text-slate-700"
+                      type="color"
+                      value={subtitleColor}
+                      data-testid="batch-project-subtitle-color-input"
+                      disabled={busy}
+                      onChange={(event) => setSubtitleColor(event.target.value)}
+                    />
                   </label>
                   <label className="col-span-2 inline-flex items-center gap-2 rounded-md border border-line bg-white px-2 py-2 text-xs font-semibold text-slate-600">
-                    <input className="h-4 w-4 accent-brand" type="checkbox" checked={subtitleBold} data-testid="batch-project-subtitle-bold-input" disabled={busy} onChange={(event) => setSubtitleBold(event.target.checked)} />
+                    <input
+                      className="h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={subtitleBold}
+                      data-testid="batch-project-subtitle-bold-input"
+                      disabled={busy}
+                      onChange={(event) => setSubtitleBold(event.target.checked)}
+                    />
                     {t.subtitleBold}
                   </label>
                 </div>
               ) : null}
-              <div className="rounded-md border border-line bg-white p-2 text-xs text-slate-600" data-testid="batch-project-operation-hint">
+              <div
+                className="rounded-md border border-line bg-white p-2 text-xs text-slate-600"
+                data-testid="batch-project-operation-hint"
+              >
                 {t.operationHint[operation]}
               </div>
               {reportText ? (
-                <pre className="max-h-56 overflow-auto rounded-md border border-line bg-white p-2 text-[11px] text-slate-700" data-testid="batch-project-report">
+                <pre
+                  className="max-h-56 overflow-auto rounded-md border border-line bg-white p-2 text-[11px] text-slate-700"
+                  data-testid="batch-project-report"
+                >
                   {reportText}
                 </pre>
               ) : (
-                <div className="rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500" data-testid="batch-project-report">
+                <div
+                  className="rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500"
+                  data-testid="batch-project-report"
+                >
                   {t.reportEmpty}
                 </div>
               )}
@@ -243,10 +352,21 @@ export function BatchProjectProcessingDialog({ onClose }: BatchProjectProcessing
             {t.selectedCount(tasks.length)}
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50" type="button" disabled={busy} onClick={onClose}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+              type="button"
+              disabled={busy}
+              onClick={onClose}
+            >
               {zhCN.common.close}
             </button>
-            <button className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50" type="button" disabled={busy || tasks.length === 0} data-testid="batch-project-run-button" onClick={() => void runBatch()}>
+            <button
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50"
+              type="button"
+              disabled={busy || tasks.length === 0}
+              data-testid="batch-project-run-button"
+              onClick={() => void runBatch()}
+            >
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
               {busy ? t.running : t.run}
             </button>
@@ -276,7 +396,10 @@ async function executeProjectBatchTask(task: ProjectBatchTask): Promise<ProjectB
     if (!capabilities.available) {
       throw new Error(zhCN.errors.ffmpegMissing);
     }
-    const exportProject = buildExportProjectFromProject(project, { outputPath, settings: { format: 'png', outputMode: 'video' } });
+    const exportProject = buildExportProjectFromProject(project, {
+      outputPath,
+      settings: { format: 'png', outputMode: 'video' },
+    });
     const plan = buildFfmpegCurrentFrameExportPlan(exportProject, 0, capabilities);
     await runExport(plan, task.id);
     return { projectName: project.name, outputPath };
@@ -288,17 +411,35 @@ async function executeProjectBatchTask(task: ProjectBatchTask): Promise<ProjectB
     }
     const result = replaceProjectMediaPathPrefix(project, prefix.from, prefix.to);
     if (result.changedCount === 0) {
-      return { status: 'skipped', projectName: project.name, changedCount: 0, message: zhCN.batchProjectProcessing.noMatchedPaths };
+      return {
+        status: 'skipped',
+        projectName: project.name,
+        changedCount: 0,
+        message: zhCN.batchProjectProcessing.noMatchedPaths,
+      };
     }
     await writeProjectFile(result.project, task.projectPath);
-    return { projectName: project.name, changedCount: result.changedCount, message: zhCN.batchProjectProcessing.changedCount(result.changedCount) };
+    return {
+      projectName: project.name,
+      changedCount: result.changedCount,
+      message: zhCN.batchProjectProcessing.changedCount(result.changedCount),
+    };
   }
   const result = updateProjectSubtitleStyle(project, task.subtitleStylePatch ?? {});
   if (result.changedCount === 0) {
-    return { status: 'skipped', projectName: project.name, changedCount: 0, message: zhCN.batchProjectProcessing.noSubtitleClips };
+    return {
+      status: 'skipped',
+      projectName: project.name,
+      changedCount: 0,
+      message: zhCN.batchProjectProcessing.noSubtitleClips,
+    };
   }
   await writeProjectFile(result.project, task.projectPath);
-  return { projectName: project.name, changedCount: result.changedCount, message: zhCN.batchProjectProcessing.changedCount(result.changedCount) };
+  return {
+    projectName: project.name,
+    changedCount: result.changedCount,
+    message: zhCN.batchProjectProcessing.changedCount(result.changedCount),
+  };
 }
 
 type ProjectBatchTaskResultLike = {

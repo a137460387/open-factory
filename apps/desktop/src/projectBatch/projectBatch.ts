@@ -51,9 +51,14 @@ interface ProjectBatchRunSuccess {
   message?: string;
 }
 
-export type ProjectBatchTaskRunner = (task: ProjectBatchTask) => Promise<ProjectBatchRunSuccess> | ProjectBatchRunSuccess;
+export type ProjectBatchTaskRunner = (
+  task: ProjectBatchTask,
+) => Promise<ProjectBatchRunSuccess> | ProjectBatchRunSuccess;
 
-export function buildProjectBatchQueue(projectPaths: string[], options: BuildProjectBatchQueueOptions): ProjectBatchTask[] {
+export function buildProjectBatchQueue(
+  projectPaths: string[],
+  options: BuildProjectBatchQueueOptions,
+): ProjectBatchTask[] {
   const paths = uniqueProjectPaths(projectPaths);
   return paths.map((projectPath, index) => ({
     id: `project-batch-${options.operation}-${index + 1}`,
@@ -61,11 +66,14 @@ export function buildProjectBatchQueue(projectPaths: string[], options: BuildPro
     operation: options.operation,
     outputPath: buildOperationOutputPath(projectPath, options),
     pathPrefix: options.pathPrefix,
-    subtitleStylePatch: options.subtitleStylePatch
+    subtitleStylePatch: options.subtitleStylePatch,
   }));
 }
 
-export async function runProjectBatchQueue(tasks: ProjectBatchTask[], runner: ProjectBatchTaskRunner): Promise<ProjectBatchReport> {
+export async function runProjectBatchQueue(
+  tasks: ProjectBatchTask[],
+  runner: ProjectBatchTaskRunner,
+): Promise<ProjectBatchReport> {
   const results: ProjectBatchTaskResult[] = [];
   for (const task of tasks) {
     try {
@@ -76,14 +84,14 @@ export async function runProjectBatchQueue(tasks: ProjectBatchTask[], runner: Pr
         projectName: result.projectName,
         outputPath: result.outputPath ?? task.outputPath,
         changedCount: result.changedCount,
-        message: result.message
+        message: result.message,
       });
     } catch (error) {
       results.push({
         task,
         status: 'failed',
         outputPath: task.outputPath,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -96,7 +104,7 @@ function summarizeProjectBatchResults(results: ProjectBatchTaskResult[]): Projec
     succeeded: results.filter((result) => result.status === 'success').length,
     failed: results.filter((result) => result.status === 'failed').length,
     skipped: results.filter((result) => result.status === 'skipped').length,
-    results
+    results,
   };
 }
 
@@ -107,7 +115,7 @@ export function serializeProjectBatchReport(report: ProjectBatchReport): string 
         total: report.total,
         succeeded: report.succeeded,
         failed: report.failed,
-        skipped: report.skipped
+        skipped: report.skipped,
       },
       results: report.results.map((result) => ({
         projectPath: result.task.projectPath,
@@ -117,18 +125,18 @@ export function serializeProjectBatchReport(report: ProjectBatchReport): string 
         outputPath: result.outputPath,
         changedCount: result.changedCount,
         message: result.message,
-        error: result.error
-      }))
+        error: result.error,
+      })),
     },
     null,
-    2
+    2,
   );
 }
 
 export function replaceProjectMediaPathPrefix(
   project: Project,
   fromPrefix: string,
-  toPrefix: string
+  toPrefix: string,
 ): { project: Project; changedCount: number } {
   const trimmedFrom = fromPrefix.trim();
   const trimmedTo = toPrefix.trim();
@@ -149,7 +157,7 @@ export function replaceProjectMediaPathPrefix(
       ? {
           ...asset.imageSequence,
           pattern: replace(asset.imageSequence.pattern) ?? asset.imageSequence.pattern,
-          paths: asset.imageSequence.paths.map((path) => replace(path) ?? path)
+          paths: asset.imageSequence.paths.map((path) => replace(path) ?? path),
         }
       : undefined;
     const nextAsset = {
@@ -159,7 +167,7 @@ export function replaceProjectMediaPathPrefix(
       proxyPath: replace(asset.proxyPath) ?? asset.proxyPath,
       thumbnailCachePath: replace(asset.thumbnailCachePath) ?? asset.thumbnailCachePath,
       waveformCachePath: replace(asset.waveformCachePath) ?? asset.waveformCachePath,
-      imageSequence: nextImageSequence
+      imageSequence: nextImageSequence,
     };
     if (!changed) {
       return asset;
@@ -172,7 +180,7 @@ export function replaceProjectMediaPathPrefix(
 
 export function updateProjectSubtitleStyle(
   project: Project,
-  patch: Partial<SubtitleStyle>
+  patch: Partial<SubtitleStyle>,
 ): { project: Project; changedCount: number } {
   const stylePatch = compactStylePatch(patch);
   if (Object.keys(stylePatch).length === 0) {
@@ -192,10 +200,17 @@ export function updateProjectSubtitleStyle(
     });
     return clips === track.clips ? track : { ...track, clips };
   });
-  return changedCount > 0 ? { project: { ...project, timeline: { ...project.timeline, tracks } }, changedCount } : { project, changedCount };
+  return changedCount > 0
+    ? { project: { ...project, timeline: { ...project.timeline, tracks } }, changedCount }
+    : { project, changedCount };
 }
 
-function buildProjectBatchOutputPath(projectPath: string, outputDirectory: string | undefined, extension: string, suffix = ''): string {
+function buildProjectBatchOutputPath(
+  projectPath: string,
+  outputDirectory: string | undefined,
+  extension: string,
+  suffix = '',
+): string {
   const directory = normalizeOutputDirectory(outputDirectory) || dirname(projectPath);
   const baseName = projectFileBaseName(projectPath);
   return `${directory}/${baseName}${suffix}.${extension.replace(/^\./, '')}`;
@@ -211,7 +226,11 @@ function buildOperationOutputPath(projectPath: string, options: BuildProjectBatc
   return undefined;
 }
 
-function replacePathPrefix(value: string | undefined | null, fromPrefix: string, toPrefix: string): string | undefined | null {
+function replacePathPrefix(
+  value: string | undefined | null,
+  fromPrefix: string,
+  toPrefix: string,
+): string | undefined | null {
   if (!value) {
     return value;
   }
@@ -232,7 +251,9 @@ function replacePathPrefix(value: string | undefined | null, fromPrefix: string,
 }
 
 function compactStylePatch(patch: Partial<SubtitleStyle>): Partial<SubtitleStyle> {
-  return Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined && value !== null)) as Partial<SubtitleStyle>;
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined && value !== null),
+  ) as Partial<SubtitleStyle>;
 }
 
 function uniqueProjectPaths(projectPaths: string[]): string[] {
@@ -252,7 +273,12 @@ function uniqueProjectPaths(projectPaths: string[]): string[] {
 
 function projectFileBaseName(projectPath: string): string {
   const name = basename(projectPath);
-  return name.replace(/\.cutproj\.json$/i, '').replace(/\.cutproj\.enc$/i, '').replace(/\.json$/i, '') || 'open-factory';
+  return (
+    name
+      .replace(/\.cutproj\.json$/i, '')
+      .replace(/\.cutproj\.enc$/i, '')
+      .replace(/\.json$/i, '') || 'open-factory'
+  );
 }
 
 function dirname(path: string): string {

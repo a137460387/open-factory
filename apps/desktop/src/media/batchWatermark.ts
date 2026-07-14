@@ -7,7 +7,7 @@ import {
   type ExportSettings,
   type ExportWatermarkPosition,
   type MediaAsset,
-  type Project
+  type Project,
 } from '@open-factory/editor-core';
 
 export const DEFAULT_BATCH_WATERMARK_TEMPLATE = '{name}_watermarked';
@@ -52,7 +52,12 @@ export function buildBatchWatermarkJobs(project: Project, options: BatchWatermar
   return ensureUniqueOutputPaths(jobs);
 }
 
-function buildBatchWatermarkJob(project: Project, asset: MediaAsset, options: BatchWatermarkOptions, index: number): BatchWatermarkJob {
+function buildBatchWatermarkJob(
+  project: Project,
+  asset: MediaAsset,
+  options: BatchWatermarkOptions,
+  index: number,
+): BatchWatermarkJob {
   const format = normalizeOutputFormat(options.format);
   const settings = buildBatchWatermarkExportSettings(project, asset, options, format);
   return {
@@ -62,17 +67,27 @@ function buildBatchWatermarkJob(project: Project, asset: MediaAsset, options: Ba
     sourcePath: asset.path,
     outputPath: buildBatchWatermarkOutputPath(asset, options, index, format),
     project: buildSingleAssetWatermarkProject(project, asset),
-    settings
+    settings,
   };
 }
 
-function buildBatchWatermarkOutputPath(asset: MediaAsset, options: BatchWatermarkOptions, index: number, format = DEFAULT_OUTPUT_FORMAT): string {
+function buildBatchWatermarkOutputPath(
+  asset: MediaAsset,
+  options: BatchWatermarkOptions,
+  index: number,
+  format = DEFAULT_OUTPUT_FORMAT,
+): string {
   const directory = normalizeDirectory(options.outputDirectory) || dirname(asset.path);
   const fileName = buildBatchWatermarkFileName(asset, options.fileNameTemplate, index, format);
   return directory ? `${directory}/${fileName}` : fileName;
 }
 
-export function buildBatchWatermarkFileName(asset: MediaAsset, fileNameTemplate: string | undefined, index: number, format = DEFAULT_OUTPUT_FORMAT): string {
+export function buildBatchWatermarkFileName(
+  asset: MediaAsset,
+  fileNameTemplate: string | undefined,
+  index: number,
+  format = DEFAULT_OUTPUT_FORMAT,
+): string {
   const { baseName } = splitFileName(asset.name || fileNameFromPath(asset.path));
   const extension = normalizeOutputFormat(format);
   const template = fileNameTemplate?.trim() || DEFAULT_BATCH_WATERMARK_TEMPLATE;
@@ -94,7 +109,7 @@ function buildBatchWatermarkExportSettings(
   project: Project,
   asset: MediaAsset,
   options: BatchWatermarkOptions,
-  format: string
+  format: string,
 ): Partial<Omit<ExportSettings, 'outputPath'>> {
   return {
     width: safeDimension(asset.width, project.settings.width),
@@ -112,8 +127,8 @@ function buildBatchWatermarkExportSettings(
       fontFamily: options.fontFamily?.trim() || DEFAULT_BATCH_WATERMARK_FONT,
       color: normalizeWatermarkColor(options.color),
       fontSize: normalizeFontSize(options.fontSize),
-      position: normalizeWatermarkPosition(options.position)
-    }
+      position: normalizeWatermarkPosition(options.position),
+    },
   };
 }
 
@@ -127,7 +142,7 @@ function buildSingleAssetWatermarkProject(sourceProject: Project, asset: MediaAs
     duration,
     trimStart: 0,
     trimEnd: 0,
-    speed: 1
+    speed: 1,
   });
   const clip =
     asset.type === 'image'
@@ -139,11 +154,11 @@ function buildSingleAssetWatermarkProject(sourceProject: Project, asset: MediaAs
         id: BATCH_WATERMARK_TRACK_ID,
         type: 'video',
         name: 'Batch Watermark',
-        clips: [clip]
-      })
+        clips: [clip],
+      }),
     ],
     transitions: [],
-    markers: []
+    markers: [],
   };
   const project = createProject(`${sourceProject.name} - ${asset.name}`);
   return {
@@ -153,13 +168,13 @@ function buildSingleAssetWatermarkProject(sourceProject: Project, asset: MediaAs
       fps: sourceProject.settings.fps,
       timecodeFormat: sourceProject.settings.timecodeFormat,
       width: safeDimension(asset.width, sourceProject.settings.width),
-      height: safeDimension(asset.height, sourceProject.settings.height)
+      height: safeDimension(asset.height, sourceProject.settings.height),
     },
     masterVolume: sourceProject.masterVolume,
     media: [asset],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-    activeSequenceId: PRIMARY_SEQUENCE_ID
+    activeSequenceId: PRIMARY_SEQUENCE_ID,
   };
 }
 
@@ -196,7 +211,17 @@ function normalizeFontSize(value: number | undefined): number {
 }
 
 function normalizeWatermarkPosition(position: ExportWatermarkPosition | undefined): ExportWatermarkPosition {
-  const positions: ExportWatermarkPosition[] = ['top-left', 'top-center', 'top-right', 'middle-left', 'center', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+  const positions: ExportWatermarkPosition[] = [
+    'top-left',
+    'top-center',
+    'top-right',
+    'middle-left',
+    'center',
+    'middle-right',
+    'bottom-left',
+    'bottom-center',
+    'bottom-right',
+  ];
   return position && positions.includes(position) ? position : 'bottom-right';
 }
 

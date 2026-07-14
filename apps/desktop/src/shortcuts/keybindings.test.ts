@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseCustomKeybindings, readCustomKeybindings, writeCustomKeybindings, type KeybindingStorage } from './keybindings';
+import {
+  parseCustomKeybindings,
+  readCustomKeybindings,
+  writeCustomKeybindings,
+  type KeybindingStorage,
+} from './keybindings';
 
 function makeStorage(files: Map<string, string>): KeybindingStorage {
   return {
@@ -13,7 +18,7 @@ function makeStorage(files: Map<string, string>): KeybindingStorage {
     },
     writeFile: (path, contents) => {
       files.set(path, contents);
-    }
+    },
   };
 }
 
@@ -25,13 +30,13 @@ describe('shortcut keybindings storage', () => {
           bindings: {
             'toggle-playback': ['p', 'P'],
             unknown: ['X'],
-            redo: 'cmd+shift+z'
-          }
-        })
-      )
+            redo: 'cmd+shift+z',
+          },
+        }),
+      ),
     ).toEqual({
       'toggle-playback': ['P'],
-      redo: ['Ctrl+Shift+Z']
+      redo: ['Ctrl+Shift+Z'],
     });
   });
 

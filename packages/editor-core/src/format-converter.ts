@@ -1,5 +1,6 @@
 export type MediaCategory = 'video' | 'audio' | 'image';
-export type ConversionDirection = 'video-to-video' | 'video-to-audio' | 'video-to-image-sequence' | 'audio-to-audio' | 'image-to-image';
+export type ConversionDirection =
+  'video-to-video' | 'video-to-audio' | 'video-to-image-sequence' | 'audio-to-audio' | 'image-to-image';
 
 export interface CodecInfo {
   name: string;
@@ -87,15 +88,22 @@ export function buildConversionPath(
 ): ConversionPath {
   const srcCat = detectMediaCategory(sourceFormat);
   if (!srcCat) {
-    return { sourceFormat, targetFormat, direction: 'video-to-video', supported: false, hint: `不支持的源格式: ${sourceFormat}` };
+    return {
+      sourceFormat,
+      targetFormat,
+      direction: 'video-to-video',
+      supported: false,
+      hint: `不支持的源格式: ${sourceFormat}`,
+    };
   }
   // Check intermediate format first – some formats need a bridge (e.g. EXR → PNG → MP4)
   const intermediate = resolveIntermediateFormat(sourceFormat, targetFormat);
   if (intermediate) {
     const targetCat = detectMediaCategory(targetFormat) ?? 'video';
-    const direction: ConversionDirection = targetCat === 'video'
-      ? 'image-to-image' // image → intermediate image → then video encode handled externally
-      : 'image-to-image';
+    const direction: ConversionDirection =
+      targetCat === 'video'
+        ? 'image-to-image' // image → intermediate image → then video encode handled externally
+        : 'image-to-image';
     return {
       sourceFormat,
       targetFormat,
@@ -107,13 +115,17 @@ export function buildConversionPath(
   }
   const direction = resolveConversionDirection(srcCat, targetFormat);
   if (!direction) {
-    return { sourceFormat, targetFormat, direction: 'video-to-video', supported: false, hint: `${sourceFormat} 无法直接转换为 ${targetFormat}` };
+    return {
+      sourceFormat,
+      targetFormat,
+      direction: 'video-to-video',
+      supported: false,
+      hint: `${sourceFormat} 无法直接转换为 ${targetFormat}`,
+    };
   }
   // Check codec availability if provided
   if (availableCodecs && availableCodecs.length > 0) {
-    const hasEncoder = availableCodecs.some(
-      (c) => c.type === 'encoder' && c.formats.includes(targetFormat),
-    );
+    const hasEncoder = availableCodecs.some((c) => c.type === 'encoder' && c.formats.includes(targetFormat));
     if (!hasEncoder) {
       return { sourceFormat, targetFormat, direction, supported: false, hint: `缺少 ${targetFormat} 编码器` };
     }
@@ -209,18 +221,20 @@ export function buildBatchConversionTasks(
     const path = buildConversionPath(file.format, preset.targetFormat);
     idx += 1;
     const baseName = file.path.replace(/\.[^.]+$/, '');
-    return [{
-      id: `${prefix}-${idx}`,
-      sourcePath: file.path,
-      sourceFormat: file.format,
-      targetFormat: preset.targetFormat,
-      presetId: preset.id,
-      intermediateFormat: path.intermediateFormat,
-      outputPath: `${outputDir}/${baseName}.${preset.targetFormat}`,
-      outputArgs: [...preset.outputArgs],
-      status: 'pending' as const,
-      progress: 0,
-    }];
+    return [
+      {
+        id: `${prefix}-${idx}`,
+        sourcePath: file.path,
+        sourceFormat: file.format,
+        targetFormat: preset.targetFormat,
+        presetId: preset.id,
+        intermediateFormat: path.intermediateFormat,
+        outputPath: `${outputDir}/${baseName}.${preset.targetFormat}`,
+        outputArgs: [...preset.outputArgs],
+        status: 'pending' as const,
+        progress: 0,
+      },
+    ];
   });
 }
 
@@ -233,7 +247,9 @@ export function normalizeConversionPreset(input: Partial<ConversionPreset> | und
     id: input.id.trim(),
     name: input.name.trim(),
     description: typeof input.description === 'string' ? input.description.trim() : '',
-    sourceCategory: Array.isArray(input.sourceCategory) ? input.sourceCategory.filter((c) => c === 'video' || c === 'audio' || c === 'image') : [],
+    sourceCategory: Array.isArray(input.sourceCategory)
+      ? input.sourceCategory.filter((c) => c === 'video' || c === 'audio' || c === 'image')
+      : [],
     targetFormat: input.targetFormat.trim().toLowerCase(),
     outputArgs: Array.isArray(input.outputArgs) ? input.outputArgs.map(String) : [],
   };

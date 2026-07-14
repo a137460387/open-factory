@@ -3,7 +3,7 @@ import type {
   ContentSceneType,
   ContentAnalysisSegment,
   ContentEmotionPoint,
-  ClipContentAnalysis
+  ClipContentAnalysis,
 } from './content-analysis';
 
 // ─── 推荐接口类型 ──────────────────────────────────────────
@@ -63,7 +63,7 @@ const DEFAULT_OPTIONS: Required<RecommendationOptions> = {
   emotionWeight: 0.35,
   diversityWeight: 0.25,
   minScoreThreshold: 0.15,
-  emotionTolerance: 0.3
+  emotionTolerance: 0.3,
 };
 
 /**
@@ -78,7 +78,7 @@ const DEFAULT_OPTIONS: Required<RecommendationOptions> = {
 export function recommendClips(
   candidates: Clip[],
   context: RecommendationContext,
-  options: RecommendationOptions = {}
+  options: RecommendationOptions = {},
 ): RecommendationResult {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const selectedAnalysis = buildSelectedAnalysis(context.selectedClips);
@@ -113,7 +113,7 @@ export function recommendClips(
       similarityScore: round(similarityScore),
       emotionScore: round(emotionScore),
       diversityScore: round(diversityScore),
-      reason: buildRecommendationReason(similarityScore, emotionScore, diversityScore)
+      reason: buildRecommendationReason(similarityScore, emotionScore, diversityScore),
     });
   }
 
@@ -122,7 +122,7 @@ export function recommendClips(
   return {
     clips: scored.slice(0, opts.maxResults),
     totalCount: scored.length,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 }
 
@@ -142,9 +142,12 @@ interface SelectedAnalysisSnapshot {
 function computeContentSimilarity(
   analysis: ClipContentAnalysis,
   context: RecommendationContext,
-  snapshot: SelectedAnalysisSnapshot
+  snapshot: SelectedAnalysisSnapshot,
 ): number {
-  const sceneScore = computeSceneTypeSimilarity(analysis.sceneTypes, context.preferredSceneTypes ?? snapshot.sceneTypes);
+  const sceneScore = computeSceneTypeSimilarity(
+    analysis.sceneTypes,
+    context.preferredSceneTypes ?? snapshot.sceneTypes,
+  );
   const visualScore = computeVisualSimilarity(analysis.segments, snapshot);
   const keywordScore = computeKeywordOverlap(analysis, context.usedKeywords ?? []);
 
@@ -152,10 +155,7 @@ function computeContentSimilarity(
 }
 
 /** 场景类型 Jaccard 相似度 */
-function computeSceneTypeSimilarity(
-  candidateTypes: ContentSceneType[],
-  targetTypes: ContentSceneType[]
-): number {
+function computeSceneTypeSimilarity(candidateTypes: ContentSceneType[], targetTypes: ContentSceneType[]): number {
   if (targetTypes.length === 0 || candidateTypes.length === 0) {
     return 0.5;
   }
@@ -172,10 +172,7 @@ function computeSceneTypeSimilarity(
 }
 
 /** 视觉特征（亮度、运动）接近度 */
-function computeVisualSimilarity(
-  segments: ContentAnalysisSegment[],
-  snapshot: SelectedAnalysisSnapshot
-): number {
+function computeVisualSimilarity(segments: ContentAnalysisSegment[], snapshot: SelectedAnalysisSnapshot): number {
   if (segments.length === 0) {
     return 0.5;
   }
@@ -195,10 +192,7 @@ function computeVisualSimilarity(
  * 关键词重叠度：从场景类型和摘要中提取关键词，
  * 与已使用关键词集合比较 Jaccard 系数。
  */
-function computeKeywordOverlap(
-  analysis: ClipContentAnalysis,
-  usedKeywords: string[]
-): number {
+function computeKeywordOverlap(analysis: ClipContentAnalysis, usedKeywords: string[]): number {
   const candidateKeywords = extractKeywords(analysis);
   if (candidateKeywords.size === 0 || usedKeywords.length === 0) {
     return 0.5;
@@ -223,7 +217,7 @@ function computeKeywordOverlap(
 function computeEmotionCoherence(
   analysis: ClipContentAnalysis,
   context: RecommendationContext,
-  tolerance: number
+  tolerance: number,
 ): number {
   const curve = analysis.emotionCurve;
   if (curve.length === 0) {
@@ -265,10 +259,7 @@ function computeCurveSmoothness(curve: ContentEmotionPoint[]): number {
  * 将候选片段的场景类型与已选片段的类型集合比较，
  * 差异性越大得分越高。
  */
-function computeDiversityBonus(
-  analysis: ClipContentAnalysis,
-  diversitySet: Set<ContentSceneType>
-): number {
+function computeDiversityBonus(analysis: ClipContentAnalysis, diversitySet: Set<ContentSceneType>): number {
   const candidateTypes = analysis.sceneTypes;
   if (candidateTypes.length === 0) {
     return 0.5;
@@ -317,7 +308,7 @@ function buildSelectedAnalysis(clips: Clip[]): SelectedAnalysisSnapshot {
     sceneTypes: dedupeSceneTypes(allSceneTypes),
     avgBrightness: segmentCount > 0 ? totalBrightness / segmentCount : 0.5,
     avgMotion: segmentCount > 0 ? totalMotion / segmentCount : 0.3,
-    keywords: new Set(keywords)
+    keywords: new Set(keywords),
   };
 }
 
@@ -351,11 +342,7 @@ function dedupeSceneTypes(types: ContentSceneType[]): ContentSceneType[] {
   return SCENE_TYPE_ORDER.filter((type) => seen.has(type));
 }
 
-function buildRecommendationReason(
-  similarity: number,
-  emotion: number,
-  diversity: number
-): string {
+function buildRecommendationReason(similarity: number, emotion: number, diversity: number): string {
   const parts: string[] = [];
   if (similarity >= 0.7) {
     parts.push('高内容匹配');

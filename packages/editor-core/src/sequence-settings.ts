@@ -10,10 +10,7 @@ export type { SequenceSettings };
 /**
  * 获取序列的有效设置，未设置的字段继承项目级设置
  */
-export function getEffectiveSequenceSettings(
-  sequence: Sequence,
-  projectSettings: ProjectSettings
-): ProjectSettings {
+export function getEffectiveSequenceSettings(sequence: Sequence, projectSettings: ProjectSettings): ProjectSettings {
   const seqSettings = (sequence as Sequence & { settings?: SequenceSettings }).settings;
   if (!seqSettings) {
     return projectSettings;
@@ -25,7 +22,7 @@ export function getEffectiveSequenceSettings(
     timecodeFormat: projectSettings.timecodeFormat,
     vfrHandling: projectSettings.vfrHandling,
     colorPipeline: projectSettings.colorPipeline,
-    workingColorSpace: projectSettings.workingColorSpace
+    workingColorSpace: projectSettings.workingColorSpace,
   };
 }
 
@@ -36,7 +33,7 @@ export function getEffectiveSequenceSettings(
 export function recalculateClipStartsForFrameRate(
   timeline: { tracks: { clips: { start: number }[] }[] },
   oldFps: number,
-  newFps: number
+  newFps: number,
 ): void {
   if (oldFps <= 0 || newFps <= 0 || oldFps === newFps) return;
   const ratio = oldFps / newFps;

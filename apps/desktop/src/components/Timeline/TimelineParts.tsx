@@ -45,7 +45,13 @@ import type { TimelineDiffRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatTrackType, zhCN } from '../../i18n/strings';
-import { getTimelineThumbnailFrame, getTimelineThumbnailPlaceholder, getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineThumbnailFrame } from '../../media/timeline-thumbnails';
+import {
+  getTimelineThumbnailFrame,
+  getTimelineThumbnailPlaceholder,
+  getTimelineThumbnailPlaceholders,
+  getTimelineThumbnails,
+  type TimelineThumbnailFrame,
+} from '../../media/timeline-thumbnails';
 import { getWaveform, type WaveformResult } from '../../media/waveform';
 import { getSilentFrequencyBands, useAudioMeterStore } from '../../store/audioMeterStore';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
@@ -101,7 +107,7 @@ function ThumbnailTrack({
   samples,
   media,
   zoom,
-  width
+  width,
 }: {
   samples: TimelineThumbnailTrackSample[];
   media: MediaAsset[];
@@ -109,7 +115,11 @@ function ThumbnailTrack({
   width: number;
 }) {
   return (
-    <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: TIMELINE_THUMBNAIL_TRACK_HEIGHT }} data-testid="timeline-thumbnail-track">
+    <div
+      className="grid border-b border-line"
+      style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: TIMELINE_THUMBNAIL_TRACK_HEIGHT }}
+      data-testid="timeline-thumbnail-track"
+    >
       <div className="flex items-center border-r border-line bg-panel px-3">
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold">{zhCN.timeline.thumbnailTrack}</div>
@@ -128,9 +138,25 @@ function ThumbnailTrack({
   );
 }
 
-function ThumbnailTrackCell({ sample, asset, left, width }: { sample: TimelineThumbnailTrackSample; asset?: MediaAsset; left: number; width: number }) {
-  const placeholderColor = sample.trackColor ? getTimelineLabelColorHex(sample.trackColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
-  const [frame, setFrame] = useState<TimelineThumbnailFrame | undefined>(() => (asset && sample.sourceTimestamp !== undefined ? getTimelineThumbnailPlaceholder(asset, sample.sourceTimestamp) : undefined));
+function ThumbnailTrackCell({
+  sample,
+  asset,
+  left,
+  width,
+}: {
+  sample: TimelineThumbnailTrackSample;
+  asset?: MediaAsset;
+  left: number;
+  width: number;
+}) {
+  const placeholderColor = sample.trackColor
+    ? getTimelineLabelColorHex(sample.trackColor)
+    : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
+  const [frame, setFrame] = useState<TimelineThumbnailFrame | undefined>(() =>
+    asset && sample.sourceTimestamp !== undefined
+      ? getTimelineThumbnailPlaceholder(asset, sample.sourceTimestamp)
+      : undefined,
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -163,7 +189,14 @@ function ThumbnailTrackCell({ sample, asset, left, width }: { sample: TimelineTh
       data-testid="timeline-thumbnail-frame"
       data-source-time={sample.sourceTimestamp ?? ''}
     >
-      {frame?.dataUrl ? <img className="h-full w-full object-cover opacity-95 transition-opacity duration-200" src={frame.dataUrl} alt="" draggable={false} /> : null}
+      {frame?.dataUrl ? (
+        <img
+          className="h-full w-full object-cover opacity-95 transition-opacity duration-200"
+          src={frame.dataUrl}
+          alt=""
+          draggable={false}
+        />
+      ) : null}
     </span>
   );
 }
@@ -180,7 +213,7 @@ function Ruler({
   dialogueMarkers,
   onSeek,
   onContextMenu,
-  audioScrubEnabled
+  audioScrubEnabled,
 }: {
   ticks: TimelineRulerTick[];
   zoom: number;
@@ -205,7 +238,10 @@ function Ruler({
     <div className="sticky top-0 z-30 grid h-11 grid-cols-[160px_1fr] border-b border-line bg-panel">
       <div className="grid grid-rows-[10px_1fr] border-r border-line">
         <div className="px-3 text-[9px] font-medium leading-[10px] text-emerald-700">{zhCN.timeline.renderCache}</div>
-        <div className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]" data-testid="timeline-ruler-timecode">
+        <div
+          className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]"
+          data-testid="timeline-ruler-timecode"
+        >
           {currentTimecode}
         </div>
       </div>
@@ -231,7 +267,18 @@ function Ruler({
             const startX = event.clientX;
             let scrubbing = false;
             let lastScrubTime = 0;
-            let scrubCtx = audioScrubEnabled ? (() => { try { const Ctor = window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext as AudioContext | undefined; return Ctor ? new Ctor() : null; } catch { return null; } })() : null;
+            let scrubCtx = audioScrubEnabled
+              ? (() => {
+                  try {
+                    const Ctor =
+                      window.AudioContext ||
+                      ((window as unknown as Record<string, unknown>).webkitAudioContext as AudioContext | undefined);
+                    return Ctor ? new Ctor() : null;
+                  } catch {
+                    return null;
+                  }
+                })()
+              : null;
             onSeek(startTime);
             const onMove = (moveEvent: PointerEvent) => {
               if (!scrubbing && Math.abs(moveEvent.clientX - startX) > 3) {
@@ -244,26 +291,34 @@ function Ruler({
                 const now = Date.now();
                 if (scrubCtx && now - lastScrubTime >= 30) {
                   try {
-                    const speedPxPerSec = Math.abs(moveEvent.clientX - startX) / Math.max(0.001, (now - event.timeStamp) / 1000);
+                    const speedPxPerSec =
+                      Math.abs(moveEvent.clientX - startX) / Math.max(0.001, (now - event.timeStamp) / 1000);
                     const intervalMul = speedPxPerSec > 500 ? 0.25 : speedPxPerSec > 100 ? 0.5 : 1.0;
                     const dur = 0.05 * intervalMul;
                     const osc = scrubCtx.createOscillator();
                     const gain = scrubCtx.createGain();
-                    osc.frequency.value = 200 + (t * 100) % 800;
+                    osc.frequency.value = 200 + ((t * 100) % 800);
                     gain.gain.setValueAtTime(0.15, scrubCtx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, scrubCtx.currentTime + dur);
                     osc.connect(gain).connect(scrubCtx.destination);
                     osc.start(scrubCtx.currentTime);
                     osc.stop(scrubCtx.currentTime + dur);
                     lastScrubTime = now;
-                  } catch { /* silent degradation */ }
+                  } catch {
+                    /* silent degradation */
+                  }
                 }
               }
             };
             const onUp = () => {
               window.removeEventListener('pointermove', onMove);
               window.removeEventListener('pointerup', onUp);
-              if (scrubCtx) { try { scrubCtx.close(); } catch {} scrubCtx = null; }
+              if (scrubCtx) {
+                try {
+                  scrubCtx.close();
+                } catch {}
+                scrubCtx = null;
+              }
             };
             window.addEventListener('pointermove', onMove);
             window.addEventListener('pointerup', onUp);
@@ -376,7 +431,7 @@ function TrackRow({
   onRemoveAnomaly,
   continuityWarnings,
   colorConsistencyWarnings,
-  sfxSuggestions
+  sfxSuggestions,
 }: {
   track: Track;
   zoom: number;
@@ -391,7 +446,10 @@ function TrackRow({
   onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
-  onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'displayHeight'>>): void;
+  onTrackUpdate(
+    trackId: string,
+    patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'displayHeight'>>,
+  ): void;
   onTrackHeaderClick(trackId: string, event: React.MouseEvent<HTMLDivElement>): void;
   onTrackBatchMenu(trackId: string, x: number, y: number): void;
   onTrackReorder(draggedTrackId: string, targetTrackId: string): void;
@@ -418,15 +476,32 @@ function TrackRow({
   collaborationLocksByClipId: Map<string, CollaborationClipLock>;
   onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
   continuityWarnings?: Array<{ clipAId: string; clipBId: string; type: string; confidence: number; reason: string }>;
-  colorConsistencyWarnings?: Array<{ clipAId: string; clipBId: string; type: string; deltaRGB: number | null; reason: string }>;
-  sfxSuggestions?: Array<{ time: number; category: string; confidence: number; matchedAssetId: string | null; status: string }>;
+  colorConsistencyWarnings?: Array<{
+    clipAId: string;
+    clipBId: string;
+    type: string;
+    deltaRGB: number | null;
+    reason: string;
+  }>;
+  sfxSuggestions?: Array<{
+    time: number;
+    category: string;
+    confidence: number;
+    matchedAssetId: string | null;
+    status: string;
+  }>;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
+  const frequencyBands = useAudioMeterStore(
+    (state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands(),
+  );
   const mediaById = useMemo(() => new Map(media.map((asset) => [asset.id, asset])), [media]);
   const locked = Boolean(track.locked);
   const selectedTrack = selectedTrackIds.includes(track.id);
-  const sortedClips = useMemo(() => [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)), [track.clips]);
+  const sortedClips = useMemo(
+    () => [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
+    [track.clips],
+  );
   const nextAdjacentByClipId = useMemo(() => {
     const adjacent = new Map<string, Clip>();
     for (let index = 0; index < sortedClips.length - 1; index += 1) {
@@ -439,13 +514,22 @@ function TrackRow({
     return adjacent;
   }, [sortedClips]);
   const virtualClips = useMemo(
-    () => filterTimelineVirtualClips(track.clips, virtualWindow).filter((clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter),
-    [track.clips, virtualWindow, colorFilter, track]
+    () =>
+      filterTimelineVirtualClips(track.clips, virtualWindow).filter(
+        (clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter,
+      ),
+    [track.clips, virtualWindow, colorFilter, track],
   );
   return (
-    <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: getEffectiveTrackHeight(track.displayHeight) }}>
+    <div
+      className="grid border-b border-line"
+      style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: getEffectiveTrackHeight(track.displayHeight) }}
+    >
       <div
-        className={clsx('relative flex items-center gap-2 border-r px-3 outline-none', selectedTrack ? 'border-brand/60 bg-brand/10' : 'border-line bg-panel')}
+        className={clsx(
+          'relative flex items-center gap-2 border-r px-3 outline-none',
+          selectedTrack ? 'border-brand/60 bg-brand/10' : 'border-line bg-panel',
+        )}
         role="option"
         aria-selected={selectedTrack}
         data-testid={`track-header-${track.id}`}
@@ -491,11 +575,17 @@ function TrackRow({
             }}
           />
           {colorPickerOpen ? (
-            <div className="absolute left-0 top-11 z-40 grid w-[116px] grid-cols-4 gap-1 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 shadow-soft" data-testid={`track-color-picker-${track.id}`}>
+            <div
+              className="absolute left-0 top-11 z-40 grid w-[116px] grid-cols-4 gap-1 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 shadow-soft"
+              data-testid={`track-color-picker-${track.id}`}
+            >
               {TIMELINE_LABEL_COLORS.map((color) => (
                 <button
                   key={color}
-                  className={clsx('h-5 w-5 rounded-full border', track.color === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white')}
+                  className={clsx(
+                    'h-5 w-5 rounded-full border',
+                    track.color === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white',
+                  )}
                   style={{ backgroundColor: getTimelineLabelColorHex(color) }}
                   type="button"
                   title={zhCN.timeline.timelineLabelColorNames[color]}
@@ -527,18 +617,41 @@ function TrackRow({
           <div className="flex min-w-0 items-center gap-1">
             <div className="truncate text-xs font-semibold">{track.name}</div>
             {track.type === 'subtitle' && track.subtitleType === 'cc' ? (
-              <span className="rounded border border-brand/30 bg-brand/10 px-1 text-[10px] font-bold text-brand" data-testid={`track-cc-badge-${track.id}`}>
+              <span
+                className="rounded border border-brand/30 bg-brand/10 px-1 text-[10px] font-bold text-brand"
+                data-testid={`track-cc-badge-${track.id}`}
+              >
                 {zhCN.timeline.trackTypes.cc}
               </span>
             ) : null}
           </div>
-          <div className="text-[11px] uppercase tracking-normal text-[var(--color-text-muted)]">{formatTimelineTrackType(track)}</div>
+          <div className="text-[11px] uppercase tracking-normal text-[var(--color-text-muted)]">
+            {formatTimelineTrackType(track)}
+          </div>
           {track.type === 'audio' ? <AudioTrackFrequencyBands trackId={track.id} bands={frequencyBands} /> : null}
         </div>
         <div className="flex items-center gap-1">
-          <TrackToggle label="M" title={zhCN.timeline.muteTrack} active={Boolean(track.muted)} testId={`track-mute-${track.id}`} onClick={() => onTrackUpdate(track.id, { muted: !track.muted })} />
-          <TrackToggle label="S" title={zhCN.timeline.soloTrack} active={Boolean(track.solo)} testId={`track-solo-${track.id}`} onClick={() => onTrackUpdate(track.id, { solo: !track.solo })} />
-          <TrackToggle label="L" title={zhCN.timeline.lockTrack} active={locked} testId={`track-lock-${track.id}`} onClick={() => onTrackUpdate(track.id, { locked: !track.locked })} />
+          <TrackToggle
+            label="M"
+            title={zhCN.timeline.muteTrack}
+            active={Boolean(track.muted)}
+            testId={`track-mute-${track.id}`}
+            onClick={() => onTrackUpdate(track.id, { muted: !track.muted })}
+          />
+          <TrackToggle
+            label="S"
+            title={zhCN.timeline.soloTrack}
+            active={Boolean(track.solo)}
+            testId={`track-solo-${track.id}`}
+            onClick={() => onTrackUpdate(track.id, { solo: !track.solo })}
+          />
+          <TrackToggle
+            label="L"
+            title={zhCN.timeline.lockTrack}
+            active={locked}
+            testId={`track-lock-${track.id}`}
+            onClick={() => onTrackUpdate(track.id, { locked: !track.locked })}
+          />
           {selectedTrack ? (
             <button
               className="h-6 w-6 rounded border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel"
@@ -608,7 +721,7 @@ function TrackRow({
             x: event.clientX,
             y: event.clientY,
             trackId: track.id,
-            time: snapTime((event.clientX - rect.left) / zoom)
+            time: snapTime((event.clientX - rect.left) / zoom),
           });
         }}
       >
@@ -625,7 +738,7 @@ function TrackRow({
                   style={{ left: previewStart * zoom, width: Math.max(16, clip.duration * zoom) }}
                   data-testid={`timeline-drop-preview-${clip.id}`}
                   data-preview-clip-id={clip.id}
-                />
+                />,
               ];
             })
           : null}
@@ -638,8 +751,9 @@ function TrackRow({
               style={{
                 left: gap.start * zoom,
                 width: Math.max(2, gap.duration * zoom),
-                backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(148,163,184,0.35) 3px, rgba(148,163,184,0.35) 5px)',
-                backgroundSize: '8px 8px'
+                backgroundImage:
+                  'repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(148,163,184,0.35) 3px, rgba(148,163,184,0.35) 5px)',
+                backgroundSize: '8px 8px',
               }}
               title={`${zhCN.timeline.gapPrefix}${gap.duration.toFixed(1)}s`}
               data-testid={`timeline-gap-${gap.trackId}-${gap.start}`}
@@ -647,11 +761,32 @@ function TrackRow({
           ));
         }, [track.clips, zoom, projectFrameRate])}
         {Array.isArray(track.musicStructure) && track.musicStructure.length > 0 ? (
-          <span className="absolute inset-0 z-[2] pointer-events-none" data-testid={`music-structure-markers-${track.id}`}>
+          <span
+            className="absolute inset-0 z-[2] pointer-events-none"
+            data-testid={`music-structure-markers-${track.id}`}
+          >
             {track.musicStructure.map((ms, mi) => {
-              const color = ms.type === 'energy_rise' ? 'bg-green-500' : ms.type === 'energy_drop' ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-accent)]';
-              const label = ms.type === 'energy_rise' ? zhCN.musicStructure.energyRise : ms.type === 'energy_drop' ? zhCN.musicStructure.energyDrop : zhCN.musicStructure.timbreShift;
-              return <span key={mi} className={`absolute top-0 bottom-0 w-px ${color} opacity-60`} style={{ left: ms.time * zoom }} data-testid={`music-structure-marker-${track.id}-${mi}`} title={label} />;
+              const color =
+                ms.type === 'energy_rise'
+                  ? 'bg-green-500'
+                  : ms.type === 'energy_drop'
+                    ? 'bg-[var(--color-danger)]'
+                    : 'bg-[var(--color-accent)]';
+              const label =
+                ms.type === 'energy_rise'
+                  ? zhCN.musicStructure.energyRise
+                  : ms.type === 'energy_drop'
+                    ? zhCN.musicStructure.energyDrop
+                    : zhCN.musicStructure.timbreShift;
+              return (
+                <span
+                  key={mi}
+                  className={`absolute top-0 bottom-0 w-px ${color} opacity-60`}
+                  style={{ left: ms.time * zoom }}
+                  data-testid={`music-structure-marker-${track.id}-${mi}`}
+                  title={label}
+                />
+              );
             })}
           </span>
         ) : null}
@@ -678,18 +813,31 @@ function TrackRow({
           </span>
         ) : null}
         {Array.isArray(colorConsistencyWarnings) && colorConsistencyWarnings.length > 0 ? (
-          <span className="absolute inset-0 z-[4] pointer-events-none" data-testid={`color-consistency-warnings-${track.id}`}>
+          <span
+            className="absolute inset-0 z-[4] pointer-events-none"
+            data-testid={`color-consistency-warnings-${track.id}`}
+          >
             {colorConsistencyWarnings.map((w, wi) => {
               const boundaryClip = sortedClips.find((c) => c.id === w.clipAId);
               if (!boundaryClip) return null;
               const boundaryTime = boundaryClip.start + boundaryClip.duration;
-              const label = w.type === 'skin_tone' ? zhCN.colorConsistency.skinTone : w.type === 'white_balance' ? zhCN.colorConsistency.whiteBalance : zhCN.colorConsistency.both;
+              const label =
+                w.type === 'skin_tone'
+                  ? zhCN.colorConsistency.skinTone
+                  : w.type === 'white_balance'
+                    ? zhCN.colorConsistency.whiteBalance
+                    : zhCN.colorConsistency.both;
               return (
                 <span
                   key={wi}
                   className="absolute top-1 z-[4] flex h-5 w-5 items-center justify-center rounded-full bg-purple-500 text-white shadow cursor-pointer pointer-events-auto"
                   style={{ left: boundaryTime * zoom - 10 }}
-                  title={zhCN.colorConsistency.title + ': ' + label + (w.deltaRGB != null ? ' (ΔRGB=' + w.deltaRGB.toFixed(1) + ')' : '')}
+                  title={
+                    zhCN.colorConsistency.title +
+                    ': ' +
+                    label +
+                    (w.deltaRGB != null ? ' (ΔRGB=' + w.deltaRGB.toFixed(1) + ')' : '')
+                  }
                   data-testid={`color-consistency-warning-${w.clipAId}-${w.clipBId}-${w.type}`}
                 >
                   <span>🎨</span>
@@ -705,7 +853,15 @@ function TrackRow({
                 key={si}
                 className="absolute bottom-0 z-[5] flex h-4 w-4 items-center justify-center rounded-full bg-teal-500 text-white shadow cursor-pointer pointer-events-auto"
                 style={{ left: s.time * zoom - 8 }}
-                title={zhCN.sfxMatch.candidatePoint + ': ' + s.category + ' (' + (s.confidence * 100).toFixed(0) + '%)' + (s.matchedAssetId ? '' : ' - ' + zhCN.sfxMatch.noMatch)}
+                title={
+                  zhCN.sfxMatch.candidatePoint +
+                  ': ' +
+                  s.category +
+                  ' (' +
+                  (s.confidence * 100).toFixed(0) +
+                  '%)' +
+                  (s.matchedAssetId ? '' : ' - ' + zhCN.sfxMatch.noMatch)
+                }
                 data-testid={`sfx-suggestion-${track.id}-${si}`}
                 data-sfx-status={s.status}
               >
@@ -716,7 +872,8 @@ function TrackRow({
         ) : null}
         {virtualClips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
-          const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
+          const trimPreview =
+            drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
           const previewClip = drag?.previewClipsById?.[clip.id];
           const movedStart = drag?.mode === 'move' ? drag.previewStartsByClipId?.[clip.id] : undefined;
           const displayClip = previewClip ?? clip;
@@ -729,7 +886,7 @@ function TrackRow({
             scrollLeft: assetLoadWindow.scrollLeft,
             viewportWidth: assetLoadWindow.viewportWidth,
             labelWidth: assetLoadWindow.labelWidth,
-            preloadPx: 100
+            preloadPx: 100,
           });
           return (
             <MemoizedClipBlock
@@ -752,7 +909,10 @@ function TrackRow({
               trackType={track.type}
               trackHeight={getEffectiveTrackHeight(track.displayHeight)}
               nextAdjacentClip={nextAdjacentByClipId.get(clip.id)}
-              transition={transitions.find((transition) => transition.fromClipId === clip.id && transition.toClipId === nextAdjacentByClipId.get(clip.id)?.id)}
+              transition={transitions.find(
+                (transition) =>
+                  transition.fromClipId === clip.id && transition.toClipId === nextAdjacentByClipId.get(clip.id)?.id,
+              )}
               onTransitionMenu={onTransitionMenu}
               onClipMenu={onClipMenu}
               onVolumeEnvelopeAdd={onVolumeEnvelopeAdd}
@@ -782,8 +942,12 @@ function TrackRow({
 
 const MemoizedTrackRow = memo(TrackRow, areTrackRowPropsEqual);
 
-function areTrackRowPropsEqual(previous: Parameters<typeof TrackRow>[0], next: Parameters<typeof TrackRow>[0]): boolean {
-  return previous.track === next.track &&
+function areTrackRowPropsEqual(
+  previous: Parameters<typeof TrackRow>[0],
+  next: Parameters<typeof TrackRow>[0],
+): boolean {
+  return (
+    previous.track === next.track &&
     previous.zoom === next.zoom &&
     previous.selectedClipId === next.selectedClipId &&
     previous.selectedClipIds === next.selectedClipIds &&
@@ -806,7 +970,8 @@ function areTrackRowPropsEqual(previous: Parameters<typeof TrackRow>[0], next: P
     previous.transitions === next.transitions &&
     previous.continuityWarnings === next.continuityWarnings &&
     previous.colorConsistencyWarnings === next.colorConsistencyWarnings &&
-    previous.sfxSuggestions === next.sfxSuggestions;
+    previous.sfxSuggestions === next.sfxSuggestions
+  );
 }
 
 const MemoizedThumbnailTrack = memo(ThumbnailTrack);
@@ -872,11 +1037,24 @@ function scheduleLargeProjectAssetHydration(onReady: () => void): () => void {
   };
 }
 
-function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColor, largeProjectMode, trackHeight }: ClipAssetStripsProps) {
+function ClipAssetStrips({
+  clip,
+  asset,
+  clipPixelWidth,
+  trackMuted,
+  waveformColor,
+  largeProjectMode,
+  trackHeight,
+}: ClipAssetStripsProps) {
   const showWaveform = shouldShowWaveform(trackHeight ?? 48);
   return (
     <>
-      <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} frameStep={largeProjectMode.previewFrameStep} />
+      <VideoThumbnailStrip
+        clip={clip}
+        asset={asset}
+        pixelWidth={clipPixelWidth}
+        frameStep={largeProjectMode.previewFrameStep}
+      />
       {asset.hasAudio ? (
         <WaveformStrip
           clipId={clip.id}
@@ -896,10 +1074,20 @@ function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColo
 
 function AudioTrackFrequencyBands({ trackId, bands }: { trackId: string; bands: number[] }) {
   return (
-    <div className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-[var(--color-bg-elevated)] px-px" title={zhCN.timeline.audioFrequencyMeter} data-testid={`track-vu-bands-${trackId}`}>
+    <div
+      className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-[var(--color-bg-elevated)] px-px"
+      title={zhCN.timeline.audioFrequencyMeter}
+      data-testid={`track-vu-bands-${trackId}`}
+    >
       {Array.from({ length: 16 }, (_, index) => {
         const level = Math.min(1, Math.max(0, bands[index] ?? 0));
-        return <span key={index} className="w-0.5 rounded-t bg-emerald-500" style={{ height: `${Math.max(8, level * 100)}%` }} />;
+        return (
+          <span
+            key={index}
+            className="w-0.5 rounded-t bg-emerald-500"
+            style={{ height: `${Math.max(8, level * 100)}%` }}
+          />
+        );
       })}
     </div>
   );
@@ -934,7 +1122,7 @@ function TrackToggle({
   title,
   active,
   testId,
-  onClick
+  onClick,
 }: {
   label: string;
   title: string;
@@ -944,7 +1132,12 @@ function TrackToggle({
 }) {
   return (
     <button
-      className={clsx('h-6 w-6 rounded border text-[11px] font-semibold', active ? 'border-brand bg-brand text-white' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel')}
+      className={clsx(
+        'h-6 w-6 rounded border text-[11px] font-semibold',
+        active
+          ? 'border-brand bg-brand text-white'
+          : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel',
+      )}
       title={title}
       type="button"
       data-testid={testId}
@@ -994,7 +1187,7 @@ function ClipBlock({
   loadAssets,
   largeProjectMode,
   collaborationLock,
-  onRemoveAnomaly
+  onRemoveAnomaly,
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -1037,7 +1230,9 @@ function ClipBlock({
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
-  const effectiveColorHex = effectiveColor ? getTimelineLabelColorHex(effectiveColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
+  const effectiveColorHex = effectiveColor
+    ? getTimelineLabelColorHex(effectiveColor)
+    : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
   const isMoveDragging = drag?.mode === 'move' && (drag.clipIds?.includes(clip.id) || drag.clip?.id === clip.id);
   const showWaveform = shouldShowWaveform(trackHeight ?? DEFAULT_TRACK_HEIGHT);
   const trimBubble =
@@ -1046,13 +1241,22 @@ function ClipBlock({
       : undefined;
   const frameRateMismatch = asset?.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
   const frameRateWarningTitle =
-    frameRateMismatch && asset?.frameRate ? zhCN.timeline.frameRateMismatchTooltip(formatFrameRateLabel(asset.frameRate), formatFrameRateLabel(projectFrameRate)) : undefined;
+    frameRateMismatch && asset?.frameRate
+      ? zhCN.timeline.frameRateMismatchTooltip(
+          formatFrameRateLabel(asset.frameRate),
+          formatFrameRateLabel(projectFrameRate),
+        )
+      : undefined;
   return (
     <div
       className={clsx(
         'group absolute top-2 flex h-10 select-none items-center overflow-hidden rounded-md border px-2.5 text-xs font-medium shadow-sm',
         getClipToneClass(clip.type),
-        asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
+        asset?.missing
+          ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]'
+          : selected
+            ? 'border-coral ring-2 ring-coral/30'
+            : 'border-white/80',
         locked
           ? 'cursor-not-allowed opacity-70'
           : slipEditActive
@@ -1064,7 +1268,7 @@ function ClipBlock({
                 : 'cursor-grab',
         isMoveDragging && 'opacity-80 shadow-[0_12px_22px_rgba(15,23,42,0.24)] ring-2 ring-brand/30',
         !reduceMotion && !largeProjectMode.disableAnimations && 'transition-all duration-150 ease-out',
-        clip.type === 'video' && clip.platformFitRemoved && 'opacity-40 grayscale'
+        clip.type === 'video' && clip.platformFitRemoved && 'opacity-40 grayscale',
       )}
       style={{ left, width }}
       onPointerDown={(event) => {
@@ -1086,7 +1290,7 @@ function ClipBlock({
               : [clip.id]
             : selectedClipIds.includes(clip.id)
               ? selectedClipIds
-              : clipGroup?.clipIds ?? [clip.id];
+              : (clipGroup?.clipIds ?? [clip.id]);
         onDragStart({
           mode: advancedMode ?? 'move',
           clip,
@@ -1095,7 +1299,7 @@ function ClipBlock({
           previewStart: clip.start,
           previewDuration: clip.duration,
           previewTrimStart: clip.trimStart,
-          previewTrimEnd: clip.trimEnd
+          previewTrimEnd: clip.trimEnd,
         });
       }}
       onContextMenu={(event) => {
@@ -1114,7 +1318,7 @@ function ClipBlock({
             toClipId: nextAdjacentClip.id,
             existingTransitionId: transition?.id,
             existingType: transition?.type,
-            existingDuration: transition?.duration
+            existingDuration: transition?.duration,
           });
           return;
         }
@@ -1124,7 +1328,11 @@ function ClipBlock({
         event.stopPropagation();
         onClipDoubleClick(clip);
       }}
-      title={asset?.missing ? zhCN.timeline.mediaMissing : frameRateWarningTitle ?? `${clip.name} (${clip.duration.toFixed(2)}s)`}
+      title={
+        asset?.missing
+          ? zhCN.timeline.mediaMissing
+          : (frameRateWarningTitle ?? `${clip.name} (${clip.duration.toFixed(2)}s)`)
+      }
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}
       data-clip-id={clip.id}
@@ -1151,9 +1359,16 @@ function ClipBlock({
       />
       {clipGroup ? (
         <>
-          <span className="absolute left-0 right-0 top-0 z-20 h-1.5" style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[clipGroup.color] }} data-testid={`timeline-clip-group-strip-${clip.id}`} />
+          <span
+            className="absolute left-0 right-0 top-0 z-20 h-1.5"
+            style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[clipGroup.color] }}
+            data-testid={`timeline-clip-group-strip-${clip.id}`}
+          />
           {width >= 86 ? (
-            <span className="absolute left-1 top-1.5 z-20 max-w-[70%] truncate rounded-sm bg-panel/80 px-1 text-[9px] font-semibold text-[var(--color-text-secondary)]" data-testid={`timeline-clip-group-label-${clip.id}`}>
+            <span
+              className="absolute left-1 top-1.5 z-20 max-w-[70%] truncate rounded-sm bg-panel/80 px-1 text-[9px] font-semibold text-[var(--color-text-secondary)]"
+              data-testid={`timeline-clip-group-label-${clip.id}`}
+            >
               {clipGroup.name}
             </span>
           ) : null}
@@ -1170,13 +1385,30 @@ function ClipBlock({
       ) : null}
       {loadAssets && clip.type === 'video' && asset ? (
         largeProjectMode.enabled ? (
-          <DeferredClipAssetStrips clip={clip} asset={asset} clipPixelWidth={clipPixelWidth} trackMuted={trackMuted} waveformColor={waveformColor} largeProjectMode={largeProjectMode} />
+          <DeferredClipAssetStrips
+            clip={clip}
+            asset={asset}
+            clipPixelWidth={clipPixelWidth}
+            trackMuted={trackMuted}
+            waveformColor={waveformColor}
+            largeProjectMode={largeProjectMode}
+          />
         ) : (
-          <ClipAssetStrips clip={clip} asset={asset} clipPixelWidth={clipPixelWidth} trackMuted={trackMuted} waveformColor={waveformColor} largeProjectMode={largeProjectMode} />
+          <ClipAssetStrips
+            clip={clip}
+            asset={asset}
+            clipPixelWidth={clipPixelWidth}
+            trackMuted={trackMuted}
+            waveformColor={waveformColor}
+            largeProjectMode={largeProjectMode}
+          />
         )
       ) : null}
       {transition ? (
-        <span className="absolute right-1 top-1 z-20 rounded bg-brand px-1 text-[10px] font-semibold text-white" data-testid={`timeline-transition-${transition.id}`}>
+        <span
+          className="absolute right-1 top-1 z-20 rounded bg-brand px-1 text-[10px] font-semibold text-white"
+          data-testid={`timeline-transition-${transition.id}`}
+        >
           {formatTransitionBadge(transition.type)}
         </span>
       ) : null}
@@ -1202,7 +1434,12 @@ function ClipBlock({
       {'motionType' in clip && (clip as { motionType?: { type: string; confidence: number } }).motionType ? (
         <span
           className="absolute bottom-1 left-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white shadow"
-          title={zhCN.motionType.title + ': ' + ((zhCN.motionType as Record<string, string>)[(clip as { motionType: { type: string } }).motionType.type] ?? (clip as { motionType: { type: string } }).motionType.type)}
+          title={
+            zhCN.motionType.title +
+            ': ' +
+            ((zhCN.motionType as Record<string, string>)[(clip as { motionType: { type: string } }).motionType.type] ??
+              (clip as { motionType: { type: string } }).motionType.type)
+          }
           data-testid={`motion-type-badge-${clip.id}`}
           data-motion-type={(clip as { motionType: { type: string } }).motionType.type}
         >
@@ -1227,19 +1464,35 @@ function ClipBlock({
           <AlertTriangle size={11} />
         </span>
       ) : null}
-      {'readingSpeedWarning' in clip && (clip as { readingSpeedWarning?: { severity: string } | null }).readingSpeedWarning ? (
+      {'readingSpeedWarning' in clip &&
+      (clip as { readingSpeedWarning?: { severity: string } | null }).readingSpeedWarning ? (
         <span
           className={`absolute bottom-1 right-9 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full ${(clip as { readingSpeedWarning: { severity: string } }).readingSpeedWarning.severity === 'critical' ? 'bg-[var(--color-danger)]' : 'bg-yellow-400'} text-white shadow`}
-          title={zhCN.subtitleReadingSpeed.title + ' (' + (clip as { readingSpeedWarning: { charsPerSecond: number } }).readingSpeedWarning.charsPerSecond.toFixed(1) + ' ' + zhCN.subtitleReadingSpeed.charsPerSecond + ')'}
+          title={
+            zhCN.subtitleReadingSpeed.title +
+            ' (' +
+            (clip as { readingSpeedWarning: { charsPerSecond: number } }).readingSpeedWarning.charsPerSecond.toFixed(
+              1,
+            ) +
+            ' ' +
+            zhCN.subtitleReadingSpeed.charsPerSecond +
+            ')'
+          }
           data-testid={`reading-speed-warning-${clip.id}`}
         >
           <AlertTriangle size={11} />
         </span>
       ) : null}
-      {'emotionAnalysis' in clip && (clip as { emotionAnalysis?: { emotionTone: string; intensity: number } }).emotionAnalysis ? (
+      {'emotionAnalysis' in clip &&
+      (clip as { emotionAnalysis?: { emotionTone: string; intensity: number } }).emotionAnalysis ? (
         <span
           className="absolute bottom-0 left-0 right-0 z-20 h-[3px]"
-          style={{ backgroundColor: EMOTION_COLORS[(clip as { emotionAnalysis: { emotionTone: keyof typeof EMOTION_COLORS } }).emotionAnalysis.emotionTone] }}
+          style={{
+            backgroundColor:
+              EMOTION_COLORS[
+                (clip as { emotionAnalysis: { emotionTone: keyof typeof EMOTION_COLORS } }).emotionAnalysis.emotionTone
+              ],
+          }}
           title={`${zhCN.emotionTone.title}: ${zhCN.emotionTone[(clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone as keyof typeof zhCN.emotionTone] ?? (clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone} (${Math.round((clip as { emotionAnalysis: { intensity: number } }).emotionAnalysis.intensity * 100)}%)`}
           data-testid={`emotion-bar-${clip.id}`}
         />
@@ -1259,17 +1512,37 @@ function ClipBlock({
               previewStart: clip.start,
               previewDuration: clip.duration,
               previewTrimStart: clip.trimStart,
-              previewTrimEnd: clip.trimEnd
+              previewTrimEnd: clip.trimEnd,
             });
           }}
         />
       )}
       {loadAssets && clip.type === 'audio' && asset ? (
         largeProjectMode.enabled ? (
-          showWaveform ? <DeferredWaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} /> : null
-        ) : (
-          showWaveform ? <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} /> : null
-        )
+          showWaveform ? (
+            <DeferredWaveformStrip
+              clipId={clip.id}
+              asset={asset}
+              pixelWidth={clipPixelWidth}
+              clipDuration={clip.duration}
+              muted={trackMuted || Boolean(clip.muted)}
+              color={waveformColor}
+              pitchData={clip.pitchData}
+              resolutionScale={largeProjectMode.waveformResolutionScale}
+            />
+          ) : null
+        ) : showWaveform ? (
+          <WaveformStrip
+            clipId={clip.id}
+            asset={asset}
+            pixelWidth={clipPixelWidth}
+            clipDuration={clip.duration}
+            muted={trackMuted || Boolean(clip.muted)}
+            color={waveformColor}
+            pitchData={clip.pitchData}
+            resolutionScale={largeProjectMode.waveformResolutionScale}
+          />
+        ) : null
       ) : null}
       {envelopeEditMode && clip.type === 'audio' && 'volume' in clip ? (
         <VolumeEnvelopeOverlay
@@ -1281,92 +1554,127 @@ function ClipBlock({
           onMenu={onVolumeEnvelopeMenu}
         />
       ) : null}
-      <span className="relative z-10 truncate pl-1">{(clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits') && 'text' in clip ? clip.text.slice(0, 28) : clip.name}</span>
+      <span className="relative z-10 truncate pl-1">
+        {(clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits') && 'text' in clip
+          ? clip.text.slice(0, 28)
+          : clip.name}
+      </span>
       <span className="relative z-10 ml-auto pl-2 tabular-nums">{clip.duration.toFixed(1)}s</span>
       {getClipKeyframeMarkers(clip).map((marker) => {
         const keyframeRef = { clipId: clip.id, property: marker.property, keyframeId: marker.id };
         const isSelectedKeyframe =
           selectedKeyframes.some((item) => sameSelectedKeyframe(item, keyframeRef)) ||
-          (selectedKeyframe?.clipId === clip.id && selectedKeyframe.property === marker.property && selectedKeyframe.keyframeId === marker.id);
+          (selectedKeyframe?.clipId === clip.id &&
+            selectedKeyframe.property === marker.property &&
+            selectedKeyframe.keyframeId === marker.id);
         const markerKey = selectedKeyframeKey(keyframeRef);
         const previewMarkerTime = drag?.mode === 'keyframe' ? drag.previewKeyframeTimes?.[markerKey] : undefined;
-        const markerTime = previewMarkerTime !== undefined
-          ? previewMarkerTime
-          : drag?.mode === 'keyframe' && drag.clip?.id === clip.id && drag.keyframeProperty === marker.property && drag.keyframeId === marker.id
-            ? drag.previewKeyframeTime ?? marker.time
-            : marker.time;
+        const markerTime =
+          previewMarkerTime !== undefined
+            ? previewMarkerTime
+            : drag?.mode === 'keyframe' &&
+                drag.clip?.id === clip.id &&
+                drag.keyframeProperty === marker.property &&
+                drag.keyframeId === marker.id
+              ? (drag.previewKeyframeTime ?? marker.time)
+              : marker.time;
         return (
-        <span
-          key={`${marker.property}-${marker.id}`}
-          className={clsx(
-            'absolute bottom-0 z-20 h-2.5 w-2.5 -translate-x-1/2 rotate-45 cursor-ew-resize border shadow',
-            isSelectedKeyframe ? 'border-black bg-[var(--color-bg-elevated)]' : 'border-white bg-coral'
-          )}
-          style={{ left: `${Math.min(100, Math.max(0, (markerTime / Math.max(0.001, clip.duration)) * 100))}%` }}
-          title={zhCN.timeline.keyframeTitle(formatTimelineKeyframeProperty(marker.property), marker.time)}
-          data-testid={`timeline-keyframe-${clip.id}-${marker.property}-${marker.id}`}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            if (locked) {
-              return;
-            }
-            event.currentTarget.setPointerCapture(event.pointerId);
-            const selectedBeforePointerDown = selectedKeyframes.some((item) => sameSelectedKeyframe(item, keyframeRef));
-            if (!event.shiftKey) {
-              onSelect(clip.id, false);
-            }
-            onKeyframeSelect(keyframeRef, event.shiftKey);
-            const dragKeyframes = event.shiftKey
-              ? selectedBeforePointerDown
-                ? selectedKeyframes.filter((item) => !sameSelectedKeyframe(item, keyframeRef))
-                : [...selectedKeyframes, keyframeRef]
-              : selectedBeforePointerDown && selectedKeyframes.length > 1
-                ? selectedKeyframes
-                : [keyframeRef];
-            const keyframeSelectionOnly = event.shiftKey && selectedBeforePointerDown;
-            onDragStart({
-              mode: 'keyframe',
-              clip,
-              keyframeProperty: marker.property,
-              keyframeId: marker.id,
-              keyframes: keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef],
-              keyframeSelectionOnly,
-              keyframeStartTimes: Object.fromEntries(
-                (keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef]).map((ref) => [selectedKeyframeKey(ref), getKeyframeMarkerTime(clip, ref) ?? marker.time])
-              ),
-              startX: event.clientX,
-              previewStart: marker.time,
-              previewDuration: clip.duration,
-              previewTrimStart: clip.trimStart,
-              previewTrimEnd: clip.trimEnd,
-              previewKeyframeTime: marker.time
-            });
-          }}
-        />
+          <span
+            key={`${marker.property}-${marker.id}`}
+            className={clsx(
+              'absolute bottom-0 z-20 h-2.5 w-2.5 -translate-x-1/2 rotate-45 cursor-ew-resize border shadow',
+              isSelectedKeyframe ? 'border-black bg-[var(--color-bg-elevated)]' : 'border-white bg-coral',
+            )}
+            style={{ left: `${Math.min(100, Math.max(0, (markerTime / Math.max(0.001, clip.duration)) * 100))}%` }}
+            title={zhCN.timeline.keyframeTitle(formatTimelineKeyframeProperty(marker.property), marker.time)}
+            data-testid={`timeline-keyframe-${clip.id}-${marker.property}-${marker.id}`}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              if (locked) {
+                return;
+              }
+              event.currentTarget.setPointerCapture(event.pointerId);
+              const selectedBeforePointerDown = selectedKeyframes.some((item) =>
+                sameSelectedKeyframe(item, keyframeRef),
+              );
+              if (!event.shiftKey) {
+                onSelect(clip.id, false);
+              }
+              onKeyframeSelect(keyframeRef, event.shiftKey);
+              const dragKeyframes = event.shiftKey
+                ? selectedBeforePointerDown
+                  ? selectedKeyframes.filter((item) => !sameSelectedKeyframe(item, keyframeRef))
+                  : [...selectedKeyframes, keyframeRef]
+                : selectedBeforePointerDown && selectedKeyframes.length > 1
+                  ? selectedKeyframes
+                  : [keyframeRef];
+              const keyframeSelectionOnly = event.shiftKey && selectedBeforePointerDown;
+              onDragStart({
+                mode: 'keyframe',
+                clip,
+                keyframeProperty: marker.property,
+                keyframeId: marker.id,
+                keyframes: keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef],
+                keyframeSelectionOnly,
+                keyframeStartTimes: Object.fromEntries(
+                  (keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef]).map((ref) => [
+                    selectedKeyframeKey(ref),
+                    getKeyframeMarkerTime(clip, ref) ?? marker.time,
+                  ]),
+                ),
+                startX: event.clientX,
+                previewStart: marker.time,
+                previewDuration: clip.duration,
+                previewTrimStart: clip.trimStart,
+                previewTrimEnd: clip.trimEnd,
+                previewKeyframeTime: marker.time,
+              });
+            }}
+          />
         );
       })}
       {Array.isArray(clip.flashWarnings) && clip.flashWarnings.length > 0 ? (
-        <span className="absolute bottom-1.5 left-0 right-0 z-10 flex h-1" data-testid={`flash-warning-bars-${clip.id}`}>
+        <span
+          className="absolute bottom-1.5 left-0 right-0 z-10 flex h-1"
+          data-testid={`flash-warning-bars-${clip.id}`}
+        >
           {clip.flashWarnings.map((fw, fi) => {
             const clipDuration = clip.duration || 1;
-            const leftPct = Math.max(0, (fw.startTime - clip.start) / clipDuration * 100);
-            const widthPct = Math.min(100 - leftPct, (fw.endTime - fw.startTime) / clipDuration * 100);
-            const color = fw.severity === 'high' ? 'bg-[var(--color-danger)]' : fw.severity === 'medium' ? 'bg-orange-400' : 'bg-yellow-300';
-            return <span key={fi} className={`absolute h-1 ${color} opacity-70`} style={{ left: leftPct + '%', width: widthPct + '%' }} data-testid={`flash-bar-${clip.id}-${fi}`} />;
+            const leftPct = Math.max(0, ((fw.startTime - clip.start) / clipDuration) * 100);
+            const widthPct = Math.min(100 - leftPct, ((fw.endTime - fw.startTime) / clipDuration) * 100);
+            const color =
+              fw.severity === 'high'
+                ? 'bg-[var(--color-danger)]'
+                : fw.severity === 'medium'
+                  ? 'bg-orange-400'
+                  : 'bg-yellow-300';
+            return (
+              <span
+                key={fi}
+                className={`absolute h-1 ${color} opacity-70`}
+                style={{ left: leftPct + '%', width: widthPct + '%' }}
+                data-testid={`flash-bar-${clip.id}-${fi}`}
+              />
+            );
           })}
         </span>
       ) : null}
       {(clip.anomalies ?? []).length > 0 && (
-          <span className="absolute bottom-0 left-0 right-0 z-10 flex h-1.5" data-testid={"anomaly-markers-" + clip.id}>
+        <span className="absolute bottom-0 left-0 right-0 z-10 flex h-1.5" data-testid={'anomaly-markers-' + clip.id}>
           {(clip.anomalies ?? []).map((anomaly, idx) => (
             <span
               key={idx}
               className="cursor-pointer h-1.5 flex-1"
-              style={{ backgroundColor: anomaly.type === "black" ? "#ef4444" : "#eab308" }}
-              title={anomaly.type === "black" ? "黑场" : "静态长镜头"}
-              data-testid={"anomaly-marker-" + clip.id + "-" + idx}
-              onPointerDown={(event) => { event.stopPropagation(); }}
-              onClick={(event) => { event.stopPropagation(); onRemoveAnomaly(clip.id, anomaly); }}
+              style={{ backgroundColor: anomaly.type === 'black' ? '#ef4444' : '#eab308' }}
+              title={anomaly.type === 'black' ? '黑场' : '静态长镜头'}
+              data-testid={'anomaly-marker-' + clip.id + '-' + idx}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemoveAnomaly(clip.id, anomaly);
+              }}
             />
           ))}
         </span>
@@ -1387,7 +1695,7 @@ function ClipBlock({
               previewStart: clip.start,
               previewDuration: clip.duration,
               previewTrimStart: clip.trimStart,
-              previewTrimEnd: clip.trimEnd
+              previewTrimEnd: clip.trimEnd,
             });
           }}
         />
@@ -1416,7 +1724,7 @@ function VolumeEnvelopeOverlay({
   onAdd,
   onUpdate,
   onRemove,
-  onMenu
+  onMenu,
 }: {
   clip: Extract<Clip, { type: 'audio' }>;
   disabled: boolean;
@@ -1430,11 +1738,15 @@ function VolumeEnvelopeOverlay({
   const duration = Math.max(0.001, clip.duration);
   const basePoints = getVolumeEnvelopePoints(clip);
   const points = draftPoint
-    ? basePoints.map((point) => (point.id === draftPoint.keyframeId ? { ...point, time: draftPoint.time, value: draftPoint.value } : point))
+    ? basePoints.map((point) =>
+        point.id === draftPoint.keyframeId ? { ...point, time: draftPoint.time, value: draftPoint.value } : point,
+      )
     : basePoints;
   const svgPoints = points.map((point) => `${envelopePointX(point, duration)},${envelopePointY(point)}`).join(' ');
 
-  const eventToRequest = (event: Pick<React.PointerEvent<HTMLElement>, 'clientX' | 'clientY'>): VolumeEnvelopePointRequest | undefined => {
+  const eventToRequest = (
+    event: Pick<React.PointerEvent<HTMLElement>, 'clientX' | 'clientY'>,
+  ): VolumeEnvelopePointRequest | undefined => {
     const bounds = overlayRef.current?.getBoundingClientRect();
     if (!bounds) {
       return undefined;
@@ -1444,7 +1756,7 @@ function VolumeEnvelopeOverlay({
     return {
       clipId: clip.id,
       time: snapTime((x / Math.max(1, bounds.width)) * clip.duration),
-      value: Math.round(Math.min(2, Math.max(0, 2 - (y / Math.max(1, bounds.height)) * 2)) * 100) / 100
+      value: Math.round(Math.min(2, Math.max(0, 2 - (y / Math.max(1, bounds.height)) * 2)) * 100) / 100,
     };
   };
 
@@ -1453,7 +1765,10 @@ function VolumeEnvelopeOverlay({
   return (
     <span
       ref={overlayRef}
-      className={clsx('absolute inset-0 z-20 cursor-crosshair', disabled ? 'pointer-events-none opacity-50' : 'pointer-events-auto')}
+      className={clsx(
+        'absolute inset-0 z-20 cursor-crosshair',
+        disabled ? 'pointer-events-none opacity-50' : 'pointer-events-auto',
+      )}
       data-testid={`timeline-volume-envelope-${clip.id}`}
       onPointerDown={(event) => {
         if (event.button !== 0 || disabled) {
@@ -1475,9 +1790,28 @@ function VolumeEnvelopeOverlay({
         onMenu({ x: event.clientX, y: event.clientY, clipId: clip.id });
       }}
     >
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <polyline points={svgPoints} fill="none" stroke="rgba(15, 23, 42, 0.45)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points={svgPoints} fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <polyline
+          points={svgPoints}
+          fill="none"
+          stroke="rgba(15, 23, 42, 0.45)"
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <polyline
+          points={svgPoints}
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
       {persistedPoints.map((point) => (
         <button
@@ -1541,8 +1875,8 @@ function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property: Keyfr
     (clip.keyframes?.[property] ?? []).map((frame) => ({
       id: frame.id,
       property,
-      time: frame.time
-    }))
+      time: frame.time,
+    })),
   );
 }
 
@@ -1579,8 +1913,12 @@ function getClipToneClass(type: Clip['type']): string {
 
 const MemoizedClipBlock = memo(ClipBlock, areClipBlockPropsEqual);
 
-function areClipBlockPropsEqual(previous: Parameters<typeof ClipBlock>[0], next: Parameters<typeof ClipBlock>[0]): boolean {
-  return previous.clip === next.clip &&
+function areClipBlockPropsEqual(
+  previous: Parameters<typeof ClipBlock>[0],
+  next: Parameters<typeof ClipBlock>[0],
+): boolean {
+  return (
+    previous.clip === next.clip &&
     previous.asset === next.asset &&
     previous.left === next.left &&
     previous.width === next.width &&
@@ -1605,12 +1943,25 @@ function areClipBlockPropsEqual(previous: Parameters<typeof ClipBlock>[0], next:
     previous.reduceMotion === next.reduceMotion &&
     previous.loadAssets === next.loadAssets &&
     previous.largeProjectMode === next.largeProjectMode &&
-    previous.collaborationLock === next.collaborationLock;
+    previous.collaborationLock === next.collaborationLock
+  );
 }
 
-function VideoThumbnailStrip({ clip, asset, pixelWidth, frameStep = 1 }: { clip: Extract<Clip, { type: 'video' }>; asset: MediaAsset; pixelWidth: number; frameStep?: number }) {
+function VideoThumbnailStrip({
+  clip,
+  asset,
+  pixelWidth,
+  frameStep = 1,
+}: {
+  clip: Extract<Clip, { type: 'video' }>;
+  asset: MediaAsset;
+  pixelWidth: number;
+  frameStep?: number;
+}) {
   const requestPixelWidth = Math.max(1, pixelWidth / Math.max(1, frameStep));
-  const [frames, setFrames] = useState<TimelineThumbnailFrame[]>(() => getTimelineThumbnailPlaceholders(asset, clip, requestPixelWidth));
+  const [frames, setFrames] = useState<TimelineThumbnailFrame[]>(() =>
+    getTimelineThumbnailPlaceholders(asset, clip, requestPixelWidth),
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -1637,10 +1988,15 @@ function VideoThumbnailStrip({ clip, asset, pixelWidth, frameStep = 1 }: { clip:
   }
 
   return (
-    <span className="absolute inset-0 z-0 flex overflow-hidden opacity-70" data-testid={`timeline-thumbnails-${clip.id}`}>
+    <span
+      className="absolute inset-0 z-0 flex overflow-hidden opacity-70"
+      data-testid={`timeline-thumbnails-${clip.id}`}
+    >
       {frames.map((frame) => (
         <span key={frame.key} className="h-full w-20 flex-none border-r border-white/20 bg-sky-200">
-          {frame.dataUrl ? <img className="h-full w-full object-cover" src={frame.dataUrl} alt="" draggable={false} /> : null}
+          {frame.dataUrl ? (
+            <img className="h-full w-full object-cover" src={frame.dataUrl} alt="" draggable={false} />
+          ) : null}
         </span>
       ))}
     </span>
@@ -1668,14 +2024,17 @@ function WaveformStrip({
   color,
   pitchData,
   compact = false,
-  resolutionScale = 1
+  resolutionScale = 1,
 }: WaveformStripProps) {
   const [waveform, setWaveform] = useState<WaveformResult | undefined>();
   const [failed, setFailed] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasWidth = Math.max(1, Math.round(pixelWidth));
   const canvasHeight = compact ? 16 : 40;
-  const pointsPerSecond = useMemo(() => Math.max(8, Math.ceil((canvasWidth / Math.max(0.001, clipDuration)) * Math.max(0.1, resolutionScale))), [canvasWidth, clipDuration, resolutionScale]);
+  const pointsPerSecond = useMemo(
+    () => Math.max(8, Math.ceil((canvasWidth / Math.max(0.001, clipDuration)) * Math.max(0.1, resolutionScale))),
+    [canvasWidth, clipDuration, resolutionScale],
+  );
 
   useEffect(() => {
     let canceled = false;
@@ -1711,19 +2070,47 @@ function WaveformStrip({
   }
   return (
     <span
-      className={clsx('absolute z-0 overflow-hidden', compact ? 'bottom-0 left-0 right-0 h-4 border-t border-white/20 bg-black/20' : 'inset-0')}
+      className={clsx(
+        'absolute z-0 overflow-hidden',
+        compact ? 'bottom-0 left-0 right-0 h-4 border-t border-white/20 bg-black/20' : 'inset-0',
+      )}
       data-testid={`timeline-waveform-${clipId}`}
       title={waveform?.isSampled ? zhCN.timeline.sampledWaveform : zhCN.timeline.waveform}
       style={{ opacity: muted ? 0.2 : compact ? 0.62 : 0.48 }}
     >
       <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} className="h-full w-full" />
-      {pitchData && pitchData.length > 0 ? <PitchCurveOverlay clipId={clipId} data={pitchData} width={canvasWidth} height={canvasHeight} duration={clipDuration} compact={compact} /> : null}
+      {pitchData && pitchData.length > 0 ? (
+        <PitchCurveOverlay
+          clipId={clipId}
+          data={pitchData}
+          width={canvasWidth}
+          height={canvasHeight}
+          duration={clipDuration}
+          compact={compact}
+        />
+      ) : null}
     </span>
   );
 }
 
-function PitchCurveOverlay({ clipId, data, width, height, duration, compact }: { clipId: string; data: ClipPitchDataPoint[]; width: number; height: number; duration: number; compact: boolean }) {
-  const points = data.filter((point) => point.time >= 0 && point.time <= duration && Number.isFinite(point.hz) && point.hz > 0);
+function PitchCurveOverlay({
+  clipId,
+  data,
+  width,
+  height,
+  duration,
+  compact,
+}: {
+  clipId: string;
+  data: ClipPitchDataPoint[];
+  width: number;
+  height: number;
+  duration: number;
+  compact: boolean;
+}) {
+  const points = data.filter(
+    (point) => point.time >= 0 && point.time <= duration && Number.isFinite(point.hz) && point.hz > 0,
+  );
   if (points.length === 0) {
     return null;
   }
@@ -1751,7 +2138,12 @@ function PitchCurveOverlay({ clipId, data, width, height, duration, compact }: {
       data-testid={`timeline-pitch-curve-${clipId}`}
     >
       {points.length === 1 ? (
-        <circle cx={toSvgPoint(points[0]).x} cy={toSvgPoint(points[0]).y} r={compact ? 1.5 : 2.5} fill={pitchNoteColor(points[0].note)} />
+        <circle
+          cx={toSvgPoint(points[0]).x}
+          cy={toSvgPoint(points[0]).y}
+          r={compact ? 1.5 : 2.5}
+          fill={pitchNoteColor(points[0].note)}
+        />
       ) : (
         points.slice(1).map((point, index) => {
           const previous = points[index];
@@ -1776,9 +2168,16 @@ function PitchCurveOverlay({ clipId, data, width, height, duration, compact }: {
   );
 }
 
-function drawWaveform(context: CanvasRenderingContext2D, width: number, height: number, peaks: number[] | undefined, color: string): void {
+function drawWaveform(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  peaks: number[] | undefined,
+  color: string,
+): void {
   context.clearRect(0, 0, width, height);
-  const values = peaks && peaks.length > 0 ? peaks : Array.from({ length: Math.max(16, Math.min(width, 64)) }, () => 0.2);
+  const values =
+    peaks && peaks.length > 0 ? peaks : Array.from({ length: Math.max(16, Math.min(width, 64)) }, () => 0.2);
   const center = height / 2;
   context.strokeStyle = color;
   context.lineWidth = 1;

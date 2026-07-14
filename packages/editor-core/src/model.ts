@@ -5,14 +5,19 @@ import {
   isNeutralThreeWayColor,
   normalizeColorCurves,
   normalizeColorGradingGraph,
-  normalizeThreeWayColor
+  normalizeThreeWayColor,
 } from './color-grading';
 import { normalizeClipBlendMode } from './blend-modes';
 import { normalizeColorNodeGraph } from './color-node-graph';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
-import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWorkingColorSpace, type MediaColorProfile } from './color-management';
+import {
+  getColorSpaceDisplayName,
+  normalizeExportColorSpace,
+  normalizeProjectWorkingColorSpace,
+  type MediaColorProfile,
+} from './color-management';
 import { normalizeMotionGraphic } from './motion-graphics';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
@@ -159,11 +164,19 @@ import type {
   VideoClip,
   VideoDeinterlaceMode,
   VideoDenoisePreset,
-  ZoomEditMode
+  ZoomEditMode,
 } from './model-types';
 
 export type { AIColorHistoryEntry } from './model-types';
-export type { ClipPrivacyRedaction, PrivacyRedactionType, RedactionKeyframe, ClipAILookMatch, WheelAdjustments, BeatSnapSuggestion, MediaCollection } from './model-types';
+export type {
+  ClipPrivacyRedaction,
+  PrivacyRedactionType,
+  RedactionKeyframe,
+  ClipAILookMatch,
+  WheelAdjustments,
+  BeatSnapSuggestion,
+  MediaCollection,
+} from './model-types';
 export type {
   AdjustmentClip,
   AssetType,
@@ -287,13 +300,20 @@ export type {
   VideoClip,
   VideoDeinterlaceMode,
   VideoDenoisePreset,
-  ZoomEditMode
+  ZoomEditMode,
 } from './model-types';
 export type { TtsSegment, TimingAdaptation, DubbingAdaptationType } from './model-types';
 export const MAX_CHROMA_KEY_COLORS = 3;
 
 export function isMediaLabelColor(value: unknown): value is MediaLabelColor {
-  return value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple';
+  return (
+    value === 'red' ||
+    value === 'orange' ||
+    value === 'yellow' ||
+    value === 'green' ||
+    value === 'blue' ||
+    value === 'purple'
+  );
 }
 
 export function normalizeMediaRating(value: unknown): number {
@@ -314,7 +334,10 @@ export function normalizeMediaFingerprint(value: unknown): MediaFingerprint | un
   }
   const input = value as Partial<MediaFingerprint>;
   const kind = input.kind === 'video' || input.kind === 'audio' || input.kind === 'image' ? input.kind : undefined;
-  const algorithm = input.algorithm === 'phash' || input.algorithm === 'rms' || input.algorithm === 'bytes' ? input.algorithm : undefined;
+  const algorithm =
+    input.algorithm === 'phash' || input.algorithm === 'rms' || input.algorithm === 'bytes'
+      ? input.algorithm
+      : undefined;
   const hash = typeof input.hash === 'string' ? input.hash.trim() : '';
   if (!kind || !algorithm || !hash) {
     return undefined;
@@ -323,7 +346,7 @@ export function normalizeMediaFingerprint(value: unknown): MediaFingerprint | un
     version: 1,
     kind,
     algorithm,
-    hash
+    hash,
   };
   if (Array.isArray(input.frameHashes)) {
     const frameHashes = input.frameHashes.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
@@ -332,7 +355,10 @@ export function normalizeMediaFingerprint(value: unknown): MediaFingerprint | un
     }
   }
   if (Array.isArray(input.rmsVector)) {
-    const rmsVector = input.rmsVector.map((item) => Number(item)).filter((item) => Number.isFinite(item)).map((item) => Math.max(0, Math.min(1, item)));
+    const rmsVector = input.rmsVector
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item))
+      .map((item) => Math.max(0, Math.min(1, item)));
     if (rmsVector.length > 0) {
       fingerprint.rmsVector = rmsVector;
     }
@@ -390,15 +416,20 @@ function normalizeMediaMetadataText(value: string | undefined, maxLength: number
   return trimmed ? trimmed.slice(0, maxLength) : undefined;
 }
 
-export function normalizeMediaColorProfile(profile: Partial<MediaColorProfile> | undefined): MediaColorProfile | undefined {
+export function normalizeMediaColorProfile(
+  profile: Partial<MediaColorProfile> | undefined,
+): MediaColorProfile | undefined {
   if (!profile || typeof profile !== 'object') {
     return undefined;
   }
   const sourceColorSpace = normalizeExportColorSpace(profile.sourceColorSpace);
-  const label = typeof profile.label === 'string' && profile.label.trim() ? profile.label.trim().slice(0, 40) : getColorSpaceDisplayName(sourceColorSpace);
+  const label =
+    typeof profile.label === 'string' && profile.label.trim()
+      ? profile.label.trim().slice(0, 40)
+      : getColorSpaceDisplayName(sourceColorSpace);
   const normalized: MediaColorProfile = {
     sourceColorSpace,
-    label
+    label,
   };
   if (typeof profile.colorSpace === 'string' && profile.colorSpace.trim()) {
     normalized.colorSpace = profile.colorSpace.trim().toLowerCase();
@@ -424,13 +455,17 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   height: 720,
   vfrHandling: 'ignore',
   colorPipeline: DEFAULT_PROJECT_COLOR_PIPELINE,
-  workingColorSpace: 'srgb'
+  workingColorSpace: 'srgb',
 };
 
 export function normalizeProjectSettings(settings: Partial<ProjectSettings> | undefined): ProjectSettings {
   const fps = normalizeProjectFps(settings?.fps);
-  const width = Number.isFinite(settings?.width) ? Math.max(1, Math.round(settings!.width!)) : DEFAULT_PROJECT_SETTINGS.width;
-  const height = Number.isFinite(settings?.height) ? Math.max(1, Math.round(settings!.height!)) : DEFAULT_PROJECT_SETTINGS.height;
+  const width = Number.isFinite(settings?.width)
+    ? Math.max(1, Math.round(settings!.width!))
+    : DEFAULT_PROJECT_SETTINGS.width;
+  const height = Number.isFinite(settings?.height)
+    ? Math.max(1, Math.round(settings!.height!))
+    : DEFAULT_PROJECT_SETTINGS.height;
   return {
     fps,
     timecodeFormat: normalizeTimecodeFormat(settings?.timecodeFormat, fps),
@@ -438,7 +473,7 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
     height,
     vfrHandling: normalizeVfrHandlingStrategy(settings?.vfrHandling),
     colorPipeline: normalizeProjectColorPipeline(settings?.colorPipeline),
-    workingColorSpace: normalizeProjectWorkingColorSpace(settings?.workingColorSpace)
+    workingColorSpace: normalizeProjectWorkingColorSpace(settings?.workingColorSpace),
   };
 }
 
@@ -453,7 +488,7 @@ export const DEFAULT_TRANSFORM: Transform = {
   scaleX: 1,
   scaleY: 1,
   rotation: 0,
-  opacity: 1
+  opacity: 1,
 };
 
 export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
@@ -465,7 +500,7 @@ export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
   lutPath: null,
   luts: [],
   colorCurves: DEFAULT_COLOR_CURVES,
-  threeWayColor: DEFAULT_THREE_WAY_COLOR
+  threeWayColor: DEFAULT_THREE_WAY_COLOR,
 };
 
 export const DEFAULT_CHROMA_KEY: ChromaKey = {
@@ -481,7 +516,7 @@ export const DEFAULT_CHROMA_KEY: ChromaKey = {
   lumaTolerance: 0.1,
   lumaSoftness: 0.05,
   differenceReferenceTime: 0,
-  differenceThreshold: 0.2
+  differenceThreshold: 0.2,
 };
 
 export const DEFAULT_STABILIZATION: ClipStabilization = {
@@ -489,7 +524,7 @@ export const DEFAULT_STABILIZATION: ClipStabilization = {
   smoothing: 30,
   zoom: 0,
   analyzed: false,
-  trfPath: null
+  trfPath: null,
 };
 
 export const FRAME_INTERPOLATION_TARGET_FPS: readonly FrameInterpolationTargetFps[] = [24, 30, 48, 60, 120];
@@ -499,7 +534,7 @@ export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
   enabled: false,
   targetFps: 60,
   mode: 'adaptive',
-  protectionFrames: 2
+  protectionFrames: 2,
 };
 
 export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'mci', 'optical-flow'];
@@ -510,34 +545,42 @@ export const DEFAULT_CLIP_PANORAMA_VIEW: ClipPanoramaView = {
   pitch: 0,
   roll: 0,
   fov: 90,
-  outputProjection: 'flat'
+  outputProjection: 'flat',
 };
-export const VIDEO_TEMPORAL_DENOISE_PRESETS: Record<Exclude<VideoDenoisePreset, 'off' | 'custom'>, ClipVideoTemporalDenoise> = {
+export const VIDEO_TEMPORAL_DENOISE_PRESETS: Record<
+  Exclude<VideoDenoisePreset, 'off' | 'custom'>,
+  ClipVideoTemporalDenoise
+> = {
   low: { preset: 'low', lumaSpatial: 2, chromaSpatial: 1.5, lumaTmp: 3 },
   medium: { preset: 'medium', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
-  high: { preset: 'high', lumaSpatial: 6, chromaSpatial: 4.5, lumaTmp: 9 }
+  high: { preset: 'high', lumaSpatial: 6, chromaSpatial: 4.5, lumaTmp: 9 },
 };
 export const DEFAULT_VIDEO_RESTORATION: ClipVideoRestoration = {
   deinterlace: { enabled: false, mode: 0 },
-  temporalDenoise: { preset: 'off', lumaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaSpatial, chromaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.chromaSpatial, lumaTmp: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaTmp },
-  spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+  temporalDenoise: {
+    preset: 'off',
+    lumaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaSpatial,
+    chromaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.chromaSpatial,
+    lumaTmp: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaTmp,
+  },
+  spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 },
 };
 
 export const DEFAULT_QUALITY_ENHANCEMENT: ClipQualityEnhancement = {
   superResolution: false,
   deblock: false,
   colorBoost: false,
-  frameCompensation: false
+  frameCompensation: false,
 };
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
-  strength: 0.5
+  strength: 0.5,
 };
 
 export const DEFAULT_AI_LOCAL_DENOISE: ClipAILocalDenoise = {
   enabled: false,
-  strength: 0.5
+  strength: 0.5,
 };
 
 export const DEFAULT_AUDIO_PITCH_SEMITONES = 0;
@@ -553,18 +596,18 @@ export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
   h: 0.5,
   inverted: false,
   feather: 0,
-  enabled: true
+  enabled: true,
 };
 export const DEFAULT_PRIVACY_BLUR: ClipPrivacyBlur = {
   enabled: false,
   effect: 'pixelize',
-  color: '#000000'
+  color: '#000000',
 };
 
 export const DEFAULT_CLIP_BORDER: ClipBorder = {
   enabled: false,
   color: '#ffffff',
-  width: 6
+  width: 6,
 };
 
 export const DEFAULT_TRACK_VOLUME = 1;
@@ -576,8 +619,8 @@ export const DEFAULT_TRACK_EQ: TrackEQ = {
     { id: 'eq-low', type: 'lowshelf', frequency: 100, gain: 0, q: 0.7 },
     { id: 'eq-low-mid', type: 'peaking', frequency: 400, gain: 0, q: 1 },
     { id: 'eq-high-mid', type: 'peaking', frequency: 2500, gain: 0, q: 1 },
-    { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 0, q: 0.7 }
-  ]
+    { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 0, q: 0.7 },
+  ],
 };
 export const DEFAULT_TRACK_COMPRESSOR: TrackCompressor = {
   enabled: false,
@@ -585,7 +628,7 @@ export const DEFAULT_TRACK_COMPRESSOR: TrackCompressor = {
   ratio: 3,
   attack: 10,
   release: 120,
-  makeupGain: 0
+  makeupGain: 0,
 };
 export const PRIMARY_SEQUENCE_ID = 'sequence-main';
 export const DEFAULT_PRIMARY_SEQUENCE_NAME = 'Main Sequence';
@@ -611,7 +654,7 @@ export const TRANSITION_TYPES: TransitionType[] = [
   'film-roll-close',
   'shape-heart',
   'shape-star',
-  'motion-blur-wipe'
+  'motion-blur-wipe',
 ];
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
@@ -633,13 +676,13 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   backgroundOpacity: 0,
   fontFamily: 'Inter, Arial, sans-serif',
   bold: false,
-  italic: false
+  italic: false,
 };
 
 export const DEFAULT_TEXT_PATH_POINTS: PathPoint[] = [
   { x: 0.14, y: 0.58, handleOut: { x: 0.28, y: 0.28 } },
   { x: 0.5, y: 0.36, handleIn: { x: 0.36, y: 0.22 }, handleOut: { x: 0.64, y: 0.22 } },
-  { x: 0.86, y: 0.58, handleIn: { x: 0.72, y: 0.28 } }
+  { x: 0.86, y: 0.58, handleIn: { x: 0.72, y: 0.28 } },
 ];
 
 export const DEFAULT_TEXT_PATH: TextPathOptions = {
@@ -647,7 +690,7 @@ export const DEFAULT_TEXT_PATH: TextPathOptions = {
   path: DEFAULT_TEXT_PATH_POINTS,
   startOffset: 0,
   letterSpacing: 4,
-  rotateCharacters: true
+  rotateCharacters: true,
 };
 
 export const DEFAULT_SUBTITLE_MODE: SubtitleMode = 'burn-in';
@@ -662,7 +705,7 @@ export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   outlineColor: '#000000',
   outlineWidth: 0,
   shadowColor: '#000000',
-  shadowOffset: 0
+  shadowOffset: 0,
 };
 
 export function createId(prefix = 'id'): string {
@@ -673,16 +716,20 @@ export function createId(prefix = 'id'): string {
   return `${prefix}-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 }
 
-export function normalizeClipBeatMarkers(markers: BeatMarker[] | undefined, maxTime?: number): BeatMarker[] | undefined {
+export function normalizeClipBeatMarkers(
+  markers: BeatMarker[] | undefined,
+  maxTime?: number,
+): BeatMarker[] | undefined {
   if (!Array.isArray(markers)) {
     return undefined;
   }
-  const limit = typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
+  const limit =
+    typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
   const normalized = markers
     .filter((marker) => marker && typeof marker.time === 'number' && Number.isFinite(marker.time))
     .map((marker) => ({
       id: typeof marker.id === 'string' && marker.id ? marker.id : createId('beat'),
-      time: round(Math.min(limit, Math.max(0, marker.time)))
+      time: round(Math.min(limit, Math.max(0, marker.time))),
     }))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
   return normalized.length > 0 ? normalized : undefined;
@@ -706,38 +753,39 @@ export function createDefaultTimeline(): Timeline {
     tracks: [
       createTrack({ id: createId('track'), type: 'video', name: 'Video 1', clips: [] }),
       createTrack({ id: createId('track'), type: 'audio', name: 'Audio 1', clips: [] }),
-      createTrack({ id: createId('track'), type: 'text', name: 'Text 1', clips: [] })
-    ]
+      createTrack({ id: createId('track'), type: 'text', name: 'Text 1', clips: [] }),
+    ],
   };
 }
 
 export function createTransition(
-  transition: Omit<Transition, 'id' | 'type' | 'duration'> & Partial<Pick<Transition, 'id' | 'type' | 'duration'>>
+  transition: Omit<Transition, 'id' | 'type' | 'duration'> & Partial<Pick<Transition, 'id' | 'type' | 'duration'>>,
 ): Transition {
   return {
     id: transition.id ?? createId('transition'),
     type: normalizeTransitionType(transition.type),
     duration: normalizeTransitionDuration(transition.duration),
     fromClipId: transition.fromClipId,
-    toClipId: transition.toClipId
+    toClipId: transition.toClipId,
   };
 }
 
 export function createTimelineMarker(
   marker: Omit<TimelineMarker, 'id' | 'label' | 'color'> & Partial<Pick<TimelineMarker, 'id' | 'label' | 'color'>>,
-  maxTime?: number
+  maxTime?: number,
 ): TimelineMarker {
   return {
     id: marker.id ?? createId('marker'),
     time: normalizeTimelineMarkerTime(marker.time, maxTime),
     label: normalizeTimelineMarkerLabel(marker.label),
-    color: normalizeTimelineMarkerColor(marker.color)
+    color: normalizeTimelineMarkerColor(marker.color),
   };
 }
 
 export function createTimelineBookmark(
-  bookmark: Omit<TimelineBookmark, 'id' | 'note'> & Partial<Pick<TimelineBookmark, 'id' | 'note' | 'groupId' | 'thumbnailPath' | 'annotation' | 'createdAt'>>,
-  maxTime?: number
+  bookmark: Omit<TimelineBookmark, 'id' | 'note'> &
+    Partial<Pick<TimelineBookmark, 'id' | 'note' | 'groupId' | 'thumbnailPath' | 'annotation' | 'createdAt'>>,
+  maxTime?: number,
 ): TimelineBookmark {
   return {
     id: bookmark.id ?? createId('bookmark'),
@@ -746,26 +794,27 @@ export function createTimelineBookmark(
     ...(bookmark.groupId ? { groupId: bookmark.groupId.trim() } : {}),
     ...(bookmark.thumbnailPath ? { thumbnailPath: bookmark.thumbnailPath } : {}),
     ...(bookmark.annotation !== undefined ? { annotation: normalizeBookmarkAnnotation(bookmark.annotation) } : {}),
-    ...(bookmark.createdAt ? { createdAt: bookmark.createdAt } : {})
+    ...(bookmark.createdAt ? { createdAt: bookmark.createdAt } : {}),
   };
 }
 
 export function createProjectAnnotation(
-  annotation: Omit<ProjectAnnotation, 'id' | 'text' | 'color'> & Partial<Pick<ProjectAnnotation, 'id' | 'text' | 'color'>>,
-  maxTime?: number
+  annotation: Omit<ProjectAnnotation, 'id' | 'text' | 'color'> &
+    Partial<Pick<ProjectAnnotation, 'id' | 'text' | 'color'>>,
+  maxTime?: number,
 ): ProjectAnnotation {
   return {
     id: annotation.id ?? createId('annotation'),
     time: normalizeTimelinePointTime(annotation.time, maxTime),
     text: normalizeProjectAnnotationText(annotation.text),
-    color: normalizeHexColor(annotation.color, DEFAULT_PROJECT_ANNOTATION_COLOR)
+    color: normalizeHexColor(annotation.color, DEFAULT_PROJECT_ANNOTATION_COLOR),
   };
 }
 
 export function createReviewAnnotation(
   annotation: Omit<ReviewAnnotation, 'id' | 'type' | 'text' | 'color' | 'x' | 'y' | 'width' | 'height'> &
     Partial<Pick<ReviewAnnotation, 'id' | 'type' | 'text' | 'color' | 'x' | 'y' | 'width' | 'height'>>,
-  maxTime?: number
+  maxTime?: number,
 ): ReviewAnnotation {
   const type = normalizeReviewAnnotationType(annotation.type);
   return {
@@ -777,14 +826,19 @@ export function createReviewAnnotation(
     x: normalizeReviewAnnotationUnit(annotation.x, 0.5),
     y: normalizeReviewAnnotationUnit(annotation.y, 0.5),
     width: normalizeReviewAnnotationDimension(annotation.width, type, 'width'),
-    height: normalizeReviewAnnotationDimension(annotation.height, type, 'height')
+    height: normalizeReviewAnnotationDimension(annotation.height, type, 'height'),
   };
 }
 
 export function createCollaborationNote(
   note: Omit<CollaborationNote, 'id' | 'type' | 'authorName' | 'authorColor' | 'text' | 'resolved' | 'createdAt'> &
-    Partial<Pick<CollaborationNote, 'id' | 'type' | 'authorName' | 'authorColor' | 'text' | 'mediaPath' | 'resolved' | 'createdAt' | 'updatedAt'>>,
-  maxTime?: number
+    Partial<
+      Pick<
+        CollaborationNote,
+        'id' | 'type' | 'authorName' | 'authorColor' | 'text' | 'mediaPath' | 'resolved' | 'createdAt' | 'updatedAt'
+      >
+    >,
+  maxTime?: number,
 ): CollaborationNote {
   const type = normalizeCollaborationNoteType(note.type);
   const start = normalizeTimelinePointTime(note.start, maxTime);
@@ -801,13 +855,14 @@ export function createCollaborationNote(
     ...(typeof note.mediaPath === 'string' && note.mediaPath.trim() ? { mediaPath: note.mediaPath.trim() } : {}),
     resolved: note.resolved === true,
     createdAt: normalizeIsoDate(note.createdAt),
-    ...(note.updatedAt ? { updatedAt: normalizeIsoDate(note.updatedAt) } : {})
+    ...(note.updatedAt ? { updatedAt: normalizeIsoDate(note.updatedAt) } : {}),
   };
 }
 
 export function createTimelineNote(
-  note: Omit<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'>>,
-  maxTime?: number
+  note: Omit<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'> &
+    Partial<Pick<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'>>,
+  maxTime?: number,
 ): TimelineNote {
   const start = normalizeTimelinePointTime(note.start, maxTime);
   const end = normalizeTimelinePointTime(note.end, maxTime);
@@ -817,13 +872,13 @@ export function createTimelineNote(
     end: round(Math.max(start, end)),
     text: normalizeTimelineNoteText(note.text),
     color: normalizeTimelineNoteColor(note.color),
-    createdAt: normalizeIsoDate(note.createdAt)
+    createdAt: normalizeIsoDate(note.createdAt),
   };
 }
 
 export function createExportRange(
   range: Omit<ExportRange, 'id' | 'label'> & Partial<Pick<ExportRange, 'id' | 'label'>>,
-  maxTime?: number
+  maxTime?: number,
 ): ExportRange {
   const start = normalizeTimelinePointTime(range.start, maxTime);
   const end = normalizeTimelinePointTime(range.end, maxTime);
@@ -831,13 +886,13 @@ export function createExportRange(
     id: range.id ?? createId('export-range'),
     label: normalizeExportRangeLabel(range.label),
     start: round(Math.min(start, end)),
-    end: round(Math.max(start, end))
+    end: round(Math.max(start, end)),
   };
 }
 
 export function createProtectedRange(
   range: Omit<ProtectedRange, 'id' | 'label'> & Partial<Pick<ProtectedRange, 'id' | 'label'>>,
-  maxTime?: number
+  maxTime?: number,
 ): ProtectedRange {
   const start = normalizeTimelinePointTime(range.start, maxTime);
   const end = normalizeTimelinePointTime(range.end, maxTime);
@@ -845,13 +900,21 @@ export function createProtectedRange(
     id: range.id ?? createId('protected-range'),
     label: normalizeProtectedRangeLabel(range.label),
     start: round(Math.min(start, end)),
-    end: round(Math.max(start, end))
+    end: round(Math.max(start, end)),
   };
 }
 
 export function createTrack(
-  track: Omit<Track, 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
-    Partial<Pick<Track, 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
+  track: Omit<
+    Track,
+    'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'
+  > &
+    Partial<
+      Pick<
+        Track,
+        'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'
+      >
+    >,
 ): Track {
   const next: Track = {
     ...track,
@@ -862,7 +925,7 @@ export function createTrack(
     volume: normalizeTrackVolume(track.volume),
     pan: normalizeTrackPan(track.pan),
     eq: normalizeTrackEQ(track.eq),
-    compressor: normalizeTrackCompressor(track.compressor)
+    compressor: normalizeTrackCompressor(track.compressor),
   };
   if (track.type === 'subtitle') {
     next.language = normalizeSubtitleLanguage(track.language);
@@ -908,37 +971,39 @@ export function createProject(name = 'Untitled Project'): Project {
     beatSnapSuggestions: [],
     mediaCollections: [],
     characterTimeline: undefined,
-    preflightReport: undefined
+    preflightReport: undefined,
   };
 }
 
 export function createSubclip(
-  input: Omit<Subclip, "id" | "createdAt"> & Partial<Pick<Subclip, "id" | "createdAt">>
+  input: Omit<Subclip, 'id' | 'createdAt'> & Partial<Pick<Subclip, 'id' | 'createdAt'>>,
 ): Subclip {
   return {
-    id: input.id ?? createId("subclip"),
+    id: input.id ?? createId('subclip'),
     name: input.name,
     sourceMediaId: input.sourceMediaId,
     inPoint: round(Math.max(0, input.inPoint)),
     outPoint: round(Math.max(input.inPoint, input.outPoint)),
     color: normalizeTimelineLabelColor(input.color),
     description: input.description,
-    createdAt: input.createdAt ?? new Date().toISOString()
+    createdAt: input.createdAt ?? new Date().toISOString(),
   };
 }
 
-export function createSequence(sequence: Omit<Sequence, 'id' | 'name'> & Partial<Pick<Sequence, 'id' | 'name'>>): Sequence {
-    return {
-      id: sequence.id ?? createId('sequence'),
-      name: normalizeSequenceName(sequence.name),
-      timeline: sequence.timeline,
-      ...(sequence.settings ? { settings: sequence.settings } : {})
-    };
-  }
+export function createSequence(
+  sequence: Omit<Sequence, 'id' | 'name'> & Partial<Pick<Sequence, 'id' | 'name'>>,
+): Sequence {
+  return {
+    id: sequence.id ?? createId('sequence'),
+    name: normalizeSequenceName(sequence.name),
+    timeline: sequence.timeline,
+    ...(sequence.settings ? { settings: sequence.settings } : {}),
+  };
+}
 
 export function createBaseClip(
   input: Omit<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'> &
-    Partial<Pick<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>
+    Partial<Pick<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>,
 ): BaseClip {
   const beatMarkers = normalizeClipBeatMarkers(input.beatMarkers, input.duration);
   const detectedBpm = normalizeDetectedBpm(input.detectedBpm);
@@ -954,7 +1019,9 @@ export function createBaseClip(
     trimEnd: round(Math.max(0, input.trimEnd)),
     speed: clampClipSpeed(input.speed),
     colorCorrection: normalizeColorCorrection(input.colorCorrection),
-    ...(input.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(input.colorNodeGraph, input.colorCorrection) } : {}),
+    ...(input.colorNodeGraph
+      ? { colorNodeGraph: normalizeColorNodeGraph(input.colorNodeGraph, input.colorCorrection) }
+      : {}),
     ...(input.colorGradingGraph ? { colorGradingGraph: normalizeColorGradingGraph(input.colorGradingGraph) } : {}),
     transform: normalizeTransform(input.transform),
     chromaKey: normalizeChromaKey(input.chromaKey),
@@ -982,17 +1049,23 @@ export function createBaseClip(
     ...(detectedBpm !== undefined ? { detectedBpm } : {}),
     ...(scenecuts ? { scenecuts } : {}),
     ...(Array.isArray(input.aiColorHistory) ? { aiColorHistory: input.aiColorHistory.slice(0, 3) } : {}),
-    ...(Array.isArray(input.privacyRedactions) ? { privacyRedactions: normalizePrivacyRedactions(input.privacyRedactions) } : {}),
+    ...(Array.isArray(input.privacyRedactions)
+      ? { privacyRedactions: normalizePrivacyRedactions(input.privacyRedactions) }
+      : {}),
     ...(input.beatSnapped === true ? { beatSnapped: true } : {}),
-    ...(input.aiLookMatch && typeof input.aiLookMatch === 'object' ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) } : {}),
-    ...(input.aiPipSuggestion && typeof input.aiPipSuggestion === 'object' ? { aiPipSuggestion: normalizeAiPipSuggestion(input.aiPipSuggestion) } : {}),
-    ...(Array.isArray(input.flashWarnings) ? { flashWarnings: normalizeFlashWarnings(input.flashWarnings) } : {})
+    ...(input.aiLookMatch && typeof input.aiLookMatch === 'object'
+      ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) }
+      : {}),
+    ...(input.aiPipSuggestion && typeof input.aiPipSuggestion === 'object'
+      ? { aiPipSuggestion: normalizeAiPipSuggestion(input.aiPipSuggestion) }
+      : {}),
+    ...(Array.isArray(input.flashWarnings) ? { flashWarnings: normalizeFlashWarnings(input.flashWarnings) } : {}),
   };
 }
 
 export function createNestedSequenceClip(
   input: Omit<NestedSequenceClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'volume'> &
-    Partial<Pick<NestedSequenceClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'volume'>>
+    Partial<Pick<NestedSequenceClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'volume'>>,
 ): NestedSequenceClip {
   return {
     ...createBaseClip(input),
@@ -1007,34 +1080,34 @@ export function createNestedSequenceClip(
     fadeInCurve: normalizeAudioFadeCurve(input.fadeInCurve),
     fadeOutCurve: normalizeAudioFadeCurve(input.fadeOutCurve),
     spatialAudio: normalizeSpatialAudio(input.spatialAudio),
-    multicam: normalizeMulticamSequence(input.multicam, input.duration)
+    multicam: normalizeMulticamSequence(input.multicam, input.duration),
   };
 }
 
 export function createAdjustmentClip(
   input: Omit<AdjustmentClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection'> &
-    Partial<Pick<AdjustmentClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>
+    Partial<Pick<AdjustmentClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>,
 ): AdjustmentClip {
   return {
     ...createBaseClip(input),
-    type: 'adjustment'
+    type: 'adjustment',
   };
 }
 
 export function createMotionGraphicClip(
   input: Omit<MotionGraphicClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection' | 'motionGraphic'> &
-    Partial<Pick<MotionGraphicClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'motionGraphic'>>
+    Partial<Pick<MotionGraphicClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'motionGraphic'>>,
 ): MotionGraphicClip {
   return {
     ...createBaseClip(input),
     type: 'motion-graphic',
-    motionGraphic: normalizeMotionGraphic(input.motionGraphic, input.duration)
+    motionGraphic: normalizeMotionGraphic(input.motionGraphic, input.duration),
   };
 }
 
 export function createCreditsClip(
   input: Omit<CreditsClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection' | 'rows' | 'rollSpeed' | 'style'> &
-    Partial<Pick<CreditsClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'rows' | 'rollSpeed' | 'style'>>
+    Partial<Pick<CreditsClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'rows' | 'rollSpeed' | 'style'>>,
 ): CreditsClip {
   const text = typeof input.text === 'string' ? input.text : '';
   return {
@@ -1043,14 +1116,14 @@ export function createCreditsClip(
     text,
     rows: normalizeCreditsRows(input.rows, text),
     rollSpeed: normalizeCreditsRollSpeed(input.rollSpeed),
-    style: normalizeCreditsStyle(input.style)
+    style: normalizeCreditsStyle(input.style),
   };
 }
 
 export function createMulticamClip(
   angles: MulticamClipAngle[],
   syncMode: MulticamSyncMode,
-  syncReferenceAngle: number
+  syncReferenceAngle: number,
 ): MulticamClip {
   if (syncReferenceAngle < 0 || syncReferenceAngle >= angles.length) {
     throw new Error('syncReferenceAngle out of range');
@@ -1062,20 +1135,20 @@ export function createMulticamClip(
     start: 0,
     duration: 0,
     trimStart: 0,
-    trimEnd: 0
+    trimEnd: 0,
   });
   return {
     ...baseClip,
     type: 'multicam',
-    angles: angles.map(a => ({
+    angles: angles.map((a) => ({
       ...a,
       ...(a.colorCorrection ? { colorCorrection: { ...a.colorCorrection } } : {}),
-      ...(a.transform ? { transform: { ...a.transform } } : {})
+      ...(a.transform ? { transform: { ...a.transform } } : {}),
     })),
     activeAngle: 0,
     switchPoints: [],
     syncMode,
-    syncReferenceAngle
+    syncReferenceAngle,
   };
 }
 
@@ -1096,7 +1169,7 @@ export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrectio
     lutPath: normalizeLutPath(colorCorrection?.lutPath),
     luts: normalizeLutLayers(colorCorrection?.luts, colorCorrection?.lutPath),
     colorCurves: normalizeColorCurves(colorCorrection?.colorCurves),
-    threeWayColor: normalizeThreeWayColor(colorCorrection?.threeWayColor)
+    threeWayColor: normalizeThreeWayColor(colorCorrection?.threeWayColor),
   };
 }
 
@@ -1115,8 +1188,10 @@ export function normalizeChromaKey(chromaKey: Partial<ChromaKey> | undefined): C
     lumaThreshold: normalizeUnit(chromaKey?.lumaThreshold, DEFAULT_CHROMA_KEY.lumaThreshold),
     lumaTolerance: normalizeUnit(chromaKey?.lumaTolerance, DEFAULT_CHROMA_KEY.lumaTolerance),
     lumaSoftness: normalizeUnit(chromaKey?.lumaSoftness, DEFAULT_CHROMA_KEY.lumaSoftness),
-    differenceReferenceTime: round(Math.max(0, finiteOrDefault(chromaKey?.differenceReferenceTime, DEFAULT_CHROMA_KEY.differenceReferenceTime))),
-    differenceThreshold: normalizeUnit(chromaKey?.differenceThreshold, DEFAULT_CHROMA_KEY.differenceThreshold)
+    differenceReferenceTime: round(
+      Math.max(0, finiteOrDefault(chromaKey?.differenceReferenceTime, DEFAULT_CHROMA_KEY.differenceReferenceTime)),
+    ),
+    differenceThreshold: normalizeUnit(chromaKey?.differenceThreshold, DEFAULT_CHROMA_KEY.differenceThreshold),
   };
 }
 
@@ -1125,14 +1200,17 @@ export function isChromaKeyEnabled(chromaKey: Partial<ChromaKey> | undefined): b
 }
 
 export function normalizeStabilization(stabilization: Partial<ClipStabilization> | undefined): ClipStabilization {
-  const trfPath = typeof stabilization?.trfPath === 'string' && stabilization.trfPath.trim() ? stabilization.trfPath.trim() : null;
+  const trfPath =
+    typeof stabilization?.trfPath === 'string' && stabilization.trfPath.trim() ? stabilization.trfPath.trim() : null;
   return {
     enabled: stabilization?.enabled === true,
-    smoothing: Math.round(Math.min(100, Math.max(1, finiteOrDefault(stabilization?.smoothing, DEFAULT_STABILIZATION.smoothing)))),
+    smoothing: Math.round(
+      Math.min(100, Math.max(1, finiteOrDefault(stabilization?.smoothing, DEFAULT_STABILIZATION.smoothing))),
+    ),
     zoom: round(Math.min(5, Math.max(0, finiteOrDefault(stabilization?.zoom, DEFAULT_STABILIZATION.zoom)))),
     analyzed: stabilization?.analyzed === true,
     trfPath,
-    ...normalizeShakeAnalysisFields(stabilization)
+    ...normalizeShakeAnalysisFields(stabilization),
   };
 }
 
@@ -1145,14 +1223,21 @@ function normalizeShakeAnalysisFields(stabilization: Partial<ClipStabilization> 
   if (!stabilization?.shakeScore && stabilization?.shakeScore !== 0) return {};
   const score = round(Math.max(0, Math.min(100, stabilization.shakeScore)));
   const validSeverities = ['low', 'medium', 'high'] as const;
-  const severity = validSeverities.includes(stabilization.severity as typeof validSeverities[number])
-    ? stabilization.severity as typeof validSeverities[number]
-    : score < 20 ? 'low' : score <= 50 ? 'medium' : 'high';
+  const severity = validSeverities.includes(stabilization.severity as (typeof validSeverities)[number])
+    ? (stabilization.severity as (typeof validSeverities)[number])
+    : score < 20
+      ? 'low'
+      : score <= 50
+        ? 'medium'
+        : 'high';
   return {
     shakeScore: score,
     severity,
     suggestedFilter: stabilization.suggestedFilter === 'vidstab' ? 'vidstab' : 'none',
-    sampledAt: typeof stabilization.sampledAt === 'number' && Number.isFinite(stabilization.sampledAt) ? stabilization.sampledAt : undefined
+    sampledAt:
+      typeof stabilization.sampledAt === 'number' && Number.isFinite(stabilization.sampledAt)
+        ? stabilization.sampledAt
+        : undefined,
   };
 }
 export function isStabilizationExportable(stabilization: Partial<ClipStabilization> | undefined): boolean {
@@ -1160,36 +1245,65 @@ export function isStabilizationExportable(stabilization: Partial<ClipStabilizati
   return normalized.enabled && normalized.analyzed && Boolean(normalized.trfPath);
 }
 
-export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFrameInterpolation> | undefined): ClipFrameInterpolation {
-  const targetFps = FRAME_INTERPOLATION_TARGET_FPS.includes(frameInterpolation?.targetFps as FrameInterpolationTargetFps)
+export function normalizeFrameInterpolation(
+  frameInterpolation: Partial<ClipFrameInterpolation> | undefined,
+): ClipFrameInterpolation {
+  const targetFps = FRAME_INTERPOLATION_TARGET_FPS.includes(
+    frameInterpolation?.targetFps as FrameInterpolationTargetFps,
+  )
     ? (frameInterpolation?.targetFps as FrameInterpolationTargetFps)
     : DEFAULT_FRAME_INTERPOLATION.targetFps;
   const normalized: ClipFrameInterpolation = {
     enabled: frameInterpolation?.enabled === true,
     targetFps,
-    mode: FRAME_INTERPOLATION_MODES.includes(frameInterpolation?.mode as FrameInterpolationMode) ? (frameInterpolation?.mode as FrameInterpolationMode) : DEFAULT_FRAME_INTERPOLATION.mode,
-    protectionFrames: Math.min(5, Math.max(0, Math.round(Number.isFinite(frameInterpolation?.protectionFrames) ? frameInterpolation!.protectionFrames! : DEFAULT_FRAME_INTERPOLATION.protectionFrames)))
+    mode: FRAME_INTERPOLATION_MODES.includes(frameInterpolation?.mode as FrameInterpolationMode)
+      ? (frameInterpolation?.mode as FrameInterpolationMode)
+      : DEFAULT_FRAME_INTERPOLATION.mode,
+    protectionFrames: Math.min(
+      5,
+      Math.max(
+        0,
+        Math.round(
+          Number.isFinite(frameInterpolation?.protectionFrames)
+            ? frameInterpolation!.protectionFrames!
+            : DEFAULT_FRAME_INTERPOLATION.protectionFrames,
+        ),
+      ),
+    ),
   };
   if (frameInterpolation?.quality && Number.isFinite(frameInterpolation.quality.ssim)) {
     normalized.quality = {
       ssim: Math.max(0, Math.min(1, frameInterpolation.quality.ssim)),
       grade:
-        frameInterpolation.quality.grade === 'excellent' || frameInterpolation.quality.grade === 'good' || frameInterpolation.quality.grade === 'poor'
+        frameInterpolation.quality.grade === 'excellent' ||
+        frameInterpolation.quality.grade === 'good' ||
+        frameInterpolation.quality.grade === 'poor'
           ? frameInterpolation.quality.grade
           : 'poor',
-      sampleCount: Math.max(0, Math.round(Number.isFinite(frameInterpolation.quality.sampleCount) ? frameInterpolation.quality.sampleCount : 0)),
-      ...(typeof frameInterpolation.quality.evaluatedAt === 'string' ? { evaluatedAt: frameInterpolation.quality.evaluatedAt } : {})
+      sampleCount: Math.max(
+        0,
+        Math.round(
+          Number.isFinite(frameInterpolation.quality.sampleCount) ? frameInterpolation.quality.sampleCount : 0,
+        ),
+      ),
+      ...(typeof frameInterpolation.quality.evaluatedAt === 'string'
+        ? { evaluatedAt: frameInterpolation.quality.evaluatedAt }
+        : {}),
     };
   }
   return normalized;
 }
 
 export function normalizeSlowMotionMode(mode: ClipSlowMotionMode | string | undefined): ClipSlowMotionMode {
-  return CLIP_SLOW_MOTION_MODES.includes(mode as ClipSlowMotionMode) ? (mode as ClipSlowMotionMode) : DEFAULT_SLOW_MOTION_MODE;
+  return CLIP_SLOW_MOTION_MODES.includes(mode as ClipSlowMotionMode)
+    ? (mode as ClipSlowMotionMode)
+    : DEFAULT_SLOW_MOTION_MODE;
 }
 
 export function normalizeClipProjection(projection: ClipProjection | string | undefined): ClipProjection {
-  return projection === 'equirectangular' || projection === 'cubemap' || projection === 'flat' ? projection : DEFAULT_CLIP_PROJECTION;
+  return projection === 'equirectangular' || projection === 'cubemap' || projection === 'flat'
+    ? projection
+    : DEFAULT_CLIP_PROJECTION;
 }
 
 export function normalizeClipPanoramaView(panorama: Partial<ClipPanoramaView> | undefined): ClipPanoramaView {
@@ -1198,7 +1312,10 @@ export function normalizeClipPanoramaView(panorama: Partial<ClipPanoramaView> | 
     pitch: round(Math.min(90, Math.max(-90, finiteOrDefault(panorama?.pitch, DEFAULT_CLIP_PANORAMA_VIEW.pitch)))),
     roll: normalizePanoramaDegrees(panorama?.roll, DEFAULT_CLIP_PANORAMA_VIEW.roll),
     fov: round(Math.min(120, Math.max(60, finiteOrDefault(panorama?.fov, DEFAULT_CLIP_PANORAMA_VIEW.fov)))),
-    outputProjection: panorama?.outputProjection === 'equirectangular' || panorama?.outputProjection === 'flat' ? panorama.outputProjection : DEFAULT_CLIP_PANORAMA_VIEW.outputProjection
+    outputProjection:
+      panorama?.outputProjection === 'equirectangular' || panorama?.outputProjection === 'flat'
+        ? panorama.outputProjection
+        : DEFAULT_CLIP_PANORAMA_VIEW.outputProjection,
   };
 }
 
@@ -1207,30 +1324,76 @@ function normalizePanoramaDegrees(value: number | undefined, fallback: number): 
 }
 
 export function normalizeVideoDenoisePreset(preset: VideoDenoisePreset | string | undefined): VideoDenoisePreset {
-  return preset === 'low' || preset === 'medium' || preset === 'high' || preset === 'custom' || preset === 'off' ? preset : 'off';
+  return preset === 'low' || preset === 'medium' || preset === 'high' || preset === 'custom' || preset === 'off'
+    ? preset
+    : 'off';
 }
 
-export function normalizeVideoRestoration(restoration: Partial<ClipVideoRestoration> | undefined): ClipVideoRestoration {
+export function normalizeVideoRestoration(
+  restoration: Partial<ClipVideoRestoration> | undefined,
+): ClipVideoRestoration {
   const preset = normalizeVideoDenoisePreset(restoration?.temporalDenoise?.preset);
-  const presetValues = preset === 'low' || preset === 'medium' || preset === 'high' ? VIDEO_TEMPORAL_DENOISE_PRESETS[preset] : DEFAULT_VIDEO_RESTORATION.temporalDenoise;
+  const presetValues =
+    preset === 'low' || preset === 'medium' || preset === 'high'
+      ? VIDEO_TEMPORAL_DENOISE_PRESETS[preset]
+      : DEFAULT_VIDEO_RESTORATION.temporalDenoise;
   const temporalSource = preset === 'custom' ? restoration?.temporalDenoise : presetValues;
   return {
     deinterlace: {
       enabled: restoration?.deinterlace?.enabled === true,
-      mode: restoration?.deinterlace?.mode === 1 ? 1 : 0
+      mode: restoration?.deinterlace?.mode === 1 ? 1 : 0,
     },
     temporalDenoise: {
       preset,
-      lumaSpatial: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.lumaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaSpatial)))),
-      chromaSpatial: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.chromaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.chromaSpatial)))),
-      lumaTmp: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.lumaTmp, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaTmp))))
+      lumaSpatial: round(
+        Math.min(
+          20,
+          Math.max(
+            0,
+            finiteOrDefault(temporalSource?.lumaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaSpatial),
+          ),
+        ),
+      ),
+      chromaSpatial: round(
+        Math.min(
+          20,
+          Math.max(
+            0,
+            finiteOrDefault(temporalSource?.chromaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.chromaSpatial),
+          ),
+        ),
+      ),
+      lumaTmp: round(
+        Math.min(
+          20,
+          Math.max(0, finiteOrDefault(temporalSource?.lumaTmp, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaTmp)),
+        ),
+      ),
     },
     spatialDenoise: {
       enabled: restoration?.spatialDenoise?.enabled === true,
-      strength: round(Math.min(30, Math.max(0, finiteOrDefault(restoration?.spatialDenoise?.strength, DEFAULT_VIDEO_RESTORATION.spatialDenoise.strength)))),
-      patchSize: normalizeOddKernel(restoration?.spatialDenoise?.patchSize, DEFAULT_VIDEO_RESTORATION.spatialDenoise.patchSize, 1, 99),
-      researchSize: normalizeOddKernel(restoration?.spatialDenoise?.researchSize, DEFAULT_VIDEO_RESTORATION.spatialDenoise.researchSize, 1, 99)
-    }
+      strength: round(
+        Math.min(
+          30,
+          Math.max(
+            0,
+            finiteOrDefault(restoration?.spatialDenoise?.strength, DEFAULT_VIDEO_RESTORATION.spatialDenoise.strength),
+          ),
+        ),
+      ),
+      patchSize: normalizeOddKernel(
+        restoration?.spatialDenoise?.patchSize,
+        DEFAULT_VIDEO_RESTORATION.spatialDenoise.patchSize,
+        1,
+        99,
+      ),
+      researchSize: normalizeOddKernel(
+        restoration?.spatialDenoise?.researchSize,
+        DEFAULT_VIDEO_RESTORATION.spatialDenoise.researchSize,
+        1,
+        99,
+      ),
+    },
   };
 }
 
@@ -1239,7 +1402,13 @@ export function suggestDeinterlaceMode(fieldOrder: string | null | undefined): V
   if (!normalized || normalized === 'unknown' || normalized === 'progressive') {
     return null;
   }
-  return normalized === 'tt' || normalized === 'bb' || normalized === 'tb' || normalized === 'bt' || normalized.includes('field') ? 0 : null;
+  return normalized === 'tt' ||
+    normalized === 'bb' ||
+    normalized === 'tb' ||
+    normalized === 'bt' ||
+    normalized.includes('field')
+    ? 0
+    : null;
 }
 
 function normalizeOddKernel(value: number | undefined, fallback: number, min: number, max: number): number {
@@ -1247,11 +1416,15 @@ function normalizeOddKernel(value: number | undefined, fallback: number, min: nu
   return rounded % 2 === 1 ? rounded : Math.min(max, rounded + 1);
 }
 
-export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[] | undefined, duration = Number.POSITIVE_INFINITY): MotionTrackPoint[] | undefined {
+export function normalizeMotionTrack(
+  points: readonly Partial<MotionTrackPoint>[] | undefined,
+  duration = Number.POSITIVE_INFINITY,
+): MotionTrackPoint[] | undefined {
   if (!Array.isArray(points)) {
     return undefined;
   }
-  const maxTime = typeof duration === 'number' && Number.isFinite(duration) ? Math.max(0, duration) : Number.POSITIVE_INFINITY;
+  const maxTime =
+    typeof duration === 'number' && Number.isFinite(duration) ? Math.max(0, duration) : Number.POSITIVE_INFINITY;
   const normalized = points.flatMap((point) => {
     if (!Number.isFinite(point.time) || !Number.isFinite(point.dx) || !Number.isFinite(point.dy)) {
       return [];
@@ -1260,8 +1433,8 @@ export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[
       {
         time: round(Math.min(maxTime, Math.max(0, point.time!))),
         dx: round(Math.min(100_000, Math.max(-100_000, point.dx!))),
-        dy: round(Math.min(100_000, Math.max(-100_000, point.dy!)))
-      }
+        dy: round(Math.min(100_000, Math.max(-100_000, point.dy!))),
+      },
     ];
   });
   normalized.sort((left, right) => left.time - right.time || left.dx - right.dx || left.dy - right.dy);
@@ -1271,17 +1444,19 @@ export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[
 export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | undefined): ClipAudioDenoise {
   return {
     enabled: audioDenoise?.enabled === true,
-    strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
+    strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength)))),
   };
 }
 
 export function normalizeAILocalDenoise(aiLocalDenoise: Partial<ClipAILocalDenoise> | undefined): ClipAILocalDenoise {
   return {
     enabled: aiLocalDenoise?.enabled === true,
-    strength: round(Math.min(1, Math.max(0, finiteOrDefault(aiLocalDenoise?.strength, DEFAULT_AI_LOCAL_DENOISE.strength)))),
+    strength: round(
+      Math.min(1, Math.max(0, finiteOrDefault(aiLocalDenoise?.strength, DEFAULT_AI_LOCAL_DENOISE.strength))),
+    ),
     outputPath: aiLocalDenoise?.outputPath,
     originalPath: aiLocalDenoise?.originalPath,
-    processedAt: aiLocalDenoise?.processedAt
+    processedAt: aiLocalDenoise?.processedAt,
   };
 }
 
@@ -1302,11 +1477,19 @@ export function normalizeAudioPitchSemitones(semitones: number | undefined): num
 }
 
 export function normalizeAudioFadeCurve(curve: AudioFadeCurve | undefined): AudioFadeCurve {
-  return curve === 'ease-in' || curve === 'ease-out' || curve === 'ease-in-out' || curve === 'linear' ? curve : DEFAULT_AUDIO_FADE_CURVE;
+  return curve === 'ease-in' || curve === 'ease-out' || curve === 'ease-in-out' || curve === 'linear'
+    ? curve
+    : DEFAULT_AUDIO_FADE_CURVE;
 }
 
-export function normalizeAudioFadeDuration(duration: number | undefined, clipDuration = Number.POSITIVE_INFINITY): number {
-  const maxDuration = typeof clipDuration === 'number' && Number.isFinite(clipDuration) ? Math.max(0, clipDuration) : Number.POSITIVE_INFINITY;
+export function normalizeAudioFadeDuration(
+  duration: number | undefined,
+  clipDuration = Number.POSITIVE_INFINITY,
+): number {
+  const maxDuration =
+    typeof clipDuration === 'number' && Number.isFinite(clipDuration)
+      ? Math.max(0, clipDuration)
+      : Number.POSITIVE_INFINITY;
   return round(Math.min(maxDuration, Math.max(0, finiteOrDefault(duration, DEFAULT_AUDIO_FADE_DURATION))));
 }
 
@@ -1333,7 +1516,7 @@ export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
     ...(privacyBlur ? { privacyBlur } : {}),
     inverted: mask?.inverted === true,
     feather: normalizeUnit(mask?.feather, DEFAULT_MASK.feather),
-    enabled: mask?.enabled !== false
+    enabled: mask?.enabled !== false,
   };
 }
 
@@ -1341,7 +1524,9 @@ export function normalizeMasks(masks: ClipMask[] | undefined): ClipMask[] {
   return Array.isArray(masks) ? masks.map((mask) => normalizeMask(mask)) : [];
 }
 
-export function normalizeMaskKeyframes(keyframes: readonly Partial<ClipMaskKeyframe>[] | undefined): ClipMaskKeyframe[] | undefined {
+export function normalizeMaskKeyframes(
+  keyframes: readonly Partial<ClipMaskKeyframe>[] | undefined,
+): ClipMaskKeyframe[] | undefined {
   if (!Array.isArray(keyframes)) {
     return undefined;
   }
@@ -1357,8 +1542,8 @@ export function normalizeMaskKeyframes(keyframes: readonly Partial<ClipMaskKeyfr
         x: round(Math.min(1 - w, Math.max(0, finiteOrDefault(keyframe.x, DEFAULT_MASK.x)))),
         y: round(Math.min(1 - h, Math.max(0, finiteOrDefault(keyframe.y, DEFAULT_MASK.y)))),
         w,
-        h
-      }
+        h,
+      },
     ];
   });
   normalized.sort((left, right) => left.time - right.time || left.x - right.x || left.y - right.y);
@@ -1372,7 +1557,10 @@ export function normalizePrivacyBlur(privacyBlur: Partial<ClipPrivacyBlur> | und
   return {
     enabled: true,
     effect: normalizePrivacyBlurEffect(privacyBlur.effect),
-    color: typeof privacyBlur.color === 'string' && privacyBlur.color.trim() ? privacyBlur.color.trim() : DEFAULT_PRIVACY_BLUR.color
+    color:
+      typeof privacyBlur.color === 'string' && privacyBlur.color.trim()
+        ? privacyBlur.color.trim()
+        : DEFAULT_PRIVACY_BLUR.color,
   };
 }
 
@@ -1384,7 +1572,7 @@ export function normalizeClipBorder(border: Partial<ClipBorder> | undefined): Cl
   return {
     enabled: border?.enabled === true,
     color: normalizeHexColor(border?.color, DEFAULT_CLIP_BORDER.color),
-    width: Math.round(Math.min(80, Math.max(1, finiteOrDefault(border?.width, DEFAULT_CLIP_BORDER.width))))
+    width: Math.round(Math.min(80, Math.max(1, finiteOrDefault(border?.width, DEFAULT_CLIP_BORDER.width)))),
   };
 }
 
@@ -1394,12 +1582,17 @@ export function normalizeTextPath(pathText: Partial<TextPathOptions> | undefined
     enabled: pathText?.enabled === true,
     path: path.length >= 2 ? path : DEFAULT_TEXT_PATH_POINTS.map((point) => clonePathPoint(point)),
     startOffset: normalizeUnit(pathText?.startOffset, DEFAULT_TEXT_PATH.startOffset),
-    letterSpacing: round(Math.min(200, Math.max(0, finiteOrDefault(pathText?.letterSpacing, DEFAULT_TEXT_PATH.letterSpacing)))),
-    rotateCharacters: pathText?.rotateCharacters !== false
+    letterSpacing: round(
+      Math.min(200, Math.max(0, finiteOrDefault(pathText?.letterSpacing, DEFAULT_TEXT_PATH.letterSpacing))),
+    ),
+    rotateCharacters: pathText?.rotateCharacters !== false,
   };
 }
 
-export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | undefined, duration = Number.POSITIVE_INFINITY): MulticamSequence | undefined {
+export function normalizeMulticamSequence(
+  multicam: Partial<MulticamSequence> | undefined,
+  duration = Number.POSITIVE_INFINITY,
+): MulticamSequence | undefined {
   if (!multicam || !Array.isArray(multicam.angles) || multicam.angles.length < 2) {
     return undefined;
   }
@@ -1409,7 +1602,7 @@ export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | 
       clipId: typeof angle.clipId === 'string' ? angle.clipId : '',
       trackId: typeof angle.trackId === 'string' ? angle.trackId : '',
       name: typeof angle.name === 'string' && angle.name.trim() ? angle.name.trim() : `Camera ${index + 1}`,
-      offset: round(finiteOrDefault(angle.offset, 0))
+      offset: round(finiteOrDefault(angle.offset, 0)),
     }))
     .filter((angle) => angle.clipId && angle.trackId)
     .slice(0, 8);
@@ -1422,7 +1615,7 @@ export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | 
     .map((item, index) => ({
       id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : createId('multicam-switch'),
       time: round(Math.min(maxTime, Math.max(0, finiteOrDefault(item.time, index === 0 ? 0 : maxTime)))),
-      angleId: typeof item.angleId === 'string' && angleIds.has(item.angleId) ? item.angleId : angles[0].id
+      angleId: typeof item.angleId === 'string' && angleIds.has(item.angleId) ? item.angleId : angles[0].id,
     }))
     .filter((item) => item.time <= maxTime)
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
@@ -1435,14 +1628,16 @@ export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | 
   }
   return {
     angles,
-    switches: Array.from(byTime.values()).sort((left, right) => left.time - right.time || left.id.localeCompare(right.id)),
-    aiCutSuggestions: normalizeAiCutSuggestions(multicam.aiCutSuggestions, angleIds)
+    switches: Array.from(byTime.values()).sort(
+      (left, right) => left.time - right.time || left.id.localeCompare(right.id),
+    ),
+    aiCutSuggestions: normalizeAiCutSuggestions(multicam.aiCutSuggestions, angleIds),
   };
 }
 
 function normalizeAiCutSuggestions(
   suggestions: unknown,
-  validAngleIds: Set<string>
+  validAngleIds: Set<string>,
 ): MulticamAiCutSuggestion[] | undefined {
   if (!Array.isArray(suggestions) || suggestions.length === 0) return undefined;
   const normalized = suggestions
@@ -1451,18 +1646,20 @@ function normalizeAiCutSuggestions(
         s != null &&
         typeof s === 'object' &&
         typeof (s as Record<string, unknown>).time === 'number' &&
-        typeof (s as Record<string, unknown>).angleId === 'string'
+        typeof (s as Record<string, unknown>).angleId === 'string',
     )
     .map((s) => ({
       time: round(Math.max(0, (s as { time: number }).time)),
       angleId: ((s as { angleId: string }).angleId || '').trim(),
-      confidence: typeof (s as { confidence?: unknown }).confidence === 'number' &&
+      confidence:
+        typeof (s as { confidence?: unknown }).confidence === 'number' &&
         Number.isFinite((s as { confidence: number }).confidence)
-        ? round(Math.min(1, Math.max(0, (s as { confidence: number }).confidence)))
-        : 0.5,
-      reason: typeof (s as { reason?: unknown }).reason === 'string'
-        ? ((s as { reason: string }).reason || '').trim().slice(0, 200)
-        : ''
+          ? round(Math.min(1, Math.max(0, (s as { confidence: number }).confidence)))
+          : 0.5,
+      reason:
+        typeof (s as { reason?: unknown }).reason === 'string'
+          ? ((s as { reason: string }).reason || '').trim().slice(0, 200)
+          : '',
     }))
     .filter((s) => s.angleId.length > 0 && validAngleIds.has(s.angleId))
     .sort((a, b) => a.time - b.time);
@@ -1479,12 +1676,14 @@ export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number
   return createTimelineMarker(marker, maxTime);
 }
 
-export function normalizeQualityEnhancement(enhancement: Partial<ClipQualityEnhancement> | undefined): ClipQualityEnhancement {
+export function normalizeQualityEnhancement(
+  enhancement: Partial<ClipQualityEnhancement> | undefined,
+): ClipQualityEnhancement {
   return {
     superResolution: enhancement?.superResolution === true,
     deblock: enhancement?.deblock === true,
     colorBoost: enhancement?.colorBoost === true,
-    frameCompensation: enhancement?.frameCompensation === true
+    frameCompensation: enhancement?.frameCompensation === true,
   };
 }
 
@@ -1494,8 +1693,10 @@ export function normalizeTimelineBookmark(bookmark: TimelineBookmark, maxTime?: 
 
 export function normalizeTransform(transform: Partial<Transform> | undefined): Transform {
   const legacyScale = clampTransformScale(transform?.scale, DEFAULT_TRANSFORM.scale);
-  const rawScaleX = typeof transform?.scaleX === 'number' && Number.isFinite(transform.scaleX) ? transform.scaleX : undefined;
-  const rawScaleY = typeof transform?.scaleY === 'number' && Number.isFinite(transform.scaleY) ? transform.scaleY : undefined;
+  const rawScaleX =
+    typeof transform?.scaleX === 'number' && Number.isFinite(transform.scaleX) ? transform.scaleX : undefined;
+  const rawScaleY =
+    typeof transform?.scaleY === 'number' && Number.isFinite(transform.scaleY) ? transform.scaleY : undefined;
   const clampedScaleX = clampTransformScale(rawScaleX, legacyScale);
   const clampedScaleY = clampTransformScale(rawScaleY, legacyScale);
   const staleUniformAxes =
@@ -1512,7 +1713,7 @@ export function normalizeTransform(transform: Partial<Transform> | undefined): T
     scaleX,
     scaleY,
     rotation: normalizeRotation(transform?.rotation),
-    opacity: round(Math.min(1, Math.max(0, finiteOrDefault(transform?.opacity, DEFAULT_TRANSFORM.opacity))))
+    opacity: round(Math.min(1, Math.max(0, finiteOrDefault(transform?.opacity, DEFAULT_TRANSFORM.opacity)))),
   };
 }
 
@@ -1538,7 +1739,10 @@ export function normalizeTimelineMarkers(markers: TimelineMarker[] | undefined, 
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-export function normalizeTimelineBookmarks(bookmarks: TimelineBookmark[] | undefined, maxTime?: number): TimelineBookmark[] {
+export function normalizeTimelineBookmarks(
+  bookmarks: TimelineBookmark[] | undefined,
+  maxTime?: number,
+): TimelineBookmark[] {
   return [...(bookmarks ?? [])]
     .map((bookmark) => normalizeTimelineBookmark(bookmark, maxTime))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
@@ -1548,7 +1752,10 @@ export function normalizeProjectAnnotation(annotation: ProjectAnnotation, maxTim
   return createProjectAnnotation(annotation, maxTime);
 }
 
-export function normalizeProjectAnnotations(annotations: ProjectAnnotation[] | undefined, maxTime?: number): ProjectAnnotation[] {
+export function normalizeProjectAnnotations(
+  annotations: ProjectAnnotation[] | undefined,
+  maxTime?: number,
+): ProjectAnnotation[] {
   return [...(annotations ?? [])]
     .map((annotation) => normalizeProjectAnnotation(annotation, maxTime))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
@@ -1558,7 +1765,10 @@ export function normalizeReviewAnnotation(annotation: ReviewAnnotation, maxTime?
   return createReviewAnnotation(annotation, maxTime);
 }
 
-export function normalizeReviewAnnotations(annotations: ReviewAnnotation[] | undefined, maxTime?: number): ReviewAnnotation[] {
+export function normalizeReviewAnnotations(
+  annotations: ReviewAnnotation[] | undefined,
+  maxTime?: number,
+): ReviewAnnotation[] {
   return [...(annotations ?? [])]
     .map((annotation) => normalizeReviewAnnotation(annotation, maxTime))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
@@ -1568,10 +1778,19 @@ export function normalizeCollaborationNote(note: CollaborationNote, maxTime?: nu
   return createCollaborationNote(note, maxTime);
 }
 
-export function normalizeCollaborationNotes(notes: CollaborationNote[] | undefined, maxTime?: number): CollaborationNote[] {
+export function normalizeCollaborationNotes(
+  notes: CollaborationNote[] | undefined,
+  maxTime?: number,
+): CollaborationNote[] {
   return [...(notes ?? [])]
     .map((note) => normalizeCollaborationNote(note, maxTime))
-    .sort((left, right) => left.start - right.start || (left.end ?? left.start) - (right.end ?? right.start) || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    .sort(
+      (left, right) =>
+        left.start - right.start ||
+        (left.end ?? left.start) - (right.end ?? right.start) ||
+        left.createdAt.localeCompare(right.createdAt) ||
+        left.id.localeCompare(right.id),
+    );
 }
 
 export function normalizeTimelineNote(note: TimelineNote, maxTime?: number): TimelineNote | undefined {
@@ -1585,7 +1804,13 @@ export function normalizeTimelineNotes(notes: TimelineNote[] | undefined, maxTim
       const normalized = normalizeTimelineNote(note, maxTime);
       return normalized ? [normalized] : [];
     })
-    .sort((left, right) => left.start - right.start || left.end - right.end || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    .sort(
+      (left, right) =>
+        left.start - right.start ||
+        left.end - right.end ||
+        left.createdAt.localeCompare(right.createdAt) ||
+        left.id.localeCompare(right.id),
+    );
 }
 
 export function normalizeExportRange(range: ExportRange, maxTime?: number): ExportRange | undefined {
@@ -1704,28 +1929,37 @@ export function normalizeTrackEQ(eq: Partial<TrackEQ> | undefined): TrackEQ {
   const inputBands = Array.isArray(eq?.bands) ? eq.bands : [];
   return {
     enabled: eq?.enabled !== false,
-    bands: DEFAULT_TRACK_EQ.bands.map((fallback, index) => normalizeTrackEQBand(inputBands[index], fallback))
+    bands: DEFAULT_TRACK_EQ.bands.map((fallback, index) => normalizeTrackEQBand(inputBands[index], fallback)),
   };
 }
 
-export function normalizeTrackEQBand(band: Partial<TrackEQBand> | undefined, fallback: TrackEQBand = DEFAULT_TRACK_EQ.bands[1]): TrackEQBand {
+export function normalizeTrackEQBand(
+  band: Partial<TrackEQBand> | undefined,
+  fallback: TrackEQBand = DEFAULT_TRACK_EQ.bands[1],
+): TrackEQBand {
   return {
     id: typeof band?.id === 'string' && band.id.trim() ? band.id : fallback.id,
     type: normalizeTrackEQBandType(band?.type, fallback.type),
     frequency: round(Math.min(20_000, Math.max(20, finiteOrDefault(band?.frequency, fallback.frequency)))),
     gain: round(Math.min(24, Math.max(-24, finiteOrDefault(band?.gain, fallback.gain)))),
-    q: round(Math.min(4, Math.max(0.1, finiteOrDefault(band?.q, fallback.q))))
+    q: round(Math.min(4, Math.max(0.1, finiteOrDefault(band?.q, fallback.q)))),
   };
 }
 
 export function normalizeTrackCompressor(compressor: Partial<TrackCompressor> | undefined): TrackCompressor {
   return {
     enabled: compressor?.enabled === true,
-    threshold: round(Math.min(0, Math.max(-60, finiteOrDefault(compressor?.threshold, DEFAULT_TRACK_COMPRESSOR.threshold)))),
+    threshold: round(
+      Math.min(0, Math.max(-60, finiteOrDefault(compressor?.threshold, DEFAULT_TRACK_COMPRESSOR.threshold))),
+    ),
     ratio: round(Math.min(20, Math.max(1, finiteOrDefault(compressor?.ratio, DEFAULT_TRACK_COMPRESSOR.ratio)))),
     attack: round(Math.min(2000, Math.max(0.01, finiteOrDefault(compressor?.attack, DEFAULT_TRACK_COMPRESSOR.attack)))),
-    release: round(Math.min(9000, Math.max(0.01, finiteOrDefault(compressor?.release, DEFAULT_TRACK_COMPRESSOR.release)))),
-    makeupGain: round(Math.min(24, Math.max(0, finiteOrDefault(compressor?.makeupGain, DEFAULT_TRACK_COMPRESSOR.makeupGain))))
+    release: round(
+      Math.min(9000, Math.max(0.01, finiteOrDefault(compressor?.release, DEFAULT_TRACK_COMPRESSOR.release))),
+    ),
+    makeupGain: round(
+      Math.min(24, Math.max(0, finiteOrDefault(compressor?.makeupGain, DEFAULT_TRACK_COMPRESSOR.makeupGain))),
+    ),
   };
 }
 
@@ -1749,19 +1983,29 @@ export function getProjectSequences(project: Pick<Project, 'timeline' | 'sequenc
   return [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: project.timeline }, ...sequences];
 }
 
-export function getProjectActiveSequenceId(project: Pick<Project, 'activeSequenceId' | 'sequences' | 'timeline'>): string {
+export function getProjectActiveSequenceId(
+  project: Pick<Project, 'activeSequenceId' | 'sequences' | 'timeline'>,
+): string {
   const sequences = getProjectSequences(project);
-  return sequences.some((sequence) => sequence.id === project.activeSequenceId) ? project.activeSequenceId : PRIMARY_SEQUENCE_ID;
+  return sequences.some((sequence) => sequence.id === project.activeSequenceId)
+    ? project.activeSequenceId
+    : PRIMARY_SEQUENCE_ID;
 }
 
-export function getProjectPrimaryTimeline(project: Pick<Project, 'activeSequenceId' | 'timeline' | 'sequences'>): Timeline {
+export function getProjectPrimaryTimeline(
+  project: Pick<Project, 'activeSequenceId' | 'timeline' | 'sequences'>,
+): Timeline {
   const synced = replaceProjectActiveTimeline(project as Project, project.timeline);
-  return getProjectSequences(synced).find((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)?.timeline ?? synced.timeline;
+  return (
+    getProjectSequences(synced).find((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)?.timeline ?? synced.timeline
+  );
 }
 
 export function replaceProjectActiveTimeline(project: Project, timeline: Timeline): Project {
   const activeSequenceId = getProjectActiveSequenceId(project);
-  const sequences = getProjectSequences(project).map((sequence) => (sequence.id === activeSequenceId ? { ...sequence, timeline } : sequence));
+  const sequences = getProjectSequences(project).map((sequence) =>
+    sequence.id === activeSequenceId ? { ...sequence, timeline } : sequence,
+  );
   return { ...project, timeline, sequences, activeSequenceId };
 }
 
@@ -1783,7 +2027,11 @@ export function getNestedSequenceDepth(project: Project, sequenceId = PRIMARY_SE
   return getNestedSequenceDepthForTimeline(project, sequence.timeline, new Set([sequenceId]));
 }
 
-export function isNestedSequenceDepthExceeded(project: Project, sequenceId = PRIMARY_SEQUENCE_ID, maxDepth = MAX_NESTED_SEQUENCE_DEPTH): boolean {
+export function isNestedSequenceDepthExceeded(
+  project: Project,
+  sequenceId = PRIMARY_SEQUENCE_ID,
+  maxDepth = MAX_NESTED_SEQUENCE_DEPTH,
+): boolean {
   return getNestedSequenceDepth(project, sequenceId) > maxDepth;
 }
 
@@ -1801,7 +2049,10 @@ function normalizeRgbColor(color: ChromaKeyColor | readonly number[] | undefined
 }
 
 function normalizeChromaKeyColors(chromaKey: Partial<ChromaKey> | undefined): ChromaKeyColor[] {
-  const candidates = Array.isArray(chromaKey?.colors) && chromaKey.colors.length > 0 ? chromaKey.colors : [chromaKey?.color ?? DEFAULT_CHROMA_KEY.color];
+  const candidates =
+    Array.isArray(chromaKey?.colors) && chromaKey.colors.length > 0
+      ? chromaKey.colors
+      : [chromaKey?.color ?? DEFAULT_CHROMA_KEY.color];
   const colors = candidates.slice(0, MAX_CHROMA_KEY_COLORS).map((color) => normalizeRgbColor(color));
   return colors.length > 0 ? colors : [[...DEFAULT_CHROMA_KEY.color]];
 }
@@ -1819,7 +2070,7 @@ function clonePathPoint(point: PathPoint): PathPoint {
     x: point.x,
     y: point.y,
     handleIn: point.handleIn ? { ...point.handleIn } : undefined,
-    handleOut: point.handleOut ? { ...point.handleOut } : undefined
+    handleOut: point.handleOut ? { ...point.handleOut } : undefined,
   };
 }
 
@@ -1896,7 +2147,7 @@ export function serializeLegacyProject(project: Project): {
       name: project.name,
       createdAt: project.createdAt,
       updatedAt: new Date().toISOString(),
-      settings: { ...project.settings }
+      settings: { ...project.settings },
     },
     assets: project.media.map((asset) => ({ ...asset })),
     timeline: {
@@ -1918,18 +2169,26 @@ export function serializeLegacyProject(project: Project): {
           masks: normalizeMasks(clip.masks),
           motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
           border: normalizeClipBorder(clip.border),
-          multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
-          ...(clip.type === 'motion-graphic' ? { motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration) } : {}),
+          multicam:
+            clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
+          ...(clip.type === 'motion-graphic'
+            ? { motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration) }
+            : {}),
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes),
           pitchData: normalizeClipPitchData(clip.pitchData),
           dataSubtitle: clip.type === 'subtitle' ? normalizeDataSubtitleSource(clip.dataSubtitle) : undefined,
-          readingSpeedWarning: clip.type === 'subtitle' ? normalizeReadingSpeedWarning((clip as { readingSpeedWarning?: unknown }).readingSpeedWarning) : undefined
+          readingSpeedWarning:
+            clip.type === 'subtitle'
+              ? normalizeReadingSpeedWarning((clip as { readingSpeedWarning?: unknown }).readingSpeedWarning)
+              : undefined,
         })),
-        musicStructure: normalizeMusicStructurePoints((track as { musicStructure?: unknown }).musicStructure)
+        musicStructure: normalizeMusicStructurePoints((track as { musicStructure?: unknown }).musicStructure),
       })),
-      continuityWarnings: normalizeContinuityWarnings((project.timeline as { continuityWarnings?: unknown }).continuityWarnings)
-    }
+      continuityWarnings: normalizeContinuityWarnings(
+        (project.timeline as { continuityWarnings?: unknown }).continuityWarnings,
+      ),
+    },
   };
 }
 
@@ -2002,7 +2261,11 @@ function normalizeReviewAnnotationUnit(value: number | undefined, fallback: numb
   return round(Math.min(1, Math.max(0, finiteOrDefault(value, fallback))));
 }
 
-function normalizeReviewAnnotationDimension(value: number | undefined, type: ReviewAnnotationType, axis: 'width' | 'height'): number {
+function normalizeReviewAnnotationDimension(
+  value: number | undefined,
+  type: ReviewAnnotationType,
+  axis: 'width' | 'height',
+): number {
   const fallback = type === 'text' ? (axis === 'width' ? 0.22 : 0.08) : type === 'arrow' ? 0.12 : 0.18;
   const finite = finiteOrDefault(value, fallback);
   if (type === 'arrow') {
@@ -2071,7 +2334,7 @@ export function normalizeLutLayers(luts: LUTLayer[] | undefined, lutPath?: strin
       .slice(0, 3)
       .map((l) => ({
         path: (typeof l.path === 'string' ? l.path.trim() : '') || '',
-        intensity: round(Math.min(1, Math.max(0, typeof l.intensity === 'number' ? l.intensity : 1)))
+        intensity: round(Math.min(1, Math.max(0, typeof l.intensity === 'number' ? l.intensity : 1))),
       }))
       .filter((l) => l.path.length > 0);
   }
@@ -2090,7 +2353,8 @@ export function normalizeClipAIReframe(value: unknown): import('./ai-reframe').C
   const obj = value as Record<string, unknown>;
   const targetAspect = typeof obj.targetAspect === 'string' ? obj.targetAspect : undefined;
   const confidence = typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? obj.confidence : undefined;
-  const generatedAt = typeof obj.generatedAt === 'number' && Number.isFinite(obj.generatedAt) ? obj.generatedAt : undefined;
+  const generatedAt =
+    typeof obj.generatedAt === 'number' && Number.isFinite(obj.generatedAt) ? obj.generatedAt : undefined;
   if (!targetAspect || confidence === undefined || generatedAt === undefined) {
     return undefined;
   }
@@ -2106,7 +2370,13 @@ export function normalizeClipAIReframe(value: unknown): import('./ai-reframe').C
     const cropY = typeof k.cropY === 'number' ? k.cropY : undefined;
     const cropW = typeof k.cropW === 'number' ? k.cropW : undefined;
     const cropH = typeof k.cropH === 'number' ? k.cropH : undefined;
-    if (time !== undefined && cropX !== undefined && cropY !== undefined && cropW !== undefined && cropH !== undefined) {
+    if (
+      time !== undefined &&
+      cropX !== undefined &&
+      cropY !== undefined &&
+      cropW !== undefined &&
+      cropH !== undefined
+    ) {
       keyframes.push({ time, cropX, cropY, cropW, cropH });
     }
   }
@@ -2129,8 +2399,16 @@ export function normalizeAnomalyIntervals(value: unknown): import('./anomaly-det
     const typ = validTypes.has(r.type as string) ? (r.type as import('./anomaly-detection').AnomalyType) : undefined;
     const startTime = typeof r.startTime === 'number' ? r.startTime : undefined;
     const endTime = typeof r.endTime === 'number' ? r.endTime : undefined;
-    const severity = validSeverities.has(r.severity as string) ? (r.severity as import('./anomaly-detection').AnomalySeverity) : undefined;
-    if (typ !== undefined && startTime !== undefined && endTime !== undefined && severity !== undefined && endTime > startTime) {
+    const severity = validSeverities.has(r.severity as string)
+      ? (r.severity as import('./anomaly-detection').AnomalySeverity)
+      : undefined;
+    if (
+      typ !== undefined &&
+      startTime !== undefined &&
+      endTime !== undefined &&
+      severity !== undefined &&
+      endTime > startTime
+    ) {
       result.push({ type: typ, startTime, endTime, severity });
     }
   }
@@ -2171,7 +2449,7 @@ function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyf
       output[property] = frames.map((frame) => ({
         ...frame,
         ...(frame.inHandle ? { inHandle: { ...frame.inHandle } } : {}),
-        ...(frame.outHandle ? { outHandle: { ...frame.outHandle } } : {})
+        ...(frame.outHandle ? { outHandle: { ...frame.outHandle } } : {}),
       }));
     }
   }
@@ -2188,18 +2466,23 @@ export function normalizePrivacyRedactions(input: unknown): ClipPrivacyRedaction
       type: r.type as PrivacyRedactionType,
       keyframes: Array.isArray(r.keyframes)
         ? r.keyframes
-            .filter((k): k is Record<string, unknown> => k != null && typeof k === 'object' && typeof k.time === 'number')
+            .filter(
+              (k): k is Record<string, unknown> => k != null && typeof k === 'object' && typeof k.time === 'number',
+            )
             .map((k) => ({
               time: round(Math.max(0, k.time as number)),
               x: round(Math.min(1, Math.max(0, typeof k.x === 'number' ? k.x : 0))),
               y: round(Math.min(1, Math.max(0, typeof k.y === 'number' ? k.y : 0))),
               w: round(Math.min(1, Math.max(0.001, typeof k.w === 'number' ? k.w : 0.1))),
-              h: round(Math.min(1, Math.max(0.001, typeof k.h === 'number' ? k.h : 0.1)))
+              h: round(Math.min(1, Math.max(0.001, typeof k.h === 'number' ? k.h : 0.1))),
             }))
             .sort((a, b) => a.time - b.time)
         : [],
-      blurStrength: typeof r.blurStrength === 'number' && Number.isFinite(r.blurStrength) ? Math.min(1, Math.max(0, r.blurStrength)) : 1,
-      enabled: r.enabled !== false
+      blurStrength:
+        typeof r.blurStrength === 'number' && Number.isFinite(r.blurStrength)
+          ? Math.min(1, Math.max(0, r.blurStrength))
+          : 1,
+      enabled: r.enabled !== false,
     }));
 }
 
@@ -2212,22 +2495,54 @@ export function normalizeAILookMatch(input: unknown): ClipAILookMatch | undefine
   const parseRgb = (v: unknown): { r: number; g: number; b: number } => {
     if (!v || typeof v !== 'object') return { r: 0, g: 0, b: 0 };
     const o = v as Record<string, unknown>;
-    return { r: typeof o.r === 'number' ? o.r : 0, g: typeof o.g === 'number' ? o.g : 0, b: typeof o.b === 'number' ? o.b : 0 };
+    return {
+      r: typeof o.r === 'number' ? o.r : 0,
+      g: typeof o.g === 'number' ? o.g : 0,
+      b: typeof o.b === 'number' ? o.b : 0,
+    };
   };
   const clampWheel = (v: { r: number; g: number; b: number }) => ({
     r: round(Math.min(1, Math.max(-1, v.r))),
     g: round(Math.min(1, Math.max(-1, v.g))),
-    b: round(Math.min(1, Math.max(-1, v.b)))
+    b: round(Math.min(1, Math.max(-1, v.b))),
   });
   return {
     sourceImageHash: obj.sourceImageHash as string,
-    wheelAdjustments: { lift: clampWheel(parseRgb(wa.lift)), gamma: clampWheel(parseRgb(wa.gamma)), gain: clampWheel(parseRgb(wa.gain)) },
-    curveControlPoints: typeof obj.curveControlPoints === 'object' && obj.curveControlPoints
-      ? obj.curveControlPoints as ClipAILookMatch['curveControlPoints']
-      : { master: [{ x: 0, y: 0 }, { x: 1, y: 1 }], r: [{ x: 0, y: 0 }, { x: 1, y: 1 }], g: [{ x: 0, y: 0 }, { x: 1, y: 1 }], b: [{ x: 0, y: 0 }, { x: 1, y: 1 }] },
-    confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
+    wheelAdjustments: {
+      lift: clampWheel(parseRgb(wa.lift)),
+      gamma: clampWheel(parseRgb(wa.gamma)),
+      gain: clampWheel(parseRgb(wa.gain)),
+    },
+    curveControlPoints:
+      typeof obj.curveControlPoints === 'object' && obj.curveControlPoints
+        ? (obj.curveControlPoints as ClipAILookMatch['curveControlPoints'])
+        : {
+            master: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            r: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            g: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+            b: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 },
+            ],
+          },
+    confidence:
+      typeof obj.confidence === 'number' && Number.isFinite(obj.confidence)
+        ? Math.min(1, Math.max(0, obj.confidence))
+        : 0,
     generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : new Date().toISOString(),
-    blendStrength: typeof obj.blendStrength === 'number' && Number.isFinite(obj.blendStrength) ? Math.min(100, Math.max(0, obj.blendStrength)) : 100
+    blendStrength:
+      typeof obj.blendStrength === 'number' && Number.isFinite(obj.blendStrength)
+        ? Math.min(100, Math.max(0, obj.blendStrength))
+        : 100,
   };
 }
 
@@ -2235,17 +2550,19 @@ export function normalizeAiPipSuggestion(input: unknown): AiPipPlacementSuggesti
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   const validCorners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
-  const corner = validCorners.includes(obj.recommendedCorner as typeof validCorners[number])
-    ? (obj.recommendedCorner as typeof validCorners[number])
+  const corner = validCorners.includes(obj.recommendedCorner as (typeof validCorners)[number])
+    ? (obj.recommendedCorner as (typeof validCorners)[number])
     : 'bottom-right';
   return {
     recommendedCorner: corner,
-    overlapReduction: typeof obj.overlapReduction === 'number' && Number.isFinite(obj.overlapReduction)
-      ? round(Math.min(100, Math.max(0, obj.overlapReduction)))
-      : 0,
-    confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence)
-      ? round(Math.min(1, Math.max(0, obj.confidence)))
-      : 0.5
+    overlapReduction:
+      typeof obj.overlapReduction === 'number' && Number.isFinite(obj.overlapReduction)
+        ? round(Math.min(100, Math.max(0, obj.overlapReduction)))
+        : 0,
+    confidence:
+      typeof obj.confidence === 'number' && Number.isFinite(obj.confidence)
+        ? round(Math.min(1, Math.max(0, obj.confidence)))
+        : 0.5,
   };
 }
 
@@ -2253,28 +2570,32 @@ export function normalizePlatformFitSuggestion(input: unknown): ProjectPlatformF
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   const validPlatforms = ['tiktok', 'reels', 'shorts', 'custom'] as const;
-  const platform = validPlatforms.includes(obj.targetPlatform as typeof validPlatforms[number])
-    ? (obj.targetPlatform as typeof validPlatforms[number])
+  const platform = validPlatforms.includes(obj.targetPlatform as (typeof validPlatforms)[number])
+    ? (obj.targetPlatform as (typeof validPlatforms)[number])
     : 'custom';
-  const limitSeconds = typeof obj.limitSeconds === 'number' && Number.isFinite(obj.limitSeconds) && obj.limitSeconds > 0
-    ? round(obj.limitSeconds)
-    : 60;
+  const limitSeconds =
+    typeof obj.limitSeconds === 'number' && Number.isFinite(obj.limitSeconds) && obj.limitSeconds > 0
+      ? round(obj.limitSeconds)
+      : 60;
   const normalizeSegments = (segs: unknown): PlatformFitSegment[] => {
     if (!Array.isArray(segs)) return [];
     return segs
-      .filter((s): s is Record<string, unknown> =>
-        s != null && typeof s === 'object' &&
-        typeof (s as Record<string, unknown>).clipId === 'string' &&
-        typeof (s as Record<string, unknown>).start === 'number' &&
-        typeof (s as Record<string, unknown>).end === 'number'
+      .filter(
+        (s): s is Record<string, unknown> =>
+          s != null &&
+          typeof s === 'object' &&
+          typeof (s as Record<string, unknown>).clipId === 'string' &&
+          typeof (s as Record<string, unknown>).start === 'number' &&
+          typeof (s as Record<string, unknown>).end === 'number',
       )
       .map((s) => ({
         clipId: (s.clipId as string).trim(),
         start: round(Math.max(0, s.start as number)),
         end: round(Math.max(0, s.end as number)),
-        score: typeof s.score === 'number' && Number.isFinite(s.score)
-          ? round(Math.min(1, Math.max(0, s.score as number)))
-          : 0.5
+        score:
+          typeof s.score === 'number' && Number.isFinite(s.score)
+            ? round(Math.min(1, Math.max(0, s.score as number)))
+            : 0.5,
       }))
       .filter((s) => s.clipId.length > 0 && s.end > s.start);
   };
@@ -2282,19 +2603,21 @@ export function normalizePlatformFitSuggestion(input: unknown): ProjectPlatformF
     targetPlatform: platform,
     limitSeconds,
     keptSegments: normalizeSegments(obj.keptSegments),
-    removedSegments: normalizeSegments(obj.removedSegments)
+    removedSegments: normalizeSegments(obj.removedSegments),
   };
 }
 /** Normalize flash warnings array */
 function normalizeFlashWarnings(input: unknown): import('./flash-warning').FlashWarning[] {
   if (!Array.isArray(input)) return [];
-  return input.filter((w): w is import('./flash-warning').FlashWarning =>
-    w != null && typeof w === 'object' &&
-    typeof (w as Record<string, unknown>).startTime === 'number' &&
-    typeof (w as Record<string, unknown>).endTime === 'number' &&
-    typeof (w as Record<string, unknown>).flashRate === 'number' &&
-    typeof (w as Record<string, unknown>).severity === 'string' &&
-    typeof (w as Record<string, unknown>).isRedFlash === 'boolean'
+  return input.filter(
+    (w): w is import('./flash-warning').FlashWarning =>
+      w != null &&
+      typeof w === 'object' &&
+      typeof (w as Record<string, unknown>).startTime === 'number' &&
+      typeof (w as Record<string, unknown>).endTime === 'number' &&
+      typeof (w as Record<string, unknown>).flashRate === 'number' &&
+      typeof (w as Record<string, unknown>).severity === 'string' &&
+      typeof (w as Record<string, unknown>).isRedFlash === 'boolean',
   );
 }
 
@@ -2302,33 +2625,46 @@ function normalizeFlashWarnings(input: unknown): import('./flash-warning').Flash
 function normalizeReadingSpeedWarning(input: unknown): import('./subtitle-reading-speed').ReadingSpeedWarning | null {
   if (!input || typeof input !== 'object') return null;
   const obj = input as Record<string, unknown>;
-  if (typeof obj.charsPerSecond !== 'number' || typeof obj.recommendedMax !== 'number' || typeof obj.severity !== 'string') return null;
+  if (
+    typeof obj.charsPerSecond !== 'number' ||
+    typeof obj.recommendedMax !== 'number' ||
+    typeof obj.severity !== 'string'
+  )
+    return null;
   const validSeverities = ['ok', 'warning', 'critical'];
   if (!validSeverities.includes(obj.severity as string)) return null;
-  return { charsPerSecond: obj.charsPerSecond, recommendedMax: obj.recommendedMax, severity: obj.severity as import('./subtitle-reading-speed').ReadingSpeedSeverity };
+  return {
+    charsPerSecond: obj.charsPerSecond,
+    recommendedMax: obj.recommendedMax,
+    severity: obj.severity as import('./subtitle-reading-speed').ReadingSpeedSeverity,
+  };
 }
 
 /** Normalize music structure points */
 function normalizeMusicStructurePoints(input: unknown): import('./music-structure').MusicStructurePoint[] {
   if (!Array.isArray(input)) return [];
-  return input.filter((p): p is import('./music-structure').MusicStructurePoint =>
-    p != null && typeof p === 'object' &&
-    typeof (p as Record<string, unknown>).time === 'number' &&
-    typeof (p as Record<string, unknown>).type === 'string' &&
-    typeof (p as Record<string, unknown>).confidence === 'number'
+  return input.filter(
+    (p): p is import('./music-structure').MusicStructurePoint =>
+      p != null &&
+      typeof p === 'object' &&
+      typeof (p as Record<string, unknown>).time === 'number' &&
+      typeof (p as Record<string, unknown>).type === 'string' &&
+      typeof (p as Record<string, unknown>).confidence === 'number',
   );
 }
 
 /** Normalize continuity warnings */
 function normalizeContinuityWarnings(input: unknown): import('./continuity-check').ContinuityWarning[] {
   if (!Array.isArray(input)) return [];
-  return input.filter((w): w is import('./continuity-check').ContinuityWarning =>
-    w != null && typeof w === 'object' &&
-    typeof (w as Record<string, unknown>).clipAId === 'string' &&
-    typeof (w as Record<string, unknown>).clipBId === 'string' &&
-    typeof (w as Record<string, unknown>).type === 'string' &&
-    typeof (w as Record<string, unknown>).confidence === 'number' &&
-    typeof (w as Record<string, unknown>).reason === 'string'
+  return input.filter(
+    (w): w is import('./continuity-check').ContinuityWarning =>
+      w != null &&
+      typeof w === 'object' &&
+      typeof (w as Record<string, unknown>).clipAId === 'string' &&
+      typeof (w as Record<string, unknown>).clipBId === 'string' &&
+      typeof (w as Record<string, unknown>).type === 'string' &&
+      typeof (w as Record<string, unknown>).confidence === 'number' &&
+      typeof (w as Record<string, unknown>).reason === 'string',
   );
 }
 
@@ -2337,7 +2673,10 @@ function normalizeBus(raw: any): AudioBus {
   return {
     id: typeof raw?.id === 'string' && raw.id.trim() ? raw.id : createId('bus'),
     name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Bus',
-    type: raw?.type === 'submix' || raw?.type === 'send' || raw?.type === 'aux' || raw?.type === 'master' ? raw.type : 'submix',
+    type:
+      raw?.type === 'submix' || raw?.type === 'send' || raw?.type === 'aux' || raw?.type === 'master'
+        ? raw.type
+        : 'submix',
     effectsChain: Array.isArray(raw?.effectsChain) ? raw.effectsChain : [],
     volume: typeof raw?.volume === 'number' && Number.isFinite(raw.volume) ? raw.volume : 0,
     pan: typeof raw?.pan === 'number' && Number.isFinite(raw.pan) ? clamp(raw.pan, -100, 100) : 0,
@@ -2367,12 +2706,8 @@ function normalizeMixerChannel(raw: any): MixerChannel {
 export function normalizeMixerState(raw: any): MixerState | undefined {
   if (!raw) return undefined;
   return {
-    channels: Array.isArray(raw.channels)
-      ? raw.channels.map(normalizeMixerChannel)
-      : [],
-    buses: Array.isArray(raw.buses)
-      ? raw.buses.map(normalizeBus)
-      : [],
+    channels: Array.isArray(raw.channels) ? raw.channels.map(normalizeMixerChannel) : [],
+    buses: Array.isArray(raw.buses) ? raw.buses.map(normalizeBus) : [],
     masterBus: raw.masterBus ? normalizeBus(raw.masterBus) : createBus('Master', 'master'),
   };
 }

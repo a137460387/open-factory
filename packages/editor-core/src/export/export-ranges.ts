@@ -15,7 +15,7 @@ export interface NormalizedExportRenderRange {
 export function normalizeExportRenderRange(
   range: ExportRenderRange | null | undefined,
   timelineDuration: number,
-  fps: number
+  fps: number,
 ): NormalizedExportRenderRange | null {
   if (!range || !Number.isFinite(range.start) || !Number.isFinite(range.duration) || range.duration <= 0) {
     return null;
@@ -29,7 +29,7 @@ export function normalizeExportRenderRange(
     id: range.id,
     label: range.label,
     start: roundFrameTime(startFrame / safeFps),
-    duration: roundFrameTime((endFrame - startFrame) / safeFps)
+    duration: roundFrameTime((endFrame - startFrame) / safeFps),
   };
 }
 
@@ -38,7 +38,7 @@ export function exportRenderRangeFromPoints(
   end: number | undefined,
   timelineDuration: number,
   fps: number,
-  metadata: Pick<ExportRenderRange, 'id' | 'label'> = {}
+  metadata: Pick<ExportRenderRange, 'id' | 'label'> = {},
 ): NormalizedExportRenderRange | null {
   if (typeof start !== 'number' || typeof end !== 'number') {
     return null;

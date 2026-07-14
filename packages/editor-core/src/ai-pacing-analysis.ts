@@ -39,7 +39,7 @@ export function calculateCpmCurve(
   cuts: number[],
   totalDuration: number,
   windowSeconds = DEFAULT_WINDOW_SECONDS,
-  stepSeconds = DEFAULT_STEP_SECONDS
+  stepSeconds = DEFAULT_STEP_SECONDS,
 ): CpmCurvePoint[] {
   if (totalDuration <= 0 || cuts.length === 0) return [];
 
@@ -57,10 +57,7 @@ export function calculateCpmCurve(
 /**
  * Calculate the overall average CPM from the full timeline.
  */
-export function calculateOverallAvgCPM(
-  cuts: number[],
-  totalDuration: number
-): number {
+export function calculateOverallAvgCPM(cuts: number[], totalDuration: number): number {
   if (totalDuration <= 0) return 0;
   return (cuts.length / totalDuration) * 60;
 }
@@ -73,7 +70,7 @@ export function calculateOverallAvgCPM(
  */
 export function classifyPacingSegments(
   curve: CpmCurvePoint[],
-  avgCPM: number
+  avgCPM: number,
 ): { slowSegments: PacingSegment[]; fastSegments: PacingSegment[] } {
   if (curve.length === 0 || avgCPM <= 0) {
     return { slowSegments: [], fastSegments: [] };
@@ -86,23 +83,21 @@ export function classifyPacingSegments(
   const fastSegments = mergeContiguousSegments(curve, fastThreshold, 'above');
 
   return {
-    slowSegments: slowSegments.filter((s) => (s.end - s.start) >= MIN_SEGMENT_DURATION),
-    fastSegments
+    slowSegments: slowSegments.filter((s) => s.end - s.start >= MIN_SEGMENT_DURATION),
+    fastSegments,
   };
 }
 
 function mergeContiguousSegments(
   curve: CpmCurvePoint[],
   threshold: number,
-  direction: 'below' | 'above'
+  direction: 'below' | 'above',
 ): PacingSegment[] {
   const segments: PacingSegment[] = [];
   let segStart: number | null = null;
 
   for (let i = 0; i < curve.length; i += 1) {
-    const qualifies = direction === 'below'
-      ? curve[i].cpm < threshold
-      : curve[i].cpm > threshold;
+    const qualifies = direction === 'below' ? curve[i].cpm < threshold : curve[i].cpm > threshold;
 
     if (qualifies) {
       if (segStart === null) segStart = curve[i].time;
@@ -127,7 +122,7 @@ export function analyzePacing(
   clipStarts: number[],
   totalDuration: number,
   windowSeconds = DEFAULT_WINDOW_SECONDS,
-  stepSeconds = DEFAULT_STEP_SECONDS
+  stepSeconds = DEFAULT_STEP_SECONDS,
 ): PacingAnalysis {
   const cpmCurve = calculateCpmCurve(clipStarts, totalDuration, windowSeconds, stepSeconds);
   const overallAvgCPM = calculateOverallAvgCPM(clipStarts, totalDuration);

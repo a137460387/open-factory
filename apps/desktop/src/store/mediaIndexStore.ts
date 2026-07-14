@@ -1,13 +1,6 @@
 import { create } from 'zustand';
-import type {
-  MediaSearchQuery,
-  MediaSearchResult,
-  TagWithCount,
-} from '../lib/tauri-bridge';
-import {
-  searchMediaAssets,
-  getAllTags,
-} from '../lib/tauri-bridge';
+import type { MediaSearchQuery, MediaSearchResult, TagWithCount } from '../lib/tauri-bridge';
+import { searchMediaAssets, getAllTags } from '../lib/tauri-bridge';
 
 /** 是否有任何活跃的筛选条件 */
 export function hasActiveIndexFilters(query: MediaSearchQuery): boolean {

@@ -54,12 +54,7 @@ export interface DistributionTask {
   error?: string;
 }
 
-export type DistributionTaskStatus =
-  | 'pending'
-  | 'running'
-  | 'success'
-  | 'error'
-  | 'canceled';
+export type DistributionTaskStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
 
 // ─── 批量结果 ────────────────────────────────────────────
 
@@ -85,10 +80,7 @@ interface ExportCostEstimate {
  * 估算单个平台导出的成本
  * 基于码率和时长的简单估算
  */
-function estimateExportCost(
-  project: Project,
-  platform: DistributionPlatformSpec,
-): ExportCostEstimate {
+function estimateExportCost(project: Project, platform: DistributionPlatformSpec): ExportCostEstimate {
   const durationSecs = getTimelinePlaybackDuration(project.timeline);
 
   // 视频文件大小 = 视频码率 × 时长 + 音频码率 × 时长
@@ -114,10 +106,14 @@ function parseBitrate(bitrate: string): number {
   const unit = (match[2] ?? '').toLowerCase();
 
   switch (unit) {
-    case 'k': return value * 1_000;
-    case 'm': return value * 1_000_000;
-    case 'g': return value * 1_000_000_000;
-    default: return value;
+    case 'k':
+      return value * 1_000;
+    case 'm':
+      return value * 1_000_000;
+    case 'g':
+      return value * 1_000_000_000;
+    default:
+      return value;
   }
 }
 
@@ -169,9 +165,7 @@ export function buildPlatformExportSettings(
   const fileName = applyDistributionTemplate(template, platform, projectName);
   const outputPath = `${outputDir}/${fileName}.${platform.format}`;
 
-  const reframeOffset = cropResult
-    ? cropResultToReframeOffset(cropResult)
-    : { reframeOffsetX: 0, reframeOffsetY: 0 };
+  const reframeOffset = cropResult ? cropResultToReframeOffset(cropResult) : { reframeOffsetX: 0, reframeOffsetY: 0 };
 
   const settings: ExportSettings = {
     width: platform.width,
@@ -199,20 +193,18 @@ export function buildPlatformExportSettings(
 }
 
 /** 将 DistributionPlatformId 映射到 ExportPlatformPreset */
-function mapPlatformIdToExportPreset(
-  id: DistributionPlatformId,
-): ExportSettings['platformPreset'] {
+function mapPlatformIdToExportPreset(id: DistributionPlatformId): ExportSettings['platformPreset'] {
   const mapping: Record<string, ExportSettings['platformPreset']> = {
     'youtube-1080p': 'youtube-1080p',
     'youtube-shorts': 'youtube-shorts',
-    'tiktok': 'tiktok',
+    tiktok: 'tiktok',
     'instagram-reels': 'instagram-reels',
     'instagram-feed': 'instagram-reels',
     'twitter-x': 'twitter-x',
-    'bilibili': 'bilibili',
+    bilibili: 'bilibili',
     'weixin-channels': 'bilibili',
-    'kuaishou': 'tiktok',
-    'pinterest': 'instagram-reels',
+    kuaishou: 'tiktok',
+    pinterest: 'instagram-reels',
   };
   return mapping[id];
 }
@@ -225,9 +217,7 @@ function mapPlatformIdToExportPreset(
  * @param request 批量分发请求
  * @returns 批次结果，包含所有平台的导出任务
  */
-export function createDistributionBatch(
-  request: DistributionBatchRequest,
-): DistributionBatchResult {
+export function createDistributionBatch(request: DistributionBatchRequest): DistributionBatchResult {
   const batchId = generateBatchId();
   const projectName = request.project.name ?? 'Untitled';
   const template = request.template ?? DEFAULT_DISTRIBUTION_TEMPLATE;
@@ -258,14 +248,8 @@ export function createDistributionBatch(
     };
   });
 
-  const totalEstimatedDurationSecs = tasks.reduce(
-    (sum, t) => sum + t.estimatedDurationSecs,
-    0,
-  );
-  const totalEstimatedFileSizeBytes = tasks.reduce(
-    (sum, t) => sum + t.estimatedFileSizeBytes,
-    0,
-  );
+  const totalEstimatedDurationSecs = tasks.reduce((sum, t) => sum + t.estimatedDurationSecs, 0);
+  const totalEstimatedFileSizeBytes = tasks.reduce((sum, t) => sum + t.estimatedFileSizeBytes, 0);
 
   return {
     batchId,
@@ -283,55 +267,27 @@ export function updateDistributionTaskProgress(
   taskId: string,
   progress: number,
 ): DistributionTask[] {
-  return tasks.map((task) =>
-    task.id === taskId
-      ? { ...task, progress: Math.max(0, Math.min(1, progress)) }
-      : task,
-  );
+  return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.max(0, Math.min(1, progress)) } : task));
 }
 
 /** 完成任务 */
-export function finishDistributionTask(
-  tasks: DistributionTask[],
-  taskId: string,
-): DistributionTask[] {
-  return tasks.map((task) =>
-    task.id === taskId
-      ? { ...task, status: 'success' as const, progress: 1 }
-      : task,
-  );
+export function finishDistributionTask(tasks: DistributionTask[], taskId: string): DistributionTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'success' as const, progress: 1 } : task));
 }
 
 /** 任务失败 */
-export function failDistributionTask(
-  tasks: DistributionTask[],
-  taskId: string,
-  error: string,
-): DistributionTask[] {
-  return tasks.map((task) =>
-    task.id === taskId
-      ? { ...task, status: 'error' as const, error }
-      : task,
-  );
+export function failDistributionTask(tasks: DistributionTask[], taskId: string, error: string): DistributionTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'error' as const, error } : task));
 }
 
 /** 取消任务 */
-export function cancelDistributionTask(
-  tasks: DistributionTask[],
-  taskId: string,
-): DistributionTask[] {
-  return tasks.map((task) =>
-    task.id === taskId
-      ? { ...task, status: 'canceled' as const }
-      : task,
-  );
+export function cancelDistributionTask(tasks: DistributionTask[], taskId: string): DistributionTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'canceled' as const } : task));
 }
 
 /** 检查批次是否全部完成 */
 export function isDistributionBatchComplete(tasks: DistributionTask[]): boolean {
-  return tasks.every(
-    (t) => t.status === 'success' || t.status === 'error' || t.status === 'canceled',
-  );
+  return tasks.every((t) => t.status === 'success' || t.status === 'error' || t.status === 'canceled');
 }
 
 /** 获取批次统计 */

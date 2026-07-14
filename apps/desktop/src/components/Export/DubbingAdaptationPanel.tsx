@@ -1,9 +1,6 @@
 import { zhCN } from '../../i18n/strings';
 import { useEditorStore } from '../../store/editorStore';
-import {
-  batchComputeAdaptations,
-  type TtsSegment,
-} from '@open-factory/editor-core';
+import { batchComputeAdaptations, type TtsSegment } from '@open-factory/editor-core';
 
 const TYPE_LABEL: Record<string, string> = {
   compress: zhCN.dubbingAdaptation.compress,
@@ -22,7 +19,7 @@ export function DubbingAdaptationPanel() {
 
   const handleAnalyze = () => {
     if (!project) return;
-    const updated = batchComputeAdaptations(project.ttsSegments ?? [] as TtsSegment[]);
+    const updated = batchComputeAdaptations(project.ttsSegments ?? ([] as TtsSegment[]));
     useEditorStore.getState().setProject({ ...project, ttsSegments: updated });
   };
 
@@ -42,26 +39,29 @@ export function DubbingAdaptationPanel() {
       <ul className="flex flex-col gap-1">
         {ttsSegments.map((seg) => (
           <li
-              key={seg.id}
-              data-testid={`dubbing-segment-${seg.id}`}
-              className="rounded border border-gray-700 p-2 text-xs"
-            >
-              <div className="flex justify-between">
+            key={seg.id}
+            data-testid={`dubbing-segment-${seg.id}`}
+            className="rounded border border-gray-700 p-2 text-xs"
+          >
+            <div className="flex justify-between">
               <span data-testid={`dubbing-delta-${seg.id}`}>
-                  {zhCN.dubbingAdaptation.durationDelta}: {seg.timingAdaptation?.durationDelta.toFixed(2) ?? '—'}s
-                </span>
+                {zhCN.dubbingAdaptation.durationDelta}: {seg.timingAdaptation?.durationDelta.toFixed(2) ?? '—'}s
+              </span>
               <span data-testid={`dubbing-type-${seg.id}`}>
-                  {zhCN.dubbingAdaptation.adaptationType}: {seg.timingAdaptation ? TYPE_LABEL[seg.timingAdaptation.adaptationType] ?? seg.timingAdaptation.adaptationType : '—'}
-                </span>
-              </div>
+                {zhCN.dubbingAdaptation.adaptationType}:{' '}
+                {seg.timingAdaptation
+                  ? (TYPE_LABEL[seg.timingAdaptation.adaptationType] ?? seg.timingAdaptation.adaptationType)
+                  : '—'}
+              </span>
+            </div>
             {seg.timingAdaptation?.atempoRatio != null && (
               <div data-testid={`dubbing-atempo-${seg.id}`}>
-                  {zhCN.dubbingAdaptation.atempoRatio}: {seg.timingAdaptation.atempoRatio.toFixed(4)}
+                {zhCN.dubbingAdaptation.atempoRatio}: {seg.timingAdaptation.atempoRatio.toFixed(4)}
               </div>
             )}
             {seg.timingAdaptation?.suggestedOutPoint != null && (
               <div data-testid={`dubbing-outpoint-${seg.id}`}>
-                  {zhCN.dubbingAdaptation.suggestedOutPoint}: {seg.timingAdaptation.suggestedOutPoint.toFixed(2)}s
+                {zhCN.dubbingAdaptation.suggestedOutPoint}: {seg.timingAdaptation.suggestedOutPoint.toFixed(2)}s
               </div>
             )}
           </li>

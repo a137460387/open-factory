@@ -18,7 +18,7 @@ export interface ExportNotificationSettings {
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: ExportNotificationSettings = {
-  enabledTypes: ['started', 'completed', 'failed', 'canceled']
+  enabledTypes: ['started', 'completed', 'failed', 'canceled'],
 };
 
 export function createExportNotification(input: {
@@ -38,7 +38,7 @@ export function createExportNotification(input: {
     read: false,
     taskId: input.taskId,
     outputPath: input.outputPath,
-    error: input.error
+    error: input.error,
   };
 }
 
@@ -56,7 +56,7 @@ export function clearNotificationHistory(notifications: ExportNotification[]): E
 
 export function filterNotificationsByEventType(
   notifications: ExportNotification[],
-  enabledTypes: ExportNotificationEventType[]
+  enabledTypes: ExportNotificationEventType[],
 ): ExportNotification[] {
   const enabled = new Set(enabledTypes);
   return notifications.filter((n) => enabled.has(n.eventType));
@@ -64,7 +64,7 @@ export function filterNotificationsByEventType(
 
 export function groupNotificationsByTime(
   notifications: ExportNotification[],
-  now: Date = new Date()
+  now: Date = new Date(),
 ): Map<ExportNotificationTimeGroup, ExportNotification[]> {
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(todayStart);
@@ -89,9 +89,7 @@ export function groupNotificationsByTime(
   return groups;
 }
 
-export function groupNotificationsByProject(
-  notifications: ExportNotification[]
-): Map<string, ExportNotification[]> {
+export function groupNotificationsByProject(notifications: ExportNotification[]): Map<string, ExportNotification[]> {
   const groups = new Map<string, ExportNotification[]>();
   for (const notification of notifications) {
     const key = notification.projectName ?? '(unknown)';
@@ -104,7 +102,7 @@ export function groupNotificationsByProject(
 
 export function shouldShowNotification(
   eventType: ExportNotificationEventType,
-  settings: ExportNotificationSettings = DEFAULT_NOTIFICATION_SETTINGS
+  settings: ExportNotificationSettings = DEFAULT_NOTIFICATION_SETTINGS,
 ): boolean {
   return settings.enabledTypes.includes(eventType);
 }

@@ -98,7 +98,7 @@ export function buildZoomContextKey(sequenceId: string, editMode: ZoomEditMode):
 export function resolveZoomForContext(
   zoomMemory: Record<string, number> | undefined,
   sequenceId: string,
-  editMode: ZoomEditMode
+  editMode: ZoomEditMode,
 ): number {
   const key = buildZoomContextKey(sequenceId, editMode);
   if (zoomMemory && typeof zoomMemory[key] === 'number' && Number.isFinite(zoomMemory[key])) {
@@ -114,7 +114,7 @@ export function saveZoomMemoryEntry(
   zoomMemory: Record<string, number> | undefined,
   sequenceId: string,
   editMode: ZoomEditMode,
-  zoomLevel: number
+  zoomLevel: number,
 ): Record<string, number> {
   const key = buildZoomContextKey(sequenceId, editMode);
   return { ...(zoomMemory ?? {}), [key]: clampTimelineZoom(zoomLevel) };
@@ -146,7 +146,7 @@ export function detectZoomEditMode(context: {
  */
 export function pruneZoomMemory(
   zoomMemory: Record<string, number> | undefined,
-  validSequenceIds: string[]
+  validSequenceIds: string[],
 ): Record<string, number> | undefined {
   if (!zoomMemory) {
     return undefined;

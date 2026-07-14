@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProject, type ExportTask, type FfmpegExportPlan, type MediaAsset } from '@open-factory/editor-core';
-import { buildSharePackageRequest, createSharePackageFromProject, type SharePackageWorkflowDependencies } from './sharePackage';
+import {
+  buildSharePackageRequest,
+  createSharePackageFromProject,
+  type SharePackageWorkflowDependencies,
+} from './sharePackage';
 
 function makeVideoAsset(overrides: Partial<MediaAsset> = {}): MediaAsset {
   return {
@@ -11,7 +15,7 @@ function makeVideoAsset(overrides: Partial<MediaAsset> = {}): MediaAsset {
     duration: overrides.duration ?? 4,
     width: overrides.width ?? 1280,
     height: overrides.height ?? 720,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -30,7 +34,7 @@ function makeTask(status: ExportTask['status'], progress: number): ExportTask {
     priority: 'normal',
     status,
     progress,
-    createdAt: '2026-06-12T00:00:00.000Z'
+    createdAt: '2026-06-12T00:00:00.000Z',
   };
 }
 
@@ -45,7 +49,7 @@ function makePlan(): FfmpegExportPlan {
     warnings: [],
     textArtifacts: [],
     nestedPlans: [],
-    duration: 4
+    duration: 4,
   };
 }
 
@@ -59,27 +63,45 @@ function makeDependencies(overrides: Partial<SharePackageWorkflowDependencies> =
       onProgress?.(makeTask('success', 1));
       return makeTask('success', 1);
     }),
-    createSharePackageZip: vi.fn(async (request) => ({ outputPath: request.outputPath, fileCount: 3 + request.mediaFiles.length, durationMs: 7 })),
+    createSharePackageZip: vi.fn(async (request) => ({
+      outputPath: request.outputPath,
+      fileCount: 3 + request.mediaFiles.length,
+      durationMs: 7,
+    })),
     removeFile: vi.fn(),
     listenToPackageProgress: vi.fn((handler) => {
-      handler({ stage: 'finished', progress: 1, progressPct: 100, current: 3, total: 3, outputPath: 'C:/Exports/share.zip' });
+      handler({
+        stage: 'finished',
+        progress: 1,
+        progressPct: 100,
+        current: 3,
+        total: 3,
+        outputPath: 'C:/Exports/share.zip',
+      });
       return () => undefined;
     }),
     now: vi.fn(() => 123),
-    ...overrides
+    ...overrides,
   };
 }
 
 describe('share package', () => {
   it('builds a package request with a relative project file, media entries, MP4, and README', () => {
-    const request = buildSharePackageRequest(makeProject(), 'C:/Exports/share.zip', 'C:/AppData/open-factory/share.mp4');
+    const request = buildSharePackageRequest(
+      makeProject(),
+      'C:/Exports/share.zip',
+      'C:/AppData/open-factory/share.mp4',
+    );
     const projectFile = JSON.parse(request.projectContents) as { project: { media: Array<{ path: string }> } };
 
     expect(request.outputPath).toBe('C:/Exports/share.zip');
     expect(request.projectFileName).toBe('Share Demo.cutproj.json');
     expect(projectFile.project.media[0].path).toBe('media/clip.mp4');
     expect(request.mediaFiles).toEqual([{ sourcePath: 'C:/Media/clip.mp4', archivePath: 'media/clip.mp4' }]);
-    expect(request.exportedVideo).toEqual({ sourcePath: 'C:/AppData/open-factory/share.mp4', archivePath: 'export/Share Demo.mp4' });
+    expect(request.exportedVideo).toEqual({
+      sourcePath: 'C:/AppData/open-factory/share.mp4',
+      archivePath: 'export/Share Demo.mp4',
+    });
     expect(request.readmeContents).toContain('Share Demo');
     expect(request.readmeContents).toContain('Share Demo.cutproj.json');
   });
@@ -99,16 +121,18 @@ describe('share package', () => {
 
     const result = await createSharePackageFromProject(makeProject(), {
       dependencies,
-      onProgress: (progress) => progressStages.push(progress.stage)
+      onProgress: (progress) => progressStages.push(progress.stage),
     });
 
     expect(result?.outputPath).toBe('C:/Exports/share.zip');
     expect(dependencies.enqueueExport).toHaveBeenCalledWith(
       expect.anything(),
       'C:/AppData/open-factory/Share Demo-share-123.mp4',
-      expect.objectContaining({ format: 'mp4', outputMode: 'video', hardwareEncoding: false })
+      expect.objectContaining({ format: 'mp4', outputMode: 'video', hardwareEncoding: false }),
     );
-    expect(dependencies.createSharePackageZip).toHaveBeenCalledWith(expect.objectContaining({ outputPath: 'C:/Exports/share.zip' }));
+    expect(dependencies.createSharePackageZip).toHaveBeenCalledWith(
+      expect.objectContaining({ outputPath: 'C:/Exports/share.zip' }),
+    );
     expect(dependencies.removeFile).toHaveBeenCalledWith('C:/AppData/open-factory/Share Demo-share-123.mp4');
     expect(progressStages).toEqual(expect.arrayContaining(['exporting', 'finished']));
   });
@@ -117,7 +141,7 @@ describe('share package', () => {
     const dependencies = makeDependencies({
       waitForExportTask: vi.fn(async () => {
         throw new Error('Export failed.');
-      })
+      }),
     });
 
     await expect(createSharePackageFromProject(makeProject(), { dependencies })).rejects.toThrow('Export failed.');

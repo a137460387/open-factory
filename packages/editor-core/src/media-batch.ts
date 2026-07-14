@@ -27,7 +27,11 @@ export type BatchEditableMediaMetadata = Pick<MediaMetadata, 'title' | 'author' 
 
 export const DEFAULT_MEDIA_RENAME_TEMPLATE = '{index:03d}_{date}_{originalName}';
 
-export function buildMediaRenamePreview(assets: MediaAsset[], allAssets: MediaAsset[], rules: MediaRenameRules): MediaRenamePreviewItem[] {
+export function buildMediaRenamePreview(
+  assets: MediaAsset[],
+  allAssets: MediaAsset[],
+  rules: MediaRenameRules,
+): MediaRenamePreviewItem[] {
   const selectedIds = new Set(assets.map((asset) => asset.id));
   const usedNames = new Set(allAssets.filter((asset) => !selectedIds.has(asset.id)).map((asset) => asset.name));
   return assets.map((asset, offset) => {
@@ -40,7 +44,7 @@ export function buildMediaRenamePreview(assets: MediaAsset[], allAssets: MediaAs
       requestedName,
       nextName,
       changed: nextName !== asset.name,
-      conflictSuffix: suffix
+      conflictSuffix: suffix,
     };
   });
 }
@@ -48,9 +52,7 @@ export function buildMediaRenamePreview(assets: MediaAsset[], allAssets: MediaAs
 export function applyMediaRenameRules(asset: MediaAsset, rules: MediaRenameRules, offset = 0): string {
   const date = normalizeRenameDate(rules.date);
   const index = Math.max(1, Math.floor(rules.startIndex ?? 1) + offset);
-  let name = rules.template?.trim()
-    ? expandMediaRenameTemplate(rules.template, asset, { index, date })
-    : asset.name;
+  let name = rules.template?.trim() ? expandMediaRenameTemplate(rules.template, asset, { index, date }) : asset.name;
   if (rules.datePrefix) {
     name = `${date}_${name}`;
   }
@@ -70,34 +72,44 @@ export function applyMediaRenameRules(asset: MediaAsset, rules: MediaRenameRules
       next = toTitleCase(next);
     }
     if (rules.removeSpecialCharacters) {
-      next = next.replace(/[^\p{L}\p{N}\s._-]+/gu, '').replace(/\s+/g, ' ').trim();
+      next = next
+        .replace(/[^\p{L}\p{N}\s._-]+/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim();
     }
     return next;
   });
   return sanitizeMediaName(name, asset.name);
 }
 
-export function expandMediaRenameTemplate(template: string, asset: MediaAsset, context: { index: number; date: string }): string {
+export function expandMediaRenameTemplate(
+  template: string,
+  asset: MediaAsset,
+  context: { index: number; date: string },
+): string {
   const { stem, extension } = splitMediaName(asset.name);
-  return template.replace(/\{([a-zA-Z]+)(?::(0?)(\d+)d)?\}/g, (match, key: string, zero: string | undefined, width: string | undefined) => {
-    if (key === 'index') {
-      const raw = String(Math.max(0, Math.floor(context.index)));
-      return width ? raw.padStart(Number(width), zero ? '0' : ' ') : raw;
-    }
-    if (key === 'date') {
-      return context.date;
-    }
-    if (key === 'originalName') {
-      return asset.name;
-    }
-    if (key === 'originalStem') {
-      return stem;
-    }
-    if (key === 'extension') {
-      return extension.replace(/^\./, '');
-    }
-    return match;
-  });
+  return template.replace(
+    /\{([a-zA-Z]+)(?::(0?)(\d+)d)?\}/g,
+    (match, key: string, zero: string | undefined, width: string | undefined) => {
+      if (key === 'index') {
+        const raw = String(Math.max(0, Math.floor(context.index)));
+        return width ? raw.padStart(Number(width), zero ? '0' : ' ') : raw;
+      }
+      if (key === 'date') {
+        return context.date;
+      }
+      if (key === 'originalName') {
+        return asset.name;
+      }
+      if (key === 'originalStem') {
+        return stem;
+      }
+      if (key === 'extension') {
+        return extension.replace(/^\./, '');
+      }
+      return match;
+    },
+  );
 }
 
 export function makeUniqueMediaName(name: string, usedNames: Set<string>): { name: string; suffix?: number } {
@@ -123,7 +135,9 @@ export function replaceMediaPathBasename(path: string, nextName: string): string
   return `${path.slice(0, separatorIndex + 1)}${nextName}`;
 }
 
-export function collectExportMediaMetadata(project: Pick<Project, 'media'> & Partial<Pick<Project, 'mediaMetadata'>>): BatchEditableMediaMetadata | undefined {
+export function collectExportMediaMetadata(
+  project: Pick<Project, 'media'> & Partial<Pick<Project, 'mediaMetadata'>>,
+): BatchEditableMediaMetadata | undefined {
   const output: BatchEditableMediaMetadata = {};
   const mediaMetadata = project.mediaMetadata ?? {};
   for (const asset of project.media) {
@@ -149,7 +163,10 @@ function normalizeRenameDate(value: string | undefined): string {
 }
 
 function sanitizeMediaName(value: string, fallback: string): string {
-  const normalized = value.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '').replace(/\s+/g, ' ').trim();
+  const normalized = value
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (normalized) {
     return normalized.slice(0, 180);
   }

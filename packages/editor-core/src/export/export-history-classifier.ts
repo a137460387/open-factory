@@ -82,11 +82,7 @@ export function classifyExportEntry(
   };
 }
 
-function inferCategory(
-  entry: ExportTaskHistoryEntry,
-  presetId?: string,
-  presetName?: string,
-): ExportCategoryTag {
+function inferCategory(entry: ExportTaskHistoryEntry, presetId?: string, presetName?: string): ExportCategoryTag {
   const nameLower = (entry.name ?? '').toLowerCase();
   const presetLower = (presetId ?? '').toLowerCase();
   const presetNameLower = (presetName ?? '').toLowerCase();
@@ -150,9 +146,7 @@ export function filterExportHistory(
 }
 
 /** Calculate export category stats with weekly trend buckets. */
-export function calculateExportCategoryStats(
-  entries: ClassifiedExportEntry[],
-): ExportCategoryStats[] {
+export function calculateExportCategoryStats(entries: ClassifiedExportEntry[]): ExportCategoryStats[] {
   const grouped = new Map<ExportCategoryTag, ClassifiedExportEntry[]>();
   for (const rule of EXPORT_CATEGORY_RULES) {
     grouped.set(rule.tag, []);

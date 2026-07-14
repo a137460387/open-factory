@@ -29,31 +29,44 @@ export const EXPORT_COLOR_SPACES: ExportColorSpace[] = ['srgb', 'rec709', 'rec20
 export const DEFAULT_EXPORT_COLOR_MANAGEMENT: ExportColorManagementSettings = {
   inputColorSpace: 'srgb',
   outputColorSpace: 'srgb',
-  embedIccProfile: true
+  embedIccProfile: true,
 };
 
 export const DEFAULT_PROJECT_WORKING_COLOR_SPACE: ProjectWorkingColorSpace = 'srgb';
 
 export const EXPORT_ICC_PROFILE_BASE64 = {
   srgb: 'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3Rvcnktc3JnYi12MQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
-  'dci-p3': 'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktZGNpcDMtdjEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
-  'display-p3': 'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktZGlzcGxheXAzLXYxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
-  rec2020: 'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktcmVjMjAyMC12MQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=='
+  'dci-p3':
+    'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktZGNpcDMtdjEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+  'display-p3':
+    'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktZGlzcGxheXAzLXYxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+  rec2020:
+    'AAAAoAAAAAAAAAAAbW50clJHQiBYWVogAAAAAAAAAAAAAAAAYWNzcAAAAAAAAAAAT0ZBQwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABvcGVuLWZhY3RvcnktcmVjMjAyMC12MQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
 } as const satisfies Record<'srgb' | 'dci-p3' | 'display-p3' | 'rec2020', string>;
 
 export function normalizeExportColorSpace(value: unknown, fallback: ExportColorSpace = 'srgb'): ExportColorSpace {
-  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020' ? value : fallback;
+  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020'
+    ? value
+    : fallback;
 }
 
-export function normalizeProjectWorkingColorSpace(value: unknown, fallback: ProjectWorkingColorSpace = DEFAULT_PROJECT_WORKING_COLOR_SPACE): ProjectWorkingColorSpace {
+export function normalizeProjectWorkingColorSpace(
+  value: unknown,
+  fallback: ProjectWorkingColorSpace = DEFAULT_PROJECT_WORKING_COLOR_SPACE,
+): ProjectWorkingColorSpace {
   return normalizeExportColorSpace(value, fallback);
 }
 
-export function normalizeExportColorManagement(value: Partial<ExportColorManagementSettings> | undefined): ExportColorManagementSettings {
+export function normalizeExportColorManagement(
+  value: Partial<ExportColorManagementSettings> | undefined,
+): ExportColorManagementSettings {
   return {
     inputColorSpace: normalizeExportColorSpace(value?.inputColorSpace, DEFAULT_EXPORT_COLOR_MANAGEMENT.inputColorSpace),
-    outputColorSpace: normalizeExportColorSpace(value?.outputColorSpace, DEFAULT_EXPORT_COLOR_MANAGEMENT.outputColorSpace),
-    embedIccProfile: value?.embedIccProfile !== false
+    outputColorSpace: normalizeExportColorSpace(
+      value?.outputColorSpace,
+      DEFAULT_EXPORT_COLOR_MANAGEMENT.outputColorSpace,
+    ),
+    embedIccProfile: value?.embedIccProfile !== false,
   };
 }
 
@@ -89,7 +102,10 @@ export function getFfmpegColorSpaceProfile(colorSpace: ExportColorSpace): Ffmpeg
   return { space: 'bt709', matrix: 'bt709', primaries: 'bt709', trc: 'iec61966-2-1', transfer: 'iec61966-2-1' };
 }
 
-export function buildZscaleColorConversionFilter(inputColorSpace: ExportColorSpace, outputColorSpace: ExportColorSpace): string | undefined {
+export function buildZscaleColorConversionFilter(
+  inputColorSpace: ExportColorSpace,
+  outputColorSpace: ExportColorSpace,
+): string | undefined {
   if (inputColorSpace === outputColorSpace) {
     return undefined;
   }
@@ -102,7 +118,7 @@ export function buildZscaleColorConversionFilter(inputColorSpace: ExportColorSpa
     `matrix=${output.matrix}`,
     `transfer=${output.transfer}`,
     `primaries=${output.primaries}`,
-    'range=tv'
+    'range=tv',
   ];
   return `zscale=${args.join(':')}`;
 }
@@ -116,7 +132,12 @@ export function buildIccMetadataArgs(colorSpace: ExportColorSpace): string[] {
   return ['-metadata:s:v:0', `icc_profile=${getExportIccProfileBase64(colorSpace)}`];
 }
 
-export function parseFfprobeColorProfile(input: { colorSpace?: unknown; colorPrimaries?: unknown; colorTransfer?: unknown; colorTrc?: unknown }): MediaColorProfile | undefined {
+export function parseFfprobeColorProfile(input: {
+  colorSpace?: unknown;
+  colorPrimaries?: unknown;
+  colorTransfer?: unknown;
+  colorTrc?: unknown;
+}): MediaColorProfile | undefined {
   const colorSpace = normalizeProbeField(input.colorSpace);
   const colorPrimaries = normalizeProbeField(input.colorPrimaries);
   const colorTransfer = normalizeProbeField(input.colorTransfer ?? input.colorTrc);
@@ -129,7 +150,7 @@ export function parseFfprobeColorProfile(input: { colorSpace?: unknown; colorPri
     label: getColorSpaceDisplayName(detected),
     ...(colorSpace ? { colorSpace } : {}),
     ...(colorPrimaries ? { colorPrimaries } : {}),
-    ...(colorTransfer ? { colorTransfer } : {})
+    ...(colorTransfer ? { colorTransfer } : {}),
   };
 }
 
@@ -153,7 +174,11 @@ function normalizeProbeField(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : undefined;
 }
 
-function inferColorSpaceFromProbeFields(colorSpace?: string, colorPrimaries?: string, colorTransfer?: string): ExportColorSpace | undefined {
+function inferColorSpaceFromProbeFields(
+  colorSpace?: string,
+  colorPrimaries?: string,
+  colorTransfer?: string,
+): ExportColorSpace | undefined {
   const combined = [colorSpace, colorPrimaries, colorTransfer].filter(Boolean).join(' ');
   if (!combined) {
     return undefined;

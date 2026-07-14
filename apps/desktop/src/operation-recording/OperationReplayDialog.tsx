@@ -36,7 +36,7 @@ export default function OperationReplayDialog({
   onJump,
   onSpeedChange,
   onExportSlides,
-  onClose
+  onClose,
 }: OperationReplayDialogProps) {
   const t = zhCN.operationRecording;
   const commandCount = recording?.commands.length ?? 0;
@@ -44,14 +44,22 @@ export default function OperationReplayDialog({
   const activeCommand = currentStep >= 0 ? recording?.commands[currentStep] : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="operation-recording-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      data-testid="operation-recording-dialog"
+    >
       <section className="flex max-h-[82vh] w-full max-w-3xl flex-col rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-ink">{t.title}</h2>
             <p className="text-xs text-slate-500">{recordingActive ? t.recordingActive : t.summary(commandCount)}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={t.close} onClick={onClose}>
+          <button
+            className="rounded p-1 text-slate-500 hover:bg-panel"
+            type="button"
+            aria-label={t.close}
+            onClick={onClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -87,7 +95,12 @@ export default function OperationReplayDialog({
               <Save size={14} />
               {t.save}
             </button>
-            <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="operation-recording-load" onClick={onLoadRecording}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="operation-recording-load"
+              onClick={onLoadRecording}
+            >
               <Upload size={14} />
               {t.load}
             </button>
@@ -118,7 +131,12 @@ export default function OperationReplayDialog({
             </label>
             <label className="block min-w-28">
               <span className="mb-1 block font-semibold text-slate-700">{t.speed}</span>
-              <select className="w-full rounded-md border border-line bg-white px-2 py-1.5" value={speed} data-testid="operation-recording-speed" onChange={(event) => onSpeedChange(normalizeOperationReplaySpeed(Number(event.target.value)))}>
+              <select
+                className="w-full rounded-md border border-line bg-white px-2 py-1.5"
+                value={speed}
+                data-testid="operation-recording-speed"
+                onChange={(event) => onSpeedChange(normalizeOperationReplaySpeed(Number(event.target.value)))}
+              >
                 <option value={1}>1x</option>
                 <option value={2}>2x</option>
                 <option value={4}>4x</option>
@@ -136,7 +154,13 @@ export default function OperationReplayDialog({
             >
               {t.replay}
             </button>
-            <button className="rounded-md border border-line px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" data-testid="operation-recording-pause" disabled={!replaying} onClick={onPauseReplay}>
+            <button
+              className="rounded-md border border-line px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              data-testid="operation-recording-pause"
+              disabled={!replaying}
+              onClick={onPauseReplay}
+            >
               {t.pause}
             </button>
             <span className="text-xs text-slate-500" data-testid="operation-recording-current-step">
@@ -163,7 +187,10 @@ export default function OperationReplayDialog({
                     </button>
                   ))
                 ) : (
-                  <div className="rounded border border-dashed border-line px-3 py-8 text-center text-xs text-slate-500" data-testid="operation-recording-empty">
+                  <div
+                    className="rounded border border-dashed border-line px-3 py-8 text-center text-xs text-slate-500"
+                    data-testid="operation-recording-empty"
+                  >
                     {t.empty}
                   </div>
                 )}
@@ -172,7 +199,9 @@ export default function OperationReplayDialog({
             <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
               <div className="font-semibold text-slate-700">{t.preview}</div>
               <div className="mt-2 space-y-1">
-                <div data-testid="operation-recording-active-command">{activeCommand?.description ?? t.initialState}</div>
+                <div data-testid="operation-recording-active-command">
+                  {activeCommand?.description ?? t.initialState}
+                </div>
                 <div>{t.slideCount(slides.length)}</div>
                 <div>{t.fileFormat}</div>
               </div>

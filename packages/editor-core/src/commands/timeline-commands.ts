@@ -112,24 +112,50 @@ import {
   type Track,
   type Transition,
   type TransitionType,
-  type Transform
+  type Transform,
 } from '../model';
-import type { BeatSnapSuggestion, MediaCollection, MulticamClip, MulticamClipAngle, MulticamSyncMode, ProjectPlatformFitSuggestion, SequenceSettings, SwitchPoint, SwitchTransition } from '../model-types';
+import type {
+  BeatSnapSuggestion,
+  MediaCollection,
+  MulticamClip,
+  MulticamClipAngle,
+  MulticamSyncMode,
+  ProjectPlatformFitSuggestion,
+  SequenceSettings,
+  SwitchPoint,
+  SwitchTransition,
+} from '../model-types';
 import { recalculateClipStartsForFrameRate } from '../sequence-settings';
 import { clampTrackHeight } from '../track-height';
 import {
   type ClipGroupBatchPatch,
   createClipGroup,
   normalizeClipGroups,
-  removeClipIdsFromGroups
+  removeClipIdsFromGroups,
 } from '../clip-groups';
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
-import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
+import {
+  calculateSplitLayoutTransforms,
+  type SplitLayoutDefinition,
+  type SplitLayoutClipSource,
+} from '../split-layout';
 import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import type { SubtitleProofreadingFix } from '../subtitles/proofreading';
-import { calculateSubtitleAlignmentUpdates, calculateSubtitleShiftUpdates, type SubtitleAlignmentOptions, type SubtitleAlignmentReport, type SubtitleTimingUpdate } from '../subtitles/retiming';
+import {
+  calculateSubtitleAlignmentUpdates,
+  calculateSubtitleShiftUpdates,
+  type SubtitleAlignmentOptions,
+  type SubtitleAlignmentReport,
+  type SubtitleTimingUpdate,
+} from '../subtitles/retiming';
 import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
-import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
+import {
+  normalizeCreditsRollSpeed,
+  normalizeCreditsRows,
+  normalizeCreditsStyle,
+  type CreditsRow,
+  type CreditsStyle,
+} from '../credits-roll';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeClipPitchData } from '../audio-pitch';
@@ -142,14 +168,31 @@ import {
   moveMediaAssetsToFolder,
   renameMediaFolder,
   setMediaFolderCollapsed,
-  type MediaFolderInput
+  type MediaFolderInput,
 } from '../media-folders';
 import type { BatchEditableMediaMetadata } from '../media-batch';
-import { alignKeyframeValues, applyBatchKeyframeEasing, createKeyframe, distributeKeyframeTimes, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
-import { cloneClipKeyframes, normalizeClipKeyframes, type ClipboardKeyframeGroup, type PasteMode, normalizePastedKeyframes } from '../keyframes';
+import {
+  alignKeyframeValues,
+  applyBatchKeyframeEasing,
+  createKeyframe,
+  distributeKeyframeTimes,
+  removeKeyframeForProperty,
+  setKeyframeForProperty,
+} from '../keyframes';
+import {
+  cloneClipKeyframes,
+  normalizeClipKeyframes,
+  type ClipboardKeyframeGroup,
+  type PasteMode,
+  normalizePastedKeyframes,
+} from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
 import { applyConformMedia, type ConformMediaReplacement } from '../project/conform-media';
-import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
+import {
+  applyProjectHealthAutoRepair,
+  type ProjectHealthAutoRepairInput,
+  type ProjectHealthRepairReport,
+} from '../project/project-health-repair';
 import { normalizeProjectReleaseVersion } from '../project/release-workflow';
 import { applyProxyMigration, type ProxyMigrationUpdate } from '../proxy/proxy-management';
 import {
@@ -159,10 +202,22 @@ import {
   normalizeTextAnimationDuration,
   normalizeTextAnimationPreset,
   type TextAnimationDirection,
-  type TextAnimationPreset
+  type TextAnimationPreset,
 } from '../text-animation';
-import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../text-layout';
-import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
+import {
+  normalizeRichTextDocument,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
+} from '../text-layout';
+import {
+  cloneEffects,
+  normalizeEffect,
+  normalizeEffects,
+  type Effect,
+  type EffectParams,
+  type EffectType,
+} from '../effects';
 import { buildEffectPresetClipPatch, type EffectPreset } from '../effect-presets';
 import { applyStyleToClip, type ApplyStyleTransferOptions, type StyleSummary } from '../style-transfer';
 import {
@@ -172,18 +227,47 @@ import {
   normalizeBeatMarkers,
   type BeatAlignmentUpdate,
   type BeatMarker,
-  type BeatSnapUpdate
+  type BeatSnapUpdate,
 } from '../beats';
-import { buildDialogueRoughCutClips, buildRhythmAssembleClips, buildSmartMontageClips, type SmartDialogueInterval, type SmartMontageConfig, type SmartRoughCutVisualClip } from '../smart-rough-cut-v2';
+import {
+  buildDialogueRoughCutClips,
+  buildRhythmAssembleClips,
+  buildSmartMontageClips,
+  type SmartDialogueInterval,
+  type SmartMontageConfig,
+  type SmartRoughCutVisualClip,
+} from '../smart-rough-cut-v2';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
-import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
-import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch, addSwitchPoint, deleteSwitchPoint, updateSwitchPoint } from '../multicam';
+import {
+  buildCrossfadeGapFillTransition,
+  buildRepeatedGapFillClip,
+  findTimelineGapAtTime,
+  type FillGapOperation,
+} from '../timeline-gap-fill';
+import {
+  createMulticamSequenceProject,
+  setMulticamSwitch,
+  trimMulticamSwitch,
+  addSwitchPoint,
+  deleteSwitchPoint,
+  updateSwitchPoint,
+} from '../multicam';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import type { ColorGradingGraph, ColorGradingNode, ColorGradingConnection } from '../color-grading/types';
 import { createEmptyColorGradingGraph } from '../color-grading/types';
-import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
-import { applyFcpXmlImport, buildFcpXmlImport, type FcpXmlImportOptions, type FcpXmlImportResult } from '../export/fcpxml-import';
+import {
+  applyCmx3600EdlImport,
+  buildCmx3600EdlImport,
+  type Cmx3600EdlImportOptions,
+  type Cmx3600EdlImportResult,
+} from '../export/timeline-import';
+import {
+  applyFcpXmlImport,
+  buildFcpXmlImport,
+  type FcpXmlImportOptions,
+  type FcpXmlImportResult,
+} from '../export/fcpxml-import';
 import {
   calculateSpeedCurveSourceDuration,
   clampTransitionDuration,
@@ -198,7 +282,7 @@ import {
   removeClip,
   replaceClip,
   splitClip,
-  trimClip
+  trimClip,
 } from '../timeline';
 import { round } from '../time';
 import type { Command } from './command';
@@ -220,7 +304,7 @@ export class NewProjectCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly nextProject: Project,
-    description = 'New project'
+    description = 'New project',
   ) {
     this.description = description;
   }
@@ -244,7 +328,7 @@ export class UpdateProjectSpeakerLabelsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly speakerLabels: Record<number, string>
+    private readonly speakerLabels: Record<number, string>,
   ) {}
 
   execute(): void {
@@ -253,7 +337,7 @@ export class UpdateProjectSpeakerLabelsCommand implements Command {
     this.after = {
       ...project,
       speakerLabels: { ...this.speakerLabels },
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -273,7 +357,7 @@ export class UpdateSequenceSettingsCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly sequenceId: string,
-    private readonly newSettings: SequenceSettings | undefined
+    private readonly newSettings: SequenceSettings | undefined,
   ) {
     this.description = 'Update sequence settings';
   }
@@ -312,7 +396,7 @@ export class UpdateSequenceSettingsCommand implements Command {
       ...project,
       timeline,
       sequences,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -331,7 +415,7 @@ export class BatchUpdateTrackHeightCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    height: number
+    height: number,
   ) {
     this.description = 'Batch update track height';
     this.height = clampTrackHeight(height);
@@ -342,12 +426,12 @@ export class BatchUpdateTrackHeightCommand implements Command {
     const project = this.accessor.getProject();
     const tracks = project.timeline.tracks.map((track) => ({
       ...track,
-      displayHeight: this.height
+      displayHeight: this.height,
     }));
     this.accessor.setProject({
       ...project,
       timeline: { ...project.timeline, tracks },
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -372,7 +456,7 @@ export class PasteKeyframesCommand implements Command {
 
   constructor(
     private readonly accessor: TimelineAccessor,
-    private readonly input: PasteKeyframesInput
+    private readonly input: PasteKeyframesInput,
   ) {}
 
   execute(): void {
@@ -383,7 +467,7 @@ export class PasteKeyframesCommand implements Command {
       this.before.start,
       this.before.duration,
       this.input.mode,
-      this.input.targetProperty
+      this.input.targetProperty,
     );
     let keyframes = cloneClipKeyframes(this.before.keyframes);
     for (const { property, keyframes: pasted } of result) {
@@ -393,7 +477,7 @@ export class PasteKeyframesCommand implements Command {
     }
     this.after = {
       ...this.before,
-      keyframes: normalizeClipKeyframes(keyframes, this.before.duration)
+      keyframes: normalizeClipKeyframes(keyframes, this.before.duration),
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -412,7 +496,7 @@ export class LoadProjectCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly nextProject: Project,
-    description = 'Load project'
+    description = 'Load project',
   ) {
     this.description = description;
   }
@@ -435,7 +519,7 @@ export class UpdateProjectSettingsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly patch: Partial<ProjectSettings>
+    private readonly patch: Partial<ProjectSettings>,
   ) {}
 
   execute(): void {
@@ -443,7 +527,7 @@ export class UpdateProjectSettingsCommand implements Command {
     const project = this.accessor.getProject();
     this.accessor.setProject({
       ...project,
-      settings: normalizeProjectSettings({ ...project.settings, ...this.patch })
+      settings: normalizeProjectSettings({ ...project.settings, ...this.patch }),
     });
   }
 
@@ -462,7 +546,7 @@ export class ConformMediaCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly replacements: ConformMediaReplacement[],
-    description = 'Conform media'
+    description = 'Conform media',
   ) {
     this.description = description;
   }
@@ -475,7 +559,7 @@ export class ConformMediaCommand implements Command {
     this.before ??= this.accessor.getProject();
     this.after = {
       ...applyConformMedia(this.accessor.getProject(), this.replacements),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -493,7 +577,7 @@ export class UpdateProjectReleaseVersionCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly releaseVersion: string
+    private readonly releaseVersion: string,
   ) {}
 
   execute(): void {
@@ -502,7 +586,7 @@ export class UpdateProjectReleaseVersionCommand implements Command {
     this.accessor.setProject({
       ...project,
       releaseVersion: normalizeProjectReleaseVersion(this.releaseVersion),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -520,17 +604,20 @@ export class UpdateProjectCoverCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly coverPath?: string
+    private readonly coverPath?: string,
   ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
     this.before ??= project;
-    const normalized = typeof this.coverPath === 'string' && this.coverPath.trim() ? this.coverPath.trim().replace(/\\/g, '/') : undefined;
+    const normalized =
+      typeof this.coverPath === 'string' && this.coverPath.trim()
+        ? this.coverPath.trim().replace(/\\/g, '/')
+        : undefined;
     this.after = {
       ...this.before,
       coverPath: normalized,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -549,7 +636,7 @@ export class UpdateProjectSpeakersCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly speakers: ProjectSpeaker[]
+    private readonly speakers: ProjectSpeaker[],
   ) {}
 
   execute(): void {
@@ -558,7 +645,7 @@ export class UpdateProjectSpeakersCommand implements Command {
     this.after = {
       ...project,
       speakers: normalizeProjectSpeakers(this.speakers),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -577,7 +664,7 @@ export class UpdateProjectDocumentationCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly documentation: ProjectDocumentation
+    private readonly documentation: ProjectDocumentation,
   ) {}
 
   execute(): void {
@@ -586,7 +673,7 @@ export class UpdateProjectDocumentationCommand implements Command {
     this.after = {
       ...project,
       documentation: normalizeProjectDocumentation(this.documentation),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -607,7 +694,7 @@ export class ImportEDLCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly contents: string,
-    private readonly options: Cmx3600EdlImportOptions = {}
+    private readonly options: Cmx3600EdlImportOptions = {},
   ) {}
 
   get result(): Cmx3600EdlImportResult | undefined {
@@ -639,7 +726,7 @@ export class ImportFCPXMLCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly contents: string,
-    private readonly options: FcpXmlImportOptions = {}
+    private readonly options: FcpXmlImportOptions = {},
   ) {}
 
   get result(): FcpXmlImportResult | undefined {
@@ -670,7 +757,7 @@ export class AddMediaFolderCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly input: MediaFolderInput = {}
+    private readonly input: MediaFolderInput = {},
   ) {}
 
   get folder(): MediaFolder | undefined {
@@ -701,7 +788,7 @@ export class RenameMediaFolderCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly folderId: string,
-    private readonly name: string
+    private readonly name: string,
   ) {}
 
   execute(): void {
@@ -723,7 +810,7 @@ export class SetMediaFolderCollapsedCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly folderId: string,
-    private readonly collapsed: boolean
+    private readonly collapsed: boolean,
   ) {}
 
   execute(): void {
@@ -744,7 +831,7 @@ export class DeleteMediaFolderCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly folderId: string
+    private readonly folderId: string,
   ) {}
 
   execute(): void {
@@ -766,7 +853,7 @@ export class MoveMediaToFolderCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly assetIds: string[],
-    private readonly folderId?: string | null
+    private readonly folderId?: string | null,
   ) {}
 
   execute(): void {
@@ -781,9 +868,7 @@ export class MoveMediaToFolderCommand implements Command {
   }
 }
 
-
 function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
-
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => {
@@ -793,7 +878,7 @@ function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
       const clips = [...track.clips];
       clips.splice(index ?? clips.length, 0, clip);
       return { ...track, clips };
-    })
+    }),
   };
 }
 
@@ -825,7 +910,11 @@ function findClipLocation(timeline: Timeline, clipId: string): { clip: Clip; tra
 
 function timelineHasOverlaps(timeline: Timeline): boolean {
   return timeline.tracks.some((track) =>
-    track.clips.some((clip, index) => track.clips.slice(index + 1).some((other) => clip.start < other.start + other.duration && other.start < clip.start + clip.duration))
+    track.clips.some((clip, index) =>
+      track.clips
+        .slice(index + 1)
+        .some((other) => clip.start < other.start + other.duration && other.start < clip.start + clip.duration),
+    ),
   );
 }
 
@@ -837,19 +926,26 @@ function removeClipsFromTimeline(timeline: Timeline, ids: Set<string>): Timeline
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) })),
-    transitions: (timeline.transitions ?? []).filter((transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId))
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId),
+    ),
   };
 }
 
 function applyClipGroupBatchPatch(clip: Clip, patch: ClipGroupBatchPatch): Clip {
   let next = {
     ...clip,
-    colorCorrection: patch.colorCorrection ? normalizeColorCorrection({ ...clip.colorCorrection, ...patch.colorCorrection }) : normalizeColorCorrection(clip.colorCorrection)
+    colorCorrection: patch.colorCorrection
+      ? normalizeColorCorrection({ ...clip.colorCorrection, ...patch.colorCorrection })
+      : normalizeColorCorrection(clip.colorCorrection),
   } as Clip;
   if (typeof patch.volume === 'number' && 'volume' in next) {
     next = { ...next, volume: normalizeTrackVolume(patch.volume) } as Clip;
   }
-  if (typeof patch.speed === 'number' && (next.type === 'video' || next.type === 'audio' || next.type === 'nested-sequence')) {
+  if (
+    typeof patch.speed === 'number' &&
+    (next.type === 'video' || next.type === 'audio' || next.type === 'nested-sequence')
+  ) {
     const speed = getClipSpeed({ speed: patch.speed });
     const duration = getClipDisplayDuration(getClipSourceVisibleDuration(clip), speed, next.keyframes);
     next = {
@@ -857,7 +953,7 @@ function applyClipGroupBatchPatch(clip: Clip, patch: ClipGroupBatchPatch): Clip 
       speed,
       duration,
       fadeInDuration: normalizeAudioFadeDuration(next.fadeInDuration, duration),
-      fadeOutDuration: normalizeAudioFadeDuration(next.fadeOutDuration, duration)
+      fadeOutDuration: normalizeAudioFadeDuration(next.fadeOutDuration, duration),
     } as Clip;
   }
   return next;
@@ -873,7 +969,7 @@ function normalizeLocalTimeRanges(ranges: LocalTimeRange[], maxDuration: number)
   const sorted = ranges
     .map((range) => ({
       start: round(Math.min(duration, Math.max(0, range.start))),
-      end: round(Math.min(duration, Math.max(0, range.end)))
+      end: round(Math.min(duration, Math.max(0, range.end))),
     }))
     .map((range) => ({ start: Math.min(range.start, range.end), end: Math.max(range.start, range.end) }))
     .filter((range) => range.end - range.start > 0.000001)
@@ -939,7 +1035,7 @@ function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTim
     transform: { ...clip.transform },
     scenecuts: sliceClipSceneCuts(clip.scenecuts, range.start, pieceDuration),
     keyframes: sliceClipKeyframes(clip.keyframes, range.start, pieceDuration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
   } as TClip;
 }
 
@@ -950,7 +1046,11 @@ function sliceClipSceneCuts(cuts: number[] | undefined, offset: number, duration
   return normalizeClipSceneCuts(localCuts, duration);
 }
 
-function sliceClipKeyframes(keyframes: ClipKeyframes | undefined, offset: number, duration: number): ClipKeyframes | undefined {
+function sliceClipKeyframes(
+  keyframes: ClipKeyframes | undefined,
+  offset: number,
+  duration: number,
+): ClipKeyframes | undefined {
   const cloned = cloneClipKeyframes(keyframes);
   if (!cloned) {
     return undefined;
@@ -970,7 +1070,12 @@ function sliceClipKeyframes(keyframes: ClipKeyframes | undefined, offset: number
   return normalizeClipKeyframes(sliced, duration);
 }
 
-function replaceClipWithSlices(timeline: Timeline, clipId: string, ranges: LocalTimeRange[], rippleRemovedGaps: boolean): Timeline {
+function replaceClipWithSlices(
+  timeline: Timeline,
+  clipId: string,
+  ranges: LocalTimeRange[],
+  rippleRemovedGaps: boolean,
+): Timeline {
   const { clip, trackId, index } = findClipLocation(timeline, clipId);
   const track = findTrack(timeline, trackId);
   let outputCursor = clip.start;
@@ -985,7 +1090,9 @@ function replaceClipWithSlices(timeline: Timeline, clipId: string, ranges: Local
   return {
     ...timeline,
     tracks: timeline.tracks.map((item) => (item.id === trackId ? { ...item, clips } : item)),
-    transitions: (timeline.transitions ?? []).filter((transition) => transition.fromClipId !== clip.id && transition.toClipId !== clip.id)
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => transition.fromClipId !== clip.id && transition.toClipId !== clip.id,
+    ),
   };
 }
 
@@ -996,7 +1103,7 @@ function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protecte
   const removedIntervals = mergeTimelineIntervals(
     track.clips
       .filter((clip) => selectedIds.has(clip.id))
-      .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration) }))
+      .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration) })),
   );
   if (removedIntervals.length === 0) {
     return track;
@@ -1006,15 +1113,21 @@ function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protecte
     clips: track.clips
       .filter((clip) => !selectedIds.has(clip.id))
       .map((clip) => {
-        const shift = removedIntervals.reduce((total, interval) => (clip.start >= interval.end - 0.000001 ? total + interval.end - interval.start : total), 0);
+        const shift = removedIntervals.reduce(
+          (total, interval) => (clip.start >= interval.end - 0.000001 ? total + interval.end - interval.start : total),
+          0,
+        );
         return shift > 0 ? moveClip(clip, round(clip.start - shift)) : clip;
-      })
+      }),
   };
 }
 
 function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
   const sorted = intervals
-    .map((interval) => ({ start: round(Math.max(0, Math.min(interval.start, interval.end))), end: round(Math.max(0, Math.max(interval.start, interval.end))) }))
+    .map((interval) => ({
+      start: round(Math.max(0, Math.min(interval.start, interval.end))),
+      end: round(Math.max(0, Math.max(interval.start, interval.end))),
+    }))
     .filter((interval) => interval.end - interval.start > 0.000001)
     .sort((left, right) => left.start - right.start || left.end - right.end);
   const merged: LocalTimeRange[] = [];
@@ -1030,7 +1143,9 @@ function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
 }
 
 function findTrackGapAtTime(track: Track, time: number): LocalTimeRange | undefined {
-  const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  const sortedClips = [...track.clips].sort(
+    (left, right) => left.start - right.start || left.id.localeCompare(right.id),
+  );
   const target = round(Math.max(0, time));
   let cursor = 0;
   for (const clip of sortedClips) {
@@ -1046,16 +1161,31 @@ function closeTrackGap(track: Track, gapStart: number, gapEnd: number): Track {
   const gapDuration = round(gapEnd - gapStart);
   return {
     ...track,
-    clips: track.clips.map((clip) => (clip.start >= gapEnd - 0.000001 ? moveClip(clip, round(clip.start - gapDuration)) : clip))
+    clips: track.clips.map((clip) =>
+      clip.start >= gapEnd - 0.000001 ? moveClip(clip, round(clip.start - gapDuration)) : clip,
+    ),
   };
 }
 
-function buildRollingTrimClips(left: Clip, right: Clip, requestedDelta: number, minDuration: number): { left: Clip; right: Clip } {
+function buildRollingTrimClips(
+  left: Clip,
+  right: Clip,
+  requestedDelta: number,
+  minDuration: number,
+): { left: Clip; right: Clip } {
   const minClipDuration = Math.max(0.000001, minDuration);
   const leftSourceDuration = getClipTotalSourceDuration(left);
   const rightSourceDuration = getClipTotalSourceDuration(right);
-  const leftMaxDuration = getClipDisplayDuration(Math.max(0, leftSourceDuration - left.trimStart), getClipSpeed(left), left.keyframes);
-  const rightMaxDuration = getClipDisplayDuration(Math.max(0, rightSourceDuration - right.trimEnd), getClipSpeed(right), right.keyframes);
+  const leftMaxDuration = getClipDisplayDuration(
+    Math.max(0, leftSourceDuration - left.trimStart),
+    getClipSpeed(left),
+    left.keyframes,
+  );
+  const rightMaxDuration = getClipDisplayDuration(
+    Math.max(0, rightSourceDuration - right.trimEnd),
+    getClipSpeed(right),
+    right.keyframes,
+  );
   const maxPositive = Math.max(0, Math.min(leftMaxDuration - left.duration, right.duration - minClipDuration));
   const maxNegative = -Math.max(0, Math.min(left.duration - minClipDuration, rightMaxDuration - right.duration));
   const delta = round(Math.min(maxPositive, Math.max(maxNegative, requestedDelta)));
@@ -1066,13 +1196,17 @@ function buildRollingTrimClips(left: Clip, right: Clip, requestedDelta: number, 
   const leftDuration = round(left.duration + delta);
   const rightDuration = round(right.duration - delta);
   const leftVisibleSourceDuration = calculateSpeedCurveSourceDuration(leftDuration, left.keyframes, getClipSpeed(left));
-  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(rightDuration, right.keyframes, getClipSpeed(right));
+  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(
+    rightDuration,
+    right.keyframes,
+    getClipSpeed(right),
+  );
   const leftTrimEnd = round(Math.max(0, leftSourceDuration - left.trimStart - leftVisibleSourceDuration));
   const rightTrimStart = round(Math.max(0, rightSourceDuration - right.trimEnd - rightVisibleSourceDuration));
   const leftTrimmed = trimClip(left, left.trimStart, leftTrimEnd);
   const rightTrimmed = {
     ...trimClip(right, rightTrimStart, right.trimEnd),
-    start: round(left.start + leftTrimmed.duration)
+    start: round(left.start + leftTrimmed.duration),
   } as Clip;
   return { left: leftTrimmed, right: rightTrimmed };
 }
@@ -1087,15 +1221,21 @@ export interface SlideClipEditResult {
 
 export function buildSlipClip<TClip extends Clip>(clip: TClip, requestedDelta: number): TClip {
   const speed = getClipSpeed(clip);
-  const requestedSourceDelta = requestedDelta >= 0
-    ? calculateSpeedCurveSourceDuration(requestedDelta, clip.keyframes, speed)
-    : -calculateSpeedCurveSourceDuration(Math.abs(requestedDelta), clip.keyframes, speed);
+  const requestedSourceDelta =
+    requestedDelta >= 0
+      ? calculateSpeedCurveSourceDuration(requestedDelta, clip.keyframes, speed)
+      : -calculateSpeedCurveSourceDuration(Math.abs(requestedDelta), clip.keyframes, speed);
   const sourceDelta = round(Math.min(clip.trimEnd, Math.max(-clip.trimStart, requestedSourceDelta)));
   const slipped = trimClip(clip, round(clip.trimStart + sourceDelta), round(clip.trimEnd - sourceDelta));
   return { ...slipped, start: clip.start, duration: clip.duration } as TClip;
 }
 
-export function buildSlideClipEdit(timeline: Timeline, clipId: string, requestedDelta: number, minDuration = 1 / 30): SlideClipEditResult {
+export function buildSlideClipEdit(
+  timeline: Timeline,
+  clipId: string,
+  requestedDelta: number,
+  minDuration = 1 / 30,
+): SlideClipEditResult {
   const location = findClipLocation(timeline, clipId);
   const track = findTrack(timeline, location.trackId);
   const sorted = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
@@ -1110,8 +1250,16 @@ export function buildSlideClipEdit(timeline: Timeline, clipId: string, requested
   const minClipDuration = Math.max(0.000001, minDuration);
   const leftSourceDuration = getClipTotalSourceDuration(left);
   const rightSourceDuration = getClipTotalSourceDuration(right);
-  const leftMaxDuration = getClipDisplayDuration(Math.max(0, leftSourceDuration - left.trimStart), getClipSpeed(left), left.keyframes);
-  const rightMaxDuration = getClipDisplayDuration(Math.max(0, rightSourceDuration - right.trimEnd), getClipSpeed(right), right.keyframes);
+  const leftMaxDuration = getClipDisplayDuration(
+    Math.max(0, leftSourceDuration - left.trimStart),
+    getClipSpeed(left),
+    left.keyframes,
+  );
+  const rightMaxDuration = getClipDisplayDuration(
+    Math.max(0, rightSourceDuration - right.trimEnd),
+    getClipSpeed(right),
+    right.keyframes,
+  );
   const maxPositive = Math.max(0, Math.min(leftMaxDuration - left.duration, right.duration - minClipDuration));
   const maxNegative = -Math.max(0, Math.min(left.duration - minClipDuration, rightMaxDuration - right.duration));
   const delta = round(Math.min(maxPositive, Math.max(maxNegative, requestedDelta)));
@@ -1121,23 +1269,41 @@ export function buildSlideClipEdit(timeline: Timeline, clipId: string, requested
 
   const nextLeftDuration = round(left.duration + delta);
   const nextRightDuration = round(right.duration - delta);
-  const leftVisibleSourceDuration = calculateSpeedCurveSourceDuration(nextLeftDuration, left.keyframes, getClipSpeed(left));
-  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(nextRightDuration, right.keyframes, getClipSpeed(right));
-  const nextLeft = trimClip(left, left.trimStart, round(Math.max(0, leftSourceDuration - left.trimStart - leftVisibleSourceDuration)));
+  const leftVisibleSourceDuration = calculateSpeedCurveSourceDuration(
+    nextLeftDuration,
+    left.keyframes,
+    getClipSpeed(left),
+  );
+  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(
+    nextRightDuration,
+    right.keyframes,
+    getClipSpeed(right),
+  );
+  const nextLeft = trimClip(
+    left,
+    left.trimStart,
+    round(Math.max(0, leftSourceDuration - left.trimStart - leftVisibleSourceDuration)),
+  );
   const nextClip = moveClip(clip, round(clip.start + delta));
   const nextRight = {
-    ...trimClip(right, round(Math.max(0, rightSourceDuration - right.trimEnd - rightVisibleSourceDuration)), right.trimEnd),
-    start: round(right.start + delta)
+    ...trimClip(
+      right,
+      round(Math.max(0, rightSourceDuration - right.trimEnd - rightVisibleSourceDuration)),
+      right.trimEnd,
+    ),
+    start: round(right.start + delta),
   } as Clip;
   const byId = new Map([
     [nextLeft.id, nextLeft],
     [nextClip.id, nextClip],
-    [nextRight.id, nextRight]
+    [nextRight.id, nextRight],
   ]);
   const nextTimeline = {
     ...timeline,
-    tracks: timeline.tracks.map((item) => (item.id === track.id ? { ...item, clips: item.clips.map((itemClip) => byId.get(itemClip.id) ?? itemClip) } : item)),
-    transitions: timeline.transitions ?? []
+    tracks: timeline.tracks.map((item) =>
+      item.id === track.id ? { ...item, clips: item.clips.map((itemClip) => byId.get(itemClip.id) ?? itemClip) } : item,
+    ),
+    transitions: timeline.transitions ?? [],
   };
   if (timelineHasOverlaps(nextTimeline)) {
     throw new Error('Clip overlaps another clip on this track');
@@ -1153,7 +1319,10 @@ export class AddTrackCommand implements Command {
   readonly description: string;
   private index = -1;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly track: Track,
+  ) {
     this.description = `Add ${track.type} track`;
   }
 
@@ -1173,7 +1342,10 @@ export class AddSpeakerDiarizationTracksCommand implements Command {
   readonly description = 'Add speaker diarization tracks';
   private before?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly tracks: Track[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly tracks: Track[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -1191,7 +1363,22 @@ export class AddSpeakerDiarizationTracksCommand implements Command {
   }
 }
 
-export type TrackPatch = Partial<Pick<Track, 'name' | 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
+export type TrackPatch = Partial<
+  Pick<
+    Track,
+    | 'name'
+    | 'language'
+    | 'subtitleType'
+    | 'color'
+    | 'muted'
+    | 'solo'
+    | 'locked'
+    | 'volume'
+    | 'pan'
+    | 'eq'
+    | 'compressor'
+  >
+>;
 
 function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
   if (!patch) {
@@ -1203,7 +1390,7 @@ function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
     volume: patch.volume === undefined ? track.volume : normalizeTrackVolume(patch.volume),
     pan: patch.pan === undefined ? track.pan : normalizeTrackPan(patch.pan),
     eq: patch.eq === undefined ? track.eq : normalizeTrackEQ(patch.eq),
-    compressor: patch.compressor === undefined ? track.compressor : normalizeTrackCompressor(patch.compressor)
+    compressor: patch.compressor === undefined ? track.compressor : normalizeTrackCompressor(patch.compressor),
   });
 }
 
@@ -1218,7 +1405,11 @@ export class UpdateTrackCommand implements Command {
   private before?: Track;
   private after?: Track;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly trackId: string, private readonly patch: TrackPatch) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly trackId: string,
+    private readonly patch: TrackPatch,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -1226,7 +1417,7 @@ export class UpdateTrackCommand implements Command {
     this.after = applyTrackPatch(this.before, this.patch);
     this.accessor.setTimeline({
       ...timeline,
-      tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.after! : track))
+      tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.after! : track)),
     });
   }
 
@@ -1237,7 +1428,7 @@ export class UpdateTrackCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.accessor.setTimeline({
       ...timeline,
-      tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.before! : track))
+      tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.before! : track)),
     });
   }
 }
@@ -1247,7 +1438,10 @@ export class BatchUpdateTrackCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly options: BatchUpdateTrackCommandOptions) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly options: BatchUpdateTrackCommandOptions,
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getTimeline();
@@ -1289,7 +1483,10 @@ export class UpdateProjectAudioCommand implements Command {
   private before?: Project;
   private after?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly patch: ProjectAudioPatch) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly patch: ProjectAudioPatch,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1297,8 +1494,11 @@ export class UpdateProjectAudioCommand implements Command {
     this.after = {
       ...this.before,
       ...this.patch,
-      masterVolume: this.patch.masterVolume === undefined ? this.before.masterVolume : normalizeMasterVolume(this.patch.masterVolume),
-      updatedAt: new Date().toISOString()
+      masterVolume:
+        this.patch.masterVolume === undefined
+          ? this.before.masterVolume
+          : normalizeMasterVolume(this.patch.masterVolume),
+      updatedAt: new Date().toISOString(),
     };
     this.accessor.setProject(this.after);
   }
@@ -1316,7 +1516,10 @@ export class RemoveMediaCommand implements Command {
   private before?: Project;
   private after?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly assetIds: string | string[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly assetIds: string | string[],
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getProject();
@@ -1348,7 +1551,7 @@ export class MergeMediaCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly keepAssetId: string,
-    private readonly mergedAssetIds: string[]
+    private readonly mergedAssetIds: string[],
   ) {}
 
   execute(): void {
@@ -1381,7 +1584,10 @@ export class BatchUpdateMetadataCommand implements Command {
   private before?: Project;
   private after?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly updates: BatchUpdateMetadataCommandItem[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly updates: BatchUpdateMetadataCommandItem[],
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getProject();
@@ -1393,7 +1599,7 @@ export class BatchUpdateMetadataCommand implements Command {
         const current = mediaMetadata[update.assetId] ?? {};
         const normalized = normalizeMediaMetadataEntry({
           ...current,
-          ...update.metadata
+          ...update.metadata,
         });
         if (normalized) {
           mediaMetadata[update.assetId] = normalized;
@@ -1403,7 +1609,7 @@ export class BatchUpdateMetadataCommand implements Command {
       }
       this.after = touchProject({
         ...this.before,
-        mediaMetadata
+        mediaMetadata,
       });
     }
     this.accessor.setProject(this.after);
@@ -1427,7 +1633,10 @@ export class BatchRenameMediaCommand implements Command {
   private before?: Project;
   private after?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly renames: BatchRenameMediaCommandItem[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly renames: BatchRenameMediaCommandItem[],
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getProject();
@@ -1445,9 +1654,9 @@ export class BatchRenameMediaCommand implements Command {
           return {
             ...asset,
             name: rename.name.trim() || asset.name,
-            path: rename.path?.trim() || asset.path
+            path: rename.path?.trim() || asset.path,
           };
-        })
+        }),
       });
     }
     this.accessor.setProject(this.after);
@@ -1467,7 +1676,7 @@ export class MigrateProxiesCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly updates: ProxyMigrationUpdate[]
+    private readonly updates: ProxyMigrationUpdate[],
   ) {}
 
   execute(): void {
@@ -1476,7 +1685,7 @@ export class MigrateProxiesCommand implements Command {
       this.after = {
         ...this.before,
         media: applyProxyMigration(this.before.media, this.updates),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
     }
     this.accessor.setProject(this.after);
@@ -1497,7 +1706,7 @@ export class AutoRepairProjectHealthCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly input: ProjectHealthAutoRepairInput
+    private readonly input: ProjectHealthAutoRepairInput,
   ) {}
 
   get report(): ProjectHealthRepairReport | undefined {
@@ -1556,7 +1765,7 @@ function removeMediaAssets(project: Project, removeIds: Set<string>): Project {
   return touchProject({
     ...project,
     media: project.media.filter((asset) => !removeIds.has(asset.id)),
-    mediaMetadata
+    mediaMetadata,
   });
 }
 
@@ -1564,15 +1773,16 @@ function mergeMediaReferences(project: Project, keepAssetId: string, removeIds: 
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const sequences = getProjectSequences(synced).map((sequence) => ({
     ...sequence,
-    timeline: replaceTimelineMediaReferences(sequence.timeline, keepAssetId, removeIds)
+    timeline: replaceTimelineMediaReferences(sequence.timeline, keepAssetId, removeIds),
   }));
-  const activeTimeline = sequences.find((sequence) => sequence.id === synced.activeSequenceId)?.timeline ?? synced.timeline;
+  const activeTimeline =
+    sequences.find((sequence) => sequence.id === synced.activeSequenceId)?.timeline ?? synced.timeline;
   return touchProject({
     ...synced,
     media: synced.media.filter((asset) => !removeIds.has(asset.id)),
     mediaMetadata: filterMediaMetadata(synced.mediaMetadata, removeIds),
     timeline: activeTimeline,
-    sequences
+    sequences,
   });
 }
 
@@ -1586,12 +1796,15 @@ function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string,
           return clip;
         }
         return { ...clip, mediaId: keepAssetId } as Clip;
-      })
-    }))
+      }),
+    })),
   };
 }
 
-function filterMediaMetadata(metadata: Record<string, MediaMetadata>, removeIds: Set<string>): Record<string, MediaMetadata> {
+function filterMediaMetadata(
+  metadata: Record<string, MediaMetadata>,
+  removeIds: Set<string>,
+): Record<string, MediaMetadata> {
   const next = { ...metadata };
   for (const assetId of removeIds) {
     delete next[assetId];
@@ -1607,7 +1820,10 @@ export class AddProjectAnnotationCommand implements Command {
   readonly description = 'Add project annotation';
   private annotation?: ProjectAnnotation;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<ProjectAnnotation, 'id'> & Partial<Pick<ProjectAnnotation, 'id'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: Omit<ProjectAnnotation, 'id'> & Partial<Pick<ProjectAnnotation, 'id'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1616,8 +1832,8 @@ export class AddProjectAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        annotations: sortAnnotations([...(project.annotations ?? []), this.annotation])
-      })
+        annotations: sortAnnotations([...(project.annotations ?? []), this.annotation]),
+      }),
     );
   }
 
@@ -1629,8 +1845,8 @@ export class AddProjectAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotation?.id)
-      })
+        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotation?.id),
+      }),
     );
   }
 }
@@ -1639,7 +1855,10 @@ export class AddReviewAnnotationCommand implements Command {
   readonly description = 'Add review annotation';
   private annotation?: ReviewAnnotation;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1648,8 +1867,8 @@ export class AddReviewAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        reviewAnnotations: sortReviewAnnotations([...(project.reviewAnnotations ?? []), this.annotation])
-      })
+        reviewAnnotations: sortReviewAnnotations([...(project.reviewAnnotations ?? []), this.annotation]),
+      }),
     );
   }
 
@@ -1661,8 +1880,10 @@ export class AddReviewAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        reviewAnnotations: (project.reviewAnnotations ?? []).filter((annotation) => annotation.id !== this.annotation?.id)
-      })
+        reviewAnnotations: (project.reviewAnnotations ?? []).filter(
+          (annotation) => annotation.id !== this.annotation?.id,
+        ),
+      }),
     );
   }
 }
@@ -1671,7 +1892,11 @@ export class AddCollaborationNoteCommand implements Command {
   readonly description = 'Add collaboration note';
   private note?: CollaborationNote;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<CollaborationNote, 'id' | 'createdAt'> & Partial<Pick<CollaborationNote, 'id' | 'createdAt'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: Omit<CollaborationNote, 'id' | 'createdAt'> &
+      Partial<Pick<CollaborationNote, 'id' | 'createdAt'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1680,8 +1905,8 @@ export class AddCollaborationNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        collaborationNotes: sortCollaborationNotes([...(project.collaborationNotes ?? []), this.note])
-      })
+        collaborationNotes: sortCollaborationNotes([...(project.collaborationNotes ?? []), this.note]),
+      }),
     );
   }
 
@@ -1693,8 +1918,8 @@ export class AddCollaborationNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.note?.id)
-      })
+        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.note?.id),
+      }),
     );
   }
 }
@@ -1703,7 +1928,10 @@ export class AddTimelineNoteCommand implements Command {
   readonly description = 'Add timeline note';
   private note?: TimelineNote;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<TimelineNote, 'id' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'createdAt'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: Omit<TimelineNote, 'id' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'createdAt'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1716,8 +1944,8 @@ export class AddTimelineNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        timelineNotes: sortTimelineNotes([...(project.timelineNotes ?? []), this.note])
-      })
+        timelineNotes: sortTimelineNotes([...(project.timelineNotes ?? []), this.note]),
+      }),
     );
   }
 
@@ -1729,8 +1957,8 @@ export class AddTimelineNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.note?.id)
-      })
+        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.note?.id),
+      }),
     );
   }
 }
@@ -1745,7 +1973,10 @@ export class AddProjectBookmarkCommand implements Command {
   readonly description = 'Add timeline bookmark';
   private bookmark?: TimelineBookmark;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly input: AddProjectBookmarkInput) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: AddProjectBookmarkInput,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1754,8 +1985,8 @@ export class AddProjectBookmarkCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        bookmarks: sortBookmarks([...(project.bookmarks ?? []), this.bookmark])
-      })
+        bookmarks: sortBookmarks([...(project.bookmarks ?? []), this.bookmark]),
+      }),
     );
   }
 
@@ -1767,8 +1998,8 @@ export class AddProjectBookmarkCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        bookmarks: (project.bookmarks ?? []).filter((bookmark) => bookmark.id !== this.bookmark?.id)
-      })
+        bookmarks: (project.bookmarks ?? []).filter((bookmark) => bookmark.id !== this.bookmark?.id),
+      }),
     );
   }
 }
@@ -1780,7 +2011,11 @@ export class UpdateProjectBookmarkCommand implements Command {
   private before?: TimelineBookmark;
   private after?: TimelineBookmark;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly bookmarkId: string, private readonly patch: TimelineBookmarkPatch) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly bookmarkId: string,
+    private readonly patch: TimelineBookmarkPatch,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1792,8 +2027,10 @@ export class UpdateProjectBookmarkCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        bookmarks: sortBookmarks((project.bookmarks ?? []).map((bookmark) => (bookmark.id === this.bookmarkId ? this.after! : bookmark)))
-      })
+        bookmarks: sortBookmarks(
+          (project.bookmarks ?? []).map((bookmark) => (bookmark.id === this.bookmarkId ? this.after! : bookmark)),
+        ),
+      }),
     );
   }
 
@@ -1805,8 +2042,10 @@ export class UpdateProjectBookmarkCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        bookmarks: sortBookmarks((project.bookmarks ?? []).map((bookmark) => (bookmark.id === this.bookmarkId ? this.before! : bookmark)))
-      })
+        bookmarks: sortBookmarks(
+          (project.bookmarks ?? []).map((bookmark) => (bookmark.id === this.bookmarkId ? this.before! : bookmark)),
+        ),
+      }),
     );
   }
 }
@@ -1816,7 +2055,10 @@ export class RemoveProjectBookmarkCommand implements Command {
   private removed?: TimelineBookmark;
   private index = -1;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly bookmarkId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly bookmarkId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1828,8 +2070,8 @@ export class RemoveProjectBookmarkCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        bookmarks: (project.bookmarks ?? []).filter((bookmark) => bookmark.id !== this.bookmarkId)
-      })
+        bookmarks: (project.bookmarks ?? []).filter((bookmark) => bookmark.id !== this.bookmarkId),
+      }),
     );
   }
 
@@ -1849,7 +2091,10 @@ export class UpdateProjectBookmarksCommand implements Command {
   private before?: TimelineBookmark[];
   private after?: TimelineBookmark[];
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly bookmarks: TimelineBookmark[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly bookmarks: TimelineBookmark[],
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1873,7 +2118,10 @@ export class UpdateProjectBeatMarkersCommand implements Command {
   private before?: BeatMarker[];
   private after?: BeatMarker[];
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly markers: BeatMarker[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly markers: BeatMarker[],
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1883,8 +2131,8 @@ export class UpdateProjectBeatMarkersCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        beatMarkers: this.after
-      })
+        beatMarkers: this.after,
+      }),
     );
   }
 
@@ -1896,8 +2144,8 @@ export class UpdateProjectBeatMarkersCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        beatMarkers: this.before
-      })
+        beatMarkers: this.before,
+      }),
     );
   }
 }
@@ -1907,7 +2155,10 @@ export class UpdateProjectExportRangesCommand implements Command {
   private before?: ExportRange[];
   private after?: ExportRange[];
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly ranges: ExportRange[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly ranges: ExportRange[],
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1917,8 +2168,8 @@ export class UpdateProjectExportRangesCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        exportRanges: this.after
-      })
+        exportRanges: this.after,
+      }),
     );
   }
 
@@ -1930,8 +2181,8 @@ export class UpdateProjectExportRangesCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        exportRanges: this.before
-      })
+        exportRanges: this.before,
+      }),
     );
   }
 }
@@ -1941,7 +2192,10 @@ export class UpdateProjectProtectedRangesCommand implements Command {
   private before?: ProtectedRange[];
   private after?: ProtectedRange[];
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly ranges: ProtectedRange[]) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly ranges: ProtectedRange[],
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1951,8 +2205,8 @@ export class UpdateProjectProtectedRangesCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        protectedRanges: this.after
-      })
+        protectedRanges: this.after,
+      }),
     );
   }
 
@@ -1964,8 +2218,8 @@ export class UpdateProjectProtectedRangesCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        protectedRanges: this.before
-      })
+        protectedRanges: this.before,
+      }),
     );
   }
 }
@@ -1981,7 +2235,11 @@ export class CreateClipGroupCommand implements Command {
   private before?: Project;
   group?: ClipGroup;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly clipIds: string[], private readonly options: CreateClipGroupOptions = {}) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipIds: string[],
+    private readonly options: CreateClipGroupOptions = {},
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -1993,8 +2251,8 @@ export class CreateClipGroupCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        clipGroups: normalizeClipGroups([...withoutGroupedClips, this.group], activeClipIds)
-      })
+        clipGroups: normalizeClipGroups([...withoutGroupedClips, this.group], activeClipIds),
+      }),
     );
   }
 
@@ -2009,7 +2267,11 @@ export class UpdateClipGroupCommand implements Command {
   readonly description = 'Update clip group';
   private before?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string, private readonly patch: Partial<Pick<ClipGroup, 'name' | 'color'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly groupId: string,
+    private readonly patch: Partial<Pick<ClipGroup, 'name' | 'color'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2022,8 +2284,11 @@ export class UpdateClipGroupCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        clipGroups: normalizeClipGroups(groups.map((group) => (group.id === this.groupId ? { ...group, ...this.patch } : group)), activeClipIds)
-      })
+        clipGroups: normalizeClipGroups(
+          groups.map((group) => (group.id === this.groupId ? { ...group, ...this.patch } : group)),
+          activeClipIds,
+        ),
+      }),
     );
   }
 
@@ -2038,7 +2303,10 @@ export class UngroupCommand implements Command {
   readonly description = 'Ungroup clips';
   private before?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly groupId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2051,8 +2319,8 @@ export class UngroupCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        clipGroups: groups.filter((group) => group.id !== this.groupId)
-      })
+        clipGroups: groups.filter((group) => group.id !== this.groupId),
+      }),
     );
   }
 
@@ -2067,7 +2335,10 @@ export class DeleteGroupCommand implements Command {
   readonly description = 'Delete clip group';
   private before?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly groupId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2083,8 +2354,8 @@ export class DeleteGroupCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...replaceProjectActiveTimeline(project, timeline),
-        clipGroups: groups.filter((item) => item.id !== group.id)
-      })
+        clipGroups: groups.filter((item) => item.id !== group.id),
+      }),
     );
   }
 
@@ -2099,7 +2370,11 @@ export class BatchUpdateClipGroupClipsCommand implements Command {
   readonly description = 'Batch update clip group clips';
   private before?: Project;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string, private readonly patch: ClipGroupBatchPatch) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly groupId: string,
+    private readonly patch: ClipGroupBatchPatch,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2115,8 +2390,8 @@ export class BatchUpdateClipGroupClipsCommand implements Command {
       ...project.timeline,
       tracks: project.timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => (ids.has(clip.id) ? applyClipGroupBatchPatch(clip, this.patch) : clip))
-      }))
+        clips: track.clips.map((clip) => (ids.has(clip.id) ? applyClipGroupBatchPatch(clip, this.patch) : clip)),
+      })),
     };
     if (timelineHasOverlaps(nextTimeline)) {
       throw new Error('Clip overlaps another clip on this track');
@@ -2124,8 +2399,8 @@ export class BatchUpdateClipGroupClipsCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...replaceProjectActiveTimeline(project, nextTimeline),
-        clipGroups: groups
-      })
+        clipGroups: groups,
+      }),
     );
   }
 
@@ -2147,7 +2422,7 @@ export class ApplyStyleCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly summary: StyleSummary,
-    private readonly options: ApplyStyleCommandOptions
+    private readonly options: ApplyStyleCommandOptions,
   ) {}
 
   execute(): void {
@@ -2165,8 +2440,8 @@ export class ApplyStyleCommand implements Command {
           }
           applied += 1;
           return applyStyleToClip(clip, this.summary, this.options);
-        })
-      }))
+        }),
+      })),
     };
     if (targetIds && applied === 0) {
       throw new Error('No clips match style transfer target');
@@ -2186,7 +2461,11 @@ export class UpdateProjectAnnotationCommand implements Command {
   private before?: ProjectAnnotation;
   private after?: ProjectAnnotation;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string, private readonly patch: Partial<Omit<ProjectAnnotation, 'id'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly annotationId: string,
+    private readonly patch: Partial<Omit<ProjectAnnotation, 'id'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2199,8 +2478,10 @@ export class UpdateProjectAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        annotations: sortAnnotations((project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)))
-      })
+        annotations: sortAnnotations(
+          (project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)),
+        ),
+      }),
     );
   }
 
@@ -2212,8 +2493,10 @@ export class UpdateProjectAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        annotations: sortAnnotations((project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)))
-      })
+        annotations: sortAnnotations(
+          (project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)),
+        ),
+      }),
     );
   }
 }
@@ -2223,7 +2506,10 @@ export class RemoveProjectAnnotationCommand implements Command {
   private removed?: ProjectAnnotation;
   private index = -1;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly annotationId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2235,8 +2521,8 @@ export class RemoveProjectAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotationId)
-      })
+        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotationId),
+      }),
     );
   }
 
@@ -2256,7 +2542,11 @@ export class UpdateReviewAnnotationCommand implements Command {
   private before?: ReviewAnnotation;
   private after?: ReviewAnnotation;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string, private readonly patch: Partial<Omit<ReviewAnnotation, 'id'>>) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly annotationId: string,
+    private readonly patch: Partial<Omit<ReviewAnnotation, 'id'>>,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2269,8 +2559,10 @@ export class UpdateReviewAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        reviewAnnotations: sortReviewAnnotations((project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)))
-      })
+        reviewAnnotations: sortReviewAnnotations(
+          (project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)),
+        ),
+      }),
     );
   }
 
@@ -2282,8 +2574,10 @@ export class UpdateReviewAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        reviewAnnotations: sortReviewAnnotations((project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)))
-      })
+        reviewAnnotations: sortReviewAnnotations(
+          (project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)),
+        ),
+      }),
     );
   }
 }
@@ -2293,7 +2587,10 @@ export class RemoveReviewAnnotationCommand implements Command {
   private removed?: ReviewAnnotation;
   private index = -1;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly annotationId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2305,8 +2602,10 @@ export class RemoveReviewAnnotationCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        reviewAnnotations: (project.reviewAnnotations ?? []).filter((annotation) => annotation.id !== this.annotationId)
-      })
+        reviewAnnotations: (project.reviewAnnotations ?? []).filter(
+          (annotation) => annotation.id !== this.annotationId,
+        ),
+      }),
     );
   }
 
@@ -2321,14 +2620,20 @@ export class RemoveReviewAnnotationCommand implements Command {
   }
 }
 
-export type CollaborationNotePatch = Partial<Omit<CollaborationNote, 'id' | 'createdAt'> & Pick<CollaborationNote, 'createdAt'>>;
+export type CollaborationNotePatch = Partial<
+  Omit<CollaborationNote, 'id' | 'createdAt'> & Pick<CollaborationNote, 'createdAt'>
+>;
 
 export class UpdateCollaborationNoteCommand implements Command {
   readonly description = 'Update collaboration note';
   private before?: CollaborationNote;
   private after?: CollaborationNote;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string, private readonly patch: CollaborationNotePatch) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly noteId: string,
+    private readonly patch: CollaborationNotePatch,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2337,12 +2642,17 @@ export class UpdateCollaborationNoteCommand implements Command {
       throw new Error(`Collaboration note ${this.noteId} not found`);
     }
     this.before ??= note;
-    this.after = normalizeCollaborationNote({ ...note, ...this.patch, updatedAt: this.patch.updatedAt ?? new Date().toISOString() }, getTimelineDuration(project.timeline));
+    this.after = normalizeCollaborationNote(
+      { ...note, ...this.patch, updatedAt: this.patch.updatedAt ?? new Date().toISOString() },
+      getTimelineDuration(project.timeline),
+    );
     this.accessor.setProject(
       touchProject({
         ...project,
-        collaborationNotes: sortCollaborationNotes((project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)))
-      })
+        collaborationNotes: sortCollaborationNotes(
+          (project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)),
+        ),
+      }),
     );
   }
 
@@ -2354,8 +2664,10 @@ export class UpdateCollaborationNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        collaborationNotes: sortCollaborationNotes((project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)))
-      })
+        collaborationNotes: sortCollaborationNotes(
+          (project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)),
+        ),
+      }),
     );
   }
 }
@@ -2365,7 +2677,10 @@ export class RemoveCollaborationNoteCommand implements Command {
   private removed?: CollaborationNote;
   private index = -1;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly noteId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2377,8 +2692,8 @@ export class RemoveCollaborationNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.noteId)
-      })
+        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.noteId),
+      }),
     );
   }
 
@@ -2400,7 +2715,11 @@ export class UpdateTimelineNoteCommand implements Command {
   private before?: TimelineNote;
   private after?: TimelineNote;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string, private readonly patch: TimelineNotePatch) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly noteId: string,
+    private readonly patch: TimelineNotePatch,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2417,8 +2736,10 @@ export class UpdateTimelineNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        timelineNotes: sortTimelineNotes((project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)))
-      })
+        timelineNotes: sortTimelineNotes(
+          (project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)),
+        ),
+      }),
     );
   }
 
@@ -2430,8 +2751,10 @@ export class UpdateTimelineNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        timelineNotes: sortTimelineNotes((project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)))
-      })
+        timelineNotes: sortTimelineNotes(
+          (project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)),
+        ),
+      }),
     );
   }
 }
@@ -2441,7 +2764,10 @@ export class RemoveTimelineNoteCommand implements Command {
   private removed?: TimelineNote;
   private index = -1;
 
-  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string) {}
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly noteId: string,
+  ) {}
 
   execute(): void {
     const project = this.accessor.getProject();
@@ -2453,8 +2779,8 @@ export class RemoveTimelineNoteCommand implements Command {
     this.accessor.setProject(
       touchProject({
         ...project,
-        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.noteId)
-      })
+        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.noteId),
+      }),
     );
   }
 
@@ -2481,7 +2807,10 @@ export class AddTransitionCommand implements Command {
   readonly description = 'Add transition';
   private transition?: Transition;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly input: TransitionInput) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly input: TransitionInput,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2489,7 +2818,11 @@ export class AddTransitionCommand implements Command {
     if (!pair) {
       throw new Error('Transition clips must be adjacent on the same track');
     }
-    if ((timeline.transitions ?? []).some((transition) => transition.fromClipId === this.input.fromClipId && transition.toClipId === this.input.toClipId)) {
+    if (
+      (timeline.transitions ?? []).some(
+        (transition) => transition.fromClipId === this.input.fromClipId && transition.toClipId === this.input.toClipId,
+      )
+    ) {
       throw new Error('Transition already exists for these clips');
     }
     const duration = clampTransitionDuration(this.input.duration, pair.fromClip, pair.toClip);
@@ -2500,7 +2833,7 @@ export class AddTransitionCommand implements Command {
     this.transition = { ...this.transition, duration };
     this.accessor.setTimeline({
       ...timeline,
-      transitions: [...(timeline.transitions ?? []), this.transition]
+      transitions: [...(timeline.transitions ?? []), this.transition],
     });
   }
 
@@ -2511,7 +2844,7 @@ export class AddTransitionCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.accessor.setTimeline({
       ...timeline,
-      transitions: (timeline.transitions ?? []).filter((transition) => transition.id !== this.transition?.id)
+      transitions: (timeline.transitions ?? []).filter((transition) => transition.id !== this.transition?.id),
     });
   }
 }
@@ -2521,7 +2854,10 @@ export class RemoveTransitionCommand implements Command {
   private removed?: Transition;
   private index = -1;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly transitionId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly transitionId: string,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2532,7 +2868,7 @@ export class RemoveTransitionCommand implements Command {
     this.removed ??= (timeline.transitions ?? [])[this.index];
     this.accessor.setTimeline({
       ...timeline,
-      transitions: (timeline.transitions ?? []).filter((transition) => transition.id !== this.transitionId)
+      transitions: (timeline.transitions ?? []).filter((transition) => transition.id !== this.transitionId),
     });
   }
 
@@ -2558,7 +2894,10 @@ export class AddTimelineMarkerCommand implements Command {
   readonly description = 'Add timeline marker';
   private marker?: TimelineMarker;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly input: AddTimelineMarkerInput) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly input: AddTimelineMarkerInput,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2566,7 +2905,7 @@ export class AddTimelineMarkerCommand implements Command {
     this.marker = normalizeTimelineMarker(this.marker, getTimelineDuration(timeline));
     this.accessor.setTimeline({
       ...timeline,
-      markers: sortMarkers([...(timeline.markers ?? []), this.marker])
+      markers: sortMarkers([...(timeline.markers ?? []), this.marker]),
     });
   }
 
@@ -2577,7 +2916,7 @@ export class AddTimelineMarkerCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.accessor.setTimeline({
       ...timeline,
-      markers: (timeline.markers ?? []).filter((marker) => marker.id !== this.marker?.id)
+      markers: (timeline.markers ?? []).filter((marker) => marker.id !== this.marker?.id),
     });
   }
 }
@@ -2589,7 +2928,11 @@ export class UpdateTimelineMarkerCommand implements Command {
   private before?: TimelineMarker;
   private after?: TimelineMarker;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly markerId: string, private readonly patch: TimelineMarkerPatch) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly markerId: string,
+    private readonly patch: TimelineMarkerPatch,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2600,7 +2943,9 @@ export class UpdateTimelineMarkerCommand implements Command {
     this.after = createTimelineMarker({ ...this.before, ...this.patch }, getTimelineDuration(timeline));
     this.accessor.setTimeline({
       ...timeline,
-      markers: sortMarkers((timeline.markers ?? []).map((marker) => (marker.id === this.markerId ? this.after! : marker)))
+      markers: sortMarkers(
+        (timeline.markers ?? []).map((marker) => (marker.id === this.markerId ? this.after! : marker)),
+      ),
     });
   }
 
@@ -2611,7 +2956,9 @@ export class UpdateTimelineMarkerCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.accessor.setTimeline({
       ...timeline,
-      markers: sortMarkers((timeline.markers ?? []).map((marker) => (marker.id === this.markerId ? this.before! : marker)))
+      markers: sortMarkers(
+        (timeline.markers ?? []).map((marker) => (marker.id === this.markerId ? this.before! : marker)),
+      ),
     });
   }
 }
@@ -2621,7 +2968,10 @@ export class RemoveTimelineMarkerCommand implements Command {
   private removed?: TimelineMarker;
   private index = -1;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly markerId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly markerId: string,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2632,7 +2982,7 @@ export class RemoveTimelineMarkerCommand implements Command {
     this.removed ??= (timeline.markers ?? [])[this.index];
     this.accessor.setTimeline({
       ...timeline,
-      markers: (timeline.markers ?? []).filter((marker) => marker.id !== this.markerId)
+      markers: (timeline.markers ?? []).filter((marker) => marker.id !== this.markerId),
     });
   }
 
@@ -2650,7 +3000,10 @@ export class RemoveTimelineMarkerCommand implements Command {
 export class AddClipCommand implements Command {
   readonly description: string;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clip: Clip) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clip: Clip,
+  ) {
     this.description = `Add clip ${clip.name}`;
   }
 
@@ -2672,7 +3025,11 @@ export class AddAdjustmentLayerCommand implements Command {
   readonly description: string;
   private insertedTrack = false;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly clip: Extract<Clip, { type: 'adjustment' }>) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly track: Track,
+    private readonly clip: Extract<Clip, { type: 'adjustment' }>,
+  ) {
     this.description = `Add adjustment layer ${clip.name}`;
   }
 
@@ -2694,9 +3051,9 @@ export class AddAdjustmentLayerCommand implements Command {
         ...timeline.tracks,
         {
           ...this.track,
-          clips: [this.clip]
-        }
-      ]
+          clips: [this.clip],
+        },
+      ],
     });
   }
 
@@ -2708,7 +3065,7 @@ export class AddAdjustmentLayerCommand implements Command {
     }
     this.accessor.setTimeline({
       ...timeline,
-      tracks: timeline.tracks.filter((track) => track.id !== this.track.id)
+      tracks: timeline.tracks.filter((track) => track.id !== this.track.id),
     });
   }
 }
@@ -2717,7 +3074,11 @@ export class AddMotionGraphicCommand implements Command {
   readonly description: string;
   private insertedTrack = false;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly clip: Extract<Clip, { type: 'motion-graphic' }>) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly track: Track,
+    private readonly clip: Extract<Clip, { type: 'motion-graphic' }>,
+  ) {
     this.description = `Add motion graphic ${clip.name}`;
   }
 
@@ -2745,9 +3106,9 @@ export class AddMotionGraphicCommand implements Command {
         ...timeline.tracks,
         {
           ...this.track,
-          clips: [this.clip]
-        }
-      ]
+          clips: [this.clip],
+        },
+      ],
     });
   }
 
@@ -2759,7 +3120,7 @@ export class AddMotionGraphicCommand implements Command {
     }
     this.accessor.setTimeline({
       ...timeline,
-      tracks: timeline.tracks.filter((track) => track.id !== this.track.id)
+      tracks: timeline.tracks.filter((track) => track.id !== this.track.id),
     });
   }
 }
@@ -2767,7 +3128,10 @@ export class AddMotionGraphicCommand implements Command {
 export class AddSubtitleClipCommand implements Command {
   readonly description: string;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clip: Extract<Clip, { type: 'subtitle' }>) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clip: Extract<Clip, { type: 'subtitle' }>,
+  ) {
     this.description = `Add subtitle clip ${clip.name}`;
   }
 
@@ -2791,7 +3155,10 @@ export class AddSubtitleClipCommand implements Command {
 export class AddCreditsClipCommand implements Command {
   readonly description: string;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clip: Extract<Clip, { type: 'credits' }>) {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clip: Extract<Clip, { type: 'credits' }>,
+  ) {
     this.description = `Add credits clip ${clip.name}`;
   }
 
@@ -2813,7 +3180,9 @@ export class AddCreditsClipCommand implements Command {
 }
 
 function resolveSubtitleImportTarget(timeline: Timeline, targetTrackId: string | undefined): Track | undefined {
-  const track = targetTrackId ? timeline.tracks.find((item) => item.id === targetTrackId) : timeline.tracks.find((item) => item.type === 'subtitle');
+  const track = targetTrackId
+    ? timeline.tracks.find((item) => item.id === targetTrackId)
+    : timeline.tracks.find((item) => item.type === 'subtitle');
   if (track && track.type !== 'subtitle') {
     throw new Error('Subtitle import target must be a subtitle track');
   }
@@ -2830,7 +3199,11 @@ export class BatchImportSubtitleCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly options: BatchImportSubtitleCommandOptions) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly track: Track,
+    private readonly options: BatchImportSubtitleCommandOptions,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -2853,20 +3226,25 @@ export class BatchImportSubtitleCommand implements Command {
       const targetTrackId = shouldUseExistingTrack ? targetTrack.id : this.track.id;
       const importedClips = clips.map((clip) => ({ ...clip, trackId: targetTrackId }));
       if (!shouldUseExistingTrack) {
-        this.after = { ...timeline, tracks: [...timeline.tracks, createTrack({ ...this.track, clips: importedClips })] };
+        this.after = {
+          ...timeline,
+          tracks: [...timeline.tracks, createTrack({ ...this.track, clips: importedClips })],
+        };
       } else if (this.options.mode === 'replace-current-track') {
         this.after = {
           ...timeline,
           tracks: timeline.tracks.map((track) =>
-            track.id === targetTrack.id ? createTrack({ ...track, name: this.track.name, clips: importedClips }) : track
-          )
+            track.id === targetTrack.id
+              ? createTrack({ ...track, name: this.track.name, clips: importedClips })
+              : track,
+          ),
         };
       } else {
         this.after = {
           ...timeline,
           tracks: timeline.tracks.map((track) =>
-            track.id === targetTrack.id ? createTrack({ ...track, clips: [...track.clips, ...importedClips] }) : track
-          )
+            track.id === targetTrack.id ? createTrack({ ...track, clips: [...track.clips, ...importedClips] }) : track,
+          ),
         };
       }
     }
@@ -2889,7 +3267,7 @@ export class BatchAddClipsCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly clips: Clip[],
-    private readonly newTracks: Array<{ id: string; name: string; type: 'video' | 'audio' }>
+    private readonly newTracks: Array<{ id: string; name: string; type: 'video' | 'audio' }>,
   ) {}
 
   execute(): void {
@@ -2904,9 +3282,8 @@ export class BatchAddClipsCommand implements Command {
         }
       }
       const newTracks = Array.from(trackMap.values());
-      let updatedTimeline: Timeline = newTracks.length > 0
-        ? { ...timeline, tracks: [...timeline.tracks, ...newTracks] }
-        : timeline;
+      let updatedTimeline: Timeline =
+        newTracks.length > 0 ? { ...timeline, tracks: [...timeline.tracks, ...newTracks] } : timeline;
       for (const clip of this.clips) {
         updatedTimeline = insertClip(updatedTimeline, clip);
       }
@@ -2931,7 +3308,7 @@ export class MoveClipCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipId: string,
     private readonly newStart: number,
-    private readonly protectedRanges: ProtectedRange[] = []
+    private readonly protectedRanges: ProtectedRange[] = [],
   ) {}
 
   execute(): void {
@@ -2963,14 +3340,17 @@ export class MoveClipsCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly newStartsByClipId: Record<string, number>,
-    private readonly protectedRanges: ProtectedRange[] = []
+    private readonly protectedRanges: ProtectedRange[] = [],
   ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
     const ids = Object.keys(this.newStartsByClipId);
     this.before ??= ids.map((id) => findClip(timeline, id));
-    const blocked = this.before.find((clip) => !canMoveClipWithProtectedRanges(clip, this.newStartsByClipId[clip.id] ?? clip.start, this.protectedRanges));
+    const blocked = this.before.find(
+      (clip) =>
+        !canMoveClipWithProtectedRanges(clip, this.newStartsByClipId[clip.id] ?? clip.start, this.protectedRanges),
+    );
     if (blocked) {
       throw new Error('Clip move is blocked by a protected range');
     }
@@ -2980,8 +3360,8 @@ export class MoveClipsCommand implements Command {
       ...timeline,
       tracks: timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => movedById.get(clip.id) ?? clip)
-      }))
+        clips: track.clips.map((clip) => movedById.get(clip.id) ?? clip),
+      })),
     };
     if (timelineHasOverlaps(nextTimeline)) {
       throw new Error('Clip overlaps another clip on this track');
@@ -2999,8 +3379,8 @@ export class MoveClipsCommand implements Command {
       ...timeline,
       tracks: timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => beforeById.get(clip.id) ?? clip)
-      }))
+        clips: track.clips.map((clip) => beforeById.get(clip.id) ?? clip),
+      })),
     });
   }
 }
@@ -3012,7 +3392,7 @@ export class BatchShiftClipsCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly offsetsByClipId: Record<string, number>,
-    private readonly protectedRanges: ProtectedRange[] = []
+    private readonly protectedRanges: ProtectedRange[] = [],
   ) {}
 
   execute(): void {
@@ -3022,7 +3402,7 @@ export class BatchShiftClipsCommand implements Command {
         Object.entries(this.offsetsByClipId).map(([clipId, offset]) => {
           const clip = findClip(timeline, clipId);
           return [clipId, round(clip.start + offset)];
-        })
+        }),
       );
       if (Object.keys(startsByClipId).length === 0) {
         throw new Error('No clips to shift');
@@ -3044,7 +3424,7 @@ export class BatchReorderClipsCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly startsByClipId: Record<string, number>,
-    private readonly protectedRanges: ProtectedRange[] = []
+    private readonly protectedRanges: ProtectedRange[] = [],
   ) {}
 
   execute(): void {
@@ -3062,7 +3442,10 @@ export class BatchSubtitleTimingCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly updates: SubtitleTimingUpdate[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly updates: SubtitleTimingUpdate[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3089,10 +3472,10 @@ export class BatchSubtitleTimingCommand implements Command {
             return {
               ...clip,
               start: round(Math.max(0, update.start)),
-              duration: round(Math.max(1 / 30, update.duration))
+              duration: round(Math.max(1 / 30, update.duration)),
             };
-          })
-        }))
+          }),
+        })),
       };
       if (changed === 0) {
         throw new Error('No subtitle clips found for retiming');
@@ -3120,7 +3503,7 @@ export class BatchShiftSubtitleCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
     private readonly offsetSeconds: number,
-    private readonly projectDuration: number
+    private readonly projectDuration: number,
   ) {}
 
   execute(): void {
@@ -3130,7 +3513,10 @@ export class BatchShiftSubtitleCommand implements Command {
       const clips = timeline.tracks
         .flatMap((track) => track.clips)
         .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
-      this.delegate = new BatchSubtitleTimingCommand(this.accessor, calculateSubtitleShiftUpdates(clips, this.offsetSeconds, this.projectDuration));
+      this.delegate = new BatchSubtitleTimingCommand(
+        this.accessor,
+        calculateSubtitleShiftUpdates(clips, this.offsetSeconds, this.projectDuration),
+      );
     }
     this.delegate.execute();
   }
@@ -3150,7 +3536,7 @@ export class BatchAlignSubtitleCommand implements Command {
     private readonly clipIds: string[],
     private readonly peakTimes: number[],
     private readonly projectDuration: number,
-    private readonly options: SubtitleAlignmentOptions = {}
+    private readonly options: SubtitleAlignmentOptions = {},
   ) {}
 
   execute(): void {
@@ -3179,7 +3565,10 @@ export class BatchProofreadSubtitleCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly fixes: SubtitleProofreadingFix[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly fixes: SubtitleProofreadingFix[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3212,8 +3601,8 @@ export class BatchProofreadSubtitleCommand implements Command {
             }
             changed += 1;
             return [{ ...clip, duration: nextDuration }];
-          })
-        }))
+          }),
+        })),
       };
       if (changed === 0) {
         throw new Error('No subtitle clips found for proofreading fixes');
@@ -3243,7 +3632,10 @@ export class BatchUpdateSubtitleTextCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly updates: SubtitleTextUpdate[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly updates: SubtitleTextUpdate[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3268,8 +3660,8 @@ export class BatchUpdateSubtitleTextCommand implements Command {
             }
             changed += 1;
             return { ...clip, text: update.text };
-          })
-        }))
+          }),
+        })),
       };
       if (changed === 0) {
         throw new Error('No subtitle clips found for text updates');
@@ -3296,7 +3688,7 @@ export class SnapToBeatsCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
     private readonly beatTimes: number[],
-    private readonly maxDistance = 0.25
+    private readonly maxDistance = 0.25,
   ) {}
 
   get appliedUpdates(): BeatSnapUpdate[] {
@@ -3316,8 +3708,10 @@ export class SnapToBeatsCommand implements Command {
         ...timeline,
         tracks: timeline.tracks.map((track) => ({
           ...track,
-          clips: track.clips.map((clip) => (startsByClipId.has(clip.id) ? moveClip(clip, startsByClipId.get(clip.id)!) : clip))
-        }))
+          clips: track.clips.map((clip) =>
+            startsByClipId.has(clip.id) ? moveClip(clip, startsByClipId.get(clip.id)!) : clip,
+          ),
+        })),
       };
       if (timelineHasOverlaps(nextTimeline)) {
         throw new Error('Clip overlaps another clip on this track');
@@ -3349,7 +3743,7 @@ export class BatchAlignToBeatCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
     private readonly beatTimes: number[],
-    private readonly options: BatchAlignToBeatOptions = {}
+    private readonly options: BatchAlignToBeatOptions = {},
   ) {}
 
   get appliedUpdates(): BeatAlignmentUpdate[] {
@@ -3360,7 +3754,12 @@ export class BatchAlignToBeatCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.before ??= timeline;
     if (!this.after) {
-      this.updates = calculateBeatAlignmentUpdates(timeline, this.clipIds, this.beatTimes, this.options.maxDistance ?? 0.05);
+      this.updates = calculateBeatAlignmentUpdates(
+        timeline,
+        this.clipIds,
+        this.beatTimes,
+        this.options.maxDistance ?? 0.05,
+      );
       if (this.updates.length === 0) {
         throw new Error('No selected video clips are within beat alignment range');
       }
@@ -3381,20 +3780,20 @@ export class BatchAlignToBeatCommand implements Command {
               start: update.toStart,
               duration,
               beatMarkers: normalizeClipBeatMarkers(clip.beatMarkers, duration),
-              detectedBpm: normalizeDetectedBpm(clip.detectedBpm)
+              detectedBpm: normalizeDetectedBpm(clip.detectedBpm),
             } as Clip;
             if (syncSpeed && next.type === 'video') {
               const speedFrames = buildBeatSyncSpeedKeyframes(next, this.beatTimes);
               if (speedFrames.length > 0) {
                 next = {
                   ...next,
-                  keyframes: normalizeClipKeyframes({ ...(next.keyframes ?? {}), speed: speedFrames }, next.duration)
+                  keyframes: normalizeClipKeyframes({ ...(next.keyframes ?? {}), speed: speedFrames }, next.duration),
                 } as Clip;
               }
             }
             return next;
-          })
-        }))
+          }),
+        })),
       };
       if (timelineHasOverlaps(nextTimeline)) {
         throw new Error('Clip overlaps another clip on this track');
@@ -3416,7 +3815,11 @@ export class SlipClipCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly delta: number) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly delta: number,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3441,7 +3844,7 @@ export class SlideClipCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipId: string,
     private readonly delta: number,
-    private readonly minDuration = 1 / 30
+    private readonly minDuration = 1 / 30,
   ) {}
 
   execute(): void {
@@ -3469,7 +3872,7 @@ export class TrimClipCommand implements Command {
     private readonly newTrimStart: number,
     private readonly newTrimEnd: number,
     private readonly newStart?: number,
-    private readonly minDuration = 1 / 30
+    private readonly minDuration = 1 / 30,
   ) {}
 
   execute(): void {
@@ -3496,7 +3899,10 @@ export class DeleteClipsCommand implements Command {
   readonly description = 'Delete clips';
   private removed: Array<{ clip: Clip; index: number; trackId: string }> = [];
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipIds: string[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+  ) {}
 
   execute(): void {
     const uniqueIds = Array.from(new Set(this.clipIds));
@@ -3505,7 +3911,7 @@ export class DeleteClipsCommand implements Command {
     const ids = new Set(uniqueIds);
     this.accessor.setTimeline({
       ...timeline,
-      tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) }))
+      tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) })),
     });
   }
 
@@ -3529,7 +3935,7 @@ export class RippleDeleteCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
-    private readonly protectedRanges: ProtectedRange[] = []
+    private readonly protectedRanges: ProtectedRange[] = [],
   ) {}
 
   execute(): void {
@@ -3541,14 +3947,18 @@ export class RippleDeleteCommand implements Command {
         throw new Error('No clips selected for ripple delete');
       }
       const ids = new Set(uniqueIds);
-      const missingIds = uniqueIds.filter((clipId) => !timeline.tracks.some((track) => track.clips.some((clip) => clip.id === clipId)));
+      const missingIds = uniqueIds.filter(
+        (clipId) => !timeline.tracks.some((track) => track.clips.some((clip) => clip.id === clipId)),
+      );
       if (missingIds.length > 0) {
         throw new Error(`Clip ${missingIds[0]} not found`);
       }
       this.after = {
         ...timeline,
         tracks: timeline.tracks.map((track) => rippleDeleteTrackClips(track, ids, this.protectedRanges)),
-        transitions: (timeline.transitions ?? []).filter((transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId))
+        transitions: (timeline.transitions ?? []).filter(
+          (transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId),
+        ),
       };
     }
     this.accessor.setTimeline(this.after);
@@ -3566,7 +3976,11 @@ export class CloseGapCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly trackId: string, private readonly time: number) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly trackId: string,
+    private readonly time: number,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3579,8 +3993,10 @@ export class CloseGapCommand implements Command {
       }
       this.after = {
         ...timeline,
-        tracks: timeline.tracks.map((item) => (item.id === this.trackId ? closeTrackGap(item, gap.start, gap.end) : item)),
-        transitions: timeline.transitions ?? []
+        tracks: timeline.tracks.map((item) =>
+          item.id === this.trackId ? closeTrackGap(item, gap.start, gap.end) : item,
+        ),
+        transitions: timeline.transitions ?? [],
       };
     }
     this.accessor.setTimeline(this.after);
@@ -3598,7 +4014,12 @@ export class FillGapCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly trackId: string, private readonly time: number, private readonly operation: FillGapOperation) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly trackId: string,
+    private readonly time: number,
+    private readonly operation: FillGapOperation,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3614,7 +4035,7 @@ export class FillGapCommand implements Command {
           ...this.operation.clip,
           trackId: this.trackId,
           start: gap.start,
-          duration: gap.duration
+          duration: gap.duration,
         } as Clip;
         if (detectOverlap(track, clip)) {
           throw new Error('Gap fill clip overlaps another clip on this track');
@@ -3633,9 +4054,11 @@ export class FillGapCommand implements Command {
           ...timeline,
           tracks: timeline.tracks.map((item) => (item.id === this.trackId ? closedTrack : item)),
           transitions: [
-            ...(timeline.transitions ?? []).filter((item) => item.fromClipId !== transition.fromClipId || item.toClipId !== transition.toClipId),
-            transition
-          ]
+            ...(timeline.transitions ?? []).filter(
+              (item) => item.fromClipId !== transition.fromClipId || item.toClipId !== transition.toClipId,
+            ),
+            transition,
+          ],
         };
       }
     }
@@ -3659,7 +4082,7 @@ export class RollingTrimCommand implements Command {
     private readonly leftClipId: string,
     private readonly rightClipId: string,
     private readonly delta: number,
-    private readonly minDuration = 1 / 30
+    private readonly minDuration = 1 / 30,
   ) {}
 
   execute(): void {
@@ -3677,11 +4100,11 @@ export class RollingTrimCommand implements Command {
           track.id === pair.track.id
             ? {
                 ...track,
-                clips: track.clips.map((clip) => (clip.id === left.id ? left : clip.id === right.id ? right : clip))
+                clips: track.clips.map((clip) => (clip.id === left.id ? left : clip.id === right.id ? right : clip)),
               }
-            : track
+            : track,
         ),
-        transitions: timeline.transitions ?? []
+        transitions: timeline.transitions ?? [],
       };
       if (timelineHasOverlaps(this.after)) {
         throw new Error('Clip overlaps another clip on this track');
@@ -3705,7 +4128,7 @@ export class PackNestedSequenceCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipIds: string[],
-    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME
+    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME,
   ) {}
 
   execute(): void {
@@ -3731,7 +4154,7 @@ export class CreateMulticamSequenceCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipIds: string[],
-    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME
+    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME,
   ) {}
 
   get multicamClipId(): string | undefined {
@@ -3769,7 +4192,7 @@ export class CutMulticamClipCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly sceneTime: number,
-    private readonly angleId: string
+    private readonly angleId: string,
   ) {}
 
   execute(): void {
@@ -3792,7 +4215,11 @@ export class SplitClipCommand implements Command {
   private right?: Clip;
   private originalIndex = -1;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly splitTime: number) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly splitTime: number,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3801,7 +4228,9 @@ export class SplitClipCommand implements Command {
     this.originalIndex = track.clips.findIndex((clip) => clip.id === this.clipId);
     [this.left, this.right] = splitClip(this.original, this.splitTime);
     const withoutOriginal = removeClip(timeline, this.original.id).timeline;
-    this.accessor.setTimeline(insertClip(insertClip(withoutOriginal, this.left, this.originalIndex), this.right, this.originalIndex + 1));
+    this.accessor.setTimeline(
+      insertClip(insertClip(withoutOriginal, this.left, this.originalIndex), this.right, this.originalIndex + 1),
+    );
   }
 
   undo(): void {
@@ -3819,7 +4248,11 @@ export class SplitClipAtTimesCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly splitTimes: number[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly splitTimes: number[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -3857,7 +4290,7 @@ export class RecordAngleCutCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    cuts: MulticamAngleCut[] = []
+    cuts: MulticamAngleCut[] = [],
   ) {
     this.cuts = cuts.map((cut) => ({ sceneTime: cut.sceneTime, angleId: cut.angleId }));
   }
@@ -3883,7 +4316,10 @@ export class RecordAngleCutCommand implements Command {
 
   private applyCuts(): void {
     this.before ??= this.accessor.getProject();
-    this.after = this.cuts.reduce((project, cut) => cutMulticamClip(project, this.clipId, cut.sceneTime, cut.angleId), this.before);
+    this.after = this.cuts.reduce(
+      (project, cut) => cutMulticamClip(project, this.clipId, cut.sceneTime, cut.angleId),
+      this.before,
+    );
     this.accessor.setProject(this.after);
   }
 }
@@ -3898,7 +4334,7 @@ export class TrimMulticamSwitchCommand implements Command {
     private readonly clipId: string,
     private readonly switchId: string,
     private readonly frameDelta: number,
-    private readonly fps: number
+    private readonly fps: number,
   ) {}
 
   execute(): void {
@@ -3922,7 +4358,7 @@ export class ApplyMulticamAiCutSuggestionsCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly suggestions: Array<{ time: number; angleId: string; confidence: number; reason: string }>
+    private readonly suggestions: Array<{ time: number; angleId: string; confidence: number; reason: string }>,
   ) {}
 
   execute(): void {
@@ -3974,7 +4410,7 @@ export class ApplyShakeStabilizationCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly stabilizationUpdate: Partial<ClipStabilization>
+    private readonly stabilizationUpdate: Partial<ClipStabilization>,
   ) {}
 
   execute(): void {
@@ -3987,7 +4423,7 @@ export class ApplyShakeStabilizationCommand implements Command {
         ...prev,
         ...this.stabilizationUpdate,
         enabled: true,
-        analyzed: true
+        analyzed: true,
       });
       const updatedClip = { ...clip, stabilization: updated };
       this.after = replaceProjectActiveTimeline(this.before, replaceClip(timeline, updatedClip));
@@ -4008,7 +4444,7 @@ export class ApplyPipPlacementCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly suggestedCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+    private readonly suggestedCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right',
   ) {}
 
   execute(): void {
@@ -4055,7 +4491,7 @@ export class ApplyPlatformFitCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly suggestion: ProjectPlatformFitSuggestion
+    private readonly suggestion: ProjectPlatformFitSuggestion,
   ) {}
 
   execute(): void {
@@ -4072,7 +4508,7 @@ export class ApplyPlatformFitCommand implements Command {
           }
           const { platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
           return rest;
-        })
+        }),
       }));
       project = replaceProjectActiveTimeline(project, { ...timeline, tracks: updatedTracks });
       this.after = project;
@@ -4092,7 +4528,7 @@ export class RestorePlatformFitClipCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly clipId: string
+    private readonly clipId: string,
   ) {}
 
   execute(): void {
@@ -4105,7 +4541,7 @@ export class RestorePlatformFitClipCommand implements Command {
           const newSuggestion = {
             ...project.platformFitSuggestion,
             removedSegments: project.platformFitSuggestion.removedSegments.filter((s) => s.clipId !== this.clipId),
-            keptSegments: [...project.platformFitSuggestion.keptSegments, kept].sort((a, b) => a.start - b.start)
+            keptSegments: [...project.platformFitSuggestion.keptSegments, kept].sort((a, b) => a.start - b.start),
           };
           project = { ...project, platformFitSuggestion: newSuggestion };
         }
@@ -4119,7 +4555,7 @@ export class RestorePlatformFitClipCommand implements Command {
             return rest;
           }
           return clip;
-        })
+        }),
       }));
       this.after = replaceProjectActiveTimeline(project, { ...timeline, tracks: updatedTracks });
     }
@@ -4142,7 +4578,10 @@ export class BatchSplitAtSceneCutsCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly items: BatchSplitAtSceneCutItem[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly items: BatchSplitAtSceneCutItem[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4186,7 +4625,10 @@ export class BatchAddMarkersCommand implements Command {
   private before?: Timeline;
   private markers?: TimelineMarker[];
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly inputs: AddTimelineMarkerInput[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly inputs: AddTimelineMarkerInput[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4197,7 +4639,7 @@ export class BatchAddMarkersCommand implements Command {
     }
     this.accessor.setTimeline({
       ...timeline,
-      markers: sortMarkers([...(timeline.markers ?? []), ...this.markers])
+      markers: sortMarkers([...(timeline.markers ?? []), ...this.markers]),
     });
   }
 
@@ -4214,7 +4656,11 @@ export class RemoveSilenceCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly ranges: LocalTimeRange[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly ranges: LocalTimeRange[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4247,7 +4693,11 @@ export class DialogueRoughCutCommand implements Command {
   private after?: Timeline;
   private generatedCount = 0;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly intervals: SmartDialogueInterval[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly intervals: SmartDialogueInterval[],
+  ) {}
 
   get clipCount(): number {
     return this.generatedCount;
@@ -4283,7 +4733,10 @@ export class BrollInsertCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clips: SmartRoughCutVisualClip[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clips: SmartRoughCutVisualClip[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4314,7 +4767,7 @@ export class RhythmAssembleCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
     private readonly beatTimes: number[],
-    private readonly targetTrackId?: string
+    private readonly targetTrackId?: string,
   ) {}
 
   get clipCount(): number {
@@ -4328,7 +4781,10 @@ export class RhythmAssembleCommand implements Command {
       const selected = new Set(this.clipIds);
       const clips = timeline.tracks
         .flatMap((track) => track.clips)
-        .filter((clip): clip is SmartRoughCutVisualClip => selected.has(clip.id) && (clip.type === 'video' || clip.type === 'image'));
+        .filter(
+          (clip): clip is SmartRoughCutVisualClip =>
+            selected.has(clip.id) && (clip.type === 'video' || clip.type === 'image'),
+        );
       const assembled = buildRhythmAssembleClips(clips, this.beatTimes, this.targetTrackId);
       if (assembled.length === 0) {
         throw new Error('No rhythm clips to assemble');
@@ -4355,7 +4811,7 @@ export class SmartMontageCommand implements Command {
 
   constructor(
     private readonly accessor: TimelineAccessor,
-    private readonly config: SmartMontageConfig
+    private readonly config: SmartMontageConfig,
   ) {}
 
   get montageResult(): { clipCount: number; estimatedBpm: number } {
@@ -4409,8 +4865,8 @@ function sortTimelineClips(timeline: Timeline): Timeline {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({
       ...track,
-      clips: [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
-    }))
+      clips: [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)),
+    })),
   };
 }
 
@@ -4419,7 +4875,10 @@ export class DeleteClipCommand implements Command {
   private removed?: Clip;
   private removedIndex = -1;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+  ) {}
 
   execute(): void {
     const result = removeClip(this.accessor.getTimeline(), this.clipId);
@@ -4451,7 +4910,12 @@ export class AddKeyframeCommand implements Command {
   private after?: Clip;
   private keyframe?: Keyframe<number>;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly property: KeyframeProperty, private readonly input: AddKeyframeInput) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly property: KeyframeProperty,
+    private readonly input: AddKeyframeInput,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4459,10 +4923,13 @@ export class AddKeyframeCommand implements Command {
     this.keyframe ??= createKeyframe(this.property, this.input, this.before.duration);
     this.after = {
       ...this.before,
-      keyframes: setKeyframeForProperty(this.before.keyframes, this.property, this.keyframe, this.before.duration)
+      keyframes: setKeyframeForProperty(this.before.keyframes, this.property, this.keyframe, this.before.duration),
     } as Clip;
     this.after = applySpeedKeyframeDuration(this.before, this.after, this.property);
-    if (this.property === 'speed' && detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)) {
+    if (
+      this.property === 'speed' &&
+      detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)
+    ) {
       throw new Error('Clip overlaps another clip on this track');
     }
     this.accessor.setTimeline(replaceClip(timeline, this.after));
@@ -4486,7 +4953,11 @@ export class BatchUpdateKeyframeCommand implements Command {
   readonly description: string;
   private before?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly updates: BatchUpdateKeyframeItem[], description = 'Batch update keyframes') {
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly updates: BatchUpdateKeyframeItem[],
+    description = 'Batch update keyframes',
+  ) {
     this.description = description;
   }
 
@@ -4495,13 +4966,20 @@ export class BatchUpdateKeyframeCommand implements Command {
     this.before ??= timeline;
     for (const update of this.updates) {
       const beforeClip = findClip(timeline, update.clipId);
-      let keyframes = update.replace ? { ...(beforeClip.keyframes ?? {}), [update.property]: [] } : beforeClip.keyframes;
+      let keyframes = update.replace
+        ? { ...(beforeClip.keyframes ?? {}), [update.property]: [] }
+        : beforeClip.keyframes;
       for (const input of update.keyframes) {
-        keyframes = setKeyframeForProperty(keyframes, update.property, createKeyframe(update.property, input, beforeClip.duration), beforeClip.duration);
+        keyframes = setKeyframeForProperty(
+          keyframes,
+          update.property,
+          createKeyframe(update.property, input, beforeClip.duration),
+          beforeClip.duration,
+        );
       }
       let after = {
         ...beforeClip,
-        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration)
+        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration),
       } as Clip;
       after = applySpeedKeyframeDuration(beforeClip, after, update.property);
       if (update.property === 'speed' && detectOverlap(findTrack(timeline, after.trackId), after, beforeClip.id)) {
@@ -4519,7 +4997,9 @@ export class BatchUpdateKeyframeCommand implements Command {
   }
 }
 
-export type KeyframePatch = Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>;
+export type KeyframePatch = Partial<
+  Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>
+>;
 
 export interface KeyframeSelectionRef {
   clipId: string;
@@ -4545,7 +5025,7 @@ export class UpdateKeyframeCommand implements Command {
     private readonly clipId: string,
     private readonly property: KeyframeProperty,
     private readonly keyframeId: string,
-    private readonly patch: KeyframePatch
+    private readonly patch: KeyframePatch,
   ) {}
 
   execute(): void {
@@ -4564,16 +5044,19 @@ export class UpdateKeyframeCommand implements Command {
         easing: this.patch.easing ?? existing.easing,
         inHandle: this.patch.inHandle ?? existing.inHandle,
         outHandle: this.patch.outHandle ?? existing.outHandle,
-        handleMode: this.patch.handleMode ?? existing.handleMode
+        handleMode: this.patch.handleMode ?? existing.handleMode,
       },
-      this.before.duration
+      this.before.duration,
     );
     this.after = {
       ...this.before,
-      keyframes: setKeyframeForProperty(this.before.keyframes, this.property, nextKeyframe, this.before.duration)
+      keyframes: setKeyframeForProperty(this.before.keyframes, this.property, nextKeyframe, this.before.duration),
     } as Clip;
     this.after = applySpeedKeyframeDuration(this.before, this.after, this.property);
-    if (this.property === 'speed' && detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)) {
+    if (
+      this.property === 'speed' &&
+      detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)
+    ) {
       throw new Error('Clip overlaps another clip on this track');
     }
     this.accessor.setTimeline(replaceClip(timeline, this.after));
@@ -4594,7 +5077,7 @@ export class BatchKeyframeEditCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly refs: KeyframeSelectionRef[],
     private readonly operation: BatchKeyframeEditOperation,
-    description = 'Batch edit keyframes'
+    description = 'Batch edit keyframes',
   ) {
     this.description = description;
   }
@@ -4606,9 +5089,16 @@ export class BatchKeyframeEditCommand implements Command {
     if (refs.length === 0) {
       return;
     }
-    const center = this.operation.type === 'scale-time' ? this.operation.center ?? calculateKeyframeSelectionCenter(timeline, refs) : 0;
-    const distributedTimes = this.operation.type === 'distribute-time' ? calculateDistributedKeyframeTimeMap(timeline, refs) : new Map<string, number>();
-    const alignValue = this.operation.type === 'align-value' ? getBatchAlignValue(timeline, refs, this.operation.value) : undefined;
+    const center =
+      this.operation.type === 'scale-time'
+        ? (this.operation.center ?? calculateKeyframeSelectionCenter(timeline, refs))
+        : 0;
+    const distributedTimes =
+      this.operation.type === 'distribute-time'
+        ? calculateDistributedKeyframeTimeMap(timeline, refs)
+        : new Map<string, number>();
+    const alignValue =
+      this.operation.type === 'align-value' ? getBatchAlignValue(timeline, refs, this.operation.value) : undefined;
     const refsByClipId = groupKeyframeRefsByClip(refs);
     for (const [clipId, clipRefs] of refsByClipId) {
       const beforeClip = findClip(timeline, clipId);
@@ -4626,10 +5116,14 @@ export class BatchKeyframeEditCommand implements Command {
         }
         const nextTime =
           this.operation.type === 'distribute-time'
-            ? distributedTimes.get(keyframeRefKey(ref)) ?? existing.time
+            ? (distributedTimes.get(keyframeRefKey(ref)) ?? existing.time)
             : getBatchEditedKeyframeTime(beforeClip, existing, this.operation, center);
-        const nextValue = this.operation.type === 'align-value' ? alignKeyframeValues([existing], alignValue)[0].value : existing.value;
-        const nextEasing = this.operation.type === 'easing' ? applyBatchKeyframeEasing([existing], this.operation.easing)[0].easing : existing.easing;
+        const nextValue =
+          this.operation.type === 'align-value' ? alignKeyframeValues([existing], alignValue)[0].value : existing.value;
+        const nextEasing =
+          this.operation.type === 'easing'
+            ? applyBatchKeyframeEasing([existing], this.operation.easing)[0].easing
+            : existing.easing;
         keyframes = setKeyframeForProperty(
           keyframes,
           ref.property,
@@ -4642,16 +5136,16 @@ export class BatchKeyframeEditCommand implements Command {
               easing: nextEasing,
               inHandle: existing.inHandle,
               outHandle: existing.outHandle,
-              handleMode: existing.handleMode
+              handleMode: existing.handleMode,
             },
-            beforeClip.duration
+            beforeClip.duration,
           ),
-          beforeClip.duration
+          beforeClip.duration,
         );
       }
       let after = {
         ...beforeClip,
-        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration)
+        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration),
       } as Clip;
       if (touchedProperties.has('speed')) {
         after = applySpeedKeyframeDuration(beforeClip, after, 'speed');
@@ -4723,9 +5217,9 @@ function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeS
             frame: {
               ...frame,
               id: keyframeRefKey(ref),
-              time: clip.start + frame.time
-            }
-          }
+              time: clip.start + frame.time,
+            },
+          },
         ]
       : [];
   });
@@ -4760,7 +5254,7 @@ function getBatchEditedKeyframeTime(
   clip: Clip,
   frame: Keyframe<number>,
   operation: BatchKeyframeEditOperation,
-  center: number
+  center: number,
 ): number {
   if (operation.type === 'shift') {
     const delta = Number.isFinite(operation.delta) ? operation.delta : 0;
@@ -4783,7 +5277,12 @@ export class RemoveKeyframeCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly property: KeyframeProperty, private readonly keyframeId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly property: KeyframeProperty,
+    private readonly keyframeId: string,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4793,10 +5292,13 @@ export class RemoveKeyframeCommand implements Command {
     }
     this.after = {
       ...this.before,
-      keyframes: removeKeyframeForProperty(this.before.keyframes, this.property, this.keyframeId)
+      keyframes: removeKeyframeForProperty(this.before.keyframes, this.property, this.keyframeId),
     } as Clip;
     this.after = applySpeedKeyframeDuration(this.before, this.after, this.property);
-    if (this.property === 'speed' && detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)) {
+    if (
+      this.property === 'speed' &&
+      detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)
+    ) {
       throw new Error('Clip overlaps another clip on this track');
     }
     this.accessor.setTimeline(replaceClip(timeline, this.after));
@@ -4820,7 +5322,11 @@ export class ApplyTextAnimationCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly input: ApplyTextAnimationInput) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly input: ApplyTextAnimationInput,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4837,11 +5343,11 @@ export class ApplyTextAnimationCommand implements Command {
       duration,
       clipDuration: this.before.duration,
       transform: this.before.transform,
-      text: this.before.text
+      text: this.before.text,
     });
     this.after = {
       ...this.before,
-      keyframes: mergeTextAnimationKeyframes(this.before.keyframes, generated, this.before.duration)
+      keyframes: mergeTextAnimationKeyframes(this.before.keyframes, generated, this.before.duration),
     };
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -4853,7 +5359,12 @@ export class ApplyTextAnimationCommand implements Command {
   }
 }
 
-export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization' | 'frameInterpolation' | 'border'>> & {
+export type ClipPatch = Partial<
+  Omit<
+    Clip,
+    'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization' | 'frameInterpolation' | 'border'
+  >
+> & {
   keyframes?: ClipKeyframes;
   kenBurns?: boolean;
   volume?: number;
@@ -4907,7 +5418,11 @@ export class UpdateSubtitleStyleCommand implements Command {
   private before?: Extract<Clip, { type: 'subtitle' }>;
   private after?: Extract<Clip, { type: 'subtitle' }>;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly style: Partial<SubtitleStyle>) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly style: Partial<SubtitleStyle>,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -4919,7 +5434,7 @@ export class UpdateSubtitleStyleCommand implements Command {
     const nextStyle = normalizeSubtitleStyleTemplateStyle({ ...DEFAULT_SUBTITLE_STYLE, ...clip.style, ...this.style });
     this.after = {
       ...clip,
-      style: nextStyle
+      style: nextStyle,
     };
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -4932,7 +5447,7 @@ export class UpdateSubtitleStyleCommand implements Command {
 }
 
 function cloneCommandValue<T>(value: T): T {
-  return globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value)) as T;
+  return globalThis.structuredClone ? globalThis.structuredClone(value) : (JSON.parse(JSON.stringify(value)) as T);
 }
 
 export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
@@ -4942,7 +5457,7 @@ type ReplaceableMediaClip = Extract<Clip, { mediaId: string }>;
 export function calculateReplaceMediaPatch(
   clip: ReplaceableMediaClip,
   media: Pick<MediaAsset, 'id' | 'duration'>,
-  durationMode: ReplaceMediaDurationMode
+  durationMode: ReplaceMediaDurationMode,
 ): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
   const minDuration = 1 / 30;
   const originalDuration = Math.max(minDuration, clip.duration);
@@ -4953,7 +5468,7 @@ export function calculateReplaceMediaPatch(
       duration: round(originalDuration),
       trimStart: 0,
       trimEnd: 0,
-      speed: getClipSpeed({ speed: mediaDuration / originalDuration })
+      speed: getClipSpeed({ speed: mediaDuration / originalDuration }),
     };
   }
   if (durationMode === 'use-new-duration') {
@@ -4962,7 +5477,7 @@ export function calculateReplaceMediaPatch(
       duration: round(mediaDuration),
       trimStart: 0,
       trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED
+      speed: DEFAULT_CLIP_SPEED,
     };
   }
   const duration = Math.min(originalDuration, mediaDuration);
@@ -4971,11 +5486,14 @@ export function calculateReplaceMediaPatch(
     duration: round(duration),
     trimStart: 0,
     trimEnd: round(Math.max(0, mediaDuration - duration)),
-    speed: DEFAULT_CLIP_SPEED
+    speed: DEFAULT_CLIP_SPEED,
   };
 }
 
-export function getReplaceMediaCompatibilityWarnings(clip: Clip, media: Pick<MediaAsset, 'type' | 'hasAudio'>): ReplaceMediaCompatibilityWarning[] {
+export function getReplaceMediaCompatibilityWarnings(
+  clip: Clip,
+  media: Pick<MediaAsset, 'type' | 'hasAudio'>,
+): ReplaceMediaCompatibilityWarning[] {
   if (!isReplaceableMediaClip(clip)) {
     return ['media-type-mismatch'];
   }
@@ -5004,7 +5522,7 @@ export class ReplaceMediaCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly clipId: string,
     private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-    private readonly durationMode: ReplaceMediaDurationMode
+    private readonly durationMode: ReplaceMediaDurationMode,
   ) {}
 
   execute(): void {
@@ -5013,13 +5531,13 @@ export class ReplaceMediaCommand implements Command {
     const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
     this.after = {
       ...this.before,
-      ...patch
+      ...patch,
     } as ReplaceableMediaClip;
     if (this.after.type === 'video' || this.after.type === 'audio') {
       this.after = {
         ...this.after,
         fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
       } as ReplaceableMediaClip;
     }
     const track = findTrack(timeline, this.after.trackId);
@@ -5044,7 +5562,7 @@ export class SwitchMediaVersionCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>
+    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
   ) {}
 
   execute(): void {
@@ -5053,13 +5571,13 @@ export class SwitchMediaVersionCommand implements Command {
     const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
     this.after = {
       ...this.before,
-      ...patch
+      ...patch,
     } as ReplaceableMediaClip;
     if (this.after.type === 'video' || this.after.type === 'audio') {
       this.after = {
         ...this.after,
         fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
       } as ReplaceableMediaClip;
     }
     const track = findTrack(timeline, this.after.trackId);
@@ -5107,7 +5625,7 @@ function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<Chrom
     return normalizeChromaKey({
       ...current,
       ...patch,
-      colors: [patch.color, ...current.colors.slice(1)]
+      colors: [patch.color, ...current.colors.slice(1)],
     });
   }
   return normalizeChromaKey({ ...before, ...patch });
@@ -5121,7 +5639,7 @@ export class PiPLayoutCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly mainClipId: string,
     private readonly pipClipId: string,
-    private readonly options: PiPLayoutCommandOptions
+    private readonly options: PiPLayoutCommandOptions,
   ) {}
 
   execute(): void {
@@ -5142,7 +5660,7 @@ export class PiPLayoutCommand implements Command {
       sourceWidth: this.options.pipSourceWidth,
       sourceHeight: this.options.pipSourceHeight,
       scale: this.options.scale,
-      margin: this.options.margin
+      margin: this.options.margin,
     });
     const nextById = new Map<string, Clip>([
       [
@@ -5150,8 +5668,8 @@ export class PiPLayoutCommand implements Command {
         {
           ...mainClip,
           transform: normalizeTransform(createFullFrameTransform()),
-          border: normalizeClipBorder({ enabled: false })
-        } as Clip
+          border: normalizeClipBorder({ enabled: false }),
+        } as Clip,
       ],
       [
         pipClip.id,
@@ -5162,17 +5680,17 @@ export class PiPLayoutCommand implements Command {
             enabled: true,
             color: '#ffffff',
             width: 6,
-            ...this.options.border
-          })
-        } as Clip
-      ]
+            ...this.options.border,
+          }),
+        } as Clip,
+      ],
     ]);
     this.accessor.setTimeline({
       ...timeline,
       tracks: timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => nextById.get(clip.id) ?? clip)
-      }))
+        clips: track.clips.map((clip) => nextById.get(clip.id) ?? clip),
+      })),
     });
   }
 
@@ -5201,7 +5719,7 @@ export class ApplySplitLayoutCommand implements Command {
   constructor(
     private readonly accessor: TimelineAccessor,
     private readonly clipIds: string[],
-    private readonly options: ApplySplitLayoutCommandOptions
+    private readonly options: ApplySplitLayoutCommandOptions,
   ) {}
 
   execute(): void {
@@ -5220,7 +5738,7 @@ export class ApplySplitLayoutCommand implements Command {
       return {
         clipId: clip.id,
         sourceWidth: source?.width,
-        sourceHeight: source?.height
+        sourceHeight: source?.height,
       };
     });
     const transforms = new Map(
@@ -5228,8 +5746,8 @@ export class ApplySplitLayoutCommand implements Command {
         layout: this.options.layout,
         clips: sources,
         canvasWidth: this.options.canvasWidth,
-        canvasHeight: this.options.canvasHeight
-      }).map((item) => [item.clipId, item.transform])
+        canvasHeight: this.options.canvasHeight,
+      }).map((item) => [item.clipId, item.transform]),
     );
     if (transforms.size === 0) {
       throw new Error('Split layout has no usable cells');
@@ -5241,8 +5759,8 @@ export class ApplySplitLayoutCommand implements Command {
         clips: track.clips.map((clip) => {
           const transform = transforms.get(clip.id);
           return transform ? ({ ...clip, transform: normalizeTransform(transform) } as Clip) : clip;
-        })
-      }))
+        }),
+      })),
     });
   }
 
@@ -5258,13 +5776,18 @@ export class UpdateClipCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly patch: ClipPatch) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly patch: ClipPatch,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
     this.before ??= findClip(timeline, this.clipId);
     const nextSpeed = typeof this.patch.speed === 'number' ? getClipSpeed({ speed: this.patch.speed }) : undefined;
-    const nextColorLabel = this.patch.colorLabel === undefined ? this.before.colorLabel : normalizeTimelineLabelColor(this.patch.colorLabel);
+    const nextColorLabel =
+      this.patch.colorLabel === undefined ? this.before.colorLabel : normalizeTimelineLabelColor(this.patch.colorLabel);
     this.after = {
       ...this.before,
       ...this.patch,
@@ -5273,66 +5796,114 @@ export class UpdateClipCommand implements Command {
       colorCorrection: normalizeColorCorrection({ ...this.before.colorCorrection, ...this.patch.colorCorrection }),
       chromaKey: mergeChromaKeyPatch(this.before.chromaKey, this.patch.chromaKey),
       stabilization: normalizeStabilization({ ...this.before.stabilization, ...this.patch.stabilization }),
-      frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
+      frameInterpolation: normalizeFrameInterpolation({
+        ...this.before.frameInterpolation,
+        ...this.patch.frameInterpolation,
+      }),
       slowMotionMode: normalizeSlowMotionMode(this.patch.slowMotionMode ?? this.before.slowMotionMode),
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
-      audioChannelRouting: normalizeAudioChannelRouting(this.patch.audioChannelRouting ?? this.before.audioChannelRouting),
+      audioChannelRouting: normalizeAudioChannelRouting(
+        this.patch.audioChannelRouting ?? this.before.audioChannelRouting,
+      ),
       videoRestoration: normalizeVideoRestoration({ ...this.before.videoRestoration, ...this.patch.videoRestoration }),
-      qualityEnhancement: normalizeQualityEnhancement({ ...this.before.qualityEnhancement, ...this.patch.qualityEnhancement }),
+      qualityEnhancement: normalizeQualityEnhancement({
+        ...this.before.qualityEnhancement,
+        ...this.patch.qualityEnhancement,
+      }),
       projection: normalizeClipProjection(this.patch.projection ?? this.before.projection),
       panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
-      motionTrack: this.patch.motionTrack === undefined ? normalizeMotionTrack(this.before.motionTrack, this.before.duration) : normalizeMotionTrack(this.patch.motionTrack, this.before.duration),
-      border: this.patch.border === undefined ? normalizeClipBorder(this.before.border) : normalizeClipBorder({ ...(this.before.border ?? {}), ...this.patch.border }),
+      motionTrack:
+        this.patch.motionTrack === undefined
+          ? normalizeMotionTrack(this.before.motionTrack, this.before.duration)
+          : normalizeMotionTrack(this.patch.motionTrack, this.before.duration),
+      border:
+        this.patch.border === undefined
+          ? normalizeClipBorder(this.before.border)
+          : normalizeClipBorder({ ...(this.before.border ?? {}), ...this.patch.border }),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
       blendMode: normalizeClipBlendMode(this.patch.blendMode ?? this.before.blendMode),
-      contentAnalysis: this.patch.contentAnalysis === undefined ? normalizeClipContentAnalysis(this.before.contentAnalysis) : normalizeClipContentAnalysis(this.patch.contentAnalysis),
-      pitchData: this.patch.pitchData === undefined ? normalizeClipPitchData(this.before.pitchData) : normalizeClipPitchData(this.patch.pitchData),
+      contentAnalysis:
+        this.patch.contentAnalysis === undefined
+          ? normalizeClipContentAnalysis(this.before.contentAnalysis)
+          : normalizeClipContentAnalysis(this.patch.contentAnalysis),
+      pitchData:
+        this.patch.pitchData === undefined
+          ? normalizeClipPitchData(this.before.pitchData)
+          : normalizeClipPitchData(this.patch.pitchData),
       transform: normalizeTransform(
-        this.patch.transform?.scale !== undefined && this.patch.transform.scaleX === undefined && this.patch.transform.scaleY === undefined
-          ? { ...this.before.transform, ...this.patch.transform, scaleX: this.patch.transform.scale, scaleY: this.patch.transform.scale }
-          : { ...this.before.transform, ...this.patch.transform }
-      )
+        this.patch.transform?.scale !== undefined &&
+          this.patch.transform.scaleX === undefined &&
+          this.patch.transform.scaleY === undefined
+          ? {
+              ...this.before.transform,
+              ...this.patch.transform,
+              scaleX: this.patch.transform.scale,
+              scaleY: this.patch.transform.scale,
+            }
+          : { ...this.before.transform, ...this.patch.transform },
+      ),
     } as Clip;
     if (this.after.type === 'video' || this.after.type === 'audio' || this.after.type === 'nested-sequence') {
       this.after = {
         ...this.after,
         pitchSemitones: normalizeAudioPitchSemitones(this.patch.pitchSemitones ?? this.after.pitchSemitones),
         reverseAudio: (this.patch.reverseAudio ?? this.after.reverseAudio) === true,
-        fadeInDuration: normalizeAudioFadeDuration(this.patch.fadeInDuration ?? this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.patch.fadeOutDuration ?? this.after.fadeOutDuration, this.after.duration),
+        fadeInDuration: normalizeAudioFadeDuration(
+          this.patch.fadeInDuration ?? this.after.fadeInDuration,
+          this.after.duration,
+        ),
+        fadeOutDuration: normalizeAudioFadeDuration(
+          this.patch.fadeOutDuration ?? this.after.fadeOutDuration,
+          this.after.duration,
+        ),
         fadeInCurve: normalizeAudioFadeCurve(this.patch.fadeInCurve ?? this.after.fadeInCurve),
         fadeOutCurve: normalizeAudioFadeCurve(this.patch.fadeOutCurve ?? this.after.fadeOutCurve),
-        spatialAudio: normalizeSpatialAudio({ ...this.after.spatialAudio, ...this.patch.spatialAudio })
+        spatialAudio: normalizeSpatialAudio({ ...this.after.spatialAudio, ...this.patch.spatialAudio }),
       } as Clip;
     }
-    const speedKeyframesChanged = this.patch.keyframes !== undefined && (Boolean(this.before.keyframes?.speed?.length) || Boolean(this.patch.keyframes?.speed?.length));
+    const speedKeyframesChanged =
+      this.patch.keyframes !== undefined &&
+      (Boolean(this.before.keyframes?.speed?.length) || Boolean(this.patch.keyframes?.speed?.length));
     if (typeof nextSpeed === 'number' || speedKeyframesChanged) {
       this.after = {
         ...this.after,
-        duration: getClipDisplayDuration(getClipSourceVisibleDuration(this.before), nextSpeed ?? this.after.speed, this.after.keyframes)
+        duration: getClipDisplayDuration(
+          getClipSourceVisibleDuration(this.before),
+          nextSpeed ?? this.after.speed,
+          this.after.keyframes,
+        ),
       } as Clip;
       if (this.after.type === 'video' || this.after.type === 'audio' || this.after.type === 'nested-sequence') {
         this.after = {
           ...this.after,
           fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-          fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+          fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
         } as Clip;
       }
     }
-    const beatMarkers = this.patch.beatMarkers === undefined ? normalizeClipBeatMarkers(this.after.beatMarkers, this.after.duration) : normalizeClipBeatMarkers(this.patch.beatMarkers, this.after.duration);
-    const detectedBpm = this.patch.detectedBpm === undefined ? normalizeDetectedBpm(this.after.detectedBpm) : normalizeDetectedBpm(this.patch.detectedBpm);
-    const scenecuts = this.patch.scenecuts === undefined ? normalizeClipSceneCuts(this.after.scenecuts, this.after.duration) : normalizeClipSceneCuts(this.patch.scenecuts, this.after.duration);
+    const beatMarkers =
+      this.patch.beatMarkers === undefined
+        ? normalizeClipBeatMarkers(this.after.beatMarkers, this.after.duration)
+        : normalizeClipBeatMarkers(this.patch.beatMarkers, this.after.duration);
+    const detectedBpm =
+      this.patch.detectedBpm === undefined
+        ? normalizeDetectedBpm(this.after.detectedBpm)
+        : normalizeDetectedBpm(this.patch.detectedBpm);
+    const scenecuts =
+      this.patch.scenecuts === undefined
+        ? normalizeClipSceneCuts(this.after.scenecuts, this.after.duration)
+        : normalizeClipSceneCuts(this.patch.scenecuts, this.after.duration);
     this.after = {
       ...this.after,
       beatMarkers,
       detectedBpm,
-      scenecuts
+      scenecuts,
     } as Clip;
     if ('style' in this.before || this.patch.style) {
       this.after = {
         ...this.after,
-        style: { ...('style' in this.before ? this.before.style : {}), ...this.patch.style }
+        style: { ...('style' in this.before ? this.before.style : {}), ...this.patch.style },
       } as Clip;
     }
     if (this.after.type === 'text') {
@@ -5342,7 +5913,7 @@ export class UpdateClipCommand implements Command {
         textLayout: normalizeTextLayout(this.after.textLayout),
         openTypeFeatures: normalizeTextOpenTypeFeatures(this.after.openTypeFeatures),
         arcText: normalizeTextArc(this.after.arcText),
-        pathText: normalizeTextPath(this.after.pathText)
+        pathText: normalizeTextPath(this.after.pathText),
       };
     }
     if (this.after.type === 'subtitle') {
@@ -5352,21 +5923,27 @@ export class UpdateClipCommand implements Command {
         subtitleType,
         speaker: subtitleType === 'cc' ? normalizeSubtitleSpeaker(this.after.speaker) : undefined,
         soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(this.after.soundDesc) : undefined,
-        dataSubtitle: normalizeDataSubtitleSource(this.after.dataSubtitle)
+        dataSubtitle: normalizeDataSubtitleSource(this.after.dataSubtitle),
       };
     }
     if (this.after.type === 'credits') {
       this.after = {
         ...this.after,
-        rows: normalizeCreditsRows(this.patch.rows ?? (this.patch.text !== undefined ? undefined : this.after.rows), this.after.text),
+        rows: normalizeCreditsRows(
+          this.patch.rows ?? (this.patch.text !== undefined ? undefined : this.after.rows),
+          this.after.text,
+        ),
         rollSpeed: normalizeCreditsRollSpeed(this.patch.rollSpeed ?? this.after.rollSpeed),
-        style: normalizeCreditsStyle(this.after.style)
+        style: normalizeCreditsStyle(this.after.style),
       };
     }
     if (this.after.type === 'motion-graphic') {
       this.after = {
         ...this.after,
-        motionGraphic: normalizeMotionGraphic(this.patch.motionGraphic ?? this.after.motionGraphic, this.after.duration)
+        motionGraphic: normalizeMotionGraphic(
+          this.patch.motionGraphic ?? this.after.motionGraphic,
+          this.after.duration,
+        ),
       };
     }
     const track = findTrack(timeline, this.after.trackId);
@@ -5388,7 +5965,11 @@ export class ApplyEffectPresetCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly preset: EffectPreset) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly preset: EffectPreset,
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getTimeline();
@@ -5400,7 +5981,7 @@ export class ApplyEffectPresetCommand implements Command {
         getTimeline: () => timeline,
         setTimeline: (nextTimeline) => {
           timeline = nextTimeline;
-        }
+        },
       };
       new UpdateClipCommand(commandAccessor, this.clipId, patch).execute();
       this.after = timeline;
@@ -5425,7 +6006,10 @@ export class BatchUpdateClipCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly updates: BatchUpdateClipCommandItem[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly updates: BatchUpdateClipCommandItem[],
+  ) {}
 
   execute(): void {
     this.before ??= this.accessor.getTimeline();
@@ -5435,7 +6019,7 @@ export class BatchUpdateClipCommand implements Command {
         getTimeline: () => timeline,
         setTimeline: (nextTimeline) => {
           timeline = nextTimeline;
-        }
+        },
       };
       for (const update of this.updates) {
         new UpdateClipCommand(batchAccessor, update.clipId, update.patch).execute();
@@ -5465,7 +6049,11 @@ export class AddEffectCommand implements Command {
   private after?: Clip;
   private effect?: Effect;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly input: AddEffectInput) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly input: AddEffectInput,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5474,14 +6062,14 @@ export class AddEffectCommand implements Command {
       id: this.input.id ?? createId('effect'),
       type: this.input.type,
       enabled: this.input.enabled ?? true,
-      params: this.input.params
+      params: this.input.params,
     });
     if (!this.effect) {
       throw new Error('Invalid effect');
     }
     this.after = {
       ...this.before,
-      effects: [...(cloneEffects(this.before.effects) ?? []), this.effect]
+      effects: [...(cloneEffects(this.before.effects) ?? []), this.effect],
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -5498,7 +6086,11 @@ export class RemoveEffectCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly effectId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly effectId: string,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5509,7 +6101,7 @@ export class RemoveEffectCommand implements Command {
     }
     this.after = {
       ...this.before,
-      effects: normalizeEffects(effects.filter((effect) => effect.id !== this.effectId))
+      effects: normalizeEffects(effects.filter((effect) => effect.id !== this.effectId)),
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -5528,7 +6120,12 @@ export class UpdateEffectCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly effectId: string, private readonly patch: EffectPatch) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly effectId: string,
+    private readonly patch: EffectPatch,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5542,7 +6139,7 @@ export class UpdateEffectCommand implements Command {
     const nextEffect = normalizeEffect({
       ...existing,
       ...this.patch,
-      params: { ...existing.params, ...this.patch.params }
+      params: { ...existing.params, ...this.patch.params },
     });
     if (!nextEffect) {
       throw new Error('Invalid effect');
@@ -5564,7 +6161,11 @@ export class ReorderEffectsCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly orderedEffectIds: string[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly orderedEffectIds: string[],
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5600,7 +6201,11 @@ export class AddMaskCommand implements Command {
   private after?: Clip;
   private mask?: ClipMask;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly input: Partial<ClipMask> = {}) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly input: Partial<ClipMask> = {},
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5608,7 +6213,7 @@ export class AddMaskCommand implements Command {
     this.mask ??= createMask(this.input);
     this.after = {
       ...this.before,
-      masks: [...normalizeMasks(this.before.masks), this.mask]
+      masks: [...normalizeMasks(this.before.masks), this.mask],
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -5625,7 +6230,11 @@ export class RemoveMaskCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly maskId: string) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly maskId: string,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5636,7 +6245,7 @@ export class RemoveMaskCommand implements Command {
     }
     this.after = {
       ...this.before,
-      masks: masks.filter((mask) => mask.id !== this.maskId)
+      masks: masks.filter((mask) => mask.id !== this.maskId),
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -5655,7 +6264,12 @@ export class UpdateMaskCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly maskId: string, private readonly patch: MaskPatch) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly maskId: string,
+    private readonly patch: MaskPatch,
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -5666,7 +6280,9 @@ export class UpdateMaskCommand implements Command {
     }
     this.after = {
       ...this.before,
-      masks: masks.map((mask) => (mask.id === this.maskId ? normalizeMask({ ...mask, ...this.patch, id: mask.id }) : mask))
+      masks: masks.map((mask) =>
+        mask.id === this.maskId ? normalizeMask({ ...mask, ...this.patch, id: mask.id }) : mask,
+      ),
     } as Clip;
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
@@ -5678,7 +6294,12 @@ export class UpdateMaskCommand implements Command {
   }
 }
 
-function clampTrimValues(clip: Clip, requestedTrimStart: number, requestedTrimEnd: number, minDuration: number): { trimStart: number; trimEnd: number } {
+function clampTrimValues(
+  clip: Clip,
+  requestedTrimStart: number,
+  requestedTrimEnd: number,
+  minDuration: number,
+): { trimStart: number; trimEnd: number } {
   const sourceDuration = Math.max(clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd, 0);
   const minimumDuration = Math.max(0.001, minDuration);
   const maxCombinedTrim = Math.max(0, sourceDuration - minimumDuration);
@@ -5704,7 +6325,7 @@ function applySpeedKeyframeDuration(before: Clip, after: Clip, property: Keyfram
   return {
     ...after,
     duration,
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(after.keyframes), duration)
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(after.keyframes), duration),
   } as Clip;
 }
 
@@ -5716,9 +6337,14 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
   const timeline = project.timeline;
   const selectedIds = new Set(uniqueIds);
   const trackIndexById = new Map(timeline.tracks.map((track, index) => [track.id, index]));
-  const locations = uniqueIds.map((id) => findClipLocation(timeline, id)).sort((left, right) => {
-    return (trackIndexById.get(left.trackId) ?? 0) - (trackIndexById.get(right.trackId) ?? 0) || left.clip.start - right.clip.start;
-  });
+  const locations = uniqueIds
+    .map((id) => findClipLocation(timeline, id))
+    .sort((left, right) => {
+      return (
+        (trackIndexById.get(left.trackId) ?? 0) - (trackIndexById.get(right.trackId) ?? 0) ||
+        left.clip.start - right.clip.start
+      );
+    });
   const start = round(Math.min(...locations.map((location) => location.clip.start)));
   const end = round(Math.max(...locations.map((location) => location.clip.start + location.clip.duration)));
   const duration = round(Math.max(0.001, end - start));
@@ -5729,7 +6355,9 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
   if (!targetTrack) {
     throw new Error(`Track ${target.trackId} not found`);
   }
-  const blocked = targetTrack.clips.some((clip) => !selectedIds.has(clip.id) && clip.start < end && clip.start + clip.duration > start);
+  const blocked = targetTrack.clips.some(
+    (clip) => !selectedIds.has(clip.id) && clip.start < end && clip.start + clip.duration > start,
+  );
   if (blocked) {
     throw new Error('Nested sequence would overlap an unselected clip');
   }
@@ -5744,15 +6372,17 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
             .map((clip) => ({
               ...cloneClipForNestedSequence(clip),
               start: round(clip.start - start),
-              trackId: track.id
-            }))
-        })
+              trackId: track.id,
+            })),
+        }),
       )
       .filter((track) => track.clips.length > 0),
-    transitions: (timeline.transitions ?? []).filter((transition) => selectedIds.has(transition.fromClipId) && selectedIds.has(transition.toClipId)),
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => selectedIds.has(transition.fromClipId) && selectedIds.has(transition.toClipId),
+    ),
     markers: (timeline.markers ?? [])
       .filter((marker) => marker.time >= start && marker.time <= end)
-      .map((marker) => ({ ...marker, time: round(marker.time - start) }))
+      .map((marker) => ({ ...marker, time: round(marker.time - start) })),
   };
 
   const nestedClip = createNestedSequenceClip({
@@ -5764,7 +6394,7 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
     start,
     duration,
     trimStart: 0,
-    trimEnd: 0
+    trimEnd: 0,
   });
   const nextTimeline = {
     ...timeline,
@@ -5774,10 +6404,15 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
         return { ...track, clips: kept };
       }
       const insertIndex = kept.findIndex((clip) => clip.start > nestedClip.start);
-      const clips = insertIndex === -1 ? [...kept, nestedClip] : [...kept.slice(0, insertIndex), nestedClip, ...kept.slice(insertIndex)];
+      const clips =
+        insertIndex === -1
+          ? [...kept, nestedClip]
+          : [...kept.slice(0, insertIndex), nestedClip, ...kept.slice(insertIndex)];
       return { ...track, clips };
     }),
-    transitions: (timeline.transitions ?? []).filter((transition) => !selectedIds.has(transition.fromClipId) && !selectedIds.has(transition.toClipId))
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => !selectedIds.has(transition.fromClipId) && !selectedIds.has(transition.toClipId),
+    ),
   };
   if (timelineHasOverlaps(nextTimeline)) {
     throw new Error('Nested sequence would overlap another clip');
@@ -5791,9 +6426,9 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
       createSequence({
         id: sequenceId,
         name,
-        timeline: nestedTimeline
-      })
-    ]
+        timeline: nestedTimeline,
+      }),
+    ],
   };
 }
 
@@ -5815,13 +6450,19 @@ function cutMulticamClip(project: Project, clipId: string, sceneTime: number, an
       ...clip,
       multicam: {
         ...clip.multicam,
-        switches
-      }
-    })
+        switches,
+      },
+    }),
   );
 }
 
-function trimMulticamClip(project: Project, clipId: string, switchId: string, frameDelta: number, fps: number): Project {
+function trimMulticamClip(
+  project: Project,
+  clipId: string,
+  switchId: string,
+  frameDelta: number,
+  fps: number,
+): Project {
   const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
   const timeline = syncedProject.timeline;
   const clip = findClip(timeline, clipId);
@@ -5835,9 +6476,9 @@ function trimMulticamClip(project: Project, clipId: string, switchId: string, fr
       ...clip,
       multicam: {
         ...clip.multicam,
-        switches
-      }
-    })
+        switches,
+      },
+    }),
   );
 }
 
@@ -5859,20 +6500,20 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
   };
   if (clip.type === 'credits') {
     return {
       ...cloned,
       rows: normalizeCreditsRows(clip.rows, clip.text),
       rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
-      style: normalizeCreditsStyle(clip.style)
+      style: normalizeCreditsStyle(clip.style),
     } as TClip;
   }
   if (clip.type === 'motion-graphic') {
     return {
       ...cloned,
-      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration)
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration),
     } as TClip;
   }
   if (clip.type === 'text' || clip.type === 'subtitle') {
@@ -5885,7 +6526,7 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
         textLayout: normalizeTextLayout(clip.textLayout),
         openTypeFeatures: normalizeTextOpenTypeFeatures(clip.openTypeFeatures),
         arcText: normalizeTextArc(clip.arcText),
-        pathText: normalizeTextPath(clip.pathText)
+        pathText: normalizeTextPath(clip.pathText),
       } as TClip;
     }
     return { ...cloned, style: { ...clip.style } } as TClip;
@@ -5924,7 +6565,7 @@ export class AddSubclipCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly subclip: Subclip
+    private readonly subclip: Subclip,
   ) {
     this.description = `Add subclip "${subclip.name}"`;
   }
@@ -5935,7 +6576,7 @@ export class AddSubclipCommand implements Command {
     this.accessor.setProject({
       ...project,
       subclips: [...(project.subclips ?? []), this.subclip],
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -5961,7 +6602,7 @@ export class UpdateSubclipCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly subclipId: string,
-    private readonly patch: SubclipPatch
+    private readonly patch: SubclipPatch,
   ) {
     this.description = `Update subclip`;
   }
@@ -5977,7 +6618,7 @@ export class UpdateSubclipCommand implements Command {
         ...(this.patch.inPoint !== undefined ? { inPoint: Math.max(0, this.patch.inPoint) } : {}),
         ...(this.patch.outPoint !== undefined ? { outPoint: Math.max(s.inPoint, this.patch.outPoint) } : {}),
         ...(this.patch.color !== undefined ? { color: this.patch.color } : {}),
-        ...(this.patch.description !== undefined ? { description: this.patch.description } : {})
+        ...(this.patch.description !== undefined ? { description: this.patch.description } : {}),
       };
     });
     this.accessor.setProject({ ...project, subclips, updatedAt: new Date().toISOString() });
@@ -5996,7 +6637,7 @@ export class DeleteSubclipCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly subclipId: string
+    private readonly subclipId: string,
   ) {
     this.description = `Delete subclip`;
   }
@@ -6007,7 +6648,7 @@ export class DeleteSubclipCommand implements Command {
     this.accessor.setProject({
       ...project,
       subclips: (project.subclips ?? []).filter((s) => s.id !== this.subclipId),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     });
   }
 
@@ -6024,7 +6665,7 @@ export class UpdateProjectBeatSnapSuggestionsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly suggestions: BeatSnapSuggestion[]
+    private readonly suggestions: BeatSnapSuggestion[],
   ) {}
 
   execute(): void {
@@ -6046,7 +6687,7 @@ export class UpdateProjectMediaCollectionsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly collections: MediaCollection[]
+    private readonly collections: MediaCollection[],
   ) {}
 
   execute(): void {
@@ -6079,7 +6720,7 @@ export class CreateMulticamClipCommand implements Command {
     private readonly syncMode: MulticamSyncMode,
     private readonly syncReferenceAngle: number,
     private readonly start = 0,
-    private readonly duration = 10
+    private readonly duration = 10,
   ) {}
 
   get result(): MulticamClip {
@@ -6122,7 +6763,7 @@ export class SwitchMulticamAngleCommand implements Command {
     private readonly clipId: string,
     private readonly time: number,
     private readonly targetAngle: number,
-    private readonly transition: SwitchTransition = 'cut'
+    private readonly transition: SwitchTransition = 'cut',
   ) {}
 
   execute(): void {
@@ -6135,9 +6776,15 @@ export class SwitchMulticamAngleCommand implements Command {
       if (clip.type !== 'multicam') {
         throw new Error('Clip is not a MulticamClip');
       }
-      const newSwitchPoint: SwitchPoint = { time: this.time, targetAngle: this.targetAngle, transition: this.transition };
+      const newSwitchPoint: SwitchPoint = {
+        time: this.time,
+        targetAngle: this.targetAngle,
+        transition: this.transition,
+      };
       const updatedClip: MulticamClip = { ...clip, switchPoints: addSwitchPoint(clip.switchPoints, newSwitchPoint) };
-      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
     }
     this.accessor.setProject(this.after);
   }
@@ -6160,7 +6807,7 @@ export class DeleteSwitchPointCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly switchPointIndex: number
+    private readonly switchPointIndex: number,
   ) {}
 
   execute(): void {
@@ -6173,8 +6820,13 @@ export class DeleteSwitchPointCommand implements Command {
       if (clip.type !== 'multicam') {
         throw new Error('Clip is not a MulticamClip');
       }
-      const updatedClip: MulticamClip = { ...clip, switchPoints: deleteSwitchPoint(clip.switchPoints, this.switchPointIndex) };
-      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+      const updatedClip: MulticamClip = {
+        ...clip,
+        switchPoints: deleteSwitchPoint(clip.switchPoints, this.switchPointIndex),
+      };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
     }
     this.accessor.setProject(this.after);
   }
@@ -6198,7 +6850,7 @@ export class UpdateSwitchPointCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly switchPointIndex: number,
-    private readonly updates: Partial<SwitchPoint>
+    private readonly updates: Partial<SwitchPoint>,
   ) {}
 
   execute(): void {
@@ -6211,8 +6863,13 @@ export class UpdateSwitchPointCommand implements Command {
       if (clip.type !== 'multicam') {
         throw new Error('Clip is not a MulticamClip');
       }
-      const updatedClip: MulticamClip = { ...clip, switchPoints: updateSwitchPoint(clip.switchPoints, this.switchPointIndex, this.updates) };
-      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+      const updatedClip: MulticamClip = {
+        ...clip,
+        switchPoints: updateSwitchPoint(clip.switchPoints, this.switchPointIndex, this.updates),
+      };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
     }
     this.accessor.setProject(this.after);
   }
@@ -6236,7 +6893,7 @@ export class SyncMulticamClipCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly syncMode: MulticamSyncMode,
-    private readonly offsets: Map<string, number>
+    private readonly offsets: Map<string, number>,
   ) {}
 
   execute(): void {
@@ -6254,7 +6911,9 @@ export class SyncMulticamClipCommand implements Command {
         return newOffset !== undefined ? { ...angle, offset: newOffset } : angle;
       });
       const updatedClip: MulticamClip = { ...clip, angles: updatedAngles, syncMode: this.syncMode };
-      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
     }
     this.accessor.setProject(this.after);
   }
@@ -6278,7 +6937,7 @@ export class UpdateMulticamAngleCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly angleIndex: number,
-    private readonly updates: Partial<MulticamClipAngle>
+    private readonly updates: Partial<MulticamClipAngle>,
   ) {}
 
   execute(): void {
@@ -6295,10 +6954,12 @@ export class UpdateMulticamAngleCommand implements Command {
         throw new Error('Angle index out of range');
       }
       const updatedAngles = clip.angles.map((angle, index) =>
-        index === this.angleIndex ? { ...angle, ...this.updates } : angle
+        index === this.angleIndex ? { ...angle, ...this.updates } : angle,
       );
       const updatedClip: MulticamClip = { ...clip, angles: updatedAngles };
-      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
     }
     this.accessor.setProject(this.after);
   }
@@ -6315,12 +6976,12 @@ export class UpdateMulticamAngleCommand implements Command {
 function updateClipColorGradingGraph(
   project: Project,
   clipId: string,
-  updater: (graph: ColorGradingGraph) => ColorGradingGraph
+  updater: (graph: ColorGradingGraph) => ColorGradingGraph,
 ): Project {
   const timeline = project.timeline;
-  const tracks = timeline.tracks.map(track => ({
+  const tracks = timeline.tracks.map((track) => ({
     ...track,
-    clips: track.clips.map(clip => {
+    clips: track.clips.map((clip) => {
       if (clip.id !== clipId) return clip;
       const currentGraph = clip.colorGradingGraph ?? createEmptyColorGradingGraph();
       return { ...clip, colorGradingGraph: updater(currentGraph) };
@@ -6338,7 +6999,7 @@ export class AddColorNodeCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly node: ColorGradingNode
+    private readonly node: ColorGradingNode,
   ) {}
 
   execute(): void {
@@ -6348,10 +7009,10 @@ export class AddColorNodeCommand implements Command {
     }
     this.before ??= this.accessor.getProject();
     this.after = touchProject(
-      updateClipColorGradingGraph(this.before, this.clipId, graph => ({
+      updateClipColorGradingGraph(this.before, this.clipId, (graph) => ({
         ...graph,
         nodes: [...graph.nodes, this.node],
-      }))
+      })),
     );
     this.accessor.setProject(this.after);
   }
@@ -6372,7 +7033,7 @@ export class RemoveColorNodeCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly nodeId: string
+    private readonly nodeId: string,
   ) {}
 
   execute(): void {
@@ -6382,14 +7043,12 @@ export class RemoveColorNodeCommand implements Command {
     }
     this.before ??= this.accessor.getProject();
     this.after = touchProject(
-      updateClipColorGradingGraph(this.before, this.clipId, graph => ({
+      updateClipColorGradingGraph(this.before, this.clipId, (graph) => ({
         ...graph,
-        nodes: graph.nodes.filter(n => n.id !== this.nodeId),
-        connections: graph.connections.filter(
-          c => c.fromNodeId !== this.nodeId && c.toNodeId !== this.nodeId
-        ),
+        nodes: graph.nodes.filter((n) => n.id !== this.nodeId),
+        connections: graph.connections.filter((c) => c.fromNodeId !== this.nodeId && c.toNodeId !== this.nodeId),
         activeNodeId: graph.activeNodeId === this.nodeId ? null : graph.activeNodeId,
-      }))
+      })),
     );
     this.accessor.setProject(this.after);
   }
@@ -6401,7 +7060,9 @@ export class RemoveColorNodeCommand implements Command {
   }
 }
 
-export type ColorGradingNodePatch = Partial<Pick<ColorGradingNode, 'enabled' | 'params' | 'position' | 'inputs' | 'output'>>;
+export type ColorGradingNodePatch = Partial<
+  Pick<ColorGradingNode, 'enabled' | 'params' | 'position' | 'inputs' | 'output'>
+>;
 
 /** 更新调色节点参数 */
 export class UpdateColorNodeCommand implements Command {
@@ -6413,7 +7074,7 @@ export class UpdateColorNodeCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly nodeId: string,
-    private readonly patch: ColorGradingNodePatch
+    private readonly patch: ColorGradingNodePatch,
   ) {}
 
   execute(): void {
@@ -6423,13 +7084,13 @@ export class UpdateColorNodeCommand implements Command {
     }
     this.before ??= this.accessor.getProject();
     this.after = touchProject(
-      updateClipColorGradingGraph(this.before, this.clipId, graph => ({
+      updateClipColorGradingGraph(this.before, this.clipId, (graph) => ({
         ...graph,
-        nodes: graph.nodes.map(node => {
+        nodes: graph.nodes.map((node) => {
           if (node.id !== this.nodeId) return node;
           return { ...node, ...this.patch };
         }),
-      }))
+      })),
     );
     this.accessor.setProject(this.after);
   }
@@ -6451,7 +7112,7 @@ export class ConnectColorNodesCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly connection: ColorGradingConnection,
-    private readonly isConnect: boolean
+    private readonly isConnect: boolean,
   ) {
     this.description = isConnect ? 'Connect color grading nodes' : 'Disconnect color grading nodes';
   }
@@ -6463,12 +7124,12 @@ export class ConnectColorNodesCommand implements Command {
     }
     this.before ??= this.accessor.getProject();
     this.after = touchProject(
-      updateClipColorGradingGraph(this.before, this.clipId, graph => {
+      updateClipColorGradingGraph(this.before, this.clipId, (graph) => {
         if (this.isConnect) {
           return { ...graph, connections: [...graph.connections, this.connection] };
         }
-        return { ...graph, connections: graph.connections.filter(c => c.id !== this.connection.id) };
-      })
+        return { ...graph, connections: graph.connections.filter((c) => c.id !== this.connection.id) };
+      }),
     );
     this.accessor.setProject(this.after);
   }

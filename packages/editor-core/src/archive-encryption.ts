@@ -1,4 +1,3 @@
-
 export type PasswordStrength = 'weak' | 'medium' | 'strong';
 
 export interface EncryptedArchiveOptions {

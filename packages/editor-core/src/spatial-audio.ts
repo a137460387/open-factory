@@ -25,7 +25,7 @@ export const DEFAULT_SPATIAL_AUDIO: ClipSpatialAudio = {
   elevation: 0,
   distanceMeters: 1,
   renderMode: 'panner',
-  roomModel: 'none'
+  roomModel: 'none',
 };
 
 export const SPATIAL_AUDIO_ROOM_MODELS: SpatialAudioRoomModel[] = ['none', 'small-room', 'hall', 'outdoor'];
@@ -36,7 +36,8 @@ export const KEMAR_ELEVATION_COUNT = 44;
 export const KEMAR_AZIMUTH_STEP_DEGREES = 360 / KEMAR_AZIMUTH_COUNT;
 export const KEMAR_ELEVATION_MIN_DEGREES = -40;
 export const KEMAR_ELEVATION_MAX_DEGREES = 90;
-export const KEMAR_ELEVATION_STEP_DEGREES = (KEMAR_ELEVATION_MAX_DEGREES - KEMAR_ELEVATION_MIN_DEGREES) / (KEMAR_ELEVATION_COUNT - 1);
+export const KEMAR_ELEVATION_STEP_DEGREES =
+  (KEMAR_ELEVATION_MAX_DEGREES - KEMAR_ELEVATION_MIN_DEGREES) / (KEMAR_ELEVATION_COUNT - 1);
 
 export interface KemarHrtfGridSample {
   azimuth: {
@@ -68,7 +69,7 @@ export function normalizeSpatialAudio(input: Partial<ClipSpatialAudio> | undefin
     elevation: normalizeElevationDegrees(input?.elevation),
     distanceMeters: normalizeDistanceMeters(input?.distanceMeters),
     renderMode: normalizeSpatialAudioRenderMode(input?.renderMode),
-    roomModel: normalizeSpatialAudioRoomModel(input?.roomModel)
+    roomModel: normalizeSpatialAudioRoomModel(input?.roomModel),
   };
 }
 
@@ -98,11 +99,15 @@ export function mapSpatialXToPanGains(x: number): { left: number; right: number 
   const normalized = normalizeAxis(x);
   return {
     left: round(normalized <= 0 ? 1 : 1 - normalized),
-    right: round(normalized >= 0 ? 1 : 1 + normalized)
+    right: round(normalized >= 0 ? 1 : 1 + normalized),
   };
 }
 
-export function resolveSpatialCartesianPosition(input: Partial<ClipSpatialAudio> | undefined): { x: number; y: number; z: number } {
+export function resolveSpatialCartesianPosition(input: Partial<ClipSpatialAudio> | undefined): {
+  x: number;
+  y: number;
+  z: number;
+} {
   const spatial = normalizeSpatialAudio(input);
   if (spatial.renderMode !== 'binaural') {
     return { x: spatial.x, y: spatial.y, z: spatial.z };
@@ -113,7 +118,7 @@ export function resolveSpatialCartesianPosition(input: Partial<ClipSpatialAudio>
   return {
     x: round(Math.sin(azimuth) * Math.cos(elevation) * radius),
     y: round(Math.cos(azimuth) * Math.cos(elevation) * radius),
-    z: round(Math.sin(elevation) * radius)
+    z: round(Math.sin(elevation) * radius),
   };
 }
 
@@ -128,25 +133,29 @@ export function resolveKemarHrtfGridSample(input: { azimuth: number; elevation: 
   const rawElevationIndex = (elevation - KEMAR_ELEVATION_MIN_DEGREES) / KEMAR_ELEVATION_STEP_DEGREES;
   const elevationLowerIndex = Math.min(KEMAR_ELEVATION_COUNT - 1, Math.max(0, Math.floor(rawElevationIndex)));
   const elevationUpperIndex = Math.min(KEMAR_ELEVATION_COUNT - 1, elevationLowerIndex + 1);
-  const elevationWeight = elevationUpperIndex === elevationLowerIndex ? 0 : round(rawElevationIndex - elevationLowerIndex);
+  const elevationWeight =
+    elevationUpperIndex === elevationLowerIndex ? 0 : round(rawElevationIndex - elevationLowerIndex);
 
   return {
     azimuth: {
       lowerIndex: azimuthLowerIndex,
       upperIndex: azimuthUpperIndex,
       nearestIndex: azimuthWeight < 0.5 ? azimuthLowerIndex : azimuthUpperIndex,
-      weight: azimuthWeight
+      weight: azimuthWeight,
     },
     elevation: {
       lowerIndex: elevationLowerIndex,
       upperIndex: elevationUpperIndex,
       nearestIndex: elevationWeight < 0.5 ? elevationLowerIndex : elevationUpperIndex,
-      weight: elevationWeight
-    }
+      weight: elevationWeight,
+    },
   };
 }
 
-export function resolveSpatialAudioPreviewMode(input: Partial<ClipSpatialAudio> | undefined, options: SpatialAudioPreviewModeOptions): SpatialAudioRenderMode {
+export function resolveSpatialAudioPreviewMode(
+  input: Partial<ClipSpatialAudio> | undefined,
+  options: SpatialAudioPreviewModeOptions,
+): SpatialAudioRenderMode {
   const spatial = normalizeSpatialAudio(input);
   if (spatial.renderMode !== 'binaural' || !options.hrtfAvailable) {
     return 'panner';
@@ -154,7 +163,11 @@ export function resolveSpatialAudioPreviewMode(input: Partial<ClipSpatialAudio> 
   return options.outputChannelCount <= 2 ? 'panner' : 'binaural';
 }
 
-export function shouldCopyKemarHrtfAsset(exists: boolean, sizeBytes: number | undefined, expectedBytes = KEMAR_HRTF_EXPECTED_BYTES): boolean {
+export function shouldCopyKemarHrtfAsset(
+  exists: boolean,
+  sizeBytes: number | undefined,
+  expectedBytes = KEMAR_HRTF_EXPECTED_BYTES,
+): boolean {
   return !exists || typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes < expectedBytes;
 }
 
@@ -170,12 +183,19 @@ export function buildRoomImpulseResponsePath(appDataDir: string, roomModel: Spat
   return `${trimTrailingSlashes(appDataDir)}/hrtf/ir/${room}.wav`;
 }
 
-export function buildSofalizerArgs(input: Partial<ClipSpatialAudio> | undefined, hrtfPath: string | undefined): string[] {
+export function buildSofalizerArgs(
+  input: Partial<ClipSpatialAudio> | undefined,
+  hrtfPath: string | undefined,
+): string[] {
   const spatial = normalizeSpatialAudio(input);
   if (spatial.renderMode !== 'binaural' || !hrtfPath?.trim()) {
     return [];
   }
-  return [`sofa=${hrtfPath.trim()}`, `azi=${formatSpatialFilterNumber(spatial.azimuth)}`, `ele=${formatSpatialFilterNumber(spatial.elevation)}`];
+  return [
+    `sofa=${hrtfPath.trim()}`,
+    `azi=${formatSpatialFilterNumber(spatial.azimuth)}`,
+    `ele=${formatSpatialFilterNumber(spatial.elevation)}`,
+  ];
 }
 
 function normalizeAxis(value: number | undefined): number {
@@ -198,7 +218,7 @@ function normalizeAzimuthDegrees(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return 0;
   }
-  const wrapped = ((value + 180) % 360 + 360) % 360 - 180;
+  const wrapped = ((((value + 180) % 360) + 360) % 360) - 180;
   return round(wrapped === -180 ? 180 : wrapped);
 }
 

@@ -1,4 +1,4 @@
-import { logError } from "../../lib/error-handlers";
+import { logError } from '../../lib/error-handlers';
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -89,7 +89,7 @@ describe('useProxyCallbacks', () => {
       useProxyCallbacks({
         proxySettings: DEFAULT_PROXY_SETTINGS,
         projectFps: 30,
-      })
+      }),
     );
 
     expect(result.current.generateProxyForMedia).toBeDefined();
@@ -101,9 +101,7 @@ describe('useProxyCallbacks', () => {
 
   // --- generateProxyForMedia ---
   it('generateProxyForMedia 对非 video 类型资产不执行操作', async () => {
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.generateProxyForMedia('audio-1');
 
@@ -111,9 +109,7 @@ describe('useProxyCallbacks', () => {
   });
 
   it('generateProxyForMedia 对不存在的资产 ID 不执行操作', async () => {
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.generateProxyForMedia('nonexistent-id');
 
@@ -121,12 +117,16 @@ describe('useProxyCallbacks', () => {
   });
 
   it('generateProxyForMedia 成功时更新 media 为 proxy 资产', async () => {
-    const proxyAsset = { id: 'video-1', name: 'test.mp4', type: 'video', proxyPath: '/proxy/test.mp4', proxyStatus: 'ready' };
+    const proxyAsset = {
+      id: 'video-1',
+      name: 'test.mp4',
+      type: 'video',
+      proxyPath: '/proxy/test.mp4',
+      proxyStatus: 'ready',
+    };
     mockCreateProxyForAsset.mockResolvedValue(proxyAsset);
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.generateProxyForMedia('video-1');
 
@@ -142,9 +142,7 @@ describe('useProxyCallbacks', () => {
   it('generateProxyForMedia 失败时设置 error 状态并显示错误提示', async () => {
     mockCreateProxyForAsset.mockRejectedValue(new Error('FFmpeg failed'));
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.generateProxyForMedia('video-1');
 
@@ -160,9 +158,7 @@ describe('useProxyCallbacks', () => {
   it('deleteProxiesForMedia 清除指定资产的代理路径', async () => {
     mockRemoveFile.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.deleteProxiesForMedia(['video-2']);
 
@@ -172,9 +168,7 @@ describe('useProxyCallbacks', () => {
   });
 
   it('deleteProxiesForMedia 在无代理路径时不调用 removeFile', async () => {
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.deleteProxiesForMedia(['video-1']);
 
@@ -185,9 +179,7 @@ describe('useProxyCallbacks', () => {
   it('deleteProxiesForMedia 即使 removeFile 失败也会继续清除状态（错误被 catch 吞掉）', async () => {
     mockRemoveFile.mockRejectedValue(new Error('Permission denied'));
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.deleteProxiesForMedia(['video-2']);
 
@@ -201,9 +193,7 @@ describe('useProxyCallbacks', () => {
   it('migrateProxiesToDirectory 在无代理需要迁移时显示提示', async () => {
     mockBuildProxyMigration.mockReturnValue([]);
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.migrateProxiesToDirectory('/new/path');
 
@@ -212,15 +202,11 @@ describe('useProxyCallbacks', () => {
   });
 
   it('migrateProxiesToDirectory 成功迁移时执行 command 并显示成功提示', async () => {
-    const updates = [
-      { fromPath: '/old/proxy.mp4', toPath: '/new/proxy.mp4', assetId: 'video-2' },
-    ];
+    const updates = [{ fromPath: '/old/proxy.mp4', toPath: '/new/proxy.mp4', assetId: 'video-2' }];
     mockBuildProxyMigration.mockReturnValue(updates);
     mockMoveFile.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.migrateProxiesToDirectory('/new/path');
 
@@ -230,16 +216,12 @@ describe('useProxyCallbacks', () => {
   });
 
   it('migrateProxiesToDirectory 迁移失败时显示错误提示（moved 为空时不回滚）', async () => {
-    const updates = [
-      { fromPath: '/old/proxy.mp4', toPath: '/new/proxy.mp4', assetId: 'video-2' },
-    ];
+    const updates = [{ fromPath: '/old/proxy.mp4', toPath: '/new/proxy.mp4', assetId: 'video-2' }];
     mockBuildProxyMigration.mockReturnValue(updates);
     // 第一次 moveFile 就失败，moved 数组为空，回滚循环不执行
     mockMoveFile.mockRejectedValue(new Error('Disk full'));
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     await result.current.migrateProxiesToDirectory('/new/path');
 
@@ -251,9 +233,7 @@ describe('useProxyCallbacks', () => {
 
   // --- convertVfrMediaToCfr ---
   it('convertVfrMediaToCfr 对非 video 类型资产不执行操作', () => {
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     result.current.convertVfrMediaToCfr('audio-1');
 
@@ -261,9 +241,7 @@ describe('useProxyCallbacks', () => {
   });
 
   it('convertVfrMediaToCfr 对不存在的资产不执行操作', () => {
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     result.current.convertVfrMediaToCfr('nonexistent');
 
@@ -274,9 +252,7 @@ describe('useProxyCallbacks', () => {
     mockGetProjectFrameRateConversionTarget.mockReturnValue(30);
     mockCreateProxyForAsset.mockResolvedValue({ id: 'video-1', proxyStatus: 'ready' });
 
-    const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
-    );
+    const { result } = renderHook(() => useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 }));
 
     result.current.convertVfrMediaToCfr('video-1');
 

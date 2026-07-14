@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, createProject, createTrack, type Project } from '@open-factory/editor-core';
+import {
+  DEFAULT_SUBTITLE_MODE,
+  DEFAULT_SUBTITLE_STYLE,
+  createProject,
+  createTrack,
+  type Project,
+} from '@open-factory/editor-core';
 import {
   buildProjectBatchQueue,
   replaceProjectMediaPathPrefix,
   runProjectBatchQueue,
   serializeProjectBatchReport,
-  updateProjectSubtitleStyle
+  updateProjectSubtitleStyle,
 } from './projectBatch';
 
 describe('project batch processing helpers', () => {
@@ -21,10 +27,13 @@ describe('project batch processing helpers', () => {
   });
 
   it('builds one queue task per unique project path', () => {
-    const tasks = buildProjectBatchQueue(['C:/Projects/A.cutproj.json', 'C:/Projects/A.cutproj.json', 'C:/Projects/B.json'], {
-      operation: 'batch-export',
-      outputDirectory: 'C:/Exports/'
-    });
+    const tasks = buildProjectBatchQueue(
+      ['C:/Projects/A.cutproj.json', 'C:/Projects/A.cutproj.json', 'C:/Projects/B.json'],
+      {
+        operation: 'batch-export',
+        outputDirectory: 'C:/Exports/',
+      },
+    );
 
     expect(tasks).toHaveLength(2);
     expect(tasks[0]).toMatchObject({ id: 'project-batch-batch-export-1', outputPath: 'C:/Exports/A.mp4' });
@@ -32,10 +41,13 @@ describe('project batch processing helpers', () => {
   });
 
   it('continues processing when one project fails', async () => {
-    const tasks = buildProjectBatchQueue(['C:/Projects/ok.cutproj.json', 'C:/Projects/bad.cutproj.json', 'C:/Projects/later.cutproj.json'], {
-      operation: 'cover-frame',
-      outputDirectory: 'C:/Covers'
-    });
+    const tasks = buildProjectBatchQueue(
+      ['C:/Projects/ok.cutproj.json', 'C:/Projects/bad.cutproj.json', 'C:/Projects/later.cutproj.json'],
+      {
+        operation: 'cover-frame',
+        outputDirectory: 'C:/Covers',
+      },
+    );
     const report = await runProjectBatchQueue(tasks, async (task) => {
       if (task.projectPath.includes('bad')) {
         throw new Error('read failed');
@@ -51,12 +63,12 @@ describe('project batch processing helpers', () => {
   it('serializes report counts and failure reasons', async () => {
     const tasks = buildProjectBatchQueue(['C:/Projects/ok.cutproj.json', 'C:/Projects/skip.cutproj.json'], {
       operation: 'replace-media-prefix',
-      pathPrefix: { from: 'D:/Old', to: 'E:/New' }
+      pathPrefix: { from: 'D:/Old', to: 'E:/New' },
     });
     const report = await runProjectBatchQueue(tasks, (task) =>
       task.projectPath.includes('skip')
         ? { status: 'skipped', message: '没有匹配路径' }
-        : { projectName: 'OK', changedCount: 2 }
+        : { projectName: 'OK', changedCount: 2 },
     );
     const parsed = JSON.parse(serializeProjectBatchReport(report)) as {
       summary: { total: number; succeeded: number; failed: number; skipped: number };
@@ -97,7 +109,7 @@ function makeProject(): Project {
         duration: 4,
         width: 1280,
         height: 720,
-        missing: true
+        missing: true,
       },
       {
         id: 'media-seq',
@@ -113,9 +125,9 @@ function makeProject(): Project {
           startNumber: 1,
           frameCount: 2,
           frameRate: 24,
-          paths: ['D:/OldRoot/seq/frame001.png', 'D:/OldRoot/seq/frame002.png']
-        }
-      }
+          paths: ['D:/OldRoot/seq/frame001.png', 'D:/OldRoot/seq/frame002.png'],
+        },
+      },
     ],
     timeline: {
       tracks: [
@@ -139,11 +151,11 @@ function makeProject(): Project {
               transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
               text: '字幕',
               style: { ...DEFAULT_SUBTITLE_STYLE },
-              subtitleMode: DEFAULT_SUBTITLE_MODE
-            }
-          ]
-        })
-      ]
-    }
+              subtitleMode: DEFAULT_SUBTITLE_MODE,
+            },
+          ],
+        }),
+      ],
+    },
   };
 }

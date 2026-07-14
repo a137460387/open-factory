@@ -43,13 +43,26 @@ export function EmotionAnalysisPanel({ open, onClose, subtitleClips, onApplyStyl
   if (!open) return null;
 
   return (
-    <div data-testid="emotion-analysis-panel" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[480px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      data-testid="emotion-analysis-panel"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[480px] max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-neutral-200 flex items-center gap-2">
             <Palette size={16} /> {t.title}
           </h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200 text-xs" data-testid="emotion-panel-close">✕</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-200 text-xs"
+            data-testid="emotion-panel-close"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Disclaimer */}
@@ -122,6 +135,3 @@ export function EmotionAnalysisPanel({ open, onClose, subtitleClips, onApplyStyl
     </div>
   );
 }
-
-
-

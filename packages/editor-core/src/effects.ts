@@ -2,7 +2,15 @@ import { clamp, round } from './time';
 import { DEFAULT_MOTION_BLUR_PARAMS, normalizeMotionBlurParams, type MotionBlurParams } from './motion-blur';
 import { MANUAL_AUDIO_VISUALIZATION_THEME_ID, expandAudioVisualizationTheme } from './audio-visualization-themes';
 
-export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader' | 'motion-blur';
+export type EffectType =
+  | 'blur'
+  | 'sharpen'
+  | 'vignette'
+  | 'film-grain'
+  | 'chromatic-aberration'
+  | 'audio-spectrum'
+  | 'custom-shader'
+  | 'motion-blur';
 export type EffectParamValue = number | string | boolean;
 export type EffectParams = Record<string, EffectParamValue>;
 export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circular';
@@ -49,14 +57,14 @@ export const CUSTOM_SHADER_EXAMPLES: readonly CustomShaderExample[] = [
     name: 'Pixelate',
     source: `vec2 blockSize = vec2(18.0) / u_resolution;
 vec2 uv = floor(v_texCoord / blockSize) * blockSize + blockSize * 0.5;
-gl_FragColor = texture2D(u_texture, uv);`
+gl_FragColor = texture2D(u_texture, uv);`,
   },
   {
     id: 'posterize',
     name: 'Posterize',
     source: `vec4 color = texture2D(u_texture, v_texCoord);
 vec3 levels = floor(color.rgb * 5.0) / 5.0;
-gl_FragColor = vec4(levels, color.a);`
+gl_FragColor = vec4(levels, color.a);`,
   },
   {
     id: 'old-film',
@@ -69,14 +77,23 @@ vec3 sepia = vec3(
   dot(color.rgb, vec3(0.272, 0.534, 0.131))
 );
 float vignette = smoothstep(0.85, 0.25, distance(v_texCoord, vec2(0.5)));
-gl_FragColor = vec4(clamp(sepia * vignette + (grain - 0.5) * 0.08, 0.0, 1.0), color.a);`
-  }
+gl_FragColor = vec4(clamp(sepia * vignette + (grain - 0.5) * 0.08, 0.0, 1.0), color.a);`,
+  },
 ];
 
 export const DEFAULT_CUSTOM_SHADER_SOURCE = CUSTOM_SHADER_EXAMPLES[0].source;
 export const DEFAULT_CUSTOM_SHADER_PRESET: CustomShaderExampleId = CUSTOM_SHADER_EXAMPLES[0].id;
 
-export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum', 'custom-shader', 'motion-blur'];
+export const EFFECT_TYPES: EffectType[] = [
+  'blur',
+  'sharpen',
+  'vignette',
+  'film-grain',
+  'chromatic-aberration',
+  'audio-spectrum',
+  'custom-shader',
+  'motion-blur',
+];
 export const AUDIO_SPECTRUM_STYLES: AudioSpectrumStyle[] = ['bars', 'waveform', 'circular'];
 export const AUDIO_SPECTRUM_POSITIONS: AudioSpectrumPosition[] = ['bottom', 'top'];
 
@@ -95,10 +112,10 @@ export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
     height: 25,
     position: 'bottom',
     sensitivity: 1,
-    mirror: false
+    mirror: false,
   },
   'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET },
-  'motion-blur': DEFAULT_MOTION_BLUR_PARAMS
+  'motion-blur': DEFAULT_MOTION_BLUR_PARAMS,
 };
 
 export function isEffectType(type: string | undefined): type is EffectType {
@@ -113,7 +130,7 @@ export function normalizeEffect(effect: Partial<Effect> | undefined): Effect | u
     id: effect.id.trim(),
     type: effect.type,
     enabled: effect.enabled ?? true,
-    params: normalizeEffectParams(effect.type, effect.params)
+    params: normalizeEffectParams(effect.type, effect.params),
   };
 }
 
@@ -140,13 +157,13 @@ export function normalizeEffectParams(type: EffectType, params: EffectParams | u
   if (type === 'vignette') {
     return {
       intensity: normalizeParam(params?.intensity, numberParam(defaults.intensity, 0.35), 0, 1),
-      radius: normalizeParam(params?.radius, numberParam(defaults.radius, 0.6), 0, 1)
+      radius: normalizeParam(params?.radius, numberParam(defaults.radius, 0.6), 0, 1),
     };
   }
   if (type === 'film-grain') {
     return {
       strength: normalizeParam(params?.strength, numberParam(defaults.strength, 0.2), 0, 1),
-      size: normalizeParam(params?.size, numberParam(defaults.size, 2), 1, 5)
+      size: normalizeParam(params?.size, numberParam(defaults.size, 2), 1, 5),
     };
   }
   if (type === 'chromatic-aberration') {
@@ -168,7 +185,7 @@ export function normalizeAudioSpectrumParams(params: EffectParams | undefined): 
     themeId,
     color: stringParam(params?.color, stringParam(defaults.color, '#22d3ee')),
     colorStart: stringParam(params?.colorStart ?? params?.color, stringParam(defaults.colorStart, '#22d3ee')),
-    colorEnd: typeof params?.colorEnd === 'string' ? params.colorEnd : undefined
+    colorEnd: typeof params?.colorEnd === 'string' ? params.colorEnd : undefined,
   });
   const colorStart = theme.colorStart;
   const colorEnd = theme.colorEnd;
@@ -181,7 +198,7 @@ export function normalizeAudioSpectrumParams(params: EffectParams | undefined): 
     height: normalizeParam(params?.height, numberParam(defaults.height, 25), 0, 50),
     position: normalizeAudioSpectrumPosition(params?.position, stringParam(defaults.position, 'bottom')),
     sensitivity: normalizeParam(params?.sensitivity, numberParam(defaults.sensitivity, 1), 0.1, 4),
-    mirror: booleanParam(params?.mirror, booleanParam(defaults.mirror, false))
+    mirror: booleanParam(params?.mirror, booleanParam(defaults.mirror, false)),
   };
 }
 
@@ -196,7 +213,7 @@ export function getEffectStringParam(params: EffectParams | undefined, key: stri
 export function normalizeCustomShaderParams(params: EffectParams | undefined): CustomShaderParams {
   return {
     source: normalizeShaderSource(params?.source),
-    preset: normalizeShaderPreset(params?.preset)
+    preset: normalizeShaderPreset(params?.preset),
   };
 }
 
@@ -208,7 +225,12 @@ export function getCustomShaderSource(effect: Pick<Effect, 'type' | 'params'>): 
 }
 
 export function getEnabledCustomShaderEffect(effects: Effect[] | undefined): Effect | undefined {
-  return (effects ?? []).find((effect) => effect.enabled && effect.type === 'custom-shader' && normalizeCustomShaderParams(effect.params).source.trim().length > 0);
+  return (effects ?? []).find(
+    (effect) =>
+      effect.enabled &&
+      effect.type === 'custom-shader' &&
+      normalizeCustomShaderParams(effect.params).source.trim().length > 0,
+  );
 }
 
 export function buildCustomShaderFragmentSource(source: string): string {
@@ -219,7 +241,7 @@ export function buildCustomShaderFragmentSource(source: string): string {
     'uniform vec2 u_resolution;',
     'uniform float u_time;',
     'uniform float u_progress;',
-    'varying vec2 v_texCoord;'
+    'varying vec2 v_texCoord;',
   ];
   const withDeclarations = declarations.reduce((current, declaration) => {
     const key = declaration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, '\\s+');
@@ -274,7 +296,9 @@ function normalizeAudioSpectrumStyle(value: EffectParamValue | undefined, fallba
   if (value === 'circle') {
     return 'circular';
   }
-  return AUDIO_SPECTRUM_STYLES.includes(value as AudioSpectrumStyle) ? (value as AudioSpectrumStyle) : normalizeFallbackStyle(fallback);
+  return AUDIO_SPECTRUM_STYLES.includes(value as AudioSpectrumStyle)
+    ? (value as AudioSpectrumStyle)
+    : normalizeFallbackStyle(fallback);
 }
 
 function normalizeFallbackStyle(value: string): AudioSpectrumStyle {
@@ -285,11 +309,15 @@ function normalizeFallbackStyle(value: string): AudioSpectrumStyle {
 }
 
 function normalizeAudioSpectrumPosition(value: EffectParamValue | undefined, fallback: string): AudioSpectrumPosition {
-  return AUDIO_SPECTRUM_POSITIONS.includes(value as AudioSpectrumPosition) ? (value as AudioSpectrumPosition) : normalizeFallbackPosition(fallback);
+  return AUDIO_SPECTRUM_POSITIONS.includes(value as AudioSpectrumPosition)
+    ? (value as AudioSpectrumPosition)
+    : normalizeFallbackPosition(fallback);
 }
 
 function normalizeFallbackPosition(value: string): AudioSpectrumPosition {
-  return AUDIO_SPECTRUM_POSITIONS.includes(value as AudioSpectrumPosition) ? (value as AudioSpectrumPosition) : 'bottom';
+  return AUDIO_SPECTRUM_POSITIONS.includes(value as AudioSpectrumPosition)
+    ? (value as AudioSpectrumPosition)
+    : 'bottom';
 }
 
 function normalizeShaderSource(value: EffectParamValue | undefined): string {

@@ -28,11 +28,11 @@ export interface EmotionToneAIResponse {
 /** Mapping of emotion tone to UI color for timeline display */
 export const EMOTION_COLORS: Record<EmotionTone, string> = {
   energetic: '#f97316', // orange
-  calm: '#3b82f6',      // blue
-  tense: '#ef4444',     // red
-  happy: '#eab308',     // yellow
-  sad: '#a855f7',       // purple
-  neutral: '#6b7280',   // gray
+  calm: '#3b82f6', // blue
+  tense: '#ef4444', // red
+  happy: '#eab308', // yellow
+  sad: '#a855f7', // purple
+  neutral: '#6b7280', // gray
 };
 
 export const VALID_EMOTION_TONES: readonly EmotionTone[] = ['energetic', 'calm', 'tense', 'happy', 'sad', 'neutral'];

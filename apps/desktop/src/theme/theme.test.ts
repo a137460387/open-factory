@@ -7,7 +7,7 @@ import {
   applyThemeDefinitionToDocument,
   upsertCustomTheme,
   validateThemeContrast,
-  type ThemeSettings
+  type ThemeSettings,
 } from './theme';
 
 describe('theme definitions', () => {
@@ -38,8 +38,8 @@ describe('theme definitions', () => {
         primary: '#0f766e',
         accent: '#f97316',
         background: '#0b1120',
-        text: '#f8fafc'
-      }
+        text: '#f8fafc',
+      },
     });
 
     expect(created.settings.activeThemeId).toBe(created.theme.id);
@@ -49,7 +49,7 @@ describe('theme definitions', () => {
     const updated = upsertCustomTheme(created.settings, {
       id: created.theme.id,
       name: 'Client Green Updated',
-      colors: { primary: '#14b8a6' }
+      colors: { primary: '#14b8a6' },
     });
 
     expect(updated.settings.customThemes).toHaveLength(1);
@@ -94,18 +94,21 @@ function createDocumentMock() {
     contains: (value: string) => classes.has(value),
     [Symbol.iterator]: function* iterator() {
       yield* classes;
-    }
+    },
   };
   return {
     vars,
     documentElement: {
       style: {
-        setProperty: (key: string, value: string) => vars.set(key, value)
-      }
+        setProperty: (key: string, value: string) => vars.set(key, value),
+      },
     },
     body: {
       classList,
-      dataset: {} as Record<string, string>
-    }
-  } as unknown as Document & { vars: Map<string, string>; body: Document['body'] & { dataset: Record<string, string>; classList: typeof classList } };
+      dataset: {} as Record<string, string>,
+    },
+  } as unknown as Document & {
+    vars: Map<string, string>;
+    body: Document['body'] & { dataset: Record<string, string>; classList: typeof classList };
+  };
 }

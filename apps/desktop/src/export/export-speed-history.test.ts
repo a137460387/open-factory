@@ -5,7 +5,7 @@ import {
   estimateRemainingSecondsFromHistory,
   getExportSpeedHistoryPath,
   readExportSpeedHistory,
-  writeExportSpeedHistory
+  writeExportSpeedHistory,
 } from './export-speed-history';
 
 describe('export speed history', () => {
@@ -28,8 +28,8 @@ describe('export speed history', () => {
         },
         writeFile: (path, contents) => {
           files.set(path, contents);
-        }
-      } satisfies TauriMocks
+        },
+      } satisfies TauriMocks,
     });
   });
 
@@ -53,9 +53,9 @@ describe('export speed history', () => {
           width: 1920,
           height: 1080,
           codec: 'libx264',
-          createdAt: '2026-06-17T00:00:00.000Z'
-        }
-      ]
+          createdAt: '2026-06-17T00:00:00.000Z',
+        },
+      ],
     });
 
     expect(JSON.parse(files.get(historyPath) ?? '{}')).toEqual(saved);
@@ -70,7 +70,7 @@ describe('export speed history', () => {
       width: 1920,
       height: 1080,
       codec: 'libx264',
-      createdAt: '2026-06-17T00:00:00.000Z'
+      createdAt: '2026-06-17T00:00:00.000Z',
     });
     await appendExportSpeedSample({
       id: 'older',
@@ -79,12 +79,20 @@ describe('export speed history', () => {
       width: 3840,
       height: 2160,
       codec: 'libx265',
-      createdAt: '2026-06-17T00:01:00.000Z'
+      createdAt: '2026-06-17T00:01:00.000Z',
     });
 
     const history = await readExportSpeedHistory();
     expect(history.samples.map((sample) => sample.id)).toEqual(['older', 'recent']);
-    expect(estimateRemainingSecondsFromHistory(history, { durationSeconds: 40, progress: 0.25, width: 1920, height: 1080, codec: 'libx264' })).toBeGreaterThan(0);
+    expect(
+      estimateRemainingSecondsFromHistory(history, {
+        durationSeconds: 40,
+        progress: 0.25,
+        width: 1920,
+        height: 1080,
+        codec: 'libx264',
+      }),
+    ).toBeGreaterThan(0);
     expect(estimateRemainingSecondsFromHistory({ samples: [] }, { durationSeconds: 40 })).toBeUndefined();
   });
 });

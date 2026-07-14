@@ -86,22 +86,23 @@ export function detectScenes(
     adaptiveSensitivity = 1.0,
   } = options;
 
-  const sorted = [...samples]
-    .filter((s) => Number.isFinite(s.time))
-    .sort((a, b) => a.time - b.time);
+  const sorted = [...samples].filter((s) => Number.isFinite(s.time)).sort((a, b) => a.time - b.time);
 
   if (sorted.length < 2) {
     return {
       boundaries: [],
-      segments: sorted.length === 1
-        ? [{
-            start: sorted[0].time,
-            end: sorted[0].time,
-            sceneType: 'indoor',
-            avgBrightness: round(sorted[0].brightness),
-            avgMotion: round(sorted[0].motion),
-          }]
-        : [],
+      segments:
+        sorted.length === 1
+          ? [
+              {
+                start: sorted[0].time,
+                end: sorted[0].time,
+                sceneType: 'indoor',
+                avgBrightness: round(sorted[0].brightness),
+                avgMotion: round(sorted[0].motion),
+              },
+            ]
+          : [],
       thresholdCurve: [],
       sampleCount: sorted.length,
     };
@@ -187,10 +188,7 @@ export function detectScenes(
  * than full pixel data, we construct a lightweight histogram approximation
  * that still allows meaningful difference calculations between frames.
  */
-function buildSyntheticHistogram(
-  sample: ContentAnalysisVisualSample,
-  bins: number,
-): Float32Array {
+function buildSyntheticHistogram(sample: ContentAnalysisVisualSample, bins: number): Float32Array {
   const totalBins = bins * 3; // H, S, V channels
   const hist = new Float32Array(totalBins);
   const brightness = clamp01(sample.brightness);
@@ -261,10 +259,7 @@ function histogramDifference(a: Float32Array, b: Float32Array): number {
  * Estimate motion change between two adjacent frames using frame-difference.
  * Uses brightness and motion scalar changes as a proxy for pixel-level frame differencing.
  */
-function motionChange(
-  prev: ContentAnalysisVisualSample,
-  curr: ContentAnalysisVisualSample,
-): number {
+function motionChange(prev: ContentAnalysisVisualSample, curr: ContentAnalysisVisualSample): number {
   const brightnessDelta = Math.abs(clamp01(curr.brightness) - clamp01(prev.brightness));
   const motionDelta = Math.abs(clamp01(curr.motion) - clamp01(prev.motion));
   const saturationDelta = Math.abs(clamp01(curr.saturation) - clamp01(prev.saturation));

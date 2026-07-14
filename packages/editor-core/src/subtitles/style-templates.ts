@@ -38,8 +38,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#08233f',
       outlineWidth: 1,
       shadowColor: '#000000',
-      shadowOffset: 1
-    })
+      shadowOffset: 1,
+    }),
   },
   {
     id: 'cinema-white',
@@ -57,8 +57,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#000000',
       outlineWidth: 2,
       shadowColor: '#000000',
-      shadowOffset: 0
-    })
+      shadowOffset: 0,
+    }),
   },
   {
     id: 'karaoke',
@@ -76,8 +76,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#7c2d12',
       outlineWidth: 2,
       shadowColor: '#000000',
-      shadowOffset: 2
-    })
+      shadowOffset: 2,
+    }),
   },
   {
     id: 'variety-bold',
@@ -95,8 +95,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#111827',
       outlineWidth: 3,
       shadowColor: '#2563eb',
-      shadowOffset: 2
-    })
+      shadowOffset: 2,
+    }),
   },
   {
     id: 'documentary',
@@ -114,8 +114,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#020617',
       outlineWidth: 1,
       shadowColor: '#000000',
-      shadowOffset: 1
-    })
+      shadowOffset: 1,
+    }),
   },
   {
     id: 'social-bold',
@@ -133,8 +133,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#f97316',
       outlineWidth: 2,
       shadowColor: '#000000',
-      shadowOffset: 2
-    })
+      shadowOffset: 2,
+    }),
   },
   {
     id: 'game-hud',
@@ -152,8 +152,8 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#22d3ee',
       outlineWidth: 1,
       shadowColor: '#0f172a',
-      shadowOffset: 2
-    })
+      shadowOffset: 2,
+    }),
   },
   {
     id: 'handwritten',
@@ -171,9 +171,9 @@ export const BUILTIN_SUBTITLE_STYLE_TEMPLATES: SubtitleStyleTemplate[] = [
       outlineColor: '#ffffff',
       outlineWidth: 1,
       shadowColor: '#f59e0b',
-      shadowOffset: 1
-    })
-  }
+      shadowOffset: 1,
+    }),
+  },
 ];
 
 export function normalizeSubtitleStyleTemplateStyle(style: Partial<SubtitleStyle>): SubtitleStyle {
@@ -191,11 +191,14 @@ export function normalizeSubtitleStyleTemplateStyle(style: Partial<SubtitleStyle
     shadowColor: normalizeColor(style.shadowColor, DEFAULT_SUBTITLE_STYLE.shadowColor),
     fontFamily: normalizeFontFamily(style.fontFamily),
     bold: style.bold === true,
-    italic: style.italic === true
+    italic: style.italic === true,
   };
 }
 
-export function renderSubtitleStyleTemplatePreview(template: Pick<SubtitleStyleTemplate, 'style'>, text = SUBTITLE_STYLE_TEMPLATE_PREVIEW_TEXT): string {
+export function renderSubtitleStyleTemplatePreview(
+  template: Pick<SubtitleStyleTemplate, 'style'>,
+  text = SUBTITLE_STYLE_TEMPLATE_PREVIEW_TEXT,
+): string {
   const style = normalizeSubtitleStyleTemplateStyle(template.style);
   const fontSize = Math.max(14, Math.min(24, Math.round(style.fontSize * 0.42)));
   const x = 96;
@@ -211,11 +214,13 @@ export function renderSubtitleStyleTemplatePreview(template: Pick<SubtitleStyleT
       ? `<text x="${x + style.shadowOffset}" y="${y + style.shadowOffset}" text-anchor="middle" font-family="${escapeXml(style.fontFamily)}" font-size="${fontSize}" font-weight="${style.bold ? 700 : 500}" font-style="${style.italic ? 'italic' : 'normal'}" fill="${style.shadowColor}" opacity="0.75">${escapedText}</text>`
       : '',
     `<text x="${x}" y="${y}" text-anchor="middle" font-family="${escapeXml(style.fontFamily)}" font-size="${fontSize}" font-weight="${style.bold ? 700 : 500}" font-style="${style.italic ? 'italic' : 'normal'}" fill="${style.color}" stroke="${style.outlineColor}" stroke-width="${style.outlineWidth}" paint-order="stroke fill">${escapedText}</text>`,
-    '</svg>'
+    '</svg>',
   ].join('');
 }
 
-export function getBuiltinSubtitleStyleTemplate(id: BuiltinSubtitleStyleTemplateId | string): SubtitleStyleTemplate | undefined {
+export function getBuiltinSubtitleStyleTemplate(
+  id: BuiltinSubtitleStyleTemplateId | string,
+): SubtitleStyleTemplate | undefined {
   return BUILTIN_SUBTITLE_STYLE_TEMPLATES.find((template) => template.id === id);
 }
 
@@ -237,9 +242,5 @@ function normalizeFontFamily(value: unknown): string {
 }
 
 function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

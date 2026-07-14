@@ -34,7 +34,7 @@ export interface DetachAudioResult {
 export function detachAudioFromVideoClip(
   timeline: Timeline,
   videoClipId: string,
-  audioTrackId?: string
+  audioTrackId?: string,
 ): { timeline: Timeline; result: DetachAudioResult } {
   const { clip: videoClip, trackIndex } = findClipWithTrackIndex(timeline, videoClipId);
   if (videoClip.type !== 'video') {
@@ -124,11 +124,7 @@ export function detachAudioFromVideoClip(
  * 在软链接模式下，移动视频 clip 时联动音频 clip。
  * 返回更新后的 timeline。
  */
-export function moveLinkedClipPair(
-  timeline: Timeline,
-  clipId: string,
-  deltaStart: number
-): Timeline {
+export function moveLinkedClipPair(timeline: Timeline, clipId: string, deltaStart: number): Timeline {
   const clip = findClip(timeline, clipId);
   const linkedId = getLinkedClipId(clip);
   if (!linkedId) {
@@ -148,10 +144,7 @@ export function moveLinkedClipPair(
 /**
  * 解除软链接：视频和音频从此完全独立。
  */
-export function unlinkAudioFromVideo(
-  timeline: Timeline,
-  audioClipId: string
-): Timeline {
+export function unlinkAudioFromVideo(timeline: Timeline, audioClipId: string): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({
@@ -176,11 +169,7 @@ export function unlinkAudioFromVideo(
  * 重新合并音视频：仅当两者时间码完全对齐时可用。
  * 合并后删除独立音频 clip，恢复视频 clip 音频。
  */
-export function relinkAudioToVideo(
-  timeline: Timeline,
-  videoClipId: string,
-  audioClipId: string
-): Timeline {
+export function relinkAudioToVideo(timeline: Timeline, videoClipId: string, audioClipId: string): Timeline {
   const videoClip = findClip(timeline, videoClipId);
   const audioClip = findClip(timeline, audioClipId);
 
@@ -220,9 +209,7 @@ export function relinkAudioToVideo(
     ...timeline,
     tracks: timeline.tracks.map((track) => ({
       ...track,
-      clips: track.clips
-        .filter((c) => c.id !== audioClipId)
-        .map((c) => (c.id === videoClipId ? restoredVideo : c)),
+      clips: track.clips.filter((c) => c.id !== audioClipId).map((c) => (c.id === videoClipId ? restoredVideo : c)),
     })),
   };
 }

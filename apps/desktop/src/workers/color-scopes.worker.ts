@@ -15,7 +15,9 @@ self.onmessage = (event: MessageEvent<ColorScopesWorkerRequest>) => {
       self.postMessage({} satisfies ColorScopesWorkerResponse);
       return;
     }
-    self.postMessage({ scopes: computeColorScopes({ width, height, data }, waveformColumns) } satisfies ColorScopesWorkerResponse);
+    self.postMessage({
+      scopes: computeColorScopes({ width, height, data }, waveformColumns),
+    } satisfies ColorScopesWorkerResponse);
   } catch {
     self.postMessage({} satisfies ColorScopesWorkerResponse);
   }

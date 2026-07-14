@@ -34,22 +34,41 @@ export function BeatSyncDialog({
   if (!beatSyncOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="beat-sync-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+      role="dialog"
+      aria-modal="true"
+      data-testid="beat-sync-dialog"
+    >
       <div className="w-full max-w-md rounded-lg border border-line bg-white p-4 shadow-xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink">{zhCN.toolbar.beatSync}</h2>
-            <p className="mt-1 text-sm text-slate-600" data-testid="beat-sync-bpm-label">{zhCN.toolbar.beatSyncDetectedBpm(detectedBeatBpm)}</p>
-            <p className="mt-1 text-xs text-slate-500" data-testid="beat-sync-marker-count">{zhCN.toolbar.beatSyncMarkers(beatSyncBeatTimes.length)}</p>
+            <p className="mt-1 text-sm text-slate-600" data-testid="beat-sync-bpm-label">
+              {zhCN.toolbar.beatSyncDetectedBpm(detectedBeatBpm)}
+            </p>
+            <p className="mt-1 text-xs text-slate-500" data-testid="beat-sync-marker-count">
+              {zhCN.toolbar.beatSyncMarkers(beatSyncBeatTimes.length)}
+            </p>
           </div>
-          <button className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel" type="button" data-testid="beat-sync-close-button" onClick={() => setBeatSyncOpen(false)}>
+          <button
+            className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel"
+            type="button"
+            data-testid="beat-sync-close-button"
+            onClick={() => setBeatSyncOpen(false)}
+          >
             {zhCN.toolbar.beatSyncClose}
           </button>
         </div>
         <div className="space-y-3">
           <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
             <span>{zhCN.toolbar.beatSensitivity}</span>
-            <select className="rounded border border-line bg-white px-2 py-1 text-sm" value={beatSensitivity} data-testid="beat-sync-sensitivity-select" onChange={(event) => setBeatSensitivity(event.target.value as BeatSensitivity)}>
+            <select
+              className="rounded border border-line bg-white px-2 py-1 text-sm"
+              value={beatSensitivity}
+              data-testid="beat-sync-sensitivity-select"
+              onChange={(event) => setBeatSensitivity(event.target.value as BeatSensitivity)}
+            >
               <option value="low">{zhCN.toolbar.beatSensitivityOptions.low}</option>
               <option value="medium">{zhCN.toolbar.beatSensitivityOptions.medium}</option>
               <option value="high">{zhCN.toolbar.beatSensitivityOptions.high}</option>
@@ -69,17 +88,39 @@ export function BeatSyncDialog({
           </label>
           <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
             <span>{zhCN.toolbar.beatSyncSpeed}</span>
-            <input type="checkbox" checked={beatSyncSpeedEnabled} data-testid="beat-sync-speed-checkbox" onChange={(event) => setBeatSyncSpeedEnabled(event.target.checked)} />
+            <input
+              type="checkbox"
+              checked={beatSyncSpeedEnabled}
+              data-testid="beat-sync-speed-checkbox"
+              onChange={(event) => setBeatSyncSpeedEnabled(event.target.checked)}
+            />
           </label>
         </div>
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel" type="button" data-testid="beat-sync-apply-bpm-button" onClick={applyManualBeatBpm}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel"
+            type="button"
+            data-testid="beat-sync-apply-bpm-button"
+            onClick={applyManualBeatBpm}
+          >
             {zhCN.toolbar.beatSyncApplyBpm}
           </button>
-          <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canDetectBeats} data-testid="beat-sync-detect-button" onClick={() => void detectSelectedBeats()}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={!canDetectBeats}
+            data-testid="beat-sync-detect-button"
+            onClick={() => void detectSelectedBeats()}
+          >
             {zhCN.toolbar.beatSyncRunDetect}
           </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canSnapToBeats} data-testid="beat-sync-align-button" onClick={snapSelectedToBeats}>
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={!canSnapToBeats}
+            data-testid="beat-sync-align-button"
+            onClick={snapSelectedToBeats}
+          >
             {zhCN.toolbar.beatSyncRunAlign}
           </button>
         </div>

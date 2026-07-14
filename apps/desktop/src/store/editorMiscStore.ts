@@ -21,7 +21,13 @@ export const useEditorMiscStore = create<EditorMiscState>((set) => ({
   pinnedIds: new Set<string>(),
   recentMediaIds: [],
 
-  setFavoriteIds(updater) { set((s) => ({ favoriteIds: applyUpdater(s.favoriteIds, updater) })); },
-  setPinnedIds(updater) { set((s) => ({ pinnedIds: applyUpdater(s.pinnedIds, updater) })); },
-  setRecentMediaIds(updater) { set((s) => ({ recentMediaIds: applyUpdater(s.recentMediaIds, updater) })); },
+  setFavoriteIds(updater) {
+    set((s) => ({ favoriteIds: applyUpdater(s.favoriteIds, updater) }));
+  },
+  setPinnedIds(updater) {
+    set((s) => ({ pinnedIds: applyUpdater(s.pinnedIds, updater) }));
+  },
+  setRecentMediaIds(updater) {
+    set((s) => ({ recentMediaIds: applyUpdater(s.recentMediaIds, updater) }));
+  },
 }));

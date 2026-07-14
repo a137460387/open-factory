@@ -14,11 +14,13 @@ const video: MediaAsset = {
   height: 2160,
   size: 640 * 1024 * 1024,
   mtimeMs: 1_000,
-  videoCodec: 'hevc'
+  videoCodec: 'hevc',
 };
 
 describe('automation rules', () => {
-  beforeAll(() => { setLanguage('en'); });
+  beforeAll(() => {
+    setLanguage('en');
+  });
 
   it('matches numeric and text conditions for media fields', () => {
     expect(evaluateAutomationCondition(video, { field: 'duration', op: '>', value: 300 })).toBe(true);
@@ -33,8 +35,8 @@ describe('automation rules', () => {
       JSON.stringify({
         trigger: 'on-import',
         conditions: [{ field: 'duration', op: '>', value: 300 }],
-        actions: [{ type: 'generate-proxy' }]
-      })
+        actions: [{ type: 'generate-proxy' }],
+      }),
     );
 
     expect(parsed).toEqual({
@@ -45,9 +47,9 @@ describe('automation rules', () => {
           enabled: true,
           trigger: 'on-import',
           conditions: [{ field: 'duration', op: '>', value: 300 }],
-          actions: [{ type: 'generate-proxy' }]
-        }
-      ]
+          actions: [{ type: 'generate-proxy' }],
+        },
+      ],
     });
   });
 
@@ -61,21 +63,23 @@ describe('automation rules', () => {
         { type: 'generate-proxy' },
         { type: 'add-tag', value: 'green' },
         { type: 'move-to-group', value: 'Long videos' },
-        { type: 'send-notification' }
-      ]
+        { type: 'send-notification' },
+      ],
     };
     const dependencies = {
       enqueueProxy: vi.fn(),
       setLabel: vi.fn(),
       moveToGroup: vi.fn(),
-      notify: vi.fn()
+      notify: vi.fn(),
     };
 
-    await expect(runAutomationRulesForMedia([rule], { trigger: 'on-import', media: [video] }, dependencies)).resolves.toEqual([
+    await expect(
+      runAutomationRulesForMedia([rule], { trigger: 'on-import', media: [video] }, dependencies),
+    ).resolves.toEqual([
       { ruleId: 'long-video-actions', assetId: 'asset-long', action: 'generate-proxy' },
       { ruleId: 'long-video-actions', assetId: 'asset-long', action: 'add-tag' },
       { ruleId: 'long-video-actions', assetId: 'asset-long', action: 'move-to-group' },
-      { ruleId: 'long-video-actions', assetId: 'asset-long', action: 'send-notification' }
+      { ruleId: 'long-video-actions', assetId: 'asset-long', action: 'send-notification' },
     ]);
     expect(dependencies.enqueueProxy).toHaveBeenCalledWith(video);
     expect(dependencies.setLabel).toHaveBeenCalledWith('asset-long', 'green');

@@ -17,7 +17,7 @@ const baseAsset: MediaAsset = {
   hasAudio: true,
   audioChannels: 2,
   audioSampleRate: 48000,
-  audioCodec: 'aac'
+  audioCodec: 'aac',
 };
 
 describe('proxy integrity scheduler', () => {
@@ -31,8 +31,11 @@ describe('proxy integrity scheduler', () => {
       getLastRunAtMs: () => undefined,
       setLastRunAtMs,
       fileExists: () => true,
-      readFileStat: (path) => ({ size: path.includes('Proxy') ? 1024 : 4000, mtimeMs: path.includes('Proxy') ? 1500 : 3000 }),
-      enqueueProxyAssets
+      readFileStat: (path) => ({
+        size: path.includes('Proxy') ? 1024 : 4000,
+        mtimeMs: path.includes('Proxy') ? 1500 : 3000,
+      }),
+      enqueueProxyAssets,
     });
 
     expect(result.ran).toBe(true);
@@ -43,7 +46,7 @@ describe('proxy integrity scheduler', () => {
     const skipped = await runScheduledProxyIntegrityCheck(project, {
       nowMs: 25 * 60 * 60 * 1000,
       getLastRunAtMs: () => 24 * 60 * 60 * 1000,
-      enqueueProxyAssets
+      enqueueProxyAssets,
     });
     expect(skipped).toMatchObject({ ran: false, assetIds: [] });
   });
@@ -74,11 +77,11 @@ function makeProxyProject(): Project {
               speed: 1,
               transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
               colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
-              volume: 1
-            }
-          ]
-        })
-      ]
-    }
+              volume: 1,
+            },
+          ],
+        }),
+      ],
+    },
   };
 }

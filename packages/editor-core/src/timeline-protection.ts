@@ -17,12 +17,19 @@ export function intervalContains(container: TimeInterval, child: TimeInterval): 
   return child.start >= container.start - EPSILON && child.end <= container.end + EPSILON;
 }
 
-export function getClipProtectedRanges(clip: Pick<Clip, 'start' | 'duration'>, ranges: ProtectedRange[]): ProtectedRange[] {
+export function getClipProtectedRanges(
+  clip: Pick<Clip, 'start' | 'duration'>,
+  ranges: ProtectedRange[],
+): ProtectedRange[] {
   const interval = { start: clip.start, end: round(clip.start + clip.duration) };
   return ranges.filter((range) => intervalsOverlap(interval, range));
 }
 
-export function canMoveClipWithProtectedRanges(clip: Pick<Clip, 'start' | 'duration'>, nextStart: number, ranges: ProtectedRange[]): boolean {
+export function canMoveClipWithProtectedRanges(
+  clip: Pick<Clip, 'start' | 'duration'>,
+  nextStart: number,
+  ranges: ProtectedRange[],
+): boolean {
   if (ranges.length === 0) {
     return true;
   }
@@ -34,11 +41,15 @@ export function canMoveClipWithProtectedRanges(clip: Pick<Clip, 'start' | 'durat
   return !ranges.some((range) => intervalsOverlap(next, range));
 }
 
-export function applyProtectedRippleDeleteToTrack(track: Track, selectedIds: Set<string>, protectedRanges: ProtectedRange[]): Track {
+export function applyProtectedRippleDeleteToTrack(
+  track: Track,
+  selectedIds: Set<string>,
+  protectedRanges: ProtectedRange[],
+): Track {
   const removedIntervals = mergeIntervals(
     track.clips
       .filter((clip) => selectedIds.has(clip.id))
-      .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration) }))
+      .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration) })),
   );
   if (removedIntervals.length === 0) {
     return track;
@@ -52,26 +63,35 @@ export function applyProtectedRippleDeleteToTrack(track: Track, selectedIds: Set
         if (stopTime !== undefined && clip.start >= stopTime - EPSILON) {
           return clip;
         }
-        const shift = removedIntervals.reduce((total, interval) => (clip.start >= interval.end - EPSILON ? total + interval.end - interval.start : total), 0);
+        const shift = removedIntervals.reduce(
+          (total, interval) => (clip.start >= interval.end - EPSILON ? total + interval.end - interval.start : total),
+          0,
+        );
         const nextStart = round(clip.start - shift);
         if (shift <= EPSILON || !canMoveClipWithProtectedRanges(clip, nextStart, protectedRanges)) {
           return clip;
         }
         return moveClip(clip, nextStart);
-      })
+      }),
   };
 }
 
-export function getRippleProtectedStopTime(removedIntervals: TimeInterval[], protectedRanges: ProtectedRange[]): number | undefined {
+export function getRippleProtectedStopTime(
+  removedIntervals: TimeInterval[],
+  protectedRanges: ProtectedRange[],
+): number | undefined {
   const stops = protectedRanges.flatMap((range) =>
-    removedIntervals.some((interval) => interval.end <= range.start + EPSILON) ? [range.start] : []
+    removedIntervals.some((interval) => interval.end <= range.start + EPSILON) ? [range.start] : [],
   );
   return stops.length > 0 ? Math.min(...stops) : undefined;
 }
 
 function mergeIntervals(intervals: TimeInterval[]): TimeInterval[] {
   const sorted = intervals
-    .map((interval) => ({ start: round(Math.max(0, Math.min(interval.start, interval.end))), end: round(Math.max(0, Math.max(interval.start, interval.end))) }))
+    .map((interval) => ({
+      start: round(Math.max(0, Math.min(interval.start, interval.end))),
+      end: round(Math.max(0, Math.max(interval.start, interval.end))),
+    }))
     .filter((interval) => interval.end - interval.start > EPSILON)
     .sort((left, right) => left.start - right.start || left.end - right.end);
   const merged: TimeInterval[] = [];

@@ -118,11 +118,7 @@ import {
   matchConformByFilename,
   hasLowConfidenceSpeakerSegments,
 } from '@open-factory/editor-core';
-import {
-  type ClipboardKeyframeGroup,
-  type PasteMode,
-  PasteKeyframesCommand,
-} from '@open-factory/editor-core';
+import { type ClipboardKeyframeGroup, type PasteMode, PasteKeyframesCommand } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { ErrorBoundary } from './common/ErrorBoundary';
@@ -137,7 +133,12 @@ import { useEditorShellSettings } from '../hooks/useEditorShellSettings';
 import { useEditorShellInteractions } from '../hooks/useEditorShellInteractions';
 import { useEditorShellProfiler } from '../hooks/useEditorShellProfiler';
 import { useEditorShellOperationRecording } from '../hooks/useEditorShellOperationRecording';
-import { useProjectHealthCallbacks, useAudioAnalysisCallbacks, useBeatSyncCallbacks, useRecordingCallbacks } from '../hooks/useEditorShellCallbacks';
+import {
+  useProjectHealthCallbacks,
+  useAudioAnalysisCallbacks,
+  useBeatSyncCallbacks,
+  useRecordingCallbacks,
+} from '../hooks/useEditorShellCallbacks';
 import { useContentAnalysisCallbacks } from '../hooks/useEditorShellContentAnalysisCallbacks';
 import { useProxyCallbacks } from '../hooks/useEditorShellProxyCallbacks';
 import { useEditorShellViewSettingsCallbacks } from '../hooks/useEditorShellViewSettingsCallbacks';
@@ -166,13 +167,18 @@ import {
   getWorkspaceLayoutById,
   resolveWorkspaceLayoutShortcut,
   type WorkspaceLayoutDefinition,
-  type WorkspaceLayoutId
+  type WorkspaceLayoutId,
 } from '../layout/layoutSettings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { indexAndTagImportedMedia } from '../media/media-index-integration';
 import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
-import { buildArchiveDestinationPath, buildRenameDestinationPath, scanMediaCleanupReport, scanSmartDuplicateMediaGroups } from '../lib/mediaOrganizer';
+import {
+  buildArchiveDestinationPath,
+  buildRenameDestinationPath,
+  scanMediaCleanupReport,
+  scanSmartDuplicateMediaGroups,
+} from '../lib/mediaOrganizer';
 import {
   buildSubtitleTrackFromDataCues,
   buildSubtitleTrackFromSrt,
@@ -181,16 +187,25 @@ import {
   parseSubtitleDataFile,
   pickSubtitleDataPaths,
   pickSubtitlePaths,
-  readSubtitleText
+  readSubtitleText,
 } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { buildProjectHealthAutoRepairInput, scanProjectHealth } from '../lib/projectHealth';
-import { readMediaHealthAutoShowEnabled, scanMediaHealthDashboard, writeMediaHealthAutoShowEnabled } from '../lib/mediaHealthDashboard';
+import {
+  readMediaHealthAutoShowEnabled,
+  scanMediaHealthDashboard,
+  writeMediaHealthAutoShowEnabled,
+} from '../lib/mediaHealthDashboard';
 import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
-import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
+import {
+  canSeparateAudioForClip,
+  getDemucsAvailability,
+  separateAudioForClip,
+  type DemucsAvailability,
+} from '../lib/demucs';
 import { analyzeSpeakerDiarizationForClip } from '../lib/speakerDiarization';
 import { analyzeAutoAudioSyncTargets, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
 import {
@@ -207,7 +222,7 @@ import {
   writeAutosaveIntervalSeconds,
   writeProjectFile,
   type AutosaveRecoveryCandidate,
-  type ProjectFileEncryptionOptions
+  type ProjectFileEncryptionOptions,
 } from '../lib/projectFiles';
 import {
   bridgeConfirm,
@@ -238,13 +253,13 @@ import {
   type DemucsProgressEvent,
   type PreviewWindowState,
   type RecordingSource,
-  initMediaIndexDb
+  initMediaIndexDb,
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   createPreviewWindowPlaybackState,
   normalizePreviewWindowPlaybackState,
-  shouldApplyPreviewWindowPlaybackState
+  shouldApplyPreviewWindowPlaybackState,
 } from '../lib/previewWindowSync';
 import {
   readBackupSettings,
@@ -271,7 +286,7 @@ import {
   type PreviewWindowSettings,
   type CollaborationIdentitySettings,
   type TimelineInteractionSettings,
-  type TimelineHeatmapViewSettings
+  type TimelineHeatmapViewSettings,
 } from '../settings/appSettings';
 import { collaborationController } from '../collaboration/local-network';
 import { applyLocalCoeditingSettings } from '../collaboration/settings';
@@ -283,9 +298,14 @@ import {
   shouldShowTutorial,
   skipTutorialProgress,
   type TutorialProgressSettings,
-  type TutorialSignals
+  type TutorialSignals,
 } from '../tutorial/tutorialState';
-import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
+import {
+  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  type PreviewPerformanceSettings,
+  type PreviewQualityMode,
+  type PreviewSkipFrames,
+} from '../lib/preview/preview-performance';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { runScheduledProxyIntegrityCheck } from '../media/proxy-integrity';
 import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -307,49 +327,133 @@ import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWi
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
-const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
-const AIRoughCutPanel = lazy(() => import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })));
-const DirectorModePanel = lazy(() => import('./DirectorMode/DirectorModePanel').then((module) => ({ default: module.DirectorModePanel })));
-const MusicMatchPanel = lazy(() => import('./MusicMatch/MusicMatchPanel').then((module) => ({ default: module.MusicMatchPanel })));
-const HighlightReelPanel = lazy(() => import('./HighlightReel/HighlightReelPanel').then((module) => ({ default: module.HighlightReelPanel })));
-const ContextualTranslationPanel = lazy(() => import('./ContextualTranslation/ContextualTranslationPanel').then((module) => ({ default: module.ContextualTranslationPanel })));
-const AIChatEditorPanel = lazy(() => import('./AIChatEditor/AIChatEditorPanel').then((module) => ({ default: module.AIChatEditorPanel })));
-const AIVideoSummaryPanel = lazy(() => import('./AIVideoSummary/AIVideoSummaryPanel').then((module) => ({ default: module.AIVideoSummaryPanel })));
-const AINarrationPanel = lazy(() => import('./AINarration/AINarrationPanel').then((module) => ({ default: module.AINarrationPanel })));
-const SmartCreationPanel = lazy(() => import('./SmartCreation/SmartCreationPanel').then((module) => ({ default: module.SmartCreationPanel })));
+const SmartRoughCutPanel = lazy(() =>
+  import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })),
+);
+const AIRoughCutPanel = lazy(() =>
+  import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })),
+);
+const DirectorModePanel = lazy(() =>
+  import('./DirectorMode/DirectorModePanel').then((module) => ({ default: module.DirectorModePanel })),
+);
+const MusicMatchPanel = lazy(() =>
+  import('./MusicMatch/MusicMatchPanel').then((module) => ({ default: module.MusicMatchPanel })),
+);
+const HighlightReelPanel = lazy(() =>
+  import('./HighlightReel/HighlightReelPanel').then((module) => ({ default: module.HighlightReelPanel })),
+);
+const ContextualTranslationPanel = lazy(() =>
+  import('./ContextualTranslation/ContextualTranslationPanel').then((module) => ({
+    default: module.ContextualTranslationPanel,
+  })),
+);
+const AIChatEditorPanel = lazy(() =>
+  import('./AIChatEditor/AIChatEditorPanel').then((module) => ({ default: module.AIChatEditorPanel })),
+);
+const AIVideoSummaryPanel = lazy(() =>
+  import('./AIVideoSummary/AIVideoSummaryPanel').then((module) => ({ default: module.AIVideoSummaryPanel })),
+);
+const AINarrationPanel = lazy(() =>
+  import('./AINarration/AINarrationPanel').then((module) => ({ default: module.AINarrationPanel })),
+);
+const SmartCreationPanel = lazy(() =>
+  import('./SmartCreation/SmartCreationPanel').then((module) => ({ default: module.SmartCreationPanel })),
+);
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
-const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
-const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
-const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
+const ProjectDocumentationPanel = lazy(() =>
+  import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })),
+);
+const MediaPrecheckPanel = lazy(() =>
+  import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })),
+);
+const SyncComparePanel = lazy(() =>
+  import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })),
+);
 const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
-const ComplexityScorePanel = lazy(() => import('../complexity/ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })));
-const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
-const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
-const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
-const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
-const TimelineCompareDialog = lazy(() => import('../timeline-compare/TimelineCompareDialog').then((module) => ({ default: module.TimelineCompareDialog })));
-const ReleaseWorkflowDialog = lazy(() => import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })));
-const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
+const ComplexityScorePanel = lazy(() =>
+  import('../complexity/ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })),
+);
+const TimelineSearchPanel = lazy(() =>
+  import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })),
+);
+const SnapshotNameDialog = lazy(() =>
+  import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })),
+);
+const SnapshotHistoryDialog = lazy(() =>
+  import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })),
+);
+const SnapshotVersionCompareDialog = lazy(() =>
+  import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({
+    default: module.SnapshotVersionCompareDialog,
+  })),
+);
+const TimelineCompareDialog = lazy(() =>
+  import('../timeline-compare/TimelineCompareDialog').then((module) => ({ default: module.TimelineCompareDialog })),
+);
+const ReleaseWorkflowDialog = lazy(() =>
+  import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })),
+);
+const ThumbnailGeneratorDialog = lazy(() =>
+  import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })),
+);
 
-const PerformanceMonitorPanel = lazy(() => import('./PerformanceMonitorPanel').then((module) => ({ default: module.PerformanceMonitorPanel })));
-const AutoAudioSyncDialog = lazy(() => import('../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })));
-const DuplicateMediaDialog = lazy(() => import('../media/DuplicateMediaDialog').then((module) => ({ default: module.DuplicateMediaDialog })));
-const MediaOrganizerDialog = lazy(() => import('../media/MediaOrganizerDialog').then((module) => ({ default: module.MediaOrganizerDialog })));
-const ProjectHealthDialog = lazy(() => import('../project-health/ProjectHealthDialog').then((module) => ({ default: module.ProjectHealthDialog })));
-const MediaHealthDashboardDialog = lazy(() => import('../media/MediaHealthDashboardDialog').then((module) => ({ default: module.MediaHealthDashboardDialog })));
-const ProjectTemplateDialog = lazy(() => import('../project-templates/ProjectTemplateDialog').then((module) => ({ default: module.ProjectTemplateDialog })));
-const TimelineTemplateDialog = lazy(() => import('../timeline-templates/TimelineTemplateDialog').then((module) => ({ default: module.TimelineTemplateDialog })));
-const MediaVersionComparePanel = lazy(() => import('./MediaVersionComparePanel').then((module) => ({ default: module.MediaVersionComparePanel })));
-const ProjectEncryptionSaveDialog = lazy(() => import('./dialogs/ProjectEncryptionSaveDialog').then((module) => ({ default: module.ProjectEncryptionSaveDialog })));
-const ProjectPasswordDialog = lazy(() => import('./dialogs/ProjectPasswordDialog').then((module) => ({ default: module.ProjectPasswordDialog })));
-const AutosaveRecoveryDialog = lazy(() => import('./dialogs/AutosaveRecoveryDialog').then((module) => ({ default: module.AutosaveRecoveryDialog })));
-const ExportQueueRecoveryDialog = lazy(() => import('./dialogs/ExportQueueRecoveryDialog').then((module) => ({ default: module.ExportQueueRecoveryDialog })));
-const ArchiveProgressDialog = lazy(() => import('./dialogs/ArchiveProgressDialog').then((module) => ({ default: module.ArchiveProgressDialog })));
-const PasteKeyframeDialog = lazy(() => import('./dialogs/PasteKeyframeDialog').then((module) => ({ default: module.PasteKeyframeDialog })));
-const SharePackageProgressDialog = lazy(() => import('./dialogs/SharePackageProgressDialog').then((module) => ({ default: module.SharePackageProgressDialog })));
-const CharacterTimelinePanel = lazy(() => import('./Timeline/CharacterTimelinePanel').then((module) => ({ default: module.CharacterTimelinePanel })));
-const PreflightChecklistPanel = lazy(() => import('./Export/PreflightChecklistPanel').then((module) => ({ default: module.PreflightChecklistPanel })));
-const DubbingAdaptationPanel = lazy(() => import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })));
+const PerformanceMonitorPanel = lazy(() =>
+  import('./PerformanceMonitorPanel').then((module) => ({ default: module.PerformanceMonitorPanel })),
+);
+const AutoAudioSyncDialog = lazy(() =>
+  import('../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })),
+);
+const DuplicateMediaDialog = lazy(() =>
+  import('../media/DuplicateMediaDialog').then((module) => ({ default: module.DuplicateMediaDialog })),
+);
+const MediaOrganizerDialog = lazy(() =>
+  import('../media/MediaOrganizerDialog').then((module) => ({ default: module.MediaOrganizerDialog })),
+);
+const ProjectHealthDialog = lazy(() =>
+  import('../project-health/ProjectHealthDialog').then((module) => ({ default: module.ProjectHealthDialog })),
+);
+const MediaHealthDashboardDialog = lazy(() =>
+  import('../media/MediaHealthDashboardDialog').then((module) => ({ default: module.MediaHealthDashboardDialog })),
+);
+const ProjectTemplateDialog = lazy(() =>
+  import('../project-templates/ProjectTemplateDialog').then((module) => ({ default: module.ProjectTemplateDialog })),
+);
+const TimelineTemplateDialog = lazy(() =>
+  import('../timeline-templates/TimelineTemplateDialog').then((module) => ({ default: module.TimelineTemplateDialog })),
+);
+const MediaVersionComparePanel = lazy(() =>
+  import('./MediaVersionComparePanel').then((module) => ({ default: module.MediaVersionComparePanel })),
+);
+const ProjectEncryptionSaveDialog = lazy(() =>
+  import('./dialogs/ProjectEncryptionSaveDialog').then((module) => ({ default: module.ProjectEncryptionSaveDialog })),
+);
+const ProjectPasswordDialog = lazy(() =>
+  import('./dialogs/ProjectPasswordDialog').then((module) => ({ default: module.ProjectPasswordDialog })),
+);
+const AutosaveRecoveryDialog = lazy(() =>
+  import('./dialogs/AutosaveRecoveryDialog').then((module) => ({ default: module.AutosaveRecoveryDialog })),
+);
+const ExportQueueRecoveryDialog = lazy(() =>
+  import('./dialogs/ExportQueueRecoveryDialog').then((module) => ({ default: module.ExportQueueRecoveryDialog })),
+);
+const ArchiveProgressDialog = lazy(() =>
+  import('./dialogs/ArchiveProgressDialog').then((module) => ({ default: module.ArchiveProgressDialog })),
+);
+const PasteKeyframeDialog = lazy(() =>
+  import('./dialogs/PasteKeyframeDialog').then((module) => ({ default: module.PasteKeyframeDialog })),
+);
+const SharePackageProgressDialog = lazy(() =>
+  import('./dialogs/SharePackageProgressDialog').then((module) => ({ default: module.SharePackageProgressDialog })),
+);
+const CharacterTimelinePanel = lazy(() =>
+  import('./Timeline/CharacterTimelinePanel').then((module) => ({ default: module.CharacterTimelinePanel })),
+);
+const PreflightChecklistPanel = lazy(() =>
+  import('./Export/PreflightChecklistPanel').then((module) => ({ default: module.PreflightChecklistPanel })),
+);
+const DubbingAdaptationPanel = lazy(() =>
+  import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })),
+);
 
 import { SettingsDialogs } from './dialogs/SettingsDialogs';
 import { ExportDialogs } from './dialogs/ExportDialogs';
@@ -363,11 +467,7 @@ import { SecurityDialogs } from './dialogs/SecurityDialogs';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
 import { ShellFloatingDialogs } from './layout/ShellFloatingDialogs';
 import { ShellMainArea } from './layout/ShellMainArea';
-import {
-  getSubtitleDataImportTargetTrackId,
-  isPiPVisualClip,
-  isSceneReorderClip,
-} from '../lib/timeline-clip-helpers';
+import { getSubtitleDataImportTargetTrackId, isPiPVisualClip, isSceneReorderClip } from '../lib/timeline-clip-helpers';
 import {
   isContentAnalysisClip,
   collectContentAnalysisTargets,
@@ -384,11 +484,7 @@ import {
   moveAutomationMediaToGroup,
 } from '../lib/ui-helpers';
 import type { ProjectPasswordRequest } from './dialogs/ProjectPasswordDialog';
-import {
-  mergeProjectSpeakers,
-  sanitizeFileName,
-  projectUsesMediaOnTimeline,
-} from '@open-factory/editor-core';
+import { mergeProjectSpeakers, sanitizeFileName, projectUsesMediaOnTimeline } from '@open-factory/editor-core';
 
 export function EditorShell() {
   useEditorShellSettings();
@@ -610,7 +706,6 @@ export function EditorShell() {
 
   const macroRecordingStepCount = useEditorFeatureStore((s) => s.macroRecordingStepCount);
 
-
   const autosaveIntervalSeconds = useEditorSettingsStore((s) => s.autosaveIntervalSeconds);
   const setAutosaveIntervalSeconds = useEditorSettingsStore((s) => s.setAutosaveIntervalSeconds);
   const recoveryCandidate = useEditorFeatureStore((s) => s.recoveryCandidate);
@@ -671,7 +766,10 @@ export function EditorShell() {
   useEffect(() => {
     const current = normalizeTutorialProgressSettings(tutorialProgress);
     const nextProgress = advanceTutorialProgress(current, tutorialSignals);
-    if (nextProgress.tutorialStep !== current.tutorialStep || nextProgress.tutorialCompleted !== current.tutorialCompleted) {
+    if (
+      nextProgress.tutorialStep !== current.tutorialStep ||
+      nextProgress.tutorialCompleted !== current.tutorialCompleted
+    ) {
       setTutorialProgress(nextProgress);
       if (nextProgress.tutorialCompleted) {
         setTutorialCelebrationVisible(true);
@@ -771,16 +869,25 @@ export function EditorShell() {
     createCurrentSharePackage,
     exportCurrentFrame,
     restoreExportQueueRecovery,
-    discardExportQueueRecovery
+    discardExportQueueRecovery,
   } = useExportQueue(project);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
-  const selectedClips = useMemo(() => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)), [project, selectedClipIds]);
-  const selectedClipMedia = useMemo(
-    () => (selectedClip && 'mediaId' in selectedClip ? project.media.find((asset) => asset.id === selectedClip.mediaId) : undefined),
-    [project.media, selectedClip]
+  const selectedClips = useMemo(
+    () => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)),
+    [project, selectedClipIds],
   );
-  const allTimelineClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline.tracks]);
+  const selectedClipMedia = useMemo(
+    () =>
+      selectedClip && 'mediaId' in selectedClip
+        ? project.media.find((asset) => asset.id === selectedClip.mediaId)
+        : undefined,
+    [project.media, selectedClip],
+  );
+  const allTimelineClips = useMemo(
+    () => project.timeline.tracks.flatMap((track) => track.clips),
+    [project.timeline.tracks],
+  );
   const visualTimelineClipRefs = useMemo(
     () =>
       project.timeline.tracks
@@ -790,14 +897,18 @@ export function EditorShell() {
             .map((clip) => ({
               clip,
               trackId: track.id,
-              media: project.media.find((asset) => 'mediaId' in clip && asset.id === clip.mediaId)
-            }))
+              media: project.media.find((asset) => 'mediaId' in clip && asset.id === clip.mediaId),
+            })),
         )
-        .filter((item): item is { clip: Extract<Clip, { type: 'video' | 'image' }>; trackId: string; media: MediaAsset } => Boolean(item.media))
+        .filter(
+          (item): item is { clip: Extract<Clip, { type: 'video' | 'image' }>; trackId: string; media: MediaAsset } =>
+            Boolean(item.media),
+        )
         .sort((left, right) => left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id)),
-    [project.media, project.timeline.tracks]
+    [project.media, project.timeline.tracks],
   );
-  const { handleProfilerFrame, startProfilerRecording, stopProfilerRecording, exportProfilerReportJson } = useEditorShellProfiler();
+  const { handleProfilerFrame, startProfilerRecording, stopProfilerRecording, exportProfilerReportJson } =
+    useEditorShellProfiler();
 
   const {
     saveCurrentWorkspaceLayout,
@@ -910,28 +1021,40 @@ export function EditorShell() {
 
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
-    [project.timeline.tracks, selectedClip]
+    [project.timeline.tracks, selectedClip],
   );
-
 
   const canCreateMulticamSequence = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {
       return false;
     }
     const selected = selectedClipIds
-      .map((id) => project.timeline.tracks.flatMap((track) => track.clips.map((clip) => ({ clip, track }))).find((item) => item.clip.id === id))
+      .map((id) =>
+        project.timeline.tracks
+          .flatMap((track) => track.clips.map((clip) => ({ clip, track })))
+          .find((item) => item.clip.id === id),
+      )
       .filter(Boolean);
     return (
       selected.length === selectedClipIds.length &&
-      selected.every((item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'))
+      selected.every(
+        (item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'),
+      )
     );
   }, [project.timeline.tracks, selectedClipIds]);
   const selectedPiPClips = useMemo(() => {
     if (selectedClipIds.length !== 2) {
       return [];
     }
-    type ClipWithTrack = { clip: Clip; track: Project['timeline']['tracks'][number]; trackIndex: number; selectedIndex: number };
-    const allClips = project.timeline.tracks.flatMap((track, trackIndex) => track.clips.map((clip) => ({ clip, track, trackIndex })));
+    type ClipWithTrack = {
+      clip: Clip;
+      track: Project['timeline']['tracks'][number];
+      trackIndex: number;
+      selectedIndex: number;
+    };
+    const allClips = project.timeline.tracks.flatMap((track, trackIndex) =>
+      track.clips.map((clip) => ({ clip, track, trackIndex })),
+    );
     return selectedClipIds
       .map((id, selectedIndex) => {
         const item = allClips.find((candidate) => candidate.clip.id === id);
@@ -946,8 +1069,15 @@ export function EditorShell() {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 4) {
       return [];
     }
-    type ClipWithTrack = { clip: Clip; track: Project['timeline']['tracks'][number]; trackIndex: number; selectedIndex: number };
-    const allClips = project.timeline.tracks.flatMap((track, trackIndex) => track.clips.map((clip) => ({ clip, track, trackIndex })));
+    type ClipWithTrack = {
+      clip: Clip;
+      track: Project['timeline']['tracks'][number];
+      trackIndex: number;
+      selectedIndex: number;
+    };
+    const allClips = project.timeline.tracks.flatMap((track, trackIndex) =>
+      track.clips.map((clip) => ({ clip, track, trackIndex })),
+    );
     return selectedClipIds
       .map((id, selectedIndex) => {
         const item = allClips.find((candidate) => candidate.clip.id === id);
@@ -1004,15 +1134,39 @@ export function EditorShell() {
     setCustomSplitLayouts,
   });
 
-  const syncCompareClipRefs = useMemo(() => findSyncCompareClipRefs(project.timeline, selectedClipIds), [project.timeline, selectedClipIds]);
+  const syncCompareClipRefs = useMemo(
+    () => findSyncCompareClipRefs(project.timeline, selectedClipIds),
+    [project.timeline, selectedClipIds],
+  );
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
   const canOpenSceneDetection = Boolean(selectedClip && selectedClipMedia && selectedClip.type === 'video');
   const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
   const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
-  const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
-  const speakerDiarizationTarget = useMemo(() => findSpeakerDiarizationTarget(project, selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []), [project, selectedClipId, selectedClipIds]);
-  const autoAudioSyncTargets = useMemo(() => collectAutoAudioSyncTargets(project, selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []), [project, selectedClipId, selectedClipIds]);
-  const resolvedAutoAudioSyncPrimaryClipId = autoAudioSyncTargets.some((target) => target.clip.id === autoAudioSyncPrimaryClipId) ? autoAudioSyncPrimaryClipId! : (autoAudioSyncTargets[0]?.clip.id ?? '');
+  const mediaContentAnalysis = useMemo(
+    () => summarizeContentAnalysisByMedia(contentAnalysisTargets),
+    [contentAnalysisTargets],
+  );
+  const speakerDiarizationTarget = useMemo(
+    () =>
+      findSpeakerDiarizationTarget(
+        project,
+        selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : [],
+      ),
+    [project, selectedClipId, selectedClipIds],
+  );
+  const autoAudioSyncTargets = useMemo(
+    () =>
+      collectAutoAudioSyncTargets(
+        project,
+        selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : [],
+      ),
+    [project, selectedClipId, selectedClipIds],
+  );
+  const resolvedAutoAudioSyncPrimaryClipId = autoAudioSyncTargets.some(
+    (target) => target.clip.id === autoAudioSyncPrimaryClipId,
+  )
+    ? autoAudioSyncPrimaryClipId!
+    : (autoAudioSyncTargets[0]?.clip.id ?? '');
   const autoAudioSyncDialogTargets = useMemo(
     () =>
       autoAudioSyncTargets.map((target) => ({
@@ -1020,25 +1174,31 @@ export function EditorShell() {
         clipName: target.clip.name,
         mediaName: target.asset.name,
         trackName: target.track.name,
-        start: target.clip.start
+        start: target.clip.start,
       })),
-    [autoAudioSyncTargets]
+    [autoAudioSyncTargets],
   );
-  const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
+  const canSeparateSelectedAudio =
+    canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canRunSpeakerDiarization = Boolean(speakerDiarizationTarget && !speakerDiarizationRunning);
-  const canOpenAutoAudioSync = autoAudioSyncTargets.length >= 2 && autoAudioSyncTargets.length <= 5 && !autoAudioSyncRunning;
+  const canOpenAutoAudioSync =
+    autoAudioSyncTargets.length >= 2 && autoAudioSyncTargets.length <= 5 && !autoAudioSyncRunning;
   const canDetectBeats = Boolean(
     selectedClip &&
-      selectedClipMedia &&
-      (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
-      (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio)
+    selectedClipMedia &&
+    (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
+    (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio),
   );
   const selectedClipTimelineBeatTimes = useMemo(() => {
-    const times = selectedClips.flatMap((clip) => (clip.beatMarkers ?? []).map((marker) => round(clip.start + marker.time)));
+    const times = selectedClips.flatMap((clip) =>
+      (clip.beatMarkers ?? []).map((marker) => round(clip.start + marker.time)),
+    );
     return Array.from(new Set(times)).sort((left, right) => left - right);
   }, [selectedClips]);
   const beatSyncBeatTimes = useMemo(() => {
-    return selectedClipTimelineBeatTimes.length > 0 ? selectedClipTimelineBeatTimes : (project.beatMarkers ?? []).map((marker) => marker.time);
+    return selectedClipTimelineBeatTimes.length > 0
+      ? selectedClipTimelineBeatTimes
+      : (project.beatMarkers ?? []).map((marker) => marker.time);
   }, [project.beatMarkers, selectedClipTimelineBeatTimes]);
   const detectedBeatBpm = selectedClip?.detectedBpm ?? estimateBpmFromBeatMarkers(selectedClip?.beatMarkers);
   const canSnapToBeats = selectedClipIds.length > 0 && beatSyncBeatTimes.length > 0;
@@ -1047,14 +1207,24 @@ export function EditorShell() {
     setBeatSyncManualBpm(detectedBeatBpm ? String(detectedBeatBpm) : '');
   }, [detectedBeatBpm, selectedClip?.id]);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
-  const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const effectivePanels = useMemo(
+    () => getEffectivePanelState(layoutSettings, viewportSize.width),
+    [layoutSettings, viewportSize.width],
+  );
   const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
   const workspaceLayouts = useMemo<WorkspaceLayoutDefinition[]>(
-    () => [...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter((layout): layout is WorkspaceLayoutDefinition => Boolean(layout)), ...layoutSettings.customWorkspaceLayouts],
-    [layoutSettings]
+    () => [
+      ...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter(
+        (layout): layout is WorkspaceLayoutDefinition => Boolean(layout),
+      ),
+      ...layoutSettings.customWorkspaceLayouts,
+    ],
+    [layoutSettings],
   );
   const editorGridRows = reviewMode ? 'auto minmax(0,1fr)' : `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
-  const mainGridColumns = reviewMode ? 'minmax(0,1fr)' : `${effectivePanels.leftPanelCollapsed ? 48 : layoutSettings.leftPanelWidthPx}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : layoutSettings.rightPanelWidthPx}px`;
+  const mainGridColumns = reviewMode
+    ? 'minmax(0,1fr)'
+    : `${effectivePanels.leftPanelCollapsed ? 48 : layoutSettings.leftPanelWidthPx}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : layoutSettings.rightPanelWidthPx}px`;
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
       ? `minmax(0,1fr) ${layoutSettings.mixerHeightPx}px`
@@ -1123,14 +1293,26 @@ export function EditorShell() {
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         setTutorialSignals((current: TutorialSignals) => ({ ...current, mediaImported: true }));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.editorToasts.mediaImported,
+          message: zhCN.editorToasts.mediaImportedMessage(result.media.length),
+        });
       }
       if (result.duplicateCount > 0) {
-        showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
+        showToast({
+          kind: 'info',
+          title: zhCN.editorToasts.duplicateTitle,
+          message: zhCN.editorToasts.duplicateMessage(result.duplicateCount),
+        });
       }
       return result.media.filter((asset) => asset.type === 'video').map((asset) => asset.id);
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.videoStitchWizard.importFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage,
+      });
       return [];
     }
   }, [addMedia, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
@@ -1150,15 +1332,15 @@ export function EditorShell() {
           id: createId('track'),
           type: 'video',
           name: zhCN.videoStitchWizard.trackName,
-          clips: []
+          clips: [],
         });
         const sequence = buildVideoStitchSequence(
           assets.map((asset) => ({ mediaId: asset.id, name: asset.name, duration: asset.duration || 5 })),
           {
             trackId: track.id,
             transitionEnabled: settings.transitionEnabled,
-            transitionDuration: settings.transitionDuration
-          }
+            transitionDuration: settings.transitionDuration,
+          },
         );
         commandManager.execute(new AddTrackCommand(timelineAccessor, track));
         for (const clip of sequence.clips) {
@@ -1186,17 +1368,25 @@ export function EditorShell() {
             targetAspectRatio: 'source',
             reframeOffsetX: 0,
             reframeOffsetY: 0,
-            hardwareEncoding: false
-          }
+            hardwareEncoding: false,
+          },
         });
         setVideoStitchWizardOpen(false);
         setExportDialogOpen(true);
-        showToast({ kind: 'success', title: zhCN.videoStitchWizard.createdTitle, message: zhCN.videoStitchWizard.createdMessage(sequence.clips.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.videoStitchWizard.createdTitle,
+          message: zhCN.videoStitchWizard.createdMessage(sequence.clips.length),
+        });
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.videoStitchWizard.generateFailed, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.videoStitchWizard.generateFailed,
+          message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage,
+        });
       }
     },
-    [setPlayheadTime, setSelectedClipIds]
+    [setPlayheadTime, setSelectedClipIds],
   );
 
   const generateSmartMontage = useCallback(
@@ -1221,18 +1411,26 @@ export function EditorShell() {
           videoTrackId: videoTrack.id,
           audioTrackId: audioTrack.id,
           audioAsset,
-          strategy: 'sequential'
+          strategy: 'sequential',
         });
         commandManager.execute(montageCmd);
         const result = montageCmd.montageResult;
         setPlayheadTime(0);
         useEditorUIStore.getState().setSmartMontageOpen(false);
-        showToast({ kind: 'success', title: 'AI 智能混剪完成', message: `已生成 ${result.clipCount} 个片段，BPM ≈ ${result.estimatedBpm}` });
+        showToast({
+          kind: 'success',
+          title: 'AI 智能混剪完成',
+          message: `已生成 ${result.clipCount} 个片段，BPM ≈ ${result.estimatedBpm}`,
+        });
       } catch (error) {
-        showToast({ kind: 'error', title: '混剪生成失败', message: error instanceof Error ? error.message : '时间线操作被拒绝' });
+        showToast({
+          kind: 'error',
+          title: '混剪生成失败',
+          message: error instanceof Error ? error.message : '时间线操作被拒绝',
+        });
       }
     },
-    [setPlayheadTime]
+    [setPlayheadTime],
   );
 
   const importSubtitles = useCallback(async () => {
@@ -1240,7 +1438,11 @@ export function EditorShell() {
       const paths = await pickSubtitlePaths();
       await importSubtitlePaths(paths);
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.subtitleImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.subtitleImportFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage,
+      });
     }
   }, [project.timeline]);
 
@@ -1250,19 +1452,19 @@ export function EditorShell() {
         const paths = await pickSubtitleDataPaths();
         await importSubtitleDataPaths(paths, mode);
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.subtitleImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.subtitleImportFailed,
+          message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage,
+        });
       }
     },
-    [selectedClipIds]
+    [selectedClipIds],
   );
 
   // --- 提取到 useContentAnalysisCallbacks hook ---
-  const {
-    runSingleContentAnalysis,
-    analyzeContentClip,
-    analyzePreferredContentTargets,
-    exportContentAnalysis,
-  } = useContentAnalysisCallbacks({ setContentAnalysisRunningClipId });
+  const { runSingleContentAnalysis, analyzeContentClip, analyzePreferredContentTargets, exportContentAnalysis } =
+    useContentAnalysisCallbacks({ setContentAnalysisRunningClipId });
 
   // --- 提取到 useEditorShellCallbacks hook ---
   const {
@@ -1306,22 +1508,14 @@ export function EditorShell() {
     project,
   });
 
-  const {
-    startEditorRecording,
-    stopEditorRecording,
-  } = useRecordingCallbacks({
+  const { startEditorRecording, stopEditorRecording } = useRecordingCallbacks({
     addMedia,
     persistMediaFingerprints,
     recordingTask,
     recordingSettings,
   });
 
-  const {
-    detectSelectedBeats,
-    snapSelectedToBeats,
-    splitSelectedToBeats,
-    applyManualBeatBpm,
-  } = useBeatSyncCallbacks({
+  const { detectSelectedBeats, snapSelectedToBeats, splitSelectedToBeats, applyManualBeatBpm } = useBeatSyncCallbacks({
     selectedClip,
     selectedClipMedia,
     selectedClipId,
@@ -1376,7 +1570,7 @@ export function EditorShell() {
       navigateNextInstance: () => void navigateToNextInstance(),
       navigatePrevGap,
       navigateNextGap,
-      renderInOut: () => void renderInOutRegion()
+      renderInOut: () => void renderInOutRegion(),
     }),
     [
       addAnnotationAtPlayhead,
@@ -1405,7 +1599,7 @@ export function EditorShell() {
       togglePlayback,
       toggleTimelineGridSnap,
       undo,
-    ]
+    ],
   );
 
   const {
@@ -1429,204 +1623,298 @@ export function EditorShell() {
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
 
-  const leftPanelCallbacks = useMemo(() => ({
-    onImport: () => void importMedia(),
-    onImportPaths: (paths: string[]) => void importDropped(paths),
-    onBatchTranscode: (paths: string[]) => openBatchTranscode(paths),
-    onBatchGenerateCovers: () => void batchGenerateCovers(),
-    onGenerateThumbnails: (assetIds: string[]) => setThumbnailGeneratorAssetIds(assetIds),
-    onExportGif: (asset: MediaAsset) => setGifExportAsset(asset),
-    onAnalyzeSpectrum: (asset: MediaAsset) => setSpectrumAsset(asset),
-    onScanDuplicates: () => void scanDuplicateMedia(),
-    onAddToTimeline: addAssetToTimeline,
-    onAddVersion: (assetId: string) => void addVersionForMedia(assetId),
-    onCompareVersions: openMediaVersionCompare,
-    onAddAdjustmentLayer: addAdjustmentLayer,
-    onRelink: (assetId: string) => void relinkMedia(assetId),
-    onRelinkAll: () => void relinkAllMissing(),
-    onGenerateProxy: (assetId: string) => void generateProxyForMedia(assetId),
-    onConvertToCfr: convertVfrMediaToCfr,
-    onSetLabel: (assetId: string, labelColor?: MediaLabelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor }),
-    onSetRating: (assetId: string, rating: number) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating }),
-    onSetFlag: (assetId: string, flag?: MediaFlag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag }),
-    onBatchUpdateMetadata: batchUpdateMediaMetadata,
-    onBatchRenameMedia: batchRenameMedia,
-    onAddTitleTemplate: addTitleTemplate,
-    onCreateFolder: createMediaFolder,
-    onRenameFolder: renameMediaFolder,
-    onDeleteFolder: deleteMediaFolder,
-    onSetFolderCollapsed: setMediaFolderCollapsed,
-    onMoveMediaToFolder: moveMediaToFolder,
-    onApplyEffectPreset: applyEffectPresetToSelectedClip,
-    onToggleFavorite: handleToggleFavorite,
-    onRevealInTimeline: handleRevealFromMediaBin,
-    onPinToSession: handlePinToSession,
-    onAddSubclip: handleAddSubclip,
-    onUpdateSubclip: handleUpdateSubclip,
-    onDeleteSubclip: handleDeleteSubclip,
-    onAddSubclipToTimeline: handleAddSubclipToTimeline,
-  }), [
-    importMedia, importDropped, openBatchTranscode, batchGenerateCovers,
-    setThumbnailGeneratorAssetIds, setGifExportAsset, setSpectrumAsset,
-    scanDuplicateMedia, addAssetToTimeline, addVersionForMedia,
-    openMediaVersionCompare, addAdjustmentLayer, relinkMedia, relinkAllMissing,
-    generateProxyForMedia, convertVfrMediaToCfr, setMediaMetadata,
-    batchUpdateMediaMetadata, batchRenameMedia, addTitleTemplate,
-    createMediaFolder, renameMediaFolder, deleteMediaFolder,
-    setMediaFolderCollapsed, moveMediaToFolder, applyEffectPresetToSelectedClip,
-    handleToggleFavorite, handleRevealFromMediaBin, handlePinToSession,
-    handleAddSubclip, handleUpdateSubclip, handleDeleteSubclip,
-    handleAddSubclipToTimeline, project.mediaMetadata,
-  ]);
+  const leftPanelCallbacks = useMemo(
+    () => ({
+      onImport: () => void importMedia(),
+      onImportPaths: (paths: string[]) => void importDropped(paths),
+      onBatchTranscode: (paths: string[]) => openBatchTranscode(paths),
+      onBatchGenerateCovers: () => void batchGenerateCovers(),
+      onGenerateThumbnails: (assetIds: string[]) => setThumbnailGeneratorAssetIds(assetIds),
+      onExportGif: (asset: MediaAsset) => setGifExportAsset(asset),
+      onAnalyzeSpectrum: (asset: MediaAsset) => setSpectrumAsset(asset),
+      onScanDuplicates: () => void scanDuplicateMedia(),
+      onAddToTimeline: addAssetToTimeline,
+      onAddVersion: (assetId: string) => void addVersionForMedia(assetId),
+      onCompareVersions: openMediaVersionCompare,
+      onAddAdjustmentLayer: addAdjustmentLayer,
+      onRelink: (assetId: string) => void relinkMedia(assetId),
+      onRelinkAll: () => void relinkAllMissing(),
+      onGenerateProxy: (assetId: string) => void generateProxyForMedia(assetId),
+      onConvertToCfr: convertVfrMediaToCfr,
+      onSetLabel: (assetId: string, labelColor?: MediaLabelColor) =>
+        setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor }),
+      onSetRating: (assetId: string, rating: number) =>
+        setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating }),
+      onSetFlag: (assetId: string, flag?: MediaFlag) =>
+        setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag }),
+      onBatchUpdateMetadata: batchUpdateMediaMetadata,
+      onBatchRenameMedia: batchRenameMedia,
+      onAddTitleTemplate: addTitleTemplate,
+      onCreateFolder: createMediaFolder,
+      onRenameFolder: renameMediaFolder,
+      onDeleteFolder: deleteMediaFolder,
+      onSetFolderCollapsed: setMediaFolderCollapsed,
+      onMoveMediaToFolder: moveMediaToFolder,
+      onApplyEffectPreset: applyEffectPresetToSelectedClip,
+      onToggleFavorite: handleToggleFavorite,
+      onRevealInTimeline: handleRevealFromMediaBin,
+      onPinToSession: handlePinToSession,
+      onAddSubclip: handleAddSubclip,
+      onUpdateSubclip: handleUpdateSubclip,
+      onDeleteSubclip: handleDeleteSubclip,
+      onAddSubclipToTimeline: handleAddSubclipToTimeline,
+    }),
+    [
+      importMedia,
+      importDropped,
+      openBatchTranscode,
+      batchGenerateCovers,
+      setThumbnailGeneratorAssetIds,
+      setGifExportAsset,
+      setSpectrumAsset,
+      scanDuplicateMedia,
+      addAssetToTimeline,
+      addVersionForMedia,
+      openMediaVersionCompare,
+      addAdjustmentLayer,
+      relinkMedia,
+      relinkAllMissing,
+      generateProxyForMedia,
+      convertVfrMediaToCfr,
+      setMediaMetadata,
+      batchUpdateMediaMetadata,
+      batchRenameMedia,
+      addTitleTemplate,
+      createMediaFolder,
+      renameMediaFolder,
+      deleteMediaFolder,
+      setMediaFolderCollapsed,
+      moveMediaToFolder,
+      applyEffectPresetToSelectedClip,
+      handleToggleFavorite,
+      handleRevealFromMediaBin,
+      handlePinToSession,
+      handleAddSubclip,
+      handleUpdateSubclip,
+      handleDeleteSubclip,
+      handleAddSubclipToTimeline,
+      project.mediaMetadata,
+    ],
+  );
 
-  const floatingDialogsCallbacks = useMemo(() => ({
-    templateExportPreset,
-    exportDialogOpen,
-    setExportDialogOpen,
-    timelineExportDialogOpen,
-    setTimelineExportDialogOpen,
-    lastExportPath,
-    onExportCompleted: (path: string) => {
-      setLastExportPath(path);
-      setTutorialSignals((current: TutorialSignals) => ({ ...current, videoExported: true }));
-      void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
-    },
-    onRelinkMissing: () => void relinkAllMissing(),
-    importEdlTimeline,
-    importFcpXmlTimeline,
-    addMedia,
-    createProjectFromTemplate,
-    createProjectFromTimelineTemplate,
-    colorAnalysisResults,
-    colorAnalysisJumps,
-    colorAnalysisBusy,
-    runTimelineColorAnalysis,
-    alignTimelineColorToReference,
-    seekSpectrumTime,
-    setSpectrumSelectionRange,
-    splitSpectrumAtTime,
-    importVideosForStitchWizard,
-    generateVideoStitchTimeline,
-    generateSmartMontage,
-    addAssetToTimeline,
-    analyzeContentClip,
-    analyzePreferredContentTargets,
-    exportContentAnalysis,
-    applySpeakerDiarization,
-    speakerDiarizationResult,
-    contentAnalysisTargets,
-    operationRecording,
-    operationRecordingActive,
-    operationReplayRunning,
-    operationRecordingStep,
-    operationReplaySpeed,
-    startOperationRecording,
-    stopOperationRecording,
-    saveOperationRecording,
-    loadOperationRecording,
-    replayOperationRecording,
-    pauseOperationReplay,
-    jumpOperationRecording,
-    exportOperationRecordingSlides,
-    profilerRecording,
-    profilerElapsedMs,
-    profilerReport,
-    startProfilerRecording,
-    stopProfilerRecording,
-    exportProfilerReportJson,
-    saveNamedSnapshot,
-    restoreSnapshotProject,
-    applySnapshotDiffSelection,
-    updateProjectReleaseVersion,
-    syncCompareClipRefs,
-    jumpToMediaAsset,
-    detectedBeatBpm,
-    beatSyncBeatTimes,
-    canDetectBeats,
-    canSnapToBeats,
-    applyManualBeatBpm,
-    detectSelectedBeats: () => void detectSelectedBeats(),
-    snapSelectedToBeats,
-    updatePreviewPerformance,
-    updateTimelineInteractionSettings,
-    deleteProxiesForMedia,
-    regenerateProxiesForMedia,
-    migrateProxiesToDirectory,
-    executeMacro,
-    confirmProjectEncryptionSave,
-    refreshProjectHealth,
-    autoRepairProjectHealth,
-    relinkMissingFromHealth,
-    removeOrphanFromHealth,
-    mergeDuplicateFromHealth,
-    queueProxyFromHealth,
-    mergeDuplicateMediaGroups,
-    refreshMediaHealthDashboard,
-    repairFromMediaHealthDashboard,
-    openMediaHealthRelinkPanel,
-    refreshMediaOrganizer,
-    confirmMediaOrganizerDuplicateGroups,
-    removeMediaOrganizerReferences,
-    archiveUnusedMedia,
-    renameUnusedMedia,
-    recoveryCandidate,
-    exportQueueRecovery,
-    archiveProgress,
-    sharePackageProgress,
-    restoreRecovery,
-    discardRecovery,
-    restoreExportQueueRecovery,
-    discardExportQueueRecovery,
-    skipTutorial,
-    closeTutorialCelebration,
-    runAutomationForMedia,
-    setLastExportPath,
-    setTutorialSignals,
-  }), [
-    templateExportPreset, exportDialogOpen, setExportDialogOpen,
-    timelineExportDialogOpen, setTimelineExportDialogOpen, lastExportPath,
-    relinkAllMissing, importEdlTimeline, importFcpXmlTimeline, addMedia,
-    createProjectFromTemplate, createProjectFromTimelineTemplate,
-    colorAnalysisResults, colorAnalysisJumps, colorAnalysisBusy,
-    runTimelineColorAnalysis, alignTimelineColorToReference,
-    seekSpectrumTime, setSpectrumSelectionRange, splitSpectrumAtTime,
-    importVideosForStitchWizard, generateVideoStitchTimeline, generateSmartMontage,
-    addAssetToTimeline, analyzeContentClip, analyzePreferredContentTargets,
-    exportContentAnalysis, applySpeakerDiarization, speakerDiarizationResult,
-    contentAnalysisTargets,
-    operationRecording, operationRecordingActive, operationReplayRunning,
-    operationRecordingStep, operationReplaySpeed,
-    startOperationRecording, stopOperationRecording,
-    saveOperationRecording, loadOperationRecording,
-    replayOperationRecording, pauseOperationReplay,
-    jumpOperationRecording, exportOperationRecordingSlides,
-    profilerRecording, profilerElapsedMs, profilerReport,
-    startProfilerRecording, stopProfilerRecording, exportProfilerReportJson,
-    saveNamedSnapshot, restoreSnapshotProject,
-    applySnapshotDiffSelection, updateProjectReleaseVersion,
-    syncCompareClipRefs, jumpToMediaAsset,
-    detectedBeatBpm, beatSyncBeatTimes, canDetectBeats, canSnapToBeats,
-    applyManualBeatBpm, detectSelectedBeats, snapSelectedToBeats,
-    updatePreviewPerformance, updateTimelineInteractionSettings,
-    deleteProxiesForMedia, regenerateProxiesForMedia, migrateProxiesToDirectory,
-    executeMacro, confirmProjectEncryptionSave,
-    refreshProjectHealth, autoRepairProjectHealth,
-    relinkMissingFromHealth, removeOrphanFromHealth,
-    mergeDuplicateFromHealth, queueProxyFromHealth,
-    mergeDuplicateMediaGroups, refreshMediaHealthDashboard,
-    repairFromMediaHealthDashboard, openMediaHealthRelinkPanel,
-    refreshMediaOrganizer, confirmMediaOrganizerDuplicateGroups,
-    removeMediaOrganizerReferences, archiveUnusedMedia, renameUnusedMedia,
-    recoveryCandidate, exportQueueRecovery, archiveProgress,
-    sharePackageProgress, restoreRecovery, discardRecovery,
-    restoreExportQueueRecovery, discardExportQueueRecovery,
-    skipTutorial, closeTutorialCelebration, runAutomationForMedia,
-    setLastExportPath, setTutorialSignals,
-  ]);
+  const floatingDialogsCallbacks = useMemo(
+    () => ({
+      templateExportPreset,
+      exportDialogOpen,
+      setExportDialogOpen,
+      timelineExportDialogOpen,
+      setTimelineExportDialogOpen,
+      lastExportPath,
+      onExportCompleted: (path: string) => {
+        setLastExportPath(path);
+        setTutorialSignals((current: TutorialSignals) => ({ ...current, videoExported: true }));
+        void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
+      },
+      onRelinkMissing: () => void relinkAllMissing(),
+      importEdlTimeline,
+      importFcpXmlTimeline,
+      addMedia,
+      createProjectFromTemplate,
+      createProjectFromTimelineTemplate,
+      colorAnalysisResults,
+      colorAnalysisJumps,
+      colorAnalysisBusy,
+      runTimelineColorAnalysis,
+      alignTimelineColorToReference,
+      seekSpectrumTime,
+      setSpectrumSelectionRange,
+      splitSpectrumAtTime,
+      importVideosForStitchWizard,
+      generateVideoStitchTimeline,
+      generateSmartMontage,
+      addAssetToTimeline,
+      analyzeContentClip,
+      analyzePreferredContentTargets,
+      exportContentAnalysis,
+      applySpeakerDiarization,
+      speakerDiarizationResult,
+      contentAnalysisTargets,
+      operationRecording,
+      operationRecordingActive,
+      operationReplayRunning,
+      operationRecordingStep,
+      operationReplaySpeed,
+      startOperationRecording,
+      stopOperationRecording,
+      saveOperationRecording,
+      loadOperationRecording,
+      replayOperationRecording,
+      pauseOperationReplay,
+      jumpOperationRecording,
+      exportOperationRecordingSlides,
+      profilerRecording,
+      profilerElapsedMs,
+      profilerReport,
+      startProfilerRecording,
+      stopProfilerRecording,
+      exportProfilerReportJson,
+      saveNamedSnapshot,
+      restoreSnapshotProject,
+      applySnapshotDiffSelection,
+      updateProjectReleaseVersion,
+      syncCompareClipRefs,
+      jumpToMediaAsset,
+      detectedBeatBpm,
+      beatSyncBeatTimes,
+      canDetectBeats,
+      canSnapToBeats,
+      applyManualBeatBpm,
+      detectSelectedBeats: () => void detectSelectedBeats(),
+      snapSelectedToBeats,
+      updatePreviewPerformance,
+      updateTimelineInteractionSettings,
+      deleteProxiesForMedia,
+      regenerateProxiesForMedia,
+      migrateProxiesToDirectory,
+      executeMacro,
+      confirmProjectEncryptionSave,
+      refreshProjectHealth,
+      autoRepairProjectHealth,
+      relinkMissingFromHealth,
+      removeOrphanFromHealth,
+      mergeDuplicateFromHealth,
+      queueProxyFromHealth,
+      mergeDuplicateMediaGroups,
+      refreshMediaHealthDashboard,
+      repairFromMediaHealthDashboard,
+      openMediaHealthRelinkPanel,
+      refreshMediaOrganizer,
+      confirmMediaOrganizerDuplicateGroups,
+      removeMediaOrganizerReferences,
+      archiveUnusedMedia,
+      renameUnusedMedia,
+      recoveryCandidate,
+      exportQueueRecovery,
+      archiveProgress,
+      sharePackageProgress,
+      restoreRecovery,
+      discardRecovery,
+      restoreExportQueueRecovery,
+      discardExportQueueRecovery,
+      skipTutorial,
+      closeTutorialCelebration,
+      runAutomationForMedia,
+      setLastExportPath,
+      setTutorialSignals,
+    }),
+    [
+      templateExportPreset,
+      exportDialogOpen,
+      setExportDialogOpen,
+      timelineExportDialogOpen,
+      setTimelineExportDialogOpen,
+      lastExportPath,
+      relinkAllMissing,
+      importEdlTimeline,
+      importFcpXmlTimeline,
+      addMedia,
+      createProjectFromTemplate,
+      createProjectFromTimelineTemplate,
+      colorAnalysisResults,
+      colorAnalysisJumps,
+      colorAnalysisBusy,
+      runTimelineColorAnalysis,
+      alignTimelineColorToReference,
+      seekSpectrumTime,
+      setSpectrumSelectionRange,
+      splitSpectrumAtTime,
+      importVideosForStitchWizard,
+      generateVideoStitchTimeline,
+      generateSmartMontage,
+      addAssetToTimeline,
+      analyzeContentClip,
+      analyzePreferredContentTargets,
+      exportContentAnalysis,
+      applySpeakerDiarization,
+      speakerDiarizationResult,
+      contentAnalysisTargets,
+      operationRecording,
+      operationRecordingActive,
+      operationReplayRunning,
+      operationRecordingStep,
+      operationReplaySpeed,
+      startOperationRecording,
+      stopOperationRecording,
+      saveOperationRecording,
+      loadOperationRecording,
+      replayOperationRecording,
+      pauseOperationReplay,
+      jumpOperationRecording,
+      exportOperationRecordingSlides,
+      profilerRecording,
+      profilerElapsedMs,
+      profilerReport,
+      startProfilerRecording,
+      stopProfilerRecording,
+      exportProfilerReportJson,
+      saveNamedSnapshot,
+      restoreSnapshotProject,
+      applySnapshotDiffSelection,
+      updateProjectReleaseVersion,
+      syncCompareClipRefs,
+      jumpToMediaAsset,
+      detectedBeatBpm,
+      beatSyncBeatTimes,
+      canDetectBeats,
+      canSnapToBeats,
+      applyManualBeatBpm,
+      detectSelectedBeats,
+      snapSelectedToBeats,
+      updatePreviewPerformance,
+      updateTimelineInteractionSettings,
+      deleteProxiesForMedia,
+      regenerateProxiesForMedia,
+      migrateProxiesToDirectory,
+      executeMacro,
+      confirmProjectEncryptionSave,
+      refreshProjectHealth,
+      autoRepairProjectHealth,
+      relinkMissingFromHealth,
+      removeOrphanFromHealth,
+      mergeDuplicateFromHealth,
+      queueProxyFromHealth,
+      mergeDuplicateMediaGroups,
+      refreshMediaHealthDashboard,
+      repairFromMediaHealthDashboard,
+      openMediaHealthRelinkPanel,
+      refreshMediaOrganizer,
+      confirmMediaOrganizerDuplicateGroups,
+      removeMediaOrganizerReferences,
+      archiveUnusedMedia,
+      renameUnusedMedia,
+      recoveryCandidate,
+      exportQueueRecovery,
+      archiveProgress,
+      sharePackageProgress,
+      restoreRecovery,
+      discardRecovery,
+      restoreExportQueueRecovery,
+      discardExportQueueRecovery,
+      skipTutorial,
+      closeTutorialCelebration,
+      runAutomationForMedia,
+      setLastExportPath,
+      setTutorialSignals,
+    ],
+  );
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
-      <div className="grid h-full min-w-0 overflow-hidden bg-[#edeff3] text-ink transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: editorGridRows }} data-testid="editor-shell">
+      <div
+        className="grid h-full min-w-0 overflow-hidden bg-[#edeff3] text-ink transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: editorGridRows }}
+        data-testid="editor-shell"
+      >
         <Toolbar
           onNewProject={newProject}
           onNewFromTemplate={() => setProjectTemplateOpen(true)}
@@ -1846,7 +2134,9 @@ export function EditorShell() {
           reviewMode={reviewMode}
           onToggleReviewMode={() => setReviewMode((mode) => !mode)}
           onCreateReviewReport={() => void createReviewReport()}
-          onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode, adaptiveEnabled: false })}
+          onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) =>
+            updatePreviewPerformance({ qualityMode, adaptiveEnabled: false })
+          }
           onPopoutPreview={() => void openDetachedPreview()}
           onToggleTimelineGridSnap={toggleTimelineGridSnap}
           onTimelineGridUnitChange={changeTimelineGridUnit}
@@ -1870,13 +2160,13 @@ export function EditorShell() {
           onRedo={redo}
           onClearCache={() => void clearCache()}
           onOpenSettings={() => setSettingsOpen(true)}
-              onOpenErrorKnowledge={() => setErrorKnowledgeOpen(true)}
-              onOpenSequenceCompare={() => setSequenceCompareOpen(true)}
-              onOpenSubtitleSync={() => setSubtitleSyncOpen(true)}
-              onOpenProxyVerify={() => setProxyVerifyOpen(true)}
-              onOpenFormatConverter={() => setFormatConverterOpen(true)}
-              onOpenEmotionAnalysis={() => setEmotionAnalysisOpen(true)}
-              onOpenExportHistoryClassifier={() => setExportHistoryClassifierOpen(true)}
+          onOpenErrorKnowledge={() => setErrorKnowledgeOpen(true)}
+          onOpenSequenceCompare={() => setSequenceCompareOpen(true)}
+          onOpenSubtitleSync={() => setSubtitleSyncOpen(true)}
+          onOpenProxyVerify={() => setProxyVerifyOpen(true)}
+          onOpenFormatConverter={() => setFormatConverterOpen(true)}
+          onOpenEmotionAnalysis={() => setEmotionAnalysisOpen(true)}
+          onOpenExportHistoryClassifier={() => setExportHistoryClassifierOpen(true)}
           onStartTutorial={startTutorial}
           onOpenProjectHealth={openProjectHealth}
           sharePackageBusy={sharePackageBusy}
@@ -1920,7 +2210,9 @@ export function EditorShell() {
           beginTimelineResize={beginTimelineResize}
         />
         <Suspense fallback={null}>
-          {complexityScoreOpen ? <ComplexityScorePanel project={project} onClose={() => setComplexityScoreOpen(false)} /> : null}
+          {complexityScoreOpen ? (
+            <ComplexityScorePanel project={project} onClose={() => setComplexityScoreOpen(false)} />
+          ) : null}
           {autoAudioSyncOpen ? (
             <AutoAudioSyncDialog
               targets={autoAudioSyncDialogTargets}
@@ -1952,14 +2244,26 @@ export function EditorShell() {
       if (isEncryptedProjectPath(recoveryCandidate.autosavePath) && !password) {
         return;
       }
-      const restored = await readProjectFile(recoveryCandidate.autosavePath, recoveryCandidate.projectPath ?? recoveryCandidate.autosavePath, { password });
+      const restored = await readProjectFile(
+        recoveryCandidate.autosavePath,
+        recoveryCandidate.projectPath ?? recoveryCandidate.autosavePath,
+        { password },
+      );
       commandManager.clear();
       setProject(restored, recoveryCandidate.projectPath);
       setDirty(true);
       setRecoveryCandidate(undefined);
-      showToast({ kind: 'success', title: zhCN.editorToasts.recoveryRestored, message: recoveryCandidate.autosavePath });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.recoveryRestored,
+        message: recoveryCandidate.autosavePath,
+      });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.recoveryFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.recoveryFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.recoveryFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.recoveryFailedMessage,
+      });
     }
   }
 
@@ -1972,7 +2276,11 @@ export function EditorShell() {
       setRecoveryCandidate(undefined);
       showToast({ kind: 'info', title: zhCN.editorToasts.recoveryDiscarded });
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.discardFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.discardFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.discardFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.discardFailedMessage,
+      });
     }
   }
 
@@ -1983,7 +2291,11 @@ export function EditorShell() {
       if (mediaPaths.length > 0) {
         const result = await probeMediaPaths(mediaPaths, project.media);
         if (result.duplicateCount > 0) {
-          showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
+          showToast({
+            kind: 'info',
+            title: zhCN.editorToasts.duplicateTitle,
+            message: zhCN.editorToasts.duplicateMessage(result.duplicateCount),
+          });
         }
         const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
         addMedia(importedMedia);
@@ -1996,7 +2308,11 @@ export function EditorShell() {
         await importSubtitlePaths(subtitlePaths);
       }
     } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.dropImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.dropImportFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.dropImportFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.dropImportFailedMessage,
+      });
     }
   }
 
@@ -2015,13 +2331,22 @@ export function EditorShell() {
       commandManager.execute(new AddTrackCommand(timelineAccessor, track));
       const importedSpeakers = collectSubtitleSpeakersFromTrack(track);
       if (importedSpeakers.length > 0) {
-        commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, mergeProjectSpeakers(useEditorStore.getState().project.speakers, importedSpeakers)));
+        commandManager.execute(
+          new UpdateProjectSpeakersCommand(
+            projectAccessor,
+            mergeProjectSpeakers(useEditorStore.getState().project.speakers, importedSpeakers),
+          ),
+        );
       }
       importedCount += track.clips.length;
       setSelectedClipId(track.clips[0]?.id);
     }
     if (importedCount > 0) {
-      showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.subtitlesImported,
+        message: zhCN.editorToasts.subtitlesImportedMessage(importedCount),
+      });
     }
   }
 
@@ -2038,7 +2363,7 @@ export function EditorShell() {
         showToast({
           kind: 'warning',
           title: zhCN.editorToasts.subtitleDataImportOverlaps,
-          message: zhCN.editorToasts.subtitleDataImportOverlapsMessage(overlaps.length)
+          message: zhCN.editorToasts.subtitleDataImportOverlapsMessage(overlaps.length),
         });
         const shouldMerge = await bridgeConfirm(zhCN.editorToasts.subtitleDataImportMergePrompt(overlaps.length));
         if (shouldMerge) {
@@ -2047,7 +2372,12 @@ export function EditorShell() {
       }
       const timeline = useEditorStore.getState().project.timeline;
       const targetTrackId = getSubtitleDataImportTargetTrackId(timeline, mode, selectedClipIds);
-      const track = buildSubtitleTrackFromDataCues(path, cues, timeline, mode === 'new-track' ? undefined : targetTrackId);
+      const track = buildSubtitleTrackFromDataCues(
+        path,
+        cues,
+        timeline,
+        mode === 'new-track' ? undefined : targetTrackId,
+      );
       if (track.clips.length === 0) {
         showToast({ kind: 'warning', title: zhCN.editorToasts.noSubtitlesFound, message: path });
         continue;
@@ -2057,11 +2387,14 @@ export function EditorShell() {
       setSelectedClipIds(track.clips.map((clip) => clip.id));
     }
     if (importedCount > 0) {
-      showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.subtitlesImported,
+        message: zhCN.editorToasts.subtitlesImportedMessage(importedCount),
+      });
     }
   }
 }
-
 
 function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; description: string } {
   const templates = zhCN.projectTemplates.templates;

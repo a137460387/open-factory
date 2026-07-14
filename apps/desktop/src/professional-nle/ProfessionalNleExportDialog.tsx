@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { exportProfessionalNle, type ProfessionalNleExportFormat, type ProfessionalNleMediaMode, type Project } from '@open-factory/editor-core';
+import {
+  exportProfessionalNle,
+  type ProfessionalNleExportFormat,
+  type ProfessionalNleMediaMode,
+  type Project,
+} from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { copyFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -20,7 +25,9 @@ export function ProfessionalNleExportDialog({ project, onClose, onCompleted }: P
     try {
       setBusy(true);
       const extension = format === 'fcp-xml' ? 'xml' : format;
-      const path = await saveFileDialog(`${sanitizeFileBaseName(project.name)}.${extension}`, [{ name: t.filterName(format), extensions: [extension] }]);
+      const path = await saveFileDialog(`${sanitizeFileBaseName(project.name)}.${extension}`, [
+        { name: t.filterName(format), extensions: [extension] },
+      ]);
       if (!path) {
         return;
       }
@@ -37,7 +44,10 @@ export function ProfessionalNleExportDialog({ project, onClose, onCompleted }: P
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="professional-nle-export-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="professional-nle-export-dialog"
+    >
       <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-soft">
         <div className="mb-4">
           <h2 className="text-base font-semibold text-ink">{t.title}</h2>
@@ -60,20 +70,45 @@ export function ProfessionalNleExportDialog({ project, onClose, onCompleted }: P
           <fieldset className="rounded-md border border-line bg-panel p-3">
             <legend className="px-1 text-xs font-semibold text-slate-700">{t.mediaMode}</legend>
             <label className="mt-1 flex items-center gap-2 text-sm text-slate-700">
-              <input className="h-4 w-4 accent-brand" type="radio" name="professional-nle-media-mode" checked={mediaMode === 'link'} onChange={() => setMediaMode('link')} data-testid="professional-nle-media-link-radio" />
+              <input
+                className="h-4 w-4 accent-brand"
+                type="radio"
+                name="professional-nle-media-mode"
+                checked={mediaMode === 'link'}
+                onChange={() => setMediaMode('link')}
+                data-testid="professional-nle-media-link-radio"
+              />
               <span>{t.mediaModes.link}</span>
             </label>
             <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
-              <input className="h-4 w-4 accent-brand" type="radio" name="professional-nle-media-mode" checked={mediaMode === 'copy'} onChange={() => setMediaMode('copy')} data-testid="professional-nle-media-copy-radio" />
+              <input
+                className="h-4 w-4 accent-brand"
+                type="radio"
+                name="professional-nle-media-mode"
+                checked={mediaMode === 'copy'}
+                onChange={() => setMediaMode('copy')}
+                data-testid="professional-nle-media-copy-radio"
+              />
               <span>{t.mediaModes.copy}</span>
             </label>
           </fieldset>
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} disabled={busy}>
+          <button
+            className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+          >
             {zhCN.common.cancel}
           </button>
-          <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50" type="button" onClick={() => void exportFile()} disabled={busy} data-testid="professional-nle-export-save-button">
+          <button
+            className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50"
+            type="button"
+            onClick={() => void exportFile()}
+            disabled={busy}
+            data-testid="professional-nle-export-save-button"
+          >
             {busy ? t.exporting : t.export}
           </button>
         </div>
@@ -114,7 +149,9 @@ function uniqueMediaFileName(path: string, name: string, index: number): string 
   const sanitized = sanitizeFileName(source);
   const suffix = `-${String(index + 1).padStart(3, '0')}`;
   const extensionIndex = sanitized.lastIndexOf('.');
-  return extensionIndex > 0 ? `${sanitized.slice(0, extensionIndex)}${suffix}${sanitized.slice(extensionIndex)}` : `${sanitized}${suffix}`;
+  return extensionIndex > 0
+    ? `${sanitized.slice(0, extensionIndex)}${suffix}${sanitized.slice(extensionIndex)}`
+    : `${sanitized}${suffix}`;
 }
 
 function sanitizeFileBaseName(name: string): string {
@@ -122,5 +159,11 @@ function sanitizeFileBaseName(name: string): string {
 }
 
 function sanitizeFileName(name: string): string {
-  return name.trim().replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_').replace(/\s+/g, ' ').trim() || 'open-factory';
+  return (
+    name
+      .trim()
+      .replace(/[<>:"/\\|?*\u0000-\u001F]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || 'open-factory'
+  );
 }

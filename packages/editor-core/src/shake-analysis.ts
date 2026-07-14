@@ -43,7 +43,7 @@ export function estimateDisplacementVectors(
   width: number,
   height: number,
   gridSize = 4,
-  searchRadius = 4
+  searchRadius = 4,
 ): Array<{ dx: number; dy: number }> {
   if (frames.length < 2 || width < gridSize || height < gridSize) return [];
   const blockW = Math.floor(width / gridSize);
@@ -82,7 +82,7 @@ export function estimateDisplacementVectors(
  */
 export function calculateShakeScore(
   displacementVectors: Array<{ dx: number; dy: number }>,
-  maxExpectedVariance?: number
+  maxExpectedVariance?: number,
 ): number {
   if (displacementVectors.length === 0) return 0;
   const magnitudes = displacementVectors.map((v) => Math.sqrt(v.dx * v.dx + v.dy * v.dy));
@@ -119,7 +119,7 @@ export function analyseShake(
   frames: ArrayLike<number>[],
   width: number,
   height: number,
-  maxExpectedVariance?: number
+  maxExpectedVariance?: number,
 ): ShakeAnalysisResult {
   const vectors = estimateDisplacementVectors(frames, width, height);
   const shakeScore = calculateShakeScore(vectors, maxExpectedVariance);
@@ -127,7 +127,7 @@ export function analyseShake(
   return {
     shakeScore,
     severity,
-    suggestedFilter: severity === 'high' ? 'vidstab' : 'none'
+    suggestedFilter: severity === 'high' ? 'vidstab' : 'none',
   };
 }
 
@@ -145,23 +145,33 @@ export function buildTwoStepVidstabArgs(
   inputPath: string,
   trfPath: string,
   smoothing = DEFAULT_SMOOTHING,
-  zoom = DEFAULT_ZOOM
+  zoom = DEFAULT_ZOOM,
 ): TwoStepVidstabArgs {
   const safeInput = inputPath;
   const safeTrf = trfPath;
   return {
     detectArgs: [
-      '-i', safeInput,
-      '-vf', `vidstabdetect=stepsize=6:shakiness=5:accuracy=15:result=${safeTrf}`,
-      '-f', 'null', '-'
+      '-i',
+      safeInput,
+      '-vf',
+      `vidstabdetect=stepsize=6:shakiness=5:accuracy=15:result=${safeTrf}`,
+      '-f',
+      'null',
+      '-',
     ],
     transformArgs: [
-      '-i', safeInput,
-      '-vf', `vidstabtransform=smoothing=${Math.max(0, Math.round(smoothing))}:zoom=${Math.max(0, zoom)}:input=${safeTrf}`,
-      '-c:v', 'libx264', '-preset', 'medium',
-      '-c:a', 'copy',
-      '-y'
-    ]
+      '-i',
+      safeInput,
+      '-vf',
+      `vidstabtransform=smoothing=${Math.max(0, Math.round(smoothing))}:zoom=${Math.max(0, zoom)}:input=${safeTrf}`,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'medium',
+      '-c:a',
+      'copy',
+      '-y',
+    ],
   };
 }
 
@@ -177,7 +187,7 @@ function computeBlockNCC(
   dx: number,
   dy: number,
   bW: number,
-  bH: number
+  bH: number,
 ): number {
   let sumA = 0;
   let sumB = 0;
@@ -229,7 +239,7 @@ function findBestBlockMatch(
   by: number,
   bW: number,
   bH: number,
-  radius: number
+  radius: number,
 ): { dx: number; dy: number; ncc: number } {
   let bestDx = 0;
   let bestDy = 0;

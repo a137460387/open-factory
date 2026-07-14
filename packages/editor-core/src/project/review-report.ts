@@ -1,6 +1,13 @@
 import type { Project, ReviewAnnotation } from '../model';
 import { getTimelineDuration } from '../timeline';
-import { formatReportDuration, formatReportNumber, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './report-i18n';
+import {
+  formatReportDuration,
+  formatReportNumber,
+  normalizeReportLocale,
+  reportHtmlLang,
+  reportLanguageLabel,
+  type ReportLocale,
+} from './report-i18n';
 
 export interface ReviewReportOptions {
   generatedAt?: string;
@@ -49,7 +56,7 @@ const reviewReportLabels: Record<ReportLocale, Record<string, string>> = {
     shotAria: '批注截图示意',
     arrow: '箭头',
     rectangle: '矩形',
-    textType: '文字'
+    textType: '文字',
   },
   en: {
     title: 'Review Report',
@@ -70,8 +77,8 @@ const reviewReportLabels: Record<ReportLocale, Record<string, string>> = {
     shotAria: 'Review annotation preview',
     arrow: 'Arrow',
     rectangle: 'Rectangle',
-    textType: 'Text'
-  }
+    textType: 'Text',
+  },
 };
 
 export function buildReviewReport(project: Project, options: ReviewReportOptions = {}): ReviewReport {
@@ -95,8 +102,8 @@ export function buildReviewReport(project: Project, options: ReviewReportOptions
         x: annotation.x,
         y: annotation.y,
         width: annotation.width,
-        height: annotation.height
-      }))
+        height: annotation.height,
+      })),
   };
 }
 
@@ -160,7 +167,7 @@ function renderAnnotationRows(rows: ReviewReportAnnotationRow[], locale: ReportL
         <td>${escapeHtml(formatAnnotationType(row.type, locale))}</td>
         <td>${escapeHtml(row.text)}</td>
         <td>x ${formatPercent(row.x)} / y ${formatPercent(row.y)} / w ${formatPercent(row.width)} / h ${formatPercent(row.height)}</td>
-      </tr>`
+      </tr>`,
     )
     .join('');
 }

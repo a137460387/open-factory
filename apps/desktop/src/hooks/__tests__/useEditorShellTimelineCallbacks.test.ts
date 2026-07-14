@@ -325,9 +325,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addAssetToTimeline('nonexistent-asset');
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
       expect(mockCommandExecute).not.toHaveBeenCalled();
     });
 
@@ -337,9 +335,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addAssetToTimeline('asset-1');
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
       expect(mockCommandExecute).not.toHaveBeenCalled();
     });
 
@@ -351,9 +347,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addAssetToTimeline('asset-1');
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -389,9 +383,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.splitSelected();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'warning' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' }));
     });
   });
 
@@ -402,10 +394,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.deleteSelected();
 
-      expect(DeleteClipsCommand).toHaveBeenCalledWith(
-        'mock-timeline-accessor',
-        ['clip-1'],
-      );
+      expect(DeleteClipsCommand).toHaveBeenCalledWith('mock-timeline-accessor', ['clip-1']);
       expect(mockClearSelectedClipIds).toHaveBeenCalled();
     });
 
@@ -464,9 +453,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addAdjustmentLayer();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -489,9 +476,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.handleAddSubclipToTimeline('nonexistent', subclip as any);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -542,9 +527,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.selectAllTimelineItems();
 
-      expect(mockSetSelectedClipIds).toHaveBeenCalledWith(
-        expect.arrayContaining(['clip-1']),
-      );
+      expect(mockSetSelectedClipIds).toHaveBeenCalledWith(expect.arrayContaining(['clip-1']));
     });
   });
 
@@ -568,9 +551,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addMotionGraphic();
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -597,9 +578,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.addTitleTemplate('lower-third' as any);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'warning' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' }));
       expect(mockCommandExecute).not.toHaveBeenCalled();
     });
   });
@@ -613,15 +592,9 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.applyEffectPresetToSelectedClip(preset as any);
 
-      expect(ApplyEffectPresetCommand).toHaveBeenCalledWith(
-        'mock-timeline-accessor',
-        'clip-1',
-        preset,
-      );
+      expect(ApplyEffectPresetCommand).toHaveBeenCalledWith('mock-timeline-accessor', 'clip-1', preset);
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'success' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     });
 
     it('无选中片段时显示警告 toast', () => {
@@ -631,9 +604,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.applyEffectPresetToSelectedClip(preset as any);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'warning' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' }));
       expect(mockCommandExecute).not.toHaveBeenCalled();
     });
 
@@ -646,9 +617,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.applyEffectPresetToSelectedClip(preset as any);
 
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: 'error' }),
-      );
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'error' }));
     });
   });
 
@@ -667,10 +636,7 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.deleteSelected();
 
-      expect(DeleteGroupCommand).toHaveBeenCalledWith(
-        'mock-project-accessor',
-        'group-1',
-      );
+      expect(DeleteGroupCommand).toHaveBeenCalledWith('mock-project-accessor', 'group-1');
       expect(mockClearSelectedClipIds).toHaveBeenCalled();
     });
   });

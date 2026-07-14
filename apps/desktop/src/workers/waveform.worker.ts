@@ -29,7 +29,7 @@ self.onmessage = (event: MessageEvent<WaveformWorkerInput>) => {
       peaks: [],
       duration: 0,
       channels: 0,
-      error: error instanceof Error ? error.message : zhCN.errors.waveformGenerateFailed
+      error: error instanceof Error ? error.message : zhCN.errors.waveformGenerateFailed,
     };
     self.postMessage(payload);
   }

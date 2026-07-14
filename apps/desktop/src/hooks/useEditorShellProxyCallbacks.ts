@@ -1,6 +1,11 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import { useCallback } from 'react';
-import { MigrateProxiesCommand, getProjectFrameRateConversionTarget, getCfrTargetFrameRate, buildProxyMigration } from '@open-factory/editor-core';
+import {
+  MigrateProxiesCommand,
+  getProjectFrameRateConversionTarget,
+  getCfrTargetFrameRate,
+  buildProxyMigration,
+} from '@open-factory/editor-core';
 import { showToast } from '../lib/toast';
 import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor } from '../store/commandManager';
@@ -32,9 +37,19 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       if (!asset || asset.type !== 'video') {
         return;
       }
-      setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? { ...item, proxyStatus: 'pending', proxyError: undefined } : item)));
+      setMedia(
+        useEditorStore
+          .getState()
+          .project.media.map((item) =>
+            item.id === assetId ? { ...item, proxyStatus: 'pending', proxyError: undefined } : item,
+          ),
+      );
       try {
-        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, proxySettings, options);
+        const proxyAsset = await createProxyForAsset(
+          { ...asset, proxyStatus: 'pending', proxyError: undefined },
+          proxySettings,
+          options,
+        );
         setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? proxyAsset : item)));
         showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
       } catch (error) {
@@ -43,14 +58,22 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
             .getState()
             .project.media.map((item) =>
               item.id === assetId
-                ? { ...item, proxyStatus: 'error', proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage }
-                : item
-            )
+                ? {
+                    ...item,
+                    proxyStatus: 'error',
+                    proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage,
+                  }
+                : item,
+            ),
         );
-        showToast({ kind: 'error', title: zhCN.editorToasts.proxyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.proxyFailed,
+          message: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage,
+        });
       }
     },
-    [proxySettings, setMedia]
+    [proxySettings, setMedia],
   );
 
   const deleteProxiesForMedia = useCallback(
@@ -59,7 +82,7 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       const media = useEditorStore.getState().project.media;
       const proxyPaths = media.filter((asset) => ids.has(asset.id) && asset.proxyPath).map((asset) => asset.proxyPath!);
       try {
-        await Promise.all(proxyPaths.map((path) => removeFile(path).catch(logError("useEditorShellProxyCallbacks"))));
+        await Promise.all(proxyPaths.map((path) => removeFile(path).catch(logError('useEditorShellProxyCallbacks'))));
         setMedia(
           useEditorStore.getState().project.media.map((asset) =>
             ids.has(asset.id)
@@ -67,17 +90,25 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
                   ...asset,
                   proxyPath: undefined,
                   proxyStatus: asset.type === 'video' ? 'none' : undefined,
-                  proxyError: undefined
+                  proxyError: undefined,
                 }
-              : asset
-          )
+              : asset,
+          ),
         );
-        showToast({ kind: 'success', title: zhCN.editorToasts.proxyDeleted, message: zhCN.editorToasts.proxyDeletedMessage(proxyPaths.length) });
+        showToast({
+          kind: 'success',
+          title: zhCN.editorToasts.proxyDeleted,
+          message: zhCN.editorToasts.proxyDeletedMessage(proxyPaths.length),
+        });
       } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.proxyDeleteFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyDeleteFailedMessage });
+        showToast({
+          kind: 'error',
+          title: zhCN.editorToasts.proxyDeleteFailed,
+          message: error instanceof Error ? error.message : zhCN.editorToasts.proxyDeleteFailedMessage,
+        });
       }
     },
-    [setMedia]
+    [setMedia],
   );
 
   const regenerateProxiesForMedia = useCallback(
@@ -86,7 +117,7 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
         await generateProxyForMedia(assetId, { force: true });
       }
     },
-    [generateProxyForMedia]
+    [generateProxyForMedia],
   );
 
   const migrateProxiesToDirectory = useCallback(async (targetDirectory: string) => {
@@ -95,19 +126,27 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       showToast({ kind: 'info', title: zhCN.editorToasts.proxyMigrationSkipped });
       return;
     }
-      const moved: typeof updates = [];
+    const moved: typeof updates = [];
     try {
       for (const update of updates) {
         await moveFile(update.fromPath, update.toPath);
         moved.push(update);
       }
       commandManager.execute(new MigrateProxiesCommand(projectAccessor, updates));
-      showToast({ kind: 'success', title: zhCN.editorToasts.proxyMigrated, message: zhCN.editorToasts.proxyMigratedMessage(updates.length) });
+      showToast({
+        kind: 'success',
+        title: zhCN.editorToasts.proxyMigrated,
+        message: zhCN.editorToasts.proxyMigratedMessage(updates.length),
+      });
     } catch (error) {
       for (const update of moved.reverse()) {
-        await moveFile(update.toPath, update.fromPath).catch(logError("useEditorShellProxyCallbacks"));
+        await moveFile(update.toPath, update.fromPath).catch(logError('useEditorShellProxyCallbacks'));
       }
-      showToast({ kind: 'error', title: zhCN.editorToasts.proxyMigrationFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyMigrationFailedMessage });
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.proxyMigrationFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.proxyMigrationFailedMessage,
+      });
     }
   }, []);
 
@@ -117,10 +156,16 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       if (!asset || asset.type !== 'video') {
         return;
       }
-      const cfrFrameRate = getProjectFrameRateConversionTarget(projectFps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
+      const cfrFrameRate = getProjectFrameRateConversionTarget(
+        projectFps,
+        getCfrTargetFrameRate(
+          { avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate },
+          asset.frameRate ?? 30,
+        ),
+      );
       void generateProxyForMedia(assetId, { force: true, cfrFrameRate });
     },
-    [generateProxyForMedia, projectFps]
+    [generateProxyForMedia, projectFps],
   );
 
   return {

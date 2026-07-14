@@ -1,12 +1,25 @@
-import type { Timeline, Clip, Track, SubtitleDataImportMode, Project, KeyframeProperty } from '@open-factory/editor-core';
+import type {
+  Timeline,
+  Clip,
+  Track,
+  SubtitleDataImportMode,
+  Project,
+  KeyframeProperty,
+} from '@open-factory/editor-core';
 import { getClipSpeed } from '@open-factory/editor-core';
 
-export function getSubtitleDataImportTargetTrackId(timeline: Timeline, mode: SubtitleDataImportMode, selectedClipIds: string[]): string | undefined {
+export function getSubtitleDataImportTargetTrackId(
+  timeline: Timeline,
+  mode: SubtitleDataImportMode,
+  selectedClipIds: string[],
+): string | undefined {
   if (mode === 'new-track') {
     return undefined;
   }
   const selected = new Set(selectedClipIds);
-  const selectedSubtitleTrack = timeline.tracks.find((track: Track) => track.type === 'subtitle' && track.clips.some((clip: Clip) => selected.has(clip.id)));
+  const selectedSubtitleTrack = timeline.tracks.find(
+    (track: Track) => track.type === 'subtitle' && track.clips.some((clip: Clip) => selected.has(clip.id)),
+  );
   return selectedSubtitleTrack?.id ?? timeline.tracks.find((track: Track) => track.type === 'subtitle')?.id;
 }
 
@@ -14,11 +27,11 @@ export function findTimelineClipForMediaSourceTime(
   timeline: Timeline,
   mediaId: string,
   sourceTime: number,
-  preferredClip?: Clip
+  preferredClip?: Clip,
 ): { clip: Clip; timelineTime: number } | undefined {
   const candidates: Clip[] = [
     ...(preferredClip ? [preferredClip] : []),
-    ...timeline.tracks.flatMap((track: Track) => track.clips).filter((clip: Clip) => clip.id !== preferredClip?.id)
+    ...timeline.tracks.flatMap((track: Track) => track.clips).filter((clip: Clip) => clip.id !== preferredClip?.id),
   ];
   for (const clip of candidates) {
     if (!('mediaId' in clip) || clip.mediaId !== mediaId) {
@@ -50,14 +63,16 @@ export function getClipSourceDimensions(project: Project, clip: Clip): { width: 
     const asset = project.media.find((item) => item.id === clip.mediaId);
     return {
       width: Math.max(1, asset?.width || project.settings.width),
-      height: Math.max(1, asset?.height || project.settings.height)
+      height: Math.max(1, asset?.height || project.settings.height),
     };
   }
   return { width: project.settings.width, height: project.settings.height };
 }
 
-export function collectClipKeyframeRefs(clip: Clip): Array<{ clipId: string; property: KeyframeProperty; keyframeId: string }> {
+export function collectClipKeyframeRefs(
+  clip: Clip,
+): Array<{ clipId: string; property: KeyframeProperty; keyframeId: string }> {
   return (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).flatMap((property) =>
-    (clip.keyframes?.[property] ?? []).map((frame) => ({ clipId: clip.id, property, keyframeId: frame.id }))
+    (clip.keyframes?.[property] ?? []).map((frame) => ({ clipId: clip.id, property, keyframeId: frame.id })),
   );
 }

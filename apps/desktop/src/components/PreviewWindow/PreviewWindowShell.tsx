@@ -1,4 +1,4 @@
-import { logError } from "../../lib/error-handlers";
+import { logError } from '../../lib/error-handlers';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Pin, Play, Scan, X } from 'lucide-react';
 import { secondsToTimecode, type Project } from '@open-factory/editor-core';
@@ -10,14 +10,18 @@ import {
   setPreviewWindowAlwaysOnTop,
   setPreviewWindowFullscreen,
   setPreviewWindowResolutionScale,
-  type PreviewWindowResolutionScale
+  type PreviewWindowResolutionScale,
 } from '../../lib/tauri-bridge';
 import {
   createPreviewWindowPlaybackState,
   normalizePreviewWindowPlaybackState,
-  shouldApplyPreviewWindowPlaybackState
+  shouldApplyPreviewWindowPlaybackState,
 } from '../../lib/previewWindowSync';
-import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode } from '../../lib/preview/preview-performance';
+import {
+  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  type PreviewPerformanceSettings,
+  type PreviewQualityMode,
+} from '../../lib/preview/preview-performance';
 import { useEditorStore } from '../../store/editorStore';
 
 interface PreviewWindowProjectStatePayload {
@@ -30,7 +34,9 @@ interface PreviewWindowProjectStatePayload {
 }
 
 const RESOLUTION_SCALES: PreviewWindowResolutionScale[] = [1, 0.5, 0.25];
-const PreviewCanvas = lazy(() => import('../PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
+const PreviewCanvas = lazy(() =>
+  import('../PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })),
+);
 
 export function PreviewWindowShell() {
   const project = useEditorStore((state) => state.project);
@@ -42,7 +48,9 @@ export function PreviewWindowShell() {
   const [alwaysOnTop, setAlwaysOnTopState] = useState(false);
   const [fullscreen, setFullscreenState] = useState(false);
   const [resolutionScale, setResolutionScaleState] = useState<PreviewWindowResolutionScale>(1);
-  const [basePreviewPerformance, setBasePreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
+  const [basePreviewPerformance, setBasePreviewPerformance] = useState<PreviewPerformanceSettings>(
+    DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  );
   const applyingRemoteRef = useRef(false);
   const fps = project.settings.fps || 30;
 
@@ -50,9 +58,9 @@ export function PreviewWindowShell() {
     () => ({
       ...basePreviewPerformance,
       qualityMode: scaleToPreviewQualityMode(resolutionScale),
-      adaptiveEnabled: false
+      adaptiveEnabled: false,
     }),
-    [basePreviewPerformance, resolutionScale]
+    [basePreviewPerformance, resolutionScale],
   );
 
   useEffect(() => {
@@ -77,7 +85,12 @@ export function PreviewWindowShell() {
       const incoming = normalizePreviewWindowPlaybackState(payload);
       if (
         incoming &&
-        shouldApplyPreviewWindowPlaybackState({ playheadTime: useEditorStore.getState().playheadTime, isPlaying: useEditorStore.getState().isPlaying }, incoming, 'preview-window', 1 / fps)
+        shouldApplyPreviewWindowPlaybackState(
+          { playheadTime: useEditorStore.getState().playheadTime, isPlaying: useEditorStore.getState().isPlaying },
+          incoming,
+          'preview-window',
+          1 / fps,
+        )
       ) {
         applyingRemoteRef.current = true;
         setPlayheadTime(incoming.playheadTime);
@@ -104,7 +117,7 @@ export function PreviewWindowShell() {
   const toggleFullscreen = useCallback(async () => {
     const next = !fullscreen;
     setFullscreenState(next);
-    const state = await setPreviewWindowFullscreen(next).catch(logError("PreviewWindowShellx"));
+    const state = await setPreviewWindowFullscreen(next).catch(logError('PreviewWindowShellx'));
     if (state) {
       setFullscreenState(state.fullscreen);
     }
@@ -113,7 +126,7 @@ export function PreviewWindowShell() {
   const toggleAlwaysOnTop = useCallback(async () => {
     const next = !alwaysOnTop;
     setAlwaysOnTopState(next);
-    const state = await setPreviewWindowAlwaysOnTop(next).catch(logError("PreviewWindowShellx"));
+    const state = await setPreviewWindowAlwaysOnTop(next).catch(logError('PreviewWindowShellx'));
     if (state) {
       setAlwaysOnTopState(state.alwaysOnTop);
     }
@@ -121,7 +134,7 @@ export function PreviewWindowShell() {
 
   const changeResolutionScale = useCallback(async (value: PreviewWindowResolutionScale) => {
     setResolutionScaleState(value);
-    const state = await setPreviewWindowResolutionScale(value).catch(logError("PreviewWindowShellx"));
+    const state = await setPreviewWindowResolutionScale(value).catch(logError('PreviewWindowShellx'));
     if (state) {
       setResolutionScaleState(state.resolutionScale);
     }
@@ -143,10 +156,17 @@ export function PreviewWindowShell() {
   }, [toggleAlwaysOnTop, toggleFullscreen]);
 
   return (
-    <div className="grid h-screen min-h-0 bg-[#111827] text-white" style={{ gridTemplateRows: '48px minmax(0, 1fr)' }} data-testid="detached-preview-window">
+    <div
+      className="grid h-screen min-h-0 bg-[#111827] text-white"
+      style={{ gridTemplateRows: '48px minmax(0, 1fr)' }}
+      data-testid="detached-preview-window"
+    >
       <header className="flex min-w-0 items-center gap-2 border-b border-white/10 bg-slate-950 px-3">
         <div className="min-w-0 flex-1 truncate text-sm font-semibold">{zhCN.preview.detachedTitle}</div>
-        <div className="rounded border border-white/10 px-2 py-1 text-xs tabular-nums text-slate-200" data-testid="detached-preview-timecode">
+        <div
+          className="rounded border border-white/10 px-2 py-1 text-xs tabular-nums text-slate-200"
+          data-testid="detached-preview-timecode"
+        >
           {secondsToTimecode(playheadTime, fps, project.settings.timecodeFormat ?? 'ndf')}
         </div>
         <button

@@ -10,7 +10,7 @@ import {
   type KeyframeHandle,
   type KeyframeHandleMode,
   type KeyframeProperty,
-  type Transform
+  type Transform,
 } from './model';
 import { round } from './time';
 
@@ -34,7 +34,7 @@ export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; m
   spatialAzimuth: { min: -180, max: 180 },
   spatialElevation: { min: -90, max: 90 },
   spatialDistanceMeters: { min: 0.1, max: 100 },
-  pathStartOffset: { min: 0, max: 1 }
+  pathStartOffset: { min: 0, max: 1 },
 };
 
 export interface KeyframeInput {
@@ -71,7 +71,11 @@ export interface KeyframeExpressionContext {
   max?: number;
 }
 
-export function interpolateKeyframes(keyframes: Keyframe<number>[] | undefined, time: number, fallback: number): number {
+export function interpolateKeyframes(
+  keyframes: Keyframe<number>[] | undefined,
+  time: number,
+  fallback: number,
+): number {
   const frames = normalizeKeyframes(keyframes, Number.POSITIVE_INFINITY, fallback);
   if (frames.length === 0) {
     return fallback;
@@ -101,7 +105,9 @@ export function interpolateKeyframes(keyframes: Keyframe<number>[] | undefined, 
       return right.value;
     }
     const rawProgress = (roundedTime - left.time) / span;
-    const progress = hasBezierSegmentHandles(left, right) ? interpolateBezierSegmentProgress(left, right, rawProgress) : applyEasing(rawProgress, left.easing);
+    const progress = hasBezierSegmentHandles(left, right)
+      ? interpolateBezierSegmentProgress(left, right, rawProgress)
+      : applyEasing(rawProgress, left.easing);
     return round(left.value + (right.value - left.value) * progress);
   }
 
@@ -132,7 +138,10 @@ export function applyEasing(progress: number, easing: KeyframeEasing): number {
   return t;
 }
 
-export function normalizeClipKeyframes(keyframes: ClipKeyframes | undefined, duration: number): ClipKeyframes | undefined {
+export function normalizeClipKeyframes(
+  keyframes: ClipKeyframes | undefined,
+  duration: number,
+): ClipKeyframes | undefined {
   if (!keyframes) {
     return undefined;
   }
@@ -151,7 +160,7 @@ export function normalizeKeyframes(
   keyframes: Keyframe<number>[] | undefined,
   duration: number,
   fallback: number,
-  property?: KeyframeProperty
+  property?: KeyframeProperty,
 ): Keyframe<number>[] {
   if (!Array.isArray(keyframes)) {
     return [];
@@ -165,12 +174,12 @@ export function normalizeKeyframes(
       }
       const value = typeof frame.value === 'number' && Number.isFinite(frame.value) ? frame.value : fallback;
       const normalizedFrame: Keyframe<number> & { originalIndex: number } = {
-          id: typeof frame.id === 'string' && frame.id ? frame.id : createId('keyframe'),
-          time: round(Math.min(maxTime, Math.max(0, frame.time))),
-          value: round(limits ? Math.min(limits.max, Math.max(limits.min, value)) : value),
-          easing: normalizeEasing(frame.easing),
-          originalIndex: index
-        };
+        id: typeof frame.id === 'string' && frame.id ? frame.id : createId('keyframe'),
+        time: round(Math.min(maxTime, Math.max(0, frame.time))),
+        value: round(limits ? Math.min(limits.max, Math.max(limits.min, value)) : value),
+        easing: normalizeEasing(frame.easing),
+        originalIndex: index,
+      };
       const inHandle = normalizeKeyframeHandle(frame.inHandle);
       const outHandle = normalizeKeyframeHandle(frame.outHandle);
       const handleMode = normalizeKeyframeHandleMode(frame.handleMode);
@@ -190,7 +199,12 @@ export function normalizeKeyframes(
 }
 
 export function normalizeEasing(easing: unknown): KeyframeEasing {
-  return easing === 'ease-in' || easing === 'ease-out' || easing === 'ease-in-out' || easing === 'elastic' || easing === 'bounce' || easing === 'linear'
+  return easing === 'ease-in' ||
+    easing === 'ease-out' ||
+    easing === 'ease-in-out' ||
+    easing === 'elastic' ||
+    easing === 'bounce' ||
+    easing === 'linear'
     ? easing
     : 'linear';
 }
@@ -228,19 +242,19 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
     return clip.panorama?.roll ?? 0;
   }
   if (property === 'spatialX') {
-    return 'volume' in clip ? clip.spatialAudio?.x ?? 0 : 0;
+    return 'volume' in clip ? (clip.spatialAudio?.x ?? 0) : 0;
   }
   if (property === 'spatialY') {
-    return 'volume' in clip ? clip.spatialAudio?.y ?? 0 : 0;
+    return 'volume' in clip ? (clip.spatialAudio?.y ?? 0) : 0;
   }
   if (property === 'spatialAzimuth') {
-    return 'volume' in clip ? clip.spatialAudio?.azimuth ?? 0 : 0;
+    return 'volume' in clip ? (clip.spatialAudio?.azimuth ?? 0) : 0;
   }
   if (property === 'spatialElevation') {
-    return 'volume' in clip ? clip.spatialAudio?.elevation ?? 0 : 0;
+    return 'volume' in clip ? (clip.spatialAudio?.elevation ?? 0) : 0;
   }
   if (property === 'spatialDistanceMeters') {
-    return 'volume' in clip ? clip.spatialAudio?.distanceMeters ?? 1 : 1;
+    return 'volume' in clip ? (clip.spatialAudio?.distanceMeters ?? 1) : 1;
   }
   if (property === 'pathStartOffset') {
     return clip.type === 'text' ? normalizeTextPath(clip.pathText).startOffset : 0;
@@ -258,7 +272,7 @@ export function resolveAnimatedTransform(clip: Clip, localTime: number): Transfo
     scale: round((scaleX + scaleY) / 2),
     scaleX,
     scaleY,
-    opacity: getClipKeyframeValue(clip, 'opacity', localTime)
+    opacity: getClipKeyframeValue(clip, 'opacity', localTime),
   };
 }
 
@@ -274,7 +288,7 @@ export function applyClipKeyframes<TClip extends Clip>(clip: TClip, localTime: n
           ...clip.panorama,
           yaw: getClipKeyframeValue(clip, 'yaw', localTime),
           pitch: getClipKeyframeValue(clip, 'pitch', localTime),
-          roll: getClipKeyframeValue(clip, 'roll', localTime)
+          roll: getClipKeyframeValue(clip, 'roll', localTime),
         }
       : clip.panorama;
   if ('volume' in clip) {
@@ -282,17 +296,21 @@ export function applyClipKeyframes<TClip extends Clip>(clip: TClip, localTime: n
       ...clip,
       transform,
       panorama,
-      volume: resolveAnimatedVolume(clip, localTime)
+      volume: resolveAnimatedVolume(clip, localTime),
     } as TClip;
   }
   return {
     ...clip,
     transform,
-    panorama
+    panorama,
   } as TClip;
 }
 
-export function createKeyframe(property: KeyframeProperty, input: KeyframeInput, clipDuration: number): Keyframe<number> {
+export function createKeyframe(
+  property: KeyframeProperty,
+  input: KeyframeInput,
+  clipDuration: number,
+): Keyframe<number> {
   const fallback = getKeyframeFallbackValue(property);
   return normalizeKeyframes(
     [
@@ -303,12 +321,12 @@ export function createKeyframe(property: KeyframeProperty, input: KeyframeInput,
         easing: input.easing ?? 'linear',
         inHandle: input.inHandle,
         outHandle: input.outHandle,
-        handleMode: input.handleMode
-      }
+        handleMode: input.handleMode,
+      },
     ],
     clipDuration,
     fallback,
-    property
+    property,
   )[0];
 }
 
@@ -329,7 +347,7 @@ export function setKeyframeForProperty(
   keyframes: ClipKeyframes | undefined,
   property: KeyframeProperty,
   keyframe: Keyframe<number>,
-  clipDuration: number
+  clipDuration: number,
 ): ClipKeyframes {
   const next: ClipKeyframes = cloneClipKeyframes(keyframes) ?? {};
   const existing = next[property] ?? [];
@@ -341,7 +359,7 @@ export function setKeyframeForProperty(
 export function removeKeyframeForProperty(
   keyframes: ClipKeyframes | undefined,
   property: KeyframeProperty,
-  keyframeId: string
+  keyframeId: string,
 ): ClipKeyframes | undefined {
   const next = cloneClipKeyframes(keyframes);
   if (!next?.[property]) {
@@ -374,17 +392,23 @@ export function cloneKeyframe<T>(frame: Keyframe<T>): Keyframe<T> {
   return {
     ...frame,
     ...(frame.inHandle ? { inHandle: { ...frame.inHandle } } : {}),
-    ...(frame.outHandle ? { outHandle: { ...frame.outHandle } } : {})
+    ...(frame.outHandle ? { outHandle: { ...frame.outHandle } } : {}),
   };
 }
 
 export function normalizeKeyframeHandle(handle: KeyframeHandle | undefined): KeyframeHandle | undefined {
-  if (!handle || typeof handle.dx !== 'number' || typeof handle.dy !== 'number' || !Number.isFinite(handle.dx) || !Number.isFinite(handle.dy)) {
+  if (
+    !handle ||
+    typeof handle.dx !== 'number' ||
+    typeof handle.dy !== 'number' ||
+    !Number.isFinite(handle.dx) ||
+    !Number.isFinite(handle.dy)
+  ) {
     return undefined;
   }
   return {
     dx: round(handle.dx),
-    dy: round(handle.dy)
+    dy: round(handle.dy),
   };
 }
 
@@ -396,7 +420,7 @@ export function calculateBezierHandleCoordinates(
   frame: Keyframe<number>,
   previous?: Keyframe<number>,
   next?: Keyframe<number>,
-  mode: KeyframeHandleMode = frame.handleMode ?? 'independent'
+  mode: KeyframeHandleMode = frame.handleMode ?? 'independent',
 ): KeyframeBezierHandleCoordinates {
   const normalizedMode = normalizeKeyframeHandleMode(mode) ?? 'independent';
   const inSpan = previous ? Math.max(0.001, frame.time - previous.time) : 0;
@@ -409,7 +433,10 @@ export function calculateBezierHandleCoordinates(
   if (normalizedMode === 'unified') {
     const source = outHandle ?? (inHandle ? mirrorHandle(inHandle, outSpan || inSpan, inSpan || outSpan) : undefined);
     outHandle = source && next ? clampHandleForDirection(source, 'out', outSpan) : undefined;
-    inHandle = source && previous ? clampHandleForDirection(mirrorHandle(source, inSpan || outSpan, outSpan || inSpan), 'in', inSpan) : undefined;
+    inHandle =
+      source && previous
+        ? clampHandleForDirection(mirrorHandle(source, inSpan || outSpan, outSpan || inSpan), 'in', inSpan)
+        : undefined;
   } else if (normalizedMode === 'independent') {
     inHandle = inHandle && previous ? clampHandleForDirection(inHandle, 'in', inSpan) : undefined;
     outHandle = outHandle && next ? clampHandleForDirection(outHandle, 'out', outSpan) : undefined;
@@ -421,7 +448,7 @@ export function calculateBezierHandleCoordinates(
   return {
     mode: normalizedMode,
     ...(inHandle ? { inHandle: handleToPoint(frame, inHandle) } : {}),
-    ...(outHandle ? { outHandle: handleToPoint(frame, outHandle) } : {})
+    ...(outHandle ? { outHandle: handleToPoint(frame, outHandle) } : {}),
   };
 }
 
@@ -429,7 +456,7 @@ export function applyKeyframeHandlePatch(
   frame: Keyframe<number>,
   handle: 'in' | 'out',
   value: KeyframeHandle,
-  mode: KeyframeHandleMode = frame.handleMode ?? 'independent'
+  mode: KeyframeHandleMode = frame.handleMode ?? 'independent',
 ): Keyframe<number> {
   const normalizedMode = normalizeKeyframeHandleMode(mode) ?? 'independent';
   const normalized = normalizeKeyframeHandle(value) ?? { dx: 0, dy: 0 };
@@ -439,13 +466,13 @@ export function applyKeyframeHandlePatch(
       ...cloneKeyframe(frame),
       handleMode: normalizedMode,
       inHandle: handle === 'in' ? normalized : opposite,
-      outHandle: handle === 'out' ? normalized : opposite
+      outHandle: handle === 'out' ? normalized : opposite,
     };
   }
   return {
     ...cloneKeyframe(frame),
     handleMode: normalizedMode,
-    ...(handle === 'in' ? { inHandle: normalized } : { outHandle: normalized })
+    ...(handle === 'in' ? { inHandle: normalized } : { outHandle: normalized }),
   };
 }
 
@@ -453,7 +480,7 @@ export function calculateKeyframeSpeedSamples(
   frames: Keyframe<number>[] | undefined,
   duration: number,
   fallback: number,
-  sampleCount = 32
+  sampleCount = 32,
 ): KeyframeSpeedSample[] {
   const normalizedDuration = Math.max(0.001, Number.isFinite(duration) ? duration : 0.001);
   const count = Math.max(2, Math.floor(sampleCount));
@@ -468,7 +495,7 @@ export function calculateKeyframeSpeedSamples(
     const right = interpolateKeyframes(normalizedFrames, rightTime, fallback);
     return {
       time,
-      value: round((right - left) / divisor)
+      value: round((right - left) / divisor),
     };
   });
 }
@@ -479,7 +506,9 @@ export function applyBatchKeyframeEasing(frames: Keyframe<number>[], easing: Key
 }
 
 export function distributeKeyframeTimes(frames: Keyframe<number>[], start?: number, end?: number): Keyframe<number>[] {
-  const sorted = frames.map((frame) => cloneKeyframe(frame)).sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+  const sorted = frames
+    .map((frame) => cloneKeyframe(frame))
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
   if (sorted.length <= 2) {
     return sorted;
   }
@@ -488,15 +517,15 @@ export function distributeKeyframeTimes(frames: Keyframe<number>[], start?: numb
   const step = (last - first) / (sorted.length - 1);
   return sorted.map((frame, index) => ({
     ...frame,
-    time: round(first + step * index)
+    time: round(first + step * index),
   }));
 }
 
 export function alignKeyframeValues(frames: Keyframe<number>[], value = frames[0]?.value ?? 0): Keyframe<number>[] {
-  const normalizedValue = Number.isFinite(value) ? value : frames[0]?.value ?? 0;
+  const normalizedValue = Number.isFinite(value) ? value : (frames[0]?.value ?? 0);
   return frames.map((frame) => ({
     ...cloneKeyframe(frame),
-    value: round(normalizedValue)
+    value: round(normalizedValue),
   }));
 }
 
@@ -539,11 +568,11 @@ function interpolateBezierSegmentProgress(left: Keyframe<number>, right: Keyfram
   const p0 = { x: 0, y: 0 };
   const p1 = {
     x: Math.min(1, Math.max(0, outHandle.dx / span)),
-    y: outHandle.dy / yScale
+    y: outHandle.dy / yScale,
   };
   const p2 = {
     x: Math.min(1, Math.max(0, 1 + inHandle.dx / span)),
-    y: 1 + inHandle.dy / yScale
+    y: 1 + inHandle.dy / yScale,
   };
   const p3 = { x: 1, y: 1 };
   const target = Math.min(1, Math.max(0, progress));
@@ -571,7 +600,7 @@ function mirrorHandle(handle: KeyframeHandle, targetSpan?: number, sourceSpan?: 
   const scale = targetSpan && sourceSpan ? targetSpan / Math.max(0.001, sourceSpan) : 1;
   return {
     dx: round(-handle.dx * scale),
-    dy: round(-handle.dy)
+    dy: round(-handle.dy),
   };
 }
 
@@ -580,7 +609,7 @@ function clampHandleForDirection(handle: KeyframeHandle, direction: 'in' | 'out'
   const dx = direction === 'in' ? -Math.min(maxDx, Math.abs(handle.dx)) : Math.min(maxDx, Math.abs(handle.dx));
   return {
     dx: round(dx),
-    dy: round(handle.dy)
+    dy: round(handle.dy),
   };
 }
 
@@ -589,7 +618,7 @@ function handleToPoint(frame: Keyframe<number>, handle: KeyframeHandle): Keyfram
     dx: handle.dx,
     dy: handle.dy,
     time: round(frame.time + handle.dx),
-    value: round(frame.value + handle.dy)
+    value: round(frame.value + handle.dy),
   };
 }
 
@@ -602,7 +631,10 @@ class NumericExpressionParser {
   private readonly tokens: NumericToken[];
   private index = 0;
 
-  constructor(expression: string, private readonly context: KeyframeExpressionContext) {
+  constructor(
+    expression: string,
+    private readonly context: KeyframeExpressionContext,
+  ) {
     this.tokens = tokenizeNumericExpression(expression, context);
   }
 
@@ -731,28 +763,35 @@ export function createKenBurnsKeyframes(duration: number, startScale = 1, endSca
   return {
     scaleX: [
       { id: createId('keyframe'), time: 0, value: startScale, easing: 'ease-in-out' },
-      { id: createId('keyframe'), time: end, value: endScale, easing: 'ease-in-out' }
+      { id: createId('keyframe'), time: end, value: endScale, easing: 'ease-in-out' },
     ],
     scaleY: [
       { id: createId('keyframe'), time: 0, value: startScale, easing: 'ease-in-out' },
-      { id: createId('keyframe'), time: end, value: endScale, easing: 'ease-in-out' }
+      { id: createId('keyframe'), time: end, value: endScale, easing: 'ease-in-out' },
     ],
     x: [
       { id: createId('keyframe'), time: 0, value: 0, easing: 'ease-in-out' },
-      { id: createId('keyframe'), time: end, value: 0, easing: 'ease-in-out' }
+      { id: createId('keyframe'), time: end, value: 0, easing: 'ease-in-out' },
     ],
     y: [
       { id: createId('keyframe'), time: 0, value: 0, easing: 'ease-in-out' },
-      { id: createId('keyframe'), time: end, value: 0, easing: 'ease-in-out' }
-    ]
+      { id: createId('keyframe'), time: end, value: 0, easing: 'ease-in-out' },
+    ],
   };
 }
 
-export function setKenBurnsEndScaleKeyframes(keyframes: ClipKeyframes | undefined, duration: number, scale: number): ClipKeyframes {
+export function setKenBurnsEndScaleKeyframes(
+  keyframes: ClipKeyframes | undefined,
+  duration: number,
+  scale: number,
+): ClipKeyframes {
   const normalizedDuration = round(Math.max(0, duration));
   const fallback = createKenBurnsKeyframes(normalizedDuration, 1, scale);
   const next = cloneClipKeyframes(keyframes) ?? fallback;
-  const clampedScale = Math.min(KEYFRAME_PROPERTY_LIMITS.scaleX.max, Math.max(KEYFRAME_PROPERTY_LIMITS.scaleX.min, scale));
+  const clampedScale = Math.min(
+    KEYFRAME_PROPERTY_LIMITS.scaleX.max,
+    Math.max(KEYFRAME_PROPERTY_LIMITS.scaleX.min, scale),
+  );
   next.scaleX = setLastScaleFrame(next.scaleX ?? fallback.scaleX ?? [], normalizedDuration, clampedScale, 'scaleX');
   next.scaleY = setLastScaleFrame(next.scaleY ?? fallback.scaleY ?? [], normalizedDuration, clampedScale, 'scaleY');
   return normalizeClipKeyframes(next, normalizedDuration) ?? {};
@@ -762,7 +801,7 @@ function setLastScaleFrame(
   frames: NonNullable<ClipKeyframes['scaleX']>,
   duration: number,
   scale: number,
-  property: Extract<KeyframeProperty, 'scaleX' | 'scaleY'>
+  property: Extract<KeyframeProperty, 'scaleX' | 'scaleY'>,
 ): NonNullable<ClipKeyframes['scaleX']> {
   if (frames.length === 0) {
     return createKenBurnsKeyframes(duration, 1, scale)[property] ?? [];
@@ -785,7 +824,7 @@ export type PasteMode = 'relative' | 'absolute';
 export function normalizeCrossPropertyValue(
   value: number,
   sourceProperty: KeyframeProperty,
-  targetProperty: KeyframeProperty
+  targetProperty: KeyframeProperty,
 ): number {
   if (sourceProperty === targetProperty) {
     return value;
@@ -808,7 +847,7 @@ export function normalizePastedKeyframes(
   targetClipStart: number,
   targetClipDuration: number,
   mode: PasteMode,
-  targetProperty?: KeyframeProperty
+  targetProperty?: KeyframeProperty,
 ): Array<{ property: KeyframeProperty; keyframes: Keyframe<number>[] }> {
   const result: Array<{ property: KeyframeProperty; keyframes: Keyframe<number>[] }> = [];
   for (const group of groups) {
@@ -838,7 +877,7 @@ export function normalizePastedKeyframes(
         easing: normalizeEasing(kf.easing),
         ...(kf.inHandle ? { inHandle: { ...kf.inHandle } } : {}),
         ...(kf.outHandle ? { outHandle: { ...kf.outHandle } } : {}),
-        ...(kf.handleMode ? { handleMode: kf.handleMode } : {})
+        ...(kf.handleMode ? { handleMode: kf.handleMode } : {}),
       });
     }
     mapped.sort((a, b) => a.time - b.time);

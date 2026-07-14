@@ -8,7 +8,7 @@ import {
   type TimelineSearchEffectFilter,
   type TimelineSearchKeyframeFilter,
   type TimelineSearchMediaFilter,
-  type TimelineSearchResult
+  type TimelineSearchResult,
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { useEditorStore } from '../store/editorStore';
@@ -32,7 +32,7 @@ export function TimelineSearchPanel({ project, onClose }: TimelineSearchPanelPro
   const [activeIndex, setActiveIndex] = useState(0);
   const response = useMemo(
     () => searchTimeline(project, { query, useRegex, mediaFilter, effectFilter, keyframeFilter }),
-    [effectFilter, keyframeFilter, mediaFilter, project, query, useRegex]
+    [effectFilter, keyframeFilter, mediaFilter, project, query, useRegex],
   );
   const results = response.results;
   const mediaById = useMemo(() => new Map(project.media.map((asset) => [asset.id, asset])), [project.media]);
@@ -80,7 +80,10 @@ export function TimelineSearchPanel({ project, onClose }: TimelineSearchPanelPro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/55 px-4 pt-20" data-testid="timeline-search-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center bg-slate-950/55 px-4 pt-20"
+      data-testid="timeline-search-panel"
+    >
       <section className="w-full max-w-3xl overflow-hidden rounded-lg border border-line bg-white shadow-2xl">
         <header className="flex items-center gap-3 border-b border-line px-4 py-3">
           <Search size={18} className="shrink-0 text-slate-500" />
@@ -157,8 +160,19 @@ export function TimelineSearchPanel({ project, onClose }: TimelineSearchPanelPro
           </label>
         </div>
         <div className="max-h-[52vh] overflow-y-auto" data-testid="timeline-search-results">
-          {response.error ? <div className="px-4 py-8 text-center text-sm font-medium text-rose-600" data-testid="timeline-search-error">{t.invalidRegex}</div> : null}
-          {!response.error && results.length === 0 ? <div className="px-4 py-8 text-center text-sm text-slate-500" data-testid="timeline-search-empty">{t.empty}</div> : null}
+          {response.error ? (
+            <div
+              className="px-4 py-8 text-center text-sm font-medium text-rose-600"
+              data-testid="timeline-search-error"
+            >
+              {t.invalidRegex}
+            </div>
+          ) : null}
+          {!response.error && results.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-slate-500" data-testid="timeline-search-empty">
+              {t.empty}
+            </div>
+          ) : null}
           {!response.error
             ? results.map((result, index) => {
                 const media = result.mediaId ? mediaById.get(result.mediaId) : undefined;
@@ -172,17 +186,30 @@ export function TimelineSearchPanel({ project, onClose }: TimelineSearchPanelPro
                     onClick={() => jumpToResult(result, index)}
                   >
                     <span className="flex h-9 w-[52px] items-center justify-center overflow-hidden rounded border border-line bg-slate-100 text-xs font-semibold text-slate-500">
-                      {media?.thumbnail ? <img className="h-full w-full object-cover" src={media.thumbnail} alt="" loading="lazy" /> : result.kind === 'marker' ? t.markerThumb : t.clipThumb}
+                      {media?.thumbnail ? (
+                        <img className="h-full w-full object-cover" src={media.thumbnail} alt="" loading="lazy" />
+                      ) : result.kind === 'marker' ? (
+                        t.markerThumb
+                      ) : (
+                        t.clipThumb
+                      )}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-ink">{result.label}</span>
                       <span className="mt-0.5 block truncate text-xs text-slate-500">
-                        {result.mediaName ?? result.trackName} · {result.matchReasons.map(formatTimelineSearchReason).join(', ')}
+                        {result.mediaName ?? result.trackName} ·{' '}
+                        {result.matchReasons.map(formatTimelineSearchReason).join(', ')}
                       </span>
                     </span>
                     <span className="text-right text-xs text-slate-500">
                       <span className="block truncate">{result.trackName}</span>
-                      <span className="tabular-nums">{secondsToTimecode(result.start, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf')}</span>
+                      <span className="tabular-nums">
+                        {secondsToTimecode(
+                          result.start,
+                          project.settings.fps || 30,
+                          project.settings.timecodeFormat ?? 'ndf',
+                        )}
+                      </span>
                     </span>
                   </button>
                 );

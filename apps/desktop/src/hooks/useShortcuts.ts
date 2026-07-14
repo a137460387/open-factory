@@ -53,15 +53,18 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
         return;
       }
 
-      const action = resolveTimelineShortcutAction({
-        key: event.key,
-        code: event.code,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-        isTyping
-      }, bindings);
+      const action = resolveTimelineShortcutAction(
+        {
+          key: event.key,
+          code: event.code,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          altKey: event.altKey,
+          shiftKey: event.shiftKey,
+          isTyping,
+        },
+        bindings,
+      );
       if (!action) {
         return;
       }
@@ -170,5 +173,8 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
 
 function isTimelineShortcutScopeActive(target: HTMLElement | null): boolean {
   const active = document.activeElement as HTMLElement | null;
-  return Boolean(active?.closest('[data-timeline-shortcuts-root="true"]') || target?.closest('[data-timeline-shortcuts-root="true"]'));
+  return Boolean(
+    active?.closest('[data-timeline-shortcuts-root="true"]') ||
+    target?.closest('[data-timeline-shortcuts-root="true"]'),
+  );
 }

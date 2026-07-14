@@ -1,4 +1,4 @@
-import { logError } from "../lib/error-handlers";
+import { logError } from '../lib/error-handlers';
 import {
   appendPublishLogsToReleaseRecord,
   buildProjectReleaseRecord,
@@ -10,7 +10,7 @@ import {
   type ExportPipelineNode,
   type ExportPublishNodeLog,
   type ExportPublishOutputInfo,
-  type Project
+  type Project,
 } from '@open-factory/editor-core';
 import { postWebhookJson, readSmtpPassword, sendSmtpEmail } from '../lib/tauri-bridge';
 import { saveProjectReleaseRecord } from '../release/projectReleases';
@@ -36,7 +36,10 @@ interface PublishPipelineMessages {
   failed: string;
 }
 
-export async function runPublishPipelineNode(node: ExportPipelineNode, context: PublishPipelineNodeContext): Promise<ExportPublishNodeLog> {
+export async function runPublishPipelineNode(
+  node: ExportPipelineNode,
+  context: PublishPipelineNodeContext,
+): Promise<ExportPublishNodeLog> {
   const startedAt = new Date().toISOString();
   if (node.publishWindow && !isWithinPublishWindow(new Date(startedAt), node.publishWindow)) {
     return buildPublishNodeLog({
@@ -45,7 +48,7 @@ export async function runPublishPipelineNode(node: ExportPipelineNode, context: 
       status: 'skipped',
       startedAt,
       finishedAt: new Date().toISOString(),
-      message: context.messages.outsideWindow
+      message: context.messages.outsideWindow,
     });
   }
 
@@ -70,7 +73,7 @@ export async function runPublishPipelineNode(node: ExportPipelineNode, context: 
       status: 'skipped',
       startedAt,
       finishedAt: new Date().toISOString(),
-      message: context.messages.platformRequiresUploader(node.platform ?? 'youtube')
+      message: context.messages.platformRequiresUploader(node.platform ?? 'youtube'),
     });
   } catch (error) {
     return buildPublishNodeLog({
@@ -79,25 +82,35 @@ export async function runPublishPipelineNode(node: ExportPipelineNode, context: 
       status: 'failed',
       startedAt,
       finishedAt: new Date().toISOString(),
-      message: error instanceof Error ? error.message : context.messages.failed
+      message: error instanceof Error ? error.message : context.messages.failed,
     });
   }
 }
 
-async function sendEmailNode(node: ExportPipelineNode, info: ExportPublishOutputInfo, messages: PublishPipelineMessages): Promise<void> {
+async function sendEmailNode(
+  node: ExportPipelineNode,
+  info: ExportPublishOutputInfo,
+  messages: PublishPipelineMessages,
+): Promise<void> {
   if (!node.smtp) {
     throw new Error(messages.smtpMissing);
   }
-  const password = node.smtp.passwordKey ? await readSmtpPassword(node.smtp.passwordKey).catch(logError("publish-pipeline-runner")) : undefined;
+  const password = node.smtp.passwordKey
+    ? await readSmtpPassword(node.smtp.passwordKey).catch(logError('publish-pipeline-runner'))
+    : undefined;
   await sendSmtpEmail({
     ...node.smtp,
     password,
     subject: node.smtp.subject || `${info.project} export complete`,
-    html: buildSmtpExportEmailHtml(info)
+    html: buildSmtpExportEmailHtml(info),
   });
 }
 
-async function sendWebhookNode(node: ExportPipelineNode, info: ExportPublishOutputInfo, messages: PublishPipelineMessages): Promise<void> {
+async function sendWebhookNode(
+  node: ExportPipelineNode,
+  info: ExportPublishOutputInfo,
+  messages: PublishPipelineMessages,
+): Promise<void> {
   if (!node.webhook) {
     throw new Error(messages.webhookMissing);
   }
@@ -105,7 +118,7 @@ async function sendWebhookNode(node: ExportPipelineNode, info: ExportPublishOutp
     url: node.webhook.url,
     headers: node.webhook.headers,
     timeoutMs: Math.min(5000, node.webhook.timeoutMs ?? 5000),
-    body: buildWebhookExportCompleteBody(info)
+    body: buildWebhookExportCompleteBody(info),
   });
   if (result.status < 200 || result.status >= 300) {
     throw new Error(messages.webhookStatus(result.status));
@@ -119,7 +132,7 @@ async function writeReleaseRecord(context: PublishPipelineNodeContext, logs: Exp
     version: context.project.releaseVersion,
     checklist,
     exportPath: context.outputPath,
-    snapshotPath: context.outputPath
+    snapshotPath: context.outputPath,
   });
   await saveProjectReleaseRecord(appendPublishLogsToReleaseRecord(record, logs));
 }
@@ -130,7 +143,7 @@ function buildOutputInfo(context: PublishPipelineNodeContext, exportedAt: string
     duration: context.duration,
     size: context.outputSize,
     project: context.project.name,
-    exportedAt
+    exportedAt,
   };
 }
 
@@ -141,12 +154,17 @@ function successLog(node: ExportPipelineNode, startedAt: string, message: string
     status: 'success',
     startedAt,
     finishedAt: new Date().toISOString(),
-    message
+    message,
   });
 }
 
 function publishNodeType(node: ExportPipelineNode): ExportPublishNodeLog['nodeType'] {
-  if (node.type === 'email-notification' || node.type === 'webhook-callback' || node.type === 'write-release-record' || node.type === 'publish-platform') {
+  if (
+    node.type === 'email-notification' ||
+    node.type === 'webhook-callback' ||
+    node.type === 'write-release-record' ||
+    node.type === 'publish-platform'
+  ) {
     return node.type;
   }
   return 'publish-platform';

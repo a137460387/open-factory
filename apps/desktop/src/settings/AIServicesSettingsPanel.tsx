@@ -5,7 +5,15 @@ import { useAISettingsStore, type AIServiceType } from '../store/aiSettingsStore
 import type { AIProvider } from '@open-factory/editor-core';
 import { AIUsageStatsPanel } from '../components/AIUsageStats/AIUsageStatsPanel';
 
-const SERVICE_TYPES: AIServiceType[] = ['subtitle-polish', 'chapter-title', 'vision-analysis', 'voiceover', 'color-grading-suggestion', 'rough-cut', 'export-suggestion'];
+const SERVICE_TYPES: AIServiceType[] = [
+  'subtitle-polish',
+  'chapter-title',
+  'vision-analysis',
+  'voiceover',
+  'color-grading-suggestion',
+  'rough-cut',
+  'export-suggestion',
+];
 
 export function AIServicesSettingsPanel() {
   const t = zhCN.settings.aiServices;
@@ -44,7 +52,7 @@ export function AIServicesSettingsPanel() {
       baseUrl: customEndpoint.trim(),
       defaultModel: customModel.trim() || 'gpt-4o',
       enabled: true,
-      isBuiltIn: false
+      isBuiltIn: false,
     };
     store.addCustomProvider(provider);
     setCustomName('');
@@ -65,15 +73,17 @@ export function AIServicesSettingsPanel() {
         <p className="text-xs text-slate-500">{t.description}</p>
       </div>
 
-      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-        {t.privacyNote}
-      </div>
+      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.privacyNote}</div>
 
       <div className="space-y-1" data-testid="ai-provider-list">
         {store.providers.map((provider) => {
           const isExpanded = expandedId === provider.id;
           return (
-            <div key={provider.id} className="rounded-md border border-line bg-white" data-testid={`ai-provider-${provider.id}`}>
+            <div
+              key={provider.id}
+              className="rounded-md border border-line bg-white"
+              data-testid={`ai-provider-${provider.id}`}
+            >
               <div className="flex items-center gap-2 px-3 py-2">
                 <button
                   className="flex items-center gap-1 text-left text-xs font-medium text-ink hover:text-blue-600"
@@ -84,7 +94,9 @@ export function AIServicesSettingsPanel() {
                   {provider.name}
                 </button>
                 {provider.id === 'ollama' && store.ollamaReachable ? (
-                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">{t.ollamaReachable}</span>
+                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                    {t.ollamaReachable}
+                  </span>
                 ) : null}
                 <div className="ml-auto flex items-center gap-2">
                   <label className="relative inline-flex cursor-pointer items-center">
@@ -111,7 +123,10 @@ export function AIServicesSettingsPanel() {
                 </div>
               </div>
               {isExpanded ? (
-                <div className="border-t border-line px-3 py-2 space-y-2" data-testid={`ai-provider-detail-${provider.id}`}>
+                <div
+                  className="border-t border-line px-3 py-2 space-y-2"
+                  data-testid={`ai-provider-detail-${provider.id}`}
+                >
                   <label className="block text-xs font-medium text-slate-600">
                     {t.endpoint}
                     <input
@@ -143,7 +158,9 @@ export function AIServicesSettingsPanel() {
                         data-testid={`ai-provider-model-select-${provider.id}`}
                       >
                         {store.ollamaModels.map((model) => (
-                          <option key={model} value={model}>{model}</option>
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
                         ))}
                       </select>
                     ) : (
@@ -230,9 +247,13 @@ export function AIServicesSettingsPanel() {
               onChange={(e) => store.setServiceMapping(service, e.target.value)}
               data-testid={`ai-service-mapping-${service}`}
             >
-              {store.providers.filter((p) => p.enabled).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {store.providers
+                .filter((p) => p.enabled)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
           </div>
         ))}

@@ -19,9 +19,17 @@ import {
   type TrackCompressor,
   type TrackEQ,
   type TrackEQBand,
-  type TrackPatch
+  type TrackPatch,
 } from '@open-factory/editor-core';
-import { ArrowLeftRight, AudioLines, ChevronDown, ChevronRight, CircleDot, SlidersHorizontal, Volume2 } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  AudioLines,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
+  SlidersHorizontal,
+  Volume2,
+} from 'lucide-react';
 import { formatTrackType, t, zhCN } from '../../i18n/strings';
 import { analyzeWaveform, saveFileDialog, writeFile } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
@@ -33,7 +41,7 @@ import {
   type ChannelAnalysisFrame,
   type ChannelAnalysisSnapshot,
   type FrequencyPeak,
-  type PhasePoint
+  type PhasePoint,
 } from '../../media/channelAnalysis';
 
 const DUCKING_POINTS_PER_SECOND = 8;
@@ -72,7 +80,10 @@ export function AudioMixer() {
   const masterLevel = useAudioMeterStore((state) => state.masterLevel);
   const trackFrequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands);
   const trackAnalysisFrames = useAudioMeterStore((state) => state.trackAnalysisFrames);
-  const tracks = useMemo(() => project.timeline.tracks.filter((track) => track.type === 'audio' || track.type === 'video'), [project.timeline.tracks]);
+  const tracks = useMemo(
+    () => project.timeline.tracks.filter((track) => track.type === 'audio' || track.type === 'video'),
+    [project.timeline.tracks],
+  );
   const mediaById = useMemo(() => new Map(project.media.map((asset) => [asset.id, asset])), [project.media]);
   const selectedTrackId = useMemo(() => {
     const selected = new Set(selectedClipIds);
@@ -94,7 +105,9 @@ export function AudioMixer() {
 
   useEffect(() => {
     const fallbackTrackId = selectedTrackId ?? tracks[0]?.id ?? '';
-    setAnalysisTrackId((current) => selectedTrackId ?? (tracks.some((track) => track.id === current) ? current : fallbackTrackId));
+    setAnalysisTrackId(
+      (current) => selectedTrackId ?? (tracks.some((track) => track.id === current) ? current : fallbackTrackId),
+    );
   }, [selectedTrackId, tracks]);
 
   function updateTrack(trackId: string, patch: TrackPatch): void {
@@ -125,7 +138,7 @@ export function AudioMixer() {
       const regions = detectDuckingRegions(samples, duckingSettings.thresholdDb, {
         sampleDuration: 1 / DUCKING_POINTS_PER_SECOND,
         minRegionDuration: 0.05,
-        mergeGap: 0.15
+        mergeGap: 0.15,
       });
       if (regions.length === 0) {
         setDuckingError(t('mixer.duckingNoRegions'));
@@ -135,9 +148,13 @@ export function AudioMixer() {
         targetRatio: duckingSettings.targetRatio,
         attack: duckingSettings.attack,
         release: duckingSettings.release,
-        idPrefix: 'duck'
+        idPrefix: 'duck',
       });
-      const updates: BatchUpdateKeyframeItem[] = plans.map((plan) => ({ clipId: plan.clipId, property: 'volume', keyframes: plan.keyframes }));
+      const updates: BatchUpdateKeyframeItem[] = plans.map((plan) => ({
+        clipId: plan.clipId,
+        property: 'volume',
+        keyframes: plan.keyframes,
+      }));
       const keyframeCount = updates.reduce((total, update) => total + update.keyframes.length, 0);
       if (keyframeCount === 0) {
         setDuckingError(t('mixer.duckingNoKeyframes'));
@@ -145,7 +162,11 @@ export function AudioMixer() {
       }
       setDuckingPreview({ regions, updates, keyframeCount });
     } catch (error) {
-      setDuckingError(error instanceof Error ? `${t('mixer.duckingAnalysisFailed')} ${error.message}` : t('mixer.duckingAnalysisFailed'));
+      setDuckingError(
+        error instanceof Error
+          ? `${t('mixer.duckingAnalysisFailed')} ${error.message}`
+          : t('mixer.duckingAnalysisFailed'),
+      );
     } finally {
       setDuckingAnalyzing(false);
     }
@@ -155,7 +176,9 @@ export function AudioMixer() {
     if (!duckingPreview) {
       return;
     }
-    commandManager.execute(new BatchUpdateKeyframeCommand(timelineAccessor, duckingPreview.updates, t('mixer.duckingCommand')));
+    commandManager.execute(
+      new BatchUpdateKeyframeCommand(timelineAccessor, duckingPreview.updates, t('mixer.duckingCommand')),
+    );
     setDuckingOpen(false);
     setDuckingPreview(undefined);
     setDuckingError(undefined);
@@ -163,7 +186,8 @@ export function AudioMixer() {
 
   const activeAnalysisTrack = tracks.find((track) => track.id === analysisTrackId) ?? tracks[0];
   const activeAnalysisFrame = activeAnalysisTrack
-    ? trackAnalysisFrames[activeAnalysisTrack.id] ?? buildFallbackChannelAnalysisFrame(activeAnalysisTrack.id, trackFrequencyBands[activeAnalysisTrack.id])
+    ? (trackAnalysisFrames[activeAnalysisTrack.id] ??
+      buildFallbackChannelAnalysisFrame(activeAnalysisTrack.id, trackFrequencyBands[activeAnalysisTrack.id]))
     : undefined;
 
   return (
@@ -177,7 +201,11 @@ export function AudioMixer() {
           <MixerTabButton active={tab === 'mix'} testId="audio-mixer-tab-mix" onClick={() => setTab('mix')}>
             {zhCN.mixer.mixTab}
           </MixerTabButton>
-          <MixerTabButton active={tab === 'channel-analysis'} testId="audio-mixer-tab-channel-analysis" onClick={() => setTab('channel-analysis')}>
+          <MixerTabButton
+            active={tab === 'channel-analysis'}
+            testId="audio-mixer-tab-channel-analysis"
+            onClick={() => setTab('channel-analysis')}
+          >
             {zhCN.mixer.channelAnalysisTab}
           </MixerTabButton>
         </div>
@@ -246,7 +274,17 @@ export function AudioMixer() {
   );
 }
 
-function MixerTabButton({ active, testId, children, onClick }: { active: boolean; testId: string; children: string; onClick(): void }) {
+function MixerTabButton({
+  active,
+  testId,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  testId: string;
+  children: string;
+  onClick(): void;
+}) {
   return (
     <button
       className={`h-6 rounded px-2 text-xs font-semibold ${active ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -263,14 +301,17 @@ function ChannelAnalysisPanel({
   tracks,
   selectedTrackId,
   frame,
-  onTrackChange
+  onTrackChange,
 }: {
   tracks: Track[];
   selectedTrackId: string;
   frame?: ChannelAnalysisFrame;
   onTrackChange(trackId: string): void;
 }) {
-  const currentSnapshot = useMemo(() => (selectedTrackId && frame ? buildChannelAnalysisSnapshot(selectedTrackId, frame) : undefined), [frame, selectedTrackId]);
+  const currentSnapshot = useMemo(
+    () => (selectedTrackId && frame ? buildChannelAnalysisSnapshot(selectedTrackId, frame) : undefined),
+    [frame, selectedTrackId],
+  );
   const snapshotRef = useRef<ChannelAnalysisSnapshot | undefined>(currentSnapshot);
   const [recording, setRecording] = useState(false);
   const [history, setHistory] = useState<ChannelAnalysisSnapshot[]>([]);
@@ -302,7 +343,10 @@ function ChannelAnalysisPanel({
     return () => window.clearInterval(interval);
   }, [recording]);
 
-  const displayedSnapshot = history.length > 0 && !recording ? history[Math.min(playbackIndex, history.length - 1)] ?? currentSnapshot : currentSnapshot;
+  const displayedSnapshot =
+    history.length > 0 && !recording
+      ? (history[Math.min(playbackIndex, history.length - 1)] ?? currentSnapshot)
+      : currentSnapshot;
   const peaks = displayedSnapshot?.peaks ?? [];
 
   async function exportJson(): Promise<void> {
@@ -312,7 +356,9 @@ function ChannelAnalysisPanel({
       return;
     }
     setExportError(undefined);
-    const outputPath = await saveFileDialog('channel-analysis.json', [{ name: zhCN.fileDialogs.json, extensions: ['json'] }]);
+    const outputPath = await saveFileDialog('channel-analysis.json', [
+      { name: zhCN.fileDialogs.json, extensions: ['json'] },
+    ]);
     if (!outputPath) {
       return;
     }
@@ -353,10 +399,17 @@ function ChannelAnalysisPanel({
         >
           {zhCN.mixer.channelAnalysisExport}
         </button>
-        <div className="rounded border border-line bg-panel px-2 py-1 text-xs font-semibold text-slate-700" data-testid="audio-channel-analysis-correlation">
+        <div
+          className="rounded border border-line bg-panel px-2 py-1 text-xs font-semibold text-slate-700"
+          data-testid="audio-channel-analysis-correlation"
+        >
           {zhCN.mixer.channelAnalysisCorrelation}: {formatCorrelation(displayedSnapshot?.correlation)}
         </div>
-        {exportError ? <div className="text-xs font-semibold text-red-700" data-testid="audio-channel-analysis-error">{exportError}</div> : null}
+        {exportError ? (
+          <div className="text-xs font-semibold text-red-700" data-testid="audio-channel-analysis-error">
+            {exportError}
+          </div>
+        ) : null}
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.4fr)_minmax(260px,0.8fr)] gap-3">
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_84px] gap-2">
@@ -380,11 +433,20 @@ function ChannelAnalysisPanel({
         </div>
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-2">
           <PhaseScope points={displayedSnapshot?.phase ?? []} />
-          <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-700" data-testid="audio-channel-analysis-peaks">
+          <div
+            className="rounded-md border border-line bg-panel p-2 text-xs text-slate-700"
+            data-testid="audio-channel-analysis-peaks"
+          >
             <div className="mb-1 font-semibold">{zhCN.mixer.channelAnalysisPeaks}</div>
             {peaks.map((peak) => (
-              <div key={`${peak.rank}-${peak.hz}`} className="flex items-center justify-between gap-2" data-testid={`audio-channel-analysis-peak-${peak.rank - 1}`}>
-                <span>{peak.rank}. {formatHz(peak.hz)}</span>
+              <div
+                key={`${peak.rank}-${peak.hz}`}
+                className="flex items-center justify-between gap-2"
+                data-testid={`audio-channel-analysis-peak-${peak.rank - 1}`}
+              >
+                <span>
+                  {peak.rank}. {formatHz(peak.hz)}
+                </span>
                 <span className="tabular-nums">{Math.round(peak.magnitude * 100)}%</span>
               </div>
             ))}
@@ -398,7 +460,12 @@ function ChannelAnalysisPanel({
 function FrequencyResponseChart({ snapshot }: { snapshot?: ChannelAnalysisSnapshot }) {
   const points = buildFrequencyPolyline(snapshot);
   return (
-    <svg className="min-h-0 h-full w-full rounded-md border border-line bg-slate-950" viewBox="0 0 640 260" role="img" data-testid="audio-channel-analysis-curve">
+    <svg
+      className="min-h-0 h-full w-full rounded-md border border-line bg-slate-950"
+      viewBox="0 0 640 260"
+      role="img"
+      data-testid="audio-channel-analysis-curve"
+    >
       {[0, 1, 2, 3].map((line) => (
         <line key={line} x1="32" y1={24 + line * 54} x2="616" y2={24 + line * 54} stroke="#1e293b" strokeWidth="1" />
       ))}
@@ -423,12 +490,24 @@ function FrequencyResponseChart({ snapshot }: { snapshot?: ChannelAnalysisSnapsh
 
 function PhaseScope({ points }: { points: PhasePoint[] }) {
   return (
-    <svg className="min-h-0 h-full w-full rounded-md border border-line bg-slate-950" viewBox="0 0 260 260" role="img" data-testid="audio-channel-analysis-phase">
+    <svg
+      className="min-h-0 h-full w-full rounded-md border border-line bg-slate-950"
+      viewBox="0 0 260 260"
+      role="img"
+      data-testid="audio-channel-analysis-phase"
+    >
       <line x1="130" y1="20" x2="130" y2="240" stroke="#1e293b" />
       <line x1="20" y1="130" x2="240" y2="130" stroke="#1e293b" />
       <circle cx="130" cy="130" r="92" fill="none" stroke="#1e293b" />
       {points.slice(0, 96).map((point, index) => (
-        <circle key={`${index}-${point.left}-${point.right}`} cx={130 + point.left * 100} cy={130 - point.right * 100} r="2" fill="#34d399" opacity="0.75" />
+        <circle
+          key={`${index}-${point.left}-${point.right}`}
+          cx={130 + point.left * 100}
+          cy={130 - point.right * 100}
+          r="2"
+          fill="#34d399"
+          opacity="0.75"
+        />
       ))}
       <text x="16" y="20" fill="#e2e8f0" fontSize="12" fontWeight="600">
         {zhCN.mixer.channelAnalysisPhase}
@@ -481,7 +560,7 @@ function buildFallbackChannelAnalysisFrame(trackId: string, bands: number[] = []
     frequencyData,
     leftTimeDomain,
     rightTimeDomain,
-    recordedAtMs: performance.now()
+    recordedAtMs: performance.now(),
   };
 }
 
@@ -510,7 +589,7 @@ function DuckingPanel({
   onChange,
   onAnalyze,
   onApply,
-  onCancel
+  onCancel,
 }: {
   tracks: Track[];
   settings: DuckingSettings;
@@ -555,7 +634,16 @@ function DuckingPanel({
             ))}
           </select>
         </label>
-        <DuckingNumberField label={t('mixer.threshold')} value={settings.thresholdDb} min={-60} max={0} step={1} unit="dB" testId="audio-ducking-threshold" onChange={(thresholdDb) => onChange({ thresholdDb })} />
+        <DuckingNumberField
+          label={t('mixer.threshold')}
+          value={settings.thresholdDb}
+          min={-60}
+          max={0}
+          step={1}
+          unit="dB"
+          testId="audio-ducking-threshold"
+          onChange={(thresholdDb) => onChange({ thresholdDb })}
+        />
         <DuckingNumberField
           label={t('mixer.duckingTargetRatio')}
           value={Math.round(settings.targetRatio * 100)}
@@ -566,8 +654,26 @@ function DuckingPanel({
           testId="audio-ducking-target"
           onChange={(targetPercent) => onChange({ targetRatio: targetPercent / 100 })}
         />
-        <DuckingNumberField label={t('mixer.attack')} value={settings.attack} min={0.1} max={1} step={0.1} unit="s" testId="audio-ducking-attack" onChange={(attack) => onChange({ attack })} />
-        <DuckingNumberField label={t('mixer.release')} value={settings.release} min={0.1} max={3} step={0.1} unit="s" testId="audio-ducking-release" onChange={(release) => onChange({ release })} />
+        <DuckingNumberField
+          label={t('mixer.attack')}
+          value={settings.attack}
+          min={0.1}
+          max={1}
+          step={0.1}
+          unit="s"
+          testId="audio-ducking-attack"
+          onChange={(attack) => onChange({ attack })}
+        />
+        <DuckingNumberField
+          label={t('mixer.release')}
+          value={settings.release}
+          min={0.1}
+          max={3}
+          step={0.1}
+          unit="s"
+          testId="audio-ducking-release"
+          onChange={(release) => onChange({ release })}
+        />
         <div className="flex items-end gap-1">
           <button
             className="h-8 rounded border border-brand bg-brand px-3 font-semibold text-white disabled:cursor-wait disabled:opacity-60"
@@ -578,21 +684,39 @@ function DuckingPanel({
           >
             {analyzing ? t('mixer.duckingAnalyzing') : t('mixer.duckingAnalyze')}
           </button>
-          <button className="h-8 rounded border border-line bg-white px-2 text-slate-600 hover:bg-white" type="button" data-testid="audio-ducking-cancel-button" onClick={onCancel}>
+          <button
+            className="h-8 rounded border border-line bg-white px-2 text-slate-600 hover:bg-white"
+            type="button"
+            data-testid="audio-ducking-cancel-button"
+            onClick={onCancel}
+          >
             {t('common.cancel')}
           </button>
         </div>
       </div>
       {preview ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-800">
-          <span data-testid="audio-ducking-preview-summary">{t<(regions: number, keyframes: number) => string>('mixer.duckingPreviewSummary')(preview.regions.length, preview.keyframeCount)}</span>
-          <button className="h-7 rounded bg-emerald-700 px-2 font-semibold text-white" type="button" data-testid="audio-ducking-apply-button" onClick={onApply}>
+          <span data-testid="audio-ducking-preview-summary">
+            {t<(regions: number, keyframes: number) => string>('mixer.duckingPreviewSummary')(
+              preview.regions.length,
+              preview.keyframeCount,
+            )}
+          </span>
+          <button
+            className="h-7 rounded bg-emerald-700 px-2 font-semibold text-white"
+            type="button"
+            data-testid="audio-ducking-apply-button"
+            onClick={onApply}
+          >
             {t('mixer.duckingApply')}
           </button>
         </div>
       ) : null}
       {error ? (
-        <div className="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700" data-testid="audio-ducking-error">
+        <div
+          className="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700"
+          data-testid="audio-ducking-error"
+        >
           {error}
         </div>
       ) : null}
@@ -608,7 +732,7 @@ function DuckingNumberField({
   step,
   unit,
   testId,
-  onChange
+  onChange,
 }: {
   label: string;
   value: number;
@@ -651,7 +775,7 @@ function makeDefaultDuckingSettings(tracks: Track[]): DuckingSettings {
     thresholdDb: -30,
     targetRatio: 0.35,
     attack: 0.25,
-    release: 0.6
+    release: 0.6,
   };
 }
 
@@ -659,7 +783,9 @@ function normalizeDuckingSettings(settings: DuckingSettings, tracks: Track[]): D
   const fallback = makeDefaultDuckingSettings(tracks);
   const trackIds = new Set(tracks.map((track) => track.id));
   const leadTrackId = trackIds.has(settings.leadTrackId) ? settings.leadTrackId : fallback.leadTrackId;
-  let backgroundTrackId = trackIds.has(settings.backgroundTrackId) ? settings.backgroundTrackId : fallback.backgroundTrackId;
+  let backgroundTrackId = trackIds.has(settings.backgroundTrackId)
+    ? settings.backgroundTrackId
+    : fallback.backgroundTrackId;
   if (leadTrackId && backgroundTrackId === leadTrackId) {
     backgroundTrackId = tracks.find((track) => track.id !== leadTrackId)?.id ?? backgroundTrackId;
   }
@@ -669,13 +795,15 @@ function normalizeDuckingSettings(settings: DuckingSettings, tracks: Track[]): D
     thresholdDb: clampNumber(settings.thresholdDb, -60, 0, fallback.thresholdDb),
     targetRatio: clampNumber(settings.targetRatio, 0, 1, fallback.targetRatio),
     attack: clampNumber(settings.attack, 0.1, 1, fallback.attack),
-    release: clampNumber(settings.release, 0.1, 3, fallback.release)
+    release: clampNumber(settings.release, 0.1, 3, fallback.release),
   };
 }
 
 function summarizeTrackChannelRouting(track: Track, mediaById: Map<string, MediaAsset>): ChannelRoutingSummary {
   const clipsWithMedia = track.clips.filter((clip) => 'mediaId' in clip);
-  const routedModes = clipsWithMedia.map((clip) => normalizeAudioChannelRouting(clip.audioChannelRouting)).filter((mode) => mode !== 'normal');
+  const routedModes = clipsWithMedia
+    .map((clip) => normalizeAudioChannelRouting(clip.audioChannelRouting))
+    .filter((mode) => mode !== 'normal');
   if (routedModes.length > 0) {
     const uniqueModes = Array.from(new Set(routedModes));
     if (uniqueModes.length === 1) {
@@ -683,18 +811,20 @@ function summarizeTrackChannelRouting(track: Track, mediaById: Map<string, Media
       return {
         kind: 'routed',
         title: zhCN.mixer.channelRoutingRouted(zhCN.inspector.audioChannelRoutingOptions[mode], routedModes.length),
-        routedClipCount: routedModes.length
+        routedClipCount: routedModes.length,
       };
     }
     return {
       kind: 'mixed',
       title: zhCN.mixer.channelRoutingMixed(routedModes.length),
-      routedClipCount: routedModes.length
+      routedClipCount: routedModes.length,
     };
   }
   const sourceChannels = clipsWithMedia
     .map((clip) => mediaById.get(clip.mediaId)?.audioChannels)
-    .filter((channels): channels is number => typeof channels === 'number' && Number.isFinite(channels) && channels > 0);
+    .filter(
+      (channels): channels is number => typeof channels === 'number' && Number.isFinite(channels) && channels > 0,
+    );
   if (sourceChannels.some((channels) => channels === 1)) {
     return { kind: 'mono', title: zhCN.mixer.channelRoutingMono, routedClipCount: 0 };
   }
@@ -722,7 +852,7 @@ async function collectTrackLoudnessSamples(project: Project, track: Track): Prom
       samples.push({
         time: clip.start + localTime,
         db: peakToDb(peaks[index]),
-        duration: 1 / DUCKING_POINTS_PER_SECOND
+        duration: 1 / DUCKING_POINTS_PER_SECOND,
       });
     }
   }
@@ -742,7 +872,7 @@ function ChannelStrip({
   channelRoutingSummary,
   expanded,
   onToggle,
-  onUpdate
+  onUpdate,
 }: {
   track: Track;
   level: AudioMeterLevel;
@@ -780,12 +910,28 @@ function ChannelStrip({
       </div>
       <div className="grid min-h-0 grid-cols-[18px_1fr] items-center gap-2">
         <VuMeter level={level} />
-        <VolumeFader value={track.volume ?? 1} testId={`mixer-volume-${track.id}`} onChange={(volume) => onUpdate({ volume })} />
+        <VolumeFader
+          value={track.volume ?? 1}
+          testId={`mixer-volume-${track.id}`}
+          onChange={(volume) => onUpdate({ volume })}
+        />
       </div>
       <PanControl value={track.pan ?? 0} testId={`mixer-pan-${track.id}`} onChange={(pan) => onUpdate({ pan })} />
       <div className="flex items-center justify-center gap-1">
-        <MixerToggle label="M" title={zhCN.mixer.muteTrack} active={Boolean(track.muted)} testId={`mixer-mute-${track.id}`} onClick={() => onUpdate({ muted: !track.muted })} />
-        <MixerToggle label="S" title={zhCN.mixer.soloTrack} active={Boolean(track.solo)} testId={`mixer-solo-${track.id}`} onClick={() => onUpdate({ solo: !track.solo })} />
+        <MixerToggle
+          label="M"
+          title={zhCN.mixer.muteTrack}
+          active={Boolean(track.muted)}
+          testId={`mixer-mute-${track.id}`}
+          onClick={() => onUpdate({ muted: !track.muted })}
+        />
+        <MixerToggle
+          label="S"
+          title={zhCN.mixer.soloTrack}
+          active={Boolean(track.solo)}
+          testId={`mixer-solo-${track.id}`}
+          onClick={() => onUpdate({ solo: !track.solo })}
+        />
       </div>
       {expanded ? <ChannelProcessingPanel track={track} onUpdate={onUpdate} /> : null}
     </div>
@@ -793,7 +939,12 @@ function ChannelStrip({
 }
 
 function ChannelRoutingBadge({ summary, trackId }: { summary: ChannelRoutingSummary; trackId: string }) {
-  const Icon = summary.kind === 'routed' || summary.kind === 'mixed' ? ArrowLeftRight : summary.kind === 'mono' ? CircleDot : AudioLines;
+  const Icon =
+    summary.kind === 'routed' || summary.kind === 'mixed'
+      ? ArrowLeftRight
+      : summary.kind === 'mono'
+        ? CircleDot
+        : AudioLines;
   const active = summary.kind === 'routed' || summary.kind === 'mixed';
   return (
     <div
@@ -818,7 +969,7 @@ function ChannelProcessingPanel({ track, onUpdate }: { track: Track; onUpdate(pa
 
   function updateBand(index: number, patch: Partial<TrackEQBand>): void {
     updateEQ({
-      bands: eq.bands.map((band, bandIndex) => (bandIndex === index ? { ...band, ...patch } : band))
+      bands: eq.bands.map((band, bandIndex) => (bandIndex === index ? { ...band, ...patch } : band)),
     });
   }
 
@@ -843,7 +994,14 @@ function ChannelProcessingPanel({ track, onUpdate }: { track: Track; onUpdate(pa
       <EQGraph eq={eq} trackId={track.id} />
       <div className="mt-2 space-y-1">
         {eq.bands.map((band, index) => (
-          <EQBandControls key={band.id} trackId={track.id} band={band} index={index} disabled={!eq.enabled} onChange={(patch) => updateBand(index, patch)} />
+          <EQBandControls
+            key={band.id}
+            trackId={track.id}
+            band={band}
+            index={index}
+            disabled={!eq.enabled}
+            onChange={(patch) => updateBand(index, patch)}
+          />
         ))}
       </div>
 
@@ -924,7 +1082,7 @@ function EQBandControls({
   band,
   index,
   disabled,
-  onChange
+  onChange,
 }: {
   trackId: string;
   band: TrackEQBand;
@@ -932,7 +1090,10 @@ function EQBandControls({
   disabled: boolean;
   onChange(patch: Partial<TrackEQBand>): void;
 }) {
-  const name = [zhCN.mixer.bandNames.low, zhCN.mixer.bandNames.lowMid, zhCN.mixer.bandNames.highMid, zhCN.mixer.bandNames.high][index] ?? band.id;
+  const name =
+    [zhCN.mixer.bandNames.low, zhCN.mixer.bandNames.lowMid, zhCN.mixer.bandNames.highMid, zhCN.mixer.bandNames.high][
+      index
+    ] ?? band.id;
   return (
     <div className="grid grid-cols-[38px_1fr_64px_50px] items-center gap-2">
       <div className="truncate font-medium" title={name}>
@@ -995,7 +1156,12 @@ function EQGraph({ eq, trackId }: { eq: TrackEQ; trackId: string }) {
   }).join(' ');
 
   return (
-    <svg className="mt-2 h-16 w-full rounded border border-line bg-white" viewBox="0 0 160 64" role="img" data-testid={`mixer-eq-graph-${trackId}`}>
+    <svg
+      className="mt-2 h-16 w-full rounded border border-line bg-white"
+      viewBox="0 0 160 64"
+      role="img"
+      data-testid={`mixer-eq-graph-${trackId}`}
+    >
       <line x1="4" y1="32" x2="156" y2="32" stroke="#cbd5e1" strokeWidth="1" />
       <polyline fill="none" stroke="#2563eb" strokeWidth="2" points={points} />
     </svg>
@@ -1011,7 +1177,7 @@ function MiniSlider({
   unit,
   disabled,
   testId,
-  onChange
+  onChange,
 }: {
   label: string;
   value: number;
@@ -1044,9 +1210,20 @@ function MiniSlider({
   );
 }
 
-function MasterStrip({ level, volume, onVolumeChange }: { level: AudioMeterLevel; volume: number; onVolumeChange(value: number): void }) {
+function MasterStrip({
+  level,
+  volume,
+  onVolumeChange,
+}: {
+  level: AudioMeterLevel;
+  volume: number;
+  onVolumeChange(value: number): void;
+}) {
   return (
-    <div className="grid h-full min-w-[92px] grid-rows-[32px_92px_24px] gap-1 rounded-md border border-slate-300 bg-white px-2 py-2" data-testid="mixer-master">
+    <div
+      className="grid h-full min-w-[92px] grid-rows-[32px_92px_24px] gap-1 rounded-md border border-slate-300 bg-white px-2 py-2"
+      data-testid="mixer-master"
+    >
       <div>
         <div className="text-[11px] font-semibold text-slate-800">{zhCN.mixer.master}</div>
         <div className="text-[10px] uppercase text-slate-500">{zhCN.mixer.output}</div>
@@ -1055,7 +1232,9 @@ function MasterStrip({ level, volume, onVolumeChange }: { level: AudioMeterLevel
         <VuMeter level={level} />
         <VolumeFader value={volume} testId="mixer-master-volume" onChange={onVolumeChange} />
       </div>
-      <div className="flex items-center justify-center text-[11px] tabular-nums text-slate-600">{Math.round(volume * 100)}%</div>
+      <div className="flex items-center justify-center text-[11px] tabular-nums text-slate-600">
+        {Math.round(volume * 100)}%
+      </div>
     </div>
   );
 }
@@ -1111,14 +1290,29 @@ function VuMeter({ level }: { level: AudioMeterLevel }) {
   const levelHeight = `${dbToPercent(level.levelDb)}%`;
   const peakBottom = `${dbToPercent(level.peakDb)}%`;
   return (
-    <div className="relative h-full min-h-[70px] w-[18px] overflow-hidden rounded-sm border border-slate-300 bg-slate-950" title={`${level.levelDb.toFixed(1)} dB`}>
+    <div
+      className="relative h-full min-h-[70px] w-[18px] overflow-hidden rounded-sm border border-slate-300 bg-slate-950"
+      title={`${level.levelDb.toFixed(1)} dB`}
+    >
       <div className="absolute bottom-0 left-0 right-0 bg-emerald-400" style={{ height: levelHeight }} />
       <div className="absolute left-0 right-0 h-0.5 bg-amber-300" style={{ bottom: peakBottom }} />
     </div>
   );
 }
 
-function MixerToggle({ label, title, active, testId, onClick }: { label: string; title: string; active: boolean; testId: string; onClick(): void }) {
+function MixerToggle({
+  label,
+  title,
+  active,
+  testId,
+  onClick,
+}: {
+  label: string;
+  title: string;
+  active: boolean;
+  testId: string;
+  onClick(): void;
+}) {
   return (
     <button
       className={`h-6 w-6 rounded border text-[11px] font-semibold ${active ? 'border-brand bg-brand text-white' : 'border-line bg-white text-slate-600 hover:bg-panel'}`}

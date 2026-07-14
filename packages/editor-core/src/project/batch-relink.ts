@@ -28,7 +28,7 @@ export interface BatchRelinkOptions {
 export function planBatchRelinkByFileName(
   media: MediaAsset[],
   candidates: BatchRelinkCandidate[],
-  options: BatchRelinkOptions = {}
+  options: BatchRelinkOptions = {},
 ): BatchRelinkPlan {
   const caseInsensitive = options.caseInsensitive ?? false;
   const candidateIndex = new Map<string, string[]>();

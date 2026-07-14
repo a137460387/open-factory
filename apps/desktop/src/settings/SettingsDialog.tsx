@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Cloud, Download, FilePlus, FolderOpen, GripVertical, Play, RotateCcw, Save, SlidersHorizontal, Star, Trash2, X, XCircle } from 'lucide-react';
+import {
+  Cloud,
+  Download,
+  FilePlus,
+  FolderOpen,
+  GripVertical,
+  Play,
+  RotateCcw,
+  Save,
+  SlidersHorizontal,
+  Star,
+  Trash2,
+  X,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   buildProxyInventory,
@@ -41,7 +55,7 @@ import {
   type TimecodeFormat,
   type Timeline,
   type TimelineScriptOperation,
-  type VfrHandlingStrategy
+  type VfrHandlingStrategy,
 } from '@open-factory/editor-core';
 import type { StressScenarioId } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
@@ -50,9 +64,28 @@ import { switchLanguage } from '../i18n/i18next-config';
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { bridgeConfirm, fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
+import {
+  bridgeConfirm,
+  fsExists,
+  getFileStat,
+  getSystemResourceSnapshot,
+  openDirectoryDialog,
+  openFileDialog,
+  openPath,
+  readExportPresetSyncWebdavPassword,
+  readWebdavPassword,
+  writeExportPresetSyncWebdavPassword,
+  writeWebdavPassword,
+  type SystemResourceSnapshot,
+} from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
+import {
+  PREVIEW_QUALITY_MODES,
+  PREVIEW_SKIP_FRAME_OPTIONS,
+  type PreviewPerformanceSettings,
+  type PreviewQualityMode,
+  type PreviewSkipFrames,
+} from '../lib/preview/preview-performance';
 import {
   detectMacroShortcutConflicts,
   exportClipMacrosToDialog,
@@ -63,16 +96,23 @@ import {
   writeClipMacros,
   type ClipMacro,
   type CommandSnapshot,
-  type MacroShortcutConflict
+  type MacroShortcutConflict,
 } from '../macros/clip-macros';
-import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
+import {
+  getPluginRegistrySnapshot,
+  refreshPluginRegistry,
+  setPluginEnabled,
+  uninstallPlugin,
+  type LoadedPlugin,
+  type PluginRegistry,
+} from '../plugins/plugin-manager';
 import {
   getCatalogEntryInstallState,
   installCatalogPlugin,
   installPluginFromFile,
   loadPluginCatalog,
   type PluginCatalogEntry,
-  type PluginCatalogResult
+  type PluginCatalogResult,
 } from '../plugins/plugin-market';
 import { loadExportPresets, serializeExportPresetPackage } from '../export/export-presets';
 import {
@@ -84,14 +124,14 @@ import {
   writePresetMarketRating,
   type PresetMarketCard,
   type PresetMarketFilters,
-  type PresetMarketLoadResult
+  type PresetMarketLoadResult,
 } from '../export/preset-market';
 import {
   filterEffectPresetCommunityCards,
   installEffectPresetCommunityCard,
   loadEffectPresetCommunityLibrary,
   type EffectPresetCommunityCard,
-  type EffectPresetCommunityLoadResult
+  type EffectPresetCommunityLoadResult,
 } from '../effects/effect-preset-library';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -104,13 +144,19 @@ import {
   eventToAccelerator,
   getEffectiveTimelineShortcutBindings,
   type TimelineShortcutAction,
-  type TimelineShortcutBindings
+  type TimelineShortcutBindings,
 } from '../shortcuts/timeline-shortcuts';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
+import {
+  PROXY_RESOLUTION_PRESETS,
+  PROXY_TRIGGER_THRESHOLDS,
+  useProxySettingsStore,
+  type ProxyResolutionPreset,
+  type ProxyTriggerThreshold,
+} from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import { AIServicesSettingsPanel } from './AIServicesSettingsPanel';
@@ -124,7 +170,7 @@ import {
   importTimelineScriptFromDialog,
   loadTimelineScripts,
   saveTimelineScript,
-  type TimelineScriptFile
+  type TimelineScriptFile,
 } from '../scripting/timeline-scripts';
 import {
   DEFAULT_BACKUP_SETTINGS,
@@ -164,7 +210,7 @@ import {
   type LocalCoeditingSettings,
   type TimelineInteractionSettings,
   readTouchOptimizationSettings,
-  saveTouchOptimizationSettings
+  saveTouchOptimizationSettings,
 } from './appSettings';
 import type { TouchOptimizationSettings } from '@open-factory/editor-core';
 import {
@@ -174,7 +220,7 @@ import {
   resolveLocalModelStatus,
   type LocalAiModelId,
   type LocalAiModelResolvedStatus,
-  type LocalAiModelsSettings
+  type LocalAiModelsSettings,
 } from './localModels';
 import {
   BUILTIN_THEME_IDS,
@@ -186,7 +232,7 @@ import {
   upsertCustomTheme,
   type BuiltinThemeId,
   type CustomThemeColors,
-  type ThemeSettings
+  type ThemeSettings,
 } from '../theme/theme';
 import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
 import { DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings } from '../updater/update-settings';
@@ -211,7 +257,25 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'effect-presets' | 'shortcuts' | 'macros' | 'automation' | 'scripts' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins' | 'ai-services' | 'hardware-acceleration';
+type SettingsTab =
+  | 'general'
+  | 'display'
+  | 'appearance'
+  | 'lut-library'
+  | 'effect-presets'
+  | 'shortcuts'
+  | 'macros'
+  | 'automation'
+  | 'scripts'
+  | 'translation'
+  | 'local-models'
+  | 'proxy'
+  | 'task-monitor'
+  | 'export-presets'
+  | 'backup'
+  | 'plugins'
+  | 'ai-services'
+  | 'hardware-acceleration';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -234,7 +298,7 @@ export function SettingsDialog({
   onDeleteProxies,
   onRegenerateProxies,
   onMigrateProxies,
-  onClose
+  onClose,
 }: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
@@ -255,29 +319,53 @@ export function SettingsDialog({
   const [backupSettings, setBackupSettings] = useState<BackupSettings>(() => ({
     ...DEFAULT_BACKUP_SETTINGS,
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
-    webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
+    webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav },
   }));
-  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({ ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS }));
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false }));
-  const [exportQualityAssuranceSettings, setExportQualityAssuranceSettings] = useState<PostExportQualityAssuranceSettings>(() => ({ ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS }));
+  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({
+    ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({
+    allowPowerActions: false,
+    postExportScriptAcknowledged: false,
+    lowPowerMode: false,
+  }));
+  const [exportQualityAssuranceSettings, setExportQualityAssuranceSettings] =
+    useState<PostExportQualityAssuranceSettings>(() => ({ ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS }));
   const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
-  const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
-  const [localCoediting, setLocalCoediting] = useState<LocalCoeditingSettings>(() => ({ ...DEFAULT_LOCAL_COEDITING_SETTINGS }));
+  const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({
+    ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
+  }));
+  const [localCoediting, setLocalCoediting] = useState<LocalCoeditingSettings>(() => ({
+    ...DEFAULT_LOCAL_COEDITING_SETTINGS,
+  }));
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({ colorGamut: 'srgb' }));
-  const [touchOptimizationSettings, setTouchOptimizationSettings] = useState<TouchOptimizationSettings>(() => ({ enabled: false, autoDetect: true, trimHandleScale: 1.6, uiSpacingMultiplier: 1.3, longPressMs: 500, doubleTapMs: 300 }));
+  const [touchOptimizationSettings, setTouchOptimizationSettings] = useState<TouchOptimizationSettings>(() => ({
+    enabled: false,
+    autoDetect: true,
+    trimHandleScale: 1.6,
+    uiSpacingMultiplier: 1.3,
+    longPressMs: 500,
+    doubleTapMs: 300,
+  }));
   const [updateSettings, setUpdateSettings] = useState<UpdateSettings>(() => ({ ...DEFAULT_UPDATE_SETTINGS }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
-  const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
+  const [localModelStatuses, setLocalModelStatuses] = useState<
+    Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>
+  >({});
   const [webdavPassword, setWebdavPassword] = useState('');
   const [developerMode, setDeveloperMode] = useState(false);
   const [stressTestResult, setStressTestResult] = useState<string | null>(null);
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
   const [presetMarketCards, setPresetMarketCards] = useState<PresetMarketCard[]>([]);
   const [presetMarketRatings, setPresetMarketRatings] = useState<Record<string, number>>({});
-  const [presetMarketFilters, setPresetMarketFilters] = useState<PresetMarketFilters>({ platform: 'all', quality: 'all', format: 'all' });
+  const [presetMarketFilters, setPresetMarketFilters] = useState<PresetMarketFilters>({
+    platform: 'all',
+    quality: 'all',
+    format: 'all',
+  });
   const [presetMarketLoading, setPresetMarketLoading] = useState(false);
   const [presetMarketSource, setPresetMarketSource] = useState<PresetMarketLoadResult['source']>('empty');
   const [presetMarketWarning, setPresetMarketWarning] = useState<string>();
@@ -292,7 +380,9 @@ export function SettingsDialog({
   const [timelineScripts, setTimelineScripts] = useState<TimelineScriptFile[]>([]);
   const [selectedTimelineScriptId, setSelectedTimelineScriptId] = useState(firstBuiltinScript?.id ?? 'bulk-speed');
   const [timelineScriptName, setTimelineScriptName] = useState(() =>
-    firstBuiltinScript ? t.scripts.examples[firstBuiltinScript.id as keyof typeof t.scripts.examples].name : t.scripts.defaultScriptName
+    firstBuiltinScript
+      ? t.scripts.examples[firstBuiltinScript.id as keyof typeof t.scripts.examples].name
+      : t.scripts.defaultScriptName,
   );
   const [timelineScriptCode, setTimelineScriptCode] = useState(() => firstBuiltinScript?.code ?? '');
   const [timelineScriptPath, setTimelineScriptPath] = useState<string>();
@@ -322,19 +412,24 @@ export function SettingsDialog({
   const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
   const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
   const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
-  const macroConflicts = useMemo(() => detectMacroShortcutConflicts(macros, shortcutBindings), [macros, shortcutBindings]);
+  const macroConflicts = useMemo(
+    () => detectMacroShortcutConflicts(macros, shortcutBindings),
+    [macros, shortcutBindings],
+  );
   const currentTheme = useTheme();
   const [themeSettings, setThemeSettingsState] = useState<ThemeSettings>(() => getCurrentThemeSettings());
   const [customThemeName, setCustomThemeName] = useState('');
-  const [customThemeColors, setCustomThemeColors] = useState<CustomThemeColors>(() => ({ ...DEFAULT_CUSTOM_THEME_COLORS }));
+  const [customThemeColors, setCustomThemeColors] = useState<CustomThemeColors>(() => ({
+    ...DEFAULT_CUSTOM_THEME_COLORS,
+  }));
   const activeTheme = useMemo(() => resolveTheme(themeSettings), [themeSettings]);
   const filteredPresetMarketCards = useMemo(
     () => filterPresetMarketCards(presetMarketCards, presetMarketFilters),
-    [presetMarketCards, presetMarketFilters]
+    [presetMarketCards, presetMarketFilters],
   );
   const filteredEffectPresetCards = useMemo(
     () => filterEffectPresetCommunityCards(effectPresetCards, effectPresetFilters),
-    [effectPresetCards, effectPresetFilters]
+    [effectPresetCards, effectPresetFilters],
   );
   const timelineScriptApiNames = useMemo(() => getTimelineScriptApiFunctionNames(), []);
 
@@ -357,7 +452,9 @@ export function SettingsDialog({
     void loadDisplaySettings();
     void loadUpdateSettings();
     void loadLocalModelsSettings();
-    void readTouchOptimizationSettings().then(setTouchOptimizationSettings).catch((error) => console.warn('Unable to load touch optimization settings', error));
+    void readTouchOptimizationSettings()
+      .then(setTouchOptimizationSettings)
+      .catch((error) => console.warn('Unable to load touch optimization settings', error));
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
@@ -376,7 +473,7 @@ export function SettingsDialog({
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
         altKey: event.altKey,
-        shiftKey: event.shiftKey
+        shiftKey: event.shiftKey,
       });
       event.preventDefault();
       event.stopPropagation();
@@ -401,7 +498,7 @@ export function SettingsDialog({
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
         altKey: event.altKey,
-        shiftKey: event.shiftKey
+        shiftKey: event.shiftKey,
       });
       event.preventDefault();
       event.stopPropagation();
@@ -508,7 +605,11 @@ export function SettingsDialog({
     try {
       const nextRegistry = setPluginEnabled(entry.plugin.id, !entry.enabled);
       setPluginRegistry(nextRegistry ?? (await refreshPluginRegistry()));
-      showToast({ kind: 'info', title: entry.enabled ? t.plugins.disabledTitle : t.plugins.enabledTitle, message: entry.plugin.name });
+      showToast({
+        kind: 'info',
+        title: entry.enabled ? t.plugins.disabledTitle : t.plugins.enabledTitle,
+        message: entry.plugin.name,
+      });
     } catch (pluginError) {
       const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
       setPluginsError(message);
@@ -549,11 +650,17 @@ export function SettingsDialog({
       return;
     }
     try {
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorCorrection: { lutPath: item.path } }));
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorCorrection: { lutPath: item.path } }),
+      );
       setPreviewTimeline(undefined);
       showToast({ kind: 'success', title: t.lutLibrary.applied, message: item.name });
     } catch (applyError) {
-      showToast({ kind: 'warning', title: t.lutLibrary.applyFailed, message: applyError instanceof Error ? applyError.message : t.lutLibrary.applyFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.lutLibrary.applyFailed,
+        message: applyError instanceof Error ? applyError.message : t.lutLibrary.applyFailedMessage,
+      });
     }
   }
 
@@ -562,7 +669,11 @@ export function SettingsDialog({
       const favorites = new Set(await toggleLutFavorite(item.path));
       setItems((current) => current.map((entry) => ({ ...entry, favorite: favorites.has(entry.path) })));
     } catch (favoriteError) {
-      showToast({ kind: 'warning', title: t.lutLibrary.favoriteFailed, message: favoriteError instanceof Error ? favoriteError.message : t.lutLibrary.favoriteFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.lutLibrary.favoriteFailed,
+        message: favoriteError instanceof Error ? favoriteError.message : t.lutLibrary.favoriteFailedMessage,
+      });
     }
   }
 
@@ -571,7 +682,11 @@ export function SettingsDialog({
       const saved = await writeCustomKeybindings(nextBindings);
       onShortcutBindingsChange(saved);
     } catch (shortcutError) {
-      showToast({ kind: 'warning', title: t.shortcuts.saveFailed, message: shortcutError instanceof Error ? shortcutError.message : t.shortcuts.saveFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.shortcuts.saveFailed,
+        message: shortcutError instanceof Error ? shortcutError.message : t.shortcuts.saveFailedMessage,
+      });
     }
   }
 
@@ -580,7 +695,11 @@ export function SettingsDialog({
       const saved = await writeClipMacros(nextMacros);
       onMacrosChange(saved);
     } catch (macroError) {
-      showToast({ kind: 'warning', title: t.macros.saveFailed, message: macroError instanceof Error ? macroError.message : t.macros.saveFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.macros.saveFailed,
+        message: macroError instanceof Error ? macroError.message : t.macros.saveFailedMessage,
+      });
     }
   }
 
@@ -617,7 +736,11 @@ export function SettingsDialog({
         showToast({ kind: 'success', title: t.macros.imported, message: t.macros.importedMessage(imported.length) });
       }
     } catch (macroError) {
-      showToast({ kind: 'warning', title: t.macros.importFailed, message: macroError instanceof Error ? macroError.message : t.macros.importFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.macros.importFailed,
+        message: macroError instanceof Error ? macroError.message : t.macros.importFailedMessage,
+      });
     }
   }
 
@@ -628,7 +751,11 @@ export function SettingsDialog({
         showToast({ kind: 'success', title: t.macros.exported, message: path });
       }
     } catch (macroError) {
-      showToast({ kind: 'warning', title: t.macros.exportFailed, message: macroError instanceof Error ? macroError.message : t.macros.exportFailedMessage });
+      showToast({
+        kind: 'warning',
+        title: t.macros.exportFailed,
+        message: macroError instanceof Error ? macroError.message : t.macros.exportFailedMessage,
+      });
     }
   }
 
@@ -651,7 +778,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: languageError instanceof Error ? languageError.message : t.general.saveFailedMessage
+        message: languageError instanceof Error ? languageError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -664,7 +791,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.backup.saveFailed,
-        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage,
       });
     }
   }
@@ -677,7 +804,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.exportPresetSync.saveFailed,
-        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage
+        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage,
       });
     }
   }
@@ -735,7 +862,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.scripts.loadFailed,
-        message: scriptError instanceof Error ? scriptError.message : t.scripts.loadFailedMessage
+        message: scriptError instanceof Error ? scriptError.message : t.scripts.loadFailedMessage,
       });
     }
   }
@@ -771,14 +898,18 @@ export function SettingsDialog({
   async function saveCurrentTimelineScript() {
     try {
       const saved = await saveTimelineScript(timelineScriptName, timelineScriptCode, timelineScriptPath);
-      setTimelineScripts((files) => [saved, ...files.filter((file) => file.path !== saved.path && file.path !== timelineScriptPath)].sort((left, right) => left.name.localeCompare(right.name)));
+      setTimelineScripts((files) =>
+        [saved, ...files.filter((file) => file.path !== saved.path && file.path !== timelineScriptPath)].sort(
+          (left, right) => left.name.localeCompare(right.name),
+        ),
+      );
       selectTimelineScriptFile(saved);
       showToast({ kind: 'success', title: t.scripts.saved, message: saved.name });
     } catch (saveError) {
       showToast({
         kind: 'warning',
         title: t.scripts.saveFailed,
-        message: saveError instanceof Error ? saveError.message : t.scripts.saveFailedMessage
+        message: saveError instanceof Error ? saveError.message : t.scripts.saveFailedMessage,
       });
     }
   }
@@ -800,7 +931,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.scripts.deleteFailed,
-        message: deleteError instanceof Error ? deleteError.message : t.scripts.deleteFailedMessage
+        message: deleteError instanceof Error ? deleteError.message : t.scripts.deleteFailedMessage,
       });
     }
   }
@@ -811,14 +942,18 @@ export function SettingsDialog({
       if (!imported) {
         return;
       }
-      setTimelineScripts((files) => [imported, ...files.filter((file) => file.path !== imported.path)].sort((left, right) => left.name.localeCompare(right.name)));
+      setTimelineScripts((files) =>
+        [imported, ...files.filter((file) => file.path !== imported.path)].sort((left, right) =>
+          left.name.localeCompare(right.name),
+        ),
+      );
       selectTimelineScriptFile(imported);
       showToast({ kind: 'success', title: t.scripts.imported, message: imported.name });
     } catch (importError) {
       showToast({
         kind: 'warning',
         title: t.scripts.importFailed,
-        message: importError instanceof Error ? importError.message : t.scripts.importFailedMessage
+        message: importError instanceof Error ? importError.message : t.scripts.importFailedMessage,
       });
     }
   }
@@ -833,7 +968,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.scripts.exportFailed,
-        message: exportError instanceof Error ? exportError.message : t.scripts.exportFailedMessage
+        message: exportError instanceof Error ? exportError.message : t.scripts.exportFailedMessage,
       });
     }
   }
@@ -845,10 +980,13 @@ export function SettingsDialog({
       setTimelineScriptOutput([]);
       const result = await runTimelineScriptInWorker({
         script: timelineScriptCode,
-        snapshot: createTimelineScriptSnapshot(project)
+        snapshot: createTimelineScriptSnapshot(project),
       });
       const exportRequests = getTimelineScriptExportRequests(result.operations);
-      const timelineOperations = result.operations.filter((operation): operation is Exclude<TimelineScriptOperation, { type: 'exportProject' }> => operation.type !== 'exportProject');
+      const timelineOperations = result.operations.filter(
+        (operation): operation is Exclude<TimelineScriptOperation, { type: 'exportProject' }> =>
+          operation.type !== 'exportProject',
+      );
       if (timelineOperations.length > 0) {
         commandManager.execute(new RunScriptCommand(timelineAccessor, timelineOperations, t.scripts.runCommand));
       }
@@ -856,7 +994,7 @@ export function SettingsDialog({
         ...result.logs,
         t.scripts.operationSummary(timelineOperations.length),
         ...(exportRequests.length > 0 ? [t.scripts.exportSummary(exportRequests.length)] : []),
-        t.scripts.elapsed(result.durationMs)
+        t.scripts.elapsed(result.durationMs),
       ]);
     } catch (scriptError) {
       const message = scriptError instanceof Error ? scriptError.message : t.scripts.runFailedMessage;
@@ -884,13 +1022,13 @@ export function SettingsDialog({
       showToast({
         kind: 'success',
         title: zhCN.presetMarket.installed,
-        message: zhCN.presetMarket.installedMessage(result.imported, result.overwritten)
+        message: zhCN.presetMarket.installedMessage(result.imported, result.overwritten),
       });
     } catch (installError) {
       showToast({
         kind: 'warning',
         title: zhCN.presetMarket.installFailed,
-        message: installError instanceof Error ? installError.message : zhCN.presetMarket.installFailedMessage
+        message: installError instanceof Error ? installError.message : zhCN.presetMarket.installFailedMessage,
       });
     } finally {
       setInstallingPresetMarketCardId(undefined);
@@ -906,7 +1044,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: zhCN.effectPresetLibrary.installFailed,
-        message: installError instanceof Error ? installError.message : zhCN.effectPresetLibrary.installFailedMessage
+        message: installError instanceof Error ? installError.message : zhCN.effectPresetLibrary.installFailedMessage,
       });
     } finally {
       setInstallingEffectPresetCardId(undefined);
@@ -920,7 +1058,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: zhCN.presetMarket.ratingFailed,
-        message: ratingError instanceof Error ? ratingError.message : zhCN.presetMarket.ratingFailedMessage
+        message: ratingError instanceof Error ? ratingError.message : zhCN.presetMarket.ratingFailedMessage,
       });
     }
   }
@@ -932,13 +1070,19 @@ export function SettingsDialog({
         showToast({ kind: 'info', title: zhCN.presetMarket.shareEmpty });
         return;
       }
-      await navigator.clipboard.writeText(serializeExportPresetPackage(presets, { creator: zhCN.presetMarket.localAuthor }));
-      showToast({ kind: 'success', title: zhCN.presetMarket.shared, message: zhCN.presetMarket.sharedMessage(presets.length) });
+      await navigator.clipboard.writeText(
+        serializeExportPresetPackage(presets, { creator: zhCN.presetMarket.localAuthor }),
+      );
+      showToast({
+        kind: 'success',
+        title: zhCN.presetMarket.shared,
+        message: zhCN.presetMarket.sharedMessage(presets.length),
+      });
     } catch (shareError) {
       showToast({
         kind: 'warning',
         title: zhCN.presetMarket.shareFailed,
-        message: shareError instanceof Error ? shareError.message : zhCN.presetMarket.shareFailedMessage
+        message: shareError instanceof Error ? shareError.message : zhCN.presetMarket.shareFailedMessage,
       });
     }
   }
@@ -946,22 +1090,30 @@ export function SettingsDialog({
   async function shareSelectedEffectPreset() {
     try {
       if (!selectedClip) {
-        showToast({ kind: 'info', title: zhCN.effectPresetLibrary.noClipSelected, message: zhCN.effectPresetLibrary.noClipSelectedMessage });
+        showToast({
+          kind: 'info',
+          title: zhCN.effectPresetLibrary.noClipSelected,
+          message: zhCN.effectPresetLibrary.noClipSelectedMessage,
+        });
         return;
       }
       const preset = createEffectPresetFromClip(selectedClip, {
         id: `${selectedClip.id}-effect-preset`,
         name: selectedClip.name || zhCN.effectPresetLibrary.defaultPresetName,
         author: zhCN.effectPresetLibrary.localAuthor,
-        tags: []
+        tags: [],
       });
       await navigator.clipboard.writeText(serializeEffectPresetFile(preset));
-      showToast({ kind: 'success', title: zhCN.effectPresetLibrary.shared, message: zhCN.effectPresetLibrary.sharedMessage });
+      showToast({
+        kind: 'success',
+        title: zhCN.effectPresetLibrary.shared,
+        message: zhCN.effectPresetLibrary.sharedMessage,
+      });
     } catch (shareError) {
       showToast({
         kind: 'warning',
         title: zhCN.effectPresetLibrary.shareFailed,
-        message: shareError instanceof Error ? shareError.message : zhCN.effectPresetLibrary.shareFailedMessage
+        message: shareError instanceof Error ? shareError.message : zhCN.effectPresetLibrary.shareFailedMessage,
       });
     }
   }
@@ -973,7 +1125,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
+        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -985,7 +1137,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: qualityError instanceof Error ? qualityError.message : t.general.saveFailedMessage
+        message: qualityError instanceof Error ? qualityError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -997,7 +1149,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1012,7 +1164,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.automation.saveFailed,
-        message: automationError instanceof Error ? automationError.message : t.automation.saveFailedMessage
+        message: automationError instanceof Error ? automationError.message : t.automation.saveFailedMessage,
       });
     }
   }
@@ -1024,7 +1176,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage
+        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1036,7 +1188,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage
+        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1048,7 +1200,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.display.saveFailed,
-        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage
+        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage,
       });
     }
   }
@@ -1060,7 +1212,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage
+        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1075,25 +1227,28 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.localModels.saveFailed,
-        message: modelError instanceof Error ? modelError.message : t.localModels.saveFailedMessage
+        message: modelError instanceof Error ? modelError.message : t.localModels.saveFailedMessage,
       });
     }
   }
 
   async function refreshLocalModelStatuses(settings = localModelsSettings) {
     const entries = await Promise.all(
-      LOCAL_AI_MODEL_IDS.map(async (id) => [
-        id,
-        await resolveLocalModelStatus(id, settings[id], {
-          exists: fsExists,
-          stat: getFileStat
-        }).catch((): LocalAiModelResolvedStatus => ({
-          id,
-          status: 'invalid',
-          path: settings[id]?.path,
-          reason: 'size'
-        }))
-      ] as const)
+      LOCAL_AI_MODEL_IDS.map(
+        async (id) =>
+          [
+            id,
+            await resolveLocalModelStatus(id, settings[id], {
+              exists: fsExists,
+              stat: getFileStat,
+            }).catch((): LocalAiModelResolvedStatus => ({
+              id,
+              status: 'invalid',
+              path: settings[id]?.path,
+              reason: 'size',
+            })),
+          ] as const,
+      ),
     );
     setLocalModelStatuses(Object.fromEntries(entries) as Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>);
   }
@@ -1101,13 +1256,19 @@ export function SettingsDialog({
   async function chooseLocalModelFile(id: LocalAiModelId) {
     const definition = LOCAL_AI_MODEL_DEFINITIONS[id];
     try {
-      const [path] = await openFileDialog(false, [{ name: t.localModels.models[id].name, extensions: definition.extensions }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.localModels.models[id].name, extensions: definition.extensions },
+      ]);
       if (!path) {
         return;
       }
       const stat = await getFileStat(path);
       if (!isLocalModelFileSizeValid(id, stat.size)) {
-        showToast({ kind: 'warning', title: t.localModels.invalidFileTitle, message: t.localModels.invalidFileSize(formatBytes(definition.minBytes), formatBytes(definition.maxBytes)) });
+        showToast({
+          kind: 'warning',
+          title: t.localModels.invalidFileTitle,
+          message: t.localModels.invalidFileSize(formatBytes(definition.minBytes), formatBytes(definition.maxBytes)),
+        });
         return;
       }
       const nextSettings: LocalAiModelsSettings = {
@@ -1115,8 +1276,8 @@ export function SettingsDialog({
         [id]: {
           ...(localModelsSettings[id] ?? {}),
           path,
-          version: definition.version
-        }
+          version: definition.version,
+        },
       };
       const saved = await saveLocalAiModelsSettings(nextSettings);
       setLocalModelsSettings(saved);
@@ -1127,7 +1288,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.localModels.chooseFailed,
-        message: modelError instanceof Error ? modelError.message : t.localModels.chooseFailedMessage
+        message: modelError instanceof Error ? modelError.message : t.localModels.chooseFailedMessage,
       });
     }
   }
@@ -1193,14 +1354,16 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.chooseDemucsExecutable,
-        message: demucsError instanceof Error ? demucsError.message : t.general.demucsChooseFailed
+        message: demucsError instanceof Error ? demucsError.message : t.general.demucsChooseFailed,
       });
     }
   }
 
   async function choosePrivacyDetectionModel() {
     try {
-      const [path] = await openFileDialog(false, [{ name: t.general.privacyDetectionModel, extensions: ['onnx', 'pb', 'xml', 'bin'] }]);
+      const [path] = await openFileDialog(false, [
+        { name: t.general.privacyDetectionModel, extensions: ['onnx', 'pb', 'xml', 'bin'] },
+      ]);
       if (path) {
         setPrivacyDetectionModelPath(path);
       }
@@ -1208,7 +1371,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.choosePrivacyDetectionModel,
-        message: privacyError instanceof Error ? privacyError.message : t.general.privacyDetectionChooseFailed
+        message: privacyError instanceof Error ? privacyError.message : t.general.privacyDetectionChooseFailed,
       });
     }
   }
@@ -1221,7 +1384,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
+        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1239,7 +1402,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage
+        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1255,7 +1418,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage
+        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1269,7 +1432,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage
+        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1283,7 +1446,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: qualityError instanceof Error ? qualityError.message : t.general.saveFailedMessage
+        message: qualityError instanceof Error ? qualityError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1297,7 +1460,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1313,7 +1476,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
-        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage,
       });
     }
   }
@@ -1326,7 +1489,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.backup.saveFailed,
-        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage,
       });
     }
   }
@@ -1339,7 +1502,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.exportPresetSync.saveFailed,
-        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage
+        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage,
       });
     }
   }
@@ -1362,7 +1525,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.appearance.saveFailed,
-        message: themeError instanceof Error ? themeError.message : t.appearance.saveFailedMessage
+        message: themeError instanceof Error ? themeError.message : t.appearance.saveFailedMessage,
       });
     }
   }
@@ -1370,7 +1533,7 @@ export function SettingsDialog({
   async function selectTheme(themeId: string) {
     const nextSettings: ThemeSettings = {
       ...themeSettings,
-      activeThemeId: themeId
+      activeThemeId: themeId,
     };
     hydrateThemeForm(nextSettings);
     await updateThemeSettings(nextSettings);
@@ -1381,7 +1544,7 @@ export function SettingsDialog({
     const result = upsertCustomTheme(themeSettings, {
       id: activeCustomTheme?.id,
       name: customThemeName,
-      colors: customThemeColors
+      colors: customThemeColors,
     });
     hydrateThemeForm(result.settings);
     await updateThemeSettings(result.settings);
@@ -1399,7 +1562,7 @@ export function SettingsDialog({
   function updateCustomThemeColor(key: keyof CustomThemeColors, value: string) {
     setCustomThemeColors((current) => ({
       ...current,
-      [key]: value
+      [key]: value,
     }));
   }
 
@@ -1409,14 +1572,14 @@ export function SettingsDialog({
       if (directory) {
         await updateBackupSettings({
           ...backupSettings,
-          local: { ...backupSettings.local, directory }
+          local: { ...backupSettings.local, directory },
         });
       }
     } catch (backupError) {
       showToast({
         kind: 'warning',
         title: t.backup.saveFailed,
-        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage,
       });
     }
   }
@@ -1429,7 +1592,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.backup.passwordSaveFailed,
-        message: passwordError instanceof Error ? passwordError.message : t.backup.passwordSaveFailedMessage
+        message: passwordError instanceof Error ? passwordError.message : t.backup.passwordSaveFailedMessage,
       });
     }
   }
@@ -1442,7 +1605,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.exportPresetSync.passwordSaveFailed,
-        message: passwordError instanceof Error ? passwordError.message : t.exportPresetSync.passwordSaveFailedMessage
+        message: passwordError instanceof Error ? passwordError.message : t.exportPresetSync.passwordSaveFailedMessage,
       });
     }
   }
@@ -1459,7 +1622,12 @@ export function SettingsDialog({
 
   function updateProjectFrameRate(value: string) {
     const fps = normalizeProjectFps(Number(value));
-    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { fps, timecodeFormat: normalizeTimecodeFormat(project.settings.timecodeFormat, fps) }));
+    commandManager.execute(
+      new UpdateProjectSettingsCommand(projectAccessor, {
+        fps,
+        timecodeFormat: normalizeTimecodeFormat(project.settings.timecodeFormat, fps),
+      }),
+    );
   }
 
   function updateProjectTimecodeFormat(value: string) {
@@ -1468,7 +1636,9 @@ export function SettingsDialog({
   }
 
   function updateProjectVfrHandling(value: string) {
-    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { vfrHandling: normalizeVfrHandlingStrategy(value) }));
+    commandManager.execute(
+      new UpdateProjectSettingsCommand(projectAccessor, { vfrHandling: normalizeVfrHandlingStrategy(value) }),
+    );
   }
 
   function updateProjectColorPipeline(value: string) {
@@ -1480,7 +1650,11 @@ export function SettingsDialog({
   }
 
   function updateProjectWorkingColorSpace(value: string) {
-    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { workingColorSpace: normalizeProjectWorkingColorSpace(value) }));
+    commandManager.execute(
+      new UpdateProjectSettingsCommand(projectAccessor, {
+        workingColorSpace: normalizeProjectWorkingColorSpace(value),
+      }),
+    );
   }
 
   async function updateDisplaySettings(patch: Partial<DisplaySettings>) {
@@ -1492,7 +1666,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: t.display.saveFailed,
-        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage
+        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage,
       });
     }
   }
@@ -1506,7 +1680,7 @@ export function SettingsDialog({
       showToast({
         kind: 'warning',
         title: '触屏设置保存失败',
-        message: touchError instanceof Error ? touchError.message : '无法写入触屏优化设置。'
+        message: touchError instanceof Error ? touchError.message : '无法写入触屏优化设置。',
       });
     }
   }
@@ -1519,7 +1693,14 @@ export function SettingsDialog({
             <h2 className="text-base font-semibold text-ink">{t.title}</h2>
             <div className="text-xs text-slate-500">{t.subtitle}</div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="settings-close-button" onClick={close}>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            data-testid="settings-close-button"
+            onClick={close}
+          >
             <X size={16} />
           </button>
         </div>
@@ -1689,7 +1870,9 @@ export function SettingsDialog({
                     <option value="en">{t.general.options.en}</option>
                   </select>
                 </label>
-                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+                  {t.general.languageDescription}
+                </div>
                 <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-update-section">
                   <div className="mb-3">
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.updatesTitle}</h4>
@@ -1719,7 +1902,9 @@ export function SettingsDialog({
                     />
                   </label>
                   <p className="mt-1 text-[11px] text-slate-500">
-                    {updateSettings.customEndpoint ? t.general.updateEndpointDescription : t.general.defaultUpdateEndpoint}
+                    {updateSettings.customEndpoint
+                      ? t.general.updateEndpointDescription
+                      : t.general.defaultUpdateEndpoint}
                   </p>
                 </div>
                 <div className="rounded-md border border-line bg-panel p-3">
@@ -1747,7 +1932,12 @@ export function SettingsDialog({
                       value={previewPerformance.qualityMode}
                       disabled={previewPerformance.adaptiveEnabled !== false}
                       data-testid="settings-preview-fixed-quality-select"
-                      onChange={(event) => onPreviewPerformanceChange({ qualityMode: event.target.value as PreviewQualityMode, adaptiveEnabled: false })}
+                      onChange={(event) =>
+                        onPreviewPerformanceChange({
+                          qualityMode: event.target.value as PreviewQualityMode,
+                          adaptiveEnabled: false,
+                        })
+                      }
                     >
                       {PREVIEW_QUALITY_MODES.map((mode) => (
                         <option key={mode} value={mode}>
@@ -1812,7 +2002,10 @@ export function SettingsDialog({
                     </label>
                   </div>
                 </div>
-                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-local-coediting-section">
+                <div
+                  className="rounded-md border border-line bg-panel p-3"
+                  data-testid="settings-local-coediting-section"
+                >
                   <label className="flex items-start gap-2 text-xs text-slate-600">
                     <input
                       className="mt-0.5 h-4 w-4 accent-brand"
@@ -1833,7 +2026,9 @@ export function SettingsDialog({
                         className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                         value={localCoediting.mode}
                         data-testid="settings-local-coediting-mode"
-                        onChange={(event) => void updateLocalCoediting({ mode: event.target.value === 'client' ? 'client' : 'host' })}
+                        onChange={(event) =>
+                          void updateLocalCoediting({ mode: event.target.value === 'client' ? 'client' : 'host' })
+                        }
                       >
                         <option value="host">{t.general.localCoeditingHost}</option>
                         <option value="client">{t.general.localCoeditingClient}</option>
@@ -1845,7 +2040,11 @@ export function SettingsDialog({
                         className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                         value={localCoediting.permission}
                         data-testid="settings-local-coediting-permission"
-                        onChange={(event) => void updateLocalCoediting({ permission: event.target.value === 'read-only' ? 'read-only' : 'edit' })}
+                        onChange={(event) =>
+                          void updateLocalCoediting({
+                            permission: event.target.value === 'read-only' ? 'read-only' : 'edit',
+                          })
+                        }
                       >
                         <option value="edit">{t.general.localCoeditingEdit}</option>
                         <option value="read-only">{t.general.localCoeditingReadOnly}</option>
@@ -1881,7 +2080,11 @@ export function SettingsDialog({
                             className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                             value={localCoediting.networkMode ?? 'localhost'}
                             data-testid="settings-local-coediting-network-mode"
-                            onChange={(event) => void updateLocalCoediting({ networkMode: event.target.value === 'lan' ? 'lan' : 'localhost' })}
+                            onChange={(event) =>
+                              void updateLocalCoediting({
+                                networkMode: event.target.value === 'lan' ? 'lan' : 'localhost',
+                              })
+                            }
                           >
                             <option value="localhost">{t.general.localCoeditingNetworkLocalhost}</option>
                             <option value="lan">{t.general.localCoeditingNetworkLan}</option>
@@ -1894,13 +2097,18 @@ export function SettingsDialog({
                             value={localCoediting.authToken ?? ''}
                             placeholder={t.general.localCoeditingAuthTokenPlaceholder}
                             data-testid="settings-local-coediting-auth-token"
-                            onChange={(event) => void updateLocalCoediting({ authToken: event.target.value || undefined })}
+                            onChange={(event) =>
+                              void updateLocalCoediting({ authToken: event.target.value || undefined })
+                            }
                           />
                         </label>
                       </>
                     )}
                     {localCoediting.mode === 'host' && localCoediting.networkMode === 'lan' && (
-                      <div className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800" data-testid="settings-local-coediting-lan-warning">
+                      <div
+                        className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800"
+                        data-testid="settings-local-coediting-lan-warning"
+                      >
                         {t.general.localCoeditingLanWarning}
                       </div>
                     )}
@@ -2031,7 +2239,9 @@ export function SettingsDialog({
                       <option value="ndf">{t.general.timecodeNdf}</option>
                       <option value="df">{t.general.timecodeDf}</option>
                     </select>
-                    {!supportsDropFrameTimecode(project.settings.fps) ? <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span> : null}
+                    {!supportsDropFrameTimecode(project.settings.fps) ? (
+                      <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span>
+                    ) : null}
                   </label>
                   <label className="block text-xs font-medium text-slate-600">
                     {t.general.vfrHandling}
@@ -2085,7 +2295,12 @@ export function SettingsDialog({
                     type="checkbox"
                     checked={exportBackgroundSettings.allowPowerActions}
                     data-testid="settings-export-power-actions-toggle"
-                    onChange={(event) => void updateExportBackgroundSettings({ ...exportBackgroundSettings, allowPowerActions: event.target.checked })}
+                    onChange={(event) =>
+                      void updateExportBackgroundSettings({
+                        ...exportBackgroundSettings,
+                        allowPowerActions: event.target.checked,
+                      })
+                    }
                   />
                   <span>
                     <span className="block font-semibold text-slate-700">{t.general.allowExportPowerActions}</span>
@@ -2098,14 +2313,22 @@ export function SettingsDialog({
                     type="checkbox"
                     checked={exportBackgroundSettings.lowPowerMode}
                     data-testid="settings-export-low-power-toggle"
-                    onChange={(event) => void updateExportBackgroundSettings({ ...exportBackgroundSettings, lowPowerMode: event.target.checked })}
+                    onChange={(event) =>
+                      void updateExportBackgroundSettings({
+                        ...exportBackgroundSettings,
+                        lowPowerMode: event.target.checked,
+                      })
+                    }
                   />
                   <span>
                     <span className="block font-semibold text-slate-700">{t.general.lowPowerExportMode}</span>
                     <span className="mt-1 block">{t.general.lowPowerExportModeDescription}</span>
                   </span>
                 </label>
-                <ExportQualityAssuranceSettingsPanel settings={exportQualityAssuranceSettings} onChange={(patch) => void updateExportQualityAssuranceSettings(patch)} />
+                <ExportQualityAssuranceSettingsPanel
+                  settings={exportQualityAssuranceSettings}
+                  onChange={(patch) => void updateExportQualityAssuranceSettings(patch)}
+                />
                 <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
                   <input
                     className="mt-0.5 h-4 w-4 accent-brand"
@@ -2116,7 +2339,9 @@ export function SettingsDialog({
                   />
                   <span>
                     <span className="block font-semibold text-slate-700">触屏优化模式</span>
-                    <span className="mt-1 block">开启后时间线交互元素自动放大、间距增加，适配触屏设备。关闭后使用标准鼠标交互尺寸。</span>
+                    <span className="mt-1 block">
+                      开启后时间线交互元素自动放大、间距增加，适配触屏设备。关闭后使用标准鼠标交互尺寸。
+                    </span>
                   </span>
                 </label>
                 <ExportRulesSettingsPanel
@@ -2143,28 +2368,39 @@ export function SettingsDialog({
                       <h4 className="text-xs font-semibold text-slate-700">项目压力测试</h4>
                       <p className="text-[11px] text-slate-500">在独立临时项目中模拟极端场景，不影响当前工作。</p>
                       <div className="flex flex-wrap gap-2">
-                        {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map((sid) => (
-                          <button
-                            key={sid}
-                            className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-                            data-testid={`stress-run-${sid}`}
-                            onClick={() => {
-                              const { project, metrics: baseMetrics } = generateStressScenario(sid);
-                              const start = Date.now();
-                              const renderStart = performance.now();
-                              const _clone = JSON.parse(JSON.stringify(project));
-                              const renderTimeMs = performance.now() - renderStart;
-                              const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
-                              const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
-                              setStressTestResult(serializeStressReport(report));
-                            }}
-                          >
-                            {sid === 'mega-clips' ? '超大项目' : sid === 'long-timeline' ? '超长TL' : sid === 'mass-keyframes' ? '大量KF' : '深度嵌套'}
-                          </button>
-                        ))}
+                        {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map(
+                          (sid) => (
+                            <button
+                              key={sid}
+                              className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                              data-testid={`stress-run-${sid}`}
+                              onClick={() => {
+                                const { project, metrics: baseMetrics } = generateStressScenario(sid);
+                                const start = Date.now();
+                                const renderStart = performance.now();
+                                const _clone = JSON.parse(JSON.stringify(project));
+                                const renderTimeMs = performance.now() - renderStart;
+                                const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
+                                const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
+                                setStressTestResult(serializeStressReport(report));
+                              }}
+                            >
+                              {sid === 'mega-clips'
+                                ? '超大项目'
+                                : sid === 'long-timeline'
+                                  ? '超长TL'
+                                  : sid === 'mass-keyframes'
+                                    ? '大量KF'
+                                    : '深度嵌套'}
+                            </button>
+                          ),
+                        )}
                       </div>
                       {stressTestResult ? (
-                        <pre className="mt-2 max-h-48 overflow-auto rounded border border-line bg-white p-2 text-[10px] text-slate-700" data-testid="stress-test-result">
+                        <pre
+                          className="mt-2 max-h-48 overflow-auto rounded border border-line bg-white p-2 text-[10px] text-slate-700"
+                          data-testid="stress-test-result"
+                        >
                           {stressTestResult}
                         </pre>
                       ) : null}
@@ -2185,17 +2421,26 @@ export function SettingsDialog({
                     className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
                     value={displaySettings.colorGamut}
                     data-testid="display-color-gamut-select"
-                    onChange={(event) => void updateDisplaySettings({ colorGamut: event.target.value as DisplaySettings['colorGamut'] })}
+                    onChange={(event) =>
+                      void updateDisplaySettings({ colorGamut: event.target.value as DisplaySettings['colorGamut'] })
+                    }
                   >
                     <option value="srgb">{t.display.colorGamutOptions.srgb}</option>
                     <option value="p3">{t.display.colorGamutOptions.p3}</option>
                     <option value="rec2020">{t.display.colorGamutOptions.rec2020}</option>
                   </select>
                 </label>
-                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="display-color-gamut-css-hint">
-                  <span className="display-gamut-indicator display-gamut-indicator-srgb">{t.display.cssGamut.srgb}</span>
+                <div
+                  className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+                  data-testid="display-color-gamut-css-hint"
+                >
+                  <span className="display-gamut-indicator display-gamut-indicator-srgb">
+                    {t.display.cssGamut.srgb}
+                  </span>
                   <span className="display-gamut-indicator display-gamut-indicator-p3">{t.display.cssGamut.p3}</span>
-                  <span className="display-gamut-indicator display-gamut-indicator-rec2020">{t.display.cssGamut.rec2020}</span>
+                  <span className="display-gamut-indicator display-gamut-indicator-rec2020">
+                    {t.display.cssGamut.rec2020}
+                  </span>
                 </div>
               </div>
             ) : null}
@@ -2218,7 +2463,11 @@ export function SettingsDialog({
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-ink">{t.lutLibrary.title}</h3>
-                    <p className="text-xs text-slate-500">{selectedClipCanUseLut ? t.lutLibrary.readyForClip(selectedClip?.name ?? '') : t.lutLibrary.noClipSelectedMessage}</p>
+                    <p className="text-xs text-slate-500">
+                      {selectedClipCanUseLut
+                        ? t.lutLibrary.readyForClip(selectedClip?.name ?? '')
+                        : t.lutLibrary.noClipSelectedMessage}
+                    </p>
                   </div>
                   <button
                     className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
@@ -2229,19 +2478,46 @@ export function SettingsDialog({
                     {t.lutLibrary.refresh}
                   </button>
                 </div>
-                {loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.loading}</div> : null}
-                {error ? <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
-                {!loading && items.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.empty}</div> : null}
+                {loading ? (
+                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
+                    {t.lutLibrary.loading}
+                  </div>
+                ) : null}
+                {error ? (
+                  <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    {error}
+                  </div>
+                ) : null}
+                {!loading && items.length === 0 ? (
+                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
+                    {t.lutLibrary.empty}
+                  </div>
+                ) : null}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {items.map((item) => (
-                    <div key={item.path} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="lut-library-item">
+                    <div
+                      key={item.path}
+                      className="rounded-md border border-line bg-white p-3 shadow-sm"
+                      data-testid="lut-library-item"
+                    >
                       <div className="flex items-start gap-3">
                         <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
-                          {item.previewDataUrl ? <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" loading="lazy" /> : null}
+                          {item.previewDataUrl ? (
+                            <img
+                              className="h-full w-full object-cover"
+                              src={item.previewDataUrl}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : null}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-ink" title={item.path}>{item.name}</div>
-                          <div className="truncate text-xs text-slate-500" title={item.path}>{item.path}</div>
+                          <div className="truncate text-sm font-semibold text-ink" title={item.path}>
+                            {item.name}
+                          </div>
+                          <div className="truncate text-xs text-slate-500" title={item.path}>
+                            {item.path}
+                          </div>
                         </div>
                         <button
                           className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line ${item.favorite ? 'bg-amber-50 text-amber-600' : 'bg-white text-slate-500'} hover:bg-panel`}
@@ -2301,7 +2577,12 @@ export function SettingsDialog({
                     <h3 className="text-sm font-semibold text-ink">{t.shortcuts.title}</h3>
                     <p className="text-xs text-slate-500">{t.shortcuts.description}</p>
                   </div>
-                  <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" onClick={resetAllShortcuts} data-testid="shortcuts-reset-all-button">
+                  <button
+                    className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                    type="button"
+                    onClick={resetAllShortcuts}
+                    data-testid="shortcuts-reset-all-button"
+                  >
                     {t.shortcuts.resetAll}
                   </button>
                 </div>
@@ -2320,7 +2601,11 @@ export function SettingsDialog({
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-ink">{label}</div>
-                            {hasConflict ? <div className="text-xs font-medium text-rose-700">{t.shortcuts.conflict(conflictList.join(', '))}</div> : null}
+                            {hasConflict ? (
+                              <div className="text-xs font-medium text-rose-700">
+                                {t.shortcuts.conflict(conflictList.join(', '))}
+                              </div>
+                            ) : null}
                           </div>
                           <button
                             className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
@@ -2331,7 +2616,9 @@ export function SettingsDialog({
                               setCapturingAction(definition.action);
                             }}
                           >
-                            {capturingAction === definition.action ? t.shortcuts.pressKeys : effectiveBindings[definition.action].join(' / ')}
+                            {capturingAction === definition.action
+                              ? t.shortcuts.pressKeys
+                              : effectiveBindings[definition.action].join(' / ')}
                           </button>
                           <button
                             className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
@@ -2356,15 +2643,29 @@ export function SettingsDialog({
                     <p className="text-xs text-slate-500">{t.macros.description}</p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="macros-import-button" onClick={() => void importMacros()}>
+                    <button
+                      className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                      type="button"
+                      data-testid="macros-import-button"
+                      onClick={() => void importMacros()}
+                    >
                       {t.macros.import}
                     </button>
-                    <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="macros-export-button" onClick={() => void exportMacros()}>
+                    <button
+                      className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                      type="button"
+                      data-testid="macros-export-button"
+                      onClick={() => void exportMacros()}
+                    >
                       {t.macros.export}
                     </button>
                   </div>
                 </div>
-                {macros.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.macros.empty}</div> : null}
+                {macros.length === 0 ? (
+                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
+                    {t.macros.empty}
+                  </div>
+                ) : null}
                 <div className="space-y-2">
                   {macros.map((macro) => {
                     const conflictList = macroConflicts[macro.id] ?? [];
@@ -2379,9 +2680,17 @@ export function SettingsDialog({
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-ink">{macro.name}</div>
-                            {macro.description ? <div className="text-xs text-slate-500">{macro.description}</div> : null}
-                            <div className="mt-1 text-xs text-slate-500">{t.macros.stepCount(getMacroSteps(macro).length)}</div>
-                            {hasConflict ? <div className="mt-1 text-xs font-medium text-rose-700">{t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}</div> : null}
+                            {macro.description ? (
+                              <div className="text-xs text-slate-500">{macro.description}</div>
+                            ) : null}
+                            <div className="mt-1 text-xs text-slate-500">
+                              {t.macros.stepCount(getMacroSteps(macro).length)}
+                            </div>
+                            {hasConflict ? (
+                              <div className="mt-1 text-xs font-medium text-rose-700">
+                                {t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}
+                              </div>
+                            ) : null}
                           </div>
                           <button
                             className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
@@ -2392,7 +2701,9 @@ export function SettingsDialog({
                               setCapturingMacroId(macro.id);
                             }}
                           >
-                            {capturingMacroId === macro.id ? t.shortcuts.pressKeys : macro.shortcut ?? t.macros.bindShortcut}
+                            {capturingMacroId === macro.id
+                              ? t.shortcuts.pressKeys
+                              : (macro.shortcut ?? t.macros.bindShortcut)}
                           </button>
                           <button
                             className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
@@ -2411,7 +2722,11 @@ export function SettingsDialog({
                             {zhCN.common.reset}
                           </button>
                         </div>
-                        <MacroStepsEditor macro={macro} onSave={(raw) => void updateMacroStepsFromJson(macro.id, raw)} onDeleteStep={(steps) => void updateMacroSteps(macro.id, steps)} />
+                        <MacroStepsEditor
+                          macro={macro}
+                          onSave={(raw) => void updateMacroStepsFromJson(macro.id, raw)}
+                          onDeleteStep={(steps) => void updateMacroSteps(macro.id, steps)}
+                        />
                       </div>
                     );
                   })}
@@ -2538,12 +2853,8 @@ export function SettingsDialog({
                 onUninstallPlugin={(entry) => void removePlugin(entry)}
               />
             ) : null}
-            {tab === 'ai-services' ? (
-              <AIServicesSettingsPanel />
-            ) : null}
-            {tab === 'hardware-acceleration' ? (
-              <HardwareAccelerationSettingsPanel />
-            ) : null}
+            {tab === 'ai-services' ? <AIServicesSettingsPanel /> : null}
+            {tab === 'hardware-acceleration' ? <HardwareAccelerationSettingsPanel /> : null}
           </main>
         </div>
       </div>
@@ -2571,7 +2882,7 @@ function TimelineScriptsSettingsPanel({
   onDelete,
   onImport,
   onExport,
-  onRun
+  onRun,
 }: {
   builtins: BuiltinTimelineScript[];
   files: TimelineScriptFile[];
@@ -2608,15 +2919,30 @@ function TimelineScriptsSettingsPanel({
           <p className="text-xs text-slate-500">{t.description}</p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="timeline-script-new-button" onClick={onNew}>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="timeline-script-new-button"
+            onClick={onNew}
+          >
             <FilePlus size={13} />
             {t.new}
           </button>
-          <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="timeline-script-import-button" onClick={onImport}>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="timeline-script-import-button"
+            onClick={onImport}
+          >
             <FolderOpen size={13} />
             {t.import}
           </button>
-          <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="timeline-script-export-button" onClick={onExport}>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="timeline-script-export-button"
+            onClick={onExport}
+          >
             <Download size={13} />
             {t.export}
           </button>
@@ -2639,7 +2965,9 @@ function TimelineScriptsSettingsPanel({
                     onClick={() => onSelectBuiltin(script)}
                   >
                     <span className="block truncate">{label.name}</span>
-                    <span className="mt-0.5 block line-clamp-2 text-[11px] font-normal text-slate-500">{label.description}</span>
+                    <span className="mt-0.5 block line-clamp-2 text-[11px] font-normal text-slate-500">
+                      {label.description}
+                    </span>
                   </button>
                 );
               })}
@@ -2648,7 +2976,9 @@ function TimelineScriptsSettingsPanel({
 
           <section className="rounded-md border border-line bg-panel p-3">
             <h4 className="text-xs font-semibold uppercase tracking-normal text-slate-500">{t.filesTitle}</h4>
-            {files.length === 0 ? <div className="mt-2 rounded-md bg-white p-2 text-xs text-slate-500">{t.emptyFiles}</div> : null}
+            {files.length === 0 ? (
+              <div className="mt-2 rounded-md bg-white p-2 text-xs text-slate-500">{t.emptyFiles}</div>
+            ) : null}
             <div className="mt-2 space-y-1" data-testid="timeline-script-file-list">
               {files.map((file) => (
                 <button
@@ -2678,7 +3008,12 @@ function TimelineScriptsSettingsPanel({
               />
             </label>
             <div className="flex items-end gap-2">
-              <button className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="timeline-script-save-button" onClick={onSave}>
+              <button
+                className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-white px-3 text-xs font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="timeline-script-save-button"
+                onClick={onSave}
+              >
                 <Save size={13} />
                 {t.save}
               </button>
@@ -2736,8 +3071,15 @@ function TimelineScriptsSettingsPanel({
             </button>
           </div>
 
-          <div className={`min-h-24 rounded-md border p-3 font-mono text-xs ${error ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-line bg-white text-slate-700'}`} data-testid="timeline-script-output">
-            {output.length > 0 ? output.map((line, index) => <div key={`${line}-${index}`}>{line}</div>) : <div className="font-sans text-slate-500">{t.outputEmpty}</div>}
+          <div
+            className={`min-h-24 rounded-md border p-3 font-mono text-xs ${error ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-line bg-white text-slate-700'}`}
+            data-testid="timeline-script-output"
+          >
+            {output.length > 0 ? (
+              output.map((line, index) => <div key={`${line}-${index}`}>{line}</div>)
+            ) : (
+              <div className="font-sans text-slate-500">{t.outputEmpty}</div>
+            )}
           </div>
         </div>
       </div>
@@ -2827,23 +3169,57 @@ function TaskMonitorSettingsPanel() {
           <p className="text-xs text-slate-500">{t.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="task-monitor-cancel-all" disabled={activeCount === 0} onClick={cancelAllJobs}>
+          <button
+            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="task-monitor-cancel-all"
+            disabled={activeCount === 0}
+            onClick={cancelAllJobs}
+          >
             {t.cancelAll}
           </button>
-          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="task-monitor-retry-failed" disabled={failedCount === 0} onClick={retryAllFailed}>
+          <button
+            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="task-monitor-retry-failed"
+            disabled={failedCount === 0}
+            onClick={retryAllFailed}
+          >
             {t.retryFailed}
           </button>
-          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="task-monitor-clear-finished" onClick={clearFinishedJobs}>
+          <button
+            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="task-monitor-clear-finished"
+            onClick={clearFinishedJobs}
+          >
             {t.clearFinished}
           </button>
         </div>
       </div>
       <div className="grid gap-2 sm:grid-cols-3" data-testid="task-monitor-resource-summary">
-        <ResourceMetric label={t.cpuUsage} value={resourceSnapshot ? `${Math.round(resourceSnapshot.cpuUsage)}%` : zhCN.common.unavailable} />
-        <ResourceMetric label={t.memoryUsage} value={resourceSnapshot ? `${formatBytes(resourceSnapshot.usedMemoryBytes)} / ${formatBytes(resourceSnapshot.totalMemoryBytes)}` : zhCN.common.unavailable} />
+        <ResourceMetric
+          label={t.cpuUsage}
+          value={resourceSnapshot ? `${Math.round(resourceSnapshot.cpuUsage)}%` : zhCN.common.unavailable}
+        />
+        <ResourceMetric
+          label={t.memoryUsage}
+          value={
+            resourceSnapshot
+              ? `${formatBytes(resourceSnapshot.usedMemoryBytes)} / ${formatBytes(resourceSnapshot.totalMemoryBytes)}`
+              : zhCN.common.unavailable
+          }
+        />
         <ResourceMetric label={t.runningCount} value={String(activeCount)} />
       </div>
-      {orderedJobs.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600" data-testid="task-monitor-empty">{t.empty}</div> : null}
+      {orderedJobs.length === 0 ? (
+        <div
+          className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600"
+          data-testid="task-monitor-empty"
+        >
+          {t.empty}
+        </div>
+      ) : null}
       <div className="overflow-hidden rounded-md border border-line bg-white">
         {orderedJobs.map((job) => {
           const etaSeconds = calculateMediaJobEtaSeconds(job, nowMs);
@@ -2875,27 +3251,59 @@ function TaskMonitorSettingsPanel() {
             >
               <GripVertical size={15} className={job.status === 'pending' ? 'text-slate-400' : 'text-slate-200'} />
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-ink" data-testid={`task-monitor-file-${job.id}`}>{job.assetName}</div>
+                <div className="truncate text-sm font-semibold text-ink" data-testid={`task-monitor-file-${job.id}`}>
+                  {job.assetName}
+                </div>
                 <div className="text-xs text-slate-500">{taskTypeLabel(job.type)}</div>
               </div>
               <div className="min-w-0">
                 <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(job.progress * 100)}%` }} />
+                  <div
+                    className="h-full bg-brand transition-all"
+                    style={{ width: `${Math.round(job.progress * 100)}%` }}
+                  />
                 </div>
-                <div className="mt-1 text-[11px] tabular-nums text-slate-500" data-testid={`task-monitor-progress-${job.id}`}>{Math.round(job.progress * 100)}%</div>
+                <div
+                  className="mt-1 text-[11px] tabular-nums text-slate-500"
+                  data-testid={`task-monitor-progress-${job.id}`}
+                >
+                  {Math.round(job.progress * 100)}%
+                </div>
               </div>
-              <span className={`inline-flex justify-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${taskStatusTone(job.status)}`} data-testid={`task-monitor-status-${job.id}`}>
+              <span
+                className={`inline-flex justify-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${taskStatusTone(job.status)}`}
+                data-testid={`task-monitor-status-${job.id}`}
+              >
                 {taskStatusLabel(job.status)}
               </span>
-              <span className="text-right text-xs tabular-nums text-slate-500" data-testid={`task-monitor-eta-${job.id}`}>{etaSeconds === undefined ? t.etaUnknown : t.etaSeconds(Math.ceil(etaSeconds))}</span>
+              <span
+                className="text-right text-xs tabular-nums text-slate-500"
+                data-testid={`task-monitor-eta-${job.id}`}
+              >
+                {etaSeconds === undefined ? t.etaUnknown : t.etaSeconds(Math.ceil(etaSeconds))}
+              </span>
               <div className="flex justify-end gap-1">
-                {(job.status === 'pending' || job.status === 'running') ? (
-                  <button className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel" type="button" title={t.cancel} aria-label={t.cancel} data-testid={`task-monitor-cancel-${job.id}`} onClick={() => cancelJob(job.id)}>
+                {job.status === 'pending' || job.status === 'running' ? (
+                  <button
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+                    type="button"
+                    title={t.cancel}
+                    aria-label={t.cancel}
+                    data-testid={`task-monitor-cancel-${job.id}`}
+                    onClick={() => cancelJob(job.id)}
+                  >
                     <XCircle size={14} />
                   </button>
                 ) : null}
-                {(job.status === 'error' || job.status === 'canceled') ? (
-                  <button className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel" type="button" title={t.retry} aria-label={t.retry} data-testid={`task-monitor-retry-${job.id}`} onClick={() => retry(job.id)}>
+                {job.status === 'error' || job.status === 'canceled' ? (
+                  <button
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+                    type="button"
+                    title={t.retry}
+                    aria-label={t.retry}
+                    data-testid={`task-monitor-retry-${job.id}`}
+                    onClick={() => retry(job.id)}
+                  >
                     <RotateCcw size={14} />
                   </button>
                 ) : null}
@@ -2951,7 +3359,7 @@ function AppearanceSettingsPanel({
   onCustomNameChange,
   onCustomColorChange,
   onSaveCustom,
-  onDeleteCustom
+  onDeleteCustom,
 }: {
   settings: ThemeSettings;
   activeTheme: ReturnType<typeof resolveTheme>;
@@ -2968,18 +3376,24 @@ function AppearanceSettingsPanel({
   const canDeleteCustom = !isBuiltinThemeId(settings.activeThemeId);
   const previewTheme = resolveTheme({
     activeThemeId: '__preview-custom-theme',
-    customThemes: [{ id: '__preview-custom-theme', name: customName || t.defaultCustomName, colors: customColors }]
+    customThemes: [{ id: '__preview-custom-theme', name: customName || t.defaultCustomName, colors: customColors }],
   });
-  const activeThemePreviewStyle: CSSProperties = useMemo(() => ({
-    borderColor: activeTheme.colors.border,
-    backgroundColor: activeTheme.colors.bgPrimary,
-    color: activeTheme.colors.textPrimary
-  }), [activeTheme.colors.border, activeTheme.colors.bgPrimary, activeTheme.colors.textPrimary]);
-  const previewThemeStyle: CSSProperties = useMemo(() => ({
-    borderColor: previewTheme.colors.border,
-    backgroundColor: previewTheme.colors.bgPrimary,
-    color: previewTheme.colors.textPrimary
-  }), [previewTheme.colors.border, previewTheme.colors.bgPrimary, previewTheme.colors.textPrimary]);
+  const activeThemePreviewStyle: CSSProperties = useMemo(
+    () => ({
+      borderColor: activeTheme.colors.border,
+      backgroundColor: activeTheme.colors.bgPrimary,
+      color: activeTheme.colors.textPrimary,
+    }),
+    [activeTheme.colors.border, activeTheme.colors.bgPrimary, activeTheme.colors.textPrimary],
+  );
+  const previewThemeStyle: CSSProperties = useMemo(
+    () => ({
+      borderColor: previewTheme.colors.border,
+      backgroundColor: previewTheme.colors.bgPrimary,
+      color: previewTheme.colors.textPrimary,
+    }),
+    [previewTheme.colors.border, previewTheme.colors.bgPrimary, previewTheme.colors.textPrimary],
+  );
   return (
     <div className="space-y-4">
       <div>
@@ -3019,9 +3433,13 @@ function AppearanceSettingsPanel({
             activeTheme.colors.bgSecondary,
             activeTheme.colors.bgElevated,
             activeTheme.colors.accent,
-            activeTheme.colors.accentWarm
+            activeTheme.colors.accentWarm,
           ].map((color) => (
-            <span key={color} className="h-7 rounded border" style={{ borderColor: activeTheme.colors.border, backgroundColor: color }} />
+            <span
+              key={color}
+              className="h-7 rounded border"
+              style={{ borderColor: activeTheme.colors.border, backgroundColor: color }}
+            />
           ))}
         </div>
       </div>
@@ -3040,15 +3458,32 @@ function AppearanceSettingsPanel({
           />
         </label>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <ThemeColorInput label={t.primaryColor} value={customColors.primary} testId="theme-primary-color-input" onChange={(value) => onCustomColorChange('primary', value)} />
-          <ThemeColorInput label={t.accentColor} value={customColors.accent} testId="theme-accent-color-input" onChange={(value) => onCustomColorChange('accent', value)} />
-          <ThemeColorInput label={t.backgroundColor} value={customColors.background} testId="theme-background-color-input" onChange={(value) => onCustomColorChange('background', value)} />
-          <ThemeColorInput label={t.textColor} value={customColors.text} testId="theme-text-color-input" onChange={(value) => onCustomColorChange('text', value)} />
+          <ThemeColorInput
+            label={t.primaryColor}
+            value={customColors.primary}
+            testId="theme-primary-color-input"
+            onChange={(value) => onCustomColorChange('primary', value)}
+          />
+          <ThemeColorInput
+            label={t.accentColor}
+            value={customColors.accent}
+            testId="theme-accent-color-input"
+            onChange={(value) => onCustomColorChange('accent', value)}
+          />
+          <ThemeColorInput
+            label={t.backgroundColor}
+            value={customColors.background}
+            testId="theme-background-color-input"
+            onChange={(value) => onCustomColorChange('background', value)}
+          />
+          <ThemeColorInput
+            label={t.textColor}
+            value={customColors.text}
+            testId="theme-text-color-input"
+            onChange={(value) => onCustomColorChange('text', value)}
+          />
         </div>
-        <div
-          className="mt-3 rounded-md border p-3 text-xs"
-          style={previewThemeStyle}
-        >
+        <div className="mt-3 rounded-md border p-3 text-xs" style={previewThemeStyle}>
           <div className="font-semibold">{customName || t.defaultCustomName}</div>
           <div className="mt-2 flex gap-2">
             <span className="h-5 w-10 rounded" style={{ backgroundColor: previewTheme.colors.accent }} />
@@ -3057,11 +3492,7 @@ function AppearanceSettingsPanel({
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            data-testid="theme-save-custom-button"
-            onClick={onSaveCustom}
-          >
+          <Button size="sm" data-testid="theme-save-custom-button" onClick={onSaveCustom}>
             <Save size={14} />
             {t.saveCustom}
           </Button>
@@ -3082,11 +3513,27 @@ function AppearanceSettingsPanel({
   );
 }
 
-function ThemeColorInput({ label, value, testId, onChange }: { label: string; value: string; testId: string; onChange(value: string): void }) {
+function ThemeColorInput({
+  label,
+  value,
+  testId,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+  onChange(value: string): void;
+}) {
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <input className="mt-1 h-9 w-full rounded-md border border-line bg-white p-1" type="color" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)} />
+      <input
+        className="mt-1 h-9 w-full rounded-md border border-line bg-white p-1"
+        type="color"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
@@ -3099,8 +3546,8 @@ const AUTOMATION_RULE_EXAMPLE = [
   {
     trigger: 'on-import',
     conditions: [{ field: 'duration', op: '>', value: 300 }],
-    actions: [{ type: 'generate-proxy' }, { type: 'add-tag', value: 'green' }]
-  }
+    actions: [{ type: 'generate-proxy' }, { type: 'add-tag', value: 'green' }],
+  },
 ];
 
 function AutomationSettingsPanel({
@@ -3109,7 +3556,7 @@ function AutomationSettingsPanel({
   error,
   onRulesJsonChange,
   onSave,
-  onToggleRule
+  onToggleRule,
 }: {
   rules: AutomationRule[];
   rulesJson: string;
@@ -3146,18 +3593,30 @@ function AutomationSettingsPanel({
         />
       </label>
       {error ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800" data-testid="automation-rules-error">
+        <div
+          className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800"
+          data-testid="automation-rules-error"
+        >
           {error}
         </div>
       ) : null}
-      <button className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" type="button" data-testid="automation-rules-save-button" onClick={onSave}>
+      <button
+        className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95"
+        type="button"
+        data-testid="automation-rules-save-button"
+        onClick={onSave}
+      >
         {t.save}
       </button>
       <div className="rounded-md border border-line bg-white p-3" data-testid="automation-rules-list">
         {rules.length === 0 ? <div className="text-sm text-slate-500">{t.empty}</div> : null}
         <div className="space-y-2">
           {rules.map((rule) => (
-            <label key={rule.id} className="flex items-start gap-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="automation-rule-row">
+            <label
+              key={rule.id}
+              className="flex items-start gap-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600"
+              data-testid="automation-rule-row"
+            >
               <input
                 className="mt-0.5 h-4 w-4 accent-brand"
                 type="checkbox"
@@ -3169,7 +3628,9 @@ function AutomationSettingsPanel({
                 <span className="block truncate font-semibold text-slate-800">{rule.name ?? rule.id}</span>
                 <span className="mt-1 block text-slate-500">{t.ruleSummary(rule.trigger, rule.actions.length)}</span>
               </span>
-              <span className="shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">{rule.enabled ? t.enabled : t.disabled}</span>
+              <span className="shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                {rule.enabled ? t.enabled : t.disabled}
+              </span>
             </label>
           ))}
         </div>
@@ -3180,7 +3641,7 @@ function AutomationSettingsPanel({
 
 function ExportQualityAssuranceSettingsPanel({
   settings,
-  onChange
+  onChange,
 }: {
   settings: PostExportQualityAssuranceSettings;
   onChange(patch: Partial<PostExportQualityAssuranceSettings>): void;
@@ -3205,12 +3666,42 @@ function ExportQualityAssuranceSettingsPanel({
         </label>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <QualityAssuranceCheckbox label={t.duration} testId="settings-export-qa-duration" checked={settings.duration} onChange={(checked) => onChange({ duration: checked })} />
-        <QualityAssuranceCheckbox label={t.blackFrames} testId="settings-export-qa-black-frames" checked={settings.blackFrames} onChange={(checked) => onChange({ blackFrames: checked })} />
-        <QualityAssuranceCheckbox label={t.silence} testId="settings-export-qa-silence" checked={settings.silence} onChange={(checked) => onChange({ silence: checked })} />
-        <QualityAssuranceCheckbox label={t.fileSize} testId="settings-export-qa-file-size" checked={settings.fileSize} onChange={(checked) => onChange({ fileSize: checked })} />
-        <QualityAssuranceCheckbox label={t.resolution} testId="settings-export-qa-resolution" checked={settings.resolution} onChange={(checked) => onChange({ resolution: checked })} />
-        <QualityAssuranceCheckbox label={t.autoRetry} testId="settings-export-qa-auto-retry" checked={settings.autoRetry} onChange={(checked) => onChange({ autoRetry: checked })} />
+        <QualityAssuranceCheckbox
+          label={t.duration}
+          testId="settings-export-qa-duration"
+          checked={settings.duration}
+          onChange={(checked) => onChange({ duration: checked })}
+        />
+        <QualityAssuranceCheckbox
+          label={t.blackFrames}
+          testId="settings-export-qa-black-frames"
+          checked={settings.blackFrames}
+          onChange={(checked) => onChange({ blackFrames: checked })}
+        />
+        <QualityAssuranceCheckbox
+          label={t.silence}
+          testId="settings-export-qa-silence"
+          checked={settings.silence}
+          onChange={(checked) => onChange({ silence: checked })}
+        />
+        <QualityAssuranceCheckbox
+          label={t.fileSize}
+          testId="settings-export-qa-file-size"
+          checked={settings.fileSize}
+          onChange={(checked) => onChange({ fileSize: checked })}
+        />
+        <QualityAssuranceCheckbox
+          label={t.resolution}
+          testId="settings-export-qa-resolution"
+          checked={settings.resolution}
+          onChange={(checked) => onChange({ resolution: checked })}
+        />
+        <QualityAssuranceCheckbox
+          label={t.autoRetry}
+          testId="settings-export-qa-auto-retry"
+          checked={settings.autoRetry}
+          onChange={(checked) => onChange({ autoRetry: checked })}
+        />
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <label className="block text-xs font-medium text-slate-600">
@@ -3246,7 +3737,14 @@ function ExportQualityAssuranceSettingsPanel({
             step={0.1}
             value={settings.blackFrameDurationSeconds}
             data-testid="settings-export-qa-black-duration"
-            onChange={(event) => onChange({ blackFrameDurationSeconds: requiredNumberFromInput(event.target.value, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds) })}
+            onChange={(event) =>
+              onChange({
+                blackFrameDurationSeconds: requiredNumberFromInput(
+                  event.target.value,
+                  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds,
+                ),
+              })
+            }
           />
         </label>
         <label className="block text-xs font-medium text-slate-600">
@@ -3257,7 +3755,14 @@ function ExportQualityAssuranceSettingsPanel({
             step={1}
             value={settings.silenceThresholdDb}
             data-testid="settings-export-qa-silence-threshold"
-            onChange={(event) => onChange({ silenceThresholdDb: requiredNumberFromInput(event.target.value, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb) })}
+            onChange={(event) =>
+              onChange({
+                silenceThresholdDb: requiredNumberFromInput(
+                  event.target.value,
+                  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb,
+                ),
+              })
+            }
           />
         </label>
         <label className="block text-xs font-medium text-slate-600">
@@ -3269,7 +3774,14 @@ function ExportQualityAssuranceSettingsPanel({
             step={0.1}
             value={settings.silenceDurationSeconds}
             data-testid="settings-export-qa-silence-duration"
-            onChange={(event) => onChange({ silenceDurationSeconds: requiredNumberFromInput(event.target.value, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds) })}
+            onChange={(event) =>
+              onChange({
+                silenceDurationSeconds: requiredNumberFromInput(
+                  event.target.value,
+                  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds,
+                ),
+              })
+            }
           />
         </label>
       </div>
@@ -3277,10 +3789,26 @@ function ExportQualityAssuranceSettingsPanel({
   );
 }
 
-function QualityAssuranceCheckbox({ label, testId, checked, onChange }: { label: string; testId: string; checked: boolean; onChange(checked: boolean): void }) {
+function QualityAssuranceCheckbox({
+  label,
+  testId,
+  checked,
+  onChange,
+}: {
+  label: string;
+  testId: string;
+  checked: boolean;
+  onChange(checked: boolean): void;
+}) {
   return (
     <label className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium text-slate-700">
-      <input className="h-4 w-4 accent-brand" type="checkbox" checked={checked} data-testid={testId} onChange={(event) => onChange(event.target.checked)} />
+      <input
+        className="h-4 w-4 accent-brand"
+        type="checkbox"
+        checked={checked}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.checked)}
+      />
       <span>{label}</span>
     </label>
   );
@@ -3302,7 +3830,7 @@ function requiredNumberFromInput(value: string, fallback: number): number {
 function ExportRulesSettingsPanel({
   rules,
   onRuleChange,
-  onChooseCopyDirectory
+  onChooseCopyDirectory,
 }: {
   rules: ExportConditionRule[];
   onRuleChange(rule: ExportConditionRule): void;
@@ -3310,7 +3838,11 @@ function ExportRulesSettingsPanel({
 }) {
   const t = zhCN.settings.exportRules;
   const copyRule = getExportRule(rules, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule());
-  const failureNotificationRule = getExportRule(rules, EXPORT_RULE_FAILURE_NOTIFICATION_ID, defaultExportFailureNotificationRule());
+  const failureNotificationRule = getExportRule(
+    rules,
+    EXPORT_RULE_FAILURE_NOTIFICATION_ID,
+    defaultExportFailureNotificationRule(),
+  );
   const queueToneRule = getExportRule(rules, EXPORT_RULE_QUEUE_TONE_ID, defaultExportQueueToneRule());
 
   return (
@@ -3391,7 +3923,7 @@ function BackupSettingsPanel({
   password,
   onSettingsChange,
   onChooseDirectory,
-  onPasswordChange
+  onPasswordChange,
 }: {
   settings: BackupSettings;
   password: string;
@@ -3401,8 +3933,10 @@ function BackupSettingsPanel({
 }) {
   const t = zhCN.settings.backup;
   const lastBackup = formatBackupDisplayTime(settings.lastBackupAt) ?? t.neverBackedUp;
-  const updateLocal = (patch: Partial<BackupSettings['local']>) => onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
-  const updateWebdav = (patch: Partial<BackupSettings['webdav']>) => onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
+  const updateLocal = (patch: Partial<BackupSettings['local']>) =>
+    onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
+  const updateWebdav = (patch: Partial<BackupSettings['webdav']>) =>
+    onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
 
   return (
     <div className="space-y-4">
@@ -3477,7 +4011,10 @@ function BackupSettingsPanel({
               data-testid="backup-webdav-url-input"
               onChange={(event) => updateWebdav({ url: event.target.value })}
             />
-            <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="backup-webdav-https-warning">
+            <span
+              className="mt-1 block text-[11px] font-normal text-amber-700"
+              data-testid="backup-webdav-https-warning"
+            >
               {t.httpsRequiredNote}
             </span>
           </label>
@@ -3529,7 +4066,7 @@ function PresetMarketPanel({
   onRefresh,
   onInstall,
   onRate,
-  onShare
+  onShare,
 }: {
   cards: PresetMarketCard[];
   ratings: Record<string, number>;
@@ -3553,7 +4090,11 @@ function PresetMarketPanel({
         <div>
           <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
           <p className="text-xs text-slate-500">{t.description}</p>
-          <p className="mt-1 text-[11px] font-medium text-slate-500" data-testid="preset-market-source" data-source={source}>
+          <p
+            className="mt-1 text-[11px] font-medium text-slate-500"
+            data-testid="preset-market-source"
+            data-source={source}
+          >
             {t.sourceLabels[source]}
           </p>
         </div>
@@ -3605,25 +4146,40 @@ function PresetMarketPanel({
       </div>
 
       {warning ? (
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="preset-market-warning">
+        <div
+          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+          data-testid="preset-market-warning"
+        >
           {warning}
         </div>
       ) : null}
-      {loading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div> : null}
-      {!loading && cards.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div> : null}
+      {loading ? (
+        <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div>
+      ) : null}
+      {!loading && cards.length === 0 ? (
+        <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div>
+      ) : null}
 
       <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="preset-market-list">
         {cards.map((card) => {
           const displayedRating = ratings[card.id] ?? card.rating;
           const installing = installingCardId === card.id;
           return (
-            <div key={card.id} className="rounded-md border border-line bg-white p-3" data-testid="preset-market-card" data-preset-id={card.id}>
+            <div
+              key={card.id}
+              className="rounded-md border border-line bg-white p-3"
+              data-testid="preset-market-card"
+              data-preset-id={card.id}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-ink">{card.name}</div>
                   <div className="truncate text-xs text-slate-500">{t.byAuthor(card.author)}</div>
                 </div>
-                <div className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600" data-testid="preset-market-downloads">
+                <div
+                  className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600"
+                  data-testid="preset-market-downloads"
+                >
                   {t.downloads(card.downloads)}
                 </div>
               </div>
@@ -3636,7 +4192,11 @@ function PresetMarketPanel({
                 ))}
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1" data-testid="preset-market-rating" data-rating={displayedRating}>
+                <div
+                  className="flex items-center gap-1"
+                  data-testid="preset-market-rating"
+                  data-rating={displayedRating}
+                >
                   {[1, 2, 3, 4, 5].map((rating) => (
                     <button
                       key={rating}
@@ -3681,7 +4241,7 @@ function EffectPresetCommunityPanel({
   onFiltersChange,
   onRefresh,
   onInstall,
-  onShare
+  onShare,
 }: {
   cards: EffectPresetCommunityCard[];
   filters: EffectPresetFilters;
@@ -3704,7 +4264,11 @@ function EffectPresetCommunityPanel({
         <div>
           <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
           <p className="text-xs text-slate-500">{t.description}</p>
-          <p className="mt-1 text-[11px] font-medium text-slate-500" data-testid="effect-preset-source" data-source={source}>
+          <p
+            className="mt-1 text-[11px] font-medium text-slate-500"
+            data-testid="effect-preset-source"
+            data-source={source}
+          >
             {t.sourceLabels[source]}
           </p>
         </div>
@@ -3750,26 +4314,50 @@ function EffectPresetCommunityPanel({
       </div>
 
       {warning ? (
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="effect-preset-warning">
+        <div
+          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+          data-testid="effect-preset-warning"
+        >
           {warning}
         </div>
       ) : null}
-      {loading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div> : null}
-      {!loading && cards.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div> : null}
+      {loading ? (
+        <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div>
+      ) : null}
+      {!loading && cards.length === 0 ? (
+        <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div>
+      ) : null}
 
       <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="effect-preset-community-list">
         {cards.map((card) => {
           const installing = installingCardId === card.id;
           return (
-            <div key={card.id} className="rounded-md border border-line bg-white p-3" data-testid="effect-preset-community-card" data-preset-id={card.id}>
+            <div
+              key={card.id}
+              className="rounded-md border border-line bg-white p-3"
+              data-testid="effect-preset-community-card"
+              data-preset-id={card.id}
+            >
               <div className="flex items-start gap-3">
                 <div className="grid h-20 w-28 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
-                  {card.thumbnail ? <img className="h-full w-full object-cover" src={card.thumbnail} alt="" data-testid="effect-preset-community-thumbnail" loading="lazy" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+                  {card.thumbnail ? (
+                    <img
+                      className="h-full w-full object-cover"
+                      src={card.thumbnail}
+                      alt=""
+                      data-testid="effect-preset-community-thumbnail"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <SlidersHorizontal size={18} className="text-slate-400" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold text-ink">{card.name}</div>
                   <div className="truncate text-xs text-slate-500">{t.byAuthor(card.author)}</div>
-                  {card.description ? <p className="mt-2 line-clamp-2 text-xs text-slate-500">{card.description}</p> : null}
+                  {card.description ? (
+                    <p className="mt-2 line-clamp-2 text-xs text-slate-500">{card.description}</p>
+                  ) : null}
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1" data-testid="effect-preset-community-tags">
@@ -3802,7 +4390,7 @@ function EffectPresetFilterSelect({
   value,
   options,
   testId,
-  onChange
+  onChange,
 }: {
   label: string;
   value: string;
@@ -3813,7 +4401,12 @@ function EffectPresetFilterSelect({
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {Object.entries(options).map(([option, optionLabel]) => (
           <option key={option} value={option}>
             {optionLabel}
@@ -3829,7 +4422,7 @@ function PresetMarketFilterSelect({
   value,
   options,
   testId,
-  onChange
+  onChange,
 }: {
   label: string;
   value: string;
@@ -3840,7 +4433,12 @@ function PresetMarketFilterSelect({
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+      <select
+        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -3855,7 +4453,7 @@ function ExportPresetSyncSettingsPanel({
   settings,
   password,
   onSettingsChange,
-  onPasswordChange
+  onPasswordChange,
 }: {
   settings: ExportPresetSyncSettings;
   password: string;
@@ -3897,7 +4495,10 @@ function ExportPresetSyncSettingsPanel({
               data-testid="export-preset-sync-url-input"
               onChange={(event) => update({ url: event.target.value })}
             />
-            <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="export-preset-sync-https-warning">
+            <span
+              className="mt-1 block text-[11px] font-normal text-amber-700"
+              data-testid="export-preset-sync-https-warning"
+            >
               {t.httpsRequiredNote}
             </span>
           </label>
@@ -3936,7 +4537,9 @@ function ExportPresetSyncSettingsPanel({
               className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
               value={settings.conflictMode}
               data-testid="export-preset-sync-conflict-mode-select"
-              onChange={(event) => update({ conflictMode: event.target.value as ExportPresetSyncSettings['conflictMode'] })}
+              onChange={(event) =>
+                update({ conflictMode: event.target.value as ExportPresetSyncSettings['conflictMode'] })
+              }
             >
               {(['merge', 'keep-local', 'keep-remote'] as const).map((mode) => (
                 <option key={mode} value={mode}>
@@ -3948,7 +4551,10 @@ function ExportPresetSyncSettingsPanel({
         </div>
         <div className="mt-2 text-xs text-slate-500">{t.passwordStorageNote}</div>
       </div>
-      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="export-preset-sync-status">
+      <div
+        className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600"
+        data-testid="export-preset-sync-status"
+      >
         <div>
           {t.lastSync}: <span data-testid="export-preset-sync-last-time">{lastSync}</span>
         </div>
@@ -3971,7 +4577,7 @@ function ProxySettingsPanel({
   onDeleteProxies,
   onRegenerateProxies,
   onMigrateProxies,
-  onReset
+  onReset,
 }: {
   project: Project;
   resolutionPreset: ProxyResolutionPreset;
@@ -4018,9 +4624,16 @@ function ProxySettingsPanel({
           }
         }
       }
-      const nextItems = buildProxyInventory(project.media, { sourceStats, proxyStats, existingProxyPaths, timeline: project.timeline });
+      const nextItems = buildProxyInventory(project.media, {
+        sourceStats,
+        proxyStats,
+        existingProxyPaths,
+        timeline: project.timeline,
+      });
       setItems(nextItems);
-      setSelectedAssetIds((current) => new Set(nextItems.filter((item) => current.has(item.assetId)).map((item) => item.assetId)));
+      setSelectedAssetIds(
+        (current) => new Set(nextItems.filter((item) => current.has(item.assetId)).map((item) => item.assetId)),
+      );
     } finally {
       setRefreshing(false);
     }
@@ -4053,7 +4666,9 @@ function ProxySettingsPanel({
   };
   const clearUnused = async () => {
     const cleanup = planProxyCleanup(items);
-    const deleteAssetIds = items.filter((item) => cleanup.deletePaths.includes(item.proxyPath)).map((item) => item.assetId);
+    const deleteAssetIds = items
+      .filter((item) => cleanup.deletePaths.includes(item.proxyPath))
+      .map((item) => item.assetId);
     await deleteSelected(deleteAssetIds);
   };
   const migrateDirectory = async () => {
@@ -4077,7 +4692,12 @@ function ProxySettingsPanel({
           <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
           <p className="text-xs text-slate-500">{t.description}</p>
         </div>
-        <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-settings-reset-button" onClick={onReset}>
+        <button
+          className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="proxy-settings-reset-button"
+          onClick={onReset}
+        >
           {t.reset}
         </button>
       </div>
@@ -4116,12 +4736,18 @@ function ProxySettingsPanel({
       <div className="grid gap-3 sm:grid-cols-3" data-testid="proxy-stats-dashboard">
         <div className="rounded-md border border-line bg-white p-3">
           <div className="text-[11px] font-semibold uppercase text-slate-500">{t.coverage}</div>
-          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-coverage-ratio">{Math.round(coverageStats.coverageRatio * 100)}%</div>
-          <div className="text-[11px] text-slate-500">{coverageStats.proxiedMediaCount}/{coverageStats.totalMediaCount}</div>
+          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-coverage-ratio">
+            {Math.round(coverageStats.coverageRatio * 100)}%
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {coverageStats.proxiedMediaCount}/{coverageStats.totalMediaCount}
+          </div>
         </div>
         <div className="rounded-md border border-line bg-white p-3">
           <div className="text-[11px] font-semibold uppercase text-slate-500">{t.previewSaved}</div>
-          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-preview-saved">{formatDurationSeconds(coverageStats.estimatedPreviewSecondsSaved)}</div>
+          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-preview-saved">
+            {formatDurationSeconds(coverageStats.estimatedPreviewSecondsSaved)}
+          </div>
         </div>
         <div className="rounded-md border border-line bg-white p-3">
           <div className="text-[11px] font-semibold uppercase text-slate-500">{t.storageTrend}</div>
@@ -4129,7 +4755,14 @@ function ProxySettingsPanel({
             {storageTrend.map((point) => {
               const maxBytes = Math.max(1, ...storageTrend.map((item) => item.totalBytes));
               const height = Math.max(2, Math.round((point.totalBytes / maxBytes) * 32));
-              return <span key={point.day} className="w-full rounded-sm bg-brand/70" title={`${point.day}: ${formatBytes(point.totalBytes)}`} style={{ height }} />;
+              return (
+                <span
+                  key={point.day}
+                  className="w-full rounded-sm bg-brand/70"
+                  title={`${point.day}: ${formatBytes(point.totalBytes)}`}
+                  style={{ height }}
+                />
+              );
             })}
           </div>
         </div>
@@ -4144,7 +4777,13 @@ function ProxySettingsPanel({
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-verify-button" disabled={refreshing} onClick={() => void refreshInventory()}>
+            <button
+              className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="proxy-verify-button"
+              disabled={refreshing}
+              onClick={() => void refreshInventory()}
+            >
               {refreshing ? t.verifying : t.verify}
             </button>
             <button
@@ -4165,10 +4804,21 @@ function ProxySettingsPanel({
             >
               {t.deleteSelected}
             </button>
-            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-clear-unused-button" onClick={() => void clearUnused()}>
+            <button
+              className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="proxy-clear-unused-button"
+              onClick={() => void clearUnused()}
+            >
               {t.clearUnused}
             </button>
-            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-40" type="button" data-testid="proxy-migrate-directory-button" disabled={migrating || items.length === 0} onClick={() => void migrateDirectory()}>
+            <button
+              className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-40"
+              type="button"
+              data-testid="proxy-migrate-directory-button"
+              disabled={migrating || items.length === 0}
+              onClick={() => void migrateDirectory()}
+            >
               {migrating ? t.migrating : t.migrateDirectory}
             </button>
           </div>
@@ -4178,7 +4828,9 @@ function ProxySettingsPanel({
             type="checkbox"
             checked={allSelected}
             data-testid="proxy-select-all-checkbox"
-            onChange={(event) => setSelectedAssetIds(event.target.checked ? new Set(items.map((item) => item.assetId)) : new Set())}
+            onChange={(event) =>
+              setSelectedAssetIds(event.target.checked ? new Set(items.map((item) => item.assetId)) : new Set())
+            }
           />
           {t.selectAll}
         </label>
@@ -4205,7 +4857,12 @@ function ProxySettingsPanel({
                 items.map((item) => (
                   <tr key={item.assetId} className="border-t border-line" data-testid="proxy-management-row">
                     <td className="py-2 pr-2">
-                      <input type="checkbox" checked={selectedAssetIds.has(item.assetId)} data-testid={`proxy-select-${item.assetId}`} onChange={() => toggleSelection(item.assetId)} />
+                      <input
+                        type="checkbox"
+                        checked={selectedAssetIds.has(item.assetId)}
+                        data-testid={`proxy-select-${item.assetId}`}
+                        onChange={() => toggleSelection(item.assetId)}
+                      />
                     </td>
                     <td className="max-w-52 py-2 pr-3">
                       <div className="truncate font-medium text-slate-700">{item.sourceName}</div>
@@ -4216,7 +4873,9 @@ function ProxySettingsPanel({
                       {item.inUse ? <div className="mt-0.5 text-[11px] text-emerald-700">{t.inUse}</div> : null}
                     </td>
                     <td className="py-2 pr-3 text-slate-600">{formatBytes(item.size)}</td>
-                    <td className="py-2 pr-3 text-slate-600">{item.generatedAtMs ? formatDateTime(item.generatedAtMs) : t.unknown}</td>
+                    <td className="py-2 pr-3 text-slate-600">
+                      {item.generatedAtMs ? formatDateTime(item.generatedAtMs) : t.unknown}
+                    </td>
                     <td className="py-2">
                       <ProxyInventoryStatusBadge item={item} />
                     </td>
@@ -4242,7 +4901,12 @@ function ProxyInventoryStatusBadge({ item }: { item: ProxyInventoryItem }) {
           ? 'border-red-200 bg-red-50 text-red-700'
           : 'border-slate-200 bg-slate-50 text-slate-600';
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`} title={item.error} data-testid={`proxy-management-status-${item.assetId}`} data-proxy-status={item.status}>
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`}
+      title={item.error}
+      data-testid={`proxy-management-status-${item.assetId}`}
+      data-proxy-status={item.status}
+    >
       {t[item.status]}
     </span>
   );
@@ -4282,7 +4946,7 @@ function TranslationSettingsPanel({
   targetLanguage,
   onProviderChange,
   onApiKeyChange,
-  onTargetLanguageChange
+  onTargetLanguageChange,
 }: {
   provider: TranslationProvider;
   apiKey: string;
@@ -4299,7 +4963,10 @@ function TranslationSettingsPanel({
         <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
         <p className="text-xs text-slate-500">{t.description}</p>
       </div>
-      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800" data-testid="translation-third-party-warning">
+      <div
+        className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800"
+        data-testid="translation-third-party-warning"
+      >
         {t.thirdPartyWarning}
       </div>
       <label className="block text-xs font-medium text-slate-600">
@@ -4350,7 +5017,7 @@ function LocalModelsSettingsPanel({
   settings,
   statuses,
   onChoose,
-  onDownload
+  onDownload,
 }: {
   settings: LocalAiModelsSettings;
   statuses: Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>;
@@ -4372,33 +5039,60 @@ function LocalModelsSettingsPanel({
           const status = statuses[id] ?? { id, status: 'missing' as const, reason: 'not-configured' as const };
           const path = config?.path ?? status.path ?? '';
           return (
-            <div key={id} className="rounded-md border border-line bg-panel p-3" data-testid={`local-model-row-${id}`} data-status={status.status}>
+            <div
+              key={id}
+              className="rounded-md border border-line bg-panel p-3"
+              data-testid={`local-model-row-${id}`}
+              data-status={status.status}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-xs font-semibold text-slate-800">{modelText.name}</h4>
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${localModelStatusClass(status.status)}`} data-testid={`local-model-status-${id}`}>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${localModelStatusClass(status.status)}`}
+                      data-testid={`local-model-status-${id}`}
+                    >
                       {t.status[status.status]}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">{modelText.description}</p>
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80" type="button" title={t.download} aria-label={t.download} data-testid={`local-model-download-${id}`} onClick={() => onDownload(id)}>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80"
+                    type="button"
+                    title={t.download}
+                    aria-label={t.download}
+                    data-testid={`local-model-download-${id}`}
+                    onClick={() => onDownload(id)}
+                  >
                     <Download size={14} />
                   </button>
-                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80" type="button" title={t.chooseFile} aria-label={t.chooseFile} data-testid={`local-model-choose-${id}`} onClick={() => onChoose(id)}>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80"
+                    type="button"
+                    title={t.chooseFile}
+                    aria-label={t.chooseFile}
+                    data-testid={`local-model-choose-${id}`}
+                    onClick={() => onChoose(id)}
+                  >
                     <FolderOpen size={14} />
                   </button>
                 </div>
               </div>
               <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
                 <ModelInfo label={t.version} value={config?.version ?? definition.version} />
-                <ModelInfo label={t.fileSize} value={status.size !== undefined ? formatBytes(status.size) : zhCN.common.unavailable} />
+                <ModelInfo
+                  label={t.fileSize}
+                  value={status.size !== undefined ? formatBytes(status.size) : zhCN.common.unavailable}
+                />
                 <ModelInfo label={t.storagePath} value={path || t.notConfigured} mono />
                 <ModelInfo label={t.lastUsedAt} value={formatOptionalIsoDateTime(config?.lastUsedAt)} />
               </div>
-              {status.status === 'invalid' ? <div className="mt-2 text-xs font-medium text-rose-700">{t.invalidStatus}</div> : null}
+              {status.status === 'invalid' ? (
+                <div className="mt-2 text-xs font-medium text-rose-700">{t.invalidStatus}</div>
+              ) : null}
             </div>
           );
         })}
@@ -4442,7 +5136,9 @@ function normalizeProxyResolutionPreset(value: string): ProxyResolutionPreset {
 
 function normalizeProxyTriggerThreshold(value: string): ProxyTriggerThreshold {
   const numeric = Number(value);
-  return PROXY_TRIGGER_THRESHOLDS.includes(numeric as ProxyTriggerThreshold) ? (numeric as ProxyTriggerThreshold) : 1080;
+  return PROXY_TRIGGER_THRESHOLDS.includes(numeric as ProxyTriggerThreshold)
+    ? (numeric as ProxyTriggerThreshold)
+    : 1080;
 }
 
 function getExportRule(rules: ExportConditionRule[], id: string, fallback: ExportConditionRule): ExportConditionRule {
@@ -4462,7 +5158,7 @@ function defaultExportCopyRule(): ExportConditionRule {
     id: EXPORT_RULE_COPY_SUCCESS_ID,
     enabled: false,
     trigger: 'export-success',
-    action: 'copy-to-directory'
+    action: 'copy-to-directory',
   };
 }
 
@@ -4471,7 +5167,7 @@ function defaultExportFailureNotificationRule(): ExportConditionRule {
     id: EXPORT_RULE_FAILURE_NOTIFICATION_ID,
     enabled: false,
     trigger: 'export-failure',
-    action: 'system-notification'
+    action: 'system-notification',
   };
 }
 
@@ -4480,14 +5176,14 @@ function defaultExportQueueToneRule(): ExportConditionRule {
     id: EXPORT_RULE_QUEUE_TONE_ID,
     enabled: false,
     trigger: 'queue-complete',
-    action: 'play-tone'
+    action: 'play-tone',
   };
 }
 
 function MacroStepsEditor({
   macro,
   onSave,
-  onDeleteStep
+  onDeleteStep,
 }: {
   macro: ClipMacro;
   onSave(raw: string): void;
@@ -4553,7 +5249,7 @@ function PluginsSettingsPanel({
   onInstallCatalogPlugin,
   onInstallFromFile,
   onTogglePlugin,
-  onUninstallPlugin
+  onUninstallPlugin,
 }: {
   registry?: PluginRegistry;
   loading: boolean;
@@ -4579,42 +5275,84 @@ function PluginsSettingsPanel({
           <div>
             <h3 className="text-sm font-semibold text-ink">{t.marketTitle}</h3>
             <p className="text-xs text-slate-500">{t.marketDescription}</p>
-            {catalog?.source === 'cache' ? <p className="mt-1 text-[11px] font-medium text-amber-700" data-testid="plugin-market-cache-source">{t.catalogCacheSource}</p> : null}
+            {catalog?.source === 'cache' ? (
+              <p className="mt-1 text-[11px] font-medium text-amber-700" data-testid="plugin-market-cache-source">
+                {t.catalogCacheSource}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
-            <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugin-market-refresh-button" onClick={onRefreshCatalog}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="plugin-market-refresh-button"
+              onClick={onRefreshCatalog}
+            >
               <Download size={13} />
               {t.refreshCatalog}
             </button>
-            <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugin-install-file-button" onClick={onInstallFromFile}>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="plugin-install-file-button"
+              onClick={onInstallFromFile}
+            >
               <FilePlus size={13} />
               {t.installFromFile}
             </button>
           </div>
         </div>
-        {catalogLoading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.catalogLoading}</div> : null}
-        {catalogError ? <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" data-testid="plugin-market-error">{catalogError}</div> : null}
-        {!catalogLoading && catalogEntries.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.catalogEmpty}</div> : null}
+        {catalogLoading ? (
+          <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">
+            {t.catalogLoading}
+          </div>
+        ) : null}
+        {catalogError ? (
+          <div
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+            data-testid="plugin-market-error"
+          >
+            {catalogError}
+          </div>
+        ) : null}
+        {!catalogLoading && catalogEntries.length === 0 ? (
+          <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.catalogEmpty}</div>
+        ) : null}
         <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="plugin-market-list">
           {catalogEntries.map((entry) => {
             const installState = getCatalogEntryInstallState(entry, registry);
             const installing = installingPluginId === entry.id;
             return (
-              <div key={entry.id} className="rounded-md border border-line bg-white p-3" data-testid="plugin-market-card" data-plugin-id={entry.id}>
+              <div
+                key={entry.id}
+                className="rounded-md border border-line bg-white p-3"
+                data-testid="plugin-market-card"
+                data-plugin-id={entry.id}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-ink">{entry.name}</div>
-                    <div className="truncate text-xs text-slate-500">{entry.author} · {entry.version}</div>
-                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">{entry.description || t.noDescription}</div>
+                    <div className="truncate text-xs text-slate-500">
+                      {entry.author} · {entry.version}
+                    </div>
+                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">
+                      {entry.description || t.noDescription}
+                    </div>
                   </div>
-                  <span className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600" data-testid="plugin-market-install-state">
+                  <span
+                    className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600"
+                    data-testid="plugin-market-install-state"
+                  >
                     {t.installState[installState.status]}
                   </span>
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  {t.permissions}: <span data-testid="plugin-market-permissions">{formatPluginPermissions(entry.permissions)}</span>
+                  {t.permissions}:{' '}
+                  <span data-testid="plugin-market-permissions">{formatPluginPermissions(entry.permissions)}</span>
                 </div>
-                {installState.installedVersion ? <div className="mt-1 text-xs text-slate-500">{t.installedVersion(installState.installedVersion)}</div> : null}
+                {installState.installedVersion ? (
+                  <div className="mt-1 text-xs text-slate-500">{t.installedVersion(installState.installedVersion)}</div>
+                ) : null}
                 <button
                   className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
@@ -4623,7 +5361,13 @@ function PluginsSettingsPanel({
                   onClick={() => onInstallCatalogPlugin(entry)}
                 >
                   <Download size={13} />
-                  {installing ? t.installing : installState.status === 'update-available' ? t.update : installState.status === 'installed' ? t.installed : t.install}
+                  {installing
+                    ? t.installing
+                    : installState.status === 'update-available'
+                      ? t.update
+                      : installState.status === 'installed'
+                        ? t.installed
+                        : t.install}
                 </button>
               </div>
             );
@@ -4635,44 +5379,94 @@ function PluginsSettingsPanel({
           <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
           <p className="text-xs text-slate-500">{t.description}</p>
         </div>
-        <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugins-refresh-button" onClick={onRefresh}>
+        <button
+          className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="plugins-refresh-button"
+          onClick={onRefresh}
+        >
           {t.refresh}
         </button>
       </div>
-      {loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.loading}</div> : null}
-      {error ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
-      {!loading && plugins.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.empty}</div> : null}
+      {loading ? (
+        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.loading}</div>
+      ) : null}
+      {error ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div>
+      ) : null}
+      {!loading && plugins.length === 0 ? (
+        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.empty}</div>
+      ) : null}
       <div className="space-y-2">
         {plugins.map((entry) => {
           const status = getLoadedPluginStatus(entry);
           return (
-            <div key={`${entry.sourcePath}-${entry.plugin.id}`} className="rounded-md border border-line bg-white p-3" data-testid="plugin-list-item" data-plugin-id={entry.plugin.id}>
+            <div
+              key={`${entry.sourcePath}-${entry.plugin.id}`}
+              className="rounded-md border border-line bg-white p-3"
+              data-testid="plugin-list-item"
+              data-plugin-id={entry.plugin.id}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-ink">{entry.plugin.name}</div>
-                  <div className="truncate text-xs text-slate-500">{entry.plugin.id} · {entry.plugin.version}</div>
-                  <div className="mt-1 truncate text-xs text-slate-500">{entry.plugin.description || t.noDescription}</div>
+                  <div className="truncate text-xs text-slate-500">
+                    {entry.plugin.id} · {entry.plugin.version}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-slate-500">
+                    {entry.plugin.description || t.noDescription}
+                  </div>
                 </div>
-                <span className="rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600">{entry.builtin ? t.builtin : t.user}</span>
+                <span className="rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600">
+                  {entry.builtin ? t.builtin : t.user}
+                </span>
               </div>
               <div className="mt-2 grid gap-1 text-xs text-slate-500">
-                <div>{t.permissions}: <span data-testid="plugin-permissions">{formatPluginPermissions(entry.plugin.permissions)}</span></div>
-                <div>{t.hooks}: {Object.keys(entry.plugin.hooks).join(', ') || zhCN.common.none}</div>
                 <div>
-                  {t.status}: <span className={`font-semibold ${pluginStatusClass(status)}`} data-testid="plugin-status" data-status={status}>{t.state[status]}</span>
+                  {t.permissions}:{' '}
+                  <span data-testid="plugin-permissions">{formatPluginPermissions(entry.plugin.permissions)}</span>
+                </div>
+                <div>
+                  {t.hooks}: {Object.keys(entry.plugin.hooks).join(', ') || zhCN.common.none}
+                </div>
+                <div>
+                  {t.status}:{' '}
+                  <span
+                    className={`font-semibold ${pluginStatusClass(status)}`}
+                    data-testid="plugin-status"
+                    data-status={status}
+                  >
+                    {t.state[status]}
+                  </span>
                 </div>
               </div>
-              {entry.errors.length > 0 ? <div className="mt-2 text-xs font-medium text-amber-700" data-testid="plugin-entry-error">{t.errors}: {entry.errors.join('; ')}</div> : null}
+              {entry.errors.length > 0 ? (
+                <div className="mt-2 text-xs font-medium text-amber-700" data-testid="plugin-entry-error">
+                  {t.errors}: {entry.errors.join('; ')}
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
-                <button className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white" type="button" data-testid="plugin-toggle-button" onClick={() => onTogglePlugin(entry)}>
+                <button
+                  className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white"
+                  type="button"
+                  data-testid="plugin-toggle-button"
+                  onClick={() => onTogglePlugin(entry)}
+                >
                   {entry.enabled ? t.disable : t.enable}
                 </button>
                 {!entry.builtin ? (
-                  <button className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100" type="button" data-testid="plugin-uninstall-button" onClick={() => onUninstallPlugin(entry)}>
+                  <button
+                    className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
+                    type="button"
+                    data-testid="plugin-uninstall-button"
+                    onClick={() => onUninstallPlugin(entry)}
+                  >
                     {t.uninstall}
                   </button>
                 ) : (
-                  <span className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-500">{t.builtinLocked}</span>
+                  <span className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-500">
+                    {t.builtinLocked}
+                  </span>
                 )}
               </div>
             </div>
@@ -4680,9 +5474,15 @@ function PluginsSettingsPanel({
         })}
       </div>
       {registry?.errors.map((loadError) => (
-        <div key={loadError.sourcePath} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="plugin-load-error">
+        <div
+          key={loadError.sourcePath}
+          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+          data-testid="plugin-load-error"
+        >
           <div className="font-semibold">{t.loadFailed}</div>
-          <div className="break-all">{loadError.sourcePath}: {loadError.message}</div>
+          <div className="break-all">
+            {loadError.sourcePath}: {loadError.message}
+          </div>
         </div>
       ))}
     </div>
@@ -4690,7 +5490,9 @@ function PluginsSettingsPanel({
 }
 
 function formatPluginPermissions(permissions: PluginPermission[]): string {
-  return permissions.map((permission) => zhCN.settings.plugins.permissionLabels[permission]).join(', ') || zhCN.common.none;
+  return (
+    permissions.map((permission) => zhCN.settings.plugins.permissionLabels[permission]).join(', ') || zhCN.common.none
+  );
 }
 
 function pluginStatusClass(status: 'enabled' | 'disabled' | 'error'): string {
@@ -4714,11 +5516,11 @@ function buildPreviewTimelineWithLut(timeline: Timeline, clipId: string, lutPath
               ...clip,
               colorCorrection: {
                 ...clip.colorCorrection,
-                lutPath
-              }
+                lutPath,
+              },
             }
-          : clip
-      )
-    }))
+          : clip,
+      ),
+    })),
   };
 }

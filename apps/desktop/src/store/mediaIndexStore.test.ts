@@ -125,8 +125,7 @@ describe('mediaIndexStore', () => {
     });
 
     it('移除标签过滤', () => {
-      const { setProjectPath, addTagFilter, removeTagFilter } =
-        useMediaIndexStore.getState();
+      const { setProjectPath, addTagFilter, removeTagFilter } = useMediaIndexStore.getState();
       setProjectPath('/test/project');
       addTagFilter('4K');
       addTagFilter('HDR');
@@ -198,8 +197,7 @@ describe('mediaIndexStore', () => {
 
   describe('clearFilters', () => {
     it('清除所有筛选条件但保留项目路径', () => {
-      const { setProjectPath, addTagFilter, toggleAssetType, clearFilters } =
-        useMediaIndexStore.getState();
+      const { setProjectPath, addTagFilter, toggleAssetType, clearFilters } = useMediaIndexStore.getState();
       setProjectPath('/test/project');
       addTagFilter('4K');
       toggleAssetType('video');

@@ -4,19 +4,19 @@ import {
   toggleTransitionFavorite,
   TRANSITION_FAVORITES_STORAGE_KEY,
   writeTransitionFavorites,
-  type TransitionFavoriteStorage
+  type TransitionFavoriteStorage,
 } from './transition-favorites';
 
 function makeStorage(initial?: string): TransitionFavoriteStorage & { value(): string | undefined } {
   let value = initial;
   return {
-    getItem: (key) => (key === TRANSITION_FAVORITES_STORAGE_KEY ? value ?? null : null),
+    getItem: (key) => (key === TRANSITION_FAVORITES_STORAGE_KEY ? (value ?? null) : null),
     setItem: (key, next) => {
       if (key === TRANSITION_FAVORITES_STORAGE_KEY) {
         value = next;
       }
     },
-    value: () => value
+    value: () => value,
   };
 }
 
@@ -43,6 +43,9 @@ describe('transition favorites persistence', () => {
   it('deduplicates writes', () => {
     const storage = makeStorage();
 
-    expect(writeTransitionFavorites(['wipe-left', 'wipe-left', 'dissolve'], storage)).toEqual(['wipe-left', 'dissolve']);
+    expect(writeTransitionFavorites(['wipe-left', 'wipe-left', 'dissolve'], storage)).toEqual([
+      'wipe-left',
+      'dissolve',
+    ]);
   });
 });

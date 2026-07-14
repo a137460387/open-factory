@@ -4,7 +4,7 @@ import {
   parseEffectPresetJson,
   serializeEffectPresetFile,
   type EffectPreset,
-  type EffectPresetFilters
+  type EffectPresetFilters,
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, scanDirectory, writeFile } from '../lib/tauri-bridge';
 
@@ -46,14 +46,15 @@ export interface EffectPresetCommunityLoadOptions {
 const EFFECT_PRESET_DIR = 'effect-presets';
 const COMMUNITY_CACHE_FILE = 'community.json';
 
-const EFFECT_PRESET_COMMUNITY_URL = 'https://gist.githubusercontent.com/open-factory/effect-preset-library/raw/effect-presets.json';
+const EFFECT_PRESET_COMMUNITY_URL =
+  'https://gist.githubusercontent.com/open-factory/effect-preset-library/raw/effect-presets.json';
 
 const bridgeEffectPresetStorage: EffectPresetLibraryStorage = {
   getAppDataDir,
   fsExists,
   readFile,
   writeFile,
-  scanDirectory
+  scanDirectory,
 };
 
 function getEffectPresetLibraryDir(appDataDir: string): string {
@@ -68,7 +69,9 @@ export function getEffectPresetCommunityCachePath(appDataDir: string): string {
   return `${getEffectPresetLibraryDir(appDataDir)}/${COMMUNITY_CACHE_FILE}`;
 }
 
-export async function loadLocalEffectPresets(storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage): Promise<EffectPreset[]> {
+export async function loadLocalEffectPresets(
+  storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage,
+): Promise<EffectPreset[]> {
   const appDataDir = await storage.getAppDataDir();
   const dir = getEffectPresetLibraryDir(appDataDir);
   const paths = await Promise.resolve(storage.scanDirectory(dir, 1)).catch(() => []);
@@ -83,7 +86,10 @@ export async function loadLocalEffectPresets(storage: EffectPresetLibraryStorage
   return presets.sort((left, right) => left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
 }
 
-export async function saveLocalEffectPreset(preset: EffectPreset, storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage): Promise<string> {
+export async function saveLocalEffectPreset(
+  preset: EffectPreset,
+  storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage,
+): Promise<string> {
   const appDataDir = await storage.getAppDataDir();
   const normalized = normalizeEffectPreset(preset);
   const path = getEffectPresetFilePath(appDataDir, normalized.id);
@@ -99,15 +105,22 @@ export function parseEffectPresetCommunityJson(contents: string): EffectPresetCo
   return parsed.presets.flatMap((card) => normalizeCommunityCard(card));
 }
 
-export function filterEffectPresetCommunityCards(cards: EffectPresetCommunityCard[], filters: EffectPresetFilters = {}): EffectPresetCommunityCard[] {
+export function filterEffectPresetCommunityCards(
+  cards: EffectPresetCommunityCard[],
+  filters: EffectPresetFilters = {},
+): EffectPresetCommunityCard[] {
   return filterEffectPresets(cards, filters);
 }
 
-export async function loadEffectPresetCommunityLibrary(options: EffectPresetCommunityLoadOptions = {}): Promise<EffectPresetCommunityLoadResult> {
+export async function loadEffectPresetCommunityLibrary(
+  options: EffectPresetCommunityLoadOptions = {},
+): Promise<EffectPresetCommunityLoadResult> {
   const storage = options.storage ?? bridgeEffectPresetStorage;
   const cachePath = getEffectPresetCommunityCachePath(await storage.getAppDataDir());
   try {
-    const response = await (options.fetcher ?? fetch)(options.url ?? EFFECT_PRESET_COMMUNITY_URL, { cache: 'no-store' });
+    const response = await (options.fetcher ?? fetch)(options.url ?? EFFECT_PRESET_COMMUNITY_URL, {
+      cache: 'no-store',
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -120,18 +133,21 @@ export async function loadEffectPresetCommunityLibrary(options: EffectPresetComm
       return {
         cards: parseEffectPresetCommunityJson(await storage.readFile(cachePath)),
         source: 'cache',
-        warning: error instanceof Error ? error.message : 'Unable to load the effect preset library.'
+        warning: error instanceof Error ? error.message : 'Unable to load the effect preset library.',
       };
     }
     return {
       cards: [],
       source: 'empty',
-      warning: error instanceof Error ? error.message : 'Unable to load the effect preset library.'
+      warning: error instanceof Error ? error.message : 'Unable to load the effect preset library.',
     };
   }
 }
 
-export async function installEffectPresetCommunityCard(card: EffectPresetCommunityCard, storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage): Promise<string> {
+export async function installEffectPresetCommunityCard(
+  card: EffectPresetCommunityCard,
+  storage: EffectPresetLibraryStorage = bridgeEffectPresetStorage,
+): Promise<string> {
   return saveLocalEffectPreset(card.preset, storage);
 }
 
@@ -152,8 +168,8 @@ function normalizeCommunityCard(input: unknown): EffectPresetCommunityCard[] {
         description: normalizeText(raw.description, 400) || preset.description,
         tags: normalizeTags(raw.tags).length > 0 ? normalizeTags(raw.tags) : preset.tags,
         thumbnail: normalizeText(raw.thumbnail, 4000) || preset.thumbnail,
-        preset
-      }
+        preset,
+      },
     ];
   } catch {
     return [];
@@ -176,5 +192,10 @@ function trimPathEnd(path: string): string {
 }
 
 function sanitizeFileSegment(value: string): string {
-  return value.trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'effect-preset';
+  return (
+    value
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'effect-preset'
+  );
 }

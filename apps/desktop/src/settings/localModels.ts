@@ -35,7 +35,7 @@ export const LOCAL_AI_MODEL_DEFINITIONS: Record<LocalAiModelId, LocalAiModelDefi
     minBytes: 1024,
     maxBytes: 10 * 1024 * 1024 * 1024,
     extensions: ['bin', 'gguf'],
-    downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp/tree/main'
+    downloadUrl: 'https://huggingface.co/ggerganov/whisper.cpp/tree/main',
   },
   demucs: {
     id: 'demucs',
@@ -43,7 +43,7 @@ export const LOCAL_AI_MODEL_DEFINITIONS: Record<LocalAiModelId, LocalAiModelDefi
     minBytes: 1024,
     maxBytes: 10 * 1024 * 1024 * 1024,
     extensions: ['exe', 'py', 'pt', 'th', 'ckpt'],
-    downloadUrl: 'https://github.com/facebookresearch/demucs'
+    downloadUrl: 'https://github.com/facebookresearch/demucs',
   },
   yunet: {
     id: 'yunet',
@@ -51,8 +51,8 @@ export const LOCAL_AI_MODEL_DEFINITIONS: Record<LocalAiModelId, LocalAiModelDefi
     minBytes: 1024,
     maxBytes: 100 * 1024 * 1024,
     extensions: ['onnx', 'pb', 'xml', 'bin'],
-    downloadUrl: 'https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet'
-  }
+    downloadUrl: 'https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet',
+  },
 };
 
 export const LOCAL_AI_MODEL_IDS: LocalAiModelId[] = ['whisper', 'demucs', 'yunet'];
@@ -86,7 +86,9 @@ export function normalizeLocalAiModelsSettings(value: unknown): LocalAiModelsSet
 }
 
 export function hasLocalAiModelsSettings(settings: LocalAiModelsSettings): boolean {
-  return LOCAL_AI_MODEL_IDS.some((id) => Boolean(settings[id]?.path || settings[id]?.version || settings[id]?.lastUsedAt));
+  return LOCAL_AI_MODEL_IDS.some((id) =>
+    Boolean(settings[id]?.path || settings[id]?.version || settings[id]?.lastUsedAt),
+  );
 }
 
 export function isLocalModelFileSizeValid(id: LocalAiModelId, size: number): boolean {
@@ -100,7 +102,7 @@ export async function resolveLocalModelStatus(
   dependencies: {
     exists(path: string): Promise<boolean>;
     stat(path: string): Promise<FileStat>;
-  }
+  },
 ): Promise<LocalAiModelResolvedStatus> {
   const path = config?.path?.trim();
   if (!path) {

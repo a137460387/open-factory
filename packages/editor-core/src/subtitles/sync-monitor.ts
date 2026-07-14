@@ -57,10 +57,7 @@ export function calculateClipTimingDelta(ref: SubtitleTimingReference): {
   return { startDelta, durationDelta, speedChanged };
 }
 
-export function detectSubtitleSyncOffset(
-  subtitleClip: SubtitleClip,
-  ref: SubtitleTimingReference,
-): number {
+export function detectSubtitleSyncOffset(subtitleClip: SubtitleClip, ref: SubtitleTimingReference): number {
   const { startDelta, durationDelta, speedChanged } = calculateClipTimingDelta(ref);
   if (!speedChanged && Math.abs(startDelta) < 0.001 && Math.abs(durationDelta) < 0.001) {
     return 0;
@@ -76,10 +73,7 @@ export function detectSubtitleSyncOffset(
   return round(expectedStart - subtitleClip.start);
 }
 
-export function shouldTriggerSyncWarning(
-  offsetSeconds: number,
-  sensitivity: SubtitleSyncSensitivity,
-): boolean {
+export function shouldTriggerSyncWarning(offsetSeconds: number, sensitivity: SubtitleSyncSensitivity): boolean {
   const thresholds = SENSITIVITY_THRESHOLDS[sensitivity];
   const offsetMs = Math.abs(offsetSeconds * 1000);
   return offsetMs >= thresholds.minorMs;
@@ -117,13 +111,7 @@ export function scanSubtitleTrackSync(
     if (!ref) continue;
     const offset = detectSubtitleSyncOffset(subtitle, ref);
     if (Math.abs(offset) < 0.001) continue;
-    const warning = buildSyncWarning(
-      subtitle.id,
-      subtitleTrackId,
-      offset,
-      subtitle.start + offset,
-      sensitivity,
-    );
+    const warning = buildSyncWarning(subtitle.id, subtitleTrackId, offset, subtitle.start + offset, sensitivity);
     if (warning) warnings.push(warning);
   }
   return {

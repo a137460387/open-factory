@@ -112,12 +112,8 @@ export function SceneTimeline({ scenes, onJumpToTime }: SceneTimelineProps) {
             >
               <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color }} />
               <span className="text-neutral-300 font-mono">{formatTime(seg.time)}</span>
-              <span className="text-neutral-400 flex-1">
-                {t.sceneTypes[seg.sceneType] ?? seg.sceneType}
-              </span>
-              <span className="text-neutral-600">
-                {(seg.score * 100).toFixed(0)}%
-              </span>
+              <span className="text-neutral-400 flex-1">{t.sceneTypes[seg.sceneType] ?? seg.sceneType}</span>
+              <span className="text-neutral-600">{(seg.score * 100).toFixed(0)}%</span>
             </button>
           );
         })}

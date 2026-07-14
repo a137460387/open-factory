@@ -6,10 +6,7 @@ export interface AutomationEvaluationResult {
   effectParams: Record<string, number>;
 }
 
-export function evaluateAutomation(
-  automation: ChannelAutomation,
-  timeSeconds: number
-): AutomationEvaluationResult {
+export function evaluateAutomation(automation: ChannelAutomation, timeSeconds: number): AutomationEvaluationResult {
   return {
     volume: automation.volume
       ? evaluateCurve(automation.volume.points, timeSeconds, automation.volume.points[0]?.curve ?? 'linear')
@@ -22,10 +19,7 @@ export function evaluateAutomation(
           Object.entries(automation)
             .filter(([key]) => key !== 'volume' && key !== 'pan')
             .filter((entry): entry is [string, AutomationCurve] => entry[1] !== undefined)
-            .map(([key, curve]) => [
-              key,
-              evaluateCurve(curve.points, timeSeconds, curve.points[0]?.curve ?? 'linear'),
-            ])
+            .map(([key, curve]) => [key, evaluateCurve(curve.points, timeSeconds, curve.points[0]?.curve ?? 'linear')]),
         )
       : {},
   };
@@ -34,7 +28,7 @@ export function evaluateAutomation(
 export function evaluateCurve(
   points: AutomationPoint[],
   time: number,
-  curveType: 'linear' | 'bezier' | 'step' | 'smooth'
+  curveType: 'linear' | 'bezier' | 'step' | 'smooth',
 ): number {
   if (!points.length) return 0;
   if (points.length === 1) return points[0].value;
@@ -79,23 +73,18 @@ export function evaluateCurve(
 function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number): number {
   const t2 = t * t;
   const t3 = t2 * t;
-  return 0.5 * (
-    (2 * p1) +
-    (-p0 + p2) * t +
-    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
-  );
+  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
 }
 
 function cubicHermite(p0: AutomationPoint, p1: AutomationPoint, t: number): number {
   // Tangent values from handles (scaled by segment duration)
   const duration = p1.time - p0.time;
   const m0 = p0.handleOut
-    ? (p0.handleOut.value - p0.value) / (p0.handleOut.time - p0.time) * duration
-    : (p1.value - p0.value);
+    ? ((p0.handleOut.value - p0.value) / (p0.handleOut.time - p0.time)) * duration
+    : p1.value - p0.value;
   const m1 = p1.handleIn
-    ? (p1.value - p1.handleIn.value) / (p1.time - p1.handleIn.time) * duration
-    : (p1.value - p0.value);
+    ? ((p1.value - p1.handleIn.value) / (p1.time - p1.handleIn.time)) * duration
+    : p1.value - p0.value;
 
   const t2 = t * t;
   const t3 = t2 * t;

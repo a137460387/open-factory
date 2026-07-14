@@ -1,9 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildAudioVisualizationThemePreviewFrame, drawAudioVisualizationThemePreviewFrame } from './audioVisualizationThemePreview';
+import {
+  buildAudioVisualizationThemePreviewFrame,
+  drawAudioVisualizationThemePreviewFrame,
+} from './audioVisualizationThemePreview';
 
 describe('audio visualization theme preview', () => {
   it('builds canvas operations for themed spectrum previews', () => {
-    const operations = buildAudioVisualizationThemePreviewFrame({ themeId: 'neon-cyberpunk' }, 'spectrum-bars', 160, 90);
+    const operations = buildAudioVisualizationThemePreviewFrame(
+      { themeId: 'neon-cyberpunk' },
+      'spectrum-bars',
+      160,
+      90,
+    );
 
     expect(operations[0]).toEqual({ kind: 'background', color: '#120026', color2: '#020617' });
     expect(operations.some((operation) => operation.kind === 'glow')).toBe(true);
@@ -29,7 +37,7 @@ describe('audio visualization theme preview', () => {
       restore: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
-      stroke: vi.fn()
+      stroke: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
 
     drawAudioVisualizationThemePreviewFrame(context, { themeId: 'retro-vu' }, 'spectrum-bars', 120, 72);

@@ -11,7 +11,7 @@ import {
   type TextStyle,
   type Timeline,
   type Track,
-  type Transform
+  type Transform,
 } from './model';
 import { getTimelineDuration } from './timeline';
 import { round } from './time';
@@ -36,7 +36,13 @@ export interface InstantiateTitleTemplateOptions {
   color?: string;
 }
 
-export const TITLE_TEMPLATE_IDS: TitleTemplateId[] = ['lower-third', 'fullscreen-title', 'caption-bar', 'corner-bug', 'counter'];
+export const TITLE_TEMPLATE_IDS: TitleTemplateId[] = [
+  'lower-third',
+  'fullscreen-title',
+  'caption-bar',
+  'corner-bug',
+  'counter',
+];
 
 export const TITLE_TEMPLATES: TitleTemplateDefinition[] = [
   {
@@ -46,12 +52,9 @@ export const TITLE_TEMPLATES: TitleTemplateDefinition[] = [
     transform: { ...DEFAULT_TRANSFORM, x: -260, y: 210 },
     style: { ...DEFAULT_TEXT_STYLE, fontSize: 42, backgroundColor: '#0f172a', backgroundOpacity: 0.72, bold: true },
     keyframes: {
-      x: [
-        keyframe('x', 0, -340, 'ease-out'),
-        keyframe('x', 0.35, -260, 'ease-out')
-      ],
-      opacity: fadeInOutKeyframes(5)
-    }
+      x: [keyframe('x', 0, -340, 'ease-out'), keyframe('x', 0.35, -260, 'ease-out')],
+      opacity: fadeInOutKeyframes(5),
+    },
   },
   {
     id: 'fullscreen-title',
@@ -61,15 +64,9 @@ export const TITLE_TEMPLATES: TitleTemplateDefinition[] = [
     style: { ...DEFAULT_TEXT_STYLE, fontSize: 86, bold: true },
     keyframes: {
       opacity: fadeInOutKeyframes(4),
-      scaleX: [
-        keyframe('scaleX', 0, 0.92, 'ease-out'),
-        keyframe('scaleX', 0.45, 1, 'ease-out')
-      ],
-      scaleY: [
-        keyframe('scaleY', 0, 0.92, 'ease-out'),
-        keyframe('scaleY', 0.45, 1, 'ease-out')
-      ]
-    }
+      scaleX: [keyframe('scaleX', 0, 0.92, 'ease-out'), keyframe('scaleX', 0.45, 1, 'ease-out')],
+      scaleY: [keyframe('scaleY', 0, 0.92, 'ease-out'), keyframe('scaleY', 0.45, 1, 'ease-out')],
+    },
   },
   {
     id: 'caption-bar',
@@ -78,8 +75,8 @@ export const TITLE_TEMPLATES: TitleTemplateDefinition[] = [
     transform: { ...DEFAULT_TRANSFORM, y: 250 },
     style: { ...DEFAULT_TEXT_STYLE, fontSize: 38, backgroundColor: '#111827', backgroundOpacity: 0.78 },
     keyframes: {
-      opacity: fadeInOutKeyframes(5)
-    }
+      opacity: fadeInOutKeyframes(5),
+    },
   },
   {
     id: 'corner-bug',
@@ -88,30 +85,28 @@ export const TITLE_TEMPLATES: TitleTemplateDefinition[] = [
     transform: { ...DEFAULT_TRANSFORM, x: 455, y: -285 },
     style: { ...DEFAULT_TEXT_STYLE, fontSize: 28, backgroundColor: '#064e3b', backgroundOpacity: 0.82, bold: true },
     keyframes: {
-      opacity: [
-        keyframe('opacity', 0, 0, 'linear'),
-        keyframe('opacity', 0.25, 1, 'ease-out')
-      ]
-    }
+      opacity: [keyframe('opacity', 0, 0, 'linear'), keyframe('opacity', 0.25, 1, 'ease-out')],
+    },
   },
   {
     id: 'counter',
     defaultDuration: 5,
     defaultText: '00:05',
     transform: { ...DEFAULT_TRANSFORM },
-    style: { ...DEFAULT_TEXT_STYLE, fontSize: 96, color: '#f8fafc', backgroundColor: '#020617', backgroundOpacity: 0.18, bold: true },
+    style: {
+      ...DEFAULT_TEXT_STYLE,
+      fontSize: 96,
+      color: '#f8fafc',
+      backgroundColor: '#020617',
+      backgroundOpacity: 0.18,
+      bold: true,
+    },
     keyframes: {
       opacity: fadeInOutKeyframes(5),
-      scaleX: [
-        keyframe('scaleX', 0, 1.15, 'ease-out'),
-        keyframe('scaleX', 0.35, 1, 'ease-out')
-      ],
-      scaleY: [
-        keyframe('scaleY', 0, 1.15, 'ease-out'),
-        keyframe('scaleY', 0.35, 1, 'ease-out')
-      ]
-    }
-  }
+      scaleX: [keyframe('scaleX', 0, 1.15, 'ease-out'), keyframe('scaleX', 0.35, 1, 'ease-out')],
+      scaleY: [keyframe('scaleY', 0, 1.15, 'ease-out'), keyframe('scaleY', 0.35, 1, 'ease-out')],
+    },
+  },
 ];
 
 export function getTitleTemplate(templateId: TitleTemplateId): TitleTemplateDefinition {
@@ -122,7 +117,12 @@ export function getTitleTemplate(templateId: TitleTemplateId): TitleTemplateDefi
   return template;
 }
 
-export function instantiateTitleTemplate(templateId: TitleTemplateId, track: Track, timeline: Timeline, options: InstantiateTitleTemplateOptions = {}): TextClip {
+export function instantiateTitleTemplate(
+  templateId: TitleTemplateId,
+  track: Track,
+  timeline: Timeline,
+  options: InstantiateTitleTemplateOptions = {},
+): TextClip {
   if (track.type !== 'text') {
     throw new Error('Title templates can only be placed on text tracks');
   }
@@ -144,7 +144,7 @@ export function instantiateTitleTemplate(templateId: TitleTemplateId, track: Tra
     transform: { ...template.transform },
     text: options.text ?? template.defaultText,
     style,
-    keyframes: scaleTemplateKeyframes(template.keyframes, template.defaultDuration, duration)
+    keyframes: scaleTemplateKeyframes(template.keyframes, template.defaultDuration, duration),
   };
 }
 
@@ -158,7 +158,7 @@ function fadeInOutKeyframes(duration: number): Keyframe<number>[] {
     keyframe('opacity', 0, 0, 'linear'),
     keyframe('opacity', Math.min(0.35, duration / 3), 1, 'ease-out'),
     keyframe('opacity', Math.max(0, duration - 0.35), 1, 'linear'),
-    keyframe('opacity', duration, 0, 'ease-in')
+    keyframe('opacity', duration, 0, 'ease-in'),
   ];
 }
 
@@ -175,7 +175,7 @@ function scaleTemplateKeyframes(keyframes: ClipKeyframes, templateDuration: numb
       output[property] = frames.map((frame) => ({
         ...frame,
         id: createId(`kf-${property}`),
-        time: round(Math.min(duration, Math.max(0, frame.time * ratio)))
+        time: round(Math.min(duration, Math.max(0, frame.time * ratio))),
       }));
     }
   }

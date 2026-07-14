@@ -46,19 +46,27 @@ export async function writeExportSpeedHistory(history: ExportSpeedHistory): Prom
   return normalized;
 }
 
-export async function appendExportSpeedSample(sample: Omit<ExportSpeedSample, 'createdAt'> & { createdAt?: string }): Promise<ExportSpeedHistory> {
+export async function appendExportSpeedSample(
+  sample: Omit<ExportSpeedSample, 'createdAt'> & { createdAt?: string },
+): Promise<ExportSpeedHistory> {
   const history = await readExportSpeedHistory();
-  const normalizedSample = normalizeExportSpeedSample({ ...sample, createdAt: sample.createdAt ?? new Date().toISOString() });
+  const normalizedSample = normalizeExportSpeedSample({
+    ...sample,
+    createdAt: sample.createdAt ?? new Date().toISOString(),
+  });
   if (!normalizedSample) {
     return history;
   }
   return writeExportSpeedHistory({
     samples: [normalizedSample, ...history.samples].slice(0, MAX_SPEED_SAMPLES),
-    updatedAt: normalizedSample.createdAt
+    updatedAt: normalizedSample.createdAt,
   });
 }
 
-export function estimateRemainingSecondsFromHistory(history: ExportSpeedHistory, input: ExportRemainingEstimateInput): number | undefined {
+export function estimateRemainingSecondsFromHistory(
+  history: ExportSpeedHistory,
+  input: ExportRemainingEstimateInput,
+): number | undefined {
   const normalized = normalizeExportSpeedHistory(history);
   const progress = clamp(input.progress ?? 0, 0, 0.999);
   const durationSeconds = positiveNumber(input.durationSeconds);
@@ -74,7 +82,10 @@ export function estimateRemainingSecondsFromHistory(history: ExportSpeedHistory,
   if (candidates.length === 0) {
     return undefined;
   }
-  const weightedSecondsPerSecond = candidates.reduce((total, item) => total + (item.sample.elapsedMs / 1000 / item.sample.durationSeconds) * item.weight, 0);
+  const weightedSecondsPerSecond = candidates.reduce(
+    (total, item) => total + (item.sample.elapsedMs / 1000 / item.sample.durationSeconds) * item.weight,
+    0,
+  );
   const weightTotal = candidates.reduce((total, item) => total + item.weight, 0);
   const secondsPerSecond = weightedSecondsPerSecond / weightTotal;
   return Math.max(0, Math.round(durationSeconds * (1 - progress) * secondsPerSecond));
@@ -95,7 +106,9 @@ function normalizeExportSpeedHistory(history: Partial<ExportSpeedHistory> | unde
   });
   return {
     samples: samples.slice(0, MAX_SPEED_SAMPLES),
-    ...(typeof history.updatedAt === 'string' && history.updatedAt.trim() ? { updatedAt: history.updatedAt.trim() } : {})
+    ...(typeof history.updatedAt === 'string' && history.updatedAt.trim()
+      ? { updatedAt: history.updatedAt.trim() }
+      : {}),
   };
 }
 
@@ -110,14 +123,21 @@ function normalizeExportSpeedSample(sample: Partial<ExportSpeedSample> | undefin
   }
   return {
     ...(typeof sample.id === 'string' && sample.id.trim() ? { id: sample.id.trim() } : {}),
-    ...(typeof sample.projectName === 'string' && sample.projectName.trim() ? { projectName: sample.projectName.trim() } : {}),
-    ...(typeof sample.outputPath === 'string' && sample.outputPath.trim() ? { outputPath: sample.outputPath.trim() } : {}),
+    ...(typeof sample.projectName === 'string' && sample.projectName.trim()
+      ? { projectName: sample.projectName.trim() }
+      : {}),
+    ...(typeof sample.outputPath === 'string' && sample.outputPath.trim()
+      ? { outputPath: sample.outputPath.trim() }
+      : {}),
     durationSeconds,
     elapsedMs,
     ...(positiveNumber(sample.width) ? { width: Math.round(positiveNumber(sample.width)!) } : {}),
     ...(positiveNumber(sample.height) ? { height: Math.round(positiveNumber(sample.height)!) } : {}),
     ...(typeof sample.codec === 'string' && sample.codec.trim() ? { codec: sample.codec.trim() } : {}),
-    createdAt: typeof sample.createdAt === 'string' && sample.createdAt.trim() ? sample.createdAt.trim() : new Date().toISOString()
+    createdAt:
+      typeof sample.createdAt === 'string' && sample.createdAt.trim()
+        ? sample.createdAt.trim()
+        : new Date().toISOString(),
   };
 }
 

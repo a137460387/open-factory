@@ -46,23 +46,40 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
 
   const categoryColor = (tag: ExportCategoryTag): string => {
     switch (tag) {
-      case 'social-media': return '#3b82f6';
-      case 'client-delivery': return '#10b981';
-      case 'internal-preview': return '#f59e0b';
-      case 'archive-backup': return '#8b5cf6';
+      case 'social-media':
+        return '#3b82f6';
+      case 'client-delivery':
+        return '#10b981';
+      case 'internal-preview':
+        return '#f59e0b';
+      case 'archive-backup':
+        return '#8b5cf6';
     }
   };
 
   if (!open) return null;
 
   return (
-    <div data-testid="export-history-classifier-panel" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[600px] max-h-[80vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      data-testid="export-history-classifier-panel"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 w-[600px] max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-neutral-200 flex items-center gap-2">
             <History size={16} /> {t.title}
           </h3>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-200 text-xs" data-testid="export-history-close">✕</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-200 text-xs"
+            data-testid="export-history-close"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Filters */}
@@ -83,7 +100,10 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
                     : 'border-neutral-700 bg-neutral-800 text-neutral-400'
                 }`}
               >
-                <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: categoryColor(cat) }} />
+                <span
+                  className="inline-block w-2 h-2 rounded-full mr-1"
+                  style={{ backgroundColor: categoryColor(cat) }}
+                />
                 {t.categories[cat]}
               </button>
             ))}
@@ -91,7 +111,9 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
           <select
             data-testid="filter-status"
             value={filter.statusOnly ?? ''}
-            onChange={(e) => setFilter({ ...filter, statusOnly: (e.target.value || undefined) as 'success' | 'error' | undefined })}
+            onChange={(e) =>
+              setFilter({ ...filter, statusOnly: (e.target.value || undefined) as 'success' | 'error' | undefined })
+            }
             className="text-xs bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-neutral-300"
           >
             <option value="">{t.filterStatus}</option>
@@ -134,7 +156,10 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
         <div data-testid="export-history-list" className="space-y-1">
           {filtered.map((entry) => (
             <div key={entry.id} className="flex items-center gap-2 text-xs bg-neutral-800 rounded p-2">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: categoryColor(entry.category) }} />
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: categoryColor(entry.category) }}
+              />
               <span className="text-neutral-300 flex-1 truncate">{entry.name}</span>
               <span className="text-neutral-500">{entry.categoryLabel}</span>
               <select
@@ -144,7 +169,9 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
                 className="text-xs bg-neutral-700 border border-neutral-600 rounded px-1 py-0.5 text-neutral-300"
               >
                 {ALL_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{t.categories[cat]}</option>
+                  <option key={cat} value={cat}>
+                    {t.categories[cat]}
+                  </option>
                 ))}
               </select>
               <span className={`text-xs ${entry.status === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -152,14 +179,9 @@ export function ExportHistoryClassifierPanel({ open, onClose, history, presetMap
               </span>
             </div>
           ))}
-          {filtered.length === 0 && (
-            <div className="text-center text-neutral-500 text-xs py-4">无匹配记录</div>
-          )}
+          {filtered.length === 0 && <div className="text-center text-neutral-500 text-xs py-4">无匹配记录</div>}
         </div>
       </div>
     </div>
   );
 }
-
-
-

@@ -19,16 +19,16 @@ import type { MediaOrganizerDuplicateSelection } from '../../media/MediaOrganize
 import { PanelLoading } from '../PanelLoading';
 
 const ProjectHealthDialog = lazy(() =>
-  import('../../project-health/ProjectHealthDialog').then((m) => ({ default: m.ProjectHealthDialog }))
+  import('../../project-health/ProjectHealthDialog').then((m) => ({ default: m.ProjectHealthDialog })),
 );
 const DuplicateMediaDialog = lazy(() =>
-  import('../../media/DuplicateMediaDialog').then((m) => ({ default: m.DuplicateMediaDialog }))
+  import('../../media/DuplicateMediaDialog').then((m) => ({ default: m.DuplicateMediaDialog })),
 );
 const MediaHealthDashboardDialog = lazy(() =>
-  import('../../media/MediaHealthDashboardDialog').then((m) => ({ default: m.MediaHealthDashboardDialog }))
+  import('../../media/MediaHealthDashboardDialog').then((m) => ({ default: m.MediaHealthDashboardDialog })),
 );
 const MediaOrganizerDialog = lazy(() =>
-  import('../../media/MediaOrganizerDialog').then((m) => ({ default: m.MediaOrganizerDialog }))
+  import('../../media/MediaOrganizerDialog').then((m) => ({ default: m.MediaOrganizerDialog })),
 );
 
 export interface ProjectHealthDialogsProps {
@@ -44,7 +44,10 @@ export interface ProjectHealthDialogsProps {
   repairFromMediaHealthDashboard: () => Promise<void>;
   openMediaHealthRelinkPanel: () => void;
   refreshMediaOrganizer: () => Promise<void>;
-  confirmMediaOrganizerDuplicateGroups: (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => Promise<void>;
+  confirmMediaOrganizerDuplicateGroups: (
+    selections: MediaOrganizerDuplicateSelection[],
+    moveFilesToTrash: boolean,
+  ) => Promise<void>;
   removeMediaOrganizerReferences: (assetIds: string[]) => void;
   archiveUnusedMedia: () => Promise<void>;
   renameUnusedMedia: (template: string) => Promise<void>;

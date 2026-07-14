@@ -2,15 +2,9 @@ import { NodeGraphEngine } from '@open-factory/editor-core';
 import type { ColorGradingGraph } from '@open-factory/editor-core';
 import { compileColorGradingShader } from './node-shader-compiler';
 
-const FULLSCREEN_QUAD_VERTICES = new Float32Array([
-  -1, -1, 1, -1, -1, 1,
-  -1, 1, 1, -1, 1, 1,
-]);
+const FULLSCREEN_QUAD_VERTICES = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
 
-const FULLSCREEN_QUAD_TEX_COORDS = new Float32Array([
-  0, 0, 1, 0, 0, 1,
-  0, 1, 1, 0, 1, 1,
-]);
+const FULLSCREEN_QUAD_TEX_COORDS = new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]);
 
 const VERTEX_SHADER_SOURCE = `
   attribute vec2 a_position;
@@ -56,13 +50,8 @@ export class ColorGradingRenderer {
    * @returns The output texture (one of the internal ping-pong textures),
    *          or `inputTexture` when there are no enabled nodes.
    */
-  render(
-    graph: ColorGradingGraph,
-    inputTexture: WebGLTexture,
-    width: number,
-    height: number
-  ): WebGLTexture {
-    const enabledNodes = graph.nodes.filter(n => n.enabled);
+  render(graph: ColorGradingGraph, inputTexture: WebGLTexture, width: number, height: number): WebGLTexture {
+    const enabledNodes = graph.nodes.filter((n) => n.enabled);
     if (enabledNodes.length === 0) return inputTexture;
 
     const execution = NodeGraphEngine.execute(graph);

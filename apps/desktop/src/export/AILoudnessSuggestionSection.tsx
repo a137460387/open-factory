@@ -6,7 +6,13 @@ import { zhCN } from '../i18n/strings';
 
 const t = zhCN.exportDialog.aiLoudnessSuggestion;
 
-export function AILoudnessSuggestionSection({ project, onApply }: { project: Project; onApply?: (s: LoudnessSuggestion) => void }) {
+export function AILoudnessSuggestionSection({
+  project,
+  onApply,
+}: {
+  project: Project;
+  onApply?: (s: LoudnessSuggestion) => void;
+}) {
   const existing = project.loudnessSuggestion;
   const safeTimeout = useSafeTimeout();
   const [suggestion, setSuggestion] = useState<LoudnessSuggestion | null>(null);
@@ -14,7 +20,10 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
   const [targetPlatform, setTargetPlatform] = useState<PlatformTarget>(existing?.targetPlatform ?? 'youtube');
 
   const handleMeasure = () => {
-    if (existing) { setSuggestion(existing); return; }
+    if (existing) {
+      setSuggestion(existing);
+      return;
+    }
     setMeasuring(true);
     safeTimeout(() => setMeasuring(false), 300);
   };
@@ -26,7 +35,13 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
 
   const handleApply = () => {
     if (!suggestion) return;
-    const updated: LoudnessSuggestion = { ...suggestion, targetPlatform, targetLUFS, suggestedGainDb: currentGain, appliedAt: Date.now() };
+    const updated: LoudnessSuggestion = {
+      ...suggestion,
+      targetPlatform,
+      targetLUFS,
+      suggestedGainDb: currentGain,
+      appliedAt: Date.now(),
+    };
     setSuggestion(updated);
     onApply?.(updated);
   };
@@ -39,7 +54,12 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
       </summary>
       <div className="mt-3 space-y-3 text-xs">
         {!suggestion && !measuring && (
-          <button className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700" type="button" onClick={handleMeasure} data-testid="ai-loudness-measure">
+          <button
+            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            type="button"
+            onClick={handleMeasure}
+            data-testid="ai-loudness-measure"
+          >
             {t.measure}
           </button>
         )}
@@ -49,9 +69,17 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
             <div className="text-slate-600">{t.measured(suggestion.measuredLUFS)}</div>
             <div className="mt-2 flex items-center gap-2">
               <label className="text-slate-600">目标平台</label>
-              <select className="rounded-md border border-line bg-white px-2 py-1 text-sm" value={targetPlatform} disabled={applied} data-testid="ai-loudness-platform-select" onChange={(e) => setTargetPlatform(e.target.value as PlatformTarget)}>
+              <select
+                className="rounded-md border border-line bg-white px-2 py-1 text-sm"
+                value={targetPlatform}
+                disabled={applied}
+                data-testid="ai-loudness-platform-select"
+                onChange={(e) => setTargetPlatform(e.target.value as PlatformTarget)}
+              >
                 {Object.entries(PLATFORM_TARGETS).map(([key, lufs]) => (
-                  <option key={key} value={key}>{t.platforms[key as PlatformTarget]} ({lufs} LUFS)</option>
+                  <option key={key} value={key}>
+                    {t.platforms[key as PlatformTarget]} ({lufs} LUFS)
+                  </option>
                 ))}
               </select>
             </div>
@@ -59,7 +87,12 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
             {showSuggestion && !applied && (
               <>
                 <div className="mt-2 font-medium text-orange-600">{t.suggestedGain(currentGain)}</div>
-                <button className="mt-2 w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700" type="button" onClick={handleApply} data-testid="ai-loudness-apply">
+                <button
+                  className="mt-2 w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  type="button"
+                  onClick={handleApply}
+                  data-testid="ai-loudness-apply"
+                >
                   {t.apply}
                 </button>
               </>

@@ -108,7 +108,7 @@ const PASS_KEYS: Array<{ name: ProfilerRenderPassName; key: keyof Omit<ProfilerR
   { name: 'composite', key: 'compositeMs' },
   { name: 'color', key: 'colorMs' },
   { name: 'effects', key: 'effectsMs' },
-  { name: 'overlay', key: 'overlayMs' }
+  { name: 'overlay', key: 'overlayMs' },
 ];
 
 export function normalizeRenderPassBreakdown(input: Partial<ProfilerRenderPassBreakdown>): ProfilerRenderPassBreakdown {
@@ -124,7 +124,7 @@ export function normalizeRenderPassBreakdown(input: Partial<ProfilerRenderPassBr
       colorMs: roundProfilerNumber(colorMs),
       effectsMs: roundProfilerNumber(effectsMs),
       overlayMs: roundProfilerNumber(overlayMs),
-      totalMs: roundProfilerNumber(totalMs > 0 ? totalMs : summed)
+      totalMs: roundProfilerNumber(totalMs > 0 ? totalMs : summed),
     };
   }
   const scale = totalMs / Math.max(0.001, summed);
@@ -133,14 +133,19 @@ export function normalizeRenderPassBreakdown(input: Partial<ProfilerRenderPassBr
     colorMs: roundProfilerNumber(colorMs * scale),
     effectsMs: roundProfilerNumber(effectsMs * scale),
     overlayMs: roundProfilerNumber(overlayMs * scale),
-    totalMs: roundProfilerNumber(totalMs)
+    totalMs: roundProfilerNumber(totalMs),
   };
 }
 
-export function estimateRenderPassBreakdown(input: { totalMs: number; drawCalls?: number; effectCount?: number; overlayActive?: boolean }): ProfilerRenderPassBreakdown {
+export function estimateRenderPassBreakdown(input: {
+  totalMs: number;
+  drawCalls?: number;
+  effectCount?: number;
+  overlayActive?: boolean;
+}): ProfilerRenderPassBreakdown {
   const totalMs = clampMs(input.totalMs);
-  const drawCalls = Math.max(0, Math.round(Number.isFinite(input.drawCalls ?? 0) ? input.drawCalls ?? 0 : 0));
-  const effectCount = Math.max(0, Math.round(Number.isFinite(input.effectCount ?? 0) ? input.effectCount ?? 0 : 0));
+  const drawCalls = Math.max(0, Math.round(Number.isFinite(input.drawCalls ?? 0) ? (input.drawCalls ?? 0) : 0));
+  const effectCount = Math.max(0, Math.round(Number.isFinite(input.effectCount ?? 0) ? (input.effectCount ?? 0) : 0));
   const overlayWeight = input.overlayActive ? 0.16 : 0.08;
   const effectsWeight = Math.min(0.42, 0.18 + effectCount * 0.04);
   const colorWeight = Math.min(0.34, 0.22 + Math.min(0.08, drawCalls * 0.005));
@@ -151,11 +156,14 @@ export function estimateRenderPassBreakdown(input: { totalMs: number; drawCalls?
     colorMs: totalMs * (colorWeight / weightTotal),
     effectsMs: totalMs * (effectsWeight / weightTotal),
     overlayMs: totalMs * (overlayWeight / weightTotal),
-    totalMs
+    totalMs,
   });
 }
 
-export function findSlowestProfilerFrames(frames: ProfilerFrameSample[], limit = PROFILER_TOP_FRAME_COUNT): ProfilerBottleneckFrame[] {
+export function findSlowestProfilerFrames(
+  frames: ProfilerFrameSample[],
+  limit = PROFILER_TOP_FRAME_COUNT,
+): ProfilerBottleneckFrame[] {
   return [...frames]
     .sort((left, right) => right.render.totalMs - left.render.totalMs || left.frameIndex - right.frameIndex)
     .slice(0, Math.max(0, Math.round(limit)))
@@ -165,12 +173,18 @@ export function findSlowestProfilerFrames(frames: ProfilerFrameSample[], limit =
         frameIndex: frame.frameIndex,
         totalMs: roundProfilerNumber(frame.render.totalMs),
         slowestPass,
-        reason: frame.reason || `${slowestPass}耗时${roundProfilerNumber(frame.render[passKeyForName(slowestPass)]).toFixed(1)}ms`
+        reason:
+          frame.reason ||
+          `${slowestPass}耗时${roundProfilerNumber(frame.render[passKeyForName(slowestPass)]).toFixed(1)}ms`,
       };
     });
 }
 
-export function shouldSampleProfilerMemory(previousTimestampMs: number | undefined, nextTimestampMs: number, intervalMs = DEFAULT_PROFILER_MEMORY_SAMPLE_INTERVAL_MS): boolean {
+export function shouldSampleProfilerMemory(
+  previousTimestampMs: number | undefined,
+  nextTimestampMs: number,
+  intervalMs = DEFAULT_PROFILER_MEMORY_SAMPLE_INTERVAL_MS,
+): boolean {
   if (!Number.isFinite(nextTimestampMs)) {
     return false;
   }
@@ -180,7 +194,11 @@ export function shouldSampleProfilerMemory(previousTimestampMs: number | undefin
   return nextTimestampMs - previousTimestampMs >= Math.max(0, intervalMs);
 }
 
-export function appendProfilerMemorySample(samples: ProfilerMemorySample[], sample: ProfilerMemorySample, minIntervalMs = DEFAULT_PROFILER_MEMORY_SAMPLE_INTERVAL_MS): ProfilerMemorySample[] {
+export function appendProfilerMemorySample(
+  samples: ProfilerMemorySample[],
+  sample: ProfilerMemorySample,
+  minIntervalMs = DEFAULT_PROFILER_MEMORY_SAMPLE_INTERVAL_MS,
+): ProfilerMemorySample[] {
   const previous = samples.at(-1)?.timestampMs;
   if (!shouldSampleProfilerMemory(previous, sample.timestampMs, minIntervalMs)) {
     return samples;
@@ -192,20 +210,22 @@ export function appendProfilerMemorySample(samples: ProfilerMemorySample[], samp
       jsHeapBytes: clampBytes(sample.jsHeapBytes),
       webglTextureBytes: clampBytes(sample.webglTextureBytes),
       proxyCacheBytes: clampBytes(sample.proxyCacheBytes),
-      undoHistoryBytes: clampBytes(sample.undoHistoryBytes)
-    }
+      undoHistoryBytes: clampBytes(sample.undoHistoryBytes),
+    },
   ];
 }
 
 export function calculateProfilerFlamegraphNodes(
   events: ProfilerTraceEvent[],
-  options: { width?: number; rowHeight?: number; startMs?: number; endMs?: number } = {}
+  options: { width?: number; rowHeight?: number; startMs?: number; endMs?: number } = {},
 ): ProfilerFlamegraphNode[] {
-  const width = Math.max(1, Number.isFinite(options.width ?? 0) ? options.width ?? 1 : 1);
-  const rowHeight = Math.max(1, Number.isFinite(options.rowHeight ?? 0) ? options.rowHeight ?? 18 : 18);
-  const startMs = Number.isFinite(options.startMs ?? NaN) ? options.startMs ?? 0 : Math.min(0, ...events.map((event) => event.startMs));
+  const width = Math.max(1, Number.isFinite(options.width ?? 0) ? (options.width ?? 1) : 1);
+  const rowHeight = Math.max(1, Number.isFinite(options.rowHeight ?? 0) ? (options.rowHeight ?? 18) : 18);
+  const startMs = Number.isFinite(options.startMs ?? NaN)
+    ? (options.startMs ?? 0)
+    : Math.min(0, ...events.map((event) => event.startMs));
   const endMs = Number.isFinite(options.endMs ?? NaN)
-    ? options.endMs ?? startMs + 1
+    ? (options.endMs ?? startMs + 1)
     : Math.max(startMs + 1, ...events.map((event) => event.startMs + Math.max(0, event.durationMs)));
   const spanMs = Math.max(1, endMs - startMs);
   return events
@@ -221,7 +241,7 @@ export function calculateProfilerFlamegraphNodes(
         x: roundProfilerNumber(Math.max(0, Math.min(width, x))),
         y: roundProfilerNumber(Math.max(0, Math.round(event.depth)) * rowHeight),
         width: roundProfilerNumber(Math.max(1, Math.min(width, nodeWidth))),
-        height: rowHeight
+        height: rowHeight,
       };
     });
 }
@@ -252,7 +272,7 @@ export function analyzeExportSpeed(input: {
   return {
     expectedFps: roundProfilerNumber(expectedFps),
     actualFps: roundProfilerNumber(actualFps),
-    bottleneck
+    bottleneck,
   };
 }
 
@@ -261,15 +281,25 @@ export function buildPerformanceProfilerReport(input: ProfilerReportInput): Perf
   const durationMs = stoppedAtMs - input.startedAtMs;
   const slowestFrames = findSlowestProfilerFrames(input.frames);
   const frameTotal = input.frames.reduce((sum, frame) => sum + frame.render.totalMs, 0);
-  const peakMemoryBytes = Math.max(0, ...input.memory.map((sample) => sample.jsHeapBytes + sample.webglTextureBytes + sample.proxyCacheBytes + sample.undoHistoryBytes));
-  const peakQueueDepth = Math.max(0, ...input.queues.map((sample) => sample.exportPending + sample.exportRunning + sample.mediaPending + sample.mediaRunning));
+  const peakMemoryBytes = Math.max(
+    0,
+    ...input.memory.map(
+      (sample) => sample.jsHeapBytes + sample.webglTextureBytes + sample.proxyCacheBytes + sample.undoHistoryBytes,
+    ),
+  );
+  const peakQueueDepth = Math.max(
+    0,
+    ...input.queues.map(
+      (sample) => sample.exportPending + sample.exportRunning + sample.mediaPending + sample.mediaRunning,
+    ),
+  );
   return {
     schemaVersion: 1,
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     recording: {
       startedAtMs: roundProfilerNumber(input.startedAtMs),
       stoppedAtMs: roundProfilerNumber(stoppedAtMs),
-      durationMs: roundProfilerNumber(durationMs)
+      durationMs: roundProfilerNumber(durationMs),
     },
     summary: {
       frameCount: input.frames.length,
@@ -277,7 +307,7 @@ export function buildPerformanceProfilerReport(input: ProfilerReportInput): Perf
       slowestFrames,
       exportBottlenecks: uniqueBottlenecks(input.exportSpeed.map((sample) => sample.bottleneck)),
       peakMemoryBytes,
-      peakQueueDepth
+      peakQueueDepth,
     },
     frames: input.frames,
     exportSpeed: input.exportSpeed,
@@ -287,8 +317,8 @@ export function buildPerformanceProfilerReport(input: ProfilerReportInput): Perf
       startMs: input.startedAtMs,
       endMs: stoppedAtMs,
       width: 1000,
-      rowHeight: 18
-    })
+      rowHeight: 18,
+    }),
   };
 }
 
@@ -310,7 +340,10 @@ export function isPerformanceProfilerReport(value: unknown): value is Performanc
   );
 }
 
-export function formatProfilerFrameReason(frame: ProfilerBottleneckFrame, passLabels: Record<ProfilerRenderPassName, string>): string {
+export function formatProfilerFrameReason(
+  frame: ProfilerBottleneckFrame,
+  passLabels: Record<ProfilerRenderPassName, string>,
+): string {
   if (frame.reason) {
     return frame.reason.startsWith('第') ? frame.reason : `第${frame.frameIndex}帧：${frame.reason}`;
   }
@@ -318,7 +351,10 @@ export function formatProfilerFrameReason(frame: ProfilerBottleneckFrame, passLa
 }
 
 function getSlowestRenderPass(breakdown: ProfilerRenderPassBreakdown): ProfilerRenderPassName {
-  return PASS_KEYS.reduce((slowest, current) => (breakdown[current.key] > breakdown[slowest.key] ? current : slowest), PASS_KEYS[0]).name;
+  return PASS_KEYS.reduce(
+    (slowest, current) => (breakdown[current.key] > breakdown[slowest.key] ? current : slowest),
+    PASS_KEYS[0],
+  ).name;
 }
 
 function passKeyForName(name: ProfilerRenderPassName): keyof Omit<ProfilerRenderPassBreakdown, 'totalMs'> {
