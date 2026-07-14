@@ -1,9 +1,7 @@
 use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
-use std::collections::HashMap;
 use std::process::Command;
-use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 
 use crate::path_validator::validate_path;
@@ -244,50 +242,35 @@ pub async fn list_ollama_models() -> Result<OllamaModelsResult, String> {
 
 fn ai_key_entry(provider_id: &str) -> Result<Entry, String> {
     let account = normalize_provider_id(provider_id)?;
-    Entry::new(AI_KEYCHAIN_SERVICE, account).map_err(|error| {
+    Entry::new(AI_KEYCHAIN_SERVICE, &account).map_err(|error| {
         format!("Unable to open AI API key entry in system keychain: {}", error)
     })
 }
 
-static PROVIDER_ID_CACHE: OnceLock<Mutex<HashMap<String, &'static str>>> = OnceLock::new();
-
-fn provider_id_cache() -> &'static Mutex<HashMap<String, &'static str>> {
-    PROVIDER_ID_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn normalize_provider_id(provider_id: &str) -> Result<&'static str, String> {
+fn normalize_provider_id(provider_id: &str) -> Result<String, String> {
     match provider_id.trim().to_ascii_lowercase().as_str() {
-        "openai" => Ok("openai"),
-        "anthropic" => Ok("anthropic"),
-        "gemini" => Ok("gemini"),
-        "mimo" => Ok("mimo"),
-        "deepseek" => Ok("deepseek"),
-        "glm" => Ok("glm"),
-        "qwen" => Ok("qwen"),
-        "kimi" => Ok("kimi"),
-        "ernie" => Ok("ernie"),
-        "spark" => Ok("spark"),
-        "doubao" => Ok("doubao"),
-        "groq" => Ok("groq"),
-        "together" => Ok("together"),
-        "elevenlabs" => Ok("elevenlabs"),
-        "ollama" => Ok("ollama"),
+        "openai" => Ok("openai".to_string()),
+        "anthropic" => Ok("anthropic".to_string()),
+        "gemini" => Ok("gemini".to_string()),
+        "mimo" => Ok("mimo".to_string()),
+        "deepseek" => Ok("deepseek".to_string()),
+        "glm" => Ok("glm".to_string()),
+        "qwen" => Ok("qwen".to_string()),
+        "kimi" => Ok("kimi".to_string()),
+        "ernie" => Ok("ernie".to_string()),
+        "spark" => Ok("spark".to_string()),
+        "doubao" => Ok("doubao".to_string()),
+        "groq" => Ok("groq".to_string()),
+        "together" => Ok("together".to_string()),
+        "elevenlabs" => Ok("elevenlabs".to_string()),
+        "ollama" => Ok("ollama".to_string()),
         _ => {
-            let normalized: String = provider_id
+            Ok(provider_id
                 .trim()
                 .to_ascii_lowercase()
                 .chars()
                 .map(|ch| if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' { ch } else { '-' })
-                .collect();
-            let mut cache = provider_id_cache()
-                .lock()
-                .map_err(|_| "Failed to lock provider ID cache".to_string())?;
-            if let Some(&cached) = cache.get(&normalized) {
-                return Ok(cached);
-            }
-            let leaked: &'static str = Box::leak(normalized.clone().into_boxed_str());
-            cache.insert(normalized, leaked);
-            Ok(leaked)
+                .collect())
         }
     }
 }

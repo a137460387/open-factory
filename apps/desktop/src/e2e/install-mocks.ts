@@ -973,9 +973,9 @@ const mocks: TauriMocks = {
   cancelDemucs: () => undefined,
   processAudioNoiseReduction: async ({ mediaPath, clipId }) => {
     emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
-    await wait(5);
+    await wait(50);
     emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
-    await wait(5);
+    await wait(50);
     emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
     const outputPath = mediaPath.replace(/(\.[^.]+)$/, '-denoised$1');
     return { outputPath, originalPath: mediaPath, durationMs: 15, noiseReductionDb: 6.5 };

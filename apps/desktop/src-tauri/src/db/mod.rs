@@ -3,7 +3,6 @@ pub mod schema;
 use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
 /// 获取媒体索引数据库路径
@@ -49,35 +48,21 @@ pub fn open_db(app: &AppHandle, project_path: &str) -> Result<Connection, String
     Ok(conn)
 }
 
-/// 数据库连接池包装
-pub struct DbPool {
-    inner: Mutex<Option<Connection>>,
-}
+/// 数据库连接包装
+pub struct DbPool {}
 
 impl DbPool {
     pub fn new() -> Self {
-        Self {
-            inner: Mutex::new(None),
-        }
+        Self {}
     }
 
     /// 获取或创建数据库连接
     pub fn get_or_open(&self, app: &AppHandle, project_path: &str) -> Result<Connection, String> {
-        let mut guard = self.inner.lock().map_err(|e| format!("锁获取失败: {}", e))?;
-        if guard.is_none() {
-            let conn = open_db(app, project_path)?;
-            *guard = Some(conn);
-        }
-        // 注意：rusqlite Connection 不支持 Clone，这里返回一个新的连接
-        // 实际使用中，每次调用都会创建新连接，通过 WAL 模式保证并发安全
         open_db(app, project_path)
     }
 
-    /// 关闭连接
-    pub fn close(&self) {
-        let mut guard = self.inner.lock().unwrap();
-        *guard = None;
-    }
+    /// 关闭连接（no-op，连接在 Connection drop 时自动关闭）
+    pub fn close(&self) {}
 }
 
 #[cfg(test)]
