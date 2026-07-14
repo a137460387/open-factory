@@ -117,7 +117,7 @@ jobs:
         run: bun run --filter @open-factory/editor-core --filter @open-factory/plugin-sdk build
 
       - name: Run E2E tests
-        run: bunx playwright test --workers=2 --retries=1 --reporter=list,html
+        run: bunx playwright test --workers=2 --reporter=list,html
         working-directory: apps/desktop
 
       - name: Upload test report

@@ -74,7 +74,7 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM1RkVEMDU2QzNDMzczRTMKUldUamM4UERWdEQrTmE0cmlCYUN2cVUyZERVWjV6RFNJejdUY0JLa1lRZVV2SWtTVDhaTVVuWlEK",
-      "endpoints": ["https://github.com/open-factory/open-factory/releases/latest/download/latest.json"]
+      "endpoints": ["https://github.com/a137460387/open-factory/releases/latest/download/latest.json"]
     }
   }
 }
