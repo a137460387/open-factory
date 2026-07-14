@@ -20,6 +20,7 @@ import {
   normalizeAudioFadeDuration,
   normalizeAudioChannelRouting,
   normalizeAudioDenoise,
+  normalizeAILocalDenoise,
   normalizeClipBorder,
   normalizeClipPanoramaView,
   normalizeClipProjection,
@@ -346,6 +347,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             motionTrack: clip.motionTrack,
             scenecuts: clip.scenecuts,
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+            aiLocalDenoise: normalizeAILocalDenoise(clip.aiLocalDenoise),
             audioRestoration: normalizeAudioRestoration(clip.audioRestoration),
             spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
             videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
@@ -4410,3 +4412,4 @@ function cssColorToAssColor(value: string, opacity?: number): string {
     .padStart(2, '0');
   return `&H${alpha}${blue}${green}${red}&`;
 }
+// CI trigger Tue Jul 14 10:50:10     2026

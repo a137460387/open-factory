@@ -74,7 +74,6 @@ import {
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
-  normalizeAILocalDenoise,
   normalizeAudioRestoration,
   normalizeAudioPitchSemitones,
   normalizeSpatialAudio,
@@ -186,7 +185,7 @@ import {
   type TextLayoutOptions,
   type TextOpenTypeFeatures
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Mic, Palette, Pipette, Plus, SlidersHorizontal, Sparkles, Trash2, Underline, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Mic, Palette, Pipette, Plus, SlidersHorizontal, Trash2, Underline, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
@@ -194,23 +193,19 @@ import {
   analyzeMotionTrack,
   bridgeConfirm,
   cancelMotionTracking,
-  cancelAudioNoiseReduction,
   detectPrivacyRegions,
   evaluateExportQuality,
   convertLocalFileSrc,
   getAppDataDir,
   getFfmpegCapabilities,
   listenBridge,
-  listenNoiseReductionProgress,
   openFileDialog,
   readFile,
   runExportPreviewSamples,
   saveFileDialog,
   writeFile,
-  processAudioNoiseReduction,
   type ClipAnalysisProgressEvent,
-  type MotionTrackProgressEvent,
-  type NoiseReductionProgressEvent
+  type MotionTrackProgressEvent
 } from '../../lib/tauri-bridge';
 import { buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS } from '../../lib/frameInterpolationComparePreview';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
@@ -224,7 +219,6 @@ import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
 import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
-import { ProfessionalColorGradingPanel } from '../ColorGrading/ProfessionalColorGradingPanel';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { AIDenoisePanel } from './AIDenoisePanel';
 import { AIBrollSuggestionPanel } from './AIBrollSuggestionPanel';
@@ -479,8 +473,6 @@ function ClipInspector({
   const [frameInterpolationQualityRunning, setFrameInterpolationQualityRunning] = useState(false);
   const [frameInterpolationQualityError, setFrameInterpolationQualityError] = useState<string>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
-  const [aiLocalDenoiseRunning, setAiLocalDenoiseRunning] = useState(false);
-  const [aiLocalDenoiseProgress, setAiLocalDenoiseProgress] = useState<NoiseReductionProgressEvent | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
@@ -790,7 +782,6 @@ function ClipInspector({
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
-  const aiLocalDenoise = normalizeAILocalDenoise(clip.aiLocalDenoise);
   const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
   const audioRestorationComparison = buildAudioRestorationWaveformComparison(buildAudioRestorationPreviewPeaks(clip.pitchData), audioRestoration);
   const blendMode = normalizeClipBlendMode(clip.blendMode);
@@ -886,23 +877,10 @@ function ClipInspector({
         unlistenMotionTrack = dispose;
       }
     });
-    let unlistenNoiseReduction: (() => void) | undefined;
-    void listenNoiseReductionProgress((payload) => {
-      if (payload.clipId === clip.id) {
-        setAiLocalDenoiseProgress(payload);
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlistenNoiseReduction = dispose;
-      }
-    });
     return () => {
       disposed = true;
       unlistenAnalysis?.();
       unlistenMotionTrack?.();
-      unlistenNoiseReduction?.();
     };
   }, [clip.id]);
   useEffect(() => {
@@ -1398,76 +1376,6 @@ function ClipInspector({
             {audioDenoiseUnavailable ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="audio-denoise-unavailable">
                 {zhCN.inspector.fields.audioDenoiseUnsupported}
-              </div>
-            ) : null}
-          </Section>
-        ) : null}
-
-        {clip.type === 'video' || clip.type === 'audio' ? (
-          <Section title={zhCN.inspector.sections.aiLocalDenoise}>
-            <ToggleField
-              label={zhCN.inspector.fields.enabled}
-              checked={aiLocalDenoise.enabled}
-              onCommit={(enabled) => commit({ aiLocalDenoise: { ...aiLocalDenoise, enabled } })}
-              testId="ai-local-denoise-toggle"
-            />
-            <RangeNumberField
-              label={zhCN.inspector.fields.strength}
-              value={aiLocalDenoise.strength}
-              min={0}
-              max={1}
-              step={0.05}
-              format={(value) => `${Math.round(value * 100)}%`}
-              disabled={!aiLocalDenoise.enabled}
-              onCommit={(strength) => commit({ aiLocalDenoise: { ...aiLocalDenoise, strength } })}
-              testId="ai-local-denoise-strength"
-            />
-            <div className="flex items-center gap-2">
-              {aiLocalDenoiseRunning ? (
-                <button
-                  className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                  onClick={() => { void cancelAudioNoiseReduction(clip.id); setAiLocalDenoiseRunning(false); setAiLocalDenoiseProgress(undefined); }}
-                  data-testid="ai-local-denoise-cancel"
-                >
-                  {zhCN.inspector.aiLocalDenoise.cancel}
-                </button>
-              ) : (
-                <button
-                  className="inline-flex items-center gap-1 rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 disabled:opacity-50"
-                  disabled={!aiLocalDenoise.enabled || !asset?.path}
-                  onClick={async () => {
-                    if (!asset?.path) return;
-                    const outputPath = asset.path.replace(/(\.[^.]+)$/, '_denoised$1');
-                    setAiLocalDenoiseRunning(true);
-                    setAiLocalDenoiseProgress(undefined);
-                    try {
-                      const result = await processAudioNoiseReduction({ inputPath: asset.path, outputPath, clipId: clip.id, strength: aiLocalDenoise.strength });
-                      commit({ aiLocalDenoise: { ...aiLocalDenoise, outputPath: result.outputPath } });
-                    } catch {
-                      // user canceled or error
-                    } finally {
-                      setAiLocalDenoiseRunning(false);
-                      setAiLocalDenoiseProgress(undefined);
-                    }
-                  }}
-                  data-testid="ai-local-denoise-run"
-                >
-                  <Sparkles className="h-3 w-3" />
-                  {zhCN.inspector.aiLocalDenoise.run}
-                </button>
-              )}
-              {aiLocalDenoise.outputPath ? (
-                <span className="text-xs text-green-600" data-testid="ai-local-denoise-status">
-                  {zhCN.inspector.aiLocalDenoise.applied}
-                </span>
-              ) : null}
-            </div>
-            {aiLocalDenoiseRunning && aiLocalDenoiseProgress ? (
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-violet-100" data-testid="ai-local-denoise-progress">
-                <div
-                  className="h-full rounded-full bg-violet-500 transition-all"
-                  style={{ width: `${Math.round(aiLocalDenoiseProgress.progressPct)}%` }}
-                />
               </div>
             ) : null}
           </Section>
@@ -2750,17 +2658,6 @@ function ClipInspector({
             <ColorGradingWorkspace
               graph={clip.colorGradingGraph}
               onGraphChange={(graph) => commit({ colorGradingGraph: graph })}
-            />
-          </details>
-        ) : null}
-
-        {clip.type !== 'audio' ? (
-          <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">高级校色面板</summary>
-            <ProfessionalColorGradingPanel
-              clip={clip}
-              onCommitColorCorrection={(patch: Partial<import('@open-factory/editor-core').ColorCorrection>) => commit({ colorCorrection: patch })}
-              onChooseLUT={() => void chooseLut()}
             />
           </details>
         ) : null}
