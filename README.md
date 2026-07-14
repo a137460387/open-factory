@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v4.23.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
+[![Version](https://img.shields.io/badge/version-v4.25.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
@@ -45,6 +45,7 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 
 - **完整混音器架构** — 多通道 Mixer，支持 Submix/Send/Aux/Master 总线路由
 - **20 种音频效果** — 4/8 段参数 EQ、压缩器、限制器、噪声门、混响、延迟、合唱、镶边、去齿音、降噪等
+- **AI 语音降噪** — 基于 nnnoiseless 的本地 AI 降噪引擎，支持强度 0.0-1.0 混合调节
 - **自动化曲线** — 支持 Read/Write/Touch/Latch 模式，线性/贝塞尔/步进插值
 - **VU 电平表** — 峰值/RMS 电平监测
 - **音频闪避** — 侧链压缩实现自动闪避
@@ -54,7 +55,10 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 
 ### 🤖 AI 创作引擎
 
+- **AI 智能混剪** — 节拍感知的智能素材编排，自动生成节奏匹配的混剪序列
+- **AI 自动字幕** — 四阶段工作流（语音识别 → 润色 → 样式 → 导出），支持 SRT/ASS/VTT
 - **本地字幕生成** — Whisper.cpp 集成，支持 SRT/ASS/VTT 导出，带进度报告
+- **AI 语音降噪** — 基于 nnnoiseless 的本地 AI 降噪，支持强度调节与实时预览
 - **AI 场景检测** — 色彩直方图 + 运动矢量的自适应阈值场景分析
 - **智能粗剪** — AI 驱动的粗剪编排，支持算法模式与一键应用
 - **多模型 AI 代理** — 支持 15+ AI 提供商（OpenAI、Anthropic、Gemini、DeepSeek、GLM、Qwen、Kimi、Ollama 等）
@@ -145,6 +149,17 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 - ✅ **自动检测** — 智能识别可用 GPU 硬件
 - ✅ **软件降级** — 硬件解码失败时自动回退到软件解码
 - ✅ **批量帧解码** — 预览管线集成的批量解码优化
+
+### v4.25.0 — AI 智能创作与性能优化
+
+- ✅ **AI 智能混剪** — 节拍感知的自动素材编排，生成节奏匹配的混剪序列
+- ✅ **AI 自动字幕** — 四阶段工作流（ASR → 润色 → 样式 → 导出）
+- ✅ **AI 语音降噪** — 从 rnnoise-rs 迁移至 nnnoiseless，支持本地与云端降噪
+- ✅ **硬件加速编码** — GPU 编码器自动选择（NVENC / VideoToolbox 等）
+- ✅ **多机位剪辑 MVP** — 多角度同步与切换，含切换点编辑
+- ✅ **大型项目性能优化** — 时间线虚拟化与缓存，支持 1000+ Clip 项目
+- ✅ **智能媒体库** — 元数据提取、列表视图、编解码器/帧率/码率列排序
+- ✅ **E2E 测试修复** — 恢复 13 个历史失败/跳过的测试
 
 ---
 
