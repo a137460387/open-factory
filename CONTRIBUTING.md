@@ -59,8 +59,86 @@ bun run build
 
 ## 代码风格
 
-- TypeScript/React 遵循项目现有结构和命名。
-- 使用 ESLint 和 Prettier 的默认项目格式，不提交无关格式化。
-- Rust 代码提交前运行 `cargo fmt`。
-- 注释应解释复杂约束或安全边界，不重复代码本身。
-- 不复制第三方项目代码、资产、logo 或宣传文案。
+### TypeScript / React
+
+- **格式化**：使用 Prettier 统一代码风格，提交前运行 `bun run format`
+- **格式检查**：CI 中会运行 `bun run format:check`，确保代码格式一致
+- **类型安全**：禁止使用 `as any` 类型断言，使用具体类型或泛型
+- **命名规范**：
+  - 组件使用 PascalCase：`MyComponent`
+  - 函数/变量使用 camelCase：`myFunction`
+  - 常量使用 UPPER_SNAKE_CASE：`MY_CONSTANT`
+  - 类型/接口使用 PascalCase：`MyInterface`
+- **JSDoc**：公共 API 和复杂函数必须添加 JSDoc 注释
+- **React.memo**：频繁渲染的纯组件应使用 `React.memo` 包裹
+- **React.lazy**：重型对话框和面板组件应使用 `React.lazy` 延迟加载
+
+### Rust
+
+- **格式化**：使用 `cargo fmt` 统一代码风格
+- **错误处理**：生产代码禁止使用 `expect()` 和 `unwrap()`，使用 `map_err` 或 `?` 运算符
+- **文档注释**：公共函数和结构体必须添加 `///` 文档注释
+- **FFmpeg 调用**：使用 `Command::new("ffmpeg").args(&plan.full_args)` 参数数组，禁止执行 shell 字符串
+
+### 通用规范
+
+- 注释应解释复杂约束或安全边界，不重复代码本身
+- 不复制第三方项目代码、资产、logo 或宣传文案
+
+## 提交规范
+
+使用 [Conventional Commits](https://www.conventionalcommits.org/) 规范：
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+### 类型（type）
+
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | 修复 bug |
+| `docs` | 文档更新 |
+| `style` | 代码格式调整（不影响逻辑） |
+| `refactor` | 重构（既不修复 bug 也不添加功能） |
+| `perf` | 性能优化 |
+| `test` | 添加或修改测试 |
+| `chore` | 构建过程或辅助工具变动 |
+
+### 范围（scope）
+
+常用范围：`editor-core`、`desktop`、`plugin-sdk`、`timeline`、`export`、`ai`、`media`
+
+### 示例
+
+```
+feat(timeline): 添加片段分组功能
+fix(export): 修复 FFmpeg 编码参数错误
+refactor: 清理 P2 级别技术债
+test(window-mask): 添加边界情况测试
+```
+
+## 测试要求
+
+- **单元测试**：editor-core 包覆盖率不低于 80%
+- **边界情况**：新功能必须包含边界情况测试
+- **E2E 测试**：核心流程变更需要添加或更新 E2E 测试
+- **测试命令**：
+  ```bash
+  bun run test              # 运行所有单元测试
+  bun run test -- --watch   # 监听模式
+  bun run e2e               # 运行 E2E 测试
+  ```
+
+## 架构原则
+
+- **本地优先**：不添加遥测、登录或云服务
+- **Timeline 命令对象**：Timeline 变更必须通过命令对象，禁止直接调用 Zustand setter
+- **Tauri Bridge**：所有 Tauri invoke/listen/dialog/shell 调用必须通过 `tauri-bridge.ts`
+- **路径安全**：使用 `validate_path` 和 `validate_path_for_write` 验证路径
+- **媒体处理**：本地媒体预览使用 Tauri `convertFileSrc`，禁止直接使用 `file://`
