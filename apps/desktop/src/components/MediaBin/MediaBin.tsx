@@ -1624,13 +1624,17 @@ function RootMediaDropZone({ onMoveMediaToFolder }: { onMoveMediaToFolder(assetI
 function MediaLibraryListView({
   media,
   settings,
+  selectedAssetId,
   onSort,
+  onSelectAsset,
   onAddToTimeline,
   onExportGif
 }: {
   media: MediaAsset[];
   settings: MediaLibraryViewSettings;
+  selectedAssetId?: string | null;
   onSort(sortKey: MediaLibrarySortKey): void;
+  onSelectAsset?(assetId: string): void;
   onAddToTimeline(assetId: string): void;
   onExportGif(asset: MediaAsset): void;
 }) {
@@ -1668,7 +1672,12 @@ function MediaLibraryListView({
         </thead>
         <tbody>
           {media.map((asset) => (
-            <tr key={asset.id} className="border-b border-line last:border-b-0" data-testid={`media-list-row-${asset.id}`}>
+            <tr
+              key={asset.id}
+              className={`border-b border-line last:border-b-0 cursor-pointer ${selectedAssetId === asset.id ? 'bg-[var(--color-bg-selected)]' : 'hover:bg-[var(--color-bg-hover)]'}`}
+              data-testid={`media-list-row-${asset.id}`}
+              onClick={() => onSelectAsset?.(asset.id)}
+            >
               <td className="max-w-[180px] px-2 py-2">
                 <div className="truncate font-semibold text-ink" title={asset.path}>
                   {asset.name}
