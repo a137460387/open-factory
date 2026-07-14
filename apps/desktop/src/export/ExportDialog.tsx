@@ -3291,8 +3291,9 @@ function AudioVisualizationSection({
           setCustomThemes([]);
         }
       });
-    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(() => {});
-    return () => { canceled = true; };
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   const saveCurrentTheme = async () => {
