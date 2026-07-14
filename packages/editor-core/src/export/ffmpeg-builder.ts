@@ -4545,4 +4545,3 @@ export function buildHardwareEncoderArgs(
 
   return args;
 }
->>>>>>> 73e19f29 (feat: implement buildHardwareEncoderArgs function and fix tests)
