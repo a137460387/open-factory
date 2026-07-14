@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.25.3] - 2026-07-15
+
+### Changed
+- 添加应用内语言切换功能，支持中文和英文切换
+
 ## [v4.25.2] - 2026-07-14
 
 ### Changed
