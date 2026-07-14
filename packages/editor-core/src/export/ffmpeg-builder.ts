@@ -180,6 +180,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   subtitleLanguages: undefined,
   subtitleBurnInLanguage: undefined,
   hardwareEncoding: false,
+  hardwareEncoderSettings: null,
   loudnessNormalization: 'off',
   platformPreset: undefined,
   videoProfile: undefined,
@@ -3316,16 +3317,14 @@ function buildBitrateArgs(flag: '-b:v' | '-b:a', bitrate: string | null | undefi
 }
 
 function buildVideoEncodingArgs(settings: ExportSettings, capabilities: FfmpegCapabilities | undefined, warnings: string[], skipVideoCodec: boolean): string[] {
-  if (skipVideoCodec) {
-    return [];
-  }
+  if (skipVideoCodec) { return []; }
   if (settings.hardwareEncoding) {
     const format = settings.format.toLowerCase();
-    const hardwareAllowedForContainer = format === 'mp4' || format === 'mov';
-    const encoder = capabilities?.hardwareEncoderAvailable ? capabilities.hardwareEncoder : null;
-    if (hardwareAllowedForContainer && encoder) {
-      return ['-c:v', encoder, '-preset', 'p4', '-cq', '23', '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
-    }
+    const hwOk = format === 'mp4' || format === 'mov';
+    const hw = settings.hardwareEncoderSettings;
+    if (hwOk && hw?.encoderId) { return buildHardwareEncoderArgs(hw, settings.fps, capabilities, warnings); }
+    const enc = capabilities?.hardwareEncoderAvailable ? capabilities.hardwareEncoder : null;
+    if (hwOk && enc) { return ['-c:v', enc, '-preset', 'p4', '-cq', '23', '-pix_fmt', 'yuv420p', '-r', String(settings.fps)]; }
     warnings.push('Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.');
   }
   return ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), ...buildVideoProfileArgs(settings), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
@@ -4413,26 +4412,9 @@ function cssColorToAssColor(value: string, opacity?: number): string {
     .padStart(2, '0');
   return `&H${alpha}${blue}${green}${red}&`;
 }
+// CI trigger
+// Tue Jul 14 10:52:37     2026
 
-/**
- * Build FFmpeg arguments for hardware-accelerated encoding.
- *
- * @param settings - Hardware encoder settings (encoder ID, preset, rate control, etc.)
- * @param fps - Target frame rate
- * @param capabilities - FFmpeg capabilities including available hardware encoders
- * @param warnings - Array to collect warning messages (e.g., fallback to software encoding)
- * @returns Array of FFmpeg arguments for video encoding
- */
-export function buildHardwareEncoderArgs(
-  settings: HardwareEncoderSettings,
-  fps: number,
-  capabilities: FfmpegCapabilities,
-  warnings: string[]
-): string[] {
-  const args: string[] = [];
-  const encoderId = settings.encoderId;
-  const encoders = capabilities.hardwareEncoders ?? [];
-  const encoderInfo = encoders.find((e) => e.id === encoderId);
 
   // Check if the requested encoder is available
   if (!encoderInfo || !capabilities.hardwareEncoderAvailable) {

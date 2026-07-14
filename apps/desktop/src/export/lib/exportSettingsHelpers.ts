@@ -666,6 +666,14 @@ export function updateHardwareEncoding(
 ): void {
   setDraftSettings((current) => ({ ...current, hardwareEncoding: checked }));
 }
+export function updateHardwareEncoderId(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoding: true, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), encoderId: v as import('@open-factory/editor-core').HardwareEncoderId } })); }
+export function updateHardwareEncoderPreset(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), preset: v } as import('@open-factory/editor-core').HardwareEncoderSettings })); }
+export function updateHardwareRateControlMode(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), rateControlMode: v as import('@open-factory/editor-core').HardwareRateControlMode } as import('@open-factory/editor-core').HardwareEncoderSettings })); }
+export function updateHardwareCq(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), cq: Number(v) } })); }
+export function updateHardwareVideoBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), videoBitrate: v } })); }
+export function updateHardwareMaxBitrate(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), maxBitrate: v } })); }
+export function updateHardwareGopSize(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), gopSize: Number(v) } })); }
+export function updateHardwareBFrames(s: Dispatch<SetStateAction<ExportPresetSettings>>, v: string): void { s((c) => ({ ...c, hardwareEncoderSettings: { ...(c.hardwareEncoderSettings ?? {}), bFrames: Number(v) } })); }
 
 export function updateLoudnessNormalization(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
