@@ -15,7 +15,7 @@ test.describe('Professional Color Grading Panel', () => {
     await expect(clip).toBeVisible({ timeout: 10_000 });
     await clip.click({ force: true });
     await expect(page.getByTestId('clip-brightness-input')).toBeVisible({ timeout: 10_000 });
-    await page.locator('summary', { hasText: '专业调色面板' }).click();
+    await page.locator('summary', { hasText: '高级校色面板' }).click();
   });
 
   test('should display professional color grading panel with tabs', async ({ page }) => {
