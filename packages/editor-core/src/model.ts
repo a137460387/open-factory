@@ -43,7 +43,6 @@ import type {
   Clip,
   ClipAILookMatch,
   ClipAudioDenoise,
-  ClipAILocalDenoise,
   ClipAudioRestoration,
   ClipAudioRestorationGap,
   ClipBorder,
@@ -176,7 +175,6 @@ export type {
   ChromaKeyMode,
   Clip,
   ClipAudioDenoise,
-  ClipAILocalDenoise,
   ClipAudioRestoration,
   ClipAudioRestorationGap,
   ClipBorder,
@@ -532,10 +530,6 @@ export const DEFAULT_QUALITY_ENHANCEMENT: ClipQualityEnhancement = {
 };
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
-  enabled: false,
-  strength: 0.5
-};
-export const DEFAULT_AI_LOCAL_DENOISE: ClipAILocalDenoise = {
   enabled: false,
   strength: 0.5
 };
@@ -961,7 +955,6 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
-    aiLocalDenoise: normalizeAILocalDenoise(input.aiLocalDenoise),
     audioRestoration: normalizeAudioRestoration(input.audioRestoration),
     audioChannelRouting: normalizeAudioChannelRouting(input.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(input.videoRestoration),
@@ -1271,16 +1264,6 @@ export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | 
   return {
     enabled: audioDenoise?.enabled === true,
     strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
-  };
-}
-
-export function normalizeAILocalDenoise(aiLocalDenoise: Partial<ClipAILocalDenoise> | undefined): ClipAILocalDenoise {
-  return {
-    enabled: aiLocalDenoise?.enabled === true,
-    strength: round(Math.min(1, Math.max(0, finiteOrDefault(aiLocalDenoise?.strength, DEFAULT_AI_LOCAL_DENOISE.strength)))),
-    ...(typeof aiLocalDenoise?.outputPath === 'string' && aiLocalDenoise.outputPath.trim() ? { outputPath: aiLocalDenoise.outputPath.trim() } : {}),
-    ...(typeof aiLocalDenoise?.originalPath === 'string' && aiLocalDenoise.originalPath.trim() ? { originalPath: aiLocalDenoise.originalPath.trim() } : {}),
-    ...(typeof aiLocalDenoise?.processedAt === 'string' && aiLocalDenoise.processedAt.trim() ? { processedAt: aiLocalDenoise.processedAt.trim() } : {})
   };
 }
 
