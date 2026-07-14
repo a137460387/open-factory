@@ -219,6 +219,7 @@ import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
+import { ProfessionalColorGradingPanel } from '../ColorGrading/ProfessionalColorGradingPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
 import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
