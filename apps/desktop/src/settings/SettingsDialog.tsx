@@ -45,7 +45,8 @@ import {
 } from '@open-factory/editor-core';
 import type { StressScenarioId } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
-import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
+import { getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language } from '../i18n/strings';
+import { switchLanguage } from '../i18n/i18next-config';
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
@@ -641,6 +642,9 @@ export function SettingsDialog({
   async function updateLanguage(value: string) {
     const nextLanguage = normalizeLanguage(value);
     setLanguage(nextLanguage);
+    // 同步到 i18next 和现有 i18n 系统
+    switchLanguage(nextLanguage);
+    setI18nLanguage(nextLanguage);
     try {
       await saveLanguageSetting(nextLanguage);
     } catch (languageError) {

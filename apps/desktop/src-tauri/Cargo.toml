@@ -41,6 +41,7 @@ futures-util = "0.3"
 zip = { version = "4", default-features = false, features = ["deflate"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+tauri-plugin-i18n = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 trash = "5"
 nnnoiseless = "0.5"

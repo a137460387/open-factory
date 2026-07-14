@@ -11243,7 +11243,21 @@ const locales: Record<Language, LocaleStrings> = {
   en: mergeLocale<LocaleStrings>(zh, enOverrides)
 };
 
-let currentLanguage: Language = languageFromNavigator(typeof navigator === 'undefined' ? undefined : navigator.language);
+// 初始化 i18next（副作用导入，确保在模块加载时执行）
+import i18nextInstance from './i18next-config';
+
+// 从 localStorage 或系统语言检测初始语言，与 i18next 保持一致
+function getInitialLanguage(): Language {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('open-factory:language');
+      if (stored === 'zh' || stored === 'en') return stored;
+    } catch { /* localStorage 不可用时静默忽略 */ }
+  }
+  return languageFromNavigator(typeof navigator === 'undefined' ? undefined : navigator.language);
+}
+
+let currentLanguage: Language = getInitialLanguage();
 const languageListeners = new Set<() => void>();
 
 export function t<T = string>(key: string): T {
@@ -11262,6 +11276,14 @@ export function setLanguage(language: string): Language {
     return currentLanguage;
   }
   currentLanguage = next;
+  // 同步到 i18next
+  try {
+    void i18nextInstance.changeLanguage(next);
+  } catch { /* i18next 未加载时静默忽略 */ }
+  // 持久化到 localStorage
+  try {
+    localStorage.setItem('open-factory:language', next);
+  } catch { /* localStorage 不可用时静默忽略 */ }
   for (const listener of languageListeners) {
     listener();
   }

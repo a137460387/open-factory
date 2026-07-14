@@ -1,5 +1,7 @@
 import { logError } from "./lib/error-handlers";
-import { useEffect, useSyncExternalStore } from 'react';
+import { Suspense, useEffect, useSyncExternalStore } from 'react';
+import { I18nextProvider } from 'react-i18next';
+import i18n from './i18n/i18next-config';
 import { EditorShell } from './components/EditorShell';
 import { PreviewWindowShell } from './components/PreviewWindow/PreviewWindowShell';
 import { ToastViewport } from './components/common/Toast';
@@ -30,13 +32,15 @@ export function App() {
   }, []);
 
   return (
-    <>
-      {previewWindowMode ? <PreviewWindowShell /> : <EditorShell />}
-      <ToastViewport />
-      {previewWindowMode ? null : <StartupUpdateChecker />}
-      {previewWindowMode ? null : <NativePreviewSmokeRunner />}
-      {previewWindowMode ? null : <NativeCancelSmokeRunner />}
-    </>
+    <I18nextProvider i18n={i18n}>
+      <Suspense fallback={null}>
+        {previewWindowMode ? <PreviewWindowShell /> : <EditorShell />}
+        <ToastViewport />
+        {previewWindowMode ? null : <StartupUpdateChecker />}
+        {previewWindowMode ? null : <NativePreviewSmokeRunner />}
+        {previewWindowMode ? null : <NativeCancelSmokeRunner />}
+      </Suspense>
+    </I18nextProvider>
   );
 }
 

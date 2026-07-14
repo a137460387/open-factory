@@ -44,6 +44,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_i18n::init())
         .on_page_load(|_window, payload| {
             write_frontend_smoke_page_load_marker(
                 "OPEN_FACTORY_PREVIEW_SMOKE",

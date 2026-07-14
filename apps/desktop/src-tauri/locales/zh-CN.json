@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Open Factory",
+    "description": "本地优先的桌面视频编辑器"
+  },
+  "dialog": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "ok": "确定",
+    "yes": "是",
+    "no": "否",
+    "close": "关闭",
+    "save": "保存",
+    "discard": "放弃",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "notification": {
+    "exportComplete": "导出完成",
+    "exportFailed": "导出失败",
+    "backupComplete": "备份完成",
+    "backupFailed": "备份失败",
+    "updateAvailable": "有可用更新"
+  },
+  "system": {
+    "fileDialog": {
+      "projectFiles": "Open Factory 项目文件",
+      "mediaFiles": "媒体文件",
+      "subtitleFiles": "字幕文件",
+      "allFiles": "所有文件"
+    }
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "common": {
+    "saved": "Saved",
+    "save": "Save",
+    "unsavedChanges": "Unsaved changes",
+    "idle": "Idle",
+    "clear": "Clear",
+    "close": "Close",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "reset": "Reset",
+    "unavailable": "Unavailable",
+    "available": "Available",
+    "missing": "Missing",
+    "auto": "Auto",
+    "none": "None",
+    "secondsShort": "s",
+    "noVideo": "No video",
+    "audioOnly": "Audio only",
+    "back": "Back"
+  },
+  "project": {
+    "defaultName": "Untitled Project"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Local configuration and media library",
+    "tabs": {
+      "general": "General",
+      "display": "Display",
+      "appearance": "Appearance",
+      "lutLibrary": "LUT Library",
+      "effectPresets": "Effect Presets",
+      "shortcuts": "Shortcuts",
+      "macros": "Macros",
+      "automation": "Automation",
+      "scripts": "Scripts",
+      "translation": "Subtitle Translation",
+      "localModels": "Local Models",
+      "proxy": "Proxy Media",
+      "taskMonitor": "Task Monitor",
+      "exportPresets": "Export Presets",
+      "backup": "Backup",
+      "plugins": "Plugins",
+      "aiServices": "AI Services",
+      "hardwareAcceleration": "Hardware Acceleration"
+    },
+    "general": {
+      "title": "General",
+      "description": "Configure interface language and local preferences.",
+      "language": "Interface Language",
+      "languageDescription": "Language is saved to the local settings file.",
+      "updatesTitle": "Auto Updates",
+      "updatesDescription": "Check for releases in the background on startup; failures are silently skipped.",
+      "autoUpdateCheck": "Auto-check for updates on startup",
+      "autoUpdateCheckDescription": "When disabled, no update endpoint is accessed.",
+      "updateEndpoint": "Enterprise Update Server URL",
+      "updateEndpointDescription": "Leave empty to use GitHub Releases latest.json.",
+      "defaultUpdateEndpoint": "Using default GitHub Releases endpoint",
+      "projectFrameRate": "Project Frame Rate",
+      "timecodeFormat": "Timecode Format",
+      "timecodeNdf": "NDF (Non-Drop Frame)",
+      "timecodeDf": "DF (Drop Frame)",
+      "dropFrameUnavailable": "Drop Frame is only available for 29.97/59.94 fps.",
+      "saveFailed": "Language save failed",
+      "saveFailedMessage": "Unable to write settings file.",
+      "options": {
+        "zh": "中文",
+        "en": "English"
+      }
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "Switch built-in themes or save a shareable custom theme.",
+      "theme": "Theme",
+      "themeNames": {
+        "dark": "Dark",
+        "light": "Light",
+        "high-contrast": "High Contrast",
+        "oled": "OLED Black"
+      }
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "description": "Rebind timeline and export shortcuts.",
+      "pressKeys": "Press keys...",
+      "resetAll": "Reset All",
+      "saveFailed": "Shortcuts save failed",
+      "saveFailedMessage": "Unable to write shortcuts config.",
+      "loadFailed": "Shortcuts load failed"
+    },
+    "backup": {
+      "title": "Backup",
+      "description": "Write local or WebDAV backups when saving projects.",
+      "localTitle": "Local Backup",
+      "enableLocal": "Enable Local Backup",
+      "directory": "Backup Directory",
+      "chooseDirectory": "Choose Directory",
+      "webdavTitle": "WebDAV Backup",
+      "enableWebdav": "Enable WebDAV Backup",
+      "url": "WebDAV URL",
+      "username": "Username",
+      "password": "Password"
+    },
+    "plugins": {
+      "title": "Plugins",
+      "description": "Load trusted JS plugins from the local plugin directory.",
+      "loading": "Loading plugins...",
+      "empty": "No plugins loaded.",
+      "install": "Install",
+      "uninstall": "Uninstall",
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "aiServices": {
+      "title": "AI Services",
+      "description": "Configure local AI providers for subtitle polishing, chapter titles, vision analysis, etc.",
+      "endpoint": "Endpoint",
+      "apiKey": "API Key",
+      "model": "Default Model",
+      "testConnection": "Test Connection",
+      "testOk": "Connection available",
+      "testFail": "Connection failed"
+    },
+    "hardwareAcceleration": {
+      "title": "Hardware Acceleration",
+      "description": "Configure hardware-accelerated video decoding options.",
+      "modeAuto": "Auto",
+      "modeEnabled": "Always Enabled",
+      "modeDisabled": "Disabled"
+    }
+  },
+  "toolbar": {
+    "fileMenu": "File",
+    "editMenu": "Edit",
+    "viewMenu": "View",
+    "toolsMenu": "Tools",
+    "helpMenu": "Help",
+    "newProject": "New Project",
+    "openProject": "Open Project",
+    "saveProject": "Save Project",
+    "importMedia": "Import Media",
+    "importSubtitles": "Import Subtitles",
+    "exportVideo": "Export Video",
+    "settings": "Settings",
+    "undo": "Undo",
+    "redo": "Redo",
+    "history": "History",
+    "play": "Play",
+    "pause": "Pause",
+    "splitSelectedClip": "Split Selected Clip",
+    "record": "Record",
+    "stopRecording": "Stop",
+    "autosave": "Autosave",
+    "autosaveInterval": "Autosave Interval"
+  },
+  "timeline": {
+    "trackTypes": {
+      "video": "Video",
+      "audio": "Audio",
+      "text": "Text",
+      "subtitle": "Subtitle"
+    },
+    "markerLabel": "Marker {{index}}"
+  },
+  "export": {
+    "title": "Export",
+    "start": "Start Export",
+    "cancel": "Cancel Export",
+    "progress": "Export Progress",
+    "complete": "Export Complete",
+    "failed": "Export Failed",
+    "format": "Format",
+    "resolution": "Resolution",
+    "quality": "Quality"
+  }
+}

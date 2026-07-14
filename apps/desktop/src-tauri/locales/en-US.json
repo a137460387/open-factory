@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Open Factory",
+    "description": "Local-first desktop video editor"
+  },
+  "dialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "close": "Close",
+    "save": "Save",
+    "discard": "Discard",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "notification": {
+    "exportComplete": "Export Complete",
+    "exportFailed": "Export Failed",
+    "backupComplete": "Backup Complete",
+    "backupFailed": "Backup Failed",
+    "updateAvailable": "Update Available"
+  },
+  "system": {
+    "fileDialog": {
+      "projectFiles": "Open Factory Project Files",
+      "mediaFiles": "Media Files",
+      "subtitleFiles": "Subtitle Files",
+      "allFiles": "All Files"
+    }
+  }
+}

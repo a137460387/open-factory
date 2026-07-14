@@ -1,0 +1,178 @@
+{
+  "common": {
+    "saved": "已保存",
+    "save": "保存",
+    "unsavedChanges": "未保存更改",
+    "idle": "空闲",
+    "clear": "清除",
+    "close": "关闭",
+    "cancel": "取消",
+    "delete": "删除",
+    "retry": "重试",
+    "reset": "重置",
+    "unavailable": "不可用",
+    "available": "可用",
+    "missing": "缺失",
+    "auto": "自动",
+    "none": "无",
+    "secondsShort": "秒",
+    "noVideo": "无视频",
+    "audioOnly": "仅音频",
+    "back": "返回"
+  },
+  "project": {
+    "defaultName": "未命名项目"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "本地配置和素材库",
+    "tabs": {
+      "general": "通用",
+      "display": "显示",
+      "appearance": "外观",
+      "lutLibrary": "LUT库",
+      "effectPresets": "特效预设库",
+      "shortcuts": "快捷键",
+      "macros": "宏",
+      "automation": "自动化",
+      "scripts": "脚本",
+      "translation": "字幕翻译",
+      "localModels": "本地模型",
+      "proxy": "代理媒体",
+      "taskMonitor": "任务监控",
+      "exportPresets": "导出预设",
+      "backup": "备份",
+      "plugins": "插件",
+      "aiServices": "AI服务",
+      "hardwareAcceleration": "硬件加速"
+    },
+    "general": {
+      "title": "通用",
+      "description": "配置界面语言和本机偏好。",
+      "language": "界面语言",
+      "languageDescription": "语言会保存到本机设置文件。",
+      "updatesTitle": "自动更新",
+      "updatesDescription": "启动时在后台检查发布版本；失败会静默跳过，不影响本地编辑。",
+      "autoUpdateCheck": "启动时自动检查更新",
+      "autoUpdateCheckDescription": "关闭后不会访问更新端点，适合版本锁定或离线部署。",
+      "updateEndpoint": "企业更新服务器 URL",
+      "updateEndpointDescription": "留空时使用 GitHub Releases latest.json；可填写内网 HTTP/HTTPS endpoint。",
+      "defaultUpdateEndpoint": "使用默认 GitHub Releases endpoint",
+      "projectFrameRate": "项目帧率",
+      "timecodeFormat": "时间码格式",
+      "timecodeNdf": "NDF（Non-Drop Frame）",
+      "timecodeDf": "DF（Drop Frame）",
+      "dropFrameUnavailable": "Drop Frame 仅支持 29.97/59.94 fps。",
+      "saveFailed": "语言保存失败",
+      "saveFailedMessage": "无法写入设置文件。",
+      "options": {
+        "zh": "中文",
+        "en": "English"
+      }
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "切换内置主题，或保存可分享的本机自定义主题。",
+      "theme": "主题",
+      "themeNames": {
+        "dark": "深色",
+        "light": "浅色",
+        "high-contrast": "高对比度",
+        "oled": "OLED 纯黑"
+      }
+    },
+    "shortcuts": {
+      "title": "快捷键",
+      "description": "重新绑定时间线和导出快捷键。",
+      "pressKeys": "按下按键...",
+      "resetAll": "全部重置",
+      "saveFailed": "快捷键保存失败",
+      "saveFailedMessage": "无法写入快捷键配置。",
+      "loadFailed": "快捷键加载失败"
+    },
+    "backup": {
+      "title": "备份",
+      "description": "保存项目时额外写入用户配置的本地或 WebDAV 备份。",
+      "localTitle": "本地备份",
+      "enableLocal": "启用本地备份",
+      "directory": "备份目录",
+      "chooseDirectory": "选择目录",
+      "webdavTitle": "WebDAV 备份",
+      "enableWebdav": "启用 WebDAV 备份",
+      "url": "WebDAV URL",
+      "username": "用户名",
+      "password": "密码"
+    },
+    "plugins": {
+      "title": "插件",
+      "description": "从本机插件目录加载可信 JS 插件。",
+      "loading": "正在加载插件...",
+      "empty": "没有加载到插件。",
+      "install": "安装",
+      "uninstall": "卸载",
+      "enable": "启用",
+      "disable": "禁用"
+    },
+    "aiServices": {
+      "title": "AI 服务",
+      "description": "配置本地 AI 服务商，用于字幕润色、章节标题、视觉分析等功能。",
+      "endpoint": "端点地址",
+      "apiKey": "API Key",
+      "model": "默认模型",
+      "testConnection": "测试连接",
+      "testOk": "连接可用",
+      "testFail": "连接失败"
+    },
+    "hardwareAcceleration": {
+      "title": "硬件加速解码",
+      "description": "配置视频预览的硬件加速解码选项。",
+      "modeAuto": "自动",
+      "modeEnabled": "始终启用",
+      "modeDisabled": "禁用"
+    }
+  },
+  "toolbar": {
+    "fileMenu": "文件",
+    "editMenu": "编辑",
+    "viewMenu": "视图",
+    "toolsMenu": "工具",
+    "helpMenu": "帮助",
+    "newProject": "新建项目",
+    "openProject": "打开项目",
+    "saveProject": "保存项目",
+    "importMedia": "导入媒体",
+    "importSubtitles": "导入字幕",
+    "exportVideo": "导出视频",
+    "settings": "设置",
+    "undo": "撤销",
+    "redo": "重做",
+    "history": "历史",
+    "play": "播放",
+    "pause": "暂停",
+    "splitSelectedClip": "分割选中片段",
+    "record": "录制",
+    "stopRecording": "停止",
+    "autosave": "自动保存",
+    "autosaveInterval": "自动保存间隔"
+  },
+  "timeline": {
+    "trackTypes": {
+      "video": "视频",
+      "audio": "音频",
+      "text": "文字",
+      "subtitle": "字幕"
+    },
+    "markerLabel": "标记 {{index}}"
+  },
+  "export": {
+    "title": "导出",
+    "start": "开始导出",
+    "cancel": "取消导出",
+    "progress": "导出进度",
+    "complete": "导出完成",
+    "failed": "导出失败",
+    "format": "格式",
+    "resolution": "分辨率",
+    "quality": "质量"
+  }
+}
