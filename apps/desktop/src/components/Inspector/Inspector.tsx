@@ -1382,6 +1382,26 @@ function ClipInspector({
           </Section>
         ) : null}
 
+        {clip.type === 'video' || clip.type === 'audio' ? (
+          <Section title={zhCN.inspector.sections.aiLocalDenoise}>
+            <ToggleField label={zhCN.inspector.fields.enabled} checked={clip.aiLocalDenoise?.enabled ?? false} onCommit={(enabled) => commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { strength: 0.5 }), enabled } })} testId="ai-local-denoise-toggle" />
+            <RangeNumberField label={zhCN.inspector.fields.strength} value={clip.aiLocalDenoise?.strength ?? 0.5} min={0} max={1} step={0.05} format={(v) => `${Math.round(v * 100)}%`} disabled={!clip.aiLocalDenoise?.enabled} onCommit={(strength) => commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { enabled: false }), strength } })} testId="ai-local-denoise-strength" />
+            {aiLocalDenoiseProcessing ? (
+              <div className="space-y-2" data-testid="ai-local-denoise-progress">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]"><Loader2 size={14} className="animate-spin" /><span>{Math.round(aiLocalDenoiseProgress * 100)}%</span><span className="capitalize">{aiLocalDenoiseStage}</span></div>
+                <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" onClick={() => { void cancelAudioNoiseReduction(clip.id); setAiLocalDenoiseProcessing(false); }} data-testid="ai-local-denoise-cancel">取消</button>
+              </div>
+            ) : aiLocalDenoiseResult ? (
+              <div className="space-y-2" data-testid="ai-local-denoise-complete">
+                <div className="rounded-md border border-green-200 bg-green-50 p-2 text-xs text-green-700">降噪完成: -{aiLocalDenoiseResult.noiseReductionDb.toFixed(1)} dB</div>
+                <button className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white" type="button" onClick={() => setAiLocalDenoiseResult(null)} data-testid="ai-local-denoise-reset">重新处理</button>
+              </div>
+            ) : (
+              <button className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!clip.aiLocalDenoise?.enabled || !asset?.path} onClick={async () => { if (!asset?.path) return; setAiLocalDenoiseProcessing(true); setAiLocalDenoiseProgress(0); setAiLocalDenoiseStage('decoding'); setAiLocalDenoiseResult(null); try { const result = await processAudioNoiseReduction({ mediaPath: asset.path, clipId: clip.id, strength: clip.aiLocalDenoise?.strength ?? 0.5 }); setAiLocalDenoiseResult({ outputPath: result.outputPath, noiseReductionDb: result.noiseReductionDb }); commit({ aiLocalDenoise: { ...(clip.aiLocalDenoise ?? { enabled: true, strength: 0.5 }), outputPath: result.outputPath, originalPath: result.originalPath, processedAt: Date.now() } }); } catch (error) { showToast({ kind: 'error', title: '降噪失败', message: error instanceof Error ? error.message : String(error) }); } finally { setAiLocalDenoiseProcessing(false); } }} data-testid="ai-local-denoise-process"><Sparkles size={14} className="mr-1 inline" />开始降噪</button>
+            )}
+          </Section>
+        ) : null}
+
         <Section title={zhCN.inspector.sections.transform}>
           <AnimatedField label="X" onAddKeyframe={() => addKeyframe('x')}>
             <NumberField label="X" value={clip.transform.x} step={1} onCommit={(x) => commit({ transform: { x } })} hideLabel testId="clip-transform-x-input" />
