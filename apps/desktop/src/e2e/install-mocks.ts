@@ -970,6 +970,17 @@ const mocks: TauriMocks = {
     return { vocalsPath, accompanimentPath, outputDir, durationMs: 10 };
   },
   cancelDemucs: () => undefined,
+  processAudioNoiseReduction: async ({ inputPath, outputPath, clipId, strength, mediaPath }: { inputPath?: string; outputPath?: string; clipId: string; strength?: number; mediaPath?: string }) => {
+    const source = mediaPath ?? inputPath ?? '';
+    const out = outputPath ?? source.replace(/(\.[^.]+)$/, '_denoised$1');
+    emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
+    await wait(5);
+    emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
+    await wait(5);
+    emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
+    return { outputPath: out, originalPath: source, durationMs: 15, noiseReductionDb: 6.5 };
+  },
+  cancelAudioNoiseReduction: () => undefined,
   detectPrivacyRegions: async ({ clipId }) => {
     await wait(10);
     return {
