@@ -57,6 +57,7 @@ import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
 import { AdvancedSearchPanel } from './AdvancedSearchPanel';
+import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
 
 
@@ -227,6 +228,8 @@ export function MediaBin({
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
+  const [detailsAssetId, setDetailsAssetId] = useState<string | null>(null);
+  const detailsAsset = useMemo(() => detailsAssetId ? media.find((a) => a.id === detailsAssetId) ?? null : null, [detailsAssetId, media]);
   const [subclipDialogAssetId, setSubclipDialogAssetId] = useState<string>();
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
