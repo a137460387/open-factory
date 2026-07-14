@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.25.2] - 2026-07-14
+
+### Changed
+- 统一错误处理机制，引入 `logError` 工具函数
+- Rust 依赖瘦身：移除 `once_cell` 改用标准库 `LazyLock`，统一 zip 库版本为 v4
+- 前端依赖整理：Radix UI 组件库迁移与清理
+- 更新架构与路线图文档
+
+### Fixed
+- 补充 AI 核心模块单元测试，提高测试覆盖率
+- 补充调色核心模块单元测试，提高测试覆盖率
+
 ## [v4.25.1] - 2026-07-14
 
 ### Fixed
