@@ -750,20 +750,15 @@ export function MediaBin({
             <MediaLibraryListView
               media={sortedVisibleMedia}
               settings={mediaLibraryView}
-              selectedAssetId={detailsAssetId}
               onSort={(sortKey) =>
                 updateMediaLibraryView({
                   sortKey,
                   sortDirection: mediaLibraryView.sortKey === sortKey && mediaLibraryView.sortDirection === 'asc' ? 'desc' : 'asc'
                 })
               }
-              onSelectAsset={(assetId) => setDetailsAssetId((prev) => prev === assetId ? null : assetId)}
               onAddToTimeline={onAddToTimeline}
               onExportGif={onExportGif}
             />
-            <div className="mt-2 flex-shrink-0 overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)]" style={{ maxHeight: detailsAsset ? '260px' : '0px', transition: 'max-height 0.2s ease' }}>
-              <MediaMetadataPanel asset={detailsAsset} />
-            </div>
           </div>
         ) : mediaLibraryView.mode === 'timeline' ? (
           <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
