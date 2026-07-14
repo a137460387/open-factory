@@ -57,7 +57,6 @@ import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
 import { AdvancedSearchPanel } from './AdvancedSearchPanel';
-import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
 
 
@@ -228,8 +227,6 @@ export function MediaBin({
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
-  const [detailsAssetId, setDetailsAssetId] = useState<string | null>(null);
-  const detailsAsset = useMemo(() => detailsAssetId ? media.find((a) => a.id === detailsAssetId) ?? null : null, [detailsAssetId, media]);
   const [subclipDialogAssetId, setSubclipDialogAssetId] = useState<string>();
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
@@ -749,18 +746,25 @@ export function MediaBin({
             {t.emptyDrop}
           </button>
         ) : mediaLibraryView.mode === 'list' ? (
-          <MediaLibraryListView
-            media={sortedVisibleMedia}
-            settings={mediaLibraryView}
-            onSort={(sortKey) =>
-              updateMediaLibraryView({
-                sortKey,
-                sortDirection: mediaLibraryView.sortKey === sortKey && mediaLibraryView.sortDirection === 'asc' ? 'desc' : 'asc'
-              })
-            }
-            onAddToTimeline={onAddToTimeline}
-            onExportGif={onExportGif}
-          />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <MediaLibraryListView
+              media={sortedVisibleMedia}
+              settings={mediaLibraryView}
+              selectedAssetId={detailsAssetId}
+              onSort={(sortKey) =>
+                updateMediaLibraryView({
+                  sortKey,
+                  sortDirection: mediaLibraryView.sortKey === sortKey && mediaLibraryView.sortDirection === 'asc' ? 'desc' : 'asc'
+                })
+              }
+              onSelectAsset={(assetId) => setDetailsAssetId((prev) => prev === assetId ? null : assetId)}
+              onAddToTimeline={onAddToTimeline}
+              onExportGif={onExportGif}
+            />
+            <div className="mt-2 flex-shrink-0 overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)]" style={{ maxHeight: detailsAsset ? '260px' : '0px', transition: 'max-height 0.2s ease' }}>
+              <MediaMetadataPanel asset={detailsAsset} />
+            </div>
+          </div>
         ) : mediaLibraryView.mode === 'timeline' ? (
           <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
         ) : smartAlbumId !== 'none' ? (
