@@ -2705,6 +2705,17 @@ function ClipInspector({
         ) : null}
 
         {clip.type !== 'audio' ? (
+          <details className="mb-4" open>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">高级校色面板</summary>
+            <ProfessionalColorGradingPanel
+              clip={clip}
+              onCommitColorCorrection={(patch) => commit({ colorCorrection: patch })}
+              onChooseLUT={() => void chooseLut()}
+            />
+          </details>
+        ) : null}
+
+        {clip.type !== 'audio' ? (
           <details className="mb-4">
             <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.effects}</summary>
             <EffectsEditor
