@@ -1,9 +1,5 @@
 import type { MediaAsset } from '@open-factory/editor-core';
-
-export interface ASRState {
-  status: 'idle' | 'processing' | 'done' | 'error';
-  progress: number;
-}
+import type { ASRState } from './useSubtitleWorkflow';
 
 interface ASRStageProps {
   media: MediaAsset[];
