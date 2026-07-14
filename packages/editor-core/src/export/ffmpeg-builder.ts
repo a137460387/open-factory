@@ -4476,7 +4476,7 @@ export function buildHardwareEncoderArgs(
   }
 
   // Use the requested encoder
-  args.push('-c:v', encoderId);
+  args.push('-c:v', encoderId ?? 'libx264');
 
   // Apply preset if supported
   if (settings.preset) {
