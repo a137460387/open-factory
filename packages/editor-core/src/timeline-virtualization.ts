@@ -43,6 +43,7 @@ export interface TimelineLazyAssetInput {
 export interface TimelineLargeProjectModeInput {
   clipCount: number;
   threshold?: number;
+  extremeThreshold?: number;
 }
 
 export interface TimelineLargeProjectMode {
@@ -52,6 +53,12 @@ export interface TimelineLargeProjectMode {
   waveformResolutionScale: number;
   previewFrameStep: number;
   minimapClipLimit: number | undefined;
+  /** 是否为极端大项目（1000+ 片段） */
+  extremeMode: boolean;
+  /** 缩略图加载延迟（ms） */
+  thumbnailLoadDelayMs: number;
+  /** 波形采样密度（0-1，越小越稀疏） */
+  waveformSampleDensity: number;
 }
 
 export interface TimelineIncrementalRenderPlan {
@@ -76,7 +83,78 @@ export function filterTimelineVirtualClips<TClip extends { start: number; durati
   clips: TClip[],
   window: TimelineVirtualRenderWindow
 ): TClip[] {
-  return clips.filter((clip) => clip.start < window.end && clip.start + clip.duration > window.start);
+  if (clips.length === 0) return [];
+  // 对于小数组（<=32 元素），线性扫描更快
+  if (clips.length <= 32) {
+    return clips.filter((clip) => clip.start < window.end && clip.start + clip.duration > window.start);
+  }
+  // 大数组使用二分查找定位起始点，减少扫描范围
+  const startIdx = binarySearchClipStart(clips, window.start);
+  const result: TClip[] = [];
+  for (let i = startIdx; i < clips.length; i++) {
+    const clip = clips[i];
+    if (clip.start >= window.end) break;
+    if (clip.start + clip.duration > window.start) {
+      result.push(clip);
+    }
+  }
+  return result;
+}
+
+/**
+ * 二分查找：找到第一个 clip.start + clip.duration > windowStart 的索引
+ * 前提：clips 按 start 升序排列
+ */
+function binarySearchClipStart<TClip extends { start: number; duration: number }>(
+  clips: TClip[],
+  windowStart: number
+): number {
+  let low = 0;
+  let high = clips.length - 1;
+  let result = 0;
+  while (low <= high) {
+    const mid = (low + high) >>> 1;
+    if (clips[mid].start + clips[mid].duration <= windowStart) {
+      low = mid + 1;
+    } else {
+      result = mid;
+      high = mid - 1;
+    }
+  }
+  return result;
+}
+
+/**
+ * 高性能滚动视口更新节流器
+ * 使用 requestAnimationFrame 批处理滚动事件，避免每帧多次计算
+ */
+export class ScrollViewportThrottler {
+  private pending = false;
+  private latestScrollLeft = 0;
+  private latestScrollTop = 0;
+  private callback?: (scrollLeft: number, scrollTop: number) => void;
+
+  constructor(callback: (scrollLeft: number, scrollTop: number) => void) {
+    this.callback = callback;
+  }
+
+  update(scrollLeft: number, scrollTop: number): void {
+    this.latestScrollLeft = scrollLeft;
+    this.latestScrollTop = scrollTop;
+    if (!this.pending) {
+      this.pending = true;
+      requestAnimationFrame(this.flush);
+    }
+  }
+
+  private flush = (): void => {
+    this.pending = false;
+    this.callback?.(this.latestScrollLeft, this.latestScrollTop);
+  };
+
+  dispose(): void {
+    this.callback = undefined;
+  }
 }
 
 export function getTimelineVirtualTrackWindow(input: TimelineVirtualTrackWindowInput): TimelineVirtualTrackWindow {
@@ -118,14 +196,20 @@ export function shouldLoadTimelineClipAssets(input: TimelineLazyAssetInput): boo
 
 export function getTimelineLargeProjectMode(input: TimelineLargeProjectModeInput): TimelineLargeProjectMode {
   const threshold = Math.max(1, Math.floor(input.threshold ?? 200));
-  const enabled = Math.max(0, input.clipCount) > threshold;
+  const extremeThreshold = Math.max(threshold, Math.floor(input.extremeThreshold ?? 1000));
+  const clipCount = Math.max(0, input.clipCount);
+  const enabled = clipCount > threshold;
+  const extremeMode = clipCount > extremeThreshold;
   return {
     enabled,
     disableAnimations: enabled,
-    virtualOverscanScreens: enabled ? 0.5 : 2,
-    waveformResolutionScale: enabled ? 0.5 : 1,
-    previewFrameStep: enabled ? 2 : 1,
-    minimapClipLimit: enabled ? 160 : undefined
+    virtualOverscanScreens: extremeMode ? 0.25 : enabled ? 0.5 : 2,
+    waveformResolutionScale: extremeMode ? 0.25 : enabled ? 0.5 : 1,
+    previewFrameStep: extremeMode ? 4 : enabled ? 2 : 1,
+    minimapClipLimit: extremeMode ? 80 : enabled ? 160 : undefined,
+    extremeMode,
+    thumbnailLoadDelayMs: extremeMode ? 2400 : enabled ? 1200 : 0,
+    waveformSampleDensity: extremeMode ? 0.3 : enabled ? 0.6 : 1.0
   };
 }
 

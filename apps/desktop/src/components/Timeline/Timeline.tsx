@@ -186,7 +186,7 @@ import {
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Eraser, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
 import { zhCN } from '../../i18n/strings';
@@ -398,6 +398,7 @@ export function Timeline({
   const heatmapWorkerRef = useRef<Worker | null>(null);
   const heatmapRequestIdRef = useRef(0);
   const [heatmapSegments, setHeatmapSegments] = useState<TimelineHeatmapSegment[]>([]);
+  const deferredHeatmapSegments = useDeferredValue(heatmapSegments);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressActiveRef = useRef(false);
   const gestureScaleRef = useRef(1);
@@ -497,6 +498,7 @@ export function Timeline({
       }),
     [exportRangeHighlights, largeProjectMode.minimapClipLimit, minimapHeight, project.bookmarks, project.timeline, timelineDuration]
   );
+  const deferredMinimapLayout = useDeferredValue(minimapLayout);
   const minimapViewport = useMemo(
     () =>
       calculateTimelineMinimapViewportRect({
@@ -2404,13 +2406,24 @@ function addProjectBookmark(time = playheadTime): void {
     }
   }
 
+  const [isPending, startTransition] = useTransition();
+  const scrollRafRef = useRef(0);
+
   function syncScrollViewport(): void {
-    const scroll = scrollRef.current;
-    if (!scroll) {
-      return;
-    }
-    setScrollViewport({ scrollLeft: scroll.scrollLeft, scrollTop: scroll.scrollTop, viewportWidth: scroll.clientWidth || 960 });
-    setTimelineViewportHeight(scroll.clientHeight || 240);
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = 0;
+      const scroll = scrollRef.current;
+      if (!scroll) return;
+      const nextScrollLeft = scroll.scrollLeft;
+      const nextScrollTop = scroll.scrollTop;
+      const nextViewportWidth = scroll.clientWidth || 960;
+      const nextViewportHeight = scroll.clientHeight || 240;
+      startTransition(() => {
+        setScrollViewport({ scrollLeft: nextScrollLeft, scrollTop: nextScrollTop, viewportWidth: nextViewportWidth });
+        setTimelineViewportHeight(nextViewportHeight);
+      });
+    });
   }
 
   // Safari gesture zoom support
@@ -3192,7 +3205,7 @@ function addProjectBookmark(time = playheadTime): void {
             ) : null}
             {heatmap?.enabled ? (
               <TimelineHeatmapCanvas
-                segments={heatmapSegments}
+                segments={deferredHeatmapSegments}
                 zoom={zoom}
                 width={width}
                 height={Math.max(TRACK_HEIGHT, virtualTrackWindow.totalHeight)}
@@ -3519,7 +3532,7 @@ function addProjectBookmark(time = playheadTime): void {
         </div>
         {minimapVisible ? (
           <TimelineMinimap
-            layout={minimapLayout}
+            layout={deferredMinimapLayout}
             viewport={minimapViewport}
             height={minimapHeight}
             onNavigate={scrollTimelineFromMinimap}
