@@ -85,6 +85,7 @@ export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubt
             asrState={state.asr}
             onUpdate={updateASR}
             onComplete={completeASR}
+            onCancel={() => {}}
             media={media}
           />
         )}
