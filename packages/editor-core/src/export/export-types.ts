@@ -43,6 +43,10 @@ import type { ClipSpatialAudio } from '../spatial-audio';
 import type { MotionGraphic } from '../motion-graphics';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
+export type HardwareEncoderId = 'h264_nvenc' | 'h264_amf' | 'h264_qsv' | 'h264_videotoolbox' | 'h264_vaapi' | 'hevc_nvenc' | 'hevc_amf' | 'hevc_qsv' | 'hevc_videotoolbox';
+export type HardwareRateControlMode = 'cqp' | 'vbr' | 'cbr';
+export interface HardwareEncoderSettings { encoderId?: HardwareEncoderId; preset?: string; rateControlMode?: HardwareRateControlMode; cq?: number; videoBitrate?: string; maxBitrate?: string; gopSize?: number; bFrames?: number; }
+export interface HardwareEncoderInfo { id: HardwareEncoderId; name: string; vendor: 'nvidia' | 'amd' | 'intel' | 'apple' | 'vaapi'; supportsHevc: boolean; presets: Array<{ value: string; label: string }>; defaultCq: number; supportsBFrames: boolean; }
 export type ExportPlatformPreset =
   | 'youtube-1080p'
   | 'youtube-shorts'
@@ -186,6 +190,7 @@ export interface ExportSettings {
   subtitleLanguages?: string[];
   subtitleBurnInLanguage?: string | null;
   hardwareEncoding?: boolean;
+  hardwareEncoderSettings?: HardwareEncoderSettings | null;
   loudnessNormalization?: ExportLoudnessNormalization;
   platformPreset?: ExportPlatformPreset;
   videoProfile?: ExportVideoProfile;
@@ -581,6 +586,7 @@ export interface FfmpegCapabilities {
   hasLibvmaf?: boolean;
   hardwareEncoderAvailable: boolean;
   hardwareEncoder: string | null;
+  hardwareEncoders?: HardwareEncoderInfo[];
   drawtextWarning: string | null;
 }
 
