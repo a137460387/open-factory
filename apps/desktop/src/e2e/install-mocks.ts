@@ -4287,8 +4287,8 @@ window.__E2E_ACTIONS__ = {
   },
   setupAIDenoiseLocalFixture: async () => {
     const project = createProject("AI Local Denoise E2E");
-    const asset = { id: "media-local-denoise-audio", type: "audio", name: "noisy-audio.wav", path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1000, hasAudio: true, audioChannels: 1, audioSampleRate: 44100 };
-    const clip = { id: "local-denoise-clip-1", type: "audio", name: "noisy-audio.wav", mediaId: "media-local-denoise-audio", trackId: "track-local-denoise-audio", start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, aiLocalDenoise: { enabled: false, strength: 0.5 } };
+    const asset: MediaAsset = { id: "media-local-denoise-audio", type: "audio", name: "noisy-audio.wav", path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1000, hasAudio: true, audioChannels: 1, audioSampleRate: 44100 };
+    const clip = { id: "local-denoise-clip-1", type: "audio" as const, name: "noisy-audio.wav", mediaId: "media-local-denoise-audio", trackId: "track-local-denoise-audio", start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, aiLocalDenoise: { enabled: false, strength: 0.5 } };
     const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: "track-local-denoise-audio", type: "audio", name: "Audio 1", clips: [clip] })] };
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds(["local-denoise-clip-1"]);
