@@ -219,6 +219,7 @@ import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
 import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
+import { ProfessionalColorGradingPanel } from '../ColorGrading/ProfessionalColorGradingPanel';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { AIDenoisePanel } from './AIDenoisePanel';
 import { AIBrollSuggestionPanel } from './AIBrollSuggestionPanel';
