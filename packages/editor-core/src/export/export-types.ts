@@ -305,6 +305,14 @@ export interface ExportAudioDenoise {
   strength: number;
 }
 
+export interface ExportAILocalDenoise {
+  enabled: boolean;
+  strength: number;
+  outputPath?: string;
+  originalPath?: string;
+  processedAt?: number;
+}
+
 export type ExportVideoRestoration = ClipVideoRestoration;
 export type ExportQualityEnhancement = ClipQualityEnhancement;
 export type ExportAudioRestoration = ClipAudioRestoration;
@@ -427,6 +435,7 @@ export interface ExportClip {
   motionTrack?: MotionTrackPoint[];
   scenecuts?: number[];
   audioDenoise: ExportAudioDenoise;
+  aiLocalDenoise: ExportAILocalDenoise;
   audioRestoration: ExportAudioRestoration;
   spatialAudio: ClipSpatialAudio;
   videoRestoration: ExportVideoRestoration;

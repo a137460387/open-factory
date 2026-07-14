@@ -2,7 +2,7 @@ import type { MediaAsset } from '@open-factory/editor-core';
 
 export type MediaLibraryViewMode = 'grid' | 'list' | 'timeline';
 export type MediaLibraryGridSize = 'small' | 'medium' | 'large';
-export type MediaLibrarySortKey = 'name' | 'duration' | 'size' | 'importedAt';
+export type MediaLibrarySortKey = 'name' | 'duration' | 'size' | 'importedAt' | 'frameRate' | 'resolution' | 'codec';
 type MediaLibrarySortDirection = 'asc' | 'desc';
 
 export interface MediaLibraryViewSettings {
@@ -55,6 +55,9 @@ function compareBySortKey(left: MediaAsset, right: MediaAsset, sortKey: MediaLib
   if (sortKey === 'size') {
     return compareNumber(left.size, right.size);
   }
+  if (sortKey === 'frameRate') return compareNumber(left.frameRate, right.frameRate);
+  if (sortKey === 'resolution') return compareNumber(getPixelCount(left), getPixelCount(right));
+  if (sortKey === 'codec') return compareText(left.videoCodec ?? left.audioCodec ?? '', right.videoCodec ?? right.audioCodec ?? '');
   return compareNumber(parseImportedAt(left.importedAt), parseImportedAt(right.importedAt));
 }
 
@@ -85,5 +88,10 @@ function isMediaLibraryGridSize(value: unknown): value is MediaLibraryGridSize {
 }
 
 function isMediaLibrarySortKey(value: unknown): value is MediaLibrarySortKey {
-  return value === 'name' || value === 'duration' || value === 'size' || value === 'importedAt';
+  return value === 'name' || value === 'duration' || value === 'size' || value === 'importedAt' || value === 'frameRate' || value === 'resolution' || value === 'codec';
+}
+
+function getPixelCount(asset: MediaAsset): number | undefined {
+  if (asset.width && asset.height) return asset.width * asset.height;
+  return undefined;
 }

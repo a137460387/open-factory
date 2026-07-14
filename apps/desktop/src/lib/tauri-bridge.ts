@@ -595,21 +595,21 @@ export interface DemucsProgressEvent {
 }
 
 export interface NoiseReductionRequest {
-  inputPath: string;
-  outputPath: string;
+  mediaPath: string;
   clipId: string;
   strength: number;
 }
 
 export interface NoiseReductionResult {
   outputPath: string;
+  originalPath: string;
   durationMs: number;
+  noiseReductionDb: number;
 }
 
 export interface NoiseReductionProgressEvent {
   clipId: string;
   progress: number;
-  progressPct: number;
   stage: string;
 }
 

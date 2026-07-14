@@ -114,7 +114,7 @@ fn emit_progress(app: &AppHandle, id: &str, progress: f32, stage: &str) {
 fn is_canceled(id: &str) -> bool { canceled().lock().map(|c| c.contains(id)).unwrap_or(false) }
 fn clear_canceled(id: &str) { if let Ok(mut c) = canceled().lock() { c.remove(id); } }
 fn safe_name(v: &str) -> String { v.chars().map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' }).collect() }
-fn norm_path(p: &Path) -> String { p.to_string_lossy().replace('\', "/") }
+fn norm_path(p: &Path) -> String { p.to_string_lossy().replace('\\', "/") }
 
 #[cfg(test)]
 mod tests {

@@ -154,6 +154,8 @@ pub fn run() {
             commands::transcode::cancel_batch_transcode_task,
             commands::demucs::run_demucs,
             commands::demucs::cancel_demucs,
+            commands::noise_reduction::process_audio_noise_reduction,
+            commands::noise_reduction::cancel_audio_noise_reduction,
             commands::recording::start_recording,
             commands::recording::stop_recording,
             commands::reports::write_clip_report,
