@@ -32,7 +32,6 @@ import {
   createDefaultGradientMask,
   createEmptyColorGradingGraph,
   createColorGradingNode,
-  buildHardwareEncoderArgs,
   type Clip,
   type ColorGradingGraph,
   type Project

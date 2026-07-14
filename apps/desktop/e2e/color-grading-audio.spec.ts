@@ -20,7 +20,7 @@ test.describe('Color Grading', () => {
     // 等待 Inspector 面板加载
     await expect(page.getByTestId('clip-brightness-input')).toBeVisible({ timeout: 10_000 });
     // 展开"调色"折叠面板
-    await page.locator('summary', { hasText: '调色' }).click();
+    await page.locator('summary', { hasText: /^调色$/ }).click();
   });
 
   test('should open color grading workspace and add primary wheel node', async ({ colorGradingPage }) => {
