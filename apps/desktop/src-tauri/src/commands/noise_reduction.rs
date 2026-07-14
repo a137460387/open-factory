@@ -83,7 +83,7 @@ fn apply_rnnoise(pcm: &[f32], strength: f32) -> Result<Vec<f32>, String> {
             let mut frame = [0.0f32; 480];
             let mut denoised = [0.0f32; 480];
             frame.copy_from_slice(chunk);
-            denoise.process_frame(&frame, &mut denoised);
+            denoise.process_frame(&mut denoised, &frame);
             for i in 0..frame_size { out.push(frame[i] * (1.0 - strength) + denoised[i] * strength); }
         } else { out.extend_from_slice(chunk); }
     }
