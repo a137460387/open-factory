@@ -3330,33 +3330,6 @@ function buildVideoEncodingArgs(settings: ExportSettings, capabilities: FfmpegCa
   return ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), ...buildVideoProfileArgs(settings), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
 }
 
-export function buildHardwareEncoderArgs(hwSettings: NonNullable<ExportSettings['hardwareEncoderSettings']>, fps: number, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string[] {
-  const encoderId = hwSettings.encoderId!;
-  const ok = (capabilities?.hardwareEncoders ?? []).some(e => e.id === encoderId) || capabilities?.hardwareEncoder === encoderId;
-  if (!ok) { warnings.push('Hardware encoder ' + encoderId + ' is not available. Falling back to software encoding.'); return ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-r', String(fps)]; }
-  const args: string[] = ['-c:v', encoderId];
-  if (hwSettings.preset && hwSettings.preset !== 'default') { args.push('-preset', hwSettings.preset); }
-  const rc = hwSettings.rateControlMode ?? 'cqp';
-  const isV = encoderId.includes('vaapi'), isA = encoderId.includes('amf'), isQ = encoderId.includes('qsv'), isT = encoderId.includes('videotoolbox');
-  if (rc === 'cqp' || rc === 'cbr') {
-    const cq = hwSettings.cq ?? 23;
-    if (isV) args.push('-qp', String(cq));
-    else if (isA) args.push('-qp_i', String(cq));
-    else if (isT) args.push('-q', String(Math.min(100, Math.max(1, cq))));
-    else if (isQ) args.push('-global_quality', String(cq));
-    else args.push('-cq', String(cq));
-  }
-  if (rc === 'cbr' || rc === 'vbr') {
-    if (hwSettings.videoBitrate) args.push('-b:v', hwSettings.videoBitrate);
-    if (rc === 'vbr' && hwSettings.maxBitrate) args.push('-maxrate', hwSettings.maxBitrate);
-    if (rc === 'cbr' && hwSettings.videoBitrate) args.push('-bufsize', hwSettings.videoBitrate);
-  }
-  if (hwSettings.gopSize && hwSettings.gopSize > 0) args.push('-g', String(hwSettings.gopSize));
-  if (hwSettings.bFrames !== undefined && hwSettings.bFrames >= 0 && !isV && !isT) args.push('-bf', String(hwSettings.bFrames));
-  args.push('-pix_fmt', 'yuv420p', '-r', String(fps));
-  return args;
-}
-
 function buildVideoProfileArgs(settings: ExportSettings): string[] {
   const codec = settings.videoCodec.toLowerCase();
   return settings.videoProfile && (codec.includes('264') || codec === 'h264') ? ['-profile:v', settings.videoProfile] : [];
