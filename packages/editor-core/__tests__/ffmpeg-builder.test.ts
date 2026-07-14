@@ -27,6 +27,7 @@ import {
   buildColorGradingFilters,
   buildAudioEffectChainFilters,
   buildMixerChannelAudioFilters,
+  buildHardwareEncoderArgs,
   createDefaultHSLQualifierParams,
   createDefaultCircleMask,
   createDefaultGradientMask,
