@@ -25,6 +25,7 @@ import { collaborationController } from '../collaboration/local-network';
 import { useCollaborationStore } from '../store/collaborationStore';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
+import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { useAISettingsStore } from '../store/aiSettingsStore';
 import type {
   BatchTranscodeTaskResult,
@@ -1415,6 +1416,120 @@ window.__E2E_ACTIONS__ = {
       media: [asset],
       timeline,
       sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
+  createLargeProject: (options?: unknown) => {
+    const opts = (options && typeof options === 'object') ? options as Record<string, unknown> : {};
+    const clipCountOpt = typeof opts.clipCount === 'number' && Number.isFinite(opts.clipCount) && opts.clipCount > 0 ? Math.floor(opts.clipCount) : 0;
+    const trackCountOpt = typeof opts.trackCount === 'number' && Number.isFinite(opts.trackCount) && opts.trackCount > 0 ? Math.floor(opts.trackCount) : 0;
+    const clipsPerTrackOpt = typeof opts.clipsPerTrack === 'number' && Number.isFinite(opts.clipsPerTrack) && opts.clipsPerTrack > 0 ? Math.floor(opts.clipsPerTrack) : 0;
+
+    const project = createProject('Large Project E2E');
+    const mediaId = 'media-large-project-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'large-project-video.mp4',
+      path: tinyVideo,
+      duration: 2,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: false
+    };
+
+    let trackCount: number;
+    let totalClips: number;
+    if (trackCountOpt > 0 && clipsPerTrackOpt > 0) {
+      trackCount = trackCountOpt;
+      totalClips = trackCount * clipsPerTrackOpt;
+    } else {
+      trackCount = 5;
+      totalClips = clipCountOpt > 0 ? clipCountOpt : 500;
+    }
+
+    const tracks = Array.from({ length: trackCount }, (_, trackIndex) =>
+      createTrack({
+        id: `track-large-project-${trackIndex}`,
+        type: 'video',
+        name: `Video ${trackIndex + 1}`,
+        clips: []
+      })
+    );
+    for (let index = 0; index < totalClips; index += 1) {
+      const trackIndex = index % trackCount;
+      const localIndex = Math.floor(index / trackCount);
+      const track = tracks[trackIndex];
+      track.clips.push(makeLargeTimelineVideoClip(`clip-lp-${String(index).padStart(4, '0')}`, track.id, mediaId, localIndex * 1.25));
+    }
+    const timeline = { transitions: [], markers: [], tracks };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
+  enableHeatmap: (enabled?: unknown) => {
+    const flag = typeof enabled === 'boolean' ? enabled : true;
+    useEditorSettingsStore.getState().setTimelineHeatmap((current) => ({ ...current, enabled: flag }));
+  },
+  setupMediaLibraryFixture: () => {
+    const project = createProject('Media Library E2E');
+    const videoAsset: MediaAsset = {
+      id: 'media-video',
+      type: 'video',
+      name: 'tiny-video.mp4',
+      path: tinyVideo,
+      duration: 6,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264',
+      frameRate: 30
+    };
+    const audioAsset: MediaAsset = {
+      id: 'media-audio',
+      type: 'audio',
+      name: 'tiny-audio.wav',
+      path: tinyAudio,
+      duration: 6,
+      width: 0,
+      height: 0,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le'
+    };
+    const imageAsset: MediaAsset = {
+      id: 'media-image',
+      type: 'image',
+      name: 'test-image.png',
+      path: tinyImage,
+      duration: 0,
+      width: 1280,
+      height: 720,
+      size: 2048,
+      mtimeMs: 1_000,
+      hasAudio: false
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [videoAsset, audioAsset, imageAsset],
+      timeline: { transitions: [], markers: [], tracks: [] },
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: { transitions: [], markers: [], tracks: [] } }],
       activeSequenceId: PRIMARY_SEQUENCE_ID
     });
     commandManager.clear();

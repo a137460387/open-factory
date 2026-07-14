@@ -1327,7 +1327,7 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
             data-testid="media-sort-key-select"
             onChange={(event) => onChange({ sortKey: event.target.value as MediaLibrarySortKey })}
           >
-            {(['importedAt', 'name', 'duration', 'size'] as MediaLibrarySortKey[]).map((key) => (
+            {(['importedAt', 'name', 'duration', 'size', 'frameRate', 'codec'] as MediaLibrarySortKey[]).map((key) => (
               <option key={key} value={key}>
                 {zhCN.mediaBin.sortKeys[key]}
               </option>
@@ -1696,8 +1696,8 @@ function MediaLibraryListView({
               </td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaFormat(asset)}</td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaResolution(asset)}</td>
-              <td className="px-2 py-2 text-[var(--color-text-secondary)]">{asset.videoCodec ?? asset.audioCodec ?? zhCN.common.unavailable}</td>
-              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{asset.frameRate ? formatFrameRateLabel(asset.frameRate) : zhCN.common.unavailable}</td>
+              <td className="px-2 py-2 text-[var(--color-text-secondary)]" data-testid={`media-list-codec-${asset.id}`}>{asset.videoCodec ?? asset.audioCodec ?? zhCN.common.unavailable}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]" data-testid={`media-list-frame-rate-${asset.id}`}>{asset.frameRate ? formatFrameRateLabel(asset.frameRate) : zhCN.common.unavailable}</td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{zhCN.common.unavailable}</td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]" data-testid={`media-list-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{formatDuration(asset.duration)}</td>

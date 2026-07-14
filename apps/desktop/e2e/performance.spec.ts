@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Timeline Performance for Large Projects', () => {
-  test.skip('should render timeline with 1000 clips within performance budget', async ({ page }) => {
+  test('should render timeline with 1000 clips within performance budget', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="import-media-button"]', { timeout: 15_000 });
 
@@ -24,7 +24,7 @@ test.describe('Timeline Performance for Large Projects', () => {
     expect(visibleClips).toBeGreaterThan(0);
   });
 
-  test.skip('should maintain smooth scrolling with many clips', async ({ page }) => {
+  test('should maintain smooth scrolling with many clips', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="import-media-button"]', { timeout: 15_000 });
 
@@ -63,7 +63,7 @@ test.describe('Timeline Performance for Large Projects', () => {
     expect(visibleClips).toBeGreaterThan(0);
   });
 
-  test.skip('should handle track virtualization correctly', async ({ page }) => {
+  test('should handle track virtualization correctly', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="import-media-button"]', { timeout: 15_000 });
 
@@ -92,7 +92,7 @@ test.describe('Timeline Performance for Large Projects', () => {
     expect(trackHeadersAfterScroll).toBeGreaterThan(0);
   });
 
-  test.skip('should use deferred values for non-critical updates', async ({ page }) => {
+  test('should use deferred values for non-critical updates', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('[data-testid="import-media-button"]', { timeout: 15_000 });
 

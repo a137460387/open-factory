@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { waitForE2eActions } from './e2e-actions';
 
-test.skip('list view shows codec, frame rate and bit rate columns', async ({ page }) => {
+test('list view shows codec, frame rate and bit rate columns', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupMediaLibraryFixture!());
@@ -22,7 +22,7 @@ test.skip('list view shows codec, frame rate and bit rate columns', async ({ pag
   await expect(page.getByTestId('media-list-frame-rate-media-video')).toContainText('fps');
 });
 
-test.skip('sorts by frame rate in list view', async ({ page }) => {
+test('sorts by frame rate in list view', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupMediaLibraryFixture!());
@@ -39,7 +39,7 @@ test.skip('sorts by frame rate in list view', async ({ page }) => {
   await expect(page.locator('[data-testid^="media-list-row-"]')).toHaveCount(3);
 });
 
-test.skip('clicking a row shows metadata panel', async ({ page }) => {
+test('clicking a row shows metadata panel', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupMediaLibraryFixture!());

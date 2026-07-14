@@ -87,6 +87,7 @@ export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubt
             onComplete={completeASR}
             onCancel={() => {}}
             media={media}
+            selectedClip={selectedClip ? { id: selectedClip.id, name: selectedClip.name } : undefined}
           />
         )}
         {state.currentStage === 'polish' && (

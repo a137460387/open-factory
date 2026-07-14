@@ -6,10 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Performance
-- MediaBin Grid view virtualized with @tanstack/react-virtual (row-based, dynamic column count via ResizeObserver)
-- Keyboard navigation rewritten to data-index driven with requestAnimationFrame deferred focus
-- Known issue: keyboard navigation in extreme scroll-boundary scenarios pending manual testing
+## [v4.25.0] - 2026-07-14
+
+### Added
+- Smart media library with metadata extraction, list view with codec/frame rate/bit rate columns, and enhanced sorting options
+- AI auto subtitle generation workflow panel (ASR → Polish → Style → Export)
+- AI noise reduction for audio (local and cloud providers)
+- Hardware accelerated encoding with GPU encoder selection
+- Multi-camera editing MVP with sync and angle switching
+- AI smart montage with beat-aware clip arrangement
+- Performance optimization: timeline virtualization and caching for large projects (1000+ clips)
+
+### Fixed
+- E2E test reliability: restored 13 previously failing/skipped tests (performance, smart-media-library, smart-subtitles)
+- Rust compilation: replaced unmaintained rnnoise-rs with nnnoiseless, fixed escaped references in ffmpeg.rs
+- CI pipeline: restored buildHardwareEncoderArgs signature, added list_hardware_encoders command
+- MediaBin list view: added data-testid attributes for codec and frame rate cells
+- ASRStage component: consistent test ID naming convention with other workflow stages
+
+### Changed
+- Timeline heatmap now uses deferred values for smoother scrolling
+- Track virtualization limits rendered tracks to visible area
+- Sort dropdown in media library now includes frame rate and codec options
 
 ## [v3.10.0] - 2026-06-23
 
