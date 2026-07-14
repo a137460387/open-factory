@@ -185,7 +185,7 @@ import {
   type TextLayoutOptions,
   type TextOpenTypeFeatures
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Mic, Palette, Pipette, Plus, SlidersHorizontal, Trash2, Underline, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Loader2, Mic, Palette, Pipette, Plus, SlidersHorizontal, Sparkles, Trash2, Underline, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
@@ -193,6 +193,7 @@ import {
   analyzeMotionTrack,
   bridgeConfirm,
   cancelMotionTracking,
+  cancelAudioNoiseReduction,
   detectPrivacyRegions,
   evaluateExportQuality,
   convertLocalFileSrc,
@@ -200,12 +201,14 @@ import {
   getFfmpegCapabilities,
   listenBridge,
   openFileDialog,
+  processAudioNoiseReduction,
   readFile,
   runExportPreviewSamples,
   saveFileDialog,
   writeFile,
   type ClipAnalysisProgressEvent,
-  type MotionTrackProgressEvent
+  type MotionTrackProgressEvent,
+  type NoiseReductionProgressEvent
 } from '../../lib/tauri-bridge';
 import { buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS } from '../../lib/frameInterpolationComparePreview';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
@@ -219,7 +222,6 @@ import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
 import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
-import { ProfessionalColorGradingPanel } from '../ColorGrading/ProfessionalColorGradingPanel';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { AIDenoisePanel } from './AIDenoisePanel';
 import { AIBrollSuggestionPanel } from './AIBrollSuggestionPanel';
@@ -474,6 +476,10 @@ function ClipInspector({
   const [frameInterpolationQualityRunning, setFrameInterpolationQualityRunning] = useState(false);
   const [frameInterpolationQualityError, setFrameInterpolationQualityError] = useState<string>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
+  const [aiLocalDenoiseProcessing, setAiLocalDenoiseProcessing] = useState(false);
+  const [aiLocalDenoiseProgress, setAiLocalDenoiseProgress] = useState(0);
+  const [aiLocalDenoiseStage, setAiLocalDenoiseStage] = useState("");
+  const [aiLocalDenoiseResult, setAiLocalDenoiseResult] = useState<{ outputPath: string; noiseReductionDb: number } | null>(null);
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
@@ -903,6 +909,20 @@ function ClipInspector({
       disposed = true;
     };
   }, []);
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listenBridge<NoiseReductionProgressEvent>("noise-reduction-progress", (payload) => {
+      if (payload.clipId === clip.id) {
+        setAiLocalDenoiseProgress(payload.progress);
+        setAiLocalDenoiseStage(payload.stage);
+      }
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, [clip.id]);
   useEffect(() => {
     if (!colorMatchReferenceClips.some((item) => item.id === colorMatchReferenceClipId)) {
       setColorMatchReferenceClipId(colorMatchReferenceClips[0]?.id ?? '');
@@ -2659,17 +2679,6 @@ function ClipInspector({
             <ColorGradingWorkspace
               graph={clip.colorGradingGraph}
               onGraphChange={(graph) => commit({ colorGradingGraph: graph })}
-            />
-          </details>
-        ) : null}
-
-        {clip.type !== 'audio' ? (
-          <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">专业调色面板</summary>
-            <ProfessionalColorGradingPanel
-              clip={clip}
-              onCommitColorCorrection={(patch: Partial<import('@open-factory/editor-core').ColorCorrection>) => commit({ colorCorrection: patch })}
-              onChooseLUT={() => void chooseLut()}
             />
           </details>
         ) : null}

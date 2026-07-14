@@ -970,6 +970,16 @@ const mocks: TauriMocks = {
     return { vocalsPath, accompanimentPath, outputDir, durationMs: 10 };
   },
   cancelDemucs: () => undefined,
+  processAudioNoiseReduction: async ({ mediaPath, clipId }) => {
+    emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
+    await wait(5);
+    emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
+    await wait(5);
+    emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
+    const outputPath = mediaPath.replace(/(\.[^.]+)$/, '-denoised$1');
+    return { outputPath, originalPath: mediaPath, durationMs: 15, noiseReductionDb: 6.5 };
+  },
+  cancelAudioNoiseReduction: () => undefined,
   detectPrivacyRegions: async ({ clipId }) => {
     await wait(10);
     return {
@@ -4272,6 +4282,16 @@ window.__E2E_ACTIONS__ = {
     aiApiKeys.delete('mimo');
     aiApiKeys.delete('ollama');
     useEditorStore.getState().setSelectedClipIds(['denoise-clip-2']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIDenoiseLocalFixture: async () => {
+    const project = createProject("AI Local Denoise E2E");
+    const asset = { id: "media-local-denoise-audio", type: "audio", name: "noisy-audio.wav", path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1000, hasAudio: true, audioChannels: 1, audioSampleRate: 44100 };
+    const clip = { id: "local-denoise-clip-1", type: "audio", name: "noisy-audio.wav", mediaId: "media-local-denoise-audio", trackId: "track-local-denoise-audio", start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, aiLocalDenoise: { enabled: false, strength: 0.5 } };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: "track-local-denoise-audio", type: "audio", name: "Audio 1", clips: [clip] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds(["local-denoise-clip-1"]);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },

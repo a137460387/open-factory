@@ -42,6 +42,7 @@ import type {
   ChromaKeyMode,
   Clip,
   ClipAILookMatch,
+  ClipAILocalDenoise,
   ClipAudioDenoise,
   ClipAudioRestoration,
   ClipAudioRestorationGap,
@@ -533,6 +534,12 @@ export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
   strength: 0.5
 };
+
+export const DEFAULT_AI_LOCAL_DENOISE: ClipAILocalDenoise = {
+  enabled: false,
+  strength: 0.5
+};
+
 export const DEFAULT_AUDIO_PITCH_SEMITONES = 0;
 export const DEFAULT_AUDIO_REVERSE = false;
 export const DEFAULT_AUDIO_FADE_CURVE: AudioFadeCurve = 'linear';
@@ -955,6 +962,7 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
+    aiLocalDenoise: normalizeAILocalDenoise(input.aiLocalDenoise),
     audioRestoration: normalizeAudioRestoration(input.audioRestoration),
     audioChannelRouting: normalizeAudioChannelRouting(input.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(input.videoRestoration),
@@ -1264,6 +1272,16 @@ export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | 
   return {
     enabled: audioDenoise?.enabled === true,
     strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
+  };
+}
+
+export function normalizeAILocalDenoise(aiLocalDenoise: Partial<ClipAILocalDenoise> | undefined): ClipAILocalDenoise {
+  return {
+    enabled: aiLocalDenoise?.enabled === true,
+    strength: round(Math.min(1, Math.max(0, finiteOrDefault(aiLocalDenoise?.strength, DEFAULT_AI_LOCAL_DENOISE.strength)))),
+    outputPath: aiLocalDenoise?.outputPath,
+    originalPath: aiLocalDenoise?.originalPath,
+    processedAt: aiLocalDenoise?.processedAt
   };
 }
 
