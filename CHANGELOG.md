@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.25.1] - 2026-07-14
+
+### Fixed
+- 修复 `ai.rs` 中的内存泄漏问题，优化 AI 模型资源释放逻辑
+- 优化 DB 连接池逻辑，修复连接泄漏和超时回收问题
+- 恢复 AI 降噪与多机位 E2E 测试，提升测试稳定性
+- 新增 `ai-emotion-analyzer` 单元测试，提高测试覆盖率
+
 ## [v4.25.0] - 2026-07-14
 
 ### Added
@@ -134,6 +142,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Corrected `read_file_header_bytes` position in `generate_handler`
 
+[v4.25.1]: https://github.com/a137460387/open-factory/compare/v4.25.0...v4.25.1
 [v4.25.0]: https://github.com/a137460387/open-factory/compare/v3.10.0...v4.25.0
 [v3.10.0]: https://github.com/a137460387/open-factory/compare/v3.9.0...v3.10.0
 [v3.9.0]: https://github.com/a137460387/open-factory/compare/v3.8.0...v3.9.0
