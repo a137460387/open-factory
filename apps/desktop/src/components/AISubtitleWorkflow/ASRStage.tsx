@@ -1,4 +1,13 @@
-import React from 'react';
-interface Props { asrState: any; onUpdate: (patch: any) => void; onComplete: (trackId: string) => void; media: any[]; }
-export function ASRStage(_props: Props) { return <div>ASR Stage</div>; }
-export default ASRStage;
+import type { MediaAsset } from '@open-factory/editor-core';
+
+interface ASRStageProps {
+  media: MediaAsset[];
+  onComplete: (trackId: string) => void;
+  onCancel: () => void;
+  asrState?: unknown;
+  onUpdate?: (patch: Record<string, unknown>) => void;
+}
+
+export function ASRStage(props: ASRStageProps) {
+  return <div data-testid="asr-stage">ASR Stage (stub)</div>;
+}
