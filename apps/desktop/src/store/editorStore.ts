@@ -2,6 +2,7 @@ import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Pr
 import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode, SwitchMulticamAngleCommand, DeleteSwitchPointCommand, UpdateSwitchPointCommand, SyncMulticamClipCommand, syncMulticamByAudio, syncMulticamByTimecode, detectMulticamDrift } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
+import { analyzeWaveform } from '../lib/tauri-bridge';
 import { commandManager, projectAccessor, setEditorStoreGetter } from './commandManager';
 
 export interface SelectedKeyframeRef {
@@ -313,9 +314,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!multicamClip) return;
       let syncResult;
       switch (mode) {
-        case 'audio':
-          syncResult = await syncMulticamByAudio(multicamClip.angles, project.media);
+        case 'audio': {
+          const audioSamplesMap = await fetchMulticamAudioSamples(multicamClip, project.media);
+          syncResult = await syncMulticamByAudio(multicamClip.angles, audioSamplesMap);
           break;
+        }
         case 'timecode':
           syncResult = syncMulticamByTimecode(multicamClip.angles, project.mediaMetadata);
           break;
@@ -343,7 +346,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!activeMulticamClipId || !project) return undefined;
     const multicamClip = findMulticamClipInProject(project, activeMulticamClipId);
     if (!multicamClip) return undefined;
-    return await detectMulticamDrift(multicamClip.angles);
+    const audioSamplesMap = await fetchMulticamAudioSamples(multicamClip, project.media);
+    return await detectMulticamDrift(multicamClip.angles, audioSamplesMap);
   },
   setMulticamPreviewLayout: (layout) => {
     set({ multicamPreviewLayout: layout as '1x1' | '1x2' | '2x2' | '2x3' | '3x3' });
@@ -366,6 +370,17 @@ export function findMulticamClipInProject(project: Project, clipId: string): Mul
     return clip as MulticamClip;
   }
   return undefined;
+}
+
+async function fetchMulticamAudioSamples(multicamClip: MulticamClip, mediaAssets: MediaAsset[], samplesPerSec = 100): Promise<Map<string, ArrayLike<number>>> {
+  const result = new Map<string, ArrayLike<number>>();
+  for (const angle of multicamClip.angles) {
+    const asset = mediaAssets.find((m) => m.id === angle.mediaId);
+    if (!asset || !asset.path || asset.missing) { result.set(angle.id, new Float32Array(0)); continue; }
+    try { const samples = await analyzeWaveform(asset.path, samplesPerSec); result.set(angle.id, samples); }
+    catch { result.set(angle.id, new Float32Array(0)); }
+  }
+  return result;
 }
 
 function uniqueSelectedKeyframes(keyframes: SelectedKeyframeRef[]): SelectedKeyframeRef[] {
