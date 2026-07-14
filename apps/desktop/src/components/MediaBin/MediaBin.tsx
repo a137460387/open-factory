@@ -57,6 +57,7 @@ import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
 import { AdvancedSearchPanel } from './AdvancedSearchPanel';
+import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
 
 
@@ -227,6 +228,8 @@ export function MediaBin({
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
+  const [detailsAssetId, setDetailsAssetId] = useState<string | null>(null);
+  const detailsAsset = useMemo(() => detailsAssetId ? media.find((a) => a.id === detailsAssetId) ?? null : null, [detailsAssetId, media]);
   const [subclipDialogAssetId, setSubclipDialogAssetId] = useState<string>();
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
@@ -750,6 +753,7 @@ export function MediaBin({
             <MediaLibraryListView
               media={sortedVisibleMedia}
               settings={mediaLibraryView}
+              selectedAssetId={detailsAssetId}
               onSort={(sortKey) =>
                 updateMediaLibraryView({
                   sortKey,
@@ -758,7 +762,11 @@ export function MediaBin({
               }
               onAddToTimeline={onAddToTimeline}
               onExportGif={onExportGif}
+              onSelectAsset={(assetId) => setDetailsAssetId((prev) => prev === assetId ? null : assetId)}
             />
+            <div className="mt-2 flex-shrink-0 overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)]" style={{ maxHeight: detailsAsset ? '260px' : '0px', transition: 'max-height 0.2s ease' }}>
+              <MediaMetadataPanel asset={detailsAsset} />
+            </div>
           </div>
         ) : mediaLibraryView.mode === 'timeline' ? (
           <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
@@ -1641,10 +1649,13 @@ function MediaLibraryListView({
   if (media.length === 0) {
     return null;
   }
-  const columns: Array<{ key: MediaLibrarySortKey | 'format' | 'resolution' | 'colorProfile'; label: string; sortable: boolean; testId: string }> = [
+  const columns: Array<{ key: MediaLibrarySortKey | 'format' | 'resolution' | 'colorProfile' | 'bitRate'; label: string; sortable: boolean; testId: string }> = [
     { key: 'name', label: zhCN.mediaBin.listColumns.name, sortable: true, testId: 'media-list-sort-name' },
     { key: 'format', label: zhCN.mediaBin.listColumns.format, sortable: false, testId: 'media-list-format-header' },
-    { key: 'resolution', label: zhCN.mediaBin.listColumns.resolution, sortable: false, testId: 'media-list-resolution-header' },
+    { key: 'resolution', label: zhCN.mediaBin.listColumns.resolution, sortable: true, testId: 'media-list-sort-resolution' },
+    { key: 'codec', label: zhCN.mediaBin.listColumns.codec, sortable: true, testId: 'media-list-sort-codec' },
+    { key: 'frameRate', label: zhCN.mediaBin.listColumns.frameRate, sortable: true, testId: 'media-list-sort-frameRate' },
+    { key: 'bitRate', label: zhCN.mediaBin.listColumns.bitRate, sortable: false, testId: 'media-list-bitrate-header' },
     { key: 'colorProfile', label: zhCN.mediaBin.listColumns.colorProfile, sortable: false, testId: 'media-list-color-profile-header' },
     { key: 'duration', label: zhCN.mediaBin.listColumns.duration, sortable: true, testId: 'media-list-sort-duration' },
     { key: 'size', label: zhCN.mediaBin.listColumns.fileSize, sortable: true, testId: 'media-list-sort-size' },
@@ -1652,7 +1663,7 @@ function MediaLibraryListView({
   ];
   return (
     <div className="overflow-x-auto rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="media-list-view">
-      <table className="min-w-[820px] w-full border-collapse text-xs">
+      <table className="min-w-[1100px] w-full border-collapse text-xs">
         <thead className="bg-panel text-left text-[11px] uppercase tracking-normal text-[var(--color-text-muted)]">
           <tr>
             {columns.map((column) => (
@@ -1685,6 +1696,9 @@ function MediaLibraryListView({
               </td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaFormat(asset)}</td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaResolution(asset)}</td>
+              <td className="px-2 py-2 text-[var(--color-text-secondary)]">{asset.videoCodec ?? asset.audioCodec ?? zhCN.common.unavailable}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{asset.frameRate ? formatFrameRateLabel(asset.frameRate) : zhCN.common.unavailable}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{zhCN.common.unavailable}</td>
               <td className="px-2 py-2 text-[var(--color-text-secondary)]" data-testid={`media-list-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{formatDuration(asset.duration)}</td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]" data-testid={`media-list-size-${asset.id}`}>
@@ -1694,11 +1708,11 @@ function MediaLibraryListView({
               <td className="px-2 py-2">
                 <div className="flex justify-end gap-1">
                   {asset.type === 'video' ? (
-                    <button className="rounded border border-line px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-list-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                    <button className="rounded border border-line px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-list-export-gif-${asset.id}`} onClick={(e) => { e.stopPropagation(); onExportGif(asset); }}>
                       GIF
                     </button>
                   ) : null}
-                  <button className="rounded border border-line bg-panel px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]" type="button" data-testid={`media-list-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                  <button className="rounded border border-line bg-panel px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]" type="button" data-testid={`media-list-add-${asset.id}`} onClick={(e) => { e.stopPropagation(); onAddToTimeline(asset.id); }}>
                     {zhCN.mediaBin.add}
                   </button>
                 </div>
@@ -1734,11 +1748,11 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
                 <div className="truncate text-[11px] text-[var(--color-text-muted)]">{formatImportedAt(asset.importedAt)}</div>
                 <div className="flex gap-1">
                   {asset.type === 'video' ? (
-                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-export-gif-${asset.id}`} onClick={(e) => { e.stopPropagation(); onExportGif(asset); }}>
                       GIF
                     </button>
                   ) : null}
-                  <button className="flex-1 rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                  <button className="flex-1 rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-add-${asset.id}`} onClick={(e) => { e.stopPropagation(); onAddToTimeline(asset.id); }}>
                     {zhCN.mediaBin.add}
                   </button>
                 </div>
