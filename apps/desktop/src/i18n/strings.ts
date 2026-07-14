@@ -8827,6 +8827,7 @@ const enOverrides = {
       videoRestoration: 'Video Restoration',
       qualityEnhancement: 'Quality Enhancement',
       audioDenoise: 'Denoise',
+      aiLocalDenoise: 'AI Local Denoise',
       audioRestoration: 'Advanced Repair',
       pitchAnalysis: 'Pitch Analysis',
       spatialAudio: 'Spatial Audio',
@@ -9487,6 +9488,11 @@ const enOverrides = {
       reason: 'Reason',
       inserted: 'Inserted to timeline',
       rejected: 'Rejected',
+    },
+    aiLocalDenoise: {
+      run: 'Run Denoise',
+      cancel: 'Cancel',
+      applied: 'Applied',
     },
   aiSubtitleStyle: {
     title: 'AI Style Recommendation',

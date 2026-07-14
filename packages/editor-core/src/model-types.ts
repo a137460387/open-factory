@@ -718,6 +718,7 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
+  aiLocalDenoise?: ClipAILocalDenoise;
   audioRestoration?: ClipAudioRestoration;
   audioChannelRouting?: AudioChannelRoutingMode;
   videoRestoration?: ClipVideoRestoration;
@@ -775,6 +776,14 @@ export interface AIColorHistoryEntry {
 export interface ClipAudioDenoise {
   enabled: boolean;
   strength: number;
+}
+
+export interface ClipAILocalDenoise {
+  enabled: boolean;
+  strength: number;
+  outputPath?: string;
+  originalPath?: string;
+  processedAt?: string;
 }
 
 interface ClipAudioRestorationToggle {

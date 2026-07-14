@@ -594,6 +594,25 @@ export interface DemucsProgressEvent {
   progressPct: number;
 }
 
+export interface NoiseReductionRequest {
+  inputPath: string;
+  outputPath: string;
+  clipId: string;
+  strength: number;
+}
+
+export interface NoiseReductionResult {
+  outputPath: string;
+  durationMs: number;
+}
+
+export interface NoiseReductionProgressEvent {
+  clipId: string;
+  progress: number;
+  progressPct: number;
+  stage: string;
+}
+
 export interface PrivacyDetectionRequest {
   modelPath: string;
   mediaPath: string;
@@ -781,6 +800,8 @@ export type TauriMocks = Partial<{
   runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
   runDemucs(request: DemucsRequest): Promise<DemucsResult> | DemucsResult;
   cancelDemucs(clipId: string): Promise<void> | void;
+  processAudioNoiseReduction(request: NoiseReductionRequest): Promise<NoiseReductionResult> | NoiseReductionResult;
+  cancelAudioNoiseReduction(clipId: string): Promise<void> | void;
   detectPrivacyRegions(request: PrivacyDetectionRequest): Promise<PrivacyDetectionResult> | PrivacyDetectionResult;
   startRecording(request: RecordingRequest): Promise<RecordingStartResult> | RecordingStartResult;
   stopRecording(taskId: string): Promise<RecordingStopResult> | RecordingStopResult;
@@ -1220,6 +1241,23 @@ export async function cancelDemucs(clipId: string): Promise<void> {
     return;
   }
   await invoke('cancel_demucs', { clipId });
+}
+
+export async function processAudioNoiseReduction(request: NoiseReductionRequest): Promise<NoiseReductionResult> {
+  const mock = getTauriMocks()?.processAudioNoiseReduction;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<NoiseReductionResult>('process_audio_noise_reduction', { request });
+}
+
+export async function cancelAudioNoiseReduction(clipId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelAudioNoiseReduction;
+  if (mock) {
+    await mock(clipId);
+    return;
+  }
+  await invoke('cancel_audio_noise_reduction', { clipId });
 }
 
 export async function detectPrivacyRegions(request: PrivacyDetectionRequest): Promise<PrivacyDetectionResult> {
