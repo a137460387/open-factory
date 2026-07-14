@@ -430,7 +430,7 @@ const LUTGradingTab: React.FC<LUTGradingTabProps> = ({
             type="button"
             className="rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-0.5 text-xs hover:bg-panel"
             onClick={onClearLUT}
-            data-testid="clear-lut-button"
+            data-testid="grading-clear-lut"
           >
             清除
           </button>
@@ -448,7 +448,7 @@ const LUTGradingTab: React.FC<LUTGradingTabProps> = ({
           type="button"
           className="flex w-full items-center justify-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
           onClick={onChooseLUT}
-          data-testid="choose-lut-button"
+          data-testid="grading-choose-lut"
         >
           选择 LUT 文件 (.cube / .3dl)
         </button>
