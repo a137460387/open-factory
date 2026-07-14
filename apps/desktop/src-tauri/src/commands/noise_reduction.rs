@@ -1,5 +1,5 @@
 use crate::path_validator::validate_path;
-use rnnoise_rs::Rnnoise;
+use nnnoiseless::DenoiseState;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
@@ -75,14 +75,15 @@ fn decode_to_pcm(src: &Path) -> Result<Vec<f32>, String> {
 }
 
 fn apply_rnnoise(pcm: &[f32], strength: f32) -> Result<Vec<f32>, String> {
-    let rn = Rnnoise::new().map_err(|e| format!("RNNoise: {}", e))?;
+    let mut denoise = DenoiseState::new();
     let frame_size = 480;
     let mut out = Vec::with_capacity(pcm.len());
     for chunk in pcm.chunks(frame_size) {
         if chunk.len() == frame_size {
             let mut frame = [0.0f32; 480];
+            let mut denoised = [0.0f32; 480];
             frame.copy_from_slice(chunk);
-            let denoised = rn.process_frame(&frame);
+            denoise.process_frame(&frame, &mut denoised);
             for i in 0..frame_size { out.push(frame[i] * (1.0 - strength) + denoised[i] * strength); }
         } else { out.extend_from_slice(chunk); }
     }

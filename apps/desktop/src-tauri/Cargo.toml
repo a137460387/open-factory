@@ -44,4 +44,4 @@ tauri-plugin-process = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 trash = "5"
 once_cell = "1"
-rnnoise-rs = "0.4"
+nnnoiseless = "0.5"

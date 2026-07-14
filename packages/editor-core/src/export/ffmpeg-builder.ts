@@ -3322,7 +3322,7 @@ function buildVideoEncodingArgs(settings: ExportSettings, capabilities: FfmpegCa
     const format = settings.format.toLowerCase();
     const hwOk = format === 'mp4' || format === 'mov';
     const hw = settings.hardwareEncoderSettings;
-    if (hwOk && hw?.encoderId) { return buildHardwareEncoderArgs(hw, settings.fps, capabilities, warnings); }
+    if (hwOk && hw?.encoderId && capabilities) { return buildHardwareEncoderArgs(hw, settings.fps, capabilities, warnings); }
     const enc = capabilities?.hardwareEncoderAvailable ? capabilities.hardwareEncoder : null;
     if (hwOk && enc) { return ['-c:v', enc, '-preset', 'p4', '-cq', '23', '-pix_fmt', 'yuv420p', '-r', String(settings.fps)]; }
     warnings.push('Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.');
@@ -4412,8 +4412,16 @@ function cssColorToAssColor(value: string, opacity?: number): string {
     .padStart(2, '0');
   return `&H${alpha}${blue}${green}${red}&`;
 }
-// CI trigger
-// Tue Jul 14 10:52:37     2026
+
+export function buildHardwareEncoderArgs(
+  settings: HardwareEncoderSettings,
+  fps: number,
+  capabilities: FfmpegCapabilities,
+  warnings: string[]
+): string[] {
+  const args: string[] = [];
+  const encoderId = settings.encoderId;
+  const encoderInfo = capabilities.hardwareEncoders?.find(e => e.id === encoderId);
 
   // Check if the requested encoder is available
   if (!encoderInfo || !capabilities.hardwareEncoderAvailable) {
