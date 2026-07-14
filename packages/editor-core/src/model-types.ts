@@ -763,6 +763,8 @@ export interface BaseClip {
   motionType?: ClipMotionType;
   /** AI情感基调分析结果 */
   emotionAnalysis?: import('./ai-emotion-tone').EmotionAnalysis;
+  /** AI 本地降噪设置 */
+  aiLocalDenoise?: ClipAILocalDenoise;
 }
 
 export interface AIColorHistoryEntry {
@@ -775,6 +777,14 @@ export interface AIColorHistoryEntry {
 export interface ClipAudioDenoise {
   enabled: boolean;
   strength: number;
+}
+
+export interface ClipAILocalDenoise {
+  enabled: boolean;
+  strength: number;
+  outputPath?: string;
+  originalPath?: string;
+  processedAt?: number;
 }
 
 interface ClipAudioRestorationToggle {
