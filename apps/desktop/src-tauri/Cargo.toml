@@ -1,6 +1,6 @@
 [package]
 name = "open-factory-desktop"
-version = "4.25.3"
+version = "4.25.4"
 description = "Local-first desktop video editor MVP."
 license = "MIT"
 authors = ["open-factory"]

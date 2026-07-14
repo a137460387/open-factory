@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.25.4] - 2026-07-15
+
+### Changed
+- 代码风格统一：Prettier 格式化全项目代码
+- 文档完善：更新 README、CONTRIBUTING、DEVELOPMENT 文档
+- 测试覆盖提升：补充核心模块单元测试
+- 依赖更新：清理冗余依赖，统一版本管理
+- 性能优化：优化内存使用和资源释放逻辑
+
 ## [v4.25.3] - 2026-07-15
 
 ### Changed
