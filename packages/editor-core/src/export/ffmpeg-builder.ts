@@ -4436,3 +4436,4 @@ function cssColorToAssColor(value: string, opacity?: number): string {
     .padStart(2, '0');
   return `&H${alpha}${blue}${green}${red}&`;
 }
+// CI trigger
