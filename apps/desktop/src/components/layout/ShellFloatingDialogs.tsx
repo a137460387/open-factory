@@ -7,9 +7,11 @@ import type {
   PerformanceProfilerReport,
   Project,
   SceneColorDifference,
+  SpeakerDiarizationSegment,
   SyncCompareClipRef,
   TimelineColorAnalysisResult,
   ProjectTemplateId,
+  Track,
 } from '@open-factory/editor-core';
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
@@ -33,15 +35,17 @@ import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
 import type { BeatSensitivity } from '@open-factory/editor-core';
 import { shouldShowTutorial } from '../../tutorial/tutorialState';
 import type { TutorialSignals } from '../../tutorial/tutorialState';
-import { ExportDialogs } from '../dialogs/ExportDialogs';
-import { AnalysisDialogs } from '../dialogs/AnalysisDialogs';
-import { SnapshotDialogs } from '../dialogs/SnapshotDialogs';
-import { MediaCompareDialogs } from '../dialogs/MediaCompareDialogs';
-import { BeatSyncDialog } from '../dialogs/BeatSyncDialog';
-import { SettingsDialogs } from '../dialogs/SettingsDialogs';
-import { SecurityDialogs } from '../dialogs/SecurityDialogs';
-import { ProjectHealthDialogs } from '../dialogs/ProjectHealthDialogs';
-import { RecoveryDialogs } from '../dialogs/RecoveryDialogs';
+
+// 延迟加载重型对话框组件，减少首屏加载体积
+const ExportDialogs = lazy(() => import('../dialogs/ExportDialogs').then((m) => ({ default: m.ExportDialogs })));
+const AnalysisDialogs = lazy(() => import('../dialogs/AnalysisDialogs').then((m) => ({ default: m.AnalysisDialogs })));
+const SnapshotDialogs = lazy(() => import('../dialogs/SnapshotDialogs').then((m) => ({ default: m.SnapshotDialogs })));
+const MediaCompareDialogs = lazy(() => import('../dialogs/MediaCompareDialogs').then((m) => ({ default: m.MediaCompareDialogs })));
+const BeatSyncDialog = lazy(() => import('../dialogs/BeatSyncDialog').then((m) => ({ default: m.BeatSyncDialog })));
+const SettingsDialogs = lazy(() => import('../dialogs/SettingsDialogs').then((m) => ({ default: m.SettingsDialogs })));
+const SecurityDialogs = lazy(() => import('../dialogs/SecurityDialogs').then((m) => ({ default: m.SecurityDialogs })));
+const ProjectHealthDialogs = lazy(() => import('../dialogs/ProjectHealthDialogs').then((m) => ({ default: m.ProjectHealthDialogs })));
+const RecoveryDialogs = lazy(() => import('../dialogs/RecoveryDialogs').then((m) => ({ default: m.RecoveryDialogs })));
 
 const CharacterTimelinePanel = lazy(() => import('../Timeline/CharacterTimelinePanel').then((m) => ({ default: m.CharacterTimelinePanel })));
 const PreflightChecklistPanel = lazy(() => import('../Export/PreflightChecklistPanel').then((m) => ({ default: m.PreflightChecklistPanel })));
@@ -88,7 +92,7 @@ export interface ShellFloatingDialogsProps {
   analyzePreferredContentTargets: () => void;
   exportContentAnalysis: (clipId: string) => void;
   applySpeakerDiarization: () => void;
-  speakerDiarizationResult: unknown;
+  speakerDiarizationResult: { sourceName: string; segments: SpeakerDiarizationSegment[]; tracks: Track[] } | undefined;
   contentAnalysisTargets: ContentAnalysisTarget[];
   // Operation recording
   operationRecording: OperationRecordingFile | undefined;
@@ -265,10 +269,10 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
           pauseOperationReplay={props.pauseOperationReplay}
           jumpOperationRecording={props.jumpOperationRecording}
           exportOperationRecordingSlides={props.exportOperationRecordingSlides}
-          speakerDiarizationResult={props.speakerDiarizationResult as any}
+          speakerDiarizationResult={props.speakerDiarizationResult}
           applySpeakerDiarization={props.applySpeakerDiarization}
           addAssetToTimeline={props.addAssetToTimeline}
-          contentAnalysisTargets={props.contentAnalysisTargets as any}
+          contentAnalysisTargets={props.contentAnalysisTargets}
           contentAnalysisRunningClipId={undefined}
           analyzeContentClip={props.analyzeContentClip}
           analyzePreferredContentTargets={props.analyzePreferredContentTargets}

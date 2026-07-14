@@ -1,4 +1,4 @@
-import { CommandManager, type ProjectAccessor, type TimelineAccessor } from '@open-factory/editor-core';
+import { CommandManager, type Command, type ProjectAccessor, type TimelineAccessor } from '@open-factory/editor-core';
 import { collaborationController } from '../collaboration/local-network';
 import type { EditorState } from './editorStore';
 
@@ -16,7 +16,7 @@ function getEditorStore() {
 
 export const commandManager = new CommandManager();
 
-type CommandExecuteListener = (command: unknown) => void;
+type CommandExecuteListener = (command: Command) => void;
 const onExecuteListeners: CommandExecuteListener[] = [];
 
 export function addOnExecuteListener(listener: CommandExecuteListener): () => void {

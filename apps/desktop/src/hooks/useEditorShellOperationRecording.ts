@@ -61,7 +61,7 @@ export function useEditorShellOperationRecording(): {
       // 宏录制
       const macroRecorder = macroRecorderRef.current;
       if (macroRecorder.active && !macroRecorder.replaying) {
-        const snapshot = snapshotCommand(command as any);
+        const snapshot = snapshotCommand(command);
         if (snapshot) {
           macroRecorder.steps.push(snapshot);
           useEditorFeatureStore.getState().setMacroRecordingStepCount(macroRecorder.steps.length);
@@ -70,7 +70,7 @@ export function useEditorShellOperationRecording(): {
       // 操作录制
       const opRecorder = operationRecorderRef.current;
       if (opRecorder.active && !opRecorder.replaying && opRecorder.recording) {
-        opRecorder.recording = recordOperationCommand(opRecorder.recording, command as any, useEditorStore.getState().project);
+        opRecorder.recording = recordOperationCommand(opRecorder.recording, command, useEditorStore.getState().project);
         useEditorFeatureStore.getState().setOperationRecording(opRecorder.recording);
       }
     });

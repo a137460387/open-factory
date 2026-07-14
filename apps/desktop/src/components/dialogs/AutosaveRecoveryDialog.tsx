@@ -1,4 +1,3 @@
-// TODO: shadcn migration pilot
 import { zhCN } from '../../i18n/strings';
 import { Button } from '@/components/ui/button';
 import {

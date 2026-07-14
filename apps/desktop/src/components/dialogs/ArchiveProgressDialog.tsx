@@ -1,4 +1,3 @@
-// TODO: shadcn migration pilot
 import type { ArchiveProgress } from '../../lib/projectArchive';
 import { zhCN } from '../../i18n/strings';
 import {

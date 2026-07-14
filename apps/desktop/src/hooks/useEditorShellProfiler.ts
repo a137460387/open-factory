@@ -18,6 +18,18 @@ import { showToast } from '../lib/toast';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { useMediaJobStore } from '../media/media-job-store';
 import { useEditorStore } from '../store/editorStore';
+
+/** E2E 调试用的 profiler 全局对象 */
+interface ProfilerDebugInfo {
+  frameCount: number;
+  lastFrameIndex?: number;
+}
+
+declare global {
+  interface Window {
+    __OPEN_FACTORY_PROFILER_DEBUG__?: ProfilerDebugInfo;
+  }
+}
 import { useEditorFeatureStore } from '../store/editorFeatureStore';
 import {
   saveFileDialog as bridgeSaveFileDialog,
@@ -85,7 +97,7 @@ export function useEditorShellProfiler(): {
         exportProgressByTaskId: new Map()
       };
       if (import.meta.env.VITE_E2E === 'true') {
-        (window as any).__OPEN_FACTORY_PROFILER_DEBUG__ = { frameCount: 0 };
+        window.__OPEN_FACTORY_PROFILER_DEBUG__ = { frameCount: 0 };
       }
       latestProfilerTextureBytesRef.current = 0;
       setProfilerReport(undefined);
@@ -109,7 +121,7 @@ export function useEditorShellProfiler(): {
         recording.frames.push(sample);
         recording.traceEvents.push(...createProfilerTraceEventsForFrame(sample));
         if (import.meta.env.VITE_E2E === 'true') {
-          (window as any).__OPEN_FACTORY_PROFILER_DEBUG__ = {
+          window.__OPEN_FACTORY_PROFILER_DEBUG__ = {
             frameCount: recording.frames.length,
             lastFrameIndex: sample.frameIndex
           };

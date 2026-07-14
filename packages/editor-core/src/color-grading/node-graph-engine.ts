@@ -1,4 +1,6 @@
-import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams, CurvesNodeParams, LUTApplyNodeParams, TrackingMaskNodeParams } from './types';
+import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams, CurvesNodeParams, LUTApplyNodeParams, PrimarySliderParams, PrimaryWheelParams, TrackingMaskNodeParams } from './types';
+import type { HSLQualifierParams } from './hsl-qualifier';
+import type { WindowMaskParams } from './window-mask';
 import { sampleCurve } from './color-curves';
 
 /** Uniform value that can be a scalar, array, or structured descriptor */
@@ -142,7 +144,7 @@ export class NodeGraphEngine {
   }
 
   private static executePrimaryWheel(node: ColorGradingNode): NodeExecutionResult {
-    const p = node.params as any;
+    const p = node.params as PrimaryWheelParams;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 
     return {
@@ -161,7 +163,7 @@ export class NodeGraphEngine {
   }
 
   private static executePrimarySlider(node: ColorGradingNode): NodeExecutionResult {
-    const p = node.params as any;
+    const p = node.params as PrimarySliderParams;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 
     return {
@@ -185,7 +187,7 @@ export class NodeGraphEngine {
   }
 
   private static executeHSLQualifier(node: ColorGradingNode): NodeExecutionResult {
-    const p = node.params as any;
+    const p = node.params as HSLQualifierParams;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 
     return {
@@ -209,10 +211,10 @@ export class NodeGraphEngine {
   }
 
   private static executeWindowMask(node: ColorGradingNode): NodeExecutionResult {
-    const p = node.params as any;
+    const p = node.params as WindowMaskParams;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 
-    if (p.shape === 'circle') {
+    if (p.shape === 'circle' && p.circle) {
       return {
         nodeId: node.id,
         uniforms: {
@@ -228,7 +230,7 @@ export class NodeGraphEngine {
       };
     }
 
-    if (p.shape === 'linear-gradient') {
+    if (p.shape === 'linear-gradient' && p.linearGradient) {
       return {
         nodeId: node.id,
         uniforms: {

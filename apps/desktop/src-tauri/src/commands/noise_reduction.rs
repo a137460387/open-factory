@@ -27,6 +27,9 @@ pub struct NoiseReductionResult { pub output_path: String, pub original_path: St
 #[serde(rename_all = "camelCase")]
 pub struct NoiseReductionProgressPayload { pub clip_id: String, pub progress: f32, pub stage: String }
 
+fn safe_name(v: &str) -> String { v.chars().map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' }).collect() }
+fn norm_path(p: &Path) -> String { p.to_string_lossy().replace('\\', "/") }
+
 #[tauri::command]
 pub async fn process_audio_noise_reduction(app: AppHandle, request: NoiseReductionRequest) -> Result<NoiseReductionResult, String> {
     tauri::async_runtime::spawn_blocking(move || process_blocking(app, request)).await.map_err(|e| e.to_string())?
@@ -116,8 +119,6 @@ fn emit_progress(app: &AppHandle, id: &str, progress: f32, stage: &str) {
 }
 fn is_canceled(id: &str) -> bool { canceled().lock().map(|c| c.contains(id)).unwrap_or(false) }
 fn clear_canceled(id: &str) { if let Ok(mut c) = canceled().lock() { c.remove(id); } }
-fn safe_name(v: &str) -> String { v.chars().map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' }).collect() }
-fn norm_path(p: &Path) -> String { p.to_string_lossy().replace('\\', "/") }
 
 #[cfg(test)]
 mod tests {
