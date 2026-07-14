@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import type { Project, Clip, MediaAsset, Track } from '@open-factory/editor-core';
+import type { Project, Clip, MediaAsset, Track, BeatSensitivity } from '@open-factory/editor-core';
 import { useEditorUIStore } from '../../store/editorUIStore';
 import { useEditorFeatureStore } from '../../store/editorFeatureStore';
 import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
@@ -46,6 +46,9 @@ const ProfilerDialog = lazy(() =>
 const RhythmAnalysisDialog = lazy(() =>
   import('../../analysis/RhythmAnalysisDialog').then((m) => ({ default: m.RhythmAnalysisDialog }))
 );
+const SmartMontageDialog = lazy(() =>
+  import('../SmartMontage/SmartMontageDialog').then((m) => ({ default: m.SmartMontageDialog }))
+);
 
 export interface AnalysisDialogsProps {
   project: Project;
@@ -67,6 +70,8 @@ export interface AnalysisDialogsProps {
   // Video stitch wizard
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
+  // Smart montage
+  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
   // Operation replay
   operationRecording: OperationRecordingFile | undefined;
   operationRecordingActive: boolean;
@@ -118,6 +123,7 @@ export function AnalysisDialogs({
   splitSpectrumAtTime,
   importVideosForStitchWizard,
   generateVideoStitchTimeline,
+  generateSmartMontage,
   operationRecording,
   operationRecordingActive,
   operationReplayRunning,
@@ -169,6 +175,8 @@ export function AnalysisDialogs({
   const setProfilerOpen = useEditorUIStore((s) => s.setProfilerOpen);
   const rhythmAnalysisOpen = useEditorUIStore((s) => s.rhythmAnalysisOpen);
   const setRhythmAnalysisOpen = useEditorUIStore((s) => s.setRhythmAnalysisOpen);
+  const smartMontageOpen = useEditorUIStore((s) => s.smartMontageOpen);
+  const setSmartMontageOpen = useEditorUIStore((s) => s.setSmartMontageOpen);
 
   // Data from useEditorFeatureStore
   const spectrumAsset = useEditorFeatureStore((s) => s.spectrumAsset);
@@ -291,6 +299,13 @@ export function AnalysisDialogs({
       ) : null}
       {rhythmAnalysisOpen ? (
         <RhythmAnalysisDialog project={project} onClose={() => setRhythmAnalysisOpen(false)} />
+      ) : null}
+      {smartMontageOpen ? (
+        <SmartMontageDialog
+          media={project.media}
+          onGenerate={(config) => void generateSmartMontage(config)}
+          onClose={() => setSmartMontageOpen(false)}
+        />
       ) : null}
     </Suspense>
   );

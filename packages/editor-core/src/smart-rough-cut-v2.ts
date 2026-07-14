@@ -1,10 +1,12 @@
 import {
   DEFAULT_CLIP_SPEED,
   DEFAULT_COLOR_CORRECTION,
-  DEFAULT_TRANSFORM
+  DEFAULT_TRANSFORM,
+  DEFAULT_AUDIO_FADE_CURVE,
+  createId
 } from './model';
 import type { ClipContentAnalysis } from './content-analysis';
-import type { Clip, MediaAsset } from './model-types';
+import type { AudioClip, Clip, MediaAsset } from './model-types';
 import { getClipSourceVisibleDuration, getClipSpeed } from './timeline';
 import { round } from './time';
 
@@ -165,7 +167,7 @@ function buildBrollClipFromCandidate(
   });
 }
 
-function createVisualClipFromAsset(
+export function createVisualClipFromAsset(
   asset: MediaAsset,
   input: { id: string; name: string; trackId: string; start: number; duration: number }
 ): SmartRoughCutVisualClip {
@@ -293,4 +295,93 @@ function finiteOrDefault(value: number | undefined, fallback: number): number {
 
 function cloneClipValue<T>(value: T): T {
   return globalThis.structuredClone ? globalThis.structuredClone(value) : (JSON.parse(JSON.stringify(value)) as T);
+}
+
+// ─── Smart Montage ──────────────────────────────────────────────
+
+export interface SmartMontageConfig {
+  assets: MediaAsset[];
+  beatTimes: number[];
+  videoTrackId: string;
+  audioTrackId: string;
+  audioAsset: MediaAsset;
+  strategy?: 'sequential' | 'random';
+}
+
+export interface SmartMontageResult {
+  visualClips: SmartRoughCutVisualClip[];
+  audioClip: AudioClip;
+  estimatedBpm: number;
+  beatCount: number;
+}
+
+export function estimateBpmFromTimes(beatTimes: number[]): number {
+  if (beatTimes.length < 2) return 0;
+  const sorted = [...beatTimes].sort((a, b) => a - b);
+  const intervals: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const interval = sorted[i] - sorted[i - 1];
+    if (interval > 0) intervals.push(interval);
+  }
+  if (intervals.length === 0) return 0;
+  intervals.sort((a, b) => a - b);
+  const median = intervals[Math.floor(intervals.length / 2)];
+  return round(60 / median);
+}
+
+export function buildSmartMontageClips(config: SmartMontageConfig): SmartMontageResult | null {
+  const { assets, beatTimes, videoTrackId, audioTrackId, audioAsset, strategy = 'sequential' } = config;
+  const beats = normalizeBeatTimes(beatTimes);
+  const visualAssets = assets.filter((a) => a.type === 'video' || a.type === 'image');
+  if (visualAssets.length === 0 || beats.length < 2 || !videoTrackId || !audioTrackId) return null;
+
+  const orderedAssets = strategy === 'random' ? shuffleArray([...visualAssets]) : [...visualAssets];
+
+  const visualClips: SmartRoughCutVisualClip[] = beats.slice(0, -1).flatMap((start, index) => {
+    const end = beats[index + 1];
+    const duration = round(end - start);
+    if (duration <= 0.000001) return [];
+    const asset = orderedAssets[index % orderedAssets.length];
+    return [createVisualClipFromAsset(asset, {
+      id: createId('montage'),
+      name: `${asset.name} M${index + 1}`,
+      trackId: videoTrackId,
+      start,
+      duration
+    })];
+  });
+
+  const montageStart = beats[0];
+  const montageEnd = beats[beats.length - 1];
+  const audioDuration = round(montageEnd - montageStart);
+  const audioClip: AudioClip = {
+    id: createId('montage-audio'),
+    name: `${audioAsset.name} BGM`,
+    trackId: audioTrackId,
+    start: montageStart,
+    duration: audioDuration,
+    trimStart: 0,
+    trimEnd: round(Math.max(0, (audioAsset.duration || audioDuration) - audioDuration)),
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    type: 'audio',
+    mediaId: audioAsset.id,
+    volume: 1,
+    fadeInDuration: 0,
+    fadeOutDuration: 0,
+    fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+  };
+
+  return { visualClips, audioClip, estimatedBpm: estimateBpmFromTimes(beats), beatCount: beats.length };
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }

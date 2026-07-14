@@ -33,6 +33,7 @@ import {
   RenameMediaFolderCommand,
   SetMediaFolderCollapsedCommand,
   SplitClipAtTimesCommand,
+  SmartMontageCommand,
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
   UpdateProjectExportRangesCommand,
@@ -456,6 +457,7 @@ export function EditorShell() {
   const mediaPrecheckOpen = useEditorUIStore((s) => s.mediaPrecheckOpen);
   const setMediaPrecheckOpen = useEditorUIStore((s) => s.setMediaPrecheckOpen);
   const setVideoStitchWizardOpen = useEditorUIStore((s) => s.setVideoStitchWizardOpen);
+  const setSmartMontageOpen = useEditorUIStore((s) => s.setSmartMontageOpen);
   const syncCompareOpen = useEditorUIStore((s) => s.syncCompareOpen);
   const setSyncCompareOpen = useEditorUIStore((s) => s.setSyncCompareOpen);
   const setSceneReorderOpen = useEditorUIStore((s) => s.setSceneReorderOpen);
@@ -1197,6 +1199,42 @@ export function EditorShell() {
     [setPlayheadTime, setSelectedClipIds]
   );
 
+  const generateSmartMontage = useCallback(
+    (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => {
+      try {
+        const currentProject = useEditorStore.getState().project;
+        const videoAssets = config.videoAssetIds.flatMap((id) => {
+          const asset = currentProject.media.find((m) => m.id === id && (m.type === 'video' || m.type === 'image'));
+          return asset ? [asset] : [];
+        });
+        const audioAsset = currentProject.media.find((m) => m.id === config.audioAssetId && m.type === 'audio');
+        if (videoAssets.length === 0 || !audioAsset) {
+          throw new Error('素材不足：需要至少 1 个视频素材和 1 个音频素材');
+        }
+        const videoTrack = createTrack({ id: createId('track'), type: 'video', name: '混剪视频', clips: [] });
+        const audioTrack = createTrack({ id: createId('track'), type: 'audio', name: '混剪音乐', clips: [] });
+        commandManager.execute(new AddTrackCommand(timelineAccessor, videoTrack));
+        commandManager.execute(new AddTrackCommand(timelineAccessor, audioTrack));
+        const montageCmd = new SmartMontageCommand(timelineAccessor, {
+          assets: videoAssets,
+          beatTimes: config.beatTimes,
+          videoTrackId: videoTrack.id,
+          audioTrackId: audioTrack.id,
+          audioAsset,
+          strategy: 'sequential'
+        });
+        commandManager.execute(montageCmd);
+        const result = montageCmd.montageResult;
+        setPlayheadTime(0);
+        useEditorUIStore.getState().setSmartMontageOpen(false);
+        showToast({ kind: 'success', title: 'AI 智能混剪完成', message: `已生成 ${result.clipCount} 个片段，BPM ≈ ${result.estimatedBpm}` });
+      } catch (error) {
+        showToast({ kind: 'error', title: '混剪生成失败', message: error instanceof Error ? error.message : '时间线操作被拒绝' });
+      }
+    },
+    [setPlayheadTime]
+  );
+
   const importSubtitles = useCallback(async () => {
     try {
       const paths = await pickSubtitlePaths();
@@ -1469,6 +1507,7 @@ export function EditorShell() {
     splitSpectrumAtTime,
     importVideosForStitchWizard,
     generateVideoStitchTimeline,
+    generateSmartMontage,
     addAssetToTimeline,
     analyzeContentClip,
     analyzePreferredContentTargets,
@@ -1551,7 +1590,7 @@ export function EditorShell() {
     colorAnalysisResults, colorAnalysisJumps, colorAnalysisBusy,
     runTimelineColorAnalysis, alignTimelineColorToReference,
     seekSpectrumTime, setSpectrumSelectionRange, splitSpectrumAtTime,
-    importVideosForStitchWizard, generateVideoStitchTimeline,
+    importVideosForStitchWizard, generateVideoStitchTimeline, generateSmartMontage,
     addAssetToTimeline, analyzeContentClip, analyzePreferredContentTargets,
     exportContentAnalysis, applySpeakerDiarization, speakerDiarizationResult,
     contentAnalysisTargets,
@@ -1618,6 +1657,7 @@ export function EditorShell() {
           onOpenMediaOrganizer={openMediaOrganizer}
           onOpenMediaHealthDashboard={openMediaHealthDashboard}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
+          onOpenSmartMontage={() => setSmartMontageOpen(true)}
           onAddMotionGraphic={addMotionGraphic}
           onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
           onOpenLutEditor={() => setLutEditorOpen(true)}

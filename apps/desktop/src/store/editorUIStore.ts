@@ -79,6 +79,7 @@ export interface EditorUIState {
   exportHistoryClassifierOpen: boolean;
   smartCreationOpen: boolean;
   smartDistributionOpen: boolean;
+  smartMontageOpen: boolean;
 
   // Layout setters
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
@@ -148,6 +149,7 @@ export interface EditorUIState {
   setExportHistoryClassifierOpen: (updater: Updater<boolean>) => void;
   setSmartCreationOpen: (updater: Updater<boolean>) => void;
   setSmartDistributionOpen: (updater: Updater<boolean>) => void;
+  setSmartMontageOpen: (updater: Updater<boolean>) => void;
 }
 
 export const useEditorUIStore = create<EditorUIState>((set, get) => ({
@@ -216,6 +218,7 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   exportHistoryClassifierOpen: false,
   smartCreationOpen: false,
   smartDistributionOpen: false,
+  smartMontageOpen: false,
 
   setLayoutSettings(updater) {
     set((state) => ({ layoutSettings: applyUpdater(state.layoutSettings, updater) }));
@@ -314,4 +317,5 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   setExportHistoryClassifierOpen(updater) { set((s) => ({ exportHistoryClassifierOpen: applyUpdater(s.exportHistoryClassifierOpen, updater) })); },
   setSmartCreationOpen(updater) { set((s) => ({ smartCreationOpen: applyUpdater(s.smartCreationOpen, updater) })); },
   setSmartDistributionOpen(updater) { set((s) => ({ smartDistributionOpen: applyUpdater(s.smartDistributionOpen, updater) })); },
+  setSmartMontageOpen(updater) { set((s) => ({ smartMontageOpen: applyUpdater(s.smartMontageOpen, updater) })); },
 }));

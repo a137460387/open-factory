@@ -58,6 +58,7 @@ interface ToolbarProps {
   onOpenMediaOrganizer(): void;
   onOpenMediaHealthDashboard(): void;
   onOpenVideoStitchWizard(): void;
+  onOpenSmartMontage(): void;
   onAddMotionGraphic(): void;
   onOpenThumbnailGenerator(): void;
   onOpenLutEditor(): void;
@@ -797,6 +798,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.videoStitchWizard}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-smart-montage-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenSmartMontage();
+              }}
+            >
+              <span>AI 智能混剪</span>
+              <Wand2 size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

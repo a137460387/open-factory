@@ -174,7 +174,7 @@ import {
   type BeatMarker,
   type BeatSnapUpdate
 } from '../beats';
-import { buildDialogueRoughCutClips, buildRhythmAssembleClips, type SmartDialogueInterval, type SmartRoughCutVisualClip } from '../smart-rough-cut-v2';
+import { buildDialogueRoughCutClips, buildRhythmAssembleClips, buildSmartMontageClips, type SmartDialogueInterval, type SmartMontageConfig, type SmartRoughCutVisualClip } from '../smart-rough-cut-v2';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
@@ -4336,6 +4336,43 @@ export class RhythmAssembleCommand implements Command {
       this.generatedCount = assembled.length;
       const withoutSources = removeClipsFromTimeline(timeline, new Set(clips.map((clip) => clip.id)));
       this.after = insertGeneratedClips(withoutSources, assembled);
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class SmartMontageCommand implements Command {
+  readonly description = 'AI smart montage';
+  private before?: Timeline;
+  private after?: Timeline;
+  private result: { clipCount: number; estimatedBpm: number } = { clipCount: 0, estimatedBpm: 0 };
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly config: SmartMontageConfig
+  ) {}
+
+  get montageResult(): { clipCount: number; estimatedBpm: number } {
+    return this.result;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const montage = buildSmartMontageClips(this.config);
+      if (!montage) {
+        throw new Error('Smart montage: unable to build clips from the provided assets and beat data');
+      }
+      const allClips: Clip[] = [...montage.visualClips, montage.audioClip];
+      this.result = { clipCount: montage.visualClips.length, estimatedBpm: montage.estimatedBpm };
+      this.after = insertGeneratedClips(timeline, allClips);
     }
     this.accessor.setTimeline(this.after);
   }
