@@ -59,7 +59,7 @@ test.describe('Professional Color Grading Panel', () => {
     await expect(page.getByTestId('lut-grading-tab')).toBeVisible();
 
     await expect(page.getByTestId('current-lut-path')).toBeVisible();
-    await expect(page.getByTestId('choose-lut-button')).toBeVisible();
+    await expect(page.getByTestId('grading-choose-lut')).toBeVisible();
   });
 
   test('should switch to curves tab and display curve editor', async ({ page }) => {
