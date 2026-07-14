@@ -970,6 +970,11 @@ const mocks: TauriMocks = {
     return { vocalsPath, accompanimentPath, outputDir, durationMs: 10 };
   },
   cancelDemucs: () => undefined,
+  processAudioNoiseReduction: async ({ inputPath, outputPath, clipId, strength }) => {
+    await wait(10);
+    return { outputPath: outputPath || inputPath.replace(/(\.[^.]+)$/, '_denoised$1'), durationMs: 5 };
+  },
+  cancelAudioNoiseReduction: () => undefined,
   detectPrivacyRegions: async ({ clipId }) => {
     await wait(10);
     return {
@@ -4272,6 +4277,34 @@ window.__E2E_ACTIONS__ = {
     aiApiKeys.delete('mimo');
     aiApiKeys.delete('ollama');
     useEditorStore.getState().setSelectedClipIds(['denoise-clip-2']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIDenoiseLocalFixture: async () => {
+    const project = createProject('AI Local Denoise E2E');
+    const audioAsset: MediaAsset = {
+      id: 'media-denoise', type: 'audio', name: 'test-audio.wav',
+      path: tinyAudio, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1_000, hasAudio: true,
+    };
+    const clip = {
+      id: 'clip-denoise', type: 'audio' as const, name: 'test-audio.wav',
+      mediaId: 'media-denoise', trackId: 'track-denoise',
+      start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+      aiLocalDenoise: { enabled: false, strength: 0.5 },
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-denoise', type: 'audio', name: 'Audio 1', clips: [clip] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [audioAsset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-denoise']);
+    useEditorStore.getState().setSelectedClipId('clip-denoise');
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },

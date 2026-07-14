@@ -126,6 +126,7 @@ import {
   getFfmpegCapabilities,
   getWebdavText,
   getTempSegmentsDir,
+  listHardwareEncoders,
   listenBridge,
   minimizeToTray,
   openFileDialog,
@@ -180,6 +181,7 @@ import { ExportTaskRow, StatusPill } from './components/ExportTaskRow';
 import { ExportUploadSection, ExportUploadStatusPanel } from './components/ExportUploadSection';
 import { PostExportScriptResultPanel, ExportRecoveryPanel, PostExportQualityAssurancePanel } from './components/PostExportStatusPanels';
 import { QualityResultPanel } from './components/QualityResultPanel';
+import { HardwareEncoderSettingsPanel } from './components/HardwareEncoderSettingsPanel';
 import { runExportWarmup } from './export-warmup';
 import {
   BUILTIN_EXPORT_PRESETS,
@@ -246,6 +248,14 @@ import {
   updateTargetAspectRatio,
   updateReframeOffset,
   updateHardwareEncoding,
+  updateHardwareEncoderId,
+  updateHardwareEncoderPreset,
+  updateHardwareRateControlMode,
+  updateHardwareCq,
+  updateHardwareVideoBitrate,
+  updateHardwareMaxBitrate,
+  updateHardwareGopSize,
+  updateHardwareBFrames,
   updateLoudnessNormalization,
   updateMasterProcessing,
   updateMasterEqEnabled,
@@ -558,6 +568,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
+  const [availableHwEncoders, setAvailableHwEncoders] = useState<import('@open-factory/editor-core').HardwareEncoderInfo[]>([]);
   const [error, setError] = useState<string>();
   const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[]; codecCompareJobs?: CodecCompareJob[] }>();
   const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
@@ -749,6 +760,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       .then((result) => {
         if (!canceled) {
           setCapabilities(result);
+          if (result.hardwareEncoders?.length) setAvailableHwEncoders(result.hardwareEncoders);
         }
       })
       .catch((reason) => {
@@ -756,9 +768,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           setError(reason instanceof Error ? reason.message : t.detectFfmpegFailed);
         }
       });
-    return () => {
-      canceled = true;
-    };
+    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(() => {});
+    return () => { canceled = true; };
   }, []);
 
   useEffect(() => {
@@ -2160,6 +2171,9 @@ function relinkFromPreflight(): void {
               onChange={(checked) => updateHardwareEncoding(setDraftSettings, checked)}
               testId="export-hardware-encoding-toggle"
             />
+            {hardwareEncodingRequested && availableHwEncoders.length > 0 ? (
+              <HardwareEncoderSettingsPanel encoders={availableHwEncoders} settings={exportSettings.hardwareEncoderSettings} setDraftSettings={setDraftSettings} disabled={!hardwareEncodingEligible} />
+            ) : null}
           </div>
           <MasterProcessingSection
             masterProcessing={exportSettings.masterProcessing}
@@ -3277,9 +3291,8 @@ function AudioVisualizationSection({
           setCustomThemes([]);
         }
       });
-    return () => {
-      canceled = true;
-    };
+    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(() => {});
+    return () => { canceled = true; };
   }, []);
 
   const saveCurrentTheme = async () => {
