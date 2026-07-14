@@ -4415,7 +4415,6 @@ function cssColorToAssColor(value: string, opacity?: number): string {
 // CI trigger
 // Tue Jul 14 10:52:37     2026
 
-
   // Check if the requested encoder is available
   if (!encoderInfo || !capabilities.hardwareEncoderAvailable) {
     warnings.push(`Hardware encoder ${encoderId ?? 'none'} not available, falling back to libx264`);
