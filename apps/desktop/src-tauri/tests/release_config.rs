@@ -9,7 +9,7 @@ fn updater_endpoint_is_configured_for_releases() {
     let config = tauri_config();
     assert_eq!(
         config["plugins"]["updater"]["endpoints"][0],
-        "https://github.com/open-factory/open-factory/releases/latest/download/latest.json"
+        "https://github.com/a137460387/open-factory/releases/latest/download/latest.json"
     );
     assert!(config["plugins"]["updater"]["pubkey"]
         .as_str()
