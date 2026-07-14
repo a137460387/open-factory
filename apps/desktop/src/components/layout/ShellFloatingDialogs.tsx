@@ -30,6 +30,7 @@ import type { DuplicateMediaMergeSelection } from '../../media/DuplicateMediaDia
 import type { MediaOrganizerDuplicateSelection } from '../../media/MediaOrganizerDialog';
 import type { AutosaveRecoveryCandidate, ProjectFileEncryptionOptions } from '../../lib/projectFiles';
 import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
+import type { BeatSensitivity } from '@open-factory/editor-core';
 import { shouldShowTutorial } from '../../tutorial/tutorialState';
 import type { TutorialSignals } from '../../tutorial/tutorialState';
 import { ExportDialogs } from '../dialogs/ExportDialogs';
@@ -81,6 +82,7 @@ export interface ShellFloatingDialogsProps {
   splitSpectrumAtTime: (asset: MediaAsset, sourceTime: number) => void;
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
+  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
   addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => void;
   analyzePreferredContentTargets: () => void;
@@ -249,6 +251,7 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
           splitSpectrumAtTime={props.splitSpectrumAtTime}
           importVideosForStitchWizard={props.importVideosForStitchWizard}
           generateVideoStitchTimeline={props.generateVideoStitchTimeline}
+          generateSmartMontage={props.generateSmartMontage}
           operationRecording={props.operationRecording}
           operationRecordingActive={props.operationRecordingActive}
           operationReplayRunning={props.operationReplayRunning}
