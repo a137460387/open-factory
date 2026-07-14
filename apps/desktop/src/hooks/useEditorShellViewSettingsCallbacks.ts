@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { useCallback } from 'react';
 import type { MediaAsset, TimelineGridSettings, TimelineGridUnit } from '@open-factory/editor-core';
 import type {
@@ -184,7 +185,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
   }, [persistPreviewWindowState]);
 
   const reembedPreviewWindow = useCallback(async () => {
-    const state = await closePreviewWindow().catch(() => undefined);
+    const state = await closePreviewWindow().catch(logError("useEditorShellViewSettingsCallbacks"));
     if (state) {
       persistPreviewWindowState(state);
     }

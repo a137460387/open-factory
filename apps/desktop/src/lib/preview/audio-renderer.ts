@@ -1,3 +1,4 @@
+import { logError } from "../error-handlers";
 import type { Clip, MediaAsset, MixerState, Timeline } from '@open-factory/editor-core';
 import {
   calculateSpeedCurveSourceDuration,
@@ -206,8 +207,8 @@ export class PreviewAudioRenderer {
       this.lastAudioCalibration = Date.now();
     }
     if (isPlaying && audio.paused) {
-      void this.audioContext?.resume().catch(() => undefined);
-      void audio.play().catch(() => undefined);
+      void this.audioContext?.resume().catch(logError("audio-renderer"));
+      void audio.play().catch(logError("audio-renderer"));
     }
     if (!isPlaying && !audio.paused) {
       audio.pause();

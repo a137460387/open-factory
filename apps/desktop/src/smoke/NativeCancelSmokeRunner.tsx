@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { useEffect } from 'react';
 import type { ExportTask } from '@open-factory/editor-core';
 import { AddClipCommand } from '@open-factory/editor-core';
@@ -191,7 +192,7 @@ function findTask(taskId: string, predicate: (task: ExportTask) => boolean): Exp
 async function getOutputSize(path: string): Promise<number | undefined> {
   return getFileStat(path)
     .then((stat) => stat.size)
-    .catch(() => undefined);
+    .catch(logError("NativeCancelSmokeRunnerx"));
 }
 
 async function waitFor<T>(read: () => T | undefined | null, timeoutMs: number, failureMessage: string): Promise<T> {

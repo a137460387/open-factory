@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { extractDecodedWaveform, type MediaAsset, type WaveformCacheEntry } from '@open-factory/editor-core';
 import { readWaveformFromCache, writeWaveformToCache } from '../cache/cache-service';
 import { zhCN } from '../i18n/strings';
@@ -100,7 +101,7 @@ async function decodeWaveform(arrayBuffer: ArrayBuffer, pointsPerSecond: number)
       isSampled: false
     };
   } finally {
-    await context.close().catch(() => undefined);
+    await context.close().catch(logError("waveform"));
   }
 }
 

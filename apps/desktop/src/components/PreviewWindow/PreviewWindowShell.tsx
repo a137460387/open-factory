@@ -1,3 +1,4 @@
+import { logError } from "../../lib/error-handlers";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Pin, Play, Scan, X } from 'lucide-react';
 import { secondsToTimecode, type Project } from '@open-factory/editor-core';
@@ -103,7 +104,7 @@ export function PreviewWindowShell() {
   const toggleFullscreen = useCallback(async () => {
     const next = !fullscreen;
     setFullscreenState(next);
-    const state = await setPreviewWindowFullscreen(next).catch(() => undefined);
+    const state = await setPreviewWindowFullscreen(next).catch(logError("PreviewWindowShellx"));
     if (state) {
       setFullscreenState(state.fullscreen);
     }
@@ -112,7 +113,7 @@ export function PreviewWindowShell() {
   const toggleAlwaysOnTop = useCallback(async () => {
     const next = !alwaysOnTop;
     setAlwaysOnTopState(next);
-    const state = await setPreviewWindowAlwaysOnTop(next).catch(() => undefined);
+    const state = await setPreviewWindowAlwaysOnTop(next).catch(logError("PreviewWindowShellx"));
     if (state) {
       setAlwaysOnTopState(state.alwaysOnTop);
     }
@@ -120,7 +121,7 @@ export function PreviewWindowShell() {
 
   const changeResolutionScale = useCallback(async (value: PreviewWindowResolutionScale) => {
     setResolutionScaleState(value);
-    const state = await setPreviewWindowResolutionScale(value).catch(() => undefined);
+    const state = await setPreviewWindowResolutionScale(value).catch(logError("PreviewWindowShellx"));
     if (state) {
       setResolutionScaleState(state.resolutionScale);
     }

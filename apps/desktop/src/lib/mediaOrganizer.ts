@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   detectMediaCleanupCandidates,
   detectSmartDuplicateGroups,
@@ -18,8 +19,8 @@ export async function scanSmartDuplicateMediaGroups(media: MediaAsset[], mediaMe
     if (asset.missing || (asset.type !== 'video' && asset.type !== 'image') || !asset.path.trim()) {
       continue;
     }
-    const stat = await getFileStat(asset.path).catch(() => undefined);
-    const fingerprint = mediaMetadata[asset.id]?.fingerprint ?? (await generateMediaFingerprint(asset).catch(() => undefined));
+    const stat = await getFileStat(asset.path).catch(logError("mediaOrganizer"));
+    const fingerprint = mediaMetadata[asset.id]?.fingerprint ?? (await generateMediaFingerprint(asset).catch(logError("mediaOrganizer")));
     const frameHashes = fingerprint?.frameHashes?.length ? fingerprint.frameHashes : fingerprint?.hash ? [fingerprint.hash] : [];
     if (!stat || frameHashes.length === 0) {
       continue;

@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   buildOfflineMediaReportHtml,
   buildClipReportHtml,
@@ -18,7 +19,7 @@ async function collectOfflineMediaFileStatuses(project: Project): Promise<Offlin
       if (!exists) {
         return { path, exists: false };
       }
-      const stat = await getFileStat(path).catch(() => undefined);
+      const stat = await getFileStat(path).catch(logError("mediaReport"));
       return { path, exists: true, size: stat?.size };
     })
   );

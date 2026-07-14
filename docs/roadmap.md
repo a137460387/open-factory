@@ -78,13 +78,46 @@
 - Local plugin loading from the app data plugin directory with Worker isolation.
 - `check:release` script for the full release gate: typecheck, unit coverage, production build, Playwright E2E, Tauri build, and golden smoke.
 
-## Next
+## v4.x Series - Professional Video Editor
 
-- Ripple edit, gap close, rolling trim, grouped clips, and related professional timeline shortcuts.
-- Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
-- Priority scheduling and explicit throttling controls for background media jobs.
-- Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
-- Main bundle code splitting for heavy panels and settings pages.
-- macOS/Linux native dialog automation where unattended host control is available.
-- WASM/GPU export acceleration and advanced preview effects.
-- Headless automation mode once the desktop editing surface is stable enough to expose safely.
+### v4.0 - v4.10: Core Editing Engine
+- [x] Multi-track timeline with advanced clip operations
+- [x] Command-object based undo/redo system
+- [x] WebGL preview compositor with 2D fallback
+- [x] FFmpeg-based export pipeline with queue management
+
+### v4.11 - v4.20: Professional Color & Audio
+- [x] Node-based color grading engine with WebGL shaders
+- [x] Lift/Gamma/Gain color wheels and curve editors
+- [x] HSL qualifier for secondary color correction
+- [x] LUT management and Camera Log conversion
+- [x] Professional audio mixer with 20+ effects
+- [x] 3D spatial audio with HRTF support
+- [x] AI-powered audio denoise (nnnoiseless)
+
+### v4.21 - v4.25: AI & Interoperability
+- [x] FCPXML import/export for Final Cut Pro interchange
+- [x] CMX 3600 EDL support
+- [x] AAF/OMF export for Avid/Pro Tools
+- [x] AI smart remix with beat detection
+- [x] AI automatic subtitle generation (4-stage workflow)
+- [x] Hardware-accelerated decoding (CUDA/VAAPI/QuickSync/D3D11VA/VideoToolbox)
+- [x] Multi-cam editing MVP
+- [x] Smart media library with metadata extraction
+
+## Next (v4.26+)
+
+- [ ] Ripple edit, gap close, rolling trim, grouped clips, and related professional timeline shortcuts.
+- [ ] Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
+- [ ] Priority scheduling and explicit throttling controls for background media jobs.
+- [ ] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
+- [ ] Main bundle code splitting for heavy panels and settings pages.
+- [ ] macOS/Linux native dialog automation where unattended host control is available.
+- [ ] WASM/GPU export acceleration and advanced preview effects.
+- [ ] Headless automation mode once the desktop editing surface is stable enough to expose safely.
+- [ ] React 19 upgrade and Tailwind CSS 4 migration.
+- [ ] Enhanced plugin ecosystem with marketplace integration.
+
+---
+
+*Last updated: 2026-07-14*

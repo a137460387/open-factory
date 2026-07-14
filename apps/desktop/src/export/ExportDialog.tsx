@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import type { ExportCostHistorySample, AIExportSuggestion } from '@open-factory/editor-core';
 import { generatePlatformFitSuggestion, ApplyPlatformFitCommand, RestorePlatformFitClipCommand, PLATFORM_LIMITS } from '@open-factory/editor-core';
 import { BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, type BroadcastSpec, type ExportComplianceParams, type ComplianceCheckResult } from '@open-factory/editor-core';
@@ -768,7 +769,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           setError(reason instanceof Error ? reason.message : t.detectFfmpegFailed);
         }
       });
-    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(() => {});
+    void listHardwareEncoders().then((encoders) => { if (!canceled && encoders.length > 0) setAvailableHwEncoders(encoders); }).catch(logError("ExportDialogx"));
     return () => { canceled = true; };
   }, []);
 
@@ -910,7 +911,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         outputPath: request.outputPath,
         duration: getTimelinePlaybackDuration(project.timeline)
       }),
-      getFileStat(request.outputPath).catch(() => undefined)
+      getFileStat(request.outputPath).catch(logError("ExportDialogx"))
     ])
       .then(([quality, stat]) => {
         setCodecCompareResults((current) => applyCodecCompareQualityResult(current, request.taskId, quality, stat?.size));
@@ -935,7 +936,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     void Promise.all(
       pendingStats.map(async (task) => ({
         outputPath: task.outputPath,
-        size: (await getFileStat(task.outputPath).catch(() => undefined))?.size
+        size: (await getFileStat(task.outputPath).catch(logError("ExportDialogx")))?.size
       }))
     ).then((stats) => {
       if (canceled) {
@@ -1806,7 +1807,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   }
 
   async function collectPreflightIssues(targetProject: Project, settings: ExportPresetSettings): Promise<PreflightResult[]> {
-    const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(() => undefined));
+    const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(logError("ExportDialogx")));
     if (nextCapabilities && !capabilities) {
       setCapabilities(nextCapabilities);
     }

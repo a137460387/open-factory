@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   buildExportProjectFromProject,
   buildProgressiveExportPlan,
@@ -70,7 +71,7 @@ export async function enqueueExport(
   await runExportBeforePlugins(project, outputPath, settings);
   const exportSettings = await withSpatialAudioAssets(project, settings);
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings: exportSettings, metadata: options.metadata });
-  const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
+  const backgroundSettings = await readExportBackgroundSettings().catch(logError("export-queue-runner"));
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
   const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
   const progressiveState = progressive ? createProgressiveExportState({ outputPath, settings: exportProject.settings }) : undefined;
@@ -110,7 +111,7 @@ export async function enqueueStemExport(options: StemExportQueueOptions): Promis
   }
   const exportProject = buildExportProjectFromProject(project, { outputPath: outputDir, settings, metadata });
   const stemPlans = buildStemExportPlans(exportProject, capabilities, stemTracks, outputDir);
-  const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
+  const backgroundSettings = await readExportBackgroundSettings().catch(logError("export-queue-runner"));
   const queuedTasks: ExportTask[] = [];
 
   for (const stem of stemPlans) {
@@ -323,7 +324,7 @@ async function startAvailableTasks(): Promise<void> {
 }
 
 async function runSingleTask(task: ExportTask): Promise<void> {
-  const logPath = await getExportLogPath(task.id).catch(() => undefined);
+  const logPath = await getExportLogPath(task.id).catch(logError("export-queue-runner"));
   if (logPath) {
     useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
   }
@@ -351,7 +352,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     if (recoveryReport) {
       report.recovery = recoveryReport;
     }
-    const qualitySettings = await readExportQualityAssuranceSettings().catch(() => undefined);
+    const qualitySettings = await readExportQualityAssuranceSettings().catch(logError("export-queue-runner"));
     if (qualitySettings && hasEnabledPostExportQualityChecks(qualitySettings)) {
       let retryAttempt = 0;
       while (true) {
@@ -394,7 +395,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     if (latest?.status === 'running') {
       const durationMs = 'durationMs' in result ? result.durationMs : undefined;
       if (durationMs !== undefined) {
-        await recordExportSpeedSample(task, durationMs).catch(() => undefined);
+        await recordExportSpeedSample(task, durationMs).catch(logError("export-queue-runner"));
       }
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, report);
@@ -467,7 +468,7 @@ async function runRecoverableLocalExportTask(task: ExportTask, onRecoveryEntries
       currentPlan = decision.plan;
       if (decision.action === 'reduce-concurrency') {
         useExportQueueStore.getState().setMaxConcurrent(1);
-        await clearMediaCache().catch(() => undefined);
+        await clearMediaCache().catch(logError("export-queue-runner"));
       }
       useExportQueueStore.getState().updateTaskProgress(task.id, 0);
     }
@@ -486,7 +487,7 @@ async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = tas
     const afterRun = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (afterRun?.status === 'running') {
       await copyFile(progressive.partialPath, task.outputPath);
-      await removeFile(progressive.partialPath).catch(() => undefined);
+      await removeFile(progressive.partialPath).catch(logError("export-queue-runner"));
       useExportQueueStore.getState().updateTaskProgressive(task.id, { completedDuration: plan.duration });
       return { ...result, outputPath: task.outputPath };
     }
@@ -496,7 +497,7 @@ async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = tas
     if (afterError?.status !== 'running') {
       throw error;
     }
-    await removeFile(progressive.partialPath).catch(() => undefined);
+    await removeFile(progressive.partialPath).catch(logError("export-queue-runner"));
     return runExport(plan, task.id);
   }
 }

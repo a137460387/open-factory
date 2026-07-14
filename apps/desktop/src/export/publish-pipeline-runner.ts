@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   appendPublishLogsToReleaseRecord,
   buildProjectReleaseRecord,
@@ -87,7 +88,7 @@ async function sendEmailNode(node: ExportPipelineNode, info: ExportPublishOutput
   if (!node.smtp) {
     throw new Error(messages.smtpMissing);
   }
-  const password = node.smtp.passwordKey ? await readSmtpPassword(node.smtp.passwordKey).catch(() => undefined) : undefined;
+  const password = node.smtp.passwordKey ? await readSmtpPassword(node.smtp.passwordKey).catch(logError("publish-pipeline-runner")) : undefined;
   await sendSmtpEmail({
     ...node.smtp,
     password,

@@ -107,3 +107,7 @@ apps/desktop/ffprobe.exe
 # Claude Code local tooling artifacts
 .superpowers/
 skills/
+
+# Audit and evidence reports (local only)
+docs/audit/
+docs/evidence/

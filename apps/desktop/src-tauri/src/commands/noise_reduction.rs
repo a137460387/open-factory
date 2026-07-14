@@ -10,6 +10,8 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
+use super::binaries::ffmpeg_binary;
+
 static CANCELED: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 fn canceled() -> &'static Mutex<HashSet<String>> { CANCELED.get_or_init(|| Mutex::new(HashSet::new())) }
 
@@ -65,7 +67,7 @@ fn create_output(app: &AppHandle, clip_id: &str, src: &Path) -> Result<PathBuf, 
 }
 
 fn decode_to_pcm(src: &Path) -> Result<Vec<f32>, String> {
-    let out = Command::new("ffmpeg").args(["-i", &norm_path(src), "-f", "f32le", "-acodec", "pcm_f32le", "-ar", "48000", "-ac", "1", "-"])
+    let out = Command::new(ffmpeg_binary()).args(["-i", &norm_path(src), "-f", "f32le", "-acodec", "pcm_f32le", "-ar", "48000", "-ac", "1", "-"])
         .stdout(Stdio::piped()).stderr(Stdio::piped()).output().map_err(|e| format!("FFmpeg: {}", e))?;
     if !out.status.success() { return Err(format!("FFmpeg decode: {}", String::from_utf8_lossy(&out.stderr))); }
     let bytes = out.stdout;
@@ -91,7 +93,7 @@ fn apply_rnnoise(pcm: &[f32], strength: f32) -> Result<Vec<f32>, String> {
 }
 
 fn encode_pcm(pcm: &[f32], output: &Path, src: &Path) -> Result<(), String> {
-    let mut child = Command::new("ffmpeg").args(["-y", "-f", "f32le", "-acodec", "pcm_f32le", "-ar", "48000", "-ac", "1", "-i", "pipe:0", "-i", &norm_path(src), "-map", "0:a", "-map", "1:v?", "-c:v", "copy", &norm_path(output)])
+    let mut child = Command::new(ffmpeg_binary()).args(["-y", "-f", "f32le", "-acodec", "pcm_f32le", "-ar", "48000", "-ac", "1", "-i", "pipe:0", "-i", &norm_path(src), "-map", "0:a", "-map", "1:v?", "-c:v", "copy", &norm_path(output)])
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| format!("FFmpeg: {}", e))?;
     if let Some(mut stdin) = child.stdin.take() {
         let bytes: Vec<u8> = pcm.iter().flat_map(|s| s.to_le_bytes().to_vec()).collect();

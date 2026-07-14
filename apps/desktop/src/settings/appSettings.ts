@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
 import {
   DEFAULT_TIMELINE_GRID_SETTINGS,
@@ -689,7 +690,7 @@ export async function readAppSettings(): Promise<AppSettings> {
 
 async function writeAppSettings(settings: AppSettings): Promise<void> {
   const normalized = normalizeSettings(settings);
-  const settingsPath = await getSettingsFilePath().catch(() => undefined);
+  const settingsPath = await getSettingsFilePath().catch(logError("appSettings"));
   if (settingsPath) {
     await writeFile(settingsPath, JSON.stringify(normalized, null, 2));
     return;
@@ -703,7 +704,7 @@ async function getSettingsFilePath(): Promise<string> {
 }
 
 async function readFileSettings(): Promise<AppSettings | undefined> {
-  const settingsPath = await getSettingsFilePath().catch(() => undefined);
+  const settingsPath = await getSettingsFilePath().catch(logError("appSettings"));
   if (!settingsPath || !(await fsExists(settingsPath).catch(() => false))) {
     return undefined;
   }

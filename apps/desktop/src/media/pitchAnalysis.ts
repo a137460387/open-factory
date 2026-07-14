@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { serializePitchDataCsv, type Clip, type ClipPitchDataPoint, type MediaAsset } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
@@ -20,7 +21,7 @@ export async function analyzeClipPitch(asset: MediaAsset): Promise<ClipPitchData
         const samples = downmixToMono(decoded);
         return await analyzePitchWithWorker(samples, decoded.sampleRate);
       } finally {
-        await context.close().catch(() => undefined);
+        await context.close().catch(logError("pitchAnalysis"));
       }
     } catch {
       return [];

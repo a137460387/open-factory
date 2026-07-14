@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   buildSpeakerDiarizationTracks,
   detectSpeakerSegments,
@@ -151,7 +152,7 @@ async function decodeAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
   try {
     return await context.decodeAudioData(arrayBuffer.slice(0));
   } finally {
-    await context.close().catch(() => undefined);
+    await context.close().catch(logError("speakerDiarization"));
   }
 }
 

@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { bridgeConfirm, copyFile, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { refreshPluginRegistry, type PluginRegistry } from './plugin-manager';
 import { extractManifestPermissions, type PluginPermission } from './plugin-loader';
@@ -64,7 +65,7 @@ export async function loadPluginCatalog({
     }
     const contents = await response.text();
     const entries = parsePluginCatalogJson(contents);
-    await writeCache(contents).catch(() => undefined);
+    await writeCache(contents).catch(logError("plugin-market"));
     return { entries, source: 'network' };
   } catch (error) {
     const cached = await readCache();

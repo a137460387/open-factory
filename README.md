@@ -187,7 +187,7 @@ open-factory/
 │   └── create-plugin/        # 插件脚手架工具
 ├── docs/                     # 架构文档、路线图、设计目标
 ├── scripts/                  # 媒体兼容性测试、性能基准
-└── e2e/                      # Playwright 端到端测试
+└── apps/desktop/e2e/         # Playwright 端到端测试
 ```
 
 **技术栈：**

@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import type { ExportSettings, Project } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, getFileStat, readFile, removeFile, scanDirectory } from '../lib/tauri-bridge';
 import {
@@ -284,7 +285,7 @@ async function readPluginDevSignature(roots: string[]): Promise<string> {
   for (const root of Array.from(new Set(roots.map(normalizePath))).sort((left, right) => left.localeCompare(right))) {
     const paths = (await scanDirectory(root, 3).catch(() => [])).map(normalizePath).sort((left, right) => left.localeCompare(right));
     for (const path of paths) {
-      const stat = await getFileStat(path).catch(() => undefined);
+      const stat = await getFileStat(path).catch(logError("plugin-manager"));
       entries.push(`${path}:${stat?.size ?? -1}:${stat?.mtimeMs ?? -1}`);
     }
   }

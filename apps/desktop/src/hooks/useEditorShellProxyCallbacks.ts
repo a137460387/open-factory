@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { useCallback } from 'react';
 import { MigrateProxiesCommand, getProjectFrameRateConversionTarget, getCfrTargetFrameRate, buildProxyMigration } from '@open-factory/editor-core';
 import { showToast } from '../lib/toast';
@@ -58,7 +59,7 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       const media = useEditorStore.getState().project.media;
       const proxyPaths = media.filter((asset) => ids.has(asset.id) && asset.proxyPath).map((asset) => asset.proxyPath!);
       try {
-        await Promise.all(proxyPaths.map((path) => removeFile(path).catch(() => undefined)));
+        await Promise.all(proxyPaths.map((path) => removeFile(path).catch(logError("useEditorShellProxyCallbacks"))));
         setMedia(
           useEditorStore.getState().project.media.map((asset) =>
             ids.has(asset.id)
@@ -104,7 +105,7 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
       showToast({ kind: 'success', title: zhCN.editorToasts.proxyMigrated, message: zhCN.editorToasts.proxyMigratedMessage(updates.length) });
     } catch (error) {
       for (const update of moved.reverse()) {
-        await moveFile(update.toPath, update.fromPath).catch(() => undefined);
+        await moveFile(update.toPath, update.fromPath).catch(logError("useEditorShellProxyCallbacks"));
       }
       showToast({ kind: 'error', title: zhCN.editorToasts.proxyMigrationFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyMigrationFailedMessage });
     }

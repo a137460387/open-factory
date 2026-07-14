@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   buildProjectHealthSearchRoots,
   planMissingMediaAutoRelinks,
@@ -63,7 +64,7 @@ export async function buildProjectHealthAutoRepairInput(project: Project, report
       manualEntries.push({ type: 'missing-media', status: 'manual', assetId: replacement.assetId, message: `${replacement.assetId}: media record is missing` });
       continue;
     }
-    const probed = await probeMediaPath(replacement.candidatePath).catch(() => undefined);
+    const probed = await probeMediaPath(replacement.candidatePath).catch(logError("projectHealth"));
     if (!probed || probed.type !== original.type) {
       manualEntries.push({ type: 'missing-media', status: 'manual', assetId: original.id, message: `${original.name}: relink candidate type changed` });
       continue;

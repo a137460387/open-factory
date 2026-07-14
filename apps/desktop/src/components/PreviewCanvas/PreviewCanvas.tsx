@@ -638,9 +638,7 @@ export function PreviewCanvas({
       if (!canceled) {
         setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
       }
-    })().catch(() => {
-      // GPU texture preload is best-effort; live rendering remains the source of truth.
-    });
+    })().catch((error) => { console.error("PreviewCanvas", error); }); // GPU texture preload is best-effort; live rendering remains the source of truth.
     return () => {
       canceled = true;
     };
@@ -696,9 +694,7 @@ export function PreviewCanvas({
           });
           await waitForIdleFrame();
         }
-      })().catch(() => {
-        // Live preview rendering already reports user-facing errors; prerender misses are best-effort.
-      });
+      })().catch((error) => { console.error("PreviewCanvas", error); }); // Live preview rendering already reports user-facing errors; prerender misses are best-effort.
     }, 80);
 
     return () => {

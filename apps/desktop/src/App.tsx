@@ -1,3 +1,4 @@
+import { logError } from "./lib/error-handlers";
 import { useEffect, useSyncExternalStore } from 'react';
 import { EditorShell } from './components/EditorShell';
 import { PreviewWindowShell } from './components/PreviewWindow/PreviewWindowShell';
@@ -81,9 +82,9 @@ async function runStartupExportPresetSync(): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Export preset startup sync failed.';
     console.warn('Unable to sync export presets on startup', error);
-    const settings = await readExportPresetSyncSettings().catch(() => undefined);
+    const settings = await readExportPresetSyncSettings().catch(logError("Appx"));
     if (settings) {
-      await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(() => undefined);
+      await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(logError("Appx"));
     }
   }
 }

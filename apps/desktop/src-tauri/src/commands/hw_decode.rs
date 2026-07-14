@@ -2,7 +2,7 @@
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, LazyLock};
 use std::collections::HashMap;
 
 /// 硬件加速后端类型
@@ -133,8 +133,8 @@ pub struct VideoInfo {
 }
 
 /// 全局解码器管理器
-static DECODER_MANAGER: once_cell::sync::Lazy<Arc<Mutex<DecoderManager>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(DecoderManager::new())));
+static DECODER_MANAGER: LazyLock<Arc<Mutex<DecoderManager>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(DecoderManager::new())));
 
 struct DecoderManager {
     decoders: HashMap<u64, Box<dyn HardwareDecoder + Send>>,

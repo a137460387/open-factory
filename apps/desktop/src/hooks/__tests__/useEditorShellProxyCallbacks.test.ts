@@ -1,3 +1,4 @@
+import { logError } from "../../lib/error-handlers";
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -190,7 +191,7 @@ describe('useProxyCallbacks', () => {
 
     await result.current.deleteProxiesForMedia(['video-2']);
 
-    // removeFile 的错误被 .catch(() => undefined) 吞掉，仍然会走到 setMedia 和 success toast
+    // removeFile 的错误被 .catch(logError("useEditorShellProxyCallbacks.test")) 吞掉，仍然会走到 setMedia 和 success toast
     expect(mockRemoveFile).toHaveBeenCalled();
     expect(mockSetMedia).toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));

@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import type { ExportTask } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { copyFile, sendNotification } from '../lib/tauri-bridge';
@@ -98,7 +99,7 @@ async function playExportRuleTone(): Promise<void> {
   await new Promise<void>((resolve) => {
     oscillator.onended = () => resolve();
   });
-  await context.close().catch(() => undefined);
+  await context.close().catch(logError("export-rules"));
 }
 
 function notificationTitle(event: ExportRuleEventContext): string {

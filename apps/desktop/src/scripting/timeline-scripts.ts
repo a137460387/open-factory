@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import { fsExists, getAppDataDir, openFileDialog, readFile, removeFile, saveFileDialog, scanDirectory, writeFile } from '../lib/tauri-bridge';
 import { zhCN } from '../i18n/strings';
 
@@ -60,7 +61,7 @@ export async function saveTimelineScript(name: string, code: string, previousPat
   const path = getTimelineScriptPath(appDataDir, name);
   await storage.writeFile(path, code.endsWith('\n') ? code : `${code}\n`);
   if (previousPath && previousPath !== path) {
-    await Promise.resolve(storage.removeFile(previousPath)).catch(() => undefined);
+    await Promise.resolve(storage.removeFile(previousPath)).catch(logError("timeline-scripts"));
   }
   return { id: path, name: scriptNameFromPath(path), path, code };
 }

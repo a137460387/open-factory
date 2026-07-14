@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   buildMediaHealthDashboard,
   type MediaHealthDashboard,
@@ -29,7 +30,7 @@ export async function scanMediaHealthDashboard(project: Project, proxySettings?:
       project.media.map(async (asset) => {
         sourceStats[asset.path] = await getFileStat(asset.path).catch(() => fallbackStat(asset.size, asset.mtimeMs));
         if (asset.proxyPath) {
-          proxyStats[asset.proxyPath] = await getFileStat(asset.proxyPath).catch(() => undefined);
+          proxyStats[asset.proxyPath] = await getFileStat(asset.proxyPath).catch(logError("mediaHealthDashboard"));
         }
       })
     );

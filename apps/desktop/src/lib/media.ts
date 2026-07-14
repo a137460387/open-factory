@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import type { AssetType, ImageSequenceInfo, MediaAsset } from '@open-factory/editor-core';
 import { createId, parseFfprobeColorProfile } from '@open-factory/editor-core';
 import { readThumbnailFromCache, writeThumbnailToCache } from '../cache/cache-service';
@@ -44,7 +45,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
   }
   const mockProbe = window.__TAURI_MOCKS__?.probeMediaPath;
   const src = sourceUrl(path);
-  const stat = isTauriRuntime() || window.__TAURI_MOCKS__ ? await getFileStat(path).catch(() => undefined) : undefined;
+  const stat = isTauriRuntime() || window.__TAURI_MOCKS__ ? await getFileStat(path).catch(logError("media")) : undefined;
   const mediaProbe: MediaProbe = isTauriRuntime() || window.__TAURI_MOCKS__ ? await probeMedia(path).catch(() => ({ hasAudio: false })) : { hasAudio: false };
   const base: MediaAsset = {
     id: createId('asset'),

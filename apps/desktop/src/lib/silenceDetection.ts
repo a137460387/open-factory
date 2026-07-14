@@ -1,3 +1,4 @@
+import { logError } from "../lib/error-handlers";
 import {
   applySilenceMargins,
   findSilentRanges,
@@ -30,7 +31,7 @@ export async function detectClipSilence(clip: Clip, asset: MediaAsset, options: 
   }
 
   const mediaPath = getAudioPreviewMediaPath(asset);
-  const stat = await getFileStat(mediaPath).catch(() => undefined);
+  const stat = await getFileStat(mediaPath).catch(logError("silenceDetection"));
   const size = asset.size ?? stat?.size;
   if (typeof size === 'number' && size > NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES) {
     return detectNativeClipSilence(clip, mediaPath, options);
@@ -105,6 +106,6 @@ async function decodeAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
   try {
     return await context.decodeAudioData(arrayBuffer.slice(0));
   } finally {
-    await context.close().catch(() => undefined);
+    await context.close().catch(logError("silenceDetection"));
   }
 }
