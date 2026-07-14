@@ -764,6 +764,8 @@ export interface BaseClip {
   motionType?: ClipMotionType;
   /** AI情感基调分析结果 */
   emotionAnalysis?: import('./ai-emotion-tone').EmotionAnalysis;
+  /** AI 本地降噪设置 */
+  aiLocalDenoise?: ClipAILocalDenoise;
 }
 
 export interface AIColorHistoryEntry {

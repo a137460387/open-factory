@@ -4689,3 +4689,30 @@ describe('effects chain export integration', () => {
     expect(plan.filterComplex).toBeTruthy();
   });
 });
+
+describe('buildHardwareEncoderArgs', () => {
+  const caps = {
+    available: true, version: '6', hasLibx264: true, hasAac: true, hasDrawtext: true, hasLibfreetype: true,
+    hardwareEncoderAvailable: true, hardwareEncoder: 'h264_nvenc',
+    hardwareEncoders: [
+      { id: 'h264_nvenc', name: 'NVENC', vendor: 'nvidia' as const, supportsHevc: false, presets: [{ value: 'p4', label: 'Med' }], defaultCq: 23, supportsBFrames: true },
+      { id: 'hevc_nvenc', name: 'NVENC HEVC', vendor: 'nvidia' as const, supportsHevc: true, presets: [{ value: 'p4', label: 'Med' }], defaultCq: 23, supportsBFrames: true },
+      { id: 'h264_amf', name: 'AMF', vendor: 'amd' as const, supportsHevc: false, presets: [{ value: 'balanced', label: 'Bal' }], defaultCq: 23, supportsBFrames: false },
+      { id: 'h264_qsv', name: 'QSV', vendor: 'intel' as const, supportsHevc: false, presets: [{ value: 'medium', label: 'Med' }], defaultCq: 23, supportsBFrames: false },
+      { id: 'h264_videotoolbox', name: 'VT', vendor: 'apple' as const, supportsHevc: false, presets: [{ value: 'default', label: 'Def' }], defaultCq: 50, supportsBFrames: false },
+      { id: 'h264_vaapi', name: 'VAAPI', vendor: 'vaapi' as const, supportsHevc: false, presets: [{ value: 'default', label: 'Def' }], defaultCq: 23, supportsBFrames: false },
+    ], drawtextWarning: null,
+  };
+  it('NVENC CQP', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc', preset: 'p4', rateControlMode: 'cqp', cq: 20 }, 30, caps, w); expect(a).toContain('h264_nvenc'); expect(a).toContain('-cq'); expect(a).toContain('20'); expect(w).toHaveLength(0); });
+  it('NVENC VBR', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc', rateControlMode: 'vbr', videoBitrate: '8M', maxBitrate: '12M' }, 30, caps, w); expect(a).toContain('8M'); expect(a).toContain('-maxrate'); });
+  it('NVENC CBR', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc', rateControlMode: 'cbr', videoBitrate: '10M' }, 30, caps, w); expect(a).toContain('-bufsize'); });
+  it('AMF', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_amf', rateControlMode: 'cqp', cq: 22 }, 30, caps, w); expect(a).toContain('-qp_i'); });
+  it('QSV', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_qsv', rateControlMode: 'cqp', cq: 24 }, 30, caps, w); expect(a).toContain('-global_quality'); });
+  it('VT', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_videotoolbox', rateControlMode: 'cqp', cq: 75 }, 30, caps, w); expect(a).toContain('-q'); });
+  it('VAAPI', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_vaapi', rateControlMode: 'cqp', cq: 25 }, 30, caps, w); expect(a).toContain('-qp'); });
+  it('GOP', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc', rateControlMode: 'cqp', gopSize: 120 }, 30, caps, w); expect(a).toContain('-g'); expect(a).toContain('120'); });
+  it('B-frames NVENC', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc', rateControlMode: 'cqp', bFrames: 3 }, 30, caps, w); expect(a).toContain('-bf'); });
+  it('B-frames VAAPI skip', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_vaapi', rateControlMode: 'cqp', bFrames: 3 }, 30, caps, w); expect(a).not.toContain('-bf'); });
+  it('fallback', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc' }, 30, { ...caps, hardwareEncoders: [] }, w); expect(a).toContain('libx264'); expect(w).toHaveLength(1); });
+  it('HEVC', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'hevc_nvenc', rateControlMode: 'cqp', cq: 25 }, 30, caps, w); expect(a).toContain('hevc_nvenc'); });
+});
