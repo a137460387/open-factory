@@ -18,6 +18,13 @@ static MOTION_TRACKING_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceL
 static QUALITY_EVALUATION_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareEncoderInfo { id: String, name: String, vendor: String, supports_hevc: bool, presets: Vec<HardwareEncoderPresetOption>, default_cq: u32, supports_b_frames: bool }
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareEncoderPresetOption { value: String, label: String }
 #[cfg(test)]
 pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
@@ -47,6 +54,7 @@ pub struct FfmpegCapabilities {
     has_libvmaf: bool,
     hardware_encoder_available: bool,
     hardware_encoder: Option<String>,
+    hardware_encoders: Vec<HardwareEncoderInfo>,
     drawtext_warning: Option<String>,
 }
 
@@ -495,7 +503,8 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
         has_arnndn,
         has_libvmaf,
         hardware_encoder_available: hardware_encoder.available,
-        hardware_encoder: hardware_encoder.encoder,
+        hardware_encoder: hardware_encoder.encoder.clone(),
+        hardware_encoders: detect_all_hardware_encoders(\&encoders),
         drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {
             Some("Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.".to_string())
         } else {
@@ -517,6 +526,15 @@ fn detect_hardware_encoder(encoders: &str) -> HardwareEncoderProbe {
     }
     probe
 }
+
+fn detect_all_hardware_encoders(encoders: \&str) -> Vec<HardwareEncoderInfo> { hardware_encoder_candidates_for_os(std::env::consts::OS).into_iter().filter(|info| encoder_list_contains(encoders, \&info.id)).collect() }
+fn hardware_encoder_candidates_for_os(os: \&str) -> Vec<HardwareEncoderInfo> { match os { "windows" => vec![hw_nvenc("h264_nvenc","NVENC H264",false),hw_nvenc("hevc_nvenc","NVENC HEVC",true),hw_amf("h264_amf","AMF H264",false),hw_amf("hevc_amf","AMF HEVC",true),hw_qsv("h264_qsv","QSV H264",false),hw_qsv("hevc_qsv","QSV HEVC",true)], "macos" => vec![hw_vt("h264_videotoolbox","VT H264",false),hw_vt("hevc_videotoolbox","VT HEVC",true)], "linux" => vec![hw_vaapi("h264_vaapi","VAAPI H264",false)], _ => vec![] } }
+fn hw_nvenc(id:\&str,name:\&str,hevc:bool)->HardwareEncoderInfo{HardwareEncoderInfo{id:id.to_string(),name:name.to_string(),vendor:"nvidia".to_string(),supports_hevc:hevc,presets:vec![hv("p1","P1"),hv("p2","P2"),hv("p3","P3"),hv("p4","P4"),hv("p5","P5"),hv("p6","P6"),hv("p7","P7")],default_cq:23,supports_b_frames:true}}
+fn hw_amf(id:\&str,name:\&str,hevc:bool)->HardwareEncoderInfo{HardwareEncoderInfo{id:id.to_string(),name:name.to_string(),vendor:"amd".to_string(),supports_hevc:hevc,presets:vec![hv("speed","Speed"),hv("balanced","Balanced"),hv("quality","Quality")],default_cq:23,supports_b_frames:false}}
+fn hw_qsv(id:\&str,name:\&str,hevc:bool)->HardwareEncoderInfo{HardwareEncoderInfo{id:id.to_string(),name:name.to_string(),vendor:"intel".to_string(),supports_hevc:hevc,presets:vec![hv("veryfast","Very Fast"),hv("faster","Faster"),hv("fast","Fast"),hv("medium","Medium"),hv("slow","Slow"),hv("slower","Slower")],default_cq:23,supports_b_frames:false}}
+fn hw_vt(id:\&str,name:\&str,hevc:bool)->HardwareEncoderInfo{HardwareEncoderInfo{id:id.to_string(),name:name.to_string(),vendor:"apple".to_string(),supports_hevc:hevc,presets:vec![hv("default","Default")],default_cq:50,supports_b_frames:false}}
+fn hw_vaapi(id:\&str,name:\&str,hevc:bool)->HardwareEncoderInfo{HardwareEncoderInfo{id:id.to_string(),name:name.to_string(),vendor:"vaapi".to_string(),supports_hevc:hevc,presets:vec![hv("default","Default")],default_cq:23,supports_b_frames:false}}
+fn hv(v:\&str,l:\&str)->HardwareEncoderPresetOption{HardwareEncoderPresetOption{value:v.to_string(),label:l.to_string()}}
 
 fn filter_list_contains(filters: &str, filter_name: &str) -> bool {
     filters

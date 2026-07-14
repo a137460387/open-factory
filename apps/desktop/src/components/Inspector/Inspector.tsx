@@ -2706,10 +2706,10 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">高级校色面板</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">专业调色面板</summary>
             <ProfessionalColorGradingPanel
               clip={clip}
-              onCommitColorCorrection={(patch) => commit({ colorCorrection: patch })}
+              onCommitColorCorrection={(patch: Partial<import('@open-factory/editor-core').ColorCorrection>) => commit({ colorCorrection: patch })}
               onChooseLUT={() => void chooseLut()}
             />
           </details>

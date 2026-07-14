@@ -97,7 +97,7 @@ export interface VolumeEnvelopeMenuRequest {
   clipId: string;
 }
 
-export function ThumbnailTrack({
+function ThumbnailTrack({
   samples,
   media,
   zoom,
@@ -168,7 +168,7 @@ function ThumbnailTrackCell({ sample, asset, left, width }: { sample: TimelineTh
   );
 }
 
-export function Ruler({
+function Ruler({
   ticks,
   zoom,
   width,
@@ -334,7 +334,7 @@ export function Ruler({
   );
 }
 
-export function TrackRow({
+function TrackRow({
   track,
   zoom,
   selectedClipId,
@@ -779,6 +779,40 @@ export function TrackRow({
     </div>
   );
 }
+
+const MemoizedTrackRow = memo(TrackRow, areTrackRowPropsEqual);
+
+function areTrackRowPropsEqual(previous: Parameters<typeof TrackRow>[0], next: Parameters<typeof TrackRow>[0]): boolean {
+  return previous.track === next.track &&
+    previous.zoom === next.zoom &&
+    previous.selectedClipId === next.selectedClipId &&
+    previous.selectedClipIds === next.selectedClipIds &&
+    previous.selectedKeyframe === next.selectedKeyframe &&
+    previous.selectedKeyframes === next.selectedKeyframes &&
+    previous.selectedTrackIds === next.selectedTrackIds &&
+    previous.drag === next.drag &&
+    previous.media === next.media &&
+    previous.virtualWindow === next.virtualWindow &&
+    previous.largeProjectMode === next.largeProjectMode &&
+    previous.rollingTrimActive === next.rollingTrimActive &&
+    previous.slipEditActive === next.slipEditActive &&
+    previous.slideEditActive === next.slideEditActive &&
+    previous.clipGroupByClipId === next.clipGroupByClipId &&
+    previous.colorFilter === next.colorFilter &&
+    previous.projectFrameRate === next.projectFrameRate &&
+    previous.envelopeEditMode === next.envelopeEditMode &&
+    previous.reduceMotion === next.reduceMotion &&
+    previous.collaborationLocksByClipId === next.collaborationLocksByClipId &&
+    previous.transitions === next.transitions &&
+    previous.continuityWarnings === next.continuityWarnings &&
+    previous.colorConsistencyWarnings === next.colorConsistencyWarnings &&
+    previous.sfxSuggestions === next.sfxSuggestions;
+}
+
+const MemoizedThumbnailTrack = memo(ThumbnailTrack);
+const MemoizedRuler = memo(Ruler);
+
+export { MemoizedTrackRow as TrackRow, MemoizedThumbnailTrack as ThumbnailTrack, MemoizedRuler as Ruler };
 
 interface ClipAssetStripsProps {
   clip: Extract<Clip, { type: 'video' }>;
