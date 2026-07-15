@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v4.25.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
+[![Version](https://img.shields.io/badge/version-v4.25.4-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
@@ -133,6 +133,32 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 
 ---
 
+## 🗺️ 功能全景
+
+项目已实现 **15 大类、200+ 功能点**，覆盖专业视频后期制作的完整工作流：
+
+| 模块 | 核心能力 |
+|------|---------|
+| 🎬 核心剪辑 | 多轨时间线、波纹删除、变速、关键帧动画、撤销树、片段组 |
+| 🤖 AI 智能创作 | 45+ AI 功能（粗剪/字幕/调色/降噪/B-roll/蒙太奇/导演模式…）、15+ AI 提供商 |
+| 🎨 画面效果与调色 | 节点式调色、色彩轮、HSL 限定器、LUT、GLSL 着色器、抠像、帧插值 |
+| 🎵 音频处理 | 20 种效果、混音器、Demucs 人声分离、3D 空间音频、节拍检测 |
+| 📝 字幕系统 | Whisper ASR、多语言、翻译、校对、阅读速度、数据字幕 |
+| 📁 媒体管理 | 媒体库/文件夹/标签/评分/版本、代理文件、SQLite FTS5 索引 |
+| 🚀 渲染与分发 | FFmpeg 管线、GPU 编码、渐进式导出、渲染农场、WebDAV 上传 |
+| 🔄 专业互操作 | FCPXML / CMX 3600 EDL / AAF 导入导出 |
+| 🎭 多机位编辑 | 多角度同步、实时切换、AI 推荐切换点 |
+| 📋 项目管理 | 快照、模板、加密(AES-GCM)、健康检查、WebDAV 备份 |
+| ⚙️ 底层架构 | 115 个 Tauri 命令、硬件编解码、SSRF 防护、系统钥匙串 |
+| 🧩 插件与自动化 | 插件系统、宏、操作录制、自动化规则、脚本 |
+| 🎨 界面与体验 | 4 种主题、3+6 工作区布局、中英文国际化、教程引导 |
+| 🤝 协作与分享 | WebSocket 协作、注释、权限、分享包、共享素材库 |
+| 🛠️ 高级工具 | 运动跟踪、隐私检测、屏幕录制、批量转码/水印、审阅模式 |
+
+> 📄 完整功能清单（含状态标记与技术亮点）：[docs/feature-inventory.md](docs/feature-inventory.md)
+
+---
+
 ## 🚀 版本亮点
 
 ### v4.21.0 — 专业互操作性
@@ -149,6 +175,29 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 - ✅ **自动检测** — 智能识别可用 GPU 硬件
 - ✅ **软件降级** — 硬件解码失败时自动回退到软件解码
 - ✅ **批量帧解码** — 预览管线集成的批量解码优化
+
+### v4.25.4 — 工程质量提升
+
+- ✅ **Prettier 格式化** — 全项目代码风格统一
+- ✅ **文档完善** — README、CONTRIBUTING、DEVELOPMENT 文档更新
+- ✅ **测试覆盖提升** — 核心模块单元测试补充
+- ✅ **依赖清理** — 移除冗余依赖，统一版本管理
+
+### v4.25.3 — 应用内语言切换
+
+- ✅ **语言切换** — 支持中文/英文界面切换，设置即时生效
+
+### v4.25.2 — 错误处理与依赖优化
+
+- ✅ **统一错误处理** — 引入 `logError` 工具函数
+- ✅ **Rust 依赖瘦身** — `once_cell` → `LazyLock`，统一 zip 库版本
+- ✅ **前端依赖整理** — Radix UI 组件库迁移与清理
+
+### v4.25.1 — 稳定性修复
+
+- ✅ **AI 内存泄漏修复** — 优化 AI 模型资源释放逻辑
+- ✅ **DB 连接池优化** — 修复连接泄漏和超时回收问题
+- ✅ **E2E 测试恢复** — AI 降噪与多机位测试稳定性提升
 
 ### v4.25.0 — AI 智能创作与性能优化
 
@@ -212,6 +261,7 @@ open-factory/
 - [开发路线图](docs/roadmap.md)
 - [设计目标](docs/design-goals.md)
 - [产品计划](docs/product-plan.md)
+- [功能全景清单](docs/feature-inventory.md)
 
 ---
 
