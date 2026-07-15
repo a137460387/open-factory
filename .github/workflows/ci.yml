@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Audit npm dependencies
+        run: bun audit --audit-level=high
+
       - name: Typecheck
         run: bun run typecheck
 
@@ -149,9 +152,27 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit
 
-      - name: Audit npm dependencies
-        run: bun audit --audit-level=high || exit 1
+      - name: Audit npm dependencies (high level)
+        run: bun audit --audit-level=high
+
+      - name: Audit npm dependencies (moderate level)
+        run: bun audit --audit-level=moderate || true
 
       - name: Audit Rust dependencies (stale check)
         run: cargo audit --stale
         working-directory: apps/desktop/src-tauri
+
+      - name: Audit Rust dependencies (full)
+        run: cargo audit
+        working-directory: apps/desktop/src-tauri
+
+      - name: Check for known advisories
+        run: |
+          echo "## Security Scan Report" >> $GITHUB_STEP_SUMMARY
+          echo "Date: $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### npm audit" >> $GITHUB_STEP_SUMMARY
+          bun audit --json 2>/dev/null | jq -r '.metadata.vulnerabilities | "| Level | Count |\n|-------|-------|\n| critical | .critical |\n| high | .high |\n| moderate | .moderate |\n| low | .low |"' >> $GITHUB_STEP_SUMMARY || true
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### cargo audit" >> $GITHUB_STEP_SUMMARY
+          echo "See job logs for details" >> $GITHUB_STEP_SUMMARY

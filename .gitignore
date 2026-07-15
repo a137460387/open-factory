@@ -108,6 +108,5 @@ apps/desktop/ffprobe.exe
 .superpowers/
 skills/
 
-# Audit and evidence reports (local only)
-docs/audit/
+# Audit evidence reports (local only)
 docs/evidence/
