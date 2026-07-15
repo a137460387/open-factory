@@ -20,17 +20,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost; connect-src ipc: http://ipc.localhost http://asset.localhost https://api.github.com https://github.com; worker-src 'self' blob:",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost; connect-src ipc: http://ipc.localhost http://asset.localhost https://api.github.com https://github.com https://gist.githubusercontent.com; worker-src 'self' blob:",
       "assetProtocol": {
         "enable": true,
         "scope": [
           "$APPDATA/**",
           "$APPCACHE/**",
-          "$DOCUMENT/**",
-          "$DOWNLOAD/**",
-          "$VIDEO/**",
-          "$AUDIO/**",
-          "$PICTURE/**",
           "$TEMP/open-factory-*/**"
         ]
       }

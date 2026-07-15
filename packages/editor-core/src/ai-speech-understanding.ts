@@ -248,11 +248,38 @@ export function understandSpeech(
 // ─── Tokenization ──────────────────────────────────────────
 
 function tokenize(text: string): string[] {
-  // Split on whitespace and punctuation, keep Chinese characters
-  return text
-    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter((t) => t.length > 0);
+  // Split into Chinese character runs and non-Chinese segments
+  const segments = text.split(/([\u4e00-\u9fa5]+)/g);
+  const tokens: string[] = [];
+
+  for (const segment of segments) {
+    if (!segment) continue;
+
+    if (/[\u4e00-\u9fa5]/.test(segment)) {
+      // Chinese segment: generate bigrams + unigrams for better keyword extraction
+      if (segment.length === 1) {
+        tokens.push(segment);
+      } else {
+        // Bigrams capture meaningful two-character words (most Chinese words are 2 chars)
+        for (let i = 0; i < segment.length - 1; i++) {
+          tokens.push(segment.substring(i, i + 2));
+        }
+        // Also include unigrams for single-char word coverage
+        for (let i = 0; i < segment.length; i++) {
+          tokens.push(segment[i]);
+        }
+      }
+    } else {
+      // Non-Chinese segment: split on whitespace and punctuation, keep alphanumeric tokens
+      const words = segment
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((t) => t.length > 0);
+      tokens.push(...words);
+    }
+  }
+
+  return tokens;
 }
 
 // ─── Keyword Extraction ────────────────────────────────────
@@ -270,7 +297,7 @@ function extractKeywords(tokens: string[], maxKeywords: number, minFrequency: nu
   for (const [word, frequency] of freqMap) {
     if (frequency >= minFrequency) {
       // TF-IDF-like score: frequency * inverse document frequency approximation
-      const score = frequency * Math.log(1 + 1 / (frequency + 1));
+      const score = frequency * Math.log(1 + tokens.length / (frequency + 1));
       candidates.push({ word, score, frequency });
     }
   }

@@ -2,11 +2,11 @@ use crate::path_validator::validate_path;
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use base64::{engine::general_purpose, Engine as _};
+use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 
 const SECRET_FILE_NAME: &str = "backup-secrets.json";
@@ -14,6 +14,7 @@ const EXPORT_UPLOAD_SECRET_FILE_NAME: &str = "export-upload-secrets.json";
 const EXPORT_PRESET_SYNC_SECRET_FILE_NAME: &str = "export-preset-sync-secrets.json";
 const EXPORT_HISTORY_FILE_NAME: &str = "export-history.json";
 const WEBDAV_HTTPS_REQUIRED_ERROR: &str = "WebDAV 连接需要使用 HTTPS（仅 localhost 允许 HTTP）";
+const WEBDAV_KEYCHAIN_SERVICE: &str = "open-factory.webdav";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -316,15 +317,21 @@ pub fn write_export_preset_sync_webdav_password(
 }
 
 fn read_password_secret(app: AppHandle, file_name: &str) -> Result<Option<String>, String> {
-    let secret_path = secret_file_path(&app, file_name)?;
-    if !secret_path.exists() {
-        return Ok(None);
+    let account = keyring_account_for_file(file_name);
+    let entry = Entry::new(WEBDAV_KEYCHAIN_SERVICE, &account)
+        .map_err(|error| format!("Unable to open keyring entry: {}", error))?;
+    // Try keyring first
+    match entry.get_password() {
+        Ok(password) => Ok(Some(password)),
+        Err(KeyringError::NoEntry) => {
+            // Migrate from old file-based storage if present
+            migrate_from_file_if_needed(&app, file_name, &entry)
+        }
+        Err(error) => Err(format!(
+            "Unable to read WebDAV password from keyring: {}",
+            error
+        )),
     }
-    let raw = fs::read_to_string(&secret_path)
-        .map_err(|error| format!("Unable to read backup secret: {}", error))?;
-    let secret: BackupSecretFile = serde_json::from_str(&raw)
-        .map_err(|error| format!("Unable to parse backup secret: {}", error))?;
-    decrypt_password(&app_data_dir(&app)?, &secret).map(Some)
 }
 
 fn write_password_secret(
@@ -332,26 +339,80 @@ fn write_password_secret(
     file_name: &str,
     password: Option<String>,
 ) -> Result<(), String> {
-    let secret_path = secret_file_path(&app, file_name)?;
+    let account = keyring_account_for_file(file_name);
+    let entry = Entry::new(WEBDAV_KEYCHAIN_SERVICE, &account)
+        .map_err(|error| format!("Unable to open keyring entry: {}", error))?;
     match password
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
     {
         Some(password) => {
-            let app_dir = app_data_dir(&app)?;
-            let secret = encrypt_password(&app_dir, &password)?;
-            fs::write(
-                &secret_path,
-                serde_json::to_string_pretty(&secret).map_err(|error| error.to_string())?,
-            )
-            .map_err(|error| format!("Unable to write backup secret: {}", error))
+            entry.set_password(&password).map_err(|error| {
+                format!("Unable to write WebDAV password to keyring: {}", error)
+            })?;
+            // Clean up old file if it exists
+            let secret_path = secret_file_path(&app, file_name)?;
+            if secret_path.exists() {
+                let _ = fs::remove_file(&secret_path);
+            }
+            Ok(())
         }
-        None => match fs::remove_file(&secret_path) {
-            Ok(()) => Ok(()),
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(error) => Err(format!("Unable to remove backup secret: {}", error)),
+        None => match entry.delete_credential() {
+            Ok(()) | Err(KeyringError::NoEntry) => {
+                // Also clean up old file
+                let secret_path = secret_file_path(&app, file_name)?;
+                if secret_path.exists() {
+                    let _ = fs::remove_file(&secret_path);
+                }
+                Ok(())
+            }
+            Err(error) => Err(format!(
+                "Unable to remove WebDAV password from keyring: {}",
+                error
+            )),
         },
     }
+}
+
+/// Returns the keyring account name for a given secret file name.
+fn keyring_account_for_file(file_name: &str) -> String {
+    match file_name {
+        SECRET_FILE_NAME => "webdav-backup".to_string(),
+        EXPORT_UPLOAD_SECRET_FILE_NAME => "webdav-export-upload".to_string(),
+        EXPORT_PRESET_SYNC_SECRET_FILE_NAME => "webdav-export-preset-sync".to_string(),
+        _ => file_name.to_string(),
+    }
+}
+
+/// Attempts to read and migrate a password from old file-based storage to keyring.
+/// Returns the password if found in the old format, or None if no old file exists.
+fn migrate_from_file_if_needed(
+    app: &AppHandle,
+    file_name: &str,
+    entry: &Entry,
+) -> Result<Option<String>, String> {
+    let secret_path = secret_file_path(app, file_name)?;
+    if !secret_path.exists() {
+        return Ok(None);
+    }
+    // Try to read from old file-based storage
+    let raw = fs::read_to_string(&secret_path)
+        .map_err(|error| format!("Unable to read backup secret for migration: {}", error))?;
+    let secret: BackupSecretFile = serde_json::from_str(&raw)
+        .map_err(|error| format!("Unable to parse backup secret for migration: {}", error))?;
+    // Decrypt using legacy method
+    let app_dir = app_data_dir(app)?;
+    let password = decrypt_password_legacy(&app_dir, &secret)?;
+    // Store in keyring
+    entry.set_password(&password).map_err(|error| {
+        format!(
+            "Unable to migrate WebDAV password to keyring: {}",
+            error
+        )
+    })?;
+    // Remove old file
+    let _ = fs::remove_file(&secret_path);
+    Ok(Some(password))
 }
 
 pub fn build_webdav_put_args(
@@ -472,25 +533,13 @@ fn is_local_http_webdav_url(url: &reqwest::Url) -> bool {
         .is_some_and(|host| host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1")
 }
 
-fn encrypt_password(app_dir: &Path, password: &str) -> Result<BackupSecretFile, String> {
-    let key = derive_secret_key(app_dir);
-    let nonce = derive_nonce(password);
-    let cipher = Aes256Gcm::new_from_slice(&key).map_err(|error| error.to_string())?;
-    let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce), password.as_bytes())
-        .map_err(|error| format!("Unable to encrypt backup secret: {:?}", error))?;
-    Ok(BackupSecretFile {
-        version: 1,
-        nonce: general_purpose::STANDARD.encode(nonce),
-        ciphertext: general_purpose::STANDARD.encode(ciphertext),
-    })
-}
-
-fn decrypt_password(app_dir: &Path, secret: &BackupSecretFile) -> Result<String, String> {
+/// Legacy decryption for migrating old file-based secrets to keyring.
+/// Uses the old predictable key derivation (SHA-256 of fixed string + app_dir).
+fn decrypt_password_legacy(app_dir: &Path, secret: &BackupSecretFile) -> Result<String, String> {
     if secret.version != 1 {
         return Err("Unsupported backup secret version.".to_string());
     }
-    let key = derive_secret_key(app_dir);
+    let key = derive_secret_key_legacy(app_dir);
     let nonce = general_purpose::STANDARD
         .decode(&secret.nonce)
         .map_err(|error| error.to_string())?;
@@ -504,26 +553,12 @@ fn decrypt_password(app_dir: &Path, secret: &BackupSecretFile) -> Result<String,
     String::from_utf8(plaintext).map_err(|error| error.to_string())
 }
 
-fn derive_secret_key(app_dir: &Path) -> [u8; 32] {
+/// Legacy key derivation — only used for reading old encrypted files during migration.
+fn derive_secret_key_legacy(app_dir: &Path) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(b"open-factory:webdav-backup-password:v1");
     hasher.update(app_dir.to_string_lossy().as_bytes());
     hasher.finalize().into()
-}
-
-fn derive_nonce(password: &str) -> [u8; 12] {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos())
-        .unwrap_or_default();
-    let mut hasher = Sha256::new();
-    hasher.update(now.to_le_bytes());
-    hasher.update(std::process::id().to_le_bytes());
-    hasher.update(password.len().to_le_bytes());
-    let digest = hasher.finalize();
-    let mut nonce = [0u8; 12];
-    nonce.copy_from_slice(&digest[..12]);
-    nonce
 }
 
 fn export_history_path(app: &AppHandle) -> Result<PathBuf, String> {

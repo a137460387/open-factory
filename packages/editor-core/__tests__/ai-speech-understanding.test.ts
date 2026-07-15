@@ -130,5 +130,26 @@ describe('ai-speech-understanding', () => {
         expect(result.keywords[i - 1].score).toBeGreaterThanOrEqual(result.keywords[i].score);
       }
     });
+
+    it('should tokenize Chinese text without spaces using n-gram segmentation', () => {
+      // Chinese text typically has no spaces between words
+      const transcript = '视频编辑是一个有趣的过程视频编辑需要创意和技术视频编辑是核心能力';
+      const result = understandSpeech(transcript, undefined, { minKeywordFrequency: 1 });
+
+      // Should extract meaningful bigrams like '视频', '编辑', '技术'
+      const words = result.keywords.map(k => k.word);
+      expect(words).toContain('视频');
+      expect(words).toContain('编辑');
+      expect(result.keywords.length).toBeGreaterThan(0);
+    });
+
+    it('should extract keywords from continuous Chinese text with repeated phrases', () => {
+      const transcript = '人工智能技术发展迅速人工智能改变生活人工智能前景广阔';
+      const result = understandSpeech(transcript, undefined, { minKeywordFrequency: 1 });
+
+      const aiKeyword = result.keywords.find(k => k.word === '人工');
+      expect(aiKeyword).toBeDefined();
+      expect(aiKeyword!.frequency).toBeGreaterThanOrEqual(3);
+    });
   });
 });

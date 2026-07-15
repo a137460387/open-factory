@@ -460,6 +460,16 @@ async function runSingleTask(task: ExportTask): Promise<void> {
         projectName: failedTask.projectName ?? task.projectName,
       });
     }
+  } finally {
+    // Clean up temp segments directory if it exists (cancel/error/success)
+    try {
+      const tempDir = await getTempSegmentsDir();
+      await removeFile(tempDir).catch(() => {
+        // Ignore cleanup errors — directory may not exist or may be in use
+      });
+    } catch {
+      // Ignore temp dir resolution errors
+    }
   }
 }
 

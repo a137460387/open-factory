@@ -579,6 +579,18 @@ export function buildFfmpegExportPlan(
 ): FfmpegExportPlan {
   const duration = Math.max(project.timeline.duration, 0.001);
   const settings = normalizeSettingsForExportFormat(project.settings);
+
+  // Validate export format
+  const SUPPORTED_FORMATS = new Set([
+    'mp4', 'mov', 'webm', 'mkv', 'avi',
+    'm4a', 'mp3', 'wav', 'aac', 'flac', 'ogg',
+    'gif', 'webp', 'apng', 'png-sequence',
+    'jpg', 'jpeg', 'png', 'bmp', 'tiff',
+  ]);
+  if (!SUPPORTED_FORMATS.has(settings.format)) {
+    throw new Error(`Unsupported export format: "${settings.format}". Supported: ${[...SUPPORTED_FORMATS].join(', ')}`);
+  }
+
   const audioVisualization = settings.outputMode === 'audio-visualization';
   const stemMode = typeof options.stemTrackIndex === 'number' && Number.isFinite(options.stemTrackIndex);
   const audioOnly = !audioVisualization && (settings.outputMode === 'audio' || settings.format === 'm4a' || stemMode);

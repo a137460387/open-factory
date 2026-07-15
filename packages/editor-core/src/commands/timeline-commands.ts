@@ -297,6 +297,21 @@ export interface ProjectAccessor {
   setProject(project: Project): void;
 }
 
+/**
+ * Throws if any of the given clip IDs belong to a locked track.
+ * Used by clip-modifying commands to prevent editing locked tracks.
+ */
+function assertClipsNotOnLockedTrack(timeline: Timeline, clipIds: string[]): void {
+  const ids = new Set(clipIds);
+  for (const track of timeline.tracks) {
+    if (track.locked && track.clips.some((clip) => ids.has(clip.id))) {
+      throw new Error(
+        `Cannot modify clips on locked track "${track.name || track.id}". Unlock the track first.`,
+      );
+    }
+  }
+}
+
 export class NewProjectCommand implements Command {
   description: string;
   private before?: Project;
@@ -3313,6 +3328,7 @@ export class MoveClipCommand implements Command {
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(timeline, [this.clipId]);
     this.before ??= findClip(timeline, this.clipId);
     if (!canMoveClipWithProtectedRanges(this.before, this.newStart, this.protectedRanges)) {
       throw new Error('Clip move is blocked by a protected range');
@@ -3346,6 +3362,7 @@ export class MoveClipsCommand implements Command {
   execute(): void {
     const timeline = this.accessor.getTimeline();
     const ids = Object.keys(this.newStartsByClipId);
+    assertClipsNotOnLockedTrack(timeline, ids);
     this.before ??= ids.map((id) => findClip(timeline, id));
     const blocked = this.before.find(
       (clip) =>
@@ -3877,6 +3894,7 @@ export class TrimClipCommand implements Command {
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(timeline, [this.clipId]);
     this.before ??= findClip(timeline, this.clipId);
     const { trimStart, trimEnd } = clampTrimValues(this.before, this.newTrimStart, this.newTrimEnd, this.minDuration);
     const trimmed = trimClip(this.before, trimStart, trimEnd);
@@ -3898,6 +3916,7 @@ export class TrimClipCommand implements Command {
 export class DeleteClipsCommand implements Command {
   readonly description = 'Delete clips';
   private removed: Array<{ clip: Clip; index: number; trackId: string }> = [];
+  private removedTransitions: Transition[] = [];
 
   constructor(
     private readonly accessor: TimelineAccessor,
@@ -3907,11 +3926,19 @@ export class DeleteClipsCommand implements Command {
   execute(): void {
     const uniqueIds = Array.from(new Set(this.clipIds));
     const timeline = this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(timeline, uniqueIds);
     this.removed = uniqueIds.map((id) => findClipLocation(timeline, id));
     const ids = new Set(uniqueIds);
+    // Save and remove transitions referencing deleted clips
+    this.removedTransitions = (timeline.transitions ?? []).filter(
+      (transition) => ids.has(transition.fromClipId) || ids.has(transition.toClipId),
+    );
     this.accessor.setTimeline({
       ...timeline,
       tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) })),
+      transitions: (timeline.transitions ?? []).filter(
+        (transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId),
+      ),
     });
   }
 
@@ -3922,6 +3949,13 @@ export class DeleteClipsCommand implements Command {
     let timeline = this.accessor.getTimeline();
     for (const item of [...this.removed].sort((left, right) => left.index - right.index)) {
       timeline = insertClip(timeline, item.clip, item.index);
+    }
+    // Restore removed transitions
+    if (this.removedTransitions.length > 0) {
+      timeline = {
+        ...timeline,
+        transitions: [...(timeline.transitions ?? []), ...this.removedTransitions],
+      };
     }
     this.accessor.setTimeline(timeline);
   }
@@ -3946,6 +3980,7 @@ export class RippleDeleteCommand implements Command {
       if (uniqueIds.length === 0) {
         throw new Error('No clips selected for ripple delete');
       }
+      assertClipsNotOnLockedTrack(timeline, uniqueIds);
       const ids = new Set(uniqueIds);
       const missingIds = uniqueIds.filter(
         (clipId) => !timeline.tracks.some((track) => track.clips.some((clip) => clip.id === clipId)),
@@ -4223,6 +4258,7 @@ export class SplitClipCommand implements Command {
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(timeline, [this.clipId]);
     this.original ??= findClip(timeline, this.clipId);
     const track = findTrack(timeline, this.original.trackId);
     this.originalIndex = track.clips.findIndex((clip) => clip.id === this.clipId);
@@ -5784,6 +5820,7 @@ export class UpdateClipCommand implements Command {
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(timeline, [this.clipId]);
     this.before ??= findClip(timeline, this.clipId);
     const nextSpeed = typeof this.patch.speed === 'number' ? getClipSpeed({ speed: this.patch.speed }) : undefined;
     const nextColorLabel =
@@ -6013,6 +6050,7 @@ export class BatchUpdateClipCommand implements Command {
 
   execute(): void {
     this.before ??= this.accessor.getTimeline();
+    assertClipsNotOnLockedTrack(this.before, this.updates.map((u) => u.clipId));
     if (!this.after) {
       let timeline = this.before;
       const batchAccessor: TimelineAccessor = {
