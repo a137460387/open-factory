@@ -6,6 +6,13 @@ import {
 } from '../layout/layoutSettings';
 import { saveLayoutSettings } from '../settings/appSettings';
 import { readViewportSize } from '../lib/ui-helpers';
+import {
+  createInitialDialogState,
+  applyDialogUpdate,
+  DIALOG_KEYS,
+  type DialogKey,
+  type DialogState,
+} from './dialog-state';
 
 type Updater<T> = T | ((current: T) => T);
 
@@ -13,12 +20,20 @@ function applyUpdater<T>(current: T, updater: Updater<T>): T {
   return typeof updater === 'function' ? (updater as (current: T) => T)(current) : updater;
 }
 
+/** Generate individual setter names: 'fooOpen' -> 'setFooOpen' */
+function dialogSetterName(key: DialogKey): string {
+  return `set${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+}
+
 export interface EditorUIState {
   layoutSettings: EditorLayoutSettings;
   reviewMode: boolean;
   viewportSize: { width: number; height: number };
 
-  // Dialog / panel open states
+  // Dialog / panel open states (from dialog-state module)
+  dialogState: DialogState;
+
+  // Individual dialog boolean accessors (backward compatibility)
   batchTranscodeOpen: boolean;
   batchWatermarkOpen: boolean;
   batchProjectProcessingOpen: boolean;
@@ -152,294 +167,90 @@ export interface EditorUIState {
   setSmartMontageOpen: (updater: Updater<boolean>) => void;
 }
 
-export const useEditorUIStore = create<EditorUIState>((set, get) => ({
-  layoutSettings: DEFAULT_EDITOR_LAYOUT_SETTINGS,
-  reviewMode: typeof window === 'undefined' ? false : window.location.hash === '#review',
-  viewportSize: readViewportSize(),
+// Generate dialog state entries and setter entries from DIALOG_KEYS
+const initialDialogs = createInitialDialogState();
 
-  // Dialog / panel open states
-  batchTranscodeOpen: false,
-  batchWatermarkOpen: false,
-  batchProjectProcessingOpen: false,
-  lutEditorOpen: false,
-  colorNodeEditorOpen: false,
-  colorAnalysisOpen: false,
-  professionalNleExportOpen: false,
-  mediaPrecheckOpen: false,
-  videoStitchWizardOpen: false,
-  syncCompareOpen: false,
-  sceneReorderOpen: false,
-  styleTransferOpen: false,
-  collaborationNotesOpen: false,
-  operationRecordingOpen: false,
-  complexityScoreOpen: false,
-  smartRecommendationsOpen: false,
-  contentAnalysisOpen: false,
-  profilerOpen: false,
-  rhythmAnalysisOpen: false,
-  timelineSearchOpen: false,
-  snapshotNameOpen: false,
-  snapshotHistoryOpen: false,
-  snapshotCompareOpen: false,
-  timelineCompareOpen: false,
-  releaseWorkflowOpen: false,
-  projectEncryptionSaveOpen: false,
-  projectTemplateOpen: false,
-  settingsOpen: false,
-  beatSyncOpen: false,
-  smartRoughCutOpen: false,
-  aiRoughCutOpen: false,
-  directorModeOpen: false,
-  musicMatchOpen: false,
-  highlightReelOpen: false,
-  contextualTranslationOpen: false,
-  aiChatEditorOpen: false,
-  videoSummaryOpen: false,
-  narrationOpen: false,
-  historyPanelOpen: false,
-  projectDocumentationOpen: false,
-  storyboardOpen: false,
-  macroHistoryOpen: false,
-  projectHealthOpen: false,
-  mediaHealthDashboardOpen: false,
-  duplicateMediaOpen: false,
-  mediaOrganizerOpen: false,
-  shortcutCheatsheetOpen: false,
-  pasteKeyframeDialogOpen: false,
-  previewWindowOpen: false,
-  autoAudioSyncOpen: false,
-  errorKnowledgeOpen: false,
-  sequenceCompareOpen: false,
-  subtitleSyncOpen: false,
-  proxyVerifyOpen: false,
-  formatConverterOpen: false,
-  emotionAnalysisOpen: false,
-  aiSubtitleWorkflowOpen: false,
-  exportHistoryClassifierOpen: false,
-  smartCreationOpen: false,
-  smartDistributionOpen: false,
-  smartMontageOpen: false,
-
-  setLayoutSettings(updater) {
-    set((state) => ({ layoutSettings: applyUpdater(state.layoutSettings, updater) }));
-  },
-
-  setReviewMode(updater) {
-    set((state) => {
-      const next = applyUpdater(state.reviewMode, updater);
-      if (typeof window !== 'undefined') {
-        if (next) {
-          window.location.hash = '#review';
-        } else {
-          history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
-      }
-      return { reviewMode: next };
-    });
-  },
-
-  setViewportSize(size) {
-    set({ viewportSize: size });
-  },
-
-  persistLayoutPatch(patch) {
-    const { layoutSettings } = get();
-    const next = normalizeStoredLayoutSettings({ ...layoutSettings, ...patch }) ?? {
-      ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
+// Build per-dialog initial state and setter factory for the create() call
+function buildDialogEntries() {
+  const entries: Record<string, boolean | ((updater: Updater<boolean>) => void)> = {};
+  for (const key of DIALOG_KEYS) {
+    entries[key] = initialDialogs[key];
+    entries[dialogSetterName(key)] = function (this: { set: (fn: (s: EditorUIState) => Partial<EditorUIState>) => void }, updater: Updater<boolean>) {
+      // `this` is bound by zustand create
     };
-    set({ layoutSettings: next });
-    void saveLayoutSettings(next).catch((error: unknown) => {
-      console.warn('Unable to save layout settings', error);
-    });
-  },
+  }
+  return entries;
+}
 
-  persistPanelVisibilityPatch(patch) {
-    const { layoutSettings, persistLayoutPatch } = get();
-    persistLayoutPatch({ panels: { ...layoutSettings.panels, ...patch } });
-  },
+export const useEditorUIStore = create<EditorUIState>((set, get) => {
+  // Build dialog setters dynamically
+  const dialogSetters = {} as Record<string, (updater: Updater<boolean>) => void>;
+  for (const key of DIALOG_KEYS) {
+    const k = key; // capture for closure
+    dialogSetters[dialogSetterName(k)] = (updater: Updater<boolean>) => {
+      set((state) => {
+        const nextDialog = applyDialogUpdate(state.dialogState, k, updater);
+        return { dialogState: nextDialog, [k]: nextDialog[k] } as Partial<EditorUIState>;
+      });
+    };
+  }
 
-  // Dialog / panel open setters
-  setBatchTranscodeOpen(updater) {
-    set((s) => ({ batchTranscodeOpen: applyUpdater(s.batchTranscodeOpen, updater) }));
-  },
-  setBatchWatermarkOpen(updater) {
-    set((s) => ({ batchWatermarkOpen: applyUpdater(s.batchWatermarkOpen, updater) }));
-  },
-  setBatchProjectProcessingOpen(updater) {
-    set((s) => ({ batchProjectProcessingOpen: applyUpdater(s.batchProjectProcessingOpen, updater) }));
-  },
-  setLutEditorOpen(updater) {
-    set((s) => ({ lutEditorOpen: applyUpdater(s.lutEditorOpen, updater) }));
-  },
-  setColorNodeEditorOpen(updater) {
-    set((s) => ({ colorNodeEditorOpen: applyUpdater(s.colorNodeEditorOpen, updater) }));
-  },
-  setColorAnalysisOpen(updater) {
-    set((s) => ({ colorAnalysisOpen: applyUpdater(s.colorAnalysisOpen, updater) }));
-  },
-  setProfessionalNleExportOpen(updater) {
-    set((s) => ({ professionalNleExportOpen: applyUpdater(s.professionalNleExportOpen, updater) }));
-  },
-  setMediaPrecheckOpen(updater) {
-    set((s) => ({ mediaPrecheckOpen: applyUpdater(s.mediaPrecheckOpen, updater) }));
-  },
-  setVideoStitchWizardOpen(updater) {
-    set((s) => ({ videoStitchWizardOpen: applyUpdater(s.videoStitchWizardOpen, updater) }));
-  },
-  setSyncCompareOpen(updater) {
-    set((s) => ({ syncCompareOpen: applyUpdater(s.syncCompareOpen, updater) }));
-  },
-  setSceneReorderOpen(updater) {
-    set((s) => ({ sceneReorderOpen: applyUpdater(s.sceneReorderOpen, updater) }));
-  },
-  setStyleTransferOpen(updater) {
-    set((s) => ({ styleTransferOpen: applyUpdater(s.styleTransferOpen, updater) }));
-  },
-  setCollaborationNotesOpen(updater) {
-    set((s) => ({ collaborationNotesOpen: applyUpdater(s.collaborationNotesOpen, updater) }));
-  },
-  setOperationRecordingOpen(updater) {
-    set((s) => ({ operationRecordingOpen: applyUpdater(s.operationRecordingOpen, updater) }));
-  },
-  setComplexityScoreOpen(updater) {
-    set((s) => ({ complexityScoreOpen: applyUpdater(s.complexityScoreOpen, updater) }));
-  },
-  setSmartRecommendationsOpen(updater) {
-    set((s) => ({ smartRecommendationsOpen: applyUpdater(s.smartRecommendationsOpen, updater) }));
-  },
-  setContentAnalysisOpen(updater) {
-    set((s) => ({ contentAnalysisOpen: applyUpdater(s.contentAnalysisOpen, updater) }));
-  },
-  setProfilerOpen(updater) {
-    set((s) => ({ profilerOpen: applyUpdater(s.profilerOpen, updater) }));
-  },
-  setRhythmAnalysisOpen(updater) {
-    set((s) => ({ rhythmAnalysisOpen: applyUpdater(s.rhythmAnalysisOpen, updater) }));
-  },
-  setTimelineSearchOpen(updater) {
-    set((s) => ({ timelineSearchOpen: applyUpdater(s.timelineSearchOpen, updater) }));
-  },
-  setSnapshotNameOpen(updater) {
-    set((s) => ({ snapshotNameOpen: applyUpdater(s.snapshotNameOpen, updater) }));
-  },
-  setSnapshotHistoryOpen(updater) {
-    set((s) => ({ snapshotHistoryOpen: applyUpdater(s.snapshotHistoryOpen, updater) }));
-  },
-  setSnapshotCompareOpen(updater) {
-    set((s) => ({ snapshotCompareOpen: applyUpdater(s.snapshotCompareOpen, updater) }));
-  },
-  setTimelineCompareOpen(updater) {
-    set((s) => ({ timelineCompareOpen: applyUpdater(s.timelineCompareOpen, updater) }));
-  },
-  setReleaseWorkflowOpen(updater) {
-    set((s) => ({ releaseWorkflowOpen: applyUpdater(s.releaseWorkflowOpen, updater) }));
-  },
-  setProjectEncryptionSaveOpen(updater) {
-    set((s) => ({ projectEncryptionSaveOpen: applyUpdater(s.projectEncryptionSaveOpen, updater) }));
-  },
-  setProjectTemplateOpen(updater) {
-    set((s) => ({ projectTemplateOpen: applyUpdater(s.projectTemplateOpen, updater) }));
-  },
-  setSettingsOpen(updater) {
-    set((s) => ({ settingsOpen: applyUpdater(s.settingsOpen, updater) }));
-  },
-  setBeatSyncOpen(updater) {
-    set((s) => ({ beatSyncOpen: applyUpdater(s.beatSyncOpen, updater) }));
-  },
-  setSmartRoughCutOpen(updater) {
-    set((s) => ({ smartRoughCutOpen: applyUpdater(s.smartRoughCutOpen, updater) }));
-  },
-  setAiRoughCutOpen(updater) {
-    set((s) => ({ aiRoughCutOpen: applyUpdater(s.aiRoughCutOpen, updater) }));
-  },
-  setDirectorModeOpen(updater) {
-    set((s) => ({ directorModeOpen: applyUpdater(s.directorModeOpen, updater) }));
-  },
-  setMusicMatchOpen(updater) {
-    set((s) => ({ musicMatchOpen: applyUpdater(s.musicMatchOpen, updater) }));
-  },
-  setHighlightReelOpen(updater) {
-    set((s) => ({ highlightReelOpen: applyUpdater(s.highlightReelOpen, updater) }));
-  },
-  setContextualTranslationOpen(updater) {
-    set((s) => ({ contextualTranslationOpen: applyUpdater(s.contextualTranslationOpen, updater) }));
-  },
-  setAiChatEditorOpen(updater) {
-    set((s) => ({ aiChatEditorOpen: applyUpdater(s.aiChatEditorOpen, updater) }));
-  },
-  setVideoSummaryOpen(updater) {
-    set((s) => ({ videoSummaryOpen: applyUpdater(s.videoSummaryOpen, updater) }));
-  },
-  setNarrationOpen(updater) {
-    set((s) => ({ narrationOpen: applyUpdater(s.narrationOpen, updater) }));
-  },
-  setHistoryPanelOpen(updater) {
-    set((s) => ({ historyPanelOpen: applyUpdater(s.historyPanelOpen, updater) }));
-  },
-  setProjectDocumentationOpen(updater) {
-    set((s) => ({ projectDocumentationOpen: applyUpdater(s.projectDocumentationOpen, updater) }));
-  },
-  setStoryboardOpen(updater) {
-    set((s) => ({ storyboardOpen: applyUpdater(s.storyboardOpen, updater) }));
-  },
-  setMacroHistoryOpen(updater) {
-    set((s) => ({ macroHistoryOpen: applyUpdater(s.macroHistoryOpen, updater) }));
-  },
-  setProjectHealthOpen(updater) {
-    set((s) => ({ projectHealthOpen: applyUpdater(s.projectHealthOpen, updater) }));
-  },
-  setMediaHealthDashboardOpen(updater) {
-    set((s) => ({ mediaHealthDashboardOpen: applyUpdater(s.mediaHealthDashboardOpen, updater) }));
-  },
-  setDuplicateMediaOpen(updater) {
-    set((s) => ({ duplicateMediaOpen: applyUpdater(s.duplicateMediaOpen, updater) }));
-  },
-  setMediaOrganizerOpen(updater) {
-    set((s) => ({ mediaOrganizerOpen: applyUpdater(s.mediaOrganizerOpen, updater) }));
-  },
-  setShortcutCheatsheetOpen(updater) {
-    set((s) => ({ shortcutCheatsheetOpen: applyUpdater(s.shortcutCheatsheetOpen, updater) }));
-  },
-  setPasteKeyframeDialogOpen(updater) {
-    set((s) => ({ pasteKeyframeDialogOpen: applyUpdater(s.pasteKeyframeDialogOpen, updater) }));
-  },
-  setPreviewWindowOpen(updater) {
-    set((s) => ({ previewWindowOpen: applyUpdater(s.previewWindowOpen, updater) }));
-  },
-  setAutoAudioSyncOpen(updater) {
-    set((s) => ({ autoAudioSyncOpen: applyUpdater(s.autoAudioSyncOpen, updater) }));
-  },
-  setErrorKnowledgeOpen(updater) {
-    set((s) => ({ errorKnowledgeOpen: applyUpdater(s.errorKnowledgeOpen, updater) }));
-  },
-  setSequenceCompareOpen(updater) {
-    set((s) => ({ sequenceCompareOpen: applyUpdater(s.sequenceCompareOpen, updater) }));
-  },
-  setSubtitleSyncOpen(updater) {
-    set((s) => ({ subtitleSyncOpen: applyUpdater(s.subtitleSyncOpen, updater) }));
-  },
-  setProxyVerifyOpen(updater) {
-    set((s) => ({ proxyVerifyOpen: applyUpdater(s.proxyVerifyOpen, updater) }));
-  },
-  setFormatConverterOpen(updater) {
-    set((s) => ({ formatConverterOpen: applyUpdater(s.formatConverterOpen, updater) }));
-  },
-  setEmotionAnalysisOpen(updater) {
-    set((s) => ({ emotionAnalysisOpen: applyUpdater(s.emotionAnalysisOpen, updater) }));
-  },
-  setAiSubtitleWorkflowOpen(updater) {
-    set((s) => ({ aiSubtitleWorkflowOpen: applyUpdater(s.aiSubtitleWorkflowOpen, updater) }));
-  },
-  setExportHistoryClassifierOpen(updater) {
-    set((s) => ({ exportHistoryClassifierOpen: applyUpdater(s.exportHistoryClassifierOpen, updater) }));
-  },
-  setSmartCreationOpen(updater) {
-    set((s) => ({ smartCreationOpen: applyUpdater(s.smartCreationOpen, updater) }));
-  },
-  setSmartDistributionOpen(updater) {
-    set((s) => ({ smartDistributionOpen: applyUpdater(s.smartDistributionOpen, updater) }));
-  },
-  setSmartMontageOpen(updater) {
-    set((s) => ({ smartMontageOpen: applyUpdater(s.smartMontageOpen, updater) }));
-  },
-}));
+  // Build individual boolean entries from DIALOG_KEYS
+  const dialogBooleans = {} as Record<DialogKey, boolean>;
+  for (const key of DIALOG_KEYS) {
+    dialogBooleans[key] = initialDialogs[key];
+  }
+
+  return {
+    layoutSettings: DEFAULT_EDITOR_LAYOUT_SETTINGS,
+    reviewMode: typeof window === 'undefined' ? false : window.location.hash === '#review',
+    viewportSize: readViewportSize(),
+
+    // Dialog state (single source of truth)
+    dialogState: initialDialogs,
+
+    // Individual dialog booleans (derived from dialogState for backward compatibility)
+    ...dialogBooleans,
+
+    // Dynamically generated setters
+    ...dialogSetters,
+
+    setLayoutSettings(updater) {
+      set((state) => ({ layoutSettings: applyUpdater(state.layoutSettings, updater) }));
+    },
+
+    setReviewMode(updater) {
+      set((state) => {
+        const next = applyUpdater(state.reviewMode, updater);
+        if (typeof window !== 'undefined') {
+          if (next) {
+            window.location.hash = '#review';
+          } else {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+        }
+        return { reviewMode: next };
+      });
+    },
+
+    setViewportSize(size) {
+      set({ viewportSize: size });
+    },
+
+    persistLayoutPatch(patch) {
+      const { layoutSettings } = get();
+      const next = normalizeStoredLayoutSettings({ ...layoutSettings, ...patch }) ?? {
+        ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
+      };
+      set({ layoutSettings: next });
+      void saveLayoutSettings(next).catch((error: unknown) => {
+        console.warn('Unable to save layout settings', error);
+      });
+    },
+
+    persistPanelVisibilityPatch(patch) {
+      const { layoutSettings, persistLayoutPatch } = get();
+      persistLayoutPatch({ panels: { ...layoutSettings.panels, ...patch } });
+    },
+  } as EditorUIState;
+});
