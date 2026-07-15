@@ -14,3 +14,29 @@ The following dependency advisories are known and tracked. They are not marked a
 
 - `glib@0.18.5`: soundness advisory in the Rust GTK/glib stack; waiting for Tauri upstream updates.
 - 16 unmaintained transitive Rust dependency advisories in the current Tauri/webview dependency graph; waiting for Tauri upstream updates.
+
+## Audit Fix History
+
+### 2026-07-15 — 全量代码审计修复
+
+基于 v4.25.4 全量代码审计（100 个问题），已完成以下安全和高优先级修复：
+
+**Critical 修复：**
+- **C1**: WebDAV 密码加密密钥可预测 → 已迁移到系统 keyring 存储（`backup.rs`）
+- **C2**: 中文分词完全失效 → 已实现 n-gram 分词策略（`ai-speech-understanding.ts`）
+
+**High 安全修复：**
+- **H1**: WebDAV nonce 可预测 → 随 C1 迁移到 keyring，不再需要 nonce
+- **H2**: Asset Protocol scope 过宽 → 已收窄至 `$APPDATA`/`$APPCACHE`/`$TEMP`
+- **H3**: CSP connect-src 缺少域名 → 已补充 `gist.githubusercontent.com`
+
+**High 业务逻辑修复：**
+- **H10**: TF-IDF 评分公式错误 → 已修正
+- **H11**: 导出取消后无资源清理 → 已添加 finally 清理块
+- **H12**: 导出格式校验缺失 → 已添加白名单校验
+- **H14**: 轨道锁定未被命令检查 → 已为 6 个关键命令添加锁定检查
+- **H15**: DeleteClipsCommand 未清理 Transition → 已修复
+
+**依赖审计：**
+- npm audit: ✅ 0 漏洞
+- cargo audit: 已知 2 个上游警告（atty 未维护），等待 Tauri 上游更新
