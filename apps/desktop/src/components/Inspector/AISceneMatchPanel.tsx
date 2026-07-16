@@ -58,7 +58,7 @@ export function AISceneMatchPanel({
   const [contrast, setContrast] = useState<SceneMatchCard[]>([]);
   const [error, setError] = useState<string>();
   const abortRef = useRef(false);
-  const prevClipIdRef = useRef<string>();
+  const prevClipIdRef = useRef<string | undefined>(undefined);
 
   // Clear results when clip changes
   useEffect(() => {

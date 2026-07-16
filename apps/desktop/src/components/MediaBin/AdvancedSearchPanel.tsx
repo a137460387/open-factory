@@ -47,7 +47,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
   } = useMediaIndexStore();
 
   const [expanded, setExpanded] = useState(false);
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 初始化项目路径
   useEffect(() => {

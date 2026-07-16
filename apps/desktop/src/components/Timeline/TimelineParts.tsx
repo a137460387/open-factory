@@ -495,7 +495,7 @@ function TrackRow({
   const frequencyBands = useAudioMeterStore(
     (state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands(),
   );
-  const mediaById = useMemo(() => new Map(media.map((asset) => [asset.id, asset])), [media]);
+  const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
   const selectedTrack = selectedTrackIds.includes(track.id);
   const sortedClips = useMemo(
@@ -2031,10 +2031,7 @@ function WaveformStrip({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasWidth = Math.max(1, Math.round(pixelWidth));
   const canvasHeight = compact ? 16 : 40;
-  const pointsPerSecond = useMemo(
-    () => Math.max(8, Math.ceil((canvasWidth / Math.max(0.001, clipDuration)) * Math.max(0.1, resolutionScale))),
-    [canvasWidth, clipDuration, resolutionScale],
-  );
+  const pointsPerSecond = Math.max(8, Math.ceil((canvasWidth / Math.max(0.001, clipDuration)) * Math.max(0.1, resolutionScale)));
 
   useEffect(() => {
     let canceled = false;

@@ -2983,7 +2983,7 @@ function MediaCard({
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
   const [hoverPreviewActive, setHoverPreviewActive] = useState(false);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const labelColor = metadata?.labelColor;
   const rating = metadata?.rating ?? 0;
   const flag = metadata?.flag;

@@ -257,7 +257,7 @@ function SyncCompareSideView({
 }: {
   side: 'left' | 'right';
   clip: Clip;
-  canvasRef: RefObject<HTMLCanvasElement>;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
   time: number;
   playing: boolean;
   fps: number;

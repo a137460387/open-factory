@@ -53,7 +53,7 @@ export function useEditorShellProfiler(): {
   const profilerReport = useEditorFeatureStore((s) => s.profilerReport);
   const setProfilerReport = useEditorFeatureStore((s) => s.setProfilerReport);
 
-  const profilerRecordingRef = useRef<ProfilerRecordingBuffer>();
+  const profilerRecordingRef = useRef<ProfilerRecordingBuffer | null>(null);
   const latestProfilerTextureBytesRef = useRef(0);
 
   const stopProfilerRecording = useCallback(() => {
@@ -79,7 +79,7 @@ export function useEditorShellProfiler(): {
     } catch (error) {
       console.warn('Unable to finalize profiler recording', error);
     } finally {
-      profilerRecordingRef.current = undefined;
+      profilerRecordingRef.current = null;
       setProfilerRecording(false);
     }
   }, []);
@@ -105,7 +105,7 @@ export function useEditorShellProfiler(): {
       setProfilerRecording(true);
     } catch (error) {
       console.warn('Unable to start profiler recording', error);
-      profilerRecordingRef.current = undefined;
+      profilerRecordingRef.current = null;
       setProfilerRecording(false);
     }
   }, []);

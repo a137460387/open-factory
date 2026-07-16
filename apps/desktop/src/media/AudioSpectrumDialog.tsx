@@ -40,7 +40,7 @@ export default function AudioSpectrumDialog({
   const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<SpectrumSelectionRange>();
   const [contextMenu, setContextMenu] = useState<SpectrumContextMenuState>();
-  const dragStartRef = useRef<number>();
+  const dragStartRef = useRef<number | undefined>(undefined);
   const duration = Math.max(0.001, asset.duration || 1);
 
   useEffect(() => {

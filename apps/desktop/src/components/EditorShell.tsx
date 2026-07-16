@@ -877,22 +877,13 @@ export function EditorShell() {
     discardExportQueueRecovery,
   } = useExportQueue(project);
 
-  const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
-  const selectedClips = useMemo(
-    () => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)),
-    [project, selectedClipIds],
-  );
-  const selectedClipMedia = useMemo(
-    () =>
-      selectedClip && 'mediaId' in selectedClip
-        ? project.media.find((asset) => asset.id === selectedClip.mediaId)
-        : undefined,
-    [project.media, selectedClip],
-  );
-  const allTimelineClips = useMemo(
-    () => project.timeline.tracks.flatMap((track) => track.clips),
-    [project.timeline.tracks],
-  );
+  const selectedClip = selectClipById(project, selectedClipId);
+  const selectedClips = selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip));
+  const selectedClipMedia =
+    selectedClip && 'mediaId' in selectedClip
+      ? project.media.find((asset) => asset.id === selectedClip.mediaId)
+      : undefined;
+  const allTimelineClips = project.timeline.tracks.flatMap((track) => track.clips);
   const visualTimelineClipRefs = useMemo(
     () =>
       project.timeline.tracks
@@ -1024,10 +1015,7 @@ export function EditorShell() {
 
   const saveProject = saveProjectFn;
 
-  const selectedClipLocked = useMemo(
-    () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
-    [project.timeline.tracks, selectedClip],
-  );
+  const selectedClipLocked = Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked);
 
   const canCreateMulticamSequence = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {
@@ -1139,18 +1127,12 @@ export function EditorShell() {
     setCustomSplitLayouts,
   });
 
-  const syncCompareClipRefs = useMemo(
-    () => findSyncCompareClipRefs(project.timeline, selectedClipIds),
-    [project.timeline, selectedClipIds],
-  );
+  const syncCompareClipRefs = findSyncCompareClipRefs(project.timeline, selectedClipIds);
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
   const canOpenSceneDetection = Boolean(selectedClip && selectedClipMedia && selectedClip.type === 'video');
-  const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
-  const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
-  const mediaContentAnalysis = useMemo(
-    () => summarizeContentAnalysisByMedia(contentAnalysisTargets),
-    [contentAnalysisTargets],
-  );
+  const canOpenSceneReorder = selectedClips.filter(isSceneReorderClip).length >= 2;
+  const contentAnalysisTargets = collectContentAnalysisTargets(project);
+  const mediaContentAnalysis = summarizeContentAnalysisByMedia(contentAnalysisTargets);
   const speakerDiarizationTarget = useMemo(
     () =>
       findSpeakerDiarizationTarget(
@@ -1172,17 +1154,13 @@ export function EditorShell() {
   )
     ? autoAudioSyncPrimaryClipId!
     : (autoAudioSyncTargets[0]?.clip.id ?? '');
-  const autoAudioSyncDialogTargets = useMemo(
-    () =>
-      autoAudioSyncTargets.map((target) => ({
-        clipId: target.clip.id,
-        clipName: target.clip.name,
-        mediaName: target.asset.name,
-        trackName: target.track.name,
-        start: target.clip.start,
-      })),
-    [autoAudioSyncTargets],
-  );
+  const autoAudioSyncDialogTargets = autoAudioSyncTargets.map((target) => ({
+    clipId: target.clip.id,
+    clipName: target.clip.name,
+    mediaName: target.asset.name,
+    trackName: target.track.name,
+    start: target.clip.start,
+  }));
   const canSeparateSelectedAudio =
     canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canRunSpeakerDiarization = Boolean(speakerDiarizationTarget && !speakerDiarizationRunning);
@@ -1212,20 +1190,14 @@ export function EditorShell() {
     setBeatSyncManualBpm(detectedBeatBpm ? String(detectedBeatBpm) : '');
   }, [detectedBeatBpm, selectedClip?.id]);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
-  const effectivePanels = useMemo(
-    () => getEffectivePanelState(layoutSettings, viewportSize.width),
-    [layoutSettings, viewportSize.width],
-  );
-  const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
-  const workspaceLayouts = useMemo<WorkspaceLayoutDefinition[]>(
-    () => [
-      ...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter(
-        (layout): layout is WorkspaceLayoutDefinition => Boolean(layout),
-      ),
-      ...layoutSettings.customWorkspaceLayouts,
-    ],
-    [layoutSettings],
-  );
+  const effectivePanels = getEffectivePanelState(layoutSettings, viewportSize.width);
+  const reviewVisibility = getReviewModeShellVisibility(reviewMode);
+  const workspaceLayouts: WorkspaceLayoutDefinition[] = [
+    ...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter(
+      (layout): layout is WorkspaceLayoutDefinition => Boolean(layout),
+    ),
+    ...layoutSettings.customWorkspaceLayouts,
+  ];
   const editorGridRows = reviewMode ? 'auto minmax(0,1fr)' : `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
   const mainGridColumns = reviewMode
     ? 'minmax(0,1fr)'

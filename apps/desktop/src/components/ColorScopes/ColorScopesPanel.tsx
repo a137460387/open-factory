@@ -15,7 +15,7 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
   const theme = useTheme();
   const [tab, setTab] = useState<ScopeTab>('histogram');
   const [scopes, setScopes] = useState<ColorScopes>();
-  const workerRef = useRef<Worker>();
+  const workerRef = useRef<Worker | null>(null);
   const drawColors = useMemo<ScopeDrawColors>(
     () => ({
       background: theme.colors.scopeBackground,
@@ -54,7 +54,7 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
   useEffect(
     () => () => {
       workerRef.current?.terminate();
-      workerRef.current = undefined;
+      workerRef.current = null;
     },
     [],
   );

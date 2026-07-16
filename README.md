@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v4.26.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
+[![Version](https://img.shields.io/badge/version-v4.29.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-ffc131)](https://tauri.app)
 
 **本地优先的专业桌面视频编辑器** — 基于 Tauri 2、Rust、React、TypeScript 构建，支持 AI 智能编辑和插件扩展。零登录、零遥测、零云端上传，所有媒体文件与项目数据始终保留在您的本地设备上。
@@ -290,7 +290,8 @@ open-factory/
 
 | 层级 | 技术 |
 |------|------|
-| 前端框架 | React + TypeScript |
+| 前端框架 | React 19 + TypeScript 5.9 |
+| CSS 框架 | Tailwind CSS 4 (Oxide 引擎) |
 | 桌面运行时 | Tauri 2 (WebView2) |
 | 后端语言 | Rust |
 | 包管理器 | Bun |

@@ -171,7 +171,7 @@ export function PreviewCanvas({
   const frameSearchInputRef = useRef<HTMLInputElement | null>(null);
   const rendererRef = useRef(new PreviewRenderer());
   const originalRendererRef = useRef(new PreviewRenderer());
-  const previousTimelineRef = useRef<Timeline | undefined>();
+  const previousTimelineRef = useRef<Timeline | undefined>(undefined);
   const scopeFrameCounterRef = useRef(0);
   const liveCutSessionRef = useRef<{ clipId: string; command: RecordAngleCutCommand } | null>(null);
   const project = useEditorStore((state) => state.project);

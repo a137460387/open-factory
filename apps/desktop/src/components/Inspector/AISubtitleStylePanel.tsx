@@ -58,7 +58,7 @@ export function AISubtitleStylePanel({
   const [results, setResults] = useState<StyleRecommendationCard[]>([]);
   const [error, setError] = useState<string>();
   const abortRef = useRef(false);
-  const prevClipIdRef = useRef<string>();
+  const prevClipIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (prevClipIdRef.current !== clip.id) {

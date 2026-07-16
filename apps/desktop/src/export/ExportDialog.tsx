@@ -464,20 +464,19 @@ function PipelineSection({
   onCreatePublishTemplate(): void;
 }) {
   const t = zhCN.exportDialog.pipeline;
-  const downstreamMap = useMemo(() => {
+  const downstreamMap = new Map<string, string[]>();
+  {
     const nameById = new Map(pipeline.nodes.map((node) => [node.id, node.name]));
-    const map = new Map<string, string[]>();
     for (const edge of pipeline.edges) {
-      const existing = map.get(edge.from);
+      const existing = downstreamMap.get(edge.from);
       const name = nameById.get(edge.to) ?? edge.to;
       if (existing) {
         existing.push(name);
       } else {
-        map.set(edge.from, [name]);
+        downstreamMap.set(edge.from, [name]);
       }
     }
-    return map;
-  }, [pipeline.nodes, pipeline.edges]);
+  }
   return (
     <div
       className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
@@ -772,9 +771,8 @@ export function ExportDialog({
     result: QualityEvaluationResult;
   }>();
   const [qualityError, setQualityError] = useState<string>();
-  const suggestedRenderFarmInstances = useMemo(
-    () => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency),
-    [],
+  const suggestedRenderFarmInstances = suggestRenderFarmInstances(
+    typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency,
   );
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
@@ -806,9 +804,9 @@ export function ExportDialog({
   const pendingCompletionAction = useRef<ExportCompletionAction>('none');
   const completionActionHandled = useRef(false);
   const enqueueInFlight = useRef(false);
-  const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
-  const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
-  const batchSequences = useMemo(() => getSyncedProjectSequences(project), [project]);
+  const selectedPreset = getExportPreset(presetId, presets);
+  const exportSettings = normalizeDraftSettings(draftSettings);
+  const batchSequences = getSyncedProjectSequences(project);
   const sequenceBatchRows = useMemo(
     () =>
       batchSequences.map((sequence, index) => ({
@@ -832,7 +830,7 @@ export function ExportDialog({
   const isAudioOnly =
     !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
   const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
-  const subtitleLanguageOptions = useMemo(() => collectSubtitleLanguageOptions(project), [project]);
+  const subtitleLanguageOptions = collectSubtitleLanguageOptions(project);
   const loudnessNormalizationEligible = supportsLoudnessNormalization(
     exportSettings.format ?? 'mp4',
     exportSettings.outputMode,
@@ -913,7 +911,7 @@ export function ExportDialog({
       }),
     [exportOptimizationSettings, exportSettings, project, renderFarmEnabled, suggestedRenderFarmInstances],
   );
-  const lastExportDurationSeconds = useMemo(() => getLastExportDurationSeconds(history), [history]);
+  const lastExportDurationSeconds = getLastExportDurationSeconds(history);
   const exportCostHistoryError = useMemo(
     () =>
       calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
@@ -932,21 +930,12 @@ export function ExportDialog({
   );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
-  const progressiveExportSupported = useMemo(() => isProgressiveExportSupported(exportSettings), [exportSettings]);
+  const progressiveExportSupported = isProgressiveExportSupported(exportSettings);
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
-  const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
-  const inOutExportRanges = useMemo(
-    () => resolveInOutExportRanges(project, inPoint, outPoint),
-    [inPoint, outPoint, project],
-  );
-  const selectedClipExportRange = useMemo(
-    () => resolveSelectedClipExportRange(project, selectedClipIds),
-    [project, selectedClipIds],
-  );
-  const activeExportRanges = useMemo(
-    () => resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange),
-    [exportRangeMode, inOutExportRanges, selectedClipExportRange],
-  );
+  const spatialDenoiseClipCount = countSpatialDenoiseClips(project);
+  const inOutExportRanges = resolveInOutExportRanges(project, inPoint, outPoint);
+  const selectedClipExportRange = resolveSelectedClipExportRange(project, selectedClipIds);
+  const activeExportRanges = resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange);
   const rangeModeAvailable = {
     all: true,
     'in-out': inOutExportRanges.length > 0,
@@ -956,10 +945,7 @@ export function ExportDialog({
     () => sortCodecCompareResults(codecCompareResults, codecCompareSort.key, codecCompareSort.direction),
     [codecCompareResults, codecCompareSort],
   );
-  const codecCompareRecommendation = useMemo(
-    () => recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode),
-    [codecCompareRecommendationMode, codecCompareResults],
-  );
+  const codecCompareRecommendation = recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode);
   const versionedBatchReportRows = useMemo(
     () =>
       buildVersionedExportReportRows(tasks, { batchId: latestVersionedBatchId, fileSizes: versionedBatchFileSizes }),
@@ -4205,7 +4191,7 @@ function AudioVisualizationSection({
   const backgroundColor2 = background.type === 'gradient' ? background.color2 : '#1d4ed8';
   const backgroundPath = background.type === 'image' ? background.path : '';
   const selectedThemeId = visualization.themeId ?? MANUAL_AUDIO_VISUALIZATION_THEME_ID;
-  const themeOptions = useMemo(() => [...BUILTIN_AUDIO_VISUALIZATION_THEMES, ...customThemes], [customThemes]);
+  const themeOptions = [...BUILTIN_AUDIO_VISUALIZATION_THEMES, ...customThemes];
 
   useEffect(() => {
     let canceled = false;
