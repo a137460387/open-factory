@@ -247,6 +247,16 @@ export const TRANSITION_TYPES: TransitionType[] = [
   'shape-heart',
   'shape-star',
   'motion-blur-wipe',
+  'push-left',
+  'push-right',
+  'push-up',
+  'push-down',
+  'light-leak',
+  'glitch',
+  'flip-horizontal',
+  'flip-vertical',
+  'cube-rotate',
+  'portal',
 ];
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';

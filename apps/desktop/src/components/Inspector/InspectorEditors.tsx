@@ -1,4 +1,13 @@
 import {
+  EASING_PRESETS,
+  getEasingPresetsByCategory,
+  getPresetHandles,
+  isStepsPreset,
+  applyStepsEasing,
+  type EasingPreset,
+  type EasingPresetCategory,
+} from '@open-factory/editor-core';
+import {
   useEffect,
   useMemo,
   useRef,
@@ -769,6 +778,63 @@ export type CurveEditorDrag =
 export type CanvasPoint = { x: number; y: number };
 export type CurveEditorFrame = Keyframe<number>;
 
+/** 缓动预设选择器组件（exported for testing） */
+export function EasingPresetSelector({
+  selectedIds,
+  frames,
+  onApplyPreset,
+}: {
+  selectedIds: string[];
+  frames: CurveEditorFrame[];
+  onApplyPreset: (preset: EasingPreset) => void;
+}) {
+  const [expandedCategory, setExpandedCategory] = useState<EasingPresetCategory | null>(null);
+
+  if (selectedIds.length === 0) return null;
+
+  const categories: { key: EasingPresetCategory; label: string }[] = [
+    { key: 'standard', label: '标准' },
+    { key: 'overshoot', label: '过冲' },
+    { key: 'spring', label: '弹簧' },
+    { key: 'steps', label: '步进' },
+  ];
+
+  return (
+    <div className="mt-1.5 space-y-1" data-testid="easing-preset-selector">
+      <div className="text-[10px] text-[var(--color-text-muted)]">缓动预设</div>
+      <div className="flex flex-wrap gap-1">
+        {categories.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => setExpandedCategory(expandedCategory === cat.key ? null : cat.key)}
+            className={`px-1.5 py-0.5 text-[10px] rounded transition-colors ${
+              expandedCategory === cat.key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted hover:bg-accent text-muted-foreground'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      {expandedCategory && (
+        <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+          {getEasingPresetsByCategory(expandedCategory).map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => onApplyPreset(preset)}
+              className="px-1.5 py-0.5 text-[10px] rounded bg-muted hover:bg-accent transition-colors"
+              title={preset.description}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function KeyframeCurveEditor({
   clip,
   property,
@@ -974,6 +1040,27 @@ export function KeyframeCurveEditor({
         onPointerCancel={handlePointerUp}
         onContextMenu={handleContextMenu}
       />
+      {/* 缓动预设选择器 */}
+      <EasingPresetSelector
+        selectedIds={selectedIds}
+        frames={draft}
+        onApplyPreset={(preset) => {
+          const handles = getPresetHandles(preset.id);
+          if (!handles) return;
+          const updated = draft.map((frame) =>
+            selectedIds.includes(frame.id)
+              ? {
+                  ...frame,
+                  easing: preset.easing,
+                  inHandle: handles.inHandle ?? frame.inHandle,
+                  outHandle: handles.outHandle ?? frame.outHandle,
+                }
+              : frame,
+          );
+          updateDraft(updated);
+          onCommit(normalizeCurveEditorFrames(updated, property, duration));
+        }}
+      />
     </div>
   );
 }
@@ -1073,7 +1160,7 @@ export function drawKeyframeCurveCanvas(
     );
     context.strokeStyle = 'rgba(251,191,36,0.85)';
     context.fillStyle = '#fbbf24';
-    context.lineWidth = 1;
+    context.lineWidth = 1.5;
     for (const handle of [coordinates.inHandle, coordinates.outHandle]) {
       if (!handle) {
         continue;
@@ -1084,13 +1171,27 @@ export function drawKeyframeCurveCanvas(
         duration,
         canvas,
       );
+      // 连线（虚线风格）
+      context.save();
+      context.setLineDash([3, 2]);
       context.beginPath();
       context.moveTo(point.x, point.y);
       context.lineTo(handlePoint.x, handlePoint.y);
       context.stroke();
+      context.restore();
+      // 手柄端点圆圈
       context.beginPath();
-      context.arc(handlePoint.x, handlePoint.y, 3.5, 0, Math.PI * 2);
+      context.arc(handlePoint.x, handlePoint.y, 4.5, 0, Math.PI * 2);
       context.fill();
+      context.strokeStyle = 'rgba(251,191,36,0.4)';
+      context.lineWidth = 1;
+      context.stroke();
+      // 中心高亮点
+      context.fillStyle = 'rgba(255,255,255,0.7)';
+      context.beginPath();
+      context.arc(handlePoint.x, handlePoint.y, 1.5, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#fbbf24';
     }
   }
   for (const { frame, point } of points) {

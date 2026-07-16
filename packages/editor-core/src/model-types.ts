@@ -69,7 +69,17 @@ export type TransitionType =
   | 'film-roll-close'
   | 'shape-heart'
   | 'shape-star'
-  | 'motion-blur-wipe';
+  | 'motion-blur-wipe'
+  | 'push-left'
+  | 'push-right'
+  | 'push-up'
+  | 'push-down'
+  | 'light-leak'
+  | 'glitch'
+  | 'flip-horizontal'
+  | 'flip-vertical'
+  | 'cube-rotate'
+  | 'portal';
 
 export type TimelineLabelColor =
   'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink';

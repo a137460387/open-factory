@@ -408,6 +408,50 @@ export function buildSmartTransitionFilters(
       `[${fromLabel}][${shapeLabel}]overlay=format=auto[${rawLabel}]`,
     ];
   }
+  if (transition.type === 'light-leak') {
+    const baseLabel = `${rawLabel}_base`;
+    const leakLabel = `${rawLabel}_leak`;
+    return [
+      `[${fromLabel}][${toLabel}]xfade=transition=dissolve:duration=${durationArg}:offset=${offsetArg}[${baseLabel}]`,
+      `color=c=white:s=${settings.width}x${settings.height}:d=${durationArg},format=rgba,geq=r='255*exp(-pow(X/W-0.5,2)*8)':g='200*exp(-pow(X/W-0.5,2)*8)':b='100*exp(-pow(X/W-0.5,2)*8)':a='128*exp(-pow(X/W-0.5,2)*8)'[${leakLabel}]`,
+      `[${baseLabel}][${leakLabel}]overlay=format=auto:shortest=1[${rawLabel}]`,
+    ];
+  }
+  if (transition.type === 'glitch') {
+    const baseLabel = `${rawLabel}_base`;
+    return [
+      `[${fromLabel}][${toLabel}]xfade=transition=pixelize:duration=${durationArg}:offset=${offsetArg}[${baseLabel}]`,
+      `[${baseLabel}]rgbashift=rh=-5:bh=5:gh=0,eq=contrast=1.3:saturation=1.2[${rawLabel}]`,
+    ];
+  }
+  if (transition.type === 'flip-horizontal') {
+    const flippedLabel = `${fromLabel}_flipped`;
+    return [
+      `[${fromLabel}]hflip[${flippedLabel}]`,
+      `[${flippedLabel}][${toLabel}]xfade=transition=fade:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`,
+    ];
+  }
+  if (transition.type === 'flip-vertical') {
+    const flippedLabel = `${fromLabel}_flipped`;
+    return [
+      `[${fromLabel}]vflip[${flippedLabel}]`,
+      `[${flippedLabel}][${toLabel}]xfade=transition=fade:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`,
+    ];
+  }
+  if (transition.type === 'cube-rotate') {
+    const rotatedLabel = `${fromLabel}_cube`;
+    return [
+      `[${fromLabel}]rotate='PI/4*t/${durationArg}':ow=iw:oh=ih:c=black@0,zoompan=z='1+0.2*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=iwxih,format=rgba[${rotatedLabel}]`,
+      `[${rotatedLabel}][${toLabel}]xfade=transition=fade:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`,
+    ];
+  }
+  if (transition.type === 'portal') {
+    const baseLabel = `${rawLabel}_base`;
+    return [
+      `[${fromLabel}][${toLabel}]xfade=transition=circleopen:duration=${durationArg}:offset=${offsetArg}[${baseLabel}]`,
+      `[${baseLabel}]zoompan=z='1+0.03*sin(2*PI*on)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${settings.width}x${settings.height}[${rawLabel}]`,
+    ];
+  }
   return [
     `[${fromLabel}][${toLabel}]xfade=transition=${mapTransitionType(transition.type)}:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`,
   ];
@@ -440,8 +484,22 @@ export function mapTransitionType(type: ExportTransition['type']): string {
       return 'wipeleft';
     case 'rotate':
       return 'fade';
+    case 'push-left':
+      return 'slideleft';
+    case 'push-right':
+      return 'slideright';
+    case 'push-up':
+      return 'slideup';
+    case 'push-down':
+      return 'slidedown';
     case 'shape-heart':
     case 'shape-star':
+    case 'light-leak':
+    case 'glitch':
+    case 'flip-horizontal':
+    case 'flip-vertical':
+    case 'cube-rotate':
+    case 'portal':
       return 'custom';
     default:
       return 'dissolve';

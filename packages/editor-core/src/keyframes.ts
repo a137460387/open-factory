@@ -555,6 +555,16 @@ function easeOutBounce(t: number): number {
   return n1 * shifted * shifted + 0.984375;
 }
 
+/**
+ * 将连续进度值转换为离散步进值。
+ * 例如 steps=3 时：0→0, 0.33→0.33, 0.34→0.33, 0.66→0.66, 0.67→0.66, 1→1
+ */
+export function applyStepsEasing(progress: number, steps: number): number {
+  if (steps <= 1) return progress;
+  const t = Math.min(1, Math.max(0, progress));
+  return Math.floor(t * steps) / steps;
+}
+
 function hasBezierSegmentHandles(left: Keyframe<number>, right: Keyframe<number>): boolean {
   return Boolean(left.outHandle || right.inHandle);
 }

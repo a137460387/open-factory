@@ -19,6 +19,7 @@ import {
   usePersistPanelVisibilityPatch,
 } from '../../store/panelStore';
 import { useEditorUIStore } from '../../store/editorUIStore';
+import { useTransitionStore } from '../../store/transitionStore';
 import { getEffectivePanelState } from '../../layout/layoutSettings';
 import { getReviewModeShellVisibility } from '../../review/reviewMode';
 
@@ -71,6 +72,9 @@ const AISubtitleWorkflowPanel = lazy(() =>
 const SmartDistributionPanel = lazy(() =>
   import('../SmartDistribution/SmartDistributionPanel').then((m) => ({ default: m.SmartDistributionPanel })),
 );
+const TransitionLibrary = lazy(() =>
+  import('../Transitions/TransitionLibrary').then((m) => ({ default: m.TransitionLibrary })),
+);
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -113,6 +117,9 @@ export function ShellRightPanel() {
   const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
   const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
   const storyboardOpen = useEditorUIStore((s) => s.storyboardOpen);
+
+  const transitionLibraryOpen = useTransitionStore((s) => s.libraryOpen);
+  const setTransitionLibraryOpen = useTransitionStore((s) => s.setLibraryOpen);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClips = useMemo(
@@ -158,7 +165,9 @@ export function ShellRightPanel() {
                             ? zhCN.aiSubtitleWorkflow.title
                             : smartRoughCutOpen
                               ? zhCN.panels.smartRoughCut
-                              : zhCN.panels.inspector;
+                              : transitionLibraryOpen
+                                ? zhCN.timeline.transitionPicker
+                                : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -337,6 +346,13 @@ export function ShellRightPanel() {
                 projectDuration={getTimelinePlaybackDuration(project.timeline)}
                 hasSubtitles={project.timeline?.tracks?.some((t) => t.type === 'subtitle') ?? false}
                 onClose={() => setSmartDistributionOpen(false)}
+              />
+            ) : transitionLibraryOpen ? (
+              <TransitionLibrary
+                onClose={() => setTransitionLibraryOpen(false)}
+                onSelectTransition={(type) => {
+                  // 选中转场时可扩展：应用到当前选中的转场或打开参数面板
+                }}
               />
             ) : layoutSettings.panels.inspector ? (
               <Inspector
