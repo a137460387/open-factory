@@ -206,6 +206,7 @@ export * from './audio/mixer-types';
 export * from './audio/effect-chain';
 export * from './audio/audio-mix-presets';
 export * from './audio/automation-evaluator';
+export * from './audio/noise-reduction';
 export * from './export/export-preset-diff';
 export * from './export/preset-compatibility';
 export * from './annotation-sync';

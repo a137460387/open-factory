@@ -135,6 +135,8 @@ export interface EditorUIState {
   smartCreationOpen: boolean;
   smartDistributionOpen: boolean;
   smartMontageOpen: boolean;
+  noiseReductionOpen: boolean;
+  spectrumAnalyzerOpen: boolean;
 
   // Layout setters
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
@@ -205,6 +207,8 @@ export interface EditorUIState {
   setSmartCreationOpen: (updater: Updater<boolean>) => void;
   setSmartDistributionOpen: (updater: Updater<boolean>) => void;
   setSmartMontageOpen: (updater: Updater<boolean>) => void;
+  setNoiseReductionOpen: (updater: Updater<boolean>) => void;
+  setSpectrumAnalyzerOpen: (updater: Updater<boolean>) => void;
 }
 
 // Generate dialog state entries and setter entries from DIALOG_KEYS

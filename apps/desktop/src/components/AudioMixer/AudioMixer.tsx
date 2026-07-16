@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   normalizeAudioChannelRouting,
   BatchUpdateKeyframeCommand,
@@ -44,11 +44,19 @@ import {
   type PhasePoint,
 } from '../../media/channelAnalysis';
 
+// ─── Lazy-loaded components (chunk splitting) ──────────────────
+const LazyNoiseReductionDialog = lazy(() =>
+  import('./NoiseReductionDialog').then((m) => ({ default: m.NoiseReductionDialog })),
+);
+const LazySpectrumAnalyzer = lazy(() =>
+  import('./SpectrumAnalyzer').then((m) => ({ default: m.SpectrumAnalyzer })),
+);
+
 const DUCKING_POINTS_PER_SECOND = 8;
 const CHANNEL_ANALYSIS_HISTORY_LIMIT = 60;
 const CHANNEL_ANALYSIS_RECORD_INTERVAL_MS = 500;
 
-type MixerTab = 'mix' | 'channel-analysis';
+type MixerTab = 'mix' | 'channel-analysis' | 'spectrum';
 
 interface DuckingSettings {
   leadTrackId: string;
@@ -98,6 +106,8 @@ export function AudioMixer() {
   const [duckingPreview, setDuckingPreview] = useState<DuckingPreview | undefined>();
   const [duckingError, setDuckingError] = useState<string | undefined>();
   const [duckingAnalyzing, setDuckingAnalyzing] = useState(false);
+  const [noiseReductionOpen, setNoiseReductionOpen] = useState(false);
+  const [noiseReductionTrackId, setNoiseReductionTrackId] = useState<string | undefined>();
 
   useEffect(() => {
     setDuckingSettings((current) => normalizeDuckingSettings(current, tracks));
@@ -208,6 +218,13 @@ export function AudioMixer() {
           >
             {zhCN.mixer.channelAnalysisTab}
           </MixerTabButton>
+          <MixerTabButton
+            active={tab === 'spectrum'}
+            testId="audio-mixer-tab-spectrum"
+            onClick={() => setTab('spectrum')}
+          >
+            频谱
+          </MixerTabButton>
         </div>
         {tab === 'mix' ? (
           <button
@@ -223,6 +240,19 @@ export function AudioMixer() {
             }}
           >
             {t('mixer.duckingButton')}
+          </button>
+        ) : null}
+        {tab === 'mix' ? (
+          <button
+            className="h-7 rounded border border-line bg-white px-2 text-xs font-semibold text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="audio-noise-reduction-button"
+            onClick={() => {
+              setNoiseReductionTrackId(selectedTrackId);
+              setNoiseReductionOpen(true);
+            }}
+          >
+            降噪
           </button>
         ) : null}
       </div>
@@ -254,6 +284,17 @@ export function AudioMixer() {
           frame={activeAnalysisFrame}
           onTrackChange={setAnalysisTrackId}
         />
+      ) : tab === 'spectrum' ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+          <Suspense fallback={<div className="flex items-center justify-center py-8 text-xs text-slate-400">加载频谱分析器...</div>}>
+            <LazySpectrumAnalyzer
+              frequencyData={trackFrequencyBands[analysisTrackId] ?? []}
+              sampleRate={48000}
+              showControls
+              height={220}
+            />
+          </Suspense>
+        </div>
       ) : (
         <div className="mixer-scrollbar flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 py-2">
           {tracks.map((track) => (
@@ -270,6 +311,16 @@ export function AudioMixer() {
           <MasterStrip level={masterLevel} volume={project.masterVolume} onVolumeChange={updateMasterVolume} />
         </div>
       )}
+      {/* 降噪对话框 (lazy loaded) */}
+      {noiseReductionOpen ? (
+        <Suspense fallback={null}>
+          <LazyNoiseReductionDialog
+            open={noiseReductionOpen}
+            onClose={() => setNoiseReductionOpen(false)}
+            trackId={noiseReductionTrackId}
+          />
+        </Suspense>
+      ) : null}
     </section>
   );
 }

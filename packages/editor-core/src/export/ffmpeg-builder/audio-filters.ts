@@ -2,6 +2,11 @@ import { buildAudioRestorationFilterChain } from '../../audio-restoration';
 import { EffectChainEngine } from '../../audio/effect-chain';
 import type { AudioEffectSlot } from '../../audio/mixer-types';
 import {
+  buildNoiseReductionFilterString,
+  normalizeNoiseReductionParams,
+  type NoiseReductionParams,
+} from '../../audio/noise-reduction';
+import {
   buildSofalizerArgs,
   calculateSpatialDistanceGain,
   isDefaultSpatialAudio,
@@ -275,6 +280,44 @@ export function buildAudioDenoiseFilters(
     return '';
   }
   return `,arnndn=m=model.rnnn:mix=${formatFfmpegNumber(clip.audioDenoise.strength)}`;
+}
+
+/**
+ * 生成基于 afftdn 的降噪滤镜
+ * 用于混音器面板的"一键降噪"功能
+ * 使用参数数组风格，不拼接 shell 字符串
+ */
+export function buildAfftdnNoiseReductionFilter(
+  params: NoiseReductionParams,
+): string {
+  const normalized = normalizeNoiseReductionParams(params);
+  const filterString = buildNoiseReductionFilterString(normalized);
+  return filterString ? `,${filterString}` : '';
+}
+
+/**
+ * 从混音器通道效果链中提取降噪滤镜
+ * 将 noise-reduction 效果类型转换为 afftdn FFmpeg 滤镜
+ */
+export function buildMixerChannelNoiseReductionFilter(
+  effects: AudioEffectSlot[],
+): string {
+  const noiseReductionEffects = effects.filter(
+    (e) => e.effectType === 'noise-reduction' && e.enabled,
+  );
+  if (noiseReductionEffects.length === 0) {
+    return '';
+  }
+  // 使用第一个降噪效果的参数
+  const effect = noiseReductionEffects[0];
+  const params: NoiseReductionParams = {
+    noiseFloor: effect.params.threshold ?? -25,
+    nrType: Math.round((effect.params.reduction ?? 50) / 50), // 映射 0-100 到 0-2
+    autoNoiseSampling: false,
+    noiseSampleStart: 0,
+    noiseSampleEnd: 0,
+  };
+  return buildAfftdnNoiseReductionFilter(params);
 }
 
 export function buildAudioRestorationFilters(clip: ExportClip): string {

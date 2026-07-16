@@ -76,6 +76,8 @@ export const DIALOG_KEYS = [
   'smartCreationOpen',
   'smartDistributionOpen',
   'smartMontageOpen',
+  'noiseReductionOpen',
+  'spectrumAnalyzerOpen',
 ] as const;
 
 export type DialogKey = (typeof DIALOG_KEYS)[number];
