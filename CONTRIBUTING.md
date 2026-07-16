@@ -139,6 +139,47 @@ test(window-mask): 添加边界情况测试
 
 - **本地优先**：不添加遥测、登录或云服务
 - **Timeline 命令对象**：Timeline 变更必须通过命令对象，禁止直接调用 Zustand setter
-- **Tauri Bridge**：所有 Tauri invoke/listen/dialog/shell 调用必须通过 `tauri-bridge.ts`
+- **Tauri Bridge**：所有 Tauri invoke/listen/dialog/shell 调用必须通过 `tauri-bridge/` 模块
 - **路径安全**：使用 `validate_path` 和 `validate_path_for_write` 验证路径
 - **媒体处理**：本地媒体预览使用 Tauri `convertFileSrc`，禁止直接使用 `file://`
+
+## 模块化规范 (v4.26.0)
+
+v4.26.0 完成了大规模架构重构，新代码必须遵循以下规范：
+
+### Store 规范
+
+- **禁止**向 `editorUIStore.ts` 或 `editorFeatureStore.ts` 添加新状态
+- 新 UI 状态按功能域添加到对应的 Store：
+  - 对话框状态 → `dialogStore.ts`
+  - 模态框状态 → `modalStore.ts`
+  - 面板状态 → `panelStore.ts`
+  - 工具栏状态 → `toolbarStore.ts`
+- 新功能状态按功能域添加到对应的 Store：
+  - AI 功能 → `aiFeatureStore.ts`
+  - 导出功能 → `exportFeatureStore.ts`
+  - 时间线功能 → `timelineFeatureStore.ts`
+  - 媒体功能 → `mediaFeatureStore.ts`
+
+### 组件规范
+
+- **禁止**向 `Timeline.tsx` 或 `Inspector.tsx` 主组件添加超过 50 行的新逻辑
+- 新逻辑应提取到对应的 hook 或子组件：
+  - Timeline 状态逻辑 → `useTimelineState.ts`
+  - Timeline 事件处理 → `useTimelineHandlers.ts`
+  - Inspector 状态逻辑 → `useClipInspectorState.ts`
+  - Inspector 字段组件 → `InspectorFields.tsx`
+  - Inspector 编辑器组件 → `InspectorEditors.tsx`
+
+### editor-core 规范
+
+- **禁止**向 `ffmpeg-builder/index.ts`、`model/index.ts`、`tauri-bridge/index.ts` 添加新逻辑
+- 新的 FFmpeg 滤镜逻辑添加到 `ffmpeg-builder/` 对应子模块
+- 新的模型规范化逻辑添加到 `model/` 对应子模块
+- 新的 Tauri 桥接逻辑添加到 `tauri-bridge/` 对应子模块
+
+### 向后兼容
+
+- 旧的 import 路径通过 barrel re-export 保持可用
+- 推荐直接引用具体模块路径以优化 Tree-shaking
+- 详见 [迁移指南](docs/migration/v4.26.0-migration-guide.md)

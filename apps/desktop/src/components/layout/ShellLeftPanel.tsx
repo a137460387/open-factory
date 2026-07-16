@@ -16,7 +16,12 @@ import { MediaBin } from '../MediaBin/MediaBin';
 import { CollapsedPanelRail } from '../CollapsedPanelRail';
 import { zhCN } from '../../i18n/strings';
 import { useEditorStore } from '../../store/editorStore';
-import { useEditorUIStore } from '../../store/editorUIStore';
+import {
+  useLayoutSettings,
+  useViewportSize,
+  useReviewMode,
+  usePersistLayoutPatch,
+} from '../../store/panelStore';
 import { useEditorMiscStore } from '../../store/editorMiscStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { commandManager, projectAccessor } from '../../store/commandManager';
@@ -66,10 +71,10 @@ export interface ShellLeftPanelCallbacks {
 export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbacks }) {
   const project = useEditorStore((s) => s.project);
   const selectedClipId = useEditorStore((s) => s.selectedClipId);
-  const layoutSettings = useEditorUIStore((s) => s.layoutSettings);
-  const viewportSize = useEditorUIStore((s) => s.viewportSize);
-  const reviewMode = useEditorUIStore((s) => s.reviewMode);
-  const persistLayoutPatch = useEditorUIStore((s) => s.persistLayoutPatch);
+  const layoutSettings = useLayoutSettings();
+  const viewportSize = useViewportSize();
+  const reviewMode = useReviewMode();
+  const persistLayoutPatch = usePersistLayoutPatch();
 
   const favoriteIds = useEditorMiscStore((s) => s.favoriteIds);
   const pinnedIds = useEditorMiscStore((s) => s.pinnedIds);

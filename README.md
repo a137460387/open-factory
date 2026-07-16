@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v4.25.4-brightgreen)](https://github.com/a137460387/open-factory/releases)
+[![Version](https://img.shields.io/badge/version-v4.26.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
@@ -175,6 +175,15 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 - ✅ **自动检测** — 智能识别可用 GPU 硬件
 - ✅ **软件降级** — 硬件解码失败时自动回退到软件解码
 - ✅ **批量帧解码** — 预览管线集成的批量解码优化
+
+### v4.26.0 — 架构重构与模块化
+
+- ✅ **Store 层重构** — 2 个 God Store 拆分为 8 个功能域 Store，Zustand DevTools 调试效率大幅提升
+- ✅ **超大组件拆分** — Timeline.tsx (7,626→817 行) 和 Inspector.tsx (8,082→310 行) 模块化
+- ✅ **超大逻辑文件拆分** — ffmpeg-builder (5,215行→8模块)、model (2,713行→6模块)、tauri-bridge (2,520行→7模块)
+- ✅ **性能优化** — Timeline/Inspector 独立 lazy chunk 按需加载，React.memo 精确渲染控制
+- ✅ **向后兼容** — 所有旧 import 路径通过 barrel re-export 保持可用
+- ✅ **测试覆盖** — 5,257 单元测试，editor-core 覆盖率 97.94%
 
 ### v4.25.4 — 安全审计与工程质量提升
 

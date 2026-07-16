@@ -1,3 +1,18 @@
+/**
+ * Editor UI state — barrel re-export entry point (H4 refactor).
+ *
+ * This file has been refactored into domain-specific sub-stores:
+ * - panelStore.ts   — layout settings, panel visibility, viewport, review mode
+ * - dialogStore.ts  — all 62 dialog open/close states and setters
+ * - toolbarStore.ts — toolbar/menu state (re-exports from dialogStore)
+ * - modalStore.ts   — modal dialog state (re-exports from dialogStore)
+ *
+ * The combined `useEditorUIStore` is preserved for backward compatibility.
+ * New code should import from the specific sub-store directly.
+ *
+ * @deprecated Prefer `usePanelStore` or `useDialogStore` for new code.
+ */
+
 import { create } from 'zustand';
 import {
   DEFAULT_EDITOR_LAYOUT_SETTINGS,
@@ -13,6 +28,31 @@ import {
   type DialogKey,
   type DialogState,
 } from './dialog-state';
+
+// Re-export sub-store hooks and selector utilities for convenience
+export {
+  usePanelStore,
+  useLayoutSettings,
+  useReviewMode,
+  useViewportSize,
+  useSetLayoutSettings,
+  useSetReviewMode,
+  useSetViewportSize,
+  usePersistLayoutPatch,
+  usePersistPanelVisibilityPatch,
+} from './panelStore';
+export {
+  useDialogStore,
+  useDialogState,
+  dialogBooleanSelector,
+  dialogSetterSelector,
+} from './dialogStore';
+export { useToolbarStore } from './toolbarStore';
+export { useModalStore } from './modalStore';
+
+// Re-export dialog-state utilities
+export type { DialogKey, DialogState } from './dialog-state';
+export { DIALOG_KEYS, createInitialDialogState, applyDialogUpdate } from './dialog-state';
 
 type Updater<T> = T | ((current: T) => T);
 
@@ -169,18 +209,6 @@ export interface EditorUIState {
 
 // Generate dialog state entries and setter entries from DIALOG_KEYS
 const initialDialogs = createInitialDialogState();
-
-// Build per-dialog initial state and setter factory for the create() call
-function buildDialogEntries() {
-  const entries: Record<string, boolean | ((updater: Updater<boolean>) => void)> = {};
-  for (const key of DIALOG_KEYS) {
-    entries[key] = initialDialogs[key];
-    entries[dialogSetterName(key)] = function (this: { set: (fn: (s: EditorUIState) => Partial<EditorUIState>) => void }, updater: Updater<boolean>) {
-      // `this` is bound by zustand create
-    };
-  }
-  return entries;
-}
 
 export const useEditorUIStore = create<EditorUIState>((set, get) => {
   // Build dialog setters dynamically

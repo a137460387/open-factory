@@ -19,7 +19,8 @@ import {
   type InputColorSpace,
   type LogInputColorSpace,
 } from './color-log-luts';
-import { normalizeLutLayers, type LUTLayer } from './model';
+import { normalizeLutLayers } from './model/clip-normalize';
+import type { LUTLayer } from './model-types';
 import { round } from './time';
 
 export type ColorNodeType = 'input' | 'sequential' | 'parallel' | 'layer' | 'output' | 'lut';

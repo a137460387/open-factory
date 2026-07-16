@@ -1,7 +1,33 @@
 import { lazy, Suspense } from 'react';
 import type { Project, Clip, MediaAsset, Track, BeatSensitivity } from '@open-factory/editor-core';
 import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
+import {
+  useSpectrumAsset,
+  useSetSpectrumAsset,
+  useSetColorAnalysisBusy,
+  useSetColorAnalysisResults,
+  useSetColorAnalysisJumps,
+  useSetColorHeatmapPoints,
+  useSetColorAnalysisSamples,
+} from '../../store/mediaFeatureStore';
+import {
+  useSetSpeakerDiarizationResult,
+  useSetSpeakerDiarizationRunning,
+  useSetProfilerRecording,
+  useSetProfilerElapsedMs,
+  useSetProfilerReport,
+  useSetContentAnalysisRunningClipId,
+  useSetAudioSeparationClipId,
+  useSetAudioSeparationProgress,
+  useSetDemucsAvailability,
+} from '../../store/aiFeatureStore';
+import {
+  useSetOperationReplaySpeed,
+  useSetOperationRecording,
+  useSetOperationRecordingActive,
+  useSetOperationReplayRunning,
+  useSetOperationRecordingStep,
+} from '../../store/timelineFeatureStore';
 import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
 import type { VideoStitchWizardSettings } from '../../video-stitching/VideoStitchWizardDialog';
 import {
@@ -181,15 +207,15 @@ export function AnalysisDialogs({
   const smartMontageOpen = useEditorUIStore((s) => s.smartMontageOpen);
   const setSmartMontageOpen = useEditorUIStore((s) => s.setSmartMontageOpen);
 
-  // Data from useEditorFeatureStore
-  const spectrumAsset = useEditorFeatureStore((s) => s.spectrumAsset);
-  const setSpectrumAsset = useEditorFeatureStore((s) => s.setSpectrumAsset);
-  const setOperationReplaySpeed = useEditorFeatureStore((s) => s.setOperationReplaySpeed);
-  const setSpeakerDiarizationResult = useEditorFeatureStore((s) => s.setSpeakerDiarizationResult);
-  const setOperationRecording = useEditorFeatureStore((s) => s.setOperationRecording);
-  const setOperationRecordingActive = useEditorFeatureStore((s) => s.setOperationRecordingActive);
-  const setOperationReplayRunning = useEditorFeatureStore((s) => s.setOperationReplayRunning);
-  const setOperationRecordingStep = useEditorFeatureStore((s) => s.setOperationRecordingStep);
+  // Data from sub-store selector hooks
+  const spectrumAsset = useSpectrumAsset();
+  const setSpectrumAsset = useSetSpectrumAsset();
+  const setOperationReplaySpeed = useSetOperationReplaySpeed();
+  const setSpeakerDiarizationResult = useSetSpeakerDiarizationResult();
+  const setOperationRecording = useSetOperationRecording();
+  const setOperationRecordingActive = useSetOperationRecordingActive();
+  const setOperationReplayRunning = useSetOperationReplayRunning();
+  const setOperationRecordingStep = useSetOperationRecordingStep();
 
   return (
     <Suspense fallback={<PanelLoading label="分析工具" />}>

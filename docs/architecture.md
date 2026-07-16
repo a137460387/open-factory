@@ -6,6 +6,77 @@
 - `apps/desktop/src`: React UI, Zustand state, command manager singleton, media import, cache service, background media jobs, waveform worker, WebGL/2D preview renderer, project IO, Relink UI, proxy UI, export queue, and export dialog.
 - `apps/desktop/src-tauri`: Tauri 2 Rust shell, plugin registration, file/cache commands, media probing, proxy generation, FFmpeg capability detection, FFmpeg process execution, progress events, cancellation, smoke mode, and close protection.
 
+## Store Architecture (v4.26.0)
+
+v4.26.0 完成了 Store 层重构，将 God Store 拆分为功能域 Store：
+
+### UI 状态 Store
+
+| Store | 职责 | 状态数 |
+|-------|------|--------|
+| `dialogStore.ts` | 对话框开关状态 | ~25 |
+| `modalStore.ts` | 模态弹窗状态 | ~15 |
+| `panelStore.ts` | 面板可见性与布局 | ~15 |
+| `toolbarStore.ts` | 工具栏/菜单状态 | ~10 |
+
+### 功能域 Store
+
+| Store | 职责 | 状态数 |
+|-------|------|--------|
+| `aiFeatureStore.ts` | AI 相关功能状态 | ~15 |
+| `exportFeatureStore.ts` | 导出相关状态 | ~10 |
+| `timelineFeatureStore.ts` | 时间线增强功能 | ~10 |
+| `mediaFeatureStore.ts` | 媒体管理功能 | ~10 |
+
+### 核心 Store
+
+| Store | 职责 |
+|-------|------|
+| `editorStore.ts` | 核心编辑器状态 (timeline/media/selection) |
+| `editorUIStore.ts` | 编辑器 UI 状态 (re-export 入口，向后兼容) |
+| `editorFeatureStore.ts` | 编辑器功能状态 (re-export 入口，向后兼容) |
+| `commandManager.ts` | 命令管理器单例 |
+
+所有旧 Store 保留为 re-export 入口，确保向后兼容。详见 [迁移指南](migration/v4.26.0-migration-guide.md)。
+
+## Component Architecture (v4.26.0)
+
+v4.26.0 完成了超大组件拆分：
+
+### Timeline 模块 (`apps/desktop/src/components/Timeline/`)
+
+| 文件 | 行数 | 职责 |
+|------|------|------|
+| `Timeline.tsx` | 817 | 主组件入口 |
+| `useTimelineState.ts` | ~1,172 | State/memos/effects hook |
+| `useTimelineHandlers.ts` | ~3,458 | Handler 函数 hook |
+| `TimelineHeader.tsx` | ~446 | 工具栏 (React.memo) |
+| `TimelineTracksContainer.tsx` | ~905 | 轨道容器 (React.memo) |
+| `TimelineDialogsLayer.tsx` | ~423 | 对话框层 (React.memo) |
+| `TimelineMenus.tsx` | ~993 | 菜单组件 |
+| `TimelineOverlays.tsx` | ~893 | 覆盖层组件 |
+| `TimelineDialogs.tsx` | ~1,124 | 对话框组件 |
+
+### Inspector 模块 (`apps/desktop/src/components/Inspector/`)
+
+| 文件 | 行数 | 职责 |
+|------|------|------|
+| `Inspector.tsx` | 310 | 主组件入口 |
+| `useClipInspectorState.ts` | ~1,757 | State/handlers hook |
+| `ClipInspectorBody.tsx` | ~3,236 | JSX 渲染体 (React.memo) |
+| `InspectorFields.tsx` | ~407 | 可复用字段组件 |
+| `InspectorEditors.tsx` | ~3,546 | 编辑器组件 |
+
+### 模块化逻辑文件 (v4.26.0)
+
+| 原始文件 | 模块目录 | 子模块数 | 最大模块行数 |
+|---------|---------|---------|------------|
+| `ffmpeg-builder.ts` (5,215行) | `export/ffmpeg-builder/` | 8 | 1,694 |
+| `model.ts` (2,713行) | `model/` | 6 | 700 |
+| `tauri-bridge.ts` (2,520行) | `lib/tauri-bridge/` | 7 | 688 |
+
+每个模块目录保留 `index.ts` 作为 barrel re-export 入口，确保向后兼容。
+
 ## Project Schema
 
 Current files use `schemaVersion: 2` and `project.media`.
@@ -35,7 +106,19 @@ Media library updates, project path changes, cache state, and selection state ar
 
 ## Tauri Bridge
 
-All frontend Tauri calls go through `apps/desktop/src/lib/tauri-bridge.ts`.
+All frontend Tauri calls go through `apps/desktop/src/lib/tauri-bridge/` (v4.26.0: split into 7 sub-modules):
+
+| 模块 | 职责 |
+|------|------|
+| `types.ts` | 所有 interface/type |
+| `mock-types.ts` | TauriMocks 接口 |
+| `fs.ts` | 文件系统操作 |
+| `media.ts` | 媒体分析 |
+| `export.ts` | 导出相关 |
+| `window.ts` | 窗口/系统/协作 |
+| `ai-db.ts` | AI API + 媒体索引 |
+
+Barrel re-export 通过 `index.ts` 保持向后兼容。
 
 - Tauri runtime: calls real `invoke`, `listen`, plugin dialog confirm, shell open, and `convertFileSrc`.
 - Web/E2E runtime: calls `window.__TAURI_MOCKS__`.
@@ -59,7 +142,18 @@ Preview rendering lives in `apps/desktop/src/lib/preview/renderer.ts`.
 
 ## FFmpeg Export Pipeline
 
-`packages/editor-core/src/export/ffmpeg-builder.ts` converts the project timeline into `FfmpegExportPlan`.
+`packages/editor-core/src/export/ffmpeg-builder/` converts the project timeline into `FfmpegExportPlan`. The module is split into 8 sub-modules (v4.26.0):
+
+| 模块 | 职责 |
+|------|------|
+| `export-plan.ts` | 核心导出计划构建 |
+| `project-converter.ts` | ExportProject 构建 |
+| `settings-normalize.ts` | 设置规范化 |
+| `visual-filters.ts` | 视觉滤镜 |
+| `audio-filters.ts` | 音频滤镜 |
+| `text-subtitle-filters.ts` | 文本与字幕滤镜 |
+| `audio-visualization.ts` | 音频可视化滤镜 |
+| `utils.ts` | 辅助函数 |
 
 The default plan:
 

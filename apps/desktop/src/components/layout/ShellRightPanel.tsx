@@ -10,6 +10,14 @@ import { zhCN } from '../../i18n/strings';
 import { featureStrings } from '../../i18n/featureStrings';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
+import {
+  useLayoutSettings,
+  useSetLayoutSettings,
+  useViewportSize,
+  useReviewMode,
+  usePersistLayoutPatch,
+  usePersistPanelVisibilityPatch,
+} from '../../store/panelStore';
 import { useEditorUIStore } from '../../store/editorUIStore';
 import { getEffectivePanelState } from '../../layout/layoutSettings';
 import { getReviewModeShellVisibility } from '../../review/reviewMode';
@@ -67,12 +75,12 @@ export function ShellRightPanel() {
   const selectedKeyframes = useEditorStore((s) => s.selectedKeyframes);
   const playheadTime = useEditorStore((s) => s.playheadTime);
 
-  const layoutSettings = useEditorUIStore((s) => s.layoutSettings);
-  const setLayoutSettings = useEditorUIStore((s) => s.setLayoutSettings);
-  const viewportSize = useEditorUIStore((s) => s.viewportSize);
-  const reviewMode = useEditorUIStore((s) => s.reviewMode);
-  const persistLayoutPatch = useEditorUIStore((s) => s.persistLayoutPatch);
-  const persistPanelVisibilityPatch = useEditorUIStore((s) => s.persistPanelVisibilityPatch);
+  const layoutSettings = useLayoutSettings();
+  const setLayoutSettings = useSetLayoutSettings();
+  const viewportSize = useViewportSize();
+  const reviewMode = useReviewMode();
+  const persistLayoutPatch = usePersistLayoutPatch();
+  const persistPanelVisibilityPatch = usePersistPanelVisibilityPatch();
   const projectDocumentationOpen = useEditorUIStore((s) => s.projectDocumentationOpen);
   const historyPanelOpen = useEditorUIStore((s) => s.historyPanelOpen);
   const setHistoryPanelOpen = useEditorUIStore((s) => s.setHistoryPanelOpen);

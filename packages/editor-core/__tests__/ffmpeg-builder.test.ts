@@ -1047,9 +1047,9 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.filterComplex).toContain('subtitles=filename=__SUBTITLEFILE_export_subtitles__');
-    expect(plan.filterComplex).toContain("force_style='FontSize=42,PrimaryColour=&Hffffff&");
-    expect(plan.filterComplex).toContain('OutlineColour=&H332211&');
-    expect(plan.filterComplex).toContain('BackColour=&Hff665544&');
+    expect(plan.filterComplex).toContain("force_style='FontSize=42,PrimaryColour=&H00FFFFFF");
+    expect(plan.filterComplex).toContain('OutlineColour=&H00332211');
+    expect(plan.filterComplex).toContain('BackColour=&H00665544');
     expect(plan.filterComplex).toContain('BorderStyle=1');
     expect(plan.filterComplex).toContain('Outline=3');
     expect(plan.filterComplex).toContain('Shadow=2');

@@ -1,4 +1,4 @@
-export const REC709_INPUT_COLOR_SPACE = 'rec709';
+export const REC709_INPUT_COLOR_SPACE = 'rec709' as const;
 export const LOG_INPUT_COLOR_SPACES = ['slog2', 'slog3', 'clog', 'clog3', 'llog', 'vlog'] as const;
 export const INPUT_COLOR_SPACES = [REC709_INPUT_COLOR_SPACE, ...LOG_INPUT_COLOR_SPACES] as const;
 export const LOG_TO_REC709_LUT_SIZE = 17;

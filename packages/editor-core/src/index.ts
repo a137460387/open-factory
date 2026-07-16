@@ -1,6 +1,10 @@
 export * from './time';
 export * from './model';
 export * from './blend-modes';
+
+// Disambiguation: normalizeHexColor is exported by both ./model and ./export/ffmpeg.
+// The model version (clip-normalize) is authoritative for general use.
+export { normalizeHexColor } from './model';
 export * from './color-log-luts';
 export * from './content-analysis';
 export * from './cover-frames';
