@@ -15,6 +15,9 @@ import {
   timelineHasExportableVideo,
   applyLowPowerThreads,
   normalizeSpatialAudio,
+  scheduleExport,
+  applySchedulerDecision,
+  getRecommendedExportConfig,
   type ExportProject,
   type ExportReport,
   type ExportSettings,
@@ -89,7 +92,16 @@ export async function enqueueExport(
   });
   const backgroundSettings = await readExportBackgroundSettings().catch(logError('export-queue-runner'));
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
-  const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
+  const planAfterLowPower = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
+
+  // 智能导出调度：根据项目复杂度自动选择最优编码参数
+  const schedulerConfig = getRecommendedExportConfig(
+    exportProject,
+    getHardwareConcurrency(),
+  );
+  const schedulerDecision = scheduleExport(planAfterLowPower, exportProject, schedulerConfig);
+  const plan = applySchedulerDecision(planAfterLowPower, schedulerDecision);
+
   const progressiveState = progressive
     ? createProgressiveExportState({ outputPath, settings: exportProject.settings })
     : undefined;

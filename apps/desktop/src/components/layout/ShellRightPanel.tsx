@@ -27,6 +27,11 @@ const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ def
 const SmartRoughCutPanel = lazy(() =>
   import('../SmartRoughCut/SmartRoughCutPanel').then((m) => ({ default: m.SmartRoughCutPanel })),
 );
+const SmartRoughCutOrchestratorPanel = lazy(() =>
+  import('../SmartRoughCut/SmartRoughCutOrchestratorPanel').then((m) => ({
+    default: m.SmartRoughCutOrchestratorPanel,
+  })),
+);
 const AIRoughCutPanel = lazy(() =>
   import('../AIRoughCut/AIRoughCutPanel').then((m) => ({ default: m.AIRoughCutPanel })),
 );
@@ -245,7 +250,7 @@ export function ShellRightPanel() {
                 onClose={() => setAiSubtitleWorkflowOpen(false)}
               />
             ) : smartRoughCutOpen ? (
-              <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
+              <SmartRoughCutOrchestratorPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (
               <SmartCreationPanel
                 open={smartCreationOpen}

@@ -120,6 +120,9 @@ import {
   sortExportSuggestionsByPriority,
   EXPORT_SUGGESTION_CACHE_TTL_MS,
   isProviderConfigured,
+  analyzeProjectComplexity,
+  calculateExportComplexityScore,
+  getRecommendedExportConfig,
 } from '@open-factory/editor-core';
 import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
 import {
@@ -216,6 +219,7 @@ import { retryExportUploadFromHistory } from './export-upload';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { useMediaJobStore } from '../media/media-job-store';
 import { ExportTaskRow, StatusPill } from './components/ExportTaskRow';
+import { ExportPreviewCanvas } from '../components/Export/ExportPreviewCanvas';
 import { ExportUploadSection, ExportUploadStatusPanel } from './components/ExportUploadSection';
 import {
   PostExportScriptResultPanel,
@@ -874,6 +878,33 @@ export function ExportDialog({
     () => estimateExportCost({ project, settings: exportSettings }),
     [exportSettings, project],
   );
+
+  // 智能调度建议
+  const schedulerSuggestion = useMemo(() => {
+    try {
+      const exportProject = buildExportProjectFromProject(project, {
+        outputPath: outputPath || 'output.mp4',
+        settings: exportSettings,
+      });
+      const metrics = analyzeProjectComplexity(exportProject);
+      const complexityScore = calculateExportComplexityScore(metrics);
+      const config = getRecommendedExportConfig(exportProject);
+      return {
+        complexityScore,
+        qualityTarget: config.qualityTarget,
+        metrics,
+        reasons: [
+          `片段数: ${metrics.totalClips}`,
+          `特效数: ${metrics.effectCount}`,
+          `分辨率: ${Math.round(metrics.resolutionFactor * 100)}% HD`,
+          `复杂度分数: ${complexityScore.toFixed(0)}/100`,
+        ],
+      };
+    } catch {
+      return undefined;
+    }
+  }, [project, exportSettings, outputPath]);
+
   const exportOptimizationSuggestions = useMemo(
     () =>
       analyzeExportOptimizationSuggestions(project, exportSettings, exportOptimizationSettings, {
@@ -2524,6 +2555,35 @@ export function ExportDialog({
               </button>
             </div>
           </div>
+          {/* 智能调度建议 */}
+          {schedulerSuggestion && (
+            <div
+              className="rounded-md border border-blue-200 bg-blue-50 p-3"
+              data-testid="export-scheduler-suggestion"
+            >
+              <div className="flex items-center gap-2 text-xs font-semibold text-blue-700">
+                <span>🧠</span>
+                <span>智能调度建议</span>
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px]">
+                  复杂度 {schedulerSuggestion.complexityScore.toFixed(0)}/100
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] text-blue-600">
+                {schedulerSuggestion.reasons.map((reason, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="text-blue-400">•</span>
+                    <span>{reason}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-[11px] text-blue-500">
+                推荐质量目标：<span className="font-medium">{schedulerSuggestion.qualityTarget}</span>
+                {schedulerSuggestion.qualityTarget === 'speed' && ' (优先速度)'}
+                {schedulerSuggestion.qualityTarget === 'balanced' && ' (均衡)'}
+                {schedulerSuggestion.qualityTarget === 'quality' && ' (优先质量)'}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.saveAs}</label>
             <input
@@ -3652,6 +3712,20 @@ export function ExportDialog({
                 </button>
               </div>
             </div>
+            {/* 导出预览画布：显示当前运行任务的实时帧预览 */}
+            {tasks.some((task) => task.status === 'running') && (
+              <div className="px-3 py-2" data-testid="export-preview-section">
+                <ExportPreviewCanvas
+                  taskId={tasks.find((task) => task.status === 'running')?.id}
+                  width={480}
+                  height={270}
+                  maxFrames={6}
+                  showProgressBar={true}
+                  showTimestamps={true}
+                  className="mx-auto"
+                />
+              </div>
+            )}
             <div className="max-h-56 overflow-y-auto">
               {tasks.length === 0 ? (
                 <div className="px-3 py-5 text-center text-xs text-slate-500">{t.noTasks}</div>

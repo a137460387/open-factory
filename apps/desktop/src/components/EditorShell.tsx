@@ -330,6 +330,11 @@ const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({
 const SmartRoughCutPanel = lazy(() =>
   import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })),
 );
+const SmartRoughCutOrchestratorPanel = lazy(() =>
+  import('./SmartRoughCut/SmartRoughCutOrchestratorPanel').then((module) => ({
+    default: module.SmartRoughCutOrchestratorPanel,
+  })),
+);
 const AIRoughCutPanel = lazy(() =>
   import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })),
 );
