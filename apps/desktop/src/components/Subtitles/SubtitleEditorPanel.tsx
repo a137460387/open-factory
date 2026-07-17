@@ -412,11 +412,10 @@ function SubtitleListView({
   onEditTextChange,
   textAreaRef,
 }: SubtitleListViewProps) {
-  const selectedSet = new Set(selectedIds);
-
   const handleToggleSelect = useCallback(
     (clipId: string, multiSelect: boolean) => {
       if (multiSelect) {
+        const selectedSet = new Set(selectedIds);
         onSelectionChange(
           selectedSet.has(clipId)
             ? selectedIds.filter((id) => id !== clipId)
@@ -426,7 +425,7 @@ function SubtitleListView({
         onSelectionChange([clipId]);
       }
     },
-    [selectedIds, selectedSet, onSelectionChange],
+    [selectedIds, onSelectionChange],
   );
 
   const handleKeyDown = useCallback(
@@ -461,7 +460,7 @@ function SubtitleListView({
               .sort((a, b) => a.start - b.start)
               .map((clip) => {
                 const subtitleClip = clip as SubtitleClip;
-                const isSelected = selectedSet.has(clip.id);
+                const isSelected = selectedIds.includes(clip.id);
                 const isEditing = editingClipId === clip.id;
 
                 return (

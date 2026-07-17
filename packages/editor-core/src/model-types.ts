@@ -39,7 +39,7 @@ export type ZoomEditMode = 'editing' | 'browsing' | 'audio';
 
 export type AssetType = 'video' | 'audio' | 'image';
 
-export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
+export type TrackType = 'video' | 'audio' | 'text' | 'subtitle' | 'multicam';
 
 export type ClipType =
   | 'video'

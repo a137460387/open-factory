@@ -447,7 +447,7 @@ export type ExportClipType =
   | 'adjustment'
   | 'motion-graphic'
   | 'multicam';
-export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
+export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle' | 'multicam';
 export type ExportTransitionType = TransitionType;
 
 export interface ExportClip {

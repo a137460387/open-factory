@@ -500,10 +500,10 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     [setSelectedClipId],
   );
 
-  const setSpectrumSelectionRange = useCallback((range: { inPoint: number; outPoint: number }) => {
+  const setSpectrumSelectionRange = (range: { inPoint: number; outPoint: number }) => {
     useEditorStore.getState().setInPoint(range.inPoint);
     useEditorStore.getState().setOutPoint(range.outPoint);
-  }, []);
+  };
 
   const splitSpectrumAtTime = useCallback(
     (asset: MediaAsset, sourceTime: number) => {

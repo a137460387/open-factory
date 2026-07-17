@@ -5,6 +5,8 @@ import type {
   AudioBus,
   AudioEffectSlot,
   AutomationCurve,
+  AudioFollowMode,
+  MulticamAudioGroup,
 } from '@open-factory/editor-core';
 import {
   createDefaultMixerState,
@@ -13,6 +15,12 @@ import {
   createEffectSlot,
   EffectChainEngine,
   buildNoiseReductionFilterString,
+  createMulticamAudioGroup,
+  updateGroupActiveAngle,
+  setGroupFollowMode,
+  updateChannelVolume as updateMcChannelVolume,
+  toggleChannelMute as toggleMcChannelMute,
+  setGroupMasterVolume as setMcGroupMasterVolume,
 } from '@open-factory/editor-core';
 import type { NoiseReductionParams } from '@open-factory/editor-core';
 
@@ -37,6 +45,9 @@ export interface MixerStoreState {
   spectrumAnalyzerActive: boolean;
   /** 自动化录制模式 */
   automationRecordMode: 'read' | 'write' | 'touch' | 'latch';
+
+  /** 多机位音频组 */
+  multicamAudioGroups: MulticamAudioGroup[];
 
   // ─── Actions ──────────────────────────────────────────────
 
@@ -110,6 +121,32 @@ export interface MixerStoreState {
   /** 设置自动化录制模式 */
   setAutomationRecordMode: (mode: 'read' | 'write' | 'touch' | 'latch') => void;
 
+  /** 添加多机位音频组 */
+  addMulticamAudioGroup: (
+    groupId: string,
+    name: string,
+    angles: Array<{ id: string; mediaId: string; name: string }>,
+    followMode?: AudioFollowMode,
+  ) => void;
+
+  /** 删除多机位音频组 */
+  removeMulticamAudioGroup: (groupId: string) => void;
+
+  /** 更新多机位音频组的激活机位 */
+  updateMulticamGroupActiveAngle: (groupId: string, activeAngleIndex: number) => void;
+
+  /** 设置多机位音频组的跟随模式 */
+  setMulticamGroupFollowMode: (groupId: string, mode: AudioFollowMode) => void;
+
+  /** 更新多机位音频组内通道音量 */
+  updateMulticamChannelVolume: (groupId: string, channelId: string, volume: number) => void;
+
+  /** 切换多机位音频组内通道静音 */
+  toggleMulticamChannelMute: (groupId: string, channelId: string) => void;
+
+  /** 设置多机位音频组主音量 */
+  setMulticamGroupMasterVolume: (groupId: string, volume: number) => void;
+
   /** 重置混音器状态 */
   reset: () => void;
 }
@@ -139,6 +176,13 @@ type MixerStateOnly = Omit<
   | 'setNoiseReductionPreviewTrackId'
   | 'toggleSpectrumAnalyzer'
   | 'setAutomationRecordMode'
+  | 'addMulticamAudioGroup'
+  | 'removeMulticamAudioGroup'
+  | 'updateMulticamGroupActiveAngle'
+  | 'setMulticamGroupFollowMode'
+  | 'updateMulticamChannelVolume'
+  | 'toggleMulticamChannelMute'
+  | 'setMulticamGroupMasterVolume'
   | 'reset'
 >;
 
@@ -151,6 +195,7 @@ const initialState: MixerStateOnly = {
   noiseReductionPreviewTrackId: null,
   spectrumAnalyzerActive: false,
   automationRecordMode: 'read',
+  multicamAudioGroups: [],
 };
 
 export const useMixerStore = create<MixerStoreState>((set, get) => ({
@@ -360,6 +405,59 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
 
   setAutomationRecordMode: (mode) => set({ automationRecordMode: mode }),
 
+  addMulticamAudioGroup: (groupId, name, angles, followMode) => {
+    const group = createMulticamAudioGroup(groupId, name, angles, followMode);
+    set((state) => ({
+      multicamAudioGroups: [...state.multicamAudioGroups, group],
+    }));
+  },
+
+  removeMulticamAudioGroup: (groupId) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.filter((g) => g.id !== groupId),
+    }));
+  },
+
+  updateMulticamGroupActiveAngle: (groupId, activeAngleIndex) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
+        g.id === groupId ? updateGroupActiveAngle(g, activeAngleIndex) : g,
+      ),
+    }));
+  },
+
+  setMulticamGroupFollowMode: (groupId, mode) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
+        g.id === groupId ? setGroupFollowMode(g, mode) : g,
+      ),
+    }));
+  },
+
+  updateMulticamChannelVolume: (groupId, channelId, volume) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
+        g.id === groupId ? updateMcChannelVolume(g, channelId, volume) : g,
+      ),
+    }));
+  },
+
+  toggleMulticamChannelMute: (groupId, channelId) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
+        g.id === groupId ? toggleMcChannelMute(g, channelId) : g,
+      ),
+    }));
+  },
+
+  setMulticamGroupMasterVolume: (groupId, volume) => {
+    set((state) => ({
+      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
+        g.id === groupId ? setMcGroupMasterVolume(g, volume) : g,
+      ),
+    }));
+  },
+
   reset: () => set(initialState),
 }));
 
@@ -411,3 +509,10 @@ export function getChannelNoiseReductionFilter(trackId: string): string {
   if (!params) return '';
   return buildNoiseReductionFilterString(params);
 }
+
+/** 获取所有多机位音频组 */
+export const useMulticamAudioGroups = () => useMixerStore((s) => s.multicamAudioGroups);
+
+/** 获取指定多机位音频组 */
+export const useMulticamAudioGroup = (groupId: string) =>
+  useMixerStore((s) => s.multicamAudioGroups.find((g) => g.id === groupId));

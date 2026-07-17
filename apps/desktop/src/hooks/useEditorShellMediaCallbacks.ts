@@ -367,21 +367,21 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     }
   }, []);
 
-  const renameMediaFolder = useCallback((folderId: string, name: string) => {
+  const renameMediaFolder = (folderId: string, name: string) => {
     commandManager.execute(new RenameMediaFolderCommand(projectAccessor, folderId, name));
-  }, []);
+  };
 
-  const deleteMediaFolder = useCallback((folderId: string) => {
+  const deleteMediaFolder = (folderId: string) => {
     commandManager.execute(new DeleteMediaFolderCommand(projectAccessor, folderId));
-  }, []);
+  };
 
-  const setMediaFolderCollapsed = useCallback((folderId: string, collapsed: boolean) => {
+  const setMediaFolderCollapsed = (folderId: string, collapsed: boolean) => {
     commandManager.execute(new SetMediaFolderCollapsedCommand(projectAccessor, folderId, collapsed));
-  }, []);
+  };
 
-  const moveMediaToFolder = useCallback((assetIds: string[], folderId?: string | null) => {
+  const moveMediaToFolder = (assetIds: string[], folderId?: string | null) => {
     commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, assetIds, folderId));
-  }, []);
+  };
 
   const batchUpdateMediaMetadata = useCallback((assetIds: string[], metadata: BatchEditableMediaMetadata) => {
     if (assetIds.length === 0) {
@@ -753,26 +753,26 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     showToast({ kind: 'success', title: zhCN.subclip.newSubclip, message: subclip.name });
   }, []);
 
-  const handleUpdateSubclip = useCallback((subclipId: string, patch: Partial<Subclip>) => {
+  const handleUpdateSubclip = (subclipId: string, patch: Partial<Subclip>) => {
     commandManager.execute(new UpdateSubclipCommand(projectAccessor, subclipId, patch));
-  }, []);
+  };
 
-  const handleDeleteSubclip = useCallback((subclipId: string) => {
+  const handleDeleteSubclip = (subclipId: string) => {
     commandManager.execute(new DeleteSubclipCommand(projectAccessor, subclipId));
     showToast({ kind: 'info', title: zhCN.subclip.deleteSubclip, message: '' });
-  }, []);
+  };
 
   // --- 跳转媒体 ---
-  const jumpToMediaAsset = useCallback((assetId: string) => {
+  const jumpToMediaAsset = (assetId: string) => {
     const element = document.querySelector(`[data-testid="media-card-${assetId}"]`) as HTMLElement | null;
     element?.scrollIntoView({ block: 'center', inline: 'nearest' });
     element?.focus();
-  }, []);
+  };
 
   // --- 版本号 ---
-  const updateProjectReleaseVersion = useCallback((version: string) => {
+  const updateProjectReleaseVersion = (version: string) => {
     commandManager.execute(new UpdateProjectReleaseVersionCommand(projectAccessor, version));
-  }, []);
+  };
 
   return {
     refreshSharedLibraryResources,

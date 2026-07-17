@@ -106,6 +106,7 @@ export * from './ai-smart-creation-orchestrator';
 export * from './multicam';
 export * from './multicam-sync';
 export * from './multicam-ai-cut';
+export * from './multi-camera';
 export * from './shake-analysis';
 export * from './pip-avoidance';
 export * from './platform-fit';
