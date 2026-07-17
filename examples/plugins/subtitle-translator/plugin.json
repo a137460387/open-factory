@@ -1,0 +1,10 @@
+{
+  "id": "open-factory.example.subtitle-translator",
+  "name": "批量字幕翻译",
+  "version": "1.0.0",
+  "description": "将项目字幕批量翻译为目标语言，支持自定义术语表和分批处理。",
+  "category": "workflow",
+  "author": "Open Factory",
+  "permissions": ["read-project", "write-project"],
+  "main": "index.js"
+}

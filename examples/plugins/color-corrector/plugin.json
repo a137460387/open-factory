@@ -1,0 +1,10 @@
+{
+  "id": "open-factory.example.color-corrector",
+  "name": "高级色彩校正器",
+  "version": "1.0.0",
+  "description": "提供亮度、对比度、饱和度调节和色温偏移的色彩校正效果插件。",
+  "category": "effect",
+  "author": "Open Factory",
+  "permissions": ["read-project"],
+  "main": "index.js"
+}

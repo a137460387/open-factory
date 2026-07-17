@@ -1,0 +1,14 @@
+{
+  "name": "@open-factory/plugin-cli",
+  "version": "0.1.0",
+  "description": "Open Factory 插件开发脚手架工具",
+  "type": "module",
+  "bin": {
+    "open-factory-plugin": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": ["open-factory", "plugin", "cli", "scaffold"],
+  "license": "MIT"
+}

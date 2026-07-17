@@ -272,3 +272,4 @@ export * from './ai/auto-reframe';
 export * from './plugins/plugin-types';
 export * from './plugins/plugin-registry';
 export * from './plugins/plugin-manager';
+export * from './plugins/plugin-market-service';

@@ -1,0 +1,10 @@
+{
+  "id": "open-factory.example.social-export",
+  "name": "社交媒体导出",
+  "version": "1.0.0",
+  "description": "一键导出适合抖音、B站、YouTube等平台的视频格式与参数预设。",
+  "category": "export",
+  "author": "Open Factory",
+  "permissions": ["export-hook", "read-project"],
+  "main": "index.js"
+}
