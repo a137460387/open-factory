@@ -265,3 +265,4 @@ export * from './ai-emotion-tone';
 export * from './ai-dubbing-adaptation';
 export * from './ai-module-types';
 export * from './algorithm-pipeline';
+export * from './ai/transcription';
