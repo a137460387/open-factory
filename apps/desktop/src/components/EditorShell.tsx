@@ -641,6 +641,9 @@ export function EditorShell() {
   const setVideoSummaryOpen = useEditorUIStore((s) => s.setVideoSummaryOpen);
   const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
+  const setAssistEditingOpen = useEditorUIStore((s) => s.setAssistEditingOpen);
+  const setContentGenerationOpen = useEditorUIStore((s) => s.setContentGenerationOpen);
+  const setQualityAssessmentOpen = useEditorUIStore((s) => s.setQualityAssessmentOpen);
   const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
   const setSmartCreationOpen = useEditorUIStore((s) => s.setSmartCreationOpen);
   const historyPanelOpen = useEditorUIStore((s) => s.historyPanelOpen);
@@ -1906,6 +1909,9 @@ export function EditorShell() {
           onCreateClipReport={() => void createClipReport()}
           onGenerateVideoSummary={() => setVideoSummaryOpen(true)}
           onGenerateNarration={() => setNarrationOpen(true)}
+          onOpenAssistEditing={() => setAssistEditingOpen(true)}
+          onOpenContentGeneration={() => setContentGenerationOpen(true)}
+          onOpenQualityAssessment={() => setQualityAssessmentOpen(true)}
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onConformMedia={() => void conformMedia()}
           onImportBookmarks={() => void importBookmarks()}

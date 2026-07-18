@@ -75,6 +75,15 @@ const SmartDistributionPanel = lazy(() =>
 const TransitionLibrary = lazy(() =>
   import('../Transitions/TransitionLibrary').then((m) => ({ default: m.TransitionLibrary })),
 );
+const AssistEditingPanel = lazy(() =>
+  import('../Assist/AssistEditingPanel').then((m) => ({ default: m.AssistEditingPanel })),
+);
+const ContentGenerationPanel = lazy(() =>
+  import('../Generation/ContentGenerationPanel').then((m) => ({ default: m.ContentGenerationPanel })),
+);
+const QualityAssessmentPanel = lazy(() =>
+  import('../QualityAssessment/QualityAssessmentPanel').then((m) => ({ default: m.QualityAssessmentPanel })),
+);
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -117,6 +126,12 @@ export function ShellRightPanel() {
   const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
   const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
   const storyboardOpen = useEditorUIStore((s) => s.storyboardOpen);
+  const assistEditingOpen = useEditorUIStore((s) => s.assistEditingOpen);
+  const setAssistEditingOpen = useEditorUIStore((s) => s.setAssistEditingOpen);
+  const contentGenerationOpen = useEditorUIStore((s) => s.contentGenerationOpen);
+  const setContentGenerationOpen = useEditorUIStore((s) => s.setContentGenerationOpen);
+  const qualityAssessmentOpen = useEditorUIStore((s) => s.qualityAssessmentOpen);
+  const setQualityAssessmentOpen = useEditorUIStore((s) => s.setQualityAssessmentOpen);
 
   const transitionLibraryOpen = useTransitionStore((s) => s.libraryOpen);
   const setTransitionLibraryOpen = useTransitionStore((s) => s.setLibraryOpen);
@@ -167,7 +182,13 @@ export function ShellRightPanel() {
                               ? zhCN.panels.smartRoughCut
                               : transitionLibraryOpen
                                 ? zhCN.timeline.transitionPicker
-                                : zhCN.panels.inspector;
+                                : assistEditingOpen
+                                  ? 'AI 辅助剪辑'
+                                  : contentGenerationOpen
+                                    ? 'AI 内容生成'
+                                    : qualityAssessmentOpen
+                                      ? 'AI 质量评估'
+                                      : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -354,6 +375,12 @@ export function ShellRightPanel() {
                   // 选中转场时可扩展：应用到当前选中的转场或打开参数面板
                 }}
               />
+            ) : assistEditingOpen ? (
+              <AssistEditingPanel project={project} onClose={() => setAssistEditingOpen(false)} />
+            ) : contentGenerationOpen ? (
+              <ContentGenerationPanel project={project} onClose={() => setContentGenerationOpen(false)} />
+            ) : qualityAssessmentOpen ? (
+              <QualityAssessmentPanel project={project} onClose={() => setQualityAssessmentOpen(false)} />
             ) : layoutSettings.panels.inspector ? (
               <Inspector
                 clip={selectedClip}

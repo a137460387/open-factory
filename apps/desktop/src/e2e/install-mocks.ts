@@ -7304,6 +7304,139 @@ window.__E2E_ACTIONS__ = {
       }),
     );
   },
+  setupAssistEditingFixture: () => {
+    const project = createProject('Assist Editing E2E');
+    const mediaId = 'media-assist-editing-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'assist-editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1920,
+      height: 1080,
+      size: 8192,
+      mtimeMs: 2_000,
+      hasAudio: true,
+    };
+    const mkClip = (id: string, start: number, dur: number) => ({
+      id,
+      type: 'video' as const,
+      name: `${id}.mp4`,
+      mediaId,
+      trackId: 'track-assist-video',
+      start,
+      duration: dur,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+    });
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-assist-video',
+          type: 'video',
+          name: 'V1',
+          clips: [mkClip('clip-assist-1', 0, 10), mkClip('clip-assist-2', 10, 10), mkClip('clip-assist-3', 20, 10)],
+        }),
+      ],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setAssistEditingOpen(true);
+    commandManager.clear();
+  },
+  setupContentGenerationFixture: () => {
+    const project = createProject('Content Generation E2E');
+    const mediaId = 'media-content-gen-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'content-gen-video.mp4',
+      path: tinyVideo,
+      duration: 60,
+      width: 1920,
+      height: 1080,
+      size: 16384,
+      mtimeMs: 3_000,
+      hasAudio: true,
+    };
+    const videoClip = {
+      id: 'clip-cg-1',
+      type: 'video' as const,
+      name: 'cg-video.mp4',
+      mediaId,
+      trackId: 'track-cg-video',
+      start: 0,
+      duration: 60,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-cg-video', type: 'video', name: 'V1', clips: [videoClip] }),
+        createTrack({ id: 'track-cg-audio', type: 'audio', name: 'A1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setContentGenerationOpen(true);
+    commandManager.clear();
+  },
+  setupQualityAssessmentFixture: () => {
+    const project = createProject('Quality Assessment E2E');
+    const mediaId = 'media-qa-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'qa-video.mp4',
+      path: tinyVideo,
+      duration: 15,
+      width: 1920,
+      height: 1080,
+      size: 4096,
+      mtimeMs: 4_000,
+      hasAudio: true,
+    };
+    const videoClip = {
+      id: 'clip-qa-1',
+      type: 'video' as const,
+      name: 'qa-video.mp4',
+      mediaId,
+      trackId: 'track-qa-video',
+      start: 0,
+      duration: 15,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-qa-video', type: 'video', name: 'V1', clips: [videoClip] })],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setQualityAssessmentOpen(true);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

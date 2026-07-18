@@ -80,6 +80,9 @@ interface ToolbarProps {
   onCreateClipReport(): void;
   onGenerateVideoSummary(): void;
   onGenerateNarration(): void;
+  onOpenAssistEditing(): void;
+  onOpenContentGeneration(): void;
+  onOpenQualityAssessment(): void;
   onCreateSharePackage(): void;
   onConformMedia(): void;
   onImportBookmarks(): void;
@@ -1282,6 +1285,39 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{zhCN.aiNarration.title}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-assist-editing-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenAssistEditing();
+              }}
+            >
+              <span>AI 辅助剪辑</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-content-generation-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenContentGeneration();
+              }}
+            >
+              <span>AI 内容生成</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-quality-assessment-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenQualityAssessment();
+              }}
+            >
+              <span>AI 质量评估</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

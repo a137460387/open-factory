@@ -276,3 +276,7 @@ export * from './plugins/plugin-types';
 export * from './plugins/plugin-registry';
 export * from './plugins/plugin-manager';
 export * from './plugins/plugin-market-service';
+export * from './ai/assist-editing';
+export * from './ai/content-generation';
+export * from './ai/quality-assessment';
+export * from './ai/ai-worker';

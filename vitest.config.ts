@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['packages/editor-core/__tests__/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
+    include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
@@ -24,6 +24,7 @@ export default defineConfig({
         'packages/editor-core/src/cache/cache-types.ts',
         'packages/editor-core/src/commands/command.ts',
         'packages/editor-core/src/**/earcut.d.ts',
+        'packages/editor-core/src/**/*.test.ts',
       ],
       thresholds: {
         lines: 80,
