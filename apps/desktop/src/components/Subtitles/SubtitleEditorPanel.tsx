@@ -491,6 +491,20 @@ function SubtitleListView({
 
                     {/* Text */}
                     <div className="flex-1 min-w-0">
+                      {/* 说话人标签 */}
+                      {subtitleClip.speaker && (
+                        <div className="mb-1 flex items-center gap-1">
+                          <span
+                            className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            style={{
+                              backgroundColor: `hsl(${(subtitleClip.speakerId ?? 0) * 60}, 70%, 90%)`,
+                              color: `hsl(${(subtitleClip.speakerId ?? 0) * 60}, 70%, 30%)`,
+                            }}
+                          >
+                            {subtitleClip.speaker}
+                          </span>
+                        </div>
+                      )}
                       {isEditing ? (
                         <textarea
                           ref={textAreaRef}
