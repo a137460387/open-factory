@@ -67,6 +67,18 @@
     "./color/gpu-color-processing": {
       "types": "./dist/color/gpu-color-processing.d.ts",
       "import": "./dist/color/gpu-color-processing.js"
+    },
+    "./collaboration/team-management": {
+      "types": "./dist/collaboration/team-management.d.ts",
+      "import": "./dist/collaboration/team-management.js"
+    },
+    "./sync/multi-device-sync": {
+      "types": "./dist/sync/multi-device-sync.d.ts",
+      "import": "./dist/sync/multi-device-sync.js"
+    },
+    "./permissions/advanced-permissions": {
+      "types": "./dist/permissions/advanced-permissions.d.ts",
+      "import": "./dist/permissions/advanced-permissions.js"
     }
   },
   "scripts": {
