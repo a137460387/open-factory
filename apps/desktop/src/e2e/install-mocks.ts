@@ -7260,6 +7260,50 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupSuperResolutionPreviewFixture: async () => {
+    // Create a container for the standalone SuperResolutionPreview component
+    let container = document.getElementById('e2e-sr-preview');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'e2e-sr-preview';
+      container.setAttribute('data-testid', 'sr-preview-container');
+      container.style.cssText = 'position:fixed;top:0;left:0;width:640px;height:480px;z-index:99999;background:#1e1e1e;';
+      document.body.appendChild(container);
+    }
+
+    // Create a test canvas with gradient image data
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(64, 64);
+    for (let y = 0; y < 64; y++) {
+      for (let x = 0; x < 64; x++) {
+        const idx = (y * 64 + x) * 4;
+        imageData.data[idx] = Math.round((x / 64) * 255);
+        imageData.data[idx + 1] = Math.round((y / 64) * 255);
+        imageData.data[idx + 2] = 128;
+        imageData.data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    // Dynamically import and render the component
+    const { createRoot } = await import('react-dom/client');
+    const React = await import('react');
+    const { SuperResolutionPreview } = await import('../components/Preview/SuperResolutionPreview');
+
+    const root = createRoot(container);
+    root.render(
+      React.createElement(SuperResolutionPreview, {
+        sourceCanvas: canvas,
+        onClose: () => {
+          root.unmount();
+          container?.remove();
+        },
+      }),
+    );
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

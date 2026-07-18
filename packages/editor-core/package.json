@@ -19,6 +19,54 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./ai/color-grading": {
+      "types": "./dist/ai/color-grading.d.ts",
+      "import": "./dist/ai/color-grading.js"
+    },
+    "./ai/speaker-diarization": {
+      "types": "./dist/ai/speaker-diarization.d.ts",
+      "import": "./dist/ai/speaker-diarization.js"
+    },
+    "./ai/super-resolution": {
+      "types": "./dist/ai/super-resolution.d.ts",
+      "import": "./dist/ai/super-resolution.js"
+    },
+    "./ai/transcription": {
+      "types": "./dist/ai/transcription.d.ts",
+      "import": "./dist/ai/transcription.js"
+    },
+    "./ai/tts": {
+      "types": "./dist/ai/tts.d.ts",
+      "import": "./dist/ai/tts.js"
+    },
+    "./ai/video-repair": {
+      "types": "./dist/ai/video-repair.d.ts",
+      "import": "./dist/ai/video-repair.js"
+    },
+    "./ai/multicam-sync": {
+      "types": "./dist/ai/multicam-sync.d.ts",
+      "import": "./dist/ai/multicam-sync.js"
+    },
+    "./color-grading/lut": {
+      "types": "./dist/color-grading/lut.d.ts",
+      "import": "./dist/color-grading/lut.js"
+    },
+    "./color-grading/lut-parser": {
+      "types": "./dist/color-grading/lut-parser.d.ts",
+      "import": "./dist/color-grading/lut-parser.js"
+    },
+    "./color-grading/types": {
+      "types": "./dist/color-grading/types.d.ts",
+      "import": "./dist/color-grading/types.js"
+    },
+    "./color/aces": {
+      "types": "./dist/color/aces.d.ts",
+      "import": "./dist/color/aces.js"
+    },
+    "./color/gpu-color-processing": {
+      "types": "./dist/color/gpu-color-processing.d.ts",
+      "import": "./dist/color/gpu-color-processing.js"
     }
   },
   "scripts": {
