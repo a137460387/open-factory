@@ -84,6 +84,9 @@ const ContentGenerationPanel = lazy(() =>
 const QualityAssessmentPanel = lazy(() =>
   import('../QualityAssessment/QualityAssessmentPanel').then((m) => ({ default: m.QualityAssessmentPanel })),
 );
+const AutomationPanel = lazy(() =>
+  import('../Automation/AutomationPanel').then((m) => ({ default: m.AutomationPanel })),
+);
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -132,6 +135,8 @@ export function ShellRightPanel() {
   const setContentGenerationOpen = useEditorUIStore((s) => s.setContentGenerationOpen);
   const qualityAssessmentOpen = useEditorUIStore((s) => s.qualityAssessmentOpen);
   const setQualityAssessmentOpen = useEditorUIStore((s) => s.setQualityAssessmentOpen);
+  const automationOpen = useEditorUIStore((s) => s.automationOpen);
+  const setAutomationOpen = useEditorUIStore((s) => s.setAutomationOpen);
 
   const transitionLibraryOpen = useTransitionStore((s) => s.libraryOpen);
   const setTransitionLibraryOpen = useTransitionStore((s) => s.setLibraryOpen);
@@ -188,7 +193,9 @@ export function ShellRightPanel() {
                                     ? 'AI 内容生成'
                                     : qualityAssessmentOpen
                                       ? 'AI 质量评估'
-                                      : zhCN.panels.inspector;
+                                      : automationOpen
+                                        ? '自动化工作流'
+                                        : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -381,6 +388,8 @@ export function ShellRightPanel() {
               <ContentGenerationPanel project={project} onClose={() => setContentGenerationOpen(false)} />
             ) : qualityAssessmentOpen ? (
               <QualityAssessmentPanel project={project} onClose={() => setQualityAssessmentOpen(false)} />
+            ) : automationOpen ? (
+              <AutomationPanel onClose={() => setAutomationOpen(false)} />
             ) : layoutSettings.panels.inspector ? (
               <Inspector
                 clip={selectedClip}

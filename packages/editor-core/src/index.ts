@@ -280,3 +280,4 @@ export * from './ai/assist-editing';
 export * from './ai/content-generation';
 export * from './ai/quality-assessment';
 export * from './ai/ai-worker';
+export * from './automation';

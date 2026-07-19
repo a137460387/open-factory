@@ -140,6 +140,7 @@ export interface EditorUIState {
   assistEditingOpen: boolean;
   contentGenerationOpen: boolean;
   qualityAssessmentOpen: boolean;
+  automationOpen: boolean;
 
   // Layout setters
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
@@ -215,6 +216,7 @@ export interface EditorUIState {
   setAssistEditingOpen: (updater: Updater<boolean>) => void;
   setContentGenerationOpen: (updater: Updater<boolean>) => void;
   setQualityAssessmentOpen: (updater: Updater<boolean>) => void;
+  setAutomationOpen: (updater: Updater<boolean>) => void;
 }
 
 // Generate dialog state entries and setter entries from DIALOG_KEYS

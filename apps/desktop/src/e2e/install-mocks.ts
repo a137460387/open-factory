@@ -7437,6 +7437,100 @@ window.__E2E_ACTIONS__ = {
     useEditorUIStore.getState().setQualityAssessmentOpen(true);
     commandManager.clear();
   },
+  openAutomationPanel: () => {
+    const project = createProject('Automation E2E');
+    const mediaId = 'media-auto-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'auto-video.mp4',
+      path: tinyVideo,
+      duration: 10,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 5_000,
+      hasAudio: true,
+    };
+    const videoClip = {
+      id: 'clip-auto-1',
+      type: 'video' as const,
+      name: 'auto-video.mp4',
+      mediaId,
+      trackId: 'track-auto-video',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-auto-video', type: 'video', name: 'V1', clips: [videoClip] })],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    // 关闭其他可能遮挡的面板
+    useEditorUIStore.getState().setQualityAssessmentOpen(false);
+    useEditorUIStore.getState().setContentGenerationOpen(false);
+    useEditorUIStore.getState().setAssistEditingOpen(false);
+    useEditorUIStore.getState().setAiRoughCutOpen(false);
+    // 确保 audio-mixer 不遮挡右侧面板
+    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useEditorUIStore.getState().setAutomationOpen(true);
+    commandManager.clear();
+  },
+  openSceneAnalysisView: () => {
+    const project = createProject('Scene Analysis E2E');
+    const mediaId = 'media-sa-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'sa-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1920,
+      height: 1080,
+      size: 8192,
+      mtimeMs: 6_000,
+      hasAudio: true,
+    };
+    const videoClip = {
+      id: 'clip-sa-1',
+      type: 'video' as const,
+      name: 'sa-video.mp4',
+      mediaId,
+      trackId: 'track-sa-video',
+      start: 0,
+      duration: 30,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-sa-video', type: 'video', name: 'V1', clips: [videoClip] })],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setQualityAssessmentOpen(false);
+    useEditorUIStore.getState().setContentGenerationOpen(false);
+    useEditorUIStore.getState().setAssistEditingOpen(false);
+    useEditorUIStore.getState().setAiRoughCutOpen(false);
+    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useEditorUIStore.getState().setAutomationOpen(true);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

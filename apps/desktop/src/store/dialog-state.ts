@@ -81,6 +81,7 @@ export const DIALOG_KEYS = [
   'assistEditingOpen',
   'contentGenerationOpen',
   'qualityAssessmentOpen',
+  'automationOpen',
 ] as const;
 
 export type DialogKey = (typeof DIALOG_KEYS)[number];
