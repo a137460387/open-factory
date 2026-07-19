@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   DISTRIBUTION_PLATFORMS,
   buildDistributionRecommendations,
@@ -6,6 +6,18 @@ import {
   formatMaxDuration,
   type DistributionPlatformId,
   type DistributionPlatformSpec,
+} from '@open-factory/editor-core';
+import {
+  generateMultiFormats,
+  getPlatformAdaptation,
+  analyzeAdaptationNeeds,
+  generateCovers,
+  DEFAULT_MULTI_FORMAT_CONFIG,
+  DEFAULT_COVER_CONFIG,
+  type FormatVariant,
+  type PlatformAdaptation,
+  type AdaptationSuggestion,
+  type CoverGenerationResult,
 } from '@open-factory/editor-core';
 import { useDistributionStore } from '../../store/distributionStore';
 
@@ -16,10 +28,11 @@ interface PlatformCardProps {
   selected: boolean;
   score?: number;
   reasons?: string[];
+  adaptation?: PlatformAdaptation;
   onToggle: (id: DistributionPlatformId) => void;
 }
 
-function PlatformCard({ platform, selected, score, reasons, onToggle }: PlatformCardProps) {
+function PlatformCard({ platform, selected, score, reasons, adaptation, onToggle }: PlatformCardProps) {
   const orientationLabel =
     platform.orientation === 'portrait' ? '竖屏' : platform.orientation === 'square' ? '方形' : '横屏';
 
@@ -76,6 +89,25 @@ function PlatformCard({ platform, selected, score, reasons, onToggle }: Platform
         </div>
       </div>
 
+      {/* 平台适配标签 */}
+      {adaptation && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+            {adaptation.rhythmStyle === 'fast' ? '快节奏' : adaptation.rhythmStyle === 'slow' ? '慢节奏' : '中等节奏'}
+          </span>
+          {adaptation.optimizations.addOpeningHook && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+              前{adaptation.optimizations.hookDurationSecs}秒强吸引
+            </span>
+          )}
+          {adaptation.optimizations.loopFriendly && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+              循环优化
+            </span>
+          )}
+        </div>
+      )}
+
       {score !== undefined && score > 0.3 && (
         <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
           推荐度: {Math.round(score * 100)}%
@@ -83,6 +115,120 @@ function PlatformCard({ platform, selected, score, reasons, onToggle }: Platform
         </div>
       )}
     </button>
+  );
+}
+
+// ─── 格式预览组件 ────────────────────────────────────────────
+
+interface FormatPreviewCardProps {
+  variant: FormatVariant;
+}
+
+function FormatPreviewCard({ variant }: FormatPreviewCardProps) {
+  const orientationLabel =
+    variant.orientation === 'portrait' ? '竖屏' : variant.orientation === 'square' ? '方形' : '横屏';
+  const qualityPercent = Math.round((1 - variant.qualityLoss) * 100);
+
+  return (
+    <div
+      className="rounded-lg border border-gray-200 dark:border-gray-700 p-3"
+      data-testid={`format-preview-${variant.id}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium">{orientationLabel}</span>
+          <span className="text-xs text-gray-500">{variant.aspectRatio}</span>
+        </div>
+        <span className="text-xs text-gray-400">
+          {variant.width}×{variant.height}
+        </span>
+      </div>
+
+      {/* 裁剪预览框 */}
+      <div className="relative w-full h-20 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden mb-2">
+        <div
+          className="absolute border-2 border-blue-400 bg-blue-400/10 rounded"
+          style={{
+            left: `${variant.cropResult.cropX * 100}%`,
+            top: `${variant.cropResult.cropY * 100}%`,
+            width: `${variant.cropResult.cropWidth * 100}%`,
+            height: `${variant.cropResult.cropHeight * 100}%`,
+          }}
+        />
+      </div>
+
+      {/* 质量指示器 */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-gray-500">质量</span>
+        <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full ${
+              qualityPercent > 80 ? 'bg-green-500' : qualityPercent > 50 ? 'bg-yellow-500' : 'bg-red-500'
+            }`}
+            style={{ width: `${qualityPercent}%` }}
+          />
+        </div>
+        <span className="text-[10px] text-gray-500">{qualityPercent}%</span>
+      </div>
+
+      {/* 警告信息 */}
+      {variant.warnings.length > 0 && (
+        <div className="mt-1">
+          {variant.warnings.map((w, i) => (
+            <span key={i} className="text-[10px] text-amber-600 dark:text-amber-400">
+              ⚠ {w}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* 目标平台标签 */}
+      <div className="mt-2 flex flex-wrap gap-1">
+        {variant.targetPlatforms.slice(0, 3).map((pid) => {
+          const p = DISTRIBUTION_PLATFORMS.find((dp) => dp.id === pid);
+          return p ? (
+            <span
+              key={pid}
+              className="text-[10px] px-1 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+            >
+              {p.icon} {p.name}
+            </span>
+          ) : null;
+        })}
+        {variant.targetPlatforms.length > 3 && (
+          <span className="text-[10px] text-gray-400">+{variant.targetPlatforms.length - 3}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── 适配建议组件 ────────────────────────────────────────────
+
+interface SuggestionListProps {
+  suggestions: AdaptationSuggestion[];
+}
+
+function SuggestionList({ suggestions }: SuggestionListProps) {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div className="space-y-1" data-testid="adaptation-suggestions">
+      {suggestions.slice(0, 5).map((s, i) => (
+        <div
+          key={i}
+          className={`text-xs px-2 py-1 rounded ${
+            s.severity === 'critical'
+              ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300'
+              : s.severity === 'warning'
+                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300'
+                : 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+          }`}
+        >
+          {s.severity === 'critical' ? '🔴' : s.severity === 'warning' ? '🟡' : '🔵'} {s.message}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -116,6 +262,12 @@ export function SmartDistributionPanel({
   const selectAllPlatforms = useDistributionStore((s) => s.selectAllPlatforms);
   const clearPlatforms = useDistributionStore((s) => s.clearPlatforms);
   const tasks = useDistributionStore((s) => s.tasks);
+  const multiFormatResult = useDistributionStore((s) => s.multiFormatResult);
+  const setMultiFormatResult = useDistributionStore((s) => s.setMultiFormatResult);
+  const isGeneratingFormats = useDistributionStore((s) => s.isGeneratingFormats);
+  const setIsGeneratingFormats = useDistributionStore((s) => s.setIsGeneratingFormats);
+
+  const [activeTab, setActiveTab] = useState<'platforms' | 'formats' | 'suggestions'>('platforms');
 
   // 智能推荐
   const recommendations = useMemo(
@@ -138,6 +290,43 @@ export function SmartDistributionPanel({
     return map;
   }, [recommendations]);
 
+  // 平台适配方案
+  const adaptations = useMemo(() => {
+    const map = new Map<DistributionPlatformId, PlatformAdaptation>();
+    for (const pid of selectedPlatforms) {
+      try {
+        map.set(pid, getPlatformAdaptation(pid));
+      } catch {
+        // ignore unknown platform
+      }
+    }
+    return map;
+  }, [selectedPlatforms]);
+
+  // 适配建议
+  const suggestions = useMemo(() => {
+    const allSuggestions: AdaptationSuggestion[] = [];
+    for (const pid of selectedPlatforms) {
+      try {
+        const platformSuggestions = analyzeAdaptationNeeds(
+          {
+            width: projectWidth,
+            height: projectHeight,
+            durationSecs: projectDuration,
+            hasSubtitles,
+            hasIntro: false,
+            hasOutro: false,
+          },
+          pid,
+        );
+        allSuggestions.push(...platformSuggestions);
+      } catch {
+        // ignore
+      }
+    }
+    return allSuggestions;
+  }, [selectedPlatforms, projectWidth, projectHeight, projectDuration, hasSubtitles]);
+
   const handleSelectRecommended = useCallback(() => {
     const recommended = recommendations.filter((r) => r.score > 0.4).map((r) => r.platform.id);
     selectAllPlatforms(recommended);
@@ -149,7 +338,33 @@ export function SmartDistributionPanel({
     }
   }, [onStartExport, selectedPlatforms]);
 
+  const handleGenerateFormats = useCallback(() => {
+    if (selectedPlatforms.length === 0) return;
+    setIsGeneratingFormats(true);
+
+    // 模拟多格式生成（实际应调用 Worker）
+    setTimeout(() => {
+      const mockProject = {
+        name: 'project',
+        settings: { width: projectWidth, height: projectHeight, fps: 30, timecodeFormat: 'hh:mm:ss:ff' },
+        timeline: { tracks: [] },
+      } as any;
+
+      try {
+        const result = generateMultiFormats(mockProject, {
+          ...DEFAULT_MULTI_FORMAT_CONFIG,
+          targetPlatforms: selectedPlatforms,
+        });
+        setMultiFormatResult(result);
+      } catch {
+        // fallback
+      }
+      setIsGeneratingFormats(false);
+    }, 300);
+  }, [selectedPlatforms, projectWidth, projectHeight, setIsGeneratingFormats, setMultiFormatResult]);
+
   const hasActiveTasks = tasks.some((t) => t.status === 'running' || t.status === 'pending');
+  const criticalSuggestions = suggestions.filter((s) => s.severity === 'critical');
 
   return (
     <div className="flex flex-col h-full" data-testid="smart-distribution-panel">
@@ -169,6 +384,30 @@ export function SmartDistributionPanel({
             ✕
           </button>
         )}
+      </div>
+
+      {/* 标签页导航 */}
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
+        {(['platforms', 'formats', 'suggestions'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`flex-1 text-xs py-2 text-center transition-colors ${
+              activeTab === tab
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+            data-testid={`tab-${tab}`}
+          >
+            {tab === 'platforms' ? '平台选择' : tab === 'formats' ? '格式预览' : '适配建议'}
+            {tab === 'suggestions' && criticalSuggestions.length > 0 && (
+              <span className="ml-1 px-1 py-0.5 text-[10px] rounded-full bg-red-500 text-white">
+                {criticalSuggestions.length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* 操作栏 */}
@@ -201,20 +440,107 @@ export function SmartDistributionPanel({
         <span className="text-xs text-gray-400">已选 {selectedPlatforms.length} 个平台</span>
       </div>
 
-      {/* 平台网格 */}
+      {/* 内容区域 */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="grid grid-cols-2 gap-3" data-testid="platform-grid">
-          {recommendations.map((rec) => (
-            <PlatformCard
-              key={rec.platform.id}
-              platform={rec.platform}
-              selected={selectedPlatforms.includes(rec.platform.id)}
-              score={rec.score}
-              reasons={rec.reasons}
-              onToggle={togglePlatform}
-            />
-          ))}
-        </div>
+        {/* 平台选择标签页 */}
+        {activeTab === 'platforms' && (
+          <div className="grid grid-cols-2 gap-3" data-testid="platform-grid">
+            {recommendations.map((rec) => (
+              <PlatformCard
+                key={rec.platform.id}
+                platform={rec.platform}
+                selected={selectedPlatforms.includes(rec.platform.id)}
+                score={rec.score}
+                reasons={rec.reasons}
+                adaptation={adaptations.get(rec.platform.id)}
+                onToggle={togglePlatform}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* 格式预览标签页 */}
+        {activeTab === 'formats' && (
+          <div>
+            {selectedPlatforms.length === 0 ? (
+              <div className="text-center text-sm text-gray-400 py-8">
+                请先在「平台选择」中选择目标平台
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-500">
+                    已选择 {selectedPlatforms.length} 个平台，
+                    预计生成{' '}
+                    {new Set(
+                      selectedPlatforms.map((pid) => {
+                        const p = DISTRIBUTION_PLATFORMS.find((dp) => dp.id === pid);
+                        return p ? `${p.orientation}:${p.aspectRatio}` : '';
+                      }),
+                    ).size}{' '}
+                    种格式
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGenerateFormats}
+                    disabled={isGeneratingFormats}
+                    className="text-xs px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    data-testid="generate-formats"
+                  >
+                    {isGeneratingFormats ? '生成中...' : '生成格式预览'}
+                  </button>
+                </div>
+
+                {multiFormatResult && (
+                  <div className="space-y-3">
+                    {/* 源信息 */}
+                    <div className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 rounded p-2">
+                      源: {multiFormatResult.sourceInfo.width}×{multiFormatResult.sourceInfo.height}
+                      {multiFormatResult.sourceInfo.durationSecs > 0 &&
+                        ` · ${Math.round(multiFormatResult.sourceInfo.durationSecs)}秒`}
+                      {` · 平均质量 ${Math.round(multiFormatResult.summary.averageQuality * 100)}%`}
+                    </div>
+
+                    {/* 格式变体卡片 */}
+                    <div className="grid grid-cols-1 gap-3">
+                      {multiFormatResult.variants.map((variant) => (
+                        <FormatPreviewCard key={variant.id} variant={variant} />
+                      ))}
+                    </div>
+
+                    {/* 警告信息 */}
+                    {multiFormatResult.summary.warnings.length > 0 && (
+                      <div className="space-y-1">
+                        {multiFormatResult.summary.warnings.map((w, i) => (
+                          <div key={i} className="text-xs text-amber-600 dark:text-amber-400">
+                            ⚠ {w}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* 适配建议标签页 */}
+        {activeTab === 'suggestions' && (
+          <div>
+            {selectedPlatforms.length === 0 ? (
+              <div className="text-center text-sm text-gray-400 py-8">
+                请先在「平台选择」中选择目标平台
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div className="text-center text-sm text-green-600 dark:text-green-400 py-8">
+                ✅ 当前项目与所选平台适配良好
+              </div>
+            ) : (
+              <SuggestionList suggestions={suggestions} />
+            )}
+          </div>
+        )}
       </div>
 
       {/* 底部操作栏 */}
@@ -246,6 +572,13 @@ export function SmartDistributionPanel({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* 严重警告提示 */}
+        {criticalSuggestions.length > 0 && (
+          <div className="mb-2 text-xs text-red-600 dark:text-red-400">
+            ⚠ 有 {criticalSuggestions.length} 个严重适配问题需要处理
           </div>
         )}
 

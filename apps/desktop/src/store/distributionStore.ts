@@ -3,6 +3,9 @@ import type { DistributionPlatformId, DistributionPlatformSpec } from '@open-fac
 import type { SmartCropResult } from '@open-factory/editor-core';
 import type { DistributionTask, DistributionBatchResult } from '@open-factory/editor-core';
 import type { DistributionSchedule, DistributionHistoryEntry } from '@open-factory/editor-core';
+import type { FormatVariant, MultiFormatResult, FormatPreview } from '@open-factory/editor-core';
+import type { PlatformAdaptation, AdaptationSuggestion } from '@open-factory/editor-core';
+import type { GeneratedCover, CoverGenerationResult } from '@open-factory/editor-core';
 
 type Updater<T> = T | ((current: T) => T);
 
@@ -31,6 +34,20 @@ export interface DistributionState {
   outputDir: string;
   /** 文件名模板 */
   template: string;
+  /** 多格式生成结果 */
+  multiFormatResult: MultiFormatResult | null;
+  /** 格式变体预览 */
+  formatPreviews: Map<string, FormatPreview>;
+  /** 平台适配方案 */
+  platformAdaptations: Map<DistributionPlatformId, PlatformAdaptation>;
+  /** 适配建议 */
+  adaptationSuggestions: AdaptationSuggestion[];
+  /** 封面生成结果 */
+  coverResult: CoverGenerationResult | null;
+  /** 是否正在生成多格式 */
+  isGeneratingFormats: boolean;
+  /** 是否正在生成封面 */
+  isGeneratingCovers: boolean;
 
   // Setters
   setSelectedPlatforms: (updater: Updater<DistributionPlatformId[]>) => void;
@@ -42,6 +59,13 @@ export interface DistributionState {
   setIsAnalyzing: (updater: Updater<boolean>) => void;
   setOutputDir: (updater: Updater<string>) => void;
   setTemplate: (updater: Updater<string>) => void;
+  setMultiFormatResult: (updater: Updater<MultiFormatResult | null>) => void;
+  setFormatPreviews: (updater: Updater<Map<string, FormatPreview>>) => void;
+  setPlatformAdaptations: (updater: Updater<Map<DistributionPlatformId, PlatformAdaptation>>) => void;
+  setAdaptationSuggestions: (updater: Updater<AdaptationSuggestion[]>) => void;
+  setCoverResult: (updater: Updater<CoverGenerationResult | null>) => void;
+  setIsGeneratingFormats: (updater: Updater<boolean>) => void;
+  setIsGeneratingCovers: (updater: Updater<boolean>) => void;
 
   // 操作
   togglePlatform: (platformId: DistributionPlatformId) => void;
@@ -69,6 +93,13 @@ const INITIAL_STATE = {
   isAnalyzing: false,
   outputDir: '',
   template: '{project}-{platform}-{resolution}',
+  multiFormatResult: null as MultiFormatResult | null,
+  formatPreviews: new Map<string, FormatPreview>(),
+  platformAdaptations: new Map<DistributionPlatformId, PlatformAdaptation>(),
+  adaptationSuggestions: [] as AdaptationSuggestion[],
+  coverResult: null as CoverGenerationResult | null,
+  isGeneratingFormats: false,
+  isGeneratingCovers: false,
 };
 
 // ─── Store ────────────────────────────────────────────
@@ -102,6 +133,27 @@ export const useDistributionStore = create<DistributionState>((set, get) => ({
   },
   setTemplate(updater) {
     set((s) => ({ template: applyUpdater(s.template, updater) }));
+  },
+  setMultiFormatResult(updater) {
+    set((s) => ({ multiFormatResult: applyUpdater(s.multiFormatResult, updater) }));
+  },
+  setFormatPreviews(updater) {
+    set((s) => ({ formatPreviews: applyUpdater(s.formatPreviews, updater) }));
+  },
+  setPlatformAdaptations(updater) {
+    set((s) => ({ platformAdaptations: applyUpdater(s.platformAdaptations, updater) }));
+  },
+  setAdaptationSuggestions(updater) {
+    set((s) => ({ adaptationSuggestions: applyUpdater(s.adaptationSuggestions, updater) }));
+  },
+  setCoverResult(updater) {
+    set((s) => ({ coverResult: applyUpdater(s.coverResult, updater) }));
+  },
+  setIsGeneratingFormats(updater) {
+    set((s) => ({ isGeneratingFormats: applyUpdater(s.isGeneratingFormats, updater) }));
+  },
+  setIsGeneratingCovers(updater) {
+    set((s) => ({ isGeneratingCovers: applyUpdater(s.isGeneratingCovers, updater) }));
   },
 
   togglePlatform(platformId) {
