@@ -30,10 +30,12 @@ import {
   Zap,
   FileText,
   Workflow as WorkflowIcon,
+  Wand2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { SceneAnalysisView } from './SceneAnalysisView';
+import { AutoGeneratePanel } from './AutoGeneratePanel';
 import { Label } from '../ui/label';
 
 /* ------------------------------------------------------------------ */
@@ -84,14 +86,12 @@ interface AutomationPanelProps {
 }
 
 export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
-  // TODO: 将 engine 替换为 useAutomationWorker() hook，使所有工作流执行在 Worker 中运行
-  // Worker 已实现于 src/workers/automation.worker.ts，hook 位于 src/hooks/useAutomationWorker.ts
-  // 当前为同步回退实现，后续迭代将切换到 Worker 模式
+  // 工作流引擎（同步回退实现，一键生成已通过 useAutomationWorker 在 Worker 中执行）
   const [engine] = useState(() => new WorkflowEngine({ verboseLogging: true }));
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [executionLogs, setExecutionLogs] = useState<WorkflowLogEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'workflows' | 'templates' | 'analysis' | 'logs'>('workflows');
+  const [activeTab, setActiveTab] = useState<'workflows' | 'templates' | 'generate' | 'analysis' | 'logs'>('workflows');
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
   // 刷新工作流列表
@@ -175,7 +175,7 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
 
       {/* 标签页 */}
       <div className="flex border-b border-line">
-        {(['workflows', 'templates', 'analysis', 'logs'] as const).map((tab) => (
+        {(['workflows', 'templates', 'generate', 'analysis', 'logs'] as const).map((tab) => (
           <button
             key={tab}
             className={cn(
@@ -185,8 +185,9 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
                 : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={() => setActiveTab(tab)}
+            data-testid={`tab-${tab}`}
           >
-            {tab === 'workflows' ? '工作流' : tab === 'templates' ? '模板' : tab === 'analysis' ? '分析' : '日志'}
+            {tab === 'workflows' ? '工作流' : tab === 'templates' ? '模板' : tab === 'generate' ? '生成' : tab === 'analysis' ? '分析' : '日志'}
           </button>
         ))}
       </div>
@@ -207,6 +208,9 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
             templates={templates}
             onCreateFromTemplate={handleCreateFromTemplate}
           />
+        )}
+        {activeTab === 'generate' && (
+          <AutoGeneratePanel />
         )}
         {activeTab === 'analysis' && (
           <SceneAnalysisView />

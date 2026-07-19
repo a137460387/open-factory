@@ -66,7 +66,7 @@ export function useAutomationWorker() {
     async function init() {
       try {
         const worker = new Worker(
-          new URL('./automation.worker.ts', import.meta.url),
+          new URL('../workers/automation.worker.ts', import.meta.url),
           { type: 'module' },
         );
 
@@ -239,6 +239,18 @@ export function useAutomationWorker() {
     return send<{ ruleId: string }>('register-rule', rule);
   }, [send]);
 
+  // ------ 自动剪辑操作 ------
+
+  const autoEditInWorker = useCallback(async (params: {
+    report: unknown;
+    templateId: string;
+    config?: Record<string, unknown>;
+    weights?: Record<string, unknown>;
+    trackId?: string;
+  }) => {
+    return send<unknown>('auto-edit', params);
+  }, [send]);
+
   return {
     ...state,
     send,
@@ -260,5 +272,7 @@ export function useAutomationWorker() {
     evaluateRules,
     getRules,
     registerRule,
+    // 自动剪辑
+    autoEditInWorker,
   };
 }

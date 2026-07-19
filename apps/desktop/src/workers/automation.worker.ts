@@ -11,6 +11,8 @@ import {
   createDefaultStep,
   BUILTIN_TEMPLATES,
   BUILTIN_RULE_TEMPLATES,
+  autoEdit,
+  TemplateManager,
 } from '@open-factory/editor-core';
 import type {
   Workflow,
@@ -24,6 +26,14 @@ import type {
 import type {
   AutomationRule,
   RuleExecutionResult,
+} from '@open-factory/editor-core';
+import type {
+  EditTemplate,
+  AutoEditorConfig,
+  AutoEditResult,
+} from '@open-factory/editor-core';
+import type {
+  PreferenceWeights,
 } from '@open-factory/editor-core';
 
 // ============================================================
@@ -48,7 +58,8 @@ interface WorkerRequest {
     | 'import-workflow'
     | 'export-workflow'
     | 'register-rule'
-    | 'create-workflow-from-template';
+    | 'create-workflow-from-template'
+    | 'auto-edit';
   payload?: unknown;
 }
 
@@ -67,6 +78,7 @@ interface WorkerResponse {
 const engine = new WorkflowEngine({ verboseLogging: true });
 const sceneAnalyzer = new SceneAnalyzer();
 const ruleEngine = new RuleEngine({ enableDecisionLog: true });
+const templateManager = new TemplateManager();
 
 // 注册内置模板
 for (const tpl of BUILTIN_TEMPLATES) {
@@ -223,6 +235,24 @@ async function handleRequest(req: WorkerRequest): Promise<void> {
         const { templateId, name } = payload as { templateId: string; name?: string };
         const wf = engine.createFromTemplate(templateId, name);
         respond({ id, type, success: true, data: wf ?? null });
+        break;
+      }
+
+      case 'auto-edit': {
+        const { report, templateId, config, weights, trackId } = payload as {
+          report: AnalysisReport;
+          templateId: string;
+          config?: Partial<AutoEditorConfig>;
+          weights?: PreferenceWeights;
+          trackId?: string;
+        };
+        const tpl = templateManager.getTemplate(templateId);
+        if (!tpl) {
+          respond({ id, type, success: false, error: `模板不存在: ${templateId}` });
+          break;
+        }
+        const result = autoEdit(report, tpl, config, weights, trackId);
+        respond({ id, type, success: true, data: result });
         break;
       }
 

@@ -7531,6 +7531,31 @@ window.__E2E_ACTIONS__ = {
     useEditorUIStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
+
+  setupAutoGenerateFixture: () => {
+    const project = createProject('Auto Generate E2E');
+    const asset: MediaAsset = {
+      id: 'media-ag-1',
+      type: 'video',
+      name: 'auto-generate-test.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1920,
+      height: 1080,
+      size: 8192,
+      mtimeMs: 1_000,
+      hasAudio: true,
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline: { tracks: [], transitions: [], markers: [] },
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: { tracks: [], transitions: [], markers: [] } }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorUIStore.getState().setAutomationOpen(true);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
