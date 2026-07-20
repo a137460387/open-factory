@@ -6,7 +6,7 @@
 
 import type {
   QualityReport,
-  QualityIssue,
+  InspectorQualityIssue,
   InspectorConfig,
   IssueSeverity,
   IssueCategory,
@@ -171,7 +171,7 @@ export function qualityPanelReducer(
 /**
  * Get filtered issues based on current filters
  */
-export function getFilteredIssues(state: QualityPanelState): QualityIssue[] {
+export function getFilteredIssues(state: QualityPanelState): InspectorQualityIssue[] {
   if (!state.report) return [];
 
   let issues = state.report.issues;

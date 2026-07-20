@@ -7,7 +7,7 @@
 import type {
   InspectorConfig,
   QualityReport,
-  QualityIssue,
+  InspectorQualityIssue,
   IssueSeverity,
   IssueCategory,
 } from '../quality/types';
@@ -42,7 +42,7 @@ export interface QualityPanelState {
   /** Inspection result */
   report?: QualityReport;
   /** Filtered issues */
-  filteredIssues: QualityIssue[];
+  filteredIssues: InspectorQualityIssue[];
   /** Active filters */
   filters: {
     severity?: IssueSeverity;
@@ -139,9 +139,9 @@ export function qualityPanelReducer(
  * Filter issues based on current filters
  */
 function filterIssues(
-  issues: QualityIssue[],
+  issues: InspectorQualityIssue[],
   filters: QualityPanelState['filters'],
-): QualityIssue[] {
+): InspectorQualityIssue[] {
   return issues.filter((issue) => {
     if (filters.severity && issue.severity !== filters.severity) return false;
     if (filters.category && issue.category !== filters.category) return false;
@@ -227,7 +227,7 @@ export function getGradeColor(grade: QualityReport['grade']): string {
 /**
  * Format issue timeline for display
  */
-export function formatIssueTimeline(issue: QualityIssue): string {
+export function formatIssueTimeline(issue: InspectorQualityIssue): string {
   if (!issue.timeRange) return '全局';
   return `${formatTime(issue.timeRange.start)} - ${formatTime(issue.timeRange.end)}`;
 }

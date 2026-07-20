@@ -9,9 +9,9 @@ import {
   calculateMotionScore,
   analyzeAudioSegment,
   analyzeFrames,
-  detectSceneTransitions,
-  analyzePacing,
-  checkCompliance,
+  detectQualitySceneTransitions,
+  analyzeQualityPacing,
+  checkPlatformCompliance,
   generateIssues,
   calculateQualityScore,
   scoreToGrade,
@@ -175,7 +175,7 @@ describe('Quality Inspector', () => {
     });
   });
 
-  describe('checkCompliance', () => {
+  describe('checkPlatformCompliance', () => {
     it('should pass for matching specs', () => {
       const mediaInfo = {
         width: 1920,
@@ -185,7 +185,7 @@ describe('Quality Inspector', () => {
         audioSampleRate: 48000,
         audioChannels: 2,
       };
-      const result = checkCompliance(mediaInfo, 'youtube-1080p');
+      const result = checkPlatformCompliance(mediaInfo, 'youtube-1080p');
       expect(result.passed).toBe(true);
       expect(result.violations).toHaveLength(0);
     });
@@ -199,7 +199,7 @@ describe('Quality Inspector', () => {
         audioSampleRate: 48000,
         audioChannels: 2,
       };
-      const result = checkCompliance(mediaInfo, 'youtube-1080p');
+      const result = checkPlatformCompliance(mediaInfo, 'youtube-1080p');
       expect(result.passed).toBe(false);
       expect(result.violations.length).toBeGreaterThan(0);
     });
@@ -213,7 +213,7 @@ describe('Quality Inspector', () => {
         audioSampleRate: 44100,
         audioChannels: 2,
       };
-      const result = checkCompliance(mediaInfo, 'tiktok-9-16');
+      const result = checkPlatformCompliance(mediaInfo, 'tiktok-9-16');
       expect(result.passed).toBe(false);
     });
   });

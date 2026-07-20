@@ -30,7 +30,7 @@ export type ContentIssueType =
   | 'low-engagement-potential';
 
 /** Platform compliance targets */
-export type PlatformTarget =
+export type QualityPlatformTarget =
   | 'youtube-1080p'
   | 'youtube-4k'
   | 'tiktok-9-16'
@@ -47,7 +47,7 @@ export interface TimeRange {
 }
 
 /** Quality issue detected */
-export interface QualityIssue {
+export interface InspectorQualityIssue {
   id: string;
   category: IssueCategory;
   type: TechnicalDefectType | ContentIssueType | string;
@@ -62,7 +62,7 @@ export interface QualityIssue {
 
 /** Platform compliance specification */
 export interface PlatformSpec {
-  id: PlatformTarget;
+  id: QualityPlatformTarget;
   name: string;
   width: number;
   height: number;
@@ -117,7 +117,7 @@ export interface SceneTransition {
 
 /** Compliance check result */
 export interface ComplianceResult {
-  platform: PlatformTarget;
+  platform: QualityPlatformTarget;
   passed: boolean;
   violations: ComplianceViolation[];
 }
@@ -137,7 +137,7 @@ export interface QualityReport {
   duration: number;
   overallScore: number;
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  issues: QualityIssue[];
+  issues: InspectorQualityIssue[];
   frameAnalyses: FrameAnalysis[];
   audioAnalyses: AudioAnalysis[];
   pacingSegments: PacingSegment[];
@@ -168,7 +168,7 @@ export interface InspectorConfig {
   /** Enable compliance checking */
   enableComplianceCheck: boolean;
   /** Target platform for compliance */
-  targetPlatform: PlatformTarget;
+  targetPlatform: QualityPlatformTarget;
   /** Custom platform spec (when targetPlatform is 'custom') */
   customPlatformSpec?: Partial<PlatformSpec>;
   /** Black frame threshold (0-1) */
@@ -206,7 +206,7 @@ export const DEFAULT_INSPECTOR_CONFIG: InspectorConfig = {
 };
 
 /** Platform specifications */
-export const PLATFORM_SPECS: Record<PlatformTarget, PlatformSpec> = {
+export const PLATFORM_SPECS: Record<QualityPlatformTarget, PlatformSpec> = {
   'youtube-1080p': {
     id: 'youtube-1080p',
     name: 'YouTube 1080p',

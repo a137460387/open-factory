@@ -15,7 +15,7 @@ import {
   generateCleanupRecommendations,
   generateResourceReport,
   formatSize,
-  formatDuration,
+  formatDurationMs,
 } from './manager';
 
 import type {
@@ -281,12 +281,12 @@ describe('Resource Manager', () => {
     });
   });
 
-  describe('formatDuration', () => {
+  describe('formatDurationMs', () => {
     it('should format duration correctly', () => {
-      expect(formatDuration(500)).toBe('500ms');
-      expect(formatDuration(1500)).toBe('1.5s');
-      expect(formatDuration(90000)).toBe('1m 30s');
-      expect(formatDuration(3660000)).toBe('1h 1m');
+      expect(formatDurationMs(500)).toBe('500ms');
+      expect(formatDurationMs(1500)).toBe('1.5s');
+      expect(formatDurationMs(90000)).toBe('1m 30s');
+      expect(formatDurationMs(3660000)).toBe('1h 1m');
     });
   });
 

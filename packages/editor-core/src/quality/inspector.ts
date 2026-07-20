@@ -6,7 +6,7 @@
 import type {
   InspectorConfig,
   QualityReport,
-  QualityIssue,
+  InspectorQualityIssue,
   QualitySummary,
   FrameAnalysis,
   AudioAnalysis,
@@ -252,7 +252,7 @@ export function analyzeFrames(
 /**
  * Detect scene transitions from frame analyses
  */
-export function detectSceneTransitions(
+export function detectQualitySceneTransitions(
   frameAnalyses: FrameAnalysis[],
   motionThreshold: number = 0.3,
 ): SceneTransition[] {
@@ -288,7 +288,7 @@ export function detectSceneTransitions(
 /**
  * Analyze pacing from scene transitions
  */
-export function analyzePacing(
+export function analyzeQualityPacing(
   transitions: SceneTransition[],
   totalDuration: number,
   windowSeconds: number = 30,
@@ -325,7 +325,7 @@ export function analyzePacing(
 /**
  * Check compliance against platform specifications
  */
-export function checkCompliance(
+export function checkPlatformCompliance(
   mediaInfo: {
     width: number;
     height: number;
@@ -439,8 +439,8 @@ export function generateIssues(
   sceneTransitions: SceneTransition[],
   complianceResult: ComplianceResult,
   config: InspectorConfig,
-): QualityIssue[] {
-  const issues: QualityIssue[] = [];
+): InspectorQualityIssue[] {
+  const issues: InspectorQualityIssue[] = [];
 
   // Technical issues from frame analysis
   for (const frame of frameAnalyses) {
@@ -575,7 +575,7 @@ export function generateIssues(
 /**
  * Calculate overall quality score and grade
  */
-export function calculateQualityScore(issues: QualityIssue[]): QualitySummary {
+export function calculateQualityScore(issues: InspectorQualityIssue[]): QualitySummary {
   const totalIssues = issues.length;
   const criticalIssues = issues.filter((i) => i.severity === 'critical').length;
   const errorIssues = issues.filter((i) => i.severity === 'error').length;
@@ -677,17 +677,17 @@ export async function runQualityInspection(
 
   // Step 3: Detect scene transitions
   const sceneTransitions = config.enableContentAnalysis
-    ? detectSceneTransitions(frameAnalyses)
+    ? detectQualitySceneTransitions(frameAnalyses)
     : [];
 
   // Step 4: Analyze pacing
   const pacingSegments = config.enableContentAnalysis
-    ? analyzePacing(sceneTransitions, mediaData.mediaInfo.duration)
+    ? analyzeQualityPacing(sceneTransitions, mediaData.mediaInfo.duration)
     : [];
 
   // Step 5: Check compliance
   const complianceResult = config.enableComplianceCheck
-    ? checkCompliance(mediaData.mediaInfo, config.targetPlatform)
+    ? checkPlatformCompliance(mediaData.mediaInfo, config.targetPlatform)
     : { platform: config.targetPlatform, passed: true, violations: [] };
 
   // Step 6: Generate issues

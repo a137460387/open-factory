@@ -24,7 +24,7 @@ import {
   generateResourceReport,
   calculateResourceStats,
   formatSize,
-  formatDuration,
+  formatDurationMs,
 } from '../resources/manager';
 
 // ─── Panel State ────────────────────────────────────────────────
