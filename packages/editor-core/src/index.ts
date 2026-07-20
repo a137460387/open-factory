@@ -286,3 +286,8 @@ export * from './ai/style-panel';
 export * from './ai/workflow-editor-panel';
 export * from './ai/enhanced-dialogue-panel';
 export * from './automation';
+
+// Sprint Z: AI Quality Inspector, Resource Manager, Performance Monitor
+export * from './quality';
+export * from './resources';
+export * from './performance';
