@@ -316,7 +316,9 @@ function Ruler({
               if (scrubCtx) {
                 try {
                   scrubCtx.close();
-                } catch {}
+                } catch {
+                  // AudioContext close can fail if already closed
+                }
                 scrubCtx = null;
               }
             };

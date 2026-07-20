@@ -814,7 +814,9 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                         if (Number.isFinite(h)) {
                           try {
                             commandManager.execute(new BatchUpdateTrackHeightCommand(projectAccessor, h));
-                          } catch {}
+                          } catch (error) {
+                            console.error('Failed to update track height:', error);
+                          }
                         }
                         setEqualHeightPrompt(false);
                       }}
