@@ -555,7 +555,7 @@ export function generatePersonalizedSubtitleStyle(
  * @param config - 个性化配置
  * @returns 推荐内容列表
  */
-export function generateRecommendations(
+export function generatePersonalizedRecommendations(
   profile: UserProfile,
   availableContent: Array<{
     id: string;
@@ -672,7 +672,7 @@ export function generateInteractiveElements(
 export function generatePersonalizedContent(
   profile: UserProfile,
   config: PersonalizationConfig,
-  availableContent: Parameters<typeof generateRecommendations>[1] = [],
+  availableContent: Parameters<typeof generatePersonalizedRecommendations>[1] = [],
   videoDuration: number = 60,
 ): PersonalizationResult {
   const startTime = performance.now();
@@ -689,7 +689,7 @@ export function generatePersonalizedContent(
     ? generatePersonalizedSubtitleStyle(profile, config)
     : createDefaultSubtitleStyle();
 
-  const recommendations = generateRecommendations(profile, availableContent, config);
+  const recommendations = generatePersonalizedRecommendations(profile, availableContent, config);
   const interactiveElements = generateInteractiveElements(profile, videoDuration, config);
 
   // 计算个性化评分

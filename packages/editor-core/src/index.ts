@@ -280,4 +280,7 @@ export * from './ai/assist-editing';
 export * from './ai/content-generation';
 export * from './ai/quality-assessment';
 export * from './ai/ai-worker';
+export * from './ai/personalization-engine';
+export * from './ai/enhancement-processor';
+export * from './ai/creative-assistant';
 export * from './automation';

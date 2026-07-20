@@ -6,7 +6,7 @@ import {
   generatePersonalizedIntro,
   generatePersonalizedOutro,
   generatePersonalizedSubtitleStyle,
-  generateRecommendations,
+  generatePersonalizedRecommendations,
   generateInteractiveElements,
   generatePersonalizedContent,
   validatePersonalizationConfig,
@@ -238,13 +238,13 @@ describe('generatePersonalizedSubtitleStyle', () => {
 
 // ==================== generateRecommendations ====================
 
-describe('generateRecommendations', () => {
+describe('generatePersonalizedRecommendations', () => {
   it('should return empty when recommendations disabled', () => {
     const profile = createTestProfile();
     const config = createTestConfig({ enableRecommendations: false });
     const content = createTestContentPool();
 
-    const recs = generateRecommendations(profile, content, config);
+    const recs = generatePersonalizedRecommendations(profile, content, config);
     expect(recs).toEqual([]);
   });
 
@@ -252,7 +252,7 @@ describe('generateRecommendations', () => {
     const profile = createTestProfile();
     const config = createTestConfig();
 
-    const recs = generateRecommendations(profile, [], config);
+    const recs = generatePersonalizedRecommendations(profile, [], config);
     expect(recs).toEqual([]);
   });
 
@@ -261,7 +261,7 @@ describe('generateRecommendations', () => {
     const config = createTestConfig();
     const content = createTestContentPool();
 
-    const recs = generateRecommendations(profile, content, config);
+    const recs = generatePersonalizedRecommendations(profile, content, config);
     expect(recs.length).toBeGreaterThan(0);
 
     // Technology content should rank higher
@@ -278,7 +278,7 @@ describe('generateRecommendations', () => {
     const config = createTestConfig({ maxRecommendations: 2 });
     const content = createTestContentPool();
 
-    const recs = generateRecommendations(profile, content, config);
+    const recs = generatePersonalizedRecommendations(profile, content, config);
     expect(recs.length).toBeLessThanOrEqual(2);
   });
 });
