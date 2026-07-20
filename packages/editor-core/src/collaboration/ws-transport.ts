@@ -263,6 +263,7 @@ export function isValidCollabMessageType(type: string): type is CollabMessageTyp
  * 浏览器 WebSocket 适配器
  *
  * 封装原生 WebSocket API，提供统一接口。
+ * @internal
  */
 export class BrowserWSAdapter implements WSAdapter {
   private ws: WebSocket | null = null;

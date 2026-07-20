@@ -196,10 +196,14 @@ const TEAM_ROLE_PERMISSIONS: Record<TeamRole, TeamMemberPermissions> = {
   },
 };
 
-/** 团队角色列表 */
+/** 团队角色列表
+ * @internal
+ */
 export const TEAM_ROLES: TeamRole[] = ['owner', 'admin', 'member', 'viewer'];
 
-/** 默认团队设置 */
+/** 默认团队设置
+ * @internal
+ */
 export const DEFAULT_TEAM_SETTINGS: TeamSettings = {
   allowMemberInvite: true,
   allowProjectCreation: true,

@@ -91,6 +91,7 @@ export interface BuildExportProjectOptions {
   metadata?: ExportProject['metadata'];
 }
 
+/** @internal */
 export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   width: 1280,
   height: 720,
@@ -131,18 +132,31 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   workingColorSpace: 'srgb',
 };
 
+/** @internal */
 export const SETPTS_EXPRESSION_LIMIT = 4096;
+/** @internal */
 export const GIF_PALETTE_PLACEHOLDER = '__GIF_PALETTE_open_factory__';
+/** @internal */
 export const LOUDNORM_MEASURED_I_PLACEHOLDER = '__LOUDNORM_MEASURED_I__';
+/** @internal */
 export const LOUDNORM_MEASURED_TP_PLACEHOLDER = '__LOUDNORM_MEASURED_TP__';
+/** @internal */
 export const LOUDNORM_MEASURED_LRA_PLACEHOLDER = '__LOUDNORM_MEASURED_LRA__';
+/** @internal */
 export const LOUDNORM_MEASURED_THRESH_PLACEHOLDER = '__LOUDNORM_MEASURED_THRESH__';
+/** @internal */
 export const LOUDNORM_OFFSET_PLACEHOLDER = '__LOUDNORM_OFFSET__';
+/** @internal */
 export const WATERMARK_MARGIN_PX = 24;
+/** @internal */
 export const SLATE_DURATION_SECONDS = 0.5;
+/** @internal */
 export const CUSTOM_SHADER_SEQUENCE_KIND = 'custom-shader-sequence';
+/** @internal */
 export const PATH_TEXT_SEQUENCE_KIND = 'path-text-sequence';
+/** @internal */
 export const MOTION_GRAPHIC_SEQUENCE_PATH_MODE = 'motion-graphic-sequence';
+/** @internal */
 export const EXPORT_PREVIEW_SAMPLE_KINDS: ExportPreviewSampleKind[] = ['start', 'middle', 'end'];
 
 export interface LoudnessNormalizationPreset {
@@ -163,6 +177,7 @@ export interface SubtitleLanguageGroup {
   clips: ExportClip[];
 }
 
+/** @internal */
 export const DEFAULT_EXPORT_MASTER_EQ_BANDS: ExportMasterEqBand[] = [
   { id: 'master-eq-31', type: 'lowshelf', frequency: 31, gain: 0, q: 0.7 },
   { id: 'master-eq-63', type: 'peaking', frequency: 63, gain: 0, q: 1 },
@@ -174,6 +189,7 @@ export const DEFAULT_EXPORT_MASTER_EQ_BANDS: ExportMasterEqBand[] = [
   { id: 'master-eq-12000', type: 'highshelf', frequency: 12000, gain: 0, q: 0.7 },
 ];
 
+/** @internal */
 export const DEFAULT_EXPORT_MASTER_PROCESSING: ExportMasterProcessingSettings = {
   eq: {
     enabled: false,
@@ -467,14 +483,17 @@ export function buildExportClipKeyframes(
 // Private helpers used by the extracted functions above
 // ---------------------------------------------------------------------------
 
+/** @internal */
 export function safeLabel(value: string): string {
   return value.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
+/** @internal */
 export function nestedInputPlaceholder(sequenceId: string): string {
   return `__NESTED_SEQUENCE_${safeLabel(sequenceId)}__.mp4`;
 }
 
+/** @internal */
 export function mergeExportMetadata(
   base: ExportProject['metadata'],
   override: ExportProject['metadata'],
@@ -493,6 +512,7 @@ export function mergeExportMetadata(
   };
 }
 
+/** @internal */
 export function normalizeExportReframeSettings(settings: ExportSettings): ExportSettings {
   const targetAspectRatio = normalizeTargetAspectRatio(settings.targetAspectRatio);
   const dimensions = resolveReframeDimensions(settings.width, settings.height, targetAspectRatio);
@@ -517,6 +537,7 @@ export function normalizeExportReframeSettings(settings: ExportSettings): Export
   };
 }
 
+/** @internal */
 export function normalizeExportSpatialAudioAssets(
   input: ExportSettings['spatialAudioAssets'] | undefined,
 ): ExportSettings['spatialAudioAssets'] {
@@ -541,6 +562,7 @@ export function normalizeExportSpatialAudioAssets(
   return hrtfPath || Object.keys(roomImpulseResponses).length > 0 ? { hrtfPath, roomImpulseResponses } : null;
 }
 
+/** @internal */
 export function normalizeExportMasterProcessing(
   input: ExportSettings['masterProcessing'] | undefined,
 ): ExportMasterProcessingSettings {
@@ -571,6 +593,7 @@ export function normalizeExportMasterProcessing(
   };
 }
 
+/** @internal */
 export function normalizeExportMasterEq(input: Partial<ExportMasterEq> | undefined): ExportMasterEq {
   const bands = Array.isArray(input?.bands) ? input.bands : [];
   return {
@@ -579,6 +602,7 @@ export function normalizeExportMasterEq(input: Partial<ExportMasterEq> | undefin
   };
 }
 
+/** @internal */
 export function normalizeExportMasterEqBand(
   input: Partial<ExportMasterEqBand> | undefined,
   fallback: ExportMasterEqBand,
@@ -594,20 +618,24 @@ export function normalizeExportMasterEqBand(
   };
 }
 
+/** @internal */
 export function finiteNumber(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+/** @internal */
 export function normalizeLoudnessNormalization(
   mode: ExportLoudnessNormalization | undefined,
 ): ExportLoudnessNormalization {
   return mode === 'youtube' || mode === 'ebu-r128' ? mode : 'off';
 }
 
+/** @internal */
 export function normalizeVideoProfile(profile: ExportVideoProfile | undefined): ExportVideoProfile | undefined {
   return profile === 'baseline' || profile === 'main' || profile === 'high' ? profile : undefined;
 }
 
+/** @internal */
 export function normalizeExportWatermark(
   watermark: ExportSettings['watermark'] | undefined,
 ): ExportSettings['watermark'] {
@@ -648,6 +676,7 @@ export function normalizeExportWatermark(
   return null;
 }
 
+/** @internal */
 export function normalizeWatermarkPosition(position: ExportWatermarkPosition | undefined): ExportWatermarkPosition {
   return position === 'top-left' ||
     position === 'top-center' ||
@@ -662,6 +691,7 @@ export function normalizeWatermarkPosition(position: ExportWatermarkPosition | u
     : 'bottom-right';
 }
 
+/** @internal */
 export function normalizeTimecodeBurnIn(
   timecode: ExportSettings['timecodeBurnIn'] | undefined,
 ): ExportSettings['timecodeBurnIn'] {
@@ -681,10 +711,12 @@ export function normalizeTimecodeBurnIn(
   };
 }
 
+/** @internal */
 export function normalizeExportSlate(slate: ExportSettings['slate'] | undefined): ExportSettings['slate'] {
   return slate?.enabled === true ? { enabled: true } : null;
 }
 
+/** @internal */
 export function normalizeExportAudioVisualization(
   input: ExportAudioVisualizationSettings | undefined,
 ): ExportAudioVisualizationSettings {
@@ -707,11 +739,13 @@ export function normalizeExportAudioVisualization(
   return normalized;
 }
 
+/** @internal */
 export function normalizeHexColor(value: string | undefined, fallback: string): string {
   const parsed = parseHexColor(value ?? '', fallback);
   return `#${toHexChannel(parsed.r)}${toHexChannel(parsed.g)}${toHexChannel(parsed.b)}`;
 }
 
+/** @internal */
 export function parseHexColor(value: string, fallback: string): { r: number; g: number; b: number } {
   const normalized = value.trim().replace(/^#/, '');
   if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
@@ -734,6 +768,7 @@ export function parseHexColor(value: string, fallback: string): { r: number; g: 
   return parseHexColor(fallback, '#050816');
 }
 
+/** @internal */
 export function toHexChannel(value: number): string {
   return Math.round(Math.min(255, Math.max(0, value)))
     .toString(16)

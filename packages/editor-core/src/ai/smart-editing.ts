@@ -530,6 +530,7 @@ export function detectSilence(
 
 /**
  * 默认智能剪辑配置
+ * @internal
  */
 export const DEFAULT_SMART_EDITING_CONFIG: SmartEditingConfig = {
   enableRhythmMatching: true,

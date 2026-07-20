@@ -332,11 +332,13 @@ export function buildAudioVisualizationOverlayPosition(
   return { x: '0', y: '0' };
 }
 
+/** @internal */
 export function normalizeHexColor(value: string | undefined, fallback: string): string {
   const parsed = parseHexColor(value ?? '', fallback);
   return `#${toHexChannel(parsed.r)}${toHexChannel(parsed.g)}${toHexChannel(parsed.b)}`;
 }
 
+/** @internal */
 export function parseHexColor(value: string, fallback: string): { r: number; g: number; b: number } {
   const normalized = value.trim().replace(/^#/, '');
   if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
@@ -366,6 +368,7 @@ export function buildGradientChannelExpression(start: number, end: number): stri
   return `${start}+(${end - start})*Y/max(H-1,1)`;
 }
 
+/** @internal */
 export function toHexChannel(value: number): string {
   return Math.round(Math.min(255, Math.max(0, value)))
     .toString(16)

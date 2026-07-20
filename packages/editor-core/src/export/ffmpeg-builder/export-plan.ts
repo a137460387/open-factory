@@ -736,6 +736,7 @@ export function buildStemExportPlans(
   });
 }
 
+/** @internal */
 export function sanitizeStemPathComponent(name: string): string {
   return name
     .replace(/[<>:"/\\|?*() ]/g, '_')
@@ -744,6 +745,7 @@ export function sanitizeStemPathComponent(name: string): string {
     .trim();
 }
 
+/** @internal */
 export function buildStemOutputPath(
   outputDir: string,
   projectName: string,

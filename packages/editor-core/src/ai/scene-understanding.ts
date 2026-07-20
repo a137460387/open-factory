@@ -529,6 +529,7 @@ export function computeMotionLevel(frame1: ImageData, frame2: ImageData, thresho
 
 /**
  * 默认场景理解配置
+ * @internal
  */
 export const DEFAULT_SCENE_UNDERSTANDING_CONFIG: SceneUnderstandingConfig = {
   enableObjectDetection: true,

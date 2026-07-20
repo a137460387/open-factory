@@ -47,12 +47,14 @@ import {
 
 export type AnimatedProperty = keyof NonNullable<ExportClip['keyframes']>;
 
+/** @internal */
 export function getAnimatedFrames(clip: ExportClip, property: AnimatedProperty): ExportKeyframe[] {
   return [...(clip.keyframes?.[property] ?? [])].sort(
     (left, right) => left.time - right.time || left.id.localeCompare(right.id),
   );
 }
 
+/** @internal */
 export function getAverageClipSpeed(clip: ExportClip): number {
   if (clip.duration <= 0.000001) {
     return clip.speed;
@@ -60,12 +62,14 @@ export function getAverageClipSpeed(clip: ExportClip): number {
   return getClipSpeed({ speed: clip.sourceDuration / clip.duration });
 }
 
+/** @internal */
 export function getExportClipSourceDuration(clip: ExportClip): number {
   return clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence'
     ? Math.max(0.001, clip.sourceDuration)
     : Math.max(0.001, clip.duration);
 }
 
+/** @internal */
 export function buildLocalExpression(
   frames: Array<{ time: number; value: number; easing?: ExportKeyframe['easing'] }>,
   fallback: number,
@@ -85,6 +89,7 @@ export function buildLocalExpression(
   return `if(lt(${variable},${formatFfmpegSeconds(first.time)}),${formatFfmpegNumber(first.value)},${expression})`;
 }
 
+/** @internal */
 export function buildSegmentExpression(
   left: { time: number; value: number; easing?: ExportKeyframe['easing'] },
   right: { time: number; value: number },
@@ -98,6 +103,7 @@ export function buildSegmentExpression(
   return `${startValue}+(${endValue}-${startValue})*${buildEasingExpression(progress, left.easing ?? 'linear')}`;
 }
 
+/** @internal */
 export function buildEasingExpression(progress: string, easing: ExportKeyframe['easing']): string {
   if (easing === 'ease-in') {
     return `(${progress})*(${progress})`;
@@ -117,6 +123,7 @@ export function buildEasingExpression(progress: string, easing: ExportKeyframe['
   return progress;
 }
 
+/** @internal */
 export function buildBounceEasingExpression(progress: string): string {
   const n1 = '7.5625';
   const d1 = '2.75';
@@ -286,6 +293,7 @@ export function buildAudioDenoiseFilters(
  * 生成基于 afftdn 的降噪滤镜
  * 用于混音器面板的"一键降噪"功能
  * 使用参数数组风格，不拼接 shell 字符串
+ * @internal
  */
 export function buildAfftdnNoiseReductionFilter(params: NoiseReductionParams): string {
   const normalized = normalizeNoiseReductionParams(params);
@@ -296,6 +304,7 @@ export function buildAfftdnNoiseReductionFilter(params: NoiseReductionParams): s
 /**
  * 从混音器通道效果链中提取降噪滤镜
  * 将 noise-reduction 效果类型转换为 afftdn FFmpeg 滤镜
+ * @internal
  */
 export function buildMixerChannelNoiseReductionFilter(effects: AudioEffectSlot[]): string {
   const noiseReductionEffects = effects.filter((e) => e.effectType === 'noise-reduction' && e.enabled);
@@ -572,6 +581,7 @@ export function buildAtempoFilters(speed: number): string[] {
   return filters;
 }
 
+/** @internal */
 export function safeLabel(value: string): string {
   return value.replace(/[^a-zA-Z0-9_]/g, '_');
 }
