@@ -13,9 +13,7 @@ describe('xfade-params', () => {
 
       expect(result).not.toBeNull();
       expect(result!.filters).toHaveLength(1);
-      expect(result!.filters[0]).toBe(
-        '[t0_from][t0_to]xfade=transition=dissolve:duration=0.5:offset=1[t0_raw]',
-      );
+      expect(result!.filters[0]).toBe('[t0_from][t0_to]xfade=transition=dissolve:duration=0.5:offset=1[t0_raw]');
       expect(result!.outputLabel).toBe('t0_raw');
     });
 
@@ -82,10 +80,22 @@ describe('xfade-params', () => {
 
     it('所有标准转场都能生成滤镜', () => {
       const standardTypes = [
-        'dissolve', 'fade-black', 'wipe-left', 'wipe-right', 'wipe-up', 'wipe-down',
-        'zoom-dissolve', 'flash-white', 'flash-black', 'block',
-        'film-roll-open', 'film-roll-close',
-        'push-left', 'push-right', 'push-up', 'push-down',
+        'dissolve',
+        'fade-black',
+        'wipe-left',
+        'wipe-right',
+        'wipe-up',
+        'wipe-down',
+        'zoom-dissolve',
+        'flash-white',
+        'flash-black',
+        'block',
+        'film-roll-open',
+        'film-roll-close',
+        'push-left',
+        'push-right',
+        'push-up',
+        'push-down',
       ] as const;
 
       for (const type of standardTypes) {

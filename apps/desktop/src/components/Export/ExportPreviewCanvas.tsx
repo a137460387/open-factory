@@ -65,9 +65,7 @@ export function ExportPreviewCanvas({
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // 从导出队列存储获取任务状态
-  const task = useExportQueueStore((state) =>
-    state.tasks.find((t) => t.id === taskId)
-  );
+  const task = useExportQueueStore((state) => state.tasks.find((t) => t.id === taskId));
 
   // 更新进度
   useEffect(() => {
@@ -85,39 +83,36 @@ export function ExportPreviewCanvas({
 
     const setupListener = async () => {
       try {
-        unlisten = await listenBridge<ExportPreviewFrameEvent>(
-          'export-preview-frame',
-          (event) => {
-            if (disposed || event.taskId !== taskId) return;
+        unlisten = await listenBridge<ExportPreviewFrameEvent>('export-preview-frame', (event) => {
+          if (disposed || event.taskId !== taskId) return;
 
-            const frameId = `frame-${event.timestamp}-${Math.random().toString(36).slice(2, 8)}`;
-            const frameSrc = convertLocalFileSrc(event.framePath);
+          const frameId = `frame-${event.timestamp}-${Math.random().toString(36).slice(2, 8)}`;
+          const frameSrc = convertLocalFileSrc(event.framePath);
 
-            setFrames((prev) => {
-              const newFrame: PreviewFrame = {
-                id: frameId,
-                src: frameSrc,
-                timestamp: event.timestamp,
-                progress: event.progress,
-                loaded: false,
-              };
+          setFrames((prev) => {
+            const newFrame: PreviewFrame = {
+              id: frameId,
+              src: frameSrc,
+              timestamp: event.timestamp,
+              progress: event.progress,
+              loaded: false,
+            };
 
-              // 保持最大帧数限制
-              const updated = [...prev, newFrame];
-              if (updated.length > maxFrames) {
-                // 移除最早的帧并清理缓存
-                const removed = updated.slice(0, updated.length - maxFrames);
-                removed.forEach((frame) => {
-                  imageCache.current.delete(frame.src);
-                });
-                return updated.slice(updated.length - maxFrames);
-              }
-              return updated;
-            });
+            // 保持最大帧数限制
+            const updated = [...prev, newFrame];
+            if (updated.length > maxFrames) {
+              // 移除最早的帧并清理缓存
+              const removed = updated.slice(0, updated.length - maxFrames);
+              removed.forEach((frame) => {
+                imageCache.current.delete(frame.src);
+              });
+              return updated.slice(updated.length - maxFrames);
+            }
+            return updated;
+          });
 
-            setCurrentProgress(event.progress);
-          }
-        );
+          setCurrentProgress(event.progress);
+        });
       } catch (err) {
         if (!disposed) {
           setError(err instanceof Error ? err.message : 'Failed to listen for preview frames');
@@ -140,9 +135,7 @@ export function ExportPreviewCanvas({
         const img = new Image();
         img.onload = () => {
           imageCache.current.set(frame.src, img);
-          setFrames((prev) =>
-            prev.map((f) => (f.id === frame.id ? { ...f, loaded: true } : f))
-          );
+          setFrames((prev) => prev.map((f) => (f.id === frame.id ? { ...f, loaded: true } : f)));
         };
         img.onerror = () => {
           console.warn(`Failed to load preview frame: ${frame.src}`);
@@ -253,20 +246,14 @@ export function ExportPreviewCanvas({
 
       {/* 进度信息覆盖层 */}
       <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent p-3">
-        <div className="text-sm text-white">
-          导出进度: {Math.round(currentProgress * 100)}%
-        </div>
-        <div className="text-xs text-gray-300">
-          {frames.length} 帧预览
-        </div>
+        <div className="text-sm text-white">导出进度: {Math.round(currentProgress * 100)}%</div>
+        <div className="text-xs text-gray-300">{frames.length} 帧预览</div>
       </div>
 
       {/* 错误信息 */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-red-900/50">
-          <div className="rounded-md bg-red-800 px-4 py-2 text-sm text-white">
-            {error}
-          </div>
+          <div className="rounded-md bg-red-800 px-4 py-2 text-sm text-white">{error}</div>
         </div>
       )}
 
@@ -296,13 +283,7 @@ function formatTimestamp(seconds: number): string {
 /**
  * 简化版导出进度条组件
  */
-export function ExportProgressBar({
-  progress,
-  className = '',
-}: {
-  progress: number;
-  className?: string;
-}) {
+export function ExportProgressBar({ progress, className = '' }: { progress: number; className?: string }) {
   return (
     <div
       className={`h-2 w-full overflow-hidden rounded-full bg-gray-700 ${className}`}
@@ -345,18 +326,11 @@ export function ExportPreviewThumbnailGrid({
           className="group relative overflow-hidden rounded-md border border-gray-600"
           data-testid={`export-preview-thumbnail-${index}`}
         >
-          <img
-            src={thumbnail.src}
-            alt={thumbnail.label}
-            className="aspect-video w-full object-cover"
-            loading="lazy"
-          />
+          <img src={thumbnail.src} alt={thumbnail.label} className="aspect-video w-full object-cover" loading="lazy" />
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
             <div className="text-xs text-white">{thumbnail.label}</div>
             {thumbnail.timestamp !== undefined && (
-              <div className="text-[10px] text-gray-300">
-                {formatTimestamp(thumbnail.timestamp)}
-              </div>
+              <div className="text-[10px] text-gray-300">{formatTimestamp(thumbnail.timestamp)}</div>
             )}
           </div>
         </div>

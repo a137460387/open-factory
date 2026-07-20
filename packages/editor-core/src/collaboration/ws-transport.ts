@@ -175,7 +175,8 @@ export function createDefaultWSTransportConfig(
 /** 验证传输配置 */
 export function validateWSTransportConfig(config: WSTransportConfig): WSTransportConfig {
   return {
-    serverUrl: typeof config.serverUrl === 'string' && config.serverUrl ? config.serverUrl : DEFAULT_WS_CONFIG.serverUrl,
+    serverUrl:
+      typeof config.serverUrl === 'string' && config.serverUrl ? config.serverUrl : DEFAULT_WS_CONFIG.serverUrl,
     sessionId: config.sessionId,
     userId: config.userId,
     userName: config.userName,
@@ -238,9 +239,20 @@ export function parseCollabMessage(json: string): CollabMessage | null {
 /** 验证消息类型 */
 export function isValidCollabMessageType(type: string): type is CollabMessageType {
   const validTypes: CollabMessageType[] = [
-    'join', 'leave', 'operation', 'cursor-update', 'state-sync',
-    'heartbeat', 'heartbeat-ack', 'comment', 'lock-request',
-    'lock-grant', 'lock-release', 'error', 'snapshot-request', 'snapshot-response',
+    'join',
+    'leave',
+    'operation',
+    'cursor-update',
+    'state-sync',
+    'heartbeat',
+    'heartbeat-ack',
+    'comment',
+    'lock-request',
+    'lock-grant',
+    'lock-release',
+    'error',
+    'snapshot-request',
+    'snapshot-response',
   ];
   return validTypes.includes(type as CollabMessageType);
 }
@@ -281,7 +293,8 @@ export class BrowserWSAdapter implements WSAdapter {
   }
 
   send(data: string): void {
-    if (this.ws?.readyState === 1) { // OPEN
+    if (this.ws?.readyState === 1) {
+      // OPEN
       this.ws.send(data);
     }
   }
@@ -428,9 +441,7 @@ export class CollabWSTransport {
   constructor(config: WSTransportConfig, adapter?: WSAdapter) {
     this.config = validateWSTransportConfig(config);
     this.adapter = adapter ?? new BrowserWSAdapter();
-    this.manager = new ColorCollaborationManager(
-      createDefaultCollabSessionConfig(config.sessionId, '', config.userId),
-    );
+    this.manager = new ColorCollaborationManager(createDefaultCollabSessionConfig(config.sessionId, '', config.userId));
     this.setupAdapterHandlers();
   }
 
@@ -497,13 +508,25 @@ export class CollabWSTransport {
 
   /** 发送光标更新 */
   sendCursorUpdate(nodeId: string, parameter: string): void {
-    const msg = buildCollabMessage('cursor-update', this.config.sessionId, this.config.userId, { nodeId, parameter }, this.nextSeq());
+    const msg = buildCollabMessage(
+      'cursor-update',
+      this.config.sessionId,
+      this.config.userId,
+      { nodeId, parameter },
+      this.nextSeq(),
+    );
     this.enqueueOrSend(msg);
   }
 
   /** 发送评论 */
   sendComment(nodeId: string, text: string): void {
-    const msg = buildCollabMessage('comment', this.config.sessionId, this.config.userId, { nodeId, text }, this.nextSeq());
+    const msg = buildCollabMessage(
+      'comment',
+      this.config.sessionId,
+      this.config.userId,
+      { nodeId, text },
+      this.nextSeq(),
+    );
     this.enqueueOrSend(msg);
   }
 
@@ -527,7 +550,13 @@ export class CollabWSTransport {
 
   /** 发送状态快照 */
   sendSnapshot(snapshot: string): void {
-    const msg = buildCollabMessage('snapshot-response', this.config.sessionId, this.config.userId, { snapshot }, this.nextSeq());
+    const msg = buildCollabMessage(
+      'snapshot-response',
+      this.config.sessionId,
+      this.config.userId,
+      { snapshot },
+      this.nextSeq(),
+    );
     this.enqueueOrSend(msg);
   }
 
@@ -568,7 +597,11 @@ export class CollabWSTransport {
 
   private emit(event: WSTransportEvent): void {
     for (const handler of this.eventHandlers) {
-      try { handler(event); } catch { /* 忽略回调异常 */ }
+      try {
+        handler(event);
+      } catch {
+        /* 忽略回调异常 */
+      }
     }
   }
 
@@ -720,10 +753,18 @@ export class CollabWSTransport {
     }
 
     this.setState('reconnecting');
-    const delay = computeBackoffDelay(this.reconnectAttempt, this.config.initialReconnectDelayMs, this.config.maxReconnectDelayMs);
+    const delay = computeBackoffDelay(
+      this.reconnectAttempt,
+      this.config.initialReconnectDelayMs,
+      this.config.maxReconnectDelayMs,
+    );
     this.reconnectAttempt++;
 
-    this.emit({ type: 'reconnect-attempt', attempt: this.reconnectAttempt, maxAttempts: this.config.maxReconnectAttempts });
+    this.emit({
+      type: 'reconnect-attempt',
+      attempt: this.reconnectAttempt,
+      maxAttempts: this.config.maxReconnectAttempts,
+    });
 
     this.reconnectTimer = setTimeout(() => {
       this.connect();

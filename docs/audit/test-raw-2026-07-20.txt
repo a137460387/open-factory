@@ -1,0 +1,1228 @@
+$ vitest run --coverage
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mD:/code/Ai/open-factory[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m packages/editor-core/__tests__/ai/multicam-sync.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 142[2mms[22m[39m
+ [32m✓[39m scripts/perf-benchmark.test.mjs [2m([22m[2m3 tests[22m[2m)[22m[32m 168[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/video-repair.test.ts [2m([22m[2m48 tests[22m[2m)[22m[32m 268[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/workflow-engine.test.ts [2m([22m[2m38 tests[22m[2m)[22m[33m 739[2mms[22m[39m
+   [33m[2m✓[22m[39m workflow-engine[2m > [22mWorkflowEngine[2m > [22m取消执行 [33m 510[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration/ws-transport.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 1058[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/scene-understanding.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/store/editorUIStore.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs
+[22m[39m=== 硬件加速解码性能基准测试 ===
+
+检测到可用后端: software, cuda, d3d11va, qsv
+将测试 4 种解码模式
+
+生成 1920x1080 测试视频...
+  跳过 1920x1080: 无法生成测试视频
+生成 3840x2160 测试视频...
+  跳过 3840x2160: 无法生成测试视频
+
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs
+[22m[39m
+=== 性能摘要 ===
+
+ [32m✓[39m apps/desktop/src/store/translationSettingsStore.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 93[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/smart-editing.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 96[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/ai/quality-assessment.test.ts [2m([22m[2m83 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/color-grading.test.ts [2m([22m[2m50 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs[2m > [22m[2mhw-decode-benchmark[2m > [22m[2mreturns a valid benchmark report structure
+[22m[39m检测到可用后端: software, cuda, d3d11va, qsv
+将测试 4 种解码模式
+
+生成 640x360 测试视频...
+  跳过 640x360: 无法生成测试视频
+
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs[2m > [22m[2mhw-decode-benchmark[2m > [22m[2mincludes software backend result for each resolution
+[22m[39m检测到可用后端: software, cuda, d3d11va, qsv
+将测试 4 种解码模式
+
+生成 640x360 测试视频...
+  跳过 640x360: 无法生成测试视频
+
+ [32m✓[39m packages/editor-core/__tests__/ai/super-resolution.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 4378[2mms[22m[39m
+   [33m[2m✓[22m[39m upscaleFrame[2m > [22m应该处理大图像（分块） [33m 742[2mms[22m[39m
+   [33m[2m✓[22m[39m quickPreview[2m > [22m应该生成预览尺寸的图像 [33m 2932[2mms[22m[39m
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs[2m > [22m[2mhw-decode-benchmark[2m > [22m[2msoftware decode produces valid metrics
+[22m[39m检测到可用后端: software, cuda, d3d11va, qsv
+将测试 4 种解码模式
+
+生成 640x360 测试视频...
+  跳过 640x360: 无法生成测试视频
+
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs[2m > [22m[2mhw-decode-benchmark[2m > [22m[2msummary contains best backend per resolution
+[22m[39m检测到可用后端: software, cuda, d3d11va, qsv
+将测试 4 种解码模式
+
+生成 640x360 测试视频...
+  跳过 640x360: 无法生成测试视频
+
+[90mstdout[2m | scripts/hw-decode-benchmark.test.mjs
+[22m[39m
+报告已保存: D:\code\Ai\open-factory\hw-decode-benchmark-report.json
+
+ [32m✓[39m scripts/hw-decode-benchmark.test.mjs [2m([22m[2m4 tests[22m[2m)[22m[33m 4740[2mms[22m[39m
+   [33m[2m✓[22m[39m hw-decode-benchmark[2m > [22mreturns a valid benchmark report structure [33m 1427[2mms[22m[39m
+   [33m[2m✓[22m[39m hw-decode-benchmark[2m > [22mincludes software backend result for each resolution [33m 1101[2mms[22m[39m
+   [33m[2m✓[22m[39m hw-decode-benchmark[2m > [22msoftware decode produces valid metrics [33m 1303[2mms[22m[39m
+   [33m[2m✓[22m[39m hw-decode-benchmark[2m > [22msummary contains best backend per resolution [33m 908[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-notes.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/preset-market.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-look-match.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-folders.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-emotion-tone.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 150[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-health-check.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-motion-type.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 123[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-migration.test.ts [2m([22m[2m82 tests[22m[2m)[22m[32m 189[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-pitch.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 183[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/commands.test.ts [2m([22m[2m264 tests[22m[2m)[22m[32m 244[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/shake-analysis.test.ts [2m([22m[2m41 tests[22m[2m)[22m[33m 304[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ffmpeg-builder.test.ts [2m([22m[2m247 tests[22m[2m)[22m[33m 432[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-presets.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-version-diff.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2mexecuteSearch[2m > [22m[2m搜索失败时设置 isSearching 为 false
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m标签过滤[2m > [22m[2m添加标签过滤
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m标签过滤[2m > [22m[2m不重复添加标签
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m标签过滤[2m > [22m[2m移除标签过滤
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m类型过滤[2m > [22m[2m切换类型过滤
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m类型过滤[2m > [22m[2m支持多类型选择
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m分辨率过滤[2m > [22m[2m设置分辨率范围
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m分辨率过滤[2m > [22m[2m清除分辨率范围
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2m时长过滤[2m > [22m[2m设置时长范围
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2mclearFilters[2m > [22m[2m清除所有筛选条件但保留项目路径
+[22m[39m媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+媒体索引搜索失败: Error: 搜索失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:95:47
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/store/mediaIndexStore.test.ts[2m > [22m[2mmediaIndexStore[2m > [22m[2mrefreshTags[2m > [22m[2m获取标签失败时设置 loading 为 false
+[22m[39m获取标签失败: Error: 获取失败
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\store\mediaIndexStore.test.ts:232:40
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ [32m✓[39m packages/editor-core/__tests__/ai-smart-creation-orchestrator.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/store/mediaIndexStore.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/lut-creator.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1417[2mms[22m[39m
+   [33m[2m✓[22m[39m 3D LUT creator[2m > [22mserializes a standards-compatible 3D .cube file [33m 728[2mms[22m[39m
+   [33m[2m✓[22m[39m 3D LUT creator[2m > [22mapplies reference transform during matrix generation [33m 302[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/ai/content-generation.test.ts [2m([22m[2m61 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-denoise-recommendation.test.ts [2m([22m[2m42 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/plugins/plugin-market-service.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/lut-layers.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-queue.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-video-summary.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/clip-effects.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multicam.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-node-graph.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-health-auto-repair.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-canvas-renderer.test.ts [2m([22m[2m80 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-import.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-scheduling.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-export.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/dialogs/dialogs.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-mix-presets.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/model.test.ts [2m([22m[2m51 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/plugins/plugin-system.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multicam-clip.test.ts [2m([22m[2m55 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-loudness-suggestion.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/publish-scheduler.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-report.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/macros/clip-macros.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+[90mstderr[2m | packages/editor-core/__tests__/subtitle-style-presets.test.ts[2m > [22m[2mimportPresetsFromJson[2m > [22m[2m应该在JSON格式无效时抛出错误
+[22m[39mFailed to import presets: SyntaxError: Unexpected token 'i', "invalid json" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at importPresetsFromJson [90m(D:\code\Ai\open-factory\[39mpackages\editor-core\src\subtitles\style-presets.ts:246:29[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mpackages\editor-core\__tests__\subtitle-style-presets.test.ts:228:18
+    at Proxy.assertThrows [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:2767:5[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1088:12[90m)[39m
+    at Proxy.overwritingMethodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1735:33[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1420:16[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1029:14[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+
+ [32m✓[39m packages/editor-core/__tests__/media-health-dashboard.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+[90mstderr[2m | packages/editor-core/__tests__/subtitle-style-presets.test.ts[2m > [22m[2mimportPresetsFromJson[2m > [22m[2m应该在缺少presets数组时抛出错误
+[22m[39mFailed to import presets: Error: Invalid preset format
+    at importPresetsFromJson [90m(D:\code\Ai\open-factory\[39mpackages\editor-core\src\subtitles\style-presets.ts:249:13[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mpackages\editor-core\__tests__\subtitle-style-presets.test.ts:232:18
+    at Proxy.assertThrows [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:2767:5[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1088:12[90m)[39m
+    at Proxy.overwritingMethodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1735:33[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1420:16[90m)[39m
+    at Proxy.<anonymous> [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/expect[24m/dist/index.js:1029:14[90m)[39m
+    at Proxy.methodWrapper [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mchai[24m/index.js:1686:25[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mpackages\editor-core\__tests__\subtitle-style-presets.test.ts:232:47
+
+ [32m✓[39m packages/editor-core/__tests__/subtitle-style-presets.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/render-cache.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-chat-editor.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-service.test.ts [2m([22m[2m113 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/style-transfer.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2mbuilds a subtitle track from Whisper SRT output
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at readFileSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:759:30[90m)[39m
+    at readAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:732:30[90m)[39m
+    at markLocalAiModelUsed [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:712:26[90m)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:9[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:58:19
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20
+
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2mbuilds a subtitle track from Whisper SRT output
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at readFileSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:759:30[90m)[39m
+    at readAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:732:30[90m)[39m
+    at saveLocalAiModelsSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:701:26[90m)[39m
+    at markLocalAiModelUsed [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:714:10[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:3[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:58:19
+
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2mbuilds a subtitle track from Whisper SRT output
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at writeAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:745:30[90m)[39m
+    at saveLocalAiModelsSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:703:9[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:3[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:58:19
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20
+
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2maligns Whisper SRT cues to the selected clip timeline window
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at readFileSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:759:30[90m)[39m
+    at readAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:732:30[90m)[39m
+    at markLocalAiModelUsed [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:712:26[90m)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:9[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:106:19
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20
+
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2maligns Whisper SRT cues to the selected clip timeline window
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at readFileSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:759:30[90m)[39m
+    at readAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:732:30[90m)[39m
+    at saveLocalAiModelsSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:701:26[90m)[39m
+    at markLocalAiModelUsed [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:714:10[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:3[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:106:19
+
+[90mstderr[2m | apps/desktop/src/lib/whisper.test.ts[2m > [22m[2mwhisper helpers[2m > [22m[2maligns Whisper SRT cues to the selected clip timeline window
+[22m[39m[appSettings] ReferenceError: window is not defined
+    at invoke [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@tauri-apps/api[24m/core.js:202:5[90m)[39m
+    at getAppDataDir [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\tauri-bridge\fs.ts:234:10[90m)[39m
+    at getSettingsFilePath [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:754:28[90m)[39m
+    at writeAppSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:745:30[90m)[39m
+    at saveLocalAiModelsSettings [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\settings\appSettings.ts:703:9[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at buildWhisperSubtitleTrackForClip [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.ts:85:3[90m)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\lib\whisper.test.ts:106:19
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20
+
+ [32m✓[39m apps/desktop/src/settings/appSettings.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/whisper.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/projectSnapshots.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-gap-fill.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-preset-recommendations.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-history-classifier.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration/team/team-management.test.ts [2m([22m[2m44 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multicam-ai-cut.test.ts [2m([22m[2m48 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/scene-reorder.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-cost-estimate.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/storyboard.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/Export/ExportPreviewCanvas.test.tsx [2m([22m[2m20 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/operation-recording.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-export.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/node-graph-engine.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/effects/effect-preset-library.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/smart-rough-cut-orchestrator.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-preflight-checklist.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/documentation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-organizer.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sequence-batch.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/selection-prerender.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-fingerprint.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/easing-presets.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-queue-runner.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-proofreading.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-prerender.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/smart-rough-cut-v2.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/stress-test.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/proxy-integrity.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-compare.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-log-luts.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/annotation-sync.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/scene-analyzer.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/conform-media.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/keyframes.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/sharePackage.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-tags.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-preflight.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/ai/assist-editing.test.ts [2m([22m[2m49 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/release-workflow.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/versioned-batch.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-templates.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio/effect-chain.test.ts [2m([22m[2m52 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/permissions/advanced-permissions.test.ts [2m([22m[2m46 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-search.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-bookmark-enhancements.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+[90mstderr[2m | apps/desktop/src/media/media-index-integration.test.ts[2m > [22m[2mmedia-index-integration[2m > [22m[2mindexAndTagImportedMedia[2m > [22m[2m数据库初始化失败时不阻断流程
+[22m[39m媒体索引写入失败（不影响导入）: Error: DB init failed
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\media\media-index-integration.test.ts:140:46
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+[90mstderr[2m | apps/desktop/src/media/media-index-integration.test.ts[2m > [22m[2mmedia-index-integration[2m > [22m[2mindexAndTagImportedMedia[2m > [22m[2m自动打标失败时不阻断流程
+[22m[39m媒体索引写入失败（不影响导入）: Error: Tag failed
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\media\media-index-integration.test.ts:152:48
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ [32m✓[39m apps/desktop/src/media/media-index-integration.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multicam-audio-sync.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-templates.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-scripting.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color/gpu-color-processing.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/subtitleTranslation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/lutLibrary.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/effect-presets.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-commands.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/shared-library/sharedLibrary.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/plugins/plugin-manager.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/error-knowledge.test.ts [2m([22m[2m42 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/clip-report.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-usage-stats.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio/mixer-types.test.ts [2m([22m[2m61 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/ShortcutCheatsheetPanel.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-safe-wrappers.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/projectArchive.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-versions.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/data-subtitle.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/post-export-quality.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/automation-template-manager.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/relink-score.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/plugins/plugin-loader.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m tools/create-plugin/create-plugin.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/complexity-score.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/naming-template.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/background-media-task-queue.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/automation-auto-editor.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-pipeline.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration/color-collaboration.test.ts [2m([22m[2m52 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/cover-generator.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-rules.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sync/project-sync.test.ts [2m([22m[2m52 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/profiler.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-tts.test.ts [2m([22m[2m45 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/preset-compatibility.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/duplicate-media.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/theme/useTheme.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/projectFiles.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-transcription.test.ts [2m([22m[2m48 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/mediaLibraryView.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/color-grading-presets.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/backup/projectBackup.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration-permissions.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/automation-rules.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/batch-crop.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/emotion-analysis.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/batchWatermark.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-editor.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-optimization-suggestions.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/proxy-planner.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/plugins/plugin-market.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m scripts/stress-test.test.mjs [2m([22m[2m6 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/content-analysis.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/duplicate-media-merge.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-envelope.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/thumbnail-scoring.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/waveform.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-speaker-diarization.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/director-mode.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/beats.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-detach.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-gaps.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-semantic-search.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/projectBatch/projectBatch.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/privacy-redaction.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/scene-detection.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/publish-pipeline.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/smart-recommendations.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/frameInterpolationComparePreview.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color/aces.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-media-organize.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitles.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-scene-match.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-line-break.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-speech-understanding.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-thumbnails.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/lut-parser.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/proxy-management.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/store/mixerStore.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/automation-style-memory.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/dialogueDetection.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-heatmap.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-emotion-analyzer.test.ts [2m([22m[2m43 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/export/transitions/__tests__/transition-registry.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/theme/theme.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-multi-language-export.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-character-timeline.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio/bus-router.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/auto-reframe.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/platform-presets.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/release/projectReleases.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-scene-detector.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-sequence-compare.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/demucs.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-data-import.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-narration.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-smart-recommender.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-transition-recommend.test.ts [2m([22m[2m45 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sync/multi-device-sync.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-batch.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-ducking.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-scheduler.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio/noise-reduction.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/resource-dashboard.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/split-layout.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/motion-graphics.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/contextual-translation.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/types.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/review-report.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-warmup.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/format-converter.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/template-sharing.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai/smart-cut.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-narrative-generator.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/multi-format-generator.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-grouping.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-preset-diff.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/progressive-export.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/performance-monitor.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/tag-learning.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/collaboration-notes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/music-structure.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/flash-warning.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/rhythm-analysis.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/scripting/timeline-script-runtime.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/render-farm.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/algorithm-pipeline.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/text-animation.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/platform-adapter.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-style-templates.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/cover-frames.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-grid.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/continuity-check.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-broll-suggestion.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sync-compare.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/store/editorFeatureStore.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/auto-audio-sync.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-reading-speed.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-import-conflict.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-notification.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-quality-assessment.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/path-mask.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-reframe.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/highlight-reel.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/broadcast-compliance.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/media-job-monitor.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/batch-export.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/clip-groups.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/batch-export-script.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multi-camera-switch-generator.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multi-camera-sync-status.test.ts [2m([22m[2m31 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multi-camera-audio-grouping.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-upload.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-favorites.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/review/reviewReport.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-spell-check.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/text-path.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/export/transitions/__tests__/custom-filters.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-queue-persistence.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/pip-avoidance.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/match-frame.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/quick-actions.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sync-monitor.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-recovery.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/automation/automation-rules.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-narrative-analyzer.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/layout/layoutSettings.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/time.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-color-labels.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-analysis.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-fade-curves.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/webgl-compositor.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-beat-snap.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/spatial-audio.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/music-match.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/effects.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/speaker-diarization.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/window-mask.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-subtitle-style.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-pipeline.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-virtualization.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-snapping.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/archive-encryption.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/shortcuts/timeline-shortcuts.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/anomaly-detection.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/gpu-acceleration.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/hsl-qualifier.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-precheck.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-minimap.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/preview-performance.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/distribution/smart-crop.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/MediaBin/media-hover-preview.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio/automation-evaluator.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-sfx-match.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-match.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/smart-montage.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-dubbing-adaptation.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/src/export/transitions/__tests__/xfade-params.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/updater/update-check.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/audioVisualizationThemePreview.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/sequence-settings.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/proxy-batch-verify.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-visualization-themes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-speaker-diarization.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-pacing-analysis.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/canvas-transform.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/ColorGrading/ProfessionalColorGradingPanel.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-zoom-memory.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-background.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/video-stitching.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-scopes.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-file-sniff.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/post-export-script.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/text-layout.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-protection.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/platform-fit.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/touch-interaction.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-retiming.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-speed-history.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-restoration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/batch-media-replace.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/paste-keyframes.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-ruler.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/dialogue-detection.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/title-templates.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/compare.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/frameSearchHistory.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/silenceDetection.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/subtitleStyleTemplates.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/multicam-sync.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-diagnostics.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/scene-cuts.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ai-color-consistency.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/motion-blur.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/codec-compare.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/credits-roll.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/primary-wheels.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/tutorial/tutorialState.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/export-retry-strategy.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/silence-detection.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/batch-relink.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/vfr.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/settings/localModels.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m scripts/tauri-release-config.test.mjs [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/complexity/complexityRadar.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/blend-modes.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/frame-search.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/SmartRoughCut/smart-rough-cut-state.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-bookmarks.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/channelAnalysis.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-style-quickbar.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/frame-interpolation-preview.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/frame-interpolation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/reframe.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/ffmpeg-escape.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/audio-scrub.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/motion-tracking.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/previewWindowSync.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/custom-shader.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/relative-paths.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/scripting/timeline-scripts.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/track-batch.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/cache-key.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/media.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/preview/frame-inspector.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-management.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/Timeline/timeline-keyboard.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m scripts/media-compat-test.test.mjs [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/privacy-blur.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-feedback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/i18n/strings.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/media-filter.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/track-height.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/color-grading/primary-sliders.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/gifWorkflow.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/updater/update-settings.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/subtitle-translation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/shortcuts/keybindings.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/accessibility/keyboard-navigation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/timeline/transition-favorites.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/pip-layout.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/timeline-templates/timelineTemplates.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-speakers.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/waveform.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/media/audioSpectrum.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/Timeline/timeline-ruler-menu.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-progress.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/review/reviewMode.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-size-estimate.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/file-utils.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/__tests__/asr.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/MediaBin/media-keyboard.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/project-utils.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/quality.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/lib/duplicateMedia.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-zoom.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/report-i18n.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/timeline-selection.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/export/export-queue-store.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m packages/editor-core/__tests__/vu-meter.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/components/AudioMixer/ChannelStrip.test.tsx [2m([22m[2m16 tests[22m[2m)[22m[33m 358[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellViewSettingsCallbacks.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+[90mstderr[2m | apps/desktop/src/hooks/__tests__/useEditorShellProxyCallbacks.test.ts[2m > [22m[2museProxyCallbacks[2m > [22m[2mdeleteProxiesForMedia 即使 removeFile 失败也会继续清除状态（错误被 catch 吞掉）
+[22m[39m[useEditorShellProxyCallbacks] Error: Permission denied
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\hooks\__tests__\useEditorShellProxyCallbacks.test.ts:180:38
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:155:11
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:26
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1897:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1863:10[90m)[39m
+    at runTest [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1574:12[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+    at runSuite [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:1729:8[90m)[39m
+
+ [32m✓[39m packages/editor-core/__tests__/fcpxml-import.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 214[2mms[22m[39m
+[90mstderr[2m | apps/desktop/src/hooks/__tests__/useEditorShellMediaCallbacks.test.ts[2m > [22m[2museEditorShellMediaCallbacks[2m > [22m[2mimportMedia[2m > [22m[2m成功导入媒体后显示成功 toast
+[22m[39m媒体索引写入失败（不影响导入）: Error: [vitest] No "initMediaIndexDb" export is defined on the "../../lib/tauri-bridge" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mvitest[24m/dist/chunks/execute.B7h3T_Hc.js:284:17[90m)[39m
+    at Object.get [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mvitest[24m/dist/chunks/execute.B7h3T_Hc.js:330:16[90m)[39m
+    at indexAndTagImportedMedia [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\media\media-index-integration.ts:70:11[90m)[39m
+    at Object.importMedia [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\hooks\useEditorShellMediaCallbacks.ts:207:14[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\hooks\__tests__\useEditorShellMediaCallbacks.test.ts:440:7
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20 {
+  codeFrame: [32m'vi\x1B[33m.\x1B[39m\x1B[34mmock\x1B[39m(\x1B[35mimport\x1B[39m(\x1B[32m"../../lib/tauri-bridge"\x1B[39m)\x1B[33m,\x1B[39m \x1B[35masync\x1B[39m (importOriginal) \x1B[33m=>\x1B[39m {\n'[39m +
+    [32m'  \x1B[35mconst\x1B[39m actual \x1B[33m=\x1B[39m \x1B[35mawait\x1B[39m \x1B[34mimportOriginal\x1B[39m()\n'[39m +
+    [32m'  \x1B[35mreturn\x1B[39m {\n'[39m +
+    [32m'    \x1B[33m...\x1B[39mactual\x1B[33m,\x1B[39m\n'[39m +
+    [32m'    \x1B[90m// your mocked methods\x1B[39m\n'[39m +
+    [32m'  }\n'[39m +
+    [32m'})'[39m
+}
+
+[90mstderr[2m | apps/desktop/src/hooks/__tests__/useEditorShellMediaCallbacks.test.ts[2m > [22m[2museEditorShellMediaCallbacks[2m > [22m[2mimportMedia[2m > [22m[2m检测到重复时显示重复提示
+[22m[39m媒体索引写入失败（不影响导入）: Error: [vitest] No "initMediaIndexDb" export is defined on the "../../lib/tauri-bridge" mock. Did you forget to return it from "vi.mock"?
+If you need to partially mock a module, you can use "importOriginal" helper inside:
+
+    at VitestMocker.createError [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mvitest[24m/dist/chunks/execute.B7h3T_Hc.js:284:17[90m)[39m
+    at Object.get [90m(file:///D:/code/Ai/open-factory/[39mnode_modules/[4mvitest[24m/dist/chunks/execute.B7h3T_Hc.js:330:16[90m)[39m
+    at indexAndTagImportedMedia [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\media\media-index-integration.ts:70:11[90m)[39m
+    at Object.importMedia [90m(D:\code\Ai\open-factory\[39mapps\desktop\src\hooks\useEditorShellMediaCallbacks.ts:207:14[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at [90mD:\code\Ai\open-factory\[39mapps\desktop\src\hooks\__tests__\useEditorShellMediaCallbacks.test.ts:462:7
+    at [90mfile:///D:/code/Ai/open-factory/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-hooks.js:752:20 {
+  codeFrame: [32m'vi\x1B[33m.\x1B[39m\x1B[34mmock\x1B[39m(\x1B[35mimport\x1B[39m(\x1B[32m"../../lib/tauri-bridge"\x1B[39m)\x1B[33m,\x1B[39m \x1B[35masync\x1B[39m (importOriginal) \x1B[33m=>\x1B[39m {\n'[39m +
+    [32m'  \x1B[35mconst\x1B[39m actual \x1B[33m=\x1B[39m \x1B[35mawait\x1B[39m \x1B[34mimportOriginal\x1B[39m()\n'[39m +
+    [32m'  \x1B[35mreturn\x1B[39m {\n'[39m +
+    [32m'    \x1B[33m...\x1B[39mactual\x1B[33m,\x1B[39m\n'[39m +
+    [32m'    \x1B[90m// your mocked methods\x1B[39m\n'[39m +
+    [32m'  }\n'[39m +
+    [32m'})'[39m
+}
+
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellContentAnalysisCallbacks.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellProxyCallbacks.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 60[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellMiscCallbacks.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellProjectCallbacks.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellPlaybackCallbacks.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellTimelineCallbacks.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m✓[39m apps/desktop/src/hooks/__tests__/useEditorShellMediaCallbacks.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 111[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m421 passed[39m[22m[90m (421)[39m
+[2m      Tests [22m [1m[32m6995 passed[39m[22m[90m (6995)[39m
+[2m   Start at [22m 09:19:54
+[2m   Duration [22m 87.26s[2m (transform 32.02s, setup 0ms, collect 672.22s, tests 24.45s, environment 21.51s, prepare 111.16s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   91.31 |    86.79 |   93.65 |   91.31 |                   
+ src               |   97.55 |    88.96 |   98.78 |   97.55 |                   
+  ai-beat-snap.ts  |     100 |      100 |     100 |     100 |                   
+  ...suggestion.ts |     100 |    89.09 |     100 |     100 | ...22,178,185-187 
+  ...r-timeline.ts |    98.2 |    90.54 |     100 |    98.2 | 151-152,171-172   
+  ...hat-editor.ts |   96.91 |    91.42 |     100 |   96.91 | ...79-180,285-286 
+  ...onsistency.ts |     100 |     90.9 |     100 |     100 | 71,79             
+  ...mmendation.ts |   98.46 |     87.5 |     100 |   98.46 | 99-100,218        
+  ...adaptation.ts |     100 |      100 |     100 |     100 |                   
+  ...n-analyzer.ts |     100 |    96.51 |     100 |     100 | 236,242           
+  ...otion-tone.ts |     100 |    87.09 |     100 |     100 | 67-68,71,90       
+  ai-look-match.ts |   98.66 |    83.33 |     100 |   98.66 | 164-165           
+  ...suggestion.ts |    96.8 |    83.33 |     100 |    96.8 | 82-84             
+  ...a-organize.ts |     100 |    86.84 |     100 |     100 | 33-36,39,44,92    
+  ...dule-types.ts |     100 |      100 |     100 |     100 |                   
+  ...otion-type.ts |   94.66 |     86.2 |     100 |   94.66 | ...23,254,267-274 
+  ai-narration.ts  |     100 |    88.37 |     100 |     100 | ...12,115-116,138 
+  ...e-analyzer.ts |   87.72 |    87.09 |     100 |   87.72 | ...58-359,366-367 
+  ...-generator.ts |   98.56 |    94.73 |     100 |   98.56 | 276-278           
+  ...g-analysis.ts |     100 |      100 |     100 |     100 |                   
+  ...-checklist.ts |     100 |    89.36 |     100 |     100 | ...29,144-145,200 
+  ...assessment.ts |    95.8 |    86.15 |     100 |    95.8 | 96-98,108-110     
+  ai-reframe.ts    |   95.16 |    84.61 |     100 |   95.16 | ...98-199,219-220 
+  ...e-detector.ts |    95.7 |    90.38 |     100 |    95.7 | ...03-404,414-415 
+  ...cene-match.ts |     100 |    93.47 |     100 |     100 | 82,88,157         
+  ...tic-search.ts |   97.84 |    92.45 |     100 |   97.84 | 156-157,165       
+  ai-service.ts    |   98.96 |    93.44 |   97.05 |   98.96 | ...05,445,471-472 
+  ai-sfx-match.ts  |     100 |    96.15 |     100 |     100 | 125               
+  ...chestrator.ts |   98.87 |     87.5 |     100 |   98.87 | 276-278           
+  ...ecommender.ts |   85.28 |    81.13 |     100 |   85.28 | ...57-364,370-371 
+  ...erstanding.ts |   97.72 |    92.18 |     100 |   97.72 | 441-447,463       
+  ...itle-style.ts |     100 |      100 |     100 |     100 |                   
+  ...-recommend.ts |     100 |    96.96 |     100 |     100 | 46,174            
+  ...sage-stats.ts |     100 |    96.66 |     100 |     100 | 146               
+  ...rsion-diff.ts |    99.1 |    86.11 |     100 |    99.1 | 168               
+  ...eo-summary.ts |   96.39 |    84.41 |     100 |   96.39 | 108-112,260-262   
+  ...m-pipeline.ts |   98.55 |    95.65 |     100 |   98.55 | 113-115           
+  ...ation-sync.ts |     100 |    83.78 |     100 |     100 | 69-70,87-90       
+  ...-detection.ts |   93.63 |    97.22 |     100 |   93.63 | 100-106           
+  ...encryption.ts |     100 |      100 |     100 |     100 |                   
+  audio-detach.ts  |   94.05 |    82.08 |     100 |   94.05 | ...32-233,266-267 
+  ...o-envelope.ts |     100 |    84.61 |     100 |     100 | 29,104            
+  ...ade-curves.ts |     100 |    93.33 |     100 |     100 | 30,40             
+  audio-pitch.ts   |   92.63 |    78.26 |     100 |   92.63 | ...11-212,218-219 
+  ...estoration.ts |     100 |    82.14 |     100 |     100 | ...10-112,114-116 
+  audio-scrub.ts   |     100 |      100 |     100 |     100 |                   
+  ...ion-themes.ts |    99.6 |    94.68 |     100 |    99.6 | 236               
+  batch-crop.ts    |     100 |      100 |     100 |     100 |                   
+  ...ort-script.ts |     100 |      100 |     100 |     100 |                   
+  ...ia-replace.ts |   95.27 |    91.66 |     100 |   95.27 | 75-80             
+  beats.ts         |   91.53 |    85.47 |   93.33 |   91.53 | ...64-265,272-273 
+  blend-modes.ts   |     100 |    88.88 |     100 |     100 | 59,61,63,88       
+  ...compliance.ts |   94.69 |     84.7 |     100 |   94.69 | ...27-333,343-344 
+  ...-transform.ts |   97.97 |    84.61 |     100 |   97.97 | 180-182,188       
+  clip-groups.ts   |     100 |    85.71 |     100 |     100 | ...96-100,110,124 
+  ...tion-notes.ts |   99.36 |       80 |     100 |   99.36 | 205               
+  ...ermissions.ts |     100 |     87.5 |     100 |     100 | ...27,189-192,201 
+  collaboration.ts |   92.92 |    80.48 |     100 |   92.92 | ...45-146,148-149 
+  ...r-analysis.ts |   95.75 |    68.18 |     100 |   95.75 | ...50-151,198-202 
+  ...r-log-luts.ts |     100 |    94.44 |     100 |     100 | 101               
+  ...management.ts |   91.61 |    80.88 |     100 |   91.61 | ...96-197,201-202 
+  color-match.ts   |     100 |     82.6 |     100 |     100 | 48,117-120,137    
+  ...node-graph.ts |   98.16 |    88.63 |   97.05 |   98.16 | ...94,696,698,700 
+  ...r-pipeline.ts |     100 |    96.42 |     100 |     100 | 90                
+  ...xity-score.ts |   98.15 |    80.59 |     100 |   98.15 | 100-101,136-137   
+  ...t-analysis.ts |   98.12 |    93.29 |     100 |   98.12 | ...83-384,398-399 
+  ...ranslation.ts |     100 |    95.45 |     100 |     100 | 74,128            
+  ...uity-check.ts |     100 |    97.95 |     100 |     100 | 82                
+  cover-frames.ts  |     100 |    83.33 |     100 |     100 | 17,35             
+  credits-roll.ts  |     100 |    91.66 |     100 |     100 | 59-60,76,142,146  
+  data-subtitle.ts |      96 |    82.46 |     100 |      96 | ...21-222,243-244 
+  director-mode.ts |     100 |    94.82 |     100 |     100 | 143,152,167       
+  ...edia-merge.ts |   96.84 |    86.36 |     100 |   96.84 | 143-145           
+  ...ng-presets.ts |     100 |      100 |     100 |     100 |                   
+  ...ct-presets.ts |     100 |     86.2 |     100 |     100 | ...34,236,240,288 
+  effects.ts       |   99.59 |    95.49 |     100 |   99.59 | 320               
+  ...uggestions.ts |   98.86 |    85.29 |     100 |   98.86 | 200-201           
+  flash-warning.ts |     100 |      100 |     100 |     100 |                   
+  ...-converter.ts |   98.98 |       90 |     100 |   98.98 | 106,252           
+  frame-search.ts  |     100 |     92.5 |     100 |     100 | 54-56             
+  ...light-reel.ts |     100 |    97.05 |     100 |     100 | 79                
+  keyframes.ts     |   96.27 |    79.55 |     100 |   96.27 | ...45-846,849-850 
+  lut-creator.ts   |     100 |    85.71 |     100 |     100 | ...28-129,171,175 
+  match-frame.ts   |   96.37 |    94.73 |     100 |   96.37 | 108-109,216-218   
+  math-utils.ts    |   29.09 |      100 |    7.14 |   29.09 | ...79,83-84,88-89 
+  media-batch.ts   |    98.7 |    94.02 |     100 |    98.7 | 127-128           
+  ...-favorites.ts |   96.61 |    91.17 |     100 |   96.61 | 113,116           
+  ...file-sniff.ts |     100 |     96.7 |     100 |     100 | 119               
+  media-filter.ts  |     100 |    97.29 |     100 |     100 | 52                
+  ...ingerprint.ts |   98.04 |     86.3 |     100 |   98.04 | 53-54,236-237     
+  media-folders.ts |   93.77 |    86.23 |     100 |   93.77 | ...30-233,302-303 
+  ...a-grouping.ts |   95.45 |    81.25 |     100 |   95.45 | 160,181-187       
+  ...-organizer.ts |   98.23 |    81.05 |     100 |   98.23 | 241,250-252       
+  media-tags.ts    |      98 |    97.29 |     100 |      98 | 114-115           
+  ...a-versions.ts |     100 |    94.89 |     100 |     100 | 57-59,92,122      
+  model.ts         |     100 |      100 |     100 |     100 |                   
+  motion-blur.ts   |   96.98 |    85.18 |     100 |   96.98 | 66-68,199-200     
+  ...n-graphics.ts |    98.8 |     87.5 |     100 |    98.8 | ...72-373,462-463 
+  ...n-tracking.ts |     100 |      100 |     100 |     100 |                   
+  ...cam-ai-cut.ts |   97.53 |    89.58 |     100 |   97.53 | 248-253           
+  multicam-sync.ts |   92.13 |    66.66 |     100 |   92.13 | 36-39,81-83       
+  multicam.ts      |   96.76 |    85.54 |   95.23 |   96.76 | ...27-228,276-277 
+  music-match.ts   |     100 |    97.87 |     100 |     100 | 87                
+  ...-structure.ts |     100 |      100 |     100 |     100 |                   
+  ...g-template.ts |     100 |    85.36 |     100 |     100 | ...83,107,126-127 
+  ...-recording.ts |   96.41 |    88.15 |     100 |   96.41 | ...,96-97,102-103 
+  ...ce-monitor.ts |   94.73 |    84.78 |     100 |   94.73 | ...91,196,200,204 
+  pip-avoidance.ts |     100 |    92.59 |     100 |     100 | 162-163           
+  pip-layout.ts    |     100 |    84.61 |     100 |     100 | 61,65             
+  platform-fit.ts  |     100 |    94.87 |     100 |     100 | 145,161           
+  privacy-blur.ts  |     100 |      100 |     100 |     100 |                   
+  ...-redaction.ts |     100 |    90.42 |     100 |     100 | ...40-143,222-223 
+  profiler.ts      |     100 |       80 |     100 |     100 | ...50,361,369,373 
+  quick-actions.ts |     100 |      100 |     100 |     100 |                   
+  reframe.ts       |     100 |    91.66 |     100 |     100 | 53-54             
+  render-cache.ts  |     100 |    92.04 |     100 |     100 | ...31,290,323-324 
+  ...m-analysis.ts |   94.76 |    73.33 |     100 |   94.76 | ...34-235,245-251 
+  scene-cuts.ts    |     100 |    89.39 |     100 |     100 | ...,98-99,126,137 
+  scene-reorder.ts |   97.15 |    84.14 |     100 |   97.15 | 66-68,119,175-176 
+  ...-prerender.ts |     100 |    95.83 |     100 |     100 | 165               
+  ...e-settings.ts |     100 |      100 |     100 |     100 |                   
+  ...e-analysis.ts |     100 |    92.72 |     100 |     100 | 90,130,201,220    
+  ...mendations.ts |   94.35 |     83.6 |     100 |   94.35 | ...51-352,361-362 
+  ...chestrator.ts |   93.86 |    91.42 |     100 |   93.86 | 232-251           
+  ...ugh-cut-v2.ts |   96.19 |     89.9 |   95.83 |   96.19 | ...13,164,420-427 
+  spatial-audio.ts |   98.87 |    93.25 |     100 |   98.87 | 113-114           
+  split-layout.ts  |     100 |    85.71 |     100 |     100 | ...53-154,172,177 
+  storyboard.ts    |     100 |      100 |     100 |     100 |                   
+  stress-test.ts   |     100 |    96.15 |     100 |     100 | 286               
+  ...e-transfer.ts |     100 |     91.2 |     100 |     100 | ...09,211,214,216 
+  ...ding-speed.ts |     100 |      100 |     100 |     100 |                   
+  sync-compare.ts  |     100 |       90 |     100 |     100 | 79,81,98          
+  tag-learning.ts  |    94.5 |    91.42 |     100 |    94.5 | 44-45,108-109,142 
+  ...-animation.ts |    99.5 |    91.08 |     100 |    99.5 | 40                
+  text-layout.ts   |   91.58 |    84.33 |     100 |   91.58 | ...18-219,282-283 
+  text-path.ts     |   96.59 |    85.71 |     100 |   96.59 | ...52-153,169-170 
+  ...il-scoring.ts |   98.19 |    80.82 |     100 |   98.19 | 91-93             
+  time.ts          |   98.89 |    95.94 |     100 |   98.89 | 175-176           
+  ...hancements.ts |     100 |    85.07 |     100 |     100 | 23,46,55-57,62-64 
+  ...-bookmarks.ts |     100 |    81.81 |     100 |     100 | 32,72-79,90       
+  ...lor-labels.ts |     100 |      100 |     100 |     100 |                   
+  ...ne-compare.ts |   97.36 |    90.06 |     100 |   97.36 | ...08-409,444-445 
+  ...e-feedback.ts |     100 |    82.35 |     100 |     100 | 42,49-50          
+  ...e-gap-fill.ts |   97.56 |    82.97 |     100 |   97.56 | 145-146,212-213   
+  timeline-gaps.ts |     100 |    96.87 |     100 |     100 | 33                
+  timeline-grid.ts |   96.33 |     91.5 |     100 |   96.33 | ...84-285,299-300 
+  ...ne-heatmap.ts |     100 |    93.47 |     100 |     100 | 115,137,142       
+  ...ne-minimap.ts |   98.43 |    81.08 |     100 |   98.43 | 121-122           
+  ...line-notes.ts |   94.64 |    80.95 |     100 |   94.64 | 38-40             
+  ...-prerender.ts |     100 |    96.42 |     100 |     100 | 141               
+  ...protection.ts |   96.77 |    83.33 |     100 |   96.77 | 72-73,101         
+  ...line-ruler.ts |   96.39 |    86.04 |     100 |   96.39 | 93-94,148-149     
+  ...-scripting.ts |     100 |    98.14 |     100 |     100 | 152               
+  ...ine-search.ts |   97.54 |    94.25 |     100 |   97.54 | 126-127,133-134   
+  ...-selection.ts |     100 |      100 |     100 |     100 |                   
+  ...ce-compare.ts |    96.8 |       92 |     100 |    96.8 | 139-140,162-163   
+  ...e-snapping.ts |     100 |    94.73 |     100 |     100 | 53,96             
+  ...-templates.ts |   99.65 |     86.3 |     100 |   99.65 | 516-517           
+  ...thumbnails.ts |     100 |       80 |     100 |     100 | ...35,147,160-162 
+  ...ualization.ts |   85.71 |    90.38 |      80 |   85.71 | 133-153,156-157   
+  timeline-zoom.ts |     100 |      100 |     100 |     100 |                   
+  timeline.ts      |   96.28 |    91.17 |   96.96 |   96.28 | ...80,393,395-396 
+  ...-templates.ts |   98.58 |       80 |     100 |   98.58 | 115-116           
+  ...nteraction.ts |     100 |    96.22 |     100 |     100 | 140,144           
+  track-batch.ts   |   95.55 |       88 |     100 |   95.55 | 53-54             
+  track-height.ts  |     100 |      100 |     100 |     100 |                   
+  vfr.ts           |     100 |    86.66 |     100 |     100 | 12,31,54          
+  ...-stitching.ts |     100 |     90.9 |     100 |     100 | 55                
+ src/ai            |   79.41 |    86.42 |   85.44 |   79.41 |                   
+  ai-worker.ts     |    9.67 |        0 |       0 |    9.67 | ...41-446,454-455 
+  ...st-editing.ts |   38.19 |    86.56 |      45 |   38.19 | ...1479,1500-1760 
+  auto-reframe.ts  |    89.9 |    81.91 |     100 |    89.9 | ...46-647,682-683 
+  color-grading.ts |   92.07 |    82.55 |   96.96 |   92.07 | ...1004,1025-1033 
+  ...generation.ts |   56.74 |    82.64 |    62.5 |   56.74 | ...1599,1618,1633 
+  multicam-sync.ts |   92.68 |    83.44 |     100 |   92.68 | ...1015,1017,1020 
+  ...assessment.ts |   67.51 |    86.36 |   86.95 |   67.51 | ...1782,1820-1851 
+  ...-detection.ts |   90.88 |    85.56 |     100 |   90.88 | ...26-627,637-638 
+  ...erstanding.ts |   87.13 |    71.93 |     100 |   87.13 | ...1539,1573-1577 
+  smart-cut.ts     |   93.61 |    95.65 |     100 |   93.61 | ...65-366,448-462 
+  smart-editing.ts |   84.97 |    85.49 |   85.71 |   84.97 | ...1118,1158-1160 
+  ...iarization.ts |   94.16 |    87.24 |     100 |   94.16 | ...36-742,857-862 
+  ...resolution.ts |   99.31 |     94.4 |     100 |   99.31 | ...68,176-177,925 
+  transcription.ts |   97.05 |    94.89 |     100 |   97.05 | ...83-388,455-456 
+  tts.ts           |   89.07 |    88.13 |     100 |   89.07 | ...46-668,672,676 
+  video-repair.ts  |   99.11 |       95 |     100 |   99.11 | 270-275,1208      
+ src/audio         |   98.61 |    85.56 |   99.06 |   98.61 |                   
+  ...ix-presets.ts |     100 |      100 |     100 |     100 |                   
+  ...audio-sync.ts |   97.03 |       86 |     100 |   97.03 | ...78-279,286-287 
+  ...-evaluator.ts |   95.89 |     82.5 |     100 |   95.89 | 24,84,87          
+  bus-router.ts    |     100 |    96.07 |     100 |     100 | 150,203           
+  ...-detection.ts |     100 |    80.32 |     100 |     100 | ...33,238-239,280 
+  ducking.ts       |    94.8 |    89.83 |     100 |    94.8 | ...65-166,177-180 
+  effect-chain.ts  |     100 |    55.71 |     100 |     100 | ...55,266,270,289 
+  mixer-types.ts   |     100 |      100 |     100 |     100 |                   
+  ...audio-sync.ts |     100 |    83.92 |     100 |     100 | ...85,223-225,238 
+  ...-reduction.ts |     100 |      100 |     100 |     100 |                   
+  ...-detection.ts |     100 |    94.44 |     100 |     100 | 49,54,157         
+  ...iarization.ts |    95.9 |    84.12 |   93.33 |    95.9 | 290-300           
+  vu-meter.ts      |     100 |    91.66 |     100 |     100 | 34                
+  waveform.ts      |   96.49 |    95.23 |     100 |   96.49 | 57-58             
+ src/automation    |   93.93 |    82.53 |    95.7 |   93.93 |                   
+  auto-editor.ts   |   96.16 |    96.77 |    90.9 |   96.16 | 334-335,506-513   
+  ...tion-rules.ts |   92.22 |    76.31 |   96.87 |   92.22 | ...92-693,706-707 
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  ...e-analyzer.ts |   94.47 |    87.36 |     100 |   94.47 | 679-706,734-735   
+  style-memory.ts  |   95.31 |       85 |     100 |   95.31 | ...96-397,412-413 
+  ...te-manager.ts |   98.96 |    92.85 |     100 |   98.96 | 513-514,547-548   
+  ...low-engine.ts |   90.84 |    74.13 |   89.13 |   90.84 | ...83,884,887,911 
+ src/cache         |     100 |      100 |     100 |     100 |                   
+  cache-key.ts     |     100 |      100 |     100 |     100 |                   
+ src/collaboration |   51.49 |    82.09 |   80.35 |   51.49 |                   
+  ...laboration.ts |   90.67 |     82.7 |    91.3 |   90.67 | ...81-783,814-822 
+  index.ts         |       0 |        0 |       0 |       0 | 1-3               
+  ...management.ts |       0 |      100 |     100 |       0 | 7-1132            
+  ws-transport.ts  |   81.87 |    81.91 |   73.43 |   81.87 | ...20,729,735-737 
+ ...aboration/team |   90.96 |    73.38 |   95.12 |   90.96 |                   
+  ...management.ts |   90.96 |    73.38 |   95.12 |   90.96 | ...1034,1089-1090 
+ src/color         |   82.51 |    72.24 |   90.67 |   82.51 |                   
+  aces.ts          |   79.29 |    67.64 |   83.01 |   79.29 | ...1127,1262-1263 
+  ...processing.ts |   85.65 |       76 |   96.92 |   85.65 | ...1230,1264-1266 
+ src/color-grading |   95.24 |    92.23 |   94.73 |   95.24 |                   
+  color-curves.ts  |     100 |    91.04 |     100 |     100 | ...22,223,251,255 
+  ...ng-presets.ts |     100 |      100 |     100 |     100 |                   
+  hsl-qualifier.ts |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  lut-parser.ts    |     100 |    94.33 |     100 |     100 | 37                
+  lut.ts           |     100 |      100 |     100 |     100 |                   
+  ...aph-engine.ts |   77.59 |    90.19 |   81.81 |   77.59 | ...35-266,349-350 
+  ...ry-sliders.ts |   88.63 |     87.5 |      75 |   88.63 | 35-77,93-94       
+  ...ary-wheels.ts |     100 |      100 |     100 |     100 |                   
+  types.ts         |   94.75 |    86.25 |   93.33 |   94.75 | ...87,289,357-361 
+  window-mask.ts   |     100 |      100 |     100 |     100 |                   
+ src/commands      |   92.12 |    85.21 |   93.33 |   92.12 |                   
+  ...nd-manager.ts |   96.35 |    89.21 |     100 |   96.35 | ...58-259,279-280 
+  ...e-commands.ts |   91.93 |    84.93 |   92.94 |   91.93 | ...7173,7176-7179 
+ src/distribution  |   96.91 |    88.32 |   95.18 |   96.91 |                   
+  batch-export.ts  |   98.86 |    85.71 |     100 |   98.86 | 114,116           
+  ...-generator.ts |   93.57 |    91.25 |     100 |   93.57 | ...54-664,677-678 
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  ...-generator.ts |   98.05 |    83.58 |     100 |   98.05 | ...70,339-340,413 
+  ...rm-adapter.ts |   98.53 |    82.35 |     100 |   98.53 | 642-648           
+  ...rm-presets.ts |   98.21 |    88.57 |     100 |   98.21 | 357-359,417-418   
+  ...-scheduler.ts |   92.93 |    96.15 |      75 |   92.93 | ...36-240,244-245 
+  smart-crop.ts    |   98.31 |    91.66 |     100 |   98.31 | 313-315           
+ src/export        |   93.15 |    86.44 |   95.73 |   93.15 |                   
+  cost-estimate.ts |   96.91 |    89.94 |     100 |   96.91 | ...02-403,496,500 
+  ...-knowledge.ts |   98.95 |    93.75 |     100 |   98.95 | 412-413,416-417   
+  ...classifier.ts |     100 |    88.46 |     100 |     100 | ...40-141,160,204 
+  ...tification.ts |     100 |    94.44 |     100 |     100 | 95                
+  ...reset-diff.ts |   94.28 |    86.48 |     100 |   94.28 | ...89-190,192-196 
+  ...mendations.ts |     100 |    89.74 |     100 |     100 | 45-46,113,115     
+  export-queue.ts  |   98.26 |    91.66 |     100 |   98.26 | ...55,217,237,309 
+  export-ranges.ts |     100 |    81.25 |     100 |     100 | 23,57-58          
+  ...t-recovery.ts |   99.03 |    88.13 |     100 |   99.03 | 214-215           
+  ...y-strategy.ts |   98.66 |       90 |     100 |   98.66 | 132               
+  ...-scheduler.ts |   93.26 |    59.25 |     100 |   93.26 | ...31,536-544,594 
+  export-types.ts  |     100 |      100 |     100 |     100 |                   
+  fcpxml-import.ts |   87.56 |    68.85 |   91.66 |   87.56 | ...15-519,526-528 
+  ...eg-builder.ts |     100 |      100 |     100 |     100 |                   
+  ffmpeg-escape.ts |     100 |      100 |     100 |     100 |                   
+  ffmpeg.ts        |     100 |      100 |     100 |     100 |                   
+  ...on-preview.ts |     100 |      100 |     100 |     100 |                   
+  ...erpolation.ts |   94.33 |    81.81 |     100 |   94.33 | 94-99,128-129,163 
+  pipeline.ts      |   96.44 |    88.77 |     100 |   96.44 | ...05-308,316-317 
+  ...rt-quality.ts |    99.2 |    86.17 |     100 |    99.2 | 235-236           
+  ...ort-script.ts |     100 |      100 |     100 |     100 |                   
+  preflight.ts     |   99.27 |    89.28 |     100 |   99.27 | 274-275           
+  ...patibility.ts |     100 |    87.09 |     100 |     100 | 104,126,128,178   
+  progressive.ts   |   96.58 |    86.79 |     100 |   96.58 | 116-117,128-129   
+  ...h-pipeline.ts |     100 |    80.88 |     100 |     100 | ...79,207,211,215 
+  quality.ts       |     100 |      100 |     100 |     100 |                   
+  render-farm.ts   |   97.85 |    91.54 |     100 |   97.85 | 193-195,268-269   
+  ...-dashboard.ts |   98.59 |    93.54 |     100 |   98.59 | 188-189           
+  scheduling.ts    |     100 |    89.51 |     100 |     100 | ...37,253,260-262 
+  ...ence-batch.ts |   97.93 |    86.84 |     100 |   97.93 | 84-85             
+  ...ine-export.ts |   97.87 |    82.52 |   95.83 |   97.87 | ...96,215-216,279 
+  ...ine-import.ts |   98.78 |    87.57 |     100 |   98.78 | ...14,318,331-332 
+  ...oned-batch.ts |   98.13 |    84.26 |     100 |   98.13 | 216-217,239-240   
+  ...monitoring.ts |    6.94 |      100 |       0 |    6.94 | ...94-357,363-471 
+ ...ffmpeg-builder |   90.57 |    82.85 |   93.33 |   90.57 |                   
+  audio-filters.ts |   83.82 |    87.42 |   94.11 |   83.82 | ...48-549,559-560 
+  ...ualization.ts |   88.16 |     88.4 |   88.23 |   88.16 | ...69-370,373-376 
+  export-plan.ts   |   95.78 |    94.21 |     100 |   95.78 | ...99-801,807-809 
+  ...-converter.ts |   96.11 |     82.3 |     100 |   96.11 | ...31-732,768-769 
+  ...-normalize.ts |   82.22 |    75.16 |   82.35 |   82.22 | ...52-553,586,592 
+  ...le-filters.ts |   93.51 |    68.24 |   97.36 |   93.51 | ...49-750,759-760 
+  utils.ts         |   85.71 |     84.8 |   89.65 |   85.71 | ...07-309,340-341 
+  ...al-filters.ts |    91.5 |    82.73 |   95.83 |    91.5 | ...1639,1735-1736 
+ ...rt/transitions |   81.29 |    93.18 |      85 |   81.29 |                   
+  ...om-filters.ts |   98.39 |       96 |    90.9 |   98.39 | 68,242-243        
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  preview-args.ts  |    6.25 |      100 |       0 |    6.25 | 27-76,103-161     
+  ...n-registry.ts |     100 |    91.66 |     100 |     100 | 284               
+  xfade-params.ts  |    92.3 |    85.71 |     100 |    92.3 | 44-45             
+ src/masks         |   96.59 |    88.88 |     100 |   96.59 |                   
+  path-mask.ts     |   96.59 |    88.88 |     100 |   96.59 | ...85-186,192-193 
+ src/model         |    83.6 |    85.48 |   81.69 |    83.6 |                   
+  annotations.ts   |   50.37 |    72.34 |   34.14 |   50.37 | ...78,583-593,603 
+  ...-normalize.ts |    89.4 |    89.62 |   96.42 |    89.4 | ...39-850,860-870 
+  defaults.ts      |    99.2 |    71.42 |     100 |    99.2 | 57,60             
+  factories.ts     |   93.62 |    88.67 |   94.33 |   93.62 | ...58,661,710-722 
+  ...-normalize.ts |   97.03 |    85.29 |     100 |   97.03 | 179,182-183,268   
+  ...k-timeline.ts |    88.8 |    83.25 |   87.03 |    88.8 | ...69-470,473-474 
+ src/multi-camera  |     100 |    99.17 |     100 |     100 |                   
+  ...o-grouping.ts |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  ...-generator.ts |     100 |    97.77 |     100 |     100 | 221               
+  sync-status.ts   |     100 |      100 |     100 |     100 |                   
+ src/permissions   |   80.52 |    73.41 |   78.72 |   80.52 |                   
+  ...ermissions.ts |   80.63 |    73.88 |   80.43 |   80.63 | ...1204,1225-1228 
+  index.ts         |       0 |        0 |       0 |       0 | 1                 
+ src/plugins       |   82.11 |    86.06 |   77.77 |   82.11 |                   
+  ...in-manager.ts |   67.72 |    73.49 |   58.82 |   67.72 | ...31-538,540-551 
+  ...et-service.ts |   97.66 |    94.28 |     100 |   97.66 | ...46-247,249-250 
+  ...n-registry.ts |   93.28 |    89.28 |     100 |   93.28 | ...86-187,189-190 
+  plugin-types.ts  |       0 |        0 |       0 |       0 |                   
+ src/project       |   97.72 |    87.26 |    99.1 |   97.72 |                   
+  batch-relink.ts  |     100 |     87.5 |     100 |     100 | 47,64             
+  clip-report.ts   |   99.34 |    85.71 |     100 |   99.34 | 159-160           
+  conform-media.ts |   99.32 |    90.75 |     100 |   99.32 | 388-389           
+  documentation.ts |   98.09 |    96.77 |     100 |   98.09 | 89-90             
+  ...cate-media.ts |     100 |    93.33 |     100 |     100 | 53,90             
+  ...-dashboard.ts |     100 |    81.63 |     100 |     100 | ...38,251,262-264 
+  ...t-conflict.ts |     100 |    93.44 |     100 |     100 | 79-80,108,146     
+  ...a-precheck.ts |    97.6 |    93.15 |     100 |    97.6 | 83-84,87-88       
+  media-report.ts  |     100 |    93.98 |     100 |     100 | ...88-198,340,485 
+  ...alth-check.ts |   91.76 |    80.26 |   94.44 |   91.76 | ...81,294,318-329 
+  ...lth-repair.ts |    97.8 |    85.93 |     100 |    97.8 | 114-116,244-245   
+  ...-migration.ts |   95.93 |    80.82 |   96.42 |   95.93 | ...06,542,573-574 
+  ...t-speakers.ts |     100 |      100 |     100 |     100 |                   
+  ...-templates.ts |   95.71 |    84.61 |     100 |   95.71 | ...18-319,368-369 
+  project-utils.ts |     100 |      100 |     100 |     100 |                   
+  ...tive-paths.ts |     100 |    90.74 |     100 |     100 | 22,57,73,86,109   
+  ...e-workflow.ts |   96.17 |    84.41 |     100 |   96.17 | ...59-260,324-325 
+  relink-score.ts  |     100 |    92.85 |     100 |     100 | 77,87             
+  report-i18n.ts   |     100 |    88.23 |     100 |     100 | 16,26             
+  review-report.ts |   98.64 |    81.25 |     100 |   98.64 | 159-160           
+  ...te-sharing.ts |    97.4 |    86.36 |     100 |    97.4 | 103,122           
+ src/proxy         |   97.94 |    89.69 |     100 |   97.94 |                   
+  ...tch-verify.ts |     100 |    95.74 |     100 |     100 | 87,131            
+  ...management.ts |   95.85 |    82.97 |     100 |   95.85 | ...60-161,218-219 
+  proxy-planner.ts |     100 |    96.22 |     100 |     100 | 50                
+ src/scopes        |     100 |    84.61 |     100 |     100 |                   
+  color-scopes.ts  |     100 |    84.61 |     100 |     100 | 101-104           
+ src/subtitles     |   95.56 |    86.13 |    96.8 |   95.56 |                   
+  ...s-renderer.ts |   98.08 |    94.59 |     100 |   98.08 | ...82,375,385-386 
+  data-import.ts   |     100 |    92.85 |     100 |     100 | ...12,143-144,188 
+  editor.ts        |   87.44 |     73.1 |     100 |   87.44 | ...51-652,658-659 
+  ...n-analysis.ts |     100 |    81.39 |     100 |     100 | ...23,241,245-246 
+  line-break.ts    |     100 |      100 |     100 |     100 |                   
+  ...age-export.ts |   96.92 |     87.5 |     100 |   96.92 | ...56,342,365-368 
+  proofreading.ts  |     100 |    91.04 |     100 |     100 | 105-107,150,161   
+  retiming.ts      |   93.18 |    80.76 |    92.3 |   93.18 | ...30-231,240-242 
+  spell-check.ts   |     100 |    86.66 |     100 |     100 | 91,143-146,154    
+  srt.ts           |   97.94 |    82.01 |     100 |   97.94 | ...96-299,353,386 
+  style-presets.ts |   80.25 |    78.57 |   76.47 |   80.25 | ...68-369,383-394 
+  ...-templates.ts |    97.7 |    84.21 |   85.71 |    97.7 | 214,222-225       
+  ...iarization.ts |     100 |    86.95 |     100 |     100 | 49,57-58          
+  ...e-quickbar.ts |     100 |    95.45 |     100 |     100 | 59                
+  sync-monitor.ts  |     100 |     92.1 |     100 |     100 | 98,111,144        
+  translation.ts   |     100 |      100 |     100 |     100 |                   
+ src/sync          |   68.64 |    76.88 |    63.7 |   68.64 |                   
+  index.ts         |       0 |        0 |       0 |       0 | 1-2               
+  ...evice-sync.ts |   52.45 |    61.66 |   41.17 |   52.45 | ...1135,1210-1211 
+  project-sync.ts  |   90.63 |     84.8 |   92.72 |   90.63 | ...09-810,825-831 
+ src/utils         |     100 |      100 |     100 |     100 |                   
+  file-utils.ts    |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------

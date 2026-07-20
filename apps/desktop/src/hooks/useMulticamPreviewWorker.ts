@@ -58,10 +58,7 @@ export function useMulticamPreviewWorker(
   // 初始化 Worker
   useEffect(() => {
     try {
-      const worker = new Worker(
-        new URL('../workers/multicam-preview.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
+      const worker = new Worker(new URL('../workers/multicam-preview.worker.ts', import.meta.url), { type: 'module' });
 
       worker.onmessage = (event: MessageEvent<MulticamPreviewWorkerOutput>) => {
         const { type, results } = event.data;

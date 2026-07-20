@@ -290,8 +290,14 @@ function ClipInspector({
   selectedSubtitleClips,
 }: InspectorProps & { clip: Clip; selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>> }) {
   const state = useClipInspectorState({
-    clip, selectedClipLocked, selectedKeyframe, selectedKeyframes,
-    media, playheadTime, projectSettings, selectedSubtitleClips,
+    clip,
+    selectedClipLocked,
+    selectedKeyframe,
+    selectedKeyframes,
+    media,
+    playheadTime,
+    projectSettings,
+    selectedSubtitleClips,
   });
 
   return (

@@ -65,10 +65,7 @@ export function useAutomationWorker() {
 
     async function init() {
       try {
-        const worker = new Worker(
-          new URL('../workers/automation.worker.ts', import.meta.url),
-          { type: 'module' },
-        );
+        const worker = new Worker(new URL('../workers/automation.worker.ts', import.meta.url), { type: 'module' });
 
         worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
           const { id, success, data, error } = event.data;
@@ -102,8 +99,14 @@ export function useAutomationWorker() {
           const id = nextRequestId();
           const timeout = setTimeout(() => reject(new Error('Worker 初始化超时')), 10000);
           pendingRef.current.set(id, {
-            resolve: () => { clearTimeout(timeout); resolve(); },
-            reject: (err) => { clearTimeout(timeout); reject(err); },
+            resolve: () => {
+              clearTimeout(timeout);
+              resolve();
+            },
+            reject: (err) => {
+              clearTimeout(timeout);
+              reject(err);
+            },
             timeout,
           });
           worker.postMessage({ id, type: 'init' });
@@ -158,31 +161,46 @@ export function useAutomationWorker() {
 
   // ------ 工作流操作 ------
 
-  const registerWorkflow = useCallback(async (workflow: unknown) => {
-    return send<{ workflowId: string }>('register-workflow', workflow);
-  }, [send]);
+  const registerWorkflow = useCallback(
+    async (workflow: unknown) => {
+      return send<{ workflowId: string }>('register-workflow', workflow);
+    },
+    [send],
+  );
 
-  const executeWorkflow = useCallback(async (workflowId: string, triggerData?: Record<string, unknown>) => {
-    return send<{
-      executionId: string;
-      status: string;
-      logs: unknown[];
-      startTime: number;
-      endTime: number;
-    }>('execute-workflow', { workflowId, triggerData });
-  }, [send]);
+  const executeWorkflow = useCallback(
+    async (workflowId: string, triggerData?: Record<string, unknown>) => {
+      return send<{
+        executionId: string;
+        status: string;
+        logs: unknown[];
+        startTime: number;
+        endTime: number;
+      }>('execute-workflow', { workflowId, triggerData });
+    },
+    [send],
+  );
 
-  const pauseExecution = useCallback(async (executionId: string) => {
-    return send<{ paused: boolean }>('pause-execution', { executionId });
-  }, [send]);
+  const pauseExecution = useCallback(
+    async (executionId: string) => {
+      return send<{ paused: boolean }>('pause-execution', { executionId });
+    },
+    [send],
+  );
 
-  const resumeExecution = useCallback(async (executionId: string) => {
-    return send<{ resumed: boolean }>('resume-execution', { executionId });
-  }, [send]);
+  const resumeExecution = useCallback(
+    async (executionId: string) => {
+      return send<{ resumed: boolean }>('resume-execution', { executionId });
+    },
+    [send],
+  );
 
-  const cancelExecution = useCallback(async (executionId: string) => {
-    return send<{ cancelled: boolean }>('cancel-execution', { executionId });
-  }, [send]);
+  const cancelExecution = useCallback(
+    async (executionId: string) => {
+      return send<{ cancelled: boolean }>('cancel-execution', { executionId });
+    },
+    [send],
+  );
 
   const getWorkflows = useCallback(async () => {
     return send<unknown[]>('get-workflows');
@@ -192,64 +210,88 @@ export function useAutomationWorker() {
     return send<unknown[]>('get-templates');
   }, [send]);
 
-  const createFromTemplate = useCallback(async (templateId: string, name?: string) => {
-    return send<unknown>('create-workflow-from-template', { templateId, name });
-  }, [send]);
+  const createFromTemplate = useCallback(
+    async (templateId: string, name?: string) => {
+      return send<unknown>('create-workflow-from-template', { templateId, name });
+    },
+    [send],
+  );
 
-  const importWorkflow = useCallback(async (json: string) => {
-    return send<unknown>('import-workflow', { json });
-  }, [send]);
+  const importWorkflow = useCallback(
+    async (json: string) => {
+      return send<unknown>('import-workflow', { json });
+    },
+    [send],
+  );
 
-  const exportWorkflow = useCallback(async (workflowId: string) => {
-    return send<{ json: string }>('export-workflow', { workflowId });
-  }, [send]);
+  const exportWorkflow = useCallback(
+    async (workflowId: string) => {
+      return send<{ json: string }>('export-workflow', { workflowId });
+    },
+    [send],
+  );
 
   // ------ 场景分析操作 ------
 
-  const analyzeScene = useCallback(async (
-    mediaPath: string,
-    startTime: number,
-    endTime: number,
-    frameData?: { brightness?: number[]; motionVectors?: number[]; audioLevels?: number[] },
-  ) => {
-    return send<unknown>('analyze-scene', { mediaPath, startTime, endTime, frameData });
-  }, [send]);
+  const analyzeScene = useCallback(
+    async (
+      mediaPath: string,
+      startTime: number,
+      endTime: number,
+      frameData?: { brightness?: number[]; motionVectors?: number[]; audioLevels?: number[] },
+    ) => {
+      return send<unknown>('analyze-scene', { mediaPath, startTime, endTime, frameData });
+    },
+    [send],
+  );
 
-  const analyzeBatch = useCallback(async (
-    mediaItems: Array<{
-      path: string;
-      duration: number;
-      frameData?: { brightness?: number[]; motionVectors?: number[]; audioLevels?: number[] };
-    }>,
-  ) => {
-    return send<unknown>('analyze-batch', { mediaItems });
-  }, [send]);
+  const analyzeBatch = useCallback(
+    async (
+      mediaItems: Array<{
+        path: string;
+        duration: number;
+        frameData?: { brightness?: number[]; motionVectors?: number[]; audioLevels?: number[] };
+      }>,
+    ) => {
+      return send<unknown>('analyze-batch', { mediaItems });
+    },
+    [send],
+  );
 
   // ------ 规则操作 ------
 
-  const evaluateRules = useCallback(async (data: Record<string, unknown>) => {
-    return send<unknown[]>('evaluate-rules', { data });
-  }, [send]);
+  const evaluateRules = useCallback(
+    async (data: Record<string, unknown>) => {
+      return send<unknown[]>('evaluate-rules', { data });
+    },
+    [send],
+  );
 
   const getRules = useCallback(async () => {
     return send<unknown[]>('get-rules');
   }, [send]);
 
-  const registerRule = useCallback(async (rule: unknown) => {
-    return send<{ ruleId: string }>('register-rule', rule);
-  }, [send]);
+  const registerRule = useCallback(
+    async (rule: unknown) => {
+      return send<{ ruleId: string }>('register-rule', rule);
+    },
+    [send],
+  );
 
   // ------ 自动剪辑操作 ------
 
-  const autoEditInWorker = useCallback(async (params: {
-    report: unknown;
-    templateId: string;
-    config?: Record<string, unknown>;
-    weights?: Record<string, unknown>;
-    trackId?: string;
-  }) => {
-    return send<unknown>('auto-edit', params);
-  }, [send]);
+  const autoEditInWorker = useCallback(
+    async (params: {
+      report: unknown;
+      templateId: string;
+      config?: Record<string, unknown>;
+      weights?: Record<string, unknown>;
+      trackId?: string;
+    }) => {
+      return send<unknown>('auto-edit', params);
+    },
+    [send],
+  );
 
   return {
     ...state,

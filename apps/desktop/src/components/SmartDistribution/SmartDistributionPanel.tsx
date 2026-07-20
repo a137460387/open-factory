@@ -463,21 +463,20 @@ export function SmartDistributionPanel({
         {activeTab === 'formats' && (
           <div>
             {selectedPlatforms.length === 0 ? (
-              <div className="text-center text-sm text-gray-400 py-8">
-                请先在「平台选择」中选择目标平台
-              </div>
+              <div className="text-center text-sm text-gray-400 py-8">请先在「平台选择」中选择目标平台</div>
             ) : (
               <>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-gray-500">
-                    已选择 {selectedPlatforms.length} 个平台，
-                    预计生成{' '}
-                    {new Set(
-                      selectedPlatforms.map((pid) => {
-                        const p = DISTRIBUTION_PLATFORMS.find((dp) => dp.id === pid);
-                        return p ? `${p.orientation}:${p.aspectRatio}` : '';
-                      }),
-                    ).size}{' '}
+                    已选择 {selectedPlatforms.length} 个平台， 预计生成{' '}
+                    {
+                      new Set(
+                        selectedPlatforms.map((pid) => {
+                          const p = DISTRIBUTION_PLATFORMS.find((dp) => dp.id === pid);
+                          return p ? `${p.orientation}:${p.aspectRatio}` : '';
+                        }),
+                      ).size
+                    }{' '}
                     种格式
                   </span>
                   <button
@@ -529,9 +528,7 @@ export function SmartDistributionPanel({
         {activeTab === 'suggestions' && (
           <div>
             {selectedPlatforms.length === 0 ? (
-              <div className="text-center text-sm text-gray-400 py-8">
-                请先在「平台选择」中选择目标平台
-              </div>
+              <div className="text-center text-sm text-gray-400 py-8">请先在「平台选择」中选择目标平台</div>
             ) : suggestions.length === 0 ? (
               <div className="text-center text-sm text-green-600 dark:text-green-400 py-8">
                 ✅ 当前项目与所选平台适配良好

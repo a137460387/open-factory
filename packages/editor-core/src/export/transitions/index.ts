@@ -14,18 +14,9 @@ export {
   searchTransitions,
 } from './transition-registry';
 
-export {
-  buildXfadeParams,
-  getXfadeName,
-  type XfadeParamsOptions,
-  type XfadeFilterResult,
-} from './xfade-params';
+export { buildXfadeParams, getXfadeName, type XfadeParamsOptions, type XfadeFilterResult } from './xfade-params';
 
-export {
-  buildCustomTransitionFilters,
-  type CustomFilterOptions,
-  type CustomFilterResult,
-} from './custom-filters';
+export { buildCustomTransitionFilters, type CustomFilterOptions, type CustomFilterResult } from './custom-filters';
 
 export {
   buildTransitionThumbnailArgs,

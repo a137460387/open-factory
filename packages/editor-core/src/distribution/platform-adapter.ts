@@ -256,11 +256,7 @@ const PLATFORM_RULES: Record<string, PlatformRule> = {
       reserveWatermarkSpace: true,
       watermarkPosition: 'bottom-right',
     },
-    notes: [
-      '抖音前3秒是关键，必须有强吸引力',
-      '字幕居中偏上，避开底部操作栏',
-      '优化循环播放，结尾平滑过渡',
-    ],
+    notes: ['抖音前3秒是关键，必须有强吸引力', '字幕居中偏上，避开底部操作栏', '优化循环播放，结尾平滑过渡'],
   },
 
   // ── Bilibili ──
@@ -306,15 +302,11 @@ const PLATFORM_RULES: Record<string, PlatformRule> = {
       subjectShiftUp: false,
       reserveWatermarkSpace: false,
     },
-    notes: [
-      'B站用户偏好有深度的内容，节奏可适当放缓',
-      '支持说话人标签显示',
-      '字幕使用半透明背景提升可读性',
-    ],
+    notes: ['B站用户偏好有深度的内容，节奏可适当放缓', '支持说话人标签显示', '字幕使用半透明背景提升可读性'],
   },
 
   // ── 小红书 ──
-  'xiaohongshu': {
+  xiaohongshu: {
     rhythmStyle: 'medium',
     clipsPerMinute: 12,
     clipDurationRange: { min: 1.5, max: 8 },
@@ -561,9 +553,7 @@ export function getPlatformAdaptation(platformId: DistributionPlatformId): Platf
 /**
  * 批量获取多个平台的适配方案
  */
-export function getBatchPlatformAdaptations(
-  platformIds: DistributionPlatformId[],
-): PlatformAdaptation[] {
+export function getBatchPlatformAdaptations(platformIds: DistributionPlatformId[]): PlatformAdaptation[] {
   return platformIds.map(getPlatformAdaptation);
 }
 
@@ -711,10 +701,12 @@ export function calculatePlatformRhythm(
     // 在范围内添加轻微变化
     const variation = rhythmStyle === 'dynamic' ? 0.3 : 0.1;
     const duration =
-      clipDurationRange.min +
-      Math.random() * (clipDurationRange.max - clipDurationRange.min) * variation;
+      clipDurationRange.min + Math.random() * (clipDurationRange.max - clipDurationRange.min) * variation;
     clipDurations.push(
-      Math.max(clipDurationRange.min, Math.min(clipDurationRange.max, avgDuration + duration - avgDuration * variation)),
+      Math.max(
+        clipDurationRange.min,
+        Math.min(clipDurationRange.max, avgDuration + duration - avgDuration * variation),
+      ),
     );
   }
 

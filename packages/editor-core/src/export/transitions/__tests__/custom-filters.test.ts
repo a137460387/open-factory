@@ -119,9 +119,16 @@ describe('custom-filters', () => {
 
     it('所有自定义转场都能生成滤镜', () => {
       const customTypes = [
-        'rotate', 'motion-blur-wipe', 'shape-heart', 'shape-star',
-        'light-leak', 'glitch', 'flip-horizontal', 'flip-vertical',
-        'cube-rotate', 'portal',
+        'rotate',
+        'motion-blur-wipe',
+        'shape-heart',
+        'shape-star',
+        'light-leak',
+        'glitch',
+        'flip-horizontal',
+        'flip-vertical',
+        'cube-rotate',
+        'portal',
       ] as const;
 
       for (const type of customTypes) {

@@ -62,10 +62,7 @@ import {
   normalizeExportColorManagement,
   normalizeProjectWorkingColorSpace,
 } from '../../color-management';
-import {
-  buildProjectColorPipelineExportDefaults,
-  normalizeProjectColorPipeline,
-} from '../../color-pipeline';
+import { buildProjectColorPipelineExportDefaults, normalizeProjectColorPipeline } from '../../color-pipeline';
 import { normalizeAudioVisualizationTheme } from '../../audio-visualization-themes';
 import { normalizeFfmpegPath } from '../ffmpeg-escape';
 import type { ExportRenderRange } from '../export-ranges';
@@ -601,7 +598,9 @@ export function finiteNumber(value: number | undefined, fallback: number): numbe
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
-export function normalizeLoudnessNormalization(mode: ExportLoudnessNormalization | undefined): ExportLoudnessNormalization {
+export function normalizeLoudnessNormalization(
+  mode: ExportLoudnessNormalization | undefined,
+): ExportLoudnessNormalization {
   return mode === 'youtube' || mode === 'ebu-r128' ? mode : 'off';
 }
 
@@ -609,7 +608,9 @@ export function normalizeVideoProfile(profile: ExportVideoProfile | undefined): 
   return profile === 'baseline' || profile === 'main' || profile === 'high' ? profile : undefined;
 }
 
-export function normalizeExportWatermark(watermark: ExportSettings['watermark'] | undefined): ExportSettings['watermark'] {
+export function normalizeExportWatermark(
+  watermark: ExportSettings['watermark'] | undefined,
+): ExportSettings['watermark'] {
   if (!watermark || watermark.enabled !== true) {
     return null;
   }

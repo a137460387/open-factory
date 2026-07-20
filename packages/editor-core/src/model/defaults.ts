@@ -1,7 +1,4 @@
-import {
-  DEFAULT_COLOR_CURVES,
-  DEFAULT_THREE_WAY_COLOR,
-} from '../color-grading';
+import { DEFAULT_COLOR_CURVES, DEFAULT_THREE_WAY_COLOR } from '../color-grading';
 import { REC709_INPUT_COLOR_SPACE } from '../color-log-luts';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from '../color-pipeline';
 import { normalizeProjectWorkingColorSpace } from '../color-management';

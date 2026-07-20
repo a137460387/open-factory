@@ -98,9 +98,7 @@ self.onmessage = async (event: MessageEvent<MulticamPreviewWorkerInput>) => {
  * 使用 OffscreenCanvas + VideoFrame 解码指定时间的帧
  * 回退到 createImageBitmap + video 元素方案
  */
-async function decodeFrameAtTime(
-  frame: MulticamPreviewFrameRequest,
-): Promise<ImageBitmap | undefined> {
+async function decodeFrameAtTime(frame: MulticamPreviewFrameRequest): Promise<ImageBitmap | undefined> {
   // 方案1：使用 VideoDecoder（如果可用）
   if (typeof VideoDecoder !== 'undefined') {
     try {
@@ -118,9 +116,7 @@ async function decodeFrameAtTime(
  * 使用 OffscreenCanvas 方案解码
  * 创建一个隐藏的 video 元素，seek 到目标时间后截取帧
  */
-async function decodeWithOffscreenCanvas(
-  frame: MulticamPreviewFrameRequest,
-): Promise<ImageBitmap | undefined> {
+async function decodeWithOffscreenCanvas(frame: MulticamPreviewFrameRequest): Promise<ImageBitmap | undefined> {
   const video = new OffscreenVideoProxy(frame.mediaSrc);
 
   try {
@@ -143,9 +139,7 @@ async function decodeWithOffscreenCanvas(
 /**
  * 使用 VideoDecoder API 解码（更高效，但兼容性有限）
  */
-async function decodeWithVideoDecoder(
-  _frame: MulticamPreviewFrameRequest,
-): Promise<ImageBitmap | undefined> {
+async function decodeWithVideoDecoder(_frame: MulticamPreviewFrameRequest): Promise<ImageBitmap | undefined> {
   // VideoDecoder API 实现（需要浏览器支持）
   // 当前作为预留接口，回退到 OffscreenCanvas 方案
   throw new Error('VideoDecoder not implemented, falling back');

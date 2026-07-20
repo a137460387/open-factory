@@ -439,7 +439,12 @@ export function TransitionPreviewCanvas({ type, active }: { type: TransitionType
   );
 }
 
-export function drawPreviewShape(context: CanvasRenderingContext2D, type: TransitionType, width: number, height: number) {
+export function drawPreviewShape(
+  context: CanvasRenderingContext2D,
+  type: TransitionType,
+  width: number,
+  height: number,
+) {
   context.save();
   context.translate(width / 2, height / 2);
   context.fillStyle = '#f8fafc';

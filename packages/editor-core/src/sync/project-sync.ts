@@ -17,12 +17,7 @@ export type SyncStatus = 'idle' | 'syncing' | 'paused' | 'error' | 'unauthorized
 
 /** 同步项目类型 */
 export type SyncItemType =
-  | 'project-config'
-  | 'color-preset'
-  | 'lut-file'
-  | 'media-proxy'
-  | 'collaboration-state'
-  | 'user-preferences';
+  'project-config' | 'color-preset' | 'lut-file' | 'media-proxy' | 'collaboration-state' | 'user-preferences';
 
 /** 同步方向 */
 export type SyncDirection = 'upload' | 'download' | 'bidirectional';
@@ -186,17 +181,8 @@ const DEFAULT_SYNC_CONFIG: SyncConfig = {
 };
 
 const DEFAULT_PRIVACY_POLICY: PrivacyPolicy = {
-  collectedData: [
-    '项目配置（不含原始媒体文件）',
-    '调色预设和 LUT 参数',
-    '协作会话元数据',
-    '用户偏好设置',
-  ],
-  dataPurpose: [
-    '跨设备同步项目设置',
-    '团队协作调色',
-    '备份与恢复',
-  ],
+  collectedData: ['项目配置（不含原始媒体文件）', '调色预设和 LUT 参数', '协作会话元数据', '用户偏好设置'],
+  dataPurpose: ['跨设备同步项目设置', '团队协作调色', '备份与恢复'],
   retentionDays: 90,
   sharedWithThirdParty: false,
   canDeleteRemoteData: true,
@@ -571,10 +557,12 @@ export class OfflineSyncQueue {
 
   /** 序列化队列 */
   serialize(): string {
-    return JSON.stringify(this.queue.map((e) => ({
-      ...e,
-      data: Array.from(e.data),
-    })));
+    return JSON.stringify(
+      this.queue.map((e) => ({
+        ...e,
+        data: Array.from(e.data),
+      })),
+    );
   }
 
   /** 反序列化队列 */
@@ -701,11 +689,7 @@ export class ProjectSyncManager {
 
   /** 计算同步差异 */
   computeDiff(remoteMetas: SyncItemMeta[]): SyncDiff {
-    return computeSyncDiff(
-      Array.from(this.localMetas.values()),
-      remoteMetas,
-      this.config.conflictStrategy,
-    );
+    return computeSyncDiff(Array.from(this.localMetas.values()), remoteMetas, this.config.conflictStrategy);
   }
 
   /** 准备上传数据（含压缩） */
@@ -855,7 +839,11 @@ export class ProjectSyncManager {
 
   private emit(event: SyncEvent): void {
     for (const handler of this.eventHandlers) {
-      try { handler(event); } catch { /* 忽略回调异常 */ }
+      try {
+        handler(event);
+      } catch {
+        /* 忽略回调异常 */
+      }
     }
   }
 }

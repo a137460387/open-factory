@@ -64,112 +64,109 @@ export function useSpeakerDiarization() {
   /**
    * 开始说话人分离
    */
-  const startDiarization = useCallback(async (
-    audioPath: string,
-    transcriptionSegments?: TranscriptionSegment[],
-    config?: SpeakerDiarizationConfig,
-  ) => {
-    // 重置状态
-    abortRef.current = false;
-    setState({
-      ...INITIAL_STATE,
-      stage: 'loading',
-      progressMessage: '正在加载模型...',
-    });
-
-    try {
-      // 创建 Worker
-      const worker = new Worker(
-        new URL('../workers/ai-speaker-diarization.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
-      workerRef.current = worker;
-
-      // 监听 Worker 消息
-      worker.onmessage = (event) => {
-        const data = event.data;
-
-        if (abortRef.current) {
-          return;
-        }
-
-        switch (data.type) {
-          case 'progress':
-            setState(prev => ({
-              ...prev,
-              stage: data.phase === 'loading-model' ? 'loading' : 'processing',
-              progress: data.progress ?? prev.progress,
-              progressMessage: getProgressMessage(data.phase),
-            }));
-            break;
-
-          case 'result':
-            setState(prev => ({
-              ...prev,
-              stage: 'done',
-              progress: 1,
-              progressMessage: '分离完成',
-              result: data.result,
-              labeledSegments: data.labeledSegments,
-              durationMs: data.durationMs,
-            }));
-            worker.terminate();
-            workerRef.current = null;
-            break;
-
-          case 'error':
-            setState(prev => ({
-              ...prev,
-              stage: 'error',
-              error: data.error ?? '未知错误',
-            }));
-            worker.terminate();
-            workerRef.current = null;
-            break;
-
-          case 'cancelled':
-            setState(prev => ({
-              ...prev,
-              stage: 'idle',
-              progress: 0,
-              progressMessage: '',
-            }));
-            worker.terminate();
-            workerRef.current = null;
-            break;
-        }
-      };
-
-      worker.onerror = (error) => {
-        setState(prev => ({
-          ...prev,
-          stage: 'error',
-          error: error.message ?? 'Worker 错误',
-        }));
-        worker.terminate();
-        workerRef.current = null;
-      };
-
-      // 发送请求
-      worker.postMessage({
-        type: 'diarize',
-        audioPath,
-        transcriptionSegments: transcriptionSegments?.map(s => ({
-          startMs: s.startMs,
-          endMs: s.endMs,
-          text: s.text,
-        })),
-        config,
+  const startDiarization = useCallback(
+    async (audioPath: string, transcriptionSegments?: TranscriptionSegment[], config?: SpeakerDiarizationConfig) => {
+      // 重置状态
+      abortRef.current = false;
+      setState({
+        ...INITIAL_STATE,
+        stage: 'loading',
+        progressMessage: '正在加载模型...',
       });
 
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        stage: 'error',
-        error: err instanceof Error ? err.message : '启动失败',
-      }));
-    }
-  }, []);
+      try {
+        // 创建 Worker
+        const worker = new Worker(new URL('../workers/ai-speaker-diarization.worker.ts', import.meta.url), {
+          type: 'module',
+        });
+        workerRef.current = worker;
+
+        // 监听 Worker 消息
+        worker.onmessage = (event) => {
+          const data = event.data;
+
+          if (abortRef.current) {
+            return;
+          }
+
+          switch (data.type) {
+            case 'progress':
+              setState((prev) => ({
+                ...prev,
+                stage: data.phase === 'loading-model' ? 'loading' : 'processing',
+                progress: data.progress ?? prev.progress,
+                progressMessage: getProgressMessage(data.phase),
+              }));
+              break;
+
+            case 'result':
+              setState((prev) => ({
+                ...prev,
+                stage: 'done',
+                progress: 1,
+                progressMessage: '分离完成',
+                result: data.result,
+                labeledSegments: data.labeledSegments,
+                durationMs: data.durationMs,
+              }));
+              worker.terminate();
+              workerRef.current = null;
+              break;
+
+            case 'error':
+              setState((prev) => ({
+                ...prev,
+                stage: 'error',
+                error: data.error ?? '未知错误',
+              }));
+              worker.terminate();
+              workerRef.current = null;
+              break;
+
+            case 'cancelled':
+              setState((prev) => ({
+                ...prev,
+                stage: 'idle',
+                progress: 0,
+                progressMessage: '',
+              }));
+              worker.terminate();
+              workerRef.current = null;
+              break;
+          }
+        };
+
+        worker.onerror = (error) => {
+          setState((prev) => ({
+            ...prev,
+            stage: 'error',
+            error: error.message ?? 'Worker 错误',
+          }));
+          worker.terminate();
+          workerRef.current = null;
+        };
+
+        // 发送请求
+        worker.postMessage({
+          type: 'diarize',
+          audioPath,
+          transcriptionSegments: transcriptionSegments?.map((s) => ({
+            startMs: s.startMs,
+            endMs: s.endMs,
+            text: s.text,
+          })),
+          config,
+        });
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          stage: 'error',
+          error: err instanceof Error ? err.message : '启动失败',
+        }));
+      }
+    },
+    [],
+  );
 
   /**
    * 取消分离

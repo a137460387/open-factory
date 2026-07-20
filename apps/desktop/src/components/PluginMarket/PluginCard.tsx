@@ -21,7 +21,10 @@ function StarRating({ rating, count }: { rating: number; count: number }) {
   const half = rating - full >= 0.5;
   const empty = 5 - full - (half ? 1 : 0);
   return (
-    <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground" title={`${rating.toFixed(1)} (${count} 条评价)`}>
+    <span
+      className="inline-flex items-center gap-0.5 text-xs text-muted-foreground"
+      title={`${rating.toFixed(1)} (${count} 条评价)`}
+    >
       {'★'.repeat(full)}
       {half && '☆'}
       {'·'.repeat(empty)}
@@ -86,10 +89,7 @@ export const PluginCard = memo(function PluginCard({
       <div className="mt-auto flex items-center justify-between pt-1">
         <StarRating rating={entry.rating.average} count={entry.rating.count} />
         <span className="text-[10px] text-muted-foreground/60">
-          {entry.downloads > 1000
-            ? `${(entry.downloads / 1000).toFixed(1)}k`
-            : entry.downloads}{' '}
-          次下载
+          {entry.downloads > 1000 ? `${(entry.downloads / 1000).toFixed(1)}k` : entry.downloads} 次下载
         </span>
       </div>
 
@@ -107,9 +107,7 @@ export const PluginCard = memo(function PluginCard({
           </button>
         )}
         {status === 'installed' && (
-          <span className="flex-1 rounded-md bg-muted px-3 py-1 text-center text-xs text-muted-foreground">
-            已安装
-          </span>
+          <span className="flex-1 rounded-md bg-muted px-3 py-1 text-center text-xs text-muted-foreground">已安装</span>
         )}
         {status === 'update-available' && (
           <button

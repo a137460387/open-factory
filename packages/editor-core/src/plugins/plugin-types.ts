@@ -196,20 +196,14 @@ export interface ExportPlugin extends PluginLifecycle {
    * @param options - Export options.
    * @returns Additional FFmpeg arguments.
    */
-  prepareExport(
-    preset: ExportPreset,
-    options: ExportOptions,
-  ): string[] | Promise<string[]>;
+  prepareExport(preset: ExportPreset, options: ExportOptions): string[] | Promise<string[]>;
 
   /**
    * Post-process after export completes.
    * @param outputPath - Path to exported file.
    * @param preset - Selected preset.
    */
-  postExport?(
-    outputPath: string,
-    preset: ExportPreset,
-  ): void | Promise<void>;
+  postExport?(outputPath: string, preset: ExportPreset): void | Promise<void>;
 }
 
 /** Export options. */
@@ -261,10 +255,7 @@ export interface WorkflowPlugin extends PluginLifecycle {
    * @param input - Input data from previous step or user.
    * @returns Output data for next step.
    */
-  executeStep(
-    step: WorkflowStep,
-    input: unknown,
-  ): unknown | Promise<unknown>;
+  executeStep(step: WorkflowStep, input: unknown): unknown | Promise<unknown>;
 
   /**
    * Validate workflow input.
@@ -368,11 +359,7 @@ export interface AIModelPlugin extends PluginLifecycle {
 // --- Union type ---
 
 /** Any plugin type. */
-export type AnyPlugin =
-  | EffectPlugin
-  | ExportPlugin
-  | WorkflowPlugin
-  | AIModelPlugin;
+export type AnyPlugin = EffectPlugin | ExportPlugin | WorkflowPlugin | AIModelPlugin;
 
 /** Plugin registration entry. */
 export interface PluginRegistration {

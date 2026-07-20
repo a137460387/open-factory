@@ -16,12 +16,7 @@ import { MediaBin } from '../MediaBin/MediaBin';
 import { CollapsedPanelRail } from '../CollapsedPanelRail';
 import { zhCN } from '../../i18n/strings';
 import { useEditorStore } from '../../store/editorStore';
-import {
-  useLayoutSettings,
-  useViewportSize,
-  useReviewMode,
-  usePersistLayoutPatch,
-} from '../../store/panelStore';
+import { useLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch } from '../../store/panelStore';
 import { useEditorMiscStore } from '../../store/editorMiscStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { commandManager, projectAccessor } from '../../store/commandManager';

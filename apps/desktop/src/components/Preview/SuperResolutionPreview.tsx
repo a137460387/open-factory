@@ -64,9 +64,7 @@ export function SuperResolutionPreview({
   onApply,
   onComplete,
 }: SuperResolutionPreviewProps) {
-  const [config, setConfig] = useState<SuperResolutionConfig>(
-    createDefaultSuperResolutionConfig(),
-  );
+  const [config, setConfig] = useState<SuperResolutionConfig>(createDefaultSuperResolutionConfig());
   const [state, setState] = useState<ProcessingState>('idle');
   const [result, setResult] = useState<SuperResolutionResult | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -79,18 +77,12 @@ export function SuperResolutionPreview({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // 配置验证
-  const configErrors = useMemo(
-    () => validateSuperResolutionConfig(config),
-    [config],
-  );
+  const configErrors = useMemo(() => validateSuperResolutionConfig(config), [config]);
 
   // 更新配置
-  const updateConfig = useCallback(
-    <K extends keyof SuperResolutionConfig>(key: K, value: SuperResolutionConfig[K]) => {
-      setConfig(prev => ({ ...prev, [key]: value }));
-    },
-    [],
-  );
+  const updateConfig = useCallback(<K extends keyof SuperResolutionConfig>(key: K, value: SuperResolutionConfig[K]) => {
+    setConfig((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   // 开始处理
   const handleProcess = useCallback(async () => {
@@ -116,10 +108,7 @@ export function SuperResolutionPreview({
       // 动态导入以支持懒加载
       const { upscaleFrame } = await import('@open-factory/editor-core/ai/super-resolution');
 
-      const processResult = upscaleFrame(
-        { data: imageData.data, width: canvas.width, height: canvas.height },
-        config,
-      );
+      const processResult = upscaleFrame({ data: imageData.data, width: canvas.width, height: canvas.height }, config);
 
       setResult(processResult);
       setState('completed');
@@ -152,14 +141,11 @@ export function SuperResolutionPreview({
   }, [config, onApply]);
 
   // 分割线拖动
-  const handleSplitDrag = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 100;
-      setSplitPosition(Math.max(5, Math.min(95, x)));
-    },
-    [],
-  );
+  const handleSplitDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    setSplitPosition(Math.max(5, Math.min(95, x)));
+  }, []);
 
   // 渲染预览
   useEffect(() => {
@@ -258,10 +244,7 @@ export function SuperResolutionPreview({
       </div>
 
       {/* 预览区域 */}
-      <div
-        style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 200 }}
-        onMouseMove={handleSplitDrag}
-      >
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 200 }} onMouseMove={handleSplitDrag}>
         <canvas
           ref={previewCanvasRef}
           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -321,11 +304,9 @@ export function SuperResolutionPreview({
       >
         {/* 缩放因子选择 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary, #999)', minWidth: 48 }}>
-            缩放
-          </span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary, #999)', minWidth: 48 }}>缩放</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            {([2, 4] as UpscaleFactor[]).map(factor => (
+            {([2, 4] as UpscaleFactor[]).map((factor) => (
               <button
                 key={factor}
                 onClick={() => updateConfig('scaleFactor', factor)}
@@ -333,12 +314,8 @@ export function SuperResolutionPreview({
                   padding: '4px 12px',
                   borderRadius: 4,
                   border: '1px solid var(--border-color, #444)',
-                  background: config.scaleFactor === factor
-                    ? 'var(--accent-bg, #2563eb)'
-                    : 'transparent',
-                  color: config.scaleFactor === factor
-                    ? '#fff'
-                    : 'var(--text-primary, #ccc)',
+                  background: config.scaleFactor === factor ? 'var(--accent-bg, #2563eb)' : 'transparent',
+                  color: config.scaleFactor === factor ? '#fff' : 'var(--text-primary, #ccc)',
                   cursor: 'pointer',
                   fontSize: 12,
                 }}
@@ -352,7 +329,7 @@ export function SuperResolutionPreview({
           {/* 模型选择 */}
           <select
             value={config.model}
-            onChange={e => updateConfig('model', e.target.value as SuperResolutionModel)}
+            onChange={(e) => updateConfig('model', e.target.value as SuperResolutionModel)}
             style={{
               padding: '4px 8px',
               borderRadius: 4,
@@ -377,13 +354,13 @@ export function SuperResolutionPreview({
           <SliderControl
             label="降噪"
             value={config.denoiseStrength}
-            onChange={v => updateConfig('denoiseStrength', v)}
+            onChange={(v) => updateConfig('denoiseStrength', v)}
             testId="sr-denoise"
           />
           <SliderControl
             label="锐化"
             value={config.sharpenStrength}
-            onChange={v => updateConfig('sharpenStrength', v)}
+            onChange={(v) => updateConfig('sharpenStrength', v)}
             testId="sr-sharpen"
           />
         </div>
@@ -414,7 +391,7 @@ export function SuperResolutionPreview({
               <input
                 type="checkbox"
                 checked={config.preserveFaces}
-                onChange={e => updateConfig('preserveFaces', e.target.checked)}
+                onChange={(e) => updateConfig('preserveFaces', e.target.checked)}
               />
               保留人脸质量
             </label>
@@ -422,17 +399,15 @@ export function SuperResolutionPreview({
               <input
                 type="checkbox"
                 checked={config.temporalConsistency}
-                onChange={e => updateConfig('temporalConsistency', e.target.checked)}
+                onChange={(e) => updateConfig('temporalConsistency', e.target.checked)}
               />
               时序一致性（视频模式）
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ color: 'var(--text-secondary, #999)', minWidth: 64 }}>
-                GPU 模式
-              </span>
+              <span style={{ color: 'var(--text-secondary, #999)', minWidth: 64 }}>GPU 模式</span>
               <select
                 value={config.gpuMode}
-                onChange={e => updateConfig('gpuMode', e.target.value as GPUMode)}
+                onChange={(e) => updateConfig('gpuMode', e.target.value as GPUMode)}
                 style={{
                   padding: '2px 6px',
                   borderRadius: 4,
@@ -451,7 +426,7 @@ export function SuperResolutionPreview({
             <SliderControl
               label="瓦片大小"
               value={config.tileSize / 2048}
-              onChange={v => updateConfig('tileSize', Math.round(v * 2048))}
+              onChange={(v) => updateConfig('tileSize', Math.round(v * 2048))}
               testId="sr-tile-size"
             />
           </div>
@@ -469,21 +444,12 @@ export function SuperResolutionPreview({
             }}
           >
             <span>
-              <Gauge size={12} style={{ verticalAlign: -2 }} />{' '}
-              PSNR: {result.psnr.toFixed(1)} dB
+              <Gauge size={12} style={{ verticalAlign: -2 }} /> PSNR: {result.psnr.toFixed(1)} dB
             </span>
-            <span>
-              SSIM: {result.ssim.toFixed(3)}
-            </span>
-            <span>
-              质量: {(result.qualityScore * 100).toFixed(0)}%
-            </span>
-            <span>
-              耗时: {result.processingTimeMs.toFixed(0)}ms
-            </span>
-            <span style={{ marginLeft: 'auto' }}>
-              模型: {result.usedModel}
-            </span>
+            <span>SSIM: {result.ssim.toFixed(3)}</span>
+            <span>质量: {(result.qualityScore * 100).toFixed(0)}%</span>
+            <span>耗时: {result.processingTimeMs.toFixed(0)}ms</span>
+            <span style={{ marginLeft: 'auto' }}>模型: {result.usedModel}</span>
           </div>
         )}
 
@@ -530,9 +496,7 @@ export function SuperResolutionPreview({
                 borderRadius: 6,
                 border: '1px solid var(--border-color, #444)',
                 background: 'transparent',
-                color: state === 'completed'
-                  ? 'var(--text-primary, #ccc)'
-                  : 'var(--text-disabled, #666)',
+                color: state === 'completed' ? 'var(--text-primary, #ccc)' : 'var(--text-disabled, #666)',
                 cursor: state === 'completed' ? 'pointer' : 'default',
                 fontSize: 13,
               }}
@@ -572,21 +536,17 @@ function SliderControl({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-      <span style={{ color: 'var(--text-secondary, #999)', minWidth: 36, fontSize: 11 }}>
-        {label}
-      </span>
+      <span style={{ color: 'var(--text-secondary, #999)', minWidth: 36, fontSize: 11 }}>{label}</span>
       <input
         type="range"
         min={0}
         max={100}
         value={Math.round(value * 100)}
-        onChange={e => onChange(Number(e.target.value) / 100)}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
         style={{ flex: 1, height: 16 }}
         data-testid={testId}
       />
-      <span style={{ minWidth: 32, textAlign: 'right', fontSize: 11 }}>
-        {Math.round(value * 100)}%
-      </span>
+      <span style={{ minWidth: 32, textAlign: 'right', fontSize: 11 }}>{Math.round(value * 100)}%</span>
     </div>
   );
 }

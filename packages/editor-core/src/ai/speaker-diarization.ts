@@ -109,9 +109,18 @@ const DEFAULT_CONVERGENCE_THRESHOLD = 0.001;
 
 /** 说话人标签映射 */
 const SPEAKER_LABELS = [
-  '说话人 A', '说话人 B', '说话人 C', '说话人 D',
-  '说话人 E', '说话人 F', '说话人 G', '说话人 H',
-  '说话人 I', '说话人 J', '说话人 K', '说话人 L',
+  '说话人 A',
+  '说话人 B',
+  '说话人 C',
+  '说话人 D',
+  '说话人 E',
+  '说话人 F',
+  '说话人 G',
+  '说话人 H',
+  '说话人 I',
+  '说话人 J',
+  '说话人 K',
+  '说话人 L',
 ];
 
 // -- Feature Extraction (Pure Computation) --
@@ -132,7 +141,7 @@ export function normalizeEmbedding(embedding: number[]): number[] {
     return new Array(embedding.length).fill(0);
   }
 
-  return embedding.map(val => val / norm);
+  return embedding.map((val) => val / norm);
 }
 
 /**
@@ -208,11 +217,12 @@ export function agglomerativeClustering(
   }
 
   // 计算距离函数
-  const distanceFn = distanceMetric === 'cosine'
-    ? (a: number[], b: number[]) => 1 - cosineSimilarity(a, b)
-    : distanceMetric === 'euclidean'
-      ? euclideanDistance
-      : angularDistance;
+  const distanceFn =
+    distanceMetric === 'cosine'
+      ? (a: number[], b: number[]) => 1 - cosineSimilarity(a, b)
+      : distanceMetric === 'euclidean'
+        ? euclideanDistance
+        : angularDistance;
 
   // 初始化：每个样本为一个簇
   const clusters: number[][] = embeddings.map((_, i) => [i]);
@@ -283,7 +293,7 @@ export function agglomerativeClustering(
   const idMap = new Map<number, number>();
   uniqueIds.forEach((id, index) => idMap.set(id, index));
 
-  return clusterIds.map(id => idMap.get(id)!);
+  return clusterIds.map((id) => idMap.get(id)!);
 }
 
 /**
@@ -312,7 +322,7 @@ export function kMeansClustering(
 
   for (let iter = 0; iter < maxIterations; iter++) {
     // 分配每个样本到最近的质心
-    const newAssignments = embeddings.map(emb => {
+    const newAssignments = embeddings.map((emb) => {
       let minDist = Infinity;
       let bestCluster = 0;
       for (let c = 0; c < effectiveK; c++) {
@@ -379,7 +389,7 @@ function initializeCentroidsKMeansPlusPlus(embeddings: number[][], k: number): n
   // 选择剩余质心
   for (let c = 1; c < k; c++) {
     // 计算每个样本到最近质心的距离
-    const distances = embeddings.map(emb => {
+    const distances = embeddings.map((emb) => {
       let minDist = Infinity;
       for (const centroid of centroids) {
         const dist = euclideanDistance(emb, centroid);
@@ -430,7 +440,7 @@ export function diarizeFromEmbeddings(
   const mergeGapMs = config.mergeGapMs ?? DEFAULT_MERGE_GAP_MS;
 
   // 归一化嵌入向量
-  const normalizedEmbeddings = timeEmbeddings.map(te => normalizeEmbedding(te.embedding));
+  const normalizedEmbeddings = timeEmbeddings.map((te) => normalizeEmbedding(te.embedding));
 
   // 使用凝聚层次聚类确定说话人
   let clusterAssignments = agglomerativeClustering(normalizedEmbeddings, threshold);
@@ -451,7 +461,12 @@ export function diarizeFromEmbeddings(
     endMs: te.endMs,
     speakerId: clusterAssignments[i],
     speakerLabel: getSpeakerLabel(clusterAssignments[i]),
-    confidence: calculateSegmentConfidence(normalizedEmbeddings[i], normalizedEmbeddings, clusterAssignments, clusterAssignments[i]),
+    confidence: calculateSegmentConfidence(
+      normalizedEmbeddings[i],
+      normalizedEmbeddings,
+      clusterAssignments,
+      clusterAssignments[i],
+    ),
     text: undefined,
   }));
 
@@ -465,9 +480,7 @@ export function diarizeFromEmbeddings(
   const stats = calculateDiarizationStats(segments);
 
   // 计算总时长
-  const durationMs = segments.length > 0
-    ? Math.max(...segments.map(s => s.endMs))
-    : 0;
+  const durationMs = segments.length > 0 ? Math.max(...segments.map((s) => s.endMs)) : 0;
 
   return {
     segments,
@@ -489,7 +502,7 @@ export function applySpeakerLabelsToTranscription(
     return transcriptionSegments;
   }
 
-  return transcriptionSegments.map(seg => {
+  return transcriptionSegments.map((seg) => {
     // 找到与此转录片段时间重叠最多的分离片段
     const bestMatch = findBestOverlap(seg.startMs, seg.endMs, diarizationResult.segments);
 
@@ -641,10 +654,7 @@ function calculateSegmentConfidence(
 /**
  * 合并相邻的同说话人片段
  */
-function mergeAdjacentSegments(
-  segments: SpeakerDiarizationSegment[],
-  mergeGapMs: number,
-): SpeakerDiarizationSegment[] {
+function mergeAdjacentSegments(segments: SpeakerDiarizationSegment[], mergeGapMs: number): SpeakerDiarizationSegment[] {
   if (segments.length <= 1) {
     return segments;
   }
@@ -664,7 +674,7 @@ function mergeAdjacentSegments(
         speakerId: current.speakerId,
         speakerLabel: current.speakerLabel,
         confidence: Math.min(current.confidence, next.confidence),
-        text: current.text && next.text ? `${current.text} ${next.text}` : current.text ?? next.text,
+        text: current.text && next.text ? `${current.text} ${next.text}` : (current.text ?? next.text),
       };
     } else {
       merged.push(current);
@@ -741,7 +751,7 @@ function calculateDiarizationStats(segments: SpeakerDiarizationSegment[]): Speak
     };
   }
 
-  const speakerIds = new Set(segments.map(s => s.speakerId));
+  const speakerIds = new Set(segments.map((s) => s.speakerId));
   const avgConfidence = segments.reduce((sum, s) => sum + s.confidence, 0) / segments.length;
 
   // 计算最长单人发言

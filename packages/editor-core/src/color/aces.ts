@@ -1,6 +1,6 @@
 /**
  * ACES色彩管理模块
- * 
+ *
  * 功能：
  * 1. ACES工作流基础 - 实现ACES色彩空间转换
  * 2. OCIO色彩管理框架集成 - 支持OpenColorIO配置
@@ -13,7 +13,7 @@
 /**
  * 色彩空间
  */
-export type ColorSpace = 
+export type ColorSpace =
   | 'srgb'
   | 'rec709'
   | 'rec2020'
@@ -34,10 +34,10 @@ export type ColorSpace =
 /**
  * ACES工作流阶段
  */
-export type ACESStage = 
-  | 'input'      // 输入设备转换 (IDT)
-  | 'working'    // 工作色彩空间
-  | 'output'     // 输出显示转换 (ODT)
+export type ACESStage =
+  | 'input' // 输入设备转换 (IDT)
+  | 'working' // 工作色彩空间
+  | 'output' // 输出显示转换 (ODT)
   | 'reference'; // 参考色彩空间
 
 /**
@@ -71,7 +71,7 @@ export interface ColorManagementConfig {
 /**
  * 色调映射方法
  */
-export type ToneMappingMethod = 
+export type ToneMappingMethod =
   | 'none'
   | 'reinhard'
   | 'reinhard-extended'
@@ -86,20 +86,28 @@ export type ToneMappingMethod =
 /**
  * 色彩矩阵 (3x3)
  */
-export type ColorMatrix3x3 = [
-  number, number, number,
-  number, number, number,
-  number, number, number,
-];
+export type ColorMatrix3x3 = [number, number, number, number, number, number, number, number, number];
 
 /**
  * 色彩矩阵 (4x4)
  */
 export type ColorMatrix4x4 = [
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
-  number, number, number, number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
 ];
 
 /**
@@ -208,30 +216,13 @@ export interface HDRMetadata {
 /**
  * 传输特性
  */
-export type TransferFunction = 
-  | 'srgb'
-  | 'gamma2.2'
-  | 'gamma2.4'
-  | 'gamma2.6'
-  | 'pq'
-  | 'hlg'
-  | 'linear'
-  | 'log'
-  | 'acescct'
-  | 'acescc'
-  | 'acesproxy';
+export type TransferFunction =
+  'srgb' | 'gamma2.2' | 'gamma2.4' | 'gamma2.6' | 'pq' | 'hlg' | 'linear' | 'log' | 'acescct' | 'acescc' | 'acesproxy';
 
 /**
  * 色域
  */
-export type ColorGamut = 
-  | 'srgb'
-  | 'rec709'
-  | 'rec2020'
-  | 'display-p3'
-  | 'dci-p3'
-  | 'aces'
-  | 'custom';
+export type ColorGamut = 'srgb' | 'rec709' | 'rec2020' | 'display-p3' | 'dci-p3' | 'aces' | 'custom';
 
 /**
  * OCIO配置
@@ -354,11 +345,7 @@ export function multiplyMatrices3x3(a: ColorMatrix3x3, b: ColorMatrix3x3): Color
  * 计算矩阵逆 (3x3)
  */
 export function invertMatrix3x3(matrix: ColorMatrix3x3): ColorMatrix3x3 {
-  const [
-    a, b, c,
-    d, e, f,
-    g, h, i,
-  ] = matrix;
+  const [a, b, c, d, e, f, g, h, i] = matrix;
 
   const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
 
@@ -406,58 +393,42 @@ export const DEFAULT_COLOR_MANAGEMENT_CONFIG: ColorManagementConfig = {
 export const ACES_MATRICES = {
   // sRGB到ACES2065-1 (AP0)
   srgbToAP0: [
-    0.4396744, 0.3829868, 0.1773388,
-    0.0897764, 0.8134392, 0.0967844,
-    0.0175417, 0.1115465, 0.8709118,
+    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
   ] as ColorMatrix3x3,
 
   // ACES2065-1 (AP0) 到 sRGB
   ap0ToSrgb: [
-    2.5216474, -1.1366888, -0.3849586,
-    -0.2754369, 1.3700779, -0.0946410,
-    -0.0159316, -0.1529726, 1.1689042,
+    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
   ] as ColorMatrix3x3,
 
   // ACEScg (AP1) 到 ACES2065-1 (AP0)
   ap1ToAP0: [
-    0.6954522, 0.1406787, 0.1638690,
-    0.0447946, 0.8596711, 0.0955343,
-    -0.0055259, 0.0040252, 1.0015007,
+    0.6954522, 0.1406787, 0.163869, 0.0447946, 0.8596711, 0.0955343, -0.0055259, 0.0040252, 1.0015007,
   ] as ColorMatrix3x3,
 
   // ACES2065-1 (AP0) 到 ACEScg (AP1)
   ap0ToAP1: [
-    1.4514393, -0.2365107, -0.2149286,
-    -0.0765538, 1.1762297, -0.0996759,
-    0.0083162, -0.0060324, 0.9977163,
+    1.4514393, -0.2365107, -0.2149286, -0.0765538, 1.1762297, -0.0996759, 0.0083162, -0.0060324, 0.9977163,
   ] as ColorMatrix3x3,
 
   // Rec.709 到 ACES2065-1 (AP0)
   rec709ToAP0: [
-    0.4396744, 0.3829868, 0.1773388,
-    0.0897764, 0.8134392, 0.0967844,
-    0.0175417, 0.1115465, 0.8709118,
+    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
   ] as ColorMatrix3x3,
 
   // ACES2065-1 (AP0) 到 Rec.709
   ap0ToRec709: [
-    2.5216474, -1.1366888, -0.3849586,
-    -0.2754369, 1.3700779, -0.0946410,
-    -0.0159316, -0.1529726, 1.1689042,
+    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
   ] as ColorMatrix3x3,
 
   // Rec.2020 到 ACES2065-1 (AP0)
   rec2020ToAP0: [
-    0.4396744, 0.3829868, 0.1773388,
-    0.0897764, 0.8134392, 0.0967844,
-    0.0175417, 0.1115465, 0.8709118,
+    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
   ] as ColorMatrix3x3,
 
   // ACES2065-1 (AP0) 到 Rec.2020
   ap0ToRec2020: [
-    2.5216474, -1.1366888, -0.3849586,
-    -0.2754369, 1.3700779, -0.0946410,
-    -0.0159316, -0.1529726, 1.1689042,
+    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
   ] as ColorMatrix3x3,
 };
 
@@ -469,18 +440,14 @@ export const TRANSFER_FUNCTIONS = {
    * sRGB传输特性（线性到sRGB）
    */
   linearToSrgb(value: number): number {
-    return value <= 0.0031308
-      ? value * 12.92
-      : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
+    return value <= 0.0031308 ? value * 12.92 : 1.055 * Math.pow(value, 1 / 2.4) - 0.055;
   },
 
   /**
    * sRGB传输特性（sRGB到线性）
    */
   srgbToLinear(value: number): number {
-    return value <= 0.04045
-      ? value / 12.92
-      : Math.pow((value + 0.055) / 1.055, 2.4);
+    return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
   },
 
   /**
@@ -604,9 +571,9 @@ export const TONE_MAPPING_FUNCTIONS = {
   reinhardExtended(color: RGBColor, maxWhite: number = 1): RGBColor {
     const divisor = 1 + color.r / (maxWhite * maxWhite);
     return {
-      r: color.r * (1 + color.r / (maxWhite * maxWhite)) / divisor,
-      g: color.g * (1 + color.g / (maxWhite * maxWhite)) / (1 + color.g / (maxWhite * maxWhite)),
-      b: color.b * (1 + color.b / (maxWhite * maxWhite)) / (1 + color.b / (maxWhite * maxWhite)),
+      r: (color.r * (1 + color.r / (maxWhite * maxWhite))) / divisor,
+      g: (color.g * (1 + color.g / (maxWhite * maxWhite))) / (1 + color.g / (maxWhite * maxWhite)),
+      b: (color.b * (1 + color.b / (maxWhite * maxWhite))) / (1 + color.b / (maxWhite * maxWhite)),
     };
   },
 
@@ -649,14 +616,14 @@ export const TONE_MAPPING_FUNCTIONS = {
    */
   filmic(color: RGBColor): RGBColor {
     const A = 0.15; // Shoulder Strength
-    const B = 0.50; // Linear Strength
-    const C = 0.10; // Linear Angle
-    const D = 0.20; // Toe Strength
+    const B = 0.5; // Linear Strength
+    const C = 0.1; // Linear Angle
+    const D = 0.2; // Toe Strength
     const E = 0.02; // Toe Numerator
-    const F = 0.30; // Toe Denominator
+    const F = 0.3; // Toe Denominator
 
     const filmicChannel = (x: number) => {
-      return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
+      return (x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F) - E / F;
     };
 
     const whiteScale = 1 / filmicChannel(1);
@@ -698,9 +665,7 @@ export const COLOR_SPACE_CONVERSIONS = {
   srgbToXYZ(color: RGBColor): XYZColor {
     // sRGB到XYZ矩阵 (D65)
     const matrix: ColorMatrix3x3 = [
-      0.4124564, 0.3575761, 0.1804375,
-      0.2126729, 0.7151522, 0.0721750,
-      0.0193339, 0.1191920, 0.9503041,
+      0.4124564, 0.3575761, 0.1804375, 0.2126729, 0.7151522, 0.072175, 0.0193339, 0.119192, 0.9503041,
     ];
 
     // 线性化sRGB
@@ -720,9 +685,7 @@ export const COLOR_SPACE_CONVERSIONS = {
   xyzToSrgb(color: XYZColor): RGBColor {
     // XYZ到sRGB矩阵 (D65)
     const matrix: ColorMatrix3x3 = [
-      3.2404542, -1.5371385, -0.4985314,
-      -0.9692660, 1.8760108, 0.0415560,
-      0.0556434, -0.2040259, 1.0572252,
+      3.2404542, -1.5371385, -0.4985314, -0.969266, 1.8760108, 0.041556, 0.0556434, -0.2040259, 1.0572252,
     ];
 
     const linear = multiplyMatrix3x3(matrix, { r: color.x, g: color.y, b: color.z });
@@ -745,9 +708,7 @@ export const COLOR_SPACE_CONVERSIONS = {
 
     const f = (t: number) => {
       const delta = 6 / 29;
-      return t > delta * delta * delta
-        ? Math.pow(t, 1 / 3)
-        : t / (3 * delta * delta) + 4 / 29;
+      return t > delta * delta * delta ? Math.pow(t, 1 / 3) : t / (3 * delta * delta) + 4 / 29;
     };
 
     const fx = f(color.x / Xn);
@@ -777,9 +738,7 @@ export const COLOR_SPACE_CONVERSIONS = {
     const delta = 6 / 29;
 
     const fInv = (t: number) => {
-      return t > delta
-        ? t * t * t
-        : 3 * delta * delta * (t - 4 / 29);
+      return t > delta ? t * t * t : 3 * delta * delta * (t - 4 / 29);
     };
 
     return {
@@ -953,11 +912,7 @@ export class ACESColorManager {
   /**
    * 色彩空间转换
    */
-  convertColorSpace(
-    color: RGBColor,
-    from: ColorSpace,
-    to: ColorSpace
-  ): RGBColor {
+  convertColorSpace(color: RGBColor, from: ColorSpace, to: ColorSpace): RGBColor {
     if (from === to) {
       return { ...color };
     }
@@ -977,22 +932,22 @@ export class ACESColorManager {
       case 'srgb':
       case 'rec709':
         return multiplyMatrix3x3(ACES_MATRICES.srgbToAP0, color);
-      
+
       case 'rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.rec2020ToAP0, color);
-      
+
       case 'aces2065-1':
         return { ...color };
-      
+
       case 'acescg':
         return multiplyMatrix3x3(ACES_MATRICES.ap1ToAP0, color);
-      
+
       case 'lin-rec709':
         return multiplyMatrix3x3(ACES_MATRICES.srgbToAP0, color);
-      
+
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.rec2020ToAP0, color);
-      
+
       case 'acescct':
         // 先转换为线性
         const linear: RGBColor = {
@@ -1001,7 +956,7 @@ export class ACESColorManager {
           b: TRANSFER_FUNCTIONS.acescctToLinear(color.b),
         };
         return multiplyMatrix3x3(ACES_MATRICES.ap1ToAP0, linear);
-      
+
       default:
         // 默认假设为sRGB
         return multiplyMatrix3x3(ACES_MATRICES.srgbToAP0, color);
@@ -1016,22 +971,22 @@ export class ACESColorManager {
       case 'srgb':
       case 'rec709':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToSrgb, color);
-      
+
       case 'rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToRec2020, color);
-      
+
       case 'aces2065-1':
         return { ...color };
-      
+
       case 'acescg':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToAP1, color);
-      
+
       case 'lin-rec709':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToSrgb, color);
-      
+
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToRec2020, color);
-      
+
       case 'acescct':
         // 转换为ACEScg，然后应用ACEScct传输特性
         const ap1 = multiplyMatrix3x3(ACES_MATRICES.ap0ToAP1, color);
@@ -1040,7 +995,7 @@ export class ACESColorManager {
           g: TRANSFER_FUNCTIONS.linearToACEScct(ap1.g),
           b: TRANSFER_FUNCTIONS.linearToACEScct(ap1.b),
         };
-      
+
       default:
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToSrgb, color);
     }
@@ -1055,22 +1010,22 @@ export class ACESColorManager {
     switch (toneMappingMethod) {
       case 'reinhard':
         return TONE_MAPPING_FUNCTIONS.reinhard(color);
-      
+
       case 'reinhard-extended':
         return TONE_MAPPING_FUNCTIONS.reinhardExtended(color);
-      
+
       case 'aces-hill':
         return TONE_MAPPING_FUNCTIONS.acesHill(color);
-      
+
       case 'aces-narkowicz':
         return TONE_MAPPING_FUNCTIONS.acesNarkowicz(color);
-      
+
       case 'filmic':
         return TONE_MAPPING_FUNCTIONS.filmic(color);
-      
+
       case 'agx':
         return TONE_MAPPING_FUNCTIONS.agx(color);
-      
+
       case 'none':
       default:
         return { ...color };
@@ -1085,7 +1040,7 @@ export class ACESColorManager {
     width: number,
     height: number,
     sourceColorSpace: ColorSpace,
-    targetColorSpace: ColorSpace
+    targetColorSpace: ColorSpace,
   ): Uint8ClampedArray {
     const result = new Uint8ClampedArray(imageData.length);
 
@@ -1257,13 +1212,16 @@ export function parseCubeFile(content: string): LUTData {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    
+
     if (trimmed.startsWith('#')) {
       continue;
     }
-    
+
     if (trimmed.startsWith('TITLE')) {
-      title = trimmed.substring(6).trim().replace(/^["']|["']$/g, '');
+      title = trimmed
+        .substring(6)
+        .trim()
+        .replace(/^["']|["']$/g, '');
     } else if (trimmed.startsWith('LUT_3D_SIZE')) {
       size = parseInt(trimmed.substring(12).trim());
     } else if (trimmed.startsWith('DOMAIN_MIN')) {
@@ -1283,11 +1241,7 @@ export function parseCubeFile(content: string): LUTData {
     } else if (trimmed && !trimmed.startsWith('#')) {
       const parts = trimmed.split(/\s+/);
       if (parts.length >= 3) {
-        data.push(
-          parseFloat(parts[0]),
-          parseFloat(parts[1]),
-          parseFloat(parts[2])
-        );
+        data.push(parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2]));
       }
     }
   }

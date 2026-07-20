@@ -126,10 +126,7 @@ interface TrackingState {
  * @param options - Reframe configuration.
  * @returns Reframe result with keyframes and tracking info.
  */
-export function generateAutoReframe(
-  frames: SubjectFrame[],
-  options: AutoReframeOptions,
-): AutoReframeResult {
+export function generateAutoReframe(frames: SubjectFrame[], options: AutoReframeOptions): AutoReframeResult {
   const {
     targetAspect,
     padding = 0.1,
@@ -145,9 +142,7 @@ export function generateAutoReframe(
     return emptyResult();
   }
 
-  const sorted = [...frames]
-    .filter((f) => Number.isFinite(f.time))
-    .sort((a, b) => a.time - b.time);
+  const sorted = [...frames].filter((f) => Number.isFinite(f.time)).sort((a, b) => a.time - b.time);
 
   // Normalize target aspect.
   if (targetAspect === 'source') {
@@ -403,9 +398,7 @@ function trackPrimarySubject(
     const avgConfidence = state.totalConfidence / state.framesTracked;
     const durationScore = state.framesTracked / frames.length;
     // Prefer faces by boosting their score.
-    const subject = frames
-      .flatMap((f) => f.subjects)
-      .find((s) => s.id === id);
+    const subject = frames.flatMap((f) => f.subjects).find((s) => s.id === id);
     const faceBonus = preferFaces && subject?.type === 'face' ? 0.2 : 0;
     const score = durationScore * 0.5 + avgConfidence * 0.3 + faceBonus + subject!.importance * 0.2;
 
@@ -539,10 +532,7 @@ function computeCenterCrop(
   };
 }
 
-function smoothAutoReframeKeyframes(
-  keyframes: AutoReframeKeyframe[],
-  windowSize: number,
-): AutoReframeKeyframe[] {
+function smoothAutoReframeKeyframes(keyframes: AutoReframeKeyframe[], windowSize: number): AutoReframeKeyframe[] {
   if (keyframes.length <= 1 || windowSize <= 1) {
     return keyframes.map((kf) => ({ ...kf }));
   }
@@ -575,10 +565,7 @@ function smoothAutoReframeKeyframes(
   });
 }
 
-function limitCropSpeed(
-  keyframes: AutoReframeKeyframe[],
-  maxSpeed: number,
-): AutoReframeKeyframe[] {
+function limitCropSpeed(keyframes: AutoReframeKeyframe[], maxSpeed: number): AutoReframeKeyframe[] {
   if (keyframes.length <= 1) {
     return keyframes;
   }
@@ -616,9 +603,7 @@ function limitCropSpeed(
   return result;
 }
 
-function buildAutoReframeFFmpegExpression(
-  keyframes: AutoReframeKeyframe[],
-): string | undefined {
+function buildAutoReframeFFmpegExpression(keyframes: AutoReframeKeyframe[]): string | undefined {
   if (keyframes.length === 0) {
     return undefined;
   }
@@ -638,10 +623,7 @@ function buildAutoReframeFFmpegExpression(
   return `crop=${w}:${h}:${xExpr}:${yExpr}`;
 }
 
-function buildSegmentExpr(
-  keyframes: AutoReframeKeyframe[],
-  field: 'cropX' | 'cropY',
-): string {
+function buildSegmentExpr(keyframes: AutoReframeKeyframe[], field: 'cropX' | 'cropY'): string {
   if (keyframes.length === 1) {
     return String(keyframes[0][field]);
   }

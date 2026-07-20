@@ -8,13 +8,7 @@ import {
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor } from '../../store/commandManager';
-import {
-  LABEL_WIDTH,
-  Ruler,
-  ThumbnailTrack,
-  TrackRow,
-  TRACK_HEIGHT,
-} from './TimelineParts';
+import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT } from './TimelineParts';
 import {
   TrackBatchMenu,
   TransitionMenu,
@@ -35,10 +29,7 @@ import {
   TimelineColorHeatmapLayer,
   TimelineHeatmapCanvas,
 } from './TimelineOverlays';
-import {
-  SequenceSettingsDialog,
-  GapStatsPanel,
-} from './TimelineDialogs';
+import { SequenceSettingsDialog, GapStatsPanel } from './TimelineDialogs';
 import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
 
 interface TimelineTracksContainerProps {

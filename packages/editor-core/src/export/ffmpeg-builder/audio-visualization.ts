@@ -1,7 +1,4 @@
-import {
-  normalizeAudioSpectrumParams,
-  type AudioSpectrumParams,
-} from '../../effects';
+import { normalizeAudioSpectrumParams, type AudioSpectrumParams } from '../../effects';
 import {
   MANUAL_AUDIO_VISUALIZATION_THEME_ID,
   expandAudioVisualizationTheme,

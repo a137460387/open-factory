@@ -5,14 +5,14 @@ export type TTSLanguage = 'zh' | 'en' | 'ja' | 'ko' | 'auto';
 
 /** TTS语音风格 */
 export type TTSVoiceStyle =
-  | 'neutral'    // 中性
-  | 'happy'      // 欢快
-  | 'sad'        // 悲伤
-  | 'angry'      // 愤怒
-  | 'fearful'    // 恐惧
-  | 'disgusted'  // 厌恶
-  | 'surprised'  // 惊讶
-  | 'custom';    // 自定义
+  | 'neutral' // 中性
+  | 'happy' // 欢快
+  | 'sad' // 悲伤
+  | 'angry' // 愤怒
+  | 'fearful' // 恐惧
+  | 'disgusted' // 厌恶
+  | 'surprised' // 惊讶
+  | 'custom'; // 自定义
 
 /** TTS语音性别 */
 export type TTSVoiceGender = 'male' | 'female' | 'neutral';
@@ -304,35 +304,30 @@ export function getVoicesByLanguage(language: TTSLanguage): TTSVoice[] {
   if (language === 'auto') {
     return BUILT_IN_VOICES;
   }
-  return BUILT_IN_VOICES.filter(v => v.language === language);
+  return BUILT_IN_VOICES.filter((v) => v.language === language);
 }
 
 /**
  * 按性别筛选语音
  */
 export function getVoicesByGender(gender: TTSVoiceGender): TTSVoice[] {
-  return BUILT_IN_VOICES.filter(v => v.gender === gender);
+  return BUILT_IN_VOICES.filter((v) => v.gender === gender);
 }
 
 /**
  * 根据ID获取语音
  */
 export function getVoiceById(voiceId: string): TTSVoice | undefined {
-  return BUILT_IN_VOICES.find(v => v.id === voiceId);
+  return BUILT_IN_VOICES.find((v) => v.id === voiceId);
 }
 
 /**
  * 推荐语音
  * 基于文本语言和用户偏好推荐最佳语音
  */
-export function recommendVoice(
-  text: string,
-  preferredGender?: TTSVoiceGender,
-): TTSVoice | undefined {
+export function recommendVoice(text: string, preferredGender?: TTSVoiceGender): TTSVoice | undefined {
   const language = detectTTSLanguage(text);
-  const candidates = language === 'auto'
-    ? BUILT_IN_VOICES
-    : getVoicesByLanguage(language);
+  const candidates = language === 'auto' ? BUILT_IN_VOICES : getVoicesByLanguage(language);
 
   if (candidates.length === 0) {
     return BUILT_IN_VOICES[0];
@@ -340,7 +335,7 @@ export function recommendVoice(
 
   // 按性别偏好筛选
   if (preferredGender) {
-    const genderMatch = candidates.filter(v => v.gender === preferredGender);
+    const genderMatch = candidates.filter((v) => v.gender === preferredGender);
     if (genderMatch.length > 0) {
       return genderMatch[0];
     }
@@ -391,10 +386,7 @@ export function preprocessText(text: string): string {
  * 文本分段
  * 将长文本分割为适合TTS处理的短段
  */
-export function segmentText(
-  text: string,
-  maxLength: number = DEFAULT_SEGMENT_MAX_LENGTH,
-): string[] {
+export function segmentText(text: string, maxLength: number = DEFAULT_SEGMENT_MAX_LENGTH): string[] {
   if (!text || text.trim().length === 0) {
     return [];
   }
@@ -420,7 +412,7 @@ export function segmentText(
     remaining = remaining.substring(splitPos).trim();
   }
 
-  return segments.filter(s => s.length > 0);
+  return segments.filter((s) => s.length > 0);
 }
 
 /**
@@ -501,19 +493,19 @@ export function calculateTextStats(text: string): {
     wordCount = text.replace(/\s/g, '').length;
   } else {
     // 英文按空格分词
-    wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+    wordCount = text.split(/\s+/).filter((w) => w.length > 0).length;
   }
 
   // 句数统计
-  const sentenceCount = text.split(/[.!?。！？]+/).filter(s => s.trim().length > 0).length;
+  const sentenceCount = text.split(/[.!?。！？]+/).filter((s) => s.trim().length > 0).length;
 
   // 估算时长（基于平均语速）
   const charsPerSecond: Record<TTSLanguage, number> = {
-    zh: 4,     // 中文约4字/秒
-    en: 15,    // 英文约15字符/秒（含空格）
-    ja: 5,     // 日文约5字/秒
-    ko: 4.5,   // 韩文约4.5字/秒
-    auto: 5,   // 自动检测使用中间值
+    zh: 4, // 中文约4字/秒
+    en: 15, // 英文约15字符/秒（含空格）
+    ja: 5, // 日文约5字/秒
+    ko: 4.5, // 韩文约4.5字/秒
+    auto: 5, // 自动检测使用中间值
   };
 
   const estimatedDurationMs = Math.round((charCount / charsPerSecond[language]) * 1000);
@@ -554,13 +546,10 @@ export function adjustDurationBySpeed(durationMs: number, speed: number): number
 /**
  * 根据语速调整时间映射
  */
-export function adjustTimingsBySpeed(
-  timings: WordTiming[],
-  speed: number,
-): WordTiming[] {
+export function adjustTimingsBySpeed(timings: WordTiming[], speed: number): WordTiming[] {
   const normalizedSpeed = clamp(speed, MIN_SPEED, MAX_SPEED);
 
-  return timings.map(timing => ({
+  return timings.map((timing) => ({
     ...timing,
     startMs: Math.round(timing.startMs / normalizedSpeed),
     endMs: Math.round(timing.endMs / normalizedSpeed),
@@ -667,13 +656,9 @@ export function alignToTimeline(
     }
   }
 
-  const totalDurationMs = segments.length > 0
-    ? segments[segments.length - 1].endMs - segments[0].startMs
-    : 0;
+  const totalDurationMs = segments.length > 0 ? segments[segments.length - 1].endMs - segments[0].startMs : 0;
 
-  const averageSpeed = segments.length > 0
-    ? segments.reduce((sum, s) => sum + s.speed, 0) / segments.length
-    : 1.0;
+  const averageSpeed = segments.length > 0 ? segments.reduce((sum, s) => sum + s.speed, 0) / segments.length : 1.0;
 
   return {
     segments,
@@ -839,7 +824,7 @@ export function pcmToWav(pcmData: Float32Array, sampleRate: number): ArrayBuffer
   let offset = headerSize;
   for (let i = 0; i < pcmData.length; i++) {
     const sample = clamp(pcmData[i], -1, 1);
-    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
     view.setInt16(offset, intSample, true);
     offset += 2;
   }
@@ -858,10 +843,7 @@ export interface TTSValidationIssue {
 /**
  * 验证TTS合成参数
  */
-export function validateTTSParams(
-  params: TTSSynthesisParams,
-  config: TTSConfig = {},
-): TTSValidationIssue[] {
+export function validateTTSParams(params: TTSSynthesisParams, config: TTSConfig = {}): TTSValidationIssue[] {
   const issues: TTSValidationIssue[] = [];
   const maxLength = config.maxTextLength ?? DEFAULT_MAX_TEXT_LENGTH;
 

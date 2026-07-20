@@ -54,10 +54,10 @@ export interface SyncAlignmentPreview {
 
 /** 同步质量阈值 (毫秒) */
 const QUALITY_THRESHOLDS = {
-  excellent: 10,   // <10ms 优秀
-  good: 30,        // <30ms 良好
-  fair: 100,       // <100ms 一般
-  poor: 500,       // <500ms 较差
+  excellent: 10, // <10ms 优秀
+  good: 30, // <30ms 良好
+  fair: 100, // <100ms 一般
+  poor: 500, // <500ms 较差
 } as const;
 
 /** 置信度阈值 */
@@ -182,10 +182,10 @@ export function buildSyncStatusSummary(
 export function getSyncQualityColor(quality: SyncQualityLevel): string {
   const colors: Record<SyncQualityLevel, string> = {
     excellent: '#22c55e', // green-500
-    good: '#84cc16',      // lime-500
-    fair: '#eab308',      // yellow-500
-    poor: '#f97316',      // orange-500
-    unsynced: '#ef4444',  // red-500
+    good: '#84cc16', // lime-500
+    fair: '#eab308', // yellow-500
+    poor: '#f97316', // orange-500
+    unsynced: '#ef4444', // red-500
   };
   return colors[quality];
 }

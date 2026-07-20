@@ -195,7 +195,7 @@ export function calculateChecksum(data: unknown): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // 转换为32位整数
   }
   return Math.abs(hash).toString(36);
@@ -229,10 +229,7 @@ export function compareVersions(v1: number, v2: number): -1 | 0 | 1 {
 /**
  * 检查操作是否冲突
  */
-export function detectOperationConflict(
-  local: SyncOperation,
-  remote: SyncOperation,
-): boolean {
+export function detectOperationConflict(local: SyncOperation, remote: SyncOperation): boolean {
   // 同一实体的并发编辑
   if (local.entityId === remote.entityId && local.entityType === remote.entityType) {
     // 同一路径的修改
@@ -240,8 +237,7 @@ export function detectOperationConflict(
       return true;
     }
     // 结构性变更（删除或移动）
-    if (local.type === 'delete' || local.type === 'move' ||
-        remote.type === 'delete' || remote.type === 'move') {
+    if (local.type === 'delete' || local.type === 'move' || remote.type === 'delete' || remote.type === 'move') {
       return true;
     }
   }
@@ -269,14 +265,10 @@ export function mergeOperations(
       // 简单的合并策略：使用最新的值
       return {
         ...local,
-        newValue: new Date(local.timestamp) > new Date(remote.timestamp)
-          ? local.newValue
-          : remote.newValue,
+        newValue: new Date(local.timestamp) > new Date(remote.timestamp) ? local.newValue : remote.newValue,
         version: Math.max(local.version, remote.version) + 1,
         checksum: calculateChecksum(
-          new Date(local.timestamp) > new Date(remote.timestamp)
-            ? local.newValue
-            : remote.newValue,
+          new Date(local.timestamp) > new Date(remote.timestamp) ? local.newValue : remote.newValue,
         ),
       };
     default:
@@ -353,11 +345,7 @@ export class MultiDeviceSyncManager {
   private syncTimer?: ReturnType<typeof setInterval>;
   private wsAdapter?: WSAdapter;
 
-  constructor(
-    localDevice: Device,
-    config?: Partial<DeviceSyncConfig>,
-    wsAdapter?: WSAdapter,
-  ) {
+  constructor(localDevice: Device, config?: Partial<DeviceSyncConfig>, wsAdapter?: WSAdapter) {
     this.config = { ...DEFAULT_SYNC_CONFIG, ...config };
     this.wsAdapter = wsAdapter;
 
@@ -574,11 +562,7 @@ export class MultiDeviceSyncManager {
       conflict.resolvedAt = new Date().toISOString();
 
       // 合并操作
-      const merged = mergeOperations(
-        conflict.localOperation,
-        conflict.remoteOperation,
-        resolution,
-      );
+      const merged = mergeOperations(conflict.localOperation, conflict.remoteOperation, resolution);
 
       // 应用合并后的操作
       this.applyMergedOperation(merged);
@@ -595,11 +579,7 @@ export class MultiDeviceSyncManager {
   /**
    * 手动解决冲突
    */
-  resolveConflictManually(
-    conflictId: string,
-    resolution: ConflictResolution,
-    userId: string,
-  ): boolean {
+  resolveConflictManually(conflictId: string, resolution: ConflictResolution, userId: string): boolean {
     const conflict = this.state.conflicts.find((c) => c.id === conflictId);
     if (!conflict) {
       return false;
@@ -610,11 +590,7 @@ export class MultiDeviceSyncManager {
     conflict.resolvedAt = new Date().toISOString();
 
     // 合并操作
-    const merged = mergeOperations(
-      conflict.localOperation,
-      conflict.remoteOperation,
-      resolution,
-    );
+    const merged = mergeOperations(conflict.localOperation, conflict.remoteOperation, resolution);
 
     // 应用合并后的操作
     this.applyMergedOperation(merged);
@@ -684,9 +660,7 @@ export class MultiDeviceSyncManager {
 
     try {
       // 压缩变更集
-      const compressed = this.config.compressionEnabled
-        ? compressChangeSet(changeSet)
-        : changeSet;
+      const compressed = this.config.compressionEnabled ? compressChangeSet(changeSet) : changeSet;
 
       // 发送到远程
       await this.wsAdapter.send({
@@ -699,7 +673,6 @@ export class MultiDeviceSyncManager {
 
       // 更新设备同步时间
       this.state.localDevice.lastSyncAt = this.state.lastSyncAt;
-
     } catch (error) {
       this.state.syncStatus = 'error';
       this.emit('sync.failed', {
@@ -754,9 +727,7 @@ export class MultiDeviceSyncManager {
 
     const now = new Date();
     const pendingItems = this.state.offlineQueue.filter(
-      (item) =>
-        item.status === 'pending' &&
-        new Date(item.nextRetryAt) <= now,
+      (item) => item.status === 'pending' && new Date(item.nextRetryAt) <= now,
     );
 
     for (const item of pendingItems) {
@@ -782,9 +753,7 @@ export class MultiDeviceSyncManager {
     }
 
     // 清除已完成的项
-    this.state.offlineQueue = this.state.offlineQueue.filter(
-      (item) => item.status !== 'completed',
-    );
+    this.state.offlineQueue = this.state.offlineQueue.filter((item) => item.status !== 'completed');
 
     this.state.syncStatus = 'idle';
     this.emit('offline.queue.updated', this.state.offlineQueue.length);
@@ -905,11 +874,7 @@ export class MultiDeviceSyncManager {
    * 检查是否需要同步
    */
   needsSync(): boolean {
-    return (
-      this.state.offlineQueue.length > 0 ||
-      this.state.conflicts.length > 0 ||
-      this.state.syncStatus === 'error'
-    );
+    return this.state.offlineQueue.length > 0 || this.state.conflicts.length > 0 || this.state.syncStatus === 'error';
   }
 
   /**
@@ -917,10 +882,7 @@ export class MultiDeviceSyncManager {
    */
   getStats(): SyncStats {
     return {
-      totalOperations: this.state.changeHistory.reduce(
-        (sum, cs) => sum + cs.operations.length,
-        0,
-      ),
+      totalOperations: this.state.changeHistory.reduce((sum, cs) => sum + cs.operations.length, 0),
       totalConflicts: this.state.conflicts.length,
       offlineQueueSize: this.state.offlineQueue.length,
       lastSyncAt: this.state.lastSyncAt,
@@ -1051,9 +1013,7 @@ export class BrowserWSAdapter implements WSAdapter {
     };
 
     this.ws.onerror = (event) => {
-      this.errorHandlers.forEach((handler) =>
-        handler(new Error(`WebSocket error: ${event}`)),
-      );
+      this.errorHandlers.forEach((handler) => handler(new Error(`WebSocket error: ${event}`)));
     };
   }
 

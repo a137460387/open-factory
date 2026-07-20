@@ -132,10 +132,7 @@ export function determineMonitoringMode(
 /**
  * 生成 VMAF 采样计划
  */
-export function generateVmafSamplePlan(
-  duration: number,
-  config: VmafMonitoringConfig,
-): number[] {
+export function generateVmafSamplePlan(duration: number, config: VmafMonitoringConfig): number[] {
   if (config.mode === 'disabled' || duration <= 0) {
     return [];
   }
@@ -168,11 +165,16 @@ export function buildVmafSampleCommand(
 ): string[] {
   const args: string[] = [
     'ffmpeg',
-    '-ss', String(timestamp),
-    '-i', sourcePath,
-    '-ss', String(timestamp),
-    '-i', outputPath,
-    '-t', '1', // 只采样 1 秒
+    '-ss',
+    String(timestamp),
+    '-i',
+    sourcePath,
+    '-ss',
+    String(timestamp),
+    '-i',
+    outputPath,
+    '-t',
+    '1', // 只采样 1 秒
     '-lavfi',
   ];
 
@@ -202,9 +204,7 @@ export function buildVmafSampleCommand(
 /**
  * 解析 VMAF 结果
  */
-export function parseVmafResult(
-  jsonOutput: string,
-): Partial<VmafSamplePoint> {
+export function parseVmafResult(jsonOutput: string): Partial<VmafSamplePoint> {
   try {
     const result = JSON.parse(jsonOutput);
     const frames = result.frames ?? [];
@@ -290,10 +290,7 @@ export function analyzeVmafResults(
 /**
  * 生成 VMAF 质量报告
  */
-export function generateVmafReport(
-  result: VmafMonitoringResult,
-  projectName?: string,
-): string {
+export function generateVmafReport(result: VmafMonitoringResult, projectName?: string): string {
   const lines: string[] = [];
 
   lines.push('# VMAF 质量监控报告');
@@ -375,10 +372,7 @@ export function createDegradedQualityReport(
     maxVmaf: estimatedQuality,
     vmafStdDev: 0,
     qualityRating: getQualityRating(estimatedQuality),
-    warnings: [
-      'VMAF 不可用，使用基于编码参数的估算值',
-      '建议安装 libvmaf 以获得精确的质量评估',
-    ],
+    warnings: ['VMAF 不可用，使用基于编码参数的估算值', '建议安装 libvmaf 以获得精确的质量评估'],
     processingTimeMs: 0,
   };
 }

@@ -73,10 +73,7 @@ export class PluginManager {
   private readonly loadQueue: string[] = [];
   private loading = 0;
 
-  constructor(
-    registry?: PluginRegistry,
-    options: PluginManagerOptions = {},
-  ) {
+  constructor(registry?: PluginRegistry, options: PluginManagerOptions = {}) {
     this.registry = registry ?? new PluginRegistry();
     this.options = {
       maxConcurrentLoads: options.maxConcurrentLoads ?? 3,
@@ -386,11 +383,7 @@ export class PluginManager {
 
   // --- Internal ---
 
-  private emit(
-    event: PluginManagerEvent,
-    manifest: PluginManifest,
-    error?: Error,
-  ): void {
+  private emit(event: PluginManagerEvent, manifest: PluginManifest, error?: Error): void {
     const payload: PluginManagerEventPayload = {
       event,
       pluginId: manifest.id,
@@ -435,17 +428,8 @@ export class PluginManager {
     return context;
   }
 
-  private async withTimeout<T>(
-    promise: Promise<T>,
-    ms: number,
-    message: string,
-  ): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error(message)), ms),
-      ),
-    ]);
+  private async withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+    return Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
   }
 
   private processQueue(): void {

@@ -61,13 +61,7 @@ export interface SubtitleSelectionResult {
 
 /** 字幕编辑操作类型 */
 export type SubtitleEditOperation =
-  | 'delete'
-  | 'duplicate'
-  | 'split'
-  | 'merge'
-  | 'style-update'
-  | 'time-shift'
-  | 'time-scale';
+  'delete' | 'duplicate' | 'split' | 'merge' | 'style-update' | 'time-shift' | 'time-scale';
 
 /** 字幕编辑操作结果 */
 export interface SubtitleEditResult {
@@ -207,11 +201,7 @@ export function replaceSubtitles(
 /**
  * 替换单个搜索结果
  */
-export function replaceSingleResult(
-  timeline: Timeline,
-  result: SubtitleSearchResult,
-  replaceText: string,
-): Timeline {
+export function replaceSingleResult(timeline: Timeline, result: SubtitleSearchResult, replaceText: string): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track, trackIndex) => {
@@ -227,8 +217,7 @@ export function replaceSingleResult(
           }
 
           const text = clip.text || '';
-          const newText =
-            text.substring(0, result.matchStart) + replaceText + text.substring(result.matchEnd);
+          const newText = text.substring(0, result.matchStart) + replaceText + text.substring(result.matchEnd);
 
           return { ...clip, text: newText };
         }),
@@ -244,10 +233,7 @@ export function replaceSingleResult(
 /**
  * 获取选中的字幕片段
  */
-export function getSelectedSubtitleClips(
-  timeline: Timeline,
-  selectedIds: string[],
-): SubtitleSelectionResult {
+export function getSelectedSubtitleClips(timeline: Timeline, selectedIds: string[]): SubtitleSelectionResult {
   const selectedClips: SubtitleClip[] = [];
 
   for (const track of timeline.tracks) {
@@ -272,28 +258,19 @@ export function getSelectedSubtitleClips(
 /**
  * 全选指定轨道的字幕片段
  */
-export function selectAllSubtitlesInTrack(
-  timeline: Timeline,
-  trackId: string,
-): string[] {
+export function selectAllSubtitlesInTrack(timeline: Timeline, trackId: string): string[] {
   const track = timeline.tracks.find((t) => t.id === trackId);
   if (!track || !isSubtitleTrack(track)) {
     return [];
   }
 
-  return track.clips
-    .filter((clip) => clip.type === 'subtitle')
-    .map((clip) => clip.id);
+  return track.clips.filter((clip) => clip.type === 'subtitle').map((clip) => clip.id);
 }
 
 /**
  * 反选字幕片段
  */
-export function invertSubtitleSelection(
-  timeline: Timeline,
-  selectedIds: string[],
-  trackId?: string,
-): string[] {
+export function invertSubtitleSelection(timeline: Timeline, selectedIds: string[], trackId?: string): string[] {
   const allIds: string[] = [];
 
   for (const track of timeline.tracks) {
@@ -322,10 +299,7 @@ export function invertSubtitleSelection(
 /**
  * 批量更新字幕样式
  */
-export function batchUpdateSubtitleStyle(
-  timeline: Timeline,
-  update: SubtitleBatchStyleUpdate,
-): Timeline {
+export function batchUpdateSubtitleStyle(timeline: Timeline, update: SubtitleBatchStyleUpdate): Timeline {
   const { clipIds, style } = update;
   const idSet = new Set(clipIds);
 
@@ -374,9 +348,7 @@ export function batchApplyStyleTemplate(
 /**
  * 从选中的字幕中提取共同样式
  */
-export function extractCommonStyle(
-  clips: SubtitleClip[],
-): Partial<SubtitleStyle> | null {
+export function extractCommonStyle(clips: SubtitleClip[]): Partial<SubtitleStyle> | null {
   if (clips.length === 0) {
     return null;
   }
@@ -406,10 +378,7 @@ export function extractCommonStyle(
 /**
  * 删除选中的字幕片段
  */
-export function deleteSelectedSubtitles(
-  timeline: Timeline,
-  selectedIds: string[],
-): SubtitleEditResult {
+export function deleteSelectedSubtitles(timeline: Timeline, selectedIds: string[]): SubtitleEditResult {
   const idSet = new Set(selectedIds);
   let affectedCount = 0;
 
@@ -480,9 +449,7 @@ export function duplicateSelectedSubtitles(
         return track;
       }
 
-      const clipsToAdd = newClips
-        .filter((item) => item.trackIndex === trackIndex)
-        .map((item) => item.clip);
+      const clipsToAdd = newClips.filter((item) => item.trackIndex === trackIndex).map((item) => item.clip);
 
       if (clipsToAdd.length === 0) {
         return track;
@@ -562,10 +529,7 @@ export function mergeSelectedSubtitles(
       // 移除原片段，添加合并后的片段
       return {
         ...track,
-        clips: [
-          ...track.clips.filter((clip) => !idSet.has(clip.id)),
-          mergedClip,
-        ],
+        clips: [...track.clips.filter((clip) => !idSet.has(clip.id)), mergedClip],
       };
     }),
   };

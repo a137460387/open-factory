@@ -98,10 +98,6 @@ export function createInitialDialogState(): DialogState {
 }
 
 /** Generic dialog open/close setter. */
-export function applyDialogUpdate(
-  state: DialogState,
-  key: DialogKey,
-  updater: Updater<boolean>,
-): DialogState {
+export function applyDialogUpdate(state: DialogState, key: DialogKey, updater: Updater<boolean>): DialogState {
   return { ...state, [key]: applyUpdater(state[key], updater) };
 }

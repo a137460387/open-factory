@@ -651,11 +651,7 @@ export function cpuApplyTemperatureTint(
 ): [number, number, number] {
   const tf = temperature / 100;
   const tt = tint / 100;
-  return [
-    clampValue(r + tf * 0.1, 0, 1),
-    clampValue(g + tt * 0.05, 0, 1),
-    clampValue(b - tf * 0.1, 0, 1),
-  ];
+  return [clampValue(r + tf * 0.1, 0, 1), clampValue(g + tt * 0.05, 0, 1), clampValue(b - tf * 0.1, 0, 1)];
 }
 
 /** CPU 回退：应用对比度 */
@@ -687,7 +683,11 @@ export function cpuApplySaturation(r: number, g: number, b: number, saturation: 
 
 /** CPU 回退：色调映射 - ACES Hill */
 export function cpuToneMapAcesHill(r: number, g: number, b: number): [number, number, number] {
-  const a = 2.51, bb = 0.03, c = 2.43, d = 0.59, e = 0.14;
+  const a = 2.51,
+    bb = 0.03,
+    c = 2.43,
+    d = 0.59,
+    e = 0.14;
   return [
     clampValue((r * (a * r + bb)) / (r * (c * r + d) + e), 0, 1),
     clampValue((g * (a * g + bb)) / (g * (c * g + d) + e), 0, 1),
@@ -742,8 +742,11 @@ export function cpuApplyToneMapping(
       const agxOffset = 0.008;
       const minEv = -12.47;
       const maxEv = 6.5;
-      const norm = (v: number) => clampValue((Math.log2(Math.max(v, 0.0001)) - minEv) / (maxEv - minEv) + agxOffset, 0, 1);
-      er = norm(er); eg = norm(eg); eb = norm(eb);
+      const norm = (v: number) =>
+        clampValue((Math.log2(Math.max(v, 0.0001)) - minEv) / (maxEv - minEv) + agxOffset, 0, 1);
+      er = norm(er);
+      eg = norm(eg);
+      eb = norm(eb);
       break;
     }
     default:
@@ -839,9 +842,18 @@ export function cpuProcessPixel(
       const rad = (colorCorrection.hueRotation * Math.PI) / 180;
       const cosA = Math.cos(rad);
       const sinA = Math.sin(rad);
-      const rr = cr * (0.213 + cosA * 0.787 - sinA * 0.213) + cg * (0.715 - cosA * 0.715 - sinA * 0.715) + cb * (0.072 - cosA * 0.072 + sinA * 0.928);
-      const gr = cr * (0.213 - cosA * 0.213 + sinA * 0.143) + cg * (0.715 + cosA * 0.285 + sinA * 0.140) + cb * (0.072 - cosA * 0.072 - sinA * 0.283);
-      const br = cr * (0.213 - cosA * 0.213 - sinA * 0.787) + cg * (0.715 - cosA * 0.715 + sinA * 0.715) + cb * (0.072 + cosA * 0.928 + sinA * 0.072);
+      const rr =
+        cr * (0.213 + cosA * 0.787 - sinA * 0.213) +
+        cg * (0.715 - cosA * 0.715 - sinA * 0.715) +
+        cb * (0.072 - cosA * 0.072 + sinA * 0.928);
+      const gr =
+        cr * (0.213 - cosA * 0.213 + sinA * 0.143) +
+        cg * (0.715 + cosA * 0.285 + sinA * 0.14) +
+        cb * (0.072 - cosA * 0.072 - sinA * 0.283);
+      const br =
+        cr * (0.213 - cosA * 0.213 - sinA * 0.787) +
+        cg * (0.715 - cosA * 0.715 + sinA * 0.715) +
+        cb * (0.072 + cosA * 0.928 + sinA * 0.072);
       cr = clampValue(rr, 0, 1);
       cg = clampValue(gr, 0, 1);
       cb = clampValue(br, 0, 1);
@@ -956,7 +968,9 @@ export class GPUColorProcessor {
     // 尝试 WebGPU
     if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
       try {
-        const adapter = await (navigator as unknown as { gpu: { requestAdapter: () => Promise<unknown> } }).gpu.requestAdapter();
+        const adapter = await (
+          navigator as unknown as { gpu: { requestAdapter: () => Promise<unknown> } }
+        ).gpu.requestAdapter();
         if (adapter) {
           const device = await (adapter as { requestDevice: () => Promise<unknown> }).requestDevice();
           if (device) {
@@ -1040,7 +1054,9 @@ export class GPUColorProcessor {
 
     // 检查缓存
     if (this.config.enableCache) {
-      const ccHash = colorCorrection ? computeParamsHash(colorCorrection as unknown as Record<string, unknown>) : 'none';
+      const ccHash = colorCorrection
+        ? computeParamsHash(colorCorrection as unknown as Record<string, unknown>)
+        : 'none';
       const tmHash = toneMapping ? computeParamsHash(toneMapping as unknown as Record<string, unknown>) : 'none';
       const lutHash = lutData ? lutData.textureId : 'none';
       const cacheKey = `${width}x${height}::cc=${ccHash}::tm=${tmHash}::lut=${lutHash}::li=${lutIntensity}`;
@@ -1067,11 +1083,27 @@ export class GPUColorProcessor {
     // 执行处理
     let output: Uint8ClampedArray;
     if (this.currentBackend === 'cpu-fallback') {
-      output = cpuProcessFrame(input, width, height, colorCorrection ?? null, toneMapping ?? null, lutData ?? null, lutIntensity);
+      output = cpuProcessFrame(
+        input,
+        width,
+        height,
+        colorCorrection ?? null,
+        toneMapping ?? null,
+        lutData ?? null,
+        lutIntensity,
+      );
     } else {
       // GPU 处理路径 - 在实际 GPU 上下文中由调用者管理
       // 这里回退到 CPU 以保持纯逻辑层
-      output = cpuProcessFrame(input, width, height, colorCorrection ?? null, toneMapping ?? null, lutData ?? null, lutIntensity);
+      output = cpuProcessFrame(
+        input,
+        width,
+        height,
+        colorCorrection ?? null,
+        toneMapping ?? null,
+        lutData ?? null,
+        lutIntensity,
+      );
     }
 
     const elapsed = performance.now() - start;
@@ -1079,7 +1111,9 @@ export class GPUColorProcessor {
 
     // 写入缓存
     if (this.config.enableCache) {
-      const ccHash = colorCorrection ? computeParamsHash(colorCorrection as unknown as Record<string, unknown>) : 'none';
+      const ccHash = colorCorrection
+        ? computeParamsHash(colorCorrection as unknown as Record<string, unknown>)
+        : 'none';
       const tmHash = toneMapping ? computeParamsHash(toneMapping as unknown as Record<string, unknown>) : 'none';
       const lutHash = lutData ? lutData.textureId : 'none';
       const cacheKey = `${width}x${height}::cc=${ccHash}::tm=${tmHash}::lut=${lutHash}::li=${lutIntensity}`;
@@ -1166,7 +1200,11 @@ export class GPUColorProcessor {
 
   private notifyStatus(status: GPUDeviceStatus): void {
     for (const cb of this.statusListeners) {
-      try { cb(status); } catch { /* 忽略回调异常 */ }
+      try {
+        cb(status);
+      } catch {
+        /* 忽略回调异常 */
+      }
     }
   }
 }

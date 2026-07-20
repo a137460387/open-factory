@@ -18,10 +18,10 @@ export type RuleStatus = 'active' | 'inactive' | 'error';
 
 /** 规则触发模式 */
 export type RuleTriggerMode =
-  | 'on-change'     // 数据变化时触发
-  | 'on-event'      // 事件触发
-  | 'periodic'      // 周期触发
-  | 'on-demand';    // 按需触发
+  | 'on-change' // 数据变化时触发
+  | 'on-event' // 事件触发
+  | 'periodic' // 周期触发
+  | 'on-demand'; // 按需触发
 
 /** 规则条件组 */
 export interface RuleConditionGroup {
@@ -102,12 +102,7 @@ export interface RuleEngineConfig {
 }
 
 /** 规则引擎事件 */
-export type RuleEngineEvent =
-  | 'rule-evaluated'
-  | 'rule-triggered'
-  | 'rule-skipped'
-  | 'rule-error'
-  | 'chain-complete';
+export type RuleEngineEvent = 'rule-evaluated' | 'rule-triggered' | 'rule-skipped' | 'rule-error' | 'chain-complete';
 
 /** 规则引擎事件回调 */
 export type RuleEngineEventCallback = (event: RuleEngineEvent, data: unknown) => void;
@@ -130,10 +125,12 @@ export function createDefaultRule(name: string = '新规则'): AutomationRule {
     priority: 'normal',
     status: 'active',
     triggerMode: 'on-change',
-    conditionGroups: [{
-      logic: 'and',
-      conditions: [],
-    }],
+    conditionGroups: [
+      {
+        logic: 'and',
+        conditions: [],
+      },
+    ],
     actions: [],
     cooldownMs: 5000,
     maxExecutions: 0,
@@ -260,9 +257,7 @@ export function evaluateRuleConditions(
   const decisionLog: string[] = [];
   const groupResults = rule.conditionGroups.map((group) => {
     const result = evaluateConditionGroup(group, data);
-    decisionLog.push(
-      `条件组 [${group.logic}]: ${result.passed ? '通过' : '未通过'} - ${result.reasons.join('; ')}`,
-    );
+    decisionLog.push(`条件组 [${group.logic}]: ${result.passed ? '通过' : '未通过'} - ${result.reasons.join('; ')}`);
     return result;
   });
 
@@ -385,7 +380,10 @@ export class RuleEngine {
    */
   async evaluateAndExecute(
     data: Record<string, unknown>,
-    actionExecutor?: (action: WorkflowAction, data: Record<string, unknown>) => Promise<{ success: boolean; output?: unknown; error?: string }>,
+    actionExecutor?: (
+      action: WorkflowAction,
+      data: Record<string, unknown>,
+    ) => Promise<{ success: boolean; output?: unknown; error?: string }>,
   ): Promise<RuleExecutionResult[]> {
     const activeRules = this.getActiveRules();
     const results: RuleExecutionResult[] = [];
@@ -404,7 +402,10 @@ export class RuleEngine {
   async evaluateRule(
     rule: AutomationRule,
     data: Record<string, unknown>,
-    actionExecutor?: (action: WorkflowAction, data: Record<string, unknown>) => Promise<{ success: boolean; output?: unknown; error?: string }>,
+    actionExecutor?: (
+      action: WorkflowAction,
+      data: Record<string, unknown>,
+    ) => Promise<{ success: boolean; output?: unknown; error?: string }>,
   ): Promise<RuleExecutionResult> {
     const decisionLog: string[] = [];
     const now = Date.now();
@@ -542,7 +543,10 @@ export class RuleEngine {
    */
   async executeRuleChain(
     initialData: Record<string, unknown>,
-    actionExecutor?: (action: WorkflowAction, data: Record<string, unknown>) => Promise<{ success: boolean; output?: unknown; error?: string }>,
+    actionExecutor?: (
+      action: WorkflowAction,
+      data: Record<string, unknown>,
+    ) => Promise<{ success: boolean; output?: unknown; error?: string }>,
   ): Promise<RuleExecutionResult[]> {
     if (!this.config.enableRuleChaining) {
       return this.evaluateAndExecute(initialData, actionExecutor);
@@ -601,7 +605,11 @@ export class RuleEngine {
   private emit(event: RuleEngineEvent, data: unknown): void {
     const listeners = this.eventListeners.get(event) || [];
     for (const cb of listeners) {
-      try { cb(event, data); } catch { /* 忽略监听器错误 */ }
+      try {
+        cb(event, data);
+      } catch {
+        /* 忽略监听器错误 */
+      }
     }
   }
 
@@ -663,9 +671,7 @@ export function normalizeRule(data: unknown): AutomationRule {
     conditionGroups: Array.isArray(obj.conditionGroups)
       ? obj.conditionGroups.map(normalizeConditionGroup)
       : [{ logic: 'and' as const, conditions: [] }],
-    actions: Array.isArray(obj.actions)
-      ? obj.actions.map(normalizeAction)
-      : [],
+    actions: Array.isArray(obj.actions) ? obj.actions.map(normalizeAction) : [],
     cooldownMs: typeof obj.cooldownMs === 'number' ? obj.cooldownMs : 5000,
     maxExecutions: typeof obj.maxExecutions === 'number' ? obj.maxExecutions : 0,
     executionCount: typeof obj.executionCount === 'number' ? obj.executionCount : 0,
@@ -681,9 +687,7 @@ function normalizeConditionGroup(data: unknown): RuleConditionGroup {
   const obj = data as Record<string, unknown>;
   return {
     logic: obj.logic === 'or' ? 'or' : 'and',
-    conditions: Array.isArray(obj.conditions)
-      ? obj.conditions.map(normalizeCondition)
-      : [],
+    conditions: Array.isArray(obj.conditions) ? obj.conditions.map(normalizeCondition) : [],
   };
 }
 
@@ -709,7 +713,7 @@ function normalizeAction(data: unknown): WorkflowAction {
   return {
     id: typeof obj.id === 'string' ? obj.id : genRuleId('action'),
     type: typeof obj.type === 'string' ? (obj.type as ActionType) : 'notify',
-    params: typeof obj.params === 'object' && obj.params !== null ? obj.params as Record<string, unknown> : {},
+    params: typeof obj.params === 'object' && obj.params !== null ? (obj.params as Record<string, unknown>) : {},
     continueOnError: typeof obj.continueOnError === 'boolean' ? obj.continueOnError : false,
     timeout: typeof obj.timeout === 'number' ? obj.timeout : undefined,
   };
@@ -731,21 +735,27 @@ export const BUILTIN_RULE_TEMPLATES: RuleTemplate[] = [
       priority: 'high',
       status: 'active',
       triggerMode: 'on-event',
-      conditionGroups: [{
-        logic: 'and',
-        conditions: [{
-          id: 'c1',
-          field: 'quality.overall',
-          operator: 'less_than',
-          value: 70,
-        }],
-      }],
-      actions: [{
-        id: 'a1',
-        type: 'apply-effect',
-        params: { effectType: 'quality-enhance', intensity: 0.8 },
-        continueOnError: false,
-      }],
+      conditionGroups: [
+        {
+          logic: 'and',
+          conditions: [
+            {
+              id: 'c1',
+              field: 'quality.overall',
+              operator: 'less_than',
+              value: 70,
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: 'a1',
+          type: 'apply-effect',
+          params: { effectType: 'quality-enhance', intensity: 0.8 },
+          continueOnError: false,
+        },
+      ],
       cooldownMs: 10000,
       maxExecutions: 0,
       tags: ['质量', '自动修复'],
@@ -762,21 +772,27 @@ export const BUILTIN_RULE_TEMPLATES: RuleTemplate[] = [
       priority: 'normal',
       status: 'active',
       triggerMode: 'on-event',
-      conditionGroups: [{
-        logic: 'and',
-        conditions: [{
-          id: 'c1',
-          field: 'analysis.hasBlackBars',
-          operator: 'equals',
-          value: true,
-        }],
-      }],
-      actions: [{
-        id: 'a1',
-        type: 'apply-effect',
-        params: { effectType: 'crop', auto: true },
-        continueOnError: true,
-      }],
+      conditionGroups: [
+        {
+          logic: 'and',
+          conditions: [
+            {
+              id: 'c1',
+              field: 'analysis.hasBlackBars',
+              operator: 'equals',
+              value: true,
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: 'a1',
+          type: 'apply-effect',
+          params: { effectType: 'crop', auto: true },
+          continueOnError: true,
+        },
+      ],
       cooldownMs: 5000,
       maxExecutions: 1,
       tags: ['裁剪', '黑边'],
@@ -793,26 +809,33 @@ export const BUILTIN_RULE_TEMPLATES: RuleTemplate[] = [
       priority: 'normal',
       status: 'active',
       triggerMode: 'on-event',
-      conditionGroups: [{
-        logic: 'and',
-        conditions: [{
-          id: 'c1',
-          field: 'scene.isTransition',
-          operator: 'equals',
-          value: true,
-        }, {
-          id: 'c2',
-          field: 'scene.duration',
-          operator: 'greater_than',
-          value: 0.5,
-        }],
-      }],
-      actions: [{
-        id: 'a1',
-        type: 'apply-effect',
-        params: { effectType: 'transition', type: 'cross-dissolve', duration: 0.5 },
-        continueOnError: true,
-      }],
+      conditionGroups: [
+        {
+          logic: 'and',
+          conditions: [
+            {
+              id: 'c1',
+              field: 'scene.isTransition',
+              operator: 'equals',
+              value: true,
+            },
+            {
+              id: 'c2',
+              field: 'scene.duration',
+              operator: 'greater_than',
+              value: 0.5,
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: 'a1',
+          type: 'apply-effect',
+          params: { effectType: 'transition', type: 'cross-dissolve', duration: 0.5 },
+          continueOnError: true,
+        },
+      ],
       cooldownMs: 2000,
       maxExecutions: 0,
       tags: ['过渡', '自动'],
@@ -829,26 +852,33 @@ export const BUILTIN_RULE_TEMPLATES: RuleTemplate[] = [
       priority: 'normal',
       status: 'active',
       triggerMode: 'on-event',
-      conditionGroups: [{
-        logic: 'or',
-        conditions: [{
-          id: 'c1',
-          field: 'audio.loudness',
-          operator: 'greater_than',
-          value: -10,
-        }, {
-          id: 'c2',
-          field: 'audio.loudness',
-          operator: 'less_than',
-          value: -20,
-        }],
-      }],
-      actions: [{
-        id: 'a1',
-        type: 'apply-effect',
-        params: { effectType: 'loudness-normalize', targetLUFS: -14 },
-        continueOnError: false,
-      }],
+      conditionGroups: [
+        {
+          logic: 'or',
+          conditions: [
+            {
+              id: 'c1',
+              field: 'audio.loudness',
+              operator: 'greater_than',
+              value: -10,
+            },
+            {
+              id: 'c2',
+              field: 'audio.loudness',
+              operator: 'less_than',
+              value: -20,
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: 'a1',
+          type: 'apply-effect',
+          params: { effectType: 'loudness-normalize', targetLUFS: -14 },
+          continueOnError: false,
+        },
+      ],
       cooldownMs: 5000,
       maxExecutions: 1,
       tags: ['音频', '响度'],

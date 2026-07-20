@@ -38,7 +38,10 @@ export function OrchestrationReport({ report }: OrchestrationReportProps) {
         <ReportRow label="字幕条数" value={String(report.subtitleCuesGenerated)} />
         <ReportRow label="对话区间" value={`${report.dialogueIntervalsFound} 段`} />
         <ReportRow label="对话总时长" value={`${report.dialogueDurationTotal}s`} />
-        <ReportRow label="节拍数" value={`${report.beatCount}${report.estimatedBpm > 0 ? ` (${round(report.estimatedBpm)} BPM)` : ''}`} />
+        <ReportRow
+          label="节拍数"
+          value={`${report.beatCount}${report.estimatedBpm > 0 ? ` (${round(report.estimatedBpm)} BPM)` : ''}`}
+        />
         <ReportRow label="情感峰值" value={String(report.emotionPeaks)} />
         <ReportRow label="叙事段落" value={String(report.narrativeActs)} />
       </div>
@@ -47,9 +50,7 @@ export function OrchestrationReport({ report }: OrchestrationReportProps) {
       <div className="mb-2 border-t border-line pt-2">
         <div className="mb-1 text-[11px] font-medium text-slate-700">剪辑决策</div>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {(
-            Object.entries(report.suggestionsByType) as Array<[SmartRoughCutSuggestionType, number]>
-          )
+          {(Object.entries(report.suggestionsByType) as Array<[SmartRoughCutSuggestionType, number]>)
             .filter(([, count]) => count > 0)
             .map(([type, count]) => (
               <ReportRow key={type} label={TYPE_LABELS[type] ?? type} value={`${count} 条`} />
@@ -76,9 +77,7 @@ export function OrchestrationReport({ report }: OrchestrationReportProps) {
       </div>
 
       {/* 生成时间 */}
-      <div className="mt-2 text-[10px] text-slate-400">
-        生成于 {new Date(report.generatedAt).toLocaleString()}
-      </div>
+      <div className="mt-2 text-[10px] text-slate-400">生成于 {new Date(report.generatedAt).toLocaleString()}</div>
     </div>
   );
 }

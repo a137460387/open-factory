@@ -48,9 +48,7 @@ import {
 const LazyNoiseReductionDialog = lazy(() =>
   import('./NoiseReductionDialog').then((m) => ({ default: m.NoiseReductionDialog })),
 );
-const LazySpectrumAnalyzer = lazy(() =>
-  import('./SpectrumAnalyzer').then((m) => ({ default: m.SpectrumAnalyzer })),
-);
+const LazySpectrumAnalyzer = lazy(() => import('./SpectrumAnalyzer').then((m) => ({ default: m.SpectrumAnalyzer })));
 
 const DUCKING_POINTS_PER_SECOND = 8;
 const CHANNEL_ANALYSIS_HISTORY_LIMIT = 60;
@@ -286,7 +284,11 @@ export function AudioMixer() {
         />
       ) : tab === 'spectrum' ? (
         <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
-          <Suspense fallback={<div className="flex items-center justify-center py-8 text-xs text-slate-400">加载频谱分析器...</div>}>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-8 text-xs text-slate-400">加载频谱分析器...</div>
+            }
+          >
             <LazySpectrumAnalyzer
               frequencyData={trackFrequencyBands[analysisTrackId] ?? []}
               sampleRate={48000}

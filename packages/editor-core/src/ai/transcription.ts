@@ -1,7 +1,12 @@
 // -- Types --
 import { parseSrt } from '../subtitles/srt';
 import type { SubtitleClip, SubtitleStyle, SubtitleMode, SubtitleTrackType } from '../model-types';
-import { DEFAULT_SUBTITLE_STYLE, DEFAULT_SUBTITLE_MODE, DEFAULT_TRANSFORM, DEFAULT_COLOR_CORRECTION } from '../model/defaults';
+import {
+  DEFAULT_SUBTITLE_STYLE,
+  DEFAULT_SUBTITLE_MODE,
+  DEFAULT_TRANSFORM,
+  DEFAULT_COLOR_CORRECTION,
+} from '../model/defaults';
 
 /** 支持的转录语言 */
 export type TranscriptionLanguage = 'zh' | 'en' | 'ja' | 'ko' | 'auto';
@@ -189,9 +194,10 @@ export function mergeShortSegments(
         startMs: current.startMs,
         endMs: Math.max(current.endMs, next.endMs),
         text: mergedText,
-        confidence: current.confidence != null && next.confidence != null
-          ? Math.min(current.confidence, next.confidence)
-          : current.confidence ?? next.confidence,
+        confidence:
+          current.confidence != null && next.confidence != null
+            ? Math.min(current.confidence, next.confidence)
+            : (current.confidence ?? next.confidence),
         speaker: current.speaker ?? next.speaker,
         speakerId: current.speakerId ?? next.speakerId,
       };
@@ -251,10 +257,7 @@ export function splitLongSegments(
  * 时间戳偏移对齐
  * 将所有片段的时间戳整体偏移指定毫秒数
  */
-export function alignTimestamps(
-  segments: TranscriptionSegment[],
-  offsetMs: number,
-): TranscriptionSegment[] {
+export function alignTimestamps(segments: TranscriptionSegment[], offsetMs: number): TranscriptionSegment[] {
   if (Math.abs(offsetMs) < EPSILON) {
     return segments;
   }
@@ -280,11 +283,11 @@ export function estimateReadingTimeMs(text: string, language: TranscriptionLangu
 
   // 每字符毫秒数（基于平均阅读速度）
   const msPerChar: Record<TranscriptionLanguage, number> = {
-    zh: 200,    // 中文约 300 字/分钟
-    en: 80,     // 英文约 750 词/分钟，平均 5 字符/词
-    ja: 180,    // 日文约 330 字/分钟
-    ko: 190,    // 韩文约 315 字/分钟
-    auto: 150,  // 自动检测使用中间值
+    zh: 200, // 中文约 300 字/分钟
+    en: 80, // 英文约 750 词/分钟，平均 5 字符/词
+    ja: 180, // 日文约 330 字/分钟
+    ko: 190, // 韩文约 315 字/分钟
+    auto: 150, // 自动检测使用中间值
   };
 
   const charCount = cleanText.length;
@@ -446,10 +449,7 @@ function msToSeconds(ms: number): number {
  * 按标点符号拆分文本为子片段
  * 优先在句号、问号、感叹号处拆分，其次在逗号、分号处拆分
  */
-function splitSegmentText(
-  segment: TranscriptionSegment,
-  maxChars: number,
-): Array<{ text: string }> {
+function splitSegmentText(segment: TranscriptionSegment, maxChars: number): Array<{ text: string }> {
   const text = segment.text;
   if (text.length <= maxChars) {
     return [{ text }];
@@ -457,9 +457,9 @@ function splitSegmentText(
 
   // 按优先级拆分
   const splitPatterns = [
-    /([。！？!?]+)/g,     // 句末标点
-    /([，；,;]+)/g,       // 句中标点
-    /(\s+)/g,            // 空白
+    /([。！？!?]+)/g, // 句末标点
+    /([，；,;]+)/g, // 句中标点
+    /(\s+)/g, // 空白
   ];
 
   for (const pattern of splitPatterns) {
@@ -474,11 +474,7 @@ function splitSegmentText(
 }
 
 /** 按正则模式拆分文本 */
-function splitByPattern(
-  text: string,
-  pattern: RegExp,
-  maxChars: number,
-): Array<{ text: string }> {
+function splitByPattern(text: string, pattern: RegExp, maxChars: number): Array<{ text: string }> {
   const parts: Array<{ text: string }> = [];
   let remaining = text;
 

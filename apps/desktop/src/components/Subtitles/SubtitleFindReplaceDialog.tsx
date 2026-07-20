@@ -193,22 +193,19 @@ export function SubtitleFindReplaceDialog({
   );
 
   // 高亮匹配文本
-  const highlightMatch = useCallback(
-    (text: string, matchStart: number, matchEnd: number) => {
-      const before = text.substring(0, matchStart);
-      const match = text.substring(matchStart, matchEnd);
-      const after = text.substring(matchEnd);
+  const highlightMatch = useCallback((text: string, matchStart: number, matchEnd: number) => {
+    const before = text.substring(0, matchStart);
+    const match = text.substring(matchStart, matchEnd);
+    const after = text.substring(matchEnd);
 
-      return (
-        <>
-          <span>{before}</span>
-          <span className="bg-yellow-200 text-yellow-900 font-medium">{match}</span>
-          <span>{after}</span>
-        </>
-      );
-    },
-    [],
-  );
+    return (
+      <>
+        <span>{before}</span>
+        <span className="bg-yellow-200 text-yellow-900 font-medium">{match}</span>
+        <span>{after}</span>
+      </>
+    );
+  }, []);
 
   return (
     <div
@@ -219,9 +216,7 @@ export function SubtitleFindReplaceDialog({
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
-        <h3 className="text-sm font-semibold text-ink">
-          {showReplace ? '查找和替换' : '查找字幕'}
-        </h3>
+        <h3 className="text-sm font-semibold text-ink">{showReplace ? '查找和替换' : '查找字幕'}</h3>
         <button
           onClick={onClose}
           className="rounded p-1 text-[var(--color-text-muted)] hover:bg-panel"
@@ -290,11 +285,7 @@ export function SubtitleFindReplaceDialog({
         </div>
 
         {/* Error */}
-        {error && (
-          <div className="rounded bg-red-50 border border-red-200 px-2 py-1 text-xs text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <div className="rounded bg-red-50 border border-red-200 px-2 py-1 text-xs text-red-600">{error}</div>}
       </div>
 
       {/* Replace Input */}
@@ -367,9 +358,7 @@ export function SubtitleFindReplaceDialog({
               <div
                 key={`${result.clipId}-${result.matchStart}`}
                 className={`cursor-pointer px-3 py-2 text-xs transition-colors ${
-                  index === currentIndex
-                    ? 'bg-[var(--color-accent)]/10'
-                    : 'hover:bg-panel'
+                  index === currentIndex ? 'bg-[var(--color-accent)]/10' : 'hover:bg-panel'
                 }`}
                 onClick={() => navigateToResult(index)}
                 data-testid={`find-replace-result-${index}`}
@@ -378,9 +367,7 @@ export function SubtitleFindReplaceDialog({
                   <span className="font-mono text-[var(--color-text-muted)]">
                     {formatTimecode(result.matchStart)} - {formatTimecode(result.matchEnd)}
                   </span>
-                  <span className="text-[var(--color-text-muted)]">
-                    轨道 {result.trackIndex + 1}
-                  </span>
+                  <span className="text-[var(--color-text-muted)]">轨道 {result.trackIndex + 1}</span>
                 </div>
                 <div className="line-clamp-2">
                   {highlightMatch(result.fullText, result.matchStart, result.matchEnd)}

@@ -166,13 +166,14 @@ export function analyzeProjectComplexity(project: ExportProject): ProjectComplex
       }
 
       // 检查色彩校正
-      if (clip.colorCorrection && (
-        clip.colorCorrection.brightness !== 0 ||
-        clip.colorCorrection.contrast !== 1 ||
-        clip.colorCorrection.saturation !== 1 ||
-        clip.colorCorrection.hue !== 0 ||
-        clip.colorCorrection.lutPath
-      )) {
+      if (
+        clip.colorCorrection &&
+        (clip.colorCorrection.brightness !== 0 ||
+          clip.colorCorrection.contrast !== 1 ||
+          clip.colorCorrection.saturation !== 1 ||
+          clip.colorCorrection.hue !== 0 ||
+          clip.colorCorrection.lutPath)
+      ) {
         hasColorCorrection = true;
         effectCount++;
       }
@@ -186,8 +187,20 @@ export function analyzeProjectComplexity(project: ExportProject): ProjectComplex
       // 检查其他复杂特效
       if (clip.chromaKey?.enabled) effectCount += 2;
       if (clip.stabilization?.enabled) effectCount += 1;
-      if (clip.videoRestoration && (clip.videoRestoration.deinterlace?.enabled || clip.videoRestoration.temporalDenoise?.preset !== 'off' || clip.videoRestoration.spatialDenoise?.enabled)) effectCount += 2;
-      if (clip.qualityEnhancement && (clip.qualityEnhancement.superResolution || clip.qualityEnhancement.deblock || clip.qualityEnhancement.colorBoost)) effectCount += 2;
+      if (
+        clip.videoRestoration &&
+        (clip.videoRestoration.deinterlace?.enabled ||
+          clip.videoRestoration.temporalDenoise?.preset !== 'off' ||
+          clip.videoRestoration.spatialDenoise?.enabled)
+      )
+        effectCount += 2;
+      if (
+        clip.qualityEnhancement &&
+        (clip.qualityEnhancement.superResolution ||
+          clip.qualityEnhancement.deblock ||
+          clip.qualityEnhancement.colorBoost)
+      )
+        effectCount += 2;
       if (clip.kenBurns) effectCount += 1;
     }
   }
@@ -345,10 +358,7 @@ export function calculateOptimalThreads(
 /**
  * 计算最优 CRF/CQ 值
  */
-export function calculateOptimalCrf(
-  complexityScore: number,
-  qualityTarget: 'speed' | 'balanced' | 'quality',
-): number {
+export function calculateOptimalCrf(complexityScore: number, qualityTarget: 'speed' | 'balanced' | 'quality'): number {
   const baseCrf = CRF_DEFAULTS[qualityTarget];
 
   // 根据复杂度调整 CRF
@@ -370,11 +380,7 @@ export function calculateOptimalCrf(
 /**
  * 估算编码速度倍数
  */
-export function estimateSpeedMultiplier(
-  preset: string,
-  threads: number,
-  complexityScore: number,
-): number {
+export function estimateSpeedMultiplier(preset: string, threads: number, complexityScore: number): number {
   const presetSpeed = PRESET_SPEED_MAP[preset] || 6;
   const baseSpeed = presetSpeed / 6; // 相对于 medium 的速度
 
@@ -390,11 +396,7 @@ export function estimateSpeedMultiplier(
 /**
  * 估算输出文件大小（MB）
  */
-export function estimateFileSizeMb(
-  settings: ExportSettings,
-  durationSeconds: number,
-  crf: number,
-): number {
+export function estimateFileSizeMb(settings: ExportSettings, durationSeconds: number, crf: number): number {
   const width = settings.width || 1920;
   const height = settings.height || 1080;
   const fps = settings.fps || 30;
@@ -439,11 +441,7 @@ export function scheduleExport(
     preset = config.presetOverride;
     reasons.push(`使用用户自定义 preset: ${preset}`);
   } else {
-    preset = selectOptimalPreset(
-      complexityScore,
-      config.qualityTarget,
-      config.hardwareAccelerationEnabled,
-    );
+    preset = selectOptimalPreset(complexityScore, config.qualityTarget, config.hardwareAccelerationEnabled);
     reasons.push(`根据质量目标 "${config.qualityTarget}" 和复杂度选择 preset: ${preset}`);
   }
 
@@ -455,7 +453,9 @@ export function scheduleExport(
     resourceEstimate,
     config.maxThreads,
   );
-  reasons.push(`根据 ${config.hardwareConcurrency} 核心和 ${config.availableMemoryMb}MB 可用内存设置线程数: ${threads}`);
+  reasons.push(
+    `根据 ${config.hardwareConcurrency} 核心和 ${config.availableMemoryMb}MB 可用内存设置线程数: ${threads}`,
+  );
 
   // 5. 计算最优 CRF
   const crf = calculateOptimalCrf(complexityScore, config.qualityTarget);
@@ -463,9 +463,7 @@ export function scheduleExport(
 
   // 6. 硬件加速决策
   const shouldUseHardwareAcceleration = Boolean(
-    config.hardwareAccelerationEnabled &&
-    config.hardwareEncoderId &&
-    resourceEstimate.memoryClass !== 'heavy'
+    config.hardwareAccelerationEnabled && config.hardwareEncoderId && resourceEstimate.memoryClass !== 'heavy',
   );
 
   if (shouldUseHardwareAcceleration) {
@@ -476,11 +474,7 @@ export function scheduleExport(
 
   // 7. 估算性能指标
   const estimatedSpeedMultiplier = estimateSpeedMultiplier(preset, threads, complexityScore);
-  const estimatedFileSizeMb = estimateFileSizeMb(
-    project.settings,
-    metrics.durationSeconds,
-    crf,
-  );
+  const estimatedFileSizeMb = estimateFileSizeMb(project.settings, metrics.durationSeconds, crf);
 
   reasons.push(`预计编码速度: ${estimatedSpeedMultiplier.toFixed(2)}x`);
   reasons.push(`预计文件大小: ${estimatedFileSizeMb}MB`);
@@ -500,10 +494,7 @@ export function scheduleExport(
 /**
  * 将调度决策应用到导出计划
  */
-export function applySchedulerDecision(
-  plan: FfmpegExportPlan,
-  decision: ExportSchedulerDecision,
-): FfmpegExportPlan {
+export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportSchedulerDecision): FfmpegExportPlan {
   const outputArgs = [...(plan.outputArgs ?? [])];
   const fullArgs = [...(plan.fullArgs ?? [])];
 

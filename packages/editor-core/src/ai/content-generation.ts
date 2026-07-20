@@ -30,7 +30,8 @@ export type MusicGenre = 'cinematic' | 'pop' | 'electronic' | 'ambient' | 'jazz'
 export type MusicMood = 'happy' | 'sad' | 'epic' | 'calm' | 'tense' | 'romantic' | 'mysterious' | 'energetic';
 
 /** 特效类型 */
-export type AIEffectType = 'particle' | 'light-leak' | 'lens-flare' | 'glitch' | 'smoke' | 'fire' | 'rain' | 'snow' | 'sparkle' | 'bokeh';
+export type AIEffectType =
+  'particle' | 'light-leak' | 'lens-flare' | 'glitch' | 'smoke' | 'fire' | 'rain' | 'snow' | 'sparkle' | 'bokeh';
 
 /** 字幕位置 */
 export type SubtitlePosition = 'bottom' | 'top' | 'center';
@@ -358,10 +359,7 @@ function amplitudeToDb(amplitude: number): number {
  * @param windowSize - 分析窗口大小（样本数）
  * @returns 每帧的能量值（分贝），长度为 ceil(audioData.length / windowSize)
  */
-export function computeAudioEnergyEnvelope(
-  audioData: Float32Array,
-  windowSize: number,
-): Float32Array {
+export function computeAudioEnergyEnvelope(audioData: Float32Array, windowSize: number): Float32Array {
   if (audioData.length === 0 || windowSize <= 0) {
     return new Float32Array(0);
   }
@@ -603,11 +601,7 @@ function silenceToSpeechSegments(
 /**
  * 将估算的字符数自适应断行
  */
-function breakTextIntoLines(
-  totalChars: number,
-  maxCharsPerLine: number,
-  maxLines: number,
-): string[] {
+function breakTextIntoLines(totalChars: number, maxCharsPerLine: number, maxLines: number): string[] {
   const lines: string[] = [];
   let remaining = totalChars;
 
@@ -635,10 +629,7 @@ function breakTextIntoLines(
  * @param config - 配音配置
  * @returns 生成的配音参数内容
  */
-export function generateDubbing(
-  text: string,
-  config: DubbingConfig = {},
-): GeneratedContent {
+export function generateDubbing(text: string, config: DubbingConfig = {}): GeneratedContent {
   const startTime = performance.now();
 
   const speed = clamp(config.speed ?? 1.0, 0.5, 2.0);
@@ -877,11 +868,7 @@ export function generateMusicStructure(
 /**
  * 分配音乐段落
  */
-function allocateSections(
-  totalBeats: number,
-  baseIntensity: number,
-  genre: MusicGenre,
-): MusicSection[] {
+function allocateSections(totalBeats: number, baseIntensity: number, genre: MusicGenre): MusicSection[] {
   const sections: MusicSection[] = [];
   let currentBeat = 0;
 
@@ -921,9 +908,8 @@ function allocateSections(
     currentBeat += chorusBeats;
   } else {
     // 长曲：多段 verse-chorus，中间可能有 bridge
-    const verseChorusUnitBeats = genre === 'ambient' || genre === 'lo-fi'
-      ? Math.round(remainingBeats * 0.15)
-      : Math.round(remainingBeats * 0.2);
+    const verseChorusUnitBeats =
+      genre === 'ambient' || genre === 'lo-fi' ? Math.round(remainingBeats * 0.15) : Math.round(remainingBeats * 0.2);
     const verseBeats = Math.round(verseChorusUnitBeats * 0.55);
     const chorusBeats = verseChorusUnitBeats - verseBeats;
 
@@ -988,9 +974,7 @@ function allocateSections(
  * @param config - 配乐配置
  * @returns 生成的配乐内容
  */
-export function generateMusic(
-  config: MusicGenerationConfig = {},
-): GeneratedContent {
+export function generateMusic(config: MusicGenerationConfig = {}): GeneratedContent {
   const startTime = performance.now();
 
   const genre = config.genre ?? 'cinematic';
@@ -1089,10 +1073,7 @@ function computeDynamics(
 /**
  * 生成和弦进行
  */
-function generateChordProgression(
-  genre: MusicGenre,
-  sectionType: MusicSection['type'],
-): string[] {
+function generateChordProgression(genre: MusicGenre, sectionType: MusicSection['type']): string[] {
   // 基于风格和段落类型的常见和弦进行
   const progressions: Record<MusicGenre, Record<string, string[]>> = {
     cinematic: {
@@ -1168,9 +1149,7 @@ function generateChordProgression(
  * @param config - 特效配置
  * @returns 生成的特效参数内容
  */
-export function generateEffect(
-  config: EffectGenerationConfig,
-): GeneratedContent {
+export function generateEffect(config: EffectGenerationConfig): GeneratedContent {
   const startTime = performance.now();
 
   const intensity = clamp(config.intensity ?? 0.5, 0, 1);
@@ -1580,10 +1559,7 @@ export function buildContentGenerationUserPrompt(config: ContentGenerationConfig
  * @returns 解析后的内容生成结果
  * @throws 当 JSON 格式不合法时抛出错误
  */
-export function parseContentGenerationResponse(
-  json: unknown,
-  type: ContentType,
-): ContentGenerationResult {
+export function parseContentGenerationResponse(json: unknown, type: ContentType): ContentGenerationResult {
   if (!json || typeof json !== 'object') {
     throw new Error('无效的 AI 响应：不是对象');
   }
@@ -1593,11 +1569,7 @@ export function parseContentGenerationResponse(
   const warnings: string[] = [];
 
   // 尝试从不同格式中提取内容
-  const contentsSource = Array.isArray(obj.contents)
-    ? obj.contents
-    : Array.isArray(obj)
-      ? obj
-      : [obj];
+  const contentsSource = Array.isArray(obj.contents) ? obj.contents : Array.isArray(obj) ? obj : [obj];
 
   for (let i = 0; i < contentsSource.length; i++) {
     const item = contentsSource[i];
@@ -1613,9 +1585,10 @@ export function parseContentGenerationResponse(
       type,
       data: itemObj.data ?? itemObj.parameters ?? itemObj,
       duration: typeof itemObj.duration === 'number' ? itemObj.duration : 0,
-      metadata: typeof itemObj.metadata === 'object' && itemObj.metadata !== null
-        ? itemObj.metadata as Record<string, unknown>
-        : {},
+      metadata:
+        typeof itemObj.metadata === 'object' && itemObj.metadata !== null
+          ? (itemObj.metadata as Record<string, unknown>)
+          : {},
       quality: isContentQuality(itemObj.quality) ? itemObj.quality : 'standard',
       generationTimeMs: typeof itemObj.generationTimeMs === 'number' ? itemObj.generationTimeMs : 0,
     };
@@ -1629,9 +1602,10 @@ export function parseContentGenerationResponse(
 
   return {
     contents,
-    totalGenerationTimeMs: typeof obj.totalGenerationTimeMs === 'number'
-      ? obj.totalGenerationTimeMs
-      : contents.reduce((sum, c) => sum + c.generationTimeMs, 0),
+    totalGenerationTimeMs:
+      typeof obj.totalGenerationTimeMs === 'number'
+        ? obj.totalGenerationTimeMs
+        : contents.reduce((sum, c) => sum + c.generationTimeMs, 0),
     gpuUsed: typeof obj.gpuUsed === 'boolean' ? obj.gpuUsed : false,
     warnings,
   };

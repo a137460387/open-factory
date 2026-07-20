@@ -1,6 +1,6 @@
 /**
  * AI色彩分级模块
- * 
+ *
  * 功能：
  * 1. 智能色彩匹配 - 分析参考图像的色彩特征，匹配到目标图像
  * 2. AI自动色彩分级 - 基于场景内容自动调整色彩参数
@@ -145,30 +145,30 @@ export interface AIAutoGradingOptions {
 /**
  * 分级风格
  */
-export type GradingStyle = 
-  | 'natural'      // 自然
-  | 'cinematic'    // 电影感
-  | 'vintage'      // 复古
-  | 'modern'       // 现代
-  | 'dramatic'     // 戏剧性
-  | 'soft'         // 柔和
-  | 'vibrant'      // 鲜艳
-  | 'muted'        // 柔和
-  | 'cold'         // 冷色调
-  | 'warm';        // 暖色调
+export type GradingStyle =
+  | 'natural' // 自然
+  | 'cinematic' // 电影感
+  | 'vintage' // 复古
+  | 'modern' // 现代
+  | 'dramatic' // 戏剧性
+  | 'soft' // 柔和
+  | 'vibrant' // 鲜艳
+  | 'muted' // 柔和
+  | 'cold' // 冷色调
+  | 'warm'; // 暖色调
 
 /**
  * 场景类型
  */
-export type SceneType = 
-  | 'indoor'       // 室内
-  | 'outdoor'      // 室外
-  | 'portrait'     // 人像
-  | 'landscape'    // 风景
-  | 'action'       // 动作
-  | 'night'        // 夜景
-  | 'sunset'       // 日落
-  | 'studio';      // 影棚
+export type SceneType =
+  | 'indoor' // 室内
+  | 'outdoor' // 室外
+  | 'portrait' // 人像
+  | 'landscape' // 风景
+  | 'action' // 动作
+  | 'night' // 夜景
+  | 'sunset' // 日落
+  | 'studio'; // 影棚
 
 /**
  * AI自动分级结果
@@ -341,7 +341,7 @@ export function rgbToLab(rgb: RGBColor): LABColor {
   return {
     l: hsl.l * 100,
     a: (hsl.s - 0.5) * 200,
-    b: (hsl.h - 180) * 200 / 360,
+    b: ((hsl.h - 180) * 200) / 360,
   };
 }
 
@@ -441,7 +441,7 @@ export function extractDominantColors(imageData: ImageData, count: number = 5): 
   const sortedColors = Array.from(colorMap.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, count)
-    .map(item => item.color);
+    .map((item) => item.color);
 
   return sortedColors;
 }
@@ -512,7 +512,7 @@ export function computeColorTemperatureAndTint(imageData: ImageData): { temperat
 
   // 色温：红色与蓝色的平衡
   const temperature = (avgR - avgB) / 255;
-  
+
   // 色调：绿色与品红的平衡
   const tint = (avgG - (avgR + avgB) / 2) / 255;
 
@@ -583,7 +583,7 @@ function computeColorUniformity(imageData: ImageData): number {
   const blockSize = 16;
   const blocksX = Math.floor(width / blockSize);
   const blocksY = Math.floor(height / blockSize);
-  
+
   if (blocksX === 0 || blocksY === 0) return 1;
 
   const blockColors: RGBColor[] = [];
@@ -637,7 +637,7 @@ function computeColorUniformity(imageData: ImageData): number {
 export function matchColors(
   referenceImage: ImageData,
   targetImage: ImageData,
-  options: Partial<ColorMatchOptions> = {}
+  options: Partial<ColorMatchOptions> = {},
 ): ColorMatchResult {
   const defaultOptions: ColorMatchOptions = {
     intensity: 0.8,
@@ -743,7 +743,7 @@ export function matchColors(
  */
 function matchHistograms(
   refHistogram: ColorAnalysis['histogram'],
-  targetHistogram: ColorAnalysis['histogram']
+  targetHistogram: ColorAnalysis['histogram'],
 ): { brightness: number; contrast: number; saturation: number } {
   // 计算直方图的统计特性
   const refStats = computeHistogramStats(refHistogram.luminance);
@@ -781,10 +781,7 @@ function computeHistogramStats(histogram: number[]): { mean: number; stdDev: num
  * AI自动色彩分级
  * 基于场景内容自动调整色彩参数
  */
-export function autoGradeImage(
-  imageData: ImageData,
-  options: Partial<AIAutoGradingOptions> = {}
-): AIAutoGradingResult {
+export function autoGradeImage(imageData: ImageData, options: Partial<AIAutoGradingOptions> = {}): AIAutoGradingResult {
   const defaultOptions: AIAutoGradingOptions = {
     targetStyle: 'natural',
     contentAwareStrength: 0.7,
@@ -811,7 +808,7 @@ export function autoGradeImage(
     analysis,
     detectedSceneType,
     mergedOptions.targetStyle,
-    mergedOptions.contentAwareStrength
+    mergedOptions.contentAwareStrength,
   );
 
   // 应用电影色调
@@ -885,7 +882,7 @@ function detectSkinTones(imageData: ImageData): Uint8Array {
 
     // 肤色范围阈值
     const isSkin = y > 0.2 && y < 0.9 && cb > 0.35 && cb < 0.55 && cr > 0.45 && cr < 0.65;
-    
+
     mask[i / 4] = isSkin ? 255 : 0;
   }
 
@@ -899,7 +896,7 @@ function generateCorrectionForScene(
   analysis: ColorAnalysis,
   sceneType: SceneType,
   style: GradingStyle,
-  contentAwareStrength: number
+  contentAwareStrength: number,
 ): ColorCorrectionParams {
   // 基础校正参数
   const correction: ColorCorrectionParams = {
@@ -1039,7 +1036,7 @@ function applyCinematicToneCorrection(correction: ColorCorrectionParams): void {
 export function transferStyle(
   styleImage: ImageData,
   contentImage: ImageData,
-  options: Partial<StyleTransferOptions> = {}
+  options: Partial<StyleTransferOptions> = {},
 ): StyleTransferResult {
   const defaultOptions: StyleTransferOptions = {
     strength: 0.7,
@@ -1103,7 +1100,7 @@ function applyColorMappingToImage(
   width: number,
   height: number,
   mapping: ColorMapping,
-  strength: number
+  strength: number,
 ): void {
   for (let i = 0; i < data.length; i += 4) {
     const pixel: RGBColor = { r: data[i], g: data[i + 1], b: data[i + 2] };
@@ -1138,7 +1135,7 @@ function applyHistogramMatching(
   width: number,
   height: number,
   targetHistogram: ColorAnalysis['histogram'],
-  strength: number
+  strength: number,
 ): void {
   // 计算当前直方图
   const currentHistogram = computeHistogram({ data, width, height });
@@ -1209,10 +1206,7 @@ function computeTransferQuality(original: ImageData, transferred: ImageData): nu
 /**
  * 应用色彩校正到图像
  */
-export function applyColorCorrection(
-  imageData: ImageData,
-  correction: ColorCorrectionParams
-): ImageData {
+export function applyColorCorrection(imageData: ImageData, correction: ColorCorrectionParams): ImageData {
   const { data, width, height } = imageData;
   const result = new Uint8ClampedArray(data);
 

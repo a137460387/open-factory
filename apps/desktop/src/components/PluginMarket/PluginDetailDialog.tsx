@@ -58,7 +58,11 @@ export function PluginDetailDialog({
   }, [entry.id, reviewRating, reviewComment, onAddReview]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose} data-testid="plugin-detail-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+      data-testid="plugin-detail-dialog"
+    >
       <div
         className="mx-4 max-h-[80vh] w-full max-w-lg overflow-auto rounded-lg border bg-background p-5 shadow-lg"
         onClick={(e) => e.stopPropagation()}
@@ -69,9 +73,7 @@ export function PluginDetailDialog({
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-semibold">{entry.name}</h2>
               {entry.official && (
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                  官方
-                </span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">官方</span>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
@@ -118,10 +120,7 @@ export function PluginDetailDialog({
             <h3 className="text-xs font-medium text-muted-foreground">所需权限</h3>
             <div className="mt-1 flex flex-wrap gap-1">
               {entry.permissions.map((perm) => (
-                <span
-                  key={perm}
-                  className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px]"
-                >
+                <span key={perm} className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px]">
                   {permissionLabels[perm] ?? perm}
                 </span>
               ))}
@@ -192,10 +191,7 @@ export function PluginDetailDialog({
         <div className="mt-6 border-t border-border/40 pt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">用户评价 ({reviews.length})</h3>
-            <button
-              className="text-xs text-primary hover:underline"
-              onClick={() => setShowReviewForm(!showReviewForm)}
-            >
+            <button className="text-xs text-primary hover:underline" onClick={() => setShowReviewForm(!showReviewForm)}>
               写评价
             </button>
           </div>
@@ -239,9 +235,7 @@ export function PluginDetailDialog({
             </div>
           )}
 
-          {reviews.length === 0 && !showReviewForm && (
-            <p className="mt-2 text-xs text-muted-foreground">暂无评价</p>
-          )}
+          {reviews.length === 0 && !showReviewForm && <p className="mt-2 text-xs text-muted-foreground">暂无评价</p>}
 
           {reviews.map((review) => (
             <div key={review.id} className="mt-3 border-b border-border/20 pb-2">
@@ -252,7 +246,8 @@ export function PluginDetailDialog({
                 </span>
               </div>
               <div className="text-xs text-yellow-500">
-                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                {'★'.repeat(review.rating)}
+                {'☆'.repeat(5 - review.rating)}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{review.comment}</p>
             </div>

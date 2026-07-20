@@ -1,6 +1,6 @@
 /**
  * 色彩分级面板组件
- * 
+ *
  * 功能：
  * 1. 色轮调整 - Lift/Gamma/Gain/Offset
  * 2. 滑块调整 - 亮度/对比度/饱和度/色温/色调
@@ -197,13 +197,7 @@ function hslToCSS(h: number, s: number, l: number): string {
 /**
  * 色轮组件
  */
-export const ColorWheel: React.FC<ColorWheelProps> = ({
-  type,
-  value,
-  onChange,
-  size = 150,
-  label,
-}) => {
+export const ColorWheel: React.FC<ColorWheelProps> = ({ type, value, onChange, size = 150, label }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [center, setCenter] = useState({ x: 0, y: 0 });
 
@@ -216,38 +210,41 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
     setIsDragging(true);
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isDragging) return;
 
-    const radius = size / 2;
-    const dx = (e.clientX - center.x) / radius;
-    const dy = (e.clientY - center.y) / radius;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxDistance = 1;
+      const radius = size / 2;
+      const dx = (e.clientX - center.x) / radius;
+      const dy = (e.clientY - center.y) / radius;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxDistance = 1;
 
-    if (distance > maxDistance) {
-      const scale = maxDistance / distance;
-      onChange({
-        ...value,
-        r: clamp(dx * scale, -1, 1),
-        g: clamp(dy * scale, -1, 1),
-      });
-    } else {
-      onChange({
-        ...value,
-        r: clamp(dx, -1, 1),
-        g: clamp(dy, -1, 1),
-      });
-    }
-  }, [isDragging, center, size, value, onChange]);
+      if (distance > maxDistance) {
+        const scale = maxDistance / distance;
+        onChange({
+          ...value,
+          r: clamp(dx * scale, -1, 1),
+          g: clamp(dy * scale, -1, 1),
+        });
+      } else {
+        onChange({
+          ...value,
+          r: clamp(dx, -1, 1),
+          g: clamp(dy, -1, 1),
+        });
+      }
+    },
+    [isDragging, center, size, value, onChange],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
 
   // 计算指示器位置
-  const indicatorX = (value.r + 1) / 2 * size;
-  const indicatorY = (value.g + 1) / 2 * size;
+  const indicatorX = ((value.r + 1) / 2) * size;
+  const indicatorY = ((value.g + 1) / 2) * size;
 
   // 根据类型选择颜色
   const wheelGradient = useMemo(() => {
@@ -305,7 +302,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
             background: 'rgba(255,255,255,0.2)',
           }}
         />
-        
+
         {/* 指示器 */}
         <div
           style={{
@@ -322,7 +319,7 @@ export const ColorWheel: React.FC<ColorWheelProps> = ({
           }}
         />
       </div>
-      
+
       {/* 数值显示 */}
       <div className="color-wheel-values" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <span>R: {value.r.toFixed(2)}</span>
@@ -347,9 +344,12 @@ export const ColorSlider: React.FC<ColorSliderProps> = ({
   step = 0.01,
   unit = '',
 }) => {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(parseFloat(e.target.value));
-  }, [onChange]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(parseFloat(e.target.value));
+    },
+    [onChange],
+  );
 
   const handleReset = useCallback(() => {
     onChange(0);
@@ -363,19 +363,12 @@ export const ColorSlider: React.FC<ColorSliderProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <label>{label}</label>
         <span style={{ fontSize: 12, color: '#888' }}>
-          {value.toFixed(2)}{unit}
+          {value.toFixed(2)}
+          {unit}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={handleChange}
-          style={{ flex: 1 }}
-        />
+        <input type="range" min={min} max={max} step={step} value={value} onChange={handleChange} style={{ flex: 1 }} />
         <button
           onClick={handleReset}
           style={{
@@ -400,12 +393,7 @@ export const ColorSlider: React.FC<ColorSliderProps> = ({
 /**
  * 色彩曲线组件
  */
-export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
-  curves,
-  onChange,
-  width = 300,
-  height = 200,
-}) => {
+export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({ curves, onChange, width = 300, height = 200 }) => {
   const [activeChannel, setActiveChannel] = useState<'master' | 'red' | 'green' | 'blue'>('master');
   const [draggingPointIndex, setDraggingPointIndex] = useState<number | null>(null);
 
@@ -413,42 +401,48 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
     setDraggingPointIndex(index);
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (draggingPointIndex === null) return;
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (draggingPointIndex === null) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = clamp((e.clientX - rect.left) / width, 0, 1);
-    const y = clamp(1 - (e.clientY - rect.top) / height, 0, 1);
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = clamp((e.clientX - rect.left) / width, 0, 1);
+      const y = clamp(1 - (e.clientY - rect.top) / height, 0, 1);
 
-    const newCurves = { ...curves };
-    const channel = newCurves[activeChannel];
-    channel[draggingPointIndex] = { x, y };
-    
-    // 按x排序
-    channel.sort((a, b) => a.x - b.x);
-    
-    onChange(newCurves);
-  }, [draggingPointIndex, activeChannel, curves, onChange, width, height]);
+      const newCurves = { ...curves };
+      const channel = newCurves[activeChannel];
+      channel[draggingPointIndex] = { x, y };
+
+      // 按x排序
+      channel.sort((a, b) => a.x - b.x);
+
+      onChange(newCurves);
+    },
+    [draggingPointIndex, activeChannel, curves, onChange, width, height],
+  );
 
   const handleMouseUp = useCallback(() => {
     setDraggingPointIndex(null);
   }, []);
 
-  const handleAddPoint = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    if (draggingPointIndex !== null) return;
+  const handleAddPoint = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (draggingPointIndex !== null) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = clamp((e.clientX - rect.left) / width, 0, 1);
-    const y = clamp(1 - (e.clientY - rect.top) / height, 0, 1);
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = clamp((e.clientX - rect.left) / width, 0, 1);
+      const y = clamp(1 - (e.clientY - rect.top) / height, 0, 1);
 
-    const newCurves = { ...curves };
-    const channel = [...newCurves[activeChannel]];
-    channel.push({ x, y });
-    channel.sort((a, b) => a.x - b.x);
-    
-    newCurves[activeChannel] = channel;
-    onChange(newCurves);
-  }, [draggingPointIndex, activeChannel, curves, onChange, width, height]);
+      const newCurves = { ...curves };
+      const channel = [...newCurves[activeChannel]];
+      channel.push({ x, y });
+      channel.sort((a, b) => a.x - b.x);
+
+      newCurves[activeChannel] = channel;
+      onChange(newCurves);
+    },
+    [draggingPointIndex, activeChannel, curves, onChange, width, height],
+  );
 
   // 生成曲线路径
   const generateCurvePath = (points: CurvePoint[]): string => {
@@ -482,7 +476,7 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
   return (
     <div className="color-curves">
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        {(['master', 'red', 'green', 'blue'] as const).map(channel => (
+        {(['master', 'red', 'green', 'blue'] as const).map((channel) => (
           <button
             key={channel}
             onClick={() => setActiveChannel(channel)}
@@ -499,7 +493,7 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
           </button>
         ))}
       </div>
-      
+
       <svg
         width={width}
         height={height}
@@ -512,14 +506,19 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
         {/* 网格 */}
         <defs>
           <pattern id="grid" width={width / 4} height={height / 4} patternUnits="userSpaceOnUse">
-            <path d={`M ${width / 4} 0 L 0 0 0 ${height / 4}`} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+            <path
+              d={`M ${width / 4} 0 L 0 0 0 ${height / 4}`}
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="1"
+            />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
-        
+
         {/* 对角线 */}
         <line x1="0" y1={height} x2={width} y2="0" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-        
+
         {/* 曲线 */}
         <path
           d={generateCurvePath(curves[activeChannel])}
@@ -527,7 +526,7 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
           stroke={channelColors[activeChannel]}
           strokeWidth="2"
         />
-        
+
         {/* 控制点 */}
         {curves[activeChannel].map((point, index) => (
           <circle
@@ -555,13 +554,13 @@ export const ColorCurvesComponent: React.FC<ColorCurvesProps> = ({
 /**
  * HSL限定器组件
  */
-export const HSLQualifier: React.FC<HSLQualifierProps> = ({
-  params,
-  onChange,
-}) => {
-  const handleChange = useCallback((key: keyof HSLQualifierParams, value: number) => {
-    onChange({ ...params, [key]: value });
-  }, [params, onChange]);
+export const HSLQualifier: React.FC<HSLQualifierProps> = ({ params, onChange }) => {
+  const handleChange = useCallback(
+    (key: keyof HSLQualifierParams, value: number) => {
+      onChange({ ...params, [key]: value });
+    },
+    [params, onChange],
+  );
 
   return (
     <div className="hsl-qualifier">
@@ -589,7 +588,7 @@ export const HSLQualifier: React.FC<HSLQualifierProps> = ({
         min={0}
         max={1}
       />
-      
+
       <h4>饱和度限定</h4>
       <ColorSlider
         label="最小饱和度"
@@ -605,23 +604,11 @@ export const HSLQualifier: React.FC<HSLQualifierProps> = ({
         min={0}
         max={1}
       />
-      
+
       <h4>亮度限定</h4>
-      <ColorSlider
-        label="最小亮度"
-        value={params.lumMin}
-        onChange={(v) => handleChange('lumMin', v)}
-        min={0}
-        max={1}
-      />
-      <ColorSlider
-        label="最大亮度"
-        value={params.lumMax}
-        onChange={(v) => handleChange('lumMax', v)}
-        min={0}
-        max={1}
-      />
-      
+      <ColorSlider label="最小亮度" value={params.lumMin} onChange={(v) => handleChange('lumMin', v)} min={0} max={1} />
+      <ColorSlider label="最大亮度" value={params.lumMax} onChange={(v) => handleChange('lumMax', v)} min={0} max={1} />
+
       <h4>调整</h4>
       <ColorSlider
         label="色相偏移"
@@ -631,16 +618,8 @@ export const HSLQualifier: React.FC<HSLQualifierProps> = ({
         max={180}
         unit="°"
       />
-      <ColorSlider
-        label="饱和度"
-        value={params.saturation}
-        onChange={(v) => handleChange('saturation', v)}
-      />
-      <ColorSlider
-        label="亮度"
-        value={params.brightness}
-        onChange={(v) => handleChange('brightness', v)}
-      />
+      <ColorSlider label="饱和度" value={params.saturation} onChange={(v) => handleChange('saturation', v)} />
+      <ColorSlider label="亮度" value={params.brightness} onChange={(v) => handleChange('brightness', v)} />
     </div>
   );
 };
@@ -660,7 +639,7 @@ export const LUTManagerComponent: React.FC<LUTManagerProps> = ({
   return (
     <div className="lut-manager">
       <h4>LUT管理</h4>
-      
+
       <div style={{ marginBottom: 12 }}>
         <label>选择LUT</label>
         <select
@@ -676,24 +655,16 @@ export const LUTManagerComponent: React.FC<LUTManagerProps> = ({
           }}
         >
           <option value="">无</option>
-          {luts.map(lut => (
+          {luts.map((lut) => (
             <option key={lut.id} value={lut.id}>
               {lut.name} ({lut.type === '3d' ? '3D' : '1D'}, {lut.size}x{lut.size}x{lut.size})
             </option>
           ))}
         </select>
       </div>
-      
-      {selectedLUTId && (
-        <ColorSlider
-          label="LUT强度"
-          value={intensity}
-          onChange={onIntensityChange}
-          min={0}
-          max={1}
-        />
-      )}
-      
+
+      {selectedLUTId && <ColorSlider label="LUT强度" value={intensity} onChange={onIntensityChange} min={0} max={1} />}
+
       {/* LUT预览 */}
       {selectedLUTId && (
         <div style={{ marginTop: 12 }}>
@@ -758,10 +729,22 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
 
   // 曲线值
   const [curves, setCurves] = useState<ColorCurves>({
-    master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-    red: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-    green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
-    blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+    master: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    red: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    green: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
+    blue: [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+    ],
   });
 
   // HSL限定器参数
@@ -785,37 +768,49 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
   const [lutIntensity, setLutIntensity] = useState(1);
 
   // 处理色轮变化
-  const handleLiftChange = useCallback((value: ColorWheelValue) => {
-    setLiftValue(value);
-    onCorrectionChange({
-      ...correction,
-      lift: { r: value.r, g: value.g, b: value.b },
-    });
-  }, [correction, onCorrectionChange]);
+  const handleLiftChange = useCallback(
+    (value: ColorWheelValue) => {
+      setLiftValue(value);
+      onCorrectionChange({
+        ...correction,
+        lift: { r: value.r, g: value.g, b: value.b },
+      });
+    },
+    [correction, onCorrectionChange],
+  );
 
-  const handleGammaChange = useCallback((value: ColorWheelValue) => {
-    setGammaValue(value);
-    onCorrectionChange({
-      ...correction,
-      gammaRGB: { r: value.r, g: value.g, b: value.b },
-    });
-  }, [correction, onCorrectionChange]);
+  const handleGammaChange = useCallback(
+    (value: ColorWheelValue) => {
+      setGammaValue(value);
+      onCorrectionChange({
+        ...correction,
+        gammaRGB: { r: value.r, g: value.g, b: value.b },
+      });
+    },
+    [correction, onCorrectionChange],
+  );
 
-  const handleGainChange = useCallback((value: ColorWheelValue) => {
-    setGainValue(value);
-    onCorrectionChange({
-      ...correction,
-      gain: { r: value.r, g: value.g, b: value.b },
-    });
-  }, [correction, onCorrectionChange]);
+  const handleGainChange = useCallback(
+    (value: ColorWheelValue) => {
+      setGainValue(value);
+      onCorrectionChange({
+        ...correction,
+        gain: { r: value.r, g: value.g, b: value.b },
+      });
+    },
+    [correction, onCorrectionChange],
+  );
 
   // 处理滑块变化
-  const handleSliderChange = useCallback((key: keyof ColorCorrectionParams, value: number) => {
-    onCorrectionChange({
-      ...correction,
-      [key]: value,
-    });
-  }, [correction, onCorrectionChange]);
+  const handleSliderChange = useCallback(
+    (key: keyof ColorCorrectionParams, value: number) => {
+      onCorrectionChange({
+        ...correction,
+        [key]: value,
+      });
+    },
+    [correction, onCorrectionChange],
+  );
 
   return (
     <div className="color-grading-panel" style={{ width: 350, background: '#1a1a1a', borderRadius: 8, padding: 16 }}>
@@ -841,7 +836,7 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
 
       {/* 标签页 */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {(['wheels', 'sliders', 'curves', 'hsl', 'lut'] as const).map(tab => (
+        {(['wheels', 'sliders', 'curves', 'hsl', 'lut'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -855,7 +850,15 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
               flex: 1,
             }}
           >
-            {tab === 'wheels' ? '色轮' : tab === 'sliders' ? '滑块' : tab === 'curves' ? '曲线' : tab === 'hsl' ? 'HSL' : 'LUT'}
+            {tab === 'wheels'
+              ? '色轮'
+              : tab === 'sliders'
+                ? '滑块'
+                : tab === 'curves'
+                  ? '曲线'
+                  : tab === 'hsl'
+                    ? 'HSL'
+                    : 'LUT'}
           </button>
         ))}
       </div>
@@ -866,7 +869,13 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <ColorWheel type="lift" value={liftValue} onChange={handleLiftChange} label="Lift (阴影)" size={120} />
-              <ColorWheel type="gamma" value={gammaValue} onChange={handleGammaChange} label="Gamma (中间调)" size={120} />
+              <ColorWheel
+                type="gamma"
+                value={gammaValue}
+                onChange={handleGammaChange}
+                label="Gamma (中间调)"
+                size={120}
+              />
               <ColorWheel type="gain" value={gainValue} onChange={handleGainChange} label="Gain (高光)" size={120} />
               <ColorWheel type="offset" value={offsetValue} onChange={() => {}} label="Offset (偏移)" size={120} />
             </div>
@@ -895,11 +904,7 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
               value={correction.temperature}
               onChange={(v) => handleSliderChange('temperature', v)}
             />
-            <ColorSlider
-              label="色调"
-              value={correction.tint}
-              onChange={(v) => handleSliderChange('tint', v)}
-            />
+            <ColorSlider label="色调" value={correction.tint} onChange={(v) => handleSliderChange('tint', v)} />
             <ColorSlider
               label="伽马"
               value={correction.gamma}
@@ -919,20 +924,10 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
         )}
 
         {activeTab === 'curves' && (
-          <ColorCurvesComponent
-            curves={curves}
-            onChange={setCurves}
-            width={300}
-            height={200}
-          />
+          <ColorCurvesComponent curves={curves} onChange={setCurves} width={300} height={200} />
         )}
 
-        {activeTab === 'hsl' && (
-          <HSLQualifier
-            params={hslParams}
-            onChange={setHslParams}
-          />
-        )}
+        {activeTab === 'hsl' && <HSLQualifier params={hslParams} onChange={setHslParams} />}
 
         {activeTab === 'lut' && (
           <LUTManagerComponent
@@ -951,19 +946,21 @@ export const ColorGradingPanel: React.FC<ColorGradingPanelProps> = ({
           <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>高级选项</h4>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => onCorrectionChange({
-                ...correction,
-                brightness: 0,
-                contrast: 0,
-                saturation: 0,
-                temperature: 0,
-                tint: 0,
-                hueRotation: 0,
-                gamma: 1,
-                lift: { r: 0, g: 0, b: 0 },
-                gammaRGB: { r: 0, g: 0, b: 0 },
-                gain: { r: 0, g: 0, b: 0 },
-              })}
+              onClick={() =>
+                onCorrectionChange({
+                  ...correction,
+                  brightness: 0,
+                  contrast: 0,
+                  saturation: 0,
+                  temperature: 0,
+                  tint: 0,
+                  hueRotation: 0,
+                  gamma: 1,
+                  lift: { r: 0, g: 0, b: 0 },
+                  gammaRGB: { r: 0, g: 0, b: 0 },
+                  gain: { r: 0, g: 0, b: 0 },
+                })
+              }
               style={{
                 padding: '6px 12px',
                 background: '#ff4444',

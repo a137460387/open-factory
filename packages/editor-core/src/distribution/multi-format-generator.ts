@@ -196,9 +196,7 @@ function formatKeyToString(key: FormatKey): string {
  * 按方向和宽高比分组平台
  * 相同方向+宽高比的平台共享同一格式变体
  */
-function groupPlatformsByFormat(
-  platforms: DistributionPlatformSpec[],
-): Map<string, DistributionPlatformSpec[]> {
+function groupPlatformsByFormat(platforms: DistributionPlatformSpec[]): Map<string, DistributionPlatformSpec[]> {
   const groups = new Map<string, DistributionPlatformSpec[]>();
 
   for (const platform of platforms) {
@@ -227,11 +225,7 @@ function groupPlatformsByFormat(
  * - 同方向少量裁剪 = 0.8-0.95
  * - 方向变化大 = 0.3-0.6
  */
-function assessCropQuality(
-  sourceWidth: number,
-  sourceHeight: number,
-  cropResult: SmartCropResult,
-): number {
+function assessCropQuality(sourceWidth: number, sourceHeight: number, cropResult: SmartCropResult): number {
   const sourceRatio = sourceWidth / sourceHeight;
   const targetRatio = parseAspectRatio(cropResult.targetAspectRatio);
 
@@ -345,9 +339,7 @@ export function generateMultiFormats(
   // 计算摘要
   const coveredPlatforms = new Set(variants.flatMap((v) => v.targetPlatforms));
   const avgQuality =
-    variants.length > 0
-      ? variants.reduce((sum, v) => sum + (1 - v.qualityLoss), 0) / variants.length
-      : 0;
+    variants.length > 0 ? variants.reduce((sum, v) => sum + (1 - v.qualityLoss), 0) / variants.length : 0;
 
   return {
     sourceInfo: {
@@ -472,9 +464,7 @@ export function getSupportedOrientations(): VideoOrientation[] {
 }
 
 /** 按方向获取推荐格式 */
-export function getRecommendedFormatsForOrientation(
-  orientation: VideoOrientation,
-): DistributionPlatformSpec[] {
+export function getRecommendedFormatsForOrientation(orientation: VideoOrientation): DistributionPlatformSpec[] {
   return DISTRIBUTION_PLATFORMS.filter((p) => p.orientation === orientation);
 }
 

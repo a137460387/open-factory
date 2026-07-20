@@ -15,10 +15,7 @@ import {
   diffStyles,
   type SubtitleStylePreset,
 } from '@open-factory/editor-core';
-import {
-  BUILTIN_SUBTITLE_STYLE_TEMPLATES,
-  normalizeSubtitleStyleTemplateStyle,
-} from '@open-factory/editor-core';
+import { BUILTIN_SUBTITLE_STYLE_TEMPLATES, normalizeSubtitleStyleTemplateStyle } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,11 +31,7 @@ interface SubtitleStylePresetManagerProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function SubtitleStylePresetManager({
-  currentStyle,
-  onApplyPreset,
-  onClose,
-}: SubtitleStylePresetManagerProps) {
+export function SubtitleStylePresetManager({ currentStyle, onApplyPreset, onClose }: SubtitleStylePresetManagerProps) {
   const [presets, setPresets] = useState<SubtitleStylePreset[]>([]);
   const [searchText, setSearchText] = useState('');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -102,9 +95,7 @@ export function SubtitleStylePresetManager({
       if (!editName.trim()) return;
 
       const newPresets = presets.map((preset) =>
-        preset.id === presetId
-          ? updateStylePreset(preset, { name: editName.trim() })
-          : preset,
+        preset.id === presetId ? updateStylePreset(preset, { name: editName.trim() }) : preset,
       );
       savePresets(newPresets);
       setEditingPresetId(null);
@@ -117,9 +108,7 @@ export function SubtitleStylePresetManager({
   const handleToggleFavorite = useCallback(
     (presetId: string) => {
       const newPresets = presets.map((preset) =>
-        preset.id === presetId
-          ? updateStylePreset(preset, { favorite: !preset.favorite })
-          : preset,
+        preset.id === presetId ? updateStylePreset(preset, { favorite: !preset.favorite }) : preset,
       );
       savePresets(newPresets);
     },
@@ -148,19 +137,16 @@ export function SubtitleStylePresetManager({
   }, [presets]);
 
   // 导出单个预设
-  const handleExportSingle = useCallback(
-    (preset: SubtitleStylePreset, format: 'json' | 'ofp' = 'json') => {
-      const { filename, content } = exportPresetToFile(preset, format);
-      const blob = new Blob([content], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    },
-    [],
-  );
+  const handleExportSingle = useCallback((preset: SubtitleStylePreset, format: 'json' | 'ofp' = 'json') => {
+    const { filename, content } = exportPresetToFile(preset, format);
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
 
   // 导入预设
   const handleImport = useCallback(() => {
@@ -306,10 +292,7 @@ export function SubtitleStylePresetManager({
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
-          <button
-            onClick={handleResetToDefault}
-            className="text-xs text-[var(--color-accent)] hover:underline"
-          >
+          <button onClick={handleResetToDefault} className="text-xs text-[var(--color-accent)] hover:underline">
             重置默认
           </button>
         </div>
@@ -348,16 +331,12 @@ export function SubtitleStylePresetManager({
       {/* User Presets */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="px-3 py-2 border-t border-line">
-          <h4 className="text-xs font-medium text-ink">
-            用户预设 ({filteredPresets.length})
-          </h4>
+          <h4 className="text-xs font-medium text-ink">用户预设 ({filteredPresets.length})</h4>
         </div>
 
         {filteredPresets.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
-            {presets.length === 0
-              ? '暂无保存的预设，点击"保存当前"开始'
-              : '未找到匹配的预设'}
+            {presets.length === 0 ? '暂无保存的预设，点击"保存当前"开始' : '未找到匹配的预设'}
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto divide-y divide-line">
@@ -427,10 +406,7 @@ export function SubtitleStylePresetManager({
                   {preset.tags && preset.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {preset.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded bg-panel px-1 text-[10px] text-[var(--color-text-muted)]"
-                        >
+                        <span key={tag} className="rounded bg-panel px-1 text-[10px] text-[var(--color-text-muted)]">
                           {tag}
                         </span>
                       ))}
@@ -475,9 +451,7 @@ export function SubtitleStylePresetManager({
             <h4 className="mb-3 text-sm font-semibold text-ink">保存样式预设</h4>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs text-[var(--color-text-muted)]">
-                  预设名称
-                </label>
+                <label className="mb-1 block text-xs text-[var(--color-text-muted)]">预设名称</label>
                 <input
                   type="text"
                   value={saveName}
@@ -488,9 +462,7 @@ export function SubtitleStylePresetManager({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-[var(--color-text-muted)]">
-                  标签（用逗号分隔）
-                </label>
+                <label className="mb-1 block text-xs text-[var(--color-text-muted)]">标签（用逗号分隔）</label>
                 <input
                   type="text"
                   value={saveTags}

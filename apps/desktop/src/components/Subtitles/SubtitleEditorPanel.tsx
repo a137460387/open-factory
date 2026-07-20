@@ -17,10 +17,7 @@ import {
   type SubtitleSearchResult,
   type SubtitleSearchOptions,
 } from '@open-factory/editor-core';
-import {
-  BUILTIN_SUBTITLE_STYLE_TEMPLATES,
-  getBuiltinSubtitleStyleTemplate,
-} from '@open-factory/editor-core';
+import { BUILTIN_SUBTITLE_STYLE_TEMPLATES, getBuiltinSubtitleStyleTemplate } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -371,10 +368,7 @@ export function SubtitleEditorPanel({
       <div className="flex items-center justify-between border-t border-line px-3 py-1.5 text-xs text-[var(--color-text-muted)]">
         <span>
           {subtitleTracks.length} 个字幕轨道，共{' '}
-          {subtitleTracks.reduce(
-            (sum, track) => sum + track.clips.filter((c) => c.type === 'subtitle').length,
-            0,
-          )}{' '}
+          {subtitleTracks.reduce((sum, track) => sum + track.clips.filter((c) => c.type === 'subtitle').length, 0)}{' '}
           条字幕
         </span>
         <span>已选中 {selectedIds.length} 条</span>
@@ -417,9 +411,7 @@ function SubtitleListView({
       if (multiSelect) {
         const selectedSet = new Set(selectedIds);
         onSelectionChange(
-          selectedSet.has(clipId)
-            ? selectedIds.filter((id) => id !== clipId)
-            : [...selectedIds, clipId],
+          selectedSet.has(clipId) ? selectedIds.filter((id) => id !== clipId) : [...selectedIds, clipId],
         );
       } else {
         onSelectionChange([clipId]);
@@ -741,9 +733,7 @@ function SubtitleFindReplaceView({
                 </div>
                 <div className="mt-0.5">
                   <span>{result.fullText.substring(0, result.matchStart)}</span>
-                  <span className="bg-yellow-200 text-yellow-900">
-                    {result.matchedText}
-                  </span>
+                  <span className="bg-yellow-200 text-yellow-900">{result.matchedText}</span>
                   <span>{result.fullText.substring(result.matchEnd)}</span>
                 </div>
               </div>
@@ -969,10 +959,7 @@ function SubtitleStyleEditorView({
       {/* Preview */}
       <div>
         <h3 className="mb-2 text-xs font-medium text-ink">预览</h3>
-        <div
-          className="relative h-20 rounded border border-line bg-gray-900"
-          style={{ overflow: 'hidden' }}
-        >
+        <div className="relative h-20 rounded border border-line bg-gray-900" style={{ overflow: 'hidden' }}>
           <div
             className="absolute inset-x-0 text-center"
             style={{
@@ -1059,9 +1046,7 @@ function SubtitleBatchOperationsView({
       <div>
         <h3 className="mb-2 text-xs font-medium text-ink">
           编辑操作
-          {selectedCount > 0 && (
-            <span className="ml-2 text-[var(--color-text-muted)]">({selectedCount} 条选中)</span>
-          )}
+          {selectedCount > 0 && <span className="ml-2 text-[var(--color-text-muted)]">({selectedCount} 条选中)</span>}
         </h3>
         <div className="space-y-2">
           <div className="flex gap-2">

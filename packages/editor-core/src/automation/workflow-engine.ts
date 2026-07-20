@@ -13,12 +13,12 @@ export type WorkflowStatus = 'idle' | 'running' | 'paused' | 'completed' | 'fail
 
 /** 触发器类型 */
 export type TriggerType =
-  | 'manual'          // 手动触发
-  | 'media-import'    // 媒体导入时
-  | 'scene-detected'  // 场景检测完成时
+  | 'manual' // 手动触发
+  | 'media-import' // 媒体导入时
+  | 'scene-detected' // 场景检测完成时
   | 'quality-threshold' // 质量低于阈值时
-  | 'time-schedule'   // 定时触发
-  | 'project-open';   // 项目打开时
+  | 'time-schedule' // 定时触发
+  | 'project-open'; // 项目打开时
 
 /** 触发器定义 */
 export interface WorkflowTrigger {
@@ -56,16 +56,16 @@ export interface WorkflowCondition {
 
 /** 动作类型 */
 export type ActionType =
-  | 'apply-effect'      // 应用效果
+  | 'apply-effect' // 应用效果
   | 'apply-color-grade' // 应用调色
-  | 'trim-clip'         // 裁剪片段
-  | 'add-subtitle'      // 添加字幕
-  | 'export'            // 导出
-  | 'notify'            // 通知
-  | 'analyze-scene'     // 分析场景
-  | 'auto-cut'          // 自动剪辑
-  | 'quality-check'     // 质量检查
-  | 'custom';           // 自定义动作
+  | 'trim-clip' // 裁剪片段
+  | 'add-subtitle' // 添加字幕
+  | 'export' // 导出
+  | 'notify' // 通知
+  | 'analyze-scene' // 分析场景
+  | 'auto-cut' // 自动剪辑
+  | 'quality-check' // 质量检查
+  | 'custom'; // 自定义动作
 
 /** 动作定义 */
 export interface WorkflowAction {
@@ -288,10 +288,7 @@ function getFieldValue(obj: unknown, path: string): unknown {
 }
 
 /** 评估单个条件 */
-export function evaluateCondition(
-  condition: WorkflowCondition,
-  data: Record<string, unknown>,
-): boolean {
+export function evaluateCondition(condition: WorkflowCondition, data: Record<string, unknown>): boolean {
   const fieldValue = getFieldValue(data, condition.field);
   const { operator, value } = condition;
 
@@ -322,10 +319,7 @@ export function evaluateCondition(
 }
 
 /** 评估一组条件（支持 and/or 逻辑） */
-export function evaluateConditions(
-  conditions: WorkflowCondition[],
-  data: Record<string, unknown>,
-): boolean {
+export function evaluateConditions(conditions: WorkflowCondition[], data: Record<string, unknown>): boolean {
   if (conditions.length === 0) return true;
 
   let result = evaluateCondition(conditions[0], data);
@@ -523,7 +517,11 @@ export class WorkflowEngine {
   private emit(event: WorkflowEngineEvent, data: unknown): void {
     const listeners = this.eventListeners.get(event) || [];
     for (const cb of listeners) {
-      try { cb(event, data); } catch { /* 忽略监听器错误 */ }
+      try {
+        cb(event, data);
+      } catch {
+        /* 忽略监听器错误 */
+      }
     }
   }
 
@@ -653,10 +651,7 @@ export class WorkflowEngine {
   }
 
   /** 执行单个动作 */
-  private async executeAction(
-    action: WorkflowAction,
-    context: WorkflowExecutionContext,
-  ): Promise<ActionResult> {
+  private async executeAction(action: WorkflowAction, context: WorkflowExecutionContext): Promise<ActionResult> {
     const executor = this.actionExecutors.get(action.type);
     if (!executor) {
       return {
@@ -753,9 +748,7 @@ export class WorkflowEngine {
 
   /** 获取工作流的所有执行记录 */
   getExecutionsForWorkflow(workflowId: string): WorkflowExecutionContext[] {
-    return Array.from(this.executions.values()).filter(
-      (ctx) => ctx.workflowId === workflowId,
-    );
+    return Array.from(this.executions.values()).filter((ctx) => ctx.workflowId === workflowId);
   }
 
   // ------ 日志 ------
@@ -846,12 +839,8 @@ export function normalizeWorkflow(data: unknown): Workflow {
     name: typeof obj.name === 'string' ? obj.name : '未命名工作流',
     description: typeof obj.description === 'string' ? obj.description : undefined,
     version: typeof obj.version === 'string' ? obj.version : '1.0.0',
-    triggers: Array.isArray(obj.triggers)
-      ? obj.triggers.map(normalizeTrigger)
-      : [createDefaultTrigger()],
-    steps: Array.isArray(obj.steps)
-      ? obj.steps.map(normalizeStep)
-      : [],
+    triggers: Array.isArray(obj.triggers) ? obj.triggers.map(normalizeTrigger) : [createDefaultTrigger()],
+    steps: Array.isArray(obj.steps) ? obj.steps.map(normalizeStep) : [],
     enabled: typeof obj.enabled === 'boolean' ? obj.enabled : true,
     createdAt: typeof obj.createdAt === 'number' ? obj.createdAt : now,
     updatedAt: typeof obj.updatedAt === 'number' ? obj.updatedAt : now,
@@ -865,9 +854,7 @@ function normalizeTrigger(data: unknown): WorkflowTrigger {
   return {
     id: typeof obj.id === 'string' ? obj.id : generateId('trigger'),
     type: typeof obj.type === 'string' ? (obj.type as TriggerType) : 'manual',
-    params: typeof obj.params === 'object' && obj.params !== null
-      ? obj.params as Record<string, unknown>
-      : {},
+    params: typeof obj.params === 'object' && obj.params !== null ? (obj.params as Record<string, unknown>) : {},
     enabled: typeof obj.enabled === 'boolean' ? obj.enabled : true,
   };
 }
@@ -879,12 +866,8 @@ function normalizeStep(data: unknown): AutomationWorkflowStep {
     id: typeof obj.id === 'string' ? obj.id : generateId('step'),
     name: typeof obj.name === 'string' ? obj.name : '未命名步骤',
     description: typeof obj.description === 'string' ? obj.description : undefined,
-    conditions: Array.isArray(obj.conditions)
-      ? obj.conditions.map(normalizeCondition)
-      : [],
-    actions: Array.isArray(obj.actions)
-      ? obj.actions.map(normalizeAction)
-      : [],
+    conditions: Array.isArray(obj.conditions) ? obj.conditions.map(normalizeCondition) : [],
+    actions: Array.isArray(obj.actions) ? obj.actions.map(normalizeAction) : [],
     skipOnError: typeof obj.skipOnError === 'boolean' ? obj.skipOnError : false,
   };
 }
@@ -907,9 +890,7 @@ function normalizeAction(data: unknown): WorkflowAction {
   return {
     id: typeof obj.id === 'string' ? obj.id : generateId('action'),
     type: typeof obj.type === 'string' ? (obj.type as ActionType) : 'notify',
-    params: typeof obj.params === 'object' && obj.params !== null
-      ? obj.params as Record<string, unknown>
-      : {},
+    params: typeof obj.params === 'object' && obj.params !== null ? (obj.params as Record<string, unknown>) : {},
     continueOnError: typeof obj.continueOnError === 'boolean' ? obj.continueOnError : false,
     timeout: typeof obj.timeout === 'number' ? obj.timeout : undefined,
   };
@@ -930,28 +911,34 @@ export const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
       name: '自动质量修复',
       description: '检测低质量素材并自动应用修复',
       version: '1.0.0',
-      triggers: [{
-        id: 'trigger-quality',
-        type: 'scene-detected',
-        params: { afterAnalysis: true },
-        enabled: true,
-      }],
+      triggers: [
+        {
+          id: 'trigger-quality',
+          type: 'scene-detected',
+          params: { afterAnalysis: true },
+          enabled: true,
+        },
+      ],
       steps: [
         {
           id: 'step-check',
           name: '检查质量分数',
-          conditions: [{
-            id: 'cond-quality',
-            field: 'scene.quality',
-            operator: 'less_than',
-            value: 70,
-          }],
-          actions: [{
-            id: 'action-fix',
-            type: 'apply-effect',
-            params: { effectType: 'quality-enhance', intensity: 0.8 },
-            continueOnError: false,
-          }],
+          conditions: [
+            {
+              id: 'cond-quality',
+              field: 'scene.quality',
+              operator: 'less_than',
+              value: 70,
+            },
+          ],
+          actions: [
+            {
+              id: 'action-fix',
+              type: 'apply-effect',
+              params: { effectType: 'quality-enhance', intensity: 0.8 },
+              continueOnError: false,
+            },
+          ],
           skipOnError: false,
         },
       ],
@@ -968,35 +955,41 @@ export const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
       name: '自动字幕生成',
       description: '为导入的视频自动生成字幕',
       version: '1.0.0',
-      triggers: [{
-        id: 'trigger-import',
-        type: 'media-import',
-        params: { mediaTypes: ['video'] },
-        enabled: true,
-      }],
+      triggers: [
+        {
+          id: 'trigger-import',
+          type: 'media-import',
+          params: { mediaTypes: ['video'] },
+          enabled: true,
+        },
+      ],
       steps: [
         {
           id: 'step-analyze',
           name: '分析音频',
           conditions: [],
-          actions: [{
-            id: 'action-transcribe',
-            type: 'analyze-scene',
-            params: { analysisType: 'transcription' },
-            continueOnError: false,
-          }],
+          actions: [
+            {
+              id: 'action-transcribe',
+              type: 'analyze-scene',
+              params: { analysisType: 'transcription' },
+              continueOnError: false,
+            },
+          ],
           skipOnError: false,
         },
         {
           id: 'step-subtitle',
           name: '生成字幕',
           conditions: [],
-          actions: [{
-            id: 'action-add-sub',
-            type: 'add-subtitle',
-            params: { style: 'default' },
-            continueOnError: true,
-          }],
+          actions: [
+            {
+              id: 'action-add-sub',
+              type: 'add-subtitle',
+              params: { style: 'default' },
+              continueOnError: true,
+            },
+          ],
           skipOnError: true,
         },
       ],
@@ -1013,52 +1006,62 @@ export const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
       name: '智能剪辑流程',
       description: '从场景分析到智能剪辑的完整流程',
       version: '1.0.0',
-      triggers: [{
-        id: 'trigger-manual',
-        type: 'manual',
-        params: {},
-        enabled: true,
-      }],
+      triggers: [
+        {
+          id: 'trigger-manual',
+          type: 'manual',
+          params: {},
+          enabled: true,
+        },
+      ],
       steps: [
         {
           id: 'step-scene',
           name: '场景分析',
           conditions: [],
-          actions: [{
-            id: 'action-analyze',
-            type: 'analyze-scene',
-            params: { detectScenes: true, generateTags: true },
-            continueOnError: false,
-          }],
+          actions: [
+            {
+              id: 'action-analyze',
+              type: 'analyze-scene',
+              params: { detectScenes: true, generateTags: true },
+              continueOnError: false,
+            },
+          ],
           skipOnError: false,
         },
         {
           id: 'step-cut',
           name: '智能剪辑',
-          conditions: [{
-            id: 'cond-has-scenes',
-            field: 'analysis.sceneCount',
-            operator: 'greater_than',
-            value: 0,
-          }],
-          actions: [{
-            id: 'action-cut',
-            type: 'auto-cut',
-            params: { strategy: 'highlight', maxDuration: 60 },
-            continueOnError: false,
-          }],
+          conditions: [
+            {
+              id: 'cond-has-scenes',
+              field: 'analysis.sceneCount',
+              operator: 'greater_than',
+              value: 0,
+            },
+          ],
+          actions: [
+            {
+              id: 'action-cut',
+              type: 'auto-cut',
+              params: { strategy: 'highlight', maxDuration: 60 },
+              continueOnError: false,
+            },
+          ],
           skipOnError: false,
         },
         {
           id: 'step-grade',
           name: '自动调色',
           conditions: [],
-          actions: [{
-            id: 'action-grade',
-            type: 'apply-color-grade',
-            params: { preset: 'cinematic' },
-            continueOnError: true,
-          }],
+          actions: [
+            {
+              id: 'action-grade',
+              type: 'apply-color-grade',
+              params: { preset: 'cinematic' },
+              continueOnError: true,
+            },
+          ],
           skipOnError: true,
         },
       ],

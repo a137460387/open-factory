@@ -81,9 +81,10 @@ export function exportMultiLanguageSubtitles(
   const languageGroups = groupSubtitlesByLanguage(timeline);
 
   // 过滤语言
-  const filteredGroups = languages && languages.length > 0
-    ? languageGroups.filter((group) => languages.includes(group.language))
-    : languageGroups;
+  const filteredGroups =
+    languages && languages.length > 0
+      ? languageGroups.filter((group) => languages.includes(group.language))
+      : languageGroups;
 
   if (filteredGroups.length === 0) {
     return { files: [], totalCues: 0, languageCount: 0 };
@@ -193,9 +194,8 @@ export function exportSubtitlesAsMergedFile(
   const { languages, separator = '\n\n---\n\n', includeLanguageHeaders = true } = options || {};
 
   const groups = groupSubtitlesByLanguage(timeline);
-  const filteredGroups = languages && languages.length > 0
-    ? groups.filter((group) => languages.includes(group.language))
-    : groups;
+  const filteredGroups =
+    languages && languages.length > 0 ? groups.filter((group) => languages.includes(group.language)) : groups;
 
   if (filteredGroups.length === 0) {
     return null;
@@ -247,9 +247,8 @@ export function buildSubtitleEmbedArgs(
 ): SubtitleEmbedResult {
   const { format, languages, burnIn = false, defaultLanguage } = options;
   const groups = groupSubtitlesByLanguage(timeline);
-  const filteredGroups = languages && languages.length > 0
-    ? groups.filter((group) => languages.includes(group.language))
-    : groups;
+  const filteredGroups =
+    languages && languages.length > 0 ? groups.filter((group) => languages.includes(group.language)) : groups;
 
   if (filteredGroups.length === 0) {
     return { args: [], files: [], burnInFilter: null };
@@ -277,8 +276,10 @@ export function buildSubtitleEmbedArgs(
     // 添加映射参数
     const isDefault = group.language === defaultLanguage || (i === 0 && !defaultLanguage);
     mapArgs.push(
-      '-map', `${i + 1}:s`,
-      `-metadata:s:s:${i}`, `language=${group.language}`,
+      '-map',
+      `${i + 1}:s`,
+      `-metadata:s:s:${i}`,
+      `language=${group.language}`,
       isDefault ? `-disposition:s:${i}` : `-disposition:s:${i} 0`,
       ...(isDefault ? ['default'] : []),
     );
@@ -356,15 +357,9 @@ function serializeCues(cues: SubtitleCueInput[], format: SubtitleTextFormat): st
   }
 }
 
-function generateFilename(
-  language: string,
-  format: SubtitleTextFormat,
-  template?: string,
-): string {
+function generateFilename(language: string, format: SubtitleTextFormat, template?: string): string {
   if (template) {
-    return template
-      .replace('{language}', language)
-      .replace('{format}', format);
+    return template.replace('{language}', language).replace('{format}', format);
   }
 
   return `subtitles_${language}.${format}`;

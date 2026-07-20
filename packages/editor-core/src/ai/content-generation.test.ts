@@ -366,11 +366,7 @@ describe('parseContentGenerationResponse', () => {
 
   it('should skip invalid items in contents array', () => {
     const input = {
-      contents: [
-        null,
-        'invalid',
-        { id: 'valid', data: { x: 1 }, duration: 5, metadata: {} },
-      ],
+      contents: [null, 'invalid', { id: 'valid', data: { x: 1 }, duration: 5, metadata: {} }],
     };
     const result = parseContentGenerationResponse(input, 'effect');
     expect(result.contents.length).toBe(1);

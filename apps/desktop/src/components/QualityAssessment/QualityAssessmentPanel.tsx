@@ -9,13 +9,7 @@ import { X, BarChart3, CheckCircle, AlertTriangle, Sparkles } from 'lucide-react
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 import { showToast } from '../../lib/toast';
@@ -59,40 +53,59 @@ type Phase = 'idle' | 'assessing' | 'done';
 
 function gradeStyle(grade: string): string {
   switch (grade) {
-    case 'S': return 'bg-violet-100 text-violet-700 border-violet-300';
-    case 'A': return 'bg-green-100 text-green-700 border-green-300';
-    case 'B': return 'bg-blue-100 text-blue-700 border-blue-300';
-    case 'C': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-    case 'D': return 'bg-orange-100 text-orange-700 border-orange-300';
-    case 'F': return 'bg-red-100 text-red-700 border-red-300';
-    default: return 'bg-muted text-muted-foreground border-line';
+    case 'S':
+      return 'bg-violet-100 text-violet-700 border-violet-300';
+    case 'A':
+      return 'bg-green-100 text-green-700 border-green-300';
+    case 'B':
+      return 'bg-blue-100 text-blue-700 border-blue-300';
+    case 'C':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-300';
+    case 'D':
+      return 'bg-orange-100 text-orange-700 border-orange-300';
+    case 'F':
+      return 'bg-red-100 text-red-700 border-red-300';
+    default:
+      return 'bg-muted text-muted-foreground border-line';
   }
 }
 
 function severityStyle(severity: string): string {
   switch (severity) {
-    case 'high': return 'text-red-600';
-    case 'medium': return 'text-orange-600';
-    case 'low': return 'text-yellow-600';
-    default: return 'text-muted-foreground';
+    case 'high':
+      return 'text-red-600';
+    case 'medium':
+      return 'text-orange-600';
+    case 'low':
+      return 'text-yellow-600';
+    default:
+      return 'text-muted-foreground';
   }
 }
 
 function priorityLabel(priority: string): string {
   switch (priority) {
-    case 'high': return '高';
-    case 'medium': return '中';
-    case 'low': return '低';
-    default: return priority;
+    case 'high':
+      return '高';
+    case 'medium':
+      return '中';
+    case 'low':
+      return '低';
+    default:
+      return priority;
   }
 }
 
 function priorityStyle(priority: string): string {
   switch (priority) {
-    case 'high': return 'bg-red-100 text-red-700';
-    case 'medium': return 'bg-yellow-100 text-yellow-700';
-    case 'low': return 'bg-blue-100 text-blue-700';
-    default: return 'bg-muted text-muted-foreground';
+    case 'high':
+      return 'bg-red-100 text-red-700';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-700';
+    case 'low':
+      return 'bg-blue-100 text-blue-700';
+    default:
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -123,12 +136,15 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const systemPrompt = buildEnhancedQualitySystemPrompt(selectedProfile);
-      const projectDuration = project.timeline?.tracks
-        ?.flatMap((t) => t.clips)
-        .reduce((max, c) => Math.max(max, c.start + c.duration), 0) ?? 0;
+      const projectDuration =
+        project.timeline?.tracks?.flatMap((t) => t.clips).reduce((max, c) => Math.max(max, c.start + c.duration), 0) ??
+        0;
       const userPrompt = `请对当前项目进行质量评估。项目时长：${projectDuration.toFixed(1)}秒。`;
 
       const response = await callAiApi(
@@ -147,7 +163,10 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
         apiKey,
       );
 
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = await parseEnhancedQualityResponseSafe(response.content);
       if (!parsed || !parsed.data) {
@@ -179,9 +198,7 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
     showToast({
       kind: 'success',
       title: '已应用建议',
-      message: autoCount > 0
-        ? `已应用 ${autoCount} 条自动优化建议。`
-        : '所有建议需手动调整，已在时间线上标记。',
+      message: autoCount > 0 ? `已应用 ${autoCount} 条自动优化建议。` : '所有建议需手动调整，已在时间线上标记。',
     });
     onClose();
   }, [result, onClose]);
@@ -198,12 +215,7 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
           <BarChart3 className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">AI 质量评估</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          data-testid="quality-close"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose} data-testid="quality-close">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -223,7 +235,9 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
             </SelectTrigger>
             <SelectContent>
               {textProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -277,12 +291,7 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div className="h-full bg-primary animate-pulse" style={{ width: '60%' }} />
             </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={cancelAssessment}
-              data-testid="quality-cancel"
-            >
+            <Button variant="outline" className="w-full" onClick={cancelAssessment} data-testid="quality-cancel">
               取消
             </Button>
           </div>
@@ -292,7 +301,10 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
         {phase === 'done' && result && overallGrade && (
           <div className="space-y-4" data-testid="quality-result">
             {/* Overall score */}
-            <div className="rounded-lg border border-line bg-white p-4 text-center space-y-2" data-testid="quality-overall">
+            <div
+              className="rounded-lg border border-line bg-white p-4 text-center space-y-2"
+              data-testid="quality-overall"
+            >
               <div className="text-xs text-muted-foreground">总体评分</div>
               <div className="flex items-center justify-center gap-3">
                 <span className="text-4xl font-bold tabular-nums text-ink" data-testid="quality-score-value">
@@ -327,10 +339,13 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
                         <div
                           className={cn(
                             'h-full rounded-full transition-all',
-                            score >= 80 ? 'bg-green-500' :
-                            score >= 60 ? 'bg-yellow-500' :
-                            score >= 40 ? 'bg-orange-500' :
-                            'bg-red-500',
+                            score >= 80
+                              ? 'bg-green-500'
+                              : score >= 60
+                                ? 'bg-yellow-500'
+                                : score >= 40
+                                  ? 'bg-orange-500'
+                                  : 'bg-red-500',
                           )}
                           style={{ width: `${score}%` }}
                         />
@@ -356,18 +371,13 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
                       data-testid={`quality-issue-${i}`}
                     >
                       <div className="flex items-center gap-2">
-                        <span
-                          className={cn('text-[11px] font-semibold', severityStyle(issue.severity))}
-                        >
-                          {issue.severity === 'high' ? '严重' :
-                           issue.severity === 'medium' ? '重要' : '轻微'}
+                        <span className={cn('text-[11px] font-semibold', severityStyle(issue.severity))}>
+                          {issue.severity === 'high' ? '严重' : issue.severity === 'medium' ? '重要' : '轻微'}
                         </span>
                         <span className="text-xs text-ink">{issue.description}</span>
                       </div>
                       {issue.suggestedFix && (
-                        <div className="text-[11px] text-muted-foreground pl-0.5">
-                          建议：{issue.suggestedFix}
-                        </div>
+                        <div className="text-[11px] text-muted-foreground pl-0.5">建议：{issue.suggestedFix}</div>
                       )}
                     </div>
                   ))}
@@ -407,9 +417,7 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
                         </div>
                       )}
                       {suggestion.autoApplicable && (
-                        <div className="text-[11px] text-primary font-medium">
-                          可自动应用
-                        </div>
+                        <div className="text-[11px] text-primary font-medium">可自动应用</div>
                       )}
                     </div>
                   ))}
@@ -422,16 +430,15 @@ export function QualityAssessmentPanel({ project, onClose }: { project: Project;
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => { setResult(null); setPhase('idle'); }}
+                onClick={() => {
+                  setResult(null);
+                  setPhase('idle');
+                }}
                 data-testid="quality-reassess"
               >
                 重新评估
               </Button>
-              <Button
-                className="flex-1"
-                onClick={handleApplySuggestions}
-                data-testid="quality-apply"
-              >
+              <Button className="flex-1" onClick={handleApplySuggestions} data-testid="quality-apply">
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 应用建议
               </Button>

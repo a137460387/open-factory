@@ -260,12 +260,7 @@ export function TransitionCard({
       draggable
       onDragStart={handleDragStart}
     >
-      <canvas
-        ref={canvasRef}
-        width={120}
-        height={68}
-        className="w-full h-auto rounded aspect-video bg-muted"
-      />
+      <canvas ref={canvasRef} width={120} height={68} className="w-full h-auto rounded aspect-video bg-muted" />
       <div className="mt-1.5 flex items-center justify-between">
         <span className="text-xs font-medium truncate">{definition.label}</span>
         <button

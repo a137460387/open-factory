@@ -1,10 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import type {
-  SceneAnalysis,
-  AnalysisReport,
-  AnalysisStats,
-  AutomationSceneType,
-} from '@open-factory/editor-core';
+import type { SceneAnalysis, AnalysisReport, AnalysisStats, AutomationSceneType } from '@open-factory/editor-core';
 import {
   SceneAnalyzer,
   createDefaultAnalyzerConfig,
@@ -33,29 +28,29 @@ import { Button } from '../ui/button';
 /* ------------------------------------------------------------------ */
 
 const SCENE_TYPE_LABELS: Record<AutomationSceneType, string> = {
-  'dialogue': '对话',
-  'action': '动作',
-  'landscape': '风景',
+  dialogue: '对话',
+  action: '动作',
+  landscape: '风景',
   'close-up': '特写',
   'wide-shot': '广角',
-  'montage': '蒙太奇',
-  'transition': '过渡',
-  'title': '标题',
-  'black': '黑场',
-  'unknown': '未知',
+  montage: '蒙太奇',
+  transition: '过渡',
+  title: '标题',
+  black: '黑场',
+  unknown: '未知',
 };
 
 const SCENE_TYPE_COLORS: Record<AutomationSceneType, string> = {
-  'dialogue': 'bg-blue-100 text-blue-700',
-  'action': 'bg-red-100 text-red-700',
-  'landscape': 'bg-green-100 text-green-700',
+  dialogue: 'bg-blue-100 text-blue-700',
+  action: 'bg-red-100 text-red-700',
+  landscape: 'bg-green-100 text-green-700',
   'close-up': 'bg-purple-100 text-purple-700',
   'wide-shot': 'bg-cyan-100 text-cyan-700',
-  'montage': 'bg-orange-100 text-orange-700',
-  'transition': 'bg-gray-100 text-gray-700',
-  'title': 'bg-yellow-100 text-yellow-700',
-  'black': 'bg-gray-200 text-gray-600',
-  'unknown': 'bg-gray-100 text-gray-500',
+  montage: 'bg-orange-100 text-orange-700',
+  transition: 'bg-gray-100 text-gray-700',
+  title: 'bg-yellow-100 text-yellow-700',
+  black: 'bg-gray-200 text-gray-600',
+  unknown: 'bg-gray-100 text-gray-500',
 };
 
 /* ------------------------------------------------------------------ */
@@ -138,18 +133,8 @@ export function SceneAnalysisView({ className, initialReport }: SceneAnalysisVie
           <Film className="w-5 h-5 text-primary" />
           <h2 className="text-sm font-semibold">场景分析</h2>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleAnalyze}
-          disabled={isAnalyzing}
-          data-testid="analyze-btn"
-        >
-          {isAnalyzing ? (
-            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-          ) : (
-            <Eye className="w-4 h-4 mr-1" />
-          )}
+        <Button variant="outline" size="sm" onClick={handleAnalyze} disabled={isAnalyzing} data-testid="analyze-btn">
+          {isAnalyzing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Eye className="w-4 h-4 mr-1" />}
           {isAnalyzing ? '分析中...' : '开始分析'}
         </Button>
       </div>
@@ -180,11 +165,7 @@ export function SceneAnalysisView({ className, initialReport }: SceneAnalysisVie
           <>
             {activeTab === 'overview' && stats && <OverviewTab stats={stats} />}
             {activeTab === 'scenes' && (
-              <ScenesTab
-                scenes={report.scenes}
-                selectedScene={selectedScene}
-                onSelect={setSelectedScene}
-              />
+              <ScenesTab scenes={report.scenes} selectedScene={selectedScene} onSelect={setSelectedScene} />
             )}
             {activeTab === 'quality' && stats && <QualityTab stats={stats} scenes={report.scenes} />}
             {activeTab === 'tags' && stats && <TagsTab stats={stats} />}
@@ -193,9 +174,7 @@ export function SceneAnalysisView({ className, initialReport }: SceneAnalysisVie
       </div>
 
       {/* 场景详情 */}
-      {selectedScene && (
-        <SceneDetail scene={selectedScene} />
-      )}
+      {selectedScene && <SceneDetail scene={selectedScene} />}
     </div>
   );
 }
@@ -223,16 +202,8 @@ function OverviewTab({ stats }: OverviewTabProps) {
     <div className="p-4 space-y-4">
       {/* 概览卡片 */}
       <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          label="总场景数"
-          value={stats.totalScenes.toString()}
-          icon={<Film className="w-4 h-4" />}
-        />
-        <StatCard
-          label="总时长"
-          value={formatDuration(stats.totalDuration)}
-          icon={<Clock className="w-4 h-4" />}
-        />
+        <StatCard label="总场景数" value={stats.totalScenes.toString()} icon={<Film className="w-4 h-4" />} />
+        <StatCard label="总时长" value={formatDuration(stats.totalDuration)} icon={<Clock className="w-4 h-4" />} />
         <StatCard
           label="平均质量"
           value={stats.averageQuality.toString()}
@@ -334,9 +305,7 @@ function ScenesTab({ scenes, selectedScene, onSelect }: ScenesTabProps) {
             key={scene.id}
             className={cn(
               'flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors',
-              selectedScene?.id === scene.id
-                ? 'bg-primary/10 text-primary'
-                : 'hover:bg-muted',
+              selectedScene?.id === scene.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
             )}
             onClick={() => onSelect(scene)}
             data-testid={`scene-item-${scene.id}`}
@@ -349,21 +318,23 @@ function ScenesTab({ scenes, selectedScene, onSelect }: ScenesTabProps) {
                 <p className="text-xs font-medium truncate">
                   {formatDuration(scene.startTime)} - {formatDuration(scene.endTime)}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  时长 {formatDuration(scene.duration)}
-                </p>
+                <p className="text-xs text-muted-foreground">时长 {formatDuration(scene.duration)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={cn('text-xs font-semibold', qualityColor(scene.quality.overall))}>
                 {scene.quality.overall}
               </span>
-              <span className={cn(
-                'px-1.5 py-0.5 rounded text-xs',
-                grade === 'excellent' || grade === 'good' ? 'bg-green-100 text-green-700' :
-                grade === 'fair' ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700',
-              )}>
+              <span
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-xs',
+                  grade === 'excellent' || grade === 'good'
+                    ? 'bg-green-100 text-green-700'
+                    : grade === 'fair'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700',
+                )}
+              >
                 {getQualityGradeLabel(grade)}
               </span>
             </div>
@@ -409,9 +380,7 @@ function QualityTab({ stats, scenes }: QualityTabProps) {
           <div key={metric.key}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs">{metric.label}</span>
-              <span className={cn('text-xs font-semibold', qualityColor(metric.avg))}>
-                {metric.avg}
-              </span>
+              <span className={cn('text-xs font-semibold', qualityColor(metric.avg))}>{metric.avg}</span>
             </div>
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
@@ -428,13 +397,9 @@ function QualityTab({ stats, scenes }: QualityTabProps) {
         <div className="p-3 rounded-md bg-orange-50 border border-orange-200">
           <div className="flex items-center gap-2 text-orange-700">
             <AlertTriangle className="w-4 h-4" />
-            <span className="text-xs font-medium">
-              发现 {stats.lowQualityScenes.length} 个低质量场景
-            </span>
+            <span className="text-xs font-medium">发现 {stats.lowQualityScenes.length} 个低质量场景</span>
           </div>
-          <p className="text-xs text-orange-600 mt-1">
-            建议使用自动化工作流对低质量场景进行修复处理
-          </p>
+          <p className="text-xs text-orange-600 mt-1">建议使用自动化工作流对低质量场景进行修复处理</p>
         </div>
       )}
     </div>
@@ -460,10 +425,7 @@ function TagsTab({ stats }: TagsTabProps) {
       <h3 className="text-xs font-medium text-muted-foreground">最常见标签</h3>
       <div className="flex flex-wrap gap-2">
         {stats.topTags.map(({ tag, count }) => (
-          <div
-            key={tag}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted"
-          >
+          <div key={tag} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted">
             <Tag className="w-3 h-3 text-muted-foreground" />
             <span className="text-xs font-medium">{tag}</span>
             <span className="text-xs text-muted-foreground">({count})</span>
@@ -488,9 +450,7 @@ function SceneDetail({ scene }: SceneDetailProps) {
           <span className={cn('px-1.5 py-0.5 rounded text-xs', SCENE_TYPE_COLORS[scene.sceneType])}>
             {SCENE_TYPE_LABELS[scene.sceneType]}
           </span>
-          <span className="text-xs text-muted-foreground">
-            置信度 {Math.round(scene.sceneTypeConfidence * 100)}%
-          </span>
+          <span className="text-xs text-muted-foreground">置信度 {Math.round(scene.sceneTypeConfidence * 100)}%</span>
         </div>
         <span className={cn('text-sm font-semibold', qualityColor(scene.quality.overall))}>
           {scene.quality.overall} 分 · {getQualityGradeLabel(grade)}
@@ -499,21 +459,20 @@ function SceneDetail({ scene }: SceneDetailProps) {
 
       {/* 质量指标条 */}
       <div className="grid grid-cols-3 gap-2 mb-2">
-        {([
-          ['清晰度', scene.quality.sharpness],
-          ['曝光', scene.quality.exposure],
-          ['稳定性', scene.quality.stability],
-        ] as const).map(([label, value]) => (
+        {(
+          [
+            ['清晰度', scene.quality.sharpness],
+            ['曝光', scene.quality.exposure],
+            ['稳定性', scene.quality.stability],
+          ] as const
+        ).map(([label, value]) => (
           <div key={label}>
             <div className="flex items-center justify-between mb-0.5">
               <span className="text-xs text-muted-foreground">{label}</span>
               <span className="text-xs">{value}</span>
             </div>
             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={cn('h-full rounded-full', qualityBarColor(value))}
-                style={{ width: `${value}%` }}
-              />
+              <div className={cn('h-full rounded-full', qualityBarColor(value))} style={{ width: `${value}%` }} />
             </div>
           </div>
         ))}

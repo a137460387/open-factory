@@ -10,30 +10,14 @@ export interface TTSPanelProps {
   /** 关闭回调 */
   onClose?: () => void;
   /** 完成回调 */
-  onComplete?: (result: {
-    audioData: Float32Array | ArrayBuffer;
-    sampleRate: number;
-    durationMs: number;
-  }) => void;
+  onComplete?: (result: { audioData: Float32Array | ArrayBuffer; sampleRate: number; durationMs: number }) => void;
 }
 
 /**
  * TTS 语音合成面板
  */
-export function TTSPanel({
-  initialText = '',
-  onClose,
-  onComplete,
-}: TTSPanelProps) {
-  const {
-    state,
-    startSynthesis,
-    cancelSynthesis,
-    reset,
-    updateRecommendedVoice,
-    playAudio,
-    exportAudio,
-  } = useTTS();
+export function TTSPanel({ initialText = '', onClose, onComplete }: TTSPanelProps) {
+  const { state, startSynthesis, cancelSynthesis, reset, updateRecommendedVoice, playAudio, exportAudio } = useTTS();
 
   const [text, setText] = useState(initialText);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
@@ -129,11 +113,7 @@ export function TTSPanel({
             <Settings className="h-4 w-4" />
           </button>
           {onClose && (
-            <button
-              className="rounded p-1 hover:bg-panel"
-              onClick={onClose}
-              data-testid="tts-close"
-            >
+            <button className="rounded p-1 hover:bg-panel" onClick={onClose} data-testid="tts-close">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -144,9 +124,7 @@ export function TTSPanel({
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* 文本输入 */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">
-            要合成的文本
-          </label>
+          <label className="text-xs font-medium text-[var(--color-text-muted)]">要合成的文本</label>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -158,17 +136,13 @@ export function TTSPanel({
           />
           <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
             <span>{text.length} 字符</span>
-            {state.recommendedVoice && (
-              <span>推荐语音: {state.recommendedVoice.name}</span>
-            )}
+            {state.recommendedVoice && <span>推荐语音: {state.recommendedVoice.name}</span>}
           </div>
         </div>
 
         {/* 语音选择 */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">
-            选择语音
-          </label>
+          <label className="text-xs font-medium text-[var(--color-text-muted)]">选择语音</label>
           <select
             value={selectedVoiceId}
             onChange={(e) => setSelectedVoiceId(e.target.value)}
@@ -176,9 +150,17 @@ export function TTSPanel({
             disabled={state.stage !== 'idle' && state.stage !== 'done' && state.stage !== 'error'}
             data-testid="tts-voice-select"
           >
-            {state.voices.map(voice => (
+            {state.voices.map((voice) => (
               <option key={voice.id} value={voice.id}>
-                {voice.name} ({voice.language === 'zh' ? '中文' : voice.language === 'en' ? '英文' : voice.language === 'ja' ? '日文' : '韩文'})
+                {voice.name} (
+                {voice.language === 'zh'
+                  ? '中文'
+                  : voice.language === 'en'
+                    ? '英文'
+                    : voice.language === 'ja'
+                      ? '日文'
+                      : '韩文'}
+                )
               </option>
             ))}
           </select>
@@ -304,7 +286,9 @@ export function TTSPanel({
                 </div>
                 <div>
                   <span className="text-[var(--color-text-muted)]">处理耗时：</span>
-                  <span className="font-medium">{state.durationMs ? `${(state.durationMs / 1000).toFixed(1)}s` : '-'}</span>
+                  <span className="font-medium">
+                    {state.durationMs ? `${(state.durationMs / 1000).toFixed(1)}s` : '-'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[var(--color-text-muted)]">实时率：</span>

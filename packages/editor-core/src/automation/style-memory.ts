@@ -12,15 +12,15 @@ import type { TransitionType } from '../model-types';
 
 /** 修改操作类型 */
 export type ModificationType =
-  | 'clip-duration-adjust'   // 片段时长调整
-  | 'clip-reorder'           // 片段重排序
-  | 'clip-remove'            // 片段删除
-  | 'transition-change'      // 转场替换
-  | 'transition-duration'    // 转场时长调整
-  | 'volume-adjust'          // 音量调整
-  | 'trim-adjust'            // 裁剪调整
-  | 'speed-change'           // 速度调整
-  | 'color-adjust';          // 色彩调整
+  | 'clip-duration-adjust' // 片段时长调整
+  | 'clip-reorder' // 片段重排序
+  | 'clip-remove' // 片段删除
+  | 'transition-change' // 转场替换
+  | 'transition-duration' // 转场时长调整
+  | 'volume-adjust' // 音量调整
+  | 'trim-adjust' // 裁剪调整
+  | 'speed-change' // 速度调整
+  | 'color-adjust'; // 色彩调整
 
 /** 修改记录 */
 export interface ModificationRecord {
@@ -226,18 +226,13 @@ export function calculateWeights(records: ModificationRecord[]): PreferenceWeigh
     }
   }
   // 归一化场景类型权重到 [-1, 1]
-  const maxSceneWeight = Math.max(
-    1,
-    ...Object.values(weights.sceneTypeWeights).map(Math.abs),
-  );
+  const maxSceneWeight = Math.max(1, ...Object.values(weights.sceneTypeWeights).map(Math.abs));
   for (const key of Object.keys(weights.sceneTypeWeights)) {
     weights.sceneTypeWeights[key] /= maxSceneWeight;
   }
 
   // 质量阈值调整：如果用户频繁删除低质量片段，说明对质量要求更高
-  const removedQualities = removedClips
-    .map((r) => Number(r.before.quality ?? 50))
-    .filter((q) => q > 0);
+  const removedQualities = removedClips.map((r) => Number(r.before.quality ?? 50)).filter((q) => q > 0);
   if (removedQualities.length > 0) {
     const avgRemovedQuality = removedQualities.reduce((a, b) => a + b, 0) / removedQualities.length;
     // 如果平均删除的质量分 > 50，说明用户对质量要求高

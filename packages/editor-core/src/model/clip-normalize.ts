@@ -875,7 +875,6 @@ export function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): C
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-
 function normalizeRgbColor(color: ChromaKeyColor | readonly number[] | undefined): ChromaKeyColor {
   const input = Array.isArray(color) ? color : DEFAULT_CHROMA_KEY.color;
   return [normalizeRgbChannel(input[0]), normalizeRgbChannel(input[1]), normalizeRgbChannel(input[2])];
@@ -933,7 +932,10 @@ function normalizeLutPath(path: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-export function normalizeLutLayers(luts: import('../model-types').LUTLayer[] | undefined, lutPath?: string | null): import('../model-types').LUTLayer[] {
+export function normalizeLutLayers(
+  luts: import('../model-types').LUTLayer[] | undefined,
+  lutPath?: string | null,
+): import('../model-types').LUTLayer[] {
   // If luts array is explicitly provided, normalize it (max 3, filter intensity=0)
   if (luts && luts.length > 0) {
     return luts

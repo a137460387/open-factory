@@ -86,9 +86,7 @@ export function getNoiseReductionPresetLabel(preset: NoiseReductionPreset): stri
 }
 
 /** 验证并规范化降噪参数 */
-export function normalizeNoiseReductionParams(
-  params: Partial<NoiseReductionParams>,
-): NoiseReductionParams {
+export function normalizeNoiseReductionParams(params: Partial<NoiseReductionParams>): NoiseReductionParams {
   return {
     noiseFloor: clampNumber(params.noiseFloor ?? -25, -60, 0),
     nrType: clampNumber(params.nrType ?? 1, 0, 2),
@@ -119,11 +117,7 @@ export function buildNoiseReductionFfmpegArgs(params: NoiseReductionParams): str
   if (normalized.autoNoiseSampling && normalized.noiseSampleEnd > normalized.noiseSampleStart) {
     filterParts.push(`nt=w`);
     // 使用 anlmdn 作为补充降噪
-    args.push(
-      'afftdn',
-      ...filterParts.map((p) => `-af`),
-      `afftdn=${filterParts.join(':')}`,
-    );
+    args.push('afftdn', ...filterParts.map((p) => `-af`), `afftdn=${filterParts.join(':')}`);
   } else {
     args.push(`afftdn=${filterParts.join(':')}`);
   }
@@ -149,10 +143,7 @@ export function buildNoiseReductionFilterString(params: NoiseReductionParams): s
  * 计算降噪效果预估
  * 基于输入参数估算降噪后的改善程度
  */
-export function estimateNoiseReduction(
-  params: NoiseReductionParams,
-  inputPeakDb: number = 0,
-): NoiseReductionPreview {
+export function estimateNoiseReduction(params: NoiseReductionParams, inputPeakDb: number = 0): NoiseReductionPreview {
   const normalized = normalizeNoiseReductionParams(params);
 
   // 降噪强度越大，峰值衰减越多
@@ -228,7 +219,7 @@ export function noiseReductionToEffectParams(params: NoiseReductionParams): Reco
   const normalized = normalizeNoiseReductionParams(params);
   return {
     threshold: normalized.noiseFloor,
-    reduction: Math.abs(normalized.noiseFloor) / 60 * 100,
+    reduction: (Math.abs(normalized.noiseFloor) / 60) * 100,
     attack: 1,
     release: 100,
   };

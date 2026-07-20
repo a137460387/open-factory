@@ -18,11 +18,7 @@ vi.mock('zustand', () => ({
   create: vi.fn(),
 }));
 
-import {
-  ExportPreviewCanvas,
-  ExportProgressBar,
-  ExportPreviewThumbnailGrid,
-} from './ExportPreviewCanvas';
+import { ExportPreviewCanvas, ExportProgressBar, ExportPreviewThumbnailGrid } from './ExportPreviewCanvas';
 
 describe('ExportPreviewCanvas', () => {
   beforeEach(() => {
@@ -30,9 +26,7 @@ describe('ExportPreviewCanvas', () => {
   });
 
   it('应该渲染基本结构', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas taskId="test-task-1" />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" />);
 
     expect(html).toContain('data-testid="export-preview-canvas"');
     expect(html).toContain('data-testid="export-preview-canvas-element"');
@@ -40,74 +34,47 @@ describe('ExportPreviewCanvas', () => {
   });
 
   it('应该显示等待状态', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas taskId="test-task-1" />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" />);
 
     expect(html).toContain('等待预览帧...');
   });
 
   it('应该显示进度信息', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas taskId="test-task-1" />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" />);
 
     expect(html).toContain('导出进度:');
     expect(html).toContain('帧预览');
   });
 
   it('应该支持自定义尺寸', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas
-        taskId="test-task-1"
-        width={320}
-        height={180}
-      />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" width={320} height={180} />);
 
     expect(html).toContain('width="320"');
     expect(html).toContain('height="180"');
   });
 
   it('应该支持自定义类名', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas
-        taskId="test-task-1"
-        className="custom-class"
-      />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" className="custom-class" />);
 
     expect(html).toContain('custom-class');
   });
 
   it('没有 taskId 时应该显示等待状态', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas />);
 
     expect(html).toContain('等待预览帧...');
     expect(html).toContain('data-testid="export-preview-canvas"');
   });
 
   it('应该支持隐藏进度条', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas
-        taskId="test-task-1"
-        showProgressBar={false}
-      />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" showProgressBar={false} />);
 
     // 进度信息仍然显示，但进度条可能不显示
     expect(html).toContain('data-testid="export-preview-canvas"');
   });
 
   it('应该支持隐藏时间戳', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewCanvas
-        taskId="test-task-1"
-        showTimestamps={false}
-      />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewCanvas taskId="test-task-1" showTimestamps={false} />);
 
     expect(html).toContain('data-testid="export-preview-canvas"');
   });
@@ -115,9 +82,7 @@ describe('ExportPreviewCanvas', () => {
 
 describe('ExportProgressBar', () => {
   it('应该渲染进度条', () => {
-    const html = renderToStaticMarkup(
-      <ExportProgressBar progress={0.5} />
-    );
+    const html = renderToStaticMarkup(<ExportProgressBar progress={0.5} />);
 
     expect(html).toContain('data-testid="export-progress-bar"');
     expect(html).toContain('data-testid="export-progress-bar-fill"');
@@ -125,37 +90,27 @@ describe('ExportProgressBar', () => {
   });
 
   it('应该处理 0% 进度', () => {
-    const html = renderToStaticMarkup(
-      <ExportProgressBar progress={0} />
-    );
+    const html = renderToStaticMarkup(<ExportProgressBar progress={0} />);
 
     expect(html).toContain('width:0%');
   });
 
   it('应该处理 100% 进度', () => {
-    const html = renderToStaticMarkup(
-      <ExportProgressBar progress={1} />
-    );
+    const html = renderToStaticMarkup(<ExportProgressBar progress={1} />);
 
     expect(html).toContain('width:100%');
   });
 
   it('应该限制进度在 0-100 范围', () => {
-    const htmlOver = renderToStaticMarkup(
-      <ExportProgressBar progress={1.5} />
-    );
-    const htmlUnder = renderToStaticMarkup(
-      <ExportProgressBar progress={-0.5} />
-    );
+    const htmlOver = renderToStaticMarkup(<ExportProgressBar progress={1.5} />);
+    const htmlUnder = renderToStaticMarkup(<ExportProgressBar progress={-0.5} />);
 
     expect(htmlOver).toContain('width:100%');
     expect(htmlUnder).toContain('width:0%');
   });
 
   it('应该支持自定义类名', () => {
-    const html = renderToStaticMarkup(
-      <ExportProgressBar progress={0.5} className="custom-progress" />
-    );
+    const html = renderToStaticMarkup(<ExportProgressBar progress={0.5} className="custom-progress" />);
 
     expect(html).toContain('custom-progress');
   });
@@ -169,9 +124,7 @@ describe('ExportPreviewThumbnailGrid', () => {
   ];
 
   it('应该渲染缩略图网格', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />);
 
     expect(html).toContain('data-testid="export-preview-thumbnail-grid"');
     expect(html).toContain('data-testid="export-preview-thumbnail-0"');
@@ -180,9 +133,7 @@ describe('ExportPreviewThumbnailGrid', () => {
   });
 
   it('应该显示标签', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />);
 
     expect(html).toContain('开始');
     expect(html).toContain('中间');
@@ -190,9 +141,7 @@ describe('ExportPreviewThumbnailGrid', () => {
   });
 
   it('应该显示时间戳', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />);
 
     expect(html).toContain('0:00');
     expect(html).toContain('0:15');
@@ -200,9 +149,7 @@ describe('ExportPreviewThumbnailGrid', () => {
   });
 
   it('应该渲染图片', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={mockThumbnails} />);
 
     expect(html).toContain('http://example.com/1.jpg');
     expect(html).toContain('http://example.com/2.jpg');
@@ -210,19 +157,14 @@ describe('ExportPreviewThumbnailGrid', () => {
   });
 
   it('空数组时应该返回 null', () => {
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={[]} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={[]} />);
 
     expect(html).toBe('');
   });
 
   it('应该支持自定义类名', () => {
     const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid
-        thumbnails={mockThumbnails}
-        className="custom-grid"
-      />
+      <ExportPreviewThumbnailGrid thumbnails={mockThumbnails} className="custom-grid" />,
     );
 
     expect(html).toContain('custom-grid');
@@ -234,9 +176,7 @@ describe('ExportPreviewThumbnailGrid', () => {
       { src: 'http://example.com/2.jpg', label: '帧2' },
     ];
 
-    const html = renderToStaticMarkup(
-      <ExportPreviewThumbnailGrid thumbnails={thumbnailsNoTimestamp} />
-    );
+    const html = renderToStaticMarkup(<ExportPreviewThumbnailGrid thumbnails={thumbnailsNoTimestamp} />);
 
     expect(html).toContain('帧1');
     expect(html).toContain('帧2');

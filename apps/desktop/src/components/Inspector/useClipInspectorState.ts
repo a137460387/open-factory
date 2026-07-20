@@ -139,7 +139,11 @@ import { showToast } from '../../lib/toast';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
-import { isTranslationConfigured, useTranslationSettingsStore, type TranslationProvider } from '../../store/translationSettingsStore';
+import {
+  isTranslationConfigured,
+  useTranslationSettingsStore,
+  type TranslationProvider,
+} from '../../store/translationSettingsStore';
 import { analyzeClipPitch, exportClipPitchCsv } from '../../media/pitchAnalysis';
 import {
   buildAudioRestorationPreviewPeaks,

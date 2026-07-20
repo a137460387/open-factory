@@ -1,9 +1,5 @@
 import type { DownloadEvent as TauriUpdateDownloadEvent } from '@tauri-apps/plugin-updater';
-import type {
-  ExportPreviewSamplePlan,
-  ExportReport,
-  MotionTrackPoint,
-} from '@open-factory/editor-core';
+import type { ExportPreviewSamplePlan, ExportReport, MotionTrackPoint } from '@open-factory/editor-core';
 
 export interface FileDialogFilter {
   name: string;

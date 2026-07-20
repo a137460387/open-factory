@@ -151,10 +151,7 @@ const DEFAULT_SESSION_CONFIG: ColorCollabSessionConfig = {
   conflictResolution: 'ot-rebase',
 };
 
-const USER_COLORS = [
-  '#38bdf8', '#f59e0b', '#a78bfa', '#10b981',
-  '#f43f5e', '#22c55e', '#6366f1', '#14b8a6',
-];
+const USER_COLORS = ['#38bdf8', '#f59e0b', '#a78bfa', '#10b981', '#f43f5e', '#22c55e', '#6366f1', '#14b8a6'];
 
 // ==================== 工具函数 ====================
 
@@ -277,10 +274,7 @@ export function validateCollabRole(role: string): role is ColorCollabRole {
 // ==================== OT 冲突检测与解决 ====================
 
 /** 检测两个操作是否冲突 */
-export function detectConflict(
-  opA: ColorCollabOperation,
-  opB: ColorCollabOperation,
-): ColorCollabConflict | null {
+export function detectConflict(opA: ColorCollabOperation, opB: ColorCollabOperation): ColorCollabConflict | null {
   // 同一节点同一参数的并发修改
   if (opA.targetNodeId === opB.targetNodeId && opA.parameterPath === opB.parameterPath) {
     if (opA.baseVersion === opB.baseVersion && opA.userId !== opB.userId) {
@@ -310,10 +304,7 @@ export function detectConflict(
 }
 
 /** OT 变换：将操作 op 相对于已应用的操作 againstOp 进行变换 */
-export function transformOperation(
-  op: ColorCollabOperation,
-  againstOp: ColorCollabOperation,
-): OTTransformResult {
+export function transformOperation(op: ColorCollabOperation, againstOp: ColorCollabOperation): OTTransformResult {
   // 不同节点的操作互不影响
   if (op.targetNodeId !== againstOp.targetNodeId) {
     return { transformed: { ...op, baseVersion: op.baseVersion + 1 }, conflicts: [], applied: true };
@@ -392,10 +383,7 @@ export function addUserToSession(
 }
 
 /** 从会话移除用户 */
-export function removeUserFromSession(
-  state: ColorCollabSessionState,
-  userId: string,
-): ColorCollabSessionState {
+export function removeUserFromSession(state: ColorCollabSessionState, userId: string): ColorCollabSessionState {
   return {
     ...state,
     users: state.users.filter((u) => u.userId !== userId),
@@ -501,10 +489,7 @@ export function lockSession(
 }
 
 /** 解锁会话 */
-export function unlockSession(
-  state: ColorCollabSessionState,
-  userId: string,
-): ColorCollabSessionState {
+export function unlockSession(state: ColorCollabSessionState, userId: string): ColorCollabSessionState {
   if (state.lockedBy !== userId) return state;
   return { ...state, isLocked: false, lockedBy: null, updatedAt: Date.now() };
 }
@@ -557,32 +542,22 @@ export function replyToComment(
 
   return {
     ...state,
-    comments: state.comments.map((c) =>
-      c.id === commentId ? { ...c, replies: [...c.replies, reply] } : c,
-    ),
+    comments: state.comments.map((c) => (c.id === commentId ? { ...c, replies: [...c.replies, reply] } : c)),
     updatedAt: Date.now(),
   };
 }
 
 /** 解决评论 */
-export function resolveComment(
-  state: ColorCollabSessionState,
-  commentId: string,
-): ColorCollabSessionState {
+export function resolveComment(state: ColorCollabSessionState, commentId: string): ColorCollabSessionState {
   return {
     ...state,
-    comments: state.comments.map((c) =>
-      c.id === commentId ? { ...c, resolved: true } : c,
-    ),
+    comments: state.comments.map((c) => (c.id === commentId ? { ...c, resolved: true } : c)),
     updatedAt: Date.now(),
   };
 }
 
 /** 获取节点上的评论 */
-export function getCommentsForNode(
-  state: ColorCollabSessionState,
-  nodeId: string,
-): ColorCollabComment[] {
+export function getCommentsForNode(state: ColorCollabSessionState, nodeId: string): ColorCollabComment[] {
   return state.comments.filter((c) => c.nodeId === nodeId && !c.resolved);
 }
 
@@ -806,7 +781,11 @@ export class ColorCollaborationManager {
 
   private emit(event: ColorCollabEvent): void {
     for (const handler of this.eventHandlers) {
-      try { handler(event); } catch { /* 忽略回调异常 */ }
+      try {
+        handler(event);
+      } catch {
+        /* 忽略回调异常 */
+      }
     }
   }
 

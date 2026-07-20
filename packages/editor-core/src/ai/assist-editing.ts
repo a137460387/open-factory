@@ -16,14 +16,14 @@ import { identityTranslator } from '../ai-module-types';
  * 场景类型枚举
  */
 export type SceneType =
-  | 'intro'       // 开场
-  | 'action'      // 动作
-  | 'dialogue'    // 对话
-  | 'transition'  // 过渡
-  | 'climax'      // 高潮
-  | 'outro'       // 结尾
-  | 'montage'     // 蒙太奇
-  | 'b-roll';     // B-Roll 补充镜头
+  | 'intro' // 开场
+  | 'action' // 动作
+  | 'dialogue' // 对话
+  | 'transition' // 过渡
+  | 'climax' // 高潮
+  | 'outro' // 结尾
+  | 'montage' // 蒙太奇
+  | 'b-roll'; // B-Roll 补充镜头
 
 /**
  * 场景信息
@@ -159,11 +159,11 @@ export interface AssistEditingResult {
  * 辅助剪辑预设
  */
 export type AssistEditingPreset =
-  | 'quick-cut'      // 快速剪辑
-  | 'rhythm-match'   // 节奏匹配
+  | 'quick-cut' // 快速剪辑
+  | 'rhythm-match' // 节奏匹配
   | 'emotion-driven' // 情绪驱动
-  | 'content-aware'  // 内容感知
-  | 'custom';        // 自定义
+  | 'content-aware' // 内容感知
+  | 'custom'; // 自定义
 
 /**
  * 辅助剪辑进度事件
@@ -197,10 +197,7 @@ function clamp(value: number, min: number, max: number): number {
  * @returns 唯一 ID 字符串
  */
 function generateId(): string {
-  return (
-    Date.now().toString(36) +
-    Math.random().toString(36).substring(2, 10)
-  );
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
 }
 
 /**
@@ -511,10 +508,7 @@ export function applyAssistEditingPreset(preset: AssistEditingPreset): AssistEdi
  * @param context - 内容分析上下文
  * @returns 质量评分 (0-1)
  */
-export function scoreSuggestionQuality(
-  suggestion: AssistEditingSuggestion,
-  context: ContentAnalysisResult,
-): number {
+export function scoreSuggestionQuality(suggestion: AssistEditingSuggestion, context: ContentAnalysisResult): number {
   let score = 0;
 
   // 1. 基础置信度 (权重 0.3)
@@ -533,10 +527,7 @@ export function scoreSuggestionQuality(
 
   // 3. 情绪匹配度 (权重 0.2)
   const midTime = (suggestion.startTime + suggestion.endTime) / 2;
-  const emotionIdx = Math.min(
-    Math.floor(midTime),
-    context.emotionCurve.length - 1,
-  );
+  const emotionIdx = Math.min(Math.floor(midTime), context.emotionCurve.length - 1);
   if (emotionIdx >= 0 && emotionIdx < context.emotionCurve.length) {
     // 如果在情绪高点或低点剪切，加分
     const emotionVal = context.emotionCurve[emotionIdx];
@@ -548,10 +539,7 @@ export function scoreSuggestionQuality(
 
   // 4. 节奏对齐度 (权重 0.15)
   if (context.rhythmProfile.beatTimes.length > 0) {
-    const nearestBeatDist = findNearestBeatDistance(
-      suggestion.startTime,
-      context.rhythmProfile.beatTimes,
-    );
+    const nearestBeatDist = findNearestBeatDistance(suggestion.startTime, context.rhythmProfile.beatTimes);
     // 距离节拍越近分数越高，阈值 0.1 秒内为满分
     const rhythmScore = clamp(1 - nearestBeatDist / 0.5, 0, 1);
     score += rhythmScore * 0.15;
@@ -691,10 +679,7 @@ export function buildAssistEditingSystemPrompt(): string {
  * @param config - 辅助剪辑配置
  * @returns 用户提示字符串
  */
-export function buildAssistEditingUserPrompt(
-  analysis: ContentAnalysisResult,
-  config: AssistEditingConfig,
-): string {
+export function buildAssistEditingUserPrompt(analysis: ContentAnalysisResult, config: AssistEditingConfig): string {
   const parts: string[] = [];
 
   // 配置信息
@@ -708,14 +693,16 @@ export function buildAssistEditingUserPrompt(
   parts.push(`- 片段时长范围: ${config.minSegmentDuration}~${config.maxSegmentDuration} 秒`);
   parts.push(`- 偏好剪切类型: ${config.preferredCutTypes.join(', ')}`);
   parts.push(`- 过渡偏好: ${config.transitionPreference}`);
-  parts.push(`- 启用功能: ${[
-    config.enableAutoCut && '自动剪切',
-    config.enableRhythmSync && '节奏同步',
-    config.enableEmotionAware && '情绪感知',
-    config.enableContentAnalysis && '内容分析',
-  ]
-    .filter(Boolean)
-    .join(', ')}`);
+  parts.push(
+    `- 启用功能: ${[
+      config.enableAutoCut && '自动剪切',
+      config.enableRhythmSync && '节奏同步',
+      config.enableEmotionAware && '情绪感知',
+      config.enableContentAnalysis && '内容分析',
+    ]
+      .filter(Boolean)
+      .join(', ')}`,
+  );
 
   // 场景信息
   parts.push('\n## 场景列表');
@@ -807,8 +794,7 @@ export function parseAssistEditingResponse(json: unknown): AssistEditingResult {
     const cutType = typeof s.cutType === 'string' ? s.cutType : null;
     const confidence = typeof s.confidence === 'number' ? s.confidence : null;
     const reason = typeof s.reason === 'string' ? s.reason : '';
-    const suggestedTransition =
-      typeof s.suggestedTransition === 'string' ? s.suggestedTransition : 'none';
+    const suggestedTransition = typeof s.suggestedTransition === 'string' ? s.suggestedTransition : 'none';
     const priority = typeof s.priority === 'number' ? s.priority : 5;
 
     if (startTime === null || endTime === null || cutType === null || confidence === null) {
@@ -831,10 +817,7 @@ export function parseAssistEditingResponse(json: unknown): AssistEditingResult {
   }
 
   // 计算预估总时长
-  const totalEstimatedDuration = suggestions.reduce(
-    (sum, s) => sum + (s.endTime - s.startTime),
-    0,
-  );
+  const totalEstimatedDuration = suggestions.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
 
   return {
     ...emptyResult,
@@ -892,10 +875,7 @@ export async function parseAssistEditingResponseSafe(
  * @param threshold - 转换阈值 (0-1)，默认 0.35
  * @returns 场景转换点对应的帧索引数组
  */
-export function detectSceneTransitions(
-  frames: Uint8Array[],
-  threshold: number = 0.35,
-): number[] {
+export function detectSceneTransitions(frames: Uint8Array[], threshold: number = 0.35): number[] {
   if (frames.length < 2) return [];
 
   const clampedThreshold = clamp(threshold, 0, 1);
@@ -960,14 +940,11 @@ export function detectSceneTransitions(
  * @param sampleRate - 音频采样率（Hz）
  * @returns 起音点时间数组（秒）
  */
-export function computeAudioOnsets(
-  audioData: Float32Array,
-  sampleRate: number,
-): number[] {
+export function computeAudioOnsets(audioData: Float32Array, sampleRate: number): number[] {
   if (audioData.length === 0 || sampleRate <= 0) return [];
 
   const frameSize = Math.floor(sampleRate * 0.02); // 20ms 帧
-  const hopSize = Math.floor(frameSize / 2);        // 10ms 跳跃
+  const hopSize = Math.floor(frameSize / 2); // 10ms 跳跃
   const energyEnvelope: number[] = [];
 
   // 计算短时能量包络
@@ -1011,10 +988,7 @@ export function computeAudioOnsets(
  * @param minGap - 最小间隔（秒）
  * @returns 合并后的建议列表
  */
-export function mergeNearbyCuts(
-  suggestions: AssistEditingSuggestion[],
-  minGap: number,
-): AssistEditingSuggestion[] {
+export function mergeNearbyCuts(suggestions: AssistEditingSuggestion[], minGap: number): AssistEditingSuggestion[] {
   if (suggestions.length === 0) return [];
 
   const clampedGap = Math.max(0, minGap);
@@ -1115,17 +1089,15 @@ function computeMotionLevel(frames: Uint8Array[], startIdx: number, endIdx: numb
     }
   }
 
-  return count > 0 ? clamp(totalDiff / count * 10, 0, 1) : 0.5;
+  return count > 0 ? clamp((totalDiff / count) * 10, 0, 1) : 0.5;
 }
 
 /**
  * 生成场景描述文本
  */
 function generateSceneDescription(sceneType: SceneType, motionLevel: number, duration: number): string {
-  const motionDesc =
-    motionLevel > 0.7 ? '高动态' : motionLevel > 0.4 ? '中等动态' : '低动态';
-  const durationDesc =
-    duration < 2 ? '短' : duration < 10 ? '中' : '长';
+  const motionDesc = motionLevel > 0.7 ? '高动态' : motionLevel > 0.4 ? '中等动态' : '低动态';
+  const durationDesc = duration < 2 ? '短' : duration < 10 ? '中' : '长';
 
   const typeNames: Record<SceneType, string> = {
     intro: '开场',
@@ -1144,11 +1116,7 @@ function generateSceneDescription(sceneType: SceneType, motionLevel: number, dur
 /**
  * 计算情绪曲线（基于音频能量和过零率）
  */
-function computeEmotionCurve(
-  audioData: Float32Array,
-  sampleRate: number,
-  duration: number,
-): number[] {
+function computeEmotionCurve(audioData: Float32Array, sampleRate: number, duration: number): number[] {
   const samplesPerSecond = 1; // 每秒一个采样点
   const totalSamples = Math.max(1, Math.ceil(duration * samplesPerSecond));
   const curve: number[] = new Array(totalSamples);
@@ -1171,10 +1139,7 @@ function computeEmotionCurve(
     for (let j = start; j < end; j++) {
       energy += audioData[j] * audioData[j];
       if (j > start) {
-        if (
-          (audioData[j] >= 0 && audioData[j - 1] < 0) ||
-          (audioData[j] < 0 && audioData[j - 1] >= 0)
-        ) {
+        if ((audioData[j] >= 0 && audioData[j - 1] < 0) || (audioData[j] < 0 && audioData[j - 1] >= 0)) {
           crossings++;
         }
       }
@@ -1239,11 +1204,7 @@ function computeRhythmProfile(audioData: Float32Array, sampleRate: number): Rhyt
   const energyCurve: number[] = new Array(curveLen);
   for (let i = 0; i < curveLen; i++) {
     const envelopeIdx = Math.floor((i / duration) * smoothed.length);
-    energyCurve[i] = clamp(
-      smoothed[Math.min(envelopeIdx, smoothed.length - 1)] / (meanEnergy * 3 + 0.001),
-      0,
-      1,
-    );
+    energyCurve[i] = clamp(smoothed[Math.min(envelopeIdx, smoothed.length - 1)] / (meanEnergy * 3 + 0.001), 0, 1);
   }
 
   // 检测速度变化点
@@ -1298,10 +1259,7 @@ function detectTempoChanges(
 /**
  * 检测说话人片段（基于静音段分割）
  */
-function detectSpeakerSegments(
-  audioData: Float32Array,
-  sampleRate: number,
-): SpeakerSegment[] {
+function detectSpeakerSegments(audioData: Float32Array, sampleRate: number): SpeakerSegment[] {
   const frameSize = Math.floor(sampleRate * 0.025); // 25ms
   const hopSize = Math.floor(frameSize / 2);
   const silenceThreshold = 0.005;
@@ -1346,12 +1304,7 @@ function detectSpeakerSegments(
 
           if (duration >= minSpeechDuration) {
             // 使用能量特征简单区分不同说话人
-            const speakerId = estimateSpeakerId(
-              audioData,
-              sampleRate,
-              speechStart,
-              speechEnd,
-            );
+            const speakerId = estimateSpeakerId(audioData, sampleRate, speechStart, speechEnd);
 
             segments.push({
               startTime: speechStart,
@@ -1391,12 +1344,7 @@ function detectSpeakerSegments(
 /**
  * 简单估算说话人 ID（基于音高特征区分）
  */
-function estimateSpeakerId(
-  audioData: Float32Array,
-  sampleRate: number,
-  startTime: number,
-  _endTime: number,
-): string {
+function estimateSpeakerId(audioData: Float32Array, sampleRate: number, startTime: number, _endTime: number): string {
   const startSample = Math.floor(startTime * sampleRate);
   const analysisLength = Math.min(Math.floor(sampleRate * 0.5), audioData.length - startSample);
 
@@ -1417,15 +1365,8 @@ function estimateSpeakerId(
 /**
  * 估算语音段情绪
  */
-function estimateSpeechEmotion(
-  frameEnergies: number[],
-  startIdx: number,
-  endIdx: number,
-): string {
-  const segmentEnergies = frameEnergies.slice(
-    Math.max(0, startIdx),
-    Math.min(frameEnergies.length, endIdx),
-  );
+function estimateSpeechEmotion(frameEnergies: number[], startIdx: number, endIdx: number): string {
+  const segmentEnergies = frameEnergies.slice(Math.max(0, startIdx), Math.min(frameEnergies.length, endIdx));
 
   if (segmentEnergies.length === 0) return 'neutral';
 
@@ -1610,16 +1551,16 @@ function generateRhythmSuggestions(
 /**
  * 生成基于情绪的剪辑建议
  */
-function generateEmotionSuggestions(
-  emotionCurve: number[],
-  config: AssistEditingConfig,
-): AssistEditingSuggestion[] {
+function generateEmotionSuggestions(emotionCurve: number[], config: AssistEditingConfig): AssistEditingSuggestion[] {
   const suggestions: AssistEditingSuggestion[] = [];
   if (emotionCurve.length < 3) return suggestions;
 
   // 检测情绪峰值和谷值
   const peaks = findPeaks(emotionCurve, 0.6);
-  const valleys = findPeaks(emotionCurve.map((v) => 1 - v), 0.6);
+  const valleys = findPeaks(
+    emotionCurve.map((v) => 1 - v),
+    0.6,
+  );
 
   // 峰值处建议切换（情绪高涨，适合切入新画面）
   for (const idx of peaks) {
@@ -1707,10 +1648,7 @@ function generateSpeakerSuggestions(
 /**
  * 生成基于关键帧的剪辑建议
  */
-function generateKeyFrameSuggestions(
-  keyFrames: number[],
-  config: AssistEditingConfig,
-): AssistEditingSuggestion[] {
+function generateKeyFrameSuggestions(keyFrames: number[], config: AssistEditingConfig): AssistEditingSuggestion[] {
   const suggestions: AssistEditingSuggestion[] = [];
 
   for (const kfTime of keyFrames) {
@@ -1754,7 +1692,10 @@ function summarizeCurve(curve: number[]): {
 
   // 峰值和谷值
   const peaks = findPeaks(curve, 0.6);
-  const valleys = findPeaks(curve.map((v) => 1 - v), 0.6);
+  const valleys = findPeaks(
+    curve.map((v) => 1 - v),
+    0.6,
+  );
 
   return { trend, peaks, valleys };
 }

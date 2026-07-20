@@ -6,15 +6,7 @@
  * 本地优先：所有处理在本地完成
  */
 
-import type {
-  Clip,
-  Track,
-  Timeline,
-  VideoClip,
-  Transition,
-  TransitionType,
-  MediaAsset,
-} from '../model-types';
+import type { Clip, Track, Timeline, VideoClip, Transition, TransitionType, MediaAsset } from '../model-types';
 import type { SceneAnalysis, AnalysisReport } from './scene-analyzer';
 import type { EditTemplate, RhythmParams, ClipFilterRule } from './template-manager';
 import type { PreferenceWeights } from './style-memory';
@@ -159,10 +151,7 @@ export function createDefaultAutoEditorConfig(): AutoEditorConfig {
 /**
  * 根据模板筛选规则过滤场景
  */
-export function filterScenes(
-  scenes: SceneAnalysis[],
-  filter: ClipFilterRule,
-): SceneAnalysis[] {
+export function filterScenes(scenes: SceneAnalysis[], filter: ClipFilterRule): SceneAnalysis[] {
   return scenes.filter((scene) => {
     // 排除黑场和未知
     if (filter.excludeSceneTypes.includes(scene.sceneType)) return false;
@@ -228,7 +217,7 @@ export function calculateTargetDuration(
   // 应用风格记忆的时长偏好
   if (weights && weights.sampleCount >= 3) {
     const bias = weights.clipDurationBias * 0.3;
-    target *= (1 + bias);
+    target *= 1 + bias;
   }
 
   return Math.max(range.min, Math.min(range.max, target));
@@ -388,8 +377,7 @@ export function generateEditPlan(
     for (let i = 0; i < selected.length - 1; i++) {
       const fromClip = selected[i];
       const toClip = selected[i + 1];
-      const transType = template.transition.sceneTypeOverrides[toClip.sceneType]
-        ?? template.transition.defaultType;
+      const transType = template.transition.sceneTypeOverrides[toClip.sceneType] ?? template.transition.defaultType;
       transitions.push({
         type: transType,
         duration: template.transition.defaultDuration,
@@ -419,11 +407,7 @@ export function generateEditPlan(
  * 从编辑计划生成可用于时间线的片段和转场
  * 返回值可直接用于 AddClipCommand 等命令对象
  */
-export function generateTimelineElements(
-  plan: EditPlan,
-  trackId: string,
-  config: AutoEditorConfig,
-): AutoEditResult {
+export function generateTimelineElements(plan: EditPlan, trackId: string, config: AutoEditorConfig): AutoEditResult {
   const generatedClips: Clip[] = [];
   const generatedTransitions: Transition[] = [];
 

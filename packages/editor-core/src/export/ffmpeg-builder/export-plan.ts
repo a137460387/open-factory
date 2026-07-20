@@ -70,7 +70,13 @@ import {
   buildAudioVisualizationOverlayPosition,
   collectAudioSpectrumEffects,
 } from './audio-visualization';
-import { buildAudioFilters, buildMasterAudioFilters, buildLoudnormAnalysisFilter, buildLoudnormRenderFilter, getLoudnessNormalizationPreset } from './audio-filters';
+import {
+  buildAudioFilters,
+  buildMasterAudioFilters,
+  buildLoudnormAnalysisFilter,
+  buildLoudnormRenderFilter,
+  getLoudnessNormalizationPreset,
+} from './audio-filters';
 import {
   buildBitrateArgs,
   buildContainerArgs,
@@ -94,10 +100,26 @@ export function buildFfmpegExportPlan(
 
   // Validate export format
   const SUPPORTED_FORMATS = new Set([
-    'mp4', 'mov', 'webm', 'mkv', 'avi',
-    'm4a', 'mp3', 'wav', 'aac', 'flac', 'ogg',
-    'gif', 'webp', 'apng', 'png-sequence',
-    'jpg', 'jpeg', 'png', 'bmp', 'tiff',
+    'mp4',
+    'mov',
+    'webm',
+    'mkv',
+    'avi',
+    'm4a',
+    'mp3',
+    'wav',
+    'aac',
+    'flac',
+    'ogg',
+    'gif',
+    'webp',
+    'apng',
+    'png-sequence',
+    'jpg',
+    'jpeg',
+    'png',
+    'bmp',
+    'tiff',
   ]);
   if (!SUPPORTED_FORMATS.has(settings.format)) {
     throw new Error(`Unsupported export format: "${settings.format}". Supported: ${[...SUPPORTED_FORMATS].join(', ')}`);

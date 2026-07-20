@@ -78,8 +78,8 @@ export function useSpeakerMulticam() {
    * 设置说话人-机位映射
    */
   const setMapping = useCallback((speakerId: number, angleIndex: number, angleName?: string) => {
-    setState(prev => {
-      const existingIndex = prev.mappings.findIndex(m => m.speakerId === speakerId);
+    setState((prev) => {
+      const existingIndex = prev.mappings.findIndex((m) => m.speakerId === speakerId);
       const newMappings = [...prev.mappings];
 
       if (existingIndex >= 0) {
@@ -105,9 +105,9 @@ export function useSpeakerMulticam() {
    * 移除说话人-机位映射
    */
   const removeMapping = useCallback((speakerId: number) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      mappings: prev.mappings.filter(m => m.speakerId !== speakerId),
+      mappings: prev.mappings.filter((m) => m.speakerId !== speakerId),
     }));
   }, []);
 
@@ -115,7 +115,7 @@ export function useSpeakerMulticam() {
    * 更新自动切换配置
    */
   const updateConfig = useCallback((config: Partial<AutoSwitchConfig>) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       config: { ...prev.config, ...config },
     }));
@@ -124,119 +124,119 @@ export function useSpeakerMulticam() {
   /**
    * 基于说话人分离结果生成切换建议
    */
-  const generateSuggestions = useCallback((
-    diarizationResult: SpeakerDiarizationResult,
-    mappings?: SpeakerAngleMapping[],
-  ) => {
-    const currentMappings = mappings ?? state.mappings;
+  const generateSuggestions = useCallback(
+    (diarizationResult: SpeakerDiarizationResult, mappings?: SpeakerAngleMapping[]) => {
+      const currentMappings = mappings ?? state.mappings;
 
-    if (currentMappings.length === 0) {
-      setState(prev => ({
-        ...prev,
-        suggestions: [],
-        error: '未配置说话人-机位映射',
-      }));
-      return [];
-    }
-
-    setState(prev => ({ ...prev, isProcessing: true, error: null }));
-
-    try {
-      // 构建映射表
-      const speakerAngleMap = new Map<number, number>();
-      for (const mapping of currentMappings) {
-        speakerAngleMap.set(mapping.speakerId, mapping.angleIndex);
+      if (currentMappings.length === 0) {
+        setState((prev) => ({
+          ...prev,
+          suggestions: [],
+          error: '未配置说话人-机位映射',
+        }));
+        return [];
       }
 
-      // 获取切换建议
-      const switches = getSpeakerBasedAngleSwitches(
-        diarizationResult.segments,
-        speakerAngleMap,
-        state.config.minSwitchIntervalMs,
-      );
+      setState((prev) => ({ ...prev, isProcessing: true, error: null }));
 
-      // 转换为完整的切换建议
-      const suggestions: SwitchSuggestion[] = switches.map(sw => {
-        const mapping = currentMappings.find(m => m.speakerId === sw.speakerId);
-        const segment = diarizationResult.segments.find(
-          s => s.speakerId === sw.speakerId && s.startMs <= sw.timeMs && s.endMs > sw.timeMs
+      try {
+        // 构建映射表
+        const speakerAngleMap = new Map<number, number>();
+        for (const mapping of currentMappings) {
+          speakerAngleMap.set(mapping.speakerId, mapping.angleIndex);
+        }
+
+        // 获取切换建议
+        const switches = getSpeakerBasedAngleSwitches(
+          diarizationResult.segments,
+          speakerAngleMap,
+          state.config.minSwitchIntervalMs,
         );
 
-        return {
-          timeMs: sw.timeMs,
-          targetAngle: sw.targetAngle,
-          speakerId: sw.speakerId,
-          speakerLabel: mapping?.speakerLabel ?? `说话人 ${String.fromCharCode(65 + sw.speakerId)}`,
-          confidence: segment?.confidence ?? 0.8,
-        };
-      });
+        // 转换为完整的切换建议
+        const suggestions: SwitchSuggestion[] = switches.map((sw) => {
+          const mapping = currentMappings.find((m) => m.speakerId === sw.speakerId);
+          const segment = diarizationResult.segments.find(
+            (s) => s.speakerId === sw.speakerId && s.startMs <= sw.timeMs && s.endMs > sw.timeMs,
+          );
 
-      setState(prev => ({
-        ...prev,
-        suggestions,
-        isProcessing: false,
-      }));
+          return {
+            timeMs: sw.timeMs,
+            targetAngle: sw.targetAngle,
+            speakerId: sw.speakerId,
+            speakerLabel: mapping?.speakerLabel ?? `说话人 ${String.fromCharCode(65 + sw.speakerId)}`,
+            confidence: segment?.confidence ?? 0.8,
+          };
+        });
 
-      return suggestions;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '生成切换建议失败';
-      setState(prev => ({
-        ...prev,
-        isProcessing: false,
-        error: errorMessage,
-      }));
-      return [];
-    }
-  }, [state.mappings, state.config.minSwitchIntervalMs]);
+        setState((prev) => ({
+          ...prev,
+          suggestions,
+          isProcessing: false,
+        }));
+
+        return suggestions;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '生成切换建议失败';
+        setState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          error: errorMessage,
+        }));
+        return [];
+      }
+    },
+    [state.mappings, state.config.minSwitchIntervalMs],
+  );
 
   /**
    * 应用切换建议到多机位序列
    */
-  const applySuggestions = useCallback((
-    suggestions: SwitchSuggestion[],
-    onApply: (switches: Array<{ timeMs: number; targetAngle: number }>) => void,
-  ) => {
-    if (suggestions.length === 0) return;
+  const applySuggestions = useCallback(
+    (suggestions: SwitchSuggestion[], onApply: (switches: Array<{ timeMs: number; targetAngle: number }>) => void) => {
+      if (suggestions.length === 0) return;
 
-    const switches = suggestions.map(s => ({
-      timeMs: s.timeMs,
-      targetAngle: s.targetAngle,
-    }));
+      const switches = suggestions.map((s) => ({
+        timeMs: s.timeMs,
+        targetAngle: s.targetAngle,
+      }));
 
-    onApply(switches);
-  }, []);
+      onApply(switches);
+    },
+    [],
+  );
 
   /**
    * 清除切换建议
    */
   const clearSuggestions = useCallback(() => {
-    setState(prev => ({ ...prev, suggestions: [] }));
+    setState((prev) => ({ ...prev, suggestions: [] }));
   }, []);
 
   /**
    * 自动配置映射（基于检测到的说话人）
    */
-  const autoConfigureMappings = useCallback((
-    diarizationResult: SpeakerDiarizationResult,
-    availableAngles: Array<{ index: number; name: string }>,
-  ) => {
-    const mappings: SpeakerAngleMapping[] = [];
+  const autoConfigureMappings = useCallback(
+    (diarizationResult: SpeakerDiarizationResult, availableAngles: Array<{ index: number; name: string }>) => {
+      const mappings: SpeakerAngleMapping[] = [];
 
-    // 为每个检测到的说话人分配机位
-    diarizationResult.speakers.forEach((speaker, index) => {
-      if (index < availableAngles.length) {
-        mappings.push({
-          speakerId: speaker.speakerId,
-          speakerLabel: speaker.speakerLabel,
-          angleIndex: availableAngles[index].index,
-          angleName: availableAngles[index].name,
-        });
-      }
-    });
+      // 为每个检测到的说话人分配机位
+      diarizationResult.speakers.forEach((speaker, index) => {
+        if (index < availableAngles.length) {
+          mappings.push({
+            speakerId: speaker.speakerId,
+            speakerLabel: speaker.speakerLabel,
+            angleIndex: availableAngles[index].index,
+            angleName: availableAngles[index].name,
+          });
+        }
+      });
 
-    setState(prev => ({ ...prev, mappings }));
-    return mappings;
-  }, []);
+      setState((prev) => ({ ...prev, mappings }));
+      return mappings;
+    },
+    [],
+  );
 
   /**
    * 重置状态

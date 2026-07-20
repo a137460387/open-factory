@@ -438,9 +438,8 @@ export class AIWorkerPool {
  * @returns AIWorkerPool 实例
  */
 export function createDefaultWorkerPool(): AIWorkerPool {
-  const hardwareConcurrency = typeof navigator !== 'undefined' && navigator.hardwareConcurrency
-    ? navigator.hardwareConcurrency
-    : 4;
+  const hardwareConcurrency =
+    typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4;
   const poolSize = Math.max(1, Math.min(8, Math.floor(hardwareConcurrency / 2)));
   return new AIWorkerPool(poolSize);
 }

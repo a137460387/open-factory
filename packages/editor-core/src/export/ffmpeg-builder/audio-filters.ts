@@ -287,9 +287,7 @@ export function buildAudioDenoiseFilters(
  * 用于混音器面板的"一键降噪"功能
  * 使用参数数组风格，不拼接 shell 字符串
  */
-export function buildAfftdnNoiseReductionFilter(
-  params: NoiseReductionParams,
-): string {
+export function buildAfftdnNoiseReductionFilter(params: NoiseReductionParams): string {
   const normalized = normalizeNoiseReductionParams(params);
   const filterString = buildNoiseReductionFilterString(normalized);
   return filterString ? `,${filterString}` : '';
@@ -299,12 +297,8 @@ export function buildAfftdnNoiseReductionFilter(
  * 从混音器通道效果链中提取降噪滤镜
  * 将 noise-reduction 效果类型转换为 afftdn FFmpeg 滤镜
  */
-export function buildMixerChannelNoiseReductionFilter(
-  effects: AudioEffectSlot[],
-): string {
-  const noiseReductionEffects = effects.filter(
-    (e) => e.effectType === 'noise-reduction' && e.enabled,
-  );
+export function buildMixerChannelNoiseReductionFilter(effects: AudioEffectSlot[]): string {
+  const noiseReductionEffects = effects.filter((e) => e.effectType === 'noise-reduction' && e.enabled);
   if (noiseReductionEffects.length === 0) {
     return '';
   }

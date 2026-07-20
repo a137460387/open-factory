@@ -13,13 +13,7 @@ import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 import { showToast } from '../../lib/toast';
@@ -107,12 +101,15 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
 
     try {
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const systemPrompt = buildAssistEditingSystemPrompt();
-      const projectDuration = project.timeline?.tracks
-        ?.flatMap((t) => t.clips)
-        .reduce((max, c) => Math.max(max, c.start + c.duration), 0) ?? 0;
+      const projectDuration =
+        project.timeline?.tracks?.flatMap((t) => t.clips).reduce((max, c) => Math.max(max, c.start + c.duration), 0) ??
+        0;
       const userPrompt = `请为当前项目生成剪辑建议。项目时长：${formatTime(projectDuration)}。`;
 
       const response = await callAiApi(
@@ -131,7 +128,10 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
         apiKey,
       );
 
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       const parsed = await parseAssistEditingResponseSafe(response.content);
       if (!parsed || !parsed.data) {
@@ -172,12 +172,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
           <Wand2 className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">AI 辅助剪辑</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          data-testid="assist-editing-close"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose} data-testid="assist-editing-close">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -197,7 +192,9 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
             </SelectTrigger>
             <SelectContent>
               {textProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -318,7 +315,9 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                   </SelectTrigger>
                   <SelectContent>
                     {TRANSITION_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -367,12 +366,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div className="h-full bg-primary animate-pulse" style={{ width: '60%' }} />
             </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={cancelGeneration}
-              data-testid="assist-editing-cancel"
-            >
+            <Button variant="outline" className="w-full" onClick={cancelGeneration} data-testid="assist-editing-cancel">
               取消
             </Button>
           </div>
@@ -388,9 +382,11 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                 <span
                   className={cn(
                     'rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                    result.qualityScore >= 80 ? 'bg-green-100 text-green-700' :
-                    result.qualityScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700',
+                    result.qualityScore >= 80
+                      ? 'bg-green-100 text-green-700'
+                      : result.qualityScore >= 60
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700',
                   )}
                   data-testid="assist-editing-quality-score"
                 >
@@ -419,13 +415,18 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                       <span
                         className={cn(
                           'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                          suggestion.cutType === 'cut' ? 'bg-blue-100 text-blue-700' :
-                          suggestion.cutType === 'trim' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-700',
+                          suggestion.cutType === 'cut'
+                            ? 'bg-blue-100 text-blue-700'
+                            : suggestion.cutType === 'trim'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-gray-100 text-gray-700',
                         )}
                       >
-                        {suggestion.cutType === 'cut' ? '剪切' :
-                         suggestion.cutType === 'trim' ? '裁剪' : suggestion.cutType}
+                        {suggestion.cutType === 'cut'
+                          ? '剪切'
+                          : suggestion.cutType === 'trim'
+                            ? '裁剪'
+                            : suggestion.cutType}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -434,9 +435,11 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                         <div
                           className={cn(
                             'h-full rounded-full',
-                            suggestion.confidence >= 0.8 ? 'bg-green-500' :
-                            suggestion.confidence >= 0.5 ? 'bg-yellow-500' :
-                            'bg-red-500',
+                            suggestion.confidence >= 0.8
+                              ? 'bg-green-500'
+                              : suggestion.confidence >= 0.5
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500',
                           )}
                           style={{ width: `${suggestion.confidence * 100}%` }}
                         />
@@ -446,9 +449,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                       </span>
                     </div>
                     {suggestion.reason && (
-                      <div className="text-[11px] text-muted-foreground line-clamp-2">
-                        {suggestion.reason}
-                      </div>
+                      <div className="text-[11px] text-muted-foreground line-clamp-2">{suggestion.reason}</div>
                     )}
                   </div>
                 ))}
@@ -460,16 +461,15 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => { setResult(null); setPhase('idle'); }}
+                onClick={() => {
+                  setResult(null);
+                  setPhase('idle');
+                }}
                 data-testid="assist-editing-regenerate"
               >
                 重新生成
               </Button>
-              <Button
-                className="flex-1"
-                onClick={handleApply}
-                data-testid="assist-editing-apply"
-              >
+              <Button className="flex-1" onClick={handleApply} data-testid="assist-editing-apply">
                 <Play className="mr-1.5 h-4 w-4" />
                 应用建议
               </Button>

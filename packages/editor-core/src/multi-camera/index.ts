@@ -60,9 +60,4 @@ export {
   resetAllChannels,
 } from './audio-grouping';
 
-export type {
-  AudioFollowMode,
-  MulticamAudioChannel,
-  MulticamAudioGroup,
-  GroupMixParams,
-} from './audio-grouping';
+export type { AudioFollowMode, MulticamAudioChannel, MulticamAudioGroup, GroupMixParams } from './audio-grouping';

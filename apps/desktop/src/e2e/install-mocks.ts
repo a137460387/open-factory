@@ -5734,15 +5734,13 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-flash-video', type: 'video', name: 'Video 1', clips: [clip] })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupFlashWarningReduceFixture: () => {
@@ -5780,15 +5778,13 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-flash-reduce', type: 'video', name: 'Video 1', clips: [clip] })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupContinuityWarningFixture: () => {
@@ -5868,15 +5864,13 @@ window.__E2E_ACTIONS__ = {
         },
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [assetA, assetB],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetA, assetB],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupMusicStructureFixture: () => {
@@ -5927,15 +5921,13 @@ window.__E2E_ACTIONS__ = {
         }),
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupSubtitleReadingSpeedFixture: () => {
@@ -5995,15 +5987,13 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-sub-rs', type: 'subtitle', name: 'Subtitle 1', clips: [subClip1, subClip2] })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   applyFlashReduction: (clipIdInput?: unknown) => {
@@ -6019,28 +6009,24 @@ window.__E2E_ACTIONS__ = {
       }),
     }));
     const timeline = { ...p.timeline, tracks: newTracks };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   insertContinuityTransition: (_unused?: unknown) => {
     const state = useEditorStore.getState();
     const p = state.project;
     if (!p) return;
     const timeline = { ...p.timeline, continuityWarnings: [] as Array<never> };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   snapClipToStructure: (clipIdInput?: unknown, trackIdInput?: unknown) => {
     const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
@@ -6069,14 +6055,12 @@ window.__E2E_ACTIONS__ = {
       clips: t.clips.map((c) => (c.id === clipId ? { ...c, duration: newDuration } : c)),
     }));
     const timeline = { ...p.timeline, tracks: newTracks };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   autoSplitSubtitle: (clipIdInput?: unknown, trackIdInput?: unknown) => {
     const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
@@ -6098,14 +6082,12 @@ window.__E2E_ACTIONS__ = {
       };
     });
     const timeline = { ...p.timeline, tracks: newTracks };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   extendSubtitleDuration: (clipIdInput?: unknown, trackIdInput?: unknown, nextStartInput?: unknown) => {
     const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
@@ -6125,14 +6107,12 @@ window.__E2E_ACTIONS__ = {
       clips: t.clips.map((c) => (c.id === clipId ? { ...c, duration: safeDuration, readingSpeedWarning: null } : c)),
     }));
     const timeline = { ...p.timeline, tracks: newTracks };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
   setupMotionTypeFixture: () => {
@@ -6228,15 +6208,13 @@ window.__E2E_ACTIONS__ = {
         createTrack({ id: 'track-mt-video', type: 'video', name: 'Video 1', clips: [clipPan, clipTilt, clipStatic] }),
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [assetPan, assetTilt, assetStatic],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetPan, assetTilt, assetStatic],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   filterByMotionType: (motionTypeInput?: unknown) => {
@@ -6327,15 +6305,13 @@ window.__E2E_ACTIONS__ = {
         },
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [assetA, assetB],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetA, assetB],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   applyColorCompensation: () => {
@@ -6345,14 +6321,12 @@ window.__E2E_ACTIONS__ = {
       (w) => !(w.clipAId === 'clip-cc-a' && w.clipBId === 'clip-cc-b'),
     );
     const timeline = { ...p.timeline, colorConsistencyWarnings: warnings };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   injectMalformedColorWarnings: () => {
     const p = useEditorStore.getState().project;
@@ -6367,14 +6341,12 @@ window.__E2E_ACTIONS__ = {
       ...p.timeline,
       colorConsistencyWarnings: malformedWarnings as unknown as typeof p.timeline.colorConsistencyWarnings,
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   setupSfxMatchFixture: () => {
     const project = createProject('SFX Match E2E');
@@ -6435,15 +6407,13 @@ window.__E2E_ACTIONS__ = {
         { time: 12.0, category: 'door_slam', confidence: 0.72, matchedAssetId: null, status: 'pending' as const },
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   insertSfx: (sfxIndexInput?: unknown) => {
@@ -6455,14 +6425,12 @@ window.__E2E_ACTIONS__ = {
       suggestions[idx] = { ...suggestions[idx], status: 'accepted' };
     }
     const timeline = { ...p.timeline, sfxSuggestions: suggestions };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...p,
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...p,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
   },
   setupPacingAnalysisFixture: () => {
     const project = createProject('Pacing Analysis E2E');
@@ -6505,16 +6473,14 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-pacing', type: 'video', name: 'Video 1', clips })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        pacingAnalysis,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      pacingAnalysis,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupCharacterTimelineFixture: () => {
@@ -6579,16 +6545,14 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-char-video', type: 'video', name: 'Video 1', clips: [clip1, clip2] })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        characterTimeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      characterTimeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupCharacterTimelineMergeFixture: () => {
@@ -6652,16 +6616,14 @@ window.__E2E_ACTIONS__ = {
       markers: [],
       tracks: [createTrack({ id: 'track-char-merge', type: 'video', name: 'Video 1', clips: [clip1, clip2] })],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        characterTimeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      characterTimeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupPreflightChecklistFixture: () => {
@@ -6723,15 +6685,13 @@ window.__E2E_ACTIONS__ = {
         },
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupPreflightAcknowledgeFixture: () => {
@@ -6823,16 +6783,14 @@ window.__E2E_ACTIONS__ = {
       totalWarnings: 1,
       acknowledgedIssueIds: [],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        preflightReport,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      preflightReport,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupEmotionToneFixture: () => {
@@ -6892,15 +6850,13 @@ window.__E2E_ACTIONS__ = {
         createTrack({ id: 'track-emo', type: 'video', name: 'Video 1', clips: [clipWithEmotion, clipWithoutEmotion] }),
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupEmotionToneMultiFixture: () => {
@@ -7016,15 +6972,13 @@ window.__E2E_ACTIONS__ = {
         }),
       ],
     };
-    useEditorStore
-      .getState()
-      .setProject({
-        ...project,
-        media: [asset1, asset2, asset3],
-        timeline,
-        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-        activeSequenceId: PRIMARY_SEQUENCE_ID,
-      });
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset1, asset2, asset3],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
     commandManager.clear();
   },
   setupDubbingAdaptationCompressFixture: () => {
@@ -7267,7 +7221,8 @@ window.__E2E_ACTIONS__ = {
       container = document.createElement('div');
       container.id = 'e2e-sr-preview';
       container.setAttribute('data-testid', 'sr-preview-container');
-      container.style.cssText = 'position:fixed;top:0;left:0;width:640px;height:480px;z-index:99999;background:#1e1e1e;';
+      container.style.cssText =
+        'position:fixed;top:0;left:0;width:640px;height:480px;z-index:99999;background:#1e1e1e;';
       document.body.appendChild(container);
     }
 
@@ -7550,7 +7505,13 @@ window.__E2E_ACTIONS__ = {
       ...project,
       media: [asset],
       timeline: { tracks: [], transitions: [], markers: [] },
-      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: { tracks: [], transitions: [], markers: [] } }],
+      sequences: [
+        {
+          id: PRIMARY_SEQUENCE_ID,
+          name: DEFAULT_PRIMARY_SEQUENCE_NAME,
+          timeline: { tracks: [], transitions: [], markers: [] },
+        },
+      ],
       activeSequenceId: PRIMARY_SEQUENCE_ID,
     });
     useEditorUIStore.getState().setAutomationOpen(true);

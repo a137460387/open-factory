@@ -322,9 +322,7 @@ export function normalizeAnomalyIntervals(value: unknown): AnomalyInterval[] {
     const typ = validTypes.has(r.type as string) ? (r.type as AnomalyType) : undefined;
     const startTime = typeof r.startTime === 'number' ? r.startTime : undefined;
     const endTime = typeof r.endTime === 'number' ? r.endTime : undefined;
-    const severity = validSeverities.has(r.severity as string)
-      ? (r.severity as AnomalySeverity)
-      : undefined;
+    const severity = validSeverities.has(r.severity as string) ? (r.severity as AnomalySeverity) : undefined;
     if (
       typ !== undefined &&
       startTime !== undefined &&

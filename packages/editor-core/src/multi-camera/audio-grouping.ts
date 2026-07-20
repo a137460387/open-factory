@@ -99,10 +99,7 @@ export function createMulticamAudioGroup(
 /**
  * 更新音频组的激活机位（用于 follow-video 模式）
  */
-export function updateGroupActiveAngle(
-  group: MulticamAudioGroup,
-  activeAngleIndex: number,
-): MulticamAudioGroup {
+export function updateGroupActiveAngle(group: MulticamAudioGroup, activeAngleIndex: number): MulticamAudioGroup {
   if (activeAngleIndex < 0 || activeAngleIndex >= group.channels.length) {
     return group;
   }
@@ -112,21 +109,14 @@ export function updateGroupActiveAngle(
 /**
  * 设置音频跟随模式
  */
-export function setGroupFollowMode(
-  group: MulticamAudioGroup,
-  mode: AudioFollowMode,
-): MulticamAudioGroup {
+export function setGroupFollowMode(group: MulticamAudioGroup, mode: AudioFollowMode): MulticamAudioGroup {
   return { ...group, followMode: mode };
 }
 
 /**
  * 更新组内通道音量
  */
-export function updateChannelVolume(
-  group: MulticamAudioGroup,
-  channelId: string,
-  volume: number,
-): MulticamAudioGroup {
+export function updateChannelVolume(group: MulticamAudioGroup, channelId: string, volume: number): MulticamAudioGroup {
   return {
     ...group,
     channels: group.channels.map((ch) =>
@@ -138,56 +128,37 @@ export function updateChannelVolume(
 /**
  * 切换通道静音状态
  */
-export function toggleChannelMute(
-  group: MulticamAudioGroup,
-  channelId: string,
-): MulticamAudioGroup {
+export function toggleChannelMute(group: MulticamAudioGroup, channelId: string): MulticamAudioGroup {
   return {
     ...group,
-    channels: group.channels.map((ch) =>
-      ch.id === channelId ? { ...ch, muted: !ch.muted } : ch,
-    ),
+    channels: group.channels.map((ch) => (ch.id === channelId ? { ...ch, muted: !ch.muted } : ch)),
   };
 }
 
 /**
  * 切换通道独奏状态
  */
-export function toggleChannelSolo(
-  group: MulticamAudioGroup,
-  channelId: string,
-): MulticamAudioGroup {
+export function toggleChannelSolo(group: MulticamAudioGroup, channelId: string): MulticamAudioGroup {
   return {
     ...group,
-    channels: group.channels.map((ch) =>
-      ch.id === channelId ? { ...ch, solo: !ch.solo } : ch,
-    ),
+    channels: group.channels.map((ch) => (ch.id === channelId ? { ...ch, solo: !ch.solo } : ch)),
   };
 }
 
 /**
  * 更新通道声像
  */
-export function updateChannelPan(
-  group: MulticamAudioGroup,
-  channelId: string,
-  pan: number,
-): MulticamAudioGroup {
+export function updateChannelPan(group: MulticamAudioGroup, channelId: string, pan: number): MulticamAudioGroup {
   return {
     ...group,
-    channels: group.channels.map((ch) =>
-      ch.id === channelId ? { ...ch, pan: Math.max(-1, Math.min(1, pan)) } : ch,
-    ),
+    channels: group.channels.map((ch) => (ch.id === channelId ? { ...ch, pan: Math.max(-1, Math.min(1, pan)) } : ch)),
   };
 }
 
 /**
  * 设置组主音量
  */
-export function setGroupMasterVolume(
-  group: MulticamAudioGroup,
-  volume: number,
-): MulticamAudioGroup {
+export function setGroupMasterVolume(group: MulticamAudioGroup, volume: number): MulticamAudioGroup {
   return { ...group, masterVolume: Math.max(0, Math.min(1, volume)) };
 }
 

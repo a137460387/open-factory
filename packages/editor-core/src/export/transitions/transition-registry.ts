@@ -19,7 +19,8 @@ export interface TransitionDefinition {
   /** FFmpeg xfade transition 名称（标准转场使用） */
   xfadeName?: string;
   /** 自定义构建器标识（高级转场使用） */
-  customBuilder?: 'light-leak' | 'glitch' | 'flip-h' | 'flip-v' | 'cube-rotate' | 'portal' | 'rotate' | 'motion-blur' | 'shape';
+  customBuilder?:
+    'light-leak' | 'glitch' | 'flip-h' | 'flip-v' | 'cube-rotate' | 'portal' | 'rotate' | 'motion-blur' | 'shape';
   /** 默认持续时间（秒） */
   defaultDuration: number;
   /** 简短描述 */
@@ -296,8 +297,6 @@ export function searchTransitions(query: string): TransitionDefinition[] {
   if (!q) return TRANSITION_REGISTRY;
   return TRANSITION_REGISTRY.filter(
     (t) =>
-      t.label.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q) ||
-      t.type.toLowerCase().includes(q),
+      t.label.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.type.toLowerCase().includes(q),
   );
 }

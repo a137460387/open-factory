@@ -175,9 +175,7 @@ export function PluginMarketPanel({
       )}
 
       {/* Results count */}
-      <p className="text-xs text-muted-foreground">
-        {loading ? '加载中…' : `共 ${result.total} 个插件`}
-      </p>
+      <p className="text-xs text-muted-foreground">{loading ? '加载中…' : `共 ${result.total} 个插件`}</p>
 
       {/* Plugin grid with virtual scrolling */}
       {result.entries.length === 0 && !loading ? (
@@ -186,10 +184,7 @@ export function PluginMarketPanel({
         </div>
       ) : (
         <div ref={parentRef} className="flex-1 overflow-auto" data-testid="plugin-market-scroll">
-          <div
-            className="relative w-full"
-            style={{ height: `${virtualizer.getTotalSize()}px` }}
-          >
+          <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
             <div
               className="grid gap-3"
               style={{
@@ -200,11 +195,7 @@ export function PluginMarketPanel({
                 const entry = result.entries[virtualItem.index];
                 if (!entry) return null;
                 return (
-                  <div
-                    key={entry.id}
-                    data-index={virtualItem.index}
-                    ref={virtualizer.measureElement}
-                  >
+                  <div key={entry.id} data-index={virtualItem.index} ref={virtualizer.measureElement}>
                     <PluginCard
                       entry={entry}
                       installState={installStates?.[entry.id]}

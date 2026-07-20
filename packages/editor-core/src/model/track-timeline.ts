@@ -429,10 +429,12 @@ export function isNestedSequenceDepthExceeded(
   return getNestedSequenceDepth(project, sequenceId) > maxDepth;
 }
 
-export function normalizeTrackEQBandType(type: TrackEQBandType | undefined, fallback: TrackEQBandType): TrackEQBandType {
+export function normalizeTrackEQBandType(
+  type: TrackEQBandType | undefined,
+  fallback: TrackEQBandType,
+): TrackEQBandType {
   return type === 'lowshelf' || type === 'peaking' || type === 'highshelf' ? type : fallback;
 }
-
 
 export function normalizeRgbColor(color: ChromaKeyColor | readonly number[] | undefined): ChromaKeyColor {
   const input = Array.isArray(color) ? color : DEFAULT_CHROMA_KEY.color;

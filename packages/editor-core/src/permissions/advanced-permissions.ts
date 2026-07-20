@@ -226,7 +226,7 @@ export function hasSufficientPermission(required: PermissionLevel, actual: Permi
 export function getHighestPermission(levels: PermissionLevel[]): PermissionLevel {
   if (levels.length === 0) return 'none';
   return levels.reduce((highest, current) =>
-    PERMISSION_LEVEL_WEIGHTS[current] > PERMISSION_LEVEL_WEIGHTS[highest] ? current : highest
+    PERMISSION_LEVEL_WEIGHTS[current] > PERMISSION_LEVEL_WEIGHTS[highest] ? current : highest,
   );
 }
 
@@ -459,11 +459,7 @@ export class AdvancedPermissionManager {
   /**
    * 移除权限规则
    */
-  removeRule(
-    ruleId: string,
-    operatorId: string,
-    operatorName: string,
-  ): boolean {
+  removeRule(ruleId: string, operatorId: string, operatorName: string): boolean {
     const ruleIndex = this.state.rules.findIndex((r) => r.id === ruleId);
     if (ruleIndex === -1) {
       return false;
@@ -560,19 +556,14 @@ export class AdvancedPermissionManager {
     );
 
     // 获取继承规则
-    const inheritedRules = this.state.config.inheritance.enabled
-      ? this.getInheritedRules(subject, target)
-      : [];
+    const inheritedRules = this.state.config.inheritance.enabled ? this.getInheritedRules(subject, target) : [];
 
     // 获取组规则
     const groupRules = this.getGroupRules(subject, target);
 
     // 获取临时权限
     const tempPermissions = this.state.temporaryPermissions.filter(
-      (tp) =>
-        tp.subject.id === subject.id &&
-        tp.target.id === target.id &&
-        isTemporaryPermissionValid(tp),
+      (tp) => tp.subject.id === subject.id && tp.target.id === target.id && isTemporaryPermissionValid(tp),
     );
 
     // 合并所有规则
@@ -655,17 +646,13 @@ export class AdvancedPermissionManager {
       if (!currentTarget.parentId) return;
 
       const parentRules = this.state.rules.filter(
-        (r) =>
-          r.subject.id === subject.id &&
-          r.target.id === currentTarget.parentId,
+        (r) => r.subject.id === subject.id && r.target.id === currentTarget.parentId,
       );
 
       rules.push(...parentRules);
 
       // 继续向上查找
-      const parentTarget = this.state.rules.find(
-        (r) => r.target.id === currentTarget.parentId,
-      )?.target;
+      const parentTarget = this.state.rules.find((r) => r.target.id === currentTarget.parentId)?.target;
       if (parentTarget) {
         collectParentRules(parentTarget);
       }
@@ -703,12 +690,7 @@ export class AdvancedPermissionManager {
   /**
    * 创建权限组
    */
-  createGroup(
-    name: string,
-    description: string,
-    operatorId: string,
-    operatorName: string,
-  ): PermissionGroup {
+  createGroup(name: string, description: string, operatorId: string, operatorName: string): PermissionGroup {
     const group: PermissionGroup = {
       id: createId('group'),
       name,
@@ -769,11 +751,7 @@ export class AdvancedPermissionManager {
   /**
    * 删除权限组
    */
-  deleteGroup(
-    groupId: string,
-    operatorId: string,
-    operatorName: string,
-  ): boolean {
+  deleteGroup(groupId: string, operatorId: string, operatorName: string): boolean {
     const groupIndex = this.state.groups.findIndex((g) => g.id === groupId);
     if (groupIndex === -1) return false;
 
@@ -797,12 +775,7 @@ export class AdvancedPermissionManager {
   /**
    * 添加组成员
    */
-  addGroupMember(
-    groupId: string,
-    member: PermissionSubject,
-    operatorId: string,
-    operatorName: string,
-  ): boolean {
+  addGroupMember(groupId: string, member: PermissionSubject, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
@@ -812,9 +785,7 @@ export class AdvancedPermissionManager {
     }
 
     // 检查用户组数限制
-    const userGroups = this.state.groups.filter((g) =>
-      g.members.some((m) => m.id === member.id),
-    );
+    const userGroups = this.state.groups.filter((g) => g.members.some((m) => m.id === member.id));
     if (userGroups.length >= this.state.config.maxGroupsPerUser) {
       return false;
     }
@@ -849,9 +820,7 @@ export class AdvancedPermissionManager {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
-    const memberIndex = group.members.findIndex(
-      (m) => m.id === memberId && m.type === memberType,
-    );
+    const memberIndex = group.members.findIndex((m) => m.id === memberId && m.type === memberType);
     if (memberIndex === -1) return false;
 
     const member = group.members[memberIndex];
@@ -875,12 +844,7 @@ export class AdvancedPermissionManager {
   /**
    * 添加组规则
    */
-  addGroupRule(
-    groupId: string,
-    ruleId: string,
-    operatorId: string,
-    operatorName: string,
-  ): boolean {
+  addGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
@@ -905,12 +869,7 @@ export class AdvancedPermissionManager {
   /**
    * 移除组规则
    */
-  removeGroupRule(
-    groupId: string,
-    ruleId: string,
-    operatorId: string,
-    operatorName: string,
-  ): boolean {
+  removeGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
@@ -965,9 +924,12 @@ export class AdvancedPermissionManager {
 
     // 设置自动撤销
     if (tempPermission.autoRevoke) {
-      setTimeout(() => {
-        this.revokeTemporaryPermission(tempPermission.id, 'system', '系统');
-      }, durationHours * 60 * 60 * 1000);
+      setTimeout(
+        () => {
+          this.revokeTemporaryPermission(tempPermission.id, 'system', '系统');
+        },
+        durationHours * 60 * 60 * 1000,
+      );
     }
 
     this.addAuditLog({
@@ -993,11 +955,7 @@ export class AdvancedPermissionManager {
   /**
    * 撤销临时权限
    */
-  revokeTemporaryPermission(
-    permissionId: string,
-    revokedBy: string,
-    revokedByName: string,
-  ): boolean {
+  revokeTemporaryPermission(permissionId: string, revokedBy: string, revokedByName: string): boolean {
     const permission = this.state.temporaryPermissions.find((tp) => tp.id === permissionId);
     if (!permission) return false;
 
@@ -1037,23 +995,19 @@ export class AdvancedPermissionManager {
    * 获取用户的组
    */
   getUserGroups(userId: string): PermissionGroup[] {
-    return this.state.groups.filter((g) =>
-      g.members.some((m) => m.id === userId),
-    );
+    return this.state.groups.filter((g) => g.members.some((m) => m.id === userId));
   }
 
   /**
    * 获取审计日志
    */
-  getAuditLog(
-    filters?: {
-      userId?: string;
-      action?: PermissionAuditAction;
-      startDate?: string;
-      endDate?: string;
-      limit?: number;
-    },
-  ): PermissionAuditLog[] {
+  getAuditLog(filters?: {
+    userId?: string;
+    action?: PermissionAuditAction;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): PermissionAuditLog[] {
     let logs = [...this.state.auditLog];
 
     if (filters?.userId) {
@@ -1086,9 +1040,7 @@ export class AdvancedPermissionManager {
     const now = new Date();
     const before = this.state.temporaryPermissions.length;
 
-    this.state.temporaryPermissions = this.state.temporaryPermissions.filter(
-      (tp) => isTemporaryPermissionValid(tp),
-    );
+    this.state.temporaryPermissions = this.state.temporaryPermissions.filter((tp) => isTemporaryPermissionValid(tp));
 
     const removed = before - this.state.temporaryPermissions.length;
 
@@ -1108,9 +1060,7 @@ export class AdvancedPermissionManager {
 
     const before = this.state.auditLog.length;
 
-    this.state.auditLog = this.state.auditLog.filter(
-      (log) => new Date(log.timestamp) > cutoffDate,
-    );
+    this.state.auditLog = this.state.auditLog.filter((log) => new Date(log.timestamp) > cutoffDate);
 
     return before - this.state.auditLog.length;
   }
@@ -1146,10 +1096,14 @@ export class AdvancedPermissionManager {
    * 导出状态
    */
   exportState(): string {
-    return JSON.stringify({
-      ...this.state,
-      cache: undefined,
-    }, null, 2);
+    return JSON.stringify(
+      {
+        ...this.state,
+        cache: undefined,
+      },
+      null,
+      2,
+    );
   }
 
   /**

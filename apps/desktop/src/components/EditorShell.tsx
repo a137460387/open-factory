@@ -881,7 +881,9 @@ export function EditorShell() {
   } = useExportQueue(project);
 
   const selectedClip = selectClipById(project, selectedClipId);
-  const selectedClips = selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip));
+  const selectedClips = selectedClipIds
+    .map((id) => selectClipById(project, id))
+    .filter((clip): clip is Clip => Boolean(clip));
   const selectedClipMedia =
     selectedClip && 'mediaId' in selectedClip
       ? project.media.find((asset) => asset.id === selectedClip.mediaId)
@@ -1018,7 +1020,9 @@ export function EditorShell() {
 
   const saveProject = saveProjectFn;
 
-  const selectedClipLocked = Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked);
+  const selectedClipLocked = Boolean(
+    selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked,
+  );
 
   const canCreateMulticamSequence = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {

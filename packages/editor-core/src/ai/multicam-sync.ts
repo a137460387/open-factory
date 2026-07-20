@@ -155,13 +155,13 @@ export interface SwitchSuggestion {
  * 切换原因
  */
 export type SwitchReason =
-  | 'active-speaker'      // 活跃说话人
-  | 'scene-change'        // 场景变化
-  | 'motion-focus'        // 运动焦点
-  | 'composition'         // 构图优化
-  | 'energy-peak'         // 能量峰值
-  | 'content-variety'     // 内容多样性
-  | 'manual-trigger';     // 手动触发
+  | 'active-speaker' // 活跃说话人
+  | 'scene-change' // 场景变化
+  | 'motion-focus' // 运动焦点
+  | 'composition' // 构图优化
+  | 'energy-peak' // 能量峰值
+  | 'content-variety' // 内容多样性
+  | 'manual-trigger'; // 手动触发
 
 /**
  * 内容分析结果
@@ -224,8 +224,7 @@ export function validateIntelligentSyncConfig(config: IntelligentSyncConfig): st
   if (config.audioWeight < 0 || config.visualWeight < 0) {
     errors.push('权重不能为负数');
   }
-  if (Math.abs(config.audioWeight + config.visualWeight - 1) > 0.01 &&
-    config.audioWeight + config.visualWeight > 0) {
+  if (Math.abs(config.audioWeight + config.visualWeight - 1) > 0.01 && config.audioWeight + config.visualWeight > 0) {
     errors.push('音频和视觉权重之和应为 1');
   }
   if (config.maxOffset < 0 || config.maxOffset > 60) {
@@ -291,12 +290,7 @@ export function generateAudioFingerprint(
  * 计算频段能量
  * 将信号分为 6 个频段：sub-bass, bass, low-mid, mid, high-mid, high
  */
-function computeFrequencyBands(
-  samples: Float32Array,
-  start: number,
-  end: number,
-  sampleRate: number,
-): number[] {
+function computeFrequencyBands(samples: Float32Array, start: number, end: number, sampleRate: number): number[] {
   const bandCount = 6;
   const bands = new Array(bandCount).fill(0);
   const fftSize = Math.min(end - start, 1024);
@@ -325,12 +319,12 @@ function computeFrequencyBands(
   const energyRatio = totalEnergy > 0 ? lowEnergy / totalEnergy : 0.5;
 
   // 基于过零率和能量分布分配到频段
-  bands[0] = totalEnergy * (1 - normalizedZCR) * 0.3;  // sub-bass
-  bands[1] = totalEnergy * energyRatio * 0.3;           // bass
-  bands[2] = totalEnergy * 0.15;                         // low-mid
-  bands[3] = totalEnergy * 0.1;                          // mid
-  bands[4] = highEnergy * 0.05;                          // high-mid
-  bands[5] = highEnergy * normalizedZCR * 0.02;         // high
+  bands[0] = totalEnergy * (1 - normalizedZCR) * 0.3; // sub-bass
+  bands[1] = totalEnergy * energyRatio * 0.3; // bass
+  bands[2] = totalEnergy * 0.15; // low-mid
+  bands[3] = totalEnergy * 0.1; // mid
+  bands[4] = highEnergy * 0.05; // high-mid
+  bands[5] = highEnergy * normalizedZCR * 0.02; // high
 
   return bands;
 }
@@ -347,9 +341,9 @@ function hashFrequencyBands(bands: number[]): number {
     hash |= quantized << (i * 4);
   }
   // 添加时间扰动
-  hash ^= (hash >>> 16);
+  hash ^= hash >>> 16;
   hash *= 0x45d9f3b;
-  hash ^= (hash >>> 16);
+  hash ^= hash >>> 16;
   return hash >>> 0;
 }
 
@@ -455,14 +449,20 @@ export function extractVisualFeature(
     for (let x = 1; x < width - 1; x += 2) {
       const idx = (y * width + x) * 4;
       const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-      const lumR = 0.299 * data[(y * width + x + 1) * 4] + 0.587 * data[(y * width + x + 1) * 4 + 1] + 0.114 * data[(y * width + x + 1) * 4 + 2];
-      const lumB = 0.299 * data[((y + 1) * width + x) * 4] + 0.587 * data[((y + 1) * width + x) * 4 + 1] + 0.114 * data[((y + 1) * width + x) * 4 + 2];
+      const lumR =
+        0.299 * data[(y * width + x + 1) * 4] +
+        0.587 * data[(y * width + x + 1) * 4 + 1] +
+        0.114 * data[(y * width + x + 1) * 4 + 2];
+      const lumB =
+        0.299 * data[((y + 1) * width + x) * 4] +
+        0.587 * data[((y + 1) * width + x) * 4 + 1] +
+        0.114 * data[((y + 1) * width + x) * 4 + 2];
       const gx = lumR - lum;
       const gy = lumB - lum;
       const mag = Math.sqrt(gx * gx + gy * gy);
       if (mag > 20) {
         const angle = Math.atan2(gy, gx);
-        const bin = ((angle + Math.PI) / (2 * Math.PI) * 8) % 8;
+        const bin = (((angle + Math.PI) / (2 * Math.PI)) * 8) % 8;
         edgeHistogram[Math.floor(bin)] += mag;
       }
     }
@@ -497,7 +497,9 @@ export function extractVisualFeature(
 }
 
 function computeColorVariance(data: Uint8ClampedArray, pixelCount: number): number {
-  let sumR = 0, sumG = 0, sumB = 0;
+  let sumR = 0,
+    sumG = 0,
+    sumB = 0;
   for (let i = 0; i < data.length; i += 4) {
     sumR += data[i];
     sumG += data[i + 1];
@@ -507,8 +509,11 @@ function computeColorVariance(data: Uint8ClampedArray, pixelCount: number): numb
   const avgG = sumG / pixelCount;
   const avgB = sumB / pixelCount;
 
-  let varR = 0, varG = 0, varB = 0;
-  for (let i = 0; i < data.length; i += 16) { // 采样
+  let varR = 0,
+    varG = 0,
+    varB = 0;
+  for (let i = 0; i < data.length; i += 16) {
+    // 采样
     varR += (data[i] - avgR) ** 2;
     varG += (data[i + 1] - avgG) ** 2;
     varB += (data[i + 2] - avgB) ** 2;
@@ -559,10 +564,7 @@ export function syncByVisualFeature(
   }
 
   // 搜索最佳偏移（帧级别）
-  const maxOffsetFrames = Math.min(
-    Math.floor(referenceFeatures.length / 2),
-    Math.floor(candidateFeatures.length / 2),
-  );
+  const maxOffsetFrames = Math.min(Math.floor(referenceFeatures.length / 2), Math.floor(candidateFeatures.length / 2));
 
   let bestOffset = 0;
   let bestScore = 0;
@@ -650,10 +652,7 @@ export function intelligentSync(
 
     if (config.method === 'audio-fingerprint' || config.method === 'hybrid') {
       if (reference.audioFingerprint && candidate.audioFingerprint) {
-        const audioResult = syncByAudioFingerprint(
-          reference.audioFingerprint,
-          candidate.audioFingerprint,
-        );
+        const audioResult = syncByAudioFingerprint(reference.audioFingerprint, candidate.audioFingerprint);
         if (config.method === 'audio-fingerprint') {
           offset = audioResult.offset;
           confidence = audioResult.confidence;
@@ -667,11 +666,7 @@ export function intelligentSync(
 
     if (config.method === 'visual-feature' || config.method === 'hybrid') {
       if (reference.visualFeatures && candidate.visualFeatures) {
-        const visualResult = syncByVisualFeature(
-          reference.visualFeatures,
-          candidate.visualFeatures,
-          candidate.fps,
-        );
+        const visualResult = syncByVisualFeature(reference.visualFeatures, candidate.visualFeatures, candidate.fps);
         if (config.method === 'visual-feature') {
           offset = visualResult.offset;
           confidence = visualResult.confidence;
@@ -724,10 +719,7 @@ export function intelligentSync(
 /**
  * 从偏移量检测漂移
  */
-function detectDriftFromOffsets(
-  angles: Array<{ id: string }>,
-  offsets: Map<string, number>,
-): DriftInfo {
+function detectDriftFromOffsets(angles: Array<{ id: string }>, offsets: Map<string, number>): DriftInfo {
   if (angles.length < 2) {
     return { detected: false, rateMsPerMin: 0, direction: 'none' };
   }
@@ -743,9 +735,7 @@ function detectDriftFromOffsets(
   return {
     detected,
     rateMsPerMin: detected ? maxOffset * 1000 : 0,
-    direction: detected
-      ? (offsetValues[1] > 0 ? 'ahead' : 'behind')
-      : 'none',
+    direction: detected ? (offsetValues[1] > 0 ? 'ahead' : 'behind') : 'none',
     predictedOffset: detected ? maxOffset * 1.1 : undefined,
   };
 }
@@ -773,10 +763,7 @@ export function analyzeWindowContent(
     let audioEnergy = 0;
     if (angle.audioSamples && angle.audioSampleRate) {
       const startIdx = Math.floor(windowStart * angle.audioSampleRate);
-      const endIdx = Math.min(
-        angle.audioSamples.length,
-        Math.floor(windowEnd * angle.audioSampleRate),
-      );
+      const endIdx = Math.min(angle.audioSamples.length, Math.floor(windowEnd * angle.audioSampleRate));
       let sumSq = 0;
       let count = 0;
       for (let i = startIdx; i < endIdx; i++) {
@@ -815,8 +802,7 @@ export function analyzeWindowContent(
     }
 
     // 综合评分
-    const overallScore = audioEnergy * 0.4 + visualActivity * 0.3 +
-      (faceCount > 0 ? 0.2 : 0) + sceneChangeScore * 0.1;
+    const overallScore = audioEnergy * 0.4 + visualActivity * 0.3 + (faceCount > 0 ? 0.2 : 0) + sceneChangeScore * 0.1;
 
     angleAnalyses.push({
       angleId: angle.id,
@@ -870,8 +856,8 @@ function detectSimpleFaces(data: Uint8ClampedArray, width: number, height: numbe
     const b = data[i + 2];
     // YCbCr 肤色检测
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
-    const cb = 128 - 0.169 * r - 0.331 * g + 0.500 * b;
-    const cr = 128 + 0.500 * r - 0.419 * g - 0.081 * b;
+    const cb = 128 - 0.169 * r - 0.331 * g + 0.5 * b;
+    const cr = 128 + 0.5 * r - 0.419 * g - 0.081 * b;
 
     if (y > 80 && cb > 85 && cb < 135 && cr > 135 && cr < 180) {
       skinPixels++;
@@ -921,7 +907,7 @@ export function generateSwitchSuggestions(
     const windowEnd = Math.min(duration, windowStart + windowSize);
 
     // 准备角度数据
-    const angleData = angles.map(angle => {
+    const angleData = angles.map((angle) => {
       const frameIdx = Math.floor((windowStart + windowSize / 2) * angle.fps);
       const prevFrameIdx = Math.max(0, frameIdx - 1);
       return {
@@ -938,12 +924,10 @@ export function generateSwitchSuggestions(
     // 如果推荐角度与当前不同，且间隔足够
     if (analysis.recommendedAngleId !== currentAngleId) {
       const lastSuggestion = suggestions[suggestions.length - 1];
-      const timeSinceLastSwitch = lastSuggestion
-        ? windowStart - lastSuggestion.time
-        : Infinity;
+      const timeSinceLastSwitch = lastSuggestion ? windowStart - lastSuggestion.time : Infinity;
 
       if (timeSinceLastSwitch >= config.minSwitchInterval) {
-        const recommended = analysis.angles.find(a => a.angleId === analysis.recommendedAngleId);
+        const recommended = analysis.angles.find((a) => a.angleId === analysis.recommendedAngleId);
         const confidence = recommended?.overallScore ?? 0.5;
 
         if (confidence >= config.confidenceThreshold) {
@@ -997,12 +981,14 @@ export function toIntegrationFormat(
   suggestions: SwitchSuggestion[],
 ): MulticamSyncIntegration {
   const offsets: Record<string, number> = {};
-  syncResult.offsets.forEach((v, k) => { offsets[k] = v; });
+  syncResult.offsets.forEach((v, k) => {
+    offsets[k] = v;
+  });
 
-  const switchPoints = suggestions.map(s => ({
+  const switchPoints = suggestions.map((s) => ({
     time: s.time,
     angleId: s.targetAngleId,
-    transition: s.confidence > 0.8 ? 'cut' as const : 'dissolve' as const,
+    transition: s.confidence > 0.8 ? ('cut' as const) : ('dissolve' as const),
   }));
 
   const details: Array<{ angleId: string; quality: SyncQuality }> = [];
@@ -1010,7 +996,7 @@ export function toIntegrationFormat(
     details.push({ angleId, quality });
   });
 
-  const overallLevels = details.map(d => d.quality.level);
+  const overallLevels = details.map((d) => d.quality.level);
   const overall: SyncQuality['level'] = overallLevels.includes('poor')
     ? 'poor'
     : overallLevels.includes('fair')

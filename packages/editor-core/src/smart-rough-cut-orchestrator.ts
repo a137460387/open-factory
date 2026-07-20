@@ -31,13 +31,7 @@ export type SmartRoughCutSuggestionType =
   | 'emotion_highlight'
   | 'narrative_structure';
 
-export type SmartRoughCutActionType =
-  | 'split'
-  | 'remove'
-  | 'add_track'
-  | 'extract'
-  | 'insert'
-  | 'reorder';
+export type SmartRoughCutActionType = 'split' | 'remove' | 'add_track' | 'extract' | 'insert' | 'reorder';
 
 export interface SmartRoughCutSuggestion {
   id: string;
@@ -253,10 +247,7 @@ export function orchestrateSmartRoughCut(
   // ── 对话提取建议 ──
   if (opts.enableDialogueExtraction && data.dialogues) {
     for (const dialogueInput of data.dialogues) {
-      const totalDuration = dialogueInput.intervals.reduce(
-        (sum, interval) => sum + (interval.end - interval.start),
-        0,
-      );
+      const totalDuration = dialogueInput.intervals.reduce((sum, interval) => sum + (interval.end - interval.start), 0);
       if (dialogueInput.intervals.length === 0) continue;
       suggestions.push({
         id: nextId('dialogue'),
@@ -384,9 +375,7 @@ export function selectSuggestionsByType(
   return suggestions.map((s) => (s.type === type ? { ...s, selected } : s));
 }
 
-export function getSelectedSuggestions(
-  suggestions: SmartRoughCutSuggestion[],
-): SmartRoughCutSuggestion[] {
+export function getSelectedSuggestions(suggestions: SmartRoughCutSuggestion[]): SmartRoughCutSuggestion[] {
   return suggestions.filter((s) => s.selected);
 }
 
@@ -436,15 +425,9 @@ export function buildSmartRoughCutReport(
 
   const totalSubtitleCues = (data.subtitles ?? []).reduce((sum, s) => sum + s.cueCount, 0);
 
-  const sceneBoundaryCount = (data.scenes ?? []).reduce(
-    (sum, s) => sum + s.result.boundaries.length,
-    0,
-  );
+  const sceneBoundaryCount = (data.scenes ?? []).reduce((sum, s) => sum + s.result.boundaries.length, 0);
 
-  const dialogueIntervalCount = (data.dialogues ?? []).reduce(
-    (sum, d) => sum + d.intervals.length,
-    0,
-  );
+  const dialogueIntervalCount = (data.dialogues ?? []).reduce((sum, d) => sum + d.intervals.length, 0);
 
   // 估算输出时长：从场景段总时长减去静音时长
   const sceneSegmentDuration = (data.scenes ?? []).reduce(

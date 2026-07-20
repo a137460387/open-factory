@@ -319,11 +319,7 @@ export function scoreVideoFrame(frame: VideoFrame): CoverFrameScore {
 
   // 综合评分（加权平均）
   const totalScore = Math.round(
-    sharpnessScore * 0.25 +
-      faceScore * 0.25 +
-      colorScore * 0.2 +
-      compositionScore * 0.15 +
-      motionScore * 0.15,
+    sharpnessScore * 0.25 + faceScore * 0.25 + colorScore * 0.2 + compositionScore * 0.15 + motionScore * 0.15,
   );
 
   return {
@@ -359,8 +355,7 @@ function calculateFaceScore(frame: VideoFrame): number {
 
   // 人脸置信度加分
   if (frame.faceRegions && frame.faceRegions.length > 0) {
-    const avgConfidence =
-      frame.faceRegions.reduce((sum, r) => sum + r.confidence, 0) / frame.faceRegions.length;
+    const avgConfidence = frame.faceRegions.reduce((sum, r) => sum + r.confidence, 0) / frame.faceRegions.length;
     score += Math.round(avgConfidence * 20);
   }
 
@@ -428,10 +423,7 @@ function calculateMotionScore(frame: VideoFrame): number {
  * @param preferFace 是否优先选择人脸帧
  * @returns 排序后的评分列表
  */
-export function rankVideoFrames(
-  frames: VideoFrame[],
-  preferFace: boolean = true,
-): CoverFrameScore[] {
+export function rankVideoFrames(frames: VideoFrame[], preferFace: boolean = true): CoverFrameScore[] {
   const scores = frames.map(scoreVideoFrame);
 
   // 排序：优先人脸 > 综合分
@@ -469,9 +461,7 @@ export function calculateCoverCrop(
 
   if (faceRegions && faceRegions.length > 0) {
     // 以主要人脸为中心
-    const mainFace = faceRegions.reduce((best, face) =>
-      face.confidence > best.confidence ? face : best,
-    );
+    const mainFace = faceRegions.reduce((best, face) => (face.confidence > best.confidence ? face : best));
     centerX = mainFace.x + mainFace.width / 2;
     centerY = mainFace.y + mainFace.height / 2;
 
@@ -513,11 +503,7 @@ export function buildCoverFfmpegArgs(
   cropParams: { x: number; y: number; width: number; height: number },
   overlay?: CoverOverlay,
 ): string[] {
-  const args: string[] = [
-    '-i', sourcePath,
-    '-ss', String(frameTimeSecs),
-    '-vframes', '1',
-  ];
+  const args: string[] = ['-i', sourcePath, '-ss', String(frameTimeSecs), '-vframes', '1'];
 
   // 构建滤镜链
   const filters: string[] = [];
@@ -534,12 +520,7 @@ export function buildCoverFfmpegArgs(
 
   // 渐变遮罩
   if (overlay && overlay.gradientOverlay !== 'none') {
-    const gradFilter = buildGradientFilter(
-      overlay.gradientOverlay,
-      outputWidth,
-      outputHeight,
-      overlay.gradientOpacity,
-    );
+    const gradFilter = buildGradientFilter(overlay.gradientOverlay, outputWidth, outputHeight, overlay.gradientOpacity);
     if (gradFilter) filters.push(gradFilter);
   }
 
@@ -636,10 +617,7 @@ export function generateCovers(
 
   // 过滤排除范围
   const filteredFrames = config.excludeRanges
-    ? frames.filter(
-        (f) =>
-          !config.excludeRanges!.some((r) => f.timeSecs >= r.start && f.timeSecs <= r.end),
-      )
+    ? frames.filter((f) => !config.excludeRanges!.some((r) => f.timeSecs >= r.start && f.timeSecs <= r.end))
     : frames;
 
   // 帧评分排序
@@ -685,11 +663,7 @@ export function generateCovers(
       bestFrameData.faceRegions,
     );
 
-    const overlay = getDefaultCoverOverlay(
-      platformId,
-      config.defaultOverlay?.title,
-      config.watermark,
-    );
+    const overlay = getDefaultCoverOverlay(platformId, config.defaultOverlay?.title, config.watermark);
 
     const ffmpegArgs = buildCoverFfmpegArgs(
       '', // 源路径由调用者提供

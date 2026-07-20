@@ -278,10 +278,7 @@ describe('mergeNearbyCuts', () => {
   });
 
   it('should handle minGap of 0', () => {
-    const suggestions = [
-      makeSuggestion({ startTime: 1.0 }),
-      makeSuggestion({ startTime: 1.0 }),
-    ];
+    const suggestions = [makeSuggestion({ startTime: 1.0 }), makeSuggestion({ startTime: 1.0 })];
     const merged = mergeNearbyCuts(suggestions, 0);
     expect(merged.length).toBe(2);
   });
@@ -342,9 +339,7 @@ describe('filterAndRankSuggestions', () => {
   });
 
   it('should limit results to maxCount', () => {
-    const suggestions = Array.from({ length: 10 }, (_, i) =>
-      makeSuggestion({ id: `s${i}`, priority: i }),
-    );
+    const suggestions = Array.from({ length: 10 }, (_, i) => makeSuggestion({ id: `s${i}`, priority: i }));
     const result = filterAndRankSuggestions(suggestions, 3);
     expect(result.length).toBe(3);
   });

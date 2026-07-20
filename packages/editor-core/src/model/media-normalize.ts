@@ -135,11 +135,7 @@ export type {
 } from '../model-types';
 export type { TtsSegment, TimingAdaptation, DubbingAdaptationType } from '../model-types';
 
-import {
-  getColorSpaceDisplayName,
-  normalizeExportColorSpace,
-  type MediaColorProfile,
-} from '../color-management';
+import { getColorSpaceDisplayName, normalizeExportColorSpace, type MediaColorProfile } from '../color-management';
 import { normalizeMediaVersions } from '../media-versions';
 import type { MediaFingerprint, MediaFlag, MediaLabelColor, MediaMetadata } from '../model-types';
 import type { ProjectFile } from '../project/project-types';

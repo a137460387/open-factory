@@ -54,17 +54,15 @@ export function useProxyCallbacks(deps: ProxyCallbacksDeps) {
         showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
       } catch (error) {
         setMedia(
-          useEditorStore
-            .getState()
-            .project.media.map((item) =>
-              item.id === assetId
-                ? {
-                    ...item,
-                    proxyStatus: 'error',
-                    proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage,
-                  }
-                : item,
-            ),
+          useEditorStore.getState().project.media.map((item) =>
+            item.id === assetId
+              ? {
+                  ...item,
+                  proxyStatus: 'error',
+                  proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage,
+                }
+              : item,
+          ),
         );
         showToast({
           kind: 'error',

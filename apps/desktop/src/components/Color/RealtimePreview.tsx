@@ -90,13 +90,18 @@ function PerformancePanel({ stats, deviceInfo, backend, resolution }: Performanc
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 4, color: '#38bdf8' }}>⚡ 性能监控</div>
-      <div>后端: <span style={{ color: '#a78bfa' }}>{backend}</span></div>
-      <div>分辨率: <span style={{ color: '#a78bfa' }}>{RESOLUTION_PRESETS[resolution].label}</span></div>
+      <div>
+        后端: <span style={{ color: '#a78bfa' }}>{backend}</span>
+      </div>
+      <div>
+        分辨率: <span style={{ color: '#a78bfa' }}>{RESOLUTION_PRESETS[resolution].label}</span>
+      </div>
       <div>
         帧时间: <span style={{ color: fpsColor }}>{stats.frameTimeMs.toFixed(1)}ms</span>
       </div>
       <div>
-        估算 FPS: <span style={{ color: fpsColor }}>{stats.frameTimeMs > 0 ? (1000 / stats.frameTimeMs).toFixed(0) : '—'}</span>
+        估算 FPS:{' '}
+        <span style={{ color: fpsColor }}>{stats.frameTimeMs > 0 ? (1000 / stats.frameTimeMs).toFixed(0) : '—'}</span>
       </div>
       <div>已渲染: {stats.framesRendered} 帧</div>
       <div>
@@ -296,11 +301,7 @@ export function RealtimePreview({
       // 绘制到 canvas
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        const imageData = new ImageData(
-          new Uint8ClampedArray(result.outputData),
-          result.width,
-          result.height,
-        );
+        const imageData = new ImageData(new Uint8ClampedArray(result.outputData), result.width, result.height);
 
         canvas.width = preset.width;
         canvas.height = preset.height;
@@ -317,7 +318,17 @@ export function RealtimePreview({
     } finally {
       setIsProcessing(false);
     }
-  }, [inputFrame, frameWidth, frameHeight, colorCorrection, lutData, lutIntensity, currentResolution, isProcessing, onPerformanceUpdate]);
+  }, [
+    inputFrame,
+    frameWidth,
+    frameHeight,
+    colorCorrection,
+    lutData,
+    lutIntensity,
+    currentResolution,
+    isProcessing,
+    onPerformanceUpdate,
+  ]);
 
   // 动画循环
   useEffect(() => {
@@ -364,12 +375,7 @@ export function RealtimePreview({
 
       {/* 性能面板 */}
       {showPerformancePanel && (
-        <PerformancePanel
-          stats={stats}
-          deviceInfo={deviceInfo}
-          backend={backend}
-          resolution={currentResolution}
-        />
+        <PerformancePanel stats={stats} deviceInfo={deviceInfo} backend={backend} resolution={currentResolution} />
       )}
 
       {/* 分辨率切换 */}

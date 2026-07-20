@@ -23,10 +23,7 @@ export interface TransitionThumbnailOptions {
  * 输出为单帧 image2pipe 格式。
  * 注意：此函数不与 ffmpeg-builder 中的 buildTransitionPreviewArgs 冲突。
  */
-export function buildTransitionThumbnailArgs(
-  type: TransitionType,
-  options: TransitionThumbnailOptions = {},
-): string[] {
+export function buildTransitionThumbnailArgs(type: TransitionType, options: TransitionThumbnailOptions = {}): string[] {
   const width = Math.max(16, Math.round(options.width ?? 160));
   const height = Math.max(16, Math.round(options.height ?? 90));
   const fps = Math.max(1, Math.round(options.fps ?? 30));
@@ -38,8 +35,7 @@ export function buildTransitionThumbnailArgs(
 
   if (def?.customBuilder === 'shape') {
     const geqExpr = buildShapeGeqExpressionForPreview(type);
-    baseFilter =
-      `[1:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='${geqExpr}'[shape];[0:v][shape]overlay=format=auto,scale=${width}:${height}`;
+    baseFilter = `[1:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='${geqExpr}'[shape];[0:v][shape]overlay=format=auto,scale=${width}:${height}`;
   } else if (def?.customBuilder === 'flip-h') {
     baseFilter = `[0:v]hflip[from_f];[from_f][1:v]xfade=transition=fade:duration=${duration}:offset=${offset},scale=${width}:${height}`;
   } else if (def?.customBuilder === 'flip-v') {
@@ -47,8 +43,7 @@ export function buildTransitionThumbnailArgs(
   } else if (def?.customBuilder === 'rotate' || def?.customBuilder === 'cube-rotate') {
     baseFilter = `[0:v]rotate='PI/10*t/${duration}':ow=iw:oh=ih:c=black@0,format=rgba[from_r];[from_r][1:v]xfade=transition=fade:duration=${duration}:offset=${offset},scale=${width}:${height}`;
   } else if (def?.customBuilder === 'glitch') {
-    baseFilter =
-      `[0:v][1:v]xfade=transition=pixelize:duration=${duration}:offset=${offset},rgbashift=rh=-5:bh=5:gh=0,eq=contrast=1.3,scale=${width}:${height}`;
+    baseFilter = `[0:v][1:v]xfade=transition=pixelize:duration=${duration}:offset=${offset},rgbashift=rh=-5:bh=5:gh=0,eq=contrast=1.3,scale=${width}:${height}`;
   } else if (def?.customBuilder === 'light-leak') {
     baseFilter = `[0:v][1:v]xfade=transition=dissolve:duration=${duration}:offset=${offset},scale=${width}:${height}`;
   } else {

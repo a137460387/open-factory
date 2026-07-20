@@ -34,16 +34,14 @@ import {
   type WindowMaskParams,
   type ThreeWayColor,
 } from '../../color-grading';
-import { buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph } from '../../color-node-graph';
+import {
+  buildColorNodeGraphFilterPlan,
+  detectColorNodeGraphCycle,
+  normalizeColorNodeGraph,
+} from '../../color-node-graph';
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../../color-log-luts';
-import {
-  buildMotionBlurExportFilter,
-  normalizeMotionBlurParams,
-} from '../../motion-blur';
-import {
-  buildReframeCropFilter,
-  isReframeEnabled,
-} from '../../reframe';
+import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../../motion-blur';
+import { buildReframeCropFilter, isReframeEnabled } from '../../reframe';
 import { triangulatePathMask } from '../../masks/path-mask';
 import { getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode } from '../../blend-modes';
 import { getClipSpeed, calculateSpeedCurveSourceDuration } from '../../timeline';
@@ -53,16 +51,9 @@ import {
   buildSceneBoundaryProtectionRanges,
   resolveFrameInterpolationMode,
 } from '../frame-interpolation';
-import {
-  buildZscaleColorConversionFilter,
-  normalizeProjectWorkingColorSpace,
-} from '../../color-management';
+import { buildZscaleColorConversionFilter, normalizeProjectWorkingColorSpace } from '../../color-management';
 import { buildPrivacyRedactionFFmpegExpressions } from '../../privacy-redaction';
-import {
-  cssColorToFfmpeg,
-  escapeDrawtextValue,
-  formatFfmpegSeconds,
-} from '../ffmpeg-escape';
+import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds } from '../ffmpeg-escape';
 import {
   formatFfmpegNumber,
   formatScale,
@@ -364,7 +355,11 @@ export function areExportClipsAdjacent(fromClip: ExportClip, toClip: ExportClip)
   return Math.abs(fromClip.start + fromClip.duration - toClip.start) <= 0.001;
 }
 
-export function clampExportTransitionDuration(transition: ExportTransition, fromClip: ExportClip, toClip: ExportClip): number {
+export function clampExportTransitionDuration(
+  transition: ExportTransition,
+  fromClip: ExportClip,
+  toClip: ExportClip,
+): number {
   return round(
     Math.min(
       normalizeTransitionDuration(transition.duration),
@@ -1004,7 +999,10 @@ export function buildPrivacyBlurEffectFilter(mask: ExportClip['masks'][number]):
   return 'pixelize=width=16:height=16';
 }
 
-export function buildMaskTimelineExpression(mask: ExportClip['masks'][number], property: 'x' | 'y' | 'w' | 'h'): string {
+export function buildMaskTimelineExpression(
+  mask: ExportClip['masks'][number],
+  property: 'x' | 'y' | 'w' | 'h',
+): string {
   const frames = mask.keyframes ?? [];
   if (frames.length === 0) {
     return formatFfmpegNumber(property === 'w' || property === 'h' ? Math.max(0.001, mask[property]) : mask[property]);
@@ -1346,7 +1344,11 @@ export function buildPathEdgeExpression(
   return `${comparator}(${dx}*(Y/ih-${y})-${dy}*(X/iw-${x}),0)`;
 }
 
-export function triangleArea(a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }): number {
+export function triangleArea(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  c: { x: number; y: number },
+): number {
   return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 

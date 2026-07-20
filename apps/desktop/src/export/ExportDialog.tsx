@@ -2543,10 +2543,7 @@ export function ExportDialog({
           </div>
           {/* 智能调度建议 */}
           {schedulerSuggestion && (
-            <div
-              className="rounded-md border border-blue-200 bg-blue-50 p-3"
-              data-testid="export-scheduler-suggestion"
-            >
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3" data-testid="export-scheduler-suggestion">
               <div className="flex items-center gap-2 text-xs font-semibold text-blue-700">
                 <span>🧠</span>
                 <span>智能调度建议</span>

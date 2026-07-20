@@ -14,27 +14,11 @@ import {
   autoEdit,
   TemplateManager,
 } from '@open-factory/editor-core';
-import type {
-  Workflow,
-  WorkflowExecutionContext,
-  ActionExecutor,
-} from '@open-factory/editor-core';
-import type {
-  SceneAnalysis,
-  AnalysisReport,
-} from '@open-factory/editor-core';
-import type {
-  AutomationRule,
-  RuleExecutionResult,
-} from '@open-factory/editor-core';
-import type {
-  EditTemplate,
-  AutoEditorConfig,
-  AutoEditResult,
-} from '@open-factory/editor-core';
-import type {
-  PreferenceWeights,
-} from '@open-factory/editor-core';
+import type { Workflow, WorkflowExecutionContext, ActionExecutor } from '@open-factory/editor-core';
+import type { SceneAnalysis, AnalysisReport } from '@open-factory/editor-core';
+import type { AutomationRule, RuleExecutionResult } from '@open-factory/editor-core';
+import type { EditTemplate, AutoEditorConfig, AutoEditResult } from '@open-factory/editor-core';
+import type { PreferenceWeights } from '@open-factory/editor-core';
 
 // ============================================================
 // Worker 消息类型

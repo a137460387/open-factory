@@ -92,13 +92,14 @@ export async function enqueueExport(
   });
   const backgroundSettings = await readExportBackgroundSettings().catch(logError('export-queue-runner'));
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
-  const planAfterLowPower = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
-
-  // 智能导出调度：根据项目复杂度自动选择最优编码参数
-  const schedulerConfig = getRecommendedExportConfig(
-    exportProject,
+  const planAfterLowPower = applyLowPowerThreads(
+    rawPlan,
+    backgroundSettings?.lowPowerMode === true,
     getHardwareConcurrency(),
   );
+
+  // 智能导出调度：根据项目复杂度自动选择最优编码参数
+  const schedulerConfig = getRecommendedExportConfig(exportProject, getHardwareConcurrency());
   const schedulerDecision = scheduleExport(planAfterLowPower, exportProject, schedulerConfig);
   const plan = applySchedulerDecision(planAfterLowPower, schedulerDecision);
 
@@ -303,11 +304,9 @@ async function runQueue(): Promise<void> {
     if (latest?.status === 'running') {
       useExportQueueStore.getState().updateTaskProgress(taskId, normalized);
       if (latest.progressive) {
-        useExportQueueStore
-          .getState()
-          .updateTaskProgressive(taskId, {
-            completedDuration: estimateProgressiveCompletedDuration(latest.plan.duration, normalized),
-          });
+        useExportQueueStore.getState().updateTaskProgressive(taskId, {
+          completedDuration: estimateProgressiveCompletedDuration(latest.plan.duration, normalized),
+        });
       }
     }
   });

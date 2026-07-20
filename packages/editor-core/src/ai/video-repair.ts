@@ -228,10 +228,7 @@ export function validateVideoRepairConfig(config: VideoRepairConfig): string[] {
  * 检测帧中的问题
  * 分析图像特征，识别需要修复的问题
  */
-export function detectIssues(
-  frame: ImageData,
-  previousFrame?: ImageData,
-): DetectedIssue[] {
+export function detectIssues(frame: ImageData, previousFrame?: ImageData): DetectedIssue[] {
   const issues: DetectedIssue[] = [];
   const { data, width, height } = frame;
 
@@ -322,16 +319,20 @@ export function detectBlur(data: Uint8ClampedArray, width: number, height: numbe
       const idx = (y * width + x) * 4;
       const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
 
-      const top = 0.299 * data[((y - 1) * width + x) * 4] +
+      const top =
+        0.299 * data[((y - 1) * width + x) * 4] +
         0.587 * data[((y - 1) * width + x) * 4 + 1] +
         0.114 * data[((y - 1) * width + x) * 4 + 2];
-      const bottom = 0.299 * data[((y + 1) * width + x) * 4] +
+      const bottom =
+        0.299 * data[((y + 1) * width + x) * 4] +
         0.587 * data[((y + 1) * width + x) * 4 + 1] +
         0.114 * data[((y + 1) * width + x) * 4 + 2];
-      const left = 0.299 * data[(y * width + (x - 1)) * 4] +
+      const left =
+        0.299 * data[(y * width + (x - 1)) * 4] +
         0.587 * data[(y * width + (x - 1)) * 4 + 1] +
         0.114 * data[(y * width + (x - 1)) * 4 + 2];
-      const right = 0.299 * data[(y * width + (x + 1)) * 4] +
+      const right =
+        0.299 * data[(y * width + (x + 1)) * 4] +
         0.587 * data[(y * width + (x + 1)) * 4 + 1] +
         0.114 * data[(y * width + (x + 1)) * 4 + 2];
 
@@ -516,10 +517,7 @@ export function detectFlicker(prevFrame: ImageData, currFrame: ImageData): numbe
  * 估计帧间全局运动
  * 使用块匹配 + RANSAC 鲁棒估计
  */
-export function estimateFrameMotion(
-  prevFrame: ImageData,
-  currFrame: ImageData,
-): FrameMotion {
+export function estimateFrameMotion(prevFrame: ImageData, currFrame: ImageData): FrameMotion {
   const { width, height } = currFrame;
   const blockSize = 16;
   const blocksX = Math.floor(width / blockSize);
@@ -590,14 +588,12 @@ export function estimateFrameMotion(
   }
 
   // 鲁棒估计全局平移（中位数）
-  const dxValues = matches.map(m => m.dx).sort((a, b) => a - b);
-  const dyValues = matches.map(m => m.dy).sort((a, b) => a - b);
+  const dxValues = matches.map((m) => m.dx).sort((a, b) => a - b);
+  const dyValues = matches.map((m) => m.dy).sort((a, b) => a - b);
   const medianDx = dxValues[Math.floor(dxValues.length / 2)] || 0;
   const medianDy = dyValues[Math.floor(dyValues.length / 2)] || 0;
 
-  const avgConfidence = matches.length > 0
-    ? matches.reduce((s, m) => s + m.confidence, 0) / matches.length
-    : 0;
+  const avgConfidence = matches.length > 0 ? matches.reduce((s, m) => s + m.confidence, 0) / matches.length : 0;
 
   return {
     translationX: medianDx,
@@ -670,10 +666,7 @@ export function stabilizeFrame(
  * 自适应去模糊
  * 使用 Unsharp Mask + Wiener 滤波的组合方法
  */
-export function deblurFrame(
-  frame: ImageData,
-  strength: number,
-): ImageData {
+export function deblurFrame(frame: ImageData, strength: number): ImageData {
   if (strength <= 0) return frame;
   const { data, width, height } = frame;
   const outData = new Uint8ClampedArray(data.length);
@@ -694,9 +687,7 @@ export function deblurFrame(
     for (let i = 0; i < currentData.length; i += 4) {
       for (let c = 0; c < 3; c++) {
         const diff = currentData[i + c] - blurred[i + c];
-        currentData[i + c] = Math.max(0, Math.min(255,
-          currentData[i + c] + diff * iterStrength,
-        ));
+        currentData[i + c] = Math.max(0, Math.min(255, currentData[i + c] + diff * iterStrength));
       }
     }
   }
@@ -707,9 +698,13 @@ export function deblurFrame(
   for (let i = 0; i < data.length; i += 4) {
     for (let c = 0; c < 3; c++) {
       const diff = currentData[i + c] - blurredFinal[i + c];
-      outData[i + c] = Math.max(0, Math.min(255,
-        data[i + c] * (1 - sharpenAmount * 0.3) + (currentData[i + c] + diff * sharpenAmount) * sharpenAmount * 0.3,
-      ));
+      outData[i + c] = Math.max(
+        0,
+        Math.min(
+          255,
+          data[i + c] * (1 - sharpenAmount * 0.3) + (currentData[i + c] + diff * sharpenAmount) * sharpenAmount * 0.3,
+        ),
+      );
     }
     outData[i + 3] = data[i + 3];
   }
@@ -717,12 +712,7 @@ export function deblurFrame(
   return { data: outData, width, height };
 }
 
-function simpleGaussianBlur(
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-  radius: number,
-): Uint8ClampedArray {
+function simpleGaussianBlur(data: Uint8ClampedArray, width: number, height: number, radius: number): Uint8ClampedArray {
   const out = new Uint8ClampedArray(data.length);
   const sigma = Math.max(0.5, radius);
   const kSize = Math.ceil(sigma * 2) * 2 + 1;
@@ -731,7 +721,7 @@ function simpleGaussianBlur(
   let kSum = 0;
 
   for (let i = -half; i <= half; i++) {
-    const w = Math.exp(-i * i / (2 * sigma * sigma));
+    const w = Math.exp((-i * i) / (2 * sigma * sigma));
     kernel.push(w);
     kSum += w;
   }
@@ -772,11 +762,7 @@ function simpleGaussianBlur(
 /**
  * 分析帧的色彩特征
  */
-export function analyzeColorProfile(
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-): ColorProfile {
+export function analyzeColorProfile(data: Uint8ClampedArray, width: number, height: number): ColorProfile {
   const pixelCount = width * height;
   let totalR = 0;
   let totalG = 0;
@@ -827,7 +813,8 @@ export function analyzeColorProfile(
   const contrast = Math.min(1, Math.sqrt(lumVariance / (pixelCount / 4)) / 128);
 
   // 饱和度
-  const saturation = Math.min(1,
+  const saturation = Math.min(
+    1,
     Math.max(Math.abs(avgR - avgGray), Math.abs(avgG - avgGray), Math.abs(avgB - avgGray)) / 64,
   );
 
@@ -847,21 +834,18 @@ export function analyzeColorProfile(
  * 自动白平衡
  * 基于灰色世界假设
  */
-export function autoWhiteBalance(
-  frame: ImageData,
-  strength: number,
-): ImageData {
+export function autoWhiteBalance(frame: ImageData, strength: number): ImageData {
   if (strength <= 0) return frame;
   const { data, width, height } = frame;
   const outData = new Uint8ClampedArray(data.length);
   const profile = analyzeColorProfile(data, width, height);
 
   // 灰色世界假设：各通道平均值应相等
-  const avgGray = (profile.averageBrightness * 255);
+  const avgGray = profile.averageBrightness * 255;
   const pixelCount = width * height;
-  const avgR = data.reduce((s, v, i) => i % 4 === 0 ? s + v : s, 0) / pixelCount;
-  const avgG = data.reduce((s, v, i) => i % 4 === 1 ? s + v : s, 0) / pixelCount;
-  const avgB = data.reduce((s, v, i) => i % 4 === 2 ? s + v : s, 0) / pixelCount;
+  const avgR = data.reduce((s, v, i) => (i % 4 === 0 ? s + v : s), 0) / pixelCount;
+  const avgG = data.reduce((s, v, i) => (i % 4 === 1 ? s + v : s), 0) / pixelCount;
+  const avgB = data.reduce((s, v, i) => (i % 4 === 2 ? s + v : s), 0) / pixelCount;
 
   const scaleR = avgGray / Math.max(1, avgR);
   const scaleG = avgGray / Math.max(1, avgG);
@@ -885,10 +869,7 @@ export function autoWhiteBalance(
 /**
  * 曝光补偿
  */
-export function exposureCompensation(
-  frame: ImageData,
-  strength: number,
-): ImageData {
+export function exposureCompensation(frame: ImageData, strength: number): ImageData {
   if (strength <= 0) return frame;
   const { data, width, height } = frame;
   const outData = new Uint8ClampedArray(data.length);
@@ -900,9 +881,7 @@ export function exposureCompensation(
   const compensation = brightnessDiff * strength;
 
   // 使用 gamma 校正而非线性偏移，更自然
-  const gamma = compensation > 0
-    ? 1 / (1 + compensation * 2)
-    : 1 + Math.abs(compensation) * 2;
+  const gamma = compensation > 0 ? 1 / (1 + compensation * 2) : 1 + Math.abs(compensation) * 2;
 
   for (let i = 0; i < data.length; i += 4) {
     for (let c = 0; c < 3; c++) {
@@ -920,10 +899,7 @@ export function exposureCompensation(
  * 色彩修复（综合）
  * 结合白平衡、曝光补偿、对比度增强
  */
-export function repairColor(
-  frame: ImageData,
-  strength: number,
-): { output: ImageData; profile: ColorProfile } {
+export function repairColor(frame: ImageData, strength: number): { output: ImageData; profile: ColorProfile } {
   let result = frame;
 
   // 1. 白平衡
@@ -979,11 +955,7 @@ function enhanceContrast(frame: ImageData, strength: number): ImageData {
  * 运动补偿帧插值
  * 在两帧之间生成中间帧
  */
-export function interpolateFrame(
-  frameA: ImageData,
-  frameB: ImageData,
-  t: number,
-): InterpolatedFrame {
+export function interpolateFrame(frameA: ImageData, frameB: ImageData, t: number): InterpolatedFrame {
   const { width, height } = frameA;
   const outData = new Uint8ClampedArray(width * height * 4);
 
@@ -1038,10 +1010,7 @@ export function interpolateFrame(
  * 批量帧插值
  * 在每对相邻帧之间生成指定数量的中间帧
  */
-export function interpolateVideoFrames(
-  frames: ImageData[],
-  factor: number,
-): ImageData[] {
+export function interpolateVideoFrames(frames: ImageData[], factor: number): ImageData[] {
   if (frames.length < 2 || factor < 2) return frames;
   const result: ImageData[] = [];
 
@@ -1064,11 +1033,7 @@ export function interpolateVideoFrames(
  * 时空域降噪
  * 结合空间域和时域信息的降噪
  */
-export function spatiotemporalDenoise(
-  currFrame: ImageData,
-  prevFrame?: ImageData,
-  strength: number = 0.5,
-): ImageData {
+export function spatiotemporalDenoise(currFrame: ImageData, prevFrame?: ImageData, strength: number = 0.5): ImageData {
   if (strength <= 0) return currFrame;
   const { data, width, height } = currFrame;
   const outData = new Uint8ClampedArray(data.length);
@@ -1092,8 +1057,9 @@ export function spatiotemporalDenoise(
             const nIdx = (ny * width + nx) * 4;
             const spatialDist = Math.sqrt(dx * dx + dy * dy);
             const rangeDist = Math.abs(data[nIdx + c] - centerVal);
-            const w = Math.exp(-spatialDist * spatialDist / (2 * sigma_s * sigma_s)) *
-              Math.exp(-rangeDist * rangeDist / (2 * sigma_r * sigma_r));
+            const w =
+              Math.exp((-spatialDist * spatialDist) / (2 * sigma_s * sigma_s)) *
+              Math.exp((-rangeDist * rangeDist) / (2 * sigma_r * sigma_r));
             sum += data[nIdx + c] * w;
             weightSum += w;
           }
@@ -1120,7 +1086,7 @@ export function spatiotemporalDenoise(
 
 /**
  * 对单帧执行完整的视频修复流程
- * 
+ *
  * 流程：
  * 1. 问题检测
  * 2. 去抖动（如果有前帧）
@@ -1128,11 +1094,7 @@ export function spatiotemporalDenoise(
  * 4. 色彩修复
  * 5. 降噪
  */
-export function repairFrame(
-  frame: ImageData,
-  config: VideoRepairConfig,
-  previousFrame?: ImageData,
-): VideoRepairResult {
+export function repairFrame(frame: ImageData, config: VideoRepairConfig, previousFrame?: ImageData): VideoRepairResult {
   const startTime = performance.now();
   const appliedRepairs: RepairOperation[] = [];
   let result = frame;
@@ -1140,7 +1102,7 @@ export function repairFrame(
 
   // 1. 去抖动
   if (previousFrame && config.stabilizationStrength > 0) {
-    const shakeIssue = detectedIssues.find(i => i.type === 'shake');
+    const shakeIssue = detectedIssues.find((i) => i.type === 'shake');
     if (shakeIssue && shakeIssue.severity > 0.1) {
       const t0 = performance.now();
       const stabilized = stabilizeFrame(result, previousFrame, config.stabilizationStrength);
@@ -1156,7 +1118,7 @@ export function repairFrame(
 
   // 2. 去模糊
   if (config.deblurStrength > 0) {
-    const blurIssue = detectedIssues.find(i => i.type === 'blur');
+    const blurIssue = detectedIssues.find((i) => i.type === 'blur');
     if (blurIssue && blurIssue.severity > 0.2) {
       const t0 = performance.now();
       result = deblurFrame(result, config.deblurStrength);
@@ -1171,8 +1133,8 @@ export function repairFrame(
 
   // 3. 色彩修复
   if (config.colorRepairStrength > 0) {
-    const colorIssues = detectedIssues.filter(i =>
-      i.type === 'color-cast' || i.type === 'underexposure' || i.type === 'overexposure',
+    const colorIssues = detectedIssues.filter(
+      (i) => i.type === 'color-cast' || i.type === 'underexposure' || i.type === 'overexposure',
     );
     if (colorIssues.length > 0) {
       const t0 = performance.now();
@@ -1189,7 +1151,7 @@ export function repairFrame(
 
   // 4. 降噪
   if (config.denoiseStrength > 0) {
-    const noiseIssue = detectedIssues.find(i => i.type === 'noise');
+    const noiseIssue = detectedIssues.find((i) => i.type === 'noise');
     if (noiseIssue && noiseIssue.severity > 0.15) {
       const t0 = performance.now();
       result = spatiotemporalDenoise(result, previousFrame, config.denoiseStrength);
@@ -1203,9 +1165,8 @@ export function repairFrame(
   }
 
   const processingTimeMs = performance.now() - startTime;
-  const qualityImprovement = appliedRepairs.length > 0
-    ? appliedRepairs.reduce((s, r) => s + r.effectiveness, 0) / appliedRepairs.length
-    : 0;
+  const qualityImprovement =
+    appliedRepairs.length > 0 ? appliedRepairs.reduce((s, r) => s + r.effectiveness, 0) / appliedRepairs.length : 0;
 
   return {
     output: result,

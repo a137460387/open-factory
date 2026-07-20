@@ -125,7 +125,9 @@ export const DEFAULT_EXPORT_MASTER_PROCESSING: ExportMasterProcessingSettings = 
 // Helper utilities (needed by the normalizer / builder functions below)
 // ---------------------------------------------------------------------------
 
-export function normalizeLoudnessNormalization(mode: ExportLoudnessNormalization | undefined): ExportLoudnessNormalization {
+export function normalizeLoudnessNormalization(
+  mode: ExportLoudnessNormalization | undefined,
+): ExportLoudnessNormalization {
   return mode === 'youtube' || mode === 'ebu-r128' ? mode : 'off';
 }
 
@@ -406,7 +408,11 @@ export function normalizeSettingsForExportFormat(settings: ExportSettings): Expo
   };
 }
 
-export function constrainDimensions(width: number, height: number, maxDimension: number): { width: number; height: number } {
+export function constrainDimensions(
+  width: number,
+  height: number,
+  maxDimension: number,
+): { width: number; height: number } {
   const safeWidth = Math.max(1, Math.round(width || DEFAULT_EXPORT_SETTINGS.width));
   const safeHeight = Math.max(1, Math.round(height || DEFAULT_EXPORT_SETTINGS.height));
   const longest = Math.max(safeWidth, safeHeight);
@@ -420,7 +426,9 @@ export function constrainDimensions(width: number, height: number, maxDimension:
   };
 }
 
-export function normalizeExportWatermark(watermark: ExportSettings['watermark'] | undefined): ExportSettings['watermark'] {
+export function normalizeExportWatermark(
+  watermark: ExportSettings['watermark'] | undefined,
+): ExportSettings['watermark'] {
   if (!watermark || watermark.enabled !== true) {
     return null;
   }

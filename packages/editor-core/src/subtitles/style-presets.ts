@@ -1,5 +1,9 @@
 import type { SubtitleStyle } from '../model';
-import { normalizeSubtitleStyleTemplateStyle, type SubtitleStyleTemplate, type SubtitleStyleTemplateKind } from './style-templates';
+import {
+  normalizeSubtitleStyleTemplateStyle,
+  type SubtitleStyleTemplate,
+  type SubtitleStyleTemplateKind,
+} from './style-templates';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,11 +55,7 @@ const MAX_PRESETS = 100;
 /**
  * 创建新的样式预设
  */
-export function createStylePreset(
-  name: string,
-  style: Partial<SubtitleStyle>,
-  tags?: string[],
-): SubtitleStylePreset {
+export function createStylePreset(name: string, style: Partial<SubtitleStyle>, tags?: string[]): SubtitleStylePreset {
   const normalizedStyle = normalizeSubtitleStyleTemplateStyle(style);
   const now = new Date().toISOString();
 
@@ -77,9 +77,7 @@ export function updateStylePreset(
   preset: SubtitleStylePreset,
   updates: Partial<Omit<SubtitleStylePreset, 'style'>> & { style?: Partial<SubtitleStyle> },
 ): SubtitleStylePreset {
-  const updatedStyle = updates.style
-    ? normalizeSubtitleStyleTemplateStyle(updates.style)
-    : preset.style;
+  const updatedStyle = updates.style ? normalizeSubtitleStyleTemplateStyle(updates.style) : preset.style;
 
   return {
     ...preset,
@@ -130,9 +128,7 @@ export function filterPresets(
 
   // 按标签过滤
   if (filter.tags && filter.tags.length > 0) {
-    filtered = filtered.filter((preset) =>
-      preset.tags?.some((tag) => filter.tags!.includes(tag)),
-    );
+    filtered = filtered.filter((preset) => preset.tags?.some((tag) => filter.tags!.includes(tag)));
   }
 
   // 只显示收藏
@@ -283,12 +279,16 @@ export function exportPresetToFile(
     case 'ofp':
       return {
         filename: `${sanitized_name}.ofp`,
-        content: JSON.stringify({
-          format: 'open-factory-preset',
-          version: 1,
-          type: 'subtitle-style',
-          preset,
-        }, null, 2),
+        content: JSON.stringify(
+          {
+            format: 'open-factory-preset',
+            version: 1,
+            type: 'subtitle-style',
+            preset,
+          },
+          null,
+          2,
+        ),
       };
     default:
       throw new Error(`Unsupported export format: ${format}`);

@@ -66,9 +66,7 @@ export function PluginManagerPanel({
       )}
 
       {loading && plugins.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          加载中…
-        </div>
+        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">加载中…</div>
       ) : plugins.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <span className="text-3xl">🧩</span>
@@ -89,11 +87,7 @@ export function PluginManagerPanel({
                 <div className="mt-1">
                   <button
                     className={`relative h-5 w-9 rounded-full transition-colors ${
-                      status === 'enabled'
-                        ? 'bg-primary'
-                        : status === 'error'
-                          ? 'bg-destructive'
-                          : 'bg-muted'
+                      status === 'enabled' ? 'bg-primary' : status === 'error' ? 'bg-destructive' : 'bg-muted'
                     }`}
                     onClick={() => handleToggle(plugin.plugin.id, plugin.enabled)}
                     disabled={plugin.builtin}

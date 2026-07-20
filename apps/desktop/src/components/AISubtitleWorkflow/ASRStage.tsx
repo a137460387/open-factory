@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { MediaAsset, TranscriptionSegment, TranscriptionLanguage, TranscriptionProgressEvent } from '@open-factory/editor-core';
+import type {
+  MediaAsset,
+  TranscriptionSegment,
+  TranscriptionLanguage,
+  TranscriptionProgressEvent,
+} from '@open-factory/editor-core';
 import { parseWhisperSrt, processWhisperOutput } from '@open-factory/editor-core';
 import type { ASRState } from './useSubtitleWorkflow';
 import { zhCN } from '../../i18n/strings';
@@ -56,10 +61,9 @@ export function ASRStage(props: ASRStageProps) {
 
     try {
       // 创建 Worker
-      const worker = new Worker(
-        new URL('../../workers/ai-transcription.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
+      const worker = new Worker(new URL('../../workers/ai-transcription.worker.ts', import.meta.url), {
+        type: 'module',
+      });
       workerRef.current = worker;
 
       worker.onmessage = (event) => {
@@ -112,8 +116,8 @@ export function ASRStage(props: ASRStageProps) {
         type: 'transcribe',
         request: {
           executablePath: '', // 从设置中获取
-          modelPath: '',      // 从设置中获取
-          audioPath: '',      // 从选中片段获取
+          modelPath: '', // 从设置中获取
+          audioPath: '', // 从选中片段获取
           clipId: selectedClip.id,
         },
         language,
@@ -174,9 +178,7 @@ export function ASRStage(props: ASRStageProps) {
       <div className="rounded-lg border border-line bg-[var(--color-bg-elevated)] p-3">
         <div className="flex items-center gap-2">
           <span
-            className={`inline-block h-2 w-2 rounded-full ${
-              asrState?.whisperReady ? 'bg-green-500' : 'bg-yellow-500'
-            }`}
+            className={`inline-block h-2 w-2 rounded-full ${asrState?.whisperReady ? 'bg-green-500' : 'bg-yellow-500'}`}
           />
           <span className="text-xs text-[var(--color-text-secondary)]">
             {asrState?.whisperReady ? t.asr.whisperReady : t.asr.whisperNotConfigured}
@@ -217,9 +219,7 @@ export function ASRStage(props: ASRStageProps) {
               {progress.phase === 'decoding' && '识别中...'}
               {progress.phase === 'post-processing' && '后处理中...'}
             </span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              {Math.round(progress.progress * 100)}%
-            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">{Math.round(progress.progress * 100)}%</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-bg-primary)]">
             <div
@@ -250,16 +250,12 @@ export function ASRStage(props: ASRStageProps) {
           <div className="max-h-48 space-y-1 overflow-y-auto">
             {segments.slice(0, 20).map((seg, i) => (
               <div key={i} className="flex gap-2 text-xs">
-                <span className="shrink-0 text-[var(--color-text-muted)]">
-                  {formatTimecode(seg.startMs)}
-                </span>
+                <span className="shrink-0 text-[var(--color-text-muted)]">{formatTimecode(seg.startMs)}</span>
                 <span className="text-ink">{seg.text}</span>
               </div>
             ))}
             {segments.length > 20 && (
-              <p className="text-xs text-[var(--color-text-muted)]">
-                ...共 {segments.length} 条字幕
-              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">...共 {segments.length} 条字幕</p>
             )}
           </div>
         </div>
@@ -285,9 +281,11 @@ function formatTimecode(ms: number): string {
   const seconds = totalSeconds % 60;
   const millis = ms % 1000;
 
-  return [
-    hours.toString().padStart(2, '0'),
-    minutes.toString().padStart(2, '0'),
-    seconds.toString().padStart(2, '0'),
-  ].join(':') + '.' + millis.toString().padStart(3, '0');
+  return (
+    [hours.toString().padStart(2, '0'), minutes.toString().padStart(2, '0'), seconds.toString().padStart(2, '0')].join(
+      ':',
+    ) +
+    '.' +
+    millis.toString().padStart(3, '0')
+  );
 }

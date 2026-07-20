@@ -4,10 +4,7 @@
  * 支持拖拽排序、全选/取消、按类型筛选。
  */
 import { useCallback, useRef, useState, type DragEvent, type Key } from 'react';
-import type {
-  SmartRoughCutSuggestion,
-  SmartRoughCutSuggestionType,
-} from '@open-factory/editor-core';
+import type { SmartRoughCutSuggestion, SmartRoughCutSuggestionType } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useSmartRoughCutOrchestratorStore } from '../../store/smartRoughCutOrchestratorStore';
 import { SuggestionItem } from './SuggestionItem';
@@ -24,17 +21,26 @@ const SUGGESTION_TYPE_LABELS: Record<SmartRoughCutSuggestionType, string> = {
 };
 
 export function SuggestionList() {
-  const suggestions = useSmartRoughCutOrchestratorStore((s: { suggestions: SmartRoughCutSuggestion[] }) => s.suggestions);
-  const toggleSuggestion = useSmartRoughCutOrchestratorStore((s: { toggleSuggestion: (id: string) => void }) => s.toggleSuggestion);
-  const setAllSelected = useSmartRoughCutOrchestratorStore((s: { setAllSelected: (selected: boolean) => void }) => s.setAllSelected);
-  const selectByType = useSmartRoughCutOrchestratorStore((s: { selectByType: (type: SmartRoughCutSuggestionType, selected: boolean) => void }) => s.selectByType);
+  const suggestions = useSmartRoughCutOrchestratorStore(
+    (s: { suggestions: SmartRoughCutSuggestion[] }) => s.suggestions,
+  );
+  const toggleSuggestion = useSmartRoughCutOrchestratorStore(
+    (s: { toggleSuggestion: (id: string) => void }) => s.toggleSuggestion,
+  );
+  const setAllSelected = useSmartRoughCutOrchestratorStore(
+    (s: { setAllSelected: (selected: boolean) => void }) => s.setAllSelected,
+  );
+  const selectByType = useSmartRoughCutOrchestratorStore(
+    (s: { selectByType: (type: SmartRoughCutSuggestionType, selected: boolean) => void }) => s.selectByType,
+  );
   const reorder = useSmartRoughCutOrchestratorStore((s: { reorder: (from: number, to: number) => void }) => s.reorder);
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [filterType, setFilterType] = useState<SmartRoughCutSuggestionType | 'all'>('all');
   const dragOverRef = useRef<number | null>(null);
 
-  const filtered = filterType === 'all' ? suggestions : suggestions.filter((s: SmartRoughCutSuggestion) => s.type === filterType);
+  const filtered =
+    filterType === 'all' ? suggestions : suggestions.filter((s: SmartRoughCutSuggestion) => s.type === filterType);
   const selectedCount = suggestions.filter((s: SmartRoughCutSuggestion) => s.selected).length;
   const types = Array.from(new Set(suggestions.map((s: SmartRoughCutSuggestion) => s.type)));
 
@@ -149,7 +155,8 @@ export function SuggestionList() {
                 onClick={() => selectByType(type, !allTypeSelected)}
                 data-testid={`suggestion-batch-${type}`}
               >
-                {allTypeSelected ? '取消' : '选中'}{SUGGESTION_TYPE_LABELS[type] ?? type}
+                {allTypeSelected ? '取消' : '选中'}
+                {SUGGESTION_TYPE_LABELS[type] ?? type}
               </button>
             );
           })}

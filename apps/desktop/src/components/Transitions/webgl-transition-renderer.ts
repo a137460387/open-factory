@@ -263,12 +263,7 @@ export function createWebGLTransitionRenderer(
   gl.useProgram(program);
 
   // 顶点数据：全屏四边形
-  const vertices = new Float32Array([
-    -1, -1, 0, 0,
-     1, -1, 1, 0,
-    -1,  1, 0, 1,
-     1,  1, 1, 1,
-  ]);
+  const vertices = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1]);
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);

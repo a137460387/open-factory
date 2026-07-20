@@ -64,9 +64,7 @@ describe('mixerStore', () => {
 
   describe('通道音量控制', () => {
     beforeEach(() => {
-      useMixerStore.getState().initChannels([
-        { id: 't1', name: 'Track 1', type: 'audio' },
-      ]);
+      useMixerStore.getState().initChannels([{ id: 't1', name: 'Track 1', type: 'audio' }]);
     });
 
     it('setChannelVolume 设置通道音量', () => {
@@ -94,9 +92,7 @@ describe('mixerStore', () => {
 
   describe('通道声像控制', () => {
     beforeEach(() => {
-      useMixerStore.getState().initChannels([
-        { id: 't1', name: 'Track 1', type: 'audio' },
-      ]);
+      useMixerStore.getState().initChannels([{ id: 't1', name: 'Track 1', type: 'audio' }]);
     });
 
     it('setChannelPan 设置声像', () => {
@@ -115,9 +111,7 @@ describe('mixerStore', () => {
 
   describe('静音/独奏', () => {
     beforeEach(() => {
-      useMixerStore.getState().initChannels([
-        { id: 't1', name: 'Track 1', type: 'audio' },
-      ]);
+      useMixerStore.getState().initChannels([{ id: 't1', name: 'Track 1', type: 'audio' }]);
     });
 
     it('toggleChannelMute 切换静音状态', () => {
@@ -139,9 +133,7 @@ describe('mixerStore', () => {
 
   describe('效果链管理', () => {
     beforeEach(() => {
-      useMixerStore.getState().initChannels([
-        { id: 't1', name: 'Track 1', type: 'audio' },
-      ]);
+      useMixerStore.getState().initChannels([{ id: 't1', name: 'Track 1', type: 'audio' }]);
     });
 
     it('addEffectToChannel 添加效果', () => {
@@ -161,9 +153,7 @@ describe('mixerStore', () => {
     it('updateChannelEffects 更新效果链', () => {
       useMixerStore.getState().addEffectToChannel('t1', 'compressor');
       const effects = useMixerStore.getState().mixerState.channels[0].effectsChain;
-      useMixerStore.getState().updateChannelEffects('t1', [
-        { ...effects[0], enabled: false },
-      ]);
+      useMixerStore.getState().updateChannelEffects('t1', [{ ...effects[0], enabled: false }]);
       expect(useMixerStore.getState().mixerState.channels[0].effectsChain[0].enabled).toBe(false);
     });
   });
@@ -211,9 +201,7 @@ describe('mixerStore', () => {
         mixerState: {
           ...state.mixerState,
           channels: state.mixerState.channels.map((ch) =>
-            ch.trackId === 't1'
-              ? { ...ch, busAssignments: [{ busId, level: 0.8, enabled: true }] }
-              : ch,
+            ch.trackId === 't1' ? { ...ch, busAssignments: [{ busId, level: 0.8, enabled: true }] } : ch,
           ),
         },
       }));

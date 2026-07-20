@@ -213,11 +213,7 @@ export type TauriMocks = Partial<{
   startCollaborationHost(request: CollaborationHostRequest): Promise<CollaborationHostState> | CollaborationHostState;
   stopCollaborationHost(): Promise<void> | void;
   broadcastCollaborationMessage(message: string): Promise<void> | void;
-  probeMediaPath(
-    path: string,
-  ):
-    | Promise<Partial<MediaAsset>>
-    | Partial<MediaAsset>;
+  probeMediaPath(path: string): Promise<Partial<MediaAsset>> | Partial<MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
   scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;

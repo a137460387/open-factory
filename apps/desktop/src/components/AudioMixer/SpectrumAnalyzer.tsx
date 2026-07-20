@@ -90,16 +90,13 @@ export function SpectrumAnalyzer({
   );
 
   // 获取频率条颜色
-  const getBarColor = useCallback(
-    (amplitude: number, index: number, total: number): string => {
-      const ratio = index / total;
-      if (amplitude > 0.9) return DEFAULT_THEME.bars[3]; // 红色 - 削波
-      if (amplitude > 0.7) return DEFAULT_THEME.bars[2]; // 黄色 - 高电平
-      if (ratio < 0.3) return DEFAULT_THEME.bars[0]; // 绿色 - 低频
-      return DEFAULT_THEME.bars[1]; // 绿色 - 中高频
-    },
-    [],
-  );
+  const getBarColor = useCallback((amplitude: number, index: number, total: number): string => {
+    const ratio = index / total;
+    if (amplitude > 0.9) return DEFAULT_THEME.bars[3]; // 红色 - 削波
+    if (amplitude > 0.7) return DEFAULT_THEME.bars[2]; // 黄色 - 高电平
+    if (ratio < 0.3) return DEFAULT_THEME.bars[0]; // 绿色 - 低频
+    return DEFAULT_THEME.bars[1]; // 绿色 - 中高频
+  }, []);
 
   // 绘制频谱
   const draw = useCallback(() => {
@@ -244,7 +241,20 @@ export function SpectrumAnalyzer({
 
     setPeakHold(newPeakHold);
     setPeakDecay(newPeakDecay);
-  }, [frequencyData, mode, peakHold, peakDecay, amplitudeToY, frequencyToX, chartWidth, chartHeight, height, width, padding, getBarColor]);
+  }, [
+    frequencyData,
+    mode,
+    peakHold,
+    peakDecay,
+    amplitudeToY,
+    frequencyToX,
+    chartWidth,
+    chartHeight,
+    height,
+    width,
+    padding,
+    getBarColor,
+  ]);
 
   // 动画循环
   useEffect(() => {
@@ -270,7 +280,10 @@ export function SpectrumAnalyzer({
   }, [isRunning, draw]);
 
   return (
-    <div className={`flex flex-col rounded-md border border-line bg-panel ${className}`} data-testid="spectrum-analyzer">
+    <div
+      className={`flex flex-col rounded-md border border-line bg-panel ${className}`}
+      data-testid="spectrum-analyzer"
+    >
       {/* 控制栏 */}
       {showControls && (
         <div className="flex items-center justify-between border-b border-line px-3 py-1.5">
@@ -311,12 +324,7 @@ export function SpectrumAnalyzer({
 
       {/* 频谱画布 */}
       <div className="relative">
-        <canvas
-          ref={canvasRef}
-          style={{ width, height }}
-          className="w-full"
-          data-testid="spectrum-canvas"
-        />
+        <canvas ref={canvasRef} style={{ width, height }} className="w-full" data-testid="spectrum-canvas" />
       </div>
     </div>
   );

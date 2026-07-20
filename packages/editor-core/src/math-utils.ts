@@ -36,13 +36,7 @@ export function lerp(a: number, b: number, t: number): number {
 }
 
 /** 将值从一个范围映射到另一个范围 */
-export function mapRange(
-  value: number,
-  inMin: number,
-  inMax: number,
-  outMin: number,
-  outMax: number,
-): number {
+export function mapRange(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
   if (inMin === inMax) return outMin;
   return outMin + ((value - inMin) / (inMax - inMin)) * (outMax - outMin);
 }

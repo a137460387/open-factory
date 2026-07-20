@@ -138,20 +138,24 @@ const DeviceListItem: React.FC<{
           <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
             {DEVICE_ICONS[device.type]}
           </div>
-          <div className={cn(
-            'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900',
-            device.status === 'online' ? 'bg-green-500' :
-            device.status === 'syncing' ? 'bg-blue-500' :
-            device.status === 'error' ? 'bg-red-500' : 'bg-gray-400',
-          )} />
+          <div
+            className={cn(
+              'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900',
+              device.status === 'online'
+                ? 'bg-green-500'
+                : device.status === 'syncing'
+                  ? 'bg-blue-500'
+                  : device.status === 'error'
+                    ? 'bg-red-500'
+                    : 'bg-gray-400',
+            )}
+          />
         </div>
 
         {/* 设备信息 */}
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {device.name}
-            </span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{device.name}</span>
             {isLocal && (
               <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
                 当前设备
@@ -247,17 +251,19 @@ const ConflictListItem: React.FC<{
               {conflict.entityType}: {conflict.entityId}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              {conflict.type === 'concurrent-edit' ? '并发编辑冲突' :
-               conflict.type === 'version-mismatch' ? '版本不匹配' :
-               conflict.type === 'structural-change' ? '结构变更冲突' : '数据损坏'}
+              {conflict.type === 'concurrent-edit'
+                ? '并发编辑冲突'
+                : conflict.type === 'version-mismatch'
+                  ? '版本不匹配'
+                  : conflict.type === 'structural-change'
+                    ? '结构变更冲突'
+                    : '数据损坏'}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">
-            {new Date(conflict.detectedAt).toLocaleTimeString('zh-CN')}
-          </span>
+          <span className="text-xs text-gray-500">{new Date(conflict.detectedAt).toLocaleTimeString('zh-CN')}</span>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
           ) : (
@@ -271,15 +277,11 @@ const ConflictListItem: React.FC<{
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
               <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">本地版本</div>
-              <div className="text-sm font-mono">
-                {JSON.stringify(conflict.localOperation.newValue).slice(0, 50)}
-              </div>
+              <div className="text-sm font-mono">{JSON.stringify(conflict.localOperation.newValue).slice(0, 50)}</div>
             </div>
             <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
               <div className="text-xs text-green-600 dark:text-green-400 mb-1">远程版本</div>
-              <div className="text-sm font-mono">
-                {JSON.stringify(conflict.remoteOperation.newValue).slice(0, 50)}
-              </div>
+              <div className="text-sm font-mono">{JSON.stringify(conflict.remoteOperation.newValue).slice(0, 50)}</div>
             </div>
           </div>
 
@@ -331,9 +333,7 @@ const OfflineQueueListItem: React.FC<{ item: OfflineQueueItem }> = ({ item }) =>
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <span className={cn('text-xs', config.color)}>
-          {config.label}
-        </span>
+        <span className={cn('text-xs', config.color)}>{config.label}</span>
         {item.retryCount > 0 && (
           <span className="text-xs text-gray-500">
             重试 {item.retryCount}/{item.maxRetries}
@@ -393,9 +393,13 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
   const [manager] = useState(() => {
     if (externalManager) return externalManager;
     const localDevice = createLocalDevice(
-      navigator.userAgent.includes('Windows') ? 'Windows PC' :
-      navigator.userAgent.includes('Mac') ? 'Mac' :
-      navigator.userAgent.includes('Linux') ? 'Linux PC' : '未知设备',
+      navigator.userAgent.includes('Windows')
+        ? 'Windows PC'
+        : navigator.userAgent.includes('Mac')
+          ? 'Mac'
+          : navigator.userAgent.includes('Linux')
+            ? 'Linux PC'
+            : '未知设备',
       'desktop',
       navigator.platform,
       navigator.userAgent,
@@ -491,12 +495,8 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              多设备同步
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              管理设备连接和数据同步
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">多设备同步</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">管理设备连接和数据同步</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -519,9 +519,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               {syncStatusConfig.icon}
-              <span className={cn('text-sm font-medium', syncStatusConfig.color)}>
-                {syncStatusConfig.label}
-              </span>
+              <span className={cn('text-sm font-medium', syncStatusConfig.color)}>{syncStatusConfig.label}</span>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">同步状态</div>
           </div>
@@ -539,9 +537,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <Cloud className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                v{syncState.currentVersion}
-              </span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">v{syncState.currentVersion}</span>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">当前版本</div>
           </div>
@@ -597,9 +593,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
         {/* 设置面板 */}
         {showSettings && (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">
-              同步设置
-            </h3>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">同步设置</h3>
 
             <div className="space-y-4">
               <label className="flex items-center justify-between">
@@ -642,12 +636,12 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
               </label>
 
               <div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                  冲突解决策略
-                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">冲突解决策略</div>
                 <select
                   value={config.conflictResolution}
-                  onChange={(e) => handleConfigUpdate({ conflictResolution: e.target.value as DeviceSyncConfig['conflictResolution'] })}
+                  onChange={(e) =>
+                    handleConfigUpdate({ conflictResolution: e.target.value as DeviceSyncConfig['conflictResolution'] })
+                  }
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                 >
                   <option value="local-wins">本地优先</option>
@@ -658,9 +652,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
               </div>
 
               <div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                  同步间隔（秒）
-                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">同步间隔（秒）</div>
                 <input
                   type="number"
                   value={config.syncIntervalMs / 1000}
@@ -676,30 +668,18 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
 
         {/* 设备列表 */}
         <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-            连接的设备
-          </h3>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">连接的设备</h3>
 
           <div className="space-y-1">
-            <DeviceListItem
-              device={syncState.localDevice}
-              isLocal={true}
-            />
+            <DeviceListItem device={syncState.localDevice} isLocal={true} />
 
             {syncState.remoteDevices.map((device) => (
-              <DeviceListItem
-                key={device.id}
-                device={device}
-                isLocal={false}
-                onRemove={handleRemoveDevice}
-              />
+              <DeviceListItem key={device.id} device={device} isLocal={false} onRemove={handleRemoveDevice} />
             ))}
           </div>
 
           {syncState.remoteDevices.length === 0 && (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-              暂无其他设备连接
-            </div>
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">暂无其他设备连接</div>
           )}
         </div>
 
@@ -715,11 +695,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
 
             <div className="space-y-2">
               {syncState.conflicts.map((conflict) => (
-                <ConflictListItem
-                  key={conflict.id}
-                  conflict={conflict}
-                  onResolve={handleResolveConflict}
-                />
+                <ConflictListItem key={conflict.id} conflict={conflict} onResolve={handleResolveConflict} />
               ))}
             </div>
           </div>
@@ -751,36 +727,26 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
 
         {/* 统计信息 */}
         <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-            同步统计
-          </h3>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">同步统计</h3>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                {stats.totalOperations}
-              </div>
+              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.totalOperations}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">总操作数</div>
             </div>
 
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                {stats.totalConflicts}
-              </div>
+              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.totalConflicts}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">冲突次数</div>
             </div>
 
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                {stats.offlineQueueSize}
-              </div>
+              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.offlineQueueSize}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">队列大小</div>
             </div>
 
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                {stats.remoteDevices}
-              </div>
+              <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.remoteDevices}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">远程设备</div>
             </div>
           </div>
@@ -788,9 +754,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
 
         {/* 存储信息 */}
         <div>
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-            存储信息
-          </h3>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">存储信息</h3>
 
           <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div className="flex items-center justify-between mb-2">
@@ -812,9 +776,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-gray-500">总计</span>
-              <span className="text-xs text-gray-500">
-                {formatBytes(syncState.localDevice.metadata.storageLimit)}
-              </span>
+              <span className="text-xs text-gray-500">{formatBytes(syncState.localDevice.metadata.storageLimit)}</span>
             </div>
           </div>
         </div>

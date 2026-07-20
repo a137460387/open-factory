@@ -1,10 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import type {
-  MulticamClip,
-  MulticamSyncMode,
-  SwitchPoint,
-  MulticamSyncStatusSummary,
-} from '@open-factory/editor-core';
+import type { MulticamClip, MulticamSyncMode, SwitchPoint, MulticamSyncStatusSummary } from '@open-factory/editor-core';
 import {
   buildSyncStatusSummary,
   getSyncQualityColor,
@@ -21,9 +16,7 @@ const MulticamPreviewGrid = lazy(() =>
   import('../AngleSwitcher/MulticamPreviewGrid').then((m) => ({ default: m.MulticamPreviewGrid })),
 );
 
-const SyncControls = lazy(() =>
-  import('../AngleSwitcher/SyncControls').then((m) => ({ default: m.SyncControls })),
-);
+const SyncControls = lazy(() => import('../AngleSwitcher/SyncControls').then((m) => ({ default: m.SyncControls })));
 
 const SwitchPointEditor = lazy(() =>
   import('../AngleSwitcher/SwitchPointEditor').then((m) => ({ default: m.SwitchPointEditor })),
@@ -57,12 +50,8 @@ const SyncStatusIndicator: React.FC<{ status: MulticamSyncStatusSummary }> = ({ 
         {qualityLabel}
       </div>
       <div className="sync-details">
-        <span className="sync-confidence">
-          置信度: {Math.round(status.averageConfidence * 100)}%
-        </span>
-        <span className="sync-max-offset">
-          最大偏移: {formatOffsetDisplay(status.maxOffsetMs)}
-        </span>
+        <span className="sync-confidence">置信度: {Math.round(status.averageConfidence * 100)}%</span>
+        <span className="sync-max-offset">最大偏移: {formatOffsetDisplay(status.maxOffsetMs)}</span>
         {status.anyDriftDetected && (
           <span className="sync-drift-warning" data-testid="drift-warning">
             ⚠️ 时钟漂移
@@ -71,10 +60,7 @@ const SyncStatusIndicator: React.FC<{ status: MulticamSyncStatusSummary }> = ({ 
       </div>
       {status.syncProgress < 1 && (
         <div className="sync-progress-bar">
-          <div
-            className="sync-progress-fill"
-            style={{ width: `${status.syncProgress * 100}%` }}
-          />
+          <div className="sync-progress-fill" style={{ width: `${status.syncProgress * 100}%` }} />
         </div>
       )}
     </div>
@@ -88,15 +74,10 @@ const AngleSyncOffsetList: React.FC<{ status: MulticamSyncStatusSummary }> = ({ 
     {status.angleStatuses.map((angle) => (
       <div key={angle.angleId} className="angle-offset-row">
         <span className="angle-name">{angle.angleName}</span>
-        <span
-          className="angle-offset-value"
-          style={{ color: getSyncQualityColor(angle.quality) }}
-        >
+        <span className="angle-offset-value" style={{ color: getSyncQualityColor(angle.quality) }}>
           {formatOffsetDisplay(angle.offsetMs)}
         </span>
-        <span className="angle-confidence">
-          {Math.round(angle.confidence * 100)}%
-        </span>
+        <span className="angle-confidence">{Math.round(angle.confidence * 100)}%</span>
       </div>
     ))}
   </div>
@@ -189,11 +170,7 @@ const HybridPreviewGrid: React.FC<{
   if (!isReady) {
     return (
       <Suspense fallback={<div className="loading-placeholder">加载预览中...</div>}>
-        <MulticamPreviewGrid
-          multicamClip={multicamClip}
-          currentTime={currentTime}
-          onAngleSwitch={onAngleSwitch}
-        />
+        <MulticamPreviewGrid multicamClip={multicamClip} currentTime={currentTime} onAngleSwitch={onAngleSwitch} />
       </Suspense>
     );
   }
@@ -297,11 +274,7 @@ export const MultiCameraAnglePanel: React.FC<MultiCameraAnglePanelProps> = ({
 
           {/* 同步控制 */}
           <Suspense fallback={null}>
-            <SyncControls
-              onSyncRequest={onSyncRequest}
-              onDriftDetection={onDriftDetection}
-              isSyncing={isSyncing}
-            />
+            <SyncControls onSyncRequest={onSyncRequest} onDriftDetection={onDriftDetection} isSyncing={isSyncing} />
           </Suspense>
 
           {/* 同步详情（可展开） */}

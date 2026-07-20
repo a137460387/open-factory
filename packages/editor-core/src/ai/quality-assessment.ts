@@ -526,9 +526,7 @@ export function mapScoreToEnhancedGrade(score: number): EnhancedQualityGrade {
  * @param score - 维度评分 (0-100)
  * @returns 等级文字
  */
-export function dimensionScoreToGrade(
-  score: number,
-): 'excellent' | 'good' | 'acceptable' | 'poor' {
+export function dimensionScoreToGrade(score: number): 'excellent' | 'good' | 'acceptable' | 'poor' {
   const s = clamp(score, 0, 100);
   if (s >= 90) return 'excellent';
   if (s >= 75) return 'good';
@@ -548,10 +546,7 @@ export function dimensionScoreToGrade(
  * @param config - 质量评估配置
  * @returns 视频质量指标
  */
-export function assessVideoQuality(
-  frames: Uint8Array[],
-  config: QualityAssessmentConfig,
-): VideoQualityMetrics {
+export function assessVideoQuality(frames: Uint8Array[], config: QualityAssessmentConfig): VideoQualityMetrics {
   if (frames.length === 0) {
     return {
       sharpness: 0,
@@ -615,8 +610,7 @@ export function assessVideoQuality(
       grayValues.push(luminance(r, g, b));
     }
     const lumMean = grayValues.reduce((a, b) => a + b, 0) / grayValues.length;
-    const lumVariance =
-      grayValues.reduce((a, b) => a + (b - lumMean) * (b - lumMean), 0) / grayValues.length;
+    const lumVariance = grayValues.reduce((a, b) => a + (b - lumMean) * (b - lumMean), 0) / grayValues.length;
     const lumStd = Math.sqrt(lumVariance);
     // 标准差在 0-80 范围内映射到 0-100，理想对比度标准差约 50-65
     const contrastScore = clamp((lumStd / 80) * 100, 0, 100);
@@ -683,8 +677,7 @@ export function assessVideoQuality(
   }
 
   // 汇总：取均值
-  const avg = (arr: number[]) =>
-    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const avg = (arr: number[]) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
   return {
     sharpness: Math.round(avg(sharpnessValues)),
@@ -873,11 +866,7 @@ export function assessAudioQuality(
  * @param height - 图像高度（像素）
  * @returns 单帧质量评分
  */
-export function assessFrameQuality(
-  frame: Uint8Array,
-  width: number,
-  height: number,
-): FrameQualityScore {
+export function assessFrameQuality(frame: Uint8Array, width: number, height: number): FrameQualityScore {
   const sharpness = computeImageSharpness(frame, width, height);
 
   // 噪声评分：原始噪声越高表示越差，取反得到"干净度"
@@ -892,9 +881,7 @@ export function assessFrameQuality(
   const exposureScore = clamp(100 - meanDist * 30 - overPenalty - underPenalty, 0, 100);
 
   // 综合评分：锐度 40%，干净度 30%，曝光 30%
-  const overallScore = Math.round(
-    sharpness * 0.4 + noiseCleanliness * 0.3 + exposureScore * 0.3,
-  );
+  const overallScore = Math.round(sharpness * 0.4 + noiseCleanliness * 0.3 + exposureScore * 0.3);
 
   return {
     frameIndex: 0,
@@ -932,16 +919,8 @@ export function computeQualityScore(
     saturation: metrics.saturation,
     'color-balance': metrics.colorBalance,
     stability: metrics.stability,
-    'audio-level': clamp(
-      100 - Math.abs(audioMetrics.rmsLevel + 14) * 3,
-      0,
-      100,
-    ), // -14dB 附近最佳
-    'audio-noise': clamp(
-      audioMetrics.noiseFloor < -60 ? 100 : 100 + (audioMetrics.noiseFloor + 60) * 1.5,
-      0,
-      100,
-    ),
+    'audio-level': clamp(100 - Math.abs(audioMetrics.rmsLevel + 14) * 3, 0, 100), // -14dB 附近最佳
+    'audio-noise': clamp(audioMetrics.noiseFloor < -60 ? 100 : 100 + (audioMetrics.noiseFloor + 60) * 1.5, 0, 100),
     bitrate: metrics.bitrate > 0 ? clamp(metrics.bitrate / 50, 0, 100) : 50,
   };
 
@@ -1038,8 +1017,7 @@ export function computeQualityScore(
 
     // 生成质量问题
     for (const issueDesc of dimIssues) {
-      const severity: QualityIssue['severity'] =
-        grade === 'poor' ? 'high' : grade === 'acceptable' ? 'medium' : 'low';
+      const severity: QualityIssue['severity'] = grade === 'poor' ? 'high' : grade === 'acceptable' ? 'medium' : 'low';
       issues.push({
         type: dim,
         severity,
@@ -1120,9 +1098,7 @@ export function computeQualityScore(
  * @param result - 质量评估结果
  * @returns 优化建议列表，按优先级排序
  */
-export function generateOptimizationSuggestions(
-  result: EnhancedQualityAssessmentResult,
-): QualitySuggestion[] {
+export function generateOptimizationSuggestions(result: EnhancedQualityAssessmentResult): QualitySuggestion[] {
   const allSuggestions: QualitySuggestion[] = [...result.suggestions];
 
   // 检查音频问题
@@ -1676,9 +1652,7 @@ export function parseEnhancedQualityResponse(json: unknown): EnhancedQualityAsse
 
   // 解析综合分数
   const overallScore = clamp(
-    typeof obj.overallScore === 'number' && !Number.isNaN(obj.overallScore)
-      ? Math.round(obj.overallScore)
-      : 0,
+    typeof obj.overallScore === 'number' && !Number.isNaN(obj.overallScore) ? Math.round(obj.overallScore) : 0,
     0,
     100,
   );
@@ -1716,9 +1690,7 @@ export function parseEnhancedQualityResponse(json: unknown): EnhancedQualityAsse
             dimension: ds.dimension as QualityDimension,
             score: clamp(Math.round(ds.score), 0, 100),
             weight: typeof ds.weight === 'number' ? clamp(ds.weight, 0, 1) : 0.1,
-            issues: Array.isArray(ds.issues)
-              ? ds.issues.filter((i: unknown) => typeof i === 'string')
-              : [],
+            issues: Array.isArray(ds.issues) ? ds.issues.filter((i: unknown) => typeof i === 'string') : [],
             suggestion: typeof ds.suggestion === 'string' ? ds.suggestion : '',
           });
         }
@@ -1741,10 +1713,7 @@ export function parseEnhancedQualityResponse(json: unknown): EnhancedQualityAsse
           issues.push({
             type: issue.type,
             severity: issue.severity as QualityIssue['severity'],
-            dimension:
-              typeof issue.dimension === 'string'
-                ? (issue.dimension as QualityDimension)
-                : 'sharpness',
+            dimension: typeof issue.dimension === 'string' ? (issue.dimension as QualityDimension) : 'sharpness',
             description: issue.description,
             suggestedFix: typeof issue.suggestedFix === 'string' ? issue.suggestedFix : '',
           });
@@ -1760,19 +1729,13 @@ export function parseEnhancedQualityResponse(json: unknown): EnhancedQualityAsse
     for (const item of obj.suggestions) {
       if (item && typeof item === 'object') {
         const sug = item as Record<string, unknown>;
-        if (
-          typeof sug.id === 'string' &&
-          typeof sug.action === 'string' &&
-          typeof sug.dimension === 'string'
-        ) {
+        if (typeof sug.id === 'string' && typeof sug.action === 'string' && typeof sug.dimension === 'string') {
           suggestions.push({
             id: sug.id,
             dimension: sug.dimension as QualityDimension,
             action: sug.action,
             expectedImprovement:
-              typeof sug.expectedImprovement === 'number'
-                ? clamp(Math.round(sug.expectedImprovement), 0, 100)
-                : 0,
+              typeof sug.expectedImprovement === 'number' ? clamp(Math.round(sug.expectedImprovement), 0, 100) : 0,
             priority: validPriorities.includes(sug.priority as string)
               ? (sug.priority as QualitySuggestion['priority'])
               : 'medium',

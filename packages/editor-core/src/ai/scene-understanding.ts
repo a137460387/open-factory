@@ -1,6 +1,6 @@
 /**
  * 场景理解增强模块
- * 
+ *
  * 功能：
  * 1. 物体识别与跟踪 - 检测和跟踪视频中的物体
  * 2. 人脸检测与表情分析 - 检测人脸并分析表情
@@ -47,7 +47,7 @@ export interface DetectedObject {
 /**
  * 物体类别
  */
-export type ObjectCategory = 
+export type ObjectCategory =
   | 'person'
   | 'vehicle'
   | 'animal'
@@ -147,15 +147,7 @@ export interface FaceExpression {
 /**
  * 表情类型
  */
-export type ExpressionType = 
-  | 'neutral'
-  | 'happy'
-  | 'sad'
-  | 'angry'
-  | 'surprised'
-  | 'fearful'
-  | 'disgusted'
-  | 'contempt';
+export type ExpressionType = 'neutral' | 'happy' | 'sad' | 'angry' | 'surprised' | 'fearful' | 'disgusted' | 'contempt';
 
 /**
  * 头部姿态
@@ -192,7 +184,7 @@ export interface DetectedAction {
 /**
  * 动作类别
  */
-export type ActionCategory = 
+export type ActionCategory =
   | 'movement'
   | 'gesture'
   | 'interaction'
@@ -260,7 +252,7 @@ export interface SegmentationCategory {
 /**
  * 分割类型
  */
-export type SegmentationType = 
+export type SegmentationType =
   | 'background'
   | 'person'
   | 'sky'
@@ -316,66 +308,28 @@ export interface SceneDescription {
 /**
  * 场景类型
  */
-export type SceneType = 
-  | 'indoor'
-  | 'outdoor'
-  | 'urban'
-  | 'nature'
-  | 'studio'
-  | 'vehicle'
-  | 'water'
-  | 'other';
+export type SceneType = 'indoor' | 'outdoor' | 'urban' | 'nature' | 'studio' | 'vehicle' | 'water' | 'other';
 
 /**
  * 场景氛围
  */
-export type SceneMood = 
-  | 'neutral'
-  | 'happy'
-  | 'sad'
-  | 'tense'
-  | 'romantic'
-  | 'mysterious'
-  | 'energetic'
-  | 'calm';
+export type SceneMood = 'neutral' | 'happy' | 'sad' | 'tense' | 'romantic' | 'mysterious' | 'energetic' | 'calm';
 
 /**
  * 光照条件
  */
-export type LightingCondition = 
-  | 'natural'
-  | 'artificial'
-  | 'mixed'
-  | 'low'
-  | 'bright'
-  | 'backlit'
-  | 'side-lit'
-  | 'diffused';
+export type LightingCondition =
+  'natural' | 'artificial' | 'mixed' | 'low' | 'bright' | 'backlit' | 'side-lit' | 'diffused';
 
 /**
  * 天气条件
  */
-export type WeatherCondition = 
-  | 'clear'
-  | 'cloudy'
-  | 'rainy'
-  | 'snowy'
-  | 'foggy'
-  | 'windy'
-  | 'stormy';
+export type WeatherCondition = 'clear' | 'cloudy' | 'rainy' | 'snowy' | 'foggy' | 'windy' | 'stormy';
 
 /**
  * 时间段
  */
-export type TimeOfDay = 
-  | 'dawn'
-  | 'morning'
-  | 'noon'
-  | 'afternoon'
-  | 'sunset'
-  | 'dusk'
-  | 'night'
-  | 'unknown';
+export type TimeOfDay = 'dawn' | 'morning' | 'noon' | 'afternoon' | 'sunset' | 'dusk' | 'night' | 'unknown';
 
 /**
  * 跟踪状态
@@ -552,22 +506,17 @@ export function computeImageContrast(imageData: ImageData): number {
 /**
  * 计算图像运动程度
  */
-export function computeMotionLevel(
-  frame1: ImageData,
-  frame2: ImageData,
-  threshold: number = 30
-): number {
+export function computeMotionLevel(frame1: ImageData, frame2: ImageData, threshold: number = 30): number {
   const { data: data1, width, height } = frame1;
   const { data: data2 } = frame2;
-  
+
   let changedPixels = 0;
   const totalPixels = width * height;
 
   for (let i = 0; i < data1.length; i += 4) {
-    const diff = Math.abs(data1[i] - data2[i]) +
-                 Math.abs(data1[i + 1] - data2[i + 1]) +
-                 Math.abs(data1[i + 2] - data2[i + 2]);
-    
+    const diff =
+      Math.abs(data1[i] - data2[i]) + Math.abs(data1[i + 1] - data2[i + 1]) + Math.abs(data1[i + 2] - data2[i + 2]);
+
     if (diff > threshold) {
       changedPixels++;
     }
@@ -599,24 +548,21 @@ export const DEFAULT_SCENE_UNDERSTANDING_CONFIG: SceneUnderstandingConfig = {
  * 物体检测
  * 使用简化的基于颜色和纹理的物体检测
  */
-export function detectObjects(
-  imageData: ImageData,
-  config: Partial<SceneUnderstandingConfig> = {}
-): DetectedObject[] {
+export function detectObjects(imageData: ImageData, config: Partial<SceneUnderstandingConfig> = {}): DetectedObject[] {
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
   const { width, height, data } = imageData;
   const objects: DetectedObject[] = [];
 
   // 简化的物体检测：基于颜色分割和轮廓检测
   const segments = segmentByColor(imageData);
-  
+
   for (const segment of segments) {
     if (segment.pixels.length < 100) continue; // 忽略太小的区域
-    
+
     const boundingBox = computeSegmentBoundingBox(segment.pixels, width, height);
     const category = classifySegment(segment);
     const confidence = computeDetectionConfidence(segment, category);
-    
+
     if (confidence >= mergedConfig.objectConfidenceThreshold) {
       objects.push({
         id: generateId(),
@@ -641,60 +587,60 @@ function segmentByColor(imageData: ImageData): Array<{ color: { r: number; g: nu
   const { data, width, height } = imageData;
   const visited = new Uint8Array(width * height);
   const segments: Array<{ color: { r: number; g: number; b: number }; pixels: number[] }> = [];
-  
+
   const colorThreshold = 50;
-  
-  for (let y = 0; y < height; y += 4) { // 采样以提高性能
+
+  for (let y = 0; y < height; y += 4) {
+    // 采样以提高性能
     for (let x = 0; x < width; x += 4) {
       const idx = y * width + x;
       if (visited[idx]) continue;
-      
+
       const pixelIdx = idx * 4;
       const color = {
         r: data[pixelIdx],
         g: data[pixelIdx + 1],
         b: data[pixelIdx + 2],
       };
-      
+
       const pixels: number[] = [];
       const stack = [idx];
-      
+
       while (stack.length > 0) {
         const currentIdx = stack.pop()!;
         if (visited[currentIdx]) continue;
-        
+
         const currentPixelIdx = currentIdx * 4;
         const currentColor = {
           r: data[currentPixelIdx],
           g: data[currentPixelIdx + 1],
           b: data[currentPixelIdx + 2],
         };
-        
-        const colorDiff = Math.abs(color.r - currentColor.r) +
-                         Math.abs(color.g - currentColor.g) +
-                         Math.abs(color.b - currentColor.b);
-        
+
+        const colorDiff =
+          Math.abs(color.r - currentColor.r) + Math.abs(color.g - currentColor.g) + Math.abs(color.b - currentColor.b);
+
         if (colorDiff <= colorThreshold) {
           visited[currentIdx] = 1;
           pixels.push(currentIdx);
-          
+
           // 添加邻居
           const x = currentIdx % width;
           const y = Math.floor(currentIdx / width);
-          
+
           if (x > 0) stack.push(currentIdx - 1);
           if (x < width - 1) stack.push(currentIdx + 1);
           if (y > 0) stack.push(currentIdx - width);
           if (y < height - 1) stack.push(currentIdx + width);
         }
       }
-      
+
       if (pixels.length > 0) {
         segments.push({ color, pixels });
       }
     }
   }
-  
+
   return segments;
 }
 
@@ -706,17 +652,17 @@ function computeSegmentBoundingBox(pixels: number[], width: number, height: numb
   let minY = height;
   let maxX = 0;
   let maxY = 0;
-  
+
   for (const idx of pixels) {
     const x = idx % width;
     const y = Math.floor(idx / width);
-    
+
     minX = Math.min(minX, x);
     minY = Math.min(minY, y);
     maxX = Math.max(maxX, x);
     maxY = Math.max(maxY, y);
   }
-  
+
   return {
     x: minX / width,
     y: minY / height,
@@ -730,35 +676,35 @@ function computeSegmentBoundingBox(pixels: number[], width: number, height: numb
  */
 function classifySegment(segment: { color: { r: number; g: number; b: number }; pixels: number[] }): ObjectCategory {
   const { color } = segment;
-  
+
   // 简化的颜色分类
   const hsl = rgbToHsl(color);
-  
+
   // 肤色检测
   if (hsl.h >= 0 && hsl.h <= 50 && hsl.s >= 0.2 && hsl.s <= 0.7 && hsl.l >= 0.3 && hsl.l <= 0.8) {
     return 'person';
   }
-  
+
   // 绿色（植被）
   if (hsl.h >= 80 && hsl.h <= 160 && hsl.s >= 0.2) {
     return 'nature';
   }
-  
+
   // 蓝色（天空/水）
   if (hsl.h >= 180 && hsl.h <= 260 && hsl.s >= 0.2) {
     return 'nature';
   }
-  
+
   // 灰色/黑色（道路/建筑）
   if (hsl.s < 0.1 && hsl.l < 0.5) {
     return 'building';
   }
-  
+
   // 白色（天空/建筑）
   if (hsl.s < 0.1 && hsl.l > 0.8) {
     return 'building';
   }
-  
+
   return 'object';
 }
 
@@ -767,12 +713,12 @@ function classifySegment(segment: { color: { r: number; g: number; b: number }; 
  */
 function computeDetectionConfidence(
   segment: { color: { r: number; g: number; b: number }; pixels: number[] },
-  category: ObjectCategory
+  category: ObjectCategory,
 ): number {
   // 基于区域大小和颜色一致性计算置信度
   const sizeScore = Math.min(segment.pixels.length / 1000, 1);
   const colorConsistency = computeColorConsistency(segment);
-  
+
   return (sizeScore + colorConsistency) / 2;
 }
 
@@ -801,7 +747,7 @@ function getObjectLabel(category: ObjectCategory): string {
     text: '文字',
     other: '其他',
   };
-  
+
   return labels[category] || '未知';
 }
 
@@ -810,11 +756,11 @@ function getObjectLabel(category: ObjectCategory): string {
  */
 function analyzeObjectAttributes(
   segment: { color: { r: number; g: number; b: number }; pixels: number[] },
-  category: ObjectCategory
+  category: ObjectCategory,
 ): ObjectAttributes {
   const { color } = segment;
   const hsl = rgbToHsl(color);
-  
+
   // 颜色属性
   let colorName = 'unknown';
   if (hsl.s < 0.1) {
@@ -832,7 +778,7 @@ function analyzeObjectAttributes(
   } else {
     colorName = 'purple';
   }
-  
+
   // 大小属性
   let size: 'small' | 'medium' | 'large' = 'medium';
   if (segment.pixels.length < 500) {
@@ -840,7 +786,7 @@ function analyzeObjectAttributes(
   } else if (segment.pixels.length > 2000) {
     size = 'large';
   }
-  
+
   return {
     color: colorName,
     size,
@@ -854,18 +800,18 @@ function rgbToHsl(rgb: { r: number; g: number; b: number }): { h: number; s: num
   const r = rgb.r / 255;
   const g = rgb.g / 255;
   const b = rgb.b / 255;
-  
+
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const l = (max + min) / 2;
-  
+
   if (max === min) {
     return { h: 0, s: 0, l };
   }
-  
+
   const d = max - min;
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  
+
   let h = 0;
   switch (max) {
     case r:
@@ -878,7 +824,7 @@ function rgbToHsl(rgb: { r: number; g: number; b: number }): { h: number; s: num
       h = ((r - g) / d + 4) / 6;
       break;
   }
-  
+
   return { h: h * 360, s, l };
 }
 
@@ -886,27 +832,24 @@ function rgbToHsl(rgb: { r: number; g: number; b: number }): { h: number; s: num
  * 人脸检测
  * 使用简化的基于肤色和椭圆检测的方法
  */
-export function detectFaces(
-  imageData: ImageData,
-  config: Partial<SceneUnderstandingConfig> = {}
-): DetectedFace[] {
+export function detectFaces(imageData: ImageData, config: Partial<SceneUnderstandingConfig> = {}): DetectedFace[] {
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
   const { width, height, data } = imageData;
   const faces: DetectedFace[] = [];
-  
+
   // 检测肤色区域
   const skinRegions = detectSkinRegions(imageData);
-  
+
   for (const region of skinRegions) {
     if (region.pixels.length < 200) continue; // 忽略太小的区域
-    
+
     const boundingBox = computeSegmentBoundingBox(region.pixels, width, height);
     const aspectRatio = boundingBox.width / boundingBox.height;
-    
+
     // 人脸宽高比通常在0.7-1.5之间
     if (aspectRatio >= 0.5 && aspectRatio <= 2.0) {
       const confidence = computeFaceConfidence(region, boundingBox);
-      
+
       if (confidence >= mergedConfig.faceConfidenceThreshold) {
         faces.push({
           id: generateId(),
@@ -919,7 +862,7 @@ export function detectFaces(
       }
     }
   }
-  
+
   // 按置信度排序并限制数量
   faces.sort((a, b) => b.confidence - a.confidence);
   return faces.slice(0, mergedConfig.maxFaces);
@@ -931,75 +874,72 @@ export function detectFaces(
 function detectSkinRegions(imageData: ImageData): Array<{ pixels: number[] }> {
   const { data, width, height } = imageData;
   const skinMask = new Uint8Array(width * height);
-  
+
   // 基于YCbCr色彩空间的肤色检测
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i] / 255;
     const g = data[i + 1] / 255;
     const b = data[i + 2] / 255;
-    
+
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     const cb = 0.564 * (b - y) + 0.5;
     const cr = 0.713 * (r - y) + 0.5;
-    
+
     // 肤色范围
     const isSkin = y > 0.2 && y < 0.9 && cb > 0.35 && cb < 0.55 && cr > 0.45 && cr < 0.65;
-    
+
     if (isSkin) {
       skinMask[i / 4] = 1;
     }
   }
-  
+
   // 连通区域分析
   const visited = new Uint8Array(width * height);
   const regions: Array<{ pixels: number[] }> = [];
-  
+
   for (let y = 0; y < height; y += 2) {
     for (let x = 0; x < width; x += 2) {
       const idx = y * width + x;
       if (visited[idx] || !skinMask[idx]) continue;
-      
+
       const pixels: number[] = [];
       const stack = [idx];
-      
+
       while (stack.length > 0) {
         const currentIdx = stack.pop()!;
         if (visited[currentIdx]) continue;
-        
+
         visited[currentIdx] = 1;
         pixels.push(currentIdx);
-        
+
         // 添加邻居
         const x = currentIdx % width;
         const y = Math.floor(currentIdx / width);
-        
+
         if (x > 0 && skinMask[currentIdx - 1]) stack.push(currentIdx - 1);
         if (x < width - 1 && skinMask[currentIdx + 1]) stack.push(currentIdx + 1);
         if (y > 0 && skinMask[currentIdx - width]) stack.push(currentIdx - width);
         if (y < height - 1 && skinMask[currentIdx + width]) stack.push(currentIdx + width);
       }
-      
+
       if (pixels.length > 0) {
         regions.push({ pixels });
       }
     }
   }
-  
+
   return regions;
 }
 
 /**
  * 计算人脸置信度
  */
-function computeFaceConfidence(
-  region: { pixels: number[] },
-  boundingBox: BoundingBox
-): number {
+function computeFaceConfidence(region: { pixels: number[] }, boundingBox: BoundingBox): number {
   // 基于区域大小和形状计算置信度
   const sizeScore = Math.min(region.pixels.length / 1000, 1);
   const aspectRatio = boundingBox.width / boundingBox.height;
   const shapeScore = 1 - Math.abs(aspectRatio - 1) / 0.5;
-  
+
   return (sizeScore + shapeScore) / 2;
 }
 
@@ -1008,7 +948,7 @@ function computeFaceConfidence(
  */
 function estimateFaceLandmarks(boundingBox: BoundingBox): FaceLandmarks {
   const { x, y, width, height } = boundingBox;
-  
+
   // 基于边界框估计关键点位置
   return {
     leftEye: { x: x + width * 0.35, y: y + height * 0.35 },
@@ -1039,15 +979,15 @@ function analyzeExpression(imageData: ImageData, boundingBox: BoundingBox): Face
   // 简化的表情分析：基于面部区域亮度和对比度
   const { data, width, height } = imageData;
   const { x, y, width: bw, height: bh } = boundingBox;
-  
+
   const startX = Math.floor(x * width);
   const startY = Math.floor(y * height);
   const endX = Math.floor((x + bw) * width);
   const endY = Math.floor((y + bh) * height);
-  
+
   let totalBrightness = 0;
   let pixelCount = 0;
-  
+
   for (let py = startY; py < endY; py++) {
     for (let px = startX; px < endX; px++) {
       const idx = (py * width + px) * 4;
@@ -1058,9 +998,9 @@ function analyzeExpression(imageData: ImageData, boundingBox: BoundingBox): Face
       pixelCount++;
     }
   }
-  
+
   const avgBrightness = pixelCount > 0 ? totalBrightness / pixelCount : 0.5;
-  
+
   // 基于亮度估计表情（非常简化的实现）
   const probabilities: Record<ExpressionType, number> = {
     neutral: 0.6,
@@ -1072,18 +1012,18 @@ function analyzeExpression(imageData: ImageData, boundingBox: BoundingBox): Face
     disgusted: 0.05,
     contempt: 0.05,
   };
-  
+
   // 找到最高概率的表情
   let primary: ExpressionType = 'neutral';
   let maxProb = 0;
-  
+
   for (const [expression, prob] of Object.entries(probabilities)) {
     if (prob > maxProb) {
       maxProb = prob;
       primary = expression as ExpressionType;
     }
   }
-  
+
   return {
     primary,
     confidence: maxProb,
@@ -1098,7 +1038,7 @@ function estimateHeadPose(boundingBox: BoundingBox): HeadPose {
   // 简化的头部姿态估计：基于边界框位置
   const centerX = boundingBox.x + boundingBox.width / 2;
   const centerY = boundingBox.y + boundingBox.height / 2;
-  
+
   return {
     yaw: (centerX - 0.5) * 60, // -30到30度
     pitch: (centerY - 0.5) * 40, // -20到20度
@@ -1112,22 +1052,22 @@ function estimateHeadPose(boundingBox: BoundingBox): HeadPose {
  */
 export function recognizeActions(
   frames: VideoFrame[],
-  config: Partial<SceneUnderstandingConfig> = {}
+  config: Partial<SceneUnderstandingConfig> = {},
 ): DetectedAction[] {
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
   const actions: DetectedAction[] = [];
-  
+
   if (frames.length < 2) {
     return actions;
   }
-  
+
   // 分析帧间运动
   for (let i = 1; i < frames.length; i++) {
     const motionLevel = computeMotionLevel(frames[i - 1], frames[i]);
-    
+
     if (motionLevel > 0.1) {
       const action = classifyMotion(frames[i - 1], frames[i], motionLevel);
-      
+
       if (action && action.confidence >= mergedConfig.actionConfidenceThreshold) {
         actions.push({
           id: generateId(),
@@ -1144,7 +1084,7 @@ export function recognizeActions(
       }
     }
   }
-  
+
   return actions;
 }
 
@@ -1154,7 +1094,7 @@ export function recognizeActions(
 function classifyMotion(
   frame1: ImageData,
   frame2: ImageData,
-  motionLevel: number
+  motionLevel: number,
 ): { category: ActionCategory; label: string; confidence: number; attributes: ActionAttributes } | null {
   // 基于运动程度和模式分类动作
   if (motionLevel > 0.5) {
@@ -1168,7 +1108,7 @@ function classifyMotion(
       },
     };
   }
-  
+
   if (motionLevel > 0.2) {
     return {
       category: 'movement',
@@ -1180,7 +1120,7 @@ function classifyMotion(
       },
     };
   }
-  
+
   if (motionLevel > 0.1) {
     return {
       category: 'gesture',
@@ -1192,7 +1132,7 @@ function classifyMotion(
       },
     };
   }
-  
+
   return null;
 }
 
@@ -1202,12 +1142,12 @@ function classifyMotion(
  */
 export function segmentSemantics(
   imageData: ImageData,
-  config: Partial<SceneUnderstandingConfig> = {}
+  config: Partial<SceneUnderstandingConfig> = {},
 ): SemanticSegmentation {
   const { width, height, data } = imageData;
   const mask = new Uint8Array(width * height);
   const confidence = new Uint8Array(width * height);
-  
+
   // 定义分割类别
   const categories: SegmentationCategory[] = [
     { id: 0, name: '背景', type: 'background', color: { r: 128, g: 128, b: 128 } },
@@ -1219,20 +1159,20 @@ export function segmentSemantics(
     { id: 6, name: '道路', type: 'road', color: { r: 105, g: 105, b: 105 } },
     { id: 7, name: '水', type: 'water', color: { r: 0, g: 0, b: 255 } },
   ];
-  
+
   // 基于位置和颜色的简单分割
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
       const pixelIdx = idx * 4;
-      
+
       const r = data[pixelIdx];
       const g = data[pixelIdx + 1];
       const b = data[pixelIdx + 2];
-      
+
       // 基于位置的分割
       const relativeY = y / height;
-      
+
       // 天空区域（上半部分，蓝色）
       if (relativeY < 0.4 && b > 150 && b > r && b > g) {
         mask[idx] = 2; // 天空
@@ -1270,7 +1210,7 @@ export function segmentSemantics(
       }
     }
   }
-  
+
   return {
     mask,
     width,
@@ -1285,9 +1225,9 @@ export function segmentSemantics(
  */
 function isSkinColor(r: number, g: number, b: number): boolean {
   const y = 0.299 * (r / 255) + 0.587 * (g / 255) + 0.114 * (b / 255);
-  const cb = 0.564 * ((b / 255) - y) + 0.5;
-  const cr = 0.713 * ((r / 255) - y) + 0.5;
-  
+  const cb = 0.564 * (b / 255 - y) + 0.5;
+  const cr = 0.713 * (r / 255 - y) + 0.5;
+
   return y > 0.2 && y < 0.9 && cb > 0.35 && cb < 0.55 && cr > 0.45 && cr < 0.65;
 }
 
@@ -1297,33 +1237,33 @@ function isSkinColor(r: number, g: number, b: number): boolean {
 export function describeScene(
   imageData: ImageData,
   objects: DetectedObject[],
-  faces: DetectedFace[]
+  faces: DetectedFace[],
 ): SceneDescription {
   const { width, height } = imageData;
   const brightness = computeImageBrightness(imageData);
   const contrast = computeImageContrast(imageData);
-  
+
   // 场景类型检测
   const sceneType = detectSceneType(imageData, objects);
-  
+
   // 氛围检测
   const mood = detectSceneMood(brightness, contrast, objects, faces);
-  
+
   // 光照条件
   const lighting = detectLightingCondition(brightness, contrast);
-  
+
   // 时间段
   const timeOfDay = detectTimeOfDay(brightness, imageData);
-  
+
   // 复杂度（基于物体数量）
   const complexity = Math.min(objects.length / 10, 1);
-  
+
   // 运动程度（需要多帧，这里使用默认值）
   const motionLevel = 0;
-  
+
   // 主色调
   const dominantColors = extractDominantColors(imageData);
-  
+
   return {
     sceneType,
     mood,
@@ -1341,27 +1281,27 @@ export function describeScene(
 function detectSceneType(imageData: ImageData, objects: DetectedObject[]): SceneType {
   const { width, height } = imageData;
   const brightness = computeImageBrightness(imageData);
-  
+
   // 基于物体类别判断
-  const categories = objects.map(obj => obj.category);
-  
+  const categories = objects.map((obj) => obj.category);
+
   if (categories.includes('nature')) {
     return 'nature';
   }
-  
+
   if (categories.includes('building')) {
     return 'urban';
   }
-  
+
   if (categories.includes('vehicle')) {
     return 'urban';
   }
-  
+
   // 基于亮度判断
   if (brightness < 0.3) {
     return 'indoor';
   }
-  
+
   return 'outdoor';
 }
 
@@ -1372,38 +1312,38 @@ function detectSceneMood(
   brightness: number,
   contrast: number,
   objects: DetectedObject[],
-  faces: DetectedFace[]
+  faces: DetectedFace[],
 ): SceneMood {
   // 基于人脸表情判断
   if (faces.length > 0) {
-    const expressions = faces.map(face => face.expression.primary);
-    
+    const expressions = faces.map((face) => face.expression.primary);
+
     if (expressions.includes('happy')) {
       return 'happy';
     }
-    
+
     if (expressions.includes('sad')) {
       return 'sad';
     }
-    
+
     if (expressions.includes('angry') || expressions.includes('fearful')) {
       return 'tense';
     }
   }
-  
+
   // 基于亮度和对比度判断
   if (brightness < 0.3 && contrast > 0.5) {
     return 'mysterious';
   }
-  
+
   if (brightness > 0.7 && contrast < 0.3) {
     return 'calm';
   }
-  
+
   if (contrast > 0.6) {
     return 'energetic';
   }
-  
+
   return 'neutral';
 }
 
@@ -1414,19 +1354,19 @@ function detectLightingCondition(brightness: number, contrast: number): Lighting
   if (brightness < 0.3) {
     return 'low';
   }
-  
+
   if (brightness > 0.8) {
     return 'bright';
   }
-  
+
   if (contrast > 0.6) {
     return 'side-lit';
   }
-  
+
   if (contrast < 0.3) {
     return 'diffused';
   }
-  
+
   return 'natural';
 }
 
@@ -1437,32 +1377,33 @@ function detectTimeOfDay(brightness: number, imageData: ImageData): TimeOfDay {
   if (brightness < 0.2) {
     return 'night';
   }
-  
+
   if (brightness < 0.4) {
     return 'dusk';
   }
-  
+
   if (brightness > 0.8) {
     return 'noon';
   }
-  
+
   // 检测日落特征（暖色调）
   const { data } = imageData;
   let totalWarmth = 0;
   const pixelCount = data.length / 4;
-  
-  for (let i = 0; i < data.length; i += 16) { // 采样
+
+  for (let i = 0; i < data.length; i += 16) {
+    // 采样
     const r = data[i] / 255;
     const b = data[i + 2] / 255;
-    totalWarmth += (r - b);
+    totalWarmth += r - b;
   }
-  
+
   const avgWarmth = totalWarmth / (pixelCount / 4);
-  
+
   if (avgWarmth > 0.2 && brightness > 0.4 && brightness < 0.7) {
     return 'sunset';
   }
-  
+
   return 'afternoon';
 }
 
@@ -1472,14 +1413,14 @@ function detectTimeOfDay(brightness: number, imageData: ImageData): TimeOfDay {
 function extractDominantColors(imageData: ImageData): { r: number; g: number; b: number }[] {
   const { data } = imageData;
   const colorMap = new Map<string, { color: { r: number; g: number; b: number }; count: number }>();
-  
+
   // 采样像素
   for (let i = 0; i < data.length; i += 16) {
     const r = Math.round(data[i] / 32) * 32;
     const g = Math.round(data[i + 1] / 32) * 32;
     const b = Math.round(data[i + 2] / 32) * 32;
     const key = `${r},${g},${b}`;
-    
+
     const existing = colorMap.get(key);
     if (existing) {
       existing.count++;
@@ -1487,12 +1428,12 @@ function extractDominantColors(imageData: ImageData): { r: number; g: number; b:
       colorMap.set(key, { color: { r, g, b }, count: 1 });
     }
   }
-  
+
   // 返回前5个主色调
   return Array.from(colorMap.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
-    .map(item => item.color);
+    .map((item) => item.color);
 }
 
 /**
@@ -1501,46 +1442,46 @@ function extractDominantColors(imageData: ImageData): { r: number; g: number; b:
 export function trackObjects(
   previousObjects: DetectedObject[],
   currentObjects: DetectedObject[],
-  trackingStates: Map<number, TrackingState>
+  trackingStates: Map<number, TrackingState>,
 ): { trackedObjects: DetectedObject[]; updatedStates: Map<number, TrackingState> } {
   const trackedObjects: DetectedObject[] = [];
   const updatedStates = new Map(trackingStates);
-  
+
   // 为当前帧的每个物体找到最佳匹配
   for (const currentObj of currentObjects) {
     let bestMatch: DetectedObject | null = null;
     let bestIoU = 0;
-    
+
     for (const prevObj of previousObjects) {
       if (prevObj.trackingId === undefined) continue;
       if (prevObj.category !== currentObj.category) continue;
-      
+
       const iou = computeIoU(prevObj.boundingBox, currentObj.boundingBox);
       if (iou > bestIoU && iou > 0.3) {
         bestIoU = iou;
         bestMatch = prevObj;
       }
     }
-    
+
     if (bestMatch && bestMatch.trackingId !== undefined) {
       // 找到匹配，更新跟踪状态
       const trackingId = bestMatch.trackingId;
       const state = updatedStates.get(trackingId);
-      
+
       if (state) {
         state.position = currentObj.boundingBox;
         state.quality = bestIoU;
         state.lostFrames = 0;
         state.trajectory.push(currentObj.boundingBox);
-        
+
         // 限制轨迹长度
         if (state.trajectory.length > 30) {
           state.trajectory.shift();
         }
-        
+
         updatedStates.set(trackingId, state);
       }
-      
+
       trackedObjects.push({
         ...currentObj,
         trackingId,
@@ -1548,7 +1489,7 @@ export function trackObjects(
     } else {
       // 新物体，分配新的跟踪ID
       const newTrackingId = generateTrackingId();
-      
+
       updatedStates.set(newTrackingId, {
         id: newTrackingId,
         category: currentObj.category,
@@ -1558,17 +1499,17 @@ export function trackObjects(
         lostFrames: 0,
         trajectory: [currentObj.boundingBox],
       });
-      
+
       trackedObjects.push({
         ...currentObj,
         trackingId: newTrackingId,
       });
     }
   }
-  
+
   // 更新丢失的跟踪状态
   for (const [id, state] of updatedStates) {
-    const found = trackedObjects.some(obj => obj.trackingId === id);
+    const found = trackedObjects.some((obj) => obj.trackingId === id);
     if (!found) {
       state.lostFrames++;
       if (state.lostFrames > 30) {
@@ -1576,7 +1517,7 @@ export function trackObjects(
       }
     }
   }
-  
+
   return { trackedObjects, updatedStates };
 }
 
@@ -1593,31 +1534,25 @@ function generateTrackingId(): number {
  */
 export function understandScene(
   imageData: ImageData,
-  config: Partial<SceneUnderstandingConfig> = {}
+  config: Partial<SceneUnderstandingConfig> = {},
 ): SceneUnderstandingResult {
   const startTime = performance.now();
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
-  
+
   // 物体检测
-  const objects = mergedConfig.enableObjectDetection
-    ? detectObjects(imageData, mergedConfig)
-    : [];
-  
+  const objects = mergedConfig.enableObjectDetection ? detectObjects(imageData, mergedConfig) : [];
+
   // 人脸检测
-  const faces = mergedConfig.enableFaceDetection
-    ? detectFaces(imageData, mergedConfig)
-    : [];
-  
+  const faces = mergedConfig.enableFaceDetection ? detectFaces(imageData, mergedConfig) : [];
+
   // 语义分割
-  const segmentation = mergedConfig.enableSemanticSegmentation
-    ? segmentSemantics(imageData, mergedConfig)
-    : undefined;
-  
+  const segmentation = mergedConfig.enableSemanticSegmentation ? segmentSemantics(imageData, mergedConfig) : undefined;
+
   // 场景描述
   const sceneDescription = describeScene(imageData, objects, faces);
-  
+
   const processingTime = performance.now() - startTime;
-  
+
   return {
     objects,
     faces,

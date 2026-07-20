@@ -6,20 +6,8 @@ import type {
   AutoEditProgress,
   AutoEditorConfig,
 } from '@open-factory/editor-core';
-import {
-  TemplateManager,
-  BUILTIN_EDIT_TEMPLATES,
-  createDefaultAutoEditorConfig,
-} from '@open-factory/editor-core';
-import {
-  Wand2,
-  Play,
-  ChevronDown,
-  CheckCircle,
-  Loader2,
-  Film,
-  Settings2,
-} from 'lucide-react';
+import { TemplateManager, BUILTIN_EDIT_TEMPLATES, createDefaultAutoEditorConfig } from '@open-factory/editor-core';
+import { Wand2, Play, ChevronDown, CheckCircle, Loader2, Film, Settings2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
@@ -111,9 +99,7 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
           <Wand2 className="w-5 h-5 text-primary" />
           <h3 className="text-sm font-semibold">一键生成</h3>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          从素材分析结果自动生成粗剪时间线（Worker 线程执行）
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">从素材分析结果自动生成粗剪时间线（Worker 线程执行）</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -125,8 +111,8 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
               <div className="min-w-0">
                 <p className="text-sm font-medium">已分析 {analysisReport.scenes.length} 个场景</p>
                 <p className="text-xs text-muted-foreground">
-                  {analysisReport.mediaPaths.length} 个素材文件 ·
-                  总时长 {analysisReport.stats.totalDuration.toFixed(1)}s
+                  {analysisReport.mediaPaths.length} 个素材文件 · 总时长 {analysisReport.stats.totalDuration.toFixed(1)}
+                  s
                 </p>
               </div>
             </>
@@ -166,7 +152,9 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
               <p>{selectedTemplate.description}</p>
               <div className="flex gap-3 text-muted-foreground">
                 <span>节奏: {selectedTemplate.rhythm.style}</span>
-                <span>片段: {selectedTemplate.rhythm.clipDurationRange.min}-{selectedTemplate.rhythm.clipDurationRange.max}s</span>
+                <span>
+                  片段: {selectedTemplate.rhythm.clipDurationRange.min}-{selectedTemplate.rhythm.clipDurationRange.max}s
+                </span>
                 {selectedTemplate.rhythm.beatSync && <span>🎵 卡点</span>}
               </div>
             </div>
@@ -196,7 +184,9 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
                   className="rounded"
                   data-testid="beat-sync-checkbox"
                 />
-                <Label htmlFor="beat-sync" className="text-xs">启用 BPM 卡点</Label>
+                <Label htmlFor="beat-sync" className="text-xs">
+                  启用 BPM 卡点
+                </Label>
               </div>
 
               {config.enableBeatSync && (
@@ -208,7 +198,9 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
                     max={200}
                     value={config.customBpm ?? ''}
                     placeholder="自动检测"
-                    onChange={(e) => setConfig((c) => ({ ...c, customBpm: e.target.value ? Number(e.target.value) : undefined }))}
+                    onChange={(e) =>
+                      setConfig((c) => ({ ...c, customBpm: e.target.value ? Number(e.target.value) : undefined }))
+                    }
                     className="w-24 h-7 px-2 text-xs rounded border border-line bg-background ml-2"
                     data-testid="custom-bpm-input"
                   />
@@ -236,7 +228,9 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
                   className="rounded"
                   data-testid="shuffle-checkbox"
                 />
-                <Label htmlFor="shuffle" className="text-xs">随机排列素材</Label>
+                <Label htmlFor="shuffle" className="text-xs">
+                  随机排列素材
+                </Label>
               </div>
             </div>
           )}
@@ -275,7 +269,10 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
 
         {/* 结果预览 */}
         {result && (
-          <div className="p-3 rounded-md border border-green-200 bg-green-50/50 space-y-2" data-testid="auto-generate-result">
+          <div
+            className="p-3 rounded-md border border-green-200 bg-green-50/50 space-y-2"
+            data-testid="auto-generate-result"
+          >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span className="text-sm font-medium text-green-700">生成完成</span>
@@ -283,15 +280,21 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-muted-foreground">片段数</span>
-                <span className="ml-1 font-medium" data-testid="result-clip-count">{result.generatedClips.length}</span>
+                <span className="ml-1 font-medium" data-testid="result-clip-count">
+                  {result.generatedClips.length}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">转场数</span>
-                <span className="ml-1 font-medium" data-testid="result-transition-count">{result.generatedTransitions.length}</span>
+                <span className="ml-1 font-medium" data-testid="result-transition-count">
+                  {result.generatedTransitions.length}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">总时长</span>
-                <span className="ml-1 font-medium" data-testid="result-duration">{result.totalDuration.toFixed(1)}s</span>
+                <span className="ml-1 font-medium" data-testid="result-duration">
+                  {result.totalDuration.toFixed(1)}s
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">轨道</span>
@@ -309,7 +312,12 @@ export function AutoGeneratePanel({ className, analysisReport, onGenerated }: Au
             <Button variant="outline" size="sm" className="flex-1" onClick={handleReset} data-testid="regenerate-btn">
               重新生成
             </Button>
-            <Button size="sm" className="flex-1" onClick={() => onGenerated?.(result)} data-testid="apply-to-timeline-btn">
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => onGenerated?.(result)}
+              data-testid="apply-to-timeline-btn"
+            >
               应用到时间线
             </Button>
           </>

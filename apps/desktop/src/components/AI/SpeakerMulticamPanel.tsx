@@ -40,17 +40,18 @@ export function SpeakerMulticamPanel({
   const [showSettings, setShowSettings] = useState(false);
 
   // 获取可用机位
-  const availableAngles = multicamClip
-    ? ('angles' in multicamClip ? multicamClip.angles : [])
-    : [];
+  const availableAngles = multicamClip ? ('angles' in multicamClip ? multicamClip.angles : []) : [];
 
   // 自动配置映射
   useEffect(() => {
     if (diarizationResult && availableAngles.length > 0 && state.mappings.length === 0) {
-      autoConfigureMappings(diarizationResult, availableAngles.map((a: any, i: number) => ({
-        index: i,
-        name: a.name ?? `机位 ${i + 1}`,
-      })));
+      autoConfigureMappings(
+        diarizationResult,
+        availableAngles.map((a: any, i: number) => ({
+          index: i,
+          name: a.name ?? `机位 ${i + 1}`,
+        })),
+      );
     }
   }, [diarizationResult, availableAngles, state.mappings.length, autoConfigureMappings]);
 
@@ -73,10 +74,13 @@ export function SpeakerMulticamPanel({
   /**
    * 更新映射
    */
-  const handleMappingChange = useCallback((speakerId: number, angleIndex: number) => {
-    const angle = availableAngles[angleIndex];
-    setMapping(speakerId, angleIndex, angle?.name);
-  }, [availableAngles, setMapping]);
+  const handleMappingChange = useCallback(
+    (speakerId: number, angleIndex: number) => {
+      const angle = availableAngles[angleIndex];
+      setMapping(speakerId, angleIndex, angle?.name);
+    },
+    [availableAngles, setMapping],
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden" data-testid="speaker-multicam-panel">
@@ -95,11 +99,7 @@ export function SpeakerMulticamPanel({
             <Settings className="h-4 w-4" />
           </button>
           {onClose && (
-            <button
-              className="rounded p-1 hover:bg-panel"
-              onClick={onClose}
-              data-testid="speaker-multicam-close"
-            >
+            <button className="rounded p-1 hover:bg-panel" onClick={onClose} data-testid="speaker-multicam-close">
               <X className="h-4 w-4" />
             </button>
           )}
@@ -119,20 +119,15 @@ export function SpeakerMulticamPanel({
         {/* 映射配置 */}
         {diarizationResult && (
           <div className="space-y-3">
-            <div className="text-xs font-medium text-[var(--color-text-muted)]">
-              为每个说话人分配对应的机位
-            </div>
+            <div className="text-xs font-medium text-[var(--color-text-muted)]">为每个说话人分配对应的机位</div>
 
             <div className="space-y-2">
-              {diarizationResult.speakers.map(speaker => {
-                const mapping = state.mappings.find(m => m.speakerId === speaker.speakerId);
+              {diarizationResult.speakers.map((speaker) => {
+                const mapping = state.mappings.find((m) => m.speakerId === speaker.speakerId);
                 const selectedAngle = mapping?.angleIndex ?? -1;
 
                 return (
-                  <div
-                    key={speaker.speakerId}
-                    className="flex items-center gap-2 rounded-lg border border-line p-2"
-                  >
+                  <div key={speaker.speakerId} className="flex items-center gap-2 rounded-lg border border-line p-2">
                     {/* 说话人标识 */}
                     <div
                       className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium text-white"
@@ -144,9 +139,7 @@ export function SpeakerMulticamPanel({
                     {/* 说话人信息 */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{speaker.speakerLabel}</div>
-                      <div className="text-xs text-[var(--color-text-muted)]">
-                        {speaker.sampleCount} 个片段
-                      </div>
+                      <div className="text-xs text-[var(--color-text-muted)]">{speaker.sampleCount} 个片段</div>
                     </div>
 
                     {/* 机位选择 */}
@@ -305,12 +298,8 @@ export function SpeakerMulticamPanel({
                     {formatTimecode(suggestion.timeMs / 1000)}
                   </span>
                   <span className="flex-1">→ {suggestion.speakerLabel}</span>
-                  <span className="text-[var(--color-text-muted)]">
-                    机位 {suggestion.targetAngle + 1}
-                  </span>
-                  <span className="text-[var(--color-text-muted)]">
-                    {(suggestion.confidence * 100).toFixed(0)}%
-                  </span>
+                  <span className="text-[var(--color-text-muted)]">机位 {suggestion.targetAngle + 1}</span>
+                  <span className="text-[var(--color-text-muted)]">{(suggestion.confidence * 100).toFixed(0)}%</span>
                 </div>
               ))}
             </div>

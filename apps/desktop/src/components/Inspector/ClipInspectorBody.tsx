@@ -52,16 +52,7 @@ import {
   type FrameInterpolationMode,
   type TextBoxFitMode,
 } from '@open-factory/editor-core';
-import {
-  Loader2,
-  Mic,
-  Palette,
-  Pipette,
-  Plus,
-  Sparkles,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Loader2, Mic, Palette, Pipette, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { cancelAudioNoiseReduction, processAudioNoiseReduction } from '../../lib/tauri-bridge';
@@ -78,8 +69,42 @@ import { AIBrollSuggestionPanel } from './AIBrollSuggestionPanel';
 import { AISubtitleStylePanel } from './AISubtitleStylePanel';
 import { useEditorStore } from '../../store/editorStore';
 import { isTranslationConfigured } from '../../store/translationSettingsStore';
-import { PanelTitle, Section, TextField, TextAreaField, NumberField, RangeField, RangeNumberField, ExpressionNumberField, ColorField, ToggleField, AnimatedField } from './InspectorFields';
-import { AudioRestorationWaveformPreview, SubtitleStyleTemplatesPanel, SubtitleProofreadingPanel, SubtitleRetimingPanel, SpeedCurveEditor, KeyframeCurveEditor, CurveEditor, ThreeWayColorEditor, PrivacyBlurPanel, RichTextEditor, MotionGraphicPanel, MasksEditor, EffectsEditor, rgbToHex, hexToRgb, formatLutPath, formatInputColorSpaceLabel, getKenBurnsEndScale, formatKeyframeProperty, formatKeyframeValue, formatEstimatedDuration } from './InspectorEditors';
+import {
+  PanelTitle,
+  Section,
+  TextField,
+  TextAreaField,
+  NumberField,
+  RangeField,
+  RangeNumberField,
+  ExpressionNumberField,
+  ColorField,
+  ToggleField,
+  AnimatedField,
+} from './InspectorFields';
+import {
+  AudioRestorationWaveformPreview,
+  SubtitleStyleTemplatesPanel,
+  SubtitleProofreadingPanel,
+  SubtitleRetimingPanel,
+  SpeedCurveEditor,
+  KeyframeCurveEditor,
+  CurveEditor,
+  ThreeWayColorEditor,
+  PrivacyBlurPanel,
+  RichTextEditor,
+  MotionGraphicPanel,
+  MasksEditor,
+  EffectsEditor,
+  rgbToHex,
+  hexToRgb,
+  formatLutPath,
+  formatInputColorSpaceLabel,
+  getKenBurnsEndScale,
+  formatKeyframeProperty,
+  formatKeyframeValue,
+  formatEstimatedDuration,
+} from './InspectorEditors';
 import type { ClipInspectorStateParams, ClipInspectorStateReturn } from './useClipInspectorState';
 
 export type ClipInspectorBodyProps = ClipInspectorStateParams & ClipInspectorStateReturn;

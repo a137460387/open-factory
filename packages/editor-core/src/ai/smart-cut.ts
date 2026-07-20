@@ -44,13 +44,7 @@ export interface CutSuggestion {
 }
 
 /** Categories of cut suggestions. */
-export type CutReason =
-  | 'silence'
-  | 'static-frame'
-  | 'filler-word'
-  | 'low-energy'
-  | 'repetitive-content'
-  | 'long-pause';
+export type CutReason = 'silence' | 'static-frame' | 'filler-word' | 'low-energy' | 'repetitive-content' | 'long-pause';
 
 /** Configuration for smart cut analysis. */
 export interface SmartCutOptions {
@@ -130,13 +124,7 @@ export function generateSmartCuts(
   let idCounter = 0;
 
   // 1. Detect silence gaps between speech segments.
-  const silenceCuts = detectSilenceGaps(
-    vadIntervals,
-    duration,
-    minSilenceDuration,
-    speechPadding,
-    minConfidence,
-  );
+  const silenceCuts = detectSilenceGaps(vadIntervals, duration, minSilenceDuration, speechPadding, minConfidence);
   for (const cut of silenceCuts) {
     suggestions.push({ ...cut, id: `cut-${++idCounter}` });
   }
@@ -154,12 +142,7 @@ export function generateSmartCuts(
   }
 
   // 3. Detect long pauses within speech.
-  const pauseCuts = detectLongPauses(
-    vadIntervals,
-    minPauseDuration,
-    speechPadding,
-    minConfidence,
-  );
+  const pauseCuts = detectLongPauses(vadIntervals, minPauseDuration, speechPadding, minConfidence);
   for (const cut of pauseCuts) {
     suggestions.push({ ...cut, id: `cut-${++idCounter}` });
   }
@@ -173,9 +156,7 @@ export function generateSmartCuts(
   }
 
   // Sort by time and merge overlapping suggestions.
-  const sorted = suggestions
-    .filter((s) => s.confidence >= minConfidence)
-    .sort((a, b) => a.start - b.start);
+  const sorted = suggestions.filter((s) => s.confidence >= minConfidence).sort((a, b) => a.start - b.start);
 
   const merged = mergeOverlappingSuggestions(sorted);
 
@@ -184,9 +165,7 @@ export function generateSmartCuts(
 
   // Compute statistics.
   const stats = computeStats(limited);
-  const totalRemovableDuration = round(
-    limited.reduce((sum, s) => sum + s.duration, 0),
-  );
+  const totalRemovableDuration = round(limited.reduce((sum, s) => sum + s.duration, 0));
 
   return {
     suggestions: limited,
@@ -208,9 +187,7 @@ export function applyCutsToTimeline(
   suggestions: CutSuggestion[],
   clipDuration: number,
 ): Array<{ start: number; end: number }> {
-  const accepted = suggestions
-    .filter((s) => s.accepted !== false)
-    .sort((a, b) => a.start - b.start);
+  const accepted = suggestions.filter((s) => s.accepted !== false).sort((a, b) => a.start - b.start);
 
   if (accepted.length === 0) {
     return [{ start: 0, end: clipDuration }];
@@ -241,22 +218,18 @@ export function applyCutsToTimeline(
  * @param speechSegments - Surrounding speech segments.
  * @returns Impact score (0.0 ~ 1.0).
  */
-export function computeCutImpact(
-  suggestion: CutSuggestion,
-  speechSegments: SpeechSegment[],
-): number {
+export function computeCutImpact(suggestion: CutSuggestion, speechSegments: SpeechSegment[]): number {
   // Longer cuts have more impact.
   const durationScore = Math.min(1, suggestion.duration / 5);
 
   // Cuts between high-confidence speech segments have more impact.
   const surroundingSpeech = speechSegments.filter(
-    (s) =>
-      Math.abs(s.start - suggestion.end) < 2 ||
-      Math.abs(s.end - suggestion.start) < 2,
+    (s) => Math.abs(s.start - suggestion.end) < 2 || Math.abs(s.end - suggestion.start) < 2,
   );
-  const speechConfidence = surroundingSpeech.length > 0
-    ? surroundingSpeech.reduce((sum, s) => sum + s.confidence, 0) / surroundingSpeech.length
-    : 0.5;
+  const speechConfidence =
+    surroundingSpeech.length > 0
+      ? surroundingSpeech.reduce((sum, s) => sum + s.confidence, 0) / surroundingSpeech.length
+      : 0.5;
 
   // Confidence of the suggestion itself.
   const confidenceScore = suggestion.confidence;
@@ -310,10 +283,8 @@ export function detectLowEnergySegments(
         const rangeEnd = rangeSamples[rangeSamples.length - 1].time;
         const rangeDuration = rangeEnd - rangeStart;
         if (rangeDuration >= minDuration) {
-          const avgEnergy = rangeSamples.reduce(
-            (sum, s) => sum + s.motion * 0.7 + s.brightness * 0.3,
-            0,
-          ) / rangeSamples.length;
+          const avgEnergy =
+            rangeSamples.reduce((sum, s) => sum + s.motion * 0.7 + s.brightness * 0.3, 0) / rangeSamples.length;
           lowEnergyRanges.push({
             start: round(rangeStart),
             end: round(rangeEnd),
@@ -353,14 +324,16 @@ function detectSilenceGaps(
   if (vadIntervals.length === 0) {
     // Entire clip is silent.
     if (duration >= minSilenceDuration) {
-      return [{
-        start: 0,
-        end: round(duration),
-        duration: round(duration),
-        reason: 'silence',
-        confidence: 0.9,
-        description: '整个片段无语音活动',
-      }];
+      return [
+        {
+          start: 0,
+          end: round(duration),
+          duration: round(duration),
+          reason: 'silence',
+          confidence: 0.9,
+          description: '整个片段无语音活动',
+        },
+      ];
     }
     return [];
   }
@@ -497,11 +470,7 @@ function detectLongPauses(
     const pauseDuration = pauseEnd - pauseStart;
 
     // Only suggest if both segments are high-confidence speech.
-    if (
-      pauseDuration >= minPauseDuration &&
-      sorted[i - 1].confidence >= 0.6 &&
-      sorted[i].confidence >= 0.6
-    ) {
+    if (pauseDuration >= minPauseDuration && sorted[i - 1].confidence >= 0.6 && sorted[i].confidence >= 0.6) {
       // Keep some padding around speech.
       const cutStart = pauseStart + speechPadding;
       const cutEnd = pauseEnd - speechPadding;
@@ -541,9 +510,7 @@ function detectFillerWords(
     .filter((c) => c.duration > 0.05);
 }
 
-function mergeOverlappingSuggestions(
-  suggestions: CutSuggestion[],
-): CutSuggestion[] {
+function mergeOverlappingSuggestions(suggestions: CutSuggestion[]): CutSuggestion[] {
   if (suggestions.length <= 1) {
     return suggestions;
   }
@@ -572,9 +539,7 @@ function mergeOverlappingSuggestions(
   return merged;
 }
 
-function computeStats(
-  suggestions: CutSuggestion[],
-): Record<CutReason, { count: number; duration: number }> {
+function computeStats(suggestions: CutSuggestion[]): Record<CutReason, { count: number; duration: number }> {
   const stats: Record<CutReason, { count: number; duration: number }> = {
     silence: { count: 0, duration: 0 },
     'static-frame': { count: 0, duration: 0 },

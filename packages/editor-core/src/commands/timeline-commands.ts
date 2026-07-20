@@ -305,9 +305,7 @@ function assertClipsNotOnLockedTrack(timeline: Timeline, clipIds: string[]): voi
   const ids = new Set(clipIds);
   for (const track of timeline.tracks) {
     if (track.locked && track.clips.some((clip) => ids.has(clip.id))) {
-      throw new Error(
-        `Cannot modify clips on locked track "${track.name || track.id}". Unlock the track first.`,
-      );
+      throw new Error(`Cannot modify clips on locked track "${track.name || track.id}". Unlock the track first.`);
     }
   }
 }
@@ -6050,7 +6048,10 @@ export class BatchUpdateClipCommand implements Command {
 
   execute(): void {
     this.before ??= this.accessor.getTimeline();
-    assertClipsNotOnLockedTrack(this.before, this.updates.map((u) => u.clipId));
+    assertClipsNotOnLockedTrack(
+      this.before,
+      this.updates.map((u) => u.clipId),
+    );
     if (!this.after) {
       let timeline = this.before;
       const batchAccessor: TimelineAccessor = {

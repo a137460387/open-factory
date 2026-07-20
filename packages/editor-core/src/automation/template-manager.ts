@@ -143,10 +143,7 @@ export interface TemplateManagerConfig {
 export type TemplateManagerEvent = 'created' | 'updated' | 'deleted' | 'imported';
 
 /** 模板变更监听器 */
-export type TemplateManagerEventListener = (
-  event: TemplateManagerEvent,
-  template: EditTemplate,
-) => void;
+export type TemplateManagerEventListener = (event: TemplateManagerEvent, template: EditTemplate) => void;
 
 // ============================================================
 // 工厂函数
@@ -252,7 +249,7 @@ export const BUILTIN_vlog_TEMPLATE: EditTemplate = {
     defaultType: 'dissolve',
     defaultDuration: 0.6,
     sceneTypeOverrides: {
-      'landscape': 'zoom-dissolve',
+      landscape: 'zoom-dissolve',
     },
     autoAddTransitions: true,
   },
@@ -303,8 +300,8 @@ export const BUILTIN_SHORT_VIDEO_TEMPLATE: EditTemplate = {
     defaultType: 'flash-black',
     defaultDuration: 0,
     sceneTypeOverrides: {
-      'action': 'flash-black',
-      'dialogue': 'dissolve',
+      action: 'flash-black',
+      dialogue: 'dissolve',
     },
     autoAddTransitions: true,
   },
@@ -357,7 +354,7 @@ export const BUILTIN_PROMO_TEMPLATE: EditTemplate = {
     defaultDuration: 0.8,
     sceneTypeOverrides: {
       'wide-shot': 'zoom-dissolve',
-      'action': 'flash-black',
+      action: 'flash-black',
     },
     autoAddTransitions: true,
   },

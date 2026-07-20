@@ -124,16 +124,19 @@ export function detectScenesWithCLIP(
   if (merged.length < 2) {
     return {
       boundaries: [],
-      segments: merged.length === 1
-        ? [{
-            start: merged[0].time,
-            end: merged[0].time,
-            sceneType: 'indoor',
-            avgBrightness: merged[0].brightness,
-            avgMotion: merged[0].motion,
-            confidence: 1.0,
-          }]
-        : [],
+      segments:
+        merged.length === 1
+          ? [
+              {
+                start: merged[0].time,
+                end: merged[0].time,
+                sceneType: 'indoor',
+                avgBrightness: merged[0].brightness,
+                avgMotion: merged[0].motion,
+                confidence: 1.0,
+              },
+            ]
+          : [],
       confidenceCurve: [],
       frameCount: merged.length,
     };
@@ -148,13 +151,7 @@ export function detectScenesWithCLIP(
   let lastBoundaryTime = -Infinity;
 
   for (let i = 0; i < pairScores.length; i++) {
-    const threshold = computeAdaptiveThreshold(
-      pairScores,
-      i,
-      windowSize,
-      similarityThreshold,
-      sensitivity,
-    );
+    const threshold = computeAdaptiveThreshold(pairScores, i, windowSize, similarityThreshold, sensitivity);
     const score = pairScores[i];
     confidenceCurve.push({ time: score.time, confidence: score.clipSimilarity });
 
@@ -206,9 +203,7 @@ export function refineBoundaries(
 
   for (const boundary of boundaries) {
     // Find nearby motion peaks.
-    const nearbySamples = samples.filter(
-      (s) => Math.abs(s.time - boundary.time) <= maxSnapDistance,
-    );
+    const nearbySamples = samples.filter((s) => Math.abs(s.time - boundary.time) <= maxSnapDistance);
 
     if (nearbySamples.length === 0) {
       continue;
@@ -219,9 +214,7 @@ export function refineBoundaries(
     let bestMotionDelta = 0;
 
     for (const sample of nearbySamples) {
-      const prevSample = samples.find(
-        (s) => s.time < sample.time && Math.abs(s.time - sample.time) < 0.5,
-      );
+      const prevSample = samples.find((s) => s.time < sample.time && Math.abs(s.time - sample.time) < 0.5);
       if (prevSample) {
         const delta = Math.abs(sample.motion - prevSample.motion);
         if (delta > bestMotionDelta) {
@@ -267,10 +260,7 @@ export function refineBoundaries(
  * Compute CLIP-based scene similarity for a pair of frames.
  * Returns cosine similarity (0.0 ~ 1.0).
  */
-export function computeCLIPSimilarity(
-  a: Float32Array,
-  b: Float32Array,
-): number {
+export function computeCLIPSimilarity(a: Float32Array, b: Float32Array): number {
   const len = Math.min(a.length, b.length);
   if (len === 0) {
     return 1.0;
@@ -326,10 +316,7 @@ export function findSimilarScenes(
         continue;
       }
 
-      const similarity = computeCLIPSimilarity(
-        segments[i].avgEmbedding!,
-        segments[j].avgEmbedding!,
-      );
+      const similarity = computeCLIPSimilarity(segments[i].avgEmbedding!, segments[j].avgEmbedding!);
 
       if (similarity >= threshold) {
         group.push(j);
@@ -340,9 +327,7 @@ export function findSimilarScenes(
     if (group.length > 1) {
       groups.push({
         indices: group,
-        similarity: round(
-          group.reduce((sum, idx) => sum + (segments[idx].confidence ?? 0), 0) / group.length,
-        ),
+        similarity: round(group.reduce((sum, idx) => sum + (segments[idx].confidence ?? 0), 0) / group.length),
       });
     }
   }
@@ -360,17 +345,10 @@ interface MergedFrame {
   embedding?: Float32Array;
 }
 
-function mergeByTime(
-  embeddings: CLIPFrameEmbedding[],
-  samples: ContentAnalysisVisualSample[],
-): MergedFrame[] {
-  const sortedSamples = [...samples]
-    .filter((s) => Number.isFinite(s.time))
-    .sort((a, b) => a.time - b.time);
+function mergeByTime(embeddings: CLIPFrameEmbedding[], samples: ContentAnalysisVisualSample[]): MergedFrame[] {
+  const sortedSamples = [...samples].filter((s) => Number.isFinite(s.time)).sort((a, b) => a.time - b.time);
 
-  const sortedEmbeddings = [...embeddings]
-    .filter((e) => Number.isFinite(e.time))
-    .sort((a, b) => a.time - b.time);
+  const sortedEmbeddings = [...embeddings].filter((e) => Number.isFinite(e.time)).sort((a, b) => a.time - b.time);
 
   if (sortedEmbeddings.length === 0) {
     return sortedSamples.map((s) => ({
@@ -394,10 +372,7 @@ function mergeByTime(
   });
 }
 
-function findNearestEmbedding(
-  embeddings: CLIPFrameEmbedding[],
-  time: number,
-): CLIPFrameEmbedding | null {
+function findNearestEmbedding(embeddings: CLIPFrameEmbedding[], time: number): CLIPFrameEmbedding | null {
   if (embeddings.length === 0) {
     return null;
   }
@@ -453,9 +428,7 @@ function computePairScores(
 
     // Combined: lower similarity = higher scene break probability.
     const clipBreakScore = 1.0 - clipSim;
-    const combined = clamp01(
-      clipBreakScore * clipWeight + histDiff * histogramWeight + motionDiff * motionWeight,
-    );
+    const combined = clamp01(clipBreakScore * clipWeight + histDiff * histogramWeight + motionDiff * motionWeight);
 
     scores.push({
       time: curr.time,
@@ -485,10 +458,11 @@ function computeAdaptiveThreshold(
   }
 
   const mean = window.reduce((sum, s) => sum + (1 - s.clipSimilarity), 0) / window.length;
-  const variance = window.reduce((sum, s) => {
-    const d = (1 - s.clipSimilarity) - mean;
-    return sum + d * d;
-  }, 0) / window.length;
+  const variance =
+    window.reduce((sum, s) => {
+      const d = 1 - s.clipSimilarity - mean;
+      return sum + d * d;
+    }, 0) / window.length;
   const stddev = Math.sqrt(variance);
 
   // In noisy regions, raise threshold to avoid false positives.
@@ -496,10 +470,7 @@ function computeAdaptiveThreshold(
   return clamp01((baseThreshold + adaptiveOffset) * clamp01(sensitivity));
 }
 
-function buildCLIPSegments(
-  frames: MergedFrame[],
-  boundaries: CLIPSceneBoundary[],
-): CLIPSceneSegment[] {
+function buildCLIPSegments(frames: MergedFrame[], boundaries: CLIPSceneBoundary[]): CLIPSceneSegment[] {
   if (frames.length === 0) {
     return [];
   }
@@ -526,11 +497,7 @@ function buildCLIPSegments(
   return segments;
 }
 
-function finalizeCLIPSegment(
-  start: number,
-  end: number,
-  frames: MergedFrame[],
-): CLIPSceneSegment {
+function finalizeCLIPSegment(start: number, end: number, frames: MergedFrame[]): CLIPSceneSegment {
   const avgBrightness = round(average(frames.map((f) => clamp01(f.brightness))));
   const avgMotion = round(average(frames.map((f) => clamp01(f.motion))));
   const avgSaturation = round(average(frames.map((f) => clamp01(f.saturation))));
@@ -595,10 +562,7 @@ function findNearest(values: number[], target: number): number | null {
   return best;
 }
 
-function mergeCloseRefinements(
-  refinements: BoundaryRefinement[],
-  minGap: number,
-): BoundaryRefinement[] {
+function mergeCloseRefinements(refinements: BoundaryRefinement[], minGap: number): BoundaryRefinement[] {
   if (refinements.length <= 1) {
     return refinements;
   }

@@ -1,0 +1,504 @@
+Unused exports (425)
+Section                                 function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:118:17     
+makeSvgDataUri                          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:291:17     
+getSubtitleProofreadingIssueLabel       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:464:17     
+EasingPresetSelector                    function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:782:17     
+getCurveEditorFrames                    function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1068:17    
+normalizeCurveEditorFrames              function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1076:17    
+drawKeyframeCurveCanvas                 function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1095:17    
+drawKeyframeVelocityCanvas              function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1220:17    
+getInterpolatedCurveEditorValue         function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1259:17    
+findNearestCurveHandle                  function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1263:17    
+findNearestCurveFrameIdByPoint          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1304:17    
+nextHandleMode                          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1325:17    
+getKeyframeFallbackForCurve             function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1335:17    
+eventToCurveEditorFrame                 function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1348:17    
+eventToCanvasPoint                      function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1367:17    
+curveFrameToPoint                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1375:17    
+findNearestCurveFrame                   function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1389:17    
+getCurveFrameIdsInBox                   function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1413:17    
+getSpeedCurveFrames                     function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1431:17    
+normalizeSpeedCurveFrames               function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1448:17    
+eventToSpeedFrame                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1459:17    
+drawSpeedCurveCanvas                    function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1475:17    
+speedFrameToPoint                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1522:17    
+findNearestSpeedFrame                   function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1538:17    
+roundFinite                             function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1559:17    
+CURVE_CHANNELS                                    apps/desktop/src/components/Inspector/InspectorEditors.tsx:1565:14    
+THREE_WAY_CHANNELS                                apps/desktop/src/components/Inspector/InspectorEditors.tsx:1717:14    
+ColorWheelControl                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:1763:17    
+parseRichTextFromElement                function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2048:17    
+collectRichTextRuns                     function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2057:17    
+richTextToHtml                          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2094:17    
+richTextRunToHtml                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2100:17    
+isParagraphNode                         function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2116:17    
+normalizeCssColorForModel               function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2120:17    
+escapeHtml                              function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2132:17    
+escapeHtmlAttribute                     function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2136:17    
+formatMotionGraphicNumberValue          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2713:17    
+TextField                               function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2723:17    
+TextAreaField                           function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2750:17    
+CustomShaderEffectFields                function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2777:17    
+NumberField                             function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2869:17    
+AudioSpectrumEffectFields               function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:2928:17    
+MotionBlurEffectFields                  function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3028:17    
+formatNumberInputValue                  function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3087:17    
+RangeField                              function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3091:17    
+RangeNumberField                        function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3140:17    
+ExpressionNumberField                   function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3216:17    
+ColorField                              function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3265:17    
+ToggleField                             function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3293:17    
+drawCurveCanvas                         function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3321:17    
+eventToCurvePoint                       function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3376:17    
+findNearestCurvePoint                   function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3384:17    
+drawColorWheel                          function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3397:17    
+eventToUnitPoint                        function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3434:17    
+wheelPointToOffsets                     function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3448:17    
+wheelOffsetsToPoint                     function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3456:17    
+hsvToRgb                                function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3466:17    
+clampUnit                               function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3488:17    
+clampSigned                             function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3492:17    
+getEffectParamConfig                    function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3529:17    
+AnimatedField                           function  apps/desktop/src/components/Inspector/InspectorEditors.tsx:3571:17    
+default                                 function  apps/desktop/src/components/Preview/SuperResolutionPreview.tsx:594:16 
+default                                 variable  apps/desktop/src/components/Timeline/TimelineHeader.tsx:446:16        
+TransitionPreviewCanvas                 function  apps/desktop/src/components/Timeline/TimelineMenus.tsx:357:17         
+drawPreviewShape                        function  apps/desktop/src/components/Timeline/TimelineMenus.tsx:442:17         
+heatmapColor                            function  apps/desktop/src/components/Timeline/TimelineOverlays.tsx:569:17      
+buttonVariants                                    apps/desktop/src/components/ui/button.tsx:41:18                       
+DialogPortal                                      apps/desktop/src/components/ui/dialog.tsx:86:3                        
+DialogOverlay                                     apps/desktop/src/components/ui/dialog.tsx:87:3                        
+DialogClose                                       apps/desktop/src/components/ui/dialog.tsx:88:3                        
+DialogTrigger                                     apps/desktop/src/components/ui/dialog.tsx:89:3                        
+DialogDescription                                 apps/desktop/src/components/ui/dialog.tsx:94:3                        
+SelectGroup                                       apps/desktop/src/components/ui/select.tsx:130:3                       
+SelectLabel                                       apps/desktop/src/components/ui/select.tsx:134:3                       
+SelectSeparator                                   apps/desktop/src/components/ui/select.tsx:136:3                       
+SelectScrollUpButton                              apps/desktop/src/components/ui/select.tsx:137:3                       
+SelectScrollDownButton                            apps/desktop/src/components/ui/select.tsx:138:3                       
+formatFpsOption                         function  apps/desktop/src/export/components/PresetFields.tsx:8:17              
+formatOptionLabel                       function  apps/desktop/src/export/components/PresetFields.tsx:16:17             
+getCurrentLanguage                      function  apps/desktop/src/i18n/i18next-config.ts:60:17                         
+runASR                                  function  apps/desktop/src/lib/asr.ts:2:17                                      
+logErrorWithDefault                     function  apps/desktop/src/lib/error-handlers.ts:24:17                          
+silentError                             function  apps/desktop/src/lib/error-handlers.ts:37:17                          
+createHardwareDecodeManager             function  apps/desktop/src/lib/preview/hw-decode-manager.ts:348:17              
+detectHardwareCapabilities              function  apps/desktop/src/lib/preview/hw-decode-manager.ts:355:23              
+isBackendAvailable                      function  apps/desktop/src/lib/preview/hw-decode-manager.ts:362:23              
+upsertMediaAsset                        function  apps/desktop/src/lib/tauri-bridge/ai-db.ts:230:23                     
+deleteMediaAsset                        function  apps/desktop/src/lib/tauri-bridge/ai-db.ts:253:23                     
+autoTagAsset                            function  apps/desktop/src/lib/tauri-bridge/ai-db.ts:276:23                     
+addManualTag                            function  apps/desktop/src/lib/tauri-bridge/ai-db.ts:309:23                     
+removeManualTag                         function  apps/desktop/src/lib/tauri-bridge/ai-db.ts:321:23                     
+writeSmtpPassword                       function  apps/desktop/src/lib/tauri-bridge/export.ts:200:23                    
+getCacheDir                             function  apps/desktop/src/lib/tauri-bridge/export.ts:346:23                    
+removeCacheFile                         function  apps/desktop/src/lib/tauri-bridge/export.ts:371:23                    
+readFileHeaderBytes                     function  apps/desktop/src/lib/tauri-bridge/fs.ts:94:23                         
+isEncryptedProjectFile                  function  apps/desktop/src/lib/tauri-bridge/fs.ts:138:23                        
+authorizePaths                          function  apps/desktop/src/lib/tauri-bridge/fs.ts:258:23                        
+detectFfmpeg                            function  apps/desktop/src/lib/tauri-bridge/media.ts:261:23                     
+showMainWindow                          function  apps/desktop/src/lib/tauri-bridge/window.ts:181:23                    
+listenRenderPreviewCacheProgress        function  apps/desktop/src/lib/tauri-bridge/window.ts:300:23                    
+normalizeHardwareAccelerationSettings   function  apps/desktop/src/settings/appSettings.ts:116:17                       
+useProfilerRecording                              apps/desktop/src/store/aiFeatureStore.ts:16:14                        
+useProfilerElapsedMs                              apps/desktop/src/store/aiFeatureStore.ts:17:14                        
+useProfilerReport                                 apps/desktop/src/store/aiFeatureStore.ts:18:14                        
+useSpeakerDiarizationRunning                      apps/desktop/src/store/aiFeatureStore.ts:24:14                        
+useSpeakerDiarizationResult                       apps/desktop/src/store/aiFeatureStore.ts:25:14                        
+useContentAnalysisRunningClipId                   apps/desktop/src/store/aiFeatureStore.ts:30:14                        
+useAudioSeparationClipId                          apps/desktop/src/store/aiFeatureStore.ts:34:14                        
+useAudioSeparationProgress                        apps/desktop/src/store/aiFeatureStore.ts:35:14                        
+useDemucsAvailability                             apps/desktop/src/store/aiFeatureStore.ts:40:14                        
+useAutoAudioSyncRunning                           apps/desktop/src/store/aiFeatureStore.ts:44:14                        
+useAutoAudioSyncPrimaryClipId                     apps/desktop/src/store/aiFeatureStore.ts:45:14                        
+useAutoAudioSyncMode                              apps/desktop/src/store/aiFeatureStore.ts:46:14                        
+useAutoAudioSyncResults                           apps/desktop/src/store/aiFeatureStore.ts:47:14                        
+useSetAutoAudioSyncRunning                        apps/desktop/src/store/aiFeatureStore.ts:48:14                        
+useSetAutoAudioSyncPrimaryClipId                  apps/desktop/src/store/aiFeatureStore.ts:49:14                        
+useSetAutoAudioSyncMode                           apps/desktop/src/store/aiFeatureStore.ts:50:14                        
+useSetAutoAudioSyncResults                        apps/desktop/src/store/aiFeatureStore.ts:51:14                        
+DIALOG_KEYS                                       apps/desktop/src/store/dialogStore.ts:21:10                           
+createInitialDialogState                          apps/desktop/src/store/dialogStore.ts:21:23                           
+applyDialogUpdate                                 apps/desktop/src/store/dialogStore.ts:21:49                           
+useDialogState                                    apps/desktop/src/store/dialogStore.ts:24:14                           
+dialogSetterSelector                    function  apps/desktop/src/store/dialogStore.ts:42:17                           
+useAIFeatureStore                                 apps/desktop/src/store/editorFeatureStore.ts:53:3                     
+useProfilerRecording                              apps/desktop/src/store/editorFeatureStore.ts:54:3                     
+useProfilerElapsedMs                              apps/desktop/src/store/editorFeatureStore.ts:55:3                     
+useProfilerReport                                 apps/desktop/src/store/editorFeatureStore.ts:56:3                     
+useSetProfilerRecording                           apps/desktop/src/store/editorFeatureStore.ts:57:3                     
+useSetProfilerElapsedMs                           apps/desktop/src/store/editorFeatureStore.ts:58:3                     
+useSetProfilerReport                              apps/desktop/src/store/editorFeatureStore.ts:59:3                     
+useSpeakerDiarizationRunning                      apps/desktop/src/store/editorFeatureStore.ts:60:3                     
+useSpeakerDiarizationResult                       apps/desktop/src/store/editorFeatureStore.ts:61:3                     
+useSetSpeakerDiarizationRunning                   apps/desktop/src/store/editorFeatureStore.ts:62:3                     
+useSetSpeakerDiarizationResult                    apps/desktop/src/store/editorFeatureStore.ts:63:3                     
+useContentAnalysisRunningClipId                   apps/desktop/src/store/editorFeatureStore.ts:64:3                     
+useSetContentAnalysisRunningClipId                apps/desktop/src/store/editorFeatureStore.ts:65:3                     
+useAudioSeparationClipId                          apps/desktop/src/store/editorFeatureStore.ts:66:3                     
+useAudioSeparationProgress                        apps/desktop/src/store/editorFeatureStore.ts:67:3                     
+useSetAudioSeparationClipId                       apps/desktop/src/store/editorFeatureStore.ts:68:3                     
+useSetAudioSeparationProgress                     apps/desktop/src/store/editorFeatureStore.ts:69:3                     
+useDemucsAvailability                             apps/desktop/src/store/editorFeatureStore.ts:70:3                     
+useSetDemucsAvailability                          apps/desktop/src/store/editorFeatureStore.ts:71:3                     
+useAutoAudioSyncRunning                           apps/desktop/src/store/editorFeatureStore.ts:72:3                     
+useAutoAudioSyncPrimaryClipId                     apps/desktop/src/store/editorFeatureStore.ts:73:3                     
+useAutoAudioSyncMode                              apps/desktop/src/store/editorFeatureStore.ts:74:3                     
+useAutoAudioSyncResults                           apps/desktop/src/store/editorFeatureStore.ts:75:3                     
+useSetAutoAudioSyncRunning                        apps/desktop/src/store/editorFeatureStore.ts:76:3                     
+useSetAutoAudioSyncPrimaryClipId                  apps/desktop/src/store/editorFeatureStore.ts:77:3                     
+useSetAutoAudioSyncMode                           apps/desktop/src/store/editorFeatureStore.ts:78:3                     
+useSetAutoAudioSyncResults                        apps/desktop/src/store/editorFeatureStore.ts:79:3                     
+useExportFeatureStore                             apps/desktop/src/store/editorFeatureStore.ts:82:3                     
+useBatchTranscodeInitialPaths                     apps/desktop/src/store/editorFeatureStore.ts:83:3                     
+useSetBatchTranscodeInitialPaths                  apps/desktop/src/store/editorFeatureStore.ts:84:3                     
+useTemplateExportPreset                           apps/desktop/src/store/editorFeatureStore.ts:85:3                     
+useSetTemplateExportPreset                        apps/desktop/src/store/editorFeatureStore.ts:86:3                     
+useGifExportAsset                                 apps/desktop/src/store/editorFeatureStore.ts:87:3                     
+useSetGifExportAsset                              apps/desktop/src/store/editorFeatureStore.ts:88:3                     
+useThumbnailGeneratorAssetIds                     apps/desktop/src/store/editorFeatureStore.ts:89:3                     
+useSetThumbnailGeneratorAssetIds                  apps/desktop/src/store/editorFeatureStore.ts:90:3                     
+useMockExportHistory                              apps/desktop/src/store/editorFeatureStore.ts:91:3                     
+useSetMockExportHistory                           apps/desktop/src/store/editorFeatureStore.ts:92:3                     
+useFormatConverterMockFiles                       apps/desktop/src/store/editorFeatureStore.ts:93:3                     
+useSetFormatConverterMockFiles                    apps/desktop/src/store/editorFeatureStore.ts:94:3                     
+useTimelineFeatureStore                           apps/desktop/src/store/editorFeatureStore.ts:97:3                     
+useMacroRecordingActive                           apps/desktop/src/store/editorFeatureStore.ts:98:3                     
+useMacroRecordingStepCount                        apps/desktop/src/store/editorFeatureStore.ts:99:3                     
+useSetMacroRecordingActive                        apps/desktop/src/store/editorFeatureStore.ts:100:3                    
+useSetMacroRecordingStepCount                     apps/desktop/src/store/editorFeatureStore.ts:101:3                    
+useOperationRecording                             apps/desktop/src/store/editorFeatureStore.ts:102:3                    
+useOperationRecordingActive                       apps/desktop/src/store/editorFeatureStore.ts:103:3                    
+useOperationRecordingStep                         apps/desktop/src/store/editorFeatureStore.ts:104:3                    
+useOperationReplaySpeed                           apps/desktop/src/store/editorFeatureStore.ts:105:3                    
+useOperationReplayRunning                         apps/desktop/src/store/editorFeatureStore.ts:106:3                    
+useSetOperationRecording                          apps/desktop/src/store/editorFeatureStore.ts:107:3                    
+useSetOperationRecordingActive                    apps/desktop/src/store/editorFeatureStore.ts:108:3                    
+useSetOperationRecordingStep                      apps/desktop/src/store/editorFeatureStore.ts:109:3                    
+useSetOperationReplaySpeed                        apps/desktop/src/store/editorFeatureStore.ts:110:3                    
+useSetOperationReplayRunning                      apps/desktop/src/store/editorFeatureStore.ts:111:3                    
+useTimelineTemplateMode                           apps/desktop/src/store/editorFeatureStore.ts:112:3                    
+useSetTimelineTemplateMode                        apps/desktop/src/store/editorFeatureStore.ts:113:3                    
+usePasteKeyframeDialogGroups                      apps/desktop/src/store/editorFeatureStore.ts:114:3                    
+useSetPasteKeyframeDialogGroups                   apps/desktop/src/store/editorFeatureStore.ts:115:3                    
+useMacroHistory                                   apps/desktop/src/store/editorFeatureStore.ts:116:3                    
+useSetMacroHistory                                apps/desktop/src/store/editorFeatureStore.ts:117:3                    
+useMockSubtitleClips                              apps/desktop/src/store/editorFeatureStore.ts:118:3                    
+useSetMockSubtitleClips                           apps/desktop/src/store/editorFeatureStore.ts:119:3                    
+useProjectPasswordRequest                         apps/desktop/src/store/editorFeatureStore.ts:120:3                    
+useRecoveryCandidate                              apps/desktop/src/store/editorFeatureStore.ts:121:3                    
+useArchiveProgress                                apps/desktop/src/store/editorFeatureStore.ts:122:3                    
+useSetProjectPasswordRequest                      apps/desktop/src/store/editorFeatureStore.ts:123:3                    
+useSetRecoveryCandidate                           apps/desktop/src/store/editorFeatureStore.ts:124:3                    
+useSetArchiveProgress                             apps/desktop/src/store/editorFeatureStore.ts:125:3                    
+useMediaFeatureStore                              apps/desktop/src/store/editorFeatureStore.ts:128:3                    
+useColorAnalysisBusy                              apps/desktop/src/store/editorFeatureStore.ts:129:3                    
+useColorAnalysisResults                           apps/desktop/src/store/editorFeatureStore.ts:130:3                    
+useColorAnalysisJumps                             apps/desktop/src/store/editorFeatureStore.ts:131:3                    
+useColorHeatmapPoints                             apps/desktop/src/store/editorFeatureStore.ts:132:3                    
+useColorAnalysisSamples                           apps/desktop/src/store/editorFeatureStore.ts:133:3                    
+useSetColorAnalysisBusy                           apps/desktop/src/store/editorFeatureStore.ts:134:3                    
+useSetColorAnalysisResults                        apps/desktop/src/store/editorFeatureStore.ts:135:3                    
+useSetColorAnalysisJumps                          apps/desktop/src/store/editorFeatureStore.ts:136:3                    
+useSetColorHeatmapPoints                          apps/desktop/src/store/editorFeatureStore.ts:137:3                    
+useSetColorAnalysisSamples                        apps/desktop/src/store/editorFeatureStore.ts:138:3                    
+useProjectHealthReport                            apps/desktop/src/store/editorFeatureStore.ts:139:3                    
+useProjectHealthRepairReport                      apps/desktop/src/store/editorFeatureStore.ts:140:3                    
+useProjectHealthScanning                          apps/desktop/src/store/editorFeatureStore.ts:141:3                    
+useMediaHealthDashboard                           apps/desktop/src/store/editorFeatureStore.ts:142:3                    
+useMediaHealthScanning                            apps/desktop/src/store/editorFeatureStore.ts:143:3                    
+useMediaHealthAutoShowEnabled                     apps/desktop/src/store/editorFeatureStore.ts:144:3                    
+useSetProjectHealthReport                         apps/desktop/src/store/editorFeatureStore.ts:145:3                    
+useSetProjectHealthRepairReport                   apps/desktop/src/store/editorFeatureStore.ts:146:3                    
+useSetProjectHealthScanning                       apps/desktop/src/store/editorFeatureStore.ts:147:3                    
+useSetMediaHealthDashboard                        apps/desktop/src/store/editorFeatureStore.ts:148:3                    
+useSetMediaHealthScanning                         apps/desktop/src/store/editorFeatureStore.ts:149:3                    
+useSetMediaHealthAutoShowEnabled                  apps/desktop/src/store/editorFeatureStore.ts:150:3                    
+useDuplicateMediaGroups                           apps/desktop/src/store/editorFeatureStore.ts:151:3                    
+useMediaOrganizerGroups                           apps/desktop/src/store/editorFeatureStore.ts:152:3                    
+useMediaOrganizerCleanup                          apps/desktop/src/store/editorFeatureStore.ts:153:3                    
+useMediaOrganizerScanning                         apps/desktop/src/store/editorFeatureStore.ts:154:3                    
+useSetDuplicateMediaGroups                        apps/desktop/src/store/editorFeatureStore.ts:155:3                    
+useSetMediaOrganizerGroups                        apps/desktop/src/store/editorFeatureStore.ts:156:3                    
+useSetMediaOrganizerCleanup                       apps/desktop/src/store/editorFeatureStore.ts:157:3                    
+useSetMediaOrganizerScanning                      apps/desktop/src/store/editorFeatureStore.ts:158:3                    
+useRecordingTask                                  apps/desktop/src/store/editorFeatureStore.ts:159:3                    
+useRecordingElapsedSeconds                        apps/desktop/src/store/editorFeatureStore.ts:160:3                    
+useSetRecordingTask                               apps/desktop/src/store/editorFeatureStore.ts:161:3                    
+useSetRecordingElapsedSeconds                     apps/desktop/src/store/editorFeatureStore.ts:162:3                    
+useMediaVersionCompare                            apps/desktop/src/store/editorFeatureStore.ts:163:3                    
+useSetMediaVersionCompare                         apps/desktop/src/store/editorFeatureStore.ts:164:3                    
+useSpectrumAsset                                  apps/desktop/src/store/editorFeatureStore.ts:165:3                    
+useSetSpectrumAsset                               apps/desktop/src/store/editorFeatureStore.ts:166:3                    
+usePanelStore                                     apps/desktop/src/store/editorUIStore.ts:34:3                          
+useLayoutSettings                                 apps/desktop/src/store/editorUIStore.ts:35:3                          
+useReviewMode                                     apps/desktop/src/store/editorUIStore.ts:36:3                          
+useViewportSize                                   apps/desktop/src/store/editorUIStore.ts:37:3                          
+useSetLayoutSettings                              apps/desktop/src/store/editorUIStore.ts:38:3                          
+useSetReviewMode                                  apps/desktop/src/store/editorUIStore.ts:39:3                          
+useSetViewportSize                                apps/desktop/src/store/editorUIStore.ts:40:3                          
+usePersistLayoutPatch                             apps/desktop/src/store/editorUIStore.ts:41:3                          
+usePersistPanelVisibilityPatch                    apps/desktop/src/store/editorUIStore.ts:42:3                          
+useDialogStore                                    apps/desktop/src/store/editorUIStore.ts:45:3                          
+useDialogState                                    apps/desktop/src/store/editorUIStore.ts:46:3                          
+dialogBooleanSelector                             apps/desktop/src/store/editorUIStore.ts:47:3                          
+dialogSetterSelector                              apps/desktop/src/store/editorUIStore.ts:48:3                          
+useToolbarStore                                   apps/desktop/src/store/editorUIStore.ts:50:10                         
+useModalStore                                     apps/desktop/src/store/editorUIStore.ts:51:10                         
+DIALOG_KEYS                                       apps/desktop/src/store/editorUIStore.ts:55:10                         
+createInitialDialogState                          apps/desktop/src/store/editorUIStore.ts:55:23                         
+applyDialogUpdate                                 apps/desktop/src/store/editorUIStore.ts:55:49                         
+useBatchTranscodeInitialPaths                     apps/desktop/src/store/exportFeatureStore.ts:16:14                    
+useSetBatchTranscodeInitialPaths                  apps/desktop/src/store/exportFeatureStore.ts:17:14                    
+useTemplateExportPreset                           apps/desktop/src/store/exportFeatureStore.ts:20:14                    
+useSetTemplateExportPreset                        apps/desktop/src/store/exportFeatureStore.ts:21:14                    
+useGifExportAsset                                 apps/desktop/src/store/exportFeatureStore.ts:24:14                    
+useSetGifExportAsset                              apps/desktop/src/store/exportFeatureStore.ts:25:14                    
+useThumbnailGeneratorAssetIds                     apps/desktop/src/store/exportFeatureStore.ts:28:14                    
+useSetThumbnailGeneratorAssetIds                  apps/desktop/src/store/exportFeatureStore.ts:29:14                    
+useMockExportHistory                              apps/desktop/src/store/exportFeatureStore.ts:32:14                    
+useSetMockExportHistory                           apps/desktop/src/store/exportFeatureStore.ts:33:14                    
+useFormatConverterMockFiles                       apps/desktop/src/store/exportFeatureStore.ts:36:14                    
+useSetFormatConverterMockFiles                    apps/desktop/src/store/exportFeatureStore.ts:37:14                    
+useColorAnalysisBusy                              apps/desktop/src/store/mediaFeatureStore.ts:17:14                     
+useColorAnalysisResults                           apps/desktop/src/store/mediaFeatureStore.ts:18:14                     
+useColorAnalysisJumps                             apps/desktop/src/store/mediaFeatureStore.ts:19:14                     
+useColorHeatmapPoints                             apps/desktop/src/store/mediaFeatureStore.ts:20:14                     
+useColorAnalysisSamples                           apps/desktop/src/store/mediaFeatureStore.ts:21:14                     
+useProjectHealthReport                            apps/desktop/src/store/mediaFeatureStore.ts:29:14                     
+useProjectHealthRepairReport                      apps/desktop/src/store/mediaFeatureStore.ts:30:14                     
+useProjectHealthScanning                          apps/desktop/src/store/mediaFeatureStore.ts:31:14                     
+useMediaHealthDashboard                           apps/desktop/src/store/mediaFeatureStore.ts:32:14                     
+useMediaHealthScanning                            apps/desktop/src/store/mediaFeatureStore.ts:33:14                     
+useMediaHealthAutoShowEnabled                     apps/desktop/src/store/mediaFeatureStore.ts:34:14                     
+useSetProjectHealthReport                         apps/desktop/src/store/mediaFeatureStore.ts:35:14                     
+useSetProjectHealthRepairReport                   apps/desktop/src/store/mediaFeatureStore.ts:36:14                     
+useSetProjectHealthScanning                       apps/desktop/src/store/mediaFeatureStore.ts:37:14                     
+useSetMediaHealthDashboard                        apps/desktop/src/store/mediaFeatureStore.ts:38:14                     
+useSetMediaHealthScanning                         apps/desktop/src/store/mediaFeatureStore.ts:39:14                     
+useSetMediaHealthAutoShowEnabled                  apps/desktop/src/store/mediaFeatureStore.ts:40:14                     
+useDuplicateMediaGroups                           apps/desktop/src/store/mediaFeatureStore.ts:43:14                     
+useMediaOrganizerGroups                           apps/desktop/src/store/mediaFeatureStore.ts:44:14                     
+useMediaOrganizerCleanup                          apps/desktop/src/store/mediaFeatureStore.ts:45:14                     
+useMediaOrganizerScanning                         apps/desktop/src/store/mediaFeatureStore.ts:46:14                     
+useSetDuplicateMediaGroups                        apps/desktop/src/store/mediaFeatureStore.ts:47:14                     
+useSetMediaOrganizerGroups                        apps/desktop/src/store/mediaFeatureStore.ts:48:14                     
+useSetMediaOrganizerCleanup                       apps/desktop/src/store/mediaFeatureStore.ts:49:14                     
+useSetMediaOrganizerScanning                      apps/desktop/src/store/mediaFeatureStore.ts:50:14                     
+useRecordingTask                                  apps/desktop/src/store/mediaFeatureStore.ts:53:14                     
+useRecordingElapsedSeconds                        apps/desktop/src/store/mediaFeatureStore.ts:54:14                     
+useSetRecordingTask                               apps/desktop/src/store/mediaFeatureStore.ts:55:14                     
+useSetRecordingElapsedSeconds                     apps/desktop/src/store/mediaFeatureStore.ts:56:14                     
+useMediaVersionCompare                            apps/desktop/src/store/mediaFeatureStore.ts:59:14                     
+useSetMediaVersionCompare                         apps/desktop/src/store/mediaFeatureStore.ts:60:14                     
+useMixerState                                     apps/desktop/src/store/mixerStore.ts:467:14                           
+useMixerChannels                                  apps/desktop/src/store/mixerStore.ts:470:14                           
+useMasterBus                                      apps/desktop/src/store/mixerStore.ts:473:14                           
+useSelectedChannelId                              apps/desktop/src/store/mixerStore.ts:476:14                           
+useActiveMixerTab                                 apps/desktop/src/store/mixerStore.ts:479:14                           
+useSpectrumAnalyzerActive                         apps/desktop/src/store/mixerStore.ts:482:14                           
+useAutomationRecordMode                           apps/desktop/src/store/mixerStore.ts:485:14                           
+useChannelNoiseReduction                          apps/desktop/src/store/mixerStore.ts:488:14                           
+useNoiseReductionPreviewTrackId                   apps/desktop/src/store/mixerStore.ts:492:14                           
+getNoiseReductionParamsForExport        function  apps/desktop/src/store/mixerStore.ts:499:17                           
+getChannelNoiseReductionFilter          function  apps/desktop/src/store/mixerStore.ts:507:17                           
+useMulticamAudioGroups                            apps/desktop/src/store/mixerStore.ts:514:14                           
+useMulticamAudioGroup                             apps/desktop/src/store/mixerStore.ts:517:14                           
+useDialogState                                    apps/desktop/src/store/modalStore.ts:11:3                             
+dialogBooleanSelector                             apps/desktop/src/store/modalStore.ts:12:3                             
+dialogSetterSelector                              apps/desktop/src/store/modalStore.ts:13:3                             
+DIALOG_KEYS                                       apps/desktop/src/store/modalStore.ts:14:3                             
+useSetReviewMode                                  apps/desktop/src/store/panelStore.ts:33:14                            
+useSetViewportSize                                apps/desktop/src/store/panelStore.ts:37:14                            
+useMacroRecordingActive                           apps/desktop/src/store/timelineFeatureStore.ts:17:14                  
+useMacroRecordingStepCount                        apps/desktop/src/store/timelineFeatureStore.ts:18:14                  
+useSetMacroRecordingActive                        apps/desktop/src/store/timelineFeatureStore.ts:19:14                  
+useSetMacroRecordingStepCount                     apps/desktop/src/store/timelineFeatureStore.ts:20:14                  
+useOperationRecording                             apps/desktop/src/store/timelineFeatureStore.ts:23:14                  
+useOperationRecordingActive                       apps/desktop/src/store/timelineFeatureStore.ts:24:14                  
+useOperationRecordingStep                         apps/desktop/src/store/timelineFeatureStore.ts:25:14                  
+useOperationReplaySpeed                           apps/desktop/src/store/timelineFeatureStore.ts:26:14                  
+useOperationReplayRunning                         apps/desktop/src/store/timelineFeatureStore.ts:27:14                  
+useTimelineTemplateMode                           apps/desktop/src/store/timelineFeatureStore.ts:35:14                  
+useSetTimelineTemplateMode                        apps/desktop/src/store/timelineFeatureStore.ts:36:14                  
+usePasteKeyframeDialogGroups                      apps/desktop/src/store/timelineFeatureStore.ts:39:14                  
+useSetPasteKeyframeDialogGroups                   apps/desktop/src/store/timelineFeatureStore.ts:40:14                  
+useMacroHistory                                   apps/desktop/src/store/timelineFeatureStore.ts:43:14                  
+useSetMacroHistory                                apps/desktop/src/store/timelineFeatureStore.ts:44:14                  
+useMockSubtitleClips                              apps/desktop/src/store/timelineFeatureStore.ts:47:14                  
+useSetMockSubtitleClips                           apps/desktop/src/store/timelineFeatureStore.ts:48:14                  
+useProjectPasswordRequest                         apps/desktop/src/store/timelineFeatureStore.ts:51:14                  
+useRecoveryCandidate                              apps/desktop/src/store/timelineFeatureStore.ts:52:14                  
+useArchiveProgress                                apps/desktop/src/store/timelineFeatureStore.ts:53:14                  
+useSetProjectPasswordRequest                      apps/desktop/src/store/timelineFeatureStore.ts:54:14                  
+useSetRecoveryCandidate                           apps/desktop/src/store/timelineFeatureStore.ts:55:14                  
+useSetArchiveProgress                             apps/desktop/src/store/timelineFeatureStore.ts:56:14                  
+useDialogState                                    apps/desktop/src/store/toolbarStore.ts:11:3                           
+dialogBooleanSelector                             apps/desktop/src/store/toolbarStore.ts:12:3                           
+dialogSetterSelector                              apps/desktop/src/store/toolbarStore.ts:13:3                           
+DIALOG_KEYS                                       apps/desktop/src/store/toolbarStore.ts:14:3                           
+buildColorFilter                                  examples/plugins/color-corrector/index.js:71:16                       
+getPlatformPresets                                examples/plugins/social-export/index.js:157:16                        
+recommendPreset                                   examples/plugins/social-export/index.js:158:16                        
+estimateDuration                                  examples/plugins/social-export/index.js:159:16                        
+buildExportArgs                                   examples/plugins/social-export/index.js:160:16                        
+translateText                                     examples/plugins/subtitle-translator/index.js:90:16                   
+batchSubtitles                                    examples/plugins/subtitle-translator/index.js:91:16                   
+DEFAULT_SCENE_UNDERSTANDING_CONFIG                packages/editor-core/src/ai/scene-understanding.ts:584:14             
+DEFAULT_SMART_EDITING_CONFIG                      packages/editor-core/src/ai/smart-editing.ts:548:14                   
+TEAM_ROLES                                        packages/editor-core/src/collaboration/team/team-management.ts:200:14 
+DEFAULT_TEAM_SETTINGS                             packages/editor-core/src/collaboration/team/team-management.ts:203:14 
+BrowserWSAdapter                        class     packages/editor-core/src/collaboration/ws-transport.ts:255:14         
+getAnimatedFrames                       function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:50:17 
+getAverageClipSpeed                     function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:56:17 
+getExportClipSourceDuration             function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:63:17 
+buildLocalExpression                    function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:69:17 
+buildSegmentExpression                  function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:88:17 
+buildEasingExpression                   function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:101:17
+buildBounceEasingExpression             function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:120:17
+buildAfftdnNoiseReductionFilter         function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:290:17
+buildMixerChannelNoiseReductionFilter   function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:302:17
+safeLabel                               function  packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:581:17
+normalizeHexColor                       function  …s/editor-core/src/export/ffmpeg-builder/audio-visualization.ts:338:17
+parseHexColor                           function  …s/editor-core/src/export/ffmpeg-builder/audio-visualization.ts:343:17
+toHexChannel                            function  …s/editor-core/src/export/ffmpeg-builder/audio-visualization.ts:372:17
+sanitizeStemPathComponent               function  packages/editor-core/src/export/ffmpeg-builder/export-plan.ts:717:17  
+buildStemOutputPath                     function  packages/editor-core/src/export/ffmpeg-builder/export-plan.ts:725:17  
+DEFAULT_EXPORT_SETTINGS                           …ages/editor-core/src/export/ffmpeg-builder/project-converter.ts:97:14
+SETPTS_EXPRESSION_LIMIT                           …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:137:14
+GIF_PALETTE_PLACEHOLDER                           …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:138:14
+LOUDNORM_MEASURED_I_PLACEHOLDER                   …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:139:14
+LOUDNORM_MEASURED_TP_PLACEHOLDER                  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:140:14
+LOUDNORM_MEASURED_LRA_PLACEHOLDER                 …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:141:14
+LOUDNORM_MEASURED_THRESH_PLACEHOLDER              …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:142:14
+LOUDNORM_OFFSET_PLACEHOLDER                       …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:143:14
+WATERMARK_MARGIN_PX                               …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:144:14
+SLATE_DURATION_SECONDS                            …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:145:14
+CUSTOM_SHADER_SEQUENCE_KIND                       …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:146:14
+PATH_TEXT_SEQUENCE_KIND                           …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:147:14
+MOTION_GRAPHIC_SEQUENCE_PATH_MODE                 …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:148:14
+EXPORT_PREVIEW_SAMPLE_KINDS                       …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:149:14
+DEFAULT_EXPORT_MASTER_EQ_BANDS                    …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:169:14
+DEFAULT_EXPORT_MASTER_PROCESSING                  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:180:14
+safeLabel                               function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:473:17
+nestedInputPlaceholder                  function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:477:17
+mergeExportMetadata                     function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:481:17
+normalizeExportReframeSettings          function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:499:17
+normalizeExportSpatialAudioAssets       function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:523:17
+normalizeExportMasterProcessing         function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:547:17
+normalizeExportMasterEq                 function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:577:17
+normalizeExportMasterEqBand             function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:585:17
+finiteNumber                            function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:600:17
+normalizeLoudnessNormalization          function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:604:17
+normalizeVideoProfile                   function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:608:17
+normalizeExportWatermark                function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:612:17
+normalizeWatermarkPosition              function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:650:17
+normalizeTimecodeBurnIn                 function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:664:17
+normalizeExportSlate                    function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:683:17
+normalizeExportAudioVisualization       function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:687:17
+normalizeHexColor                       function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:709:17
+parseHexColor                           function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:714:17
+toHexChannel                            function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:736:17
+normalizeAudioVisualizationBackground   function  …ges/editor-core/src/export/ffmpeg-builder/project-converter.ts:742:17
+toHexChannel                            function  …es/editor-core/src/export/ffmpeg-builder/settings-normalize.ts:214:17
+buildMasterAudioFilters                 function  …es/editor-core/src/export/ffmpeg-builder/settings-normalize.ts:220:17
+buildEqualizerFilters                   function  …es/editor-core/src/export/ffmpeg-builder/settings-normalize.ts:235:17
+formatFfmpegNumber                      function  …es/editor-core/src/export/ffmpeg-builder/settings-normalize.ts:248:17
+formatOpacity                           function  …es/editor-core/src/export/ffmpeg-builder/settings-normalize.ts:253:17
+round                                   function  …editor-core/src/export/ffmpeg-builder/text-subtitle-filters.ts:777:17
+formatOpacity                           function  …editor-core/src/export/ffmpeg-builder/text-subtitle-filters.ts:781:17
+formatSigned                            function  …editor-core/src/export/ffmpeg-builder/text-subtitle-filters.ts:785:17
+cssColorToAssColor                      function  …editor-core/src/export/ffmpeg-builder/text-subtitle-filters.ts:793:17
+buildSourceColorSpaceConversionFilters  function  …kages/editor-core/src/export/ffmpeg-builder/visual-filters.ts:1738:17
+getExportClipSourceDuration             function  …kages/editor-core/src/export/ffmpeg-builder/visual-filters.ts:1748:17
+clamp                                   function  packages/editor-core/src/math-utils.ts:9:17                           
+clamp01                                 function  packages/editor-core/src/math-utils.ts:17:17                          
+round                                   function  packages/editor-core/src/math-utils.ts:22:17                          
+average                                 function  packages/editor-core/src/math-utils.ts:28:17                          
+lerp                                    function  packages/editor-core/src/math-utils.ts:34:17                          
+mapRange                                function  packages/editor-core/src/math-utils.ts:39:17                          
+dbToLinear                              function  packages/editor-core/src/math-utils.ts:56:17                          
+linearToDb                              function  packages/editor-core/src/math-utils.ts:61:17                          
+degToRad                                function  packages/editor-core/src/math-utils.ts:67:17                          
+radToDeg                                function  packages/editor-core/src/math-utils.ts:72:17                          
+distance                                function  packages/editor-core/src/math-utils.ts:77:17                          
+nonNegative                             function  packages/editor-core/src/math-utils.ts:82:17                          
+positive                                function  packages/editor-core/src/math-utils.ts:87:17                          
+Unused exported types (77)
+StageStatus                   type       apps/desktop/src/components/AISubtitleWorkflow/useSubtitleWorkflow.ts:5:13
+EmotionPoint                  type       apps/desktop/src/components/SmartCreation/EmotionCurveChart.tsx:4:15      
+RecommendedClip               interface  apps/desktop/src/components/SmartCreation/RecommendationList.tsx:7:18     
+SceneBoundary                 interface  apps/desktop/src/components/SmartCreation/SceneTimeline.tsx:7:18          
+TransitionMenuRequest         interface  apps/desktop/src/components/Timeline/TimelineParts.tsx:1096:18            
+ButtonProps                   interface  apps/desktop/src/components/ui/button.tsx:31:18                           
+ASRState                      type       apps/desktop/src/lib/asr.ts:1:13                                          
+ExportPreviewSampleResult     interface  apps/desktop/src/lib/tauri-bridge/types.ts:32:18                          
+PreviewWindowBounds           interface  apps/desktop/src/lib/tauri-bridge/types.ts:46:18                          
+SharePackageFileEntry         interface  apps/desktop/src/lib/tauri-bridge/types.ts:77:18                          
+AppUpdateDownloadEvent        type       apps/desktop/src/lib/tauri-bridge/types.ts:224:13                         
+MediaFormatInfo               interface  apps/desktop/src/lib/tauri-bridge/types.ts:243:18                         
+MediaVideoStreamInfo          interface  apps/desktop/src/lib/tauri-bridge/types.ts:251:18                         
+MediaAudioStreamInfo          interface  apps/desktop/src/lib/tauri-bridge/types.ts:268:18                         
+MediaBitratePoint             interface  apps/desktop/src/lib/tauri-bridge/types.ts:280:18                         
+AudioSpectrumStats            interface  apps/desktop/src/lib/tauri-bridge/types.ts:302:18                         
+CoverFrameExtractionMode      type       apps/desktop/src/lib/tauri-bridge/types.ts:329:13                         
+CoverFrameBatchTaskRequest    interface  apps/desktop/src/lib/tauri-bridge/types.ts:352:18                         
+CoverFrameBatchTaskResult     interface  apps/desktop/src/lib/tauri-bridge/types.ts:363:18                         
+BatchTranscodeTaskRequest     interface  apps/desktop/src/lib/tauri-bridge/types.ts:498:18                         
+PrivacyDetectionBox           interface  apps/desktop/src/lib/tauri-bridge/types.ts:617:18                         
+EditorFeatureState            type       apps/desktop/src/store/aiFeatureStore.ts:54:15                            
+DialogKey                     type       apps/desktop/src/store/dialogStore.ts:20:15                               
+DialogState                   type       apps/desktop/src/store/dialogStore.ts:20:26                               
+DialogState                   type       apps/desktop/src/store/editorUIStore.ts:54:26                             
+EditorFeatureState            type       apps/desktop/src/store/exportFeatureStore.ts:40:15                        
+EditorFeatureState            type       apps/desktop/src/store/mediaFeatureStore.ts:67:15                         
+MixerPanelTab                 type       apps/desktop/src/store/mixerStore.ts:28:13                                
+DialogKey                     type       apps/desktop/src/store/modalStore.ts:16:15                                
+DialogState                   type       apps/desktop/src/store/modalStore.ts:16:26                                
+EditorUIState                 type       apps/desktop/src/store/modalStore.ts:16:39                                
+EditorLayoutSettings          type       apps/desktop/src/store/panelStore.ts:49:15                                
+EditorUIState                 type       apps/desktop/src/store/panelStore.ts:50:15                                
+EditorFeatureState            type       apps/desktop/src/store/timelineFeatureStore.ts:59:15                      
+DialogKey                     type       apps/desktop/src/store/toolbarStore.ts:16:15                              
+DialogState                   type       apps/desktop/src/store/toolbarStore.ts:16:26                              
+EditorUIState                 type       apps/desktop/src/store/toolbarStore.ts:16:39                              
+ObjectCategory                type       packages/editor-core/src/ai/scene-understanding.ts:50:13                  
+ObjectAttributes              interface  packages/editor-core/src/ai/scene-understanding.ts:66:18                  
+FaceLandmarks                 interface  packages/editor-core/src/ai/scene-understanding.ts:108:18                 
+FaceExpression                interface  packages/editor-core/src/ai/scene-understanding.ts:138:18                 
+ExpressionType                type       packages/editor-core/src/ai/scene-understanding.ts:150:13                 
+HeadPose                      interface  packages/editor-core/src/ai/scene-understanding.ts:163:18                 
+ActionCategory                type       packages/editor-core/src/ai/scene-understanding.ts:195:13                 
+TimeRange                     interface  packages/editor-core/src/ai/scene-understanding.ts:209:18                 
+ActionAttributes              interface  packages/editor-core/src/ai/scene-understanding.ts:219:18                 
+SegmentationCategory          interface  packages/editor-core/src/ai/scene-understanding.ts:249:18                 
+SegmentationType              type       packages/editor-core/src/ai/scene-understanding.ts:263:13                 
+SceneType                     type       packages/editor-core/src/ai/scene-understanding.ts:319:13                 
+SceneMood                     type       packages/editor-core/src/ai/scene-understanding.ts:332:13                 
+LightingCondition             type       packages/editor-core/src/ai/scene-understanding.ts:345:13                 
+WeatherCondition              type       packages/editor-core/src/ai/scene-understanding.ts:358:13                 
+TimeOfDay                     type       packages/editor-core/src/ai/scene-understanding.ts:370:13                 
+TimePointType                 type       packages/editor-core/src/ai/smart-editing.ts:30:13                        
+EmotionPoint                  interface  packages/editor-core/src/ai/smart-editing.ts:74:18                        
+EmotionType                   type       packages/editor-core/src/ai/smart-editing.ts:88:13                        
+CutType                       type       packages/editor-core/src/ai/smart-editing.ts:123:13                       
+TransitionType                type       packages/editor-core/src/ai/smart-editing.ts:137:13                       
+TrailerStyle                  type       packages/editor-core/src/ai/smart-editing.ts:174:13                       
+TrailerTempo                  type       packages/editor-core/src/ai/smart-editing.ts:187:13                       
+TrailerSegment                interface  packages/editor-core/src/ai/smart-editing.ts:196:18                       
+TrailerSegmentType            type       packages/editor-core/src/ai/smart-editing.ts:218:13                       
+SortStrategy                  type       packages/editor-core/src/ai/smart-editing.ts:265:13                       
+SortWeights                   interface  packages/editor-core/src/ai/smart-editing.ts:277:18                       
+AudioFeatures                 interface  packages/editor-core/src/ai/smart-editing.ts:319:18                       
+SpectralFeatures              interface  packages/editor-core/src/ai/smart-editing.ts:335:18                       
+RoutingConnection             interface  packages/editor-core/src/audio/bus-router.ts:19:18                        
+TeamMetadata                  interface  packages/editor-core/src/collaboration/team/team-management.ts:46:18      
+ProjectShareMetadata          interface  packages/editor-core/src/collaboration/team/team-management.ts:106:18     
+TeamAuditAction               type       packages/editor-core/src/collaboration/team/team-management.ts:128:13     
+WSConnectionStateCallback     type       packages/editor-core/src/collaboration/ws-transport.ts:91:13              
+WSMessageCallback             type       packages/editor-core/src/collaboration/ws-transport.ts:94:13              
+AnimatedProperty              type       packages/editor-core/src/export/ffmpeg-builder/audio-filters.ts:48:13     
+LoudnessNormalizationPreset   interface  packages/editor-core/src/export/ffmpeg-builder/project-converter.ts:151:18
+BuildFfmpegExportPlanOptions  interface  packages/editor-core/src/export/ffmpeg-builder/project-converter.ts:156:18
+SubtitleLanguageGroup         interface  packages/editor-core/src/export/ffmpeg-builder/project-converter.ts:164:18
+AnimatedProperty              type       packages/editor-core/src/export/ffmpeg-builder/visual-filters.ts:91:13    

@@ -84,11 +84,7 @@ export function buildFontString(style: SubtitleStyle, scale: number = 1): string
 /**
  * 计算字幕在 Canvas 上的 Y 位置
  */
-export function calculateSubtitleY(
-  canvasHeight: number,
-  style: SubtitleStyle,
-  scale: number = 1,
-): number {
+export function calculateSubtitleY(canvasHeight: number, style: SubtitleStyle, scale: number = 1): number {
   const scaledFontSize = style.fontSize * scale;
   const scaledYOffset = style.yOffset * scale;
   return canvasHeight - scaledYOffset - scaledFontSize / 2;
@@ -153,12 +149,7 @@ export function renderSubtitleCue(
 
     ctx.fillStyle = style.backgroundColor;
     ctx.globalAlpha = style.backgroundOpacity;
-    ctx.fillRect(
-      x - textWidth / 2 - padding,
-      y - textHeight / 2,
-      textWidth + padding * 2,
-      textHeight,
-    );
+    ctx.fillRect(x - textWidth / 2 - padding, y - textHeight / 2, textWidth + padding * 2, textHeight);
     ctx.globalAlpha = 1;
   }
 
@@ -371,14 +362,15 @@ export function prerenderSubtitleToCanvas(
   width: number,
   height: number,
 ): HTMLCanvasElement | OffscreenCanvas {
-  const canvas = typeof OffscreenCanvas !== 'undefined'
-    ? new OffscreenCanvas(width, height)
-    : (() => {
-        const c = document.createElement('canvas');
-        c.width = width;
-        c.height = height;
-        return c;
-      })();
+  const canvas =
+    typeof OffscreenCanvas !== 'undefined'
+      ? new OffscreenCanvas(width, height)
+      : (() => {
+          const c = document.createElement('canvas');
+          c.width = width;
+          c.height = height;
+          return c;
+        })();
 
   const ctx = (canvas as HTMLCanvasElement).getContext('2d') || (canvas as OffscreenCanvas).getContext('2d');
   if (!ctx) {

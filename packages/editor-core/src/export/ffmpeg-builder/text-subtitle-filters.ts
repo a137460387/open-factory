@@ -1,8 +1,4 @@
-import {
-  normalizeSubtitleLanguage,
-  normalizeTextPath,
-  type TextStyle,
-} from '../../model';
+import { normalizeSubtitleLanguage, normalizeTextPath, type TextStyle } from '../../model';
 import {
   buildCustomShaderFragmentSource,
   getEnabledCustomShaderEffect,
@@ -28,12 +24,7 @@ import {
 } from '../../subtitles/srt';
 import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../../data-subtitle';
 import { MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic } from '../../motion-graphics';
-import {
-  cssColorToFfmpeg,
-  escapeDrawtextValue,
-  formatFfmpegSeconds,
-  normalizeFfmpegPath,
-} from '../ffmpeg-escape';
+import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath } from '../ffmpeg-escape';
 import type {
   ExportClip,
   ExportAudioVisualizationBackground,
@@ -44,7 +35,11 @@ import type {
   TextArtifact,
 } from '../export-types';
 import { formatFfmpegNumber, safeLabel, getAnimatedFrames, buildTimelineExpression } from './utils';
-import { CUSTOM_SHADER_SEQUENCE_KIND, PATH_TEXT_SEQUENCE_KIND, MOTION_GRAPHIC_SEQUENCE_PATH_MODE } from './settings-normalize';
+import {
+  CUSTOM_SHADER_SEQUENCE_KIND,
+  PATH_TEXT_SEQUENCE_KIND,
+  MOTION_GRAPHIC_SEQUENCE_PATH_MODE,
+} from './settings-normalize';
 import { resolveExportAudioVisualizationTheme } from './audio-visualization';
 import { buildOpacityFilters } from './visual-filters';
 import { expandAudioVisualizationTheme, type ExpandedAudioVisualizationTheme } from '../../audio-visualization-themes';
@@ -157,7 +152,10 @@ export function buildPathTextSequenceArtifact(clip: ExportClip, settings: Export
   };
 }
 
-export function buildMotionGraphicSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
+export function buildMotionGraphicSequenceArtifact(
+  clip: ExportClip,
+  settings: ExportSettings,
+): TextArtifact | undefined {
   if (clip.type !== 'motion-graphic' || !clip.motionGraphic) {
     return undefined;
   }
@@ -184,7 +182,10 @@ export function buildMotionGraphicSequenceArtifact(clip: ExportClip, settings: E
   };
 }
 
-export function buildCustomShaderSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
+export function buildCustomShaderSequenceArtifact(
+  clip: ExportClip,
+  settings: ExportSettings,
+): TextArtifact | undefined {
   if (clip.type !== 'video' && clip.type !== 'image' && clip.type !== 'nested-sequence') {
     return undefined;
   }

@@ -76,11 +76,7 @@ export interface MixerStoreState {
   removeEffectFromChannel: (trackId: string, effectId: string) => void;
 
   /** 更新通道自动化曲线 */
-  updateChannelAutomation: (
-    trackId: string,
-    property: string,
-    curve: AutomationCurve,
-  ) => void;
+  updateChannelAutomation: (trackId: string, property: string, curve: AutomationCurve) => void;
 
   /** 设置 Master 音量 */
   setMasterVolume: (volume: number) => void;
@@ -236,9 +232,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
     set((state) => ({
       mixerState: {
         ...state.mixerState,
-        channels: state.mixerState.channels.map((ch) =>
-          ch.trackId === trackId ? { ...ch, muted: !ch.muted } : ch,
-        ),
+        channels: state.mixerState.channels.map((ch) => (ch.trackId === trackId ? { ...ch, muted: !ch.muted } : ch)),
       },
     }));
   },
@@ -247,9 +241,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
     set((state) => ({
       mixerState: {
         ...state.mixerState,
-        channels: state.mixerState.channels.map((ch) =>
-          ch.trackId === trackId ? { ...ch, solo: !ch.solo } : ch,
-        ),
+        channels: state.mixerState.channels.map((ch) => (ch.trackId === trackId ? { ...ch, solo: !ch.solo } : ch)),
       },
     }));
   },
@@ -275,9 +267,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
       mixerState: {
         ...prev.mixerState,
         channels: prev.mixerState.channels.map((ch) =>
-          ch.trackId === trackId
-            ? { ...ch, effectsChain: [...ch.effectsChain, newEffect] }
-            : ch,
+          ch.trackId === trackId ? { ...ch, effectsChain: [...ch.effectsChain, newEffect] } : ch,
         ),
       },
     }));
@@ -291,9 +281,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
           ch.trackId === trackId
             ? {
                 ...ch,
-                effectsChain: ch.effectsChain
-                  .filter((e) => e.id !== effectId)
-                  .map((e, i) => ({ ...e, order: i })),
+                effectsChain: ch.effectsChain.filter((e) => e.id !== effectId).map((e, i) => ({ ...e, order: i })),
               }
             : ch,
         ),
@@ -306,9 +294,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
       mixerState: {
         ...state.mixerState,
         channels: state.mixerState.channels.map((ch) =>
-          ch.trackId === trackId
-            ? { ...ch, automation: { ...ch.automation, [property]: curve } }
-            : ch,
+          ch.trackId === trackId ? { ...ch, automation: { ...ch.automation, [property]: curve } } : ch,
         ),
       },
     }));
@@ -428,9 +414,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
 
   setMulticamGroupFollowMode: (groupId, mode) => {
     set((state) => ({
-      multicamAudioGroups: state.multicamAudioGroups.map((g) =>
-        g.id === groupId ? setGroupFollowMode(g, mode) : g,
-      ),
+      multicamAudioGroups: state.multicamAudioGroups.map((g) => (g.id === groupId ? setGroupFollowMode(g, mode) : g)),
     }));
   },
 
@@ -485,12 +469,10 @@ export const useSpectrumAnalyzerActive = () => useMixerStore((s) => s.spectrumAn
 export const useAutomationRecordMode = () => useMixerStore((s) => s.automationRecordMode);
 
 /** 获取指定通道的降噪参数 */
-export const useChannelNoiseReduction = (trackId: string) =>
-  useMixerStore((s) => s.noiseReductionParams[trackId]);
+export const useChannelNoiseReduction = (trackId: string) => useMixerStore((s) => s.noiseReductionParams[trackId]);
 
 /** 获取降噪预览通道 ID */
-export const useNoiseReductionPreviewTrackId = () =>
-  useMixerStore((s) => s.noiseReductionPreviewTrackId);
+export const useNoiseReductionPreviewTrackId = () => useMixerStore((s) => s.noiseReductionPreviewTrackId);
 
 /**
  * 获取所有通道的降噪参数（用于导出管线）

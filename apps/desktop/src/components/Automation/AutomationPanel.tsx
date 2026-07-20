@@ -1,10 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import type {
-  Workflow,
-  WorkflowTemplate,
-  WorkflowStatus,
-  WorkflowLogEntry,
-} from '@open-factory/editor-core';
+import type { Workflow, WorkflowTemplate, WorkflowStatus, WorkflowLogEntry } from '@open-factory/editor-core';
 import {
   WorkflowEngine,
   createDefaultWorkflow,
@@ -44,23 +39,35 @@ import { Label } from '../ui/label';
 
 function statusStyle(status: WorkflowStatus): string {
   switch (status) {
-    case 'running': return 'text-blue-500';
-    case 'completed': return 'text-green-500';
-    case 'failed': return 'text-red-500';
-    case 'paused': return 'text-yellow-500';
-    case 'cancelled': return 'text-gray-500';
-    default: return 'text-muted-foreground';
+    case 'running':
+      return 'text-blue-500';
+    case 'completed':
+      return 'text-green-500';
+    case 'failed':
+      return 'text-red-500';
+    case 'paused':
+      return 'text-yellow-500';
+    case 'cancelled':
+      return 'text-gray-500';
+    default:
+      return 'text-muted-foreground';
   }
 }
 
 function statusIcon(status: WorkflowStatus) {
   switch (status) {
-    case 'running': return <Play className="w-4 h-4" />;
-    case 'completed': return <CheckCircle className="w-4 h-4" />;
-    case 'failed': return <XCircle className="w-4 h-4" />;
-    case 'paused': return <Pause className="w-4 h-4" />;
-    case 'cancelled': return <Square className="w-4 h-4" />;
-    default: return <Clock className="w-4 h-4" />;
+    case 'running':
+      return <Play className="w-4 h-4" />;
+    case 'completed':
+      return <CheckCircle className="w-4 h-4" />;
+    case 'failed':
+      return <XCircle className="w-4 h-4" />;
+    case 'paused':
+      return <Pause className="w-4 h-4" />;
+    case 'cancelled':
+      return <Square className="w-4 h-4" />;
+    default:
+      return <Clock className="w-4 h-4" />;
   }
 }
 
@@ -109,33 +116,42 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
   }, [engine, refreshWorkflows]);
 
   // 从模板创建
-  const handleCreateFromTemplate = useCallback((templateId: string) => {
-    const wf = engine.createFromTemplate(templateId);
-    if (wf) {
-      setSelectedWorkflow(wf);
-      refreshWorkflows();
-    }
-  }, [engine, refreshWorkflows]);
+  const handleCreateFromTemplate = useCallback(
+    (templateId: string) => {
+      const wf = engine.createFromTemplate(templateId);
+      if (wf) {
+        setSelectedWorkflow(wf);
+        refreshWorkflows();
+      }
+    },
+    [engine, refreshWorkflows],
+  );
 
   // 执行工作流
-  const handleExecute = useCallback(async (workflowId: string) => {
-    try {
-      const ctx = await engine.executeWorkflow(workflowId);
-      setExecutionLogs(ctx.logs);
-      refreshWorkflows();
-    } catch (error) {
-      console.error('执行失败:', error);
-    }
-  }, [engine, refreshWorkflows]);
+  const handleExecute = useCallback(
+    async (workflowId: string) => {
+      try {
+        const ctx = await engine.executeWorkflow(workflowId);
+        setExecutionLogs(ctx.logs);
+        refreshWorkflows();
+      } catch (error) {
+        console.error('执行失败:', error);
+      }
+    },
+    [engine, refreshWorkflows],
+  );
 
   // 删除工作流
-  const handleDelete = useCallback((workflowId: string) => {
-    engine.unregisterWorkflow(workflowId);
-    if (selectedWorkflow?.id === workflowId) {
-      setSelectedWorkflow(null);
-    }
-    refreshWorkflows();
-  }, [engine, refreshWorkflows, selectedWorkflow]);
+  const handleDelete = useCallback(
+    (workflowId: string) => {
+      engine.unregisterWorkflow(workflowId);
+      if (selectedWorkflow?.id === workflowId) {
+        setSelectedWorkflow(null);
+      }
+      refreshWorkflows();
+    },
+    [engine, refreshWorkflows, selectedWorkflow],
+  );
 
   // 切换步骤展开
   const toggleStep = useCallback((stepId: string) => {
@@ -162,12 +178,7 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
           <Zap className="w-5 h-5 text-primary" />
           <h2 className="text-sm font-semibold">自动化工作流</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleCreateWorkflow}
-          data-testid="create-workflow-btn"
-        >
+        <Button variant="ghost" size="sm" onClick={handleCreateWorkflow} data-testid="create-workflow-btn">
           <Plus className="w-4 h-4 mr-1" />
           新建
         </Button>
@@ -187,7 +198,15 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
             onClick={() => setActiveTab(tab)}
             data-testid={`tab-${tab}`}
           >
-            {tab === 'workflows' ? '工作流' : tab === 'templates' ? '模板' : tab === 'generate' ? '生成' : tab === 'analysis' ? '分析' : '日志'}
+            {tab === 'workflows'
+              ? '工作流'
+              : tab === 'templates'
+                ? '模板'
+                : tab === 'generate'
+                  ? '生成'
+                  : tab === 'analysis'
+                    ? '分析'
+                    : '日志'}
           </button>
         ))}
       </div>
@@ -204,29 +223,16 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
           />
         )}
         {activeTab === 'templates' && (
-          <TemplatesTab
-            templates={templates}
-            onCreateFromTemplate={handleCreateFromTemplate}
-          />
+          <TemplatesTab templates={templates} onCreateFromTemplate={handleCreateFromTemplate} />
         )}
-        {activeTab === 'generate' && (
-          <AutoGeneratePanel />
-        )}
-        {activeTab === 'analysis' && (
-          <SceneAnalysisView />
-        )}
-        {activeTab === 'logs' && (
-          <LogsTab logs={executionLogs} />
-        )}
+        {activeTab === 'generate' && <AutoGeneratePanel />}
+        {activeTab === 'analysis' && <SceneAnalysisView />}
+        {activeTab === 'logs' && <LogsTab logs={executionLogs} />}
       </div>
 
       {/* 详情面板 */}
       {selectedWorkflow && (
-        <WorkflowDetail
-          workflow={selectedWorkflow}
-          expandedSteps={expandedSteps}
-          onToggleStep={toggleStep}
-        />
+        <WorkflowDetail workflow={selectedWorkflow} expandedSteps={expandedSteps} onToggleStep={toggleStep} />
       )}
     </div>
   );
@@ -262,9 +268,7 @@ function WorkflowsTab({ workflows, selectedWorkflow, onSelect, onExecute, onDele
           key={wf.id}
           className={cn(
             'flex items-center justify-between px-3 py-2 rounded-md cursor-pointer transition-colors',
-            selectedWorkflow?.id === wf.id
-              ? 'bg-primary/10 text-primary'
-              : 'hover:bg-muted',
+            selectedWorkflow?.id === wf.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
           )}
           onClick={() => onSelect(wf)}
           data-testid={`workflow-item-${wf.id}`}
@@ -283,7 +287,10 @@ function WorkflowsTab({ workflows, selectedWorkflow, onSelect, onExecute, onDele
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0"
-              onClick={(e) => { e.stopPropagation(); onExecute(wf.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onExecute(wf.id);
+              }}
               disabled={!wf.enabled}
               data-testid={`execute-workflow-${wf.id}`}
             >
@@ -293,7 +300,10 @@ function WorkflowsTab({ workflows, selectedWorkflow, onSelect, onExecute, onDele
               variant="ghost"
               size="sm"
               className="h-7 w-7 p-0 text-destructive"
-              onClick={(e) => { e.stopPropagation(); onDelete(wf.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(wf.id);
+              }}
               data-testid={`delete-workflow-${wf.id}`}
             >
               <Trash2 className="w-3 h-3" />
@@ -380,14 +390,14 @@ function LogsTab({ logs }: LogsTabProps) {
             log.level === 'debug' && 'text-muted-foreground',
           )}
         >
-          <span className="text-muted-foreground">
-            [{new Date(log.timestamp).toLocaleTimeString()}]
-          </span>{' '}
-          <span className={cn(
-            'font-semibold',
-            log.level === 'error' && 'text-red-600',
-            log.level === 'warn' && 'text-yellow-600',
-          )}>
+          <span className="text-muted-foreground">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
+          <span
+            className={cn(
+              'font-semibold',
+              log.level === 'error' && 'text-red-600',
+              log.level === 'warn' && 'text-yellow-600',
+            )}
+          >
             [{log.level.toUpperCase()}]
           </span>{' '}
           {log.message}
@@ -413,9 +423,7 @@ function WorkflowDetail({ workflow, expandedSteps, onToggleStep }: WorkflowDetai
         </span>
       </div>
 
-      {workflow.description && (
-        <p className="text-xs text-muted-foreground mb-2">{workflow.description}</p>
-      )}
+      {workflow.description && <p className="text-xs text-muted-foreground mb-2">{workflow.description}</p>}
 
       {/* 触发器 */}
       <div className="mb-2">
@@ -447,16 +455,14 @@ function WorkflowDetail({ workflow, expandedSteps, onToggleStep }: WorkflowDetai
                   ) : (
                     <ChevronRight className="w-3 h-3" />
                   )}
-                  <span className="font-medium">{i + 1}. {step.name}</span>
-                  <span className="text-muted-foreground ml-auto">
-                    {step.actions.length} 动作
+                  <span className="font-medium">
+                    {i + 1}. {step.name}
                   </span>
+                  <span className="text-muted-foreground ml-auto">{step.actions.length} 动作</span>
                 </button>
                 {expandedSteps.has(step.id) && (
                   <div className="px-4 pb-2 text-xs text-muted-foreground">
-                    {step.conditions.length > 0 && (
-                      <p>条件: {step.conditions.length} 个</p>
-                    )}
+                    {step.conditions.length > 0 && <p>条件: {step.conditions.length} 个</p>}
                     {step.actions.map((a) => (
                       <p key={a.id}>→ {a.type}</p>
                     ))}

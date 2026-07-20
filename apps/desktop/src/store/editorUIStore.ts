@@ -41,12 +41,7 @@ export {
   usePersistLayoutPatch,
   usePersistPanelVisibilityPatch,
 } from './panelStore';
-export {
-  useDialogStore,
-  useDialogState,
-  dialogBooleanSelector,
-  dialogSetterSelector,
-} from './dialogStore';
+export { useDialogStore, useDialogState, dialogBooleanSelector, dialogSetterSelector } from './dialogStore';
 export { useToolbarStore } from './toolbarStore';
 export { useModalStore } from './modalStore';
 

@@ -112,11 +112,7 @@ self.onmessage = async (event: MessageEvent<AISpeakerDiarizationWorkerInput>) =>
       diarizationResult = await callPyannoteViaBridge(input.tauriRequest);
     } else if (input.audioData && input.sampleRate) {
       // 使用前端特征提取（简化版本）
-      diarizationResult = await performFrontendDiarization(
-        input.audioData,
-        input.sampleRate,
-        input.config,
-      );
+      diarizationResult = await performFrontendDiarization(input.audioData, input.sampleRate, input.config);
     } else if (input.audioPath) {
       // 需要通过桥接加载音频
       diarizationResult = await callPyannoteViaBridge({
@@ -149,10 +145,7 @@ self.onmessage = async (event: MessageEvent<AISpeakerDiarizationWorkerInput>) =>
     // 如果有转录片段，应用说话人标签
     let labeledSegments: AISpeakerDiarizationWorkerOutput['labeledSegments'];
     if (input.transcriptionSegments && input.transcriptionSegments.length > 0) {
-      labeledSegments = applySpeakerLabelsToSegments(
-        input.transcriptionSegments,
-        diarizationResult,
-      );
+      labeledSegments = applySpeakerLabelsToSegments(input.transcriptionSegments, diarizationResult);
     }
 
     const durationMs = performance.now() - startTime;
@@ -164,7 +157,6 @@ self.onmessage = async (event: MessageEvent<AISpeakerDiarizationWorkerInput>) =>
       labeledSegments,
       durationMs,
     } satisfies AISpeakerDiarizationWorkerOutput);
-
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     postMessage({
@@ -206,10 +198,13 @@ async function callPyannoteViaBridge(request: {
     });
 
     // 超时保护（10 分钟）
-    setTimeout(() => {
-      self.removeEventListener('message', handler);
-      reject(new Error('Pyannote 调用超时（10分钟）'));
-    }, 10 * 60 * 1000);
+    setTimeout(
+      () => {
+        self.removeEventListener('message', handler);
+        reject(new Error('Pyannote 调用超时（10分钟）'));
+      },
+      10 * 60 * 1000,
+    );
   });
 }
 
@@ -226,7 +221,7 @@ async function performFrontendDiarization(
   // 实际应用中应该使用 Pyannote 等专业模型
 
   const windowSize = Math.round(sampleRate * 0.025); // 25ms窗口
-  const hopSize = Math.round(sampleRate * 0.010);    // 10ms帧移
+  const hopSize = Math.round(sampleRate * 0.01); // 10ms帧移
   const minSpeakers = config?.minSpeakers ?? 1;
   const maxSpeakers = config?.maxSpeakers ?? 10;
 
@@ -257,10 +252,8 @@ async function performFrontendDiarization(
   const segments = clusterByFeatures(normalizedFeatures, sampleRate, hopSize, minSpeakers, maxSpeakers);
 
   // 计算统计信息
-  const speakerIds = new Set(segments.map(s => s.speakerId));
-  const avgConfidence = segments.length > 0
-    ? segments.reduce((sum, s) => sum + s.confidence, 0) / segments.length
-    : 0;
+  const speakerIds = new Set(segments.map((s) => s.speakerId));
+  const avgConfidence = segments.length > 0 ? segments.reduce((sum, s) => sum + s.confidence, 0) / segments.length : 0;
 
   let maxMonologueMs = 0;
   let speakerSwitches = 0;
@@ -290,13 +283,11 @@ async function performFrontendDiarization(
       speakerLabel: getSpeakerLabel(id),
       embedding: [], // 简化版本不提供实际嵌入
       confidence: 0.7,
-      sampleCount: segments.filter(s => s.speakerId === id).length,
+      sampleCount: segments.filter((s) => s.speakerId === id).length,
     });
   }
 
-  const durationMs = segments.length > 0
-    ? Math.max(...segments.map(s => s.endMs))
-    : 0;
+  const durationMs = segments.length > 0 ? Math.max(...segments.map((s) => s.endMs)) : 0;
 
   return {
     segments,
@@ -328,11 +319,11 @@ function normalizeFeatures(features: number[][]): number[][] {
     }
   }
 
-  return features.map(feat =>
+  return features.map((feat) =>
     feat.map((val, d) => {
       const range = maxs[d] - mins[d];
       return range > 0 ? (val - mins[d]) / range : 0.5;
-    })
+    }),
   );
 }
 
@@ -359,8 +350,8 @@ function clusterByFeatures(
 
     // 能量突变且持续一段时间，认为是说话人切换
     if (energyDiff > energyThreshold && i - segmentStart > 50) {
-      const startMs = Math.round((segmentStart * hopSize / sampleRate) * 1000);
-      const endMs = Math.round((i * hopSize / sampleRate) * 1000);
+      const startMs = Math.round(((segmentStart * hopSize) / sampleRate) * 1000);
+      const endMs = Math.round(((i * hopSize) / sampleRate) * 1000);
 
       segments.push({
         startMs,
@@ -377,8 +368,8 @@ function clusterByFeatures(
 
   // 添加最后一段
   if (segmentStart < features.length) {
-    const startMs = Math.round((segmentStart * hopSize / sampleRate) * 1000);
-    const endMs = Math.round((features.length * hopSize / sampleRate) * 1000);
+    const startMs = Math.round(((segmentStart * hopSize) / sampleRate) * 1000);
+    const endMs = Math.round(((features.length * hopSize) / sampleRate) * 1000);
 
     segments.push({
       startMs,
@@ -390,7 +381,7 @@ function clusterByFeatures(
   }
 
   // 如果检测到的说话人数量不足，合并一些片段
-  const uniqueSpeakers = new Set(segments.map(s => s.speakerId));
+  const uniqueSpeakers = new Set(segments.map((s) => s.speakerId));
   if (uniqueSpeakers.size < minSpeakers && segments.length > 1) {
     // 重新分配说话人ID
     const speakerMap = new Map<number, number>();
@@ -414,7 +405,7 @@ function applySpeakerLabelsToSegments(
   transcriptionSegments: Array<{ startMs: number; endMs: number; text: string }>,
   diarizationResult: SpeakerDiarizationResult,
 ): Array<{ startMs: number; endMs: number; text: string; speaker?: string; speakerId?: number }> {
-  return transcriptionSegments.map(seg => {
+  return transcriptionSegments.map((seg) => {
     // 找到与此转录片段时间重叠最多的分离片段
     let bestOverlap = 0;
     let bestMatch: SpeakerDiarizationSegment | null = null;
@@ -446,10 +437,7 @@ function applySpeakerLabelsToSegments(
  * 获取说话人标签
  */
 function getSpeakerLabel(speakerId: number): string {
-  const labels = [
-    '说话人 A', '说话人 B', '说话人 C', '说话人 D',
-    '说话人 E', '说话人 F', '说话人 G', '说话人 H',
-  ];
+  const labels = ['说话人 A', '说话人 B', '说话人 C', '说话人 D', '说话人 E', '说话人 F', '说话人 G', '说话人 H'];
 
   if (speakerId >= 0 && speakerId < labels.length) {
     return labels[speakerId];

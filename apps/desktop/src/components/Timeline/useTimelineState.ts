@@ -40,11 +40,7 @@ import { type EditorState, useEditorStore } from '../../store/editorStore';
 import { type RenderCacheState, useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { readTimelineInteractionSettings, type TimelineHeatmapViewSettings } from '../../settings/appSettings';
-import {
-  LABEL_WIDTH,
-  TRACK_HEIGHT,
-  type DragState,
-} from './TimelineParts';
+import { LABEL_WIDTH, TRACK_HEIGHT, type DragState } from './TimelineParts';
 import type {
   TransitionMenuState,
   ClipMenuState,
@@ -65,10 +61,7 @@ import type {
 import type { TimelineNoteDraftState, BookmarkRenameState } from './TimelineOverlays';
 import type { RulerContextMenuAction } from './timeline-ruler-menu';
 import { showToast } from '../../lib/toast';
-import {
-  cancelSceneDetection,
-  type SceneDetectProgressEvent,
-} from '../../lib/tauri-bridge';
+import { cancelSceneDetection, type SceneDetectProgressEvent } from '../../lib/tauri-bridge';
 
 interface HeatmapWorkerResponse {
   id: number;
@@ -176,13 +169,30 @@ export interface TimelineState {
   whisperDialog: WhisperDialogState | undefined;
   setWhisperDialog: React.Dispatch<React.SetStateAction<WhisperDialogState | undefined>>;
   subtitleAlignReport: { correctedCount: number; averageOffsetMs: number } | undefined;
-  setSubtitleAlignReport: React.Dispatch<React.SetStateAction<{ correctedCount: number; averageOffsetMs: number } | undefined>>;
+  setSubtitleAlignReport: React.Dispatch<
+    React.SetStateAction<{ correctedCount: number; averageOffsetMs: number } | undefined>
+  >;
   replaceMediaDialog: ReplaceMediaDialogState | undefined;
   setReplaceMediaDialog: React.Dispatch<React.SetStateAction<ReplaceMediaDialogState | undefined>>;
   reframeDialog: { clipId: string } | undefined;
   setReframeDialog: React.Dispatch<React.SetStateAction<{ clipId: string } | undefined>>;
-  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: import('@open-factory/editor-core').TransitionRecommendation[] } | undefined;
-  setTransitionDialog: React.Dispatch<React.SetStateAction<{ clipId: string; adjacentClipId: string; recommendations: import('@open-factory/editor-core').TransitionRecommendation[] } | undefined>>;
+  transitionDialog:
+    | {
+        clipId: string;
+        adjacentClipId: string;
+        recommendations: import('@open-factory/editor-core').TransitionRecommendation[];
+      }
+    | undefined;
+  setTransitionDialog: React.Dispatch<
+    React.SetStateAction<
+      | {
+          clipId: string;
+          adjacentClipId: string;
+          recommendations: import('@open-factory/editor-core').TransitionRecommendation[];
+        }
+      | undefined
+    >
+  >;
   sequenceSettingsDialogOpen: boolean;
   setSequenceSettingsDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -241,7 +251,9 @@ export interface TimelineState {
   equalHeightValue: string;
   setEqualHeightValue: React.Dispatch<React.SetStateAction<string>>;
   scrollViewport: { scrollLeft: number; scrollTop: number; viewportWidth: number };
-  setScrollViewport: React.Dispatch<React.SetStateAction<{ scrollLeft: number; scrollTop: number; viewportWidth: number }>>;
+  setScrollViewport: React.Dispatch<
+    React.SetStateAction<{ scrollLeft: number; scrollTop: number; viewportWidth: number }>
+  >;
   timelineViewportHeight: number;
   setTimelineViewportHeight: React.Dispatch<React.SetStateAction<number>>;
   heatmapSegments: TimelineHeatmapSegment[];
@@ -395,7 +407,12 @@ export function useTimelineState(params: TimelineStateParams): TimelineState {
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [reframeDialog, setReframeDialog] = useState<{ clipId: string } | undefined>();
   const [transitionDialog, setTransitionDialog] = useState<
-    { clipId: string; adjacentClipId: string; recommendations: import('@open-factory/editor-core').TransitionRecommendation[] } | undefined
+    | {
+        clipId: string;
+        adjacentClipId: string;
+        recommendations: import('@open-factory/editor-core').TransitionRecommendation[];
+      }
+    | undefined
   >();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [beatSnapEnabled, setBeatSnapEnabled] = useState(true);

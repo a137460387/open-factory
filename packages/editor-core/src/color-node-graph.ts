@@ -465,13 +465,11 @@ export const BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES: readonly ColorNodeGraphTemplat
 ] as const;
 
 function createTemplateGraph(templateId: string, nodes: ColorNode[]): ColorNodeGraph {
-  const connections = nodes
-    .slice(0, -1)
-    .map((item, index) => ({
-      id: `${templateId}-${item.id}-${nodes[index + 1].id}`,
-      from: item.id,
-      to: nodes[index + 1].id,
-    }));
+  const connections = nodes.slice(0, -1).map((item, index) => ({
+    id: `${templateId}-${item.id}-${nodes[index + 1].id}`,
+    from: item.id,
+    to: nodes[index + 1].id,
+  }));
   return normalizeColorNodeGraph({
     version: 1,
     nodes,

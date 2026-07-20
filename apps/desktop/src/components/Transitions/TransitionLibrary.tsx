@@ -15,10 +15,7 @@ import {
   type TransitionDefinition,
   type TransitionCategory,
 } from '@open-factory/editor-core';
-import {
-  readTransitionFavorites,
-  toggleTransitionFavorite,
-} from '../../timeline/transition-favorites';
+import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
 
 type CategoryFilter = 'all' | TransitionCategory;
 
@@ -38,17 +35,11 @@ interface TransitionLibraryProps {
   onApplyToTimeline?: (type: string) => void;
 }
 
-export function TransitionLibrary({
-  onClose,
-  onSelectTransition,
-  onApplyToTimeline,
-}: TransitionLibraryProps) {
+export function TransitionLibrary({ onClose, onSelectTransition, onApplyToTimeline }: TransitionLibraryProps) {
   const { selectedCategory, searchQuery, previewingType, setSelectedCategory, setSearchQuery, setPreviewingType } =
     useTransitionStore();
 
-  const [favorites, setFavorites] = useState<string[]>(() =>
-    readTransitionFavorites().map(String),
-  );
+  const [favorites, setFavorites] = useState<string[]>(() => readTransitionFavorites().map(String));
 
   const toggleFav = useCallback((type: string) => {
     setFavorites((prev) => {

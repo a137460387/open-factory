@@ -39,7 +39,7 @@ function makeCheckerboardFrame(width: number, height: number): Uint8Array {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
-      const v = ((x + y) % 2 === 0) ? 255 : 0;
+      const v = (x + y) % 2 === 0 ? 255 : 0;
       frame[i] = v;
       frame[i + 1] = v;
       frame[i + 2] = v;
@@ -64,13 +64,25 @@ function makeResult(overrides: Partial<EnhancedQualityAssessmentResult> = {}): E
   return {
     overallScore: 70,
     videoMetrics: {
-      sharpness: 70, noise: 20, exposure: 80, contrast: 65, saturation: 60,
-      colorBalance: 75, stability: 90, bitrate: 5000,
-      resolution: { width: 1920, height: 1080 }, frameRate: 30,
+      sharpness: 70,
+      noise: 20,
+      exposure: 80,
+      contrast: 65,
+      saturation: 60,
+      colorBalance: 75,
+      stability: 90,
+      bitrate: 5000,
+      resolution: { width: 1920, height: 1080 },
+      frameRate: 30,
     },
     audioMetrics: {
-      rmsLevel: -14, peakLevel: -3, noiseFloor: -60,
-      dynamicRange: 40, clipping: false, distortion: 5, frequencyBalance: 70,
+      rmsLevel: -14,
+      peakLevel: -3,
+      noiseFloor: -60,
+      dynamicRange: 40,
+      clipping: false,
+      distortion: 5,
+      frequencyBalance: 70,
     },
     dimensionScores: [
       { dimension: 'sharpness', score: 70, weight: 0.15, issues: [], suggestion: '' },
@@ -478,7 +490,7 @@ describe('assessAudioQuality', () => {
   it('should detect clipping in saturated audio', () => {
     const audio = new Float32Array(44100);
     for (let i = 0; i < audio.length; i++) {
-      audio[i] = (i % 2 === 0) ? 1.0 : -1.0;
+      audio[i] = i % 2 === 0 ? 1.0 : -1.0;
     }
     const result = assessAudioQuality(audio, 44100, defaultConfig);
     expect(result.clipping).toBe(true);
@@ -537,15 +549,11 @@ describe('compareQuality', () => {
   it('should detect regressions when comparison is worse', () => {
     const baseline = makeResult({
       overallScore: 80,
-      dimensionScores: [
-        { dimension: 'sharpness', score: 80, weight: 0.15, issues: [], suggestion: '' },
-      ],
+      dimensionScores: [{ dimension: 'sharpness', score: 80, weight: 0.15, issues: [], suggestion: '' }],
     });
     const comparison = makeResult({
       overallScore: 50,
-      dimensionScores: [
-        { dimension: 'sharpness', score: 40, weight: 0.15, issues: [], suggestion: '' },
-      ],
+      dimensionScores: [{ dimension: 'sharpness', score: 40, weight: 0.15, issues: [], suggestion: '' }],
     });
     const result = compareQuality(baseline, comparison);
     expect(result.regressions.length).toBeGreaterThan(0);
@@ -582,8 +590,12 @@ describe('generateOptimizationSuggestions', () => {
       ],
       suggestions: [
         {
-          id: 's1', dimension: 'sharpness', action: 'sharpen',
-          expectedImprovement: 20, priority: 'high', autoApplicable: true,
+          id: 's1',
+          dimension: 'sharpness',
+          action: 'sharpen',
+          expectedImprovement: 20,
+          priority: 'high',
+          autoApplicable: true,
         },
       ],
     });
@@ -594,44 +606,71 @@ describe('generateOptimizationSuggestions', () => {
   it('should add clipping fix suggestion when audio clips', () => {
     const result = makeResult({
       audioMetrics: {
-        rmsLevel: -3, peakLevel: 0, noiseFloor: -60,
-        dynamicRange: 40, clipping: true, distortion: 50, frequencyBalance: 70,
+        rmsLevel: -3,
+        peakLevel: 0,
+        noiseFloor: -60,
+        dynamicRange: 40,
+        clipping: true,
+        distortion: 50,
+        frequencyBalance: 70,
       },
     });
     const suggestions = generateOptimizationSuggestions(result);
-    const clipSuggestion = suggestions.find(s => s.action.includes('削波'));
+    const clipSuggestion = suggestions.find((s) => s.action.includes('削波'));
     expect(clipSuggestion).toBeDefined();
   });
 
   it('should add heavy denoise suggestion when noise > 70', () => {
     const result = makeResult({
       videoMetrics: {
-        sharpness: 50, noise: 80, exposure: 60, contrast: 50, saturation: 50,
-        colorBalance: 50, stability: 50, bitrate: 5000,
-        resolution: { width: 1920, height: 1080 }, frameRate: 30,
+        sharpness: 50,
+        noise: 80,
+        exposure: 60,
+        contrast: 50,
+        saturation: 50,
+        colorBalance: 50,
+        stability: 50,
+        bitrate: 5000,
+        resolution: { width: 1920, height: 1080 },
+        frameRate: 30,
       },
     });
     const suggestions = generateOptimizationSuggestions(result);
-    const denoiseSuggestion = suggestions.find(s => s.action.includes('强降噪'));
+    const denoiseSuggestion = suggestions.find((s) => s.action.includes('强降噪'));
     expect(denoiseSuggestion).toBeDefined();
   });
 
   it('should sort by priority (critical first)', () => {
     const result = makeResult({
       audioMetrics: {
-        rmsLevel: -3, peakLevel: 0, noiseFloor: -60,
-        dynamicRange: 40, clipping: true, distortion: 50, frequencyBalance: 70,
+        rmsLevel: -3,
+        peakLevel: 0,
+        noiseFloor: -60,
+        dynamicRange: 40,
+        clipping: true,
+        distortion: 50,
+        frequencyBalance: 70,
       },
       videoMetrics: {
-        sharpness: 50, noise: 80, exposure: 60, contrast: 50, saturation: 50,
-        colorBalance: 50, stability: 50, bitrate: 5000,
-        resolution: { width: 1920, height: 1080 }, frameRate: 30,
+        sharpness: 50,
+        noise: 80,
+        exposure: 60,
+        contrast: 50,
+        saturation: 50,
+        colorBalance: 50,
+        stability: 50,
+        bitrate: 5000,
+        resolution: { width: 1920, height: 1080 },
+        frameRate: 30,
       },
     });
     const suggestions = generateOptimizationSuggestions(result);
     if (suggestions.length >= 2) {
       const priorityOrder: Record<string, number> = {
-        critical: 0, high: 1, medium: 2, low: 3,
+        critical: 0,
+        high: 1,
+        medium: 2,
+        low: 3,
       };
       for (let i = 1; i < suggestions.length; i++) {
         expect(priorityOrder[suggestions[i].priority]).toBeGreaterThanOrEqual(
@@ -645,17 +684,25 @@ describe('generateOptimizationSuggestions', () => {
     const result = makeResult({
       suggestions: [
         {
-          id: 's1', dimension: 'sharpness', action: 'sharpen',
-          expectedImprovement: 10, priority: 'low', autoApplicable: true,
+          id: 's1',
+          dimension: 'sharpness',
+          action: 'sharpen',
+          expectedImprovement: 10,
+          priority: 'low',
+          autoApplicable: true,
         },
         {
-          id: 's2', dimension: 'sharpness', action: 'sharpen',
-          expectedImprovement: 10, priority: 'low', autoApplicable: true,
+          id: 's2',
+          dimension: 'sharpness',
+          action: 'sharpen',
+          expectedImprovement: 10,
+          priority: 'low',
+          autoApplicable: true,
         },
       ],
     });
     const suggestions = generateOptimizationSuggestions(result);
-    const sharpenSugs = suggestions.filter(s => s.action === 'sharpen');
+    const sharpenSugs = suggestions.filter((s) => s.action === 'sharpen');
     expect(sharpenSugs.length).toBe(1);
   });
 });
@@ -718,9 +765,7 @@ describe('parseEnhancedQualityResponse', () => {
     const input = {
       overallScore: 85,
       grade: 'A',
-      dimensionScores: [
-        { dimension: 'sharpness', score: 90, weight: 0.15, issues: [], suggestion: 'good' },
-      ],
+      dimensionScores: [{ dimension: 'sharpness', score: 90, weight: 0.15, issues: [], suggestion: 'good' }],
       issues: [],
       suggestions: [],
     };
@@ -758,8 +803,12 @@ describe('parseEnhancedQualityResponse', () => {
       overallScore: 50,
       suggestions: [
         {
-          id: 's1', dimension: 'sharpness', action: 'sharpen',
-          expectedImprovement: 15, priority: 'high', autoApplicable: true,
+          id: 's1',
+          dimension: 'sharpness',
+          action: 'sharpen',
+          expectedImprovement: 15,
+          priority: 'high',
+          autoApplicable: true,
         },
       ],
     };
@@ -806,14 +855,19 @@ describe('parseEnhancedQualityResponseSafe', () => {
     const input = {
       overallScore: 65,
       grade: 'B',
-      dimensionScores: [
-        { dimension: 'noise', score: 50, weight: 0.1, issues: ['noisy'], suggestion: 'denoise' },
-      ],
+      dimensionScores: [{ dimension: 'noise', score: 50, weight: 0.1, issues: ['noisy'], suggestion: 'denoise' }],
       issues: [
         { type: 'noise', severity: 'medium', dimension: 'noise', description: 'some noise', suggestedFix: 'denoise' },
       ],
       suggestions: [
-        { id: 's1', dimension: 'noise', action: 'denoise', expectedImprovement: 10, priority: 'medium', autoApplicable: true },
+        {
+          id: 's1',
+          dimension: 'noise',
+          action: 'denoise',
+          expectedImprovement: 10,
+          priority: 'medium',
+          autoApplicable: true,
+        },
       ],
     };
     const result = await parseEnhancedQualityResponseSafe(input);

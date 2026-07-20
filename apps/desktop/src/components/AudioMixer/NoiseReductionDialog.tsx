@@ -69,13 +69,10 @@ export function NoiseReductionDialog({ open, onClose, trackId }: NoiseReductionD
     setPreset('custom');
   }, []);
 
-  const handleParamChange = useCallback(
-    (key: keyof NoiseReductionParams, value: number | boolean) => {
-      setParams((prev) => normalizeNoiseReductionParams({ ...prev, [key]: value }));
-      setPreset('custom');
-    },
-    [],
-  );
+  const handleParamChange = useCallback((key: keyof NoiseReductionParams, value: number | boolean) => {
+    setParams((prev) => normalizeNoiseReductionParams({ ...prev, [key]: value }));
+    setPreset('custom');
+  }, []);
 
   const handlePreview = useCallback(() => {
     setIsPreviewPlaying(true);
@@ -113,7 +110,10 @@ export function NoiseReductionDialog({ open, onClose, trackId }: NoiseReductionD
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="noise-reduction-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      data-testid="noise-reduction-dialog"
+    >
       <div className="w-full max-w-lg rounded-lg border border-line bg-white shadow-xl">
         {/* 标题栏 */}
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -159,9 +159,7 @@ export function NoiseReductionDialog({ open, onClose, trackId }: NoiseReductionD
                   type="button"
                   onClick={() => handlePresetChange(p)}
                   className={`rounded px-2 py-1.5 text-xs font-medium transition-colors ${
-                    preset === p
-                      ? 'bg-brand text-white'
-                      : 'border border-line bg-white text-slate-600 hover:bg-panel'
+                    preset === p ? 'bg-brand text-white' : 'border border-line bg-white text-slate-600 hover:bg-panel'
                   }`}
                   data-testid={`noise-reduction-preset-${p}`}
                 >
@@ -241,7 +239,10 @@ export function NoiseReductionDialog({ open, onClose, trackId }: NoiseReductionD
 
           {/* 预览结果 */}
           {previewResult && (
-            <div className="rounded border border-emerald-200 bg-emerald-50 p-3" data-testid="noise-reduction-preview-result">
+            <div
+              className="rounded border border-emerald-200 bg-emerald-50 p-3"
+              data-testid="noise-reduction-preview-result"
+            >
               <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-700">
                 <Zap size={14} />
                 预览结果

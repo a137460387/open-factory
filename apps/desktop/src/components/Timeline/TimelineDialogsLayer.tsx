@@ -8,11 +8,7 @@ import { X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
-import {
-  AnnotationListPanel,
-  BookmarkListPanel,
-  TimelineNoteListPanel,
-} from './TimelineOverlays';
+import { AnnotationListPanel, BookmarkListPanel, TimelineNoteListPanel } from './TimelineOverlays';
 import {
   AnnotationEditorDialog,
   TimelineNoteEditorDialog,

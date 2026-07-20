@@ -78,11 +78,7 @@ export function SpeakerDiarizationPanel({
           <span className="text-sm font-semibold text-ink">AI 说话人分离</span>
         </div>
         {onClose && (
-          <button
-            className="rounded p-1 hover:bg-panel"
-            onClick={onClose}
-            data-testid="speaker-diarization-close"
-          >
+          <button className="rounded p-1 hover:bg-panel" onClick={onClose} data-testid="speaker-diarization-close">
             <X className="h-4 w-4" />
           </button>
         )}
@@ -99,19 +95,19 @@ export function SpeakerDiarizationPanel({
 
             {/* 说话人数量配置 */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">
-                说话人数量范围
-              </label>
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">说话人数量范围</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min={1}
                   max={20}
                   value={config.minSpeakers ?? 1}
-                  onChange={(e) => setConfig(prev => ({
-                    ...prev,
-                    minSpeakers: parseInt(e.target.value) || 1,
-                  }))}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      minSpeakers: parseInt(e.target.value) || 1,
+                    }))
+                  }
                   className="w-16 rounded border border-line bg-[var(--color-bg-primary)] px-2 py-1 text-sm"
                   data-testid="min-speakers-input"
                 />
@@ -121,10 +117,12 @@ export function SpeakerDiarizationPanel({
                   min={1}
                   max={20}
                   value={config.maxSpeakers ?? 10}
-                  onChange={(e) => setConfig(prev => ({
-                    ...prev,
-                    maxSpeakers: parseInt(e.target.value) || 10,
-                  }))}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      maxSpeakers: parseInt(e.target.value) || 10,
+                    }))
+                  }
                   className="w-16 rounded border border-line bg-[var(--color-bg-primary)] px-2 py-1 text-sm"
                   data-testid="max-speakers-input"
                 />
@@ -133,19 +131,19 @@ export function SpeakerDiarizationPanel({
 
             {/* 聚类阈值 */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">
-                分离灵敏度
-              </label>
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">分离灵敏度</label>
               <input
                 type="range"
                 min={0.3}
                 max={0.9}
                 step={0.05}
                 value={config.clusteringThreshold ?? 0.7}
-                onChange={(e) => setConfig(prev => ({
-                  ...prev,
-                  clusteringThreshold: parseFloat(e.target.value),
-                }))}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    clusteringThreshold: parseFloat(e.target.value),
+                  }))
+                }
                 className="w-full"
                 data-testid="clustering-threshold-slider"
               />
@@ -223,7 +221,9 @@ export function SpeakerDiarizationPanel({
                 </div>
                 <div>
                   <span className="text-[var(--color-text-muted)]">处理耗时：</span>
-                  <span className="font-medium">{state.durationMs ? `${(state.durationMs / 1000).toFixed(1)}s` : '-'}</span>
+                  <span className="font-medium">
+                    {state.durationMs ? `${(state.durationMs / 1000).toFixed(1)}s` : '-'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -232,7 +232,7 @@ export function SpeakerDiarizationPanel({
             <div className="space-y-2">
               <div className="text-xs font-medium text-[var(--color-text-muted)]">检测到的说话人</div>
               <div className="space-y-1">
-                {state.result.speakers.map(speaker => (
+                {state.result.speakers.map((speaker) => (
                   <div
                     key={speaker.speakerId}
                     className="flex items-center gap-2 rounded px-2 py-1 text-sm"
@@ -243,9 +243,7 @@ export function SpeakerDiarizationPanel({
                       style={{ backgroundColor: `hsl(${speaker.speakerId * 60}, 70%, 50%)` }}
                     />
                     <span>{speaker.speakerLabel}</span>
-                    <span className="text-xs text-[var(--color-text-muted)]">
-                      ({speaker.sampleCount} 个片段)
-                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">({speaker.sampleCount} 个片段)</span>
                   </div>
                 ))}
               </div>

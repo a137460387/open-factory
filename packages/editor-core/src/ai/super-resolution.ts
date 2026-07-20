@@ -22,11 +22,11 @@ export type UpscaleFactor = 2 | 4;
  * 超分辨率模型类型
  */
 export type SuperResolutionModel =
-  | 'realesrgan-x2plus'    // Real-ESRGAN 2x 通用模型
-  | 'realesrgan-x4plus'    // Real-ESRGAN 4x 通用模型
-  | 'realesrgan-x4-anime'  // Real-ESRGAN 4x 动漫优化模型
-  | 'esrgan-x4'            // ESRGAN 4x 经典模型
-  | 'auto';                // 自动选择最优模型
+  | 'realesrgan-x2plus' // Real-ESRGAN 2x 通用模型
+  | 'realesrgan-x4plus' // Real-ESRGAN 4x 通用模型
+  | 'realesrgan-x4-anime' // Real-ESRGAN 4x 动漫优化模型
+  | 'esrgan-x4' // ESRGAN 4x 经典模型
+  | 'auto'; // 自动选择最优模型
 
 /**
  * 图像数据（RGBA 扁平数组）
@@ -181,10 +181,7 @@ export function validateSuperResolutionConfig(config: SuperResolutionConfig): st
 /**
  * 根据图像特征自动选择最优模型
  */
-export function selectOptimalModel(
-  imageData: ImageData,
-  scaleFactor: UpscaleFactor,
-): SuperResolutionModel {
+export function selectOptimalModel(imageData: ImageData, scaleFactor: UpscaleFactor): SuperResolutionModel {
   const { width, height, data } = imageData;
   const totalPixels = width * height;
 
@@ -220,11 +217,7 @@ interface ImageFeatures {
 /**
  * 分析图像特征，用于模型选择和参数优化
  */
-export function analyzeImageFeatures(
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-): ImageFeatures {
+export function analyzeImageFeatures(data: Uint8ClampedArray, width: number, height: number): ImageFeatures {
   let totalBrightness = 0;
   let minBrightness = 255;
   let maxBrightness = 0;
@@ -306,10 +299,7 @@ export function analyzeImageFeatures(
  * 双三次插值（Bicubic Interpolation）
  * 用于基础图像放大，作为 AI 模型推理的后备方案
  */
-export function bicubicInterpolate(
-  src: ImageData,
-  scaleFactor: UpscaleFactor,
-): ImageData {
+export function bicubicInterpolate(src: ImageData, scaleFactor: UpscaleFactor): ImageData {
   const { data: srcData, width: srcW, height: srcH } = src;
   const dstW = srcW * scaleFactor;
   const dstH = srcH * scaleFactor;
@@ -344,9 +334,7 @@ export function bicubicInterpolate(
           }
         }
 
-        dstData[(dstY * dstW + dstX) * 4 + c] = Math.round(
-          Math.max(0, Math.min(255, value / weightSum)),
-        );
+        dstData[(dstY * dstW + dstX) * 4 + c] = Math.round(Math.max(0, Math.min(255, value / weightSum)));
       }
     }
   }
@@ -381,9 +369,7 @@ export function pixelShuffle(
           const offsetX = (dx - scaleFactor / 2 + 0.5) / scaleFactor;
           const offsetY = (dy - scaleFactor / 2 + 0.5) / scaleFactor;
           for (let c = 0; c < 3; c++) {
-            outData[dstIdx + c] = Math.max(0, Math.min(255,
-              data[srcIdx + c] + offsetX * 10 + offsetY * 10,
-            ));
+            outData[dstIdx + c] = Math.max(0, Math.min(255, data[srcIdx + c] + offsetX * 10 + offsetY * 10));
           }
           outData[dstIdx + 3] = data[srcIdx + 3]; // Alpha 不变
         }
@@ -398,10 +384,7 @@ export function pixelShuffle(
  * 残差增强（Residual Enhancement）
  * ESRGAN 的核心：在基础插值上叠加高频残差细节
  */
-export function residualEnhance(
-  baseImage: ImageData,
-  residualStrength: number,
-): ImageData {
+export function residualEnhance(baseImage: ImageData, residualStrength: number): ImageData {
   const { data, width, height } = baseImage;
   const outData = new Uint8ClampedArray(data.length);
 
@@ -417,9 +400,7 @@ export function residualEnhance(
         const right = data[(y * width + (x + 1)) * 4 + c];
         const laplacian = top + bottom + left + right - 4 * center;
         // 残差增强
-        outData[idx + c] = Math.max(0, Math.min(255,
-          center + laplacian * residualStrength * 0.25,
-        ));
+        outData[idx + c] = Math.max(0, Math.min(255, center + laplacian * residualStrength * 0.25));
       }
       outData[idx + 3] = data[idx + 3];
     }
@@ -434,7 +415,7 @@ export function residualEnhance(
   }
   for (let y = 0; y < height; y++) {
     for (let c = 0; c < 4; c++) {
-      outData[(y * width) * 4 + c] = data[(y * width) * 4 + c];
+      outData[y * width * 4 + c] = data[y * width * 4 + c];
       outData[(y * width + width - 1) * 4 + c] = data[(y * width + width - 1) * 4 + c];
     }
   }
@@ -446,10 +427,7 @@ export function residualEnhance(
  * 自适应降噪
  * 基于局部噪声估计的自适应降噪，保留边缘细节
  */
-export function adaptiveDenoise(
-  image: ImageData,
-  strength: number,
-): ImageData {
+export function adaptiveDenoise(image: ImageData, strength: number): ImageData {
   if (strength <= 0) return image;
   const { data, width, height } = image;
   const outData = new Uint8ClampedArray(data.length);
@@ -471,7 +449,7 @@ export function adaptiveDenoise(
             const diff = Math.abs(data[nIdx + c] - centerVal);
             // 边缘感知权重：差异越大权重越小
             const spatialWeight = 1 / (1 + dx * dx + dy * dy);
-            const rangeWeight = Math.exp(-diff * diff / (2 * 32 * 32));
+            const rangeWeight = Math.exp((-diff * diff) / (2 * 32 * 32));
             const w = spatialWeight * rangeWeight;
             sum += data[nIdx + c] * w;
             weightSum += w;
@@ -491,10 +469,7 @@ export function adaptiveDenoise(
 /**
  * 自适应锐化（Unsharp Mask）
  */
-export function adaptiveSharpen(
-  image: ImageData,
-  strength: number,
-): ImageData {
+export function adaptiveSharpen(image: ImageData, strength: number): ImageData {
   if (strength <= 0) return image;
   const { data, width, height } = image;
   const outData = new Uint8ClampedArray(data.length);
@@ -518,19 +493,14 @@ export function adaptiveSharpen(
 /**
  * 简化的高斯模糊
  */
-function gaussianBlur(
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-  sigma: number,
-): Uint8ClampedArray {
+function gaussianBlur(data: Uint8ClampedArray, width: number, height: number, sigma: number): Uint8ClampedArray {
   const out = new Uint8ClampedArray(data.length);
   const radius = Math.ceil(sigma * 2);
   const kernel: number[] = [];
   let kernelSum = 0;
 
   for (let i = -radius; i <= radius; i++) {
-    const w = Math.exp(-i * i / (2 * sigma * sigma));
+    const w = Math.exp((-i * i) / (2 * sigma * sigma));
     kernel.push(w);
     kernelSum += w;
   }
@@ -573,11 +543,7 @@ function gaussianBlur(
 /**
  * 将大图像分割为重叠瓦片
  */
-export function splitIntoTiles(
-  image: ImageData,
-  tileSize: number,
-  overlap: number,
-): ImageData[] {
+export function splitIntoTiles(image: ImageData, tileSize: number, overlap: number): ImageData[] {
   const { data, width, height } = image;
   const tiles: ImageData[] = [];
   const step = tileSize - overlap;
@@ -609,12 +575,7 @@ export function splitIntoTiles(
 /**
  * 将瓦片拼接回完整图像，使用 alpha 融合处理重叠区域
  */
-export function mergeTiles(
-  tiles: TileResult[],
-  outputWidth: number,
-  outputHeight: number,
-  overlap: number,
-): ImageData {
+export function mergeTiles(tiles: TileResult[], outputWidth: number, outputHeight: number, overlap: number): ImageData {
   const outData = new Uint8ClampedArray(outputWidth * outputHeight * 4);
   const weightMap = new Float32Array(outputWidth * outputHeight);
 
@@ -671,11 +632,7 @@ export function createTemporalFrameCache(): TemporalFrameCache {
 /**
  * 计算两帧之间的运动向量场（简化光流）
  */
-export function computeMotionVectors(
-  prevFrame: ImageData,
-  currFrame: ImageData,
-  blockSize: number = 8,
-): Float32Array {
+export function computeMotionVectors(prevFrame: ImageData, currFrame: ImageData, blockSize: number = 8): Float32Array {
   const { width, height } = currFrame;
   const blocksX = Math.floor(width / blockSize);
   const blocksY = Math.floor(height / blockSize);
@@ -774,9 +731,7 @@ export function temporalBlend(
       }
 
       for (let c = 0; c < 3; c++) {
-        outData[idx + c] = Math.round(
-          currData[idx + c] * (1 - adjustedWeight) + prevData[idx + c] * adjustedWeight,
-        );
+        outData[idx + c] = Math.round(currData[idx + c] * (1 - adjustedWeight) + prevData[idx + c] * adjustedWeight);
       }
       outData[idx + 3] = currData[idx + 3];
     }
@@ -793,8 +748,7 @@ export function temporalBlend(
 export function calculatePSNR(original: ImageData, upscaled: ImageData): number {
   if (original.width !== upscaled.width || original.height !== upscaled.height) {
     // 将原始图像放大到与超分结果相同尺寸进行比较
-    const resized = bicubicInterpolate(original, 
-      (upscaled.width / original.width) as UpscaleFactor);
+    const resized = bicubicInterpolate(original, (upscaled.width / original.width) as UpscaleFactor);
     return calculatePSNRInternal(resized, upscaled);
   }
   return calculatePSNRInternal(original, upscaled);
@@ -867,8 +821,8 @@ export function calculateSSIM(original: ImageData, upscaled: ImageData): number 
       const C1 = (0.01 * 255) ** 2;
       const C2 = (0.03 * 255) ** 2;
 
-      const ssimBlock = ((2 * meanA * meanB + C1) * (2 * covAB + C2)) /
-        ((meanA * meanA + meanB * meanB + C1) * (varA + varB + C2));
+      const ssimBlock =
+        ((2 * meanA * meanB + C1) * (2 * covAB + C2)) / ((meanA * meanA + meanB * meanB + C1) * (varA + varB + C2));
 
       ssimSum += ssimBlock;
       blockCount++;
@@ -903,7 +857,7 @@ export function evaluateQuality(
 
 /**
  * 对单帧图像执行超分辨率处理
- * 
+ *
  * 流程：
  * 1. 自动选择模型（如果配置为 auto）
  * 2. 分块处理大图像
@@ -920,9 +874,7 @@ export function upscaleFrame(
   const startTime = performance.now();
 
   // 自动选择模型
-  const model = config.model === 'auto'
-    ? selectOptimalModel(input, config.scaleFactor)
-    : config.model;
+  const model = config.model === 'auto' ? selectOptimalModel(input, config.scaleFactor) : config.model;
 
   // 分块处理
   const needsTiling = input.width > config.tileSize || input.height > config.tileSize;
@@ -963,12 +915,7 @@ export function upscaleFrame(
   // 时序一致性混合
   if (cache?.previousFrame && config.temporalConsistency) {
     const motionVectors = computeMotionVectors(cache.previousFrame, input);
-    output = temporalBlend(
-      output,
-      cache.previousFrame,
-      motionVectors,
-      cache.blendWeight,
-    );
+    output = temporalBlend(output, cache.previousFrame, motionVectors, cache.blendWeight);
   }
 
   const processingTimeMs = performance.now() - startTime;
@@ -985,11 +932,7 @@ export function upscaleFrame(
   };
 }
 
-function processSingleTile(
-  tile: ImageData,
-  config: SuperResolutionConfig,
-  model: SuperResolutionModel,
-): ImageData {
+function processSingleTile(tile: ImageData, config: SuperResolutionConfig, model: SuperResolutionModel): ImageData {
   // 基础放大（双三次插值）
   let result = bicubicInterpolate(tile, config.scaleFactor);
 
@@ -1038,10 +981,7 @@ export function upscaleVideoFrames(
 /**
  * 快速预览模式（低分辨率快速预览超分效果）
  */
-export function quickPreview(
-  input: ImageData,
-  previewConfig: PreviewConfig,
-): ImageData {
+export function quickPreview(input: ImageData, previewConfig: PreviewConfig): ImageData {
   // 先缩小到预览尺寸
   const scale = Math.min(
     previewConfig.previewScale,
@@ -1140,7 +1080,7 @@ export function estimateGPUMemoryRequirement(
   model: SuperResolutionModel,
 ): number {
   const inputBytes = width * height * 4;
-  const outputBytes = (width * scaleFactor) * (height * scaleFactor) * 4;
+  const outputBytes = width * scaleFactor * (height * scaleFactor) * 4;
   // 模型参数大小估算（MB）
   const modelSizeMB = model.includes('x4') ? 64 : 32;
   const modelBytes = modelSizeMB * 1024 * 1024;

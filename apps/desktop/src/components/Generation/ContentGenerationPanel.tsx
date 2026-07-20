@@ -12,13 +12,7 @@ import { Switch } from '../ui/switch';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 import { showToast } from '../../lib/toast';
@@ -172,12 +166,18 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
     try {
       const estTime = estimateGenerationTime(config);
       const apiKey = await readAiApiKey(selectedProvider.id);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       // Simulate progress
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 90) { clearInterval(progressInterval); return 90; }
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
           return prev + Math.random() * 15;
         });
       }, estTime * 10);
@@ -188,7 +188,10 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
           baseUrl: selectedProvider.baseUrl,
           model: selectedProvider.defaultModel,
           messages: [
-            { role: 'system' as const, content: `你是一个专业的${activeTab === 'subtitle' ? '字幕' : activeTab === 'dubbing' ? '配音' : activeTab === 'music' ? '配乐' : '特效'}生成助手。` },
+            {
+              role: 'system' as const,
+              content: `你是一个专业的${activeTab === 'subtitle' ? '字幕' : activeTab === 'dubbing' ? '配音' : activeTab === 'music' ? '配乐' : '特效'}生成助手。`,
+            },
             { role: 'user' as const, content: JSON.stringify(config) },
           ],
           customHeaders: selectedProvider.customHeaders,
@@ -199,7 +202,10 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
       );
 
       clearInterval(progressInterval);
-      if (abortRef.current) { setPhase('idle'); return; }
+      if (abortRef.current) {
+        setPhase('idle');
+        return;
+      }
 
       setProgress(100);
       const generatedContent = {
@@ -229,11 +235,26 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
       setPhase('idle');
     }
   }, [
-    selectedProvider, activeTab,
-    subtitleLang, maxCharsPerLine, autoBreak, speakerDiarization,
-    voiceStyle, speechRate, pitch, volume, emotion, ttsText,
-    musicGenre, musicMood, musicDuration, bpm, loopable,
-    effectType, effectIntensity, effectDuration,
+    selectedProvider,
+    activeTab,
+    subtitleLang,
+    maxCharsPerLine,
+    autoBreak,
+    speakerDiarization,
+    voiceStyle,
+    speechRate,
+    pitch,
+    volume,
+    emotion,
+    ttsText,
+    musicGenre,
+    musicMood,
+    musicDuration,
+    bpm,
+    loopable,
+    effectType,
+    effectIntensity,
+    effectDuration,
   ]);
 
   const cancelGeneration = useCallback(() => {
@@ -244,12 +265,18 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
   /* --- helpers ---------------------------------------------------- */
   function getTabLabel(tab: ContentType): string {
     switch (tab) {
-      case 'subtitle': return '字幕';
-      case 'dubbing': return '配音';
-      case 'music': return '配乐';
-      case 'effect': return '特效';
-      case 'voiceover': return '配音';
-      default: return tab;
+      case 'subtitle':
+        return '字幕';
+      case 'dubbing':
+        return '配音';
+      case 'music':
+        return '配乐';
+      case 'effect':
+        return '特效';
+      case 'voiceover':
+        return '配音';
+      default:
+        return tab;
     }
   }
 
@@ -262,12 +289,7 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
           <Wand2 className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">AI 内容生成</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          data-testid="content-gen-close"
-        >
+        <Button variant="ghost" size="icon" onClick={onClose} data-testid="content-gen-close">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -287,7 +309,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
             </SelectTrigger>
             <SelectContent>
               {textProviders.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -326,7 +350,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {LANGUAGE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -387,7 +413,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {VOICE_STYLES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -467,7 +495,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {EMOTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -510,7 +540,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {MUSIC_GENRES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -524,7 +556,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {MUSIC_MOODS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -556,11 +590,7 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
 
                 <div className="flex items-center justify-between">
                   <Label className="text-xs text-muted-foreground">可循环</Label>
-                  <Switch
-                    checked={loopable}
-                    onCheckedChange={setLoopable}
-                    data-testid="content-gen-music-loop"
-                  />
+                  <Switch checked={loopable} onCheckedChange={setLoopable} data-testid="content-gen-music-loop" />
                 </div>
 
                 <Button
@@ -588,7 +618,9 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                     </SelectTrigger>
                     <SelectContent>
                       {EFFECT_TYPES.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -651,20 +683,10 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
               <span>正在生成{getTabLabel(activeTab)}...</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
-            <div className="text-right text-[11px] text-muted-foreground tabular-nums">
-              {progress.toFixed(0)}%
-            </div>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={cancelGeneration}
-              data-testid="content-gen-cancel"
-            >
+            <div className="text-right text-[11px] text-muted-foreground tabular-nums">{progress.toFixed(0)}%</div>
+            <Button variant="outline" className="w-full" onClick={cancelGeneration} data-testid="content-gen-cancel">
               取消
             </Button>
           </div>
@@ -680,18 +702,18 @@ export function ContentGenerationPanel({ project, onClose }: { project: Project;
                 const displayType = firstContent?.type ?? 'subtitle';
                 const displayData = typeof firstContent?.data === 'string' ? firstContent.data : '';
                 return (
-                <div
-                  key={i}
-                  className="rounded-md border border-line bg-white p-2.5 space-y-1"
-                  data-testid={`content-gen-result-${i}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-ink">{getTabLabel(displayType)}</span>
+                  <div
+                    key={i}
+                    className="rounded-md border border-line bg-white p-2.5 space-y-1"
+                    data-testid={`content-gen-result-${i}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-ink">{getTabLabel(displayType)}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground line-clamp-2">
+                      {displayData.length > 100 ? displayData.slice(0, 100) + '...' : displayData}
+                    </div>
                   </div>
-                  <div className="text-[11px] text-muted-foreground line-clamp-2">
-                    {displayData.length > 100 ? displayData.slice(0, 100) + '...' : displayData}
-                  </div>
-                </div>
                 );
               })}
             </div>

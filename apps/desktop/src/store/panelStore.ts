@@ -26,24 +26,19 @@ export const useReviewMode = () => useEditorUIStore((s) => s.reviewMode);
 export const useViewportSize = () => useEditorUIStore((s) => s.viewportSize);
 
 /** Selector: layout settings setter */
-export const useSetLayoutSettings = () =>
-  useEditorUIStore((s) => s.setLayoutSettings);
+export const useSetLayoutSettings = () => useEditorUIStore((s) => s.setLayoutSettings);
 
 /** Selector: review mode setter */
-export const useSetReviewMode = () =>
-  useEditorUIStore((s) => s.setReviewMode);
+export const useSetReviewMode = () => useEditorUIStore((s) => s.setReviewMode);
 
 /** Selector: viewport size setter */
-export const useSetViewportSize = () =>
-  useEditorUIStore((s) => s.setViewportSize);
+export const useSetViewportSize = () => useEditorUIStore((s) => s.setViewportSize);
 
 /** Selector: persist layout patch */
-export const usePersistLayoutPatch = () =>
-  useEditorUIStore((s) => s.persistLayoutPatch);
+export const usePersistLayoutPatch = () => useEditorUIStore((s) => s.persistLayoutPatch);
 
 /** Selector: persist panel visibility patch */
-export const usePersistPanelVisibilityPatch = () =>
-  useEditorUIStore((s) => s.persistPanelVisibilityPatch);
+export const usePersistPanelVisibilityPatch = () => useEditorUIStore((s) => s.persistPanelVisibilityPatch);
 
 // Re-export types for consumers
 export type { EditorLayoutSettings } from '../layout/layoutSettings';

@@ -97,16 +97,7 @@ import {
   type SubtitleStyleTemplate,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
-import {
-  ArrowDown,
-  ArrowUp,
-  Bold,
-  GripVertical,
-  Italic,
-  Plus,
-  Trash2,
-  Underline,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Plus, Trash2, Underline } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { saveFileDialog, writeFile } from '../../lib/tauri-bridge';
@@ -1364,7 +1355,10 @@ export function eventToCurveEditorFrame(
   };
 }
 
-export function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CanvasPoint {
+export function eventToCanvasPoint(
+  event: { clientX: number; clientY: number },
+  canvas: HTMLCanvasElement,
+): CanvasPoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.min(canvas.width, Math.max(0, ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width)),

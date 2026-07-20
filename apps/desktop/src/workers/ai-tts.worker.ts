@@ -145,7 +145,6 @@ async function handleSingleSynthesis(input: AITTSWorkerInput): Promise<void> {
       result,
       durationMs,
     } satisfies AITTSWorkerOutput);
-
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     postMessage({
@@ -191,10 +190,13 @@ async function callVITSViaBridge(request: {
     });
 
     // 超时保护（5 分钟）
-    setTimeout(() => {
-      self.removeEventListener('message', handler);
-      reject(new Error('TTS 调用超时（5分钟）'));
-    }, 5 * 60 * 1000);
+    setTimeout(
+      () => {
+        self.removeEventListener('message', handler);
+        reject(new Error('TTS 调用超时（5分钟）'));
+      },
+      5 * 60 * 1000,
+    );
   });
 }
 
@@ -277,7 +279,7 @@ async function synthesizeWithWebSpeech(params: TTSSynthesisParams): Promise<Floa
     // 尝试选择匹配的语音
     const voices = speechSynthesis.getVoices();
     const targetLang = detectLanguage(params.text);
-    const matchingVoice = voices.find(v => v.lang.startsWith(targetLang));
+    const matchingVoice = voices.find((v) => v.lang.startsWith(targetLang));
 
     if (matchingVoice) {
       utterance.voice = matchingVoice;
@@ -347,7 +349,7 @@ function detectLanguage(text: string): string {
  * 生成词时间映射
  */
 function generateWordTimings(text: string, totalDurationMs: number): WordTiming[] {
-  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
   if (words.length === 0) return [];
 
   const avgDuration = totalDurationMs / words.length;
@@ -380,5 +382,5 @@ function countWords(text: string): number {
   }
 
   // 英文按空格分词
-  return text.split(/\s+/).filter(w => w.length > 0).length;
+  return text.split(/\s+/).filter((w) => w.length > 0).length;
 }

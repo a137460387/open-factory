@@ -237,11 +237,7 @@ export function roleHasPermission(role: TeamRole, permission: keyof TeamMemberPe
 /**
  * 验证角色变更是否允许
  */
-export function canChangeRole(
-  currentRole: TeamRole,
-  targetRole: TeamRole,
-  operatorRole: TeamRole,
-): boolean {
+export function canChangeRole(currentRole: TeamRole, targetRole: TeamRole, operatorRole: TeamRole): boolean {
   // 所有者不能被降级
   if (currentRole === 'owner') return false;
 
@@ -430,11 +426,7 @@ export class TeamManager {
   /**
    * 更新团队设置
    */
-  updateSettings(
-    settings: Partial<TeamSettings>,
-    operatorId: string,
-    operatorName: string,
-  ): TeamOperationResult {
+  updateSettings(settings: Partial<TeamSettings>, operatorId: string, operatorName: string): TeamOperationResult {
     const operator = this.getMember(operatorId);
     if (!operator || !hasTeamPermission(operator, 'canManageRoles')) {
       return { success: false, message: '无权更新团队设置', error: 'PERMISSION_DENIED' };
@@ -510,11 +502,7 @@ export class TeamManager {
   /**
    * 移除成员
    */
-  removeMember(
-    userId: string,
-    operatorId: string,
-    operatorName: string,
-  ): TeamOperationResult {
+  removeMember(userId: string, operatorId: string, operatorName: string): TeamOperationResult {
     const operator = this.getMember(operatorId);
     if (!operator || !hasTeamPermission(operator, 'canManageRoles')) {
       return { success: false, message: '无权移除成员', error: 'PERMISSION_DENIED' };
@@ -557,12 +545,7 @@ export class TeamManager {
   /**
    * 更新成员角色
    */
-  updateMemberRole(
-    userId: string,
-    newRole: TeamRole,
-    operatorId: string,
-    operatorName: string,
-  ): TeamOperationResult {
+  updateMemberRole(userId: string, newRole: TeamRole, operatorId: string, operatorName: string): TeamOperationResult {
     const operator = this.getMember(operatorId);
     if (!operator) {
       return { success: false, message: '操作者不存在', error: 'OPERATOR_NOT_FOUND' };
@@ -669,9 +652,7 @@ export class TeamManager {
     }
 
     // 检查是否已有待处理的邀请
-    const existingInvitation = this.state.invitations.find(
-      (inv) => inv.email === email && inv.status === 'pending',
-    );
+    const existingInvitation = this.state.invitations.find((inv) => inv.email === email && inv.status === 'pending');
     if (existingInvitation) {
       return { success: false, message: '该邮箱已有待处理的邀请', error: 'INVITATION_EXISTS' };
     }
@@ -713,11 +694,7 @@ export class TeamManager {
   /**
    * 接受邀请
    */
-  acceptInvitation(
-    invitationId: string,
-    userId: string,
-    userName: string,
-  ): TeamOperationResult {
+  acceptInvitation(invitationId: string, userId: string, userName: string): TeamOperationResult {
     const invitation = this.state.invitations.find((inv) => inv.id === invitationId);
     if (!invitation) {
       return { success: false, message: '邀请不存在', error: 'INVITATION_NOT_FOUND' };
@@ -759,11 +736,7 @@ export class TeamManager {
   /**
    * 拒绝邀请
    */
-  declineInvitation(
-    invitationId: string,
-    userId: string,
-    userName: string,
-  ): TeamOperationResult {
+  declineInvitation(invitationId: string, userId: string, userName: string): TeamOperationResult {
     const invitation = this.state.invitations.find((inv) => inv.id === invitationId);
     if (!invitation) {
       return { success: false, message: '邀请不存在', error: 'INVITATION_NOT_FOUND' };
@@ -852,11 +825,7 @@ export class TeamManager {
   /**
    * 取消项目共享
    */
-  unshareProject(
-    projectId: string,
-    operatorId: string,
-    operatorName: string,
-  ): TeamOperationResult {
+  unshareProject(projectId: string, operatorId: string, operatorName: string): TeamOperationResult {
     const operator = this.getMember(operatorId);
     if (!operator) {
       return { success: false, message: '操作者不存在', error: 'OPERATOR_NOT_FOUND' };
@@ -908,9 +877,7 @@ export class TeamManager {
       return { success: false, message: '无权更新项目权限', error: 'PERMISSION_DENIED' };
     }
 
-    const share = this.state.sharedProjects.find(
-      (s) => s.projectId === projectId && s.teamId === this.state.team.id,
-    );
+    const share = this.state.sharedProjects.find((s) => s.projectId === projectId && s.teamId === this.state.team.id);
     if (!share) {
       return { success: false, message: '项目未共享', error: 'PROJECT_NOT_SHARED' };
     }
@@ -964,9 +931,7 @@ export class TeamManager {
     const member = this.getMember(userId);
     if (!member || member.status !== 'active') return false;
 
-    const share = this.state.sharedProjects.find(
-      (s) => s.projectId === projectId && s.teamId === this.state.team.id,
-    );
+    const share = this.state.sharedProjects.find((s) => s.projectId === projectId && s.teamId === this.state.team.id);
     if (!share) return false;
 
     // 检查成员是否在允许列表中
@@ -984,9 +949,7 @@ export class TeamManager {
     const member = this.getMember(userId);
     if (!member || member.status !== 'active') return null;
 
-    const share = this.state.sharedProjects.find(
-      (s) => s.projectId === projectId && s.teamId === this.state.team.id,
-    );
+    const share = this.state.sharedProjects.find((s) => s.projectId === projectId && s.teamId === this.state.team.id);
     if (!share) return null;
 
     // 检查成员是否在允许列表中

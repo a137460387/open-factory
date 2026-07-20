@@ -112,9 +112,7 @@ const MemberListItem: React.FC<{
         {/* 信息 */}
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {member.userName}
-            </span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{member.userName}</span>
             {isCurrentUser && (
               <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
                 你
@@ -125,9 +123,7 @@ const MemberListItem: React.FC<{
               {roleConfig.label}
             </span>
           </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {member.userEmail || member.userId}
-          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{member.userEmail || member.userId}</div>
         </div>
       </div>
 
@@ -144,9 +140,7 @@ const MemberListItem: React.FC<{
           {showMenu && (
             <div className="absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
               <div className="py-1">
-                <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">
-                  更改角色
-                </div>
+                <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">更改角色</div>
                 {(['admin', 'member', 'viewer'] as TeamRole[]).map((role) => (
                   <button
                     key={role}
@@ -228,9 +222,7 @@ const InvitationListItem: React.FC<{
           <Mail className="w-5 h-5 text-gray-500" />
         </div>
         <div>
-          <div className="font-medium text-gray-900 dark:text-gray-100">
-            {invitation.email}
-          </div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{invitation.email}</div>
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span className={cn('flex items-center gap-1', roleConfig.color)}>
               {roleConfig.icon}
@@ -307,9 +299,7 @@ const ProjectShareListItem: React.FC<{
           <FolderOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
         </div>
         <div>
-          <div className="font-medium text-gray-900 dark:text-gray-100">
-            {share.projectName}
-          </div>
+          <div className="font-medium text-gray-900 dark:text-gray-100">{share.projectName}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">
             由 {share.sharedBy} 共享 · {share.metadata.accessCount} 次访问
           </div>
@@ -317,12 +307,14 @@ const ProjectShareListItem: React.FC<{
       </div>
 
       <div className="flex items-center gap-2">
-        <span className={cn(
-          'px-2 py-1 rounded text-xs font-medium',
-          share.permissions === 'admin' && 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400',
-          share.permissions === 'edit' && 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400',
-          share.permissions === 'view' && 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
-        )}>
+        <span
+          className={cn(
+            'px-2 py-1 rounded text-xs font-medium',
+            share.permissions === 'admin' && 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400',
+            share.permissions === 'edit' && 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400',
+            share.permissions === 'view' && 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
+          )}
+        >
           {share.permissions === 'admin' ? '管理' : share.permissions === 'edit' ? '编辑' : '查看'}
         </span>
 
@@ -465,13 +457,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
   const handleInvite = useCallback(() => {
     if (!inviteEmail) return;
 
-    const result = manager.sendInvitation(
-      inviteEmail,
-      inviteRole,
-      currentUserId,
-      currentUserName,
-      inviteMessage,
-    );
+    const result = manager.sendInvitation(inviteEmail, inviteRole, currentUserId, currentUserName, inviteMessage);
 
     if (result.success) {
       setShowInviteDialog(false);
@@ -525,12 +511,8 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {team.name}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {team.description || '暂无描述'}
-            </p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{team.name}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{team.description || '暂无描述'}</p>
           </div>
           {canManage && (
             <button
@@ -559,9 +541,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
               {tab.icon}
               {tab.label}
               {tab.count !== undefined && (
-                <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs">
-                  {tab.count}
-                </span>
+                <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs">{tab.count}</span>
               )}
             </button>
           ))}
@@ -612,16 +592,11 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
         {activeTab === 'invitations' && (
           <div className="space-y-1">
             {invitations.map((invitation) => (
-              <InvitationListItem
-                key={invitation.id}
-                invitation={invitation}
-              />
+              <InvitationListItem key={invitation.id} invitation={invitation} />
             ))}
 
             {invitations.length === 0 && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                暂无待处理的邀请
-              </div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">暂无待处理的邀请</div>
             )}
           </div>
         )}
@@ -644,9 +619,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
             ))}
 
             {sharedProjects.length === 0 && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                暂无共享项目
-              </div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">暂无共享项目</div>
             )}
           </div>
         )}
@@ -655,14 +628,10 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
         {activeTab === 'settings' && canManage && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                团队信息
-              </h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">团队信息</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    团队名称
-                  </label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">团队名称</label>
                   <input
                     type="text"
                     value={team.name}
@@ -674,9 +643,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    描述
-                  </label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">描述</label>
                   <textarea
                     value={team.description}
                     onChange={(e) => {
@@ -691,28 +658,18 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                团队设置
-              </h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">团队设置</h3>
               <div className="space-y-3">
                 <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      允许成员邀请
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      成员可以邀请新成员加入团队
-                    </div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">允许成员邀请</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">成员可以邀请新成员加入团队</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={team.settings.allowMemberInvite}
                     onChange={(e) => {
-                      manager.updateSettings(
-                        { allowMemberInvite: e.target.checked },
-                        currentUserId,
-                        currentUserName,
-                      );
+                      manager.updateSettings({ allowMemberInvite: e.target.checked }, currentUserId, currentUserName);
                     }}
                     className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
                   />
@@ -720,12 +677,8 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
 
                 <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      允许创建项目
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      成员可以在团队中创建新项目
-                    </div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">允许创建项目</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">成员可以在团队中创建新项目</div>
                   </div>
                   <input
                     type="checkbox"
@@ -743,22 +696,14 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
 
                 <label className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      启用审计日志
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      记录团队中的所有操作
-                    </div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">启用审计日志</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">记录团队中的所有操作</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={team.settings.enableAuditLog}
                     onChange={(e) => {
-                      manager.updateSettings(
-                        { enableAuditLog: e.target.checked },
-                        currentUserId,
-                        currentUserName,
-                      );
+                      manager.updateSettings({ enableAuditLog: e.target.checked }, currentUserId, currentUserName);
                     }}
                     className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
                   />
@@ -776,9 +721,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
             ))}
 
             {auditLog.length === 0 && (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                暂无审计日志
-              </div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">暂无审计日志</div>
             )}
           </div>
         )}
@@ -789,15 +732,11 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                邀请新成员
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">邀请新成员</h3>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    邮箱地址
-                  </label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">邮箱地址</label>
                   <input
                     type="email"
                     value={inviteEmail}
@@ -808,9 +747,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    角色
-                  </label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">角色</label>
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as TeamRole)}
@@ -823,9 +760,7 @@ export const TeamManagementPanel: React.FC<TeamManagementPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    消息（可选）
-                  </label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">消息（可选）</label>
                   <textarea
                     value={inviteMessage}
                     onChange={(e) => setInviteMessage(e.target.value)}

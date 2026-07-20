@@ -120,7 +120,6 @@ self.onmessage = async (event: MessageEvent<AITranscriptionWorkerInput>) => {
       srtContent,
       durationMs,
     } satisfies AITranscriptionWorkerOutput);
-
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     postMessage({
@@ -167,9 +166,12 @@ async function callWhisperViaBridge(request: {
     });
 
     // 超时保护（5 分钟）
-    setTimeout(() => {
-      self.removeEventListener('message', handler);
-      reject(new Error('Whisper 调用超时（5分钟）'));
-    }, 5 * 60 * 1000);
+    setTimeout(
+      () => {
+        self.removeEventListener('message', handler);
+        reject(new Error('Whisper 调用超时（5分钟）'));
+      },
+      5 * 60 * 1000,
+    );
   });
 }

@@ -10,16 +10,16 @@
 
 /** 自动化场景类型 */
 export type AutomationSceneType =
-  | 'dialogue'      // 对话场景
-  | 'action'        // 动作场景
-  | 'landscape'     // 风景场景
-  | 'close-up'      // 特写镜头
-  | 'wide-shot'     // 广角镜头
-  | 'montage'       // 蒙太奇
-  | 'transition'    // 过渡场景
-  | 'title'         // 标题/字幕场景
-  | 'black'         // 黑场
-  | 'unknown';      // 未知
+  | 'dialogue' // 对话场景
+  | 'action' // 动作场景
+  | 'landscape' // 风景场景
+  | 'close-up' // 特写镜头
+  | 'wide-shot' // 广角镜头
+  | 'montage' // 蒙太奇
+  | 'transition' // 过渡场景
+  | 'title' // 标题/字幕场景
+  | 'black' // 黑场
+  | 'unknown'; // 未知
 
 /** 内容标签 */
 export interface ContentTag {
@@ -295,16 +295,40 @@ export const TAG_CATEGORIES = {
 /** 根据场景类型生成默认标签 */
 export function generateDefaultTags(sceneType: AutomationSceneType): ContentTag[] {
   const tagMap: Record<AutomationSceneType, Array<{ name: string; category: string }>> = {
-    'dialogue': [{ name: '人物', category: 'content' }, { name: '对话', category: 'content' }],
-    'action': [{ name: '动作', category: 'content' }, { name: '快速', category: 'motion' }],
-    'landscape': [{ name: '自然', category: 'content' }, { name: '风景', category: 'content' }],
-    'close-up': [{ name: '特写', category: 'content' }, { name: '人物', category: 'content' }],
-    'wide-shot': [{ name: '广角', category: 'content' }, { name: '全景', category: 'content' }],
-    'montage': [{ name: '蒙太奇', category: 'content' }, { name: '快速', category: 'motion' }],
-    'transition': [{ name: '过渡', category: 'content' }],
-    'title': [{ name: '文字', category: 'content' }, { name: '标题', category: 'content' }],
-    'black': [{ name: '黑场', category: 'lighting' }, { name: '暗淡', category: 'lighting' }],
-    'unknown': [],
+    dialogue: [
+      { name: '人物', category: 'content' },
+      { name: '对话', category: 'content' },
+    ],
+    action: [
+      { name: '动作', category: 'content' },
+      { name: '快速', category: 'motion' },
+    ],
+    landscape: [
+      { name: '自然', category: 'content' },
+      { name: '风景', category: 'content' },
+    ],
+    'close-up': [
+      { name: '特写', category: 'content' },
+      { name: '人物', category: 'content' },
+    ],
+    'wide-shot': [
+      { name: '广角', category: 'content' },
+      { name: '全景', category: 'content' },
+    ],
+    montage: [
+      { name: '蒙太奇', category: 'content' },
+      { name: '快速', category: 'motion' },
+    ],
+    transition: [{ name: '过渡', category: 'content' }],
+    title: [
+      { name: '文字', category: 'content' },
+      { name: '标题', category: 'content' },
+    ],
+    black: [
+      { name: '黑场', category: 'lighting' },
+      { name: '暗淡', category: 'lighting' },
+    ],
+    unknown: [],
   };
 
   return (tagMap[sceneType] || []).map((t, i) => ({
@@ -347,9 +371,7 @@ export function generateAnalysisStats(scenes: SceneAnalysis[]): AnalysisStats {
   const maxQuality = Math.max(...qualities);
 
   // 低质量场景
-  const lowQualityScenes = scenes
-    .filter((s) => isLowQuality(s.quality))
-    .map((s) => s.id);
+  const lowQualityScenes = scenes.filter((s) => isLowQuality(s.quality)).map((s) => s.id);
 
   // 总时长
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
@@ -379,10 +401,7 @@ export function generateAnalysisStats(scenes: SceneAnalysis[]): AnalysisStats {
 }
 
 /** 生成分析报告 */
-export function generateAnalysisReport(
-  mediaPaths: string[],
-  scenes: SceneAnalysis[],
-): AnalysisReport {
+export function generateAnalysisReport(mediaPaths: string[], scenes: SceneAnalysis[]): AnalysisReport {
   return {
     id: genAnalysisId('report'),
     mediaPaths,
@@ -513,12 +532,7 @@ export class SceneAnalyzer {
 
       // 分析每个场景
       for (const bounds of sceneBounds) {
-        const scene = await this.analyzeScene(
-          item.path,
-          bounds.start,
-          bounds.end,
-          item.frameData,
-        );
+        const scene = await this.analyzeScene(item.path, bounds.start, bounds.end, item.frameData);
         allScenes.push(scene);
       }
 
@@ -560,9 +574,10 @@ export class SceneAnalyzer {
   // ------ 内部方法 ------
 
   /** 检测场景类型 */
-  private detectAutomationSceneType(
-    frameData?: { brightness?: number[]; motionVectors?: number[] },
-  ): AutomationSceneType {
+  private detectAutomationSceneType(frameData?: {
+    brightness?: number[];
+    motionVectors?: number[];
+  }): AutomationSceneType {
     if (!frameData) return 'unknown';
 
     const { brightness, motionVectors } = frameData;
@@ -592,13 +607,11 @@ export class SceneAnalyzer {
   }
 
   /** 评估质量 */
-  private assessQuality(
-    frameData: {
-      brightness?: number[];
-      motionVectors?: number[];
-      audioLevels?: number[];
-    },
-  ): SceneQualityMetrics {
+  private assessQuality(frameData: {
+    brightness?: number[];
+    motionVectors?: number[];
+    audioLevels?: number[];
+  }): SceneQualityMetrics {
     const { brightness, motionVectors, audioLevels } = frameData;
     const config = this.config.qualityAssessment;
 
@@ -633,8 +646,10 @@ export class SceneAnalyzer {
     if (config.assessAudio && audioLevels && audioLevels.length > 0) {
       const avgLevel = audioLevels.reduce((a, b) => a + b, 0) / audioLevels.length;
       // 理想音频电平在 -20 到 -6 dB 之间
-      if (avgLevel < -40) audioQuality = 40; // 太安静
-      else if (avgLevel > 0) audioQuality = 30; // 削波
+      if (avgLevel < -40)
+        audioQuality = 40; // 太安静
+      else if (avgLevel > 0)
+        audioQuality = 30; // 削波
       else audioQuality = 85;
     }
 

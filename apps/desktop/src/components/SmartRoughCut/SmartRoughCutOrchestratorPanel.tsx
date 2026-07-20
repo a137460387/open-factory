@@ -5,16 +5,8 @@
  * 遵循 v4.26.0 模块化架构：独立 Store + 子组件 + lazy chunk。
  */
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import type {
-  Clip,
-  MediaAsset,
-  SmartRoughCutAnalysisData,
-  SmartRoughCutSuggestion,
-} from '@open-factory/editor-core';
-import {
-  getSelectedSuggestions,
-  buildOrchestrationInput,
-} from '@open-factory/editor-core';
+import type { Clip, MediaAsset, SmartRoughCutAnalysisData, SmartRoughCutSuggestion } from '@open-factory/editor-core';
+import { getSelectedSuggestions, buildOrchestrationInput } from '@open-factory/editor-core';
 import {
   AddTrackCommand,
   BrollInsertCommand,
@@ -41,10 +33,7 @@ import { showToast } from '../../lib/toast';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import {
-  useSmartRoughCutOrchestratorStore,
-  type OrchestratorPhase,
-} from '../../store/smartRoughCutOrchestratorStore';
+import { useSmartRoughCutOrchestratorStore, type OrchestratorPhase } from '../../store/smartRoughCutOrchestratorStore';
 import { WorkflowStepper } from './WorkflowStepper';
 import { SuggestionList } from './SuggestionList';
 import { OrchestrationReport } from './OrchestrationReport';
@@ -56,10 +45,7 @@ interface SmartRoughCutOrchestratorPanelProps {
 
 type PanelTab = 'workflow' | 'suggestions' | 'report';
 
-export function SmartRoughCutOrchestratorPanel({
-  selectedClip,
-  media,
-}: SmartRoughCutOrchestratorPanelProps) {
+export function SmartRoughCutOrchestratorPanel({ selectedClip, media }: SmartRoughCutOrchestratorPanelProps) {
   const [activeTab, setActiveTab] = useState<PanelTab>('workflow');
   const [targetTrackId, setTargetTrackId] = useState('');
 
@@ -100,10 +86,14 @@ export function SmartRoughCutOrchestratorPanel({
 
   useEffect(() => {
     let disposed = false;
-    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then((availability) => {
-      if (!disposed) setWhisperAvailability(availability);
-    });
-    return () => { disposed = true; };
+    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then(
+      (availability) => {
+        if (!disposed) setWhisperAvailability(availability);
+      },
+    );
+    return () => {
+      disposed = true;
+    };
   }, [whisperExecutablePath, whisperModelPath]);
 
   useEffect(() => {
@@ -195,12 +185,10 @@ export function SmartRoughCutOrchestratorPanel({
         });
         if (availability.ready) {
           const mediaClip = selectedClip as Extract<Clip, { type: 'audio' }> | Extract<Clip, { type: 'video' }>;
-          const track = await buildWhisperSubtitleTrackForClip(
-            mediaClip,
-            asset,
-            timeline,
-            { executablePath: whisperExecutablePath, modelPath: whisperModelPath },
-          );
+          const track = await buildWhisperSubtitleTrackForClip(mediaClip, asset, timeline, {
+            executablePath: whisperExecutablePath,
+            modelPath: whisperModelPath,
+          });
           if (track.clips.length > 0) {
             analysisData.subtitles = [
               {
@@ -227,7 +215,11 @@ export function SmartRoughCutOrchestratorPanel({
       runOrchestration(analysisData);
 
       setActiveTab('suggestions');
-      showToast({ kind: 'success', title: '分析完成', message: `生成 ${analysisData.scenes?.[0]?.result.boundaries.length ?? 0} 个场景切点` });
+      showToast({
+        kind: 'success',
+        title: '分析完成',
+        message: `生成 ${analysisData.scenes?.[0]?.result.boundaries.length ?? 0} 个场景切点`,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : '分析失败';
       setError(message);
@@ -299,12 +291,7 @@ export function SmartRoughCutOrchestratorPanel({
           if (beatTimes && selectedClip) {
             const trackId = targetTrackId || (selectedClip as { trackId?: string }).trackId || videoTracks[0]?.id;
             if (trackId) {
-              const command = new RhythmAssembleCommand(
-                timelineAccessor,
-                [selectedClip.id],
-                beatTimes,
-                trackId,
-              );
+              const command = new RhythmAssembleCommand(timelineAccessor, [selectedClip.id], beatTimes, trackId);
               commandManager.execute(command);
               appliedCount += command.clipCount;
             }
@@ -336,15 +323,12 @@ export function SmartRoughCutOrchestratorPanel({
       </div>
 
       {/* 标签页 */}
-      <div
-        className="grid grid-cols-3 gap-1 border-b border-line bg-panel p-1"
-        data-testid="orchestrator-tabs"
-      >
-        {([
+      <div className="grid grid-cols-3 gap-1 border-b border-line bg-panel p-1" data-testid="orchestrator-tabs">
+        {[
           { key: 'workflow' as const, label: '工作流' },
           { key: 'suggestions' as const, label: `建议 (${suggestions.length})` },
           { key: 'report' as const, label: '报告' },
-        ]).map((tab) => (
+        ].map((tab) => (
           <button
             key={tab.key}
             className={`rounded px-2 py-1.5 text-xs font-medium ${
@@ -363,12 +347,7 @@ export function SmartRoughCutOrchestratorPanel({
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {activeTab === 'workflow' && (
           <div className="space-y-3">
-            <WorkflowStepper
-              phase={phase}
-              progress={progress}
-              progressMessage={progressMessage}
-              error={error}
-            />
+            <WorkflowStepper phase={phase} progress={progress} progressMessage={progressMessage} error={error} />
 
             {/* 运行按钮 */}
             <button
@@ -435,9 +414,7 @@ export function SmartRoughCutOrchestratorPanel({
             {report ? (
               <OrchestrationReport report={report} />
             ) : (
-              <div className="p-4 text-center text-xs text-slate-500">
-                请先运行分析以生成报告。
-              </div>
+              <div className="p-4 text-center text-xs text-slate-500">请先运行分析以生成报告。</div>
             )}
           </div>
         )}

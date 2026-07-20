@@ -142,9 +142,7 @@ import {
   type TargetAspectRatio,
   DEFAULT_TRANSITION_DURATION,
 } from '@open-factory/editor-core';
-import {
-  LONG_PRESS_PAN_THRESHOLD_MS,
-} from '@open-factory/editor-core';
+import { LONG_PRESS_PAN_THRESHOLD_MS } from '@open-factory/editor-core';
 import type {
   TransitionMenuState,
   ClipMenuState,
@@ -294,7 +292,9 @@ export interface TimelineHandlerParams {
   drag: DragState | undefined;
   setDrag: React.Dispatch<React.SetStateAction<DragState | undefined>>;
   snapHighlight: import('@open-factory/editor-core').TimelineSnapHighlight | undefined;
-  setSnapHighlight: React.Dispatch<React.SetStateAction<import('@open-factory/editor-core').TimelineSnapHighlight | undefined>>;
+  setSnapHighlight: React.Dispatch<
+    React.SetStateAction<import('@open-factory/editor-core').TimelineSnapHighlight | undefined>
+  >;
   selectionRect: SelectionRect | undefined;
   setSelectionRect: React.Dispatch<React.SetStateAction<SelectionRect | undefined>>;
   selectionStart: { x: number; y: number } | undefined;
@@ -322,13 +322,19 @@ export interface TimelineHandlerParams {
   whisperDialog: WhisperDialogState | undefined;
   setWhisperDialog: React.Dispatch<React.SetStateAction<WhisperDialogState | undefined>>;
   subtitleAlignReport: { correctedCount: number; averageOffsetMs: number } | undefined;
-  setSubtitleAlignReport: React.Dispatch<React.SetStateAction<{ correctedCount: number; averageOffsetMs: number } | undefined>>;
+  setSubtitleAlignReport: React.Dispatch<
+    React.SetStateAction<{ correctedCount: number; averageOffsetMs: number } | undefined>
+  >;
   replaceMediaDialog: ReplaceMediaDialogState | undefined;
   setReplaceMediaDialog: React.Dispatch<React.SetStateAction<ReplaceMediaDialogState | undefined>>;
   reframeDialog: { clipId: string } | undefined;
   setReframeDialog: React.Dispatch<React.SetStateAction<{ clipId: string } | undefined>>;
   transitionDialog: { clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined;
-  setTransitionDialog: React.Dispatch<React.SetStateAction<{ clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined>>;
+  setTransitionDialog: React.Dispatch<
+    React.SetStateAction<
+      { clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined
+    >
+  >;
 
   // useState – panels / modes
   dialoguePanelOpen: boolean;
@@ -379,7 +385,9 @@ export interface TimelineHandlerParams {
   equalHeightValue: string;
   setEqualHeightValue: React.Dispatch<React.SetStateAction<string>>;
   scrollViewport: { scrollLeft: number; scrollTop: number; viewportWidth: number };
-  setScrollViewport: React.Dispatch<React.SetStateAction<{ scrollLeft: number; scrollTop: number; viewportWidth: number }>>;
+  setScrollViewport: React.Dispatch<
+    React.SetStateAction<{ scrollLeft: number; scrollTop: number; viewportWidth: number }>
+  >;
   setTimelineViewportHeight: React.Dispatch<React.SetStateAction<number>>;
   isPanning: boolean;
   setIsPanning: React.Dispatch<React.SetStateAction<boolean>>;
@@ -519,8 +527,14 @@ export interface TimelineHandlers {
   openGapMenu(request: GapMenuRequest): void;
   closeGap(): void;
   fillGap(strategy: GapFillStrategy): Promise<void>;
-  createGapFillMediaAsset(menu: GapMenuState, strategy: Extract<GapFillStrategy, 'freeze-frame' | 'black' | 'white'>): Promise<MediaAsset>;
-  buildGapFillAsset(result: { path: string; name: string; width: number; height: number }, fallbackName: string): MediaAsset;
+  createGapFillMediaAsset(
+    menu: GapMenuState,
+    strategy: Extract<GapFillStrategy, 'freeze-frame' | 'black' | 'white'>,
+  ): Promise<MediaAsset>;
+  buildGapFillAsset(
+    result: { path: string; name: string; width: number; height: number },
+    fallbackName: string,
+  ): MediaAsset;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
   onAnnotationLayerPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
   openClipMenu(request: ClipMenuRequest): void;
@@ -542,7 +556,9 @@ export interface TimelineHandlers {
   openCoverFrameGeneration(clipId: string): Promise<void>;
   applyProjectCoverFrame(frame: CoverFrameResult): void;
   generateSubtitles(clipId: string): Promise<void>;
-  findSubtitleAlignmentSource(subtitleClips: SubtitleClip[]): { clip: SubtitleAlignmentMediaClip; asset: MediaAsset } | undefined;
+  findSubtitleAlignmentSource(
+    subtitleClips: SubtitleClip[],
+  ): { clip: SubtitleAlignmentMediaClip; asset: MediaAsset } | undefined;
   alignSubtitlesToWaveform(clipId: string): Promise<void>;
   ttsVoiceover(clipId: string): Promise<void>;
   handleAiReframe(clipId: string): void;
@@ -562,7 +578,9 @@ export interface TimelineHandlers {
   moveSelectedClipsByKeyboardFrame(direction: -1 | 1): void;
   trimSelectedClipByKeyboardFrame(edge: 'in' | 'out'): void;
   applyZoom(nextZoom: number, anchorViewportX: number): void;
-  buildMovedPreviewTimeline(previewStartsByClipId: Record<string, number>): ReturnType<typeof useEditorStore.getState>['project']['timeline'];
+  buildMovedPreviewTimeline(
+    previewStartsByClipId: Record<string, number>,
+  ): ReturnType<typeof useEditorStore.getState>['project']['timeline'];
   buildTrimPreview(clip: Clip, edge: 'left' | 'right', delta: number, snappingDisabled: boolean): Clip;
   findClip(clipId: string): Clip;
   getClipMediaAsset(clip: Clip): MediaAsset | undefined;
@@ -583,51 +601,92 @@ export interface TimelineHandlers {
 
 export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHandlers {
   const {
-    drag, setDrag,
-    snapHighlight, setSnapHighlight,
-    selectionRect, setSelectionRect,
-    selectionStart, setSelectionStart,
-    transitionMenu, setTransitionMenu,
-    clipMenu, setClipMenu,
-    volumeEnvelopeMenu, setVolumeEnvelopeMenu,
-    gapMenu, setGapMenu,
-    rulerMenu, setRulerMenu,
-    silenceDialog, setSilenceDialog,
-    sceneDialog, setSceneDialog,
-    coverFrameDialog, setCoverFrameDialog,
-    whisperDialog, setWhisperDialog,
-    subtitleAlignReport, setSubtitleAlignReport,
-    replaceMediaDialog, setReplaceMediaDialog,
-    reframeDialog, setReframeDialog,
-    transitionDialog, setTransitionDialog,
-    dialoguePanelOpen, setDialoguePanelOpen,
-    dialogueMarkers, setDialogueMarkers,
-    dialogueMisses, setDialogueMisses,
+    drag,
+    setDrag,
+    snapHighlight,
+    setSnapHighlight,
+    selectionRect,
+    setSelectionRect,
+    selectionStart,
+    setSelectionStart,
+    transitionMenu,
+    setTransitionMenu,
+    clipMenu,
+    setClipMenu,
+    volumeEnvelopeMenu,
+    setVolumeEnvelopeMenu,
+    gapMenu,
+    setGapMenu,
+    rulerMenu,
+    setRulerMenu,
+    silenceDialog,
+    setSilenceDialog,
+    sceneDialog,
+    setSceneDialog,
+    coverFrameDialog,
+    setCoverFrameDialog,
+    whisperDialog,
+    setWhisperDialog,
+    subtitleAlignReport,
+    setSubtitleAlignReport,
+    replaceMediaDialog,
+    setReplaceMediaDialog,
+    reframeDialog,
+    setReframeDialog,
+    transitionDialog,
+    setTransitionDialog,
+    dialoguePanelOpen,
+    setDialoguePanelOpen,
+    dialogueMarkers,
+    setDialogueMarkers,
+    dialogueMisses,
+    setDialogueMisses,
     whisperAvailability,
-    rollingTrimActive, setRollingTrimActive,
-    slipEditActive, setSlipEditActive,
-    slideEditActive, setSlideEditActive,
-    annotationMode, setAnnotationMode,
-    annotationPanelOpen, setAnnotationPanelOpen,
-    annotationEditor, setAnnotationEditor,
-    timelineNotePanelOpen, setTimelineNotePanelOpen,
-    timelineNoteEditor, setTimelineNoteEditor,
+    rollingTrimActive,
+    setRollingTrimActive,
+    slipEditActive,
+    setSlipEditActive,
+    slideEditActive,
+    setSlideEditActive,
+    annotationMode,
+    setAnnotationMode,
+    annotationPanelOpen,
+    setAnnotationPanelOpen,
+    annotationEditor,
+    setAnnotationEditor,
+    timelineNotePanelOpen,
+    setTimelineNotePanelOpen,
+    timelineNoteEditor,
+    setTimelineNoteEditor,
     timelineNoteSearch,
-    timelineNoteDraft, setTimelineNoteDraft,
-    bookmarkRename, setBookmarkRename,
-    beatSnapEnabled, setBeatSnapEnabled,
-    beatSnapPanelOpen, setBeatSnapPanelOpen,
-    envelopeEditMode, setEnvelopeEditMode,
-    selectedTrackIds, setSelectedTrackIds,
-    trackSelectionAnchorId, setTrackSelectionAnchorId,
-    trackBatchMenu, setTrackBatchMenu,
-    gapStatsOpen, setGapStatsOpen,
+    timelineNoteDraft,
+    setTimelineNoteDraft,
+    bookmarkRename,
+    setBookmarkRename,
+    beatSnapEnabled,
+    setBeatSnapEnabled,
+    beatSnapPanelOpen,
+    setBeatSnapPanelOpen,
+    envelopeEditMode,
+    setEnvelopeEditMode,
+    selectedTrackIds,
+    setSelectedTrackIds,
+    trackSelectionAnchorId,
+    setTrackSelectionAnchorId,
+    trackBatchMenu,
+    setTrackBatchMenu,
+    gapStatsOpen,
+    setGapStatsOpen,
     audioScrubEnabled,
-    equalHeightPrompt, setEqualHeightPrompt,
-    equalHeightValue, setEqualHeightValue,
-    scrollViewport, setScrollViewport,
+    equalHeightPrompt,
+    setEqualHeightPrompt,
+    equalHeightValue,
+    setEqualHeightValue,
+    scrollViewport,
+    setScrollViewport,
     setTimelineViewportHeight,
-    isPanning, setIsPanning,
+    isPanning,
+    setIsPanning,
     project,
     selectedClipId,
     selectedClipIds,
@@ -2843,7 +2902,6 @@ export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHand
       }
     }
   }
-
 
   function syncScrollViewport(): void {
     if (scrollRafRef.current) return;
