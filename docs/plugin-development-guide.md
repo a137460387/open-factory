@@ -1,6 +1,6 @@
 # Open Factory 插件开发指南
 
-> 版本: v4.35.0 | 最后更新: 2026-07-17
+> 版本: v4.48.0 | 最后更新: 2026-07-20
 
 ## 概述
 
@@ -538,3 +538,132 @@ A: 可以通过 `PluginEventEmitter` 进行事件通信。
 ### Q: 如何调试插件？
 
 A: 使用 `context.logger` 输出日志，或在 `dev` 模式下加载插件进行调试。
+
+---
+
+## Plugin SDK v4.48.0 新增功能
+
+### 插件宿主 (PluginHost)
+
+`PluginHost` 是插件系统的中央编排器，整合了生命周期管理、安全沙箱、API 提供和市场功能。
+
+```typescript
+import { PluginHost } from '@open-factory/plugin-sdk';
+
+const host = new PluginHost({
+  maxPlugins: 50,
+  defaultSandboxPolicy: {
+    rateLimitPerMinute: 100,
+    maxExecutionTimeMs: 5000,
+  },
+});
+
+// 安装插件
+await host.installPlugin('com.example.my-plugin');
+
+// 获取插件 API
+const api = host.getPluginApi('com.example.my-plugin');
+await api.editor.getProject();
+await api.storage.set('key', 'value');
+await api.network.fetch('https://api.example.com');
+```
+
+### 安全沙箱
+
+所有插件运行在安全沙箱中，支持以下安全机制：
+
+- **权限控制**: 强制检查每个 API 调用的权限
+- **速率限制**: 默认 100 次/分钟，可自定义
+- **执行超时**: 默认 5 秒/调用，防止阻塞
+- **主机访问**: 需要显式声明允许的网络主机
+- **路径访问**: 需要显式声明允许的文件路径
+
+```typescript
+const sandbox = new PluginSandbox();
+
+sandbox.register('my-plugin', {
+  permissions: ['read-project', 'network-access'],
+  rateLimitPerMinute: 60,
+  maxExecutionTimeMs: 3000,
+  allowedHosts: ['api.example.com'],
+  allowedPaths: ['/data/my-plugin/'],
+});
+
+// 违规监控
+sandbox.onViolation((violation) => {
+  console.warn(`Sandbox violation: ${violation.type}`, violation.message);
+});
+```
+
+### 插件市场
+
+插件市场支持插件的发现、安装、更新和评价：
+
+```typescript
+const marketplace = new PluginMarketplace();
+
+// 搜索插件
+const results = marketplace.search({
+  query: 'blur',
+  category: 'effect',
+  sortBy: 'downloads',
+});
+
+// 安装插件
+marketplace.install('com.example.blur-effect');
+
+// 检查更新
+const updates = marketplace.checkUpdates();
+
+// 添加评价
+marketplace.addReview({
+  pluginId: 'com.example.blur-effect',
+  userId: 'user-1',
+  userName: 'Test User',
+  rating: 5,
+  title: 'Great plugin!',
+  comment: 'Works perfectly',
+});
+```
+
+### API 模块
+
+Plugin SDK 提供五个 API 模块：
+
+| 模块 | 说明 | 主要功能 |
+|------|------|----------|
+| Editor API | 编辑器访问 | 项目读写、片段操作、时间线控制 |
+| AI API | AI 能力 | 任务提交、模型列表、推理调用 |
+| UI API | 界面交互 | 面板注册、对话框、菜单、通知 |
+| Storage API | 数据存储 | 键值存储、文件读写、配额管理 |
+| Network API | 网络请求 | 沙箱化 HTTP 请求、主机访问控制 |
+
+### 生命周期管理
+
+插件生命周期管理器支持完整的插件状态管理：
+
+```typescript
+const lifecycle = new PluginLifecycleManager();
+
+// 注册插件
+lifecycle.register({
+  manifest: { id: 'my-plugin', name: 'My Plugin', version: '1.0.0' },
+  module: pluginModule,
+  metadata: { author: 'Test', license: 'MIT' },
+});
+
+// 加载和启用
+await lifecycle.load('my-plugin');
+await lifecycle.enable('my-plugin');
+
+// 监听生命周期事件
+lifecycle.on((event) => {
+  console.log(`Plugin ${event.pluginId}: ${event.event}`);
+});
+
+// 更新插件
+await lifecycle.update('my-plugin', newEntry);
+
+// 卸载
+await lifecycle.unload('my-plugin');
+```

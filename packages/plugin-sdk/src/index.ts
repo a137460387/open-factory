@@ -80,3 +80,11 @@ export type OpenFactoryPluginModule = OpenFactoryPlugin | {
   manifest: OpenFactoryPluginManifest;
   hooks?: PluginHooks;
 };
+
+// ─── Re-export sub-modules ────────────────────────────────────────────
+
+export * from './lifecycle';
+export * from './sandbox';
+export * from './api';
+export * from './marketplace';
+export * from './host';

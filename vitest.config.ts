@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
+    include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'packages/plugin-sdk/__tests__/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
