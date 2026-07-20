@@ -3,6 +3,7 @@
  */
 
 export * from './workflow-engine';
+export * from './workflow-node-editor';
 export * from './scene-analyzer';
 export * from './automation-rules';
 export * from './template-manager';
