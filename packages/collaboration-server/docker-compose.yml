@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  collaboration-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${COLLAB_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      COLLAB_PORT: "3001"
+      COLLAB_HOST: "0.0.0.0"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      REDIS_URL: "redis://redis:6379"
+      REDIS_KEY_PREFIX: "collab:"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env}"
+      JWT_ISSUER: "open-factory"
+      JWT_AUDIENCE: "collaboration-server"
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
+      MAX_ROOMS: "${MAX_ROOMS:-1000}"
+      MAX_USERS_PER_ROOM: "${MAX_USERS_PER_ROOM:-10}"
+      HEARTBEAT_INTERVAL_MS: "${HEARTBEAT_INTERVAL_MS:-30000}"
+      ROOM_IDLE_TIMEOUT_MS: "${ROOM_IDLE_TIMEOUT_MS:-3600000}"
+      # TURN server config (optional)
+      TURN_URLS: "${TURN_URLS:-}"
+      TURN_USERNAME: "${TURN_USERNAME:-}"
+      TURN_CREDENTIAL: "${TURN_CREDENTIAL:-}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+    driver: local
