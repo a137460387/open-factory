@@ -125,7 +125,7 @@ function isSameTarget(opA: TimelineOperation, opB: TimelineOperation): boolean {
  * @param opB - Second operation.
  * @returns True if the two operations conflict.
  */
-export function detectConflict(opA: TimelineOperation, opB: TimelineOperation): boolean {
+export function detectTimelineConflict(opA: TimelineOperation, opB: TimelineOperation): boolean {
   const ordering = compareVectorClocks(opA.vectorClock, opB.vectorClock);
   if (ordering !== 'concurrent') return false;
   if (!isSameTarget(opA, opB)) return false;
