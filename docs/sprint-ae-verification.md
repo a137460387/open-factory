@@ -21,18 +21,18 @@
 
 ```
 测试文件: 6 passed (6)
-测试用例: 45 passed (45)
-耗时: 1.55s
+测试用例: 46 passed (46)
+耗时: 1.41s
 ```
 
 | 测试文件 | 用例数 | 状态 |
 |----------|--------|------|
 | headless-editor-core.test.ts | 5 | ✅ 全部通过 |
 | headless-renderer.test.ts | 5 | ✅ 全部通过 |
-| headless-ai-inference.test.ts | 17 | ✅ 全部通过 |
+| headless-ai-inference.test.ts | 18 | ✅ 全部通过 |
 | output.test.ts | 5 | ✅ 全部通过 |
-| workflow-engine.test.ts | 6 | ✅ 全部通过 |
-| cli-integration.test.ts | 7 | ✅ 全部通过 |
+| workflow-engine.test.ts | 7 | ✅ 全部通过 |
+| cli-integration.test.ts | 6 | ✅ 全部通过 |
 
 ### 2.2 全量测试套件
 
@@ -128,6 +128,8 @@
 | `d1053394` | feat: v4.55.0 - CLI engine and headless rendering |
 | `091f6b64` | feat: headless AI inference, stdin pipe support, CLI integration tests |
 | `a9de0566` | docs: v4.55.0 Sprint AE verification report |
+| `aeadef95` | docs: TypeScript SDK reference, enhanced Docker config |
+| `c8bfc5ed` | fix: Sprint AE quality improvements from code review |
 
 ---
 
