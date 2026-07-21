@@ -61,7 +61,7 @@ const MOOD_CATEGORIES: Record<string, ReadonlyArray<TemplateCategory>> = {
   neutral: ['product-demo', 'custom', 'tutorial'],
 };
 
-const TYPE_PLACEHOLDER_MAP: Record<string, ReadonlyArray<string>> = {
+const TYPE_PLACEHOLDER_MAP: Record<string, ReadonlyArray<'user-video' | 'user-image' | 'user-audio' | 'generated-text'>> = {
   video: ['user-video'],
   image: ['user-image'],
   audio: ['user-audio'],

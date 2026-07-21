@@ -15,6 +15,7 @@ import type {
   TemplateTrack,
 } from '../models/template-schema';
 import type { Project, MediaAsset } from '../model-types';
+import type { EffectParams } from '../effects';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ function adaptDurations(
   tracks: readonly TemplateTrack[],
   targetSec: number,
   changes: AdaptationChange[],
-): readonly TemplateTrack[] {
+): TemplateTrack[] {
   const flexTotal = tracks.reduce((sum, t) =>
     sum + t.clips.filter((c) => c.flexibleDuration).reduce((s, c) => s + c.durationSec, 0), 0);
 
@@ -192,7 +193,7 @@ function adaptVisualEffects(
   tracks: readonly TemplateTrack[],
   vc: VisualComplexity | null,
   changes: AdaptationChange[],
-): readonly TemplateTrack[] {
+): TemplateTrack[] {
   if (!vc) return tracks;
   const f = effectScale(vc.overallScore);
   if (Math.abs(f - 1.0) < 0.05) return tracks;
@@ -356,10 +357,10 @@ function buildSummary(analysis: MediaAnalysis, changeCount: number): string {
 }
 
 function mapValues(
-  obj: Record<string, number | string>,
-  fn: (v: number | string) => number | string,
-): Record<string, number | string> {
-  const out: Record<string, number | string> = {};
+  obj: EffectParams,
+  fn: (v: number | string | boolean) => number | string | boolean,
+): EffectParams {
+  const out: EffectParams = {};
   for (const [k, v] of Object.entries(obj)) out[k] = fn(v);
   return out;
 }
