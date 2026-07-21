@@ -166,10 +166,10 @@ function adaptDurations(
   const flexTotal = tracks.reduce((sum, t) =>
     sum + t.clips.filter((c) => c.flexibleDuration).reduce((s, c) => s + c.durationSec, 0), 0);
 
-  if (flexTotal <= 0) return tracks;
+  if (flexTotal <= 0) return tracks as TemplateTrack[];
 
   const factor = clamp(targetSec / flexTotal, SCALE.min, SCALE.max);
-  if (Math.abs(factor - 1.0) < 0.01) return tracks;
+  if (Math.abs(factor - 1.0) < 0.01) return tracks as TemplateTrack[];
 
   return tracks.map((track) => ({
     ...track,
@@ -194,9 +194,9 @@ function adaptVisualEffects(
   vc: VisualComplexity | null,
   changes: AdaptationChange[],
 ): TemplateTrack[] {
-  if (!vc) return tracks;
+  if (!vc) return tracks as TemplateTrack[];
   const f = effectScale(vc.overallScore);
-  if (Math.abs(f - 1.0) < 0.05) return tracks;
+  if (Math.abs(f - 1.0) < 0.05) return tracks as TemplateTrack[];
 
   return tracks.map((track) => ({
     ...track,
