@@ -1,16 +1,20 @@
 /**
  * CLI `render` command — render a project file to video.
+ *
+ * Supports stdin pipe input for project config:
+ *   echo '{"projectPath":"./test.ofp","outputPath":"./out.mp4"}' | of render --stdin
  */
 
 import type { Command } from 'commander';
 import { withCliOutput, createLogger } from '../core/output.js';
+import { hasStdinData, readStdinJson } from '../core/stdin.js';
 
 export function registerRenderCommand(program: Command): void {
   program
     .command('render')
     .description('Render a project file to video using headless FFmpeg pipeline')
-    .requiredOption('-i, --input <path>', 'Path to project file (.ofp/.json)')
-    .requiredOption('-o, --output <path>', 'Output video file path')
+    .option('-i, --input <path>', 'Path to project file (.ofp/.json)')
+    .option('-o, --output <path>', 'Output video file path')
     .option('-f, --format <format>', 'Output format (mp4|webm|mov)', 'mp4')
     .option('--width <pixels>', 'Output width', '1920')
     .option('--height <pixels>', 'Output height', '1080')
@@ -21,14 +25,37 @@ export function registerRenderCommand(program: Command): void {
     .option('--ffmpeg <path>', 'Path to ffmpeg binary', 'ffmpeg')
     .option('--temp-dir <path>', 'Temp directory for intermediate files')
     .option('--concurrency <n>', 'Max concurrent render threads', '4')
+    .option('--stdin', 'Read project config from stdin pipe', false)
     .action(async (opts) => {
       await withCliOutput('render', async () => {
         const logger = createLogger(program.opts().logLevel ?? 'info');
 
-        logger.info(`Rendering ${opts.input} -> ${opts.output}`);
+        let inputPath = opts.input;
+        let outputPath = opts.output;
 
-        // Dynamic import to avoid loading headless module when not needed
-        const { HeadlessEditorCore } = await import('@open-factory/editor-core/headless');
+        // Handle stdin input
+        if (opts.stdin && hasStdinData()) {
+          const config = await readStdinJson<{
+            projectPath?: string;
+            outputPath?: string;
+            format?: string;
+            width?: number;
+            height?: number;
+            fps?: number;
+          }>();
+          inputPath = config.projectPath ?? inputPath;
+          outputPath = config.outputPath ?? outputPath;
+          if (config.format) opts.format = config.format;
+          if (config.width) opts.width = String(config.width);
+          if (config.height) opts.height = String(config.height);
+          if (config.fps) opts.fps = String(config.fps);
+        }
+
+        if (!inputPath) throw new Error('No input file specified. Use -i <path> or pipe config with --stdin');
+        if (!outputPath) throw new Error('No output file specified. Use -o <path> or pipe config with --stdin');
+
+        logger.info(`Rendering ${inputPath} -> ${outputPath}`);
+
         const { headlessRender } = await import('@open-factory/editor-core/headless');
 
         // Parse range
@@ -41,8 +68,8 @@ export function registerRenderCommand(program: Command): void {
         }
 
         const result = await headlessRender({
-          projectPath: opts.input,
-          outputPath: opts.output,
+          projectPath: inputPath,
+          outputPath,
           settings: {
             format: opts.format,
             width: Number(opts.width),

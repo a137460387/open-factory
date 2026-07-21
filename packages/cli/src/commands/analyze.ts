@@ -1,30 +1,58 @@
 /**
  * CLI `analyze` command — analyze video quality/semantics/compliance.
+ *
+ * Supports stdin pipe input:
+ *   cat video.mp4 | of analyze --stdin -t quality
+ *   echo '{"inputPath":"./video.mp4","type":"full"}' | of analyze --stdin
  */
 
 import type { Command } from 'commander';
 import { withCliOutput, createLogger, ExitCode, exitWith, createOutput } from '../core/output.js';
+import { hasStdinData, stdinToTempFile, readStdinJson } from '../core/stdin.js';
 
 export function registerAnalyzeCommand(program: Command): void {
   program
     .command('analyze')
     .description('Analyze video content and output quality/semantic/compliance report')
-    .requiredOption('-i, --input <path>', 'Path to video file')
+    .option('-i, --input <path>', 'Path to video file (or use --stdin)')
     .option('-t, --type <type>', 'Analysis type: quality|semantic|compliance|full', 'quality')
     .option('-p, --platform <name>', 'Target platform for compliance check', 'youtube')
     .option('--fail-on-low-score <threshold>', 'Exit with code 2 if quality score is below threshold')
+    .option('--stdin', 'Read video or JSON config from stdin pipe', false)
     .action(async (opts) => {
       const startTime = Date.now();
       const logger = createLogger(program.opts().logLevel ?? 'info');
 
       try {
-        logger.info(`Analyzing ${opts.input} (type: ${opts.type})`);
+        let inputPath = opts.input;
+        let analysisType = opts.type;
+
+        // Handle stdin input
+        if (opts.stdin && hasStdinData()) {
+          if (opts.stdinFormat === 'binary' || (!opts.input && !opts.stdinFormat)) {
+            // Binary mode: save stdin to temp file
+            logger.info('Reading video from stdin...');
+            inputPath = await stdinToTempFile('mp4');
+            logger.info(`Saved stdin to temp file: ${inputPath}`);
+          } else {
+            // JSON mode: parse config from stdin
+            const config = await readStdinJson<{ inputPath?: string; type?: string; platform?: string }>();
+            inputPath = config.inputPath ?? inputPath;
+            analysisType = config.type ?? analysisType;
+          }
+        }
+
+        if (!inputPath) {
+          throw new Error('No input file specified. Use -i <path> or pipe input with --stdin');
+        }
+
+        logger.info(`Analyzing ${inputPath} (type: ${analysisType})`);
 
         const { headlessAnalyze } = await import('@open-factory/editor-core/headless');
 
         const result = await headlessAnalyze({
-          inputPath: opts.input,
-          type: opts.type,
+          inputPath,
+          type: analysisType,
           format: 'json',
           onProgress: (progress) => {
             logger.info(`[${progress.phase}] ${progress.percent}%${progress.message ? ' - ' + progress.message : ''}`);

@@ -34,3 +34,28 @@ export {
 
 export { applyTemplate, loadTemplate } from './template-apply';
 export type { TemplateApplyRequest, TemplateApplyResult, TemplateDefinition, MediaSlot } from './template-apply';
+
+export {
+  detectAvailableProviders,
+  selectProvider,
+  createOnnxSession,
+  heuristicSceneDetection,
+  heuristicQualityAssessment,
+  heuristicContentAnalysis,
+  detectScenes,
+  assessQuality,
+  analyzeContent,
+  DEFAULT_INFERENCE_CONFIG,
+} from './headless-ai-inference';
+export type {
+  InferenceProvider,
+  InferenceConfig,
+  InferenceResult,
+  SceneDetectionInput,
+  SceneDetectionOutput,
+  QualityAssessmentInput,
+  QualityAssessmentOutput,
+  ContentAnalysisInput,
+  ContentAnalysisOutput,
+  OnnxSession,
+} from './headless-ai-inference';
