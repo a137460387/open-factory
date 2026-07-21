@@ -194,8 +194,20 @@ export async function runWorkflow(
     ...context.variables,
   };
 
-  // Topological sort of steps
-  const sortedSteps = topologicalSort(definition.steps);
+  // Topological sort of steps (detects circular dependencies)
+  let sortedSteps: WorkflowStep[];
+  try {
+    sortedSteps = topologicalSort(definition.steps);
+  } catch (err) {
+    return {
+      success: false,
+      completedSteps: 0,
+      totalSteps: definition.steps.length,
+      error: err instanceof Error ? err.message : String(err),
+      stepResults,
+      warnings,
+    };
+  }
 
   for (const step of sortedSteps) {
     // Check dependencies
@@ -499,12 +511,16 @@ function evaluateCondition(condition: string, variables: Record<string, string>)
 
 function topologicalSort(steps: WorkflowStep[]): WorkflowStep[] {
   const visited = new Set<string>();
+  const visiting = new Set<string>();
   const result: WorkflowStep[] = [];
   const stepMap = new Map(steps.map((s) => [s.id, s]));
 
   function visit(step: WorkflowStep) {
     if (visited.has(step.id)) return;
-    visited.add(step.id);
+    if (visiting.has(step.id)) {
+      throw new Error(`Circular dependency detected involving step "${step.id}"`);
+    }
+    visiting.add(step.id);
 
     if ('dependsOn' in step && step.dependsOn) {
       for (const dep of step.dependsOn) {
@@ -513,6 +529,8 @@ function topologicalSort(steps: WorkflowStep[]): WorkflowStep[] {
       }
     }
 
+    visiting.delete(step.id);
+    visited.add(step.id);
     result.push(step);
   }
 

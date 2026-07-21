@@ -11,6 +11,7 @@ import { HeadlessEditorCore } from './headless-editor-core';
 export interface FfmpegRenderOptions {
   config: HeadlessConfig;
   args: string[];
+  outputPath: string;
   duration: number;
   onProgress?: (progress: HeadlessProgress) => void;
 }
@@ -108,8 +109,8 @@ export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise
         return;
       }
 
-      // Extract output path from args (last arg before -y)
-      const outputPath = args[args.length - 2] ?? '';
+      // Use explicit output path instead of fragile arg extraction
+      const outputPath = options.outputPath;
       let fileSize = 0;
       try {
         const stats = await stat(outputPath);
@@ -210,6 +211,7 @@ export async function headlessRender(
   return executeFfmpegRender({
     config: effectiveConfig,
     args,
+    outputPath: request.outputPath,
     duration,
     onProgress: request.onProgress,
   });

@@ -195,6 +195,7 @@ function detectMediaType(path: string): 'video' | 'audio' | 'image' {
 
 /**
  * Replace placeholder media references in timeline with actual media assets.
+ * Creates new clip objects to maintain immutability.
  */
 function replaceTimelineMedia(timeline: Timeline, assets: MediaAsset[], slots: MediaSlot[]): void {
   for (let i = 0; i < slots.length && i < assets.length; i++) {
@@ -210,8 +211,12 @@ function replaceTimelineMedia(timeline: Timeline, assets: MediaAsset[], slots: M
     const clip = clips?.[slot.clipIndex];
     if (!clip) continue;
 
-    // Replace media reference
-    (clip as unknown as Record<string, unknown>).mediaId = asset.id;
-    (clip as unknown as Record<string, unknown>).mediaPath = asset.path;
+    // Replace clip with new object (immutable update)
+    const newClip = {
+      ...clip,
+      mediaId: asset.id,
+      mediaPath: asset.path,
+    };
+    clips![slot.clipIndex] = newClip as Clip;
   }
 }

@@ -74,6 +74,8 @@ export interface HeadlessAnalyzeRequest {
   type: 'quality' | 'semantic' | 'compliance' | 'full';
   /** Output format */
   format: 'json';
+  /** Target platform for compliance checks */
+  platform?: string;
   /** Progress callback */
   onProgress?: (progress: HeadlessProgress) => void;
 }

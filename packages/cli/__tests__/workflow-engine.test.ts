@@ -1,7 +1,9 @@
 import { describe, test, expect } from 'vitest';
 import {
   validateWorkflow,
+  runWorkflow,
   type WorkflowDefinition,
+  type WorkflowContext,
 } from '../src/core/workflow-engine';
 
 describe('Workflow Validation', () => {
@@ -83,5 +85,27 @@ describe('Workflow Validation', () => {
     const result = validateWorkflow(workflow);
     expect(result.valid).toBe(true);
     expect(result.warnings).toContain('Missing workflow version');
+  });
+});
+
+describe('Workflow Execution', () => {
+  test('detects circular dependencies', async () => {
+    const workflow: WorkflowDefinition = {
+      name: 'circular-test',
+      version: '1.0',
+      steps: [
+        { id: 'step1', type: 'command', command: 'echo', dependsOn: ['step2'] },
+        { id: 'step2', type: 'command', command: 'echo', dependsOn: ['step1'] },
+      ],
+    };
+
+    const context: WorkflowContext = {
+      variables: {},
+      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    };
+
+    const result = await runWorkflow(workflow, context);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Circular dependency');
   });
 });

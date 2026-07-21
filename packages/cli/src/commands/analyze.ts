@@ -19,6 +19,7 @@ export function registerAnalyzeCommand(program: Command): void {
     .option('-p, --platform <name>', 'Target platform for compliance check', 'youtube')
     .option('--fail-on-low-score <threshold>', 'Exit with code 2 if quality score is below threshold')
     .option('--stdin', 'Read video or JSON config from stdin pipe', false)
+    .option('--stdin-format <format>', 'stdin input format: json|binary', 'binary')
     .action(async (opts) => {
       const startTime = Date.now();
       const logger = createLogger(program.opts().logLevel ?? 'info');
@@ -54,6 +55,7 @@ export function registerAnalyzeCommand(program: Command): void {
           inputPath,
           type: analysisType,
           format: 'json',
+          platform: opts.platform,
           onProgress: (progress) => {
             logger.info(`[${progress.phase}] ${progress.percent}%${progress.message ? ' - ' + progress.message : ''}`);
           },

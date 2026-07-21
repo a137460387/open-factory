@@ -18,7 +18,7 @@ import type {
 /**
  * Probe video file using ffprobe to extract technical metadata.
  */
-export async function probeVideo(inputPath: string): Promise<{
+export async function probeVideo(inputPath: string, ffprobePath = 'ffprobe'): Promise<{
   width: number;
   height: number;
   frameRate: number;
@@ -33,7 +33,7 @@ export async function probeVideo(inputPath: string): Promise<{
 
   return new Promise((resolve, reject) => {
     execFile(
-      'ffprobe',
+      ffprobePath,
       [
         '-v', 'quiet',
         '-print_format', 'json',
@@ -81,7 +81,7 @@ export async function probeVideo(inputPath: string): Promise<{
 /**
  * Measure audio loudness using ffmpeg loudnorm filter (2-pass).
  */
-export async function measureLoudness(inputPath: string): Promise<{
+export async function measureLoudness(inputPath: string, ffmpegPath = 'ffmpeg'): Promise<{
   integrated: number;
   truePeak: number;
   range: number;
@@ -90,7 +90,7 @@ export async function measureLoudness(inputPath: string): Promise<{
 
   return new Promise((resolve) => {
     execFile(
-      'ffmpeg',
+      ffmpegPath,
       [
         '-i', inputPath,
         '-af', 'loudnorm=print_format=json',
@@ -239,12 +239,13 @@ async function detectScenes(
   inputPath: string,
   duration: number,
   threshold = 0.3,
+  ffmpegPath = 'ffmpeg',
 ): Promise<Array<{ index: number; startTime: number; endTime: number; tags: string[] }>> {
   const { execFile } = await import('node:child_process');
 
   return new Promise((resolve) => {
     execFile(
-      'ffmpeg',
+      ffmpegPath,
       [
         '-i', inputPath,
         '-vf', `select='gt(scene,${threshold})',showinfo`,
@@ -390,7 +391,7 @@ export async function headlessAnalyze(request: HeadlessAnalyzeRequest): Promise<
         report = await analyzeSemantic(request.inputPath, request.onProgress);
         break;
       case 'compliance':
-        report = await analyzeCompliance(request.inputPath, 'youtube', request.onProgress);
+        report = await analyzeCompliance(request.inputPath, request.platform ?? 'youtube', request.onProgress);
         break;
       case 'full':
         report = await analyzeFull(request.inputPath, request.onProgress);
@@ -399,10 +400,29 @@ export async function headlessAnalyze(request: HeadlessAnalyzeRequest): Promise<
 
     return { success: true, report };
   } catch (err) {
+    const fallbackReport = buildFallbackReport(request.type);
     return {
       success: false,
-      report: { type: 'quality', resolution: { width: 0, height: 0 }, frameRate: 0, bitrate: 0, codec: '', audioCodec: '', audioChannels: 0, audioSampleRate: 0, loudness: { integrated: 0, truePeak: 0, range: 0 }, issues: [], score: 0 },
+      report: fallbackReport,
       error: err instanceof Error ? err.message : String(err),
     };
+  }
+}
+
+function buildFallbackReport(type: HeadlessAnalyzeRequest['type']): QualityReport | SemanticReport | ComplianceReport | FullReport {
+  switch (type) {
+    case 'quality':
+      return { type: 'quality', resolution: { width: 0, height: 0 }, frameRate: 0, bitrate: 0, codec: '', audioCodec: '', audioChannels: 0, audioSampleRate: 0, loudness: { integrated: 0, truePeak: 0, range: 0 }, issues: [], score: 0 };
+    case 'semantic':
+      return { type: 'semantic', scenes: [], duration: 0, summary: 'Analysis failed' };
+    case 'compliance':
+      return { type: 'compliance', platform: 'unknown', passed: false, checks: [] };
+    case 'full':
+      return {
+        type: 'full',
+        quality: { type: 'quality', resolution: { width: 0, height: 0 }, frameRate: 0, bitrate: 0, codec: '', audioCodec: '', audioChannels: 0, audioSampleRate: 0, loudness: { integrated: 0, truePeak: 0, range: 0 }, issues: [], score: 0 },
+        semantic: { type: 'semantic', scenes: [], duration: 0, summary: 'Analysis failed' },
+        compliance: [],
+      };
   }
 }
