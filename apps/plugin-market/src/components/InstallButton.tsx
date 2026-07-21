@@ -21,7 +21,7 @@ export function InstallButton({
 
   if (isInstalled) {
     return (
-      <button className="flex items-center gap-2 rounded-lg border border-[var(--success)]/20 bg-[var(--success)]/10 px-5 py-2.5 text-sm font-medium text-[var(--success)]">
+      <button className="flex items-center gap-2 rounded-lg border border-[rgba(var(--success-rgb),0.2)] bg-[rgba(var(--success-rgb),0.1)] px-5 py-2.5 text-sm font-medium text-[var(--success)]">
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
@@ -32,7 +32,7 @@ export function InstallButton({
 
   if (install.state === 'confirming') {
     return (
-      <div className="w-72 rounded-xl border border-[var(--warning)]/20 bg-[var(--surface-1)] p-4 space-y-3">
+      <div className="w-72 rounded-xl border border-[rgba(var(--warning-rgb),0.2)] bg-[var(--surface-1)] p-4 space-y-3">
         <p className="text-xs font-medium text-[var(--warning)]">
           This plugin requests special permissions:
         </p>
@@ -85,7 +85,7 @@ export function InstallButton({
 
   if (install.state === 'success') {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-[var(--success)]/20 bg-[var(--success)]/10 px-5 py-2.5 text-sm font-medium text-[var(--success)]">
+      <div className="flex items-center gap-2 rounded-lg border border-[rgba(var(--success-rgb),0.2)] bg-[rgba(var(--success-rgb),0.1)] px-5 py-2.5 text-sm font-medium text-[var(--success)]">
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
         </svg>
@@ -100,7 +100,8 @@ export function InstallButton({
         <p className="text-xs text-[var(--danger)]">{install.error}</p>
         <button
           onClick={install.reset}
-          className="rounded-lg bg-[var(--danger)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--danger)]/80 transition-colors"
+          className="rounded-lg bg-[var(--danger)] px-5 py-2.5 text-sm font-medium text-white transition-colors"
+          style={{ backgroundColor: 'rgba(var(--danger-rgb), 0.8)' }}
         >
           Retry
         </button>

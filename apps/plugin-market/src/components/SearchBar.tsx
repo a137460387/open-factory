@@ -74,7 +74,8 @@ export function SearchBar({
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-3 pl-11 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30"
+        className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-2)] py-3 pl-11 pr-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] transition-all focus:border-[var(--accent)] focus:outline-none focus:ring-1"
+        style={{ '--tw-ring-color': 'rgba(var(--accent-rgb), 0.3)' } as React.CSSProperties}
       />
 
       {/* Clear button */}

@@ -60,7 +60,7 @@ export function PluginDetail({
                 {manifest.name}
               </h1>
               {verified && (
-                <span className="flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
+                <span className="flex items-center gap-1 rounded-full bg-[rgba(var(--success-rgb),0.1)] px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
                   <svg
                     className="h-3 w-3"
                     fill="currentColor"
@@ -147,7 +147,7 @@ export function PluginDetail({
         <div className="space-y-6 lg:col-span-2">
           {/* Permissions */}
           {manifest.permissions.required.length > 0 && (
-            <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--surface-1)] p-5">
+            <div className="rounded-xl border border-[rgba(var(--warning-rgb),0.2)] bg-[var(--surface-1)] p-5">
               <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <svg
                   className="h-4 w-4 text-[var(--warning)]"

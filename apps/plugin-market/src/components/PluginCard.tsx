@@ -12,7 +12,8 @@ export function PluginCard({ plugin }: PluginCardProps) {
   return (
     <a
       href={`/plugins/${manifest.id}`}
-      className="group relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 transition-all duration-200 hover:border-[var(--accent)]/30 hover:bg-[var(--surface-2)] hover:shadow-lg hover:shadow-[var(--accent)]/5"
+      className="group relative flex flex-col rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-4 transition-all duration-200 hover:border-[rgba(var(--accent-rgb),0.3)] hover:bg-[var(--surface-2)] hover:shadow-lg"
+      style={{ '--tw-shadow-color': 'rgba(var(--accent-rgb), 0.05)' } as React.CSSProperties}
     >
       {/* Header row */}
       <div className="flex items-start justify-between">
@@ -20,7 +21,7 @@ export function PluginCard({ plugin }: PluginCardProps) {
           {manifest.icon || '🔌'}
         </div>
         {verified && (
-          <span className="flex items-center gap-1 rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
+          <span className="flex items-center gap-1 rounded-full bg-[rgba(var(--success-rgb),0.1)] px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
             <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fillRule="evenodd"

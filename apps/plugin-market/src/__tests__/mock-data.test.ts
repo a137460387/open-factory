@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mockPlugins, mockCategories, mockFeatured, mockReviews } from '@/lib/mock-data';
+import { mockPlugins, mockCategories, mockFeatured, mockReviews } from '../lib/mock-data';
 
 describe('mock data', () => {
   it('has at least 10 plugins', () => {

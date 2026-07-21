@@ -37,7 +37,7 @@ export function CategoryNav({
               transition-all
               ${
                 isActive
-                  ? 'bg-[var(--accent)] text-white shadow-sm shadow-[var(--accent)]/20'
+                  ? 'bg-[var(--accent)] text-white shadow-sm shadow-[rgba(var(--accent-rgb),0.2)]'
                   : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]'
               }
             `}

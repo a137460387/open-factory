@@ -32,7 +32,7 @@ export function VersionHistory({ versions }: VersionHistoryProps) {
                 v{v.version}
               </span>
               {i === 0 && (
-                <span className="rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
+                <span className="rounded-full bg-[rgba(var(--success-rgb),0.1)] px-2 py-0.5 text-2xs font-medium text-[var(--success)]">
                   Latest
                 </span>
               )}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatNumber, formatDate, cn, categoryLabel } from '@/lib/utils';
+import { formatNumber, formatDate, cn, categoryLabel } from '../lib/utils';
 
 describe('formatNumber', () => {
   it('formats millions', () => {
@@ -22,7 +22,6 @@ describe('formatNumber', () => {
 describe('formatDate', () => {
   it('formats ISO date string', () => {
     const result = formatDate('2026-07-15T00:00:00Z');
-    // Should contain month, day, year
     expect(result).toMatch(/Jul/);
     expect(result).toMatch(/15/);
     expect(result).toMatch(/2026/);

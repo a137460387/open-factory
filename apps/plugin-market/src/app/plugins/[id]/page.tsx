@@ -4,21 +4,11 @@ import { usePluginDetail } from '@/hooks/usePluginDetail';
 import { PluginDetail } from '@/components/PluginDetail';
 
 interface PluginDetailPageProps {
-  readonly params: Promise<{ id: string }>;
+  readonly params: { id: string };
 }
 
 export default function PluginDetailPage({ params }: PluginDetailPageProps) {
-  return <PluginDetailContent params={params} />;
-}
-
-function PluginDetailContent({
-  params,
-}: {
-  readonly params: Promise<{ id: string }>;
-}) {
-  // Use React.use() to unwrap the params promise (Next.js 15 pattern)
-  const { id } = React.use(params);
-  const { data, loading, error } = usePluginDetail(id);
+  const { data, loading, error } = usePluginDetail(params.id);
 
   if (loading) {
     return <PluginDetailSkeleton />;
@@ -74,6 +64,3 @@ function PluginDetailSkeleton() {
     </div>
   );
 }
-
-// Need React for use()
-import React from 'react';

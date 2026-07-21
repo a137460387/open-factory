@@ -3,9 +3,9 @@ import { mockPlugins, mockReviews, mockVersions } from '@/lib/mock-data';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: { id: string } },
 ) {
-  const { id } = await params;
+  const { id } = params;
   const plugin = mockPlugins.find((p) => p.manifest.id === id);
 
   if (!plugin) {

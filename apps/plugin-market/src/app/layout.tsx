@@ -15,7 +15,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="min-h-screen antialiased">
         {/* Top nav */}
-        <nav className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface-0)]/80 backdrop-blur-xl">
+        <nav className="sticky top-0 z-50 border-b border-[var(--border)] backdrop-blur-xl" style={{ backgroundColor: 'rgba(8, 8, 13, 0.8)' }}>
           <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
             <a href="/" className="flex items-center gap-2.5">
               {/* Logo mark */}

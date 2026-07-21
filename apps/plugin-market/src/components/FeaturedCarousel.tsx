@@ -85,7 +85,7 @@ export function FeaturedCarousel({ plugins }: FeaturedCarouselProps) {
         </div>
 
         {/* Decorative side */}
-        <div className="hidden h-full w-64 items-center justify-center bg-gradient-to-br from-[var(--accent)]/10 to-purple-600/5 md:flex">
+        <div className="hidden h-full w-64 items-center justify-center bg-gradient-to-br from-indigo-500/10 to-purple-600/5 md:flex">
           <span className="text-6xl opacity-80">{manifest.icon || '✨'}</span>
         </div>
       </div>
@@ -113,7 +113,8 @@ export function FeaturedCarousel({ plugins }: FeaturedCarouselProps) {
         <>
           <button
             onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-[var(--surface-2)]/80 p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors"
+            style={{ backgroundColor: 'rgba(22, 22, 34, 0.8)' }}
             aria-label="Previous"
           >
             <svg
@@ -132,7 +133,8 @@ export function FeaturedCarousel({ plugins }: FeaturedCarouselProps) {
           </button>
           <button
             onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-[var(--surface-2)]/80 p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors"
+            style={{ backgroundColor: 'rgba(22, 22, 34, 0.8)' }}
             aria-label="Next"
           >
             <svg

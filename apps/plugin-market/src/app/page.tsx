@@ -115,7 +115,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : search.error ? (
-          <div className="rounded-xl border border-[var(--danger)]/20 bg-[var(--danger)]/5 p-8 text-center">
+          <div className="rounded-xl border border-[rgba(var(--danger-rgb),0.2)] bg-[rgba(var(--danger-rgb),0.05)] p-8 text-center">
             <p className="text-sm text-[var(--danger)]">{search.error}</p>
             <button
               onClick={search.refresh}
