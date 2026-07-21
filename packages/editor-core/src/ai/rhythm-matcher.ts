@@ -35,7 +35,7 @@ export interface VideoMotionPoint {
 }
 
 /** Overall rhythm analysis result. */
-export interface RhythmProfile {
+export interface AudioAudioRhythmProfile {
   /** Detected BPM (beats per minute) */
   bpm: number;
   /** Sorted beat points */
@@ -215,7 +215,7 @@ export function findMotionPeaks(motionPoints: readonly VideoMotionPoint[]): Vide
  * @returns New template with rhythm-aligned keyframes injected
  */
 export function matchRhythmToTemplate(
-  rhythmProfile: RhythmProfile,
+  rhythmProfile: AudioRhythmProfile,
   template: EditingTemplate,
 ): EditingTemplate {
   const totalDuration = template.metadata.estimatedDurationSec;
@@ -298,7 +298,7 @@ export function createRhythmAlignedTemplate(
 
   const beats = detectAudioBeats(audioData, sampleRate);
   const motionPeaks = findMotionPeaks(analyzeVideoMotion(videoFrames, fps));
-  const rhythmProfile = buildRhythmProfile(beats);
+  const rhythmProfile = buildAudioRhythmProfile(beats);
   const mergedBeats = mergeBeatsWithMotion(beats, motionPeaks, audioWeight);
 
   return matchRhythmToTemplate({ ...rhythmProfile, beats: mergedBeats }, template);
@@ -306,8 +306,8 @@ export function createRhythmAlignedTemplate(
 
 // ─── Internal Helpers ─────────────────────────────────────────────
 
-/** Build a RhythmProfile from detected beats (BPM, avg interval, type). */
-function buildRhythmProfile(beats: readonly AudioBeat[]): RhythmProfile {
+/** Build a AudioRhythmProfile from detected beats (BPM, avg interval, type). */
+function buildAudioRhythmProfile(beats: readonly AudioBeat[]): AudioRhythmProfile {
   if (beats.length < 2) {
     return { bpm: 0, beats: [...beats], avgBeatInterval: 0, rhythmType: 'variable' };
   }
@@ -318,7 +318,7 @@ function buildRhythmProfile(beats: readonly AudioBeat[]): RhythmProfile {
   const avgInterval = intervals.reduce((s, v) => s + v, 0) / intervals.length;
   const bpm = avgInterval > 0 ? 60 / avgInterval : 0;
 
-  let rhythmType: RhythmProfile['rhythmType'];
+  let rhythmType: AudioRhythmProfile['rhythmType'];
   if (bpm < 80) rhythmType = 'slow';
   else if (bpm < 120) rhythmType = 'medium';
   else if (bpm < 160) rhythmType = 'fast';

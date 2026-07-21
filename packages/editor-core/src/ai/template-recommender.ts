@@ -39,7 +39,7 @@ export interface UserPreference {
 }
 
 /** A scored template recommendation with reasoning */
-export interface TemplateRecommendation {
+export interface AIAITemplateRecommendation {
   template: EditingTemplate;
   /** Composite score 0-1 */
   score: number;
@@ -121,7 +121,7 @@ export function scoreTemplate(
   template: EditingTemplate,
   profile: ProjectContentProfile,
   preferences: UserPreference,
-): TemplateRecommendation {
+): AITemplateRecommendation {
   const contentMatch = scoreContentMatch(template, profile);
   const preferenceMatch = scorePreferenceMatch(template, preferences);
   const materialFit = scoreMaterialFit(template, profile);
@@ -149,7 +149,7 @@ export function recommendTemplates(
   profile: ProjectContentProfile,
   preferences: UserPreference,
   topK: number = 5,
-): ReadonlyArray<TemplateRecommendation> {
+): ReadonlyArray<AITemplateRecommendation> {
   return templates
     .map((t) => scoreTemplate(t, profile, preferences))
     .sort((a, b) => b.score - a.score)
@@ -160,7 +160,7 @@ export function recommendTemplates(
  * Generate a human-readable explanation for a recommendation.
  * Includes dimension scores and individual reasons.
  */
-export function explainRecommendation(recommendation: TemplateRecommendation): string {
+export function explainRecommendation(recommendation: AITemplateRecommendation): string {
   const { template, score, reasons, matchDimensions } = recommendation;
   const pct = (v: number) => Math.round(v * 100);
 
