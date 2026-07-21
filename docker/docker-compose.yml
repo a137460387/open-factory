@@ -1,0 +1,73 @@
+# Open Factory Docker Compose
+# Provides easy setup for common workflows
+
+version: '3.8'
+
+services:
+  # Base CLI service
+  of:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./workspace:/workspace
+      - /tmp/open-factory:/tmp/open-factory
+    environment:
+      - OF_FFMPEG_PATH=ffmpeg
+      - OF_LOG_LEVEL=info
+      - OF_CONCURRENCY=4
+
+  # Render service — render a project file
+  render:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: ["of", "render"]
+    volumes:
+      - ./workspace:/workspace
+      - /tmp/open-factory:/tmp/open-factory
+    environment:
+      - OF_LOG_LEVEL=info
+
+  # Analyze service — analyze video quality
+  analyze:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: ["of", "analyze"]
+    volumes:
+      - ./workspace:/workspace
+    environment:
+      - OF_LOG_LEVEL=info
+
+  # Workflow service — run workflow definitions
+  workflow:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: ["of", "workflow", "run"]
+    volumes:
+      - ./workspace:/workspace
+      - ./workflows:/workflows
+    environment:
+      - OF_LOG_LEVEL=info
+
+  # GPU-enabled service (requires nvidia-docker)
+  of-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gpu
+    volumes:
+      - ./workspace:/workspace
+      - /tmp/open-factory:/tmp/open-factory
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - OF_AI_PROVIDER=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -71,10 +71,12 @@
 
 | 文件 | 说明 |
 |------|------|
-| `docker/Dockerfile` | 多阶段构建基础镜像 |
+| `docker/Dockerfile` | 多阶段构建基础镜像（含 health check） |
 | `docker/Dockerfile.gpu` | GPU 镜像（CUDA 支持） |
+| `docker/docker-compose.yml` | Docker Compose 编排配置 |
 | `docker/README.md` | Docker 使用文档 |
 | `docs/api/cli-reference.md` | CLI API 参考文档 |
+| `docs/api/typescript-sdk.md` | TypeScript SDK 完整参考 |
 | `docs/workflows/batch-render.json` | 批量渲染工作流示例 |
 | `docs/workflows/template-pipeline.json` | 模板管线工作流示例 |
 
@@ -125,10 +127,31 @@
 |--------|------|
 | `d1053394` | feat: v4.55.0 - CLI engine and headless rendering |
 | `091f6b64` | feat: headless AI inference, stdin pipe support, CLI integration tests |
+| `a9de0566` | docs: v4.55.0 Sprint AE verification report |
 
 ---
 
-## 6. 已知限制
+## 6. Docker 镜像配置
+
+### 基础镜像 (docker/Dockerfile)
+- 基于 node:20-slim 多阶段构建
+- 包含 FFmpeg 运行时
+- Health check 验证 CLI 功能
+- 环境变量支持：OF_FFMPEG_PATH, OF_TEMP_DIR, OF_LOG_LEVEL, OF_CONCURRENCY
+
+### GPU 镜像 (docker/Dockerfile.gpu)
+- 基于 nvidia/cuda:12.2.0-runtime
+- 支持 ONNX Runtime CUDA 加速
+- 环境变量：NVIDIA_VISIBLE_DEVICES, OF_AI_PROVIDER
+
+### Docker Compose (docker/docker-compose.yml)
+- 5 个服务：of, render, analyze, workflow, of-gpu
+- 卷挂载：workspace + temp
+- GPU 服务配置 nvidia-docker
+
+---
+
+## 7. 已知限制
 
 1. ONNX Runtime Node.js 为可选依赖，未安装时自动降级为启发式分析
 2. YAML 工作流格式需要 js-yaml 依赖，当前仅支持 JSON

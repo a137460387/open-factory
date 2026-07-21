@@ -82,3 +82,25 @@ video-analysis:
 | `OF_TEMP_DIR` | Temp directory | `/tmp/open-factory` |
 | `OF_LOG_LEVEL` | Log level | `info` |
 | `OF_CONCURRENCY` | Max render threads | `4` |
+| `OF_AI_PROVIDER` | AI inference provider | `auto` |
+
+## Docker Compose
+
+For common workflows, use the provided `docker-compose.yml`:
+
+```bash
+# Build all services
+docker compose build
+
+# Render a project
+docker compose run render -i /workspace/project.ofp -o /workspace/output.mp4
+
+# Analyze a video
+docker compose run analyze -i /workspace/video.mp4 -t full
+
+# Run a workflow
+docker compose run workflow -f /workflows/batch-render.json
+
+# GPU-enabled analysis
+docker compose run of-gpu analyze -i /workspace/video.mp4 -t semantic
+```
