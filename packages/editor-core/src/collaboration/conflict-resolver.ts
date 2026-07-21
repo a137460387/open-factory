@@ -412,7 +412,7 @@ function findConflictingSet(ops: TimelineOperation[]): TimelineOperation[] {
 
   for (let i = 0; i < ops.length; i++) {
     for (let j = i + 1; j < ops.length; j++) {
-      if (detectConflict(ops[i], ops[j])) {
+      if (detectTimelineConflict(ops[i], ops[j])) {
         conflicting.add(ops[i]);
         conflicting.add(ops[j]);
       }

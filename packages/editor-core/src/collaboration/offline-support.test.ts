@@ -5,24 +5,20 @@ import {
   MemoryStorageAdapter,
   createOfflineSupport,
   type OfflineOperation,
-  type CrdtOperation,
   type NetworkStatusProvider,
   type CollabWSTransportLike,
   type SyncBatchResult,
 } from './offline-support';
+import type { CrdtOperation } from './crdt-integration';
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function makeCrdtOp(overrides: Partial<CrdtOperation> = {}): CrdtOperation {
   return {
-    type: 'update',
-    targetId: 'clip-1',
-    data: { name: 'test' },
-    vectorClock: new Map([['u1', 1]]),
-    userId: 'u1',
-    timestamp: Date.now(),
+    type: 'set-clip',
+    clip: { id: 'clip-1', type: 'video', trackId: 'track-1', startTime: 0, duration: 5, volume: 1, speed: 1, opacity: 1, sourceId: 'src-1', inPoint: 0, outPoint: 5 },
     ...overrides,
-  };
+  } as CrdtOperation;
 }
 
 function makeTransport(): CollabWSTransportLike {

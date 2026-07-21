@@ -35,7 +35,7 @@ export interface VideoMotionPoint {
 }
 
 /** Overall rhythm analysis result. */
-export interface AudioAudioRhythmProfile {
+export interface AudioRhythmProfile {
   /** Detected BPM (beats per minute) */
   bpm: number;
   /** Sorted beat points */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { detectAudioBeats, analyzeVideoMotion, matchRhythmToTemplate, createRhythmAlignedTemplate } from './rhythm-matcher';
 import type { EditingTemplate } from '../models/template-schema';
-import type { RhythmProfile } from './rhythm-matcher';
+import type { AudioRhythmProfile } from './rhythm-matcher';
 
 function makeTemplate(overrides: Partial<EditingTemplate> = {}): EditingTemplate {
   return {
@@ -30,7 +30,7 @@ function makeTemplate(overrides: Partial<EditingTemplate> = {}): EditingTemplate
   };
 }
 
-function makeRhythm(overrides: Partial<RhythmProfile> = {}): RhythmProfile {
+function makeRhythm(overrides: Partial<AudioRhythmProfile> = {}): AudioRhythmProfile {
   return { bpm: 120, beats: [], avgBeatInterval: 0.5, rhythmType: 'medium', ...overrides };
 }
 

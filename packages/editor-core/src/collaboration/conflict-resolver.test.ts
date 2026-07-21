@@ -3,7 +3,7 @@ import {
   createVectorClock,
   incrementClock,
   compareVectorClocks,
-  detectConflict,
+  detectTimelineConflict,
   resolveConflict,
   batchOperations,
   ConflictResolver,
@@ -107,9 +107,9 @@ describe('compareVectorClocks', () => {
   });
 });
 
-// ─── detectConflict ───────────────────────────────────────────────
+// ─── detectTimelineConflict ───────────────────────────────────────────────
 
-describe('detectConflict', () => {
+describe('detectTimelineConflict', () => {
   it('detects conflict for concurrent ops on same target', () => {
     const opA = makeOp('clip-1', {
       vectorClock: makeClock({ u1: 2, u2: 1 }),
@@ -119,13 +119,13 @@ describe('detectConflict', () => {
       vectorClock: makeClock({ u1: 1, u2: 2 }),
       userId: 'u2',
     });
-    expect(detectConflict(opA, opB)).toBe(true);
+    expect(detectTimelineConflict(opA, opB)).toBe(true);
   });
 
   it('no conflict when ops are causally ordered', () => {
     const opA = makeOp('clip-1', { vectorClock: makeClock({ u1: 1 }) });
     const opB = makeOp('clip-1', { vectorClock: makeClock({ u1: 3 }) });
-    expect(detectConflict(opA, opB)).toBe(false);
+    expect(detectTimelineConflict(opA, opB)).toBe(false);
   });
 
   it('no conflict when ops target different entities', () => {
@@ -135,7 +135,7 @@ describe('detectConflict', () => {
     const opB = makeOp('clip-2', {
       vectorClock: makeClock({ u1: 1, u2: 1 }),
     });
-    expect(detectConflict(opA, opB)).toBe(false);
+    expect(detectTimelineConflict(opA, opB)).toBe(false);
   });
 
   it('detects duplicate add on same id as conflict', () => {
@@ -147,7 +147,7 @@ describe('detectConflict', () => {
       type: 'add',
       vectorClock: makeClock({ u1: 1, u2: 2 }),
     });
-    expect(detectConflict(opA, opB)).toBe(true);
+    expect(detectTimelineConflict(opA, opB)).toBe(true);
   });
 });
 

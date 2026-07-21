@@ -39,7 +39,7 @@ export interface UserPreference {
 }
 
 /** A scored template recommendation with reasoning */
-export interface AIAITemplateRecommendation {
+export interface AITemplateRecommendation {
   template: EditingTemplate;
   /** Composite score 0-1 */
   score: number;
