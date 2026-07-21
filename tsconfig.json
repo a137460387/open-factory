@@ -7,7 +7,9 @@
     { "path": "./packages/plugin-market" },
     { "path": "./packages/sdk" },
     { "path": "./packages/creator-dashboard" },
-    { "path": "./apps/desktop" }
+    { "path": "./apps/desktop" },
+    { "path": "./apps/creator-dashboard" },
+    { "path": "./apps/plugin-market" }
   ],
   "compilerOptions": {
     "strict": true,
