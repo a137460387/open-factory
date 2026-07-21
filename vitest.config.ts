@@ -6,16 +6,17 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./apps/desktop/src', import.meta.url)),
       '@open-factory/editor-core': fileURLToPath(new URL('./packages/editor-core/src/index.ts', import.meta.url)),
-      '@open-factory/plugin-sdk': fileURLToPath(new URL('./packages/plugin-sdk/src/index.ts', import.meta.url))
+      '@open-factory/plugin-sdk': fileURLToPath(new URL('./packages/plugin-sdk/src/index.ts', import.meta.url)),
+      '@open-factory/cli': fileURLToPath(new URL('./packages/cli/src/index.ts', import.meta.url))
     }
   },
   test: {
-    include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'packages/plugin-sdk/__tests__/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
+    include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'packages/plugin-sdk/__tests__/**/*.test.ts', 'packages/cli/__tests__/**/*.test.ts', 'packages/cli/src/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: 'coverage',
-      include: ['packages/editor-core/src/**/*.ts'],
+      include: ['packages/editor-core/src/**/*.ts', 'packages/cli/src/**/*.ts'],
       exclude: [
         'packages/editor-core/src/index.ts',
         'packages/editor-core/src/model-types.ts',

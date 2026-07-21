@@ -79,6 +79,10 @@
     "./permissions/advanced-permissions": {
       "types": "./dist/permissions/advanced-permissions.d.ts",
       "import": "./dist/permissions/advanced-permissions.js"
+    },
+    "./headless": {
+      "types": "./dist/headless/index.d.ts",
+      "import": "./dist/headless/index.js"
     }
   },
   "scripts": {

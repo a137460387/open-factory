@@ -1,0 +1,42 @@
+# Open Factory — GPU-enabled Docker image
+# Extends the base image with CUDA support for AI inference
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 AS gpu-base
+
+# Install Node.js
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install FFmpeg with NVIDIA support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy built application from builder stage
+# (Assumes base image was built first)
+COPY --from=open-factory:latest /app/packages/cli/dist ./packages/cli/dist
+COPY --from=open-factory:latest /app/packages/editor-core/dist ./packages/editor-core/dist
+COPY --from=open-factory:latest /app/node_modules ./node_modules
+COPY --from=open-factory:latest /app/packages/cli/package.json ./packages/cli/
+COPY --from=open-factory:latest /app/packages/editor-core/package.json ./packages/editor-core/
+
+# Install ONNX Runtime with CUDA support
+RUN npm install onnxruntime-node@1.17.0
+
+# Create symlink for the CLI
+RUN ln -s /app/packages/cli/dist/cli.js /usr/local/bin/of && \
+    chmod +x /usr/local/bin/of
+
+# Create temp directory
+RUN mkdir -p /tmp/open-factory
+
+# Set environment for GPU detection
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+ENTRYPOINT ["of"]
+CMD ["--help"]

@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/editor-core" },
     { "path": "./packages/plugin-sdk" },
+    { "path": "./packages/cli" },
     { "path": "./apps/desktop" }
   ],
   "compilerOptions": {

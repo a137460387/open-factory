@@ -1,0 +1,61 @@
+{
+  "name": "batch-render",
+  "version": "1.0",
+  "description": "Batch render multiple project files and analyze results",
+  "variables": {
+    "outputDir": "./output",
+    "qualityThreshold": "80"
+  },
+  "steps": [
+    {
+      "id": "render-intro",
+      "type": "command",
+      "command": "of",
+      "args": {
+        "arg0": "render",
+        "arg1": "-i",
+        "arg2": "./projects/intro.ofp",
+        "arg3": "-o",
+        "arg4": "${outputDir}/intro.mp4"
+      }
+    },
+    {
+      "id": "render-main",
+      "type": "command",
+      "command": "of",
+      "args": {
+        "arg0": "render",
+        "arg1": "-i",
+        "arg2": "./projects/main.ofp",
+        "arg3": "-o",
+        "arg4": "${outputDir}/main.mp4"
+      }
+    },
+    {
+      "id": "quality-check",
+      "type": "command",
+      "command": "of",
+      "args": {
+        "arg0": "analyze",
+        "arg1": "-i",
+        "arg2": "${outputDir}/main.mp4",
+        "arg3": "-t",
+        "arg4": "quality",
+        "arg5": "--fail-on-low-score",
+        "arg6": "${qualityThreshold}"
+      },
+      "dependsOn": ["render-main"]
+    },
+    {
+      "id": "publish",
+      "type": "webhook",
+      "url": "https://api.example.com/publish",
+      "method": "POST",
+      "body": {
+        "video": "${outputDir}/main.mp4",
+        "status": "ready"
+      },
+      "dependsOn": ["quality-check"]
+    }
+  ]
+}
