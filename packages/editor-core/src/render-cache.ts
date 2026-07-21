@@ -2,6 +2,96 @@ import { normalizeProjectColorPipeline, type ProjectColorPipeline } from './colo
 import type { Clip, MediaAsset, Sequence, Timeline } from './model';
 import { round } from './time';
 
+// MinHeap for efficient LRU eviction
+class MinHeap<T> {
+  private heap: T[] = [];
+  private compare: (a: T, b: T) => number;
+
+  constructor(compare: (a: T, b: T) => number) {
+    this.compare = compare;
+  }
+
+  get size(): number {
+    return this.heap.length;
+  }
+
+  push(item: T): void {
+    this.heap.push(item);
+    this.bubbleUp(this.heap.length - 1);
+  }
+
+  peek(): T | undefined {
+    return this.heap[0];
+  }
+
+  pop(): T | undefined {
+    if (this.heap.length === 0) return undefined;
+    const min = this.heap[0];
+    const last = this.heap.pop()!;
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this.sinkDown(0);
+    }
+    return min;
+  }
+
+  remove(item: T): boolean {
+    const index = this.heap.indexOf(item);
+    if (index === -1) return false;
+    if (index === this.heap.length - 1) {
+      this.heap.pop();
+      return true;
+    }
+    const last = this.heap.pop()!;
+    this.heap[index] = last;
+    this.bubbleUp(index);
+    this.sinkDown(index);
+    return true;
+  }
+
+  reheapify(item: T): void {
+    const index = this.heap.indexOf(item);
+    if (index === -1) return;
+    this.bubbleUp(index);
+    this.sinkDown(index);
+  }
+
+  clear(): void {
+    this.heap = [];
+  }
+
+  toArray(): T[] {
+    return [...this.heap].sort(this.compare);
+  }
+
+  private bubbleUp(index: number): void {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.compare(this.heap[index], this.heap[parent]) >= 0) break;
+      [this.heap[index], this.heap[parent]] = [this.heap[parent], this.heap[index]];
+      index = parent;
+    }
+  }
+
+  private sinkDown(index: number): void {
+    const length = this.heap.length;
+    while (true) {
+      let smallest = index;
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
+      if (left < length && this.compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this.compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === index) break;
+      [this.heap[index], this.heap[smallest]] = [this.heap[smallest], this.heap[index]];
+      index = smallest;
+    }
+  }
+}
+
 export const TIMELINE_RENDER_CACHE_DEFAULT_MEMORY_BYTES = 256 * 1024 * 1024;
 export const TIMELINE_RENDER_CACHE_PRERENDER_SECONDS = 5;
 export const TIMELINE_RENDER_CACHE_RETAIN_SECONDS = 10;
@@ -54,10 +144,12 @@ export class TimelineRenderFrameCache<TBitmap> {
   private readonly maxBytes: number;
   private readonly disposeBitmap?: (bitmap: TBitmap) => void;
   private bytes = 0;
+  private readonly heap: MinHeap<Required<TimelineRenderFrameCacheEntry<TBitmap>>>;
 
   constructor(options: TimelineRenderFrameCacheOptions<TBitmap> = {}) {
     this.maxBytes = Math.max(1, options.maxBytes ?? TIMELINE_RENDER_CACHE_DEFAULT_MEMORY_BYTES);
     this.disposeBitmap = options.disposeBitmap;
+    this.heap = new MinHeap((a, b) => a.ts - b.ts);
   }
 
   get sizeBytes(): number {
@@ -78,6 +170,7 @@ export class TimelineRenderFrameCache<TBitmap> {
       ts: entry.ts ?? now,
     };
     this.entries.set(normalized.key, normalized);
+    this.heap.push(normalized);
     this.bytes += normalized.bytes;
     this.pruneToBudget();
     return this.snapshot();
@@ -89,6 +182,7 @@ export class TimelineRenderFrameCache<TBitmap> {
       return undefined;
     }
     entry.ts = now;
+    this.heap.reheapify(entry);
     return entry.bitmap;
   }
 
@@ -127,6 +221,7 @@ export class TimelineRenderFrameCache<TBitmap> {
     for (const key of [...this.entries.keys()]) {
       this.delete(key);
     }
+    this.heap.clear();
     return this.snapshot();
   }
 
@@ -145,12 +240,13 @@ export class TimelineRenderFrameCache<TBitmap> {
 
   private pruneToBudget(): void {
     if (this.bytes <= this.maxBytes) return;
-    // 收集所有条目并按时间戳排序（最旧的优先淘汰）
-    const entries = [...this.entries.values()];
-    entries.sort((a, b) => a.ts - b.ts);
-    for (const entry of entries) {
-      if (this.bytes <= this.maxBytes) break;
-      this.delete(entry.key);
+    // Use MinHeap with lazy deletion: skip entries already removed from map
+    while (this.bytes > this.maxBytes && this.heap.size > 0) {
+      const oldest = this.heap.pop();
+      if (!oldest) break;
+      // Skip stale entries (removed by prior delete or replaced by put)
+      if (!this.entries.has(oldest.key) || this.entries.get(oldest.key) !== oldest) continue;
+      this.delete(oldest.key);
     }
   }
 
@@ -160,6 +256,7 @@ export class TimelineRenderFrameCache<TBitmap> {
       return;
     }
     this.entries.delete(key);
+    this.heap.remove(entry);
     this.bytes = Math.max(0, this.bytes - entry.bytes);
     this.disposeBitmap?.(entry.bitmap);
   }

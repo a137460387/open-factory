@@ -255,8 +255,9 @@ export class TaskScheduler {
       if (this.config.enablePreemption && entry.task.canInterrupt) {
         const higherPriorityTask = this.findHigherPriorityTask(entry.task.priority);
         if (higherPriorityTask) {
-          // Pause current task
+          // Pause current task and boost its priority for next attempt
           entry.status = 'paused';
+          this.boostPriorityForPreemptedTask(entry);
           if (entry.task.resumeAfterInterrupt) {
             await entry.task.resumeAfterInterrupt();
           }
@@ -285,6 +286,16 @@ export class TaskScheduler {
     } catch (error) {
       if (entry.status === 'cancelled') return;
 
+      // Time slice exceeded is a scheduling signal, not a task failure
+      // Don't count it as a retry - just re-queue the task
+      if (this.isTimeSliceExceeded(error)) {
+        entry.status = 'pending';
+        this.running.delete(entry.task.id);
+        this.queue.set(entry.task.id, entry);
+        this.schedule();
+        return;
+      }
+
       if (entry.retryCount < this.config.maxRetries) {
         entry.retryCount++;
         entry.status = 'pending';
@@ -305,19 +316,24 @@ export class TaskScheduler {
     execute: () => Promise<T>,
     timeSliceMs: number,
   ): Promise<T> {
-    const startTime = performance.now();
-
     // Create a race between execution and time slice
     const result = await Promise.race([
       execute(),
       new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('TIME_SLICE_EXCEEDED'));
+          // Use a special error type to distinguish time slice from real failures
+          const error = new Error('TIME_SLICE_EXCEEDED');
+          error.name = 'TimeSliceExceeded';
+          reject(error);
         }, timeSliceMs);
       }),
     ]);
 
     return result;
+  }
+
+  private isTimeSliceExceeded(error: unknown): boolean {
+    return error instanceof Error && error.name === 'TimeSliceExceeded';
   }
 
   private findHigherPriorityTask(currentPriority: TaskPriority): TaskEntry | null {
@@ -331,6 +347,19 @@ export class TaskScheduler {
     }
 
     return null;
+  }
+
+  private boostPriorityForPreemptedTask(entry: TaskEntry): void {
+    // Track how many times this task has been preempted
+    const preemptCount = (entry.task as any).__preemptCount ?? 0;
+    (entry.task as any).__preemptCount = preemptCount + 1;
+
+    // After 3 preemptions, temporarily boost priority to 'normal'
+    // This prevents starvation of low/background priority tasks
+    if (preemptCount >= 3 && (entry.task.priority === 'low' || entry.task.priority === 'background')) {
+      (entry.task as any).__originalPriority = entry.task.priority;
+      entry.task.priority = 'normal';
+    }
   }
 }
 

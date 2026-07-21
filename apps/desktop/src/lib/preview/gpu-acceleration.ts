@@ -7,6 +7,88 @@ import {
   type TimelineRenderFrameRequest,
 } from '@open-factory/editor-core';
 
+// MinHeap for efficient LRU eviction
+class MinHeap<T> {
+  private heap: T[] = [];
+  private compare: (a: T, b: T) => number;
+
+  constructor(compare: (a: T, b: T) => number) {
+    this.compare = compare;
+  }
+
+  get size(): number {
+    return this.heap.length;
+  }
+
+  push(item: T): void {
+    this.heap.push(item);
+    this.bubbleUp(this.heap.length - 1);
+  }
+
+  pop(): T | undefined {
+    if (this.heap.length === 0) return undefined;
+    const min = this.heap[0];
+    const last = this.heap.pop()!;
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this.sinkDown(0);
+    }
+    return min;
+  }
+
+  remove(item: T): boolean {
+    const index = this.heap.indexOf(item);
+    if (index === -1) return false;
+    if (index === this.heap.length - 1) {
+      this.heap.pop();
+      return true;
+    }
+    const last = this.heap.pop()!;
+    this.heap[index] = last;
+    this.bubbleUp(index);
+    this.sinkDown(index);
+    return true;
+  }
+
+  reheapify(item: T): void {
+    const index = this.heap.indexOf(item);
+    if (index === -1) return;
+    this.bubbleUp(index);
+    this.sinkDown(index);
+  }
+
+  clear(): void {
+    this.heap = [];
+  }
+
+  private bubbleUp(index: number): void {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.compare(this.heap[index], this.heap[parent]) >= 0) break;
+      [this.heap[index], this.heap[parent]] = [this.heap[parent], this.heap[index]];
+      index = parent;
+    }
+  }
+
+  private sinkDown(index: number): void {
+    const length = this.heap.length;
+    while (true) {
+      let smallest = index;
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
+      if (left < length && this.compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this.compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === index) break;
+      [this.heap[index], this.heap[smallest]] = [this.heap[smallest], this.heap[index]];
+      index = smallest;
+    }
+  }
+}
+
 export const GPU_TEXTURE_POOL_MAX_BYTES = 512 * 1024 * 1024;
 const GPU_PREFETCH_LOOKAHEAD_SECONDS = 3;
 
@@ -41,10 +123,12 @@ export class GpuTexturePool<TTexture> {
   private readonly disposeTexture?: (texture: TTexture) => void;
   private clock = 0;
   private usedBytes = 0;
+  private readonly heap: MinHeap<GpuTexturePoolEntry<TTexture>>;
 
   constructor(options: GpuTexturePoolOptions<TTexture> = {}) {
     this.maxBytes = Math.max(1, options.maxBytes ?? GPU_TEXTURE_POOL_MAX_BYTES);
     this.disposeTexture = options.disposeTexture;
+    this.heap = new MinHeap((a, b) => a.lastUsed - b.lastUsed);
   }
 
   get size(): number {
@@ -61,6 +145,7 @@ export class GpuTexturePool<TTexture> {
       return undefined;
     }
     entry.lastUsed = ++this.clock;
+    this.heap.reheapify(entry);
     return entry.texture;
   }
 
@@ -80,16 +165,19 @@ export class GpuTexturePool<TTexture> {
     const existing = this.entries.get(key);
     if (existing) {
       this.usedBytes -= existing.bytes;
+      this.heap.remove(existing);
       if (existing.texture !== input.texture) {
         this.disposeTexture?.(existing.texture);
       }
     }
-    this.entries.set(key, {
+    const newEntry: GpuTexturePoolEntry<TTexture> = {
       key,
       texture: input.texture,
       bytes,
       lastUsed: ++this.clock,
-    });
+    };
+    this.entries.set(key, newEntry);
+    this.heap.push(newEntry);
     this.usedBytes += bytes;
     this.pruneToBudget();
     return this.entries.has(key);
@@ -101,6 +189,7 @@ export class GpuTexturePool<TTexture> {
       return false;
     }
     this.entries.delete(key);
+    this.heap.remove(entry);
     this.usedBytes -= entry.bytes;
     this.disposeTexture?.(entry.texture);
     return true;
@@ -111,6 +200,7 @@ export class GpuTexturePool<TTexture> {
       this.disposeTexture?.(entry.texture);
     }
     this.entries.clear();
+    this.heap.clear();
     this.usedBytes = 0;
     return this.snapshot();
   }
@@ -125,16 +215,12 @@ export class GpuTexturePool<TTexture> {
   }
 
   private pruneToBudget(): void {
-    while (this.usedBytes > this.maxBytes && this.entries.size > 0) {
-      let oldest: GpuTexturePoolEntry<TTexture> | undefined;
-      for (const entry of this.entries.values()) {
-        if (!oldest || entry.lastUsed < oldest.lastUsed) {
-          oldest = entry;
-        }
-      }
-      if (!oldest) {
-        break;
-      }
+    // Use MinHeap with lazy deletion: skip entries already removed from map
+    while (this.usedBytes > this.maxBytes && this.heap.size > 0) {
+      const oldest = this.heap.pop();
+      if (!oldest) break;
+      // Skip stale entries (removed by prior delete or replaced by put)
+      if (!this.entries.has(oldest.key) || this.entries.get(oldest.key) !== oldest) continue;
       this.delete(oldest.key);
     }
   }
