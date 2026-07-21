@@ -267,14 +267,18 @@ export class AIWorkerPool {
 
     this.activeTasks.set(request.id, task);
 
-    // 发送推理请求给 Worker
+    // 发送推理请求给 Worker (使用 Transferable 避免拷贝)
+    const transferables: Transferable[] = [];
+    if (request.inputData instanceof Float32Array) {
+      transferables.push(request.inputData.buffer);
+    }
     slot.worker.postMessage({
       id: request.id,
       type: request.type,
       modelType: request.modelType,
       inputData: request.inputData,
       config: request.config,
-    } as AIWorkerRequest);
+    } as AIWorkerRequest, transferables);
   }
 
   /**

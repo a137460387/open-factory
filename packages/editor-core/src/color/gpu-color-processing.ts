@@ -158,6 +158,7 @@ const DEFAULT_PIPELINE_CONFIG: GPUPipelineConfig = {
   enableToneMapping: true,
   enableCache: true,
   maxCacheSize: 64,
+  maxCacheBytes: 512 * 1024 * 1024, // 512MB
   inputColorSpace: 'srgb',
   outputColorSpace: 'srgb',
   hdrEnabled: false,
@@ -302,6 +303,7 @@ export function validateGPUPipelineConfig(config: GPUPipelineConfig): GPUPipelin
     enableToneMapping: !!config.enableToneMapping,
     enableCache: !!config.enableCache,
     maxCacheSize: clampValue(config.maxCacheSize, 1, 256),
+    maxCacheBytes: Math.max(1024 * 1024, config.maxCacheBytes ?? 512 * 1024 * 1024),
     inputColorSpace: config.inputColorSpace,
     outputColorSpace: config.outputColorSpace,
     hdrEnabled: !!config.hdrEnabled,
@@ -916,6 +918,7 @@ export class GPUColorProcessor {
   private config: GPUPipelineConfig;
   private deviceInfo: GPUDeviceInfo | null = null;
   private cache: Map<string, GPUCacheEntry> = new Map();
+  private cacheUsedBytes = 0;
   private performanceHistory: number[] = [];
   private stats: GPUPerformanceStats;
   private statusListeners: Set<GPUStatusCallback> = new Set();
@@ -1137,6 +1140,7 @@ export class GPUColorProcessor {
   /** 清除缓存 */
   clearCache(): void {
     this.cache.clear();
+    this.cacheUsedBytes = 0;
   }
 
   /** 销毁处理器 */
@@ -1177,8 +1181,10 @@ export class GPUColorProcessor {
   }
 
   private addToCache(key: string, data: Uint8ClampedArray, width: number, height: number): void {
-    // LRU 淘汰
-    if (this.cache.size >= this.config.maxCacheSize) {
+    const entryBytes = data.byteLength;
+
+    // Byte-level LRU eviction
+    while (this.cache.size > 0 && (this.cacheUsedBytes + entryBytes > this.config.maxCacheBytes || this.cache.size >= this.config.maxCacheSize)) {
       let oldestKey = '';
       let oldestTime = Infinity;
       for (const [k, v] of this.cache) {
@@ -1187,7 +1193,10 @@ export class GPUColorProcessor {
           oldestKey = k;
         }
       }
-      if (oldestKey) this.cache.delete(oldestKey);
+      if (!oldestKey) break;
+      const evicted = this.cache.get(oldestKey);
+      if (evicted) this.cacheUsedBytes -= evicted.bytes;
+      this.cache.delete(oldestKey);
     }
 
     this.cache.set(key, {
@@ -1195,9 +1204,11 @@ export class GPUColorProcessor {
       textureData: new Uint8ClampedArray(data),
       width,
       height,
+      bytes: entryBytes,
       timestamp: Date.now(),
       accessCount: 1,
     });
+    this.cacheUsedBytes += entryBytes;
   }
 
   private notifyStatus(status: GPUDeviceStatus): void {
