@@ -103,6 +103,7 @@ export interface GPUPipelineConfig {
   enableToneMapping: boolean;
   enableCache: boolean;
   maxCacheSize: number;
+  maxCacheBytes: number;
   inputColorSpace: ColorSpace;
   outputColorSpace: ColorSpace;
   hdrEnabled: boolean;
@@ -115,6 +116,7 @@ interface GPUCacheEntry {
   textureData: Uint8ClampedArray;
   width: number;
   height: number;
+  bytes: number;
   timestamp: number;
   accessCount: number;
 }
