@@ -81,7 +81,7 @@ describe('plugin manager', () => {
       onReload: () => {
         reloadCount += 1;
       },
-      setTimer: (() => 1) as typeof setInterval,
+      setTimer: (() => 1) as unknown as typeof setInterval,
       clearTimer: () => undefined,
     });
 
