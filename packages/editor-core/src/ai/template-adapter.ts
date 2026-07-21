@@ -4,157 +4,85 @@
  * Analyzes media assets (duration, visual complexity, audio features)
  * and automatically adapts EditingTemplate parameters to fit the content.
  *
- * Pipeline:
- * 1. Analyze media assets → MediaAnalysis
- * 2. Map analysis dimensions → adaptation adjustments
- * 3. Apply adjustments to template → TemplateAdaptationResult
- * 4. Convenience: one-step smart adaptation from project + template
- *
+ * Pipeline: analyze media -> map dimensions -> apply adjustments -> return result
  * Design: pure functions, immutable operations, no classes.
  */
 
 import type {
   EditingTemplate,
-  TemplateClip,
-  TemplateKeyframe,
   TemplateAudioLayout,
   TemplateAudioMix,
   TemplateTrack,
 } from '../models/template-schema';
-import type { Project, Clip, MediaAsset } from '../model-types';
+import type { Project, MediaAsset } from '../model-types';
 
-// ─── Media Analysis ────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────
 
-/** Audio feature profile extracted from media */
+/** Audio feature profile extracted from media metadata */
 export interface AudioFeatures {
-  /** Average loudness in dB */
   avgLoudnessDb: number;
-  /** Peak loudness in dB */
   peakLoudnessDb: number;
-  /** Dynamic range (peak - average) in dB */
   dynamicRangeDb: number;
-  /** Dominant frequency band: 'bass' | 'mid' | 'treble' */
   dominantBand: 'bass' | 'mid' | 'treble';
-  /** Beat density: beats per second (0 if undetectable) */
   beatsPerSecond: number;
-  /** Whether the audio contains speech */
   hasSpeech: boolean;
-  /** Signal-to-noise ratio estimate in dB */
   snrDb: number;
 }
 
-/** Visual complexity metrics for a single frame or region */
+/** Visual complexity metrics (0-1 scale) */
 export interface VisualComplexity {
-  /** Edge density 0-1 (higher = more detail) */
   edgeDensity: number;
-  /** Color variance 0-1 (higher = more colorful) */
   colorVariance: number;
-  /** Motion estimate 0-1 (higher = more motion between frames) */
   motionIntensity: number;
-  /** Overall complexity score 0-1 */
   overallScore: number;
 }
 
-/** Result of analyzing a media asset */
+/** Result of analyzing a single media asset */
 export interface MediaAnalysis {
-  /** Source media asset ID */
   mediaId: string;
-  /** Duration in seconds */
   durationSec: number;
-  /** Resolution width */
   width: number;
-  /** Resolution height */
   height: number;
-  /** Frame rate (0 if unknown) */
   frameRate: number;
-  /** Whether the asset has an audio track */
   hasAudio: boolean;
-  /** Visual complexity metrics (null for audio-only) */
   visualComplexity: VisualComplexity | null;
-  /** Audio features (null if no audio track) */
   audioFeatures: AudioFeatures | null;
 }
 
-// ─── Adaptation Result ─────────────────────────────────────────────
-
-/** Describes a single adaptation change applied to a clip */
+/** A single adaptation change (clip or audio level) */
 export interface AdaptationChange {
-  /** Track name where the clip resides */
-  trackName: string;
-  /** Index of the clip within the track */
-  clipIndex: number;
-  /** What was adapted */
-  field: 'durationSec' | 'speed' | 'opacity' | 'volume' | 'effectIntensity';
-  /** Original value */
+  /** Target identifier: track name for clips, role name for audio */
+  target: string;
+  /** Index within the target (clip index, or -1 for track-level) */
+  index: number;
+  field: string;
   originalValue: number;
-  /** New value after adaptation */
   adaptedValue: number;
-  /** Reason for the change */
-  reason: string;
-}
-
-/** Describes an audio layout adaptation */
-export interface AudioAdaptationChange {
-  /** Role of the audio track */
-  role: string;
-  /** What was adapted */
-  field: 'volumeDb' | 'fadeInSec' | 'fadeOutSec' | 'duckAttenuationDb' | 'masterLoudnessTarget';
-  /** Original value */
-  originalValue: number;
-  /** New value after adaptation */
-  adaptedValue: number;
-  /** Reason for the change */
   reason: string;
 }
 
 /** Complete result of template adaptation */
 export interface TemplateAdaptationResult {
-  /** The adapted template (immutable copy) */
   template: EditingTemplate;
-  /** Summary of clip-level changes */
-  clipChanges: AdaptationChange[];
-  /** Summary of audio layout changes */
-  audioChanges: AudioAdaptationChange[];
-  /** Total duration after adaptation in seconds */
+  changes: AdaptationChange[];
   adaptedDurationSec: number;
-  /** Human-readable summary */
   summary: string;
 }
 
-// ─── Analysis Constants ────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────
 
-const COMPLEXITY_THRESHOLDS = {
-  low: 0.3,
-  medium: 0.6,
-  high: 0.85,
-} as const;
+const COMPLEXITY = { low: 0.3, medium: 0.6, high: 0.85 } as const;
+const SCALE = { min: 0.5, max: 2.0 } as const;
+const EFFECT_FACTOR = { low: 0.4, med: 1.0, high: 0.75 } as const;
 
-const DURATION_RATIO = {
-  minScale: 0.5,
-  maxScale: 2.0,
-} as const;
-
-const EFFECT_SCALE = {
-  /** At low complexity, effects scale to this factor */
-  lowComplexity: 0.4,
-  /** At medium complexity, effects stay at 1.0 */
-  mediumComplexity: 1.0,
-  /** At high complexity, effects reduce to avoid visual noise */
-  highComplexity: 0.75,
-} as const;
-
-// ─── Media Analysis ────────────────────────────────────────────────
+// ─── Public API ────────────────────────────────────────────────────
 
 /**
  * Analyze a single media asset and extract content features.
- * Uses available metadata; visual/audio heuristics are estimated from properties.
- *
- * @param media - The media asset to analyze
- * @returns Analysis result with duration, visual complexity, and audio features
+ * Uses available metadata for heuristic estimation of visual/audio properties.
  */
 export function analyzeMedia(media: MediaAsset): MediaAnalysis {
   const hasAudio = media.hasAudio === true || media.type === 'audio';
-
   return {
     mediaId: media.id,
     durationSec: media.duration,
@@ -162,71 +90,42 @@ export function analyzeMedia(media: MediaAsset): MediaAnalysis {
     height: media.height,
     frameRate: media.frameRate ?? 0,
     hasAudio,
-    visualComplexity: media.type !== 'audio' ? estimateVisualComplexity(media) : null,
-    audioFeatures: hasAudio ? estimateAudioFeatures(media) : null,
+    visualComplexity: media.type !== 'audio' ? estimateVisual(media) : null,
+    audioFeatures: hasAudio ? estimateAudio(media) : null,
   };
 }
 
-/**
- * Analyze multiple media assets and return individual analyses.
- *
- * @param mediaAssets - Array of media assets
- * @returns Array of analysis results
- */
-export function analyzeMediaBatch(mediaAssets: readonly MediaAsset[]): readonly MediaAnalysis[] {
-  return mediaAssets.map(analyzeMedia);
+/** Analyze multiple media assets. */
+export function analyzeMediaBatch(assets: readonly MediaAsset[]): readonly MediaAnalysis[] {
+  return assets.map(analyzeMedia);
 }
 
-// ─── Template Adaptation ───────────────────────────────────────────
-
 /**
- * Adapt a template to fit the analyzed media content.
+ * Adapt a template to fit analyzed media content.
  *
- * Adjustments:
- * - **Duration**: scales clip durations so the total matches the media duration,
- *   respecting flexible vs fixed clips.
- * - **Visual complexity**: adjusts effect intensity — reduces for complex footage
- *   (avoid visual noise) and for simple footage (avoid over-processing).
- * - **Audio features**: adjusts audio layout volumes and dynamics to match
- *   the source audio's loudness profile.
- *
- * @param template - The source template to adapt
- * @param analysis - Media analysis result (typically the primary video asset)
- * @returns Adaptation result with adapted template and change log
+ * - **Duration**: scales flexible clip durations to match media length
+ * - **Visual complexity**: adjusts effect intensity to avoid over/under-processing
+ * - **Audio**: adjusts volumes, ducking, fades to match source audio profile
  */
 export function adaptTemplateToContent(
   template: EditingTemplate,
   analysis: MediaAnalysis,
 ): TemplateAdaptationResult {
-  const clipChanges: AdaptationChange[] = [];
-  const audioChanges: AudioAdaptationChange[] = [];
+  const changes: AdaptationChange[] = [];
 
-  // Step 1: Duration adaptation
-  const { tracks: durationTracks, changes: durationChanges } = adaptDurations(
-    template.tracks,
-    analysis.durationSec,
-  );
-  clipChanges.push(...durationChanges);
+  // Duration adaptation
+  const tracks1 = adaptDurations(template.tracks, analysis.durationSec, changes);
 
-  // Step 2: Visual complexity adaptation
-  const { tracks: visualTracks, changes: visualChanges } = adaptVisualEffects(
-    durationTracks,
-    analysis.visualComplexity,
-  );
-  clipChanges.push(...visualChanges);
+  // Visual complexity adaptation
+  const tracks2 = adaptVisualEffects(tracks1, analysis.visualComplexity, changes);
 
-  // Step 3: Audio adaptation
-  const { audioLayout: adaptedAudio, changes: audioLayoutChanges } = adaptAudioLayout(
-    template.audioLayout,
-    analysis.audioFeatures,
-    analysis.durationSec,
-  );
-  audioChanges.push(...audioLayoutChanges);
+  // Audio layout adaptation
+  const audioLayout = adaptAudio(template.audioLayout, analysis.audioFeatures, changes);
 
-  const adaptedTemplate: EditingTemplate = {
+  const adapted: EditingTemplate = {
     ...template,
-    tracks: visualTracks,
-    audioLayout: adaptedAudio,
+    tracks: tracks2,
+    audioLayout,
     metadata: {
       ...template.metadata,
       estimatedDurationSec: analysis.durationSec,
@@ -234,392 +133,243 @@ export function adaptTemplateToContent(
     },
   };
 
-  const totalChanges = clipChanges.length + audioChanges.length;
-
   return {
-    template: adaptedTemplate,
-    clipChanges,
-    audioChanges,
+    template: adapted,
+    changes,
     adaptedDurationSec: analysis.durationSec,
-    summary: buildSummary(analysis, totalChanges, clipChanges.length, audioChanges.length),
+    summary: buildSummary(analysis, changes.length),
   };
 }
 
-// ─── Smart Adaptation ──────────────────────────────────────────────
-
 /**
- * One-click smart adaptation: analyzes the primary video media in the project
- * and adapts the template to fit it.
- *
- * Selects the first video asset as the primary reference. If no video asset
- * exists, falls back to the first audio asset. Returns null if no media exists.
- *
- * @param project - The project containing media assets
- * @param template - The template to adapt
- * @returns Adaptation result, or null if no suitable media found
+ * One-click smart adaptation: selects the primary media from the project
+ * (video > image > audio) and adapts the template to fit it.
+ * Returns null if no suitable media exists.
  */
 export function createSmartAdaptation(
   project: Project,
   template: EditingTemplate,
 ): TemplateAdaptationResult | null {
-  const primaryMedia = selectPrimaryMedia(project.media);
-  if (!primaryMedia) return null;
-
-  const analysis = analyzeMedia(primaryMedia);
-  return adaptTemplateToContent(template, analysis);
+  const primary = selectPrimaryMedia(project.media);
+  if (!primary) return null;
+  return adaptTemplateToContent(template, analyzeMedia(primary));
 }
 
 // ─── Duration Adaptation ───────────────────────────────────────────
 
-interface DurationAdaptResult {
-  tracks: readonly TemplateTrack[];
-  changes: AdaptationChange[];
-}
-
 function adaptDurations(
   tracks: readonly TemplateTrack[],
-  targetDurationSec: number,
-): DurationAdaptResult {
-  const changes: AdaptationChange[] = [];
+  targetSec: number,
+  changes: AdaptationChange[],
+): readonly TemplateTrack[] {
+  const flexTotal = tracks.reduce((sum, t) =>
+    sum + t.clips.filter((c) => c.flexibleDuration).reduce((s, c) => s + c.durationSec, 0), 0);
 
-  // Calculate current total duration from flexible clips
-  const totalFlexibleDuration = tracks.reduce((sum, track) => {
-    return sum + track.clips
-      .filter((c) => c.flexibleDuration)
-      .reduce((s, c) => s + c.durationSec, 0);
-  }, 0);
+  if (flexTotal <= 0) return tracks;
 
-  if (totalFlexibleDuration <= 0) {
-    return { tracks, changes };
-  }
+  const factor = clamp(targetSec / flexTotal, SCALE.min, SCALE.max);
+  if (Math.abs(factor - 1.0) < 0.01) return tracks;
 
-  const scaleFactor = clamp(
-    targetDurationSec / totalFlexibleDuration,
-    DURATION_RATIO.minScale,
-    DURATION_RATIO.maxScale,
-  );
-
-  const adaptedTracks = tracks.map((track) => {
-    const adaptedClips = track.clips.map((clip, index) => {
+  return tracks.map((track) => ({
+    ...track,
+    clips: track.clips.map((clip, i) => {
       if (!clip.flexibleDuration) return clip;
-
-      const newDuration = round2(clip.durationSec * scaleFactor);
-      if (Math.abs(newDuration - clip.durationSec) < 0.01) return clip;
-
+      const newDur = r2(clip.durationSec * factor);
+      if (Math.abs(newDur - clip.durationSec) < 0.01) return clip;
       changes.push({
-        trackName: track.name,
-        clipIndex: index,
-        field: 'durationSec',
-        originalValue: clip.durationSec,
-        adaptedValue: newDuration,
-        reason: `Duration scaled by ${scaleFactor.toFixed(2)}x to fit ${targetDurationSec.toFixed(1)}s content`,
+        target: track.name, index: i, field: 'durationSec',
+        originalValue: clip.durationSec, adaptedValue: newDur,
+        reason: `Scaled ${factor.toFixed(2)}x to fit ${targetSec.toFixed(1)}s`,
       });
-
-      return { ...clip, durationSec: newDuration };
-    });
-
-    return { ...track, clips: adaptedClips };
-  });
-
-  return { tracks: adaptedTracks, changes };
+      return { ...clip, durationSec: newDur };
+    }),
+  }));
 }
 
 // ─── Visual Complexity Adaptation ──────────────────────────────────
 
-interface VisualAdaptResult {
-  tracks: readonly TemplateTrack[];
-  changes: AdaptationChange[];
-}
-
 function adaptVisualEffects(
   tracks: readonly TemplateTrack[],
-  complexity: VisualComplexity | null,
-): VisualAdaptResult {
-  if (!complexity) return { tracks, changes: [] };
+  vc: VisualComplexity | null,
+  changes: AdaptationChange[],
+): readonly TemplateTrack[] {
+  if (!vc) return tracks;
+  const f = effectScale(vc.overallScore);
+  if (Math.abs(f - 1.0) < 0.05) return tracks;
 
-  const changes: AdaptationChange[] = [];
-  const effectFactor = computeEffectScaleFactor(complexity.overallScore);
-
-  // No adjustment needed if factor is ~1.0
-  if (Math.abs(effectFactor - 1.0) < 0.05) {
-    return { tracks, changes };
-  }
-
-  const adaptedTracks = tracks.map((track) => {
-    const adaptedClips = track.clips.map((clip, clipIndex) => {
+  return tracks.map((track) => ({
+    ...track,
+    clips: track.clips.map((clip, ci) => {
       if (clip.effects.length === 0) return clip;
-
-      const adaptedEffects = clip.effects.map((effect) => ({
-        ...effect,
-        params: scaleEffectParams(effect.params, effectFactor),
-      }));
-
       changes.push({
-        trackName: track.name,
-        clipIndex,
-        field: 'effectIntensity',
-        originalValue: 1.0,
-        adaptedValue: effectFactor,
-        reason: describeComplexityAdjustment(complexity.overallScore, effectFactor),
+        target: track.name, index: ci, field: 'effectIntensity',
+        originalValue: 1.0, adaptedValue: f,
+        reason: complexityReason(vc.overallScore, f),
       });
-
-      return { ...clip, effects: adaptedEffects };
-    });
-
-    return { ...track, clips: adaptedClips };
-  });
-
-  return { tracks: adaptedTracks, changes };
+      return {
+        ...clip,
+        effects: clip.effects.map((e) => ({
+          ...e,
+          params: mapValues(e.params, (v) => typeof v === 'number' ? r2(v * f) : v),
+        })),
+      };
+    }),
+  }));
 }
 
-function computeEffectScaleFactor(complexityScore: number): number {
-  if (complexityScore < COMPLEXITY_THRESHOLDS.low) {
-    return EFFECT_SCALE.lowComplexity;
+function effectScale(score: number): number {
+  if (score < COMPLEXITY.low) return EFFECT_FACTOR.low;
+  if (score < COMPLEXITY.medium) return EFFECT_FACTOR.med;
+  if (score < COMPLEXITY.high) {
+    const t = (score - COMPLEXITY.medium) / (COMPLEXITY.high - COMPLEXITY.medium);
+    return lerp(EFFECT_FACTOR.med, EFFECT_FACTOR.high, t);
   }
-  if (complexityScore < COMPLEXITY_THRESHOLDS.medium) {
-    return EFFECT_SCALE.mediumComplexity;
-  }
-  if (complexityScore < COMPLEXITY_THRESHOLDS.high) {
-    // Linear interpolation between medium and high
-    const t = (complexityScore - COMPLEXITY_THRESHOLDS.medium) /
-      (COMPLEXITY_THRESHOLDS.high - COMPLEXITY_THRESHOLDS.medium);
-    return lerp(EFFECT_SCALE.mediumComplexity, EFFECT_SCALE.highComplexity, t);
-  }
-  return EFFECT_SCALE.highComplexity;
+  return EFFECT_FACTOR.high;
 }
 
-function describeComplexityAdjustment(score: number, factor: number): string {
-  if (score < COMPLEXITY_THRESHOLDS.low) {
-    return `Simple footage (score ${score.toFixed(2)}): reduced effects to ${factor.toFixed(2)}x to avoid over-processing`;
-  }
-  if (score > COMPLEXITY_THRESHOLDS.high) {
-    return `Complex footage (score ${score.toFixed(2)}): reduced effects to ${factor.toFixed(2)}x to avoid visual noise`;
-  }
-  return `Moderate footage (score ${score.toFixed(2)}): adjusted effects to ${factor.toFixed(2)}x`;
-}
-
-function scaleEffectParams(
-  params: Record<string, number | string>,
-  factor: number,
-): Record<string, number | string> {
-  const scaled: Record<string, number | string> = {};
-  for (const [key, value] of Object.entries(params)) {
-    scaled[key] = typeof value === 'number' ? round2(value * factor) : value;
-  }
-  return scaled;
+function complexityReason(score: number, factor: number): string {
+  const label = score < COMPLEXITY.low ? 'Simple' : score > COMPLEXITY.high ? 'Complex' : 'Moderate';
+  return `${label} footage (score ${score.toFixed(2)}): effects adjusted to ${factor.toFixed(2)}x`;
 }
 
 // ─── Audio Layout Adaptation ───────────────────────────────────────
 
-interface AudioAdaptResult {
-  audioLayout: TemplateAudioLayout;
-  changes: AudioAdaptationChange[];
-}
-
-function adaptAudioLayout(
+function adaptAudio(
   layout: TemplateAudioLayout,
-  audioFeatures: AudioFeatures | null,
-  durationSec: number,
-): AudioAdaptResult {
-  if (!audioFeatures) {
-    return { audioLayout: layout, changes: [] };
-  }
+  af: AudioFeatures | null,
+  changes: AdaptationChange[],
+): TemplateAudioLayout {
+  if (!af) return layout;
 
-  const changes: AudioAdaptationChange[] = [];
+  const tracks = layout.tracks.map((t) => adaptAudioMix(t, af, changes));
 
-  // Adapt track volumes based on source loudness
-  const adaptedTracks = layout.tracks.map((track) => adaptAudioTrack(track, audioFeatures, changes));
+  const targetLufs = af.dynamicRangeDb > 20 ? -16 : af.dynamicRangeDb > 12 ? -14 : -12;
+  let masterLufs = layout.masterLoudnessTarget;
 
-  // Adapt master loudness target based on dynamic range
-  const targetLoudness = computeMasterLoudness(audioFeatures);
-  let masterLoudnessTarget = layout.masterLoudnessTarget;
-
-  if (Math.abs(targetLoudness - masterLoudnessTarget) > 1) {
+  if (Math.abs(targetLufs - masterLufs) > 1) {
     changes.push({
-      role: 'master',
-      field: 'masterLoudnessTarget',
-      originalValue: masterLoudnessTarget,
-      adaptedValue: targetLoudness,
-      reason: `Adjusted master target from ${masterLoudnessTarget} to ${targetLoudness} LUFS based on source dynamic range ${audioFeatures.dynamicRangeDb.toFixed(1)} dB`,
+      target: 'master', index: -1, field: 'masterLoudnessTarget',
+      originalValue: masterLufs, adaptedValue: targetLufs,
+      reason: `Master LUFS adjusted to ${targetLufs} (dynamic range ${af.dynamicRangeDb.toFixed(1)} dB)`,
     });
-    masterLoudnessTarget = targetLoudness;
+    masterLufs = targetLufs;
   }
 
-  return {
-    audioLayout: {
-      ...layout,
-      tracks: adaptedTracks,
-      masterLoudnessTarget,
-    },
-    changes,
-  };
+  return { ...layout, tracks, masterLoudnessTarget: masterLufs };
 }
 
-function adaptAudioTrack(
-  track: TemplateAudioMix,
-  features: AudioFeatures,
-  changes: AudioAdaptationChange[],
+function adaptAudioMix(
+  mix: TemplateAudioMix,
+  af: AudioFeatures,
+  changes: AdaptationChange[],
 ): TemplateAudioMix {
-  let adapted = { ...track };
+  let m = { ...mix };
 
-  // Adjust voice track volume to match source loudness
-  if (track.role === 'voice' && features.hasSpeech) {
-    const targetVol = clamp(features.avgLoudnessDb, -24, -6);
-    if (Math.abs(targetVol - track.volumeDb) > 2) {
+  // Voice volume matched to source speech loudness
+  if (mix.role === 'voice' && af.hasSpeech) {
+    const vol = clamp(af.avgLoudnessDb, -24, -6);
+    if (Math.abs(vol - mix.volumeDb) > 2) {
       changes.push({
-        role: 'voice',
-        field: 'volumeDb',
-        originalValue: track.volumeDb,
-        adaptedValue: targetVol,
-        reason: `Voice volume adjusted to ${targetVol} dB to match source speech loudness`,
+        target: 'voice', index: -1, field: 'volumeDb',
+        originalValue: mix.volumeDb, adaptedValue: vol,
+        reason: `Voice volume matched to source ${vol} dB`,
       });
-      adapted = { ...adapted, volumeDb: targetVol };
+      m = { ...m, volumeDb: vol };
     }
   }
 
-  // Adjust music ducking based on speech presence
-  if (track.role === 'music' && features.hasSpeech) {
-    const targetDuck = features.dynamicRangeDb > 15 ? 12 : 8;
-    if (track.duckAttenuationDb !== undefined &&
-        Math.abs(targetDuck - track.duckAttenuationDb) > 1) {
+  // Music ducking strength for speech clarity
+  if (mix.role === 'music' && af.hasSpeech && mix.duckAttenuationDb !== undefined) {
+    const duck = af.dynamicRangeDb > 15 ? 12 : 8;
+    if (Math.abs(duck - mix.duckAttenuationDb) > 1) {
       changes.push({
-        role: 'music',
-        field: 'duckAttenuationDb',
-        originalValue: track.duckAttenuationDb,
-        adaptedValue: targetDuck,
-        reason: `Music ducking increased to ${targetDuck} dB for clear speech`,
+        target: 'music', index: -1, field: 'duckAttenuationDb',
+        originalValue: mix.duckAttenuationDb, adaptedValue: duck,
+        reason: `Music ducking set to ${duck} dB for speech clarity`,
       });
-      adapted = { ...adapted, duckAttenuationDb: targetDuck };
+      m = { ...m, duckAttenuationDb: duck };
     }
   }
 
-  // Adjust fade durations based on beat density
-  if (features.beatsPerSecond > 0) {
-    const beatInterval = 1 / features.beatsPerSecond;
-    const targetFade = round2(Math.min(beatInterval * 0.5, 2.0));
-
-    if (Math.abs(targetFade - track.fadeInSec) > 0.3) {
+  // Fade alignment to beat interval
+  if (af.beatsPerSecond > 0) {
+    const fade = r2(Math.min(0.5 / af.beatsPerSecond, 2.0));
+    if (Math.abs(fade - mix.fadeInSec) > 0.3) {
       changes.push({
-        role: track.role,
-        field: 'fadeInSec',
-        originalValue: track.fadeInSec,
-        adaptedValue: targetFade,
-        reason: `Fade-in aligned to beat interval (${beatInterval.toFixed(2)}s)`,
+        target: mix.role, index: -1, field: 'fadeInSec',
+        originalValue: mix.fadeInSec, adaptedValue: fade,
+        reason: `Fade-in aligned to beat interval`,
       });
-      adapted = { ...adapted, fadeInSec: targetFade };
+      m = { ...m, fadeInSec: fade };
     }
-
-    if (Math.abs(targetFade - track.fadeOutSec) > 0.3) {
+    if (Math.abs(fade - mix.fadeOutSec) > 0.3) {
       changes.push({
-        role: track.role,
-        field: 'fadeOutSec',
-        originalValue: track.fadeOutSec,
-        adaptedValue: targetFade,
-        reason: `Fade-out aligned to beat interval (${beatInterval.toFixed(2)}s)`,
+        target: mix.role, index: -1, field: 'fadeOutSec',
+        originalValue: mix.fadeOutSec, adaptedValue: fade,
+        reason: `Fade-out aligned to beat interval`,
       });
-      adapted = { ...adapted, fadeOutSec: targetFade };
+      m = { ...m, fadeOutSec: fade };
     }
   }
 
-  return adapted;
+  return m;
 }
 
-function computeMasterLoudness(features: AudioFeatures): number {
-  // Wide dynamic range → more headroom needed → lower target
-  if (features.dynamicRangeDb > 20) return -16;
-  if (features.dynamicRangeDb > 12) return -14;
-  // Tight dynamics (pop music, podcasts) → louder target
-  return -12;
-}
+// ─── Estimation Heuristics ─────────────────────────────────────────
 
-// ─── Helpers ───────────────────────────────────────────────────────
-
-function estimateVisualComplexity(media: MediaAsset): VisualComplexity {
-  // Heuristic estimation based on resolution and codec
-  const pixels = media.width * media.height;
-  const resolutionFactor = clamp(pixels / (3840 * 2160), 0, 1);
-
-  // Higher resolution tends to have more detail
-  const edgeDensity = clamp(resolutionFactor * 0.6 + 0.2, 0, 1);
-
-  // Estimate motion from frame rate
+function estimateVisual(media: MediaAsset): VisualComplexity {
+  const px = media.width * media.height;
+  const resFactor = clamp(px / (3840 * 2160), 0, 1);
+  const edge = clamp(resFactor * 0.6 + 0.2, 0, 1);
   const fps = media.frameRate ?? 30;
-  const motionIntensity = clamp((fps - 15) / 45, 0.1, 0.9);
+  const motion = clamp((fps - 15) / 45, 0.1, 0.9);
+  const color = media.type === 'video' ? 0.5 : 0.3;
+  const overall = edge * 0.4 + color * 0.3 + motion * 0.3;
+  return { edgeDensity: r2(edge), colorVariance: r2(color), motionIntensity: r2(motion), overallScore: r2(overall) };
+}
 
-  // Color variance heuristic: higher for video, moderate for image
-  const colorVariance = media.type === 'video' ? 0.5 : 0.3;
-
-  const overallScore = edgeDensity * 0.4 + colorVariance * 0.3 + motionIntensity * 0.3;
-
+function estimateAudio(media: MediaAsset): AudioFeatures {
+  const sr = media.audioSampleRate ?? 44100;
+  const ch = media.audioChannels ?? 2;
+  const band: AudioFeatures['dominantBand'] = sr >= 48000 ? 'treble' : sr >= 44100 ? 'mid' : 'bass';
   return {
-    edgeDensity: round2(edgeDensity),
-    colorVariance: round2(colorVariance),
-    motionIntensity: round2(motionIntensity),
-    overallScore: round2(overallScore),
+    avgLoudnessDb: -14, peakLoudnessDb: -3, dynamicRangeDb: 11,
+    dominantBand: band, beatsPerSecond: 0, hasSpeech: false, snrDb: ch >= 2 ? 30 : 20,
   };
 }
 
-function estimateAudioFeatures(media: MediaAsset): AudioFeatures {
-  // Heuristic estimation from metadata
-  const sampleRate = media.audioSampleRate ?? 44100;
-  const channels = media.audioChannels ?? 2;
+// ─── Utilities ─────────────────────────────────────────────────────
 
-  // Higher sample rate suggests higher quality audio with more treble content
-  const dominantBand: AudioFeatures['dominantBand'] =
-    sampleRate >= 48000 ? 'treble' : sampleRate >= 44100 ? 'mid' : 'bass';
-
-  return {
-    avgLoudnessDb: -14,
-    peakLoudnessDb: -3,
-    dynamicRangeDb: 11,
-    dominantBand,
-    beatsPerSecond: 0,
-    hasSpeech: false,
-    snrDb: channels >= 2 ? 30 : 20,
-  };
+function selectPrimaryMedia(assets: readonly MediaAsset[]): MediaAsset | null {
+  return assets.find((m) => m.type === 'video' && !m.missing)
+    ?? assets.find((m) => m.type === 'image' && !m.missing)
+    ?? assets.find((m) => m.type === 'audio' && !m.missing)
+    ?? null;
 }
 
-function selectPrimaryMedia(mediaAssets: readonly MediaAsset[]): MediaAsset | null {
-  if (mediaAssets.length === 0) return null;
-
-  // Prefer video, then image, then audio
-  const video = mediaAssets.find((m) => m.type === 'video' && !m.missing);
-  if (video) return video;
-
-  const image = mediaAssets.find((m) => m.type === 'image' && !m.missing);
-  if (image) return image;
-
-  const audio = mediaAssets.find((m) => m.type === 'audio' && !m.missing);
-  if (audio) return audio;
-
-  return null;
+function buildSummary(analysis: MediaAnalysis, changeCount: number): string {
+  const dur = analysis.durationSec.toFixed(1);
+  const cx = analysis.visualComplexity ? `${(analysis.visualComplexity.overallScore * 100).toFixed(0)}% complexity` : 'no visual';
+  return changeCount === 0
+    ? `No adaptation needed for ${dur}s content (${cx})`
+    : `Adapted ${dur}s content (${cx}): ${changeCount} adjustment(s)`;
 }
 
-function buildSummary(
-  analysis: MediaAnalysis,
-  totalChanges: number,
-  clipChanges: number,
-  audioChanges: number,
-): string {
-  const durationStr = analysis.durationSec.toFixed(1);
-  const complexityStr = analysis.visualComplexity
-    ? `complexity ${(analysis.visualComplexity.overallScore * 100).toFixed(0)}%`
-    : 'no visual';
-
-  if (totalChanges === 0) {
-    return `No adaptation needed for ${durationStr}s content (${complexityStr})`;
-  }
-
-  return `Adapted to ${durationStr}s content (${complexityStr}): ` +
-    `${clipChanges} clip adjustment(s), ${audioChanges} audio adjustment(s)`;
+function mapValues(
+  obj: Record<string, number | string>,
+  fn: (v: number | string) => number | string,
+): Record<string, number | string> {
+  const out: Record<string, number | string> = {};
+  for (const [k, v] of Object.entries(obj)) out[k] = fn(v);
+  return out;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
+function clamp(v: number, min: number, max: number): number {
+  return Math.min(Math.max(v, min), max);
 }
 
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
+function r2(v: number): number {
+  return Math.round(v * 100) / 100;
 }
 
 function lerp(a: number, b: number, t: number): number {
