@@ -20,8 +20,8 @@
 ### 2.1 新增测试（Headless + CLI）
 
 ```
-测试文件: 6 passed (6)
-测试用例: 46 passed (46)
+测试文件: 7 passed (7)
+测试用例: 84 passed (84)
 耗时: 1.41s
 ```
 
@@ -31,14 +31,15 @@
 | headless-renderer.test.ts | 5 | ✅ 全部通过 |
 | headless-ai-inference.test.ts | 18 | ✅ 全部通过 |
 | output.test.ts | 5 | ✅ 全部通过 |
-| workflow-engine.test.ts | 7 | ✅ 全部通过 |
+| workflow-engine.test.ts (cli) | 7 | ✅ 全部通过 |
+| workflow-engine.test.ts (editor-core) | 38 | ✅ 全部通过 |
 | cli-integration.test.ts | 6 | ✅ 全部通过 |
 
 ### 2.2 全量测试套件
 
 ```
 测试文件: 464 passed (464)
-测试用例: 7740 passed (7740)
+测试用例: 7741 passed (7741)
 耗时: 65.85s
 ```
 
