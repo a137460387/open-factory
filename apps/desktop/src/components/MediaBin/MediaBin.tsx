@@ -2021,51 +2021,6 @@ function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>, nav: M
   requestAnimationFrame(() => focusWhenReady(0));
 }
 
-function formatBytes(bytes?: number): string {
-  if (bytes === undefined || !Number.isFinite(bytes)) {
-    return zhCN.common.unavailable;
-  }
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = Math.max(0, bytes);
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
-function formatBitRate(bitRate?: number): string {
-  if (bitRate === undefined || !Number.isFinite(bitRate)) {
-    return zhCN.common.unavailable;
-  }
-  if (bitRate >= 1_000_000) {
-    return `${(bitRate / 1_000_000).toFixed(2)} Mbps`;
-  }
-  if (bitRate >= 1_000) {
-    return `${(bitRate / 1_000).toFixed(1)} kbps`;
-  }
-  return `${Math.round(bitRate)} bps`;
-}
-
-function formatDateTime(timestamp?: number): string {
-  if (timestamp === undefined || !Number.isFinite(timestamp)) {
-    return zhCN.common.unavailable;
-  }
-  return new Date(timestamp).toLocaleString();
-}
-
-function formatImportedAt(importedAt?: string): string {
-  if (!importedAt) {
-    return zhCN.common.unavailable;
-  }
-  const timestamp = Date.parse(importedAt);
-  if (!Number.isFinite(timestamp)) {
-    return zhCN.common.unavailable;
-  }
-  return new Date(timestamp).toLocaleDateString();
-}
-
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
   if (!element) {
