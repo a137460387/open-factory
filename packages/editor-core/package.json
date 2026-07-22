@@ -83,6 +83,14 @@
     "./headless": {
       "types": "./dist/headless/index.d.ts",
       "import": "./dist/headless/index.js"
+    },
+    "./utils/time": {
+      "types": "./dist/utils/time.d.ts",
+      "import": "./dist/utils/time.js"
+    },
+    "./utils/math": {
+      "types": "./dist/utils/math.d.ts",
+      "import": "./dist/utils/math.js"
     }
   },
   "scripts": {

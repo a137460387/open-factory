@@ -17,6 +17,9 @@ export default defineConfig({
     },
   },
   clearScreen: false,
+  worker: {
+    format: 'es',
+  },
   optimizeDeps: {
     esbuildOptions: {
       target: 'es2022',
@@ -36,6 +39,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('.worker.') || id.includes('worker-')) return undefined;
           const normalized = id.replace(/\\/g, '/');
           if (normalized.includes('/node_modules/@open-factory/editor-core/') || normalized.includes('/packages/editor-core/')) {
             if (/\/ai-[^/]+$/.test(normalized) || /\/ai\/[^/]+$/.test(normalized)) return 'editor-core-ai';
