@@ -20,6 +20,7 @@ import type {
 
 import { DEFAULT_RESOURCE_CONFIG } from './types';
 import { formatDurationMs } from '../utils/time';
+export { formatDurationMs } from '../utils/time';
 
 let resourceIdCounter = 0;
 

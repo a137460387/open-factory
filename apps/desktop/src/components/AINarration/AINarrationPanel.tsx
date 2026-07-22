@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Project, NarrationStyle, NarrationSegment } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import {
   NARRATION_STYLES,
   isProviderConfigured,
@@ -24,14 +25,6 @@ const STYLE_LABELS: Record<NarrationStyle, string> = {
 };
 
 type NarrationPhase = 'idle' | 'generating' | 'done';
-
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const total = Math.floor(seconds);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return String(m) + ':' + String(s).padStart(2, '0');
-}
 
 export function AINarrationPanel({ project, onClose }: { project: Project; onClose(): void }) {
   const providers = useAISettingsStore((s) => s.providers);

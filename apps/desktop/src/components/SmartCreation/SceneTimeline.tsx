@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Film } from 'lucide-react';
 import type { ContentSceneType } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { featureStrings } from '../../i18n/featureStrings';
 
 /** Scene boundary point from scene detection. */
@@ -26,12 +27,6 @@ const SCENE_COLORS: Record<ContentSceneType, string> = {
   dialogue: '#eab308',
   'close-up': '#a855f7',
 };
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export function SceneTimeline({ scenes, onJumpToTime }: SceneTimelineProps) {
   const t = featureStrings.smartCreation;

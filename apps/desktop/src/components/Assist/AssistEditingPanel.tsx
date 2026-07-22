@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Project, AssistEditingPreset, AssistEditingConfig, AssistEditingResult } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import {
   createDefaultAssistEditingConfig,
   applyAssistEditingPreset,
@@ -48,14 +49,6 @@ type Phase = 'idle' | 'generating' | 'done';
 /* ------------------------------------------------------------------ */
 /*  Helper                                                            */
 /* ------------------------------------------------------------------ */
-
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const total = Math.floor(seconds);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return String(m) + ':' + String(s).padStart(2, '0');
-}
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */

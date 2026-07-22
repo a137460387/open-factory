@@ -1,4 +1,5 @@
 import type { MediaAsset } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { Scissors, X } from 'lucide-react';
 import {
   useEffect,
@@ -311,15 +312,4 @@ function drawSelection(
 
 function formatDb(value: number | undefined, unit: string): string {
   return typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(1)} ${unit}` : zhCN.common.unavailable;
-}
-
-function formatTime(seconds: number): string {
-  const safeSeconds = Math.max(0, seconds);
-  const minutes = Math.floor(safeSeconds / 60)
-    .toString()
-    .padStart(2, '0');
-  const remaining = Math.floor(safeSeconds % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${minutes}:${remaining}`;
 }

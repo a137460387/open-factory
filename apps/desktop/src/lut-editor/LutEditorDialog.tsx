@@ -818,10 +818,6 @@ function sanitizeFileBaseName(name: string): string {
   );
 }
 
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-}
-
 function clampSigned(value: number): number {
-  return Math.min(1, Math.max(-1, Number.isFinite(value) ? value : 0));
+  return clamp(Number.isFinite(value) ? value : 0, -1, 1);
 }

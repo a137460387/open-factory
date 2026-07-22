@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EmotionPoint } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { featureStrings } from '../../i18n/featureStrings';
 export type { EmotionPoint } from '@open-factory/editor-core';
 
@@ -10,12 +11,6 @@ interface EmotionCurveChartProps {
 const CHART_WIDTH = 440;
 const CHART_HEIGHT = 140;
 const PADDING = { top: 12, right: 12, bottom: 24, left: 32 };
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export function EmotionCurveChart({ curve }: EmotionCurveChartProps) {
   const t = featureStrings.smartCreation;
