@@ -380,6 +380,9 @@ import { ThemePreviewButton, AudioVisualizationSection } from './components/Audi
 import { MonitoringSection, PostExportScriptSection } from './components/MonitoringAndPostScript';
 import { WatermarkSection } from './components/WatermarkSection';
 import { AIExportSuggestionPanel } from './components/AIExportSuggestionPanel';
+import { ReframeOffsetField, ReframePreviewBox } from './components/ReframePreview';
+import type { SequenceBatchPresetMode } from './components/SequenceBatchSection';
+import type { VersionWatermarkMode, VersionRangeMode, VersionedExportRowState } from './components/ExportVersionBatchSection';
 
 interface ExportDialogProps {
   project: Project;
@@ -393,24 +396,6 @@ interface ExportDialogProps {
 }
 
 type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';
-type SequenceBatchPresetMode = 'shared' | 'individual';
-type VersionWatermarkMode = 'inherit' | 'none' | 'text';
-type VersionRangeMode = 'default' | 'custom';
-
-interface VersionedExportRowState {
-  id: string;
-  enabled: boolean;
-  name: string;
-  presetId: string;
-  platform: string;
-  language: string;
-  rangeMode: VersionRangeMode;
-  rangeStart: number;
-  rangeDuration: number;
-  width: number;
-  height: number;
-  watermarkMode: VersionWatermarkMode;
-}
 
 const VERSIONED_BATCH_TEMPLATE_EXTENSION = 'ofbatch.json';
 const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
@@ -3706,72 +3691,6 @@ async function runCompletionAction(action: ExportCompletionAction, settings: Exp
       message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage,
     });
   }
-}
-
-function ReframeOffsetField({
-  label,
-  value,
-  axis,
-  setDraftSettings,
-}: {
-  label: string;
-  value: number;
-  axis: 'x' | 'y';
-  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
-}) {
-  return (
-    <label className="space-y-1 text-xs font-medium text-slate-600">
-      <span>{label}</span>
-      <div className="flex items-center gap-2">
-        <input
-          className="w-full accent-brand"
-          type="range"
-          min={-1}
-          max={1}
-          step={0.01}
-          value={value}
-          onChange={(event) => updateReframeOffset(setDraftSettings, axis, event.target.value)}
-          data-testid={`export-reframe-offset-${axis}`}
-        />
-        <span className="w-10 text-right tabular-nums">{value.toFixed(2)}</span>
-      </div>
-    </label>
-  );
-}
-
-function ReframePreviewBox({
-  aspect,
-  offsetX,
-  offsetY,
-}: {
-  aspect: TargetAspectRatio;
-  offsetX: number;
-  offsetY: number;
-}) {
-  const normalized = normalizeTargetAspectRatio(aspect);
-  const ratioClass =
-    normalized === '9:16'
-      ? 'aspect-[9/16]'
-      : normalized === '1:1'
-        ? 'aspect-square'
-        : normalized === '4:5'
-          ? 'aspect-[4/5]'
-          : normalized === '21:9'
-            ? 'aspect-[21/9]'
-            : 'aspect-video';
-  const translateX = `${clampReframeOffset(offsetX) * 18}%`;
-  const translateY = `${clampReframeOffset(offsetY) * 18}%`;
-  return (
-    <div className="flex items-center justify-center rounded-md bg-panel p-2" data-testid="export-reframe-preview">
-      <div className="relative h-24 w-full max-w-32 overflow-hidden rounded border border-line bg-slate-200">
-        <div className="absolute inset-2 rounded bg-gradient-to-br from-slate-500 via-slate-400 to-slate-600" />
-        <div
-          className={`absolute left-1/2 top-1/2 max-h-[88%] w-[58%] -translate-x-1/2 -translate-y-1/2 border-2 border-brand bg-brand/10 ${ratioClass}`}
-          style={{ transform: `translate(calc(-50% + ${translateX}), calc(-50% + ${translateY}))` }}
-        />
-      </div>
-    </div>
-  );
 }
 
 function getLastExportDurationSeconds(history: ExportTaskHistoryEntry[]): number | undefined {

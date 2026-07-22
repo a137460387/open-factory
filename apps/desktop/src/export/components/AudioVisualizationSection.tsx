@@ -8,6 +8,7 @@ import {
   type ExportAudioVisualizationStyle,
 } from '@open-factory/editor-core';
 import { useState, useEffect, useMemo, useRef, type Dispatch, type SetStateAction, type ReactNode } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
 import { Save, Trash2 } from 'lucide-react';
 import { PresetSelectField, PresetColorField } from './PresetFields';

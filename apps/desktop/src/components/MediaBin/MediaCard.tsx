@@ -118,13 +118,25 @@ function labelColorToHex(color: MediaLabelColor): string {
   return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
 }
 
-function formatFrameRateLabel(frameRate: number): string {
+export function formatFrameRateLabel(frameRate: number): string {
   const rounded = Math.round(frameRate * 100) / 100;
   return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
 }
 
-function formatMediaColorProfile(asset: MediaAsset): string {
+export function formatMediaColorProfile(asset: MediaAsset): string {
   return asset.colorProfile?.label ?? zhCN.common.unavailable;
+}
+
+export function formatMediaFormat(asset: MediaAsset): string {
+  const extension = asset.name.includes('.') ? asset.name.split('.').pop()?.toUpperCase() : undefined;
+  return extension ? `${zhCN.mediaBin.assetType[asset.type]} / ${extension}` : zhCN.mediaBin.assetType[asset.type];
+}
+
+export function formatMediaResolution(asset: MediaAsset): string {
+  if (asset.type === 'audio') {
+    return zhCN.common.unavailable;
+  }
+  return asset.width && asset.height ? `${asset.width} x ${asset.height}` : zhCN.common.unavailable;
 }
 
 function formatPreciseFrameRate(frameRate: number): string {
@@ -226,7 +238,7 @@ function ProxyStatus({
   );
 }
 
-function IconPreview({ type }: { type: MediaAsset['type'] }) {
+export function IconPreview({ type }: { type: MediaAsset['type'] }) {
   const Icon = type === 'video' ? FileVideo2 : type === 'audio' ? FileAudio2 : FileImage;
   return (
     <div className="flex h-full items-center justify-center text-[var(--color-text-muted)]">

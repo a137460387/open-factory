@@ -8,13 +8,42 @@ import {
   EXPORT_SUGGESTION_CACHE_TTL_MS,
   type AIExportSuggestion,
   type Project,
+  type ExportLoudnessNormalization,
+  type ExportSubtitleFormat,
 } from '@open-factory/editor-core';
 import { useState, type Dispatch, type SetStateAction } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
 import { Loader2 } from 'lucide-react';
 import { priorityLabel } from '../lib/exportFormatHelpers';
 import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
+
+function applyExportSuggestionToDraft(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  suggestion: AIExportSuggestion,
+  project: Project,
+) {
+  const param = suggestion.parameter;
+  const value = suggestion.suggestedValue;
+  setDraftSettings((prev) => {
+    if (param === 'videoBitrate') return { ...prev, videoBitrate: value };
+    if (param === 'audioBitrate') return { ...prev, audioBitrate: value };
+    if (param === 'fps') return { ...prev, fps: Number(value) || prev.fps };
+    if (param === 'encoder') return { ...prev, videoCodec: value };
+    if (param === 'loudnessNormalization')
+      return { ...prev, loudnessNormalization: value as ExportLoudnessNormalization };
+    if (param === 'subtitleFormat') return { ...prev, subtitleFormat: value as ExportSubtitleFormat };
+    if (param === 'resolution') {
+      const m = value.match(/(\d+)\s*[x×]\s*(\d+)/);
+      if (m) return { ...prev, width: Number(m[1]), height: Number(m[2]) };
+    }
+    if (param === 'hardwareEncoding') return { ...prev, hardwareEncoding: value === 'true' || value === 'yes' };
+    return prev;
+  });
+}
+
+let aiExportSuggestionCache: { key: string; ts: number; data: AIExportSuggestion[] } | null = null;
 
 export function AIExportSuggestionPanel({
   project,

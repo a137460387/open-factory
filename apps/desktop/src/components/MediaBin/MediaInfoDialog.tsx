@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { MediaAnalysis, MediaAsset } from '@open-factory/editor-core';
+import type { MediaAsset } from '@open-factory/editor-core';
+import type { MediaAnalysis } from '../../lib/tauri-bridge';
 import { zhCN } from '../../i18n/strings';
 
 export type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };

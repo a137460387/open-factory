@@ -1,8 +1,10 @@
 import {
   normalizeExportColorManagement,
   EXPORT_COLOR_SPACES,
+  type ExportColorSpace,
 } from '@open-factory/editor-core';
 import { type Dispatch, type SetStateAction } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
 import { PresetSelectField, PresetCheckboxField } from './PresetFields';
 import {

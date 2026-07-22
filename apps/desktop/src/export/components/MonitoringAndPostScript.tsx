@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
 import { PresetColorField, PresetCheckboxField, WatermarkNumberField } from './PresetFields';
 import {

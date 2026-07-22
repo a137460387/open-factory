@@ -1,4 +1,5 @@
 import { type Dispatch, type SetStateAction } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
 import { FolderOpen } from 'lucide-react';
 import { PresetTextField, PresetCheckboxField, WatermarkNumberField } from './PresetFields';
