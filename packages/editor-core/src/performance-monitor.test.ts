@@ -242,7 +242,7 @@ describe('performance-monitor', () => {
 
     it('合并自定义阈值', () => {
       const config = normalizePerformanceMonitorConfig({
-        thresholds: { memoryBytes: 512 * 1024 * 1024 },
+        thresholds: { memoryBytes: 512 * 1024 * 1024, undoHistorySize: 500, renderFps: 30 },
       });
       expect(config.thresholds.memoryBytes).toBe(512 * 1024 * 1024);
       expect(config.thresholds.undoHistorySize).toBe(thresholds.undoHistorySize);
@@ -267,15 +267,15 @@ describe('performance-monitor', () => {
     });
 
     it('钳制 undoHistorySize 最小值', () => {
-      const config = normalizePerformanceMonitorConfig({ thresholds: { undoHistorySize: 1 } });
+      const config = normalizePerformanceMonitorConfig({ thresholds: { undoHistorySize: 1, memoryBytes: 100 * 1024 * 1024, renderFps: 30 } });
       expect(config.thresholds.undoHistorySize).toBe(10);
     });
 
     it('钳制 renderFps 到 [1, 60] 范围', () => {
-      const low = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 0 } });
+      const low = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 0, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 } });
       expect(low.thresholds.renderFps).toBe(1);
 
-      const high = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 120 } });
+      const high = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 120, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 } });
       expect(high.thresholds.renderFps).toBe(60);
     });
   });

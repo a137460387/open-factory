@@ -23,7 +23,7 @@ describe('CLI Output', () => {
     let stderrSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation((() => true) as any) as any;
     });
 
     it('should create logger with all methods', () => {
