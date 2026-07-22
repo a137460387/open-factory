@@ -20,6 +20,7 @@ import type {
   TechnicalDefectType,
   ContentIssueType,
 } from './types';
+import { formatTime } from '../utils/time';
 
 import {
   DEFAULT_INSPECTOR_CONFIG,

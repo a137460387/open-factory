@@ -25,6 +25,7 @@ import { understandSpeech } from './ai-speech-understanding';
 import { analyzeNarrative } from './ai-narrative-analyzer';
 import { recommendClips } from './ai-smart-recommender';
 import { generateNarrative } from './ai-narrative-generator';
+import { clamp01 } from './utils/math';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -344,14 +345,6 @@ function collectAudioSamples(media: MediaAsset[]): ContentAnalysisAudioSample[] 
     }
   }
   return samples.sort((a, b) => a.time - b.time);
-}
-
-/**
- * Clamp a value to [0, 1].
- */
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
 }
 
 /**

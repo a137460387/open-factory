@@ -10,6 +10,8 @@
 
 // ==================== 类型定义 ====================
 
+import { clamp } from '../utils/math';
+
 /**
  * 边界框
  */
@@ -448,13 +450,6 @@ export function computePointDistance(point1: Point2D, point2: Point2D): number {
   const dx = point1.x - point2.x;
   const dy = point1.y - point2.y;
   return Math.sqrt(dx * dx + dy * dy);
-}
-
-/**
- * 钳制值到范围
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /**

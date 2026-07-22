@@ -2,6 +2,7 @@ import type { ClipAILookMatch, WheelAdjustments } from './model-types';
 import type { ColorCurves, CurvePoint, ThreeWayColor, ColorWheelValue } from './color-grading';
 import { normalizeThreeWayColor, normalizeColorCurves } from './color-grading';
 import { round } from './time';
+import { clamp } from './utils/math';
 
 export interface AILookMatchResponse {
   warmth: number;
@@ -162,8 +163,4 @@ function interpolateCurve(points: CurvePoint[], x: number): number {
     }
   }
   return x;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Number.isFinite(value) ? value : 0));
 }

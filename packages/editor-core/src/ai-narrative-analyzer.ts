@@ -7,6 +7,7 @@
  */
 
 import type { ContentAnalysisSegment, ContentEmotionPoint, ContentSceneType } from './content-analysis';
+import { clamp01 } from './utils/math';
 
 // --- Types ---
 
@@ -359,13 +360,6 @@ function variance(values: number[]): number {
   }
   const mean = average(values);
   return average(values.map((v) => (v - mean) ** 2));
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
 }
 
 function round(value: number): number {

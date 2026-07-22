@@ -1,4 +1,5 @@
 import type { FfmpegExportPlan, ExportSettings } from './export-types';
+import { formatTimeShort } from '../utils/time';
 
 /**
  * VMAF 质量监控模块

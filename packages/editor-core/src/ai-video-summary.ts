@@ -3,6 +3,7 @@ export const SUMMARY_MAX_SUBTITLE_CHARS = 1000;
 
 import type { Clip, TimelineMarker, SubtitleClip, Project, Track } from './model-types';
 import { round } from './time';
+import { formatTimecode } from './utils/time';
 
 export interface VideoSummaryScene {
   time: number;

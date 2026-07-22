@@ -5,6 +5,7 @@ import type {
   ContentEmotionPoint,
   ClipContentAnalysis,
 } from './content-analysis';
+import { clamp01 } from './utils/math';
 
 // ─── 推荐接口类型 ──────────────────────────────────────────
 
@@ -363,13 +364,6 @@ function buildRecommendationReason(similarity: number, emotion: number, diversit
     }
   }
   return parts.join(' · ');
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
 }
 
 function round(value: number): number {

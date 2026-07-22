@@ -7,6 +7,7 @@
  */
 
 import type { ContentAnalysisVisualSample, ContentAnalysisAudioSample, ContentEmotionPoint } from './content-analysis';
+import { clamp } from './utils/math';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -292,7 +293,3 @@ function determineEmotionalArc(
 }
 
 // ─── Utility ───────────────────────────────────────────────
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}

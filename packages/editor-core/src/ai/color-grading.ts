@@ -10,6 +10,8 @@
 
 // ==================== 类型定义 ====================
 
+import { clamp } from '../utils/math';
+
 /**
  * 色彩分析结果
  */
@@ -363,13 +365,6 @@ export function deltaE(lab1: LABColor, lab2: LABColor): number {
   const aDiff = lab1.a - lab2.a;
   const bDiff = lab1.b - lab2.b;
   return Math.sqrt(lDiff * lDiff + aDiff * aDiff + bDiff * bDiff);
-}
-
-/**
- * 钳制值到范围
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /**

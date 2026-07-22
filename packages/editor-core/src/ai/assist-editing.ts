@@ -9,6 +9,7 @@
 
 import type { AiModuleResult, TranslateFn } from '../ai-module-types';
 import { identityTranslator } from '../ai-module-types';
+import { clamp } from '../utils/math';
 
 // ==================== 类型定义 ====================
 
@@ -178,18 +179,6 @@ export interface AssistEditingProgressEvent {
 }
 
 // ==================== 辅助工具函数 ====================
-
-/**
- * 将数值限制在指定范围内
- *
- * @param value - 输入值
- * @param min - 最小值
- * @param max - 最大值
- * @returns 限制后的值
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
 
 /**
  * 生成唯一 ID（基于时间戳和随机数）

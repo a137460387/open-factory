@@ -1,3 +1,4 @@
+import { clamp01 } from '@open-factory/editor-core/utils/math';
 import { getAppDataDir, readFile, scanDirectory, writeFile } from './tauri-bridge';
 
 export interface LutLibraryItem {
@@ -184,8 +185,4 @@ function joinConfigPath(root: string, fileName: string): string {
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/');
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }

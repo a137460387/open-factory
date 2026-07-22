@@ -16,6 +16,7 @@ import type {
   PlanExecutionResult,
 } from '../ai/llm-orchestrator';
 import { sortInstructionsByPriority } from '../ai/llm-orchestrator';
+import { formatTimeShort } from '../utils/time';
 
 // ─── Panel State ────────────────────────────────────────────────
 

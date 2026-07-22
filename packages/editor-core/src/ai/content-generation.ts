@@ -14,6 +14,7 @@
 
 import type { AiModuleResult, TranslateFn } from '../ai-module-types';
 import { identityTranslator } from '../ai-module-types';
+import { clamp } from '../utils/math';
 
 // ==================== 类型定义 ====================
 
@@ -325,11 +326,6 @@ const EFFECT_BASE_PARTICLE_COUNT: Record<AIEffectType, number> = {
 const DB_REF = 1.0;
 
 // ==================== 工具函数 ====================
-
-/** 将数值限制在指定范围 */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 /** 生成唯一 ID */
 function generateId(prefix: string): string {

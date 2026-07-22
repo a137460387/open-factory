@@ -13,6 +13,7 @@ import type { SmartCropResult } from './smart-crop';
 import { getDistributionPlatform } from './platform-presets';
 import { cropResultToReframeOffset } from './smart-crop';
 import { getTimelinePlaybackDuration } from '../timeline';
+import { formatDuration } from '../utils/time';
 
 // ─── 批量请求 ────────────────────────────────────────────
 

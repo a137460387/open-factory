@@ -13,6 +13,7 @@ import {
   type SceneClipFeatures,
   type SceneReorderStrategy,
 } from '@open-factory/editor-core';
+import { clamp01 } from '@open-factory/editor-core/utils/math';
 import { zhCN } from '../i18n/strings';
 import { convertLocalFileSrc } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -335,8 +336,4 @@ function estimateClipMotion(clip: Clip): number {
   }
   const total = points.reduce((sum, point) => sum + Math.hypot(point.dx, point.dy), 0);
   return clamp01(total / points.length);
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }

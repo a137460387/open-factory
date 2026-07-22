@@ -12,6 +12,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import type { RGBColor } from '@open-factory/editor-core/color/aces';
 import type { ColorCorrectionParams } from '@open-factory/editor-core/ai/color-grading';
+import { clamp } from '@open-factory/editor-core/utils/math';
 
 // ==================== 类型定义 ====================
 

@@ -10,6 +10,8 @@
 
 // ==================== 类型定义 ====================
 
+import { clamp } from '../utils/math';
+
 /**
  * 时间点
  */
@@ -363,13 +365,6 @@ export interface SmartEditingConfig {
  */
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-/**
- * 钳制值到范围
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
 }
 
 /**

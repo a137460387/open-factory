@@ -7,6 +7,7 @@
  */
 
 import type { ContentAnalysisVisualSample, ContentSceneType } from './content-analysis';
+import { clamp01 } from './utils/math';
 
 // --- Types ---
 
@@ -397,13 +398,6 @@ function finalizeSegment(
 }
 
 // --- Utility functions (replicated from content-analysis.ts for module independence) ---
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
-}
 
 function round(value: number): number {
   return Math.round(value * 1000) / 1000;

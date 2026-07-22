@@ -1,3 +1,4 @@
+import { clamp } from '@open-factory/editor-core/utils/math';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 
 const HISTORY_FILE_NAME = 'export-speed-history.json';
@@ -156,8 +157,4 @@ function speedSampleWeight(sample: ExportSpeedSample, input: ExportRemainingEsti
 
 function positiveNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

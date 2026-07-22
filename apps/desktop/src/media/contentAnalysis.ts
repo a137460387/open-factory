@@ -7,6 +7,7 @@ import {
   type ContentAnalysisVisualSample,
   type MediaAsset,
 } from '@open-factory/editor-core';
+import { clamp01 } from '@open-factory/editor-core/utils/math';
 import { analyzeMedia, analyzeWaveform, saveFileDialog, writeFile, type MediaAnalysis } from '../lib/tauri-bridge';
 import { zhCN } from '../i18n/strings';
 
@@ -110,13 +111,6 @@ function findNearestBitratePoint(
     (best, point) => (Math.abs(point.time - time) < Math.abs(best.time - time) ? point : best),
     points[0],
   );
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
 }
 
 function sanitizeFileName(name: string): string {
