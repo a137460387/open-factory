@@ -202,7 +202,7 @@ describe('inspector: scoreToGrade', () => {
 describe('inspector: formatTime', () => {
   it('小于 1 小时格式为 M:SS.CC', () => {
     const result = formatTime(65.5);
-    expect(result).toBe('1:05.50');
+    expect(result).toBe('01:05.50');
   });
 
   it('大于 1 小时格式为 H:MM:SS.CC', () => {
@@ -211,6 +211,6 @@ describe('inspector: formatTime', () => {
   });
 
   it('零秒', () => {
-    expect(formatTime(0)).toBe('0:00.00');
+    expect(formatTime(0)).toBe('00:00.00');
   });
 });

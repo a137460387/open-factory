@@ -3,12 +3,16 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 import zhCN from './locales/zh-CN.json';
-import enUS from './locales/en-US.json';
 
 const STORAGE_KEY = 'open-factory:language';
 
+/** Cache for loaded language packs */
+const loadedLanguages: Record<string, Record<string, unknown>> = {
+  zh: zhCN,
+};
+
 /**
- * 从 localStorage 或系统语言检测初始语言
+ * Detect initial language from localStorage or system language
  */
 function detectInitialLanguage(): string {
   if (typeof window === 'undefined') return 'zh';
@@ -16,11 +20,24 @@ function detectInitialLanguage(): string {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'zh' || stored === 'en') return stored;
   } catch {
-    // localStorage 不可用时静默忽略
+    // localStorage not available
   }
   const nav = navigator.language || '';
   return nav.startsWith('en') ? 'en' : 'zh';
 }
+
+/**
+ * Lazily load a language pack and add it to i18next resources
+ */
+async function loadLanguage(lng: string): Promise<void> {
+  if (loadedLanguages[lng]) return;
+
+  const module = await import(`./locales/${lng === 'en' ? 'en-US' : 'zh-CN'}.json`);
+  loadedLanguages[lng] = module.default ?? module;
+  i18n.addResourceBundle(lng, 'translation', loadedLanguages[lng], true, true);
+}
+
+const initialLang = detectInitialLanguage();
 
 i18n
   .use(LanguageDetector)
@@ -28,9 +45,8 @@ i18n
   .init({
     resources: {
       zh: { translation: zhCN },
-      en: { translation: enUS },
     },
-    lng: detectInitialLanguage(),
+    lng: initialLang,
     fallbackLng: 'zh',
     interpolation: {
       escapeValue: false,
@@ -42,20 +58,26 @@ i18n
     },
   });
 
+// Pre-load non-default language in background if needed
+if (initialLang === 'en') {
+  void loadLanguage('en');
+}
+
 /**
- * 切换语言并持久化到 localStorage
+ * Switch language with lazy loading support
  */
-export function switchLanguage(lng: 'zh' | 'en'): void {
+export async function switchLanguage(lng: 'zh' | 'en'): Promise<void> {
+  await loadLanguage(lng);
   void i18n.changeLanguage(lng);
   try {
     localStorage.setItem(STORAGE_KEY, lng);
   } catch {
-    // localStorage 不可用时静默忽略
+    // localStorage not available
   }
 }
 
 /**
- * 获取当前语言
+ * Get current language
  */
 export function getCurrentLanguage(): 'zh' | 'en' {
   const lng = i18n.language;

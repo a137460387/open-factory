@@ -7,7 +7,7 @@ import {
   parseVideoSummaryResponse,
   generateSummaryHtml,
   generateSummaryFilename,
-  formatTimecode,
+  formatTimeShort,
   SUMMARY_FRAME_COUNT,
   SUMMARY_MAX_SUBTITLE_CHARS
 } from '../src';
@@ -297,32 +297,32 @@ describe('generateSummaryFilename', () => {
   });
 });
 
-describe('formatTimecode', () => {
+describe('formatTimeShort', () => {
   it('formats 0 as 00:00', () => {
-    expect(formatTimecode(0)).toBe('00:00');
+    expect(formatTimeShort(0)).toBe('00:00');
   });
 
   it('formats seconds under 1 minute', () => {
-    expect(formatTimecode(45)).toBe('00:45');
+    expect(formatTimeShort(45)).toBe('00:45');
   });
 
   it('formats minutes and seconds', () => {
-    expect(formatTimecode(125)).toBe('02:05');
+    expect(formatTimeShort(125)).toBe('02:05');
   });
 
   it('formats hours, minutes, and seconds', () => {
-    expect(formatTimecode(3661)).toBe('61:01');
+    expect(formatTimeShort(3661)).toBe('61:01');
   });
 
   it('returns 00:00 for negative values', () => {
-    expect(formatTimecode(-5)).toBe('00:00');
+    expect(formatTimeShort(-5)).toBe('00:00');
   });
 
   it('returns 00:00 for NaN', () => {
-    expect(formatTimecode(Number.NaN)).toBe('00:00');
+    expect(formatTimeShort(Number.NaN)).toBe('00:00');
   });
 
   it('floors fractional seconds', () => {
-    expect(formatTimecode(65.9)).toBe('01:05');
+    expect(formatTimeShort(65.9)).toBe('01:05');
   });
 });

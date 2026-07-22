@@ -32,6 +32,7 @@ import {
   type NumericStyleStat,
   type EffectStyleSummary,
 } from '../style-transfer';
+import { clamp01 } from '../utils/math';
 
 // ─── Style Fingerprint JSON Schema ──────────────────────────────
 
@@ -675,7 +676,7 @@ export function applyStyleToInstructions(
   style: StyleFingerprint,
   strength: number = 0.7,
 ): Array<{ action: string; params: Record<string, unknown> }> {
-  const clampedStrength = Math.max(0, Math.min(1, strength));
+  const clampedStrength = clamp01(strength);
   return instructions.map((inst) => {
     const params = { ...inst.params };
 

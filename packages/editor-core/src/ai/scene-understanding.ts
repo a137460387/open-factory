@@ -453,13 +453,6 @@ export function computePointDistance(point1: Point2D, point2: Point2D): number {
 }
 
 /**
- * 线性插值
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-/**
  * 计算图像亮度
  */
 export function computeImageBrightness(imageData: ImageData): number {

@@ -3,14 +3,7 @@ export const SUMMARY_MAX_SUBTITLE_CHARS = 1000;
 
 import type { Clip, TimelineMarker, SubtitleClip, Project, Track } from './model-types';
 import { round } from './time';
-
-function formatTimecode(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
-  const min = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${min.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
-export { formatTimecode };
+import { formatTimeShort } from './utils/time';
 
 export interface VideoSummaryScene {
   time: number;
@@ -100,13 +93,13 @@ export function buildSummarySystemPrompt(): string {
 
 export function buildSummaryUserPrompt(data: VideoSummaryDataPack): string {
   const lines: string[] = [];
-  lines.push('项目时长: ' + formatTimecode(data.duration));
+  lines.push('项目时长: ' + formatTimeShort(data.duration));
   lines.push('轨道数: ' + String(data.trackCount));
   lines.push('片段数: ' + String(data.clipCount));
   if (data.markers.length > 0) {
     lines.push('章节标记:');
     for (const m of data.markers) {
-      lines.push('  ' + formatTimecode(m.time) + ' ' + m.label);
+      lines.push('  ' + formatTimeShort(m.time) + ' ' + m.label);
     }
   }
   if (data.subtitleText.length > 0) {
@@ -216,7 +209,7 @@ export function generateSummaryHtml(result: VideoSummaryResult, projectName: str
       const imgSrc = frameBase64s[i] ? 'data:image/jpeg;base64,' + frameBase64s[i] : '';
       return (
         '<div class="scene-item"><div class="scene-time">' +
-        formatTimecode(scene.time) +
+        formatTimeShort(scene.time) +
         '</div>' +
         (imgSrc ? '<img src="' + imgSrc + '" alt="场景 ' + (i + 1) + '" />' : '') +
         '<div class="scene-desc">' +
@@ -227,7 +220,7 @@ export function generateSummaryHtml(result: VideoSummaryResult, projectName: str
     .join('\n');
   const keyMomentsHtml = result.keyMoments
     .map((km) => {
-      return '<li><span class="km-time">' + formatTimecode(km.time) + '</span> ' + escapeHtml(km.description) + '</li>';
+      return '<li><span class="km-time">' + formatTimeShort(km.time) + '</span> ' + escapeHtml(km.description) + '</li>';
     })
     .join('\n');
   return (

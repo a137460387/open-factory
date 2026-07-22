@@ -11,7 +11,7 @@ export function formatTime(seconds: number): string {
   if (h > 0) {
     return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   }
-  return `${m}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -19,9 +19,10 @@ export function formatTime(seconds: number): string {
  * Use for subtitles, simple displays.
  */
 export function formatTimeShort(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
   const min = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
-  return `${min}:${s.toString().padStart(2, '0')}`;
+  return `${min.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 /**

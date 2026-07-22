@@ -316,20 +316,20 @@ export class TaskScheduler {
     execute: () => Promise<T>,
     timeSliceMs: number,
   ): Promise<T> {
-    // Create a race between execution and time slice
-    const result = await Promise.race([
-      execute(),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          // Use a special error type to distinguish time slice from real failures
-          const error = new Error('TIME_SLICE_EXCEEDED');
-          error.name = 'TimeSliceExceeded';
-          reject(error);
-        }, timeSliceMs);
-      }),
-    ]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timerPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        const error = new Error('TIME_SLICE_EXCEEDED');
+        error.name = 'TimeSliceExceeded';
+        reject(error);
+      }, timeSliceMs);
+    });
 
-    return result;
+    try {
+      return await Promise.race([execute(), timerPromise]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   }
 
   private isTimeSliceExceeded(error: unknown): boolean {

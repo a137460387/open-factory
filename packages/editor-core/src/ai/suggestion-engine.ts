@@ -15,6 +15,7 @@ import type { MaterialMetadata } from './semantic-extractor';
 import type { StyleFingerprint } from './style-analyzer';
 import type { LLMMessage, LLMResponse } from './llm-orchestrator';
 import { buildEditingPrompt } from './llm-orchestrator';
+import { clamp01 } from '../utils/math';
 
 // ─── Suggestion Types ───────────────────────────────────────────
 
@@ -267,7 +268,7 @@ export function parseSuggestionResponse(jsonStr: string): SuggestionResponse | n
       category,
       title: typeof s.title === 'string' ? s.title : 'Untitled Suggestion',
       description: typeof s.description === 'string' ? s.description : '',
-      confidence: typeof s.confidence === 'number' ? Math.max(0, Math.min(1, s.confidence)) : 0.5,
+      confidence: typeof s.confidence === 'number' ? clamp01(s.confidence) : 0.5,
       rationale: typeof s.rationale === 'string' ? s.rationale : '',
       previewInstructions,
       tags: Array.isArray(s.tags) ? s.tags.filter((t: unknown): t is string => typeof t === 'string') : [],
@@ -301,7 +302,7 @@ export function enrichSuggestionWithStyle(
   style: StyleFingerprint,
   strength: number = 0.7,
 ): EditingSuggestion {
-  const clampedStrength = Math.max(0, Math.min(1, strength));
+  const clampedStrength = clamp01(strength);
 
   const enrichedInstructions = suggestion.previewInstructions.map((inst) => {
     const params = { ...inst.params };

@@ -159,8 +159,8 @@ describe('Quality Inspector', () => {
 
   describe('formatTime', () => {
     it('should format seconds correctly', () => {
-      expect(formatTime(0)).toBe('0:00.00');
-      expect(formatTime(65)).toBe('1:05.00');
+      expect(formatTime(0)).toBe('00:00.00');
+      expect(formatTime(65)).toBe('01:05.00');
       expect(formatTime(3661)).toBe('1:01:01.00');
     });
   });

@@ -776,7 +776,7 @@ export function SettingsDialog({
     const nextLanguage = normalizeLanguage(value);
     setLanguage(nextLanguage);
     // 同步到 i18next 和现有 i18n 系统
-    switchLanguage(nextLanguage);
+    await switchLanguage(nextLanguage);
     setI18nLanguage(nextLanguage);
     try {
       await saveLanguageSetting(nextLanguage);

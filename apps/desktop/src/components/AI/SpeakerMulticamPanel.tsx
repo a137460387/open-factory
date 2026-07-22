@@ -3,6 +3,7 @@ import { Users, Video, Settings, Play, X, AlertCircle, CheckCircle, Loader2 } fr
 import { useSpeakerMulticam } from '../../hooks/useSpeakerMulticam';
 import type { SpeakerDiarizationResult } from '@open-factory/editor-core/ai/speaker-diarization';
 import type { MulticamClip, MulticamSequence } from '@open-factory/editor-core';
+import { formatTime } from '@open-factory/editor-core';
 
 /** 说话人-多机位面板属性 */
 export interface SpeakerMulticamPanelProps {
@@ -295,7 +296,7 @@ export function SpeakerMulticamPanel({
                     style={{ backgroundColor: `hsl(${suggestion.speakerId * 60}, 70%, 50%)` }}
                   />
                   <span className="font-mono text-[var(--color-text-muted)]">
-                    {formatTimecode(suggestion.timeMs / 1000)}
+                    {formatTime(suggestion.timeMs / 1000)}
                   </span>
                   <span className="flex-1">→ {suggestion.speakerLabel}</span>
                   <span className="text-[var(--color-text-muted)]">机位 {suggestion.targetAngle + 1}</span>
@@ -331,17 +332,3 @@ export function SpeakerMulticamPanel({
   );
 }
 
-/**
- * 格式化时间码
- */
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 100);
-
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-  }
-  return `${m}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-}

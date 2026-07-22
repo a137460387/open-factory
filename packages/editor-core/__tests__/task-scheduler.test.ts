@@ -120,9 +120,10 @@ describe('TaskScheduler', () => {
     expect(stats.total).toBeGreaterThanOrEqual(1);
   });
 
-  it('clears all tasks', () => {
-    scheduler.submit({ id: 'c1', priority: 'low', execute: async () => 1 });
+  it('clears all tasks', async () => {
+    const promise = scheduler.submit({ id: 'c1', priority: 'low', execute: async () => 1 }).catch(() => {});
     scheduler.clear();
+    await promise;
     expect(scheduler.getStats().queued).toBe(0);
     expect(scheduler.getStats().running).toBe(0);
   });
@@ -237,10 +238,11 @@ describe('WorkerTaskScheduler', () => {
     expect(stats.completed).toBe(1);
   });
 
-  it('clears all tasks and affinity', () => {
+  it('clears all tasks and affinity', async () => {
     const scheduler = new WorkerTaskScheduler(2);
-    scheduler.submitToWorker('w1', 0, async () => 'ok');
+    const promise = scheduler.submitToWorker('w1', 0, async () => 'ok').catch(() => {});
     scheduler.clear();
+    await promise;
     expect(scheduler.getPreferredWorker('w1')).toBeNull();
   });
 });

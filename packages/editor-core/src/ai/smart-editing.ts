@@ -368,13 +368,6 @@ export function generateId(): string {
 }
 
 /**
- * 线性插值
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-/**
  * 计算数组平均值
  */
 export function average(array: number[]): number {

@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { clamp } from '../../src/utils/math';
+import { clamp, lerp } from '../../src/utils/math';
 import {
   generateId,
-  lerp,
   average,
   standardDeviation,
   smoothArray,

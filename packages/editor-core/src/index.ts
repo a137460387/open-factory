@@ -1,5 +1,6 @@
 export * from './time';
 export * from './model';
+export { formatTime, formatTimeShort, formatDuration, formatDurationMs } from './utils/time';
 export * from './blend-modes';
 
 // Disambiguation: normalizeHexColor is exported by both ./model and ./export/ffmpeg.

@@ -4,13 +4,13 @@ import { formatTime, formatTimeShort, formatDuration, formatDurationMs, formatTi
 describe('time utils', () => {
   describe('formatTime', () => {
     it('formats seconds with centiseconds', () => {
-      expect(formatTime(0)).toBe('0:00.00');
-      expect(formatTime(65.5)).toBe('1:05.50');
+      expect(formatTime(0)).toBe('00:00.00');
+      expect(formatTime(65.5)).toBe('01:05.50');
       expect(formatTime(3661.25)).toBe('1:01:01.25');
     });
 
     it('formats minutes and seconds', () => {
-      expect(formatTime(125)).toBe('2:05.00');
+      expect(formatTime(125)).toBe('02:05.00');
     });
 
     it('formats hours when >= 3600', () => {
@@ -21,13 +21,13 @@ describe('time utils', () => {
 
   describe('formatTimeShort', () => {
     it('formats as MM:SS', () => {
-      expect(formatTimeShort(0)).toBe('0:00');
-      expect(formatTimeShort(65)).toBe('1:05');
-      expect(formatTimeShort(125)).toBe('2:05');
+      expect(formatTimeShort(0)).toBe('00:00');
+      expect(formatTimeShort(65)).toBe('01:05');
+      expect(formatTimeShort(125)).toBe('02:05');
     });
 
     it('truncates fractional seconds', () => {
-      expect(formatTimeShort(65.9)).toBe('1:05');
+      expect(formatTimeShort(65.9)).toBe('01:05');
     });
   });
 
