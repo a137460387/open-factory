@@ -300,3 +300,11 @@ export * from './automation';
 export * from './quality';
 export * from './resources';
 export * from './performance';
+
+// Sprint AR: Immersive Creation Experience
+export * from './engine/webgpu-render-engine';
+export * from './engine/smart-proxy-manager';
+export * from './engine/incremental-render-engine';
+export * from './ui/zen-mode-manager';
+export * from './ui/shortcut-manager';
+export * from './ui/theme-engine';
