@@ -1,48 +1,48 @@
-import type { Creator, Analytics, Revenue, WithdrawalRequest, Plugin } from '@open-factory/creator-dashboard';
-import {
-  mockCreator,
-  mockAnalytics,
-  mockTransactions,
-  mockWithdrawals,
-  mockPlugins,
-} from './mock-data';
+import { initializeApiClient, getApiClient } from '@open-factory/api-client/react';
+import type {
+  CreatorProfile,
+  CreatorStats,
+  CreatorRevenue,
+  CreatorDashboardData,
+  Plugin,
+} from '@open-factory/api-client';
 
-const API_DELAY = 300;
-
-/** Simulate API delay */
-function delay(ms: number = API_DELAY): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Simulate an API response */
-async function apiResponse<T>(data: T): Promise<{ success: boolean; data?: T; error?: string }> {
-  await delay();
-  return { success: true, data };
-}
+// Initialize API client
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+initializeApiClient({ baseUrl: API_BASE_URL });
 
 /** Fetch creator profile */
 export async function fetchCreator(_id: string) {
-  return apiResponse<Creator>(mockCreator);
+  const client = getApiClient();
+  const profile = await client.getMyProfile();
+  return { success: true, data: profile };
 }
 
 /** Fetch analytics data */
 export async function fetchAnalytics(_creatorId: string) {
-  return apiResponse<Analytics>(mockAnalytics);
+  const client = getApiClient();
+  const stats = await client.getMyStats();
+  return { success: true, data: stats };
 }
 
 /** Fetch revenue transactions */
 export async function fetchTransactions(_creatorId: string) {
-  return apiResponse<Revenue[]>(mockTransactions);
+  const client = getApiClient();
+  const revenue = await client.getMyRevenue();
+  return { success: true, data: revenue.breakdown };
 }
 
 /** Fetch withdrawal requests */
 export async function fetchWithdrawals(_creatorId: string) {
-  return apiResponse<WithdrawalRequest[]>(mockWithdrawals);
+  // Withdrawal API not implemented yet, return empty array
+  return { success: true, data: [] };
 }
 
 /** Fetch creator's plugins */
 export async function fetchPlugins(_creatorId: string) {
-  return apiResponse<Plugin[]>(mockPlugins);
+  const client = getApiClient();
+  const dashboard = await client.getDashboard();
+  return { success: true, data: dashboard.recentPlugins };
 }
 
 /** Submit a withdrawal request */
@@ -52,13 +52,9 @@ export async function submitWithdrawal(
   _method: string,
   _account: string
 ) {
-  await delay(500);
+  // Withdrawal API not implemented yet
   return {
-    success: true,
-    data: {
-      id: `wd-${Date.now()}`,
-      status: 'pending' as const,
-      createdAt: new Date(),
-    },
+    success: false,
+    error: 'Withdrawal API not implemented',
   };
 }

@@ -25,10 +25,47 @@ export function useCreator(creatorId: string): UseCreatorResult {
     ]);
 
     if (creatorResult.success && creatorResult.data) {
-      setCreator(creatorResult.data);
+      // Convert API CreatorProfile to Creator type
+      const profile = creatorResult.data;
+      const creatorData: Creator = {
+        id: profile.id,
+        userId: profile.userId,
+        displayName: profile.displayName,
+        email: profile.email,
+        avatar: profile.avatar,
+        bio: profile.bio,
+        status: profile.status,
+        tier: profile.tier,
+        totalRevenue: profile.totalRevenue,
+        monthlyRevenue: profile.monthlyRevenue,
+        commissionRate: profile.commissionRate,
+        tags: [...profile.tags],
+        socialLinks: { ...profile.socialLinks },
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt),
+      };
+      setCreator(creatorData);
     }
     if (pluginsResult.success && pluginsResult.data) {
-      setPlugins(pluginsResult.data);
+      // Convert API Plugin to Plugin type
+      const pluginsData: Plugin[] = pluginsResult.data.map((p) => ({
+        id: p.manifest.id,
+        creatorId: creatorId,
+        name: p.manifest.name,
+        slug: p.manifest.id,
+        description: p.manifest.description,
+        version: p.manifest.version,
+        status: p.verified ? 'published' : 'review',
+        category: p.manifest.category as any,
+        price: 0,
+        downloads: p.stats.downloads,
+        rating: p.rating.averageRating,
+        ratingCount: p.rating.totalReviews,
+        createdAt: new Date(p.publishedAt),
+        updatedAt: new Date(p.updatedAt),
+        publishedAt: new Date(p.publishedAt),
+      }));
+      setPlugins(pluginsData);
     }
     if (!creatorResult.success || !pluginsResult.success) {
       setError('Failed to load creator data');

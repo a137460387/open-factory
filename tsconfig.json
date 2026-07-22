@@ -7,6 +7,9 @@
     { "path": "./packages/plugin-market" },
     { "path": "./packages/sdk" },
     { "path": "./packages/creator-dashboard" },
+    { "path": "./packages/api-client" },
+    { "path": "./packages/api-gateway" },
+    { "path": "./packages/ai-generator" },
     { "path": "./apps/desktop" },
     { "path": "./apps/creator-dashboard" },
     { "path": "./apps/plugin-market" }

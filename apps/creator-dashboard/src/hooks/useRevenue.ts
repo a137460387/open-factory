@@ -26,7 +26,19 @@ export function useRevenue(creatorId: string): UseRevenueResult {
     ]);
 
     if (txResult.success && txResult.data) {
-      setTransactions(txResult.data);
+      // Convert API revenue breakdown to Revenue type
+      const revenueData: Revenue[] = txResult.data.map((item, index) => ({
+        id: `rev-${index}`,
+        creatorId: creatorId,
+        type: 'sales' as const,
+        amount: item.revenue,
+        commissionRate: 0.3,
+        netAmount: item.revenue * 0.7,
+        productName: item.pluginName,
+        orderId: `order-${index}`,
+        createdAt: new Date(),
+      }));
+      setTransactions(revenueData);
     }
     if (wdResult.success && wdResult.data) {
       setWithdrawals(wdResult.data);
