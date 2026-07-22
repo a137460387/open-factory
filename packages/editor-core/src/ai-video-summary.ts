@@ -168,18 +168,6 @@ export function generateSummaryFilename(projectName: string): string {
   return safe + '_摘要_' + date + '.html';
 }
 
-export function formatTimecode(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
-  const totalSeconds = Math.floor(seconds);
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  if (h > 0) {
-    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-  }
-  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-}
-
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

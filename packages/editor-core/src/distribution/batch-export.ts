@@ -325,10 +325,3 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
-
-/** 格式化时长 */
-export function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}秒`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
-  return `${Math.floor(seconds / 3600)}时${Math.floor((seconds % 3600) / 60)}分`;
-}

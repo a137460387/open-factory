@@ -255,14 +255,7 @@ export function getInstructionLabel(instruction: EditInstruction): string {
   const target = instruction.target;
 
   if (target.startSec !== undefined && target.endSec !== undefined) {
-    return `${label} (${formatTime(target.startSec)} - ${formatTime(target.endSec)})`;
+    return `${label} (${formatTimeShort(target.startSec)} - ${formatTimeShort(target.endSec)})`;
   }
   return label;
-}
-
-/** Format seconds to MM:SS */
-function formatTime(sec: number): string {
-  const min = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${min}:${s.toString().padStart(2, '0')}`;
 }

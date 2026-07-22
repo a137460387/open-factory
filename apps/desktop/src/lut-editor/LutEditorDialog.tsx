@@ -25,6 +25,7 @@ import {
   type LutCreatorState,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
+import { clamp, clamp01 } from '@open-factory/editor-core/utils/math';
 import { zhCN } from '../i18n/strings';
 import {
   getAppDataDir,
@@ -699,8 +700,8 @@ function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], stroke
 function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
   const rect = canvas.getBoundingClientRect();
   return {
-    x: clampUnit((event.clientX - rect.left) / rect.width),
-    y: clampUnit(1 - (event.clientY - rect.top) / rect.height),
+    x: clamp01((event.clientX - rect.left) / rect.width),
+    y: clamp01(1 - (event.clientY - rect.top) / rect.height),
   };
 }
 
@@ -817,7 +818,7 @@ function sanitizeFileBaseName(name: string): string {
   );
 }
 
-function clampUnit(value: number): number {
+function clamp01(value: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }
 

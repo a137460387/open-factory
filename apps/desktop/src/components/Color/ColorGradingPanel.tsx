@@ -173,13 +173,6 @@ export interface LUTManagerProps {
 // ==================== 辅助函数 ====================
 
 /**
- * 钳制值到范围
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-/**
  * RGB到CSS颜色
  */
 function rgbToCSS(rgb: RGBColor): string {

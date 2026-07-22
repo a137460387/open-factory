@@ -327,7 +327,7 @@ export function generateVmafReport(result: VmafMonitoringResult, projectName?: s
   lines.push('|--------|------|------|------|');
 
   result.samples.forEach((sample) => {
-    const timestamp = formatTimestamp(sample.timestamp);
+    const timestamp = formatTimeShort(sample.timestamp);
     const vmaf = sample.vmafScore.toFixed(1);
     const psnr = sample.psnrScore?.toFixed(1) ?? '-';
     const ssim = sample.ssimScore?.toFixed(3) ?? '-';
@@ -436,15 +436,6 @@ function getQualityRatingLabel(rating: VmafMonitoringResult['qualityRating']): s
     poor: '较差 (<60)',
   };
   return labels[rating];
-}
-
-/**
- * 格式化时间戳
- */
-function formatTimestamp(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 /**
