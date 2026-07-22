@@ -6,6 +6,30 @@
 - `apps/desktop/src`: React UI, Zustand state, command manager singleton, media import, cache service, background media jobs, waveform worker, WebGL/2D preview renderer, project IO, Relink UI, proxy UI, export queue, and export dialog.
 - `apps/desktop/src-tauri`: Tauri 2 Rust shell, plugin registration, file/cache commands, media probing, proxy generation, FFmpeg capability detection, FFmpeg process execution, progress events, cancellation, smoke mode, and close protection.
 
+## Platform Packages (v4.58.0+, Sprint AI 审计校准)
+
+Sprint AI 全量审计后确认的包结构与依赖关系：
+
+| 包 | 职责 | 关键依赖 | 说明 |
+|----|------|---------|------|
+| `packages/sdk` | 面向外部消费者的轻量 TypeScript SDK（项目/时间线/特效/导出/插件 API + React/Vue 绑定） | react (peer), vue (peer) | **独立类型契约**，不复用 editor-core 内部模型（审计确认两者语义不同：SDK 为简化桩，editor-core 为 30+ 字段完整模型） |
+| `packages/api-client` | Open Factory 平台 HTTP 客户端（插件搜索/详情/安装/评价，创作者仪表盘 API） | 无运行时依赖（纯 fetch） | 类型注释标注 "matching @open-factory/plugin-market types"，与 gateway 对齐 |
+| `packages/api-gateway` | Fastify 5 API 网关（JWT 认证、RBAC、CORS、限流、Swagger 文档） | fastify, @fastify/cors, @fastify/rate-limit, @fastify/swagger(-ui), zod, jsonwebtoken | **Sprint AI 移除了 6 个未使用依赖**（drizzle-orm/pg/bcryptjs/dotenv/@fastify/jwt/@fastify/cookie），其中 drizzle-orm 含 HIGH 级 SQL 注入漏洞 |
+| `packages/plugin-sdk` | 插件开发者 SDK | — | desktop 通过 `@open-factory/plugin-sdk` 集成 |
+| `packages/collaboration-server` | 协作服务器 | — | 实时协作后端 |
+| `packages/ai-generator` | 本地生成式 AI（Wan2.1 模型 + WebGPU） | — | v4.58 新增，本地优先 |
+
+### 依赖方向（审计确认健康）
+
+```
+apps/desktop → packages/editor-core, packages/plugin-sdk
+packages/sdk → (独立，仅 peer: react/vue)
+packages/api-client → (独立，纯 fetch)
+packages/api-gateway → fastify 生态（无 workspace 内部依赖）
+```
+
+无反向依赖或循环。`packages/sdk` 在 Sprint AI 前错误声明了对 `@open-factory/editor-core` 的 workspace 依赖（源码从未使用），已移除。
+
 ## Store Architecture (v4.26.0)
 
 v4.26.0 完成了 Store 层重构，将 God Store 拆分为功能域 Store：
