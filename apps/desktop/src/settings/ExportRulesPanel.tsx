@@ -2,15 +2,15 @@ import { FolderOpen } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import type { ExportConditionRule } from './appSettings';
 
-const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
+export const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
 
-function getExportRule(rules: ExportConditionRule[], id: string, fallback: ExportConditionRule): ExportConditionRule {
+export function getExportRule(rules: ExportConditionRule[], id: string, fallback: ExportConditionRule): ExportConditionRule {
   return rules.find((rule) => rule.id === id) ?? fallback;
 }
 
-function defaultExportCopyRule(): ExportConditionRule {
+export function defaultExportCopyRule(): ExportConditionRule {
   return {
     id: EXPORT_RULE_COPY_SUCCESS_ID,
     enabled: false,

@@ -1,15 +1,16 @@
 import {
   getMediaVersionLabel,
-  shouldGenerateProxy,
   isFrameRateMismatch,
   mapScoreToGrade,
-  type MediaAsset,
+  shouldGenerateProxy,
   type ClipContentAnalysis,
-  type MediaMetadata,
-  type MediaLabelColor,
+  type MediaAsset,
   type MediaFlag,
+  type MediaLabelColor,
+  type MediaMetadata,
+  type QualityAssessmentResult,
 } from '@open-factory/editor-core';
-import { formatTimeShort } from '@open-factory/editor-core/utils/time';
+import type { Subclip, TimelineLabelColor } from '@open-factory/editor-core';
 import {
   AlertCircle,
   BadgeCheck,
@@ -34,30 +35,113 @@ import {
   Star,
   Tag,
   Trash2,
+  X,
 } from 'lucide-react';
-import { useContext, useRef, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
+import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
+import { getMediaKeyboardNavigationIndex } from './media-keyboard';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { convertLocalFileSrc } from '../../lib/tauri-bridge';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
-import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
-import { getMediaKeyboardNavigationIndex } from './media-keyboard';
-import {
-  MEDIA_LABEL_COLORS,
-  MEDIA_LABEL_COLOR_STYLES,
-  MEDIA_CARD_DRAG_MIME,
-  SUBCLIP_DRAG_MIME,
-  labelColorToHex,
-  formatFrameRateLabel,
-  formatPreciseFrameRate,
-  formatMediaColorProfile,
-} from './media-bin-utils';
-import type { MediaCardExtras, MediaGridNavCtxValue, SubclipContextValue } from './MediaBin';
-import { MediaCardExtrasCtx, MediaGridNavCtx, SubclipCtx } from './MediaBin';
+
+// ---------------------------------------------------------------------------
+// Contexts & shared types
+// ---------------------------------------------------------------------------
+
+export interface MediaCardExtras {
+  favoriteIds: Set<string>;
+  onToggleFavorite(assetId: string): void;
+  onRevealInTimeline(assetId: string): void;
+  pinnedIds: Set<string>;
+  onPinToSession(assetId: string): void;
+  onAnalyzeAI(assetId: string): void;
+  qualityResults: Map<string, QualityAssessmentResult>;
+  qualityErrors: Map<string, string>;
+  qualityLoading: Set<string>;
+  onQualityAssess(assetId: string): void;
+  onBatchQualityScan(): void;
+}
+export const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
+
+export interface MediaGridNavCtxValue {
+  columnCount: number;
+  mediaCount: number;
+  scrollToMediaIndex(index: number): void;
+  pendingFocusRef: { current: number | null };
+}
+export const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
+
+export interface SubclipContextValue {
+  subclips: Subclip[];
+  onAddSubclip(subclip: Subclip): void;
+  onUpdateSubclip(subclipId: string, patch: Partial<Subclip>): void;
+  onDeleteSubclip(subclipId: string): void;
+  onAddSubclipToTimeline(assetId: string, subclip: Subclip): void;
+  onOpenSubclipDialog(assetId: string, editingSubclipId?: string): void;
+  expandedSubclipAssetIds: Set<string>;
+  onToggleSubclipExpanded(assetId: string): void;
+}
+export const SubclipCtx = createContext<SubclipContextValue | null>(null);
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+export const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
+export const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
+
+const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
+  { key: 'red', value: '#ef4444' },
+  { key: 'orange', value: '#f97316' },
+  { key: 'yellow', value: '#eab308' },
+  { key: 'green', value: '#22c55e' },
+  { key: 'blue', value: '#3b82f6' },
+  { key: 'purple', value: '#a855f7' },
+];
+const MEDIA_LABEL_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
+  MEDIA_LABEL_COLORS.map((c) => [c.key, { backgroundColor: c.value }]),
+);
+
+// ---------------------------------------------------------------------------
+// Helper functions
+// ---------------------------------------------------------------------------
 
 function labelColorToHex(color: MediaLabelColor): string {
   return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
 }
+
+function formatFrameRateLabel(frameRate: number): string {
+  const rounded = Math.round(frameRate * 100) / 100;
+  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
+}
+
+function formatMediaColorProfile(asset: MediaAsset): string {
+  return asset.colorProfile?.label ?? zhCN.common.unavailable;
+}
+
+function formatPreciseFrameRate(frameRate: number): string {
+  return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
+}
+
+function formatDuration(duration: number): string {
+  const minutes = Math.floor(duration / 60);
+  const seconds = Math.floor(duration % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+// ---------------------------------------------------------------------------
+// Internal sub-components
+// ---------------------------------------------------------------------------
 
 function MediaSceneTagList({ assetId, analysis }: { assetId: string; analysis: ClipContentAnalysis }) {
   return (
@@ -73,31 +157,6 @@ function MediaSceneTagList({ assetId, analysis }: { assetId: string; analysis: C
       ))}
     </div>
   );
-}
-
-function formatFrameRateLabel(frameRate: number): string {
-  const rounded = Math.round(frameRate * 100) / 100;
-  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
-}
-
-function formatMediaFormat(asset: MediaAsset): string {
-  const extension = asset.name.includes('.') ? asset.name.split('.').pop()?.toUpperCase() : undefined;
-  return extension ? `${zhCN.mediaBin.assetType[asset.type]} / ${extension}` : zhCN.mediaBin.assetType[asset.type];
-}
-
-function formatMediaResolution(asset: MediaAsset): string {
-  if (asset.type === 'audio') {
-    return zhCN.common.unavailable;
-  }
-  return asset.width && asset.height ? `${asset.width} x ${asset.height}` : zhCN.common.unavailable;
-}
-
-function formatMediaColorProfile(asset: MediaAsset): string {
-  return asset.colorProfile?.label ?? zhCN.common.unavailable;
-}
-
-function formatPreciseFrameRate(frameRate: number): string {
-  return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
 }
 
 function ProxyStatus({
@@ -176,19 +235,41 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
   );
 }
 
-const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
-  { key: 'red', value: '#ef4444' },
-  { key: 'orange', value: '#f97316' },
-  { key: 'yellow', value: '#eab308' },
-  { key: 'green', value: '#22c55e' },
-  { key: 'blue', value: '#3b82f6' },
-  { key: 'purple', value: '#a855f7' },
-];
-const MEDIA_LABEL_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
-  MEDIA_LABEL_COLORS.map((c) => [c.key, { backgroundColor: c.value }]),
-);
+function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>, nav: MediaGridNavCtxValue): void {
+  const ref = nav.pendingFocusRef;
+  const domIndex = Number(event.currentTarget.getAttribute('data-media-index'));
+  const currentIndex = ref.current ?? domIndex;
+  if (!Number.isFinite(currentIndex)) return;
+  const nextIndex = getMediaKeyboardNavigationIndex({
+    currentIndex,
+    itemCount: nav.mediaCount,
+    columnCount: nav.columnCount,
+    key: event.key,
+  });
+  if (nextIndex === undefined) return;
+  ref.current = nextIndex;
+  nav.scrollToMediaIndex(nextIndex);
+  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+  function focusWhenReady(attempts: number): void {
+    if (ref.current !== nextIndex) return;
+    const target = grid?.querySelector<HTMLElement>(`[data-media-index="${nextIndex}"]`);
+    if (target) {
+      target.focus();
+      if (ref.current === nextIndex) ref.current = null;
+    } else if (attempts < 10) {
+      requestAnimationFrame(() => focusWhenReady(attempts + 1));
+    } else {
+      ref.current = null;
+    }
+  }
+  focusWhenReady(0);
+}
 
-function MediaCard({
+// ---------------------------------------------------------------------------
+// MediaCard
+// ---------------------------------------------------------------------------
+
+export function MediaCard({
   asset,
   metadata,
   contentAnalysis,
@@ -739,7 +820,7 @@ function MediaCard({
         <div className="mt-1 flex items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
           <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>
-            {asset.type === 'audio' ? formatTimeShort(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}
+            {asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}
           </span>
         </div>
         <div
@@ -815,7 +896,7 @@ function MediaCard({
                 <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]" title={version.path}>
                   {version.name}
                 </span>
-                <span className="text-[var(--color-text-muted)]">{formatTimeShort(version.duration ?? 0)}</span>
+                <span className="text-[var(--color-text-muted)]">{formatDuration(version.duration ?? 0)}</span>
               </div>
             ))}
           </div>
@@ -943,7 +1024,7 @@ function MediaCard({
                           {sub.name}
                         </span>
                         <span className="shrink-0 text-[var(--color-text-muted)]">
-                          {formatTimeShort(sub.inPoint)} \u2013 {formatTimeShort(sub.outPoint)}
+                          {formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}
                         </span>
                       </div>
                       {sub.color ? (

@@ -1,7 +1,9 @@
-import type { VersionedExportReportRow } from '@open-factory/editor-core';
+import {
+  type VersionedExportReportRow,
+} from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
-import { formatBytes, formatMilliseconds } from '../lib/exportFormatHelpers';
 import { formatDuration } from '../lib/pipelineHelpers';
+import { formatBytes, formatMilliseconds } from '../lib/exportFormatHelpers';
 
 export function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] }) {
   const t = zhCN.exportDialog.versionBatch.report;
@@ -52,3 +54,4 @@ export function VersionedBatchReportTable({ rows }: { rows: VersionedExportRepor
     </div>
   );
 }
+

@@ -1,16 +1,16 @@
+import { useState, useRef, useMemo } from 'react';
+import { X } from 'lucide-react';
+import { zhCN } from '../../i18n/strings';
 import {
   DEFAULT_MEDIA_RENAME_TEMPLATE,
   buildMediaRenamePreview,
-  type MediaAsset,
   type BatchEditableMediaMetadata,
+  type MediaAsset,
   type MediaRenamePreviewItem,
   type MediaRenameRules,
 } from '@open-factory/editor-core';
-import { X } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import { zhCN } from '../../i18n/strings';
 
-function BatchTextField({
+export function BatchTextField({
   label,
   value,
   onChange,
@@ -54,11 +54,12 @@ function buildBatchMetadataPatch(fields: Record<keyof BatchEditableMediaMetadata
   return metadata;
 }
 
-
 function formatBatchRenameDate(date: Date): string {
-  return date.toISOString().slice(0, 10).replace(/-/g, '');
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
-
 
 export function BatchMetadataDialog({
   assets,
@@ -163,7 +164,6 @@ export function BatchMetadataDialog({
     </div>
   );
 }
-
 
 export function BatchRenameDialog({
   assets,
@@ -417,4 +417,3 @@ export function BatchRenameDialog({
     </div>
   );
 }
-

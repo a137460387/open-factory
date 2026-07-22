@@ -4,14 +4,12 @@
   CONTENT_SCENE_TYPES,
   collectSmartAlbums,
   collectFingerprintReferences,
-  DEFAULT_MEDIA_RENAME_TEMPLATE,
   filterMediaAssets,
   getMediaFolderDepth,
   isFrameRateMismatch,
   listFingerprintSourcePaths,
   getMediaVersionLabel,
   shouldGenerateProxy,
-  buildMediaRenamePreview,
   type MediaAsset,
   type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
@@ -22,7 +20,6 @@
   type MediaMetadata,
   type MediaMetadataFilter,
   type MediaRenamePreviewItem,
-  type MediaRenameRules,
   type SmartAlbumId,
   type TitleTemplateId,
   type EffectPreset,
@@ -39,7 +36,6 @@ import {
   type Subclip,
   type TimelineLabelColor,
 } from '@open-factory/editor-core';
-import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import {
   AlertCircle,
   BadgeCheck,
@@ -89,6 +85,7 @@ import {
   type RefObject,
 } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
+import { BatchMetadataDialog, BatchRenameDialog, BatchTextField } from './BatchDialogs';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
@@ -125,25 +122,8 @@ import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
 import { AdvancedSearchPanel } from './AdvancedSearchPanel';
 import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
-import { MediaCard } from './MediaCard';
-import { BatchMetadataDialog, BatchRenameDialog } from './BatchDialogs';
-import { MediaFolderTree } from './MediaFolderTree';
-import { MediaInfoDialog, MediaSourcePathsDialog, type MediaInfoState, type MediaSourcePathsState } from './MediaInfoDialog';
-import { SubclipDialog } from './SubclipDialog';
-import {
-  MEDIA_CARD_DRAG_MIME,
-  SUBCLIP_DRAG_MIME,
-  MEDIA_LABEL_COLORS,
-  MEDIA_LABEL_COLOR_STYLES,
-  formatFrameRateLabel,
-  formatMediaFormat,
-  formatMediaResolution,
-  formatMediaColorProfile,
-  formatBytes,
-  formatImportedAt,
-} from './media-bin-utils';
 
-export interface MediaCardExtras {
+interface MediaCardExtras {
   favoriteIds: Set<string>;
   onToggleFavorite(assetId: string): void;
   onRevealInTimeline(assetId: string): void;
@@ -156,15 +136,15 @@ export interface MediaCardExtras {
   onQualityAssess(assetId: string): void;
   onBatchQualityScan(): void;
 }
-export const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
+const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
 
-export interface MediaGridNavCtxValue {
+interface MediaGridNavCtxValue {
   columnCount: number;
   mediaCount: number;
   scrollToMediaIndex(index: number): void;
   pendingFocusRef: { current: number | null };
 }
-export const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
+const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -219,10 +199,10 @@ interface MediaBinProps {
 
 type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
 type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
-export const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
-export const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
+const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
+const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
 
-export interface SubclipContextValue {
+interface SubclipContextValue {
   subclips: Subclip[];
   onAddSubclip(subclip: Subclip): void;
   onUpdateSubclip(subclipId: string, patch: Partial<Subclip>): void;
@@ -232,7 +212,9 @@ export interface SubclipContextValue {
   expandedSubclipAssetIds: Set<string>;
   onToggleSubclipExpanded(assetId: string): void;
 }
-export const SubclipCtx = createContext<SubclipContextValue | null>(null);
+const SubclipCtx = createContext<SubclipContextValue | null>(null);
+type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
+type MediaSourcePathsState = { asset: MediaAsset; paths: string[] };
 
 export function MediaBin({
   media,
@@ -1098,6 +1080,7 @@ function getMediaAssetsByIdOrder(media: MediaAsset[], assetIds: string[] | undef
   return assetIds.map((assetId) => byId.get(assetId)).filter((asset): asset is MediaAsset => Boolean(asset));
 }
 
+
 function SmartAlbumBar({
   albums,
   activeId,
@@ -1381,6 +1364,274 @@ function MediaLibraryViewToolbar({
   );
 }
 
+function MediaFolderTree(props: {
+  folders: MediaFolder[];
+  media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
+  gridSize: MediaLibraryGridSize;
+  projectFrameRate: number;
+  onCreateFolder(parentId?: string | null): void;
+  onRenameFolder(folderId: string, name: string): void;
+  onDeleteFolder(folderId: string): void;
+  onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
+  onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
+  onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
+  onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
+  onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
+}) {
+  const roots = props.folders.filter((folder) => !folder.parentId);
+  if (roots.length === 0) {
+    return null;
+  }
+  return (
+    <div className="space-y-2" data-testid="media-folder-tree">
+      {roots.map((folder) => (
+        <MediaFolderNode key={folder.id} folder={folder} depth={1} {...props} />
+      ))}
+    </div>
+  );
+}
+
+function MediaFolderNode({
+  folder,
+  depth,
+  folders,
+  media,
+  mediaMetadata,
+  mediaContentAnalysis,
+  gridSize,
+  projectFrameRate,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onSetFolderCollapsed,
+  onMoveMediaToFolder,
+  onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
+  onRelink,
+  onGenerateProxy,
+  onConvertToCfr,
+  onSetLabel,
+  onSetRating,
+  onSetFlag,
+  onBatchTranscode,
+  onExportGif,
+  onAnalyzeSpectrum,
+  onShowInfo,
+  onFindSources,
+  selectedMediaIds,
+  onToggleSelected,
+  onOpenBatchMetadata,
+  onOpenBatchRename,
+}: {
+  folder: MediaFolder;
+  depth: number;
+  folders: MediaFolder[];
+  media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
+  gridSize: MediaLibraryGridSize;
+  projectFrameRate: number;
+  onCreateFolder(parentId?: string | null): void;
+  onRenameFolder(folderId: string, name: string): void;
+  onDeleteFolder(folderId: string): void;
+  onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
+  onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
+  onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
+  onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
+  onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(folder.name);
+  const children = folders.filter((item) => item.parentId === folder.id);
+  const folderMedia = media.filter((asset) => asset.folderId === folder.id);
+  const canNest = getMediaFolderDepth(folders, folder.id) < MAX_MEDIA_FOLDER_DEPTH;
+  const commitRename = () => {
+    setEditing(false);
+    if (draftName.trim() && draftName.trim() !== folder.name) {
+      onRenameFolder(folder.id, draftName);
+    } else {
+      setDraftName(folder.name);
+    }
+  };
+  return (
+    <div className="space-y-2" style={{ marginLeft: `${(depth - 1) * 12}px` }}>
+      <div
+        className="flex min-h-10 items-center gap-2 rounded-md border border-line bg-panel px-2 text-xs"
+        data-testid={`media-folder-${folder.id}`}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          const assetId = event.dataTransfer.getData(MEDIA_CARD_DRAG_MIME);
+          if (assetId) {
+            onMoveMediaToFolder([assetId], folder.id);
+          }
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onDeleteFolder(folder.id);
+        }}
+      >
+        <button
+          className="rounded p-1 hover:bg-[var(--color-bg-secondary)]"
+          type="button"
+          data-testid={`media-folder-toggle-${folder.id}`}
+          onClick={() => onSetFolderCollapsed(folder.id, !folder.collapsed)}
+        >
+          {folder.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        </button>
+        <Folder size={15} className="text-brand" />
+        {editing ? (
+          <input
+            className="min-w-0 flex-1 rounded-lg border border-line px-1 py-0.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+            value={draftName}
+            autoFocus
+            data-testid={`media-folder-name-input-${folder.id}`}
+            onChange={(event) => setDraftName(event.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                commitRename();
+              }
+              if (event.key === 'Escape') {
+                setDraftName(folder.name);
+                setEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <button
+            className="min-w-0 flex-1 truncate text-left font-semibold text-[var(--color-text-secondary)]"
+            type="button"
+            data-testid={`media-folder-name-${folder.id}`}
+            onDoubleClick={() => setEditing(true)}
+          >
+            {folder.name}
+          </button>
+        )}
+        <span className="text-[var(--color-text-muted)]">{folderMedia.length}</span>
+        <button
+          className="rounded p-1 hover:bg-[var(--color-bg-secondary)] disabled:opacity-40"
+          type="button"
+          title={zhCN.mediaBin.newSubfolder}
+          data-testid={`media-folder-add-child-${folder.id}`}
+          disabled={!canNest}
+          onClick={() => onCreateFolder(folder.id)}
+        >
+          <FolderPlus size={13} />
+        </button>
+        <button
+          className="rounded p-1 text-rose-600 hover:bg-[var(--color-bg-secondary)]"
+          type="button"
+          title={zhCN.common.delete}
+          data-testid={`media-folder-delete-${folder.id}`}
+          onClick={() => onDeleteFolder(folder.id)}
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+      {!folder.collapsed ? (
+        <div className="space-y-2">
+          {children.map((child) => (
+            <MediaFolderNode
+              key={child.id}
+              folder={child}
+              depth={depth + 1}
+              folders={folders}
+              media={media}
+              mediaMetadata={mediaMetadata}
+              mediaContentAnalysis={mediaContentAnalysis}
+              gridSize={gridSize}
+              projectFrameRate={projectFrameRate}
+              onCreateFolder={onCreateFolder}
+              onRenameFolder={onRenameFolder}
+              onDeleteFolder={onDeleteFolder}
+              onSetFolderCollapsed={onSetFolderCollapsed}
+              onMoveMediaToFolder={onMoveMediaToFolder}
+              onAddToTimeline={onAddToTimeline}
+              onAddVersion={onAddVersion}
+              onCompareVersions={onCompareVersions}
+              onRelink={onRelink}
+              onGenerateProxy={onGenerateProxy}
+              onConvertToCfr={onConvertToCfr}
+              onSetLabel={onSetLabel}
+              onSetRating={onSetRating}
+              onSetFlag={onSetFlag}
+              onBatchTranscode={onBatchTranscode}
+              onExportGif={onExportGif}
+              onAnalyzeSpectrum={onAnalyzeSpectrum}
+              onShowInfo={onShowInfo}
+              onFindSources={onFindSources}
+              selectedMediaIds={selectedMediaIds}
+              onToggleSelected={onToggleSelected}
+              onOpenBatchMetadata={onOpenBatchMetadata}
+              onOpenBatchRename={onOpenBatchRename}
+            />
+          ))}
+          <MediaCardGrid
+            media={folderMedia}
+            mediaMetadata={mediaMetadata}
+            mediaContentAnalysis={mediaContentAnalysis}
+            gridSize={gridSize}
+            projectFrameRate={projectFrameRate}
+            onAddToTimeline={onAddToTimeline}
+            onAddVersion={onAddVersion}
+            onCompareVersions={onCompareVersions}
+            onRelink={onRelink}
+            onGenerateProxy={onGenerateProxy}
+            onConvertToCfr={onConvertToCfr}
+            onSetLabel={onSetLabel}
+            onSetRating={onSetRating}
+            onSetFlag={onSetFlag}
+            onBatchTranscode={onBatchTranscode}
+            onExportGif={onExportGif}
+            onAnalyzeSpectrum={onAnalyzeSpectrum}
+            onShowInfo={onShowInfo}
+            onFindSources={onFindSources}
+            selectedMediaIds={selectedMediaIds}
+            onToggleSelected={onToggleSelected}
+            onOpenBatchMetadata={onOpenBatchMetadata}
+            onOpenBatchRename={onOpenBatchRename}
+            folderId={folder.id}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RootMediaDropZone({
   onMoveMediaToFolder,
 }: {
@@ -1525,7 +1776,7 @@ function MediaLibraryListView({
                 {formatMediaColorProfile(asset)}
               </td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">
-                {formatTimeShort(asset.duration)}
+                {formatDuration(asset.duration)}
               </td>
               <td
                 className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]"
@@ -1607,7 +1858,7 @@ function MediaLibraryTimelineView({
                   <IconPreview type={asset.type} />
                 )}
                 <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                  {formatTimeShort(asset.duration)}
+                  {formatDuration(asset.duration)}
                 </span>
               </div>
               <div className="space-y-1 p-2">
@@ -1689,7 +1940,7 @@ function estimateCardRowHeight(gridSize: MediaLibraryGridSize): number {
   return GRID_ROW_HEIGHTS[gridSize];
 }
 
-export function MediaCardGrid({
+function MediaCardGrid({
   media,
   gridSize,
   mediaMetadata,
@@ -1991,6 +2242,1390 @@ function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(template
   );
 }
 
+function MediaSourcePathsDialog({ state, onClose }: { state: MediaSourcePathsState; onClose(): void }) {
+  const paths = state.paths;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="media-source-paths-dialog"
+    >
+      <div className="w-full max-w-xl overflow-hidden rounded-lg bg-[var(--color-bg-elevated)] shadow-soft">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold text-ink">{zhCN.mediaBin.sourcePathsTitle}</h2>
+            <div className="truncate text-xs text-[var(--color-text-muted)]">{state.asset.name}</div>
+          </div>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] hover:bg-panel"
+            type="button"
+            aria-label={zhCN.common.close}
+            onClick={onClose}
+          >
+            <X size={17} />
+          </button>
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto p-4 text-xs">
+          {paths.length > 0 ? (
+            <ul className="space-y-2">
+              {paths.map((path) => (
+                <li
+                  key={path}
+                  className="rounded-md border border-line bg-panel px-2 py-1.5 font-mono text-[var(--color-text-secondary)]"
+                  data-testid="media-source-path"
+                >
+                  {path}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div
+              className="rounded-md border border-line bg-panel p-3 text-[var(--color-text-secondary)]"
+              data-testid="media-source-path-empty"
+            >
+              {zhCN.mediaBin.sourcePathsEmpty}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose(): void }) {
+  const t = zhCN.mediaBin.mediaInfo;
+  const analysis = state.analysis;
+  const firstVideo = analysis?.videoStreams[0];
+  const firstAudio = analysis?.audioStreams[0];
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="media-info-dialog"
+    >
+      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-[var(--color-bg-elevated)] shadow-soft">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold text-ink">{t.title}</h2>
+            <div className="truncate text-xs text-[var(--color-text-muted)]">{state.asset.name}</div>
+          </div>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] hover:bg-panel"
+            type="button"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            data-testid="media-info-close-button"
+            onClick={onClose}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {state.loading ? (
+            <div className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]">
+              {t.loading}
+            </div>
+          ) : null}
+          {state.error ? (
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{state.error}</div>
+          ) : null}
+          {analysis ? (
+            <div className="space-y-4">
+              <InfoSection title={t.basic}>
+                <InfoRow
+                  label={t.format}
+                  value={analysis.format.formatLongName ?? analysis.format.formatName ?? zhCN.common.unavailable}
+                  testId="media-info-format"
+                />
+                <InfoRow label={t.duration} value={formatDuration(analysis.format.duration ?? state.asset.duration)} />
+                <InfoRow label={t.fileSize} value={formatBytes(analysis.fileSize ?? analysis.format.size)} />
+                <InfoRow label={t.createdTime} value={formatDateTime(analysis.createdTimeMs)} />
+                <InfoRow label={t.bitRate} value={formatBitRate(analysis.format.bitRate)} />
+              </InfoSection>
+              <InfoSection title={t.video}>
+                {firstVideo ? (
+                  <>
+                    <InfoRow
+                      label={t.codec}
+                      value={firstVideo.codecLongName ?? firstVideo.codecName ?? zhCN.common.unavailable}
+                      testId="media-info-codec"
+                    />
+                    <InfoRow
+                      label={t.resolution}
+                      value={
+                        firstVideo.width && firstVideo.height
+                          ? `${firstVideo.width} x ${firstVideo.height}`
+                          : zhCN.common.unavailable
+                      }
+                      testId="media-info-resolution"
+                    />
+                    <InfoRow
+                      label={t.frameRate}
+                      value={firstVideo.frameRate ? `${firstVideo.frameRate.toFixed(2)} fps` : zhCN.common.unavailable}
+                    />
+                    <InfoRow label={t.bitRate} value={formatBitRate(firstVideo.bitRate)} />
+                    <InfoRow
+                      label={t.colorSpace}
+                      value={
+                        [firstVideo.colorPrimaries, firstVideo.colorTransfer, firstVideo.colorSpace]
+                          .filter(Boolean)
+                          .join(' / ') || zhCN.common.unavailable
+                      }
+                    />
+                    <InfoRow label={t.pixelFormat} value={firstVideo.pixelFormat ?? zhCN.common.unavailable} />
+                    <InfoRow
+                      label={t.hdrMetadata}
+                      value={firstVideo.hdrMetadata.length > 0 ? firstVideo.hdrMetadata.join(', ') : zhCN.common.none}
+                    />
+                  </>
+                ) : (
+                  <div className="text-sm text-[var(--color-text-muted)]">{t.noVideo}</div>
+                )}
+              </InfoSection>
+              <InfoSection title={t.audio}>
+                {firstAudio ? (
+                  <>
+                    <InfoRow
+                      label={t.codec}
+                      value={firstAudio.codecLongName ?? firstAudio.codecName ?? zhCN.common.unavailable}
+                    />
+                    <InfoRow
+                      label={t.sampleRate}
+                      value={firstAudio.sampleRate ? `${firstAudio.sampleRate} Hz` : zhCN.common.unavailable}
+                    />
+                    <InfoRow
+                      label={t.channels}
+                      value={
+                        firstAudio.channels
+                          ? `${firstAudio.channels}${firstAudio.channelLayout ? ` (${firstAudio.channelLayout})` : ''}`
+                          : zhCN.common.unavailable
+                      }
+                    />
+                    <InfoRow label={t.bitRate} value={formatBitRate(firstAudio.bitRate)} />
+                    <InfoRow
+                      label={t.loudness}
+                      value={
+                        firstAudio.integratedLufs !== undefined
+                          ? `${firstAudio.integratedLufs.toFixed(1)} LUFS`
+                          : (analysis.loudnessError ?? zhCN.common.unavailable)
+                      }
+                      testId="media-info-loudness"
+                    />
+                  </>
+                ) : (
+                  <div className="text-sm text-[var(--color-text-muted)]">{t.noAudio}</div>
+                )}
+              </InfoSection>
+              <InfoSection title={t.bitrateChart}>
+                <BitrateChart points={analysis.bitratePoints} />
+              </InfoSection>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-md border border-line bg-panel p-3">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-text-secondary)]">
+        {title}
+      </h3>
+      <div className="grid gap-1 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({ label, value, testId }: { label: string; value: string; testId?: string }) {
+  return (
+    <div className="grid grid-cols-[140px_minmax(0,1fr)] gap-3">
+      <div className="text-xs font-medium text-[var(--color-text-muted)]">{label}</div>
+      <div className="min-w-0 break-words text-sm text-ink" data-testid={testId}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function BitrateChart({ points }: { points: MediaAnalysis['bitratePoints'] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    const width = canvas.width;
+    const height = canvas.height;
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = '#f8fafc';
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = '#cbd5e1';
+    context.lineWidth = 1;
+    for (let y = 24; y < height; y += 24) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+      context.stroke();
+    }
+    if (points.length === 0) {
+      context.fillStyle = '#64748b';
+      context.font = '12px sans-serif';
+      context.fillText(zhCN.mediaBin.mediaInfo.noBitrateData, 12, 26);
+      return;
+    }
+    const maxRate = Math.max(...points.map((point) => point.bitRate), 1);
+    const maxTime = Math.max(...points.map((point) => point.time), 1);
+    context.strokeStyle = '#0f766e';
+    context.lineWidth = 2;
+    context.beginPath();
+    points.forEach((point, index) => {
+      const x = (point.time / maxTime) * (width - 16) + 8;
+      const y = height - 8 - (point.bitRate / maxRate) * (height - 16);
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.stroke();
+  }, [points]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="h-32 w-full rounded-md border border-line bg-[var(--color-bg-elevated)]"
+      width={640}
+      height={128}
+      data-testid="media-info-bitrate-chart"
+    />
+  );
+}
+
+const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
+  { key: 'red', value: '#ef4444' },
+  { key: 'orange', value: '#f97316' },
+  { key: 'yellow', value: '#eab308' },
+  { key: 'green', value: '#22c55e' },
+  { key: 'blue', value: '#3b82f6' },
+  { key: 'purple', value: '#a855f7' },
+];
+const MEDIA_LABEL_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
+  MEDIA_LABEL_COLORS.map((c) => [c.key, { backgroundColor: c.value }]),
+);
+
+function MediaCard({
+  asset,
+  metadata,
+  contentAnalysis,
+  projectFrameRate,
+  onAdd,
+  onAddVersion,
+  onCompareVersions,
+  onRelink,
+  onGenerateProxy,
+  onConvertToCfr,
+  onSetLabel,
+  onSetRating,
+  onSetFlag,
+  onBatchTranscode,
+  onExportGif,
+  onAnalyzeSpectrum,
+  onShowInfo,
+  onFindSources,
+  selected,
+  onToggleSelected,
+  batchSelectionCount,
+  onOpenBatchMetadata,
+  onOpenBatchRename,
+  mediaIndex,
+}: {
+  asset: MediaAsset;
+  metadata?: MediaMetadata;
+  contentAnalysis?: ClipContentAnalysis;
+  projectFrameRate: number;
+  onAdd(): void;
+  onAddVersion(): void;
+  onCompareVersions(): void;
+  onRelink(): void;
+  onGenerateProxy(): void;
+  onConvertToCfr(): void;
+  onSetLabel(labelColor?: MediaLabelColor): void;
+  onSetRating(rating: number): void;
+  onSetFlag(flag?: MediaFlag): void;
+  onBatchTranscode(): void;
+  onExportGif(): void;
+  onAnalyzeSpectrum(): void;
+  onShowInfo(): void;
+  onFindSources(): void;
+  selected: boolean;
+  onToggleSelected(): void;
+  batchSelectionCount: number;
+  onOpenBatchMetadata(): void;
+  onOpenBatchRename(): void;
+  mediaIndex: number;
+}) {
+  const proxySettings = useProxySettingsStore((state) => state.settings);
+  const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
+  const canGenerateProxy =
+    asset.type === 'video' && (shouldGenerateProxy(asset, proxySettings) || proxyStatus === 'error');
+  const frameRateMismatch = asset.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
+  const canConvertFrameRate = asset.type === 'video' && (asset.variableFrameRate || frameRateMismatch);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [hoverPreviewActive, setHoverPreviewActive] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const labelColor = metadata?.labelColor;
+  const rating = metadata?.rating ?? 0;
+  const flag = metadata?.flag;
+  const extras = useContext(MediaCardExtrasCtx);
+  const sc = useContext(SubclipCtx);
+  const mediaVersions = metadata?.versions ?? [];
+  const versionCount = 1 + mediaVersions.length;
+  return (
+    <div
+      className={clsx(
+        'relative overflow-hidden rounded-lg border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]',
+        asset.missing ? 'border-rose-300' : 'border-line',
+      )}
+      data-testid={`media-card-${asset.id}`}
+      data-media-card="true"
+      data-media-index={mediaIndex}
+      data-missing={asset.missing ? 'true' : 'false'}
+      data-folder-id={asset.folderId ?? 'root'}
+      data-label-color={labelColor ?? 'none'}
+      data-rating={rating}
+      data-flag={flag ?? 'none'}
+      role="group"
+      aria-label={`${asset.name} ${zhCN.mediaBin.assetType[asset.type]}`}
+      tabIndex={0}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(MEDIA_CARD_DRAG_MIME, asset.id);
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+          event.preventDefault();
+          const nav = useContext(MediaGridNavCtx);
+          if (nav) focusMediaCardByKeyboard(event, nav);
+          return;
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          onAdd();
+          return;
+        }
+        if (event.key === ' ' || event.code === 'Space') {
+          event.preventDefault();
+          if (isMediaPreviewable(asset.type) && !asset.missing) {
+            setHoverPreviewActive(true);
+            setTimeout(() => setHoverPreviewActive(false), 3000);
+          } else {
+            onShowInfo();
+          }
+          return;
+        }
+        if (event.key.toLowerCase() === 'g') {
+          event.preventDefault();
+          onSetFlag('green');
+        }
+        if (event.key.toLowerCase() === 'x') {
+          event.preventDefault();
+          onSetFlag('red');
+        }
+        if (event.key.toLowerCase() === 'u') {
+          event.preventDefault();
+          onSetFlag(undefined);
+        }
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setLabelMenuOpen(true);
+      }}
+      onMouseEnter={() => {
+        if (!isMediaPreviewable(asset.type)) return;
+        const { schedule, cancel } = computeMediaPreviewDelay();
+        cancel(hoverTimerRef.current);
+        hoverTimerRef.current = schedule(() => setHoverPreviewActive(true));
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = undefined;
+        setHoverPreviewActive(false);
+      }}
+    >
+      <div className="checkerboard relative aspect-video">
+        <label
+          className="absolute left-2 top-2 z-10 inline-flex h-6 w-6 items-center justify-center rounded border border-white/80 bg-white/90 shadow"
+          title={zhCN.mediaBin.selectForThumbnail}
+          aria-label={zhCN.mediaBin.selectForThumbnail}
+          data-testid={`media-select-${asset.id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <input className="h-4 w-4 accent-brand" type="checkbox" checked={selected} onChange={onToggleSelected} />
+        </label>
+        {asset.thumbnail ? (
+          <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" loading="lazy" />
+        ) : (
+          <IconPreview type={asset.type} />
+        )}
+        {hoverPreviewActive && isMediaPreviewable(asset.type) && !asset.missing ? (
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            src={convertLocalFileSrc(asset.path)}
+            muted
+            autoPlay
+            loop
+            playsInline
+            preload="metadata"
+            data-testid={`media-hover-preview-${asset.id}`}
+          />
+        ) : null}
+        {asset.missing ? (
+          <span
+            className="absolute left-2 top-10 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white"
+            data-testid={`missing-media-badge-${asset.id}`}
+          >
+            {zhCN.common.missing}
+          </span>
+        ) : null}
+        {asset.variableFrameRate ? (
+          <span
+            className="absolute left-2 top-10 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white shadow"
+            title={zhCN.mediaBin.vfrTooltip}
+            data-testid={`vfr-badge-${asset.id}`}
+          >
+            {zhCN.mediaBin.vfrBadge}
+          </span>
+        ) : null}
+        {asset.type === 'video' && asset.frameRate ? (
+          <span
+            className={clsx(
+              'absolute bottom-2 right-2 rounded px-2 py-0.5 text-[11px] font-semibold shadow',
+              frameRateMismatch ? 'bg-orange-500 text-white' : 'bg-black/70 text-white',
+            )}
+            title={zhCN.mediaBin.frameRateTooltip(formatPreciseFrameRate(asset.frameRate))}
+            data-testid={`media-frame-rate-${asset.id}`}
+            data-frame-rate={asset.frameRate}
+            data-frame-rate-mismatch={frameRateMismatch ? 'true' : 'false'}
+          >
+            {formatFrameRateLabel(asset.frameRate)}
+          </span>
+        ) : null}
+        {versionCount > 1 ? (
+          <button
+            className="absolute right-2 top-2 rounded bg-brand px-2 py-0.5 text-[11px] font-semibold text-white shadow"
+            type="button"
+            title={zhCN.mediaBin.versionBadgeTitle(versionCount)}
+            data-testid={`media-version-badge-${asset.id}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setVersionsOpen((open) => !open);
+            }}
+          >
+            {zhCN.mediaBin.versionBadge(versionCount)}
+          </button>
+        ) : null}
+        {labelColor ? (
+          <span
+            className={clsx(
+              'absolute right-2 h-4 w-4 rounded-full border border-white shadow',
+              versionCount > 1 ? 'top-8' : 'top-2',
+            )}
+            style={{ backgroundColor: labelColorToHex(labelColor) }}
+            data-testid={`media-label-${asset.id}`}
+          />
+        ) : null}
+        {extras?.favoriteIds.has(asset.id) ? (
+          <span
+            className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow"
+            data-testid={`media-favorite-badge-${asset.id}`}
+          >
+            <Heart size={12} className="text-rose-500" fill="currentColor" />
+          </span>
+        ) : null}
+        {extras?.qualityLoading.has(asset.id) ? (
+          <span
+            className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow"
+            data-testid={`quality-badge-loading-${asset.id}`}
+          >
+            <Loader2 size={12} className="animate-spin text-[var(--color-text-muted)]" />
+          </span>
+        ) : null}
+        {extras?.qualityResults.has(asset.id)
+          ? (() => {
+              const g = mapScoreToGrade(extras.qualityResults.get(asset.id)!.overallScore);
+              return (
+                <span
+                  className={clsx(
+                    'absolute left-2 top-2 z-10 flex items-center justify-center rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold shadow',
+                    g === 'green' ? 'text-emerald-600' : g === 'yellow' ? 'text-amber-500' : 'text-rose-600',
+                  )}
+                  title={
+                    zhCN.mediaBin.aiQualityAssessment.scoreBadge +
+                    ': ' +
+                    extras.qualityResults.get(asset.id)!.overallScore
+                  }
+                  data-testid={`quality-badge-${asset.id}`}
+                >
+                  {extras.qualityResults.get(asset.id)!.overallScore}
+                </span>
+              );
+            })()
+          : null}
+        {flag ? (
+          <span
+            className={clsx(
+              'absolute left-2 bottom-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-white shadow',
+              flag === 'green' ? 'bg-emerald-600' : 'bg-rose-600',
+            )}
+            data-testid={`media-flag-badge-${asset.id}`}
+          >
+            <Flag size={11} fill="currentColor" />
+            {flag === 'green' ? zhCN.mediaBin.flagGreen : zhCN.mediaBin.flagRed}
+          </span>
+        ) : null}
+      </div>
+      {labelMenuOpen ? (
+        <div
+          className="absolute right-2 top-2 z-10 w-48 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
+          data-testid={`media-label-menu-${asset.id}`}
+        >
+          {batchSelectionCount > 1 ? (
+            <>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                type="button"
+                data-testid="batch-edit-metadata-menu-item"
+                onClick={() => {
+                  onOpenBatchMetadata();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <Tag size={13} />
+                {zhCN.mediaBin.batchEditMetadata}
+              </button>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                type="button"
+                data-testid="batch-rename-media-menu-item"
+                onClick={() => {
+                  onOpenBatchRename();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <List size={13} />
+                {zhCN.mediaBin.batchRename}
+              </button>
+            </>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid="batch-quality-scan"
+              onClick={() => {
+                extras.onBatchQualityScan();
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {zhCN.mediaBin.aiQualityAssessment.batchScan}
+            </button>
+          ) : null}
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid={`media-info-${asset.id}`}
+            onClick={() => {
+              onShowInfo();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Info size={13} />
+            {zhCN.mediaBin.mediaInfo.menuItem}
+          </button>
+          {sc && (asset.type === 'video' || asset.type === 'audio') ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-new-subclip-${asset.id}`}
+              onClick={() => {
+                sc.onOpenSubclipDialog(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Scissors size={13} />
+              {zhCN.subclip.newSubclip}
+            </button>
+          ) : null}
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid={`media-add-version-${asset.id}`}
+            onClick={() => {
+              onAddVersion();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Plus size={13} />
+            {zhCN.mediaBin.addVersion}
+          </button>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid={`media-find-source-${asset.id}`}
+            onClick={() => {
+              onFindSources();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Search size={13} />
+            {zhCN.mediaBin.findSourceFiles}
+          </button>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
+            type="button"
+            disabled={versionCount < 2}
+            data-testid={`media-compare-versions-${asset.id}`}
+            onClick={() => {
+              onCompareVersions();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <GalleryHorizontal size={13} />
+            {zhCN.mediaBin.compareVersions}
+          </button>
+          {asset.type === 'video' ? (
+            <>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                type="button"
+                data-testid={`media-batch-transcode-${asset.id}`}
+                onClick={() => {
+                  onBatchTranscode();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <FileVideo2 size={13} />
+                {zhCN.mediaBin.batchTranscode}
+              </button>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                type="button"
+                data-testid={`media-export-gif-${asset.id}`}
+                onClick={() => {
+                  onExportGif();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <ImageDown size={13} />
+                {zhCN.mediaBin.exportGif}
+              </button>
+            </>
+          ) : null}
+          {asset.type === 'video' || asset.type === 'audio' ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-spectrum-analysis-${asset.id}`}
+              onClick={() => {
+                onAnalyzeSpectrum();
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {zhCN.mediaBin.spectrumAnalysis}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-reveal-in-timeline-${asset.id}`}
+              onClick={() => {
+                extras.onRevealInTimeline(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Search size={13} />
+              {zhCN.matchFrame.revealInTimeline}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-toggle-favorite-${asset.id}`}
+              onClick={() => {
+                extras.onToggleFavorite(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Heart
+                size={13}
+                className={extras.favoriteIds.has(asset.id) ? 'text-rose-500' : ''}
+                fill={extras.favoriteIds.has(asset.id) ? 'currentColor' : 'none'}
+              />
+              {extras.favoriteIds.has(asset.id)
+                ? zhCN.mediaFavorites.removeFromFavorites
+                : zhCN.mediaFavorites.addToFavorites}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-pin-to-session-${asset.id}`}
+              onClick={() => {
+                extras.onPinToSession(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Star
+                size={13}
+                className={extras.pinnedIds.has(asset.id) ? 'text-amber-500' : ''}
+                fill={extras.pinnedIds.has(asset.id) ? 'currentColor' : 'none'}
+              />
+              {zhCN.mediaFavorites.pinToSession}
+            </button>
+          ) : null}
+          {(asset.type === 'video' || asset.type === 'image') && extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              data-testid={`media-ai-analyze-${asset.id}`}
+              onClick={() => {
+                extras.onAnalyzeAI(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Sparkles size={13} />
+              {zhCN.inspector.aiContentAnalysis.title}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+              type="button"
+              disabled={extras.qualityLoading.has(asset.id)}
+              data-testid={`media-quality-assess-${asset.id}`}
+              onClick={() => {
+                extras.onQualityAssess(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {extras.qualityLoading.has(asset.id)
+                ? zhCN.mediaBin.aiQualityAssessment.assessing
+                : zhCN.mediaBin.aiQualityAssessment.assess}
+            </button>
+          ) : null}
+          <div className="mb-2 flex items-center gap-1 font-semibold text-[var(--color-text-secondary)]">
+            <Tag size={13} />
+            {zhCN.mediaBin.label}
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {MEDIA_LABEL_COLORS.map((color) => (
+              <button
+                key={color.key}
+                className="h-7 rounded border border-line"
+                type="button"
+                title={zhCN.mediaBin.labelColors[color.key]}
+                style={MEDIA_LABEL_COLOR_STYLES[color.key]}
+                data-testid={`media-label-color-${color.key}`}
+                onClick={() => {
+                  onSetLabel(color.key);
+                  setLabelMenuOpen(false);
+                }}
+              />
+            ))}
+          </div>
+          <button
+            className="mt-2 w-full rounded-md border border-line px-2 py-1 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+            type="button"
+            data-testid="media-label-clear"
+            onClick={() => {
+              onSetLabel(undefined);
+              setLabelMenuOpen(false);
+            }}
+          >
+            {zhCN.mediaBin.clearLabel}
+          </button>
+        </div>
+      ) : null}
+      <div className="p-2">
+        <div className="truncate text-sm font-medium" title={asset.path} data-testid={`media-name-${asset.id}`}>
+          {asset.name}
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
+          <span>{zhCN.mediaBin.assetType[asset.type]}</span>
+          <span>
+            {asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}
+          </span>
+        </div>
+        <div
+          className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]"
+          data-testid={`media-color-profile-${asset.id}`}
+        >
+          {formatMediaColorProfile(asset)}
+        </div>
+        {contentAnalysis ? <MediaSceneTagList assetId={asset.id} analysis={contentAnalysis} /> : null}
+        {asset.aiAnalysis?.tags && asset.aiAnalysis.tags.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-1" data-testid={`ai-tags-${asset.id}`}>
+            {asset.aiAnalysis.tags.slice(0, 5).map((tag, i) => (
+              <span
+                key={i}
+                className="inline-block rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]"
+              >
+                {tag}
+              </span>
+            ))}
+            {asset.aiAnalysis.scene ? (
+              <span className="inline-block text-[10px] text-[var(--color-text-muted)]" title={asset.aiAnalysis.scene}>
+                {asset.aiAnalysis.scene}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        {asset.type === 'video' ? (
+          <ProxyStatus
+            status={proxyStatus}
+            error={asset.proxyError}
+            canGenerate={canGenerateProxy}
+            onGenerateProxy={onGenerateProxy}
+            assetId={asset.id}
+          />
+        ) : null}
+        {canConvertFrameRate ? (
+          <button
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-100"
+            type="button"
+            data-testid={`convert-cfr-${asset.id}`}
+            onClick={onConvertToCfr}
+          >
+            {frameRateMismatch
+              ? zhCN.mediaBin.convertFrameRateToProject(formatFrameRateLabel(projectFrameRate))
+              : zhCN.mediaBin.convertToCfr}
+          </button>
+        ) : null}
+        {asset.relativePath ? (
+          <div className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]">{asset.relativePath}</div>
+        ) : null}
+        {versionsOpen && versionCount > 1 ? (
+          <div
+            className="mt-2 space-y-1 rounded-md border border-line bg-panel p-2 text-[11px]"
+            data-testid={`media-version-list-${asset.id}`}
+          >
+            <div
+              className="flex items-center justify-between gap-2 rounded bg-[var(--color-bg-elevated)] px-2 py-1"
+              data-testid={`media-version-row-${asset.id}-${asset.id}`}
+            >
+              <span className="font-semibold text-[var(--color-text-secondary)]">{getMediaVersionLabel(0)}</span>
+              <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]">{asset.name}</span>
+              <span className="text-[var(--color-text-muted)]">{zhCN.mediaBin.versionOriginal}</span>
+            </div>
+            {mediaVersions.map((version, index) => (
+              <div
+                key={version.id}
+                className="flex items-center justify-between gap-2 rounded bg-[var(--color-bg-elevated)] px-2 py-1"
+                data-testid={`media-version-row-${asset.id}-${version.id}`}
+              >
+                <span className="font-semibold text-[var(--color-text-secondary)]">
+                  {version.label || getMediaVersionLabel(index + 1)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]" title={version.path}>
+                  {version.name}
+                </span>
+                <span className="text-[var(--color-text-muted)]">{formatDuration(version.duration ?? 0)}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center" data-testid={`media-rating-${asset.id}`} aria-label={zhCN.mediaBin.rating}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={clsx(
+                  'rounded p-0.5',
+                  value <= rating ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-amber-300',
+                )}
+                title={zhCN.mediaBin.ratingValue(value)}
+                aria-label={zhCN.mediaBin.ratingValue(value)}
+                data-testid={`media-rating-star-${asset.id}-${value}`}
+                data-rating-value={value}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSetRating(rating === value ? 0 : value);
+                }}
+              >
+                <Star size={14} fill={value <= rating ? 'currentColor' : 'none'} />
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1" aria-label={zhCN.mediaBin.flag}>
+            <button
+              type="button"
+              className={clsx(
+                'rounded border px-1.5 py-0.5 text-[11px] font-semibold',
+                flag === 'green'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                  : 'border-line text-[var(--color-text-muted)] hover:bg-panel',
+              )}
+              title={zhCN.mediaBin.flagGreenShortcut}
+              data-testid={`media-flag-green-${asset.id}`}
+              onClick={() => onSetFlag(flag === 'green' ? undefined : 'green')}
+            >
+              G
+            </button>
+            <button
+              type="button"
+              className={clsx(
+                'rounded border px-1.5 py-0.5 text-[11px] font-semibold',
+                flag === 'red'
+                  ? 'border-rose-300 bg-rose-50 text-rose-700'
+                  : 'border-line text-[var(--color-text-muted)] hover:bg-panel',
+              )}
+              title={zhCN.mediaBin.flagRedShortcut}
+              data-testid={`media-flag-red-${asset.id}`}
+              onClick={() => onSetFlag(flag === 'red' ? undefined : 'red')}
+            >
+              X
+            </button>
+            {flag ? (
+              <button
+                type="button"
+                className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)] hover:bg-panel"
+                title={zhCN.mediaBin.flagClearShortcut}
+                data-testid={`media-flag-clear-${asset.id}`}
+                onClick={() => onSetFlag(undefined)}
+              >
+                U
+              </button>
+            ) : null}
+          </div>
+        </div>
+        <button
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-[var(--color-bg-secondary)]"
+          type="button"
+          onClick={onAdd}
+          data-testid={`add-to-timeline-${asset.id}`}
+        >
+          <Plus size={15} />
+          {zhCN.mediaBin.addToTimeline}
+        </button>
+        {asset.missing ? (
+          <button
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+            type="button"
+            onClick={onRelink}
+            data-testid={`relink-media-${asset.id}`}
+          >
+            <Link2 size={15} />
+            {zhCN.mediaBin.relink}
+          </button>
+        ) : null}
+        {sc && sc.subclips.filter((s) => s.sourceMediaId === asset.id).length > 0 ? (
+          <div className="mt-2">
+            <button
+              className="inline-flex w-full items-center gap-1 rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
+              type="button"
+              data-testid={`toggle-subclips-${asset.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                sc.onToggleSubclipExpanded(asset.id);
+              }}
+            >
+              {sc.expandedSubclipAssetIds.has(asset.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Scissors size={11} />
+              {zhCN.subclip.subclipCount(sc.subclips.filter((s) => s.sourceMediaId === asset.id).length)}
+            </button>
+            {sc.expandedSubclipAssetIds.has(asset.id) ? (
+              <div className="mt-1 space-y-1" data-testid={`subclip-list-${asset.id}`}>
+                {sc.subclips
+                  .filter((s) => s.sourceMediaId === asset.id)
+                  .map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-[11px] shadow-sm"
+                      draggable
+                      data-testid={`subclip-card-${sub.id}`}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = 'copy';
+                        event.dataTransfer.setData(
+                          SUBCLIP_DRAG_MIME,
+                          JSON.stringify({ assetId: asset.id, subclip: sub }),
+                        );
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="truncate font-semibold text-[var(--color-text-secondary)]" title={sub.name}>
+                          {sub.name}
+                        </span>
+                        <span className="shrink-0 text-[var(--color-text-muted)]">
+                          {formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}
+                        </span>
+                      </div>
+                      {sub.color ? (
+                        <span
+                          className="mt-0.5 inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: sub.color }}
+                        />
+                      ) : null}
+                      <div className="mt-1 flex items-center gap-1">
+                        <button
+                          className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                          type="button"
+                          data-testid={`add-subclip-to-timeline-${sub.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sc.onAddSubclipToTimeline(asset.id, sub);
+                          }}
+                        >
+                          {zhCN.subclip.addToTimeline}
+                        </button>
+                        <button
+                          className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)] hover:bg-panel"
+                          type="button"
+                          data-testid={`edit-subclip-${sub.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sc.onOpenSubclipDialog(asset.id, sub.id);
+                          }}
+                        >
+                          {zhCN.subclip.editSubclip}
+                        </button>
+                        <button
+                          className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-rose-600 hover:bg-panel"
+                          type="button"
+                          data-testid={`delete-subclip-${sub.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sc.onDeleteSubclip(sub.id);
+                          }}
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const TIMELINE_COLORS: Array<{ key: TimelineLabelColor; value: string }> = [
+  { key: 'red', value: '#ef4444' },
+  { key: 'orange', value: '#f97316' },
+  { key: 'amber', value: '#f59e0b' },
+  { key: 'yellow', value: '#eab308' },
+  { key: 'lime', value: '#84cc16' },
+  { key: 'green', value: '#22c55e' },
+  { key: 'teal', value: '#14b8a6' },
+  { key: 'cyan', value: '#06b6d4' },
+  { key: 'blue', value: '#3b82f6' },
+  { key: 'indigo', value: '#6366f1' },
+  { key: 'purple', value: '#a855f7' },
+  { key: 'pink', value: '#ec4899' },
+];
+const TIMELINE_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
+  TIMELINE_COLORS.map((c) => [c.key, { backgroundColor: c.value }]),
+);
+
+function SubclipDialog({
+  asset,
+  editingSubclip,
+  onAddSubclip,
+  onUpdateSubclip,
+  onClose,
+}: {
+  asset: MediaAsset;
+  editingSubclip?: Subclip;
+  onAddSubclip(subclip: Subclip): void;
+  onUpdateSubclip(subclipId: string, patch: Partial<Subclip>): void;
+  onClose(): void;
+}) {
+  const t = zhCN.subclip;
+  const isEdit = !!editingSubclip;
+  const [name, setName] = useState(editingSubclip?.name ?? asset.name);
+  const [inPoint, setInPoint] = useState(editingSubclip?.inPoint ?? 0);
+  const [outPoint, setOutPoint] = useState(editingSubclip?.outPoint ?? asset.duration);
+  const [color, setColor] = useState<TimelineLabelColor | null>(editingSubclip?.color ?? null);
+  const [description, setDescription] = useState(editingSubclip?.description ?? '');
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const validIn = Math.max(0, inPoint);
+    const validOut = Math.max(validIn + 0.01, outPoint);
+    if (isEdit && editingSubclip) {
+      onUpdateSubclip(editingSubclip.id, {
+        name: name.trim() || asset.name,
+        inPoint: validIn,
+        outPoint: Math.min(validOut, asset.duration),
+        color,
+        description: description.trim() || undefined,
+      });
+    } else {
+      onAddSubclip(
+        createSubclip({
+          name: name.trim() || asset.name,
+          sourceMediaId: asset.id,
+          inPoint: validIn,
+          outPoint: Math.min(validOut, asset.duration),
+          color,
+          description: description.trim() || undefined,
+        }),
+      );
+    }
+    onClose();
+  };
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      data-testid="subclip-dialog"
+    >
+      <form
+        className="grid max-h-[80vh] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
+        onSubmit={handleSubmit}
+      >
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold text-ink">{isEdit ? t.editSubclip : t.newSubclip}</h2>
+          <button
+            className="rounded p-1 hover:bg-panel"
+            type="button"
+            onClick={onClose}
+            data-testid="subclip-dialog-close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-3 overflow-y-auto px-4 py-3">
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+            {t.name}
+            <input
+              className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              data-testid="subclip-dialog-name"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+              {t.inPoint}
+              <input
+                className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+                type="number"
+                min={0}
+                max={asset.duration}
+                step={0.01}
+                value={inPoint}
+                onChange={(e) => setInPoint(Number(e.target.value))}
+                data-testid="subclip-dialog-in"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+              {t.outPoint}
+              <input
+                className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+                type="number"
+                min={0}
+                max={asset.duration}
+                step={0.01}
+                value={outPoint}
+                onChange={(e) => setOutPoint(Number(e.target.value))}
+                data-testid="subclip-dialog-out"
+              />
+            </label>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{t.color}</div>
+            <div className="flex flex-wrap gap-1.5" data-testid="subclip-dialog-colors">
+              <button
+                type="button"
+                className={`h-5 w-5 rounded-full border-2 ${color === null ? 'border-ink' : 'border-transparent'} bg-slate-300`}
+                onClick={() => setColor(null)}
+                data-testid="subclip-color-none"
+              />
+              {TIMELINE_COLORS.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`}
+                  style={TIMELINE_COLOR_STYLES[item.key]}
+                  onClick={() => setColor(item.key)}
+                  data-testid={`subclip-color-${item.key}`}
+                />
+              ))}
+            </div>
+          </div>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+            {t.description}
+            <textarea
+              className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              data-testid="subclip-dialog-description"
+            />
+          </label>
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+          <button
+            className="rounded border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel"
+            type="button"
+            onClick={onClose}
+          >
+            {zhCN.common.cancel}
+          </button>
+          <button
+            className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+            type="submit"
+            data-testid="subclip-dialog-save"
+          >
+            {t.save}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function labelColorToHex(color: MediaLabelColor): string {
+  return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
+}
+
+function MediaSceneTagList({ assetId, analysis }: { assetId: string; analysis: ClipContentAnalysis }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-1" data-testid={`media-scene-tags-${assetId}`}>
+      {analysis.sceneTypes.slice(0, 3).map((sceneType) => (
+        <span
+          key={sceneType}
+          className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
+          data-testid={`media-scene-tag-${sceneType}-${assetId}`}
+        >
+          {zhCN.contentAnalysis.sceneTypeLabels[sceneType]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function formatFrameRateLabel(frameRate: number): string {
+  const rounded = Math.round(frameRate * 100) / 100;
+  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
+}
+
+function formatMediaFormat(asset: MediaAsset): string {
+  const extension = asset.name.includes('.') ? asset.name.split('.').pop()?.toUpperCase() : undefined;
+  return extension ? `${zhCN.mediaBin.assetType[asset.type]} / ${extension}` : zhCN.mediaBin.assetType[asset.type];
+}
+
+function formatMediaResolution(asset: MediaAsset): string {
+  if (asset.type === 'audio') {
+    return zhCN.common.unavailable;
+  }
+  return asset.width && asset.height ? `${asset.width} x ${asset.height}` : zhCN.common.unavailable;
+}
+
+function formatMediaColorProfile(asset: MediaAsset): string {
+  return asset.colorProfile?.label ?? zhCN.common.unavailable;
+}
+
+function formatPreciseFrameRate(frameRate: number): string {
+  return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
+}
+
+function ProxyStatus({
+  status,
+  error,
+  canGenerate,
+  onGenerateProxy,
+  assetId,
+}: {
+  status: MediaAsset['proxyStatus'];
+  error?: string;
+  canGenerate: boolean;
+  onGenerateProxy(): void;
+  assetId: string;
+}) {
+  const icon =
+    status === 'ready' ? (
+      <BadgeCheck size={13} />
+    ) : status === 'pending' ? (
+      <Loader2 className="animate-spin" size={13} />
+    ) : status === 'error' ? (
+      <AlertCircle size={13} />
+    ) : (
+      <Gauge size={13} />
+    );
+  const label =
+    status === 'ready'
+      ? zhCN.mediaBin.proxyStatus.ready
+      : status === 'pending'
+        ? zhCN.mediaBin.proxyStatus.pending
+        : status === 'error'
+          ? zhCN.mediaBin.proxyStatus.error
+          : canGenerate
+            ? zhCN.mediaBin.proxyStatus.recommended
+            : zhCN.mediaBin.proxyStatus.notNeeded;
+  const tone =
+    status === 'ready'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : status === 'pending'
+        ? 'border-sky-200 bg-sky-50 text-sky-700'
+        : status === 'error'
+          ? 'border-rose-200 bg-rose-50 text-rose-700'
+          : 'border-line bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]';
+  return (
+    <div className="mt-2 space-y-1">
+      <div
+        className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`}
+        title={error}
+        data-testid={`proxy-status-${assetId}`}
+        data-proxy-status={status ?? 'none'}
+      >
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      {canGenerate || status === 'pending' || status === 'ready' ? (
+        <button
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-50"
+          onClick={onGenerateProxy}
+          disabled={!canGenerate || status === 'pending'}
+          data-testid={`generate-proxy-${assetId}`}
+        >
+          <Gauge size={14} />
+          {zhCN.mediaBin.generateProxy}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function IconPreview({ type }: { type: MediaAsset['type'] }) {
+  const Icon = type === 'video' ? FileVideo2 : type === 'audio' ? FileAudio2 : FileImage;
+  return (
+    <div className="flex h-full items-center justify-center text-[var(--color-text-muted)]">
+      <Icon size={36} />
+    </div>
+  );
+}
+
 function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>, nav: MediaGridNavCtxValue): void {
   const ref = nav.pendingFocusRef;
   const domIndex = Number(event.currentTarget.getAttribute('data-media-index'));
@@ -2019,6 +3654,59 @@ function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>, nav: M
     }
   }
   requestAnimationFrame(() => focusWhenReady(0));
+}
+
+function formatBytes(bytes?: number): string {
+  if (bytes === undefined || !Number.isFinite(bytes)) {
+    return zhCN.common.unavailable;
+  }
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = Math.max(0, bytes);
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function formatBitRate(bitRate?: number): string {
+  if (bitRate === undefined || !Number.isFinite(bitRate)) {
+    return zhCN.common.unavailable;
+  }
+  if (bitRate >= 1_000_000) {
+    return `${(bitRate / 1_000_000).toFixed(2)} Mbps`;
+  }
+  if (bitRate >= 1_000) {
+    return `${(bitRate / 1_000).toFixed(1)} kbps`;
+  }
+  return `${Math.round(bitRate)} bps`;
+}
+
+function formatDateTime(timestamp?: number): string {
+  if (timestamp === undefined || !Number.isFinite(timestamp)) {
+    return zhCN.common.unavailable;
+  }
+  return new Date(timestamp).toLocaleString();
+}
+
+function formatImportedAt(importedAt?: string): string {
+  if (!importedAt) {
+    return zhCN.common.unavailable;
+  }
+  const timestamp = Date.parse(importedAt);
+  if (!Number.isFinite(timestamp)) {
+    return zhCN.common.unavailable;
+  }
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function formatDuration(duration: number): string {
+  const minutes = Math.floor(duration / 60);
+  const seconds = Math.floor(duration % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${minutes}:${seconds}`;
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {

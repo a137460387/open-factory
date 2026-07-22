@@ -1,6 +1,7 @@
 import { FilePlus } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
-import { serializeAutomationRulesJson, type AutomationRule } from '../automation/automation-rules';
+import { serializeAutomationRulesJson } from '../automation/automation-rules';
+import type { AutomationRule } from './appSettings';
 
 const AUTOMATION_RULE_EXAMPLE = [
   {

@@ -120,21 +120,8 @@ import {
   sortExportSuggestionsByPriority,
   EXPORT_SUGGESTION_CACHE_TTL_MS,
   isProviderConfigured,
-  analyzeProjectComplexity,
-  calculateExportComplexityScore,
-  getRecommendedExportConfig,
 } from '@open-factory/editor-core';
 import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
-import { AudioVisualizationSection } from './components/AudioVisualizationSection';
-import { AIExportSuggestionPanel } from './components/AIExportSuggestionPanel';
-import { WatermarkSection } from './components/WatermarkSection';
-import { MonitoringSection, PostExportScriptSection } from './components/MonitoringAndPostScript';
-import { PipelineSection } from './components/PipelineSection';
-import { VersionedBatchReportTable } from './components/VersionedBatchReportTable';
-import { ExportVersionBatchSection, type VersionedExportRowState, type VersionWatermarkMode, type VersionRangeMode } from './components/ExportVersionBatchSection';
-import { CodecCompareSection } from './components/CodecCompareSection';
-import { SequenceBatchSection, type SequenceBatchPresetMode, type SequenceBatchRow } from './components/SequenceBatchSection';
-import { StemSection, type StemTrack } from './components/StemSection';
 import {
   Cloud,
   CloudDownload,
@@ -229,7 +216,6 @@ import { retryExportUploadFromHistory } from './export-upload';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { useMediaJobStore } from '../media/media-job-store';
 import { ExportTaskRow, StatusPill } from './components/ExportTaskRow';
-import { ExportPreviewCanvas } from '../components/Export/ExportPreviewCanvas';
 import { ExportUploadSection, ExportUploadStatusPanel } from './components/ExportUploadSection';
 import {
   PostExportScriptResultPanel,
@@ -385,6 +371,15 @@ import {
   PresetCheckboxField,
 } from './components/PresetFields';
 import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel } from './lib/exportFormatHelpers';
+import { PipelineSection } from './components/PipelineSection';
+import { VersionedBatchReportTable } from './components/VersionedBatchReportTable';
+import { MasterProcessingSection } from './components/MasterProcessingSection';
+import { SubtitleLanguageSection } from './components/SubtitleLanguageSection';
+import { ColorManagementSection } from './components/ColorManagementSection';
+import { ThemePreviewButton, AudioVisualizationSection } from './components/AudioVisualizationSection';
+import { MonitoringSection, PostExportScriptSection } from './components/MonitoringAndPostScript';
+import { WatermarkSection } from './components/WatermarkSection';
+import { AIExportSuggestionPanel } from './components/AIExportSuggestionPanel';
 
 interface ExportDialogProps {
   project: Project;
@@ -397,7 +392,43 @@ interface ExportDialogProps {
   onRelinkMissing?(): void;
 }
 
-type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';  {
+type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';
+type SequenceBatchPresetMode = 'shared' | 'individual';
+type VersionWatermarkMode = 'inherit' | 'none' | 'text';
+type VersionRangeMode = 'default' | 'custom';
+
+interface VersionedExportRowState {
+  id: string;
+  enabled: boolean;
+  name: string;
+  presetId: string;
+  platform: string;
+  language: string;
+  rangeMode: VersionRangeMode;
+  rangeStart: number;
+  rangeDuration: number;
+  width: number;
+  height: number;
+  watermarkMode: VersionWatermarkMode;
+}
+
+const VERSIONED_BATCH_TEMPLATE_EXTENSION = 'ofbatch.json';
+const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
+  {
+    id: 'version-landscape',
+    enabled: true,
+    name: '横版 1080p',
+    presetId: 'web-1080p',
+    platform: 'YouTube',
+    language: 'zh',
+    rangeMode: 'default',
+    rangeStart: 0,
+    rangeDuration: 5,
+    width: 1920,
+    height: 1080,
+    watermarkMode: 'inherit',
+  },
+  {
     id: 'version-vertical',
     enabled: true,
     name: '竖版 1080x1920',
@@ -412,6 +443,18 @@ type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare
     watermarkMode: 'inherit',
   },
 ];
+const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
+
+interface ExportPreviewThumbnail {
+  id: string;
+  kind: ExportPreviewSampleKind;
+  label: string;
+  time: number;
+  path: string;
+  src: string;
+  durationMs: number;
+}
+
 export function ExportDialog({
   project,
   initialPreset,
@@ -564,8 +607,9 @@ export function ExportDialog({
     result: QualityEvaluationResult;
   }>();
   const [qualityError, setQualityError] = useState<string>();
-  const suggestedRenderFarmInstances = suggestRenderFarmInstances(
-    typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency,
+  const suggestedRenderFarmInstances = useMemo(
+    () => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency),
+    [],
   );
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
@@ -597,9 +641,9 @@ export function ExportDialog({
   const pendingCompletionAction = useRef<ExportCompletionAction>('none');
   const completionActionHandled = useRef(false);
   const enqueueInFlight = useRef(false);
-  const selectedPreset = getExportPreset(presetId, presets);
-  const exportSettings = normalizeDraftSettings(draftSettings);
-  const batchSequences = getSyncedProjectSequences(project);
+  const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
+  const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
+  const batchSequences = useMemo(() => getSyncedProjectSequences(project), [project]);
   const sequenceBatchRows = useMemo(
     () =>
       batchSequences.map((sequence, index) => ({
@@ -623,7 +667,7 @@ export function ExportDialog({
   const isAudioOnly =
     !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
   const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
-  const subtitleLanguageOptions = collectSubtitleLanguageOptions(project);
+  const subtitleLanguageOptions = useMemo(() => collectSubtitleLanguageOptions(project), [project]);
   const loudnessNormalizationEligible = supportsLoudnessNormalization(
     exportSettings.format ?? 'mp4',
     exportSettings.outputMode,
@@ -669,33 +713,6 @@ export function ExportDialog({
     () => estimateExportCost({ project, settings: exportSettings }),
     [exportSettings, project],
   );
-
-  // 智能调度建议
-  const schedulerSuggestion = useMemo(() => {
-    try {
-      const exportProject = buildExportProjectFromProject(project, {
-        outputPath: outputPath || 'output.mp4',
-        settings: exportSettings,
-      });
-      const metrics = analyzeProjectComplexity(exportProject);
-      const complexityScore = calculateExportComplexityScore(metrics);
-      const config = getRecommendedExportConfig(exportProject);
-      return {
-        complexityScore,
-        qualityTarget: config.qualityTarget,
-        metrics,
-        reasons: [
-          `片段数: ${metrics.totalClips}`,
-          `特效数: ${metrics.effectCount}`,
-          `分辨率: ${Math.round(metrics.resolutionFactor * 100)}% HD`,
-          `复杂度分数: ${complexityScore.toFixed(0)}/100`,
-        ],
-      };
-    } catch {
-      return undefined;
-    }
-  }, [project, exportSettings, outputPath]);
-
   const exportOptimizationSuggestions = useMemo(
     () =>
       analyzeExportOptimizationSuggestions(project, exportSettings, exportOptimizationSettings, {
@@ -704,7 +721,7 @@ export function ExportDialog({
       }),
     [exportOptimizationSettings, exportSettings, project, renderFarmEnabled, suggestedRenderFarmInstances],
   );
-  const lastExportDurationSeconds = getLastExportDurationSeconds(history);
+  const lastExportDurationSeconds = useMemo(() => getLastExportDurationSeconds(history), [history]);
   const exportCostHistoryError = useMemo(
     () =>
       calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
@@ -723,12 +740,21 @@ export function ExportDialog({
   );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
-  const progressiveExportSupported = isProgressiveExportSupported(exportSettings);
+  const progressiveExportSupported = useMemo(() => isProgressiveExportSupported(exportSettings), [exportSettings]);
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
-  const spatialDenoiseClipCount = countSpatialDenoiseClips(project);
-  const inOutExportRanges = resolveInOutExportRanges(project, inPoint, outPoint);
-  const selectedClipExportRange = resolveSelectedClipExportRange(project, selectedClipIds);
-  const activeExportRanges = resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange);
+  const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
+  const inOutExportRanges = useMemo(
+    () => resolveInOutExportRanges(project, inPoint, outPoint),
+    [inPoint, outPoint, project],
+  );
+  const selectedClipExportRange = useMemo(
+    () => resolveSelectedClipExportRange(project, selectedClipIds),
+    [project, selectedClipIds],
+  );
+  const activeExportRanges = useMemo(
+    () => resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange),
+    [exportRangeMode, inOutExportRanges, selectedClipExportRange],
+  );
   const rangeModeAvailable = {
     all: true,
     'in-out': inOutExportRanges.length > 0,
@@ -738,7 +764,10 @@ export function ExportDialog({
     () => sortCodecCompareResults(codecCompareResults, codecCompareSort.key, codecCompareSort.direction),
     [codecCompareResults, codecCompareSort],
   );
-  const codecCompareRecommendation = recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode);
+  const codecCompareRecommendation = useMemo(
+    () => recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode),
+    [codecCompareRecommendationMode, codecCompareResults],
+  );
   const versionedBatchReportRows = useMemo(
     () =>
       buildVersionedExportReportRows(tasks, { batchId: latestVersionedBatchId, fileSizes: versionedBatchFileSizes }),
@@ -2334,32 +2363,6 @@ export function ExportDialog({
               </button>
             </div>
           </div>
-          {/* 智能调度建议 */}
-          {schedulerSuggestion && (
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-3" data-testid="export-scheduler-suggestion">
-              <div className="flex items-center gap-2 text-xs font-semibold text-blue-700">
-                <span>🧠</span>
-                <span>智能调度建议</span>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px]">
-                  复杂度 {schedulerSuggestion.complexityScore.toFixed(0)}/100
-                </span>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-1 text-[11px] text-blue-600">
-                {schedulerSuggestion.reasons.map((reason, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <span className="text-blue-400">•</span>
-                    <span>{reason}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 text-[11px] text-blue-500">
-                推荐质量目标：<span className="font-medium">{schedulerSuggestion.qualityTarget}</span>
-                {schedulerSuggestion.qualityTarget === 'speed' && ' (优先速度)'}
-                {schedulerSuggestion.qualityTarget === 'balanced' && ' (均衡)'}
-                {schedulerSuggestion.qualityTarget === 'quality' && ' (优先质量)'}
-              </div>
-            </div>
-          )}
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.saveAs}</label>
             <input
@@ -2692,55 +2695,571 @@ export function ExportDialog({
               onCreatePublishTemplate={createPublishPipelineTemplate}
             />
           ) : exportMode === 'codec-compare' ? (
-            <CodecCompareSection
-              presets={presets}
-              codecComparePresetIds={codecComparePresetIds}
-              codecCompareRecommendationMode={codecCompareRecommendationMode}
-              setCodecCompareRecommendationMode={setCodecCompareRecommendationMode}
-              codecCompareRecommendation={codecCompareRecommendation}
-              codecCompareEvaluatingTaskId={codecCompareEvaluatingTaskId}
-              codecCompareResults={codecCompareResults}
-              sortedCodecCompareResults={sortedCodecCompareResults}
-              codecCompareSort={codecCompareSort}
-              toggleCodecComparePreset={toggleCodecComparePreset}
-              toggleCodecCompareSort={toggleCodecCompareSort}
-              setPresetId={setPresetId}
-            />
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-codec-compare-tab"
+            >
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.codecCompare.description(MAX_CODEC_COMPARE_PRESETS)}</p>
+                <div className="grid gap-2 md:grid-cols-2" data-testid="export-codec-compare-preset-list">
+                  {presets.map((preset) => {
+                    const checked = codecComparePresetIds.includes(preset.id);
+                    const disabled = !checked && codecComparePresetIds.length >= MAX_CODEC_COMPARE_PRESETS;
+                    return (
+                      <label
+                        key={preset.id}
+                        className={`flex items-start gap-2 rounded-md border border-line p-2 text-xs ${disabled ? 'opacity-50' : ''}`}
+                        data-testid="export-codec-compare-preset-row"
+                      >
+                        <input
+                          className="mt-0.5 h-4 w-4 accent-brand"
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={(event) => toggleCodecComparePreset(preset.id, event.target.checked)}
+                          data-testid={`export-codec-compare-preset-${preset.id}`}
+                        />
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-slate-700">{preset.name}</span>
+                          <span className="block text-[11px] text-slate-500">
+                            {preset.settings.videoCodec ?? zhCN.common.auto} ·{' '}
+                            {preset.settings.videoBitrate ?? zhCN.common.auto} · {preset.settings.format ?? 'mp4'}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {codecComparePresetIds.length < 2 ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                    {t.codecCompare.selectAtLeastTwo}
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <label className="inline-flex items-center gap-2 font-medium text-slate-600">
+                    <span>{t.codecCompare.recommendationMode}</span>
+                    <select
+                      className="rounded-md border border-line px-2 py-1.5"
+                      value={codecCompareRecommendationMode}
+                      onChange={(event) =>
+                        setCodecCompareRecommendationMode(event.target.value as CodecCompareRecommendationMode)
+                      }
+                      data-testid="export-codec-compare-recommendation-mode"
+                    >
+                      <option value="quality">{t.codecCompare.recommendationModes.quality}</option>
+                      <option value="size">{t.codecCompare.recommendationModes.size}</option>
+                    </select>
+                  </label>
+                  <button
+                    className="rounded-md border border-line px-2 py-1.5 font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    disabled={!codecCompareRecommendation}
+                    data-testid="export-codec-compare-recommend-button"
+                    onClick={() => {
+                      if (codecCompareRecommendation) {
+                        setPresetId(codecCompareRecommendation.presetId);
+                        showToast({
+                          kind: 'info',
+                          title: t.codecCompare.recommendedTitle,
+                          message: codecCompareRecommendation.presetName,
+                        });
+                      }
+                    }}
+                  >
+                    {codecCompareRecommendation
+                      ? t.codecCompare.chooseRecommended(codecCompareRecommendation.presetName)
+                      : t.codecCompare.chooseBest}
+                  </button>
+                  {codecCompareEvaluatingTaskId ? (
+                    <span className="text-slate-500" data-testid="export-codec-compare-quality-running">
+                      {t.codecCompare.evaluating}
+                    </span>
+                  ) : null}
+                </div>
+                {codecCompareResults.length > 0 ? (
+                  <div
+                    className="overflow-hidden rounded-md border border-line"
+                    data-testid="export-codec-compare-results"
+                  >
+                    <table className="w-full border-collapse text-xs">
+                      <thead className="bg-panel text-slate-600">
+                        <tr>
+                          {(['presetName', 'fileSizeBytes', 'durationMs', 'ssim', 'psnr'] as CodecCompareSortKey[]).map(
+                            (key) => (
+                              <th key={key} className="px-2 py-2 text-left font-semibold">
+                                <button
+                                  className="inline-flex items-center gap-1 hover:text-ink"
+                                  type="button"
+                                  data-testid={`export-codec-compare-sort-${key}`}
+                                  onClick={() => toggleCodecCompareSort(key)}
+                                >
+                                  {t.codecCompare.columns[key]}
+                                  {codecCompareSort.key === key ? (
+                                    <span>{codecCompareSort.direction === 'asc' ? '↑' : '↓'}</span>
+                                  ) : null}
+                                </button>
+                              </th>
+                            ),
+                          )}
+                          <th className="px-2 py-2 text-left font-semibold">{t.codecCompare.columns.status}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedCodecCompareResults.map((result) => (
+                          <tr
+                            key={`${result.presetId}-${result.outputPath}`}
+                            className={
+                              codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined
+                            }
+                            data-testid="export-codec-compare-result-row"
+                            data-preset-id={result.presetId}
+                          >
+                            <td className="px-2 py-2 font-medium text-slate-800">{result.presetName}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">
+                              {formatBytes(result.fileSizeBytes)}
+                            </td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">
+                              {formatMilliseconds(result.durationMs)}
+                            </td>
+                            <td
+                              className="px-2 py-2 tabular-nums text-slate-600"
+                              data-testid="export-codec-compare-ssim"
+                            >
+                              {formatOptionalNumber(result.ssim, 3)}
+                            </td>
+                            <td
+                              className="px-2 py-2 tabular-nums text-slate-600"
+                              data-testid="export-codec-compare-psnr"
+                            >
+                              {formatOptionalNumber(result.psnr, 1)}
+                            </td>
+                            <td className="px-2 py-2 text-slate-600">
+                              {result.qualityStatus === 'running'
+                                ? t.codecCompare.evaluating
+                                : result.qualityStatus === 'error'
+                                  ? (result.qualityError ?? t.quality.failedMessage)
+                                  : (t.status[result.status as ExportTaskStatus] ?? result.status)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           ) : exportMode === 'version-batch' ? (
-            <ExportVersionBatchSection
-              versionedBatchTemplate={versionedBatchTemplate}
-              setVersionedBatchTemplate={setVersionedBatchTemplate}
-              exportVersionedBatchTemplate={() => void exportVersionedBatchTemplate()}
-              importVersionedBatchTemplate={() => void importVersionedBatchTemplate()}
-              versionedBatchRows={versionedBatchRows}
-              updateVersionedBatchRow={updateVersionedBatchRow}
-              removeVersionedBatchRow={removeVersionedBatchRow}
-              addVersionedBatchRow={addVersionedBatchRow}
-              presets={presets}
-              exportSettings={exportSettings}
-              buildVersionSettings={buildVersionSettings}
-              versionedBatchReportRows={versionedBatchReportRows}
-            />
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-version-batch-tab"
+            >
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.versionBatch.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.versionBatch.description}</p>
+                <div className="grid gap-2 md:grid-cols-[1fr_auto_auto]">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.versionBatch.outputTemplate}
+                    <input
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 font-mono text-xs"
+                      value={versionedBatchTemplate}
+                      placeholder={t.versionBatch.outputTemplatePlaceholder}
+                      onChange={(event) => setVersionedBatchTemplate(event.target.value)}
+                      data-testid="export-version-output-template"
+                    />
+                  </label>
+                  <button
+                    className="mt-5 inline-flex items-center justify-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                    type="button"
+                    data-testid="export-version-template-export"
+                    onClick={() => void exportVersionedBatchTemplate()}
+                  >
+                    <Download size={13} />
+                    {t.versionBatch.exportTemplate}
+                  </button>
+                  <button
+                    className="mt-5 inline-flex items-center justify-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                    type="button"
+                    data-testid="export-version-template-import"
+                    onClick={() => void importVersionedBatchTemplate()}
+                  >
+                    <Upload size={13} />
+                    {t.versionBatch.importTemplate}
+                  </button>
+                </div>
+                <div className="overflow-x-auto rounded-md border border-line" data-testid="export-version-list">
+                  <div className="grid min-w-[1180px] gap-2 bg-panel px-3 py-2 text-[11px] font-semibold uppercase text-slate-500 md:grid-cols-[minmax(120px,1fr)_96px_90px_190px_132px_80px_80px_110px_120px_42px]">
+                    <span>{t.versionBatch.columns.version}</span>
+                    <span>{t.versionBatch.columns.platform}</span>
+                    <span>{t.versionBatch.columns.language}</span>
+                    <span>{t.versionBatch.columns.range}</span>
+                    <span>{t.versionBatch.columns.preset}</span>
+                    <span>{t.versionBatch.columns.width}</span>
+                    <span>{t.versionBatch.columns.height}</span>
+                    <span>{t.versionBatch.columns.watermark}</span>
+                    <span>{t.versionBatch.columns.output}</span>
+                    <span />
+                  </div>
+                  {versionedBatchRows.map((row) => {
+                    const previewJob = createVersionedExportJobs({
+                      batchId: 'preview',
+                      outputPathTemplate: versionedBatchTemplate,
+                      defaultSettings: exportSettings,
+                      versions: [
+                        {
+                          id: row.id,
+                          name: row.name,
+                          presetId: row.presetId,
+                          platform: row.platform,
+                          language: row.language,
+                          settings: buildVersionSettings(row),
+                        },
+                      ],
+                    })[0];
+                    return (
+                      <div
+                        key={row.id}
+                        className="grid min-w-[1180px] gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(120px,1fr)_96px_90px_190px_132px_80px_80px_110px_120px_42px]"
+                        data-testid="export-version-row"
+                      >
+                        <label className="flex min-w-0 items-center gap-2">
+                          <input
+                            className="h-4 w-4 accent-brand"
+                            type="checkbox"
+                            checked={row.enabled}
+                            onChange={(event) => updateVersionedBatchRow(row.id, { enabled: event.target.checked })}
+                            data-testid="export-version-enabled"
+                          />
+                          <input
+                            className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5"
+                            value={row.name}
+                            onChange={(event) => updateVersionedBatchRow(row.id, { name: event.target.value })}
+                            data-testid="export-version-name-input"
+                          />
+                        </label>
+                        <input
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.platform}
+                          onChange={(event) => updateVersionedBatchRow(row.id, { platform: event.target.value })}
+                          data-testid="export-version-platform-input"
+                        />
+                        <input
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.language}
+                          onChange={(event) => updateVersionedBatchRow(row.id, { language: event.target.value })}
+                          data-testid="export-version-language-input"
+                        />
+                        <div className="grid grid-cols-[74px_1fr_1fr] gap-1">
+                          <select
+                            className="rounded-md border border-line px-1 py-1.5"
+                            value={row.rangeMode}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, { rangeMode: event.target.value as VersionRangeMode })
+                            }
+                            data-testid="export-version-range-mode"
+                          >
+                            <option value="default">{t.versionBatch.rangeModes.default}</option>
+                            <option value="custom">{t.versionBatch.rangeModes.custom}</option>
+                          </select>
+                          <input
+                            className="rounded-md border border-line px-1 py-1.5 disabled:bg-slate-100"
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            disabled={row.rangeMode !== 'custom'}
+                            value={row.rangeStart}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, {
+                                rangeStart: Math.max(0, Number(event.target.value) || 0),
+                              })
+                            }
+                            data-testid="export-version-range-start"
+                            title={t.versionBatch.rangeStart}
+                          />
+                          <input
+                            className="rounded-md border border-line px-1 py-1.5 disabled:bg-slate-100"
+                            type="number"
+                            min={0.001}
+                            step={0.1}
+                            disabled={row.rangeMode !== 'custom'}
+                            value={row.rangeDuration}
+                            onChange={(event) =>
+                              updateVersionedBatchRow(row.id, {
+                                rangeDuration: Math.max(0.001, Number(event.target.value) || 0.001),
+                              })
+                            }
+                            data-testid="export-version-range-duration"
+                            title={t.versionBatch.rangeDuration}
+                          />
+                        </div>
+                        <select
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.presetId}
+                          onChange={(event) => updateVersionedBatchRow(row.id, { presetId: event.target.value })}
+                          data-testid="export-version-preset-select"
+                        >
+                          {presets.map((preset) => (
+                            <option key={preset.id} value={preset.id}>
+                              {preset.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          className="rounded-md border border-line px-2 py-1.5"
+                          type="number"
+                          min={1}
+                          value={row.width}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              width: Math.max(1, Math.round(Number(event.target.value) || 1)),
+                            })
+                          }
+                          data-testid="export-version-width-input"
+                        />
+                        <input
+                          className="rounded-md border border-line px-2 py-1.5"
+                          type="number"
+                          min={1}
+                          value={row.height}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              height: Math.max(1, Math.round(Number(event.target.value) || 1)),
+                            })
+                          }
+                          data-testid="export-version-height-input"
+                        />
+                        <select
+                          className="rounded-md border border-line px-2 py-1.5"
+                          value={row.watermarkMode}
+                          onChange={(event) =>
+                            updateVersionedBatchRow(row.id, {
+                              watermarkMode: event.target.value as VersionWatermarkMode,
+                            })
+                          }
+                          data-testid="export-version-watermark-select"
+                        >
+                          <option value="inherit">{t.versionBatch.watermarkModes.inherit}</option>
+                          <option value="none">{t.versionBatch.watermarkModes.none}</option>
+                          <option value="text">{t.versionBatch.watermarkModes.text}</option>
+                        </select>
+                        <div
+                          className="truncate rounded-md bg-panel px-2 py-1.5 font-mono text-[11px] text-slate-500"
+                          title={previewJob?.outputPath}
+                          data-testid="export-version-output-preview"
+                        >
+                          {previewJob?.outputPath}
+                        </div>
+                        <button
+                          className="rounded-md border border-line p-1.5 text-slate-500 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-40"
+                          type="button"
+                          disabled={versionedBatchRows.length <= 1}
+                          data-testid="export-version-remove"
+                          onClick={() => removeVersionedBatchRow(row.id)}
+                          title={t.versionBatch.remove}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                  type="button"
+                  data-testid="export-version-add"
+                  onClick={addVersionedBatchRow}
+                >
+                  <ListPlus size={13} />
+                  {t.versionBatch.add}
+                </button>
+                {versionedBatchReportRows.length > 0 ? (
+                  <VersionedBatchReportTable rows={versionedBatchReportRows} />
+                ) : null}
+              </div>
+            </div>
           ) : exportMode === 'sequence-batch' ? (
-            <SequenceBatchSection
-              sequenceBatchTemplate={sequenceBatchTemplate}
-              setSequenceBatchTemplate={setSequenceBatchTemplate}
-              sequenceBatchPresetMode={sequenceBatchPresetMode}
-              setSequenceBatchPresetMode={setSequenceBatchPresetMode}
-              sequenceBatchRows={sequenceBatchRows}
-              toggleSequenceBatchSelection={toggleSequenceBatchSelection}
-              updateSequenceBatchOutput={updateSequenceBatchOutput}
-              updateSequenceBatchPreset={updateSequenceBatchPreset}
-              presets={presets}
-              selectedPreset={selectedPreset}
-            />
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-sequence-batch-tab"
+            >
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.sequenceBatch.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.sequenceBatch.description}</p>
+                <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.sequenceBatch.outputTemplate}
+                    <input
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={sequenceBatchTemplate}
+                      placeholder={t.sequenceBatch.outputTemplatePlaceholder}
+                      onChange={(event) => setSequenceBatchTemplate(event.target.value)}
+                      data-testid="export-sequence-output-template"
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.sequenceBatch.presetMode}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={sequenceBatchPresetMode}
+                      onChange={(event) => setSequenceBatchPresetMode(event.target.value as SequenceBatchPresetMode)}
+                      data-testid="export-sequence-preset-mode"
+                    >
+                      <option value="shared">{t.sequenceBatch.presetModes.shared}</option>
+                      <option value="individual">{t.sequenceBatch.presetModes.individual}</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="overflow-hidden rounded-md border border-line" data-testid="export-sequence-list">
+                  {sequenceBatchRows.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs text-slate-500">{t.sequenceBatch.noSequences}</div>
+                  ) : (
+                    sequenceBatchRows.map(
+                      ({ sequence, selected, outputPath: rowOutputPath, presetId: rowPresetId }) => (
+                        <div
+                          key={sequence.id}
+                          className="grid gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(220px,1.4fr)_180px]"
+                          data-testid="export-sequence-batch-row"
+                          data-sequence-id={sequence.id}
+                        >
+                          <label className="flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                            <input
+                              className="h-4 w-4 accent-brand"
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(event) => toggleSequenceBatchSelection(sequence.id, event.target.checked)}
+                              data-testid="export-sequence-checkbox"
+                            />
+                            <span className="truncate">{sequence.name}</span>
+                          </label>
+                          <input
+                            className="min-w-0 rounded-md border border-line px-2 py-1.5 font-mono text-[11px]"
+                            value={rowOutputPath}
+                            onChange={(event) => updateSequenceBatchOutput(sequence.id, event.target.value)}
+                            data-testid="export-sequence-output-path"
+                          />
+                          {sequenceBatchPresetMode === 'individual' ? (
+                            <select
+                              className="rounded-md border border-line px-2 py-1.5 text-xs"
+                              value={rowPresetId}
+                              onChange={(event) => updateSequenceBatchPreset(sequence.id, event.target.value)}
+                              data-testid="export-sequence-preset-select"
+                            >
+                              {presets.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                  {preset.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="rounded-md bg-panel px-2 py-1.5 text-[11px] text-slate-500">
+                              {selectedPreset.name}
+                            </div>
+                          )}
+                        </div>
+                      ),
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
           ) : exportMode === 'stem' ? (
-            <StemSection
-              stemMode={stemMode}
-              setStemMode={setStemMode}
-              stemTracks={stemTracks}
-              setStemTracks={setStemTracks}
-            />
+            <div
+              className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+              data-testid="export-stem-tab"
+            >
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.stem.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.stem.description}</p>
+                <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.stem.format}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={stemMode}
+                      onChange={(event) => setStemMode(event.target.value as ExportStemMode)}
+                      data-testid="export-stem-mode-select"
+                    >
+                      <option value="independent">{t.stem.modes.independent}</option>
+                      <option value="combined">{t.stem.modes.combined}</option>
+                      <option value="stems-only">{t.stem.modes['stems-only']}</option>
+                    </select>
+                  </label>
+                  <div className="text-xs text-slate-500">{t.stem.modeDescriptions[stemMode]}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-600">{t.stem.trackList}</label>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-[11px] text-brand hover:underline"
+                        type="button"
+                        onClick={() => setStemTracks((prev) => prev.map((track) => ({ ...track, selected: true })))}
+                        data-testid="export-stem-select-all"
+                      >
+                        {t.stem.selectAll}
+                      </button>
+                      <button
+                        className="text-[11px] text-brand hover:underline"
+                        type="button"
+                        onClick={() => setStemTracks((prev) => prev.map((track) => ({ ...track, selected: false })))}
+                        data-testid="export-stem-deselect-all"
+                      >
+                        {t.stem.deselectAll}
+                      </button>
+                    </div>
+                  </div>
+                  {stemTracks.length === 0 ? (
+                    <p className="text-xs text-slate-500">{t.stem.noAudioTracks}</p>
+                  ) : (
+                    <div className="space-y-1" data-testid="export-stem-track-list">
+                      {stemTracks.map((track) => (
+                        <label
+                          key={track.trackIndex}
+                          className="flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-xs"
+                          data-testid={`export-stem-track-${track.trackIndex}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 accent-brand"
+                            checked={track.selected}
+                            onChange={(event) =>
+                              setStemTracks((prev) =>
+                                prev.map((item) =>
+                                  item.trackIndex === track.trackIndex
+                                    ? { ...item, selected: event.target.checked }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                          <span className="flex-1 font-medium text-slate-700">{track.trackName}</span>
+                          <select
+                            className="rounded-md border border-line px-1 py-0.5 text-[11px]"
+                            value={track.format}
+                            onChange={(event) =>
+                              setStemTracks((prev) =>
+                                prev.map((item) =>
+                                  item.trackIndex === track.trackIndex
+                                    ? { ...item, format: event.target.value as ExportStemFormat }
+                                    : item,
+                                ),
+                              )
+                            }
+                            data-testid={`export-stem-format-${track.trackIndex}`}
+                          >
+                            <option value="default">{t.stem.formatOptions.default}</option>
+                            <option value="wav">{t.stem.formatOptions.wav}</option>
+                            <option value="aiff">{t.stem.formatOptions.aiff}</option>
+                            <option value="m4a">{t.stem.formatOptions.m4a}</option>
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400">{t.stem.namingRule}</div>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-[110px_1fr] gap-2">
               <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
@@ -2972,20 +3491,6 @@ export function ExportDialog({
                 </button>
               </div>
             </div>
-            {/* 导出预览画布：显示当前运行任务的实时帧预览 */}
-            {tasks.some((task) => task.status === 'running') && (
-              <div className="px-3 py-2" data-testid="export-preview-section">
-                <ExportPreviewCanvas
-                  taskId={tasks.find((task) => task.status === 'running')?.id}
-                  width={480}
-                  height={270}
-                  maxFrames={6}
-                  showProgressBar={true}
-                  showTimestamps={true}
-                  className="mx-auto"
-                />
-              </div>
-            )}
             <div className="max-h-56 overflow-y-auto">
               {tasks.length === 0 ? (
                 <div className="px-3 py-5 text-center text-xs text-slate-500">{t.noTasks}</div>

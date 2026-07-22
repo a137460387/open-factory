@@ -1,8 +1,9 @@
-import type {
-  ExportPipeline,
-  ExportPipelineNodeStatus,
-  ExportPublishNodeLog,
+import {
+  type ExportPipeline,
+  type ExportPipelineNodeStatus,
+  type ExportPublishNodeLog,
 } from '@open-factory/editor-core';
+import { useMemo } from 'react';
 import { zhCN } from '../../i18n/strings';
 import { pipelineStatusClass } from '../lib/pipelineHelpers';
 
@@ -20,19 +21,20 @@ export function PipelineSection({
   onCreatePublishTemplate(): void;
 }) {
   const t = zhCN.exportDialog.pipeline;
-  const downstreamMap = new Map<string, string[]>();
-  {
+  const downstreamMap = useMemo(() => {
     const nameById = new Map(pipeline.nodes.map((node) => [node.id, node.name]));
+    const map = new Map<string, string[]>();
     for (const edge of pipeline.edges) {
-      const existing = downstreamMap.get(edge.from);
+      const existing = map.get(edge.from);
       const name = nameById.get(edge.to) ?? edge.to;
       if (existing) {
         existing.push(name);
       } else {
-        downstreamMap.set(edge.from, [name]);
+        map.set(edge.from, [name]);
       }
     }
-  }
+    return map;
+  }, [pipeline.nodes, pipeline.edges]);
   return (
     <div
       className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
@@ -124,3 +126,4 @@ export function PipelineSection({
     </div>
   );
 }
+
