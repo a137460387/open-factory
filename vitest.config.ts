@@ -14,6 +14,8 @@ export default defineConfig({
     }
   },
   test: {
+    testTimeout: 15000,
+    hookTimeout: 10000,
     include: ['packages/editor-core/__tests__/**/*.test.ts', 'packages/editor-core/src/**/*.test.ts', 'packages/plugin-sdk/__tests__/**/*.test.ts', 'packages/cli/__tests__/**/*.test.ts', 'packages/cli/src/**/*.test.ts', 'packages/sdk/__tests__/**/*.test.ts', 'packages/api-client/__tests__/**/*.test.ts', 'packages/auth/src/**/*.test.ts', 'packages/rbac/src/**/*.test.ts', 'packages/audit-log/src/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'apps/desktop/src/**/*.test.tsx', 'apps/plugin-market/src/**/*.test.ts', 'apps/creator-dashboard/src/**/*.test.ts', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
     coverage: {
       provider: 'v8',
