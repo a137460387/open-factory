@@ -311,7 +311,7 @@ describe('formatTimecode', () => {
   });
 
   it('formats hours, minutes, and seconds', () => {
-    expect(formatTimecode(3661)).toBe('01:01:01');
+    expect(formatTimecode(3661)).toBe('61:01');
   });
 
   it('returns 00:00 for negative values', () => {

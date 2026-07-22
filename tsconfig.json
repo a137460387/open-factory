@@ -10,6 +10,9 @@
     { "path": "./packages/api-client" },
     { "path": "./packages/api-gateway" },
     { "path": "./packages/ai-generator" },
+    { "path": "./packages/auth" },
+    { "path": "./packages/rbac" },
+    { "path": "./packages/audit-log" },
     { "path": "./apps/desktop" },
     { "path": "./apps/creator-dashboard" },
     { "path": "./apps/plugin-market" }

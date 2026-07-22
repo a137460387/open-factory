@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { clamp, lerp } from '../../src/utils/math';
 import {
   rgbToHsl,
   hslToRgb,
   rgbToLab,
   colorDistance,
   deltaE,
-  clamp,
-  lerp,
   computeHistogram,
   extractDominantColors,
   computeContrast,

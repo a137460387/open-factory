@@ -87,24 +87,21 @@ import {
   SubtitleStyleTemplatesPanel,
   SubtitleProofreadingPanel,
   SubtitleRetimingPanel,
-  SpeedCurveEditor,
-  KeyframeCurveEditor,
   CurveEditor,
   ThreeWayColorEditor,
   PrivacyBlurPanel,
-  RichTextEditor,
-  MotionGraphicPanel,
-  MasksEditor,
   EffectsEditor,
   rgbToHex,
   hexToRgb,
   formatLutPath,
   formatInputColorSpaceLabel,
   getKenBurnsEndScale,
-  formatKeyframeProperty,
-  formatKeyframeValue,
   formatEstimatedDuration,
 } from './InspectorEditors';
+import { SpeedCurveEditor, KeyframeCurveEditor, formatKeyframeProperty, formatKeyframeValue } from './KeyframeCurveEditor';
+import { RichTextEditor } from './RichTextEditor';
+import { MasksEditor } from './MasksEditor';
+import { MotionGraphicPanel } from './MotionGraphicPanel';
 import type { ClipInspectorStateParams, ClipInspectorStateReturn } from './useClipInspectorState';
 
 export type ClipInspectorBodyProps = ClipInspectorStateParams & ClipInspectorStateReturn;

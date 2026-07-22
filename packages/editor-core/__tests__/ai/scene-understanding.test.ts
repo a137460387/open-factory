@@ -1,11 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { clamp, lerp } from '../../src/utils/math';
 import {
   generateId,
   computeIoU,
   getBoundingBoxCenter,
   computePointDistance,
-  clamp,
-  lerp,
   computeImageBrightness,
   computeImageContrast,
   computeMotionLevel,

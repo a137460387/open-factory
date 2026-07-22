@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { clamp } from '../../src/utils/math';
 import {
   generateId,
-  clamp,
   lerp,
   average,
   standardDeviation,

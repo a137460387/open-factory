@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { formatDuration } from '../../src/utils/time';
 import {
   createDistributionBatch,
   updateDistributionTaskProgress,
@@ -10,7 +11,6 @@ import {
   applyDistributionTemplate,
   buildPlatformExportSettings,
   formatFileSize,
-  formatDuration,
 } from '../../src/distribution/batch-export';
 import { getDistributionPlatform } from '../../src/distribution/platform-presets';
 import type { Project } from '../../src/model-types';
