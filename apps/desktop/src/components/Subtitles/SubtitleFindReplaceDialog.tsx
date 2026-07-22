@@ -6,6 +6,7 @@ import {
   replaceSingleResult,
   type SubtitleSearchResult,
   type SubtitleSearchOptions,
+  formatTime,
 } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
@@ -365,7 +366,7 @@ export function SubtitleFindReplaceDialog({
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-mono text-[var(--color-text-muted)]">
-                    {formatTimecode(result.matchStart)} - {formatTimecode(result.matchEnd)}
+                    {formatTime(result.matchStart)} - {formatTime(result.matchEnd)}
                   </span>
                   <span className="text-[var(--color-text-muted)]">轨道 {result.trackIndex + 1}</span>
                 </div>
@@ -392,11 +393,3 @@ export function SubtitleFindReplaceDialog({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatTimecode(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 100);
-
-  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-}

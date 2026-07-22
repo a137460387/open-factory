@@ -10,7 +10,7 @@
 
 // ==================== 类型定义 ====================
 
-import { clamp } from '../utils/math';
+import { clamp, lerp } from '../utils/math';
 
 /**
  * 色彩分析结果
@@ -365,13 +365,6 @@ export function deltaE(lab1: LABColor, lab2: LABColor): number {
   const aDiff = lab1.a - lab2.a;
   const bDiff = lab1.b - lab2.b;
   return Math.sqrt(lDiff * lDiff + aDiff * aDiff + bDiff * bDiff);
-}
-
-/**
- * 线性插值
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
 }
 
 /**

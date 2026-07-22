@@ -15,6 +15,7 @@ import type { MaterialMetadata } from './semantic-extractor';
 import type { StyleFingerprint } from './style-analyzer';
 import type { LLMMessage, LLMResponse } from './llm-orchestrator';
 import { buildEditingPrompt } from './llm-orchestrator';
+import { clamp01 } from '../utils/math';
 
 // ─── Suggestion Types ───────────────────────────────────────────
 
@@ -301,7 +302,7 @@ export function enrichSuggestionWithStyle(
   style: StyleFingerprint,
   strength: number = 0.7,
 ): EditingSuggestion {
-  const clampedStrength = Math.max(0, Math.min(1, strength));
+  const clampedStrength = clamp01(strength);
 
   const enrichedInstructions = suggestion.previewInstructions.map((inst) => {
     const params = { ...inst.params };
