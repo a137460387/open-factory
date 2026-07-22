@@ -1,4 +1,5 @@
 import { getTimelineDuration, type Project } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { Eye, RotateCcw, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -231,12 +232,4 @@ function IconButton({
 function formatSnapshotTime(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString(undefined, { hour12: false });
-}
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${minutes}:${rest}`;
 }

@@ -103,7 +103,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
       const projectDuration =
         project.timeline?.tracks?.flatMap((t) => t.clips).reduce((max, c) => Math.max(max, c.start + c.duration), 0) ??
         0;
-      const userPrompt = `请为当前项目生成剪辑建议。项目时长：${formatTime(projectDuration)}。`;
+      const userPrompt = `请为当前项目生成剪辑建议。项目时长：${formatTimeShort(projectDuration)}。`;
 
       const response = await callAiApi(
         {
@@ -387,7 +387,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                 </span>
               </div>
               <div className="text-xs text-muted-foreground" data-testid="assist-editing-total-duration">
-                总预估时长：{formatTime(result.totalEstimatedDuration)}
+                总预估时长：{formatTimeShort(result.totalEstimatedDuration)}
               </div>
             </div>
 
@@ -403,7 +403,7 @@ export function AssistEditingPanel({ project, onClose }: { project: Project; onC
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono text-primary">
-                        {formatTime(suggestion.startTime)} - {formatTime(suggestion.endTime)}
+                        {formatTimeShort(suggestion.startTime)} - {formatTimeShort(suggestion.endTime)}
                       </span>
                       <span
                         className={cn(

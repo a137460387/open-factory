@@ -82,7 +82,7 @@ export function SceneTimeline({ scenes, onJumpToTime }: SceneTimelineProps) {
                 backgroundColor: color,
                 minWidth: '2px',
               }}
-              title={`${t.sceneTypes[seg.sceneType] ?? seg.sceneType} ${formatTime(seg.time)}`}
+              title={`${t.sceneTypes[seg.sceneType] ?? seg.sceneType} ${formatTimeShort(seg.time)}`}
             >
               {widthPct > 8 && (
                 <span className="text-[9px] text-white/80 truncate px-0.5">
@@ -106,7 +106,7 @@ export function SceneTimeline({ scenes, onJumpToTime }: SceneTimelineProps) {
               className="flex items-center gap-2 w-full text-xs bg-neutral-800 hover:bg-neutral-750 rounded p-1.5 transition-colors text-left"
             >
               <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-neutral-300 font-mono">{formatTime(seg.time)}</span>
+              <span className="text-neutral-300 font-mono">{formatTimeShort(seg.time)}</span>
               <span className="text-neutral-400 flex-1">{t.sceneTypes[seg.sceneType] ?? seg.sceneType}</span>
               <span className="text-neutral-600">{(seg.score * 100).toFixed(0)}%</span>
             </button>

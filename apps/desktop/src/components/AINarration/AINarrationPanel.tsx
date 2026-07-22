@@ -237,7 +237,7 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
               <div key={i} className="rounded-md border border-line p-2 space-y-1">
                 <div className="flex items-center gap-2 text-[11px] text-blue-600 font-mono">
                   <span>
-                    {t.timeRange}: {formatTime(seg.markerTime)} - {formatTime(seg.markerTime + seg.duration)}
+                    {t.timeRange}: {formatTimeShort(seg.markerTime)} - {formatTimeShort(seg.markerTime + seg.duration)}
                   </span>
                 </div>
                 <div className="space-y-1">

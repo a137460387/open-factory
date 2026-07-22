@@ -1,3 +1,4 @@
+import { clamp01 } from '@open-factory/editor-core/utils/math';
 import type { ExportTask, ExportTaskStatus } from '@open-factory/editor-core';
 import type { QualityEvaluationResult } from '../lib/tauri-bridge';
 import type { ExportPreset, ExportPresetSettings } from './export-presets';
@@ -261,8 +262,4 @@ function unique(values: string[]): string[] {
   return Array.from(
     new Set(values.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim())),
   );
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }

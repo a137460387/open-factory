@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Wand2, X, Loader2, Music, Film, ChevronRight } from 'lucide-react';
 import type { BeatSensitivity, MediaAsset } from '@open-factory/editor-core';
 import { estimateBpmFromTimes } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { detectBeats } from '../../lib/tauri-bridge';
 import { showToast } from '../../lib/toast';
 
@@ -345,11 +346,4 @@ function StatCard({ label, value, unit }: { label: string; value: string; unit: 
       <div className="text-xs text-slate-500">{label}</div>
     </div>
   );
-}
-
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }

@@ -101,7 +101,7 @@ export default function AudioSpectrumDialog({
     if (!selection) {
       return undefined;
     }
-    return t.selection(formatTime(selection.inPoint), formatTime(selection.outPoint));
+    return t.selection(formatTimeShort(selection.inPoint), formatTimeShort(selection.outPoint));
   }, [selection, t]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {

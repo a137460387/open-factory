@@ -160,7 +160,7 @@ export function EmotionCurveChart({ curve }: EmotionCurveChartProps) {
           }}
         >
           <div>
-            {t.time}: {formatTime(hovered.time)}
+            {t.time}: {formatTimeShort(hovered.time)}
           </div>
           <div>
             {t.emotionValue}: {hovered.value.toFixed(2)}

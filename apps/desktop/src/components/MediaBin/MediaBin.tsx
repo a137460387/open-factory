@@ -39,6 +39,7 @@ import {
   type Subclip,
   type TimelineLabelColor,
 } from '@open-factory/editor-core';
+import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import {
   AlertCircle,
   BadgeCheck,
@@ -4105,14 +4106,6 @@ function formatImportedAt(importedAt?: string): string {
     return zhCN.common.unavailable;
   }
   return new Date(timestamp).toLocaleDateString();
-}
-
-function formatDuration(duration: number): string {
-  const minutes = Math.floor(duration / 60);
-  const seconds = Math.floor(duration % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${minutes}:${seconds}`;
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
