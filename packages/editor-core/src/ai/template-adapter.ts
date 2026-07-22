@@ -16,7 +16,7 @@ import type {
 } from '../models/template-schema';
 import type { Project, MediaAsset } from '../model-types';
 import type { EffectParams } from '../effects';
-import { clamp } from '../utils/math';
+import { clamp, lerp } from '../utils/math';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -370,6 +370,3 @@ function r2(v: number): number {
   return Math.round(v * 100) / 100;
 }
 
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}

@@ -16,6 +16,7 @@ import {
   extractCommonStyle,
   type SubtitleSearchResult,
   type SubtitleSearchOptions,
+  formatTime,
 } from '@open-factory/editor-core';
 import { BUILTIN_SUBTITLE_STYLE_TEMPLATES, getBuiltinSubtitleStyleTemplate } from '@open-factory/editor-core';
 
@@ -477,8 +478,8 @@ function SubtitleListView({
 
                     {/* Timecode */}
                     <div className="flex-shrink-0 font-mono text-[var(--color-text-muted)]">
-                      <div>{formatTimecode(subtitleClip.start)}</div>
-                      <div>{formatTimecode(subtitleClip.start + subtitleClip.duration)}</div>
+                      <div>{formatTime(subtitleClip.start)}</div>
+                      <div>{formatTime(subtitleClip.start + subtitleClip.duration)}</div>
                     </div>
 
                     {/* Text */}
@@ -729,7 +730,7 @@ function SubtitleFindReplaceView({
                 }`}
               >
                 <div className="font-mono text-[var(--color-text-muted)]">
-                  {formatTimecode(result.matchStart)} - {formatTimecode(result.matchEnd)}
+                  {formatTime(result.matchStart)} - {formatTime(result.matchEnd)}
                 </div>
                 <div className="mt-0.5">
                   <span>{result.fullText.substring(0, result.matchStart)}</span>
@@ -1165,11 +1166,3 @@ function getTabLabel(tab: EditorTab): string {
   }
 }
 
-function formatTimecode(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 100);
-
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-}

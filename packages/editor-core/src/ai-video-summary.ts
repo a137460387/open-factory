@@ -3,12 +3,11 @@ export const SUMMARY_MAX_SUBTITLE_CHARS = 1000;
 
 import type { Clip, TimelineMarker, SubtitleClip, Project, Track } from './model-types';
 import { round } from './time';
+import { formatTimeShort } from './utils/time';
 
 function formatTimecode(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
-  const min = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${min.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return formatTimeShort(seconds);
 }
 export { formatTimecode };
 
