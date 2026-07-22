@@ -16,7 +16,8 @@ import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { showToast } from '../../lib/toast';
-import { Section, AnimatedField, RangeNumberField, TextField, ColorField, ToggleField, formatMotionGraphicNumberValue } from './InspectorEditors';
+import { Section, AnimatedField } from './InspectorEditors';
+import { RangeNumberField, TextField, ColorField, ToggleField, formatMotionGraphicNumberValue } from './EffectEditors';
 
 export function MotionGraphicPanel({
   clip,

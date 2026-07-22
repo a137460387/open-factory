@@ -2,7 +2,7 @@ import type { ClipMask, MaskPatch, PrivacyBlurEffect } from '@open-factory/edito
 import { normalizePrivacyBlurEffect } from '@open-factory/editor-core';
 import { Plus, Trash2 } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
-import { RangeNumberField, ToggleField } from './InspectorEditors';
+import { RangeNumberField, ToggleField } from './EffectEditors';
 
 export function MasksEditor({
   masks,

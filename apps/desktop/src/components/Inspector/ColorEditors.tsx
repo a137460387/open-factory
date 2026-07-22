@@ -14,7 +14,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { zhCN } from '../../i18n/strings';
-import { RangeNumberField } from './InspectorEditors';
+import { RangeNumberField } from './EffectEditors';
 
 export type ThreeWayKey = keyof ThreeWayColor;
 
