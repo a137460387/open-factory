@@ -9,6 +9,7 @@ import {
   normalizeInputColorSpace,
   parseColorNodeGraphFile,
   serializeColorNodeGraphFile,
+  clamp,
   type Clip,
   type ColorNode,
   type ColorNodeBlendMode,
@@ -1260,10 +1261,6 @@ function buildConnectionPath(from: { x: number; y: number }, to: { x: number; y:
 
 function resolveNodeLabel(graph: ColorNodeGraph, nodeId: string): string {
   return graph.nodes.find((node) => node.id === nodeId)?.name ?? nodeId;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 }
 
 function clampNumber(value: number, min: number, max: number): number {

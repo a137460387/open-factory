@@ -10,6 +10,7 @@ import { round } from '../time';
 import { finiteOrDefault } from '../math-utils';
 export { finiteOrDefault };
 import { normalizeSceneCutTimes } from '../scene-cuts';
+import { normalizeLutLayers } from '../lut-normalize';
 import type {
   AiPipPlacementSuggestion,
   AudioChannelRoutingMode,
@@ -930,26 +931,4 @@ export function normalizeHexColor(color: string | undefined, fallback: string): 
 function normalizeLutPath(path: string | null | undefined): string | null {
   const trimmed = path?.trim();
   return trimmed ? trimmed : null;
-}
-
-export function normalizeLutLayers(
-  luts: import('../model-types').LUTLayer[] | undefined,
-  lutPath?: string | null,
-): import('../model-types').LUTLayer[] {
-  // If luts array is explicitly provided, normalize it (max 3, filter intensity=0)
-  if (luts && luts.length > 0) {
-    return luts
-      .slice(0, 3)
-      .map((l) => ({
-        path: (typeof l.path === 'string' ? l.path.trim() : '') || '',
-        intensity: round(Math.min(1, Math.max(0, typeof l.intensity === 'number' ? l.intensity : 1))),
-      }))
-      .filter((l) => l.path.length > 0);
-  }
-  // Backward compat: upgrade legacy lutPath string to single LUTLayer
-  const normalizedPath = normalizeLutPath(lutPath);
-  if (normalizedPath) {
-    return [{ path: normalizedPath, intensity: 1 }];
-  }
-  return [];
 }

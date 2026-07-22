@@ -12,7 +12,7 @@ import {
   normalizeClipBorder,
   normalizeMulticamSequence,
   normalizeSequenceFrameRate,
-} from '../model';
+} from './clip-normalize';
 import { normalizeAudioRestoration } from '../audio-restoration';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { normalizeClipPitchData } from '../audio-pitch';
@@ -32,7 +32,9 @@ import {
   DEFAULT_TIMELINE_NOTE_COLOR,
   TIMELINE_NOTE_COLORS,
 } from './defaults';
-import { normalizeQualityEnhancement, finiteOrDefault } from './track-timeline';
+import { normalizeQualityEnhancement } from './clip-normalize';
+import { finiteOrDefault } from '../math-utils';
+import { normalizeOptionalHexColor } from '../math-utils';
 import type {
   AiPipPlacementSuggestion,
   ClipAILookMatch,
@@ -232,18 +234,7 @@ export function normalizeHexColor(color: string | undefined, fallback: string): 
   return fallback;
 }
 
-export function normalizeOptionalHexColor(color: string | undefined): string | undefined {
-  const trimmed = color?.trim();
-  if (!trimmed) return undefined;
-  const six = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
-  if (six) return `#${six[1].toLowerCase()}`;
-  const three = /^#([0-9a-fA-F]{3})$/.exec(trimmed);
-  if (three) {
-    const [r, g, b] = three[1].toLowerCase();
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-  return undefined;
-}
+export { normalizeOptionalHexColor } from '../math-utils';
 
 export function normalizeLutPath(path: string | null | undefined): string | null {
   const trimmed = path?.trim();

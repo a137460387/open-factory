@@ -1,4 +1,4 @@
-import type { TimelineMarker } from './model-types';
+import type { TimelineMarker } from './model-types-primitives';
 import { round } from './time';
 
 export const DEFAULT_SCENE_DETECTION_THRESHOLD = 10;

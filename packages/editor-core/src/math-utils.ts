@@ -81,3 +81,17 @@ export function nonNegative(value: number): number {
 export function positive(value: number, fallback = 1): number {
   return value > 0 ? value : fallback;
 }
+
+/** 校验并规范化可选的十六进制颜色值（#RGB 或 #RRGGBB），无效时返回 undefined */
+export function normalizeOptionalHexColor(color: string | undefined): string | undefined {
+  const trimmed = color?.trim();
+  if (!trimmed) return undefined;
+  const six = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
+  if (six) return `#${six[1].toLowerCase()}`;
+  const three = /^#([0-9a-fA-F]{3})$/.exec(trimmed);
+  if (three) {
+    const [r, g, b] = three[1].toLowerCase();
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return undefined;
+}

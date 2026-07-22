@@ -2,7 +2,7 @@ import { diffTimelineVersions, type TimelineVersionDiff } from '../timeline-comp
 import { getTimelineDuration } from '../timeline';
 import { getProjectSequences, type Project } from '../model';
 import type { PostExportQualityAssuranceResult } from '../export/post-export-quality';
-import type { ExportPublishNodeLog } from '../export/publish-pipeline';
+import type { ExportPublishNodeLog } from '../export/publish-types';
 
 export const DEFAULT_PROJECT_RELEASE_VERSION = '0.1.0';
 export const DEFAULT_SUBTITLE_RELEASE_MAX_CHARS = 80;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
-import type { MediaAsset } from '@open-factory/editor-core';
+import { formatTimeShort, type MediaAsset } from '@open-factory/editor-core';
 import type { MediaAnalysis } from '../../lib/tauri-bridge';
 import { zhCN } from '../../i18n/strings';
 
@@ -40,13 +40,7 @@ export function formatDateTime(timestamp?: number): string {
   return new Date(timestamp).toLocaleString();
 }
 
-export function formatDuration(duration: number): string {
-  const minutes = Math.floor(duration / 60);
-  const seconds = Math.floor(duration % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${minutes}:${seconds}`;
-}
+export const formatDuration = formatTimeShort;
 
 function InfoSection({ title, children }: { title: string; children: ReactNode }) {
   return (

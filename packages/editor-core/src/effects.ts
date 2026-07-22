@@ -1,7 +1,9 @@
 import { clamp, round } from './time';
 import { DEFAULT_MOTION_BLUR_PARAMS, normalizeMotionBlurParams, type MotionBlurParams } from './motion-blur';
 import { MANUAL_AUDIO_VISUALIZATION_THEME_ID, expandAudioVisualizationTheme } from './audio-visualization-themes';
+import type { EffectParamValue, EffectParams } from './effect-types';
 
+export type { EffectParamValue, EffectParams };
 export type EffectType =
   | 'blur'
   | 'sharpen'
@@ -11,8 +13,6 @@ export type EffectType =
   | 'audio-spectrum'
   | 'custom-shader'
   | 'motion-blur';
-export type EffectParamValue = number | string | boolean;
-export type EffectParams = Record<string, EffectParamValue>;
 export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circular';
 export type AudioSpectrumPosition = 'top' | 'bottom';
 export type CustomShaderExampleId = 'pixelate' | 'posterize' | 'old-film';

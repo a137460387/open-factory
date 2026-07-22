@@ -1,4 +1,4 @@
-import type { ExportTask } from './export-queue';
+import type { ExportTask } from './queue-types';
 import type { FfmpegExportPlan } from './export-types';
 
 export type ExportMemoryClass = 'light' | 'balanced' | 'heavy';

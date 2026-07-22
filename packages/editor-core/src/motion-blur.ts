@@ -1,5 +1,5 @@
 import { clamp, round } from './time';
-import type { EffectParams, EffectParamValue } from './effects';
+import type { EffectParams, EffectParamValue } from './effect-types';
 
 export type MotionBlurSampleCount = 4 | 8 | 16 | 32;
 

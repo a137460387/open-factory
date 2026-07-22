@@ -6,7 +6,57 @@
  * structured report, with AI summary generation support.
  */
 
-import type { Project, SubtitleClip, VideoClip } from './model-types';
+/** 最小化 Project 引用，避免对 model-types 的循环依赖 */
+interface PreflightProjectLike {
+  timeline: {
+    tracks: Array<{
+      clips: Array<{
+        type: string;
+        id: string;
+        start: number;
+        flashWarnings?: Array<{
+          startTime: number;
+          flashRate: number;
+          severity: string;
+          isRedFlash: boolean;
+        }>;
+        anomalies?: Array<{
+          type: string;
+          startTime: number;
+          endTime: number;
+          severity: string;
+        }>;
+        stabilization?: {
+          analyzed?: boolean;
+          shakeScore?: number | null;
+        };
+        readingSpeedWarning?: {
+          charsPerSecond: number;
+          recommendedMax: number;
+          severity: string;
+        } | null;
+      }>;
+    }>;
+    continuityWarnings?: Array<{
+      clipAId: string;
+      clipBId: string;
+      type: string;
+      reason: string;
+    }>;
+    colorConsistencyWarnings?: Array<{
+      clipAId: string;
+      clipBId: string;
+      type: string;
+      reason: string;
+    }>;
+  };
+  loudnessSuggestion?: {
+    targetPlatform: string;
+    measuredLUFS: number;
+    targetLUFS: number;
+    suggestedGainDb: number;
+  };
+}
 
 // --- Types ---
 
@@ -45,14 +95,14 @@ export interface PreflightAIResponse {
  * Only reads already-generated fields; does not trigger any new analysis.
  * Empty/missing fields are skipped.
  */
-export function aggregatePreflightIssues(project: Project): PreflightIssue[] {
+export function aggregatePreflightIssues(project: PreflightProjectLike): PreflightIssue[] {
   const issues: PreflightIssue[] = [];
 
   // Flash warnings from clips
   for (const track of project.timeline.tracks) {
     for (const clip of track.clips) {
       if (clip.type !== 'video') continue;
-      const vc = clip as VideoClip;
+      const vc = clip;
       if (vc.flashWarnings) {
         for (const fw of vc.flashWarnings) {
           issues.push({
@@ -120,7 +170,7 @@ export function aggregatePreflightIssues(project: Project): PreflightIssue[] {
   for (const track of project.timeline.tracks) {
     for (const clip of track.clips) {
       if (clip.type !== 'subtitle') continue;
-      const sc = clip as SubtitleClip;
+      const sc = clip;
       if (sc.readingSpeedWarning) {
         const rsw = sc.readingSpeedWarning;
         issues.push({

@@ -1,9 +1,8 @@
-import type { ProjectReleaseRecord } from '../project/release-workflow';
+import type { ExportPublishNodeLog, ExportPublishNodeStatus, ExportPublishNodeType } from './publish-types';
+
+export type { ExportPublishNodeLog, ExportPublishNodeStatus, ExportPublishNodeType };
 
 export type ExportPublishPlatform = 'youtube' | 'bilibili' | 'douyin';
-export type ExportPublishNodeType =
-  'publish-platform' | 'email-notification' | 'webhook-callback' | 'write-release-record';
-export type ExportPublishNodeStatus = 'success' | 'failed' | 'skipped';
 
 export interface ExportPublishOutputInfo {
   file: string;
@@ -37,15 +36,7 @@ export interface ExportPublishWindow {
   timezoneOffsetMinutes?: number;
 }
 
-export interface ExportPublishNodeLog {
-  nodeId: string;
-  nodeType: ExportPublishNodeType;
-  status: ExportPublishNodeStatus;
-  startedAt: string;
-  finishedAt: string;
-  durationMs: number;
-  message: string;
-}
+/** 发布日志记录接口已移至 publish-types.ts 并在此处重新导出 */
 
 export interface ExportPublishPipelineReport {
   logs: ExportPublishNodeLog[];
@@ -111,10 +102,10 @@ export function buildPublishNodeLog(input: {
   };
 }
 
-export function appendPublishLogsToReleaseRecord(
-  record: ProjectReleaseRecord,
+export function appendPublishLogsToReleaseRecord<T extends { publishLogs?: ExportPublishNodeLog[] }>(
+  record: T,
   logs: ExportPublishNodeLog[],
-): ProjectReleaseRecord {
+): T {
   return {
     ...record,
     publishLogs: [...(record.publishLogs ?? []), ...logs.map((log) => ({ ...log }))],

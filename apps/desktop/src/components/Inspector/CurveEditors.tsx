@@ -4,6 +4,8 @@ import {
   getPresetHandles,
   isStepsPreset,
   applyStepsEasing,
+  clamp01,
+  clamp,
   type EasingPreset,
   type EasingPresetCategory,
 } from '@open-factory/editor-core';
@@ -1377,10 +1379,8 @@ export function roundFinite(value: number): number {
   return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : 0;
 }
 
-export function clampUnit(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-}
+/** @deprecated 使用 clamp01 代替 */
+export const clampUnit = clamp01;
 
-export function clampSigned(value: number): number {
-  return Math.min(1, Math.max(-1, Number.isFinite(value) ? value : 0));
-}
+/** @deprecated 使用 clamp(value, -1, 1) 代替 */
+export const clampSigned = (value: number): number => clamp(value, -1, 1);

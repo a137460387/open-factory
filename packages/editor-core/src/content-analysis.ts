@@ -1,4 +1,9 @@
-import type { Clip } from './model-types';
+/** 最小化剪辑引用接口，避免对 model-types 的循环依赖 */
+interface ClipLike {
+  id: string;
+  name: string;
+  contentAnalysis?: ClipContentAnalysis;
+}
 
 export const CONTENT_ANALYSIS_VERSION = 1;
 
@@ -240,7 +245,7 @@ export function normalizeClipContentAnalysis(input: unknown): ClipContentAnalysi
   };
 }
 
-export function serializeClipContentAnalysisJson(clip: Pick<Clip, 'id' | 'name' | 'contentAnalysis'>): string {
+export function serializeClipContentAnalysisJson(clip: ClipLike): string {
   const analysis = normalizeClipContentAnalysis(clip.contentAnalysis);
   return JSON.stringify(
     {

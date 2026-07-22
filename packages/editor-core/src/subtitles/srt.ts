@@ -1,4 +1,4 @@
-import type { SubtitleClip, SubtitleTrackType } from '../model';
+import type { SubtitleClip, SubtitleTrackType } from '../model-types';
 
 export interface SrtCue {
   index: number;

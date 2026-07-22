@@ -1,10 +1,12 @@
 import { round } from '../time';
-import { finiteOrDefault } from '../math-utils';
+import { finiteOrDefault, normalizeOptionalHexColor } from '../math-utils';
 export { finiteOrDefault };
 import { isDefaultColorCurves, isNeutralThreeWayColor } from '../color-grading';
 import {
   createId,
   normalizeColorCorrection,
+} from './clip-normalize';
+import {
   createTimelineMarker,
   createTimelineBookmark,
   createProjectAnnotation,
@@ -13,7 +15,7 @@ import {
   createTimelineNote,
   createExportRange,
   createProtectedRange,
-} from '../model';
+} from './factories';
 import {
   DEFAULT_CHROMA_KEY,
   DEFAULT_COLOR_CORRECTION,
@@ -36,7 +38,6 @@ import {
   PRIMARY_SEQUENCE_ID,
   TRANSITION_TYPES,
 } from './defaults';
-import { normalizeOptionalHexColor } from './annotations';
 import type {
   ChromaKey,
   ChromaKeyColor,

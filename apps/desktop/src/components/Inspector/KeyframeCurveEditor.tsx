@@ -4,6 +4,7 @@ import {
   getPresetHandles,
   isStepsPreset,
   applyStepsEasing,
+  clamp01,
   type EasingPreset,
   type EasingPresetCategory,
 } from '@open-factory/editor-core';
@@ -928,9 +929,8 @@ export function roundFinite(value: number): number {
   return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : 0;
 }
 
-export function clampUnit(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-}
+/** @deprecated 使用 clamp01 代替 */
+export const clampUnit = clamp01;
 
 export function formatKeyframeProperty(property: KeyframeProperty): string {
   return zhCN.inspector.keyframeProperty[property] ?? property;

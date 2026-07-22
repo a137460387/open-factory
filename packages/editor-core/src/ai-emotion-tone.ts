@@ -5,8 +5,26 @@
  * Supports batch mode with concurrency ≤3 and interruptible processing.
  */
 
-import type { Project } from './model-types';
-import type { VideoClip } from './model-types';
+/** 最小化 Project 引用，避免循环依赖 */
+interface ProjectLike {
+  timeline: {
+    tracks: Array<{
+      clips: Array<{
+        type: string;
+        emotionAnalysis?: EmotionAnalysis;
+        [key: string]: unknown;
+      }>;
+    }>;
+  };
+}
+
+/** 最小化 VideoClip 引用 */
+interface VideoClipLike {
+  id: string;
+  type: 'video';
+  emotionAnalysis?: EmotionAnalysis;
+  [key: string]: unknown;
+}
 
 // --- Types ---
 
@@ -83,12 +101,12 @@ export function parseEmotionToneResponse(json: string): EmotionToneAIResponse | 
  * Get all video clips from a project that need emotion analysis.
  * Returns clips that don't have emotionAnalysis yet.
  */
-export function getClipsNeedingEmotionAnalysis(project: Project): VideoClip[] {
-  const result: VideoClip[] = [];
+export function getClipsNeedingEmotionAnalysis(project: ProjectLike): VideoClipLike[] {
+  const result: VideoClipLike[] = [];
   for (const track of project.timeline.tracks) {
     for (const clip of track.clips) {
       if (clip.type !== 'video') continue;
-      const vc = clip as VideoClip;
+      const vc = clip as VideoClipLike;
       if (!vc.emotionAnalysis) {
         result.push(vc);
       }
@@ -107,8 +125,8 @@ export function getClipsNeedingEmotionAnalysis(project: Project): VideoClip[] {
  * @returns Map of clipId → EmotionAnalysis for completed analyses
  */
 export async function batchAnalyzeEmotionTones(
-  clips: VideoClip[],
-  analyzeFn: (clip: VideoClip) => Promise<EmotionAnalysis | null>,
+  clips: VideoClipLike[],
+  analyzeFn: (clip: VideoClipLike) => Promise<EmotionAnalysis | null>,
   maxConcurrency = 3,
   signal?: AbortSignal,
 ): Promise<Map<string, EmotionAnalysis>> {

@@ -4,6 +4,8 @@ import {
   normalizeCurvePoints,
   normalizeThreeWayColor,
   sampleCurve,
+  clamp01,
+  clamp,
   type ColorWheelValue,
   type CurvePoint,
   type ThreeWayColor,
@@ -333,10 +335,8 @@ export function hsvToRgb(hue: number, saturation: number, value: number): { r: n
   }
 }
 
-export function clampUnit(value: number): number {
-  return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-}
+/** @deprecated 使用 clamp01 代替 */
+export const clampUnit = clamp01;
 
-export function clampSigned(value: number): number {
-  return Math.min(1, Math.max(-1, Number.isFinite(value) ? value : 0));
-}
+/** @deprecated 使用 clamp(value, -1, 1) 代替 */
+export const clampSigned = (value: number): number => clamp(value, -1, 1);

@@ -1,14 +1,8 @@
 import type { ExportRenderRange } from './export-ranges';
-import type { ExportTask } from './export-queue';
+import type { ExportTask, VersionedExportTaskMetadata } from './queue-types';
 import type { ExportProject, ExportSettings } from './export-types';
 
-export interface VersionedExportTaskMetadata {
-  batchId: string;
-  versionId: string;
-  versionName: string;
-  platform?: string;
-  language?: string;
-}
+export type { VersionedExportTaskMetadata } from './queue-types';
 
 export interface VersionedExportMetadataTemplate {
   title?: string;

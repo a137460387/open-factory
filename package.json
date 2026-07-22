@@ -37,7 +37,9 @@
     "smoke:cancel": "cd apps/desktop && bun run smoke:cancel",
     "smoke:golden": "cd apps/desktop && bun run smoke:golden",
     "media:compat": "node scripts/media-compat-test.mjs",
-    "check:release": "node scripts/check-release.mjs"
+    "check:release": "node scripts/check-release.mjs",
+    "depcruise": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs",
+    "depcruise:ci": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs --output-type err-long"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1",
@@ -46,6 +48,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^26.1.1",
     "@vitest/coverage-v8": "^3.2.7",
+    "dependency-cruiser": "^18.1.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.5",
     "typedoc": "^0.28.20",

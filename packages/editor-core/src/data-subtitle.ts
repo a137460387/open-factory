@@ -1,4 +1,4 @@
-import type { DataSubtitleRow, DataSubtitleSource, DataSubtitleSourceType, SubtitleClip } from './model';
+import type { DataSubtitleRow, DataSubtitleSource, DataSubtitleSourceType, SubtitleClip } from './model-types';
 import { round } from './time';
 import type { SubtitleCueInput } from './subtitles/srt';
 

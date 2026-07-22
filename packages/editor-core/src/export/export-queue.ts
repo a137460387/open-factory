@@ -3,44 +3,25 @@ import type { ExportReport, FfmpegExportPlan } from './export-types';
 import type { ProgressiveExportState } from './progressive';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 import { startResourceAwareExportTaskSlots } from './scheduling';
-import type { VersionedExportTaskMetadata } from './versioned-batch';
+import type {
+  ExportTask,
+  ExportTaskPriority,
+  ExportTaskStatus,
+  ExportUploadState,
+  ExportUploadStatus,
+  ExportUploadTargetType,
+  VersionedExportTaskMetadata,
+} from './queue-types';
 
-export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'interrupted' | 'canceled' | 'error' | 'success';
-export type ExportTaskPriority = 'high' | 'normal' | 'low';
-export type ExportUploadTargetType = 'webdav' | 'local';
-export type ExportUploadStatus = 'pending' | 'running' | 'success' | 'error';
-
-export interface ExportUploadState {
-  targetType: ExportUploadTargetType;
-  status: ExportUploadStatus;
-  progress: number;
-  attempts: number;
-  destination?: string;
-  error?: string;
-  updatedAt: string;
-}
-
-export interface ExportTask {
-  id: string;
-  name: string;
-  projectName?: string;
-  outputPath: string;
-  plan: FfmpegExportPlan;
-  priority: ExportTaskPriority;
-  status: ExportTaskStatus;
-  progress: number;
-  createdAt: string;
-  scheduledStartAt?: string;
-  startedAt?: string;
-  finishedAt?: string;
-  logPath?: string;
-  error?: string;
-  report?: ExportReport;
-  renderFarm?: RenderFarmTaskConfig;
-  segments?: RenderFarmSegmentStatus[];
-  progressive?: ProgressiveExportState;
-  versionedBatch?: VersionedExportTaskMetadata;
-}
+export type {
+  ExportTask,
+  ExportTaskPriority,
+  ExportTaskStatus,
+  ExportUploadState,
+  ExportUploadStatus,
+  ExportUploadTargetType,
+  VersionedExportTaskMetadata,
+} from './queue-types';
 
 export interface ExportTaskHistoryEntry {
   id: string;

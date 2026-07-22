@@ -1,4 +1,4 @@
-import type { Keyframe, KeyframeEasing } from './model-types';
+import type { Keyframe, KeyframeEasing } from './model-types-primitives';
 import { round } from './time';
 
 export const MOTION_GRAPHIC_FILE_FORMAT = 'open-factory-motion-graphic';

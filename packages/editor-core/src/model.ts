@@ -39,7 +39,7 @@ export { normalizeQualityEnhancement } from './model/track-timeline';
 
 // clip-normalize vs annotations (clip-normalize is authoritative)
 export { normalizeHexColor } from './model/clip-normalize';
-export { normalizeLutLayers } from './model/clip-normalize';
+export { normalizeLutLayers } from './lut-normalize';
 export { cloneClipKeyframesLocal } from './model/clip-normalize';
 export { normalizePrivacyRedactions } from './model/clip-normalize';
 export { normalizeAILookMatch } from './model/clip-normalize';

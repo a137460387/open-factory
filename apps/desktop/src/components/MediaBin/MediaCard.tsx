@@ -3,6 +3,7 @@ import {
   isFrameRateMismatch,
   mapScoreToGrade,
   shouldGenerateProxy,
+  formatTimeShort,
   type ClipContentAnalysis,
   type MediaAsset,
   type MediaFlag,
@@ -143,13 +144,7 @@ function formatPreciseFrameRate(frameRate: number): string {
   return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
 }
 
-function formatDuration(duration: number): string {
-  const minutes = Math.floor(duration / 60);
-  const seconds = Math.floor(duration % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${minutes}:${seconds}`;
-}
+const formatDuration = formatTimeShort;
 
 // ---------------------------------------------------------------------------
 // Internal sub-components

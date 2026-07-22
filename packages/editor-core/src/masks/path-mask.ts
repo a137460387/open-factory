@@ -1,7 +1,7 @@
 import earcut from 'earcut';
 
 import { round } from '../time';
-import type { PathPoint, PathPointHandle } from '../model-types';
+import type { PathPoint, PathPointHandle } from '../model-types-primitives';
 
 export interface TriangulatedPathMask {
   vertices: number[];
