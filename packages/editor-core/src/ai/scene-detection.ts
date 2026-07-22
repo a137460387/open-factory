@@ -7,6 +7,7 @@
  */
 
 import type { ContentAnalysisVisualSample, ContentSceneType } from '../content-analysis';
+import { clamp01 } from '../utils/math';
 
 // --- Types ---
 
@@ -583,13 +584,6 @@ function mergeCloseRefinements(refinements: BoundaryRefinement[], minGap: number
   }
 
   return merged;
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
 }
 
 function round(value: number): number {

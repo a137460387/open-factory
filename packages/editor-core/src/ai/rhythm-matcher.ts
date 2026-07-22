@@ -13,6 +13,7 @@ import type {
   TemplateKeyframe,
   TemplateClip,
 } from '../models/template-schema';
+import { clamp01 } from '../utils/math';
 
 /** A single beat point detected from audio data. */
 export interface AudioBeat {
@@ -359,8 +360,4 @@ function mergeBeatsWithMotion(
   }
 
   return merged.sort((a, b) => a.time - b.time);
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

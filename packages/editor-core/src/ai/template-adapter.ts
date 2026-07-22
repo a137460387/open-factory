@@ -16,6 +16,7 @@ import type {
 } from '../models/template-schema';
 import type { Project, MediaAsset } from '../model-types';
 import type { EffectParams } from '../effects';
+import { clamp } from '../utils/math';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -363,10 +364,6 @@ function mapValues(
   const out: EffectParams = {};
   for (const [k, v] of Object.entries(obj)) out[k] = fn(v);
   return out;
-}
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.min(Math.max(v, min), max);
 }
 
 function r2(v: number): number {

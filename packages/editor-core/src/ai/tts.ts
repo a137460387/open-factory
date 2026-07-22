@@ -1,5 +1,7 @@
 // -- Types --
 
+import { clamp } from '../utils/math';
+
 /** TTS语言 */
 export type TTSLanguage = 'zh' | 'en' | 'ja' | 'ko' | 'auto';
 
@@ -897,10 +899,6 @@ export function validateTTSParams(params: TTSSynthesisParams, config: TTSConfig 
 }
 
 // -- Helpers --
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function writeString(view: DataView, offset: number, str: string): void {
   for (let i = 0; i < str.length; i++) {

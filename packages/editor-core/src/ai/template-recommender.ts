@@ -10,6 +10,7 @@
 
 import type { EditingTemplate, TemplateCategory } from '../models/template-schema';
 import type { Project, Clip, Timeline } from '../model-types';
+import { clamp } from '../utils/math';
 
 // ─── Public Types ─────────────────────────────────────────────────
 
@@ -294,10 +295,6 @@ function cosineSimilarity(a: ReadonlyArray<number>, b: ReadonlyArray<number>): n
   }
   const denom = Math.sqrt(normA) * Math.sqrt(normB);
   return denom > 0 ? clamp(dot / denom, 0, 1) : 0;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function round3(value: number): number {
