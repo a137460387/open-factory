@@ -7,6 +7,7 @@ import {
   getQualityGradeLabel,
   generateAnalysisReport,
 } from '@open-factory/editor-core';
+import { formatDuration } from '@open-factory/editor-core/utils/time';
 import {
   BarChart3,
   Film,
@@ -56,12 +57,6 @@ const SCENE_TYPE_COLORS: Record<AutomationSceneType, string> = {
 /* ------------------------------------------------------------------ */
 /*  工具函数                                                            */
 /* ------------------------------------------------------------------ */
-
-function formatDuration(seconds: number): string {
-  const min = Math.floor(seconds / 60);
-  const sec = Math.floor(seconds % 60);
-  return min > 0 ? `${min}分${sec}秒` : `${sec}秒`;
-}
 
 function qualityColor(score: number): string {
   if (score >= 90) return 'text-green-600';

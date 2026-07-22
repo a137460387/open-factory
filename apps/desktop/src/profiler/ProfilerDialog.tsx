@@ -4,6 +4,7 @@ import {
   type PerformanceProfilerReport,
   type ProfilerRenderPassName,
 } from '@open-factory/editor-core';
+import { formatDurationMs } from '@open-factory/editor-core/utils/time';
 import { zhCN } from '../i18n/strings';
 
 interface ProfilerDialogProps {
@@ -61,7 +62,7 @@ export function ProfilerDialog({
                     className="mt-1 font-mono text-2xl tabular-nums text-ink"
                     data-testid="profiler-recording-elapsed"
                   >
-                    {formatDuration(elapsedMs)}
+                    {formatDurationMs(elapsedMs)}
                   </div>
                 </div>
                 <Timer className={recording ? 'text-brand' : 'text-slate-400'} size={26} />
@@ -197,15 +198,6 @@ function colorForCategory(category: string): string {
     return '#f59e0b';
   }
   return '#8b5cf6';
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60)
-    .toString()
-    .padStart(2, '0');
-  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-  return `${minutes}:${seconds}`;
 }
 
 function formatBytes(bytes: number): string {

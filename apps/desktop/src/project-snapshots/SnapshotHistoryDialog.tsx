@@ -183,7 +183,7 @@ export function SnapshotHistoryDialog({ projectId, projectPath, onRestore, onClo
                     preview.project.name,
                     preview.project.timeline.tracks.length,
                     preview.project.media.length,
-                    formatDuration(getTimelineDuration(preview.project.timeline)),
+                    formatTimeShort(getTimelineDuration(preview.project.timeline)),
                   )}
                 </div>
                 <div className="space-y-1 text-xs text-slate-500">

@@ -158,7 +158,7 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
                           />
                           <span className="min-w-0 flex-1 truncate">{asset.name}</span>
                           <span className="shrink-0 text-xs tabular-nums text-slate-400">
-                            {formatDuration(asset.duration)}
+                            {formatTimeShort(asset.duration)}
                           </span>
                         </label>
                       );
@@ -197,7 +197,7 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
                         />
                         <span className="min-w-0 flex-1 truncate">{asset.name}</span>
                         <span className="shrink-0 text-xs tabular-nums text-slate-400">
-                          {formatDuration(asset.duration)}
+                          {formatTimeShort(asset.duration)}
                         </span>
                       </label>
                     ))}

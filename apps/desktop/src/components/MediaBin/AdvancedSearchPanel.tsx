@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Filter, Loader2, Tag, X } from 'lucide-react';
 import { clsx } from 'clsx';
+import { formatDurationMs } from '@open-factory/editor-core/utils/time';
 import { useMediaIndexStore } from '../../store/mediaIndexStore';
 import type { TagWithCount } from '../../lib/tauri-bridge';
 
@@ -149,7 +150,7 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
           )}
           {(searchQuery.minDurationMs !== undefined || searchQuery.maxDurationMs !== undefined) && (
             <FilterChip
-              label={`${formatDuration(searchQuery.minDurationMs)} - ${formatDuration(searchQuery.maxDurationMs)}`}
+              label={`${formatDurationDisplay(searchQuery.minDurationMs)} - ${formatDurationDisplay(searchQuery.maxDurationMs)}`}
               onRemove={() => setDurationRange()}
             />
           )}
@@ -334,15 +335,7 @@ function TagBadge({ tag, active, onClick }: { tag: TagWithCount; active: boolean
 }
 
 /** 格式化时长显示 */
-function formatDuration(ms?: number): string {
+function formatDurationDisplay(ms?: number): string {
   if (ms === undefined) return '∞';
-  if (ms < 1000) return `${ms}ms`;
-  const secs = ms / 1000;
-  if (secs < 60) return `${Math.round(secs)}s`;
-  const mins = Math.floor(secs / 60);
-  const remainSecs = Math.round(secs % 60);
-  if (mins < 60) return `${mins}:${remainSecs.toString().padStart(2, '0')}`;
-  const hours = Math.floor(mins / 60);
-  const remainMins = mins % 60;
-  return `${hours}:${remainMins.toString().padStart(2, '0')}:${remainSecs.toString().padStart(2, '0')}`;
+  return formatDurationMs(ms);
 }

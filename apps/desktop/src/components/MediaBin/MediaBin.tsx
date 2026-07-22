@@ -2183,7 +2183,7 @@ function MediaLibraryListView({
                 {formatMediaColorProfile(asset)}
               </td>
               <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">
-                {formatDuration(asset.duration)}
+                {formatTimeShort(asset.duration)}
               </td>
               <td
                 className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]"
@@ -2265,7 +2265,7 @@ function MediaLibraryTimelineView({
                   <IconPreview type={asset.type} />
                 )}
                 <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                  {formatDuration(asset.duration)}
+                  {formatTimeShort(asset.duration)}
                 </span>
               </div>
               <div className="space-y-1 p-2">
@@ -2742,7 +2742,7 @@ function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose():
                   value={analysis.format.formatLongName ?? analysis.format.formatName ?? zhCN.common.unavailable}
                   testId="media-info-format"
                 />
-                <InfoRow label={t.duration} value={formatDuration(analysis.format.duration ?? state.asset.duration)} />
+                <InfoRow label={t.duration} value={formatTimeShort(analysis.format.duration ?? state.asset.duration)} />
                 <InfoRow label={t.fileSize} value={formatBytes(analysis.fileSize ?? analysis.format.size)} />
                 <InfoRow label={t.createdTime} value={formatDateTime(analysis.createdTimeMs)} />
                 <InfoRow label={t.bitRate} value={formatBitRate(analysis.format.bitRate)} />
@@ -3475,7 +3475,7 @@ function MediaCard({
         <div className="mt-1 flex items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
           <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>
-            {asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}
+            {asset.type === 'audio' ? formatTimeShort(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}
           </span>
         </div>
         <div
@@ -3551,7 +3551,7 @@ function MediaCard({
                 <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]" title={version.path}>
                   {version.name}
                 </span>
-                <span className="text-[var(--color-text-muted)]">{formatDuration(version.duration ?? 0)}</span>
+                <span className="text-[var(--color-text-muted)]">{formatTimeShort(version.duration ?? 0)}</span>
               </div>
             ))}
           </div>
@@ -3679,7 +3679,7 @@ function MediaCard({
                           {sub.name}
                         </span>
                         <span className="shrink-0 text-[var(--color-text-muted)]">
-                          {formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}
+                          {formatTimeShort(sub.inPoint)} \u2013 {formatTimeShort(sub.outPoint)}
                         </span>
                       </div>
                       {sub.color ? (
