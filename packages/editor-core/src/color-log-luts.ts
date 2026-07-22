@@ -1,3 +1,5 @@
+import { clamp01 } from './math-utils';
+
 export const REC709_INPUT_COLOR_SPACE = 'rec709' as const;
 export const LOG_INPUT_COLOR_SPACES = ['slog2', 'slog3', 'clog', 'clog3', 'llog', 'vlog'] as const;
 export const INPUT_COLOR_SPACES = [REC709_INPUT_COLOR_SPACE, ...LOG_INPUT_COLOR_SPACES] as const;
@@ -149,10 +151,6 @@ function convertLogTripletToRec709(input: Lut3dPoint, spec: LogCurveSpec): Lut3d
     clamp01(luma + (expanded[1] - luma) * spec.saturation),
     clamp01(luma + (expanded[2] - luma) * spec.saturation),
   ];
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
 }
 
 function formatCubeNumber(value: number): string {

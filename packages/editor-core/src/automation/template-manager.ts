@@ -1,3 +1,5 @@
+import { clamp01 } from '../math-utils';
+
 /**
  * 模板化创作系统
  * 内置基础模板（Vlog、短视频、宣传片），支持节奏参数、转场偏好、字幕样式
@@ -413,10 +415,6 @@ export function normalizeRhythmParams(data: Partial<RhythmParams>): RhythmParams
     keyframeWeight: clamp01(data.keyframeWeight ?? defaults.keyframeWeight),
     qualityWeight: clamp01(data.qualityWeight ?? defaults.qualityWeight),
   };
-}
-
-function clamp01(v: number): number {
-  return Math.max(0, Math.min(1, v));
 }
 
 /** 规范化模板 */

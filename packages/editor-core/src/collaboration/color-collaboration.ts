@@ -1,3 +1,5 @@
+import { clamp } from '../math-utils';
+
 /**
  * 实时协作调色模块
  *
@@ -157,10 +159,6 @@ const USER_COLORS = ['#38bdf8', '#f59e0b', '#a78bfa', '#10b981', '#f43f5e', '#22
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function clampValue(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
 }
 
 // ==================== 默认工厂函数 ====================

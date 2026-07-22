@@ -3,6 +3,7 @@ import type { HSLQualifierParams } from './hsl-qualifier';
 import { createDefaultHSLQualifierParams, validateHSLQualifierParams } from './hsl-qualifier';
 import type { WindowMaskParams } from './window-mask';
 import { createDefaultCircleMask, validateWindowMaskParams } from './window-mask';
+import { clamp } from '../math-utils';
 
 /** 调色节点类型 */
 export type ColorGradingNodeType =
@@ -214,7 +215,6 @@ export function createColorGradingNode(
 
 /** 验证色轮参数范围 */
 export function validatePrimaryWheelParams(params: PrimaryWheelParams): PrimaryWheelParams {
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
   const clampChannel = (ch: { r: number; g: number; b: number; y: number }) => ({
     r: clamp(ch.r, -1, 1),
     g: clamp(ch.g, -1, 1),
@@ -236,8 +236,6 @@ export function validatePrimaryWheelParams(params: PrimaryWheelParams): PrimaryW
 
 /** 验证滑块参数范围 */
 export function validatePrimarySliderParams(params: PrimarySliderParams): PrimarySliderParams {
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-
   return {
     temperature: clamp(params.temperature, -100, 100),
     tint: clamp(params.tint, -100, 100),
@@ -319,14 +317,14 @@ function normalizeColorNode(node: unknown): ColorGradingNode {
     const p = n.params as LUTApplyNodeParams;
     params = {
       lutId: typeof p?.lutId === 'string' ? p.lutId : '',
-      intensity: clampValue(typeof p?.intensity === 'number' ? p.intensity : 1, 0, 1),
+      intensity: clamp(typeof p?.intensity === 'number' ? p.intensity : 1, 0, 1),
     };
   } else if (type === 'tracking-mask') {
     const p = n.params as TrackingMaskNodeParams;
     params = {
       trackingData: Array.isArray(p?.trackingData) ? p.trackingData : [],
-      feather: clampValue(typeof p?.feather === 'number' ? p.feather : 10, 0, 100),
-      expand: clampValue(typeof p?.expand === 'number' ? p.expand : 0, -100, 100),
+      feather: clamp(typeof p?.feather === 'number' ? p.feather : 10, 0, 100),
+      expand: clamp(typeof p?.expand === 'number' ? p.expand : 0, -100, 100),
       invert: !!p?.invert,
     };
   } else {
@@ -348,10 +346,6 @@ function isValidPosition(pos: unknown): boolean {
   if (!pos || typeof pos !== 'object') return false;
   const p = pos as Record<string, unknown>;
   return typeof p.x === 'number' && typeof p.y === 'number';
-}
-
-function clampValue(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function isValidConnection(conn: unknown): boolean {

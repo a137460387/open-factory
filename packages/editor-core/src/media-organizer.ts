@@ -1,5 +1,6 @@
 import type { MediaAsset, Project, Timeline } from './model-types';
 import { getProjectSequences, replaceProjectActiveTimeline } from './model';
+import { clamp01 } from './math-utils';
 
 export interface SmartDuplicateCandidate {
   asset: MediaAsset;
@@ -280,10 +281,6 @@ function normalizeHash(value: string): string {
 
 function normalizePathKey(path: string): string {
   return path.replace(/\\/g, '/').toLowerCase();
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 function countBits(value: number): number {

@@ -1,3 +1,5 @@
+import { clamp } from '../math-utils';
+
 /**
  * 项目云同步模块
  *
@@ -195,10 +197,6 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function clampValue(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
 /** 简单哈希 (FNV-1a) */
 export function computeDataHash(data: Uint8Array): string {
   let hash = 0x811c9dc5;
@@ -306,12 +304,12 @@ export function validateSyncConfig(config: SyncConfig): SyncConfig {
       ? config.conflictStrategy
       : 'newest-wins',
     enableCompression: !!config.enableCompression,
-    compressionLevel: clampValue(config.compressionLevel, 1, 9),
+    compressionLevel: clamp(config.compressionLevel, 1, 9),
     enableEncryption: !!config.enableEncryption,
     autoSyncIntervalMs: Math.max(0, config.autoSyncIntervalMs),
-    maxRetries: clampValue(config.maxRetries, 0, 10),
-    retryDelayMs: clampValue(config.retryDelayMs, 500, 30000),
-    maxConcurrentTransfers: clampValue(config.maxConcurrentTransfers, 1, 10),
+    maxRetries: clamp(config.maxRetries, 0, 10),
+    retryDelayMs: clamp(config.retryDelayMs, 500, 30000),
+    maxConcurrentTransfers: clamp(config.maxConcurrentTransfers, 1, 10),
     maxProxySizeBytes: Math.max(0, config.maxProxySizeBytes),
   };
 }

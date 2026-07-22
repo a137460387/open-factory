@@ -1,3 +1,5 @@
+import { clamp } from '../math-utils';
+
 /** HSL 限定器参数 */
 export interface HSLQualifierParams {
   /** 选中范围 - 色相 */
@@ -44,8 +46,6 @@ export function createDefaultHSLQualifierParams(): HSLQualifierParams {
 
 /** 验证 HSL 限定器参数 */
 export function validateHSLQualifierParams(params: HSLQualifierParams): HSLQualifierParams {
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-
   return {
     hueRange: {
       center: clamp(params.hueRange.center, 0, 360),

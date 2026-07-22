@@ -1,3 +1,5 @@
+import { clamp } from '../math-utils';
+
 /**
  * WebSocket 协作传输层
  *
@@ -150,10 +152,6 @@ function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function clampValue(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
-
 /** 计算指数退避延迟 */
 export function computeBackoffDelay(attempt: number, initialMs: number, maxMs: number): number {
   const delay = initialMs * 2 ** attempt;
@@ -181,12 +179,12 @@ export function validateWSTransportConfig(config: WSTransportConfig): WSTranspor
     userId: config.userId,
     userName: config.userName,
     role: config.role,
-    heartbeatIntervalMs: clampValue(config.heartbeatIntervalMs, 5000, 60000),
-    heartbeatTimeoutMs: clampValue(config.heartbeatTimeoutMs, 2000, 30000),
-    maxReconnectAttempts: clampValue(config.maxReconnectAttempts, 0, 100),
-    initialReconnectDelayMs: clampValue(config.initialReconnectDelayMs, 500, 10000),
-    maxReconnectDelayMs: clampValue(config.maxReconnectDelayMs, 5000, 120000),
-    maxQueueSize: clampValue(config.maxQueueSize, 10, 1000),
+    heartbeatIntervalMs: clamp(config.heartbeatIntervalMs, 5000, 60000),
+    heartbeatTimeoutMs: clamp(config.heartbeatTimeoutMs, 2000, 30000),
+    maxReconnectAttempts: clamp(config.maxReconnectAttempts, 0, 100),
+    initialReconnectDelayMs: clamp(config.initialReconnectDelayMs, 500, 10000),
+    maxReconnectDelayMs: clamp(config.maxReconnectDelayMs, 5000, 120000),
+    maxQueueSize: clamp(config.maxQueueSize, 10, 1000),
     autoReconnect: !!config.autoReconnect,
   };
 }

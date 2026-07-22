@@ -1,3 +1,5 @@
+import { clamp } from '../math-utils';
+
 /**
  * 个人风格记忆库
  * 监听用户对自动生成序列的修改操作，将偏好转化为可复用的权重参数
@@ -447,6 +449,4 @@ export class StyleMemory {
 // 工具函数
 // ============================================================
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
+// ============================================================

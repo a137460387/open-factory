@@ -1,3 +1,5 @@
+import { clamp01 } from '../math-utils';
+
 /** 窗口遮罩形状 */
 export type WindowMaskShape = 'circle' | 'linear-gradient' | 'polygon';
 
@@ -58,7 +60,6 @@ export function createDefaultGradientMask(): WindowMaskParams {
 
 /** 验证窗口遮罩参数 */
 export function validateWindowMaskParams(params: WindowMaskParams): WindowMaskParams {
-  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
   const result = { ...params };
 
   if (result.circle) {
