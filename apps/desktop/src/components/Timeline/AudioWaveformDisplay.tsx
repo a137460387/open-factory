@@ -3,6 +3,9 @@
  *
  * Renders audio waveform visualization with beat detection markers
  * for the Timeline audio tracks. Supports beat-snap for clip editing.
+ *
+ * Sprint AU: Uses OffscreenCanvas + Worker for rendering when available,
+ * keeping the main thread free during playback.
  */
 
 import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
@@ -41,7 +44,7 @@ export interface AudioWaveformDisplayProps {
 }
 
 // ---------------------------------------------------------------------------
-// Canvas waveform renderer
+// Canvas waveform renderer (main thread fallback)
 // ---------------------------------------------------------------------------
 
 function drawWaveform(
@@ -153,6 +156,12 @@ function drawBeatMarkers(
 }
 
 // ---------------------------------------------------------------------------
+// OffscreenCanvas support detection
+// ---------------------------------------------------------------------------
+
+const supportsOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -169,25 +178,79 @@ export function AudioWaveformDisplay({
   currentTime = 0,
 }: AudioWaveformDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const offscreenRef = useRef<OffscreenCanvas | null>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const renderCountRef = useRef(0);
 
-  // Draw waveform
+  // Initialize OffscreenCanvas worker
   useEffect(() => {
+    if (!supportsOffscreenCanvas) return;
+
     const canvas = canvasRef.current;
-    if (!canvas || !rhythmResult) return;
+    if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    try {
+      const offscreen = canvas.transferControlToOffscreen();
+      offscreenRef.current = offscreen;
 
+      const worker = new Worker(
+        new URL('../workers/waveform-render.worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+      workerRef.current = worker;
+
+      worker.postMessage(
+        { type: 'init', canvas: offscreen },
+        [offscreen],
+      );
+
+      return () => {
+        worker.terminate();
+        workerRef.current = null;
+        offscreenRef.current = null;
+      };
+    } catch {
+      // OffscreenCanvas not available, fall back to main thread
+      return;
+    }
+  }, []);
+
+  // Render waveform
+  useEffect(() => {
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
 
-    drawWaveform(ctx, rhythmResult.spectrumFrames, width, height, pixelsPerSecond, scrollLeft, currentTime);
+    if (workerRef.current && offscreenRef.current) {
+      // OffscreenCanvas path: send render data to worker
+      workerRef.current.postMessage({
+        type: 'render',
+        spectrumFrames: rhythmResult?.spectrumFrames ?? [],
+        beatTimes: rhythmResult?.beatTimes ?? [],
+        width,
+        height,
+        pixelsPerSecond,
+        scrollLeft,
+        currentTime,
+        showBeatMarkers,
+        dpr,
+      });
+    } else {
+      // Main thread fallback
+      const canvas = canvasRef.current;
+      if (!canvas || !rhythmResult) return;
 
-    if (showBeatMarkers && rhythmResult.beatTimes.length > 0) {
-      drawBeatMarkers(ctx, rhythmResult.beatTimes, width, height, pixelsPerSecond, scrollLeft);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+
+      drawWaveform(ctx, rhythmResult.spectrumFrames, width, height, pixelsPerSecond, scrollLeft, currentTime);
+
+      if (showBeatMarkers && rhythmResult.beatTimes.length > 0) {
+        drawBeatMarkers(ctx, rhythmResult.beatTimes, width, height, pixelsPerSecond, scrollLeft);
+      }
     }
   }, [rhythmResult, width, height, pixelsPerSecond, scrollLeft, showBeatMarkers, currentTime]);
 

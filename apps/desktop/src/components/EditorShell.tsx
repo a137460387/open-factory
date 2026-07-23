@@ -514,7 +514,9 @@ export function EditorShell() {
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
   const selectedKeyframes = useEditorStore((state) => state.selectedKeyframes);
-  const playheadTime = useEditorStore((state) => state.playheadTime);
+  // Sprint AU: playheadTime removed from EditorShell subscription.
+  // ShellMainArea subscribes to it directly, avoiding 60fps re-renders of this 2490-line component.
+  // Use useEditorStore.getState().playheadTime in callbacks that need it.
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
@@ -2272,6 +2274,7 @@ export function EditorShell() {
                   break;
                 case 'go-to':
                   if (cmd.timeRef !== undefined) setPlayheadTime(cmd.timeRef);
+                  else setPlayheadTime(useEditorStore.getState().playheadTime);
                   break;
                 case 'zoom-in':
                   // Zoom in handled by timeline
