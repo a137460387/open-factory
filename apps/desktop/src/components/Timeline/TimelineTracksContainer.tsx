@@ -31,6 +31,9 @@ import {
 } from './TimelineOverlays';
 import { SequenceSettingsDialog, GapStatsPanel } from './TimelineDialogs';
 import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import { ContextualSuggestionBubble } from './ContextualSuggestionBubble';
+import type { ContextualSuggestion, TimelineContext } from '@open-factory/editor-core/contextual-suggestions';
+import type { Timeline as CoreTimeline, MediaAsset } from '@open-factory/editor-core';
 
 interface TimelineTracksContainerProps {
   // Scroll container
@@ -227,6 +230,13 @@ interface TimelineTracksContainerProps {
   minimapViewport: any;
   minimapHeight: number;
   scrollTimelineFromMinimap: (y: number, mode: 'top' | 'center') => void;
+
+  // Contextual suggestions
+  suggestionTimeline?: CoreTimeline;
+  suggestionMedia?: MediaAsset[];
+  suggestionContext?: TimelineContext;
+  onApplySuggestion?: (suggestion: ContextualSuggestion) => void;
+  onDismissSuggestion?: (suggestionId: string) => void;
 }
 
 export const TimelineTracksContainer = React.memo(function TimelineTracksContainer({
@@ -375,6 +385,11 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
   minimapViewport,
   minimapHeight,
   scrollTimelineFromMinimap,
+  suggestionTimeline,
+  suggestionMedia,
+  suggestionContext,
+  onApplySuggestion,
+  onDismissSuggestion,
 }: TimelineTracksContainerProps) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -885,6 +900,20 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                 });
               }}
             />
+            {suggestionTimeline && suggestionMedia && suggestionContext && onApplySuggestion ? (
+              <div
+                className="absolute z-[25]"
+                style={{ left: LABEL_WIDTH + playheadTime * zoom + 12, top: 8 }}
+              >
+                <ContextualSuggestionBubble
+                  timeline={suggestionTimeline}
+                  media={suggestionMedia}
+                  context={suggestionContext}
+                  onApplySuggestion={onApplySuggestion}
+                  onDismiss={onDismissSuggestion}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

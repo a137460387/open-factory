@@ -124,6 +124,7 @@ import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
 import { AdvancedSearchPanel } from './AdvancedSearchPanel';
 import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
+import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
 
 interface MediaCardExtras {
   favoriteIds: Set<string>;
@@ -358,6 +359,41 @@ export function MediaBin({
     const rest = sorted.filter((a) => !_effectivePinnedIds.has(a.id));
     return [...pinned, ...rest];
   }, [visibleMedia, mediaLibraryView, _effectivePinnedIds]);
+  const mediaHighlights = useMemo(() => {
+    const map = new Map<string, VisualHighlightMarker[]>();
+    for (const asset of media) {
+      const analysis = mediaContentAnalysis[asset.id];
+      if (!analysis) continue;
+      const markers: VisualHighlightMarker[] = [];
+      for (const seg of analysis.segments) {
+        if (seg.motion > 0.6) {
+          markers.push({
+            time: seg.start,
+            frameIndex: 0,
+            score: seg.motion,
+            type: 'motion-peak',
+            duration: seg.end - seg.start,
+          });
+        }
+      }
+      for (const pt of analysis.emotionCurve) {
+        if (pt.value > 0.7) {
+          markers.push({
+            time: pt.time,
+            frameIndex: 0,
+            score: pt.value,
+            type: 'combined',
+            duration: 1,
+          });
+        }
+      }
+      if (markers.length > 0) {
+        markers.sort((a, b) => a.time - b.time);
+        map.set(asset.id, markers);
+      }
+    }
+    return map;
+  }, [media, mediaContentAnalysis]);
   const importedTimelineMedia = useMemo(
     () => sortMediaLibraryAssets(visibleMedia, { sortKey: 'importedAt', sortDirection: 'asc' }),
     [visibleMedia],
@@ -955,6 +991,7 @@ export function MediaBin({
                   onToggleSelected={toggleSelectedMedia}
                   onOpenBatchMetadata={openBatchMetadataEditor}
                   onOpenBatchRename={openBatchRenameEditor}
+                  mediaHighlights={mediaHighlights}
                 />
               </div>
             ) : (
@@ -989,6 +1026,7 @@ export function MediaBin({
                   onToggleSelected={toggleSelectedMedia}
                   onOpenBatchMetadata={openBatchMetadataEditor}
                   onOpenBatchRename={openBatchRenameEditor}
+                  mediaHighlights={mediaHighlights}
                 />
                 <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
                 <VirtualMediaCardGrid
@@ -1015,6 +1053,7 @@ export function MediaBin({
                   onToggleSelected={toggleSelectedMedia}
                   onOpenBatchMetadata={openBatchMetadataEditor}
                   onOpenBatchRename={openBatchRenameEditor}
+                  mediaHighlights={mediaHighlights}
                 />
               </div>
             )}
@@ -1395,6 +1434,7 @@ function MediaFolderTree(props: {
   onToggleSelected(assetId: string): void;
   onOpenBatchMetadata(assetId: string): void;
   onOpenBatchRename(assetId: string): void;
+  mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
   if (roots.length === 0) {
@@ -1441,6 +1481,7 @@ function MediaFolderNode({
   onToggleSelected,
   onOpenBatchMetadata,
   onOpenBatchRename,
+  mediaHighlights,
 }: {
   folder: MediaFolder;
   depth: number;
@@ -1473,6 +1514,7 @@ function MediaFolderNode({
   onToggleSelected(assetId: string): void;
   onOpenBatchMetadata(assetId: string): void;
   onOpenBatchRename(assetId: string): void;
+  mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(folder.name);
@@ -1599,6 +1641,7 @@ function MediaFolderNode({
               onToggleSelected={onToggleSelected}
               onOpenBatchMetadata={onOpenBatchMetadata}
               onOpenBatchRename={onOpenBatchRename}
+              mediaHighlights={mediaHighlights}
             />
           ))}
           <MediaCardGrid
@@ -1626,6 +1669,7 @@ function MediaFolderNode({
             onOpenBatchMetadata={onOpenBatchMetadata}
             onOpenBatchRename={onOpenBatchRename}
             folderId={folder.id}
+            mediaHighlights={mediaHighlights}
           />
         </div>
       ) : null}
@@ -1966,6 +2010,7 @@ function MediaCardGrid({
   onOpenBatchMetadata,
   onOpenBatchRename,
   folderId,
+  mediaHighlights,
 }: {
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
@@ -1991,6 +2036,7 @@ function MediaCardGrid({
   onOpenBatchMetadata(assetId: string): void;
   onOpenBatchRename(assetId: string): void;
   folderId: string;
+  mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
@@ -2046,6 +2092,7 @@ function MediaCardGrid({
             batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
             onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
             onOpenBatchRename={() => onOpenBatchRename(asset.id)}
+            highlights={mediaHighlights?.get(asset.id)}
           />
         ))}
       </div>
@@ -2077,6 +2124,7 @@ function VirtualMediaCardGrid({
   onToggleSelected,
   onOpenBatchMetadata,
   onOpenBatchRename,
+  mediaHighlights,
 }: {
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
@@ -2101,6 +2149,7 @@ function VirtualMediaCardGrid({
   onToggleSelected(assetId: string): void;
   onOpenBatchMetadata(assetId: string): void;
   onOpenBatchRename(assetId: string): void;
+  mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const columnCount = useColumnCount(parentRef as RefObject<HTMLDivElement | null>, gridSize);
@@ -2188,6 +2237,7 @@ function VirtualMediaCardGrid({
                     batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
                     onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
                     onOpenBatchRename={() => onOpenBatchRename(asset.id)}
+                    highlights={mediaHighlights?.get(asset.id)}
                   />
                 ))}
               </Fragment>

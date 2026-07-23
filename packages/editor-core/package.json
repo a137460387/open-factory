@@ -91,6 +91,38 @@
     "./utils/math": {
       "types": "./dist/utils/math.d.ts",
       "import": "./dist/utils/math.js"
+    },
+    "./natural-language-commands": {
+      "types": "./dist/natural-language-commands.d.ts",
+      "import": "./dist/natural-language-commands.js"
+    },
+    "./gesture-control": {
+      "types": "./dist/gesture-control.d.ts",
+      "import": "./dist/gesture-control.js"
+    },
+    "./visual-highlight-engine": {
+      "types": "./dist/visual-highlight-engine.d.ts",
+      "import": "./dist/visual-highlight-engine.js"
+    },
+    "./audio-rhythm-analysis": {
+      "types": "./dist/audio-rhythm-analysis.d.ts",
+      "import": "./dist/audio-rhythm-analysis.js"
+    },
+    "./contextual-suggestions": {
+      "types": "./dist/contextual-suggestions.d.ts",
+      "import": "./dist/contextual-suggestions.js"
+    },
+    "./smart-rough-cut": {
+      "types": "./dist/smart-rough-cut.d.ts",
+      "import": "./dist/smart-rough-cut.js"
+    },
+    "./model-types": {
+      "types": "./dist/model-types.d.ts",
+      "import": "./dist/model-types.js"
+    },
+    "./collaboration/team/team-management": {
+      "types": "./dist/collaboration/team/team-management.d.ts",
+      "import": "./dist/collaboration/team/team-management.js"
     }
   },
   "scripts": {

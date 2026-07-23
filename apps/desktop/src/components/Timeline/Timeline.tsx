@@ -758,6 +758,15 @@ export function Timeline({
         minimapViewport={minimapViewport}
         minimapHeight={minimapHeight}
         scrollTimelineFromMinimap={scrollTimelineFromMinimap}
+        suggestionTimeline={project?.timeline}
+        suggestionMedia={project?.media}
+        suggestionContext={project ? {
+          currentTime: playheadTime,
+          selectedClipIds,
+          zoomLevel: zoom,
+          isPlaying,
+          recentActions: [],
+        } : undefined}
       />
       <TimelineDialogsLayer
         silenceDialog={silenceDialog}

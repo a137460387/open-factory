@@ -163,6 +163,7 @@ import { ExportQualityAssuranceSettingsPanel } from './ExportQualityAssurancePan
 import { ExportRulesSettingsPanel, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule } from './ExportRulesPanel';
 import { formatBytes, formatDateTime } from './formatHelpers';
 import { HardwareAccelerationSettingsPanel } from './HardwareAccelerationSettingsPanel';
+import { GesturePracticePanel } from '../components/GestureControl/GestureTutorial';
 import { LocalModelsSettingsPanel } from './LocalModelsPanel';
 import { MacroStepsEditor } from './MacroStepsEditor';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
@@ -285,7 +286,8 @@ type SettingsTab =
   | 'backup'
   | 'plugins'
   | 'ai-services'
-  | 'hardware-acceleration';
+  | 'hardware-acceleration'
+  | 'gesture';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 export function SettingsDialog({
   open,
@@ -1856,6 +1858,14 @@ export function SettingsDialog({
             >
               {t.tabs.hardwareAcceleration}
             </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'gesture' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-gesture"
+              onClick={() => setTab('gesture')}
+            >
+              手势控制
+            </button>
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
             {tab === 'general' ? (
@@ -2861,6 +2871,15 @@ export function SettingsDialog({
             ) : null}
             {tab === 'ai-services' ? <AIServicesSettingsPanel /> : null}
             {tab === 'hardware-acceleration' ? <HardwareAccelerationSettingsPanel /> : null}
+            {tab === 'gesture' ? (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-ink">手势控制</h3>
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  使用摄像头进行手势控制，支持播放/暂停、前进/后退等操作。
+                </p>
+                <GesturePracticePanel />
+              </div>
+            ) : null}
           </main>
         </div>
       </div>
