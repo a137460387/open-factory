@@ -201,7 +201,7 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       exportQueueRecovery: deps.exportQueueRecovery,
       archiveProgress: deps.archiveProgress,
       sharePackageProgress: deps.sharePackageProgress,
-      restoreRecovery: deps.restoreRecovery,
+      restoreRecovery: () => deps.restoreRecovery(deps.recoveryCandidate),
       discardRecovery: deps.discardRecovery,
       restoreExportQueueRecovery: deps.restoreExportQueueRecovery,
       discardExportQueueRecovery: deps.discardExportQueueRecovery,

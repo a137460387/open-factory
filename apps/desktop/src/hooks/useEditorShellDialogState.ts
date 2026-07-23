@@ -3,7 +3,7 @@ import type { ExportTask } from '@open-factory/editor-core';
 import type { ExportPreset } from '../export/export-presets';
 import type { ArchiveProgress } from '../lib/projectArchive';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
-import type { AutosaveRecoveryCandidate } from '../export/export-queue-persistence';
+import type { AutosaveRecoveryCandidate } from '../lib/projectFiles';
 import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
 import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
 import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';

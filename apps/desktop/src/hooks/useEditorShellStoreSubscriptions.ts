@@ -68,7 +68,7 @@ export function useEditorShellStoreSubscriptions() {
   const setContentAnalysisOpen = useEditorUIStore((s) => s.setContentAnalysisOpen);
   const setProfilerOpen = useEditorUIStore((s) => s.setProfilerOpen);
   const setRhythmAnalysisOpen = useEditorUIStore((s) => s.setRhythmAnalysisOpen);
-  const setBeatSyncOpen = useEditorUIStore((s) => s.setBeatSyncOpen);
+  const autoAudioSyncOpen = useEditorUIStore((s) => s.autoAudioSyncOpen);
   const setAutoAudioSyncOpen = useEditorUIStore((s) => s.setAutoAudioSyncOpen);
   const setErrorKnowledgeOpen = useEditorUIStore((s) => s.setErrorKnowledgeOpen);
   const setSequenceCompareOpen = useEditorUIStore((s) => s.setSequenceCompareOpen);
@@ -78,9 +78,6 @@ export function useEditorShellStoreSubscriptions() {
   const setEmotionAnalysisOpen = useEditorUIStore((s) => s.setEmotionAnalysisOpen);
   const setExportHistoryClassifierOpen = useEditorUIStore((s) => s.setExportHistoryClassifierOpen);
   const setMacroHistoryOpen = useEditorUIStore((s) => s.setMacroHistoryOpen);
-  const setProjectHealthOpen = useEditorUIStore((s) => s.setProjectHealthOpen);
-  const setMediaHealthDashboardOpen = useEditorUIStore((s) => s.setMediaHealthDashboardOpen);
-  const setArchiveProgress = useEditorUIStore((s) => s.setArchiveProgress);
 
   // --- EditorSettingsStore 订阅 ---
   const lastBackupAt = useEditorSettingsStore((s) => s.lastBackupAt);
@@ -361,7 +358,7 @@ export function useEditorShellStoreSubscriptions() {
     setContentAnalysisOpen,
     setProfilerOpen,
     setRhythmAnalysisOpen,
-    setBeatSyncOpen,
+    autoAudioSyncOpen,
     setAutoAudioSyncOpen,
     setErrorKnowledgeOpen,
     setSequenceCompareOpen,
@@ -371,9 +368,6 @@ export function useEditorShellStoreSubscriptions() {
     setEmotionAnalysisOpen,
     setExportHistoryClassifierOpen,
     setMacroHistoryOpen,
-    setProjectHealthOpen,
-    setMediaHealthDashboardOpen,
-    setArchiveProgress,
 
     // EditorSettingsStore
     lastBackupAt,
@@ -587,48 +581,6 @@ export function useEditorShellStoreSubscriptions() {
     setTimelineTemplateMode,
     templateExportPreset,
     setTemplateExportPreset,
-
-    // Additional UI state
-    exportDialogOpen,
-    setExportDialogOpen,
-    timelineExportDialogOpen,
-    setTimelineExportDialogOpen,
-    autoAudioSyncOpen,
-    setAutoAudioSyncOpen,
-    setErrorKnowledgeOpen,
-    setSequenceCompareOpen,
-    setSubtitleSyncOpen,
-    setProxyVerifyOpen,
-    setFormatConverterOpen,
-    setEmotionAnalysisOpen,
-    setExportHistoryClassifierOpen,
-
-    // Additional Feature state
-    demucsAvailability,
-    setDemucsAvailability,
-    audioSeparationClipId,
-    setAudioSeparationClipId,
-    audioSeparationProgress,
-    setAudioSeparationProgress,
-    speakerDiarizationRunning,
-    setSpeakerDiarizationRunning,
-    speakerDiarizationResult,
-    setSpeakerDiarizationResult,
-    autoAudioSyncRunning,
-    setAutoAudioSyncRunning,
-    autoAudioSyncPrimaryClipId,
-    setAutoAudioSyncPrimaryClipId,
-    autoAudioSyncMode,
-    setAutoAudioSyncMode,
-    autoAudioSyncResults,
-    setAutoAudioSyncResults,
-    recordingTask,
-    setRecordingTask,
-    recordingElapsedSeconds,
-    setRecordingElapsedSeconds,
-    setFormatConverterMockFiles,
-    setMockSubtitleClips,
-    setMockExportHistory,
 
     // CollaborationStore
     collaborationEnabled,

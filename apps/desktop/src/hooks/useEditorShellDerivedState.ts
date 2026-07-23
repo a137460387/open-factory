@@ -1,15 +1,14 @@
 import { useMemo } from 'react';
 import {
-  selectClipById,
   type Clip,
   type MediaAsset,
   type Project,
-  isPiPVisualClip,
-  isSceneReorderClip,
   findSyncCompareClipRefs,
   round,
   estimateBpmFromBeatMarkers,
 } from '@open-factory/editor-core';
+import { selectClipById } from '../store/editorStore';
+import { isPiPVisualClip, isSceneReorderClip } from '../lib/timeline-clip-helpers';
 import { canSeparateAudioForClip } from '../lib/demucs';
 import {
   collectContentAnalysisTargets,
@@ -25,10 +24,10 @@ import {
   clampTimelineHeight,
   getEffectivePanelState,
   getWorkspaceLayoutById,
-  getReviewModeShellVisibility,
   type WorkspaceLayoutDefinition,
   type WorkspaceLayoutId,
 } from '../layout/layoutSettings';
+import { getReviewModeShellVisibility } from '../review/reviewMode';
 import type { TimelineInteractionSettings } from '../settings/appSettings';
 
 interface DerivedStateDeps {
@@ -65,7 +64,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   } = deps;
 
   const selectedClip = useMemo(
-    () => selectClipById(project, selectedClipId),
+    () => selectClipById(project, selectedClipId ?? undefined),
     [project, selectedClipId],
   );
 

@@ -72,11 +72,6 @@ export function useDialogStoreSelectors() {
   const batchTranscodeOpen = useEditorUIStore((s) => s.batchTranscodeOpen);
   const batchWatermarkOpen = useEditorUIStore((s) => s.batchWatermarkOpen);
   const batchProjectProcessingOpen = useEditorUIStore((s) => s.batchProjectProcessingOpen);
-  const exportDialogOpen = useEditorUIStore((s) => s.exportDialogOpen);
-  const timelineExportDialogOpen = useEditorUIStore((s) => s.timelineExportDialogOpen);
-
-  // --- 导出相关 ---
-  const lastExportPath = useEditorUIStore((s) => s.lastExportPath);
 
   return {
     // 项目相关
@@ -144,11 +139,6 @@ export function useDialogStoreSelectors() {
     batchTranscodeOpen,
     batchWatermarkOpen,
     batchProjectProcessingOpen,
-    exportDialogOpen,
-    timelineExportDialogOpen,
-
-    // 导出相关
-    lastExportPath,
   };
 }
 
@@ -212,9 +202,6 @@ export function useDialogSetterSelectors() {
   const setBatchTranscodeOpen = useEditorUIStore((s) => s.setBatchTranscodeOpen);
   const setBatchWatermarkOpen = useEditorUIStore((s) => s.setBatchWatermarkOpen);
   const setBatchProjectProcessingOpen = useEditorUIStore((s) => s.setBatchProjectProcessingOpen);
-  const setExportDialogOpen = useEditorUIStore((s) => s.setExportDialogOpen);
-  const setTimelineExportDialogOpen = useEditorUIStore((s) => s.setTimelineExportDialogOpen);
-  const setLastExportPath = useEditorUIStore((s) => s.setLastExportPath);
 
   return {
     setSettingsOpen,
@@ -273,8 +260,5 @@ export function useDialogSetterSelectors() {
     setBatchTranscodeOpen,
     setBatchWatermarkOpen,
     setBatchProjectProcessingOpen,
-    setExportDialogOpen,
-    setTimelineExportDialogOpen,
-    setLastExportPath,
   };
 }
