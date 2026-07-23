@@ -352,12 +352,12 @@ export class QuantizationTool {
     const mantissa = value & 0x03FF;
 
     if (exponent === 0) {
-      return sign | (mantissa << 13);
+      return (sign | (mantissa << 13)) as any;
     } else if (exponent === 31) {
-      return sign | 0x7F800000 | (mantissa << 13);
+      return (sign | 0x7F800000 | (mantissa << 13)) as any;
     }
 
-    return (sign | ((exponent + 112) << 23) | (mantissa << 13)) >>> 0;
+    return (sign | ((exponent + 112) << 23) | (mantissa << 13)) as any;
   }
 }
 

@@ -342,8 +342,8 @@ export function generateEditPlan(
       {
         ...({} as SceneAnalysis),
         duration: candidate.duration,
-        quality: { overall: candidate.quality } as SceneAnalysis["quality"],
-      } as SceneAnalysis,
+        quality: { overall: candidate.quality } as any,
+      } as any,
       template.rhythm,
       weights,
     );

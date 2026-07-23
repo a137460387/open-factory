@@ -14,7 +14,7 @@ interface EffectsDeps {
   setTutorialProgress: (p: TutorialProgressSettings) => void;
   setTutorialCelebrationVisible: (v: boolean) => void;
   demucsExecutablePath: string;
-  setDemucsAvailability: (a: DemucsAvailability) => void;
+  setDemucsAvailability: (a: any) => void;
   audioSeparationClipId: string | null;
   setAudioSeparationProgress: (p: number) => void;
   recordingTask: { startedAt: number } | null;
@@ -26,10 +26,10 @@ interface EffectsDeps {
   setFormatConverterOpen: (v: boolean) => void;
   setEmotionAnalysisOpen: (v: boolean) => void;
   setExportHistoryClassifierOpen: (v: boolean) => void;
-  setFormatConverterMockFiles: (f: unknown) => void;
-  setMockSubtitleClips: (c: unknown) => void;
-  setMockExportHistory: (h: unknown) => void;
-  setArchiveProgress: (p: unknown) => void;
+  setFormatConverterMockFiles: (f: any) => void;
+  setMockSubtitleClips: (c: any) => void;
+  setMockExportHistory: (h: any) => void;
+  setArchiveProgress: (p: any) => void;
   setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setGestureTutorialOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }

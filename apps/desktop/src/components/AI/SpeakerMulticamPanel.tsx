@@ -48,7 +48,7 @@ export function SpeakerMulticamPanel({
     if (diarizationResult && availableAngles.length > 0 && state.mappings.length === 0) {
       autoConfigureMappings(
         diarizationResult,
-        availableAngles.map((a: { name?: string }, i: number) => ({
+        availableAngles.map((a: any, i: number) => ({
           index: i,
           name: a.name ?? `机位 ${i + 1}`,
         })),
@@ -151,7 +151,7 @@ export function SpeakerMulticamPanel({
                       data-testid={`angle-select-${speaker.speakerId}`}
                     >
                       <option value={-1}>未分配</option>
-                      {availableAngles.map((angle: { id: string; name?: string }, index: number) => (
+                      {availableAngles.map((angle: any, index: number) => (
                         <option key={angle.id} value={index}>
                           {angle.name ?? `机位 ${index + 1}`}
                         </option>
@@ -215,7 +215,7 @@ export function SpeakerMulticamPanel({
               <label className="text-xs text-[var(--color-text-muted)]">过渡类型</label>
               <select
                 value={state.config.transitionType}
-                onChange={(e) => updateConfig({ transitionType: e.target.value as "cut" | "dissolve" | "wipe" })}
+                onChange={(e) => updateConfig({ transitionType: e.target.value as any })}
                 className="w-full rounded border border-line bg-[var(--color-bg-primary)] px-2 py-1 text-xs"
                 data-testid="transition-type"
               >

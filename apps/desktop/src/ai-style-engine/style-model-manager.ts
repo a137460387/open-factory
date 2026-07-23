@@ -111,7 +111,7 @@ export interface StyleModelStorage {
  * Create a personal style model from multiple project analyses
  */
 export function createStyleModel(
-  projects: Array<{ id: string; timeline: unknown; presets?: unknown[] }>,
+  projects: Array<{ id: string; timeline: any; presets?: any[] }>,
   existingModel?: PersonalStyleModel,
 ): PersonalStyleModel {
   const now = Date.now();
@@ -186,7 +186,7 @@ function mergeEditingProfiles(results: EDLAnalysisResult[]): EDLAnalysisResult {
     longShotRatio,
     transitionDistribution,
     highlightRhythmPattern: {
-      type: dominantRhythmType as EditingRhythmProfile["highlightRhythmPattern"]["type"],
+      type: dominantRhythmType as any,
       confidence: average(profiles.map((p) => p.highlightRhythmPattern.confidence)),
       avgInterval: average(profiles.map((p) => p.highlightRhythmPattern.avgInterval)),
       intervalVariance: average(profiles.map((p) => p.highlightRhythmPattern.intervalVariance)),
@@ -292,7 +292,7 @@ function mergeColorProfiles(results: ColorAnalysisResult[]): ColorPreferenceProf
  */
 export function applyStyleToProject(
   model: PersonalStyleModel,
-  targetTimeline: unknown,
+  targetTimeline: any,
   audioBeatTimes?: number[],
 ): StyleApplicationResult {
   // Generate edit point recommendations
@@ -318,7 +318,7 @@ export function applyStyleToProject(
  */
 function recommendEditPoints(
   model: PersonalStyleModel,
-  timeline: unknown,
+  timeline: any,
   audioBeatTimes?: number[],
 ): EditPointRecommendation[] {
   const recommendations: EditPointRecommendation[] = [];

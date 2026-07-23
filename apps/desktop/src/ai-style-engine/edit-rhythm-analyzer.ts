@@ -93,7 +93,7 @@ export interface EDLAnalysisResult {
 /**
  * Parse EDL entries from project timeline data
  */
-export function parseEDLEntries(timeline: unknown): EditDecisionEntry[] {
+export function parseEDLEntries(timeline: any): EditDecisionEntry[] {
   const entries: EditDecisionEntry[] = [];
 
   if (!timeline?.tracks) {
@@ -343,7 +343,7 @@ function normalizeValue(value: number, min: number, max: number): number {
 /**
  * Run full EDL analysis on project timeline
  */
-export function analyzeEditingStyle(timeline: unknown): EDLAnalysisResult {
+export function analyzeEditingStyle(timeline: any): EDLAnalysisResult {
   const entries = parseEDLEntries(timeline);
 
   if (entries.length === 0) {

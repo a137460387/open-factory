@@ -21,23 +21,23 @@ export function useEditorShellDialogState() {
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [snapshotCompareOpen, setSnapshotCompareOpen] = useState(false);
   const [timelineCompareOpen, setTimelineCompareOpen] = useState(false);
-  const [projectPasswordRequest, setProjectPasswordRequest] = useState<unknown>(null);
+  const [projectPasswordRequest, setProjectPasswordRequest] = useState<any>(null);
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate | undefined>(undefined);
   const [exportQueueRecovery, setExportQueueRecovery] = useState<ExportQueueRecoveryCandidate | undefined>(undefined);
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress | undefined>(undefined);
   const [sharePackageProgress, setSharePackageProgress] = useState<SharePackageWorkflowProgress | undefined>(undefined);
 
   // --- 媒体相关对话框 ---
-  const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<unknown[]>([]);
+  const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<any[]>([]);
   const [duplicateMediaDialogOpen, setDuplicateMediaDialogOpen] = useState(false);
   const [mediaOrganizerDialogOpen, setMediaOrganizerDialogOpen] = useState(false);
-  const [mediaOrganizerReport, setMediaOrganizerReport] = useState<unknown>(null);
+  const [mediaOrganizerReport, setMediaOrganizerReport] = useState<any>(null);
   const [mediaHealthDashboardOpen, setMediaHealthDashboardOpen] = useState(false);
-  const [mediaHealthDashboard, setMediaHealthDashboard] = useState<unknown>(null);
+  const [mediaHealthDashboard, setMediaHealthDashboard] = useState<any>(null);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
-  const [projectHealthReport, setProjectHealthReport] = useState<unknown>(null);
+  const [projectHealthReport, setProjectHealthReport] = useState<any>(null);
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
-  const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<unknown>(null);
+  const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<any>(null);
   const [mediaHealthScanning, setMediaHealthScanning] = useState(false);
 
   // --- 时间线相关对话框 ---
@@ -96,12 +96,12 @@ export function useEditorShellDialogState() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>([]);
-  const [gifExportAsset, setGifExportAsset] = useState<unknown>(null);
-  const [spectrumAsset, setSpectrumAsset] = useState<unknown>(null);
+  const [gifExportAsset, setGifExportAsset] = useState<any>(null);
+  const [spectrumAsset, setSpectrumAsset] = useState<any>(null);
   const [pasteKeyframeDialogOpen, setPasteKeyframeDialogOpen] = useState(false);
 
   // --- 教程状态 ---
-  const [tutorialProgress, setTutorialProgress] = useState<unknown>(null);
+  const [tutorialProgress, setTutorialProgress] = useState<any>(null);
   const [tutorialCelebrationVisible, setTutorialCelebrationVisible] = useState(false);
 
   // --- 宏录制状态 ---
