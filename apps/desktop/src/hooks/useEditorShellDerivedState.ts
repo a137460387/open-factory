@@ -29,9 +29,11 @@ import {
 } from '../layout/layoutSettings';
 import { getReviewModeShellVisibility } from '../review/reviewMode';
 import type { TimelineInteractionSettings } from '../settings/appSettings';
+import type { EditorLayoutSettings } from '../layout/layoutSettings';
+import type { Track } from '@open-factory/editor-core';
 
 interface DerivedStateDeps {
-  project: any;
+  project: Project;
   selectedClipId: string | null;
   selectedClipIds: string[];
   demucsAvailability: DemucsAvailability;
@@ -39,7 +41,7 @@ interface DerivedStateDeps {
   speakerDiarizationRunning: boolean;
   autoAudioSyncRunning: boolean;
   autoAudioSyncPrimaryClipId: string | null;
-  layoutSettings: any;
+  layoutSettings: EditorLayoutSettings;
   viewportSize: { width: number; height: number };
   reviewMode: boolean;
 }
@@ -85,17 +87,17 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   );
 
   const allTimelineClips = useMemo(
-    () => project.timeline.tracks.flatMap((track: any) => track.clips),
+    () => project.timeline.tracks.flatMap((track: Track) => track.clips),
     [project.timeline.tracks],
   );
 
   const visualTimelineClipRefs = useMemo(
     () =>
       project.timeline.tracks
-        .flatMap((track: any) =>
+        .flatMap((track: Track) =>
           track.clips
-            .filter((clip: any) => clip.type === 'video' || clip.type === 'image')
-            .map((clip: any) => ({
+            .filter((clip: Clip) => clip.type === 'video' || clip.type === 'image')
+            .map((clip: Clip) => ({
               clip,
               trackId: track.id,
               media: project.media.find((asset: MediaAsset) => 'mediaId' in clip && asset.id === clip.mediaId),
@@ -112,7 +114,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   const selectedClipLocked = useMemo(
     () =>
       Boolean(
-        selectedClip && project.timeline.tracks.find((track: any) => track.id === selectedClip.trackId)?.locked,
+        selectedClip && project.timeline.tracks.find((track: Track) => track.id === selectedClip.trackId)?.locked,
       ),
     [selectedClip, project.timeline.tracks],
   );
@@ -215,7 +217,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     const selected = selectedClipIds
       .map((id) =>
         project.timeline.tracks
-          .flatMap((track: any) => track.clips.map((clip: any) => ({ clip, track })))
+          .flatMap((track: Track) => track.clips.map((clip: Clip) => ({ clip, track })))
           .find((item: any) => item.clip.id === id),
       )
       .filter(Boolean);
@@ -231,7 +233,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     if (selectedClipIds.length !== 2) return [];
     type ClipWithTrack = { clip: Clip; track: any; trackIndex: number; selectedIndex: number };
     const allClips = project.timeline.tracks.flatMap((track: any, trackIndex: number) =>
-      track.clips.map((clip: any) => ({ clip, track, trackIndex })),
+      track.clips.map((clip: Clip) => ({ clip, track, trackIndex })),
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
@@ -249,7 +251,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 4) return [];
     type ClipWithTrack = { clip: Clip; track: any; trackIndex: number; selectedIndex: number };
     const allClips = project.timeline.tracks.flatMap((track: any, trackIndex: number) =>
-      track.clips.map((clip: any) => ({ clip, track, trackIndex })),
+      track.clips.map((clip: Clip) => ({ clip, track, trackIndex })),
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
@@ -265,7 +267,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
 
   const selectedClipTimelineBeatTimes = useMemo(() => {
     const times = selectedClips.flatMap((clip) =>
-      (clip.beatMarkers ?? []).map((marker: any) => round(clip.start + marker.time)),
+      (clip.beatMarkers ?? []).map((marker: BeatMarker) => round(clip.start + marker.time)),
     );
     return Array.from(new Set(times)).sort((left, right) => left - right);
   }, [selectedClips]);
@@ -273,7 +275,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   const beatSyncBeatTimes = useMemo(() => {
     return selectedClipTimelineBeatTimes.length > 0
       ? selectedClipTimelineBeatTimes
-      : (project.beatMarkers ?? []).map((marker: any) => marker.time);
+      : (project.beatMarkers ?? []).map((marker: BeatMarker) => marker.time);
   }, [project.beatMarkers, selectedClipTimelineBeatTimes]);
 
   const detectedBeatBpm = selectedClip?.detectedBpm ?? estimateBpmFromBeatMarkers(selectedClip?.beatMarkers);
