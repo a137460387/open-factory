@@ -696,4 +696,87 @@ mod tests {
         assert!(!result.spectrum_frames.is_empty());
         assert!(result.stats.total_frames > 0);
     }
+
+    /// Benchmark: FFT performance for various sizes
+    /// Run with: cargo test --release -- audio_rhythm::tests::bench_fft --nocapture
+    #[test]
+    fn bench_fft() {
+        let sizes: Vec<usize> = vec![256, 1024, 2048, 4096, 8192];
+        let iterations = 500;
+
+        for &size in &sizes {
+            let samples: Vec<f64> = (0..size)
+                .map(|i| {
+                    let t = i as f64 / 44100.0;
+                    (2.0 * PI * 440.0 * t).sin() * 0.5
+                        + (2.0 * PI * 880.0 * t).sin() * 0.3
+                })
+                .collect();
+
+            let start = std::time::Instant::now();
+            for _ in 0..iterations {
+                let _ = compute_magnitudes(&samples);
+            }
+            let elapsed = start.elapsed();
+            let per_call_us = elapsed.as_micros() as f64 / iterations as f64;
+
+            println!(
+                "Rust FFT (n={:>5}, {} iters): total={:.2}ms, avg={:.2}µs ({:.4}ms)",
+                size,
+                iterations,
+                elapsed.as_secs_f64() * 1000.0,
+                per_call_us,
+                per_call_us / 1000.0,
+            );
+        }
+    }
+
+    /// Benchmark: Full audio rhythm analysis pipeline
+    /// Run with: cargo test --release -- audio_rhythm::tests::bench_full_pipeline --nocapture
+    #[test]
+    fn bench_full_pipeline() {
+        let sample_rate = 44100.0;
+        let duration = 5.0;
+        let n = (sample_rate * duration) as usize;
+        let signal: Vec<f64> = (0..n)
+            .map(|i| {
+                let t = i as f64 / sample_rate;
+                let beat = if (t * 2.0) % 1.0 < 0.1 { 0.8 } else { 0.0 };
+                (2.0 * PI * 440.0 * t).sin() * 0.5 + beat
+            })
+            .collect();
+
+        let iterations = 10;
+        let start = std::time::Instant::now();
+        for _ in 0..iterations {
+            let _ = analyze_audio_rhythm(&signal, sample_rate, None);
+        }
+        let elapsed = start.elapsed();
+
+        println!(
+            "Rust full pipeline ({}s audio, {} iters): total={:.2}ms, avg={:.2}ms",
+            duration,
+            iterations,
+            elapsed.as_secs_f64() * 1000.0,
+            elapsed.as_secs_f64() * 1000.0 / iterations as f64,
+        );
+    }
+}
+
+// ==================== Tauri Command Wrappers ====================
+
+/// Tauri command: analyze audio rhythm from raw f64 samples
+#[tauri::command]
+pub fn analyze_audio_rhythm_command(
+    audio_samples: Vec<f64>,
+    sample_rate: f64,
+    config: Option<AudioRhythmConfig>,
+) -> Result<AudioRhythmResult, String> {
+    Ok(analyze_audio_rhythm(&audio_samples, sample_rate, config))
+}
+
+/// Tauri command: compute FFT magnitudes (for real-time spectrum display)
+#[tauri::command]
+pub fn compute_fft_magnitudes(input: Vec<f64>) -> Result<Vec<f64>, String> {
+    Ok(compute_magnitudes(&input))
 }

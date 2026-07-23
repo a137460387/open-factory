@@ -28,5 +28,7 @@ pub mod ai;
 pub mod auto_tag;
 pub mod media_index;
 pub mod noise_reduction;
+pub mod audio_rhythm;
+pub mod visual_highlight;
 #[cfg(feature = "hw-decode")]
 pub mod hw_decode;

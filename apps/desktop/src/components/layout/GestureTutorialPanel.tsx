@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 
 const GestureTutorialOverlay = lazy(() =>
-  import('./GestureControl/GestureTutorial').then((module) => ({ default: module.GestureTutorialOverlay })),
+  import('../GestureControl/GestureTutorial').then((module) => ({ default: module.GestureTutorialOverlay })),
 );
 
 interface GestureTutorialPanelProps {

@@ -27,7 +27,7 @@ import {
 import { revealExport } from '../lib/exportVideo';
 import { writeAutosaveIntervalSeconds } from '../lib/projectFiles';
 import { zhCN } from '../i18n/strings';
-import type { PreviewQualityMode } from '../settings/appSettings';
+import type { PreviewQualityMode } from '../lib/preview/preview-performance';
 
 export function EditorShell() {
   useEditorShellSettings();

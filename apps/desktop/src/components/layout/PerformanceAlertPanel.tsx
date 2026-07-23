@@ -1,4 +1,4 @@
-import { PerformanceAlertIcon } from './PerformanceAlertIcon';
+import { PerformanceAlertIcon } from '../PerformanceAlertIcon';
 
 /**
  * 性能警告面板组件。

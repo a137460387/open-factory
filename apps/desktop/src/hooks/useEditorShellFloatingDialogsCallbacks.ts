@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { OperationReplaySpeed } from '@open-factory/editor-core';
 import { useEditorStore } from '../store/editorStore';
 
 interface FloatingDialogsDeps {
@@ -7,13 +8,13 @@ interface FloatingDialogsDeps {
   setExportDialogOpen: (v: boolean) => void;
   timelineExportDialogOpen: boolean;
   setTimelineExportDialogOpen: (v: boolean) => void;
-  lastExportPath: string;
+  lastExportPath: string | undefined;
   setLastExportPath: (p: string) => void;
   setTutorialSignals: React.Dispatch<React.SetStateAction<any>>;
   runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: any[]) => Promise<void>;
   relinkAllMissing: () => Promise<void>;
-  importEdlTimeline: () => Promise<void>;
-  importFcpXmlTimeline: () => Promise<void>;
+  importEdlTimeline: (contents: string, path: string) => any;
+  importFcpXmlTimeline: (contents: string, path: string) => any;
   addMedia: (media: any[]) => void;
   createProjectFromTemplate: (templateId: any) => Promise<void>;
   createProjectFromTimelineTemplate: (nextProject: any) => Promise<void>;
@@ -28,10 +29,10 @@ interface FloatingDialogsDeps {
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: any) => void;
   generateSmartMontage: (config: any) => void;
-  addAssetToTimeline: (assetId: string) => Promise<void>;
+  addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => Promise<void>;
   analyzePreferredContentTargets: () => void;
-  exportContentAnalysis: () => void;
+  exportContentAnalysis: (clipId: string) => Promise<void>;
   applySpeakerDiarization: () => void;
   speakerDiarizationResult: any;
   contentAnalysisTargets: any;
@@ -39,7 +40,7 @@ interface FloatingDialogsDeps {
   operationRecordingActive: boolean;
   operationReplayRunning: boolean;
   operationRecordingStep: number;
-  operationReplaySpeed: number;
+  operationReplaySpeed: OperationReplaySpeed;
   startOperationRecording: () => void;
   stopOperationRecording: () => void;
   saveOperationRecording: () => void;
@@ -64,14 +65,14 @@ interface FloatingDialogsDeps {
   beatSyncBeatTimes: number[];
   canDetectBeats: boolean;
   canSnapToBeats: boolean;
-  applyManualBeatBpm: (bpm: number) => void;
+  applyManualBeatBpm: () => void;
   detectSelectedBeats: () => Promise<void>;
   snapSelectedToBeats: () => void;
   updatePreviewPerformance: (settings: any) => void;
   updateTimelineInteractionSettings: (settings: any) => void;
   deleteProxiesForMedia: (assetIds: string[]) => Promise<void>;
   regenerateProxiesForMedia: (assetIds: string[]) => Promise<void>;
-  migrateProxiesToDirectory: (assetIds: string[]) => Promise<void>;
+  migrateProxiesToDirectory: (targetDirectory: string) => Promise<void>;
   executeMacro: (macro: any) => Promise<void>;
   confirmProjectEncryptionSave: (options: any) => Promise<void>;
   refreshProjectHealth: () => Promise<void>;
@@ -82,20 +83,20 @@ interface FloatingDialogsDeps {
   queueProxyFromHealth: (issue: any) => Promise<void>;
   mergeDuplicateMediaGroups: (selections: any[]) => void;
   refreshMediaHealthDashboard: () => Promise<any>;
-  repairFromMediaHealthDashboard: (issue: any) => Promise<void>;
-  openMediaHealthRelinkPanel: (issue: any) => void;
+  repairFromMediaHealthDashboard: () => Promise<void>;
+  openMediaHealthRelinkPanel: () => void;
   refreshMediaOrganizer: () => Promise<void>;
   confirmMediaOrganizerDuplicateGroups: (selections: any[], moveFilesToTrash: boolean) => Promise<void>;
   removeMediaOrganizerReferences: (assetIds: string[]) => void;
-  archiveUnusedMedia: (taskIds: string[]) => Promise<void>;
-  renameUnusedMedia: (assetIds: string[]) => void;
+  archiveUnusedMedia: () => Promise<void>;
+  renameUnusedMedia: (template: string) => Promise<void>;
   recoveryCandidate: any;
   exportQueueRecovery: any;
   archiveProgress: any;
   sharePackageProgress: any;
   restoreRecovery: (candidate: any) => Promise<void>;
   discardRecovery: (candidate: any) => Promise<void>;
-  restoreExportQueueRecovery: () => Promise<void>;
+  restoreExportQueueRecovery: (taskIds: string[]) => Promise<void>;
   discardExportQueueRecovery: () => Promise<void>;
   skipTutorial: () => void;
   closeTutorialCelebration: () => void;
@@ -202,7 +203,7 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       archiveProgress: deps.archiveProgress,
       sharePackageProgress: deps.sharePackageProgress,
       restoreRecovery: () => deps.restoreRecovery(deps.recoveryCandidate),
-      discardRecovery: deps.discardRecovery,
+      discardRecovery: () => deps.discardRecovery(deps.recoveryCandidate),
       restoreExportQueueRecovery: deps.restoreExportQueueRecovery,
       discardExportQueueRecovery: deps.discardExportQueueRecovery,
       skipTutorial: deps.skipTutorial,

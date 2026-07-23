@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { getTimelineDuration } from '@open-factory/editor-core';
 
 const RoughCutComparePanelComponent = lazy(() =>
-  import('./SmartRoughCut/RoughCutComparePanel').then((module) => ({ default: module.RoughCutComparePanel })),
+  import('../SmartRoughCut/RoughCutComparePanel').then((module) => ({ default: module.RoughCutComparePanel })),
 );
 
 interface RoughCutComparePanelWrapperProps {

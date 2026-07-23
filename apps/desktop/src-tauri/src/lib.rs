@@ -193,7 +193,11 @@ pub fn run() {
             commands::hw_decode::get_decoder_video_info,
             commands::hw_decode::release_decoder,
             commands::hw_decode::get_hw_decode_settings,
-            commands::hw_decode::set_hw_decode_settings
+            commands::hw_decode::set_hw_decode_settings,
+            commands::audio_rhythm::analyze_audio_rhythm_command,
+            commands::audio_rhythm::compute_fft_magnitudes,
+            commands::visual_highlight::detect_visual_highlights_command,
+            commands::visual_highlight::merge_visual_with_audio_beats
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();

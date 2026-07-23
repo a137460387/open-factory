@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 
 const ComplexityScorePanelComponent = lazy(() =>
-  import('./ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })),
+  import('../../complexity/ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })),
 );
 
 interface ComplexityScorePanelWrapperProps {

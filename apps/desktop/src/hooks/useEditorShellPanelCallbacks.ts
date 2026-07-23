@@ -14,14 +14,14 @@ interface PanelCallbacksDeps {
   setGifExportAsset: (asset: MediaAsset | undefined) => void;
   setSpectrumAsset: (asset: MediaAsset | undefined) => void;
   scanDuplicateMedia: () => Promise<void>;
-  addAssetToTimeline: (assetId: string) => Promise<void>;
+  addAssetToTimeline: (assetId: string) => void;
   addVersionForMedia: (assetId: string) => Promise<void>;
   openMediaVersionCompare: (request: any) => void;
   addAdjustmentLayer: () => void;
   relinkMedia: (assetId: string) => Promise<void>;
   relinkAllMissing: () => Promise<void>;
   generateProxyForMedia: (assetId: string) => Promise<void>;
-  convertVfrMediaToCfr: (assetId: string) => Promise<void>;
+  convertVfrMediaToCfr: (assetId: string) => void;
   setMediaMetadata: (assetId: string, metadata: any) => void;
   batchUpdateMediaMetadata: (assetIds: string[], metadata: any) => void;
   batchRenameMedia: (assetIds: string[], preview: any[], renameFiles: boolean) => Promise<void>;
@@ -38,7 +38,7 @@ interface PanelCallbacksDeps {
   handleAddSubclip: (subclip: any) => void;
   handleUpdateSubclip: (assetId: string, subclip: any) => void;
   handleDeleteSubclip: (subclipId: string) => void;
-  handleAddSubclipToTimeline: (subclipId: string) => void;
+  handleAddSubclipToTimeline: (assetId: string, subclip: any) => void;
   projectMediaMetadata: Record<string, any>;
 }
 
@@ -120,8 +120,8 @@ export function useEditorShellPanelCallbacks(deps: PanelCallbacksDeps) {
       onToggleFavorite: handleToggleFavorite,
       onRevealInTimeline: handleRevealFromMediaBin,
       onPinToSession: handlePinToSession,
-      onAddSubclip: (assetId: string, inPoint: number, outPoint: number) => handleAddSubclip({ assetId, inPoint, outPoint } as any),
-      onUpdateSubclip: (subclipId: string) => handleUpdateSubclip(subclipId, {} as any),
+      onAddSubclip: (subclip: any) => handleAddSubclip(subclip),
+      onUpdateSubclip: (subclipId: string, patch: any) => handleUpdateSubclip(subclipId, patch),
       onDeleteSubclip: handleDeleteSubclip,
       onAddSubclipToTimeline: handleAddSubclipToTimeline,
     }),

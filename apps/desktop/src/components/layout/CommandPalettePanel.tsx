@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 
 const CommandPalette = lazy(() =>
-  import('./CommandPalette/CommandPalette').then((module) => ({ default: module.CommandPalette })),
+  import('../CommandPalette/CommandPalette').then((module) => ({ default: module.CommandPalette })),
 );
 
 interface CommandPalettePanelProps {

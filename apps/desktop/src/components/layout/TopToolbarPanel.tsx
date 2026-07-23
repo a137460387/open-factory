@@ -1,11 +1,11 @@
 import { lazy, Suspense } from 'react';
 import type { BeatSensitivity, PiPLayoutPosition, SplitLayoutDefinition, SubtitleDataImportMode, TimelineGridSettings, TimelineGridUnit } from '@open-factory/editor-core';
-import type { PreviewQualityMode } from '../lib/preview/preview-performance';
-import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../layout/layoutSettings';
-import type { TimelineHeatmapViewSettings } from '../settings/appSettings';
-import type { RecordingSource } from '../lib/tauri-bridge';
+import type { PreviewQualityMode } from '../../lib/preview/preview-performance';
+import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../../layout/layoutSettings';
+import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import type { RecordingSource } from '../../lib/tauri-bridge';
 
-const Toolbar = lazy(() => import('./Toolbar').then((module) => ({ default: module.Toolbar })));
+const Toolbar = lazy(() => import('../Toolbar').then((module) => ({ default: module.Toolbar })));
 
 interface TopToolbarPanelProps {
   // 项目操作
@@ -94,9 +94,9 @@ interface TopToolbarPanelProps {
   onCancelAudioSeparation: () => void;
   onRunSpeakerDiarization: () => void;
   onCreateMulticamSequence: () => void;
-  onApplyPiPLayout: (layout: SplitLayoutDefinition) => void;
-  onApplySplitLayout: (layout: SplitLayoutDefinition) => void;
-  onSaveCustomSplitLayout: (ratio: [number, number]) => void;
+  onApplyPiPLayout: () => void;
+  onApplySplitLayout: (layoutId: string) => void;
+  onSaveCustomSplitLayout: (mainRatio: number) => Promise<string>;
 
   // 状态
   canCreateMulticamSequence: boolean;

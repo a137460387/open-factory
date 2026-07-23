@@ -579,4 +579,124 @@ mod tests {
         let ranges = extract_highlight_ranges(&highlights, 0.5);
         assert_eq!(ranges.len(), 2); // First two should be merged
     }
+
+    /// Benchmark: Motion intensity calculation
+    /// Run with: cargo test --release -- visual_highlight::tests::bench_motion_intensity --nocapture
+    #[test]
+    fn bench_motion_intensity() {
+        let sizes: Vec<(usize, usize)> = vec![
+            (320, 240),   // QVGA
+            (640, 480),   // VGA
+            (1280, 720),  // 720p
+            (1920, 1080), // 1080p
+        ];
+        let iterations = 1000;
+
+        for (w, h) in &sizes {
+            let pixel_count = w * h;
+            let frame1: Vec<u8> = (0..pixel_count).map(|i| (i % 256) as u8).collect();
+            let frame2: Vec<u8> = (0..pixel_count).map(|i| ((i + 30) % 256) as u8).collect();
+
+            let start = std::time::Instant::now();
+            for _ in 0..iterations {
+                let _ = calculate_motion_intensity(&frame1, &frame2, pixel_count);
+            }
+            let elapsed = start.elapsed();
+            let per_call_us = elapsed.as_micros() as f64 / iterations as f64;
+
+            println!(
+                "Rust motion ({}x{}, {}px, {} iters): avg={:.2}µs ({:.4}ms)",
+                w, h, pixel_count, iterations, per_call_us, per_call_us / 1000.0,
+            );
+        }
+    }
+
+    /// Benchmark: Scene change detection
+    /// Run with: cargo test --release -- visual_highlight::tests::bench_scene_change --nocapture
+    #[test]
+    fn bench_scene_change() {
+        let sizes: Vec<(usize, usize)> = vec![
+            (320, 240),
+            (640, 480),
+            (1280, 720),
+            (1920, 1080),
+        ];
+        let iterations = 500;
+
+        for (w, h) in &sizes {
+            let pixel_count = w * h;
+            let frame1: Vec<u8> = (0..pixel_count).map(|i| (i % 256) as u8).collect();
+            let frame2: Vec<u8> = (0..pixel_count).map(|i| ((i + 50) % 256) as u8).collect();
+
+            let start = std::time::Instant::now();
+            for _ in 0..iterations {
+                let _ = calculate_scene_change_score(&frame1, &frame2, *w, *h, 8);
+            }
+            let elapsed = start.elapsed();
+            let per_call_us = elapsed.as_micros() as f64 / iterations as f64;
+
+            println!(
+                "Rust scene_change ({}x{}, {}px, {} iters): avg={:.2}µs ({:.4}ms)",
+                w, h, pixel_count, iterations, per_call_us, per_call_us / 1000.0,
+            );
+        }
+    }
+
+    /// Benchmark: Full visual highlight pipeline
+    /// Run with: cargo test --release -- visual_highlight::tests::bench_full_pipeline --nocapture
+    #[test]
+    fn bench_full_pipeline() {
+        let (width, height) = (640, 480);
+        let pixel_count = width * height;
+        let frame_count = 150; // 5 seconds at 30fps
+
+        let frames: Vec<Vec<u8>> = (0..frame_count)
+            .map(|f| {
+                let offset = (f * 3) % 256;
+                (0..pixel_count).map(|i| ((i + offset) % 256) as u8).collect()
+            })
+            .collect();
+
+        let config = VisualHighlightConfig {
+            fps: 30.0,
+            ..Default::default()
+        };
+
+        let iterations = 20;
+        let start = std::time::Instant::now();
+        for _ in 0..iterations {
+            let _ = detect_visual_highlights(&frames, width, height, Some(config.clone()));
+        }
+        let elapsed = start.elapsed();
+
+        println!(
+            "Rust full pipeline ({}x{}, {} frames, {} iters): total={:.2}ms, avg={:.2}ms",
+            width, height, frame_count, iterations,
+            elapsed.as_secs_f64() * 1000.0,
+            elapsed.as_secs_f64() * 1000.0 / iterations as f64,
+        );
+    }
+}
+
+// ==================== Tauri Command Wrappers ====================
+
+/// Tauri command: detect visual highlights from grayscale frame data
+#[tauri::command]
+pub fn detect_visual_highlights_command(
+    frames: Vec<Vec<u8>>,
+    width: usize,
+    height: usize,
+    config: Option<VisualHighlightConfig>,
+) -> Result<VisualHighlightResult, String> {
+    Ok(detect_visual_highlights(&frames, width, height, config))
+}
+
+/// Tauri command: merge visual highlights with audio beat times
+#[tauri::command]
+pub fn merge_visual_with_audio_beats(
+    visual_highlights: Vec<VisualHighlightMarker>,
+    audio_beat_times: Vec<f64>,
+    tolerance_seconds: f64,
+) -> Result<Vec<VisualHighlightMarker>, String> {
+    Ok(merge_with_audio_beats(&visual_highlights, &audio_beat_times, tolerance_seconds))
 }
