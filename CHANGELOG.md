@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.70.0] - 2026-07-24
+
+### Changed
+- **i18n 懒加载**: `en-overrides.ts` (5144行) 改为动态 import，首屏仅加载中文
+- **巨型文件拆分**: `timeline-commands.ts` (7181行) 拆为10个模块，`ExportDialog.tsx` (3807行) 拆为8个组件，`ClipInspectorBody.tsx` (3258行) 拆为7个组件
+- **any 类型清理**: 源文件中 `any` 使用减少50+处
+- **测试完整性**: 8775测试全部通过（新增4个i18n懒加载测试）
+
+### Fixed
+- 修复5个测试文件因i18n懒加载导致的英文切换失败
+
+### Known Issues
+- `noUncheckedIndexedAccess` 启用后产生2708个错误，需独立sprint处理
+
 ## [v4.25.4] - 2026-07-15
 
 ### Changed
