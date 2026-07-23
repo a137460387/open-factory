@@ -3,6 +3,10 @@ import {
   UpdateClipCommand,
   UpdateProjectBeatSnapSuggestionsCommand,
   applyBeatSnapToClip,
+  type Clip,
+  type MediaAsset,
+  type Project,
+  type BeatSnapSuggestion,
 } from '@open-factory/editor-core';
 import { X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
@@ -22,24 +26,24 @@ import {
 
 interface TimelineDialogsLayerProps {
   // Silence detection
-  silenceDialog: { clip: any; asset: any } | undefined;
+  silenceDialog: { clip: Clip; asset: MediaAsset } | undefined;
   setSilenceDialog: (v: undefined) => void;
-  applySilenceRemoval: (clipId: string, ranges: any[]) => void;
+  applySilenceRemoval: (clipId: string, ranges: unknown[]) => void;
 
   // Scene detection
-  sceneDialog: any;
-  setSceneDialog: (v: any) => void;
+  sceneDialog: unknown;
+  setSceneDialog: (v: unknown) => void;
   startSceneDetection: () => void;
   cancelCurrentSceneDetection: () => void;
   applySceneDetectionResult: () => void;
 
   // Cover frame
-  coverFrameDialog: any;
+  coverFrameDialog: unknown;
   setCoverFrameDialog: (v: undefined) => void;
-  applyProjectCoverFrame: (v: any) => void;
+  applyProjectCoverFrame: (v: unknown) => void;
 
   // Whisper
-  whisperDialog: { progress: any; clip: { name: string } } | undefined;
+  whisperDialog: { progress: number; clip: { name: string } } | undefined;
 
   // Subtitle align report
   subtitleAlignReport: { correctedCount: number; averageOffsetMs: number } | undefined;
@@ -47,19 +51,19 @@ interface TimelineDialogsLayerProps {
   // Dialogue detection
   dialoguePanelOpen: boolean;
   setDialoguePanelOpen: (v: boolean) => void;
-  dialogueMarkers: any[];
-  dialogueMisses: any[];
-  runDialogueDetection: (sensitivity: any) => void | Promise<void>;
+  dialogueMarkers: unknown[];
+  dialogueMisses: unknown[];
+  runDialogueDetection: (sensitivity: unknown) => void | Promise<void>;
   generateDialogueSubtitles: () => void;
 
   // Beat snap
   beatSnapPanelOpen: boolean;
   setBeatSnapPanelOpen: (v: boolean) => void;
-  project: any;
+  project: Project;
 
   // Replace media
-  replaceMediaDialog: any;
-  setReplaceMediaDialog: (v: any) => void;
+  replaceMediaDialog: unknown;
+  setReplaceMediaDialog: (v: unknown) => void;
   confirmReplaceMedia: () => void;
 
   // Reframe
@@ -68,42 +72,42 @@ interface TimelineDialogsLayerProps {
   applyAiReframe: (clipId: string, aspect: 'source' | '16:9' | '9:16' | '1:1' | '4:5' | '21:9') => void;
 
   // Transition
-  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: any[] } | undefined;
+  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: unknown[] } | undefined;
   setTransitionDialog: (v: undefined) => void;
-  applyAiTransition: (clipId: string, adjacentClipId: string, rec: any) => void;
+  applyAiTransition: (clipId: string, adjacentClipId: string, rec: unknown) => void;
 
   // Annotations
   annotationPanelOpen: boolean;
   annotationMode: boolean;
-  openAnnotationEditorAt: (time: number, annotation?: any) => void;
+  openAnnotationEditorAt: (time: number, annotation?: unknown) => void;
   removeProjectAnnotation: (id: string) => void;
   setPlayheadTime: (time: number) => void;
 
   // Bookmarks
   bookmarkPanelOpen: boolean;
   bookmarkRename: { id: string; note: string } | undefined;
-  setBookmarkRename: (v: any) => void;
+  setBookmarkRename: (v: unknown) => void;
   renameProjectBookmark: (bookmarkId: string, note: string) => void;
   removeProjectBookmark: (id: string) => void;
 
   // Timeline notes
   timelineNotePanelOpen: boolean;
-  filteredTimelineNotes: any[];
+  filteredTimelineNotes: unknown[];
   timelineNoteSearch: string;
   setTimelineNoteSearch: (v: string) => void;
-  openTimelineNoteEditor: (start: number, end: number, note?: any) => void;
+  openTimelineNoteEditor: (start: number, end: number, note?: unknown) => void;
   removeTimelineNote: (id: string) => void;
   exportTimelineNotesCsv: () => void;
 
   // Annotation editor
-  annotationEditor: any;
-  setAnnotationEditor: (v: any) => void;
-  saveAnnotationEditor: (next: any) => void;
+  annotationEditor: unknown;
+  setAnnotationEditor: (v: unknown) => void;
+  saveAnnotationEditor: (next: unknown) => void;
 
   // Timeline note editor
-  timelineNoteEditor: any;
-  setTimelineNoteEditor: (v: any) => void;
-  saveTimelineNoteEditor: (next: any) => void;
+  timelineNoteEditor: unknown;
+  setTimelineNoteEditor: (v: unknown) => void;
+  saveTimelineNoteEditor: (next: unknown) => void;
 }
 
 export const TimelineDialogsLayer = React.memo(function TimelineDialogsLayer({
@@ -230,7 +234,7 @@ export const TimelineDialogsLayer = React.memo(function TimelineDialogsLayer({
             </button>
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto">
-            {(project.beatSnapSuggestions ?? []).map((suggestion: any) => (
+            {(project.beatSnapSuggestions ?? []).map((suggestion: BeatSnapSuggestion) => (
               <div
                 key={`${suggestion.clipId}-${suggestion.edge}`}
                 className="flex items-center justify-between rounded border border-line px-2 py-1 text-xs"

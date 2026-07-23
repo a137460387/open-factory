@@ -92,8 +92,8 @@ export interface ShellFloatingDialogsProps {
   setTimelineExportDialogOpen: (open: boolean) => void;
   onExportCompleted: (path: string) => void;
   onRelinkMissing: () => void;
-  importEdlTimeline: (contents: string, path: string) => any;
-  importFcpXmlTimeline: (contents: string, path: string) => any;
+  importEdlTimeline: (contents: string, path: string) => unknown;
+  importFcpXmlTimeline: (contents: string, path: string) => unknown;
   addMedia: (media: MediaAsset[]) => void;
   lastExportPath: string | undefined;
   // Template
@@ -172,10 +172,10 @@ export interface ShellFloatingDialogsProps {
   // Health
   refreshProjectHealth: () => Promise<void>;
   autoRepairProjectHealth: () => Promise<void>;
-  relinkMissingFromHealth: (issue: any) => Promise<void>;
-  removeOrphanFromHealth: (issue: any) => Promise<void>;
-  mergeDuplicateFromHealth: (issue: any) => Promise<void>;
-  queueProxyFromHealth: (issue: any) => Promise<void>;
+  relinkMissingFromHealth: (issue: unknown) => Promise<void>;
+  removeOrphanFromHealth: (issue: unknown) => Promise<void>;
+  mergeDuplicateFromHealth: (issue: unknown) => Promise<void>;
+  queueProxyFromHealth: (issue: unknown) => Promise<void>;
   mergeDuplicateMediaGroups: (selections: DuplicateMediaMergeSelection[]) => void;
   refreshMediaHealthDashboard: () => Promise<unknown>;
   repairFromMediaHealthDashboard: () => Promise<void>;

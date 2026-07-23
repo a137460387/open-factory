@@ -58,7 +58,7 @@ export function generateToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): strin
     algorithm: 'HS256',
     issuer: config.jwt.issuer,
     audience: config.jwt.audience,
-    expiresIn: config.jwt.expiresIn as any,
+    expiresIn: config.jwt.expiresIn as string,
   });
 }
 
@@ -69,7 +69,7 @@ export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>)
     algorithm: 'HS256',
     issuer: config.jwt.issuer,
     audience: config.jwt.audience,
-    expiresIn: config.jwt.refreshExpiresIn as any,
+    expiresIn: config.jwt.refreshExpiresIn as string,
   });
 }
 

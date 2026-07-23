@@ -582,7 +582,7 @@ export function normalizeContinuityWarnings(input: unknown): ContinuityWarning[]
 }
 
 /** Normalize mixer bus */
-export function normalizeBus(raw: any): AudioBus {
+export function normalizeBus(raw: Record<string, unknown> | null | undefined): AudioBus {
   return {
     id: typeof raw?.id === 'string' && raw.id.trim() ? raw.id : createId('bus'),
     name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Bus',
@@ -599,7 +599,7 @@ export function normalizeBus(raw: any): AudioBus {
 }
 
 /** Normalize mixer channel */
-export function normalizeMixerChannel(raw: any): MixerChannel {
+export function normalizeMixerChannel(raw: Record<string, unknown> | null | undefined): MixerChannel {
   return {
     trackId: typeof raw?.trackId === 'string' ? raw.trackId : '',
     name: typeof raw?.name === 'string' ? raw.name : '',
@@ -616,7 +616,7 @@ export function normalizeMixerChannel(raw: any): MixerChannel {
 }
 
 /** Normalize mixer state */
-export function normalizeMixerState(raw: any): MixerState | undefined {
+export function normalizeMixerState(raw: Record<string, unknown> | null | undefined): MixerState | undefined {
   if (!raw) return undefined;
   return {
     channels: Array.isArray(raw.channels) ? raw.channels.map(normalizeMixerChannel) : [],

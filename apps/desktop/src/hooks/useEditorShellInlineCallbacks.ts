@@ -40,25 +40,25 @@ import type { ExportPreset } from '../export/export-presets';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 interface InlineCallbacksDeps {
-  addMedia: (media: any[]) => void;
+  addMedia: (media: MediaAsset[]) => void;
   setSelectedClipId: (id: string | undefined) => void;
   setSelectedClipIds: (ids: string[]) => void;
   setPlayheadTime: (time: number) => void;
   setVideoStitchWizardOpen: (v: boolean) => void;
   setExportDialogOpen: (v: boolean) => void;
   setTemplateExportPreset: (p: ExportPreset) => void;
-  persistMediaFingerprints: (media: any[]) => Promise<void>;
-  queueFrameRateConversionForImportedMedia: (media: any[]) => Promise<void>;
+  persistMediaFingerprints: (media: MediaAsset[]) => Promise<void>;
+  queueFrameRateConversionForImportedMedia: (media: MediaAsset[]) => Promise<void>;
   runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => Promise<void>;
-  setTutorialSignals: React.Dispatch<React.SetStateAction<any>>;
+  setTutorialSignals: React.Dispatch<React.SetStateAction<unknown>>;
   projectPath: string | null | undefined;
-  project: any;
+  project: Project;
   selectedClipIds: string[];
   requestProjectPassword: (title: string, description: string) => Promise<string | undefined>;
-  setProject: (project: any, path?: string | undefined) => void;
+  setProject: (project: Project, path?: string | undefined) => void;
   setDirty: (dirty: boolean) => void;
-  setRecoveryCandidate: (c: any) => void;
-  applyImportedMediaColorConversionChoice: (media: any[]) => Promise<any[]>;
+  setRecoveryCandidate: (c: unknown) => void;
+  applyImportedMediaColorConversionChoice: (media: MediaAsset[]) => Promise<MediaAsset[]>;
   // Shortcut handler deps
   togglePlayback: () => void;
   reversePlayback: () => void;
@@ -161,7 +161,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
         await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
-        setTutorialSignals((current: any) => ({ ...current, mediaImported: true }));
+        setTutorialSignals((current: unknown) => ({ ...current, mediaImported: true }));
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
       if (result.duplicateCount > 0) {
@@ -179,7 +179,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       try {
         const currentProject = useEditorStore.getState().project;
         const assets = settings.assetIds.flatMap((assetId) => {
-          const asset = currentProject.media.find((item: any) => item.id === assetId && item.type === 'video');
+          const asset = currentProject.media.find((item: MediaAsset) => item.id === assetId && item.type === 'video');
           return asset ? [asset] : [];
         });
         if (assets.length < 2) throw new Error(zhCN.videoStitchWizard.empty);
@@ -206,10 +206,10 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       try {
         const currentProject = useEditorStore.getState().project;
         const videoAssets = config.videoAssetIds.flatMap((id) => {
-          const asset = currentProject.media.find((m: any) => m.id === id && (m.type === 'video' || m.type === 'image'));
+          const asset = currentProject.media.find((m: MediaAsset) => m.id === id && (m.type === 'video' || m.type === 'image'));
           return asset ? [asset] : [];
         });
-        const audioAsset = currentProject.media.find((m: any) => m.id === config.audioAssetId && m.type === 'audio');
+        const audioAsset = currentProject.media.find((m: MediaAsset) => m.id === config.audioAssetId && m.type === 'audio');
         if (videoAssets.length === 0 || !audioAsset) throw new Error('素材不足：需要至少 1 个视频素材和 1 个音频素材');
         const videoTrack = createTrack({ id: createId('track'), type: 'video', name: '混剪视频', clips: [] });
         const audioTrack = createTrack({ id: createId('track'), type: 'audio', name: '混剪音乐', clips: [] });
@@ -249,7 +249,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
     [selectedClipIds],
   );
 
-  async function restoreRecovery(recoveryCandidate: any): Promise<void> {
+  async function restoreRecovery(recoveryCandidate: unknown): Promise<void> {
     if (!recoveryCandidate) return;
     try {
       const password = isEncryptedProjectPath(recoveryCandidate.autosavePath)
@@ -267,7 +267,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
     }
   }
 
-  async function discardRecovery(recoveryCandidate: any): Promise<void> {
+  async function discardRecovery(recoveryCandidate: unknown): Promise<void> {
     if (!recoveryCandidate) return;
     try {
       await discardAutosaveRecovery(recoveryCandidate);

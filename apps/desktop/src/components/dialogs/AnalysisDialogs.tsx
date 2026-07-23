@@ -79,8 +79,8 @@ export interface AnalysisDialogsProps {
   selectedClip?: Clip;
   selectedClipId?: string;
   selectedClipIds: string[];
-  commandManager: { execute: (command: any) => void };
-  timelineAccessor: any;
+  commandManager: { execute: (command: unknown) => void };
+  timelineAccessor: unknown;
   // Color analysis
   colorAnalysisResults: TimelineColorAnalysisResult[];
   colorAnalysisJumps: SceneColorDifference[];

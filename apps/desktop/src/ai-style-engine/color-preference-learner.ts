@@ -102,7 +102,7 @@ export interface ColorAnalysisResult {
 /**
  * Extract color grading parameters from project nodes
  */
-export function extractColorParams(project: any): ColorGradingParams[] {
+export function extractColorParams(project: unknown): ColorGradingParams[] {
   const params: ColorGradingParams[] = [];
 
   if (!project?.timeline?.tracks) {
@@ -134,7 +134,7 @@ export function extractColorParams(project: any): ColorGradingParams[] {
 /**
  * Extract color params from project presets
  */
-export function extractPresetParams(project: any): ColorGradingParams[] {
+export function extractPresetParams(project: unknown): ColorGradingParams[] {
   const params: ColorGradingParams[] = [];
 
   if (!project?.presets) {
@@ -442,7 +442,7 @@ export function generatePreferenceVector(profile: ColorPreferenceProfile): numbe
 /**
  * Run full color preference analysis on project
  */
-export function analyzeColorPreferences(project: any): ColorAnalysisResult {
+export function analyzeColorPreferences(project: unknown): ColorAnalysisResult {
   const clipParams = extractColorParams(project);
   const presetParams = extractPresetParams(project);
   const allParams = [...clipParams, ...presetParams];

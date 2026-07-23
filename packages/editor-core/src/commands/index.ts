@@ -1,6 +1,7 @@
-// Barrel file - re-exports from all sub-modules
-// Original file split into modules for maintainability
+// Re-export all types and interfaces from helpers
+export type { TimelineAccessor, ProjectAccessor, LocalTimeRange } from './helpers';
 
+// Re-export all from each module
 export * from './helpers';
 export * from './clip-commands';
 export * from './track-commands';

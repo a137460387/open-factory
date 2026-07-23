@@ -351,13 +351,13 @@ export class TaskScheduler {
 
   private boostPriorityForPreemptedTask(entry: TaskEntry): void {
     // Track how many times this task has been preempted
-    const preemptCount = (entry.task as any).__preemptCount ?? 0;
-    (entry.task as any).__preemptCount = preemptCount + 1;
+    const preemptCount = (entry.task as Task & { __preemptCount?: number }).__preemptCount ?? 0;
+    (entry.task as Task & { __preemptCount?: number }).__preemptCount = preemptCount + 1;
 
     // After 3 preemptions, temporarily boost priority to 'normal'
     // This prevents starvation of low/background priority tasks
     if (preemptCount >= 3 && (entry.task.priority === 'low' || entry.task.priority === 'background')) {
-      (entry.task as any).__originalPriority = entry.task.priority;
+      (entry.task as Task & { __originalPriority?: TaskPriority }).__originalPriority = entry.task.priority;
       entry.task.priority = 'normal';
     }
   }

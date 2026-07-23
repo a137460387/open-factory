@@ -24,6 +24,7 @@ import {
   type TimelineMarker,
   type TimelineNote,
   type Track,
+  type Keyframe,
 } from '../model';
 import type { ClipGroupBatchPatch } from '../clip-groups';
 import {
@@ -44,6 +45,7 @@ import {
 import { round } from '../time';
 import { cloneEffects } from '../effects';
 import { applyProtectedRippleDeleteToTrack } from '../timeline-protection';
+import type { KeyframeSelectionRef, BatchKeyframeEditOperation } from './keyframe-commands';
 
 export interface TimelineAccessor {
   getTimeline(): Timeline;
@@ -55,7 +57,7 @@ export interface ProjectAccessor {
   setProject(project: Project): void;
 }
 
-function assertClipsNotOnLockedTrack(timeline: Timeline, clipIds: string[]): void {
+export function assertClipsNotOnLockedTrack(timeline: Timeline, clipIds: string[]): void {
   const ids = new Set(clipIds);
   for (const track of timeline.tracks) {
     if (track.locked && track.clips.some((clip) => ids.has(clip.id))) {
@@ -64,7 +66,7 @@ function assertClipsNotOnLockedTrack(timeline: Timeline, clipIds: string[]): voi
   }
 }
 
-function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
+export function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => {
@@ -78,7 +80,7 @@ function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
   };
 }
 
-function findTrack(timeline: Timeline, trackId: string): Track {
+export function findTrack(timeline: Timeline, trackId: string): Track {
   const track = timeline.tracks.find((item) => item.id === trackId);
   if (!track) {
     throw new Error(`Track ${trackId} not found`);
@@ -86,7 +88,7 @@ function findTrack(timeline: Timeline, trackId: string): Track {
   return track;
 }
 
-function findClip(timeline: Timeline, clipId: string): Clip {
+export function findClip(timeline: Timeline, clipId: string): Clip {
   const clip = timeline.tracks.flatMap((track) => track.clips).find((item) => item.id === clipId);
   if (!clip) {
     throw new Error(`Clip ${clipId} not found`);
@@ -94,7 +96,7 @@ function findClip(timeline: Timeline, clipId: string): Clip {
   return clip;
 }
 
-function findClipLocation(timeline: Timeline, clipId: string): { clip: Clip; trackId: string; index: number } {
+export function findClipLocation(timeline: Timeline, clipId: string): { clip: Clip; trackId: string; index: number } {
   for (const track of timeline.tracks) {
     const index = track.clips.findIndex((clip) => clip.id === clipId);
     if (index !== -1) {
@@ -104,7 +106,7 @@ function findClipLocation(timeline: Timeline, clipId: string): { clip: Clip; tra
   throw new Error(`Clip ${clipId} not found`);
 }
 
-function timelineHasOverlaps(timeline: Timeline): boolean {
+export function timelineHasOverlaps(timeline: Timeline): boolean {
   return timeline.tracks.some((track) =>
     track.clips.some((clip, index) =>
       track.clips
@@ -114,11 +116,11 @@ function timelineHasOverlaps(timeline: Timeline): boolean {
   );
 }
 
-function getProjectActiveClipIds(project: Project): string[] {
+export function getProjectActiveClipIds(project: Project): string[] {
   return project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
 }
 
-function removeClipsFromTimeline(timeline: Timeline, ids: Set<string>): Timeline {
+export function removeClipsFromTimeline(timeline: Timeline, ids: Set<string>): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) })),
@@ -127,7 +129,7 @@ function removeClipsFromTimeline(timeline: Timeline, ids: Set<string>): Timeline
     ),
   };
 
-function applyClipGroupBatchPatch(clip: Clip, patch: ClipGroupBatchPatch): Clip {
+export function applyClipGroupBatchPatch(clip: Clip, patch: ClipGroupBatchPatch): Clip {
   let next = {
     ...clip,
     colorCorrection: patch.colorCorrection
@@ -157,7 +159,7 @@ export interface LocalTimeRange {
   start: number;
   end: number;
 
-function normalizeLocalTimeRanges(ranges: LocalTimeRange[], maxDuration: number): LocalTimeRange[] {
+export function normalizeLocalTimeRanges(ranges: LocalTimeRange[], maxDuration: number): LocalTimeRange[] {
   const duration = Math.max(0, maxDuration);
   const sorted = ranges
     .map((range) => ({
@@ -180,7 +182,7 @@ function normalizeLocalTimeRanges(ranges: LocalTimeRange[], maxDuration: number)
   return merged;
 }
 
-function buildKeptRanges(duration: number, removedRanges: LocalTimeRange[]): LocalTimeRange[] {
+export function buildKeptRanges(duration: number, removedRanges: LocalTimeRange[]): LocalTimeRange[] {
   const kept: LocalTimeRange[] = [];
   let cursor = 0;
   for (const range of normalizeLocalTimeRanges(removedRanges, duration)) {
@@ -195,7 +197,7 @@ function buildKeptRanges(duration: number, removedRanges: LocalTimeRange[]): Loc
   return kept;
 }
 
-function buildSplitRanges(duration: number, splitTimes: number[]): LocalTimeRange[] {
+export function buildSplitRanges(duration: number, splitTimes: number[]): LocalTimeRange[] {
   const points = Array.from(new Set(splitTimes.map((time) => round(Math.min(duration, Math.max(0, time))))))
     .filter((time) => time > 0.000001 && time < duration - 0.000001)
     .sort((left, right) => left - right);
@@ -208,7 +210,7 @@ function buildSplitRanges(duration: number, splitTimes: number[]): LocalTimeRang
   ranges.push({ start: cursor, end: duration });
   return ranges.filter((range) => range.end - range.start > 0.000001);
 
-function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTimeRange, nextStart: number): TClip {
+export function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTimeRange, nextStart: number): TClip {
   const speed = getClipSpeed(clip);
   const pieceDuration = round(range.end - range.start);
   const sourceDuration = round(clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd);
@@ -231,14 +233,14 @@ function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTim
   } as TClip;
 }
 
-function sliceClipSceneCuts(cuts: number[] | undefined, offset: number, duration: number): number[] | undefined {
+export function sliceClipSceneCuts(cuts: number[] | undefined, offset: number, duration: number): number[] | undefined {
   const localCuts = (cuts ?? [])
     .filter((time) => time > offset + 0.000001 && time < offset + duration - 0.000001)
     .map((time) => round(time - offset));
   return normalizeClipSceneCuts(localCuts, duration);
 }
 
-function sliceClipKeyframes(
+export function sliceClipKeyframes(
   keyframes: ClipKeyframes | undefined,
   offset: number,
   duration: number,
@@ -262,7 +264,7 @@ function sliceClipKeyframes(
   return normalizeClipKeyframes(sliced, duration);
 }
 
-function replaceClipWithSlices(
+export function replaceClipWithSlices(
   timeline: Timeline,
   clipId: string,
   ranges: LocalTimeRange[],
@@ -287,7 +289,7 @@ function replaceClipWithSlices(
     ),
   };
 
-function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protectedRanges: ProtectedRange[] = []): Track {
+export function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protectedRanges: ProtectedRange[] = []): Track {
   if (protectedRanges.length > 0) {
     return applyProtectedRippleDeleteToTrack(track, selectedIds, protectedRanges);
   }
@@ -312,7 +314,7 @@ function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protecte
       }),
   };
 
-function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
+export function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
   const sorted = intervals
     .map((interval) => ({
       start: round(Math.max(0, Math.min(interval.start, interval.end))),
@@ -331,7 +333,7 @@ function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
   }
   return merged;
 
-function findTrackGapAtTime(track: Track, time: number): LocalTimeRange | undefined {
+export function findTrackGapAtTime(track: Track, time: number): LocalTimeRange | undefined {
   const sortedClips = [...track.clips].sort(
     (left, right) => left.start - right.start || left.id.localeCompare(right.id),
   );
@@ -346,7 +348,7 @@ function findTrackGapAtTime(track: Track, time: number): LocalTimeRange | undefi
   return undefined;
 }
 
-function closeTrackGap(track: Track, gapStart: number, gapEnd: number): Track {
+export function closeTrackGap(track: Track, gapStart: number, gapEnd: number): Track {
   const gapDuration = round(gapEnd - gapStart);
   return {
     ...track,
@@ -355,7 +357,7 @@ function closeTrackGap(track: Track, gapStart: number, gapEnd: number): Track {
     ),
   };
 
-function buildRollingTrimClips(
+export function buildRollingTrimClips(
   left: Clip,
   right: Clip,
   requestedDelta: number,
@@ -398,16 +400,16 @@ function buildRollingTrimClips(
   } as Clip;
   return { left: leftTrimmed, right: rightTrimmed };
 
-function getClipTotalSourceDuration(clip: Clip): number {
+export function getClipTotalSourceDuration(clip: Clip): number {
   return round(Math.max(0, clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd));
 
-function touchProject(project: Project): Project {
+export function touchProject(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() };
 
-function cloneCommandValue<T>(value: T): T {
+export function cloneCommandValue<T>(value: T): T {
   return globalThis.structuredClone ? globalThis.structuredClone(value) : (JSON.parse(JSON.stringify(value)) as T);
 
-function clampTrimValues(
+export function clampTrimValues(
   clip: Clip,
   requestedTrimStart: number,
   requestedTrimEnd: number,
@@ -429,7 +431,7 @@ function clampTrimValues(
   }
   return { trimStart, trimEnd };
 
-function applySpeedKeyframeDuration(before: Clip, after: Clip, property: KeyframeProperty): Clip {
+export function applySpeedKeyframeDuration(before: Clip, after: Clip, property: KeyframeProperty): Clip {
   if (property !== 'speed') {
     return after;
   }
@@ -440,7 +442,7 @@ function applySpeedKeyframeDuration(before: Clip, after: Clip, property: Keyfram
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(after.keyframes), duration),
   } as Clip;
 
-function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<ChromaKey> | undefined): ChromaKey {
+export function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<ChromaKey> | undefined): ChromaKey {
   if (!patch) {
     return normalizeChromaKey(before);
   }
@@ -454,15 +456,15 @@ function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<Chrom
   }
   return normalizeChromaKey({ ...before, ...patch });
 
-function isPiPVisualClip(clip: Clip): boolean {
+export function isPiPVisualClip(clip: Clip): boolean {
   return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
 
-function replaceClipWithGeneratedClips(timeline: Timeline, sourceClipId: string, clips: Clip[]): Timeline {
+export function replaceClipWithGeneratedClips(timeline: Timeline, sourceClipId: string, clips: Clip[]): Timeline {
   const withoutSource = removeClip(timeline, sourceClipId).timeline;
   return insertGeneratedClips(withoutSource, clips);
 }
 
-function insertGeneratedClips(timeline: Timeline, clips: Clip[]): Timeline {
+export function insertGeneratedClips(timeline: Timeline, clips: Clip[]): Timeline {
   let next = timeline;
   for (const clip of clips) {
     const track = findTrack(next, clip.trackId);
@@ -477,7 +479,7 @@ function insertGeneratedClips(timeline: Timeline, clips: Clip[]): Timeline {
   return sortTimelineClips(next);
 }
 
-function sortTimelineClips(timeline: Timeline): Timeline {
+export function sortTimelineClips(timeline: Timeline): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({
@@ -486,30 +488,30 @@ function sortTimelineClips(timeline: Timeline): Timeline {
     })),
   };
 
-function sortMarkers(markers: TimelineMarker[]): TimelineMarker[] {
+export function sortMarkers(markers: TimelineMarker[]): TimelineMarker[] {
   return [...markers].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] {
+export function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] {
   return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function sortReviewAnnotations(annotations: ReviewAnnotation[]): ReviewAnnotation[] {
+export function sortReviewAnnotations(annotations: ReviewAnnotation[]): ReviewAnnotation[] {
   return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function sortCollaborationNotes(notes: CollaborationNote[]): CollaborationNote[] {
+export function sortCollaborationNotes(notes: CollaborationNote[]): CollaborationNote[] {
   return normalizeCollaborationNotes(notes);
 }
 
-function sortTimelineNotes(notes: TimelineNote[]): TimelineNote[] {
+export function sortTimelineNotes(notes: TimelineNote[]): TimelineNote[] {
   return normalizeTimelineNotes(notes);
 }
 
-function sortBookmarks(bookmarks: TimelineBookmark[]): TimelineBookmark[] {
+export function sortBookmarks(bookmarks: TimelineBookmark[]): TimelineBookmark[] {
   return [...bookmarks].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 
-function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[] {
+export function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[] {
   const seen = new Set<string>();
   const output: KeyframeSelectionRef[] = [];
   for (const ref of refs) {
@@ -523,7 +525,7 @@ function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[
   return output;
 }
 
-function groupKeyframeRefsByClip(refs: KeyframeSelectionRef[]): Map<string, KeyframeSelectionRef[]> {
+export function groupKeyframeRefsByClip(refs: KeyframeSelectionRef[]): Map<string, KeyframeSelectionRef[]> {
   const output = new Map<string, KeyframeSelectionRef[]>();
   for (const ref of refs) {
     const group = output.get(ref.clipId) ?? [];
@@ -533,7 +535,7 @@ function groupKeyframeRefsByClip(refs: KeyframeSelectionRef[]): Map<string, Keyf
   return output;
 }
 
-function calculateKeyframeSelectionCenter(timeline: Timeline, refs: KeyframeSelectionRef[]): number {
+export function calculateKeyframeSelectionCenter(timeline: Timeline, refs: KeyframeSelectionRef[]): number {
   const absoluteTimes = refs.flatMap((ref) => {
     const clip = findClip(timeline, ref.clipId);
     const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
@@ -545,11 +547,11 @@ function calculateKeyframeSelectionCenter(timeline: Timeline, refs: KeyframeSele
   return round((Math.min(...absoluteTimes) + Math.max(...absoluteTimes)) / 2);
 }
 
-function keyframeRefKey(ref: KeyframeSelectionRef): string {
+export function keyframeRefKey(ref: KeyframeSelectionRef): string {
   return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
 }
 
-function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeSelectionRef[]): Map<string, number> {
+export function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeSelectionRef[]): Map<string, number> {
   const entries = refs.flatMap((ref) => {
     const clip = findClip(timeline, ref.clipId);
     const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
@@ -580,7 +582,7 @@ function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeS
   return output;
 }
 
-function getBatchAlignValue(timeline: Timeline, refs: KeyframeSelectionRef[], value: number | undefined): number {
+export function getBatchAlignValue(timeline: Timeline, refs: KeyframeSelectionRef[], value: number | undefined): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
@@ -594,7 +596,7 @@ function getBatchAlignValue(timeline: Timeline, refs: KeyframeSelectionRef[], va
   return 0;
 }
 
-function getBatchEditedKeyframeTime(
+export function getBatchEditedKeyframeTime(
   clip: Clip,
   frame: Keyframe<number>,
   operation: BatchKeyframeEditOperation,
@@ -612,10 +614,10 @@ function getBatchEditedKeyframeTime(
   return frame.time;
 }
 
-function clampKeyframeTime(time: number, duration: number): number {
+export function clampKeyframeTime(time: number, duration: number): number {
   return round(Math.min(Math.max(0, time), Math.max(0, duration)));
 
-function normalizeAssetIdSet(assetIds: string | string[]): Set<string> {
+export function normalizeAssetIdSet(assetIds: string | string[]): Set<string> {
   const ids = Array.isArray(assetIds) ? assetIds : [assetIds];
   const normalized = new Set(ids.map((assetId) => assetId.trim()).filter(Boolean));
   if (normalized.size === 0) {
@@ -624,7 +626,7 @@ function normalizeAssetIdSet(assetIds: string | string[]): Set<string> {
   return normalized;
 }
 
-function assertMediaAssetsExist(project: Project, assetIds: Set<string>): void {
+export function assertMediaAssetsExist(project: Project, assetIds: Set<string>): void {
   const available = new Set(project.media.map((asset) => asset.id));
   const missing = Array.from(assetIds).filter((assetId) => !available.has(assetId));
   if (missing.length > 0) {
@@ -632,7 +634,7 @@ function assertMediaAssetsExist(project: Project, assetIds: Set<string>): void {
   }
 }
 
-function collectProjectMediaIds(project: Project): Set<string> {
+export function collectProjectMediaIds(project: Project): Set<string> {
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const ids = new Set<string>();
   for (const sequence of getProjectSequences(synced)) {
@@ -645,7 +647,7 @@ function collectProjectMediaIds(project: Project): Set<string> {
   return ids;
 }
 
-function removeMediaAssets(project: Project, removeIds: Set<string>): Project {
+export function removeMediaAssets(project: Project, removeIds: Set<string>): Project {
   const mediaMetadata = filterMediaMetadata(project.mediaMetadata, removeIds);
   return touchProject({
     ...project,
@@ -654,7 +656,7 @@ function removeMediaAssets(project: Project, removeIds: Set<string>): Project {
   });
 }
 
-function mergeMediaReferences(project: Project, keepAssetId: string, removeIds: Set<string>): Project {
+export function mergeMediaReferences(project: Project, keepAssetId: string, removeIds: Set<string>): Project {
   const synced = replaceProjectActiveTimeline(project, project.timeline);
   const sequences = getProjectSequences(synced).map((sequence) => ({
     ...sequence,
@@ -671,7 +673,7 @@ function mergeMediaReferences(project: Project, keepAssetId: string, removeIds: 
   });
 }
 
-function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string, removeIds: Set<string>): Timeline {
+export function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string, removeIds: Set<string>): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({
@@ -686,7 +688,7 @@ function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string,
   };
 }
 
-function filterMediaMetadata(
+export function filterMediaMetadata(
   metadata: Record<string, MediaMetadata>,
   removeIds: Set<string>,
 ): Record<string, MediaMetadata> {

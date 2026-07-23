@@ -5,6 +5,28 @@ import {
   type TimelineColorHeatmapPoint,
   type SceneColorDifference,
   type TimelineGridSettings,
+  type TimelineRulerTick,
+  type TimelineRenderRange,
+  type ProtectedRange,
+  type DialogueInterval,
+  type TimelineNoteLayout,
+  type TimelineNote,
+  type TimelineThumbnailTrackSample,
+  type TimelineVirtualRenderWindow,
+  type SelectionRect,
+  type CollaborationUserPresence,
+  type CollaborationClipLock,
+  type BeatSnapSuggestion,
+  type PacingSegment,
+  type CpmCurvePoint,
+  type ProjectAnnotation,
+  type TimelineBookmark,
+  type BeatMarker,
+  type TimelineMarker,
+  type Clip,
+  type Track,
+  type MediaAsset as CoreMediaAsset,
+  type Project,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor } from '../../store/commandManager';
@@ -50,29 +72,29 @@ interface TimelineTracksContainerProps {
   zoom: number;
 
   // Ruler
-  ticks: any[];
+  ticks: TimelineRulerTick[];
   playheadTimecode: string;
-  renderCacheRanges: any[];
-  staleRanges: any[];
-  timelineCompareRanges: any[];
-  exportRangeHighlights: any[];
-  protectedRanges: any[];
-  dialogueMarkers: any[];
+  renderCacheRanges: TimelineRenderRange[];
+  staleRanges: TimelineRenderRange[];
+  timelineCompareRanges: TimelineRenderRange[];
+  exportRangeHighlights: TimelineRenderRange[];
+  protectedRanges: ProtectedRange[];
+  dialogueMarkers: DialogueInterval[];
   audioScrubEnabled: boolean;
   setPlayheadTime: (time: number) => void;
-  openRulerMenu: (...args: any[]) => void;
+  openRulerMenu: (x: number, y: number, time: number) => void;
 
   // Note layer
-  timelineNoteLayouts: any[];
-  timelineNoteDraft: any;
-  setTimelineNoteDraft: (draft: any) => void;
-  onTimelineNoteRangeDraft: (...args: any[]) => void;
-  openTimelineNoteEditor: (start: number, end: number, note?: any) => void;
+  timelineNoteLayouts: TimelineNoteLayout[];
+  timelineNoteDraft: TimelineNote | undefined;
+  setTimelineNoteDraft: (draft: TimelineNote | undefined) => void;
+  onTimelineNoteRangeDraft: (start: number, end: number) => void;
+  openTimelineNoteEditor: (start: number, end: number, note?: TimelineNote) => void;
 
   // Thumbnail track
   thumbnailTrackVisible: boolean;
-  thumbnailTrackSamples: any[];
-  project: any;
+  thumbnailTrackSamples: TimelineThumbnailTrackSample[];
+  project: Project;
 
   // Color heatmap
   colorHeatmap: TimelineColorHeatmapPoint[];
@@ -85,79 +107,79 @@ interface TimelineTracksContainerProps {
 
   // Heatmap
   heatmap?: TimelineHeatmapViewSettings;
-  deferredHeatmapSegments: any[];
+  deferredHeatmapSegments: unknown[];
 
   // Virtual tracks
   virtualTrackWindow: { beforeHeight: number; afterHeight: number; totalHeight: number };
-  virtualTracks: any[];
-  virtualWindow: any;
+  virtualTracks: Track[];
+  virtualWindow: TimelineVirtualRenderWindow;
   scrollViewport: { scrollLeft: number; viewportWidth: number };
 
   // Track row / selection
   selectedClipId: string | undefined;
   selectedClipIds: string[];
-  selectedKeyframe: any;
-  selectedKeyframes: any;
+  selectedKeyframe: unknown;
+  selectedKeyframes: unknown;
   selectedTrackIds: string[];
-  drag: any;
-  selectClip: (...args: any[]) => void;
-  selectKeyframe: (...args: any[]) => void;
-  onDragStart: (...args: any[]) => void;
-  onTrackPointerDown: (...args: any[]) => void;
-  updateTrack: (...args: any[]) => void;
-  selectTrackHeader: (...args: any[]) => void;
-  openTrackBatchMenu: (...args: any[]) => void;
-  reorderTracks: (...args: any[]) => void;
+  drag: DragState | undefined;
+  selectClip: (clipId: string, additive: boolean, forceSingle?: boolean) => void;
+  selectKeyframe: (keyframe: unknown, additive: boolean) => void;
+  onDragStart: (drag: DragState) => void;
+  onTrackPointerDown: (event: React.PointerEvent) => void;
+  updateTrack: (trackId: string, patch: Record<string, unknown>) => void;
+  selectTrackHeader: (trackId: string, event: React.MouseEvent) => void;
+  openTrackBatchMenu: (trackId: string, x: number, y: number) => void;
+  reorderTracks: (draggedTrackId: string, targetTrackId: string) => void;
 
   // Track row menus
-  setGapMenu: (v: any) => void;
-  setClipMenu: (v: any) => void;
-  setVolumeEnvelopeMenu: (v: any) => void;
-  setRulerMenu: (v: any) => void;
-  setTransitionMenu: (v: any) => void;
-  openGapMenu: (...args: any[]) => void;
-  openClipMenu: (...args: any[]) => void;
-  addVolumeEnvelopePoint: (...args: any[]) => void;
-  updateVolumeEnvelopePoint: (...args: any[]) => void;
-  removeVolumeEnvelopePoint: (...args: any[]) => void;
-  openVolumeEnvelopeMenu: (...args: any[]) => void;
-  openNestedSequence: (...args: any[]) => void;
+  setGapMenu: (v: unknown) => void;
+  setClipMenu: (v: unknown) => void;
+  setVolumeEnvelopeMenu: (v: unknown) => void;
+  setRulerMenu: (v: unknown) => void;
+  setTransitionMenu: (v: unknown) => void;
+  openGapMenu: (request: GapMenuRequest) => void;
+  openClipMenu: (x: number, y: number, clipId: string) => void;
+  addVolumeEnvelopePoint: (request: VolumeEnvelopePointRequest) => void;
+  updateVolumeEnvelopePoint: (request: VolumeEnvelopePointRequest) => void;
+  removeVolumeEnvelopePoint: (clipId: string, keyframeId: string) => void;
+  openVolumeEnvelopeMenu: (request: VolumeEnvelopePointRequest) => void;
+  openNestedSequence: (clipId: string) => void;
 
   // Track row state
-  largeProjectMode: any;
+  largeProjectMode: { enabled: boolean };
   rollingTrimActive: boolean;
   slipEditActive: boolean;
   slideEditActive: boolean;
-  clipGroupByClipId: Map<string, any>;
-  timelineColorFilter: any;
+  clipGroupByClipId: Map<string, unknown>;
+  timelineColorFilter: string | undefined;
   envelopeEditMode: boolean;
-  collaborationLocksByClipId: Map<string, any>;
-  removeAnomaly: (...args: any[]) => void;
+  collaborationLocksByClipId: Map<string, CollaborationClipLock>;
+  removeAnomaly: (clipId: string, anomalyId: string) => void;
 
   // Overlays
   annotationMode: boolean;
   onAnnotationLayerPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
-  openAnnotationEditorAt: (time: number, annotation?: any) => void;
+  openAnnotationEditorAt: (time: number, annotation?: ProjectAnnotation) => void;
   removeTimelineMarker: (id: string) => void;
-  sceneCutOverlays: any[];
+  sceneCutOverlays: Array<{ id: string; time: number }>;
   removeProjectBookmark: (id: string) => void;
   activeBeatMarkerId: string | undefined;
   removeBeatMarker: (id: string) => void;
 
   // Transition menu
-  transitionMenu: any;
-  addTransition: (...args: any[]) => void;
-  removeTransition: (...args: any[]) => void;
+  transitionMenu: TransitionMenuState | undefined;
+  addTransition: (request: unknown, transitionType: string, duration: number) => void;
+  removeTransition: (transitionId: string) => void;
 
   // Ruler menu
-  rulerMenu: any;
-  runRulerMenuAction: (...args: any[]) => void;
-  jumpToRulerTimecode: (...args: any[]) => void;
+  rulerMenu: RulerMenuState | undefined;
+  runRulerMenuAction: (action: string, time: number) => void;
+  jumpToRulerTimecode: (timecode: string) => void;
 
   // Gap menu
-  gapMenu: any;
-  closeGap: (...args: any[]) => void;
-  fillGap: (...args: any[]) => void;
+  gapMenu: GapMenuState | undefined;
+  closeGap: (trackId: string, time: number) => void;
+  fillGap: (strategy: string) => void;
 
   // Gap stats
   gapStatsOpen: boolean;
@@ -165,19 +187,19 @@ interface TimelineTracksContainerProps {
 
   // Sequence settings
   sequenceSettingsDialogOpen: boolean;
-  activeSequence: any;
+  activeSequence: { id: string } | undefined;
   setSequenceSettingsDialogOpen: (v: boolean) => void;
 
   // Volume envelope menu
-  volumeEnvelopeMenu: any;
-  applyVolumeEnvelopeFade: (...args: any[]) => void;
-  resetVolumeEnvelope: (...args: any[]) => void;
+  volumeEnvelopeMenu: VolumeEnvelopeMenuState | undefined;
+  applyVolumeEnvelopeFade: (clipId: string, fadeType: string) => void;
+  resetVolumeEnvelope: (clipId: string) => void;
 
   // Clip menu
-  clipMenu: any;
-  allClips: any[];
-  getClipMediaAsset: (clip: any) => any;
-  getClipMediaVersionEntries: (clip: any) => any;
+  clipMenu: ClipMenuState | undefined;
+  allClips: Clip[];
+  getClipMediaAsset: (clip: Clip) => CoreMediaAsset | undefined;
+  getClipMediaVersionEntries: (clip: Clip) => unknown;
   whisperAvailability: { ready: boolean; error?: string };
   openSilenceDetection: (clipId: string) => void;
   openSceneDetection: (clipId: string) => void;
@@ -194,20 +216,20 @@ interface TimelineTracksContainerProps {
   handleAnomalyDetect: (clipId: string) => void;
   onRoughCutCompare?: (clipId: string) => void;
   createGroupFromSelection: () => void;
-  ungroupSelected: (group?: any) => void;
-  deleteGroup: (...args: any[]) => void;
-  updateGroupColor: (...args: any[]) => void;
-  updateClipColor: (...args: any[]) => void;
+  ungroupSelected: (group?: unknown) => void;
+  deleteGroup: (groupId: string) => void;
+  updateGroupColor: (groupId: string, color: string) => void;
+  updateClipColor: (clipId: string, color: string) => void;
   deleteSelected: () => void;
   rippleDeleteSelected: () => void;
 
   // Track batch menu
-  trackBatchMenu: any;
-  selectedTracksForBatch: () => any[];
-  applyBatchTrackPatch: (...args: any[]) => void;
+  trackBatchMenu: TrackBatchMenuState | undefined;
+  selectedTracksForBatch: () => Track[];
+  applyBatchTrackPatch: (trackIds: string[], patch: Record<string, unknown>) => void;
   deleteSelectedEmptyTracks: () => void;
   setEqualHeightPrompt: (v: boolean) => void;
-  setTrackBatchMenu: (v: any) => void;
+  setTrackBatchMenu: (v: unknown) => void;
 
   // Equal height prompt
   equalHeightPrompt: boolean;
@@ -215,19 +237,19 @@ interface TimelineTracksContainerProps {
   setEqualHeightValue: (v: string) => void;
 
   // Selection
-  selectionRect: any;
+  selectionRect: SelectionRect | undefined;
   inPoint: number | undefined;
   outPoint: number | undefined;
 
   // Remote collaboration
-  remoteCollaborationUsers: any[];
+  remoteCollaborationUsers: CollaborationUserPresence[];
   playheadTime: number;
-  setDrag: (v: any) => void;
+  setDrag: (v: DragState) => void;
 
   // Minimap
   minimapVisible: boolean;
-  deferredMinimapLayout: any;
-  minimapViewport: any;
+  deferredMinimapLayout: unknown;
+  minimapViewport: unknown;
   minimapHeight: number;
   scrollTimelineFromMinimap: (y: number, mode: 'top' | 'center') => void;
 
@@ -546,14 +568,14 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
             {project.pacingAnalysis
               ? (() => {
                   const pa = project.pacingAnalysis;
-                  const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p: any) => p.cpm), 1) : 1;
+                  const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p: CpmCurvePoint) => p.cpm), 1) : 1;
                   return (
                     <div
                       className="relative h-10 border-t border-line bg-panel"
                       style={{ marginLeft: LABEL_WIDTH }}
                       data-testid="pacing-analysis-chart"
                     >
-                      {pa.slowSegments.map((seg: any, si: number) => (
+                      {pa.slowSegments.map((seg: PacingSegment, si: number) => (
                         <div
                           key={si}
                           className="absolute top-0 bottom-0 bg-[var(--color-accent)]/15 cursor-pointer"
@@ -570,7 +592,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                           data-testid={`pacing-slow-segment-${si}`}
                         />
                       ))}
-                      {pa.fastSegments.map((seg: any, fi: number) => (
+                      {pa.fastSegments.map((seg: PacingSegment, fi: number) => (
                         <div
                           key={fi}
                           className="absolute top-0 bottom-0 bg-[var(--color-danger)]/15"
@@ -591,7 +613,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                         preserveAspectRatio="none"
                         viewBox={`0 0 ${Math.max(1, pa.cpmCurve.length)} ${maxCpm}`}
                       >
-                        {pa.cpmCurve.map((pt: any, i: number) => {
+                        {pa.cpmCurve.map((pt: CpmCurvePoint, i: number) => {
                           if (i === 0) return null;
                           const prev = pa.cpmCurve[i - 1];
                           return (
@@ -635,7 +657,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                 onPointerDown={onAnnotationLayerPointerDown}
               />
             ) : null}
-            {(project.annotations ?? []).map((annotation: any, index: number) => (
+            {(project.annotations ?? []).map((annotation: ProjectAnnotation, index: number) => (
               <AnnotationBubble
                 key={annotation.id}
                 annotation={annotation}
@@ -645,7 +667,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                 onEdit={openAnnotationEditorAt}
               />
             ))}
-            {(project.timeline.markers ?? []).map((marker: any) => (
+            {(project.timeline.markers ?? []).map((marker: TimelineMarker) => (
               <TimelineMarkerOverlay
                 key={marker.id}
                 marker={marker}
@@ -657,7 +679,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
             {sceneCutOverlays.map((cut) => (
               <SceneCutOverlay key={cut.id} cut={cut} left={LABEL_WIDTH + cut.time * zoom} onSeek={setPlayheadTime} />
             ))}
-            {(project.bookmarks ?? []).map((bookmark: any) => (
+            {(project.bookmarks ?? []).map((bookmark: TimelineBookmark) => (
               <TimelineBookmarkOverlay
                 key={bookmark.id}
                 bookmark={bookmark}
@@ -666,7 +688,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                 onRemove={removeProjectBookmark}
               />
             ))}
-            {(project.beatMarkers ?? []).map((marker: any) => (
+            {(project.beatMarkers ?? []).map((marker: BeatMarker) => (
               <BeatMarkerOverlay
                 key={marker.id}
                 marker={marker}
