@@ -12,6 +12,8 @@ import {
   type QualityAssessmentResult,
 } from '@open-factory/editor-core';
 import type { Subclip, TimelineLabelColor } from '@open-factory/editor-core';
+import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
+import { HighlightBadge } from './HighlightOverlay';
 import {
   AlertCircle,
   BadgeCheck,
@@ -301,6 +303,7 @@ export function MediaCard({
   onOpenBatchMetadata,
   onOpenBatchRename,
   mediaIndex,
+  highlights,
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -326,6 +329,7 @@ export function MediaCard({
   onOpenBatchMetadata(): void;
   onOpenBatchRename(): void;
   mediaIndex: number;
+  highlights?: VisualHighlightMarker[];
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -550,6 +554,9 @@ export function MediaCard({
             <Flag size={11} fill="currentColor" />
             {flag === 'green' ? zhCN.mediaBin.flagGreen : zhCN.mediaBin.flagRed}
           </span>
+        ) : null}
+        {highlights && highlights.length > 0 ? (
+          <HighlightBadge count={highlights.length} className="absolute left-2 bottom-8 z-10" />
         ) : null}
       </div>
       {labelMenuOpen ? (

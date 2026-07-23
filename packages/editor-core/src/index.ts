@@ -308,3 +308,52 @@ export * from './engine/incremental-render-engine';
 export * from './ui/zen-mode-manager';
 export * from './ui/shortcut-manager';
 export * from './ui/theme-engine';
+
+// Sprint AS: Predictive AI Creation
+export * from './visual-highlight-engine';
+export {
+  AudioRhythmConfig,
+  DEFAULT_AUDIO_RHYTHM_CONFIG,
+  SpectrumFrame,
+  OnsetEvent,
+  TempoEstimate,
+  RhythmPattern,
+  AudioRhythmResult,
+  computeMagnitudes,
+  applyHanningWindow,
+  calculateBandEnergies,
+  detectOnsets,
+  estimateTempo,
+  generateBeatTimes,
+  classifyRhythmPattern,
+  analyzeAudioRhythm,
+  alignHighlightsWithRhythm,
+} from './audio-rhythm-analysis';
+export * from './natural-language-commands';
+export {
+  RoughCutConfig,
+  DEFAULT_ROUGH_CUT_CONFIG,
+  CutPoint,
+  RoughCutSegment,
+  RoughCutProposal,
+  RoughCutResult,
+  generateCutPoints,
+  selectSegments,
+  calculatePacingScore,
+  calculateHighlightCoverage,
+  generateRoughCutProposals,
+} from './smart-rough-cut';
+export * from './gesture-control';
+export {
+  SuggestionPriority,
+  ContextualSuggestion,
+  SuggestionConfig,
+  DEFAULT_SUGGESTION_CONFIG,
+  suggestTransition,
+  suggestPacingFix,
+  suggestAudioFix,
+  suggestContentImprovement,
+  suggestHighlightMark,
+  generateContextualSuggestions,
+  getSuggestionIcon,
+} from './contextual-suggestions';

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AutoRepairProjectHealthCommand,
   AddClipCommand,
@@ -459,6 +459,15 @@ const PreflightChecklistPanel = lazy(() =>
 const DubbingAdaptationPanel = lazy(() =>
   import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })),
 );
+const CommandPalette = lazy(() =>
+  import('./CommandPalette/CommandPalette').then((module) => ({ default: module.CommandPalette })),
+);
+const GestureTutorialOverlay = lazy(() =>
+  import('./GestureControl/GestureTutorial').then((module) => ({ default: module.GestureTutorialOverlay })),
+);
+const RoughCutComparePanel = lazy(() =>
+  import('./SmartRoughCut/RoughCutComparePanel').then((module) => ({ default: module.RoughCutComparePanel })),
+);
 
 import { SettingsDialogs } from './dialogs/SettingsDialogs';
 import { ExportDialogs } from './dialogs/ExportDialogs';
@@ -494,6 +503,12 @@ import { mergeProjectSpeakers, sanitizeFileName, projectUsesMediaOnTimeline } fr
 export function EditorShell() {
   useEditorShellSettings();
   const { applyWorkspaceLayoutById, toggleProjectDocumentation } = useEditorShellInteractions();
+
+  // Sprint AT: Command palette state (⌘+K / Ctrl+K)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [gestureTutorialOpen, setGestureTutorialOpen] = useState(false);
+  const [roughCutCompareOpen, setRoughCutCompareOpen] = useState(false);
+
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
@@ -1605,6 +1620,18 @@ export function EditorShell() {
   useCloseGuard(saveProject);
   useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
+
+  // Sprint AT: Global shortcut for Command Palette (⌘+K / Ctrl+K)
+  useEffect(() => {
+    function handleKeydown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, []);
   useBackgroundMediaJobs(project.media);
 
   const leftPanelCallbacks = useMemo(
@@ -2216,6 +2243,56 @@ export function EditorShell() {
           ) : null}
         </Suspense>
         <ShellFloatingDialogs {...floatingDialogsCallbacks} />
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={commandPaletteOpen}
+            onClose={() => setCommandPaletteOpen(false)}
+            onExecute={(cmd) => {
+              // Route parsed command to appropriate editor action
+              switch (cmd.type) {
+                case 'play':
+                case 'pause':
+                  setIsPlaying(!isPlaying);
+                  break;
+                case 'undo':
+                  undo();
+                  break;
+                case 'redo':
+                  redo();
+                  break;
+                case 'go-to':
+                  if (cmd.timeRef !== undefined) setPlayheadTime(cmd.timeRef);
+                  break;
+                case 'zoom-in':
+                  // Zoom in handled by timeline
+                  break;
+                case 'zoom-out':
+                  // Zoom out handled by timeline
+                  break;
+                case 'export':
+                  setExportDialogOpen(true);
+                  break;
+                default:
+                  break;
+              }
+            }}
+          />
+          <GestureTutorialOverlay
+            open={gestureTutorialOpen}
+            onClose={() => setGestureTutorialOpen(false)}
+          />
+          {roughCutCompareOpen && project ? (
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+              <RoughCutComparePanel
+                highlights={[]}
+                rhythmResult={null}
+                sourceDuration={getTimelineDuration(project.timeline)}
+                onApply={() => setRoughCutCompareOpen(false)}
+                onClose={() => setRoughCutCompareOpen(false)}
+              />
+            </div>
+          ) : null}
+        </Suspense>
       </div>
     </ErrorBoundary>
   );

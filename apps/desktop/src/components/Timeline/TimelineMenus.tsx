@@ -707,6 +707,7 @@ export function ClipActionMenu({
   onClipColor,
   onDelete,
   onRippleDelete,
+  onRoughCutCompare,
   onClose,
 }: {
   menu: ClipMenuState;
@@ -738,6 +739,7 @@ export function ClipActionMenu({
   onClipColor(clipId: string, color: TimelineLabelColor | null): void;
   onDelete(): void;
   onRippleDelete(): void;
+  onRoughCutCompare?(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -840,6 +842,17 @@ export function ClipActionMenu({
       >
         {zhCN.toolbar.detectAnomalies}
       </button>
+      {onRoughCutCompare ? (
+        <button
+          className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+          type="button"
+          disabled={clip?.type !== 'video'}
+          data-testid="clip-action-rough-cut-compare"
+          onClick={onRoughCutCompare}
+        >
+          生成粗剪方案
+        </button>
+      ) : null}
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
         type="button"
