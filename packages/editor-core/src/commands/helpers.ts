@@ -5,8 +5,8 @@ import {
   normalizeCollaborationNotes,
   normalizeTimelineNotes,
   normalizeChromaKey,
-  normalizeClipKeyframes,
-  normalizeTrackVolume,
+
+  normalizeTrackPan, normalizeTrackEQ, normalizeTrackCompressor, normalizeTrackVolume,
   normalizeAudioFadeDuration,
   replaceProjectActiveTimeline,
   getProjectSequences,
@@ -23,12 +23,12 @@ import {
   type TimelineBookmark,
   type TimelineMarker,
   type TimelineNote,
-  type Track,
+  createTrack, type Track,
 } from '../model';
 import type { ClipGroupBatchPatch } from '../clip-groups';
 import {
   cloneClipKeyframes,
-  normalizeClipKeyframes as normalizeClipKeyframesFromKF,
+  normalizeClipKeyframes,
   distributeKeyframeTimes,
 } from '../keyframes';
 import {
@@ -946,4 +946,18 @@ export function trimMulticamClip(
       },
     }),
   );
+}
+
+export function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
+  if (!patch) {
+    return track;
+  }
+  return createTrack({
+    ...track,
+    ...patch,
+    volume: patch.volume === undefined ? track.volume : normalizeTrackVolume(patch.volume),
+    pan: patch.pan === undefined ? track.pan : normalizeTrackPan(patch.pan),
+    eq: patch.eq === undefined ? track.eq : normalizeTrackEQ(patch.eq),
+    compressor: patch.compressor === undefined ? track.compressor : normalizeTrackCompressor(patch.compressor),
+  });
 }
