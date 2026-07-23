@@ -138,6 +138,25 @@ describe("verifyToken", () => {
     expect(() => verifyToken("not-a-token", testConfig)).toThrow(AuthError);
   });
 
+  it("throws TOKEN_INVALID for empty string", () => {
+    try {
+      verifyToken("", testConfig);
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect((err as AuthError).code).toBe("TOKEN_INVALID");
+      expect((err as AuthError).message).toContain("empty");
+    }
+  });
+
+  it("throws TOKEN_INVALID for whitespace-only string", () => {
+    try {
+      verifyToken("   ", testConfig);
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect((err as AuthError).code).toBe("TOKEN_INVALID");
+    }
+  });
+
   it("respects issuer validation", () => {
     const token = jwt.sign({ sub: "u1", name: "N" }, testSecret, {
       algorithm: "HS256",

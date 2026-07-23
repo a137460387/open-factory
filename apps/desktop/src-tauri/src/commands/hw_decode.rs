@@ -161,6 +161,7 @@ impl DecoderManager {
 /// 硬件解码器 trait
 trait HardwareDecoder {
     fn decode_frame(&mut self, timestamp: f64) -> Result<DecodedFrame, String>;
+    #[allow(dead_code)]
     fn seek(&mut self, timestamp: f64) -> Result<(), String>;
     fn get_duration(&self) -> f64;
     fn get_size(&self) -> (u32, u32);

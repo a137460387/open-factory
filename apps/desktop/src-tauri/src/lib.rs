@@ -1,5 +1,6 @@
 mod commands;
 pub mod db;
+pub mod input_validator;
 pub mod net_guard;
 pub mod path_validator;
 

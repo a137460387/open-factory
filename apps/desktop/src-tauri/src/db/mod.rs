@@ -51,6 +51,12 @@ pub fn open_db(app: &AppHandle, project_path: &str) -> Result<Connection, String
 /// 数据库连接包装
 pub struct DbPool {}
 
+impl Default for DbPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DbPool {
     pub fn new() -> Self {
         Self {}

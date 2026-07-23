@@ -133,12 +133,14 @@ struct MotionGraphicSequenceManifest {
     height: u32,
     fps: f64,
     frame_count: u32,
+    #[allow(dead_code)]
     duration: f64,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct MotionGraphicTemplateManifest {
+    #[allow(dead_code)]
     version: u8,
     template_type: String,
     params: Value,
@@ -1239,6 +1241,7 @@ pub fn should_pause_export_for_memory(available_memory_bytes: u64) -> bool {
     available_memory_bytes < EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_materialized_export_plan(
     app: &AppHandle,
     materialized: MaterializedFfmpegExportPlan,
@@ -2317,7 +2320,7 @@ fn parse_blackdetect_output(text: &str) -> Vec<DetectedMediaRangeDto> {
             let start = extract_named_number(line, &["black_start"])?;
             let end = extract_named_number(line, &["black_end"])?;
             let duration =
-                extract_named_number(line, &["black_duration"]).unwrap_or_else(|| end - start);
+                extract_named_number(line, &["black_duration"]).unwrap_or(end - start);
             Some(DetectedMediaRangeDto {
                 start,
                 end,
@@ -3274,7 +3277,7 @@ fn build_motion_graphic_data_chart_filters(manifest: &MotionGraphicSequenceManif
         if show_labels {
             filters.push(format!(
                 "drawtext=text='{}':fontsize={}:fontcolor=white:x='{}':y='{}'",
-                format!("{}", value.round() as i64),
+                value.round() as i64,
                 format_seconds_arg((height as f64 * 0.045).max(12.0)),
                 format_seconds_arg(x),
                 format_seconds_arg(plot_top + plot_height + height as f64 * 0.02)

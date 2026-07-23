@@ -102,4 +102,75 @@ describe('SSOManager', () => {
 
     await expect(manager.registerProvider(config)).rejects.toThrow('Unsupported SSO provider type');
   });
+
+  it('should start login flow', async () => {
+    const config: SSOProviderConfig = {
+      id: 'google',
+      name: 'Google',
+      type: 'oidc',
+      enabled: true,
+      oidc: {
+        issuer: 'https://accounts.google.com',
+        clientId: 'test',
+        clientSecret: 'test',
+        redirectUri: 'https://app.example.com/callback',
+      },
+    };
+
+    await manager.registerProvider(config);
+    const url = await manager.startLogin('google', 'test-state');
+    expect(url).toContain('accounts.google.com');
+  });
+
+  it('should throw when starting login for unknown provider', async () => {
+    await expect(manager.startLogin('unknown', 'state')).rejects.toThrow('not found');
+  });
+
+  it('should handle callback and store session', async () => {
+    const config: SSOProviderConfig = {
+      id: 'google',
+      name: 'Google',
+      type: 'oidc',
+      enabled: true,
+      oidc: {
+        issuer: 'https://accounts.google.com',
+        clientId: 'test',
+        clientSecret: 'test',
+        redirectUri: 'https://app.example.com/callback',
+      },
+    };
+
+    await manager.registerProvider(config);
+    const session = await manager.handleCallback('google', { code: 'test-code' });
+    expect(session.provider).toBe('google');
+    expect(manager.getSession(session.userId)).toBeDefined();
+  });
+
+  it('should throw when handling callback for unknown provider', async () => {
+    await expect(manager.handleCallback('unknown', {})).rejects.toThrow('not found');
+  });
+
+  it('should logout and remove session', async () => {
+    const config: SSOProviderConfig = {
+      id: 'google',
+      name: 'Google',
+      type: 'oidc',
+      enabled: true,
+      oidc: {
+        issuer: 'https://accounts.google.com',
+        clientId: 'test',
+        clientSecret: 'test',
+        redirectUri: 'https://app.example.com/callback',
+      },
+    };
+
+    await manager.registerProvider(config);
+    const session = await manager.handleCallback('google', { code: 'test' });
+    await manager.logout(session.userId);
+    expect(manager.getSession(session.userId)).toBeUndefined();
+  });
+
+  it('logout is no-op for unknown user', async () => {
+    await expect(manager.logout('nonexistent')).resolves.toBeUndefined();
+  });
 });

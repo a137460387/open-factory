@@ -248,9 +248,8 @@ fn run_transcode_task(
     if let Err(error) = transcode_children()
         .lock()
         .map_err(|_| "Unable to lock transcode processes".to_string())
-        .and_then(|mut children| {
+        .map(|mut children| {
             children.insert(task.task_id.clone(), child);
-            Ok(())
         })
     {
         emit_progress(

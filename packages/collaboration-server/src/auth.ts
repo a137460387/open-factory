@@ -46,11 +46,15 @@ export class AuthError extends Error {
 /**
  * Verify a JWT token string and return the decoded payload.
  * Throws AuthError on any failure.
+ * Rejects empty and whitespace-only tokens explicitly.
  */
 export function verifyToken(
   token: string,
   config: Pick<CollaborationConfig, "jwt">
 ): TokenPayload {
+  if (!token || token.trim().length === 0) {
+    throw new AuthError("Token must not be empty", "TOKEN_INVALID");
+  }
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,

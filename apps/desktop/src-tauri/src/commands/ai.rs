@@ -53,6 +53,21 @@ pub struct OllamaModelsResult {
 
 #[tauri::command]
 pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> Result<CallAiApiResult, String> {
+    // Input validation
+    crate::input_validator::validate_non_empty_string(&request.provider_id, "provider_id")?;
+    crate::input_validator::validate_non_empty_string(&request.base_url, "base_url")?;
+    crate::input_validator::validate_string(&request.model, "model")?;
+    crate::input_validator::validate_array_length(&request.messages, "messages")?;
+    if let Some(key) = &api_key {
+        crate::input_validator::validate_string(key, "api_key")?;
+    }
+    if let Some(max_tokens) = request.max_tokens {
+        crate::input_validator::validate_range(max_tokens, 1, 1_000_000, "max_tokens")?;
+    }
+    if let Some(temp) = request.temperature {
+        crate::input_validator::validate_range(temp, 0.0, 2.0, "temperature")?;
+    }
+
     if request.provider_id != "ollama" {
         crate::net_guard::ensure_not_private(&request.base_url).await?;
     }

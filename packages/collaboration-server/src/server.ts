@@ -135,6 +135,35 @@ export function createCollaborationServer(
     authMiddleware(socket, next);
   });
 
+  // Rate limiting: max 100 events per minute per socket
+  const RATE_LIMIT_WINDOW_MS = 60_000;
+  const RATE_LIMIT_MAX = 100;
+
+  io.use((socket, next) => {
+    let eventCount = 0;
+    let windowStart = Date.now();
+
+    const originalOnEvent = socket.onAny.bind(socket);
+    socket.onAny((event, ...args) => {
+      const now = Date.now();
+      if (now - windowStart > RATE_LIMIT_WINDOW_MS) {
+        eventCount = 0;
+        windowStart = now;
+      }
+      eventCount++;
+      if (eventCount > RATE_LIMIT_MAX) {
+        socket.emit("room:error", {
+          message: "Rate limit exceeded. Please slow down.",
+          code: "RATE_LIMIT_EXCEEDED",
+        });
+        return;
+      }
+      originalOnEvent(event, ...args);
+    });
+
+    next();
+  });
+
   // Error handling for auth failures
   io.on("connection_error", (err) => {
     if (err.message.includes("auth") || err.message.includes("token")) {
