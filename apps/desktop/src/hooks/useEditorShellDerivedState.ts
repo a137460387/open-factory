@@ -3,6 +3,7 @@ import {
   type Clip,
   type MediaAsset,
   type Project,
+  type BeatMarker,
   findSyncCompareClipRefs,
   round,
   estimateBpmFromBeatMarkers,
@@ -104,10 +105,10 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
             })),
         )
         .filter(
-          (item: any): item is { clip: Extract<Clip, { type: 'video' | 'image' }>; trackId: string; media: MediaAsset } =>
+          (item): item is { clip: Extract<Clip, { type: 'video' | 'image' }>; trackId: string; media: MediaAsset } =>
             Boolean(item.media),
         )
-        .sort((left: any, right: any) => left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id)),
+        .sort((left, right) => left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id)),
     [project.media, project.timeline.tracks],
   );
 
@@ -218,26 +219,26 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
       .map((id) =>
         project.timeline.tracks
           .flatMap((track: Track) => track.clips.map((clip: Clip) => ({ clip, track })))
-          .find((item: any) => item.clip.id === id),
+          .find((item) => item.clip.id === id),
       )
-      .filter(Boolean);
+      .filter((item): item is { clip: Clip; track: Track } => Boolean(item));
     return (
       selected.length === selectedClipIds.length &&
       selected.every(
-        (item: any) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'),
+        (item) => item.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'),
       )
     );
   }, [project.timeline.tracks, selectedClipIds]);
 
   const selectedPiPClips = useMemo(() => {
     if (selectedClipIds.length !== 2) return [];
-    type ClipWithTrack = { clip: Clip; track: any; trackIndex: number; selectedIndex: number };
-    const allClips = project.timeline.tracks.flatMap((track: any, trackIndex: number) =>
+    type ClipWithTrack = { clip: Clip; track: Track; trackIndex: number; selectedIndex: number };
+    const allClips = project.timeline.tracks.flatMap((track: Track, trackIndex: number) =>
       track.clips.map((clip: Clip) => ({ clip, track, trackIndex })),
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
-        const item = allClips.find((candidate: any) => candidate.clip.id === id);
+        const item = allClips.find((candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id);
         return item ? { ...item, selectedIndex } : undefined;
       })
       .filter((item): item is ClipWithTrack => item !== undefined)
@@ -249,13 +250,13 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
 
   const selectedSplitLayoutClips = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 4) return [];
-    type ClipWithTrack = { clip: Clip; track: any; trackIndex: number; selectedIndex: number };
-    const allClips = project.timeline.tracks.flatMap((track: any, trackIndex: number) =>
+    type ClipWithTrack = { clip: Clip; track: Track; trackIndex: number; selectedIndex: number };
+    const allClips = project.timeline.tracks.flatMap((track: Track, trackIndex: number) =>
       track.clips.map((clip: Clip) => ({ clip, track, trackIndex })),
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
-        const item = allClips.find((candidate: any) => candidate.clip.id === id);
+        const item = allClips.find((candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id);
         return item ? { ...item, selectedIndex } : undefined;
       })
       .filter((item): item is ClipWithTrack => item !== undefined)

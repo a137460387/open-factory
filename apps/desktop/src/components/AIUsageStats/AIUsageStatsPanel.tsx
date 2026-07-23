@@ -15,9 +15,9 @@ const t = zhCN.settings.aiServices;
 const CHART_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
 
 export function AIUsageStatsPanel() {
-  const store = useAISettingsStore();
-  const records = store.usageRecords as AIFeatureUsageRecord[];
-  const costAlertThreshold = store.costAlertThreshold;
+  const records = useAISettingsStore((s) => s.usageRecords) as AIFeatureUsageRecord[];
+  const costAlertThreshold = useAISettingsStore((s) => s.costAlertThreshold);
+  const setCostAlertThreshold = useAISettingsStore((s) => s.setCostAlertThreshold);
 
   const providerStats = useMemo(() => aggregateByProvider(records), [records]);
   const featureStats = useMemo(() => aggregateByFeature(records), [records]);
@@ -245,7 +245,7 @@ export function AIUsageStatsPanel() {
             value={costAlertThreshold}
             min={0}
             step={10}
-            onChange={(e) => store.setCostAlertThreshold(Number(e.target.value))}
+            onChange={(e) => setCostAlertThreshold(Number(e.target.value))}
             data-testid="cost-alert-threshold"
           />
         </div>

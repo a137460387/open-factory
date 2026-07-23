@@ -3,20 +3,18 @@ import { useEditorStore, findMulticamClipInProject } from '../store/editorStore'
 import { AngleSwitcherPanel } from './AngleSwitcher/AngleSwitcherPanel';
 
 export const PreviewPanel: React.FC = () => {
-  const {
-    multicamEditMode,
-    activeMulticamClipId,
-    playheadTime,
-    isPlaying,
-    project,
-    isMulticamSyncing,
-    switchMulticamAngle,
-    syncMulticamClip,
-    addMulticamSwitchPoint,
-    deleteMulticamSwitchPoint,
-    updateMulticamSwitchPoint,
-    detectMulticamDrift,
-  } = useEditorStore();
+  const multicamEditMode = useEditorStore((s) => s.multicamEditMode);
+  const activeMulticamClipId = useEditorStore((s) => s.activeMulticamClipId);
+  const playheadTime = useEditorStore((s) => s.playheadTime);
+  const isPlaying = useEditorStore((s) => s.isPlaying);
+  const project = useEditorStore((s) => s.project);
+  const isMulticamSyncing = useEditorStore((s) => s.isMulticamSyncing);
+  const switchMulticamAngle = useEditorStore((s) => s.switchMulticamAngle);
+  const syncMulticamClip = useEditorStore((s) => s.syncMulticamClip);
+  const addMulticamSwitchPoint = useEditorStore((s) => s.addMulticamSwitchPoint);
+  const deleteMulticamSwitchPoint = useEditorStore((s) => s.deleteMulticamSwitchPoint);
+  const updateMulticamSwitchPoint = useEditorStore((s) => s.updateMulticamSwitchPoint);
+  const detectMulticamDrift = useEditorStore((s) => s.detectMulticamDrift);
 
   // Find the active multicam clip
   const activeMulticamClip =

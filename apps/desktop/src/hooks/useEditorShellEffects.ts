@@ -3,7 +3,7 @@ import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 import { initMediaIndexDb, listenBridge, type DemucsProgressEvent } from '../lib/tauri-bridge';
-import { getDemucsAvailability } from '../lib/demucs';
+import { getDemucsAvailability, type DemucsAvailability } from '../lib/demucs';
 import { normalizeTutorialProgressSettings, advanceTutorialProgress, type TutorialProgressSettings, type TutorialSignals } from '../tutorial/tutorialState';
 import { saveTutorialProgressSettings } from '../settings/appSettings';
 

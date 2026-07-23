@@ -4,7 +4,8 @@ import { featureStrings } from '../i18n/featureStrings';
 
 /** Toolbar alert icon - shown when there are active alerts. */
 export function PerformanceAlertIcon() {
-  const { alerts, setPanelOpen } = usePerformanceMonitorStore();
+  const alerts = usePerformanceMonitorStore((s) => s.alerts);
+  const setPanelOpen = usePerformanceMonitorStore((s) => s.setPanelOpen);
   if (alerts.length === 0) return null;
   return (
     <button

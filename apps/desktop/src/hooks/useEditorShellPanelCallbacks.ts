@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from 'react';
-import type { MediaAsset, MediaLabelColor, MediaFlag } from '@open-factory/editor-core';
+import type { MediaAsset, MediaLabelColor, MediaFlag, Subclip, MediaMetadata } from '@open-factory/editor-core';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import type { AutoAudioSyncApplyMode } from '@open-factory/editor-core';
+import type { AutoAudioSyncApplyMode, EffectPreset, TitleTemplateId, MediaRenamePreviewItem } from '@open-factory/editor-core';
 
 interface PanelCallbacksDeps {
   importMedia: () => Promise<void>;
@@ -16,30 +16,30 @@ interface PanelCallbacksDeps {
   scanDuplicateMedia: () => Promise<void>;
   addAssetToTimeline: (assetId: string) => void;
   addVersionForMedia: (assetId: string) => Promise<void>;
-  openMediaVersionCompare: (request: any) => void;
+  openMediaVersionCompare: (assetId: string) => void;
   addAdjustmentLayer: () => void;
   relinkMedia: (assetId: string) => Promise<void>;
   relinkAllMissing: () => Promise<void>;
   generateProxyForMedia: (assetId: string) => Promise<void>;
   convertVfrMediaToCfr: (assetId: string) => void;
-  setMediaMetadata: (assetId: string, metadata: any) => void;
-  batchUpdateMediaMetadata: (assetIds: string[], metadata: any) => void;
-  batchRenameMedia: (assetIds: string[], preview: any[], renameFiles: boolean) => Promise<void>;
-  addTitleTemplate: (templateId: any) => void;
+  setMediaMetadata: (assetId: string, metadata: Partial<MediaMetadata>) => void;
+  batchUpdateMediaMetadata: (assetIds: string[], metadata: Partial<MediaMetadata>) => void;
+  batchRenameMedia: (assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => Promise<void>;
+  addTitleTemplate: (templateId: TitleTemplateId) => void;
   createMediaFolder: (parentId?: string | null) => void;
   renameMediaFolder: (folderId: string, name: string) => void;
   deleteMediaFolder: (folderId: string) => void;
   setMediaFolderCollapsed: (folderId: string, collapsed: boolean) => void;
   moveMediaToFolder: (assetIds: string[], folderId?: string | null) => void;
-  applyEffectPresetToSelectedClip: (preset: any) => void;
+  applyEffectPresetToSelectedClip: (preset: EffectPreset) => void;
   handleToggleFavorite: (assetId: string) => void;
   handleRevealFromMediaBin: (assetId: string) => void;
   handlePinToSession: (assetId: string) => void;
-  handleAddSubclip: (subclip: any) => void;
-  handleUpdateSubclip: (assetId: string, subclip: any) => void;
+  handleAddSubclip: (subclip: Subclip) => void;
+  handleUpdateSubclip: (assetId: string, subclip: Partial<Subclip>) => void;
   handleDeleteSubclip: (subclipId: string) => void;
-  handleAddSubclipToTimeline: (assetId: string, subclip: any) => void;
-  projectMediaMetadata: Record<string, any>;
+  handleAddSubclipToTimeline: (assetId: string, subclip: Subclip) => void;
+  projectMediaMetadata: Record<string, MediaMetadata>;
 }
 
 /**
@@ -108,8 +108,8 @@ export function useEditorShellPanelCallbacks(deps: PanelCallbacksDeps) {
         setMediaMetadata(assetId, { ...projectMediaMetadata[assetId], rating }),
       onSetFlag: (assetId: string, flag?: MediaFlag) =>
         setMediaMetadata(assetId, { ...projectMediaMetadata[assetId], flag }),
-      onBatchUpdateMetadata: (assetIds: string[], metadata: any) => batchUpdateMediaMetadata(assetIds, metadata),
-      onBatchRenameMedia: (assetIds: string[], preview: any[], renameFiles: boolean) => batchRenameMedia(assetIds, preview, renameFiles),
+      onBatchUpdateMetadata: (assetIds: string[], metadata: Partial<MediaMetadata>) => batchUpdateMediaMetadata(assetIds, metadata),
+      onBatchRenameMedia: (assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => batchRenameMedia(assetIds, preview, renameFiles),
       onAddTitleTemplate: addTitleTemplate,
       onCreateFolder: (parentId?: string | null) => createMediaFolder(parentId),
       onRenameFolder: renameMediaFolder,
@@ -120,8 +120,8 @@ export function useEditorShellPanelCallbacks(deps: PanelCallbacksDeps) {
       onToggleFavorite: handleToggleFavorite,
       onRevealInTimeline: handleRevealFromMediaBin,
       onPinToSession: handlePinToSession,
-      onAddSubclip: (subclip: any) => handleAddSubclip(subclip),
-      onUpdateSubclip: (subclipId: string, patch: any) => handleUpdateSubclip(subclipId, patch),
+      onAddSubclip: (subclip: Subclip) => handleAddSubclip(subclip),
+      onUpdateSubclip: (subclipId: string, patch: Partial<Subclip>) => handleUpdateSubclip(subclipId, patch),
       onDeleteSubclip: handleDeleteSubclip,
       onAddSubclipToTimeline: handleAddSubclipToTimeline,
     }),

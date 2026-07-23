@@ -3,6 +3,7 @@ import { Filter, Loader2, Tag, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { formatDurationMs } from '@open-factory/editor-core/utils/time';
 import { useMediaIndexStore } from '../../store/mediaIndexStore';
+import { useShallow } from 'zustand/react/shallow';
 import type { TagWithCount } from '../../lib/tauri-bridge';
 
 interface AdvancedSearchPanelProps {
@@ -45,7 +46,22 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
     setResolutionRange,
     setDurationRange,
     setProjectPath,
-  } = useMediaIndexStore();
+  } = useMediaIndexStore(useShallow((s) => ({
+    searchQuery: s.searchQuery,
+    isSearching: s.isSearching,
+    searchResults: s.searchResults,
+    allTags: s.allTags,
+    tagsLoading: s.tagsLoading,
+    setSearchQuery: s.setSearchQuery,
+    clearFilters: s.clearFilters,
+    refreshTags: s.refreshTags,
+    addTagFilter: s.addTagFilter,
+    removeTagFilter: s.removeTagFilter,
+    toggleAssetType: s.toggleAssetType,
+    setResolutionRange: s.setResolutionRange,
+    setDurationRange: s.setDurationRange,
+    setProjectPath: s.setProjectPath,
+  })));
 
   const [expanded, setExpanded] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

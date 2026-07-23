@@ -244,7 +244,8 @@ const TIMELINE_GRID_UNITS: TimelineGridUnit[] = [
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
-  const aiSettings = useAISettingsStore();
+  const usageRecords = useAISettingsStore((s) => s.usageRecords);
+  const costAlertThreshold = useAISettingsStore((s) => s.costAlertThreshold);
   const edit = zhCN.editMenu;
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
@@ -1702,7 +1703,7 @@ export function Toolbar(props: ToolbarProps) {
           />
         ) : null}
       </div>
-      {checkCostAlert(aiSettings.usageRecords, aiSettings.costAlertThreshold) ? (
+      {checkCostAlert(usageRecords, costAlertThreshold) ? (
         <ToolButton
           title={zhCN.settings.aiServices.costAlertTitle}
           onClick={props.onOpenSettings}
