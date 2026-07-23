@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
-import { setLanguage } from '../i18n/strings';
+import { setLanguage, setLanguageAsync } from '../i18n/strings';
 import { writeReviewReportFile } from './reviewReport';
 
 describe('review report export helper', () => {
@@ -50,7 +50,7 @@ describe('review report export helper', () => {
       },
     ];
     const files = new Map<string, string>();
-    setLanguage('en');
+    await setLanguageAsync('en');
 
     await writeReviewReportFile(project, 'C:/Reports/review.html', (path, html) => {
       files.set(path, html);

@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ExportConditionRule } from '../settings/appSettings';
-import { setLanguage } from '../i18n/strings';
+import { setLanguage, setLanguageAsync } from '../i18n/strings';
 import { replaceExportRuleVariables, resolveCopyDestination, runExportRuleEvent } from './export-rules';
 
 describe('export condition rules', () => {
-  beforeAll(() => {
-    setLanguage('en');
+  beforeAll(async () => {
+    await setLanguageAsync('en');
   });
   it('replaces date and project variables with a path-safe project segment', () => {
     expect(

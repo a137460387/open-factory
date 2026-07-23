@@ -1,5 +1,4 @@
 import { formatSignedNumber } from './i18n-utils.js';
-import { enOverrides } from './en-overrides.js';
 
 const zh = {
   common: {
@@ -6248,10 +6247,23 @@ export type Language = 'zh' | 'en';
 export type LocaleStrings = WidenLocale<typeof zh>;
 
 
-const locales: Record<Language, LocaleStrings> = {
+const locales: Partial<Record<Language, LocaleStrings>> = {
   zh,
-  en: mergeLocale<LocaleStrings>(zh, enOverrides),
 };
+
+let enLoadPromise: Promise<LocaleStrings> | null = null;
+
+async function ensureEnglishLocale(): Promise<LocaleStrings> {
+  if (locales.en) return locales.en;
+  if (!enLoadPromise) {
+    enLoadPromise = import('./en-overrides.js').then((mod) => {
+      const merged = mergeLocale<LocaleStrings>(zh, mod.enOverrides);
+      locales.en = merged;
+      return merged;
+    });
+  }
+  return enLoadPromise;
+}
 
 // 初始化 i18next（副作用导入，确保在模块加载时执行）
 import i18nextInstance from './i18next-config';
@@ -6287,23 +6299,56 @@ export function setLanguage(language: string): Language {
   if (next === currentLanguage) {
     return currentLanguage;
   }
-  currentLanguage = next;
-  // 同步到 i18next
-  try {
-    void i18nextInstance.changeLanguage(next);
-  } catch {
-    /* i18next 未加载时静默忽略 */
+  // Lazy-load English locale in background when switching to en
+  if (next === 'en' && !locales.en) {
+    void ensureEnglishLocale().then(() => {
+      currentLanguage = next;
+      persistLanguage(next);
+      notifyListeners();
+    });
+    return currentLanguage;
   }
-  // 持久化到 localStorage
+  currentLanguage = next;
+  persistLanguage(next);
+  notifyListeners();
+  return currentLanguage;
+}
+
+/**
+ * Async version of setLanguage that waits for locale loading to complete.
+ * Use when you need to guarantee translations are available immediately.
+ */
+export async function setLanguageAsync(language: string): Promise<Language> {
+  const next = normalizeLanguage(language);
+  if (next === currentLanguage) {
+    return currentLanguage;
+  }
+  if (next === 'en') {
+    await ensureEnglishLocale();
+  }
+  currentLanguage = next;
+  persistLanguage(next);
+  notifyListeners();
+  return currentLanguage;
+}
+
+function persistLanguage(lng: Language): void {
   try {
-    localStorage.setItem('open-factory:language', next);
+    localStorage.setItem('open-factory:language', lng);
   } catch {
     /* localStorage 不可用时静默忽略 */
   }
+  try {
+    void i18nextInstance.changeLanguage(lng);
+  } catch {
+    /* i18next 未加载时静默忽略 */
+  }
+}
+
+function notifyListeners(): void {
   for (const listener of languageListeners) {
     listener();
   }
-  return currentLanguage;
 }
 
 export function subscribeLanguage(listener: () => void): () => void {
