@@ -493,12 +493,11 @@ export class ASRAccelerator {
   }
 
   private computeMFCC(frame: Float32Array): Float32Array {
-    // Simplified MFCC computation
-    const mfcc = new Float32Array(80);
-    for (let i = 0; i < 80; i++) {
-      mfcc[i] = Math.random(); // Placeholder
-    }
-    return mfcc;
+    // MFCC computation requires a trained model — not yet implemented
+    throw new Error(
+      'NotImplementedError: computeMFCC requires a trained acoustic model. ' +
+      'Connect a real ASR backend before calling transcribe().',
+    );
   }
 
   private async encoder(features: Float32Array): Promise<Float32Array> {
@@ -580,17 +579,11 @@ export class SemanticExtractorAccelerator {
   }
 
   private async computeEmbeddings(tokens: number[]): Promise<Float32Array> {
-    const embeddingDim = 768;
-    const embeddings = new Float32Array(tokens.length * embeddingDim);
-
-    for (let i = 0; i < tokens.length; i++) {
-      const offset = i * embeddingDim;
-      for (let j = 0; j < embeddingDim; j++) {
-        embeddings[offset + j] = Math.random() * 2 - 1; // Placeholder
-      }
-    }
-
-    return embeddings;
+    // Embedding computation requires a trained model — not yet implemented
+    throw new Error(
+      'NotImplementedError: computeEmbeddings requires a trained embedding model. ' +
+      'Connect a real NLP backend before calling extractEmbedding().',
+    );
   }
 
   private poolEmbeddings(embeddings: Float32Array): Float32Array {
@@ -805,19 +798,11 @@ export class InferenceEngine {
   }
 
   private async inferGeneric(input: TensorDescriptor): Promise<TensorDescriptor> {
-    // Generic CPU inference
-    const outputSize = input.shape.reduce((a, b) => a * b, 1);
-    const output = new Float32Array(outputSize);
-
-    for (let i = 0; i < outputSize; i++) {
-      output[i] = Math.random(); // Placeholder
-    }
-
-    return {
-      shape: [...input.shape],
-      dtype: 'float32',
-      data: output.buffer,
-    };
+    // Generic CPU inference requires a real model — not yet implemented
+    throw new Error(
+      'NotImplementedError: inferGeneric requires a loaded model. ' +
+      'No GPU backend available and no CPU fallback model is configured.',
+    );
   }
 }
 

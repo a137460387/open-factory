@@ -59,7 +59,7 @@ export function verifyToken(
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
-      algorithms: ["HS256", "HS384", "HS512"],
+      algorithms: ["HS256"],
     });
 
     const parsed = tokenPayloadSchema.safeParse(decoded);

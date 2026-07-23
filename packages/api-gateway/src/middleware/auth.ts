@@ -33,7 +33,7 @@ export function verifyToken(token: string): TokenPayload {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
-      algorithms: ['HS256', 'HS384', 'HS512'],
+      algorithms: ['HS256'],
     });
 
     return decoded as TokenPayload;
