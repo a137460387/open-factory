@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import type { Project } from '@open-factory/editor-core';
 
 const ComplexityScorePanelComponent = lazy(() =>
   import('../../complexity/ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })),
@@ -6,7 +7,7 @@ const ComplexityScorePanelComponent = lazy(() =>
 
 interface ComplexityScorePanelWrapperProps {
   open: boolean;
-  project: any;
+  project: Project;
   onClose: () => void;
 }
 

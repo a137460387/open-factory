@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { getTimelineDuration } from '@open-factory/editor-core';
+import { getTimelineDuration, type Project } from '@open-factory/editor-core';
 
 const RoughCutComparePanelComponent = lazy(() =>
   import('../SmartRoughCut/RoughCutComparePanel').then((module) => ({ default: module.RoughCutComparePanel })),
@@ -7,7 +7,7 @@ const RoughCutComparePanelComponent = lazy(() =>
 
 interface RoughCutComparePanelWrapperProps {
   open: boolean;
-  project: any;
+  project: Project;
   onClose: () => void;
 }
 

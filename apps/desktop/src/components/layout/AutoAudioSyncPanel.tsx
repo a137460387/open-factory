@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import type { AutoAudioSyncApplyMode, AutoAudioSyncResult } from '@open-factory/editor-core';
+import type { AutoAudioSyncDialogTarget } from '../../audio-sync/AutoAudioSyncDialog';
 
 const AutoAudioSyncDialogComponent = lazy(() =>
   import('../../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })),
@@ -7,7 +8,7 @@ const AutoAudioSyncDialogComponent = lazy(() =>
 
 interface AutoAudioSyncPanelProps {
   open: boolean;
-  targets: any[];
+  targets: AutoAudioSyncDialogTarget[];
   primaryClipId: string;
   mode: AutoAudioSyncApplyMode;
   running: boolean;

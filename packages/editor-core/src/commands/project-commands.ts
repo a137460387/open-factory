@@ -692,27 +692,332 @@ import {
 } from './helpers';
 import { normalizeClipKeyframes, normalizePastedKeyframes, cloneClipKeyframes, type ClipboardKeyframeGroup, type PasteMode } from '../keyframes';
 
-export class RemoveMediaCommand implements Command {
-  readonly description = 'Remove media';
+export class NewProjectCommand implements Command {
+  description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly nextProject: Project,
+    description = 'New project',
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectSpeakerLabelsCommand implements Command {
+  readonly description = 'Update project speaker labels';
   private before?: Project;
   private after?: Project;
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly assetIds: string | string[],
+    private readonly speakerLabels: Record<number, string>,
   ) {}
 
   execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      speakerLabels: { ...this.speakerLabels },
+      updatedAt: new Date().toISOString(),
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateSequenceSettingsCommand implements Command {
+  readonly description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly sequenceId: string,
+    private readonly newSettings: SequenceSettings | undefined,
+  ) {
+    this.description = 'Update sequence settings';
+  }
+
+  execute(): void {
     this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.assetIds);
-      assertMediaAssetsExist(this.before, removeIds);
-      const referencedIds = collectProjectMediaIds(this.before);
-      const referenced = Array.from(removeIds).filter((assetId) => referencedIds.has(assetId));
-      if (referenced.length > 0) {
-        throw new Error(`Media asset is still used by timeline clips: ${referenced.join(', ')}`);
+    const project = this.accessor.getProject();
+    const oldSequence = project.sequences.find((s) => s.id === this.sequenceId);
+    if (!oldSequence) return;
+
+    const oldSettings = oldSequence.settings;
+    const oldFps = oldSettings?.frameRate ?? project.settings.fps;
+    const newFps = this.newSettings?.frameRate ?? project.settings.fps;
+
+    const sequences = project.sequences.map((seq) => {
+      if (seq.id !== this.sequenceId) return seq;
+      return { ...seq, settings: this.newSettings };
+    });
+
+    // 帧率变更时重新对齐 clip 位置
+    if (oldFps !== newFps) {
+      for (const seq of sequences) {
+        if (seq.id !== this.sequenceId) continue;
+        recalculateClipStartsForFrameRate(seq.timeline, oldFps, newFps);
       }
-      this.after = removeMediaAssets(this.before, removeIds);
+    }
+
+    // 如果当前活跃序列就是被修改的序列，同步 timeline
+    let timeline = project.timeline;
+    if (project.activeSequenceId === this.sequenceId) {
+      const activeSeq = sequences.find((s) => s.id === this.sequenceId);
+      if (activeSeq) timeline = activeSeq.timeline;
+    }
+
+    this.accessor.setProject({
+      ...project,
+      timeline,
+      sequences,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class LoadProjectCommand implements Command {
+  description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly nextProject: Project,
+    description = 'Load project',
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectSettingsCommand implements Command {
+  readonly description = 'Update project settings';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly patch: Partial<ProjectSettings>,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject({
+      ...project,
+      settings: normalizeProjectSettings({ ...project.settings, ...this.patch }),
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ConformMediaCommand implements Command {
+  description: string;
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly replacements: ConformMediaReplacement[],
+    description = 'Conform media',
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    if (this.after) {
+      this.accessor.setProject(this.after);
+      return;
+    }
+    this.before ??= this.accessor.getProject();
+    this.after = {
+      ...applyConformMedia(this.accessor.getProject(), this.replacements),
+      updatedAt: new Date().toISOString(),
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectReleaseVersionCommand implements Command {
+  readonly description = 'Update project release version';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly releaseVersion: string,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject({
+      ...project,
+      releaseVersion: normalizeProjectReleaseVersion(this.releaseVersion),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectCoverCommand implements Command {
+  readonly description = 'Update project cover';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly coverPath?: string,
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const normalized =
+      typeof this.coverPath === 'string' && this.coverPath.trim()
+        ? this.coverPath.trim().replace(/\\/g, '/')
+        : undefined;
+    this.after = {
+      ...this.before,
+      coverPath: normalized,
+      updatedAt: new Date().toISOString(),
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectSpeakersCommand implements Command {
+  readonly description = 'Update project speakers';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly speakers: ProjectSpeaker[],
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      speakers: normalizeProjectSpeakers(this.speakers),
+      updatedAt: new Date().toISOString(),
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectDocumentationCommand implements Command {
+  readonly description = 'Update project documentation';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly documentation: ProjectDocumentation,
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      documentation: normalizeProjectDocumentation(this.documentation),
+      updatedAt: new Date().toISOString(),
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ImportEDLCommand implements Command {
+  readonly description = 'Import EDL';
+  private before?: Project;
+  private after?: Project;
+  private importResult?: Cmx3600EdlImportResult;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly contents: string,
+    private readonly options: Cmx3600EdlImportOptions = {},
+  ) {}
+
+  get result(): Cmx3600EdlImportResult | undefined {
+    return this.importResult;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      this.importResult = buildCmx3600EdlImport(this.before, this.contents, this.options);
+      this.after = applyCmx3600EdlImport(this.before, this.importResult);
     }
     this.accessor.setProject(this.after);
   }
@@ -724,26 +1029,27 @@ export class RemoveMediaCommand implements Command {
   }
 }
 
-export class MergeMediaCommand implements Command {
-  readonly description = 'Merge media references';
+export class ImportFCPXMLCommand implements Command {
+  readonly description = 'Import FCPXML';
   private before?: Project;
   private after?: Project;
+  private importResult?: FcpXmlImportResult;
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly keepAssetId: string,
-    private readonly mergedAssetIds: string[],
+    private readonly contents: string,
+    private readonly options: FcpXmlImportOptions = {},
   ) {}
+
+  get result(): FcpXmlImportResult | undefined {
+    return this.importResult;
+  }
 
   execute(): void {
     this.before ??= this.accessor.getProject();
     if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.mergedAssetIds.filter((assetId) => assetId !== this.keepAssetId));
-      if (removeIds.size === 0) {
-        throw new Error('No duplicate media assets selected');
-      }
-      assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
-      this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
+      this.importResult = buildFcpXmlImport(this.before, this.contents, this.options);
+      this.after = applyFcpXmlImport(this.before, this.importResult);
     }
     this.accessor.setProject(this.after);
   }
@@ -755,151 +1061,27 @@ export class MergeMediaCommand implements Command {
   }
 }
 
-export interface BatchUpdateMetadataCommandItem {
-  assetId: string;
-  metadata: BatchEditableMediaMetadata;
-}
-
-export class BatchUpdateMetadataCommand implements Command {
-  readonly description = 'Batch update media metadata';
+export class AddMediaFolderCommand implements Command {
+  readonly description = 'Add media folder';
   private before?: Project;
   private after?: Project;
+  private createdFolder?: MediaFolder;
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly updates: BatchUpdateMetadataCommandItem[],
+    private readonly input: MediaFolderInput = {},
   ) {}
 
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.updates.map((update) => update.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const mediaMetadata = { ...this.before.mediaMetadata };
-      for (const update of this.updates) {
-        const current = mediaMetadata[update.assetId] ?? {};
-        const normalized = normalizeMediaMetadataEntry({
-          ...current,
-          ...update.metadata,
-        });
-        if (normalized) {
-          mediaMetadata[update.assetId] = normalized;
-        } else {
-          delete mediaMetadata[update.assetId];
-        }
-      }
-      this.after = touchProject({
-        ...this.before,
-        mediaMetadata,
-      });
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export interface BatchRenameMediaCommandItem {
-  assetId: string;
-  name: string;
-  path?: string;
-}
-
-export class BatchRenameMediaCommand implements Command {
-  readonly description = 'Batch rename media';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly renames: BatchRenameMediaCommandItem[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.renames.map((rename) => rename.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const renameByAssetId = new Map(this.renames.map((rename) => [rename.assetId, rename]));
-      this.after = touchProject({
-        ...this.before,
-        media: this.before.media.map((asset) => {
-          const rename = renameByAssetId.get(asset.id);
-          if (!rename) {
-            return asset;
-          }
-          return {
-            ...asset,
-            name: rename.name.trim() || asset.name,
-            path: rename.path?.trim() || asset.path,
-          };
-        }),
-      });
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MigrateProxiesCommand implements Command {
-  readonly description = 'Migrate proxy paths';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: ProxyMigrationUpdate[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      this.after = {
-        ...this.before,
-        media: applyProxyMigration(this.before.media, this.updates),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class AutoRepairProjectHealthCommand implements Command {
-  readonly description = 'Auto repair project health';
-  private before?: Project;
-  private after?: Project;
-  private repairReport?: ProjectHealthRepairReport;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly input: ProjectHealthAutoRepairInput,
-  ) {}
-
-  get report(): ProjectHealthRepairReport | undefined {
-    return this.repairReport;
+  get folder(): MediaFolder | undefined {
+    return this.createdFolder;
   }
 
   execute(): void {
     this.before ??= this.accessor.getProject();
     if (!this.after) {
-      const result = applyProjectHealthAutoRepair(this.before, this.input);
+      const result = addMediaFolderToProject(this.before, this.input);
       this.after = result.project;
-      this.repairReport = result.report;
+      this.createdFolder = result.folder;
     }
     this.accessor.setProject(this.after);
   }
@@ -911,157 +1093,133 @@ export class AutoRepairProjectHealthCommand implements Command {
   }
 }
 
-export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
-
-export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
-
-function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
-  if (!isReplaceableMediaClip(clip)) {
-    throw new Error('Media replacement requires a media clip');
-  }
-  return clip;
-}
-
-function isReplaceableMediaClip(clip: Clip): clip is ReplaceableMediaClip {
-  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
-}
-
-export function calculateReplaceMediaPatch(
-  clip: ReplaceableMediaClip,
-  media: Pick<MediaAsset, 'id' | 'duration'>,
-  durationMode: ReplaceMediaDurationMode,
-): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
-  const minDuration = 1 / 30;
-  const originalDuration = Math.max(minDuration, clip.duration);
-  const mediaDuration = Math.max(minDuration, Number.isFinite(media.duration) ? media.duration : originalDuration);
-  if (durationMode === 'stretch-to-fit') {
-    return {
-      mediaId: media.id,
-      duration: round(originalDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: getClipSpeed({ speed: mediaDuration / originalDuration }),
-    };
-  }
-  if (durationMode === 'use-new-duration') {
-    return {
-      mediaId: media.id,
-      duration: round(mediaDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED,
-    };
-  }
-  const duration = Math.min(originalDuration, mediaDuration);
-  return {
-    mediaId: media.id,
-    duration: round(duration),
-    trimStart: 0,
-    trimEnd: round(Math.max(0, mediaDuration - duration)),
-    speed: DEFAULT_CLIP_SPEED,
-  };
-}
-
-export function getReplaceMediaCompatibilityWarnings(
-  clip: Clip,
-  media: Pick<MediaAsset, 'type' | 'hasAudio'>,
-): ReplaceMediaCompatibilityWarning[] {
-  if (!isReplaceableMediaClip(clip)) {
-    return ['media-type-mismatch'];
-  }
-  const warnings = new Set<ReplaceMediaCompatibilityWarning>();
-  if (clip.type !== media.type) {
-    warnings.add('media-type-mismatch');
-  }
-  const newMediaHasAudio = media.type === 'audio' || (media.type === 'video' && media.hasAudio !== false);
-  const clipHasAudioProperties =
-    clip.type === 'audio' ||
-    ('volume' in clip && clip.volume !== undefined) ||
-    Boolean(clip.keyframes?.volume?.length) ||
-    ('fadeInDuration' in clip && ((clip.fadeInDuration ?? 0) > 0 || (clip.fadeOutDuration ?? 0) > 0));
-  if (clipHasAudioProperties && !newMediaHasAudio) {
-    warnings.add('missing-audio-for-audio-properties');
-  }
-  return Array.from(warnings);
-}
-
-export class ReplaceMediaCommand implements Command {
-  readonly description = 'Replace media';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+export class RenameMediaFolderCommand implements Command {
+  readonly description = 'Rename media folder';
+  private before?: Project;
 
   constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-    private readonly durationMode: ReplaceMediaDurationMode,
+    private readonly accessor: ProjectAccessor,
+    private readonly folderId: string,
+    private readonly name: string,
   ) {}
 
   execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(renameMediaFolder(this.accessor.getProject(), this.folderId, this.name));
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setProject(this.before);
     }
   }
 }
 
-export class SwitchMediaVersionCommand implements Command {
-  readonly description = 'Switch media version';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+export class SetMediaFolderCollapsedCommand implements Command {
+  readonly description = 'Set media folder collapsed';
+  private before?: Project;
 
   constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
+    private readonly accessor: ProjectAccessor,
+    private readonly folderId: string,
+    private readonly collapsed: boolean,
   ) {}
 
   execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(setMediaFolderCollapsed(this.accessor.getProject(), this.folderId, this.collapsed));
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class DeleteMediaFolderCommand implements Command {
+  readonly description = 'Delete media folder';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly folderId: string,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(deleteMediaFolder(this.accessor.getProject(), this.folderId));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class MoveMediaToFolderCommand implements Command {
+  readonly description = 'Move media to folder';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly assetIds: string[],
+    private readonly folderId?: string | null,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(moveMediaAssetsToFolder(this.accessor.getProject(), this.assetIds, this.folderId));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectBeatSnapSuggestionsCommand implements Command {
+  readonly description = 'Update beat snap suggestions';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly suggestions: BeatSnapSuggestion[],
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject(touchProject({ ...project, beatSnapSuggestions: [...this.suggestions] }));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectMediaCollectionsCommand implements Command {
+  readonly description = 'Update media collections';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly collections: MediaCollection[],
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject(touchProject({ ...project, mediaCollections: [...this.collections] }));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
     }
   }
 }

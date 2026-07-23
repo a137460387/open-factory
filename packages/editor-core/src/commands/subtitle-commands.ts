@@ -692,376 +692,322 @@ import {
 } from './helpers';
 import { normalizeClipKeyframes, normalizePastedKeyframes, cloneClipKeyframes, type ClipboardKeyframeGroup, type PasteMode } from '../keyframes';
 
-export class RemoveMediaCommand implements Command {
-  readonly description = 'Remove media';
-  private before?: Project;
-  private after?: Project;
+function resolveSubtitleImportTarget(timeline: Timeline, targetTrackId: string | undefined): Track | undefined {
+  const track = targetTrackId
+    ? timeline.tracks.find((item) => item.id === targetTrackId)
+    : timeline.tracks.find((item) => item.type === 'subtitle');
+  if (track && track.type !== 'subtitle') {
+    throw new Error('Subtitle import target must be a subtitle track');
+  }
+  return track;
+}
+
+export interface BatchImportSubtitleCommandOptions {
+  mode: SubtitleDataImportMode;
+  targetTrackId?: string;
+}
+
+export class BatchImportSubtitleCommand implements Command {
+  readonly description = 'Import subtitle clips';
+  private before?: Timeline;
+  private after?: Timeline;
 
   constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly assetIds: string | string[],
+    private readonly accessor: TimelineAccessor,
+    private readonly track: Track,
+    private readonly options: BatchImportSubtitleCommandOptions,
   ) {}
 
   execute(): void {
-    this.before ??= this.accessor.getProject();
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
     if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.assetIds);
-      assertMediaAssetsExist(this.before, removeIds);
-      const referencedIds = collectProjectMediaIds(this.before);
-      const referenced = Array.from(removeIds).filter((assetId) => referencedIds.has(assetId));
-      if (referenced.length > 0) {
-        throw new Error(`Media asset is still used by timeline clips: ${referenced.join(', ')}`);
+      if (this.track.type !== 'subtitle') {
+        throw new Error('Batch subtitle import requires a subtitle track');
       }
-      this.after = removeMediaAssets(this.before, removeIds);
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MergeMediaCommand implements Command {
-  readonly description = 'Merge media references';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly keepAssetId: string,
-    private readonly mergedAssetIds: string[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.mergedAssetIds.filter((assetId) => assetId !== this.keepAssetId));
-      if (removeIds.size === 0) {
-        throw new Error('No duplicate media assets selected');
-      }
-      assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
-      this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export interface BatchUpdateMetadataCommandItem {
-  assetId: string;
-  metadata: BatchEditableMediaMetadata;
-}
-
-export class BatchUpdateMetadataCommand implements Command {
-  readonly description = 'Batch update media metadata';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: BatchUpdateMetadataCommandItem[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.updates.map((update) => update.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const mediaMetadata = { ...this.before.mediaMetadata };
-      for (const update of this.updates) {
-        const current = mediaMetadata[update.assetId] ?? {};
-        const normalized = normalizeMediaMetadataEntry({
-          ...current,
-          ...update.metadata,
-        });
-        if (normalized) {
-          mediaMetadata[update.assetId] = normalized;
-        } else {
-          delete mediaMetadata[update.assetId];
+      const clips = this.track.clips.map((clip) => {
+        if (clip.type !== 'subtitle') {
+          throw new Error('Batch subtitle import can only contain subtitle clips');
         }
+        return clip;
+      });
+      if (clips.length === 0) {
+        throw new Error('No subtitle clips to import');
       }
-      this.after = touchProject({
-        ...this.before,
-        mediaMetadata,
-      });
+      const targetTrack = resolveSubtitleImportTarget(timeline, this.options.targetTrackId);
+      const shouldUseExistingTrack = this.options.mode !== 'new-track' && targetTrack;
+      const targetTrackId = shouldUseExistingTrack ? targetTrack.id : this.track.id;
+      const importedClips = clips.map((clip) => ({ ...clip, trackId: targetTrackId }));
+      if (!shouldUseExistingTrack) {
+        this.after = {
+          ...timeline,
+          tracks: [...timeline.tracks, createTrack({ ...this.track, clips: importedClips })],
+        };
+      } else if (this.options.mode === 'replace-current-track') {
+        this.after = {
+          ...timeline,
+          tracks: timeline.tracks.map((track) =>
+            track.id === targetTrack.id
+              ? createTrack({ ...track, name: this.track.name, clips: importedClips })
+              : track,
+          ),
+        };
+      } else {
+        this.after = {
+          ...timeline,
+          tracks: timeline.tracks.map((track) =>
+            track.id === targetTrack.id ? createTrack({ ...track, clips: [...track.clips, ...importedClips] }) : track,
+          ),
+        };
+      }
     }
-    this.accessor.setProject(this.after);
+    this.accessor.setTimeline(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setProject(this.before);
+      this.accessor.setTimeline(this.before);
     }
   }
 }
 
-export interface BatchRenameMediaCommandItem {
-  assetId: string;
-  name: string;
-  path?: string;
-}
-
-export class BatchRenameMediaCommand implements Command {
-  readonly description = 'Batch rename media';
-  private before?: Project;
-  private after?: Project;
+export class BatchSubtitleTimingCommand implements Command {
+  readonly description = 'Retiming subtitle clips';
+  private before?: Timeline;
+  private after?: Timeline;
 
   constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly renames: BatchRenameMediaCommandItem[],
+    private readonly accessor: TimelineAccessor,
+    private readonly updates: SubtitleTimingUpdate[],
   ) {}
 
   execute(): void {
-    this.before ??= this.accessor.getProject();
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
     if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.renames.map((rename) => rename.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const renameByAssetId = new Map(this.renames.map((rename) => [rename.assetId, rename]));
-      this.after = touchProject({
-        ...this.before,
-        media: this.before.media.map((asset) => {
-          const rename = renameByAssetId.get(asset.id);
-          if (!rename) {
-            return asset;
-          }
-          return {
-            ...asset,
-            name: rename.name.trim() || asset.name,
-            path: rename.path?.trim() || asset.path,
-          };
-        }),
-      });
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MigrateProxiesCommand implements Command {
-  readonly description = 'Migrate proxy paths';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: ProxyMigrationUpdate[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      this.after = {
-        ...this.before,
-        media: applyProxyMigration(this.before.media, this.updates),
-        updatedAt: new Date().toISOString(),
+      const updatesByClipId = new Map(this.updates.map((update) => [update.clipId, update]));
+      if (updatesByClipId.size === 0) {
+        throw new Error('No subtitle timing updates');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => {
+            const update = updatesByClipId.get(clip.id);
+            if (!update) {
+              return clip;
+            }
+            if (clip.type !== 'subtitle') {
+              throw new Error('Subtitle timing updates can only target subtitle clips');
+            }
+            changed += 1;
+            return {
+              ...clip,
+              start: round(Math.max(0, update.start)),
+              duration: round(Math.max(1 / 30, update.duration)),
+            };
+          }),
+        })),
       };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for retiming');
+      }
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
     }
-    this.accessor.setProject(this.after);
+    this.accessor.setTimeline(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setProject(this.before);
+      this.accessor.setTimeline(this.before);
     }
   }
 }
 
-export class AutoRepairProjectHealthCommand implements Command {
-  readonly description = 'Auto repair project health';
-  private before?: Project;
-  private after?: Project;
-  private repairReport?: ProjectHealthRepairReport;
+export class BatchShiftSubtitleCommand implements Command {
+  readonly description = 'Shift subtitle clips';
+  private delegate?: BatchSubtitleTimingCommand;
 
   constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly input: ProjectHealthAutoRepairInput,
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly offsetSeconds: number,
+    private readonly projectDuration: number,
   ) {}
 
-  get report(): ProjectHealthRepairReport | undefined {
-    return this.repairReport;
+  execute(): void {
+    if (!this.delegate) {
+      const timeline = this.accessor.getTimeline();
+      const ids = new Set(this.clipIds);
+      const clips = timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
+      this.delegate = new BatchSubtitleTimingCommand(
+        this.accessor,
+        calculateSubtitleShiftUpdates(clips, this.offsetSeconds, this.projectDuration),
+      );
+    }
+    this.delegate.execute();
   }
 
+  undo(): void {
+    this.delegate?.undo();
+  }
+}
+
+export class BatchAlignSubtitleCommand implements Command {
+  readonly description = 'Align subtitle clips to audio peaks';
+  private delegate?: BatchSubtitleTimingCommand;
+  report: SubtitleAlignmentReport = { correctedCount: 0, averageOffsetMs: 0, updates: [] };
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly peakTimes: number[],
+    private readonly projectDuration: number,
+    private readonly options: SubtitleAlignmentOptions = {},
+  ) {}
+
   execute(): void {
-    this.before ??= this.accessor.getProject();
+    if (!this.delegate) {
+      const timeline = this.accessor.getTimeline();
+      const ids = new Set(this.clipIds);
+      const clips = timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
+      this.report = calculateSubtitleAlignmentUpdates(clips, this.peakTimes, this.projectDuration, this.options);
+      if (this.report.updates.length === 0) {
+        throw new Error('No subtitle alignment updates');
+      }
+      this.delegate = new BatchSubtitleTimingCommand(this.accessor, this.report.updates);
+    }
+    this.delegate.execute();
+  }
+
+  undo(): void {
+    this.delegate?.undo();
+  }
+}
+
+export class BatchProofreadSubtitleCommand implements Command {
+  readonly description = 'Fix subtitle proofreading issues';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly fixes: SubtitleProofreadingFix[],
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
     if (!this.after) {
-      const result = applyProjectHealthAutoRepair(this.before, this.input);
-      this.after = result.project;
-      this.repairReport = result.report;
+      const fixesByClipId = new Map(this.fixes.map((fix) => [fix.clipId, fix]));
+      if (fixesByClipId.size === 0) {
+        throw new Error('No subtitle proofreading fixes');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.flatMap((clip) => {
+            const fix = fixesByClipId.get(clip.id);
+            if (!fix) {
+              return [clip];
+            }
+            if (clip.type !== 'subtitle') {
+              throw new Error('Subtitle proofreading fixes can only target subtitle clips');
+            }
+            if (fix.delete) {
+              changed += 1;
+              return [];
+            }
+            const nextDuration = round(Math.max(1 / 30, fix.duration ?? clip.duration));
+            if (Math.abs(nextDuration - clip.duration) <= 0.000001) {
+              return [clip];
+            }
+            changed += 1;
+            return [{ ...clip, duration: nextDuration }];
+          }),
+        })),
+      };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for proofreading fixes');
+      }
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
     }
-    this.accessor.setProject(this.after);
+    this.accessor.setTimeline(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setProject(this.before);
+      this.accessor.setTimeline(this.before);
     }
   }
 }
 
-export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
-
-export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
-
-function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
-  if (!isReplaceableMediaClip(clip)) {
-    throw new Error('Media replacement requires a media clip');
-  }
-  return clip;
+export interface SubtitleTextUpdate {
+  clipId: string;
+  text: string;
 }
 
-function isReplaceableMediaClip(clip: Clip): clip is ReplaceableMediaClip {
-  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
-}
-
-export function calculateReplaceMediaPatch(
-  clip: ReplaceableMediaClip,
-  media: Pick<MediaAsset, 'id' | 'duration'>,
-  durationMode: ReplaceMediaDurationMode,
-): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
-  const minDuration = 1 / 30;
-  const originalDuration = Math.max(minDuration, clip.duration);
-  const mediaDuration = Math.max(minDuration, Number.isFinite(media.duration) ? media.duration : originalDuration);
-  if (durationMode === 'stretch-to-fit') {
-    return {
-      mediaId: media.id,
-      duration: round(originalDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: getClipSpeed({ speed: mediaDuration / originalDuration }),
-    };
-  }
-  if (durationMode === 'use-new-duration') {
-    return {
-      mediaId: media.id,
-      duration: round(mediaDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED,
-    };
-  }
-  const duration = Math.min(originalDuration, mediaDuration);
-  return {
-    mediaId: media.id,
-    duration: round(duration),
-    trimStart: 0,
-    trimEnd: round(Math.max(0, mediaDuration - duration)),
-    speed: DEFAULT_CLIP_SPEED,
-  };
-}
-
-export function getReplaceMediaCompatibilityWarnings(
-  clip: Clip,
-  media: Pick<MediaAsset, 'type' | 'hasAudio'>,
-): ReplaceMediaCompatibilityWarning[] {
-  if (!isReplaceableMediaClip(clip)) {
-    return ['media-type-mismatch'];
-  }
-  const warnings = new Set<ReplaceMediaCompatibilityWarning>();
-  if (clip.type !== media.type) {
-    warnings.add('media-type-mismatch');
-  }
-  const newMediaHasAudio = media.type === 'audio' || (media.type === 'video' && media.hasAudio !== false);
-  const clipHasAudioProperties =
-    clip.type === 'audio' ||
-    ('volume' in clip && clip.volume !== undefined) ||
-    Boolean(clip.keyframes?.volume?.length) ||
-    ('fadeInDuration' in clip && ((clip.fadeInDuration ?? 0) > 0 || (clip.fadeOutDuration ?? 0) > 0));
-  if (clipHasAudioProperties && !newMediaHasAudio) {
-    warnings.add('missing-audio-for-audio-properties');
-  }
-  return Array.from(warnings);
-}
-
-export class ReplaceMediaCommand implements Command {
-  readonly description = 'Replace media';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+export class BatchUpdateSubtitleTextCommand implements Command {
+  readonly description = 'Update subtitle text (AI polish)';
+  private before?: Timeline;
+  private after?: Timeline;
 
   constructor(
     private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-    private readonly durationMode: ReplaceMediaDurationMode,
+    private readonly updates: SubtitleTextUpdate[],
   ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
+    this.before ??= timeline;
+    if (!this.after) {
+      const updatesByClipId = new Map(this.updates.map((u) => [u.clipId, u]));
+      if (updatesByClipId.size === 0) {
+        throw new Error('No subtitle text updates');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => {
+            const update = updatesByClipId.get(clip.id);
+            if (!update || clip.type !== 'subtitle') {
+              return clip;
+            }
+            if (clip.text === update.text) {
+              return clip;
+            }
+            changed += 1;
+            return { ...clip, text: update.text };
+          }),
+        })),
+      };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for text updates');
+      }
+      this.after = nextTimeline;
     }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    this.accessor.setTimeline(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
-    }
-  }
-}
-
-export class SwitchMediaVersionCommand implements Command {
-  readonly description = 'Switch media version';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
-
-  constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-  ) {}
-
-  execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setTimeline(this.before);
     }
   }
 }

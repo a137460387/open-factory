@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Users, Video, Settings, Play, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useSpeakerMulticam } from '../../hooks/useSpeakerMulticam';
 import type { SpeakerDiarizationResult } from '@open-factory/editor-core/ai/speaker-diarization';
-import type { MulticamClip, MulticamSequence } from '@open-factory/editor-core';
+import type { MulticamClip, MulticamSequence, MulticamClipAngle } from '@open-factory/editor-core';
 import { formatTime } from '@open-factory/editor-core';
 
 /** 说话人-多机位面板属性 */
@@ -48,7 +48,7 @@ export function SpeakerMulticamPanel({
     if (diarizationResult && availableAngles.length > 0 && state.mappings.length === 0) {
       autoConfigureMappings(
         diarizationResult,
-        availableAngles.map((a: any, i: number) => ({
+        availableAngles.map((a: MulticamClipAngle, i: number) => ({
           index: i,
           name: a.name ?? `机位 ${i + 1}`,
         })),
@@ -151,7 +151,7 @@ export function SpeakerMulticamPanel({
                       data-testid={`angle-select-${speaker.speakerId}`}
                     >
                       <option value={-1}>未分配</option>
-                      {availableAngles.map((angle: any, index: number) => (
+                      {availableAngles.map((angle: MulticamClipAngle, index: number) => (
                         <option key={angle.id} value={index}>
                           {angle.name ?? `机位 ${index + 1}`}
                         </option>

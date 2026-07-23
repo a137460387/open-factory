@@ -692,106 +692,121 @@ import {
 } from './helpers';
 import { normalizeClipKeyframes, normalizePastedKeyframes, cloneClipKeyframes, type ClipboardKeyframeGroup, type PasteMode } from '../keyframes';
 
-export class RemoveMediaCommand implements Command {
-  readonly description = 'Remove media';
+export interface MulticamAngleCut {
+  sceneTime: number;
+  angleId: string;
+}
+
+export class RecordAngleCutCommand implements Command {
+  readonly description = 'Record multicam angle cuts';
+  private before?: Project;
+  private after?: Project;
+  private readonly cuts: MulticamAngleCut[];
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    cuts: MulticamAngleCut[] = [],
+  ) {
+    this.cuts = cuts.map((cut) => ({ sceneTime: cut.sceneTime, angleId: cut.angleId }));
+  }
+
+  get cutCount(): number {
+    return this.cuts.length;
+  }
+
+  record(sceneTime: number, angleId: string): void {
+    this.cuts.push({ sceneTime, angleId });
+    this.applyCuts();
+  }
+
+  execute(): void {
+    this.applyCuts();
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+
+  private applyCuts(): void {
+    this.before ??= this.accessor.getProject();
+    this.after = this.cuts.reduce(
+      (project, cut) => cutMulticamClip(project, this.clipId, cut.sceneTime, cut.angleId),
+      this.before,
+    );
+    this.accessor.setProject(this.after);
+  }
+}
+
+export class TrimMulticamSwitchCommand implements Command {
+  readonly description = 'Trim multicam switch';
   private before?: Project;
   private after?: Project;
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly assetIds: string | string[],
+    private readonly clipId: string,
+    private readonly switchId: string,
+    private readonly frameDelta: number,
+    private readonly fps: number,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.after ??= trimMulticamClip(this.before, this.clipId, this.switchId, this.frameDelta, this.fps);
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ApplyMulticamAiCutSuggestionsCommand implements Command {
+  readonly description = 'Apply AI multicam cut suggestions';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly suggestions: Array<{ time: number; angleId: string; confidence: number; reason: string }>,
   ) {}
 
   execute(): void {
     this.before ??= this.accessor.getProject();
     if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.assetIds);
-      assertMediaAssetsExist(this.before, removeIds);
-      const referencedIds = collectProjectMediaIds(this.before);
-      const referenced = Array.from(removeIds).filter((assetId) => referencedIds.has(assetId));
-      if (referenced.length > 0) {
-        throw new Error(`Media asset is still used by timeline clips: ${referenced.join(', ')}`);
+      const project = this.before;
+      const clip = findClip(project.timeline, this.clipId);
+      if (clip.type !== 'nested-sequence' || !clip.multicam) {
+        throw new Error('Clip is not a multicam sequence');
       }
-      this.after = removeMediaAssets(this.before, removeIds);
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MergeMediaCommand implements Command {
-  readonly description = 'Merge media references';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly keepAssetId: string,
-    private readonly mergedAssetIds: string[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.mergedAssetIds.filter((assetId) => assetId !== this.keepAssetId));
-      if (removeIds.size === 0) {
-        throw new Error('No duplicate media assets selected');
+      const normalized = normalizeMulticamSequence(clip.multicam, clip.duration);
+      if (!normalized) {
+        throw new Error('Invalid multicam sequence');
       }
-      assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
-      this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export interface BatchUpdateMetadataCommandItem {
-  assetId: string;
-  metadata: BatchEditableMediaMetadata;
-}
-
-export class BatchUpdateMetadataCommand implements Command {
-  readonly description = 'Batch update media metadata';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: BatchUpdateMetadataCommandItem[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.updates.map((update) => update.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const mediaMetadata = { ...this.before.mediaMetadata };
-      for (const update of this.updates) {
-        const current = mediaMetadata[update.assetId] ?? {};
-        const normalized = normalizeMediaMetadataEntry({
-          ...current,
-          ...update.metadata,
-        });
-        if (normalized) {
-          mediaMetadata[update.assetId] = normalized;
-        } else {
-          delete mediaMetadata[update.assetId];
-        }
+      const switchMap = new Map<number, { time: number; angleId: string }>();
+      for (const sw of normalized.switches) {
+        switchMap.set(sw.time, { time: sw.time, angleId: sw.angleId });
       }
-      this.after = touchProject({
-        ...this.before,
-        mediaMetadata,
-      });
+      for (const suggestion of this.suggestions) {
+        const localTime = round(Math.min(clip.duration, Math.max(0, suggestion.time - clip.start + clip.trimStart)));
+        switchMap.set(localTime, { time: localTime, angleId: suggestion.angleId });
+      }
+      const newSwitches = [...switchMap.values()]
+        .sort((a, b) => a.time - b.time)
+        .map((sw) => ({ id: createId('multicam-switch'), time: sw.time, angleId: sw.angleId }));
+      const finalMc = normalizeMulticamSequence({ ...normalized, switches: newSwitches }, clip.duration);
+      if (!finalMc) {
+        throw new Error('Invalid multicam after merge');
+      }
+      const multicam = { ...clip.multicam, switches: finalMc.switches, aiCutSuggestions: this.suggestions };
+      const updatedClip = { ...clip, multicam };
+      this.after = replaceProjectActiveTimeline(project, replaceClip(project.timeline, updatedClip));
     }
     this.accessor.setProject(this.after);
   }
@@ -803,103 +818,34 @@ export class BatchUpdateMetadataCommand implements Command {
   }
 }
 
-export interface BatchRenameMediaCommandItem {
-  assetId: string;
-  name: string;
-  path?: string;
-}
-
-export class BatchRenameMediaCommand implements Command {
-  readonly description = 'Batch rename media';
+export class CreateMulticamSequenceCommand implements Command {
+  readonly description = 'Create multicam sequence';
   private before?: Project;
   private after?: Project;
+  private resultClipId?: string;
+  private resultSequenceId?: string;
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly renames: BatchRenameMediaCommandItem[],
+    private readonly clipIds: string[],
+    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME,
   ) {}
 
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.renames.map((rename) => rename.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const renameByAssetId = new Map(this.renames.map((rename) => [rename.assetId, rename]));
-      this.after = touchProject({
-        ...this.before,
-        media: this.before.media.map((asset) => {
-          const rename = renameByAssetId.get(asset.id);
-          if (!rename) {
-            return asset;
-          }
-          return {
-            ...asset,
-            name: rename.name.trim() || asset.name,
-            path: rename.path?.trim() || asset.path,
-          };
-        }),
-      });
-    }
-    this.accessor.setProject(this.after);
+  get multicamClipId(): string | undefined {
+    return this.resultClipId;
   }
 
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MigrateProxiesCommand implements Command {
-  readonly description = 'Migrate proxy paths';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: ProxyMigrationUpdate[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      this.after = {
-        ...this.before,
-        media: applyProxyMigration(this.before.media, this.updates),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class AutoRepairProjectHealthCommand implements Command {
-  readonly description = 'Auto repair project health';
-  private before?: Project;
-  private after?: Project;
-  private repairReport?: ProjectHealthRepairReport;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly input: ProjectHealthAutoRepairInput,
-  ) {}
-
-  get report(): ProjectHealthRepairReport | undefined {
-    return this.repairReport;
+  get sequenceId(): string | undefined {
+    return this.resultSequenceId;
   }
 
   execute(): void {
     this.before ??= this.accessor.getProject();
     if (!this.after) {
-      const result = applyProjectHealthAutoRepair(this.before, this.input);
+      const result = createMulticamSequenceProject(this.before, this.clipIds, { sequenceName: this.sequenceName });
       this.after = result.project;
-      this.repairReport = result.report;
+      this.resultClipId = result.multicamClipId;
+      this.resultSequenceId = result.sequenceId;
     }
     this.accessor.setProject(this.after);
   }
@@ -911,157 +857,325 @@ export class AutoRepairProjectHealthCommand implements Command {
   }
 }
 
-export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
-
-export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
-
-function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
-  if (!isReplaceableMediaClip(clip)) {
-    throw new Error('Media replacement requires a media clip');
-  }
-  return clip;
-}
-
-function isReplaceableMediaClip(clip: Clip): clip is ReplaceableMediaClip {
-  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
-}
-
-export function calculateReplaceMediaPatch(
-  clip: ReplaceableMediaClip,
-  media: Pick<MediaAsset, 'id' | 'duration'>,
-  durationMode: ReplaceMediaDurationMode,
-): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
-  const minDuration = 1 / 30;
-  const originalDuration = Math.max(minDuration, clip.duration);
-  const mediaDuration = Math.max(minDuration, Number.isFinite(media.duration) ? media.duration : originalDuration);
-  if (durationMode === 'stretch-to-fit') {
-    return {
-      mediaId: media.id,
-      duration: round(originalDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: getClipSpeed({ speed: mediaDuration / originalDuration }),
-    };
-  }
-  if (durationMode === 'use-new-duration') {
-    return {
-      mediaId: media.id,
-      duration: round(mediaDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED,
-    };
-  }
-  const duration = Math.min(originalDuration, mediaDuration);
-  return {
-    mediaId: media.id,
-    duration: round(duration),
-    trimStart: 0,
-    trimEnd: round(Math.max(0, mediaDuration - duration)),
-    speed: DEFAULT_CLIP_SPEED,
-  };
-}
-
-export function getReplaceMediaCompatibilityWarnings(
-  clip: Clip,
-  media: Pick<MediaAsset, 'type' | 'hasAudio'>,
-): ReplaceMediaCompatibilityWarning[] {
-  if (!isReplaceableMediaClip(clip)) {
-    return ['media-type-mismatch'];
-  }
-  const warnings = new Set<ReplaceMediaCompatibilityWarning>();
-  if (clip.type !== media.type) {
-    warnings.add('media-type-mismatch');
-  }
-  const newMediaHasAudio = media.type === 'audio' || (media.type === 'video' && media.hasAudio !== false);
-  const clipHasAudioProperties =
-    clip.type === 'audio' ||
-    ('volume' in clip && clip.volume !== undefined) ||
-    Boolean(clip.keyframes?.volume?.length) ||
-    ('fadeInDuration' in clip && ((clip.fadeInDuration ?? 0) > 0 || (clip.fadeOutDuration ?? 0) > 0));
-  if (clipHasAudioProperties && !newMediaHasAudio) {
-    warnings.add('missing-audio-for-audio-properties');
-  }
-  return Array.from(warnings);
-}
-
-export class ReplaceMediaCommand implements Command {
-  readonly description = 'Replace media';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+export class CutMulticamClipCommand implements Command {
+  readonly description = 'Cut multicam clip';
+  private before?: Project;
+  private after?: Project;
 
   constructor(
-    private readonly accessor: TimelineAccessor,
+    private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-    private readonly durationMode: ReplaceMediaDurationMode,
+    private readonly sceneTime: number,
+    private readonly angleId: string,
   ) {}
 
   execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    this.before ??= this.accessor.getProject();
+    this.after ??= cutMulticamClip(this.before, this.clipId, this.sceneTime, this.angleId);
+    this.accessor.setProject(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setProject(this.before);
     }
   }
 }
 
-export class SwitchMediaVersionCommand implements Command {
-  readonly description = 'Switch media version';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+function cutMulticamClip(project: Project, clipId: string, sceneTime: number, angleId: string): Project {
+  const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+  const timeline = syncedProject.timeline;
+  const clip = findClip(timeline, clipId);
+  if (clip.type !== 'nested-sequence' || !clip.multicam) {
+    throw new Error('Clip is not a multicam sequence');
+  }
+  if (sceneTime < clip.start - 0.000001 || sceneTime > clip.start + clip.duration + 0.000001) {
+    throw new Error('Multicam cut time must be inside the clip bounds');
+  }
+  const localTime = round(Math.min(clip.duration, Math.max(0, sceneTime - clip.start + clip.trimStart)));
+  const switches = setMulticamSwitch(clip.multicam, localTime, angleId, clip.duration);
+  return replaceProjectActiveTimeline(
+    syncedProject,
+    replaceClip(timeline, {
+      ...clip,
+      multicam: {
+        ...clip.multicam,
+        switches,
+      },
+    }),
+  );
+}
+
+function trimMulticamClip(
+  project: Project,
+  clipId: string,
+  switchId: string,
+  frameDelta: number,
+  fps: number,
+): Project {
+  const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+  const timeline = syncedProject.timeline;
+  const clip = findClip(timeline, clipId);
+  if (clip.type !== 'nested-sequence' || !clip.multicam) {
+    throw new Error('Clip is not a multicam sequence');
+  }
+  const switches = trimMulticamSwitch(clip.multicam, switchId, frameDelta, fps, clip.duration);
+  return replaceProjectActiveTimeline(
+    syncedProject,
+    replaceClip(timeline, {
+      ...clip,
+      multicam: {
+        ...clip.multicam,
+        switches,
+      },
+    }),
+  );
+}
+
+export class CreateMulticamClipCommand implements Command {
+  readonly description = 'Create multicam clip';
+  private before?: Project;
+  private _result?: MulticamClip;
 
   constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
+    private readonly accessor: ProjectAccessor,
+    private readonly trackId: string,
+    private readonly angles: MulticamClipAngle[],
+    private readonly syncMode: MulticamSyncMode,
+    private readonly syncReferenceAngle: number,
+    private readonly start = 0,
+    private readonly duration = 10,
   ) {}
 
+  get result(): MulticamClip {
+    if (!this._result) {
+      throw new Error('Command not executed');
+    }
+    return this._result;
+  }
+
   execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
+    this.before ??= this.accessor.getProject();
+    if (!this._result) {
+      const clip = createMulticamClip(this.angles, this.syncMode, this.syncReferenceAngle);
+      this._result = { ...clip, trackId: this.trackId, start: this.start, duration: this.duration };
     }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    const project = this.accessor.getProject();
+    const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+    const timeline = syncedProject.timeline;
+    const nextTimeline = insertClip(timeline, this._result as unknown as Clip);
+    this.accessor.setProject(touchProject(replaceProjectActiveTimeline(syncedProject, nextTimeline)));
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class SwitchMulticamAngleCommand implements Command {
+  readonly description = 'Switch multicam angle';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly time: number,
+    private readonly targetAngle: number,
+    private readonly transition: SwitchTransition = 'cut',
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const newSwitchPoint: SwitchPoint = {
+        time: this.time,
+        targetAngle: this.targetAngle,
+        transition: this.transition,
+      };
+      const updatedClip: MulticamClip = { ...clip, switchPoints: addSwitchPoint(clip.switchPoints, newSwitchPoint) };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class DeleteSwitchPointCommand implements Command {
+  readonly description = 'Delete switch point';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly switchPointIndex: number,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedClip: MulticamClip = {
+        ...clip,
+        switchPoints: deleteSwitchPoint(clip.switchPoints, this.switchPointIndex),
+      };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateSwitchPointCommand implements Command {
+  readonly description = 'Update switch point';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly switchPointIndex: number,
+    private readonly updates: Partial<SwitchPoint>,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedClip: MulticamClip = {
+        ...clip,
+        switchPoints: updateSwitchPoint(clip.switchPoints, this.switchPointIndex, this.updates),
+      };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class SyncMulticamClipCommand implements Command {
+  readonly description = 'Sync multicam clip';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly syncMode: MulticamSyncMode,
+    private readonly offsets: Map<string, number>,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedAngles = clip.angles.map((angle) => {
+        const newOffset = this.offsets.get(angle.id);
+        return newOffset !== undefined ? { ...angle, offset: newOffset } : angle;
+      });
+      const updatedClip: MulticamClip = { ...clip, angles: updatedAngles, syncMode: this.syncMode };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateMulticamAngleCommand implements Command {
+  readonly description = 'Update multicam angle';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly angleIndex: number,
+    private readonly updates: Partial<MulticamClipAngle>,
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      if (this.angleIndex < 0 || this.angleIndex >= clip.angles.length) {
+        throw new Error('Angle index out of range');
+      }
+      const updatedAngles = clip.angles.map((angle, index) =>
+        index === this.angleIndex ? { ...angle, ...this.updates } : angle,
+      );
+      const updatedClip: MulticamClip = { ...clip, angles: updatedAngles };
+      this.after = touchProject(
+        replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)),
+      );
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
     }
   }
 }

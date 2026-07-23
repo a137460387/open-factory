@@ -692,376 +692,181 @@ import {
 } from './helpers';
 import { normalizeClipKeyframes, normalizePastedKeyframes, cloneClipKeyframes, type ClipboardKeyframeGroup, type PasteMode } from '../keyframes';
 
-export class RemoveMediaCommand implements Command {
-  readonly description = 'Remove media';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly assetIds: string | string[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.assetIds);
-      assertMediaAssetsExist(this.before, removeIds);
-      const referencedIds = collectProjectMediaIds(this.before);
-      const referenced = Array.from(removeIds).filter((assetId) => referencedIds.has(assetId));
-      if (referenced.length > 0) {
-        throw new Error(`Media asset is still used by timeline clips: ${referenced.join(', ')}`);
-      }
-      this.after = removeMediaAssets(this.before, removeIds);
-    }
-    this.accessor.setProject(this.after);
+function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
+  const cloned = {
+    ...clip,
+    colorCorrection: normalizeColorCorrection(clip.colorCorrection),
+    transform: { ...clip.transform },
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
+    slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
+    audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+    videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
+    qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
+    projection: normalizeClipProjection(clip.projection),
+    panorama: normalizeClipPanoramaView(clip.panorama),
+    masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
+    effects: cloneEffects(clip.effects),
+  };
+  if (clip.type === 'credits') {
+    return {
+      ...cloned,
+      rows: normalizeCreditsRows(clip.rows, clip.text),
+      rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
+      style: normalizeCreditsStyle(clip.style),
+    } as TClip;
   }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
+  if (clip.type === 'motion-graphic') {
+    return {
+      ...cloned,
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration),
+    } as TClip;
   }
+  if (clip.type === 'text' || clip.type === 'subtitle') {
+    if (clip.type === 'text') {
+      return {
+        ...cloned,
+        text: clip.text,
+        style: { ...clip.style },
+        richText: normalizeRichTextDocument(clip.richText, clip.text),
+        textLayout: normalizeTextLayout(clip.textLayout),
+        openTypeFeatures: normalizeTextOpenTypeFeatures(clip.openTypeFeatures),
+        arcText: normalizeTextArc(clip.arcText),
+        pathText: normalizeTextPath(clip.pathText),
+      } as TClip;
+    }
+    return { ...cloned, style: { ...clip.style } } as TClip;
+  }
+  return cloned as TClip;
 }
 
-export class MergeMediaCommand implements Command {
-  readonly description = 'Merge media references';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly keepAssetId: string,
-    private readonly mergedAssetIds: string[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const removeIds = normalizeAssetIdSet(this.mergedAssetIds.filter((assetId) => assetId !== this.keepAssetId));
-      if (removeIds.size === 0) {
-        throw new Error('No duplicate media assets selected');
-      }
-      assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
-      this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
-    }
-    this.accessor.setProject(this.after);
+function packNestedSequence(project: Project, clipIds: string[], sequenceName: string): Project {
+  const uniqueIds = Array.from(new Set(clipIds));
+  if (uniqueIds.length === 0) {
+    throw new Error('No clips selected for nested sequence');
+  }
+  const timeline = project.timeline;
+  const selectedIds = new Set(uniqueIds);
+  const trackIndexById = new Map(timeline.tracks.map((track, index) => [track.id, index]));
+  const locations = uniqueIds
+    .map((id) => findClipLocation(timeline, id))
+    .sort((left, right) => {
+      return (
+        (trackIndexById.get(left.trackId) ?? 0) - (trackIndexById.get(right.trackId) ?? 0) ||
+        left.clip.start - right.clip.start
+      );
+    });
+  const start = round(Math.min(...locations.map((location) => location.clip.start)));
+  const end = round(Math.max(...locations.map((location) => location.clip.start + location.clip.duration)));
+  const duration = round(Math.max(0.001, end - start));
+  const sequenceId = createId('sequence');
+  const name = sequenceName.trim() || DEFAULT_NESTED_SEQUENCE_NAME;
+  const target = locations[0];
+  const targetTrack = timeline.tracks.find((track) => track.id === target.trackId);
+  if (!targetTrack) {
+    throw new Error(`Track ${target.trackId} not found`);
+  }
+  const blocked = targetTrack.clips.some(
+    (clip) => !selectedIds.has(clip.id) && clip.start < end && clip.start + clip.duration > start,
+  );
+  if (blocked) {
+    throw new Error('Nested sequence would overlap an unselected clip');
   }
 
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export interface BatchUpdateMetadataCommandItem {
-  assetId: string;
-  metadata: BatchEditableMediaMetadata;
-}
-
-export class BatchUpdateMetadataCommand implements Command {
-  readonly description = 'Batch update media metadata';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: BatchUpdateMetadataCommandItem[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.updates.map((update) => update.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const mediaMetadata = { ...this.before.mediaMetadata };
-      for (const update of this.updates) {
-        const current = mediaMetadata[update.assetId] ?? {};
-        const normalized = normalizeMediaMetadataEntry({
-          ...current,
-          ...update.metadata,
-        });
-        if (normalized) {
-          mediaMetadata[update.assetId] = normalized;
-        } else {
-          delete mediaMetadata[update.assetId];
-        }
-      }
-      this.after = touchProject({
-        ...this.before,
-        mediaMetadata,
-      });
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export interface BatchRenameMediaCommandItem {
-  assetId: string;
-  name: string;
-  path?: string;
-}
-
-export class BatchRenameMediaCommand implements Command {
-  readonly description = 'Batch rename media';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly renames: BatchRenameMediaCommandItem[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const assetIds = normalizeAssetIdSet(this.renames.map((rename) => rename.assetId));
-      assertMediaAssetsExist(this.before, assetIds);
-      const renameByAssetId = new Map(this.renames.map((rename) => [rename.assetId, rename]));
-      this.after = touchProject({
-        ...this.before,
-        media: this.before.media.map((asset) => {
-          const rename = renameByAssetId.get(asset.id);
-          if (!rename) {
-            return asset;
-          }
-          return {
-            ...asset,
-            name: rename.name.trim() || asset.name,
-            path: rename.path?.trim() || asset.path,
-          };
+  const nestedTimeline = {
+    tracks: timeline.tracks
+      .map((track) =>
+        createTrack({
+          ...track,
+          clips: track.clips
+            .filter((clip) => selectedIds.has(clip.id))
+            .map((clip) => ({
+              ...cloneClipForNestedSequence(clip),
+              start: round(clip.start - start),
+              trackId: track.id,
+            })),
         }),
-      });
-    }
-    this.accessor.setProject(this.after);
-  }
+      )
+      .filter((track) => track.clips.length > 0),
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => selectedIds.has(transition.fromClipId) && selectedIds.has(transition.toClipId),
+    ),
+    markers: (timeline.markers ?? [])
+      .filter((marker) => marker.time >= start && marker.time <= end)
+      .map((marker) => ({ ...marker, time: round(marker.time - start) })),
+  };
 
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class MigrateProxiesCommand implements Command {
-  readonly description = 'Migrate proxy paths';
-  private before?: Project;
-  private after?: Project;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly updates: ProxyMigrationUpdate[],
-  ) {}
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      this.after = {
-        ...this.before,
-        media: applyProxyMigration(this.before.media, this.updates),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export class AutoRepairProjectHealthCommand implements Command {
-  readonly description = 'Auto repair project health';
-  private before?: Project;
-  private after?: Project;
-  private repairReport?: ProjectHealthRepairReport;
-
-  constructor(
-    private readonly accessor: ProjectAccessor,
-    private readonly input: ProjectHealthAutoRepairInput,
-  ) {}
-
-  get report(): ProjectHealthRepairReport | undefined {
-    return this.repairReport;
-  }
-
-  execute(): void {
-    this.before ??= this.accessor.getProject();
-    if (!this.after) {
-      const result = applyProjectHealthAutoRepair(this.before, this.input);
-      this.after = result.project;
-      this.repairReport = result.report;
-    }
-    this.accessor.setProject(this.after);
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setProject(this.before);
-    }
-  }
-}
-
-export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
-
-export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
-
-function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
-  if (!isReplaceableMediaClip(clip)) {
-    throw new Error('Media replacement requires a media clip');
-  }
-  return clip;
-}
-
-function isReplaceableMediaClip(clip: Clip): clip is ReplaceableMediaClip {
-  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
-}
-
-export function calculateReplaceMediaPatch(
-  clip: ReplaceableMediaClip,
-  media: Pick<MediaAsset, 'id' | 'duration'>,
-  durationMode: ReplaceMediaDurationMode,
-): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
-  const minDuration = 1 / 30;
-  const originalDuration = Math.max(minDuration, clip.duration);
-  const mediaDuration = Math.max(minDuration, Number.isFinite(media.duration) ? media.duration : originalDuration);
-  if (durationMode === 'stretch-to-fit') {
-    return {
-      mediaId: media.id,
-      duration: round(originalDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: getClipSpeed({ speed: mediaDuration / originalDuration }),
-    };
-  }
-  if (durationMode === 'use-new-duration') {
-    return {
-      mediaId: media.id,
-      duration: round(mediaDuration),
-      trimStart: 0,
-      trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED,
-    };
-  }
-  const duration = Math.min(originalDuration, mediaDuration);
-  return {
-    mediaId: media.id,
-    duration: round(duration),
+  const nestedClip = createNestedSequenceClip({
+    id: createId('clip'),
+    type: 'nested-sequence',
+    name,
+    trackId: target.trackId,
+    sequenceId,
+    start,
+    duration,
     trimStart: 0,
-    trimEnd: round(Math.max(0, mediaDuration - duration)),
-    speed: DEFAULT_CLIP_SPEED,
+    trimEnd: 0,
+  });
+  const nextTimeline = {
+    ...timeline,
+    tracks: timeline.tracks.map((track) => {
+      const kept = track.clips.filter((clip) => !selectedIds.has(clip.id));
+      if (track.id !== target.trackId) {
+        return { ...track, clips: kept };
+      }
+      const insertIndex = kept.findIndex((clip) => clip.start > nestedClip.start);
+      const clips =
+        insertIndex === -1
+          ? [...kept, nestedClip]
+          : [...kept.slice(0, insertIndex), nestedClip, ...kept.slice(insertIndex)];
+      return { ...track, clips };
+    }),
+    transitions: (timeline.transitions ?? []).filter(
+      (transition) => !selectedIds.has(transition.fromClipId) && !selectedIds.has(transition.toClipId),
+    ),
+  };
+  if (timelineHasOverlaps(nextTimeline)) {
+    throw new Error('Nested sequence would overlap another clip');
+  }
+
+  const syncedProject = replaceProjectActiveTimeline(project, nextTimeline);
+  return {
+    ...syncedProject,
+    sequences: [
+      ...syncedProject.sequences,
+      createSequence({
+        id: sequenceId,
+        name,
+        timeline: nestedTimeline,
+      }),
+    ],
   };
 }
 
-export function getReplaceMediaCompatibilityWarnings(
-  clip: Clip,
-  media: Pick<MediaAsset, 'type' | 'hasAudio'>,
-): ReplaceMediaCompatibilityWarning[] {
-  if (!isReplaceableMediaClip(clip)) {
-    return ['media-type-mismatch'];
-  }
-  const warnings = new Set<ReplaceMediaCompatibilityWarning>();
-  if (clip.type !== media.type) {
-    warnings.add('media-type-mismatch');
-  }
-  const newMediaHasAudio = media.type === 'audio' || (media.type === 'video' && media.hasAudio !== false);
-  const clipHasAudioProperties =
-    clip.type === 'audio' ||
-    ('volume' in clip && clip.volume !== undefined) ||
-    Boolean(clip.keyframes?.volume?.length) ||
-    ('fadeInDuration' in clip && ((clip.fadeInDuration ?? 0) > 0 || (clip.fadeOutDuration ?? 0) > 0));
-  if (clipHasAudioProperties && !newMediaHasAudio) {
-    warnings.add('missing-audio-for-audio-properties');
-  }
-  return Array.from(warnings);
-}
-
-export class ReplaceMediaCommand implements Command {
-  readonly description = 'Replace media';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
+export class PackNestedSequenceCommand implements Command {
+  readonly description = 'Pack nested sequence';
+  private before?: Project;
+  private after?: Project;
 
   constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-    private readonly durationMode: ReplaceMediaDurationMode,
+    private readonly accessor: ProjectAccessor,
+    private readonly clipIds: string[],
+    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME,
   ) {}
 
   execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
+    this.before ??= this.accessor.getProject();
+    this.after ??= packNestedSequence(this.before, this.clipIds, this.sequenceName);
+    this.accessor.setProject(this.after);
   }
 
   undo(): void {
     if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
-    }
-  }
-}
-
-export class SwitchMediaVersionCommand implements Command {
-  readonly description = 'Switch media version';
-  private before?: ReplaceableMediaClip;
-  private after?: ReplaceableMediaClip;
-
-  constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly clipId: string,
-    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
-  ) {}
-
-  execute(): void {
-    const timeline = this.accessor.getTimeline();
-    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
-    const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
-    this.after = {
-      ...this.before,
-      ...patch,
-    } as ReplaceableMediaClip;
-    if (this.after.type === 'video' || this.after.type === 'audio') {
-      this.after = {
-        ...this.after,
-        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
-        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration),
-      } as ReplaceableMediaClip;
-    }
-    const track = findTrack(timeline, this.after.trackId);
-    if (detectOverlap(track, this.after, this.before.id)) {
-      throw new Error('Clip overlaps another clip on this track');
-    }
-    this.accessor.setTimeline(replaceClip(timeline, this.after));
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+      this.accessor.setProject(this.before);
     }
   }
 }

@@ -1,42 +1,71 @@
 import { useMemo } from 'react';
-import type { OperationReplaySpeed } from '@open-factory/editor-core';
+import type {
+  OperationReplaySpeed,
+  MediaAsset,
+  Project,
+  ProjectTemplateId,
+  TimelineColorAnalysisResult,
+  SceneColorDifference,
+  OperationRecordingFile,
+  PerformanceProfilerReport,
+  SyncCompareClipRef,
+  SpeakerDiarizationSegment,
+  Track,
+  MissingMediaIssue,
+  OrphanMediaIssue,
+  DuplicateMediaIssue,
+  ProxyMissingIssue,
+} from '@open-factory/editor-core';
+import type { ExportPreset } from '../export/export-presets';
+import type { AutosaveRecoveryCandidate, ProjectFileEncryptionOptions } from '../lib/projectFiles';
+import type { ArchiveProgress } from '../lib/projectArchive';
+import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
+import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
+import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
+import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
+import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
+import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
+import type { ClipMacro } from '../macros/clip-macros';
+import type { PreviewPerformanceSettings } from '../lib/preview/preview-performance';
+import type { TimelineInteractionSettings } from '../settings/appSettings';
+import type { TutorialSignals } from '../tutorial/tutorialState';
 import { useEditorStore } from '../store/editorStore';
 
 interface FloatingDialogsDeps {
-  templateExportPreset: any;
+  templateExportPreset: ExportPreset | undefined;
   exportDialogOpen: boolean;
   setExportDialogOpen: (v: boolean) => void;
   timelineExportDialogOpen: boolean;
   setTimelineExportDialogOpen: (v: boolean) => void;
   lastExportPath: string | undefined;
   setLastExportPath: (p: string) => void;
-  setTutorialSignals: React.Dispatch<React.SetStateAction<any>>;
-  runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: any[]) => Promise<void>;
+  setTutorialSignals: React.Dispatch<React.SetStateAction<TutorialSignals>>;
+  runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => Promise<void>;
   relinkAllMissing: () => Promise<void>;
-  importEdlTimeline: (contents: string, path: string) => any;
-  importFcpXmlTimeline: (contents: string, path: string) => any;
-  addMedia: (media: any[]) => void;
-  createProjectFromTemplate: (templateId: any) => Promise<void>;
-  createProjectFromTimelineTemplate: (nextProject: any) => Promise<void>;
-  colorAnalysisResults: any;
-  colorAnalysisJumps: any;
+  importEdlTimeline: (contents: string, path: string) => { title: string; matchedCount: number; missingCount: number };
+  importFcpXmlTimeline: (contents: string, path: string) => { title: string; matchedCount: number; missingCount: number };
+  addMedia: (media: MediaAsset[]) => void;
+  createProjectFromTemplate: (templateId: ProjectTemplateId) => Promise<void>;
+  createProjectFromTimelineTemplate: (nextProject: Project) => Promise<void>;
+  colorAnalysisResults: TimelineColorAnalysisResult[];
+  colorAnalysisJumps: SceneColorDifference[];
   colorAnalysisBusy: boolean;
   runTimelineColorAnalysis: () => void;
   alignTimelineColorToReference: (referenceClipId: string) => void;
-  seekSpectrumTime: (asset: any, sourceTime: number) => void;
+  seekSpectrumTime: (asset: MediaAsset, sourceTime: number) => void;
   setSpectrumSelectionRange: (range: { inPoint: number; outPoint: number }) => void;
-  splitSpectrumAtTime: (asset: any, sourceTime: number) => void;
+  splitSpectrumAtTime: (asset: MediaAsset, sourceTime: number) => void;
   importVideosForStitchWizard: () => Promise<string[]>;
-  generateVideoStitchTimeline: (settings: any) => void;
-  generateSmartMontage: (config: any) => void;
+  generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
+  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: string }) => void;
   addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => Promise<void>;
   analyzePreferredContentTargets: () => void;
   exportContentAnalysis: (clipId: string) => Promise<void>;
   applySpeakerDiarization: () => void;
-  speakerDiarizationResult: any;
-  contentAnalysisTargets: any;
-  operationRecording: any;
+  speakerDiarizationResult: { sourceName: string; segments: SpeakerDiarizationSegment[]; tracks: Track[] } | undefined;
+  contentAnalysisTargets: ContentAnalysisTarget[];
+  operationRecording: OperationRecordingFile | undefined;
   operationRecordingActive: boolean;
   operationReplayRunning: boolean;
   operationRecordingStep: number;
@@ -51,15 +80,15 @@ interface FloatingDialogsDeps {
   exportOperationRecordingSlides: () => void;
   profilerRecording: boolean;
   profilerElapsedMs: number;
-  profilerReport: any;
+  profilerReport: PerformanceProfilerReport | undefined;
   startProfilerRecording: () => void;
   stopProfilerRecording: () => void;
   exportProfilerReportJson: () => void;
   saveNamedSnapshot: (name: string) => Promise<void>;
-  restoreSnapshotProject: (snapshotProject: any) => void;
-  applySnapshotDiffSelection: (sourceProject: any, itemIds: string[]) => void;
+  restoreSnapshotProject: (snapshotProject: Project) => void;
+  applySnapshotDiffSelection: (sourceProject: Project, itemIds: string[]) => void;
   updateProjectReleaseVersion: (version: string) => void;
-  syncCompareClipRefs: any[];
+  syncCompareClipRefs: SyncCompareClipRef[];
   jumpToMediaAsset: (assetId: string) => void;
   detectedBeatBpm: number | undefined;
   beatSyncBeatTimes: number[];
@@ -68,34 +97,34 @@ interface FloatingDialogsDeps {
   applyManualBeatBpm: () => void;
   detectSelectedBeats: () => Promise<void>;
   snapSelectedToBeats: () => void;
-  updatePreviewPerformance: (settings: any) => void;
-  updateTimelineInteractionSettings: (settings: any) => void;
+  updatePreviewPerformance: (settings: Partial<PreviewPerformanceSettings>) => void;
+  updateTimelineInteractionSettings: (settings: Partial<TimelineInteractionSettings>) => void;
   deleteProxiesForMedia: (assetIds: string[]) => Promise<void>;
   regenerateProxiesForMedia: (assetIds: string[]) => Promise<void>;
   migrateProxiesToDirectory: (targetDirectory: string) => Promise<void>;
-  executeMacro: (macro: any) => Promise<void>;
-  confirmProjectEncryptionSave: (options: any) => Promise<void>;
+  executeMacro: (macro: ClipMacro) => Promise<void>;
+  confirmProjectEncryptionSave: (options: ProjectFileEncryptionOptions) => Promise<void>;
   refreshProjectHealth: () => Promise<void>;
   autoRepairProjectHealth: () => Promise<void>;
-  relinkMissingFromHealth: (issue: any) => Promise<void>;
-  removeOrphanFromHealth: (issue: any) => Promise<void>;
-  mergeDuplicateFromHealth: (group: any) => Promise<void>;
-  queueProxyFromHealth: (issue: any) => Promise<void>;
-  mergeDuplicateMediaGroups: (selections: any[]) => void;
-  refreshMediaHealthDashboard: () => Promise<any>;
+  relinkMissingFromHealth: (issue: MissingMediaIssue) => Promise<void>;
+  removeOrphanFromHealth: (issue: OrphanMediaIssue) => Promise<void>;
+  mergeDuplicateFromHealth: (group: DuplicateMediaIssue) => Promise<void>;
+  queueProxyFromHealth: (issue: ProxyMissingIssue) => Promise<void>;
+  mergeDuplicateMediaGroups: (selections: DuplicateMediaMergeSelection[]) => void;
+  refreshMediaHealthDashboard: () => Promise<unknown>;
   repairFromMediaHealthDashboard: () => Promise<void>;
   openMediaHealthRelinkPanel: () => void;
   refreshMediaOrganizer: () => Promise<void>;
-  confirmMediaOrganizerDuplicateGroups: (selections: any[], moveFilesToTrash: boolean) => Promise<void>;
+  confirmMediaOrganizerDuplicateGroups: (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => Promise<void>;
   removeMediaOrganizerReferences: (assetIds: string[]) => void;
   archiveUnusedMedia: () => Promise<void>;
   renameUnusedMedia: (template: string) => Promise<void>;
-  recoveryCandidate: any;
-  exportQueueRecovery: any;
-  archiveProgress: any;
-  sharePackageProgress: any;
-  restoreRecovery: (candidate: any) => Promise<void>;
-  discardRecovery: (candidate: any) => Promise<void>;
+  recoveryCandidate: AutosaveRecoveryCandidate | undefined;
+  exportQueueRecovery: ExportQueueRecoveryCandidate | undefined;
+  archiveProgress: ArchiveProgress | undefined;
+  sharePackageProgress: SharePackageWorkflowProgress | undefined;
+  restoreRecovery: (candidate: AutosaveRecoveryCandidate) => Promise<void>;
+  discardRecovery: (candidate: AutosaveRecoveryCandidate) => Promise<void>;
   restoreExportQueueRecovery: (taskIds: string[]) => Promise<void>;
   discardExportQueueRecovery: () => Promise<void>;
   skipTutorial: () => void;
@@ -117,7 +146,7 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       lastExportPath: deps.lastExportPath,
       onExportCompleted: (path: string) => {
         deps.setLastExportPath(path);
-        deps.setTutorialSignals((current: any) => ({ ...current, videoExported: true }));
+        deps.setTutorialSignals((current: TutorialSignals) => ({ ...current, videoExported: true }));
         void deps.runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
       },
       onRelinkMissing: () => void deps.relinkAllMissing(),
