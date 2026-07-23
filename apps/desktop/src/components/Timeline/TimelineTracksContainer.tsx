@@ -189,6 +189,7 @@ interface TimelineTracksContainerProps {
   handleAiReframe: (clipId: string) => void;
   handleAiTransitionRecommend: (clipId: string) => void;
   handleAnomalyDetect: (clipId: string) => void;
+  onRoughCutCompare?: (clipId: string) => void;
   createGroupFromSelection: () => void;
   ungroupSelected: (group?: any) => void;
   deleteGroup: (...args: any[]) => void;
@@ -346,6 +347,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
   handleAiReframe,
   handleAiTransitionRecommend,
   handleAnomalyDetect,
+  onRoughCutCompare,
   createGroupFromSelection,
   ungroupSelected,
   deleteGroup,
@@ -744,6 +746,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                 onAiReframe={() => handleAiReframe(clipMenu.clipId)}
                 onAiTransitionRecommend={() => handleAiTransitionRecommend(clipMenu.clipId)}
                 onAnomalyDetect={() => handleAnomalyDetect(clipMenu.clipId)}
+                onRoughCutCompare={onRoughCutCompare ? () => onRoughCutCompare(clipMenu.clipId) : undefined}
                 onCreateGroup={createGroupFromSelection}
                 onUngroup={(group) => ungroupSelected(group)}
                 onDeleteGroup={deleteGroup}

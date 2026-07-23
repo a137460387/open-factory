@@ -1632,6 +1632,15 @@ export function EditorShell() {
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
   }, []);
+
+  // Sprint AT: Auto-show gesture tutorial on first launch
+  useEffect(() => {
+    const seen = localStorage.getItem('open-factory:gesture-tutorial-seen');
+    if (!seen) {
+      const timer = setTimeout(() => setGestureTutorialOpen(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   useBackgroundMediaJobs(project.media);
 
   const leftPanelCallbacks = useMemo(
@@ -2220,6 +2229,7 @@ export function EditorShell() {
           reduceMotion={timelineInteractionSettings.reduceMotion}
           convertVfrMediaToCfr={convertVfrMediaToCfr}
           sceneDetectionRequestId={sceneDetectionRequestId}
+          onRoughCutCompare={() => setRoughCutCompareOpen(true)}
           leftPanelCallbacks={leftPanelCallbacks}
           beginTimelineResize={beginTimelineResize}
         />
@@ -2279,7 +2289,10 @@ export function EditorShell() {
           />
           <GestureTutorialOverlay
             open={gestureTutorialOpen}
-            onClose={() => setGestureTutorialOpen(false)}
+            onClose={() => {
+              setGestureTutorialOpen(false);
+              localStorage.setItem('open-factory:gesture-tutorial-seen', '1');
+            }}
           />
           {roughCutCompareOpen && project ? (
             <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">

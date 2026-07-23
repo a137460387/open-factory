@@ -73,6 +73,7 @@ interface ShellMainAreaProps {
   reduceMotion: boolean;
   convertVfrMediaToCfr: (clipId: string) => void;
   sceneDetectionRequestId: number;
+  onRoughCutCompare?: (clipId: string) => void;
 
   // 回调
   leftPanelCallbacks: React.ComponentProps<typeof ShellLeftPanel>['callbacks'];
@@ -104,6 +105,7 @@ export function ShellMainArea({
   reduceMotion,
   convertVfrMediaToCfr,
   sceneDetectionRequestId,
+  onRoughCutCompare,
   leftPanelCallbacks,
   beginTimelineResize,
 }: ShellMainAreaProps) {
@@ -225,6 +227,7 @@ export function ShellMainArea({
                 onBookmarkPanelOpenChange={(bookmarks: boolean) => persistPanelVisibilityPatch({ bookmarks })}
                 onConvertMediaFrameRate={convertVfrMediaToCfr}
                 sceneDetectionRequestId={sceneDetectionRequestId}
+                onRoughCutCompare={onRoughCutCompare}
               />
             )}
           </ErrorBoundary>

@@ -26,6 +26,7 @@ export function Timeline({
   onBookmarkPanelOpenChange,
   onConvertMediaFrameRate,
   sceneDetectionRequestId = 0,
+  onRoughCutCompare,
 }: {
   thumbnailTrackVisible?: boolean;
   minimapVisible?: boolean;
@@ -38,6 +39,7 @@ export function Timeline({
   onBookmarkPanelOpenChange?(open: boolean): void;
   onConvertMediaFrameRate?(assetId: string): void;
   sceneDetectionRequestId?: number;
+  onRoughCutCompare?(clipId: string): void;
 }) {
   const handlerRefs = useRef({
     quickAddTimelineNote: undefined as (() => void) | undefined,
@@ -728,6 +730,7 @@ export function Timeline({
         handleAiReframe={handleAiReframe}
         handleAiTransitionRecommend={handleAiTransitionRecommend}
         handleAnomalyDetect={handleAnomalyDetect}
+        onRoughCutCompare={onRoughCutCompare}
         createGroupFromSelection={createGroupFromSelection}
         ungroupSelected={ungroupSelected}
         deleteGroup={deleteGroup}
