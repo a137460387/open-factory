@@ -55,8 +55,9 @@ export class PluginNetworkAPIImpl implements PluginNetworkAPI {
     const timer = setTimeout(() => controller.abort(), timeout);
 
     // Combine external signal with timeout
+    const onAbort = (): void => { controller.abort(); };
     if (options?.signal) {
-      options.signal.addEventListener('abort', () => controller.abort());
+      options.signal.addEventListener('abort', onAbort);
     }
 
     try {
@@ -81,6 +82,9 @@ export class PluginNetworkAPIImpl implements PluginNetworkAPI {
       };
     } finally {
       clearTimeout(timer);
+      if (options?.signal) {
+        options.signal.removeEventListener('abort', onAbort);
+      }
     }
   }
 
