@@ -55,6 +55,13 @@ export function validateEncryptionOptions(options: EncryptedArchiveOptions): { v
   const errors: string[] = [];
   if (!options.password || options.password.length < 1) {
     errors.push('密码不能为空');
+  } else {
+    if (options.password.length < 8) {
+      errors.push('密码长度不能少于 8 个字符');
+    }
+    if (!/[A-Z]/.test(options.password) || !/[a-z]/.test(options.password) || !/[0-9]/.test(options.password)) {
+      errors.push('密码必须包含大写字母、小写字母和数字');
+    }
   }
   if (options.volumeSizeMB !== undefined && options.volumeSizeMB <= 0) {
     errors.push('分卷大小必须大于 0');

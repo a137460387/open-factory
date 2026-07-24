@@ -501,13 +501,19 @@ export class ASRAccelerator {
   }
 
   private async encoder(features: Float32Array): Promise<Float32Array> {
-    // Transformer encoder
-    return features; // Placeholder
+    // Transformer encoder requires a trained model — not yet implemented
+    throw new Error(
+      'NotImplementedError: encoder requires a trained transformer model. ' +
+      'Connect a real ASR backend before calling transcribe().',
+    );
   }
 
   private async decoder(encoded: Float32Array): Promise<string> {
-    // CTC decoder
-    return 'Transcription result'; // Placeholder
+    // CTC decoder requires a trained model — not yet implemented
+    throw new Error(
+      'NotImplementedError: decoder requires a trained CTC model. ' +
+      'Connect a real ASR backend before calling transcribe().',
+    );
   }
 
   private getEncoderShader(): string {

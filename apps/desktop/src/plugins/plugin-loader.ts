@@ -552,6 +552,7 @@ function validatePluginCode(code) {
   const DANGEROUS_PATTERNS = [
     /\\beval\\s*\\(/,
     /\\bnew\\s+Function\\s*\\(/,
+    /\\bFunction\\s*\\(/,
     /\\bimportScripts\\s*\\(/,
     /\\bfetch\\s*\\(/,
     /\\bXMLHttpRequest\\b/,
@@ -564,6 +565,12 @@ function validatePluginCode(code) {
     /\\bWorker\\s*\\(/,
     /\\bSharedArrayBuffer\\b/,
     /\\bAtomics\\b/,
+    /\\barguments\\s*\\.\\s*callee\\b/,
+    /\\b__proto__\\b/,
+    /\\bconstructor\\s*\\[/,
+    /\\bglobalThis\\b/,
+    /\\bsetTimeout\\s*\\(\\s*['"\`]/,
+    /\\bsetInterval\\s*\\(\\s*['"\`]/,
   ];
   for (const pattern of DANGEROUS_PATTERNS) {
     const match = code.match(pattern);
@@ -649,6 +656,10 @@ self.onmessage = async (event) => {
       const preliminaryId = message.manifest && typeof message.manifest.id === 'string' ? message.manifest.id : 'plugin';
       const openFactory = createPluginApi(preliminaryId);
       sandbox.openFactory = openFactory;
+      // Freeze prototypes to prevent prototype chain escapes
+      try { Object.freeze(Object.prototype); } catch (_) { /* already frozen */ }
+      try { Object.freeze(Function.prototype); } catch (_) { /* already frozen */ }
+      try { Object.freeze(Array.prototype); } catch (_) { /* already frozen */ }
       new Function('module', 'exports', 'globalThis', 'openFactory', '"use strict";\\n' + message.code)(module, exports, sandbox, openFactory);
       const exported = module.exports && Object.keys(module.exports).length > 0 ? module.exports : undefined;
       loadedPlugin = normalizePlugin(module.exports.default || exported || sandbox.openFactoryPlugin || sandbox.plugin, message.manifest);

@@ -15,7 +15,7 @@
  */
 
 import { writeFile } from 'node:fs/promises';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,16 +38,16 @@ const HW_BACKENDS = [
  */
 function generateTestVideo(outputPath, resolution, durationSec = 5) {
   const [width, height] = resolution.split('x');
-  const cmd = [
-    'ffmpeg', '-y',
+  const args = [
+    '-y',
     '-f', 'lavfi', '-i', `testsrc2=size=${width}x${height}:rate=30:duration=${durationSec}`,
     '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '18',
     '-pix_fmt', 'yuv420p',
     outputPath
-  ].join(' ');
+  ];
 
   try {
-    execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+    execFileSync('ffmpeg', args, { stdio: 'pipe', timeout: 30000 });
     return true;
   } catch {
     return false;
@@ -73,11 +73,9 @@ function decodeSingleFrame(videoPath, backend, timestamp) {
   args.push('-pix_fmt', 'rgba');
   args.push('-');
 
-  const cmd = `ffmpeg ${args.map(a => `"${a}"`).join(' ')}`;
-
   try {
     const start = performance.now();
-    execSync(cmd, { stdio: 'pipe', timeout: 30000 });
+    execFileSync('ffmpeg', args, { stdio: 'pipe', timeout: 30000 });
     const elapsed = performance.now() - start;
     return { success: true, elapsedMs: elapsed };
   } catch (error) {
@@ -90,10 +88,12 @@ function decodeSingleFrame(videoPath, backend, timestamp) {
  */
 function getVideoInfo(videoPath) {
   try {
-    const output = execSync(
-      `ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration,codec_name,r_frame_rate,bit_rate -of json "${videoPath}"`,
-      { encoding: 'utf8', timeout: 10000 }
-    );
+    const output = execFileSync('ffprobe', [
+      '-v', 'error', '-select_streams', 'v:0',
+      '-show_entries', 'stream=width,height,duration,codec_name,r_frame_rate,bit_rate',
+      '-of', 'json',
+      videoPath
+    ], { encoding: 'utf8', timeout: 10000 });
     const info = JSON.parse(output);
     const stream = info.streams?.[0];
     if (!stream) return null;
@@ -123,7 +123,7 @@ function detectAvailableBackends() {
 
   // 检测 CUDA
   try {
-    execSync('nvidia-smi', { stdio: 'pipe', timeout: 5000 });
+    execFileSync('nvidia-smi', [], { stdio: 'pipe', timeout: 5000 });
     available.push('cuda');
   } catch { /* not available */ }
 
@@ -135,7 +135,7 @@ function detectAvailableBackends() {
   // 检测 QuickSync
   if (process.platform === 'win32') {
     try {
-      const output = execSync('wmic path win32_videocontroller get name', { encoding: 'utf8', timeout: 5000 });
+      const output = execFileSync('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { encoding: 'utf8', timeout: 5000 });
       if (output.toLowerCase().includes('intel')) {
         available.push('qsv');
       }
@@ -145,7 +145,7 @@ function detectAvailableBackends() {
   // 检测 VAAPI (Linux)
   if (process.platform === 'linux') {
     try {
-      execSync('test -e /dev/dri/renderD128', { stdio: 'pipe', timeout: 5000 });
+      execFileSync('test', ['-e', '/dev/dri/renderD128'], { stdio: 'pipe', timeout: 5000 });
       available.push('vaapi');
     } catch { /* not available */ }
   }
