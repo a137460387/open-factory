@@ -3,7 +3,16 @@ import {
   UpdateClipCommand,
   UpdateProjectBeatSnapSuggestionsCommand,
   applyBeatSnapToClip,
+  type Clip,
+  type MediaAsset,
+  type Project,
+  type BeatSensitivity,
+  type BeatSnapSuggestion,
+  type ProjectAnnotation,
+  type TimelineNote,
 } from '@open-factory/editor-core';
+import type { SilentRange } from '@open-factory/editor-core/audio/silence-detection';
+import type { DialogueInterval, DialogueWhisperMiss } from '@open-factory/editor-core/audio/dialogue-detection';
 import { X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
@@ -18,28 +27,34 @@ import {
   CoverFramePickerDialog,
   WhisperGenerationDialog,
   DialogueDetectionPanel,
+  type SceneDialogState,
+  type CoverFrameDialogState,
+  type ReplaceMediaDialogState,
+  type AnnotationEditorState,
+  type TimelineNoteEditorState,
 } from './TimelineDialogs';
+import type { CoverFrameResult } from '../../lib/tauri-bridge';
 
 interface TimelineDialogsLayerProps {
   // Silence detection
-  silenceDialog: { clip: any; asset: any } | undefined;
+  silenceDialog: { clip: Clip; asset: MediaAsset } | undefined;
   setSilenceDialog: (v: undefined) => void;
-  applySilenceRemoval: (clipId: string, ranges: any[]) => void;
+  applySilenceRemoval: (clipId: string, ranges: SilentRange[]) => void;
 
   // Scene detection
-  sceneDialog: any;
-  setSceneDialog: (v: any) => void;
+  sceneDialog: SceneDialogState | undefined;
+  setSceneDialog: (v: SceneDialogState | undefined) => void;
   startSceneDetection: () => void;
   cancelCurrentSceneDetection: () => void;
   applySceneDetectionResult: () => void;
 
   // Cover frame
-  coverFrameDialog: any;
+  coverFrameDialog: CoverFrameDialogState | undefined;
   setCoverFrameDialog: (v: undefined) => void;
-  applyProjectCoverFrame: (v: any) => void;
+  applyProjectCoverFrame: (v: CoverFrameResult) => void;
 
   // Whisper
-  whisperDialog: { progress: any; clip: { name: string } } | undefined;
+  whisperDialog: { progress: number; clip: { name: string } } | undefined;
 
   // Subtitle align report
   subtitleAlignReport: { correctedCount: number; averageOffsetMs: number } | undefined;
@@ -47,19 +62,19 @@ interface TimelineDialogsLayerProps {
   // Dialogue detection
   dialoguePanelOpen: boolean;
   setDialoguePanelOpen: (v: boolean) => void;
-  dialogueMarkers: any[];
-  dialogueMisses: any[];
-  runDialogueDetection: (sensitivity: any) => void | Promise<void>;
+  dialogueMarkers: DialogueInterval[];
+  dialogueMisses: DialogueWhisperMiss[];
+  runDialogueDetection: (sensitivity: BeatSensitivity) => void | Promise<void>;
   generateDialogueSubtitles: () => void;
 
   // Beat snap
   beatSnapPanelOpen: boolean;
   setBeatSnapPanelOpen: (v: boolean) => void;
-  project: any;
+  project: Project;
 
   // Replace media
-  replaceMediaDialog: any;
-  setReplaceMediaDialog: (v: any) => void;
+  replaceMediaDialog: ReplaceMediaDialogState | undefined;
+  setReplaceMediaDialog: (v: ReplaceMediaDialogState | undefined) => void;
   confirmReplaceMedia: () => void;
 
   // Reframe
@@ -68,42 +83,42 @@ interface TimelineDialogsLayerProps {
   applyAiReframe: (clipId: string, aspect: 'source' | '16:9' | '9:16' | '1:1' | '4:5' | '21:9') => void;
 
   // Transition
-  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: any[] } | undefined;
+  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: Array<{ transitionType: string; duration: number; reason: string }> } | undefined;
   setTransitionDialog: (v: undefined) => void;
-  applyAiTransition: (clipId: string, adjacentClipId: string, rec: any) => void;
+  applyAiTransition: (clipId: string, adjacentClipId: string, rec: { transitionType: string; duration: number; reason: string }) => void;
 
   // Annotations
   annotationPanelOpen: boolean;
   annotationMode: boolean;
-  openAnnotationEditorAt: (time: number, annotation?: any) => void;
+  openAnnotationEditorAt: (time: number, annotation?: ProjectAnnotation) => void;
   removeProjectAnnotation: (id: string) => void;
   setPlayheadTime: (time: number) => void;
 
   // Bookmarks
   bookmarkPanelOpen: boolean;
   bookmarkRename: { id: string; note: string } | undefined;
-  setBookmarkRename: (v: any) => void;
+  setBookmarkRename: (v: { id: string; note: string } | undefined) => void;
   renameProjectBookmark: (bookmarkId: string, note: string) => void;
   removeProjectBookmark: (id: string) => void;
 
   // Timeline notes
   timelineNotePanelOpen: boolean;
-  filteredTimelineNotes: any[];
+  filteredTimelineNotes: TimelineNote[];
   timelineNoteSearch: string;
   setTimelineNoteSearch: (v: string) => void;
-  openTimelineNoteEditor: (start: number, end: number, note?: any) => void;
+  openTimelineNoteEditor: (start: number, end: number, note?: TimelineNote) => void;
   removeTimelineNote: (id: string) => void;
   exportTimelineNotesCsv: () => void;
 
   // Annotation editor
-  annotationEditor: any;
-  setAnnotationEditor: (v: any) => void;
-  saveAnnotationEditor: (next: any) => void;
+  annotationEditor: AnnotationEditorState | undefined;
+  setAnnotationEditor: (v: AnnotationEditorState | undefined) => void;
+  saveAnnotationEditor: (next: AnnotationEditorState) => void;
 
   // Timeline note editor
-  timelineNoteEditor: any;
-  setTimelineNoteEditor: (v: any) => void;
-  saveTimelineNoteEditor: (next: any) => void;
+  timelineNoteEditor: TimelineNoteEditorState | undefined;
+  setTimelineNoteEditor: (v: TimelineNoteEditorState | undefined) => void;
+  saveTimelineNoteEditor: (next: TimelineNoteEditorState) => void;
 }
 
 export const TimelineDialogsLayer = React.memo(function TimelineDialogsLayer({
@@ -230,7 +245,7 @@ export const TimelineDialogsLayer = React.memo(function TimelineDialogsLayer({
             </button>
           </div>
           <div className="max-h-40 space-y-1 overflow-y-auto">
-            {(project.beatSnapSuggestions ?? []).map((suggestion: any) => (
+            {(project.beatSnapSuggestions ?? []).map((suggestion: BeatSnapSuggestion) => (
               <div
                 key={`${suggestion.clipId}-${suggestion.edge}`}
                 className="flex items-center justify-between rounded border border-line px-2 py-1 text-xs"

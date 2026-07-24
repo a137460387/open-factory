@@ -5,6 +5,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import helmet from '@fastify/helmet';
 import { getConfig } from './config.js';
 import { errorHandler } from './utils/errors.js';
 import { pluginRoutes } from './routes/plugins.js';
@@ -34,7 +35,7 @@ export async function createServer() {
 
   // CORS
   await fastify.register(cors, {
-    origin: config.cors.origin,
+    origin: config.cors.origins,
     credentials: config.cors.credentials,
   });
 
@@ -42,6 +43,23 @@ export async function createServer() {
   await fastify.register(rateLimit, {
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.window,
+  });
+
+  // Security Headers
+  await fastify.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Allow Tauri WebView
   });
 
   // ============================================================

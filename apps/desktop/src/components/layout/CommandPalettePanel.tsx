@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import type { ParsedCommand } from '@open-factory/editor-core/natural-language-commands';
 
 const CommandPalette = lazy(() =>
   import('../CommandPalette/CommandPalette').then((module) => ({ default: module.CommandPalette })),
@@ -7,7 +8,7 @@ const CommandPalette = lazy(() =>
 interface CommandPalettePanelProps {
   open: boolean;
   onClose: () => void;
-  onExecute: (cmd: any) => void;
+  onExecute: (cmd: ParsedCommand) => void;
 }
 
 /**

@@ -7,7 +7,7 @@ import { useCollaborationStore } from '../store/collaborationStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
-import type { Clip, MediaAsset } from '@open-factory/editor-core';
+import type { Clip, MediaAsset, Project } from '@open-factory/editor-core';
 
 /**
  * 优化的 store selectors，避免不必要的重渲染。
@@ -180,7 +180,7 @@ export function useEditorDerivedSelectors() {
 }
 
 // Helper function
-function selectClipById(project: any, clipId?: string): Clip | undefined {
+function selectClipById(project: Project, clipId?: string): Clip | undefined {
   if (!clipId) return undefined;
   for (const track of project.timeline.tracks) {
     const clip = track.clips.find((c: Clip) => c.id === clipId);

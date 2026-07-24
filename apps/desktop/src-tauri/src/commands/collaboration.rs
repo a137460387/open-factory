@@ -170,6 +170,7 @@ pub fn stop_collaboration_host() -> Result<(), String> {
 
 #[tauri::command]
 pub fn broadcast_collaboration_message(app: AppHandle, message: String) -> Result<(), String> {
+    crate::input_validator::validate_string(&message, "message")?;
     let sender = runtime_slot()
         .lock()
         .map_err(|_| "Unable to lock collaboration runtime".to_string())?

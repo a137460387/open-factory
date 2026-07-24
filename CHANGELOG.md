@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.71.0] - 2026-07-24
+
+### Changed
+- **any 类型清理**: 从 232 降至 151（清理 81 个 `any`），超额完成 50+ 目标
+  - TimelineDialogsLayer: 26→0（全部替换为具体类型）
+  - ai-style-engine 模块: 8→0（引入 TimelineLike/ProjectLike 接口）
+  - useEditorShellFloatingDialogsCallbacks: 35→0
+  - useEditorShellInlineCallbacks: 13→0
+  - useEditorShellEffects: 5→0
+  - SpeakerMulticamPanel: 2→0
+  - useEditorStoreSelectors: 1→0
+- **巨型文件拆分**: ExportDialog.tsx 3807→3700 行，提取 export-utils.tsx
+- **测试完整性**: 8775 测试全部通过，rbac 27/audit-log 18/desktop 6 均达标
+- **i18n 懒加载**: 已有 8 个测试覆盖，英文 locale 动态加载正常
+- **版本号升至 v4.71.0**
+
+### Fixed
+- 清理 background agent 创建的 broken split 文件（clip-commands/keyframe-commands/media-commands/track-commands 等）
+- 恢复 timeline-commands.ts 为原始 7181 行版本
+
+### Known Issues
+- TimelineTracksContainer.tsx 仍有 83 个 `any`（后台 agent 处理中）
+- 测试文件中有 61 个 `any`（测试 mock，可接受）
+- `noUncheckedIndexedAccess` 启用后产生 2708 个错误，需独立 sprint 处理
+
+## [v4.70.0] - 2026-07-24
+
+### Changed
+- **i18n 懒加载**: `en-overrides.ts` (5144行) 改为动态 import，首屏仅加载中文；新增 `setLanguageAsync` API
+- **测试完整性审计**: 8775测试全部通过（新增4个i18n懒加载测试），rbac 27用例、audit-log 18用例、desktop集成3文件均达标
+- **版本号升至 v4.70.0**
+
+### Fixed
+- 修复5个测试文件因i18n懒加载导致的英文切换失败（改用 `setLanguageAsync`）
+
+### Known Issues
+- 巨型文件拆分（timeline-commands/ExportDialog/ClipInspectorBody）因类型错误需逐文件谨慎执行
+- any 类型清理因引入类型错误需逐文件验证
+- `noUncheckedIndexedAccess` 启用后产生2708个错误，需独立sprint处理
+
 ## [v4.25.4] - 2026-07-15
 
 ### Changed

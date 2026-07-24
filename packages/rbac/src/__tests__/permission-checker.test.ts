@@ -164,5 +164,90 @@ describe('PermissionChecker', () => {
       // for editor role since editor has project:update
       expect(checker.hasPermission('user1', ['editor'], 'project:update')).toBe(true);
     });
+
+    it('replaces existing resource permission for same user+resource', () => {
+      checker.grantResourcePermission({
+        userId: 'user1', resourceId: 'proj-1', resourceType: 'project',
+        roleId: 'viewer', grantedBy: 'admin', grantedAt: Date.now(),
+      });
+      checker.grantResourcePermission({
+        userId: 'user1', resourceId: 'proj-1', resourceType: 'project',
+        roleId: 'editor', grantedBy: 'admin', grantedAt: Date.now(),
+      });
+      const perms = checker.getUserResourcePermissions('user1');
+      expect(perms).toHaveLength(1);
+      expect(perms[0].roleId).toBe('editor');
+    });
+  });
+
+  describe('role management', () => {
+    it('can update custom role name', () => {
+      const custom: Role = {
+        id: 'custom', name: 'Custom', description: 'desc',
+        permissions: ['project:read'], isSystem: false,
+        createdAt: Date.now(), updatedAt: Date.now(),
+      };
+      checker.addRole(custom);
+      const updated = checker.updateRole('custom', { name: 'Renamed' });
+      expect(updated.name).toBe('Renamed');
+    });
+
+    it('throws when updating nonexistent role', () => {
+      expect(() => checker.updateRole('nonexistent', { name: 'x' })).toThrow('not found');
+    });
+
+    it('throws when deleting nonexistent role', () => {
+      expect(() => checker.deleteRole('nonexistent')).toThrow('not found');
+    });
+
+    it('lists all roles', () => {
+      const roles = checker.listRoles();
+      expect(roles.length).toBeGreaterThanOrEqual(3); // admin, editor, viewer
+      expect(roles.map(r => r.id)).toContain('admin');
+    });
+  });
+
+  describe('permissions management', () => {
+    it('lists all built-in permissions', () => {
+      const perms = checker.listPermissions();
+      expect(perms.length).toBeGreaterThanOrEqual(14);
+    });
+
+    it('can add custom permission', () => {
+      checker.addPermission({
+        id: 'custom:action', name: 'Custom', description: 'desc',
+        resource: 'system', action: 'manage',
+      });
+      expect(checker.getPermission('custom:action')).toBeDefined();
+    });
+
+    it('returns undefined for unknown permission', () => {
+      expect(checker.getPermission('nonexistent')).toBeUndefined();
+    });
+  });
+
+  describe('policies', () => {
+    it('deny policy overrides role permission', () => {
+      checker.addPolicy({
+        id: 'deny-delete',
+        name: 'Deny Delete',
+        description: 'No one can delete',
+        conditions: [],
+        effect: 'deny',
+        permissions: ['project:delete'],
+        priority: 100,
+      });
+      expect(checker.hasPermission('user1', ['admin'], 'project:delete')).toBe(false);
+    });
+
+    it('can remove policy', () => {
+      checker.addPolicy({
+        id: 'temp', name: 'Temp', description: '', conditions: [],
+        effect: 'deny', permissions: ['project:read'], priority: 1,
+      });
+      expect(checker.hasPermission('u1', ['viewer'], 'project:read')).toBe(false);
+      checker.removePolicy('temp');
+      expect(checker.hasPermission('u1', ['viewer'], 'project:read')).toBe(true);
+    });
   });
 });

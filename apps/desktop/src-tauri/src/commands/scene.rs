@@ -272,7 +272,6 @@ fn parse_progress_frame(line: &str) -> Option<u64> {
     let marker = "frame=";
     let start = line.find(marker)? + marker.len();
     line[start..]
-        .trim_start()
         .split_whitespace()
         .next()?
         .parse::<u64>()

@@ -6,7 +6,7 @@ import {
   type Clip,
   type MediaAsset,
 } from '@open-factory/editor-core';
-import { setLanguage } from '../i18n/strings';
+import { setLanguage, setLanguageAsync } from '../i18n/strings';
 import {
   assertDemucsSettingsReady,
   buildSeparatedAudioMediaAssets,
@@ -15,8 +15,8 @@ import {
 } from './demucs';
 
 describe('demucs helpers', () => {
-  beforeAll(() => {
-    setLanguage('en');
+  beforeAll(async () => {
+    await setLanguageAsync('en');
   });
   it('returns clear errors when the demucs path is not configured or missing', async () => {
     await expect(assertDemucsSettingsReady({ executablePath: '' })).rejects.toThrow('Demucs path is not configured.');

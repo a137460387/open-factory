@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AlertTriangle, Zap, Activity } from 'lucide-react';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
+import { useShallow } from 'zustand/react/shallow';
 import { featureStrings } from '../i18n/featureStrings';
 
 export { PerformanceAlertIcon } from './PerformanceAlertIcon';
@@ -21,7 +22,17 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
     setConfig,
     setPanelOpen,
     sample,
-  } = usePerformanceMonitorStore();
+  } = usePerformanceMonitorStore(useShallow((s) => ({
+    alerts: s.alerts,
+    metrics: s.metrics,
+    optimizationPlan: s.optimizationPlan,
+    config: s.config,
+    executeOptimization: s.executeOptimization,
+    dismissAlert: s.dismissAlert,
+    setConfig: s.setConfig,
+    setPanelOpen: s.setPanelOpen,
+    sample: s.sample,
+  })));
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {

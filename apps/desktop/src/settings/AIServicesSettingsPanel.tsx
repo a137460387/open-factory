@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plug, TestTube, Trash2 } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import { useAISettingsStore, type AIServiceType } from '../store/aiSettingsStore';
+import { useShallow } from 'zustand/react/shallow';
 import type { AIProvider } from '@open-factory/editor-core';
 import { AIUsageStatsPanel } from '../components/AIUsageStats/AIUsageStatsPanel';
 
@@ -17,7 +18,19 @@ const SERVICE_TYPES: AIServiceType[] = [
 
 export function AIServicesSettingsPanel() {
   const t = zhCN.settings.aiServices;
-  const store = useAISettingsStore();
+  const store = useAISettingsStore(useShallow((s) => ({
+    providers: s.providers,
+    ollamaReachable: s.ollamaReachable,
+    ollamaModels: s.ollamaModels,
+    serviceMapping: s.serviceMapping,
+    toggleProvider: s.toggleProvider,
+    testConnection: s.testConnection,
+    addCustomProvider: s.addCustomProvider,
+    removeCustomProvider: s.removeCustomProvider,
+    updateProvider: s.updateProvider,
+    setProviderApiKey: s.setProviderApiKey,
+    setServiceMapping: s.setServiceMapping,
+  })));
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; error?: string } | null>>({});

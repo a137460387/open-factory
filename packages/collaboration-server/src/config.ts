@@ -1,6 +1,9 @@
 /**
  * Configuration management with environment variable validation.
  * Uses Zod schemas to ensure all required values are present and valid.
+ *
+ * SECURITY: JWT_SECRET is mandatory and must be >= 32 characters.
+ * CORS origin defaults to deny-all when not explicitly configured.
  */
 
 import { z } from "zod";
@@ -25,8 +28,13 @@ const redisSchema = z.object({
 });
 
 const jwtSchema = z.object({
-  /** Secret key for verifying JWT tokens */
-  secret: z.string().min(32, "JWT secret must be at least 32 characters"),
+  /** Secret key for verifying JWT tokens — MUST come from environment */
+  secret: z
+    .string()
+    .min(32, "JWT_SECRET must be at least 32 characters")
+    .refine((s) => s.trim().length >= 32, {
+      message: "JWT_SECRET must not be whitespace-only",
+    }),
   /** Expected token issuer */
   issuer: z.string().default("open-factory"),
   /** Expected token audience */
@@ -43,8 +51,14 @@ const turnSchema = z.object({
 });
 
 const corsSchema = z.object({
-  /** Allowed origins */
-  origin: z.union([z.string(), z.array(z.string())]).default("*"),
+  /**
+   * Allowed origins for CORS.
+   * SECURITY: Must be explicitly configured per environment.
+   * Empty array = deny all cross-origin requests.
+   */
+  origin: z
+    .union([z.string(), z.array(z.string())])
+    .default([]),
   /** Allow credentials */
   credentials: z.boolean().default(true),
 });
@@ -104,7 +118,7 @@ export function loadConfig(): CollaborationConfig {
     },
 
     jwt: {
-      secret: env("JWT_SECRET", ""),
+      secret: requiredEnv("JWT_SECRET"),
       issuer: env("JWT_ISSUER", "open-factory"),
       audience: env("JWT_AUDIENCE", "collaboration-server"),
     },
@@ -116,7 +130,7 @@ export function loadConfig(): CollaborationConfig {
     },
 
     cors: {
-      origin: env("CORS_ORIGIN", "*"),
+      origin: parseCorsOrigins(env("CORS_ORIGIN", "")),
       credentials: env("CORS_CREDENTIALS", "true") === "true",
     },
 
@@ -144,6 +158,24 @@ function env(key: string, fallback: string): string {
   return process.env[key] ?? fallback;
 }
 
+/** Require an env var — throws immediately if missing or empty. */
+function requiredEnv(key: string): string {
+  const value = process.env[key];
+  if (!value || value.trim().length === 0) {
+    throw new Error(
+      `Missing required environment variable: ${key}. ` +
+      `Set it before starting the server.`
+    );
+  }
+  return value;
+}
+
+/** Parse CORS origins: empty string → empty array (deny all). */
+function parseCorsOrigins(raw: string): string[] {
+  if (!raw || raw.trim().length === 0) return [];
+  return raw.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 function parseClusterNodes(
   raw: string
 ): Array<{ host: string; port: number }> {
@@ -152,4 +184,19 @@ function parseClusterNodes(
     const [host, portStr] = entry.trim().split(":");
     return { host, port: Number(portStr ?? 6379) };
   });
+}
+
+/**
+ * Validate critical configuration at startup.
+ * Calls process.exit(1) with a clear message if config is invalid.
+ * Use this at server entry points to fail fast.
+ */
+export function validateOrExit(): CollaborationConfig {
+  try {
+    return loadConfig();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`\n[FATAL] Server configuration error:\n${message}\n`);
+    process.exit(1);
+  }
 }

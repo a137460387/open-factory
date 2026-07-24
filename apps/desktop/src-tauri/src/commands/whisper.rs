@@ -240,8 +240,7 @@ fn parse_whisper_progress(line: &str) -> Option<f32> {
     let before_percent = &line[..percent_index];
     let token = before_percent
         .split(|ch: char| !(ch.is_ascii_digit() || ch == '.'))
-        .filter(|part| !part.is_empty())
-        .next_back()?;
+        .rfind(|part| !part.is_empty())?;
     let value = token.parse::<f32>().ok()?;
     Some((value / 100.0).clamp(0.0, 1.0))
 }

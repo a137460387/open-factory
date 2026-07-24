@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { MediaAsset } from '@open-factory/editor-core';
-import { setLanguage } from '../i18n/strings';
+import { setLanguage, setLanguageAsync } from '../i18n/strings';
 import type { AutomationRule } from '../settings/appSettings';
 import { evaluateAutomationCondition, parseAutomationRulesJson, runAutomationRulesForMedia } from './automation-rules';
 
@@ -18,8 +18,8 @@ const video: MediaAsset = {
 };
 
 describe('automation rules', () => {
-  beforeAll(() => {
-    setLanguage('en');
+  beforeAll(async () => {
+    await setLanguageAsync('en');
   });
 
   it('matches numeric and text conditions for media fields', () => {

@@ -105,22 +105,14 @@ pub fn calculate_motion_intensity(
         // Process 16 pixels in parallel
         for j in 0..16 {
             let idx = offset + j;
-            let diff = if prev_frame[idx] > curr_frame[idx] {
-                prev_frame[idx] - curr_frame[idx]
-            } else {
-                curr_frame[idx] - prev_frame[idx]
-            };
+            let diff = prev_frame[idx].abs_diff(curr_frame[idx]);
             total_diff += diff as u64;
         }
     }
 
     // Process remaining pixels
     for i in (chunks * 16)..len {
-        let diff = if prev_frame[i] > curr_frame[i] {
-            prev_frame[i] - curr_frame[i]
-        } else {
-            curr_frame[i] - prev_frame[i]
-        };
+        let diff = prev_frame[i].abs_diff(curr_frame[i]);
         total_diff += diff as u64;
     }
 
@@ -231,7 +223,7 @@ pub fn find_peaks(
     for i in 1..values.len() - 1 {
         if values[i] >= threshold && values[i] > values[i - 1] && values[i] >= values[i + 1] {
             // Check minimum gap from last peak
-            if peaks.is_empty() || i - peaks.last().unwrap().0 >= min_gap {
+            if peaks.is_empty() || i - peaks.last().expect("peaks non-empty").0 >= min_gap {
                 peaks.push((i, values[i]));
             }
         }
@@ -338,7 +330,7 @@ pub fn detect_visual_highlights(
     for (index, value) in scene_peaks {
         let m = &frame_metrics[index];
         let existing = highlight_map.get(&index);
-        if existing.is_none() || value > existing.unwrap().score {
+        if existing.map_or(true, |e| value > e.score) {
             highlight_map.insert(
                 index,
                 VisualHighlightMarker {
@@ -355,7 +347,7 @@ pub fn detect_visual_highlights(
     for (index, value) in energy_peaks {
         let m = &frame_metrics[index];
         let existing = highlight_map.get(&index);
-        if existing.is_none() || value > existing.unwrap().score {
+        if existing.map_or(true, |e| value > e.score) {
             highlight_map.insert(
                 index,
                 VisualHighlightMarker {
@@ -425,6 +417,7 @@ pub fn merge_with_audio_beats(
 }
 
 /// Extract highlight time ranges for MediaBin display
+#[allow(dead_code)]
 pub fn extract_highlight_ranges(
     highlights: &[VisualHighlightMarker],
     merge_gap: f64,
@@ -442,16 +435,16 @@ pub fn extract_highlight_ranges(
     let mut peak_score = sorted[0].score;
     let mut count = 1;
 
-    for i in 1..sorted.len() {
-        if sorted[i].time - range_end <= merge_gap {
-            range_end = sorted[i].time + sorted[i].duration;
-            peak_score = peak_score.max(sorted[i].score);
+    for item in sorted.iter().skip(1) {
+        if item.time - range_end <= merge_gap {
+            range_end = item.time + item.duration;
+            peak_score = peak_score.max(item.score);
             count += 1;
         } else {
             ranges.push((range_start, range_end, peak_score, count));
-            range_start = sorted[i].time;
-            range_end = sorted[i].time + sorted[i].duration;
-            peak_score = sorted[i].score;
+            range_start = item.time;
+            range_end = item.time + item.duration;
+            peak_score = item.score;
             count = 1;
         }
     }

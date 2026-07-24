@@ -10,6 +10,19 @@
 
 // ==================== Types ====================
 
+/** Minimal project shape for color analysis */
+export interface ProjectLike {
+  timeline?: {
+    tracks: Array<{
+      clips: Array<{
+        colorGrading?: ColorGradingParams;
+        colorNodes?: Array<{ params?: ColorGradingParams }>;
+      }>;
+    }>;
+  };
+  presets?: Array<{ type: string; params?: ColorGradingParams }>;
+}
+
 export interface ColorGradingParams {
   /** LUT file path or name */
   lut?: string;
@@ -102,7 +115,7 @@ export interface ColorAnalysisResult {
 /**
  * Extract color grading parameters from project nodes
  */
-export function extractColorParams(project: any): ColorGradingParams[] {
+export function extractColorParams(project: ProjectLike): ColorGradingParams[] {
   const params: ColorGradingParams[] = [];
 
   if (!project?.timeline?.tracks) {
@@ -134,7 +147,7 @@ export function extractColorParams(project: any): ColorGradingParams[] {
 /**
  * Extract color params from project presets
  */
-export function extractPresetParams(project: any): ColorGradingParams[] {
+export function extractPresetParams(project: ProjectLike): ColorGradingParams[] {
   const params: ColorGradingParams[] = [];
 
   if (!project?.presets) {
@@ -442,7 +455,7 @@ export function generatePreferenceVector(profile: ColorPreferenceProfile): numbe
 /**
  * Run full color preference analysis on project
  */
-export function analyzeColorPreferences(project: any): ColorAnalysisResult {
+export function analyzeColorPreferences(project: ProjectLike): ColorAnalysisResult {
   const clipParams = extractColorParams(project);
   const presetParams = extractPresetParams(project);
   const allParams = [...clipParams, ...presetParams];

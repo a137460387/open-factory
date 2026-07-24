@@ -9,7 +9,7 @@ import cors from "cors";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import type { CollaborationConfig } from "./config.js";
-import { createAuthMiddleware, AuthError } from "./auth.js";
+import { createAuthMiddleware, createExpressAuthMiddleware, AuthError } from "./auth.js";
 import { RoomManager, RoomError } from "./room-manager.js";
 import type {
   ClientToServerEvents,
@@ -64,16 +64,20 @@ export function createCollaborationServer(
   // REST Management API
   // ----------------------------------------------------------
 
+  // Public health endpoint
   app.get("/health", (_req, res) => {
     res.json({ status: "ok", uptime: process.uptime() });
   });
 
-  app.get("/api/rooms", (_req, res) => {
+  // JWT-authenticated API routes
+  const apiAuth = createExpressAuthMiddleware(config);
+
+  app.get("/api/rooms", apiAuth, (_req, res) => {
     const rooms = roomManager.listRooms();
     res.json({ rooms });
   });
 
-  app.get("/api/rooms/:roomId", (req, res) => {
+  app.get("/api/rooms/:roomId", apiAuth, (req, res) => {
     const room = roomManager.getRoom(req.params.roomId);
     if (!room) {
       res.status(404).json({ error: "Room not found" });
@@ -82,9 +86,9 @@ export function createCollaborationServer(
     res.json({ room });
   });
 
-  app.delete("/api/rooms/:roomId", async (req, res) => {
+  app.delete("/api/rooms/:roomId", apiAuth, async (req, res) => {
     try {
-      const userId = (req.headers["x-user-id"] as string) ?? "system";
+      const userId = req.user!.userId;
       await roomManager.deleteRoom(req.params.roomId, userId);
       res.json({ success: true });
     } catch (err) {
@@ -99,7 +103,7 @@ export function createCollaborationServer(
     }
   });
 
-  app.get("/api/rooms/:roomId/users", (req, res) => {
+  app.get("/api/rooms/:roomId/users", apiAuth, (req, res) => {
     const room = roomManager.getRoom(req.params.roomId);
     if (!room) {
       res.status(404).json({ error: "Room not found" });
@@ -129,6 +133,35 @@ export function createCollaborationServer(
   const authMiddleware = createAuthMiddleware(config);
   io.use((socket, next) => {
     authMiddleware(socket, next);
+  });
+
+  // Rate limiting: max 100 events per minute per socket
+  const RATE_LIMIT_WINDOW_MS = 60_000;
+  const RATE_LIMIT_MAX = 100;
+
+  io.use((socket, next) => {
+    let eventCount = 0;
+    let windowStart = Date.now();
+
+    const originalOnEvent = socket.onAny.bind(socket);
+    socket.onAny((event, ...args) => {
+      const now = Date.now();
+      if (now - windowStart > RATE_LIMIT_WINDOW_MS) {
+        eventCount = 0;
+        windowStart = now;
+      }
+      eventCount++;
+      if (eventCount > RATE_LIMIT_MAX) {
+        socket.emit("room:error", {
+          message: "Rate limit exceeded. Please slow down.",
+          code: "RATE_LIMIT_EXCEEDED",
+        });
+        return;
+      }
+      originalOnEvent(event, ...args);
+    });
+
+    next();
   });
 
   // Error handling for auth failures

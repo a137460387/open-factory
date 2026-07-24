@@ -296,6 +296,8 @@ export function formatPluginError(error: unknown): string {
   return String(error);
 }
 
+const PLUGIN_HOOK_TIMEOUT_MS = 5_000;
+
 function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
   return {
     plugin: runtime.plugin,
@@ -304,7 +306,18 @@ function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
         return undefined;
       }
       assertPluginHookPermission(runtime.plugin, hookName);
-      return runtime.invokeHook(hookName, payload);
+      // Timeout guard: prevent runaway plugin hooks from blocking the host
+      const result = runtime.invokeHook(hookName, payload);
+      const timeout = new Promise<never>((_, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error(
+            `PluginTimeoutError: "${runtime.plugin.name}" hook "${hookName}" exceeded ${PLUGIN_HOOK_TIMEOUT_MS}ms limit.`,
+          ));
+        }, PLUGIN_HOOK_TIMEOUT_MS);
+        // Prevent timer from keeping the process alive
+        if (typeof timer === 'object' && 'unref' in timer) timer.unref();
+      });
+      return Promise.race([result, timeout]);
     },
     receiveMessage(payload) {
       return runtime.receiveMessage?.(payload) ?? Promise.resolve();
@@ -533,6 +546,43 @@ type WorkerResponse =
 const WORKER_BOOTSTRAP = `
 let loadedPlugin;
 const messageHandlers = [];
+
+// ---- Security: static analysis before execution ----
+function validatePluginCode(code) {
+  const DANGEROUS_PATTERNS = [
+    /\\beval\\s*\\(/,
+    /\\bnew\\s+Function\\s*\\(/,
+    /\\bFunction\\s*\\(/,
+    /\\bimportScripts\\s*\\(/,
+    /\\bfetch\\s*\\(/,
+    /\\bXMLHttpRequest\\b/,
+    /\\bWebSocket\\b/,
+    /\\bnavigator\\b/,
+    /\\blocation\\b/,
+    /\\bdocument\\b/,
+    /\\bwindow\\b/,
+    /\\bself\\s*\\.\\s*importScripts/,
+    /\\bWorker\\s*\\(/,
+    /\\bSharedArrayBuffer\\b/,
+    /\\bAtomics\\b/,
+    /\\barguments\\s*\\.\\s*callee\\b/,
+    /\\b__proto__\\b/,
+    /\\bconstructor\\s*\\[/,
+    /\\bglobalThis\\b/,
+    /\\bsetTimeout\\s*\\(\\s*['"\`]/,
+    /\\bsetInterval\\s*\\(\\s*['"\`]/,
+  ];
+  for (const pattern of DANGEROUS_PATTERNS) {
+    const match = code.match(pattern);
+    if (match) {
+      throw new Error(
+        'PluginSecurityError: plugin code contains forbidden pattern "' + match[0].trim() + '". ' +
+        'Plugins cannot use eval, fetch, WebSocket, DOM access, or spawn workers.'
+      );
+    }
+  }
+}
+
 function createPluginApi(fromPluginId) {
   return {
     getProject() {
@@ -598,12 +648,18 @@ self.onmessage = async (event) => {
   const message = event.data;
   try {
     if (message.type === 'load') {
+      // Validate plugin code before execution
+      validatePluginCode(message.code);
       const module = { exports: {} };
       const exports = module.exports;
       const sandbox = {};
       const preliminaryId = message.manifest && typeof message.manifest.id === 'string' ? message.manifest.id : 'plugin';
       const openFactory = createPluginApi(preliminaryId);
       sandbox.openFactory = openFactory;
+      // Freeze prototypes to prevent prototype chain escapes
+      try { Object.freeze(Object.prototype); } catch (_) { /* already frozen */ }
+      try { Object.freeze(Function.prototype); } catch (_) { /* already frozen */ }
+      try { Object.freeze(Array.prototype); } catch (_) { /* already frozen */ }
       new Function('module', 'exports', 'globalThis', 'openFactory', '"use strict";\\n' + message.code)(module, exports, sandbox, openFactory);
       const exported = module.exports && Object.keys(module.exports).length > 0 ? module.exports : undefined;
       loadedPlugin = normalizePlugin(module.exports.default || exported || sandbox.openFactoryPlugin || sandbox.plugin, message.manifest);

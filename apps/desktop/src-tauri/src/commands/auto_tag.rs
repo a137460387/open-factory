@@ -7,6 +7,7 @@ use crate::db;
 /// 自动打标请求
 #[derive(Debug, Clone, Deserialize)]
 pub struct AutoTagRequest {
+    #[allow(dead_code)]
     pub project_path: String,
     pub asset_id: String,
     pub name: String,
@@ -16,6 +17,7 @@ pub struct AutoTagRequest {
     pub height: Option<i32>,
     pub frame_rate: Option<f64>,
     pub video_codec: Option<String>,
+    #[allow(dead_code)]
     pub audio_codec: Option<String>,
     pub color_space: Option<String>,
     pub file_size: Option<i64>,

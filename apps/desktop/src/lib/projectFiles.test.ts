@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
 import { runAutosaveTick } from '../hooks/useAutosave';
-import { setLanguage } from '../i18n/strings';
+import { setLanguage, setLanguageAsync } from '../i18n/strings';
 import {
   deleteAutosaveAfterSave,
   findStartupAutosaveRecovery,
@@ -41,8 +41,8 @@ describe('project autosave files', () => {
   let exists: Map<string, boolean>;
   let mtimes: Map<string, number>;
 
-  beforeEach(() => {
-    setLanguage('en');
+  beforeEach(async () => {
+    await setLanguageAsync('en');
     storage = new MemoryStorage();
     writes = [];
     removes = [];

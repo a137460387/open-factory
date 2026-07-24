@@ -4,12 +4,12 @@
  */
 
 // Configuration
-export { loadConfig, configSchema } from "./config.js";
+export { loadConfig, validateOrExit, configSchema } from "./config.js";
 export type { CollaborationConfig } from "./config.js";
 
 // Authentication
-export { createAuthMiddleware, verifyToken, generateTestToken, AuthError } from "./auth.js";
-export type { TokenPayload } from "./auth.js";
+export { createAuthMiddleware, createExpressAuthMiddleware, verifyToken, generateTestToken, AuthError, extractBearerToken } from "./auth.js";
+export type { TokenPayload, AuthenticatedUser } from "./auth.js";
 
 // Room Management
 export { RoomManager, RoomError } from "./room-manager.js";

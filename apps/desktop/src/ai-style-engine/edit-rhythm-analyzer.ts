@@ -90,10 +90,24 @@ export interface EDLAnalysisResult {
 
 // ==================== EDL Parsing ====================
 
+/** Minimal timeline shape for EDL analysis */
+export interface TimelineLike {
+  tracks: Array<{
+    id: string;
+    clips: Array<{
+      start: number;
+      duration: number;
+      mediaId: string;
+      transition?: { type?: string };
+      metadata?: { isHighlight?: boolean; visualEnergy?: number; audioEnergy?: number };
+    }>;
+  }>;
+}
+
 /**
  * Parse EDL entries from project timeline data
  */
-export function parseEDLEntries(timeline: any): EditDecisionEntry[] {
+export function parseEDLEntries(timeline: TimelineLike): EditDecisionEntry[] {
   const entries: EditDecisionEntry[] = [];
 
   if (!timeline?.tracks) {
@@ -343,7 +357,7 @@ function normalizeValue(value: number, min: number, max: number): number {
 /**
  * Run full EDL analysis on project timeline
  */
-export function analyzeEditingStyle(timeline: any): EDLAnalysisResult {
+export function analyzeEditingStyle(timeline: TimelineLike): EDLAnalysisResult {
   const entries = parseEDLEntries(timeline);
 
   if (entries.length === 0) {

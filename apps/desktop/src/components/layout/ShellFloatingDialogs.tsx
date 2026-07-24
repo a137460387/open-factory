@@ -13,6 +13,12 @@ import type {
   ProjectTemplateId,
   Track,
 } from '@open-factory/editor-core';
+import type {
+  MissingMediaIssue,
+  DuplicateMediaIssue,
+  OrphanMediaIssue,
+  ProxyMissingIssue,
+} from '@open-factory/editor-core';
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
 import { useEditorUIStore } from '../../store/editorUIStore';
@@ -172,10 +178,10 @@ export interface ShellFloatingDialogsProps {
   // Health
   refreshProjectHealth: () => Promise<void>;
   autoRepairProjectHealth: () => Promise<void>;
-  relinkMissingFromHealth: (issue: any) => Promise<void>;
-  removeOrphanFromHealth: (issue: any) => Promise<void>;
-  mergeDuplicateFromHealth: (issue: any) => Promise<void>;
-  queueProxyFromHealth: (issue: any) => Promise<void>;
+  relinkMissingFromHealth: (issue: MissingMediaIssue) => Promise<void>;
+  removeOrphanFromHealth: (issue: OrphanMediaIssue) => Promise<void>;
+  mergeDuplicateFromHealth: (issue: DuplicateMediaIssue) => Promise<void>;
+  queueProxyFromHealth: (issue: ProxyMissingIssue) => Promise<void>;
   mergeDuplicateMediaGroups: (selections: DuplicateMediaMergeSelection[]) => void;
   refreshMediaHealthDashboard: () => Promise<unknown>;
   repairFromMediaHealthDashboard: () => Promise<void>;

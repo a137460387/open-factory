@@ -22,6 +22,18 @@ interface FlattenedCommandHistoryNode {
 
 export type CommandExecuteListener = (command: Command) => void;
 
+/** Options for the CommandManager. */
+export interface CommandManagerOptions {
+  /** Maximum history entries (default 100). */
+  maxHistory?: number;
+  /**
+   * Time window in ms for operation merging.
+   * Commands executed within this window that support merge()
+   * will be coalesced into a single undo step. Default 200ms.
+   */
+  mergeWindowMs?: number;
+}
+
 export class CommandManager {
   private readonly root: CommandHistoryNode = { id: 'history-root', children: [], order: 0 };
   private current: CommandHistoryNode = this.root;
@@ -30,8 +42,13 @@ export class CommandManager {
   private onExecute?: CommandExecuteListener;
   private nextEntryId = 1;
   private nextOrder = 1;
+  private readonly mergeWindowMs: number;
+  private lastExecuteTime = 0;
 
-  constructor(private readonly maxHistory = 100) {}
+  constructor(private readonly maxHistory = 100, options: CommandManagerOptions = {}) {
+    this.maxHistory = options.maxHistory ?? maxHistory;
+    this.mergeWindowMs = options.mergeWindowMs ?? 200;
+  }
 
   setOnChange(onChange: (meta: HistoryMeta) => void): void {
     this.onChange = onChange;
@@ -43,6 +60,30 @@ export class CommandManager {
   }
 
   execute(command: Command): void {
+    const now = Date.now();
+
+    // Attempt merge with the most recent command if within time window
+    if (this.canMergeWithPrevious(command, now)) {
+      const prevNode = this.current;
+      if (prevNode.command) {
+        const merged = prevNode.command.merge!(command);
+        if (merged) {
+          // Replace the previous command with the merged one
+          prevNode.command = merged;
+          prevNode.entry = {
+            ...prevNode.entry!,
+            description: merged.description,
+            timestamp: new Date().toISOString(),
+          };
+          merged.execute();
+          this.onExecute?.(merged);
+          this.lastExecuteTime = now;
+          this.emitChange();
+          return;
+        }
+      }
+    }
+
     command.execute();
     this.onExecute?.(command);
     const entry: HistoryEntry = {
@@ -65,7 +106,15 @@ export class CommandManager {
     this.enforceBranchLimit(this.current);
     this.current = node;
     this.pruneToMaxHistory();
+    this.lastExecuteTime = now;
     this.emitChange();
+  }
+
+  private canMergeWithPrevious(command: Command, now: number): boolean {
+    if (!command.merge) return false;
+    if (now - this.lastExecuteTime > this.mergeWindowMs) return false;
+    if (this.current === this.root) return false;
+    return true;
   }
 
   undo(): void {

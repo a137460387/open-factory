@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
 import type { Project, Clip, MediaAsset, Track, BeatSensitivity } from '@open-factory/editor-core';
+import type { Command } from '@open-factory/editor-core';
+import type { TimelineAccessor } from '@open-factory/editor-core';
 import { useEditorUIStore } from '../../store/editorUIStore';
 import {
   useSpectrumAsset,
@@ -79,8 +81,8 @@ export interface AnalysisDialogsProps {
   selectedClip?: Clip;
   selectedClipId?: string;
   selectedClipIds: string[];
-  commandManager: { execute: (command: any) => void };
-  timelineAccessor: any;
+  commandManager: { execute: (command: Command) => void };
+  timelineAccessor: TimelineAccessor;
   // Color analysis
   colorAnalysisResults: TimelineColorAnalysisResult[];
   colorAnalysisJumps: SceneColorDifference[];

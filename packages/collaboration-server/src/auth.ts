@@ -1,9 +1,10 @@
 /**
- * JWT authentication middleware for Socket.IO connections.
- * Verifies tokens, extracts user identity, and attaches it to the socket.
+ * JWT authentication middleware for Socket.IO and Express REST API.
+ * Verifies tokens, extracts user identity, and attaches it to the request/socket.
  */
 
 import type { Socket } from "socket.io";
+import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import type { CollaborationConfig } from "./config.js";
@@ -45,16 +46,20 @@ export class AuthError extends Error {
 /**
  * Verify a JWT token string and return the decoded payload.
  * Throws AuthError on any failure.
+ * Rejects empty and whitespace-only tokens explicitly.
  */
 export function verifyToken(
   token: string,
   config: Pick<CollaborationConfig, "jwt">
 ): TokenPayload {
+  if (!token || token.trim().length === 0) {
+    throw new AuthError("Token must not be empty", "TOKEN_INVALID");
+  }
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
       audience: config.jwt.audience,
-      algorithms: ["HS256", "HS384", "HS512"],
+      algorithms: ["HS256"],
     });
 
     const parsed = tokenPayloadSchema.safeParse(decoded);
@@ -144,4 +149,76 @@ export function generateTestToken(
       expiresIn: "1h",
     }
   );
+}
+
+// ============================================================
+// Express REST API Middleware
+// ============================================================
+
+/** Authenticated user info attached to Express requests */
+export interface AuthenticatedUser {
+  userId: string;
+  displayName: string;
+}
+
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: AuthenticatedUser;
+  }
+}
+
+/**
+ * Extract Bearer token from Authorization header.
+ * Returns null if header is missing or malformed.
+ */
+export function extractBearerToken(authHeader: string | undefined): string | null {
+  if (!authHeader) return null;
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Bearer") return null;
+  const token = parts[1];
+  return token.length > 0 ? token : null;
+}
+
+/**
+ * Express middleware that enforces JWT authentication on REST API routes.
+ *
+ * Reads token from `Authorization: Bearer <token>` header.
+ * On success, attaches `req.user` with userId and displayName.
+ * Returns 401 on missing/invalid/expired token.
+ */
+export function createExpressAuthMiddleware(
+  config: Pick<CollaborationConfig, "jwt">
+) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const token = extractBearerToken(req.headers.authorization);
+
+    if (!token) {
+      res.status(401).json({
+        error: "Authentication required",
+        code: "NO_TOKEN",
+      });
+      return;
+    }
+
+    try {
+      const payload = verifyToken(token, config);
+      req.user = {
+        userId: payload.sub,
+        displayName: payload.name,
+      };
+      next();
+    } catch (err) {
+      if (err instanceof AuthError) {
+        res.status(401).json({
+          error: err.message,
+          code: err.code,
+        });
+        return;
+      }
+      res.status(401).json({
+        error: "Authentication failed",
+        code: "AUTH_FAILED",
+      });
+    }
+  };
 }

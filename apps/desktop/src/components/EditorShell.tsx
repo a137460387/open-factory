@@ -158,7 +158,7 @@ export function EditorShell() {
   // Effects, autosave, close guard, shortcuts
   useEditorShellEffects({
     projectPath: projectPath ?? null,
-    tutorialProgress: tutorialProgress ?? { enabled: true, currentStep: 0, completed: false, dismissed: false } as any,
+    tutorialProgress: tutorialProgress ?? { tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false },
     tutorialSignals, setTutorialProgress, setTutorialCelebrationVisible,
     demucsExecutablePath, setDemucsAvailability,
     audioSeparationClipId: audioSeparationClipId ?? null,

@@ -143,9 +143,9 @@ fn fft_magnitudes_radix2(input: &[f64]) -> Vec<f64> {
     let mut real = vec![0.0f64; n];
     let mut imag = vec![0.0f64; n];
 
-    for i in 0..n {
+    for (i, &input_val) in input.iter().enumerate().take(n) {
         let j = bit_reverse(i, n.trailing_zeros() as usize);
-        real[j] = input[i];
+        real[j] = input_val;
     }
 
     // Butterfly operations
@@ -209,10 +209,10 @@ fn dft_magnitudes(input: &[f64]) -> Vec<f64> {
     for k in 0..half_n {
         let mut sum_real = 0.0;
         let mut sum_imag = 0.0;
-        for i in 0..n {
+        for (i, &input_val) in input.iter().enumerate().take(n) {
             let angle = 2.0 * PI * k as f64 * i as f64 / n_f64;
-            sum_real += input[i] * angle.cos();
-            sum_imag -= input[i] * angle.sin();
+            sum_real += input_val * angle.cos();
+            sum_imag -= input_val * angle.sin();
         }
         magnitudes.push((sum_real * sum_real + sum_imag * sum_imag).sqrt() / n_f64);
     }

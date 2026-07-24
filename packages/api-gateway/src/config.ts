@@ -1,8 +1,26 @@
 /**
  * API Gateway configuration
+ *
+ * SECURITY: JWT_SECRET and CORS_ORIGIN are mandatory.
+ * The server will refuse to start if they are not configured.
  */
 
 import { z } from 'zod';
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value || !value.trim()) {
+    throw new Error(
+      `[CONFIG] Required environment variable "${name}" is missing or empty. ` +
+      `Set it in .env or the process environment before starting the server.`,
+    );
+  }
+  return value.trim();
+}
 
 // ============================================================
 // Config Schema
@@ -38,7 +56,7 @@ const configSchema = z.object({
 
   // CORS
   cors: z.object({
-    origin: z.union([z.string(), z.array(z.string())]).default('*'),
+    origins: z.array(z.string().url()).min(1),
     credentials: z.boolean().default(true),
   }),
 
@@ -52,6 +70,17 @@ const configSchema = z.object({
 export type Config = z.infer<typeof configSchema>;
 
 // ============================================================
+// Parse CORS Origins
+// ============================================================
+
+function parseCorsOrigins(raw: string): string[] {
+  return raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+// ============================================================
 // Load Config
 // ============================================================
 
@@ -62,7 +91,7 @@ export function loadConfig(): Config {
     nodeEnv: process.env.NODE_ENV || 'development',
 
     jwt: {
-      secret: process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars',
+      secret: requiredEnv('JWT_SECRET'),
       issuer: process.env.JWT_ISSUER || 'open-factory',
       audience: process.env.JWT_AUDIENCE || 'open-factory-api',
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
@@ -81,7 +110,7 @@ export function loadConfig(): Config {
     },
 
     cors: {
-      origin: process.env.CORS_ORIGIN || '*',
+      origins: parseCorsOrigins(requiredEnv('CORS_ORIGIN')),
       credentials: process.env.CORS_CREDENTIALS !== 'false',
     },
 

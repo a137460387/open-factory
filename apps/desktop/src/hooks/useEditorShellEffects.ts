@@ -3,7 +3,7 @@ import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 import { initMediaIndexDb, listenBridge, type DemucsProgressEvent } from '../lib/tauri-bridge';
-import { getDemucsAvailability } from '../lib/demucs';
+import { getDemucsAvailability, type DemucsAvailability } from '../lib/demucs';
 import { normalizeTutorialProgressSettings, advanceTutorialProgress, type TutorialProgressSettings, type TutorialSignals } from '../tutorial/tutorialState';
 import { saveTutorialProgressSettings } from '../settings/appSettings';
 
@@ -14,7 +14,7 @@ interface EffectsDeps {
   setTutorialProgress: (p: TutorialProgressSettings) => void;
   setTutorialCelebrationVisible: (v: boolean) => void;
   demucsExecutablePath: string;
-  setDemucsAvailability: (a: any) => void;
+  setDemucsAvailability: (a: DemucsAvailability) => void;
   audioSeparationClipId: string | null;
   setAudioSeparationProgress: (p: number) => void;
   recordingTask: { startedAt: number } | null;
@@ -26,10 +26,10 @@ interface EffectsDeps {
   setFormatConverterOpen: (v: boolean) => void;
   setEmotionAnalysisOpen: (v: boolean) => void;
   setExportHistoryClassifierOpen: (v: boolean) => void;
-  setFormatConverterMockFiles: (f: any) => void;
-  setMockSubtitleClips: (c: any) => void;
-  setMockExportHistory: (h: any) => void;
-  setArchiveProgress: (p: any) => void;
+  setFormatConverterMockFiles: (f: DroppedFile[]) => void;
+  setMockSubtitleClips: (c: SubtitleClip[]) => void;
+  setMockExportHistory: (h: ExportTaskHistoryEntry[]) => void;
+  setArchiveProgress: (p: ArchiveProgress | undefined) => void;
   setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setGestureTutorialOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
