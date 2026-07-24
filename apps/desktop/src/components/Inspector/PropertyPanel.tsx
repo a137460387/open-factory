@@ -218,6 +218,7 @@ function SubtitleDetailsPanel({
   translateSubtitleTrack, applySubtitleStyleTemplate, saveCurrentSubtitleStyleTemplate,
   deleteSubtitleStyleTemplate, addSubtitleStyleTemplateToSharedLibrary,
 }: ClipInspectorBodyProps) {
+  const subClip = clip as Extract<import('@open-factory/editor-core').Clip, { type: 'subtitle' }>;
 
   return (
     <>
@@ -286,7 +287,7 @@ function SubtitleDetailsPanel({
               </select>
             </label>
             {soundDescSelectValue === 'custom' || customSoundDescOpen ? (
-              <TextField label={zhCN.inspector.closedCaptions.customSoundDesc} value={clip.soundDesc ?? ''} testId="subtitle-custom-sound-desc-input" onCommit={(soundDesc) => { setCustomSoundDescOpen(false); commitCcSoundDesc(soundDesc); }} />
+              <TextField label={zhCN.inspector.closedCaptions.customSoundDesc} value={subClip.soundDesc ?? ''} testId="subtitle-custom-sound-desc-input" onCommit={(soundDesc) => { setCustomSoundDescOpen(false); commitCcSoundDesc(soundDesc); }} />
             ) : null}
           </>
         ) : null}
@@ -296,23 +297,23 @@ function SubtitleDetailsPanel({
       <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="data-subtitle-section" open>
         <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.dataSubtitle}</summary>
         <div className="space-y-2 border-t border-line p-2">
-          <TextAreaField label={zhCN.inspector.fields.dataSubtitleTemplate} value={clip.dataSubtitle?.template ?? clip.text} testId="data-subtitle-template-input" onCommit={updateDataSubtitleTemplate} />
+          <TextAreaField label={zhCN.inspector.fields.dataSubtitleTemplate} value={subClip.dataSubtitle?.template ?? subClip.text} testId="data-subtitle-template-input" onCommit={updateDataSubtitleTemplate} />
           <div className="rounded bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="data-subtitle-source-summary">
-            {clip.dataSubtitle ? zhCN.inspector.dataSubtitle.summary(clip.dataSubtitle.sourceType, clip.dataSubtitle.rows.length) : zhCN.inspector.dataSubtitle.notBound}
+            {subClip.dataSubtitle ? zhCN.inspector.dataSubtitle.summary(subClip.dataSubtitle.sourceType, subClip.dataSubtitle.rows.length) : zhCN.inspector.dataSubtitle.notBound}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={selectedClipLocked} onClick={() => void bindDataSubtitleSource()} data-testid="data-subtitle-bind-button">{zhCN.inspector.dataSubtitle.bind}</button>
-            <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={selectedClipLocked || !clip.dataSubtitle} onClick={clearDataSubtitleSource} data-testid="data-subtitle-clear-button">{zhCN.inspector.dataSubtitle.clear}</button>
+            <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={selectedClipLocked || !subClip.dataSubtitle} onClick={clearDataSubtitleSource} data-testid="data-subtitle-clear-button">{zhCN.inspector.dataSubtitle.clear}</button>
           </div>
         </div>
       </details>
 
       <SubtitleStyleTemplatesPanel templates={subtitleStyleTemplates} onApply={applySubtitleStyleTemplate} onSave={saveCurrentSubtitleStyleTemplate} onDelete={deleteSubtitleStyleTemplate} onAddToSharedLibrary={(template) => void addSubtitleStyleTemplateToSharedLibrary(template)} />
-      <AISubtitleStylePanel clip={clip} media={media} subtitleTrack={subtitleTrack} selectedClipLocked={selectedClipLocked} />
-      <ColorField label={zhCN.inspector.fields.outlineColor} value={clip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
-      <NumberField label={zhCN.inspector.fields.outlineWidth} value={clip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
-      <ColorField label={zhCN.inspector.fields.shadowColor} value={clip.style.shadowColor} onCommit={(shadowColor) => commit({ style: { shadowColor } })} testId="subtitle-shadow-color-input" />
-      <NumberField label={zhCN.inspector.fields.shadowOffset} value={clip.style.shadowOffset} min={0} max={24} step={1} onCommit={(shadowOffset) => commit({ style: { shadowOffset } })} testId="subtitle-shadow-offset-input" />
+      <AISubtitleStylePanel clip={subClip} media={media} subtitleTrack={subtitleTrack} selectedClipLocked={selectedClipLocked} />
+      <ColorField label={zhCN.inspector.fields.outlineColor} value={subClip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
+      <NumberField label={zhCN.inspector.fields.outlineWidth} value={subClip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
+      <ColorField label={zhCN.inspector.fields.shadowColor} value={subClip.style.shadowColor} onCommit={(shadowColor) => commit({ style: { shadowColor } })} testId="subtitle-shadow-color-input" />
+      <NumberField label={zhCN.inspector.fields.shadowOffset} value={subClip.style.shadowOffset} min={0} max={24} step={1} onCommit={(shadowOffset) => commit({ style: { shadowOffset } })} testId="subtitle-shadow-offset-input" />
       <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!isTranslationConfigured(translationSettings) || Boolean(subtitleTranslationProgress)} data-testid="subtitle-translate-button" onClick={() => void translateSubtitleTrack()}>
         {subtitleTranslationProgress ? zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total) : zhCN.inspector.translation.button}
       </button>
@@ -322,17 +323,17 @@ function SubtitleDetailsPanel({
       {subtitleTranslationProgress ? (
         <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-translation-progress">{zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total)}</div>
       ) : null}
-      <NumberField label={zhCN.inspector.fields.bottomMargin} value={clip.style.yOffset} min={0} step={1} onCommit={(yOffset) => commit({ style: { yOffset } })} />
+      <NumberField label={zhCN.inspector.fields.bottomMargin} value={subClip.style.yOffset} min={0} step={1} onCommit={(yOffset) => commit({ style: { yOffset } })} />
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.exportMode}
-        <select className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" value={clip.subtitleMode} data-testid="subtitle-mode-select" onChange={(event) => commit({ subtitleMode: event.target.value === 'soft-sub' ? 'soft-sub' : 'burn-in' })}>
+        <select className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" value={subClip.subtitleMode} data-testid="subtitle-mode-select" onChange={(event) => commit({ subtitleMode: event.target.value === 'soft-sub' ? 'soft-sub' : 'burn-in' })}>
           <option value="burn-in">{zhCN.inspector.subtitleMode.burnIn}</option>
           <option value="soft-sub">{zhCN.inspector.subtitleMode.softSub}</option>
         </select>
       </label>
-      <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
-      <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
-      <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} />
+      <SubtitleProofreadingPanel clip={subClip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [subClip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
+      <SubtitleRetimingPanel clip={subClip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [subClip]} projectSettings={projectSettings} />
+      <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [subClip]} selectedClipLocked={selectedClipLocked} />
       <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
     </>
   );
