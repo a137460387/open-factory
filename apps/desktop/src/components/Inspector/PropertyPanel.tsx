@@ -40,68 +40,38 @@ import { AISubtitleStylePanel } from './AISubtitleStylePanel';
 import { MotionGraphicPanel } from './MotionGraphicPanel';
 import type { ClipInspectorBodyProps } from './ClipInspectorBody';
 
-export function PropertyPanel({
-  clip,
-  selectedClipLocked,
-  media,
-  playheadTime,
-  projectSettings,
-  selectedSubtitleClips,
-  project,
-  allTimelineSubtitleClips,
-  projectSpeakers,
-  translationSettings,
-  translationApiKeyError,
-  subtitleTranslationProgress,
-  subtitleStyleTemplates,
-  customSoundDescOpen,
-  setCustomSoundDescOpen,
-  textAnimationPreset,
-  setTextAnimationPreset,
-  textAnimationDuration,
-  setTextAnimationDuration,
-  textAnimationDirection,
-  setTextAnimationDirection,
-  asset,
-  clipStartTimecode,
-  clipDurationTimecode,
-  assetDurationTimecode,
-  subtitleTrack,
-  subtitleType,
-  activeSpeaker,
-  activeSpeakerEntry,
-  soundDescSelectValue,
-  textPath,
-  textLayout,
-  textOpenTypeFeatures,
-  textArc,
-  deinterlaceSuggestion,
-  textAnimationKeyframeCount,
-  commit,
-  addKeyframe,
-  setKenBurns,
-  updateKenBurnsEndScale,
-  commitSubtitleType,
-  commitCcSpeaker,
-  commitCcSoundDesc,
-  addActiveSpeakerToLibrary,
-  removeActiveSpeakerFromLibrary,
-  updateActiveSpeakerColor,
-  updateTextPath,
-  updateTextLayout,
-  updateTextOpenTypeFeatures,
-  updateTextArc,
-  bindDataSubtitleSource,
-  updateDataSubtitleTemplate,
-  clearDataSubtitleSource,
-  translateSubtitleTrack,
-  applySubtitleStyleTemplate,
-  saveCurrentSubtitleStyleTemplate,
-  deleteSubtitleStyleTemplate,
-  addSubtitleStyleTemplateToSharedLibrary,
-  applyTextAnimation,
-  soundDescriptionOptions,
-}: ClipInspectorBodyProps) {
+export function PropertyPanel(props: ClipInspectorBodyProps) {
+  const {
+    clip,
+    selectedClipLocked,
+    media,
+    playheadTime,
+    projectSettings,
+    asset,
+    clipStartTimecode,
+    clipDurationTimecode,
+    assetDurationTimecode,
+    textPath,
+    textLayout,
+    textOpenTypeFeatures,
+    textArc,
+    textAnimationPreset,
+    setTextAnimationPreset,
+    textAnimationDuration,
+    setTextAnimationDuration,
+    textAnimationDirection,
+    setTextAnimationDirection,
+    textAnimationKeyframeCount,
+    commit,
+    addKeyframe,
+    setKenBurns,
+    updateKenBurnsEndScale,
+    updateTextPath,
+    updateTextLayout,
+    updateTextOpenTypeFeatures,
+    updateTextArc,
+    applyTextAnimation,
+  } = props;
   return (
     <>
       {/* Basic Properties */}
@@ -180,32 +150,7 @@ export function PropertyPanel({
             </>
           ) : null}
           {clip.type === 'subtitle' ? (
-            <SubtitleDetailsPanel
-              clip={clip} selectedClipLocked={selectedClipLocked} media={media}
-              projectSettings={projectSettings} selectedSubtitleClips={selectedSubtitleClips}
-              project={project} allTimelineSubtitleClips={allTimelineSubtitleClips}
-              projectSpeakers={projectSpeakers} translationSettings={translationSettings}
-              translationApiKeyError={translationApiKeyError}
-              subtitleTranslationProgress={subtitleTranslationProgress}
-              subtitleStyleTemplates={subtitleStyleTemplates}
-              customSoundDescOpen={customSoundDescOpen} setCustomSoundDescOpen={setCustomSoundDescOpen}
-              subtitleTrack={subtitleTrack} subtitleType={subtitleType}
-              activeSpeaker={activeSpeaker} activeSpeakerEntry={activeSpeakerEntry}
-              soundDescSelectValue={soundDescSelectValue} soundDescriptionOptions={soundDescriptionOptions}
-              commit={commit} commitSubtitleType={commitSubtitleType}
-              commitCcSpeaker={commitCcSpeaker} commitCcSoundDesc={commitCcSoundDesc}
-              addActiveSpeakerToLibrary={addActiveSpeakerToLibrary}
-              removeActiveSpeakerFromLibrary={removeActiveSpeakerFromLibrary}
-              updateActiveSpeakerColor={updateActiveSpeakerColor}
-              bindDataSubtitleSource={bindDataSubtitleSource}
-              updateDataSubtitleTemplate={updateDataSubtitleTemplate}
-              clearDataSubtitleSource={clearDataSubtitleSource}
-              translateSubtitleTrack={translateSubtitleTrack}
-              applySubtitleStyleTemplate={applySubtitleStyleTemplate}
-              saveCurrentSubtitleStyleTemplate={saveCurrentSubtitleStyleTemplate}
-              deleteSubtitleStyleTemplate={deleteSubtitleStyleTemplate}
-              addSubtitleStyleTemplateToSharedLibrary={addSubtitleStyleTemplateToSharedLibrary}
-            />
+            <SubtitleDetailsPanel {...props} />
           ) : null}
           {clip.type === 'text' ? (
             <TextAdvancedPanel
@@ -266,7 +211,7 @@ function SubtitleDetailsPanel({
   clip, selectedClipLocked, media, projectSettings, selectedSubtitleClips, project,
   allTimelineSubtitleClips, projectSpeakers, translationSettings, translationApiKeyError,
   subtitleTranslationProgress, subtitleStyleTemplates, customSoundDescOpen, setCustomSoundDescOpen,
-  subtitleType, activeSpeaker, activeSpeakerEntry, soundDescSelectValue, soundDescriptionOptions,
+  subtitleTrack, subtitleType, activeSpeaker, activeSpeakerEntry, soundDescSelectValue, soundDescriptionOptions,
   commit, commitSubtitleType, commitCcSpeaker, commitCcSoundDesc,
   addActiveSpeakerToLibrary, removeActiveSpeakerFromLibrary, updateActiveSpeakerColor,
   bindDataSubtitleSource, updateDataSubtitleTemplate, clearDataSubtitleSource,

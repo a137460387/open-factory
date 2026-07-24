@@ -406,3 +406,31 @@ export function getAdaptiveQualityIndicatorClass(status: ReturnType<typeof impor
   }
   return 'bg-emerald-400';
 }
+
+export function isFrameJumpLikeQuery(query: string): boolean {
+  const trimmed = query.trim();
+  return (trimmed.includes(':') && /^[\d:]+$/.test(trimmed)) || /^f/i.test(trimmed);
+}
+
+export function buildFrameSearchCandidates(project: Project, query: string): import('./types').FrameSearchCandidate[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return [];
+  const markerCandidates = (project.timeline.markers ?? [])
+    .filter((m) => m.label.toLowerCase().includes(normalizedQuery))
+    .map((m): import('./types').FrameSearchCandidate => ({ id: m.id, type: 'marker', label: m.label, time: m.time }));
+  const clipCandidates = project.timeline.tracks.flatMap((tr) =>
+    tr.clips
+      .filter((c) => {
+        const asset = 'mediaId' in c ? project.media.find((a) => a.id === (c as any).mediaId) : undefined;
+        return [c.name, asset?.name, asset?.path].some((v) => v?.toLowerCase().includes(normalizedQuery));
+      })
+      .map((c): import('./types').FrameSearchCandidate => ({ id: c.id, type: 'clip', label: c.name, time: c.start })),
+  );
+  return [...markerCandidates, ...clipCandidates]
+    .sort((l, r) =>
+      (l.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) -
+      (r.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) ||
+      l.time - r.time || l.label.localeCompare(r.label),
+    )
+    .slice(0, 8);
+}
