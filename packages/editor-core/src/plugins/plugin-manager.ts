@@ -8,6 +8,7 @@
 
 import type {
   AnyPlugin,
+  PluginCategory,
   PluginContext,
   PluginEventEmitter,
   PluginLifecycle,
@@ -350,8 +351,8 @@ export class PluginManager {
   /**
    * Get plugins by category.
    */
-  getPluginsByCategory(category: string): PluginRegistration[] {
-    return this.registry.query({ category: category as any });
+  getPluginsByCategory(category: PluginCategory): PluginRegistration[] {
+    return this.registry.query({ category });
   }
 
   // --- Events ---

@@ -6,7 +6,7 @@
  * InferenceEngine, enabling clean degradation when no real inference is available.
  */
 
-import type { ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult } from './inference-engine';
+import type { ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType } from './inference-engine';
 
 // ==================== Provider Interface ====================
 
@@ -47,7 +47,7 @@ export interface InferenceProvider {
   /** Initialize the provider. Returns true if ready. */
   initialize(): Promise<boolean>;
   /** Run inference for a given model type. */
-  infer(modelType: string, input: TensorDescriptor): Promise<InferenceResult>;
+  infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult>;
   /** Check if a specific capability is available. */
   hasCapability(capability: InferenceCapability): boolean;
   /** Release all resources. */
@@ -142,11 +142,11 @@ export class LocalInferenceProvider implements InferenceProvider {
     }
   }
 
-  async infer(modelType: string, input: TensorDescriptor): Promise<InferenceResult> {
+  async infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult> {
     if (!this._isReady) {
       throw new Error(`Provider '${this.id}' is not ready (health: ${this._health})`);
     }
-    return this.engine.infer(modelType as any, input);
+    return this.engine.infer(modelType, input);
   }
 
   hasCapability(capability: InferenceCapability): boolean {
@@ -218,7 +218,7 @@ export class RemoteInferenceProvider implements InferenceProvider {
     }
   }
 
-  async infer(modelType: string, input: TensorDescriptor): Promise<InferenceResult> {
+  async infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult> {
     if (!this._isReady) {
       throw new Error(`Provider '${this.id}' is not ready (health: ${this._health})`);
     }
@@ -262,7 +262,7 @@ export class RemoteInferenceProvider implements InferenceProvider {
 
 // Auto-register
 registerProvider('remote', (config) => new RemoteInferenceProvider({
-  endpoint: (config as any)?.endpoint ?? 'http://localhost:8080',
+  endpoint: (config as Record<string, unknown>)?.endpoint as string ?? 'http://localhost:8080',
   ...config,
 }));
 
@@ -287,7 +287,7 @@ export class HeuristicProvider implements InferenceProvider {
     return true;
   }
 
-  async infer(modelType: string, input: TensorDescriptor): Promise<InferenceResult> {
+  async infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult> {
     const startTime = performance.now();
 
     // Return a minimal valid result — downstream code must handle degraded quality

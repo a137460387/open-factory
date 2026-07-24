@@ -46,6 +46,9 @@ export interface SchedulerConfig {
   starvationPreventionMs: number;
 }
 
+/** Tracks preemption metadata per task without mutating the task object. */
+const preemptMeta = new WeakMap<Task, { count: number; originalPriority?: TaskPriority }>();
+
 export const DEFAULT_SCHEDULER_CONFIG: SchedulerConfig = {
   maxConcurrent: 4,
   timeSliceMs: 16, // ~1 frame at 60fps
@@ -351,13 +354,14 @@ export class TaskScheduler {
 
   private boostPriorityForPreemptedTask(entry: TaskEntry): void {
     // Track how many times this task has been preempted
-    const preemptCount = (entry.task as any).__preemptCount ?? 0;
-    (entry.task as any).__preemptCount = preemptCount + 1;
+    const meta = preemptMeta.get(entry.task) ?? { count: 0 };
+    meta.count += 1;
+    preemptMeta.set(entry.task, meta);
 
     // After 3 preemptions, temporarily boost priority to 'normal'
     // This prevents starvation of low/background priority tasks
-    if (preemptCount >= 3 && (entry.task.priority === 'low' || entry.task.priority === 'background')) {
-      (entry.task as any).__originalPriority = entry.task.priority;
+    if (meta.count >= 3 && (entry.task.priority === 'low' || entry.task.priority === 'background')) {
+      meta.originalPriority = entry.task.priority;
       entry.task.priority = 'normal';
     }
   }

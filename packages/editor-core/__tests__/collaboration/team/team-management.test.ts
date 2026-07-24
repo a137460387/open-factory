@@ -14,7 +14,7 @@ import {
   type TeamMember,
   type TeamRole,
   type TeamState,
-} from '../../../src/collaboration/team/team-management';
+} from '../../../src/collaboration/team-management';
 
 describe('TeamManager', () => {
   let manager: TeamManager;

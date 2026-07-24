@@ -352,12 +352,12 @@ export class QuantizationTool {
     const mantissa = value & 0x03FF;
 
     if (exponent === 0) {
-      return (sign | (mantissa << 13)) as any;
+      return (sign | (mantissa << 13)) >>> 0;
     } else if (exponent === 31) {
-      return (sign | 0x7F800000 | (mantissa << 13)) as any;
+      return (sign | 0x7F800000 | (mantissa << 13)) >>> 0;
     }
 
-    return (sign | ((exponent + 112) << 23) | (mantissa << 13)) as any;
+    return (sign | ((exponent + 112) << 23) | (mantissa << 13)) >>> 0;
   }
 }
 
@@ -470,7 +470,7 @@ export class ASRAccelerator {
     const decoded = await this.decoder(encoded);
 
     const inferenceTime = performance.now() - startTime;
-    console.log(`ASR inference: ${inferenceTime.toFixed(2)}ms`);
+    console.debug('[open-factory] ASR inference:', `${inferenceTime.toFixed(2)}ms`);
 
     return decoded;
   }
@@ -658,7 +658,7 @@ export class InferenceEngine {
       const webgpuAvailable = await this.webgpuBackend.initialize();
       if (webgpuAvailable) {
         this.activeBackend = this.webgpuBackend;
-        console.log('Using WebGPU backend');
+        console.debug('[open-factory] Using WebGPU backend');
       }
     }
 
@@ -667,7 +667,7 @@ export class InferenceEngine {
       const webgl2Available = await this.webgl2Backend.initialize();
       if (webgl2Available) {
         this.activeBackend = this.webgl2Backend;
-        console.log('Using WebGL2 backend');
+        console.debug('[open-factory] Using WebGL2 backend');
       }
     }
 

@@ -40,7 +40,7 @@ let globalProvider: InferenceProvider | null = null;
 export function initInferenceGuard(provider: InferenceProvider | null): void {
   globalProvider = provider;
   if (provider) {
-    console.log(`[InferenceGuard] initialized with provider '${provider.id}' (health: ${provider.health})`);
+    console.debug(`[open-factory] InferenceGuard initialized with provider '${provider.id}' (health: ${provider.health})`);
   } else {
     console.warn('[InferenceGuard] no provider available — all inference features will be degraded');
   }

@@ -26,7 +26,7 @@ export async function createServer() {
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
     },
-    trustProxy: true,
+    trustProxy: process.env.TRUST_PROXY === 'true',
   });
 
   // ============================================================

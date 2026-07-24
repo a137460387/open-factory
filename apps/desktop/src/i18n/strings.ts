@@ -4185,6 +4185,12 @@ const zh = {
     title: '导出视频',
     subtitle: '命名预设、本地 FFmpeg 队列、无云端上传',
     close: '关闭导出弹窗',
+    steps: {
+      config: '配置',
+      preview: '预览',
+      export: '导出',
+      complete: '完成',
+    },
     output: '输出',
     range: {
       title: '导出范围',

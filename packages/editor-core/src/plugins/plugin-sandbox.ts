@@ -266,7 +266,7 @@ export class PluginSandbox {
   // Freeze prototypes to prevent prototype pollution
   const freezeTargets = [Object.prototype, Array.prototype, Function.prototype, String.prototype, Number.prototype, Boolean.prototype];
   for (const target of freezeTargets) {
-    try { Object.freeze(target); } catch(e) {}
+    try { Object.freeze(target); } catch { /* ignore: freezing may fail on some proxies */ }
   }
 
   // Restricted console

@@ -181,7 +181,7 @@ export async function detectDevicePerformance(): Promise<DevicePerformanceInfo> 
 
   // Estimate memory
   if ('deviceMemory' in navigator) {
-    info.memoryGB = (navigator as any).deviceMemory;
+    info.memoryGB = (navigator as Navigator & { deviceMemory: number }).deviceMemory;
   }
 
   // Estimate VRAM based on GPU capabilities

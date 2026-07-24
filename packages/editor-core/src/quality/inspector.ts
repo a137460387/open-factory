@@ -15,6 +15,7 @@ import type {
   ComplianceResult,
   ComplianceViolation,
   PlatformSpec,
+  QualityPlatformTarget,
   TimeRange,
   IssueSeverity,
   TechnicalDefectType,
@@ -425,7 +426,7 @@ export function checkPlatformCompliance(
   }
 
   return {
-    platform: platformId as any,
+    platform: platformId as QualityPlatformTarget,
     passed: violations.length === 0,
     violations,
   };

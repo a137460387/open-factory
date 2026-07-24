@@ -133,7 +133,7 @@ export class PluginSandbox {
     if (!policy) throw new Error(`Plugin ${pluginId} is not sandboxed`);
 
     const allowed = policy.allowedHosts ?? [];
-    if (allowed.length > 0 && !allowed.some((h) => host.endsWith(h) || h === '*')) {
+    if (allowed.length > 0 && !allowed.some((h) => h === '*' || host === h || host.endsWith(`.${h}`))) {
       this.reportViolation({
         type: 'host-not-allowed',
         pluginId,

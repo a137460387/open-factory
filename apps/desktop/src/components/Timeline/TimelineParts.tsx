@@ -114,6 +114,7 @@ function ThumbnailTrack({
   zoom: number;
   width: number;
 }) {
+  const mediaMap = useMemo(() => new Map(media.map((m) => [m.id, m])), [media]);
   return (
     <div
       className="grid border-b border-line"
@@ -128,7 +129,7 @@ function ThumbnailTrack({
       </div>
       <div className="relative overflow-hidden bg-[var(--color-bg-elevated)]" style={{ width }}>
         {samples.map((sample) => {
-          const asset = sample.mediaId ? media.find((item) => item.id === sample.mediaId) : undefined;
+          const asset = sample.mediaId ? mediaMap.get(sample.mediaId) : undefined;
           const left = sample.time * zoom;
           const sampleWidth = Math.max(48, sample.intervalSeconds * zoom);
           return <ThumbnailTrackCell key={sample.id} sample={sample} asset={asset} left={left} width={sampleWidth} />;

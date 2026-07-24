@@ -340,10 +340,26 @@ export function generateEditPlan(
     // 计算目标时长
     const targetDur = calculateTargetDuration(
       {
-        ...({} as SceneAnalysis),
+        id: candidate.mediaPath,
+        mediaPath: candidate.mediaPath,
+        startTime: 0,
+        endTime: candidate.duration,
         duration: candidate.duration,
-        quality: { overall: candidate.quality } as any,
-      } as any,
+        sceneType: 'unknown',
+        sceneTypeConfidence: 0,
+        tags: [],
+        quality: {
+          overall: candidate.quality,
+          sharpness: 50,
+          exposure: 50,
+          colorSaturation: 50,
+          stability: 50,
+          audioQuality: 50,
+          noiseLevel: 50,
+        },
+        keyframes: [],
+        analyzedAt: Date.now(),
+      },
       template.rhythm,
       weights,
     );

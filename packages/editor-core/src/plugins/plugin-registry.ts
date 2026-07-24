@@ -6,7 +6,7 @@
  * All operations are synchronous and side-effect-free.
  */
 
-import type { AnyPlugin, PluginCategory, PluginManifest, PluginRegistration, PluginStatus } from './plugin-types';
+import type { AnyPlugin, PluginCategory, PluginManifest, PluginPermission, PluginRegistration, PluginStatus } from './plugin-types';
 
 // --- Types ---
 
@@ -148,7 +148,7 @@ export class PluginRegistry {
       results = results.filter((r) => r.status === query.status);
     }
     if (query.permission) {
-      results = results.filter((r) => r.manifest.permissions?.includes(query.permission as any));
+      results = results.filter((r) => r.manifest.permissions?.includes(query.permission as PluginPermission));
     }
     if (query.search) {
       const searchLower = query.search.toLowerCase();

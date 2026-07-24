@@ -148,4 +148,14 @@ describe('analyzePacing', () => {
       expect(point.cpm).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it('performance: 10000 cuts in < 50ms', () => {
+    const cuts = Array.from({ length: 10000 }, (_, i) => i * 0.5);
+    const totalDuration = 5000;
+    const start = performance.now();
+    const result = analyzePacing(cuts, totalDuration);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(50);
+    expect(result.cpmCurve.length).toBeGreaterThan(0);
+  });
 });

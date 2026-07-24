@@ -99,10 +99,9 @@ export function verifyToken(
 export function createAuthMiddleware(config: Pick<CollaborationConfig, "jwt">) {
   return (socket: Socket, next: (err?: Error) => void) => {
     try {
-      // Extract token from multiple possible locations
+      // Extract token from auth payload only (not from query to avoid URL logging)
       const token =
-        (socket.handshake.auth as Record<string, string>)?.token ??
-        (socket.handshake.query as Record<string, string>)?.token;
+        (socket.handshake.auth as Record<string, string>)?.token;
 
       if (!token) {
         return next(

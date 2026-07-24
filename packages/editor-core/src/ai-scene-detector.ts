@@ -329,6 +329,7 @@ function buildSegments(
   }
 
   const boundaryTimes = boundaries.map((b) => b.time);
+  const boundarySet = new Set(boundaryTimes.map((t) => Math.round(t * 1000)));
   const segments: Array<{
     start: number;
     end: number;
@@ -341,7 +342,7 @@ function buildSegments(
   let segSamples: ContentAnalysisVisualSample[] = [];
 
   for (const sample of sorted) {
-    const isBoundary = boundaryTimes.some((bt) => Math.abs(bt - sample.time) < 0.001);
+    const isBoundary = boundarySet.has(Math.round(sample.time * 1000));
     if (isBoundary && segSamples.length > 0) {
       segments.push(finalizeSegment(segStart, sample.time, segSamples));
       segStart = sample.time;

@@ -82,7 +82,7 @@ describe('HeuristicProvider', () => {
 
   it('infer returns a valid result', async () => {
     const provider = new HeuristicProvider();
-    const result = await provider.infer('scene-detection', {
+    const result = await provider.infer('vision', {
       shape: [10],
       dtype: 'float32',
       data: new Float32Array(10).buffer,

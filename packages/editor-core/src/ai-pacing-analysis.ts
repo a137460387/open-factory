@@ -43,11 +43,21 @@ export function calculateCpmCurve(
 ): CpmCurvePoint[] {
   if (totalDuration <= 0 || cuts.length === 0) return [];
 
+  const sortedCuts = [...cuts].sort((a, b) => a - b);
   const curve: CpmCurvePoint[] = [];
+  let windowStart = 0;
+  let windowEnd = windowSeconds;
+  let head = 0;
+  let tail = 0;
+
   for (let t = 0; t <= totalDuration - windowSeconds / 2; t += stepSeconds) {
-    const windowStart = t;
-    const windowEnd = t + windowSeconds;
-    const count = cuts.filter((c) => c >= windowStart && c < windowEnd).length;
+    windowStart = t;
+    windowEnd = t + windowSeconds;
+
+    while (head < sortedCuts.length && sortedCuts[head] < windowEnd) head++;
+    while (tail < sortedCuts.length && sortedCuts[tail] < windowStart) tail++;
+
+    const count = head - tail;
     const cpm = (count / windowSeconds) * 60;
     curve.push({ time: t, cpm });
   }
