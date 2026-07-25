@@ -8,9 +8,9 @@
  * 4. 平滑过渡动画
  */
 
-// ==================== 类型定义 ====================
+import { logger } from '../utils/logger.js';
 
-/** Zen 模式状态 */
+// ==================== 类型定义 ====================
 export type ZenModeStatus = 'inactive' | 'activating' | 'active' | 'deactivating';
 
 /** UI 元素类型 */
@@ -366,7 +366,7 @@ export class ZenModeManager {
       try {
         listener(this.state);
       } catch (error) {
-        console.error('Zen mode listener error:', error);
+        logger.error('Zen mode listener error:', error);
       }
     }
   }

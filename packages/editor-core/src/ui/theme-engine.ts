@@ -9,9 +9,9 @@
  * 5. 主题导入/导出
  */
 
-// ==================== 类型定义 ====================
+import { logger } from '../utils/logger.js';
 
-/** 主题模式 */
+// ==================== 类型定义 ====================
 export type ThemeMode = 'light' | 'dark' | 'auto' | 'custom';
 
 /** 颜色格式 */
@@ -1140,7 +1140,7 @@ export class ThemeManager {
       try {
         listener(this.activeTheme);
       } catch (error) {
-        console.error('Theme listener error:', error);
+        logger.error('Theme listener error:', error);
       }
     }
   }

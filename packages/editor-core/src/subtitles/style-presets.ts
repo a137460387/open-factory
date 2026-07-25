@@ -4,6 +4,7 @@ import {
   type SubtitleStyleTemplate,
   type SubtitleStyleTemplateKind,
 } from './style-templates';
+import { logger } from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -183,7 +184,7 @@ export function savePresetsToStorage(presets: SubtitleStylePreset[]): void {
     const serialized = JSON.stringify(collection);
     localStorage.setItem(PRESET_STORAGE_KEY, serialized);
   } catch (error) {
-    console.error('Failed to save subtitle style presets:', error);
+    logger.error('Failed to save subtitle style presets:', error);
   }
 }
 
@@ -206,7 +207,7 @@ export function loadPresetsFromStorage(): SubtitleStylePresetCollection {
 
     return collection;
   } catch (error) {
-    console.error('Failed to load subtitle style presets:', error);
+    logger.error('Failed to load subtitle style presets:', error);
     return { presets: [], version: CURRENT_VERSION };
   }
 }
@@ -256,7 +257,7 @@ export function importPresetsFromJson(json: string): SubtitleStylePreset[] {
       updatedAt: preset.updatedAt || new Date().toISOString(),
     }));
   } catch (error) {
-    console.error('Failed to import presets:', error);
+    logger.error('Failed to import presets:', error);
     throw new Error('Invalid preset file format');
   }
 }
@@ -310,7 +311,7 @@ export function importPresetFromFile(content: string): SubtitleStylePreset {
     // 直接作为预设导入
     return importSinglePreset(data);
   } catch (error) {
-    console.error('Failed to import preset from file:', error);
+    logger.error('Failed to import preset from file:', error);
     throw new Error('Invalid preset file');
   }
 }

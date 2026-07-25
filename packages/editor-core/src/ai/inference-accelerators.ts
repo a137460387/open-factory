@@ -3,6 +3,7 @@
  */
 
 import { WebGPUBackend, WebGL2Backend } from './inference-backends.js';
+import { logger } from '../utils/logger.js';
 
 // ==================== ASR Accelerator ====================
 
@@ -28,7 +29,7 @@ export class ASRAccelerator {
         );
         return true;
       } catch (error) {
-        console.error('ASR pipeline creation failed:', error);
+        logger.error('ASR pipeline creation failed:', error);
         return false;
       }
     }
@@ -44,7 +45,7 @@ export class ASRAccelerator {
     const decoded = await this.decoder(encoded);
 
     const inferenceTime = performance.now() - startTime;
-    console.debug('[open-factory] ASR inference:', `${inferenceTime.toFixed(2)}ms`);
+    logger.debug('ASR inference:', `${inferenceTime.toFixed(2)}ms`);
 
     return decoded;
   }
@@ -135,7 +136,7 @@ export class SemanticExtractorAccelerator {
         );
         return true;
       } catch (error) {
-        console.error('Semantic extractor pipeline creation failed:', error);
+        logger.error('Semantic extractor pipeline creation failed:', error);
         return false;
       }
     }

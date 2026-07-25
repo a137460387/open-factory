@@ -28,6 +28,7 @@ import { FULLSCREEN_VERTEX_SHADER, COLOR_PROCESSING_FRAGMENT_SHADER } from './we
 import { WebGPUFrameCacheManager } from './webgpu-frame-cache.js';
 import { WebGPUPredictivePrefetcher } from './webgpu-prefetcher.js';
 import { WebGPUDirtyRegionManager } from './webgpu-dirty-region.js';
+import { logger } from '../utils/logger.js';
 
 export class WebGPURenderEngine {
   private config: WebGPURenderPipelineConfig;
@@ -107,7 +108,7 @@ export class WebGPURenderEngine {
 
       // Handle device lost
       this.device.lost.then((info) => {
-        console.error('WebGPU device lost:', info.message);
+        logger.error('WebGPU device lost:', info.message);
         this.status = 'lost';
         this.notifyStatus('lost', `设备丢失: ${info.message}`);
       });
@@ -557,7 +558,7 @@ export class WebGPURenderEngine {
       try {
         listener(status, message);
       } catch (error) {
-        console.error('Status listener error:', error);
+        logger.error('Status listener error:', error);
       }
     }
   }

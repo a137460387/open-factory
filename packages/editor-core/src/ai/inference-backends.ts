@@ -2,6 +2,8 @@
  * AI inference engine — GPU backends (WebGPU + WebGL2 fallback)
  */
 
+import { logger } from '../utils/logger.js';
+
 // ==================== WebGPU Backend ====================
 
 export class WebGPUBackend {

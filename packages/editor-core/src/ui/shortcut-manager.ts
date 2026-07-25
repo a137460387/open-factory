@@ -8,6 +8,8 @@
  * 4. 快捷键冲突检测
  */
 
+import { logger } from '../utils/logger.js';
+
 // ==================== 类型定义 ====================
 
 /** 快捷键修饰键 */
@@ -1741,7 +1743,7 @@ export class ShortcutManager {
     if (this.config.enableConflictDetection && updates.keys) {
       const conflict = this.checkConflict(shortcutId, updates.keys, updates.modifiers || shortcut.modifiers);
       if (conflict) {
-        console.warn('Shortcut conflict detected:', conflict);
+        logger.warn('Shortcut conflict detected:', conflict);
         return false;
       }
     }
@@ -1905,7 +1907,7 @@ export class ShortcutManager {
       try {
         listener(this.activeScheme.shortcuts);
       } catch (error) {
-        console.error('Shortcut listener error:', error);
+        logger.error('Shortcut listener error:', error);
       }
     }
   }
