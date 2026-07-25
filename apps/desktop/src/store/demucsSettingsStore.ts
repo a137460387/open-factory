@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '@open-factory/editor-core/utils';
 import { saveLocalAiModelsSettings } from '../settings/appSettings';
 
 const DEMUCS_EXECUTABLE_KEY = 'open-factory:demucs-executable-path';
@@ -13,7 +14,7 @@ export const useDemucsSettingsStore = create<DemucsSettingsState>((set) => ({
   setExecutablePath: (executablePath) => {
     writeStoredPath(DEMUCS_EXECUTABLE_KEY, executablePath);
     void saveLocalAiModelsSettings({ demucs: { path: executablePath, version: 'demucs' } }).catch((error) => {
-      console.warn('Unable to save Demucs model path', error);
+      logger.warn('Unable to save Demucs model path', error);
     });
     set({ executablePath });
   },

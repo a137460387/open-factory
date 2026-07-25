@@ -20,6 +20,7 @@ import {
   type EditorLayoutSettings,
 } from '../layout/layoutSettings';
 import { saveLayoutSettings } from '../settings/appSettings';
+import { logger } from '@open-factory/editor-core/utils';
 import { readViewportSize } from '../lib/ui-helpers';
 import {
   createInitialDialogState,
@@ -279,7 +280,7 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
       };
       set({ layoutSettings: next });
       void saveLayoutSettings(next).catch((error: unknown) => {
-        console.warn('Unable to save layout settings', error);
+        logger.warn('Unable to save layout settings', error);
       });
     },
 

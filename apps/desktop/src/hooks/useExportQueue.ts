@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import type { Project } from '@open-factory/editor-core';
 import {
   cancelAllQueuedExportTasks,
@@ -52,7 +53,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
     const runningCount = runningTasks.length;
     const progress = runningCount > 0 ? runningTasks.reduce((sum, task) => sum + task.progress, 0) / runningCount : 0;
     void updateExportTrayProgress(progress, runningCount).catch((error) => {
-      console.warn('Unable to update export tray progress', error);
+      logger.warn('Unable to update export tray progress', error);
     });
   }, [exportTasks]);
 
@@ -96,7 +97,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load export queue recovery state', error);
+        logger.warn('Unable to load export queue recovery state', error);
       })
       .finally(() => {
         if (!disposed) {
@@ -200,7 +201,7 @@ export function useExportQueue(project: Project): UseExportQueueResult {
     try {
       await persistExportQueueState([]);
     } catch (error) {
-      console.warn('Unable to discard export queue recovery state', error);
+      logger.warn('Unable to discard export queue recovery state', error);
     }
   }, []);
 

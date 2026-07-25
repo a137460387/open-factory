@@ -7,6 +7,7 @@ import {
   type MediaAsset,
   type Track,
 } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { zhCN } from '../i18n/strings';
 import { markLocalAiModelUsed } from '../settings/appSettings';
 import { createClipFromAsset } from './clipFactory';
@@ -94,7 +95,7 @@ export async function separateAudioForClip(
 ): Promise<DemucsSeparationResult> {
   await assertDemucsSettingsReady(settings, dependencies.exists ?? fsExists);
   await markLocalAiModelUsed('demucs', settings.executablePath).catch((error) => {
-    console.warn('Unable to update Demucs model last-used time', error);
+    logger.warn('Unable to update Demucs model last-used time', error);
   });
   const execute = dependencies.run ?? runDemucs;
   const result = await execute({

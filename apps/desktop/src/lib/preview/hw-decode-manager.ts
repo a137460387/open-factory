@@ -26,6 +26,7 @@ import {
   releaseDecoder,
   setHwDecodeSettings,
 } from '../tauri-bridge';
+import { logger } from '@open-factory/editor-core/utils';
 
 export interface HardwareDecodeOptions {
   /** 视频文件路径 */
@@ -264,7 +265,7 @@ export class HardwareDecodeManager {
 
       // 异步解码，不等待完成
       this.decodeFrame(timestamp).catch((error) => {
-        console.error('hw-decode-manager', error);
+        logger.error('hw-decode-manager', error);
       }); // 预解码失败时忽略错误
     }
   }

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import type { TTSSynthesisParams, TTSSynthesisResult, TTSVoice, TTSConfig } from '@open-factory/editor-core/ai/tts';
 import { getAvailableVoices, recommendVoice, validateTTSParams } from '@open-factory/editor-core/ai/tts';
 
@@ -238,7 +239,7 @@ export function useTTS(config?: TTSConfig) {
         audioContext.close();
       };
     } catch (err) {
-      console.error('播放音频失败:', err);
+      logger.error('播放音频失败:', err);
     }
   }, []);
 
@@ -265,7 +266,7 @@ export function useTTS(config?: TTSConfig) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('导出音频失败:', err);
+      logger.error('导出音频失败:', err);
     }
   }, []);
 

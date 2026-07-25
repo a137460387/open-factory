@@ -1,4 +1,5 @@
 import type { ExportCostHistorySample, AIExportSuggestion } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   generatePlatformFitSuggestion,
   ApplyPlatformFitCommand,
@@ -756,22 +757,22 @@ export function useExportState(props: ExportDialogProps) {
     void readExportBackgroundSettings()
       .then(setExportBackgroundSettings)
       .catch((reason) => {
-        console.warn('Unable to load export background settings', reason);
+        logger.warn('Unable to load export background settings', reason);
       });
     void readExportOptimizationSettings()
       .then(setExportOptimizationSettings)
       .catch((reason) => {
-        console.warn('Unable to load export optimization settings', reason);
+        logger.warn('Unable to load export optimization settings', reason);
       });
     void readExportUploadSettings()
       .then(setExportUploadSettings)
       .catch((reason) => {
-        console.warn('Unable to load export upload settings', reason);
+        logger.warn('Unable to load export upload settings', reason);
       });
     void readExportUploadWebdavPassword()
       .then((password) => setExportUploadPassword(password ?? ''))
       .catch((reason) => {
-        console.warn('Unable to load export upload password', reason);
+        logger.warn('Unable to load export upload password', reason);
       });
     void Promise.all([readExportPresetSyncSettings(), readExportPresetSyncWebdavPassword()])
       .then(([settings, password]) => {
@@ -779,7 +780,7 @@ export function useExportState(props: ExportDialogProps) {
         setExportPresetSyncPassword(password ?? '');
       })
       .catch((reason) => {
-        console.warn('Unable to load export preset sync settings', reason);
+        logger.warn('Unable to load export preset sync settings', reason);
       });
   }, []);
 
@@ -805,7 +806,7 @@ export function useExportState(props: ExportDialogProps) {
     let canceled = false;
     void readDisableExportRecommendations()
       .then(setDisableRecommendations)
-      .catch((error) => console.warn('Unable to load export recommendation settings', error));
+      .catch((error) => logger.warn('Unable to load export recommendation settings', error));
     void loadExportPresets()
       .then((nextPresets) => {
         if (canceled) {
@@ -1164,7 +1165,7 @@ export type ExportState = ReturnType<typeof useExportState>;
 // Helper functions
 function logError(context: string) {
   return (error: unknown) => {
-    console.error(`[${context}]`, error);
+    logger.error(`[${context}]`, error);
   };
 }
 

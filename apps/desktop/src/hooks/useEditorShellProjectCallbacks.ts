@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   LoadProjectCommand,
   NewProjectCommand,
@@ -96,7 +97,7 @@ export function useEditorShellProjectCallbacks() {
     try {
       useEditorSettingsStore.getState().setLastBackupAt((await readBackupSettings()).lastBackupAt);
     } catch (error) {
-      console.warn(zhCN.settings.backup.statusSaveFailed, error);
+      logger.warn(zhCN.settings.backup.statusSaveFailed, error);
     }
     state.setProjectPath(targetPath);
     state.setDirty(false);
@@ -118,7 +119,7 @@ export function useEditorShellProjectCallbacks() {
     useEditorSettingsStore.getState().setTutorialSignals(DEFAULT_TUTORIAL_SIGNALS);
     useEditorSettingsStore.getState().setTutorialProgress(nextProgress);
     void saveTutorialProgressSettings(nextProgress).catch((error) => {
-      console.warn('Unable to save tutorial progress settings', error);
+      logger.warn('Unable to save tutorial progress settings', error);
     });
   }, []);
 
@@ -127,7 +128,7 @@ export function useEditorShellProjectCallbacks() {
     useEditorSettingsStore.getState().setTutorialProgress((current) => {
       const nextProgress = skipTutorialProgress(current ?? normalizeTutorialProgressSettings(undefined));
       void saveTutorialProgressSettings(nextProgress).catch((error) => {
-        console.warn('Unable to save tutorial progress settings', error);
+        logger.warn('Unable to save tutorial progress settings', error);
       });
       return nextProgress;
     });

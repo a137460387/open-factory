@@ -1,4 +1,5 @@
 import { joinPath, type ExportTask } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { useExportQueueStore } from './export-queue-store';
 
@@ -98,7 +99,7 @@ export function installExportQueuePersistence(
     }
     previousSignature = nextSignature;
     void persistExportQueueState(nextTasks, storage).catch((error) => {
-      console.warn('Unable to persist export queue state', error);
+      logger.warn('Unable to persist export queue state', error);
     });
   });
 }

@@ -1,4 +1,5 @@
 import type { ExportCostHistorySample, AIExportSuggestion } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   generatePlatformFitSuggestion,
   ApplyPlatformFitCommand,
@@ -1711,7 +1712,7 @@ export type ExportActions = ReturnType<typeof useExportActions>;
 // Helper functions (module-level)
 function logError(context: string) {
   return (error: unknown) => {
-    console.error(`[${context}]`, error);
+    logger.error(`[${context}]`, error);
   };
 }
 

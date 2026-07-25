@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import { zhCN } from '../i18n/strings';
 import { showToast } from '../lib/toast';
 import { readViewportSize, isEditableKeyboardEventTarget, getWorkspaceLayoutDisplayName } from '../lib/ui-helpers';
@@ -58,7 +59,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
     useEditorUIStore.getState().setVideoSummaryOpen(false);
     useEditorUIStore.getState().setNarrationOpen(false);
     void saveLayoutSettings(next).catch((error) => {
-      console.warn('Unable to save workspace layout', error);
+      logger.warn('Unable to save workspace layout', error);
     });
     showToast({ kind: 'success', title: zhCN.layout.workspaceApplied, message: getWorkspaceLayoutDisplayName(layout) });
   }, []);
@@ -227,7 +228,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
           void ensureMediaJobRunner();
         },
       }).catch((error) => {
-        console.warn('Unable to run proxy integrity check', error);
+        logger.warn('Unable to run proxy integrity check', error);
       });
     };
     void runIntegrityCheck();
@@ -264,7 +265,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         }
       })
       .catch((error) => {
-        console.warn('Unable to auto scan media health dashboard', error);
+        logger.warn('Unable to auto scan media health dashboard', error);
       });
     return () => {
       disposed = true;

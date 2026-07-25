@@ -5,6 +5,7 @@ import {
   type ThumbnailCacheEntry,
   type WaveformCacheEntry,
 } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { clearCache as bridgeClearCache, getCacheSize, readCache, writeCache } from '../lib/tauri-bridge';
 
 async function getAssetCacheKey(asset: MediaAsset): Promise<string | undefined> {
@@ -21,7 +22,7 @@ export async function readThumbnailFromCache(asset: MediaAsset): Promise<string 
   }
   const paths = buildCachePaths('thumbnail', key);
   const raw = await readCache(paths.dataPath).catch((error) => {
-    console.warn('Thumbnail cache read failed', error);
+    logger.warn('Thumbnail cache read failed', error);
     return null;
   });
   if (!raw) {
@@ -55,7 +56,7 @@ export async function writeThumbnailToCache(
     createdAt: new Date().toISOString(),
   };
   await writeCache(paths.dataPath, JSON.stringify(entry)).catch((error) => {
-    console.warn('Thumbnail cache write failed', error);
+    logger.warn('Thumbnail cache write failed', error);
   });
 }
 
@@ -66,7 +67,7 @@ export async function readWaveformFromCache(asset: MediaAsset): Promise<Waveform
   }
   const paths = buildCachePaths('waveform', key);
   const raw = await readCache(paths.dataPath).catch((error) => {
-    console.warn('Waveform cache read failed', error);
+    logger.warn('Waveform cache read failed', error);
     return null;
   });
   if (!raw) {
@@ -96,7 +97,7 @@ export async function writeWaveformToCache(
     createdAt: new Date().toISOString(),
   };
   await writeCache(paths.dataPath, JSON.stringify(payload)).catch((error) => {
-    console.warn('Waveform cache write failed', error);
+    logger.warn('Waveform cache write failed', error);
   });
 }
 

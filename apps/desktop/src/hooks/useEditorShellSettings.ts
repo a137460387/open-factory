@@ -1,4 +1,5 @@
 import { logError } from '../lib/error-handlers';
+import { logger } from '@open-factory/editor-core/utils';
 import { useEffect } from 'react';
 import { normalizeTutorialProgressSettings } from '../tutorial/tutorialState';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
@@ -37,7 +38,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load preview performance settings', error);
+        logger.warn('Unable to load preview performance settings', error);
       });
     return () => {
       canceled = true;
@@ -54,7 +55,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load local co-editing settings', error);
+        logger.warn('Unable to load local co-editing settings', error);
       });
     return () => {
       canceled = true;
@@ -85,7 +86,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load timeline grid settings', error);
+        logger.warn('Unable to load timeline grid settings', error);
       });
     return () => {
       canceled = true;
@@ -101,7 +102,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load timeline interaction settings', error);
+        logger.warn('Unable to load timeline interaction settings', error);
       });
     return () => {
       canceled = true;
@@ -117,7 +118,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load tutorial progress settings', error);
+        logger.warn('Unable to load tutorial progress settings', error);
         if (!canceled) {
           useEditorSettingsStore.getState().setTutorialProgress(normalizeTutorialProgressSettings(undefined));
         }
@@ -139,7 +140,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load view settings', error);
+        logger.warn('Unable to load view settings', error);
       });
     return () => {
       canceled = true;
@@ -155,7 +156,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn(zhCN.editorToasts.autosaveCheckFailed, error);
+        logger.warn(zhCN.editorToasts.autosaveCheckFailed, error);
       });
     return () => {
       canceled = true;
@@ -171,7 +172,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn(zhCN.settings.shortcuts.loadFailed, error);
+        logger.warn(zhCN.settings.shortcuts.loadFailed, error);
       });
     return () => {
       canceled = true;
@@ -187,7 +188,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn(zhCN.settings.macros.saveFailed, error);
+        logger.warn(zhCN.settings.macros.saveFailed, error);
       });
     void readMacroHistory()
       .then((entries) => {
@@ -196,7 +197,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn(zhCN.macros.history.title, error);
+        logger.warn(zhCN.macros.history.title, error);
       });
     return () => {
       canceled = true;
@@ -212,7 +213,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn(zhCN.settings.backup.statusSaveFailed, error);
+        logger.warn(zhCN.settings.backup.statusSaveFailed, error);
       });
     return () => {
       canceled = true;
@@ -228,7 +229,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load layout settings', error);
+        logger.warn('Unable to load layout settings', error);
       });
     return () => {
       canceled = true;
@@ -244,7 +245,7 @@ export function useEditorShellSettings(): void {
         }
       })
       .catch((error) => {
-        console.warn('Unable to load custom split layouts', error);
+        logger.warn('Unable to load custom split layouts', error);
       });
     return () => {
       canceled = true;

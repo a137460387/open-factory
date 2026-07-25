@@ -1,4 +1,5 @@
 import type { Project } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { zhCN } from '../i18n/strings';
 import {
   getFileStat,
@@ -55,7 +56,7 @@ export async function runProjectBackupAfterSave(
 ): Promise<ProjectBackupStatus> {
   const readSettingsImpl = dependencies.readSettings ?? readBackupSettings;
   const saveSettingsImpl = dependencies.saveSettings ?? saveBackupSettings;
-  const warn = dependencies.warn ?? ((message, error) => console.warn(message, error));
+  const warn = dependencies.warn ?? ((message, error) => logger.warn(message, error));
   const now = dependencies.now ?? (() => new Date());
 
   try {

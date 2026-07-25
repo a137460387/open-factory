@@ -1,4 +1,5 @@
 import { logError } from '../lib/error-handlers';
+import { logger } from '@open-factory/editor-core/utils';
 import { useCallback } from 'react';
 import type { MediaAsset, TimelineGridSettings, TimelineGridUnit } from '@open-factory/editor-core';
 import type { TimelineHeatmapViewSettings, TimelineInteractionSettings } from '../settings/appSettings';
@@ -79,7 +80,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     useEditorSettingsStore.getState().setSafeFrameGuides((current) => {
       const next = !current;
       void saveViewSettings({ safeFrameGuides: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
+        logger.warn('Unable to save view settings', error);
       });
       return next;
     });
@@ -89,7 +90,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     useEditorSettingsStore.getState().setThumbnailTrackVisible((current) => {
       const next = !current;
       void saveViewSettings({ thumbnailTrackVisible: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
+        logger.warn('Unable to save view settings', error);
       });
       return next;
     });
@@ -99,7 +100,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     useEditorSettingsStore.getState().setTimelineMinimapVisible((current) => {
       const next = !current;
       void saveViewSettings({ timelineMinimapVisible: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
+        logger.warn('Unable to save view settings', error);
       });
       return next;
     });
@@ -111,7 +112,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       void saveViewSettings({ timelineHeatmap: optimistic })
         .then((view) => useEditorSettingsStore.getState().setTimelineHeatmap(view.timelineHeatmap))
         .catch((error) => {
-          console.warn('Unable to save timeline heatmap settings', error);
+          logger.warn('Unable to save timeline heatmap settings', error);
         });
       return optimistic;
     });
@@ -123,7 +124,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       void savePreviewPerformanceSettings(optimistic)
         .then((saved) => useEditorSettingsStore.getState().setPreviewPerformance(saved))
         .catch((error) => {
-          console.warn('Unable to save preview performance settings', error);
+          logger.warn('Unable to save preview performance settings', error);
         });
       return optimistic;
     });
@@ -135,7 +136,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       void saveTimelineInteractionSettings(optimistic)
         .then((saved) => useEditorSettingsStore.getState().setTimelineInteractionSettings(saved))
         .catch((error) => {
-          console.warn('Unable to save timeline interaction settings', error);
+          logger.warn('Unable to save timeline interaction settings', error);
         });
       return optimistic;
     });
@@ -151,7 +152,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       alwaysOnTop: state.alwaysOnTop,
       resolutionScale: state.resolutionScale,
     }).catch((error) => {
-      console.warn('Unable to save preview window settings', error);
+      logger.warn('Unable to save preview window settings', error);
     });
   }, []);
 
@@ -200,7 +201,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       void saveTimelineGridSettings(optimistic)
         .then((saved) => useEditorSettingsStore.getState().setTimelineGridSettings(saved))
         .catch((error) => {
-          console.warn('Unable to save timeline grid settings', error);
+          logger.warn('Unable to save timeline grid settings', error);
         });
       return optimistic;
     });
@@ -212,7 +213,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
       void saveTimelineGridSettings(optimistic)
         .then((saved) => useEditorSettingsStore.getState().setTimelineGridSettings(saved))
         .catch((error) => {
-          console.warn('Unable to save timeline grid settings', error);
+          logger.warn('Unable to save timeline grid settings', error);
         });
       return optimistic;
     });
@@ -251,7 +252,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
           dependencies,
         );
       } catch (error) {
-        console.warn('Automation rule execution failed', error);
+        logger.warn('Automation rule execution failed', error);
       }
     },
     [],
@@ -274,7 +275,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
         setLayoutSettings((current) => {
           const next = { ...current, timelineHeightPx: nextHeight };
           void saveLayoutSettings(next).catch((error) => {
-            console.warn('Unable to save layout settings', error);
+            logger.warn('Unable to save layout settings', error);
           });
           return next;
         });

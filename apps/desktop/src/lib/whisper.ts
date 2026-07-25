@@ -6,6 +6,7 @@ import {
   type Timeline,
   type Track,
 } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { zhCN } from '../i18n/strings';
 import { markLocalAiModelUsed } from '../settings/appSettings';
 import { buildSubtitleTrackFromSrt } from './subtitles';
@@ -83,7 +84,7 @@ export async function buildWhisperSubtitleTrackForClip(
 ): Promise<Track> {
   await assertWhisperSettingsReady(settings, dependencies.exists ?? fsExists);
   await markLocalAiModelUsed('whisper', settings.modelPath).catch((error) => {
-    console.warn('Unable to update Whisper model last-used time', error);
+    logger.warn('Unable to update Whisper model last-used time', error);
   });
   const executeWhisper = dependencies.run ?? runWhisper;
   const result = await executeWhisper({

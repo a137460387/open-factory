@@ -2,6 +2,7 @@
  * 统一错误处理工具函数
  * 用于替换空catch块和.catch(() => undefined)，确保错误被记录
  */
+import { logger } from '@open-factory/editor-core/utils';
 
 /**
  * 带日志的catch处理器，用于替换.catch(() => undefined)
@@ -10,7 +11,7 @@
  */
 export function logError(context: string): (error: unknown) => undefined {
   return (error: unknown) => {
-    console.error(`[${context}]`, error);
+    logger.error(`[${context}]`, error);
     return undefined;
   };
 }
@@ -23,7 +24,7 @@ export function logError(context: string): (error: unknown) => undefined {
  */
 export function logErrorWithDefault<T>(context: string, defaultValue: T): (error: unknown) => T {
   return (error: unknown) => {
-    console.error(`[${context}]`, error);
+    logger.error(`[${context}]`, error);
     return defaultValue;
   };
 }
@@ -36,7 +37,7 @@ export function logErrorWithDefault<T>(context: string, defaultValue: T): (error
  */
 export function silentError(context: string): (error: unknown) => undefined {
   return (error: unknown) => {
-    console.warn(`[${context}] 静默处理:`, error);
+    logger.warn(`[${context}] 静默处理:`, error);
     return undefined;
   };
 }

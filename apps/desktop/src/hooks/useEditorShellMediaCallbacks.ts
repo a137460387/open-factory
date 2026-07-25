@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   AddClipCommand,
   AddMediaFolderCommand,
@@ -99,7 +100,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     try {
       useEditorSettingsStore.getState().setSharedLibraryResources(await loadSharedLibrary());
     } catch (error) {
-      console.warn('Unable to load shared library', error);
+      logger.warn('Unable to load shared library', error);
       useEditorSettingsStore.getState().setSharedLibraryResources([]);
     }
   }, []);

@@ -50,6 +50,7 @@ import {
   estimateTextureBytes,
   type GpuPreviewMetrics,
 } from './gpu-acceleration';
+import { logger } from '@open-factory/editor-core/utils';
 
 interface ProgramInfo {
   program: WebGLProgram;
@@ -354,7 +355,7 @@ export class WebGlPreviewCompositor {
     try {
       passes = resolveColorNodeGraphPreviewPasses(colorNodeGraph, fallbackColorCorrection);
     } catch (error) {
-      console.warn('Unable to resolve color node graph preview passes', error);
+      logger.warn('Unable to resolve color node graph preview passes', error);
       this.drawSource(
         source,
         mediaWidth,
@@ -379,7 +380,7 @@ export class WebGlPreviewCompositor {
     try {
       scratchCompositor = new WebGlPreviewCompositor(scratch);
     } catch (error) {
-      console.warn('Unable to allocate color node graph preview compositor', error);
+      logger.warn('Unable to allocate color node graph preview compositor', error);
       this.drawSource(
         source,
         mediaWidth,
@@ -568,7 +569,7 @@ export class WebGlPreviewCompositor {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
       return true;
     } catch (error) {
-      console.warn('Unable to preload GPU preview texture', error);
+      logger.warn('Unable to preload GPU preview texture', error);
       return false;
     }
   }
@@ -647,7 +648,7 @@ export class WebGlPreviewCompositor {
     try {
       passes = resolveColorNodeGraphPreviewPasses(colorNodeGraph, fallbackColorCorrection);
     } catch (error) {
-      console.warn('Unable to resolve adjustment color node graph preview passes', error);
+      logger.warn('Unable to resolve adjustment color node graph preview passes', error);
       this.applyAdjustmentLayer(fallbackColorCorrection, effects, options);
       return false;
     }
@@ -769,7 +770,7 @@ export class WebGlPreviewCompositor {
       this.customPrograms.set(sourceCode, program);
       return program;
     } catch (error) {
-      console.warn('Unable to compile custom preview shader', error);
+      logger.warn('Unable to compile custom preview shader', error);
       this.customPrograms.set(sourceCode, null);
       return null;
     }
@@ -783,7 +784,7 @@ export class WebGlPreviewCompositor {
       this.panoramaProgram = createPanoramaProgram(this.gl);
       return this.panoramaProgram;
     } catch (error) {
-      console.warn('Unable to compile panorama preview shader', error);
+      logger.warn('Unable to compile panorama preview shader', error);
       this.panoramaProgram = null;
       return null;
     }

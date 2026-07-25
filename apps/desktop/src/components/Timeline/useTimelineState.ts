@@ -32,6 +32,7 @@ import {
   type DialogueInterval,
   type DialogueWhisperMiss,
 } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { zhCN } from '../../i18n/strings';
 import { getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
@@ -438,7 +439,7 @@ export function useTimelineState(params: TimelineStateParams): TimelineState {
   useEffect(() => {
     readTimelineInteractionSettings()
       .then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false))
-      .catch((error) => console.warn('Unable to load timeline interaction settings', error));
+      .catch((error) => logger.warn('Unable to load timeline interaction settings', error));
   }, []);
 
   // ---------------------------------------------------------------------------

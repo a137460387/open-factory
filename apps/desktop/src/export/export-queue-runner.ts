@@ -1,4 +1,5 @@
 import { logError } from '../lib/error-handlers';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   buildExportProjectFromProject,
   buildProgressiveExportPlan,
@@ -208,7 +209,7 @@ async function withSpatialAudioAssets(
       },
     };
   } catch (error) {
-    console.warn('Unable to prepare spatial audio assets; falling back to standard panner export.', error);
+    logger.warn('Unable to prepare spatial audio assets; falling back to standard panner export.', error);
     return settings;
   }
 }
@@ -598,7 +599,7 @@ async function runExportRulesSafely(event: ExportRuleEventContext): Promise<void
   try {
     await runConfiguredExportRules(event);
   } catch (error) {
-    console.warn('Export rule execution failed', error);
+    logger.warn('Export rule execution failed', error);
   }
 }
 

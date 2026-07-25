@@ -1,4 +1,5 @@
 import { deserializeProject, serializeProject, type CutProjectFile, type Project } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { runProjectBackupAfterSave } from '../backup/projectBackup';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
@@ -158,7 +159,7 @@ export async function writeAutosaveProjectSafely(project: Project, projectPath?:
   try {
     return await writeAutosaveProject(project, projectPath);
   } catch (error) {
-    console.warn('Autosave failed', error);
+    logger.warn('Autosave failed', error);
     return undefined;
   }
 }
@@ -177,7 +178,7 @@ export async function deleteAutosaveAfterSave(savedProjectPath: string, previous
     try {
       await removeFile(path);
     } catch (error) {
-      console.warn(zhCN.projectFiles.autosaveDeleteFailed, error);
+      logger.warn(zhCN.projectFiles.autosaveDeleteFailed, error);
     }
   }
 }

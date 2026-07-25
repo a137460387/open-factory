@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '@open-factory/editor-core/utils';
 import type { MediaSearchQuery, MediaSearchResult, TagWithCount } from '../lib/tauri-bridge';
 import { searchMediaAssets, getAllTags } from '../lib/tauri-bridge';
 
@@ -84,7 +85,7 @@ export const useMediaIndexStore = create<MediaIndexState>((set, get) => ({
       const results = await searchMediaAssets(searchQuery);
       set({ searchResults: results, isSearching: false });
     } catch (err) {
-      console.error('媒体索引搜索失败:', err);
+      logger.error('媒体索引搜索失败:', err);
       set({ isSearching: false });
     }
   },
@@ -103,7 +104,7 @@ export const useMediaIndexStore = create<MediaIndexState>((set, get) => ({
       const tags = await getAllTags(projectPath);
       set({ allTags: tags, tagsLoading: false });
     } catch (err) {
-      console.error('获取标签失败:', err);
+      logger.error('获取标签失败:', err);
       set({ tagsLoading: false });
     }
   },

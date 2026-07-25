@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   createOperationRecording,
   serializeOperationRecording,
@@ -89,7 +90,7 @@ export function useEditorShellOperationRecording(): {
     try {
       setMacroHistory(await appendMacroHistoryEntry(entry));
     } catch (error) {
-      console.warn(zhCN.macros.history.title, error);
+      logger.warn(zhCN.macros.history.title, error);
     }
   }, []);
 

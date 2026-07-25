@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import type { Timeline } from '@open-factory/editor-core';
 import {
   buildTimelineRenderFrameKey,
@@ -370,7 +371,7 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
         setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
       }
     })().catch((error) => {
-      console.error('PreviewCanvas', error);
+      logger.error('PreviewCanvas', error);
     });
     return () => { canceled = true; };
   }, [audioOnlyPreview, project.media, previewRenderSize.height, previewRenderSize.width]);
@@ -417,7 +418,7 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
           });
           await waitForIdleFrame();
         }
-      })().catch((error) => { console.error('PreviewCanvas', error); });
+      })().catch((error) => { logger.error('PreviewCanvas', error); });
     }, 80);
     return () => { canceled = true; window.clearTimeout(timer); };
   }, [fps, isPlaying, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);

@@ -3,6 +3,7 @@
  * 在媒体导入后自动写入 SQLite 索引并生成 AI 标签
  */
 import type { MediaAsset } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import type { MediaIndexAsset, AutoTagRequest } from '../lib/tauri-bridge';
 import { initMediaIndexDb, batchUpsertMediaAssets, batchAutoTagAssets } from '../lib/tauri-bridge';
 
@@ -78,6 +79,6 @@ export async function indexAndTagImportedMedia(importedMedia: MediaAsset[], proj
     await batchUpsertMediaAssets(projectPath, indexAssets);
   } catch (error) {
     // 索引失败不应阻断导入流程
-    console.warn('媒体索引写入失败（不影响导入）:', error);
+    logger.warn('媒体索引写入失败（不影响导入）:', error);
   }
 }

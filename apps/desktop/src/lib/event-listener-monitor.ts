@@ -9,6 +9,7 @@
  *
  * In production builds this module is a no-op (tree-shaken away).
  */
+import { logger } from '@open-factory/editor-core/utils';
 
 interface ListenerRecord {
   target: string;
@@ -104,10 +105,10 @@ export function getActiveListeners(): ListenerRecord[] {
 export function reportLeakedListeners(): void {
   const leaked = getActiveListeners();
   if (leaked.length === 0) {
-    console.info('[EventListenerMonitor] No leaked listeners detected.');
+    logger.info('[EventListenerMonitor] No leaked listeners detected.');
     return;
   }
-  console.warn(`[EventListenerMonitor] ${leaked.length} active listener(s) detected:`);
+  logger.warn(`[EventListenerMonitor] ${leaked.length} active listener(s) detected:`);
   console.table(
     leaked.map(r => ({
       target: r.target,

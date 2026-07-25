@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import {
   appendProfilerMemorySample,
   buildPerformanceProfilerReport,
@@ -77,7 +78,7 @@ export function useEditorShellProfiler(): {
       );
       setProfilerElapsedMs(stoppedAtMs - recording.startedAtMs);
     } catch (error) {
-      console.warn('Unable to finalize profiler recording', error);
+      logger.warn('Unable to finalize profiler recording', error);
     } finally {
       profilerRecordingRef.current = null;
       setProfilerRecording(false);
@@ -104,7 +105,7 @@ export function useEditorShellProfiler(): {
       setProfilerElapsedMs(0);
       setProfilerRecording(true);
     } catch (error) {
-      console.warn('Unable to start profiler recording', error);
+      logger.warn('Unable to start profiler recording', error);
       profilerRecordingRef.current = null;
       setProfilerRecording(false);
     }
@@ -127,7 +128,7 @@ export function useEditorShellProfiler(): {
           };
         }
       } catch (error) {
-        console.warn('Unable to record profiler frame', error);
+        logger.warn('Unable to record profiler frame', error);
         stopProfilerRecording();
       }
     },
@@ -204,7 +205,7 @@ export function useEditorShellProfiler(): {
           undoHistoryBytes: estimateUndoHistoryBytes(useEditorStore.getState().historyMeta),
         });
       } catch (error) {
-        console.warn('Unable to sample profiler metrics', error);
+        logger.warn('Unable to sample profiler metrics', error);
         stopProfilerRecording();
       }
     };

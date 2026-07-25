@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '@open-factory/editor-core/utils';
 import { saveLocalAiModelsSettings } from '../settings/appSettings';
 
 const WHISPER_EXECUTABLE_KEY = 'open-factory:whisper-executable-path';
@@ -21,7 +22,7 @@ export const useWhisperSettingsStore = create<WhisperSettingsState>((set) => ({
   setModelPath: (modelPath) => {
     writeStoredPath(WHISPER_MODEL_KEY, modelPath);
     void saveLocalAiModelsSettings({ whisper: { path: modelPath, version: 'whisper.cpp' } }).catch((error) => {
-      console.warn('Unable to save Whisper model path', error);
+      logger.warn('Unable to save Whisper model path', error);
     });
     set({ modelPath });
   },

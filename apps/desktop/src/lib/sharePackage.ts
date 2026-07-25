@@ -1,4 +1,5 @@
 import { dirname, joinPath, normalizePath, type ExportTask, type Project } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
 import { enqueueExport } from '../export/export-queue-runner';
 import { BUILTIN_EXPORT_PRESETS, type ExportPresetSettings } from '../export/export-presets';
 import { useExportQueueStore } from '../export/export-queue-store';
@@ -93,7 +94,7 @@ export async function createSharePackageFromProject(
   } finally {
     if (cleanupTemporaryVideo) {
       await Promise.resolve(dependencies.removeFile(temporaryVideoPath)).catch((error) => {
-        console.warn(zhCN.sharePackage.cleanupFailed, error);
+        logger.warn(zhCN.sharePackage.cleanupFailed, error);
       });
     }
   }

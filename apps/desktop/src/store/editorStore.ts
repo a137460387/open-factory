@@ -31,6 +31,7 @@ import {
   detectMulticamDrift,
 } from '@open-factory/editor-core';
 import { create } from 'zustand';
+import { logger } from '@open-factory/editor-core/utils';
 import { zhCN } from '../i18n/strings';
 import { analyzeWaveform } from '../lib/tauri-bridge';
 import { commandManager, projectAccessor, setEditorStoreGetter } from './commandManager';
@@ -381,7 +382,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         commandManager.execute(command);
       }
     } catch (error) {
-      console.error('Multicam sync failed:', error);
+      logger.error('Multicam sync failed:', error);
     } finally {
       set({ isMulticamSyncing: false });
     }

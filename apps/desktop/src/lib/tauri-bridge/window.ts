@@ -21,6 +21,7 @@ import type {
 import { getTauriMocks } from './mock-types';
 import { isTauriRuntime } from '../tauri';
 import { zhCN } from '../../i18n/strings';
+import { logger } from '@open-factory/editor-core/utils';
 import desktopPackage from '../../../package.json';
 
 async function authorizePaths(paths: string[]): Promise<void> {
@@ -315,7 +316,7 @@ export async function listenDragDrop(
       void authorizePaths(payload.paths)
         .then(() => handler(payload))
         .catch((error) => {
-          console.warn(zhCN.errors.droppedPathsNotAuthorized, error);
+          logger.warn(zhCN.errors.droppedPathsNotAuthorized, error);
           handler({ type: payload.type, paths: [] });
         });
       return;

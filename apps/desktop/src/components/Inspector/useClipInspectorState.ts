@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import type { Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker } from '@open-factory/editor-core';
 import {
   AddSubtitleClipCommand,
@@ -1320,7 +1321,7 @@ export function useClipInspectorState({
     try {
       setPrivacyBlurBusy(true);
       await markLocalAiModelUsed('yunet', privacyDetectionModelPath.trim()).catch((error) => {
-        console.warn('Unable to update YuNet model last-used time', error);
+        logger.warn('Unable to update YuNet model last-used time', error);
       });
       const result = await detectPrivacyRegions({
         modelPath: privacyDetectionModelPath.trim(),

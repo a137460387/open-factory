@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
@@ -69,7 +70,7 @@ export function useEditorShellEffects(deps: EffectsDeps) {
   useEffect(() => {
     if (projectPath) {
       void initMediaIndexDb(projectPath).catch((error) => {
-        console.warn('媒体索引数据库初始化失败:', error);
+        logger.warn('媒体索引数据库初始化失败:', error);
       });
     }
   }, [projectPath]);
@@ -87,7 +88,7 @@ export function useEditorShellEffects(deps: EffectsDeps) {
         setTutorialCelebrationVisible(true);
       }
       void saveTutorialProgressSettings(nextProgress).catch((error) => {
-        console.warn('Unable to save tutorial progress', error);
+        logger.warn('Unable to save tutorial progress', error);
       });
     }
   }, [tutorialSignals, tutorialProgress, setTutorialProgress, setTutorialCelebrationVisible]);
