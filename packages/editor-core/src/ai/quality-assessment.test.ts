@@ -11,9 +11,12 @@ import {
   applyQualityProfile,
   assessFrameQuality,
   assessAudioQuality,
+  assessVideoQuality,
+  computeQualityScore,
   compareQuality,
   generateOptimizationSuggestions,
   buildEnhancedQualitySystemPrompt,
+  buildEnhancedQualityUserPrompt,
   parseEnhancedQualityResponse,
   parseEnhancedQualityResponseSafe,
 } from './quality-assessment';
@@ -875,5 +878,73 @@ describe('parseEnhancedQualityResponseSafe', () => {
     expect(result.data.dimensionScores.length).toBe(1);
     expect(result.data.issues.length).toBe(1);
     expect(result.data.suggestions.length).toBe(1);
+  });
+});
+
+// ==================== assessVideoQuality ====================
+
+describe('assessVideoQuality', () => {
+  function makeFrame(width: number, height: number, r: number, g: number, b: number): Uint8Array {
+    const frame = new Uint8Array(width * height * 4);
+    for (let i = 0; i < width * height; i++) {
+      frame[i * 4] = r;
+      frame[i * 4 + 1] = g;
+      frame[i * 4 + 2] = b;
+      frame[i * 4 + 3] = 255;
+    }
+    return frame;
+  }
+
+  it('assesses video quality from frames', () => {
+    const frames = [makeFrame(16, 16, 128, 128, 128), makeFrame(16, 16, 100, 100, 100)];
+    const config = createDefaultQualityAssessmentConfig();
+    const result = assessVideoQuality(frames, config);
+    expect(result).toBeDefined();
+    expect(typeof result.sharpness).toBe('number');
+    expect(typeof result.noise).toBe('number');
+    expect(result.resolution).toBeDefined();
+  });
+
+  it('handles empty frames array', () => {
+    const config = createDefaultQualityAssessmentConfig();
+    const result = assessVideoQuality([], config);
+    expect(result.sharpness).toBe(0);
+    expect(result.resolution.width).toBe(0);
+  });
+});
+
+// ==================== computeQualityScore ====================
+
+describe('computeQualityScore', () => {
+  it('computes score from metrics', () => {
+    const config = applyQualityProfile('broadcast');
+    const videoMetrics = {
+      sharpness: 80, noise: 10, exposure: 70, contrast: 60, saturation: 65,
+      colorBalance: 75, stability: 80, bitrate: 5000,
+      resolution: { width: 1920, height: 1080 }, frameRate: 30,
+    };
+    const audioMetrics = { rmsLevel: -14, noiseFloor: -60, thd: 0.01 };
+    const result = computeQualityScore(videoMetrics, audioMetrics, config);
+    expect(result).toBeDefined();
+    expect(typeof result.overallScore).toBe('number');
+    expect(result.overallScore).toBeGreaterThanOrEqual(0);
+    expect(result.overallScore).toBeLessThanOrEqual(100);
+  });
+});
+
+// ==================== buildEnhancedQualityUserPrompt ====================
+
+describe('buildEnhancedQualityUserPrompt', () => {
+  it('builds prompt from metrics', () => {
+    const videoMetrics = {
+      sharpness: 80, noise: 10, exposure: 70, contrast: 60, saturation: 65,
+      colorBalance: 75, stability: 80, bitrate: 5000,
+      resolution: { width: 1920, height: 1080 }, frameRate: 30,
+    };
+    const audioMetrics = { rmsLevel: -14, noiseFloor: -60, thd: 0.01 };
+    const prompt = buildEnhancedQualityUserPrompt(videoMetrics, audioMetrics);
+    expect(typeof prompt).toBe('string');
+    expect(prompt).toContain('1920x1080');
+    expect(prompt).toContain('30 fps');
   });
 });

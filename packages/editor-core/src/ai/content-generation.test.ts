@@ -7,10 +7,13 @@ import {
   generateMusicStructure,
   estimateGenerationTime,
   buildContentGenerationSystemPrompt,
+  buildContentGenerationUserPrompt,
   parseContentGenerationResponse,
   parseContentGenerationResponseSafe,
   generateSubtitle,
   generateEffect,
+  generateDubbing,
+  generateMusic,
 } from './content-generation';
 import type { ContentGenerationConfig } from './content-generation';
 
@@ -476,5 +479,383 @@ describe('generateEffect', () => {
     const result = generateEffect({ effectType: 'fire', intensity: 2.0 });
     const data = result.data as any;
     expect(data.intensity).toBeLessThanOrEqual(1);
+  });
+});
+
+// ==================== generateDubbing ====================
+
+describe('generateDubbing', () => {
+  it('generates dubbing with default config', () => {
+    const result = generateDubbing('Hello world');
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+  });
+
+  it('generates dubbing with custom config', () => {
+    const result = generateDubbing('Test text', { language: 'zh' });
+    expect(result).toBeDefined();
+  });
+
+  it('handles empty text', () => {
+    const result = generateDubbing('');
+    expect(result).toBeDefined();
+  });
+
+  it('handles speed and pitch config', () => {
+    const result = generateDubbing('Test', { speed: 1.5, pitch: 0.8 });
+    expect(result).toBeDefined();
+  });
+
+  it('handles emotion config', () => {
+    const result = generateDubbing('Test', { emotion: 'happy' });
+    expect(result).toBeDefined();
+  });
+});
+
+// ==================== generateMusic ====================
+
+describe('generateMusic', () => {
+  it('generates music with default config', () => {
+    const result = generateMusic();
+    expect(result).toBeDefined();
+    expect(result.data).toBeDefined();
+  });
+
+  it('generates music with custom config', () => {
+    const result = generateMusic({ genre: 'pop', duration: 30 });
+    expect(result).toBeDefined();
+  });
+
+  it('generates music with different genres', () => {
+    for (const genre of ['rock', 'jazz', 'electronic', 'classical']) {
+      const result = generateMusic({ genre });
+      expect(result).toBeDefined();
+    }
+  });
+
+  it('handles mood config', () => {
+    const result = generateMusic({ mood: 'energetic' });
+    expect(result).toBeDefined();
+  });
+});
+
+// ==================== buildContentGenerationUserPrompt ====================
+
+describe('buildContentGenerationUserPrompt', () => {
+  it('builds prompt for subtitle type', () => {
+    const config = createDefaultContentGenerationConfig('subtitle');
+    const prompt = buildContentGenerationUserPrompt(config);
+    expect(typeof prompt).toBe('string');
+    expect(prompt.length).toBeGreaterThan(0);
+  });
+
+  it('builds prompt for music type', () => {
+    const config = createDefaultContentGenerationConfig('music');
+    const prompt = buildContentGenerationUserPrompt(config);
+    expect(typeof prompt).toBe('string');
+  });
+
+  it('builds prompt for effect type', () => {
+    const config = createDefaultContentGenerationConfig('effect');
+    const prompt = buildContentGenerationUserPrompt(config);
+    expect(typeof prompt).toBe('string');
+  });
+});
+
+// ==================== Additional effect type coverage ====================
+
+describe('generateEffect - additional types', () => {
+  const effectTypes = ['light-leak', 'lens-flare', 'glitch', 'smoke', 'vignette', 'bokeh'] as const;
+
+  for (const effectType of effectTypes) {
+    it(`handles ${effectType} effect type`, () => {
+      const result = generateEffect({ effectType, intensity: 0.5, duration: 3 });
+      expect(result.type).toBe('effect');
+      expect(result.data).toBeDefined();
+    });
+  }
+
+  it('handles custom parameters', () => {
+    const result = generateEffect({ effectType: 'particle', parameters: { color: '#ff0000' } });
+    expect(result.data).toBeDefined();
+  });
+});
+
+// ==================== generateMusicStructure additional coverage ====================
+
+describe('generateMusicStructure - additional genres', () => {
+  const genres = ['electronic', 'jazz', 'classical', 'ambient', 'rock', 'hip-hop'] as const;
+  const moods = ['happy', 'sad', 'energetic', 'calm', 'dramatic', 'mysterious'] as const;
+
+  for (const genre of genres) {
+    it(`handles ${genre} genre`, () => {
+      const result = generateMusicStructure(genre, 'happy', 30, 120);
+      expect(result.sections.length).toBeGreaterThan(0);
+      expect(result.totalBeats).toBeGreaterThan(0);
+    });
+  }
+
+  for (const mood of moods) {
+    it(`handles ${mood} mood`, () => {
+      const result = generateMusicStructure('electronic', mood, 30, 120);
+      expect(result.sections.length).toBeGreaterThan(0);
+    });
+  }
+
+  it('clamps duration to max', () => {
+    const result = generateMusicStructure('electronic', 'happy', 9999, 120);
+    expect(result.totalBeats).toBeGreaterThan(0);
+  });
+
+  it('clamps tempo', () => {
+    const result = generateMusicStructure('electronic', 'happy', 30, 500);
+    expect(result.tempo).toBeLessThanOrEqual(240);
+  });
+});
+
+// ==================== parseContentGenerationResponse additional coverage ====================
+
+describe('parseContentGenerationResponse - additional', () => {
+  it('handles subtitle response', () => {
+    const result = parseContentGenerationResponse({ segments: [{ text: 'hello', start: 0, end: 1 }] }, 'subtitle');
+    expect(result).toBeDefined();
+  });
+
+  it('handles music response', () => {
+    const result = parseContentGenerationResponse({ notes: [{ pitch: 60, start: 0, duration: 1 }] }, 'music');
+    expect(result).toBeDefined();
+  });
+});
+
+// ==================== generateSubtitle additional coverage ====================
+
+describe('generateSubtitle - additional configs', () => {
+  it('handles custom maxCharsPerLine', () => {
+    const audio = new Float32Array(44100 * 2);
+    audio.fill(0.3);
+    const result = generateSubtitle(audio, 44100, { maxCharsPerLine: 20 });
+    expect(result.type).toBe('subtitle');
+  });
+
+  it('handles custom maxLines', () => {
+    const audio = new Float32Array(44100 * 2);
+    audio.fill(0.3);
+    const result = generateSubtitle(audio, 44100, { maxLines: 3 });
+    expect(result.type).toBe('subtitle');
+  });
+
+  it('handles custom position', () => {
+    const audio = new Float32Array(44100 * 2);
+    audio.fill(0.3);
+    const result = generateSubtitle(audio, 44100, { position: 'top' });
+    expect(result.type).toBe('subtitle');
+  });
+
+  it('handles autoBreak disabled', () => {
+    const audio = new Float32Array(44100 * 2);
+    audio.fill(0.3);
+    const result = generateSubtitle(audio, 44100, { autoBreak: false });
+    expect(result.type).toBe('subtitle');
+  });
+
+  it('handles fontSize config', () => {
+    const audio = new Float32Array(44100 * 2);
+    audio.fill(0.3);
+    const result = generateSubtitle(audio, 44100, { fontSize: 48 });
+    expect(result.type).toBe('subtitle');
+  });
+});
+
+// ==================== parseContentGenerationResponseSafe ====================
+
+describe('parseContentGenerationResponseSafe', () => {
+  it('returns result for valid input', () => {
+    const result = parseContentGenerationResponseSafe({ segments: [] }, 'subtitle');
+    expect(result).toBeDefined();
+  });
+
+  it('handles null input', () => {
+    const result = parseContentGenerationResponseSafe(null, 'subtitle');
+    expect(result).toBeDefined();
+  });
+});
+
+// ==================== estimateGenerationTime additional coverage ====================
+
+describe('estimateGenerationTime - additional types', () => {
+  it('estimates for effect type', () => {
+    const result = estimateGenerationTime({ type: 'effect' });
+    expect(result).toBeGreaterThan(0);
+  });
+
+  it('estimates for voiceover type', () => {
+    const result = estimateGenerationTime({ type: 'voiceover' });
+    expect(result).toBeGreaterThan(0);
+  });
+});
+
+// ==================== Branch coverage: generateDubbing emotions ====================
+
+describe('generateDubbing - emotion branches', () => {
+  const emotions = ['neutral', 'happy', 'sad', 'angry', 'fearful', 'excited', 'calm', 'unknown'] as const;
+  for (const emotion of emotions) {
+    it(`handles emotion=${emotion}`, () => {
+      const result = generateDubbing('This is a test sentence. Another sentence here.', { emotion });
+      expect(result.type).toBe('dubbing');
+      expect(result.data.emotion).toBe(emotion);
+    });
+  }
+});
+
+// ==================== Branch coverage: generateDubbing text patterns ====================
+
+describe('generateDubbing - text splitting branches', () => {
+  it('handles text with Chinese sentence-ending punctuation', () => {
+    const result = generateDubbing('你好世界！这是测试。还有更多内容？');
+    expect(result.metadata.sentenceCount).toBeGreaterThan(0);
+  });
+
+  it('handles text with comma splitting', () => {
+    const text = 'this is a long text without sentence ending punctuation but with commas, semicolons; and more content here';
+    const result = generateDubbing(text);
+    expect(result.metadata.sentenceCount).toBeGreaterThan(0);
+  });
+
+  it('handles very long text with fixed-length splitting', () => {
+    const text = 'a'.repeat(100);
+    const result = generateDubbing(text);
+    expect(result.metadata.sentenceCount).toBeGreaterThan(1);
+  });
+
+  it('handles text with quoted emphasis words', () => {
+    const result = generateDubbing('He said "important" and "critical" words here.');
+    expect(result.type).toBe('dubbing');
+  });
+
+  it('handles text with uppercase words', () => {
+    const result = generateDubbing('The API and SDK are critical components here.');
+    expect(result.type).toBe('dubbing');
+  });
+
+  it('handles mixed CJK and English text', () => {
+    const result = generateDubbing('你好 world 测试 test 句子.');
+    expect(result.metadata.charCount).toBeGreaterThan(0);
+    expect(result.metadata.wordCount).toBeGreaterThan(0);
+  });
+
+  it('handles lipSync config', () => {
+    const result = generateDubbing('Test.', { lipSync: true });
+    expect(result.data.lipSync).toBe(true);
+  });
+
+  it('handles voiceId config', () => {
+    const result = generateDubbing('Test.', { voiceId: 'custom-voice' });
+    expect(result.data.voiceId).toBe('custom-voice');
+  });
+});
+
+// ==================== Branch coverage: generateMusic genres ====================
+
+describe('generateMusic - all genres with loopable/fade', () => {
+  const genres = ['cinematic', 'pop', 'electronic', 'ambient', 'jazz', 'rock', 'classical', 'lo-fi'] as const;
+  for (const genre of genres) {
+    it(`generates ${genre} music with loopable and fade`, () => {
+      const result = generateMusic({ genre, loopable: true, fadeIn: 2, fadeOut: 3 });
+      expect(result.type).toBe('music');
+      expect(result.data.genre).toBe(genre);
+      expect(result.data.loopable).toBe(true);
+      expect(result.data.fadeIn).toBe(2);
+      expect(result.data.fadeOut).toBe(3);
+    });
+  }
+});
+
+// ==================== Branch coverage: generateMusicStructure edge cases ====================
+
+describe('generateMusicStructure - short vs long', () => {
+  it('handles very short duration (forced minimum)', () => {
+    const structure = generateMusicStructure('cinematic', 'calm', 1, 60);
+    expect(structure.sections.length).toBeGreaterThan(0);
+    expect(structure.totalBeats).toBeGreaterThan(0);
+  });
+
+  it('handles very long duration', () => {
+    const structure = generateMusicStructure('cinematic', 'epic', 300, 120);
+    expect(structure.sections.length).toBeGreaterThan(3);
+  });
+});
+
+// ==================== Branch coverage: generateEffect edge cases ====================
+
+describe('generateEffect - intensity boundaries', () => {
+  it('handles minimum intensity', () => {
+    const result = generateEffect({ effectType: 'particle', intensity: 0 });
+    expect(result.data.intensity).toBe(0);
+  });
+
+  it('handles maximum intensity', () => {
+    const result = generateEffect({ effectType: 'particle', intensity: 1 });
+    expect(result.data.intensity).toBe(1);
+  });
+
+  it('handles custom parameters override', () => {
+    const result = generateEffect({
+      effectType: 'particle',
+      parameters: { customField: 'value' },
+    });
+    expect(result.data.parameters).toBeDefined();
+  });
+});
+
+// ==================== Branch coverage: generateSubtitle edge cases ====================
+
+describe('generateSubtitle - speaker diarization', () => {
+  it('handles speakerDiarization enabled', () => {
+    const result = generateSubtitle({
+      audioData: makeSineWave(440, 44100, 2.0, 0.5),
+      text: 'Hello world. This is a test.',
+      speakerDiarization: true,
+    });
+    expect(result.type).toBe('subtitle');
+  });
+});
+
+// ==================== Branch coverage: buildContentGenerationUserPrompt ====================
+
+describe('buildContentGenerationUserPrompt - all types', () => {
+  const types = ['subtitle', 'dubbing', 'music', 'effect', 'voiceover'] as const;
+  for (const type of types) {
+    it(`builds prompt for ${type}`, () => {
+      const prompt = buildContentGenerationUserPrompt({ type });
+      expect(prompt.length).toBeGreaterThan(0);
+    });
+  }
+});
+
+// ==================== Branch coverage: parseContentGenerationResponse ====================
+
+describe('parseContentGenerationResponse - error branches', () => {
+  it('throws for array input', () => {
+    expect(() => parseContentGenerationResponse([], 'subtitle')).toThrow();
+  });
+
+  it('throws for object with empty contents', () => {
+    expect(() => parseContentGenerationResponse({ contents: [] }, 'subtitle')).toThrow();
+  });
+
+  it('parses dubbing response', () => {
+    const result = parseContentGenerationResponse({
+      type: 'dubbing',
+      timeline: [],
+    }, 'dubbing');
+    expect(result.contents.length).toBe(1);
+  });
+
+  it('parses effect response', () => {
+    const result = parseContentGenerationResponse({
+      type: 'effect',
+      effectType: 'particle',
+    }, 'effect');
+    expect(result.contents.length).toBe(1);
   });
 });

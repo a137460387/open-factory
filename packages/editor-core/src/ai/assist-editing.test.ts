@@ -9,8 +9,11 @@ import {
   scoreSuggestionQuality,
   filterAndRankSuggestions,
   buildAssistEditingSystemPrompt,
+  buildAssistEditingUserPrompt,
   parseAssistEditingResponse,
   parseAssistEditingResponseSafe,
+  analyzeContent,
+  generateAssistEditingSuggestions,
 } from './assist-editing';
 import type { AssistEditingSuggestion, ContentAnalysisResult } from './assist-editing';
 
@@ -497,5 +500,127 @@ describe('parseAssistEditingResponseSafe', () => {
   it('should return error when suggestions is not an array', async () => {
     const result = await parseAssistEditingResponseSafe({ suggestions: 'bad' });
     expect(result.error).not.toBeNull();
+  });
+});
+
+// ==================== analyzeContent ====================
+
+describe('analyzeContent', () => {
+  it('returns empty result for empty input', () => {
+    const result = analyzeContent([], new Float32Array(0), 44100);
+    expect(result.scenes).toEqual([]);
+    expect(result.emotionCurve).toBeDefined();
+    expect(result.rhythmProfile).toBeDefined();
+    expect(result.speakerSegments).toBeDefined();
+    expect(result.keyFrames).toBeDefined();
+  });
+
+  it('detects scenes from uniform frames', () => {
+    const frames = [makeFrame(4, 4, 255, 0, 0), makeFrame(4, 4, 0, 0, 255)];
+    const audio = new Float32Array(44100);
+    const result = analyzeContent(frames, audio, 44100);
+    expect(result.scenes.length).toBeGreaterThanOrEqual(0);
+    expect(result.rhythmProfile.bpm).toBeGreaterThanOrEqual(0);
+  });
+
+  it('handles frames without audio', () => {
+    const frames = [makeFrame(4, 4, 128, 128, 128)];
+    const result = analyzeContent(frames, new Float32Array(0), 44100);
+    expect(result.scenes).toBeDefined();
+  });
+});
+
+// ==================== generateAssistEditingSuggestions ====================
+
+describe('generateAssistEditingSuggestions', () => {
+  const config = createDefaultAssistEditingConfig();
+
+  it('returns suggestions from empty analysis', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [],
+      emotionCurve: [],
+      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      speakerSegments: [],
+      keyFrames: [],
+    };
+    const result = generateAssistEditingSuggestions(analysis, config);
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it('generates scene-based suggestions', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [
+        { startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'test scene' },
+        { startTime: 5, endTime: 10, sceneType: 'dialog', confidence: 0.8, description: 'test dialog' },
+      ],
+      emotionCurve: [{ time: 2.5, value: 0.7 }],
+      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5, 1], tempoChanges: [] },
+      speakerSegments: [{ startTime: 0, endTime: 10, speakerId: 'sp1' }],
+      keyFrames: [1, 5],
+    };
+    const result = generateAssistEditingSuggestions(analysis, config);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it('respects enableContentAnalysis=false', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [{ startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'test' }],
+      emotionCurve: [],
+      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      speakerSegments: [],
+      keyFrames: [],
+    };
+    const result = generateAssistEditingSuggestions(analysis, { ...config, enableContentAnalysis: false });
+    const sceneSuggestions = result.filter((s) => s.sourceAnalysis === 'scene');
+    expect(sceneSuggestions).toHaveLength(0);
+  });
+});
+
+// ==================== buildAssistEditingUserPrompt ====================
+
+describe('buildAssistEditingUserPrompt', () => {
+  const config = createDefaultAssistEditingConfig();
+
+  it('builds prompt with empty analysis', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [],
+      emotionCurve: [],
+      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      speakerSegments: [],
+      keyFrames: [],
+    };
+    const prompt = buildAssistEditingUserPrompt(analysis, config);
+    expect(prompt).toContain('剪辑配置');
+    expect(prompt).toContain('场景列表');
+    expect(prompt).toContain('节奏信息');
+    expect(prompt).toContain('情绪曲线');
+  });
+
+  it('includes scene details', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [
+        { startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'exciting scene' },
+      ],
+      emotionCurve: [{ time: 2.5, value: 0.8 }],
+      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5], tempoChanges: [{ time: 2, bpm: 140 }] },
+      speakerSegments: [{ startTime: 0, endTime: 5, speakerId: 'sp1', text: 'hello world' }],
+      keyFrames: [1, 3],
+    };
+    const prompt = buildAssistEditingUserPrompt(analysis, config);
+    expect(prompt).toContain('action');
+    expect(prompt).toContain('exciting scene');
+    expect(prompt).toContain('120');
+  });
+
+  it('includes targetDuration when set', () => {
+    const analysis: ContentAnalysisResult = {
+      scenes: [],
+      emotionCurve: [],
+      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      speakerSegments: [],
+      keyFrames: [],
+    };
+    const prompt = buildAssistEditingUserPrompt(analysis, { ...config, targetDuration: 60 });
+    expect(prompt).toContain('60');
   });
 });

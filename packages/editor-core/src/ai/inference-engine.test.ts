@@ -283,3 +283,108 @@ describe('DEFAULT_INFERENCE_CONFIG', () => {
     expect(DEFAULT_INFERENCE_CONFIG.warmupIterations).toBe(3);
   });
 });
+
+describe('InferenceEngine advanced', () => {
+  it('infer throws for custom model type when no GPU', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    await expect(engine.infer('custom', {
+      shape: [10],
+      dtype: 'float32',
+      data: new Float32Array(10).buffer,
+    })).rejects.toThrow();
+  });
+
+  it('infer throws for asr when no GPU', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    await expect(engine.infer('asr', {
+      shape: [10],
+      dtype: 'float32',
+      data: new Float32Array(10).buffer,
+    })).rejects.toThrow();
+  });
+
+  it('infer throws for semantic when no GPU', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    await expect(engine.infer('semantic', {
+      shape: [10],
+      dtype: 'float32',
+      data: new Float32Array(10).buffer,
+    })).rejects.toThrow();
+  });
+
+  it('infer throws for vision when no GPU', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    await expect(engine.infer('vision', {
+      shape: [10],
+      dtype: 'float32',
+      data: new Float32Array(10).buffer,
+    })).rejects.toThrow();
+  });
+
+  it('infer throws for llm when no GPU', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    await expect(engine.infer('llm', {
+      shape: [10],
+      dtype: 'float32',
+      data: new Float32Array(10).buffer,
+    })).rejects.toThrow();
+  });
+
+  it('isGPUAccelerated returns false without GPU', () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    expect(engine.isGPUAccelerated()).toBe(false);
+  });
+
+  it('getOptimizationReport returns valid report', () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    const report = engine.getOptimizationReport();
+    expect(report.backend).toBe('cpu');
+    expect(report.quantization).toBeDefined();
+    expect(typeof report.fusionSpeedup).toBe('number');
+    expect(typeof report.gpuAccelerated).toBe('boolean');
+  });
+
+  it('destroy resets state', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    await engine.initialize();
+    engine.destroy();
+    expect(engine.getBackend()).toBe('cpu');
+  });
+
+  it('initialize is idempotent', async () => {
+    const engine = new InferenceEngine({ backend: 'cpu' });
+    const r1 = await engine.initialize();
+    const r2 = await engine.initialize();
+    expect(r1).toBe(true);
+    expect(r2).toBe(true);
+  });
+});
+
+describe('QuantizationTool', () => {
+  it('float32ToInt8 quantizes correctly', () => {
+    const input = new Float32Array([1.0, 2.0, 3.0, 4.0]);
+    const result = QuantizationTool.float32ToInt8(input);
+    expect(result).toBeInstanceOf(Int8Array);
+    expect(result.length).toBe(4);
+    expect(result[3]).toBe(127); // max value maps to 127
+  });
+
+  it('int8ToFloat32 dequantizes correctly', () => {
+    const data = new Int8Array([64, 127]);
+    const result = QuantizationTool.int8ToFloat32(data, 127);
+    expect(result).toBeInstanceOf(Float32Array);
+    expect(result[1]).toBeCloseTo(1.0, 1);
+  });
+
+  it('float32ToInt4 quantizes correctly', () => {
+    const input = new Float32Array([1.0, 2.0, 3.0, 4.0]);
+    const result = QuantizationTool.float32ToInt4(input);
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(result.length).toBe(2); // 4 values packed into 2 bytes
+  });
+});
