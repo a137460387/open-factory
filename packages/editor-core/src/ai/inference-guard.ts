@@ -8,6 +8,7 @@
  */
 
 import type { InferenceProvider, InferenceCapability } from './inference-provider';
+import { logger } from '../utils/logger.js';
 
 // ==================== Types ====================
 
@@ -40,9 +41,9 @@ let globalProvider: InferenceProvider | null = null;
 export function initInferenceGuard(provider: InferenceProvider | null): void {
   globalProvider = provider;
   if (provider) {
-    console.debug(`[open-factory] InferenceGuard initialized with provider '${provider.id}' (health: ${provider.health})`);
+    logger.debug(`InferenceGuard initialized with provider '${provider.id}' (health: ${provider.health})`);
   } else {
-    console.warn('[InferenceGuard] no provider available — all inference features will be degraded');
+    logger.warn('[InferenceGuard] no provider available — all inference features will be degraded');
   }
 }
 
@@ -100,7 +101,7 @@ export async function withInferenceGuard<T>(
 
   if (!status.available) {
     if (!options.silent) {
-      console.warn(`[InferenceGuard] feature degraded: ${status.reason}`);
+      logger.warn(`[InferenceGuard] feature degraded: ${status.reason}`);
     }
     throw new InferenceFeatureDegradedError(options.featureName, status.reason ?? 'unknown');
   }
@@ -112,7 +113,7 @@ export async function withInferenceGuard<T>(
     // Wrap unexpected errors so callers get a consistent error type
     const message = err instanceof Error ? err.message : String(err);
     if (!options.silent) {
-      console.error(`[InferenceGuard] inference failed for '${options.featureName}':`, message);
+      logger.error(`[InferenceGuard] inference failed for '${options.featureName}':`, message);
     }
     throw new InferenceFeatureDegradedError(options.featureName, `推理失败: ${message}`);
   }
@@ -129,7 +130,7 @@ export function withInferenceGuardSync<T>(
 
   if (!status.available) {
     if (!options.silent) {
-      console.warn(`[InferenceGuard] feature degraded: ${status.reason}`);
+      logger.warn(`[InferenceGuard] feature degraded: ${status.reason}`);
     }
     throw new InferenceFeatureDegradedError(options.featureName, status.reason ?? 'unknown');
   }

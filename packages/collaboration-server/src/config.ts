@@ -8,6 +8,14 @@
 
 import { z } from "zod";
 
+const PREFIX = '[open-factory]';
+const logger = {
+  debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
+  info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
+  warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),
+  error: (msg: string, ...args: unknown[]) => console.error(PREFIX, msg, ...args),
+};
+
 // ============================================================
 // Schemas
 // ============================================================
@@ -196,7 +204,7 @@ export function validateOrExit(): CollaborationConfig {
     return loadConfig();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`\n[FATAL] Server configuration error:\n${message}\n`);
+    logger.error(`\n[FATAL] Server configuration error:\n${message}\n`);
     process.exit(1);
   }
 }

@@ -21,6 +21,14 @@ import type {
   UserRole,
 } from "./types.js";
 
+const PREFIX = '[open-factory]';
+const logger = {
+  debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
+  info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
+  warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),
+  error: (msg: string, ...args: unknown[]) => console.error(PREFIX, msg, ...args),
+};
+
 // ============================================================
 // Server Factory
 // ============================================================
@@ -507,14 +515,6 @@ function log(
   const configLevel = levels.indexOf(config.logLevel);
   const msgLevel = levels.indexOf(level);
   if (msgLevel >= configLevel) {
-    const timestamp = new Date().toISOString();
-    const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
-    if (level === "error") {
-      console.error(`${prefix} ${message}`);
-    } else if (level === "warn") {
-      console.warn(`${prefix} ${message}`);
-    } else {
-      console.log(`${prefix} ${message}`);
-    }
+    logger[level](message);
   }
 }

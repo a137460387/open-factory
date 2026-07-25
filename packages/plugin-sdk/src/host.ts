@@ -15,6 +15,7 @@ import { PluginUIAPIImpl } from './api/ui-api';
 import { PluginStorageAPIImpl } from './api/storage-api';
 import { PluginNetworkAPIImpl } from './api/network-api';
 import { PluginMarketplace, type MarketplacePlugin } from './marketplace';
+import { logger } from '@open-factory/editor-core/utils';
 
 // ─── Host Configuration ────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export class PluginHost {
 
     // Wire up sandbox violation logging
     this.sandbox.onViolation((violation) => {
-      console.warn(`[PluginSandbox] ${violation.type}: ${violation.message}`);
+      logger.warn(`[PluginSandbox] ${violation.type}: ${violation.message}`);
     });
   }
 

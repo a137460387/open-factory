@@ -14,6 +14,7 @@ import { registerRenderCommand } from './commands/render.js';
 import { registerApplyTemplateCommand } from './commands/apply-template.js';
 import { registerAnalyzeCommand } from './commands/analyze.js';
 import { registerWorkflowCommand } from './commands/workflow.js';
+import { logger } from '@open-factory/editor-core/utils';
 
 const VERSION = '0.1.0';
 
@@ -50,7 +51,7 @@ const isDirectRun =
 
 if (isDirectRun) {
   createCli().parseAsync(process.argv).catch((err) => {
-    console.error(err);
+    logger.error(String(err));
     process.exit(1);
   });
 }

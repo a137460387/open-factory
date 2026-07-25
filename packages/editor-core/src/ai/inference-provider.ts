@@ -7,6 +7,7 @@
  */
 
 import type { ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType } from './inference-engine';
+import { logger } from '../utils/logger.js';
 
 // ==================== Provider Interface ====================
 
@@ -137,7 +138,7 @@ export class LocalInferenceProvider implements InferenceProvider {
     } catch (err) {
       this._health = 'error';
       this._isReady = false;
-      console.error('[LocalInferenceProvider] initialization failed:', err);
+      logger.error('[LocalInferenceProvider] initialization failed:', err);
       return false;
     }
   }

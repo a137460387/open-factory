@@ -4,6 +4,14 @@
 
 import type { ComputeEngine, ComputeCapabilities, ComputeBackend } from '../types.js';
 
+const PREFIX = '[open-factory]';
+const logger = {
+  debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
+  info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
+  warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),
+  error: (msg: string, ...args: unknown[]) => console.error(PREFIX, msg, ...args),
+};
+
 // ============================================================
 // Compute Engine Factory
 // ============================================================
@@ -19,7 +27,7 @@ export async function createComputeEngine(
       return engine;
     }
   } catch {
-    console.warn(`${preferredBackend} initialization failed, trying fallbacks...`);
+    logger.warn(`${preferredBackend} initialization failed, trying fallbacks...`);
   }
 
   // Fallback chain: webgpu -> webgl -> cpu

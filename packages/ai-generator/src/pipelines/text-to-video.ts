@@ -12,6 +12,14 @@ import type {
 import { getConfig } from '../config.js';
 import { modelManager } from '../models/model-manager.js';
 
+const PREFIX = '[open-factory]';
+const logger = {
+  debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
+  info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
+  warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),
+  error: (msg: string, ...args: unknown[]) => console.error(PREFIX, msg, ...args),
+};
+
 // ============================================================
 // Text-to-Video Pipeline
 // ============================================================
@@ -163,7 +171,7 @@ export class TextToVideoPipeline {
         // Handle encoded chunk
       },
       error: (error) => {
-        console.error('Video encoding error:', error);
+        logger.error('Video encoding error:', error);
       },
     });
 
