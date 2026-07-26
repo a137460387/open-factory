@@ -527,7 +527,7 @@ describe('generateMusic', () => {
   });
 
   it('generates music with different genres', () => {
-    for (const genre of ['rock', 'jazz', 'electronic', 'classical']) {
+    for (const genre of ['rock', 'jazz', 'electronic', 'classical'] as const) {
       const result = generateMusic({ genre });
       expect(result).toBeDefined();
     }
@@ -565,7 +565,7 @@ describe('buildContentGenerationUserPrompt', () => {
 // ==================== Additional effect type coverage ====================
 
 describe('generateEffect - additional types', () => {
-  const effectTypes = ['light-leak', 'lens-flare', 'glitch', 'smoke', 'vignette', 'bokeh'] as const;
+  const effectTypes = ['light-leak', 'lens-flare', 'glitch', 'smoke', 'fire', 'bokeh'] as const;
 
   for (const effectType of effectTypes) {
     it(`handles ${effectType} effect type`, () => {
@@ -584,7 +584,7 @@ describe('generateEffect - additional types', () => {
 // ==================== generateMusicStructure additional coverage ====================
 
 describe('generateMusicStructure - additional genres', () => {
-  const genres = ['electronic', 'jazz', 'classical', 'ambient', 'rock', 'hip-hop'] as const;
+  const genres = ['electronic', 'jazz', 'classical', 'ambient', 'rock', 'cinematic'] as const;
   const moods = ['happy', 'sad', 'energetic', 'calm', 'dramatic', 'mysterious'] as const;
 
   for (const genre of genres) {
@@ -702,7 +702,7 @@ describe('generateDubbing - emotion branches', () => {
     it(`handles emotion=${emotion}`, () => {
       const result = generateDubbing('This is a test sentence. Another sentence here.', { emotion });
       expect(result.type).toBe('dubbing');
-      expect(result.data.emotion).toBe(emotion);
+      expect((result.data as any).emotion).toBe(emotion);
     });
   }
 });
@@ -745,12 +745,12 @@ describe('generateDubbing - text splitting branches', () => {
 
   it('handles lipSync config', () => {
     const result = generateDubbing('Test.', { lipSync: true });
-    expect(result.data.lipSync).toBe(true);
+    expect((result.data as any).lipSync).toBe(true);
   });
 
   it('handles voiceId config', () => {
     const result = generateDubbing('Test.', { voiceId: 'custom-voice' });
-    expect(result.data.voiceId).toBe('custom-voice');
+    expect((result.data as any).voiceId).toBe('custom-voice');
   });
 });
 
@@ -762,10 +762,10 @@ describe('generateMusic - all genres with loopable/fade', () => {
     it(`generates ${genre} music with loopable and fade`, () => {
       const result = generateMusic({ genre, loopable: true, fadeIn: 2, fadeOut: 3 });
       expect(result.type).toBe('music');
-      expect(result.data.genre).toBe(genre);
-      expect(result.data.loopable).toBe(true);
-      expect(result.data.fadeIn).toBe(2);
-      expect(result.data.fadeOut).toBe(3);
+      expect((result.data as any).genre).toBe(genre);
+      expect((result.data as any).loopable).toBe(true);
+      expect((result.data as any).fadeIn).toBe(2);
+      expect((result.data as any).fadeOut).toBe(3);
     });
   }
 });
@@ -790,12 +790,12 @@ describe('generateMusicStructure - short vs long', () => {
 describe('generateEffect - intensity boundaries', () => {
   it('handles minimum intensity', () => {
     const result = generateEffect({ effectType: 'particle', intensity: 0 });
-    expect(result.data.intensity).toBe(0);
+    expect((result.data as any).intensity).toBe(0);
   });
 
   it('handles maximum intensity', () => {
     const result = generateEffect({ effectType: 'particle', intensity: 1 });
-    expect(result.data.intensity).toBe(1);
+    expect((result.data as any).intensity).toBe(1);
   });
 
   it('handles custom parameters override', () => {
@@ -803,7 +803,7 @@ describe('generateEffect - intensity boundaries', () => {
       effectType: 'particle',
       parameters: { customField: 'value' },
     });
-    expect(result.data.parameters).toBeDefined();
+    expect((result.data as any).parameters).toBeDefined();
   });
 });
 

@@ -10,28 +10,28 @@ import {
 
 describe('determineMonitoringMode', () => {
   it('returns disabled when vmaf not available', () => {
-    expect(determineMonitoringMode({ vmafAvailable: false, realtimeSupported: false })).toBe('disabled');
+    expect(determineMonitoringMode({ vmafAvailable: false, realtimeSupported: false, availableModels: [] })).toBe('disabled');
   });
 
   it('returns post-export by default', () => {
-    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: false })).toBe('post-export');
+    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: false, availableModels: ["vmaf_v0.6.1"] })).toBe('post-export');
   });
 
   it('returns realtime when supported', () => {
-    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: true }, { mode: 'realtime' })).toBe('realtime');
+    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: true, availableModels: ['vmaf_v0.6.1'] }, { mode: 'realtime' })).toBe('realtime');
   });
 
   it('falls back to post-export when realtime not supported', () => {
-    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: false }, { mode: 'realtime' })).toBe('post-export');
+    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: false, availableModels: ["vmaf_v0.6.1"] }, { mode: 'realtime' })).toBe('post-export');
   });
 
   it('returns configured mode', () => {
-    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: true }, { mode: 'post-export' })).toBe('post-export');
+    expect(determineMonitoringMode({ vmafAvailable: true, realtimeSupported: true, availableModels: ['vmaf_v0.6.1'] }, { mode: 'post-export' })).toBe('post-export');
   });
 });
 
 describe('generateVmafSamplePlan', () => {
-  const config = { mode: 'post-export' as const, sampleInterval: 10, maxSamples: 100, modelPath: '/model', enablePerFrame: false };
+  const config = { mode: 'post-export' as const, sampleInterval: 10, maxSamples: 100, modelPath: '/model', enablePsnr: true, enableSsim: false };
 
   it('returns empty for disabled mode', () => {
     expect(generateVmafSamplePlan(100, { ...config, mode: 'disabled' })).toEqual([]);
@@ -57,7 +57,7 @@ describe('generateVmafSamplePlan', () => {
 });
 
 describe('buildVmafSampleCommand', () => {
-  const config = { mode: 'post-export' as const, sampleInterval: 10, maxSamples: 100, modelPath: '/model/vmaf', enablePerFrame: false };
+  const config = { mode: 'post-export' as const, sampleInterval: 10, maxSamples: 100, modelPath: '/model/vmaf', enablePsnr: true, enableSsim: false };
 
   it('builds ffmpeg command', () => {
     const cmd = buildVmafSampleCommand('/source.mp4', '/output.mp4', 10, config);

@@ -677,7 +677,7 @@ export function deblurFrame(frame: ImageData, strength: number): ImageData {
 
   // 步骤 2: Wiener 滤波近似
   // 使用多次 Unsharp Mask 迭代模拟反卷积
-  let currentData = new Uint8ClampedArray(data);
+  const currentData = new Uint8ClampedArray(data);
   const iterations = Math.max(1, Math.round(strength * 3));
 
   for (let iter = 0; iter < iterations; iter++) {

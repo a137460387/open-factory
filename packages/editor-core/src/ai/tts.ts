@@ -378,7 +378,7 @@ export function preprocessText(text: string): string {
   processed = processed.replace(/\s+/g, ' ');
 
   // 移除控制字符
-  // eslint-disable-next-line no-control-regex
+   
   processed = processed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
   return processed;
@@ -408,7 +408,7 @@ export function segmentText(text: string, maxLength: number = DEFAULT_SEGMENT_MA
     }
 
     // 在maxLength范围内找最佳分割点
-    let splitPos = findBestSplitPoint(remaining, maxLength);
+    const splitPos = findBestSplitPoint(remaining, maxLength);
 
     segments.push(remaining.substring(0, splitPos).trim());
     remaining = remaining.substring(splitPos).trim();

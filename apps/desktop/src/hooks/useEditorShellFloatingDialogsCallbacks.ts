@@ -15,6 +15,7 @@ import type {
   OrphanMediaIssue,
   DuplicateMediaIssue,
   ProxyMissingIssue,
+  BeatSensitivity,
 } from '@open-factory/editor-core';
 import type { ExportPreset } from '../export/export-presets';
 import type { AutosaveRecoveryCandidate, ProjectFileEncryptionOptions } from '../lib/projectFiles';
@@ -57,7 +58,7 @@ interface FloatingDialogsDeps {
   splitSpectrumAtTime: (asset: MediaAsset, sourceTime: number) => void;
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
-  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: string }) => void;
+  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
   addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => Promise<void>;
   analyzePreferredContentTargets: () => void;
@@ -231,8 +232,8 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       exportQueueRecovery: deps.exportQueueRecovery,
       archiveProgress: deps.archiveProgress,
       sharePackageProgress: deps.sharePackageProgress,
-      restoreRecovery: () => deps.restoreRecovery(deps.recoveryCandidate),
-      discardRecovery: () => deps.discardRecovery(deps.recoveryCandidate),
+      restoreRecovery: () => deps.recoveryCandidate ? deps.restoreRecovery(deps.recoveryCandidate) : Promise.resolve(),
+      discardRecovery: () => deps.recoveryCandidate ? deps.discardRecovery(deps.recoveryCandidate) : Promise.resolve(),
       restoreExportQueueRecovery: deps.restoreExportQueueRecovery,
       discardExportQueueRecovery: deps.discardExportQueueRecovery,
       skipTutorial: deps.skipTutorial,
@@ -241,7 +242,7 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       setLastExportPath: deps.setLastExportPath,
       setTutorialSignals: deps.setTutorialSignals,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     [
       deps.templateExportPreset, deps.exportDialogOpen, deps.setExportDialogOpen,
       deps.timelineExportDialogOpen, deps.setTimelineExportDialogOpen, deps.lastExportPath,

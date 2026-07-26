@@ -99,19 +99,19 @@ export async function detectAvailableProviders(): Promise<InferenceProvider[]> {
 
   try {
     // Try ONNX Runtime Node.js (optional dependency)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+     
     const ort = await import(/* webpackIgnore: true */ 'onnxruntime-node' as string);
     if (ort) {
       providers.unshift('onnx-cpu');
 
       // Check for CUDA support
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+         
         const session = await ort.InferenceSession.create('', {
           executionProviders: ['cuda'],
         });
         providers.unshift('onnx-cuda');
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+         
         await session.release();
       } catch {
         // CUDA not available, CPU-only
@@ -157,21 +157,21 @@ export async function createOnnxSession(
 ): Promise<OnnxSession | null> {
   try {
     // Dynamic import — onnxruntime-node is an optional dependency
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+     
     const ort = await import(/* webpackIgnore: true */ 'onnxruntime-node' as string);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+     
     const session = await ort.InferenceSession.create(modelPath, {
       executionProviders: [provider],
     });
 
     return {
       async run(feeds: Record<string, unknown>) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+         
         const results = await session.run(feeds);
         return results as Record<string, unknown>;
       },
       async release() {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+         
         await session.release();
       },
     };

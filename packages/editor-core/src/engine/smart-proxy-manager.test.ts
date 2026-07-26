@@ -19,19 +19,19 @@ describe('DEFAULT_PROXY_CONFIG', () => {
 
 describe('recommendProxyQuality', () => {
   it('returns full for ultra', () => {
-    expect(recommendProxyQuality({ level: 'ultra' })).toBe('full');
+    expect(recommendProxyQuality({ level: 'ultra', cpuCores: 8, memoryGB: 16, gpuRenderer: 'NVIDIA', maxTextureSize: 4096, supportsWebGPU: true, supportsWebGL2: true, estimatedVRAM: 8192, benchmarkScore: 95 })).toBe('full');
   });
 
   it('returns three-quarter for high', () => {
-    expect(recommendProxyQuality({ level: 'high' })).toBe('three-quarter');
+    expect(recommendProxyQuality({ level: 'high', cpuCores: 4, memoryGB: 8, gpuRenderer: 'Intel', maxTextureSize: 2048, supportsWebGPU: false, supportsWebGL2: true, estimatedVRAM: 2048, benchmarkScore: 70 })).toBe('three-quarter');
   });
 
   it('returns half for medium', () => {
-    expect(recommendProxyQuality({ level: 'medium' })).toBe('half');
+    expect(recommendProxyQuality({ level: 'medium', cpuCores: 2, memoryGB: 4, gpuRenderer: 'Basic', maxTextureSize: 1024, supportsWebGPU: false, supportsWebGL2: false, estimatedVRAM: 512, benchmarkScore: 40 })).toBe('half');
   });
 
   it('returns quarter for low', () => {
-    expect(recommendProxyQuality({ level: 'low' })).toBe('quarter');
+    expect(recommendProxyQuality({ level: 'low', cpuCores: 1, memoryGB: 2, gpuRenderer: 'None', maxTextureSize: 512, supportsWebGPU: false, supportsWebGL2: false, estimatedVRAM: 0, benchmarkScore: 10 })).toBe('quarter');
   });
 });
 
@@ -107,7 +107,7 @@ describe('SmartProxyManager', () => {
 
   it('creates with custom config', () => {
     const manager = new SmartProxyManager({
-      generation: { maxConcurrent: 1 },
+      generation: { quality: 'half', maxConcurrent: 1, storagePath: '/tmp', autoGenerateLowQuality: false, lowQualityThreshold: 30, maxCacheSizeMB: 500, maxCacheCount: 10 },
     });
     expect(manager).toBeDefined();
   });
@@ -140,7 +140,7 @@ describe('createSmartProxyManager', () => {
   });
 
   it('creates with config', () => {
-    const manager = createSmartProxyManager({ generation: { maxConcurrent: 2 } });
+    const manager = createSmartProxyManager({ generation: { quality: 'half', maxConcurrent: 2, storagePath: '/tmp', autoGenerateLowQuality: false, lowQualityThreshold: 30, maxCacheSizeMB: 500, maxCacheCount: 10 } });
     expect(manager).toBeInstanceOf(SmartProxyManager);
   });
 });

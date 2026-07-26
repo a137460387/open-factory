@@ -923,7 +923,7 @@ describe('computeQualityScore', () => {
       colorBalance: 75, stability: 80, bitrate: 5000,
       resolution: { width: 1920, height: 1080 }, frameRate: 30,
     };
-    const audioMetrics = { rmsLevel: -14, noiseFloor: -60, thd: 0.01 };
+    const audioMetrics = { rmsLevel: -14, peakLevel: -3, noiseFloor: -60, dynamicRange: 40, clipping: false, distortion: 5, frequencyBalance: 70 };
     const result = computeQualityScore(videoMetrics, audioMetrics, config);
     expect(result).toBeDefined();
     expect(typeof result.overallScore).toBe('number');
@@ -941,7 +941,7 @@ describe('buildEnhancedQualityUserPrompt', () => {
       colorBalance: 75, stability: 80, bitrate: 5000,
       resolution: { width: 1920, height: 1080 }, frameRate: 30,
     };
-    const audioMetrics = { rmsLevel: -14, noiseFloor: -60, thd: 0.01 };
+    const audioMetrics = { rmsLevel: -14, peakLevel: -3, noiseFloor: -60, dynamicRange: 40, clipping: false, distortion: 5, frequencyBalance: 70 };
     const prompt = buildEnhancedQualityUserPrompt(videoMetrics, audioMetrics);
     expect(typeof prompt).toBe('string');
     expect(prompt).toContain('1920x1080');

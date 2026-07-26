@@ -54,22 +54,22 @@ export function verifyToken(token: string): TokenPayload {
 export function generateToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
   const config = getConfig();
 
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign(payload as any, config.jwt.secret as string, {
     algorithm: 'HS256',
     issuer: config.jwt.issuer,
     audience: config.jwt.audience,
-    expiresIn: config.jwt.expiresIn as string | number | undefined,
+    expiresIn: config.jwt.expiresIn as any,
   });
 }
 
 export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
   const config = getConfig();
 
-  return jwt.sign(payload, config.jwt.secret, {
+  return jwt.sign(payload as any, config.jwt.secret as string, {
     algorithm: 'HS256',
     issuer: config.jwt.issuer,
     audience: config.jwt.audience,
-    expiresIn: config.jwt.refreshExpiresIn as string | number | undefined,
+    expiresIn: config.jwt.refreshExpiresIn as any,
   });
 }
 

@@ -8,6 +8,10 @@ import { getDemucsAvailability, type DemucsAvailability } from '../lib/demucs';
 import { normalizeTutorialProgressSettings, advanceTutorialProgress, type TutorialProgressSettings, type TutorialSignals } from '../tutorial/tutorialState';
 import { saveTutorialProgressSettings } from '../settings/appSettings';
 
+import type { DroppedFile } from '../components/FormatConverterDialog';
+import type { ExportTaskHistoryEntry } from '@open-factory/editor-core';
+import type { ArchiveProgress } from '../lib/projectArchive';
+type SubtitleClip = import('@open-factory/editor-core').Clip & { type: 'subtitle' };
 interface EffectsDeps {
   projectPath: string | null;
   tutorialProgress: TutorialProgressSettings;

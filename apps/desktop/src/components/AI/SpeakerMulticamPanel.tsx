@@ -48,7 +48,7 @@ export function SpeakerMulticamPanel({
     if (diarizationResult && availableAngles.length > 0 && state.mappings.length === 0) {
       autoConfigureMappings(
         diarizationResult,
-        availableAngles.map((a: MulticamClipAngle, i: number) => ({
+        availableAngles.map((a, i) => ({
           index: i,
           name: a.name ?? `机位 ${i + 1}`,
         })),
@@ -151,7 +151,7 @@ export function SpeakerMulticamPanel({
                       data-testid={`angle-select-${speaker.speakerId}`}
                     >
                       <option value={-1}>未分配</option>
-                      {availableAngles.map((angle: MulticamClipAngle, index: number) => (
+                      {availableAngles.map((angle, index) => (
                         <option key={angle.id} value={index}>
                           {angle.name ?? `机位 ${index + 1}`}
                         </option>

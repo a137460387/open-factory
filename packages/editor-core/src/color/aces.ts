@@ -918,7 +918,7 @@ export class ACESColorManager {
     }
 
     // 转换到参考色彩空间 (ACES2065-1)
-    let reference = this.toReference(color, from);
+    const reference = this.toReference(color, from);
 
     // 从参考色彩空间转换到目标
     return this.fromReference(reference, to);

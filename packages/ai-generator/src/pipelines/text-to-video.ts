@@ -14,7 +14,7 @@ import { getConfig } from '../config.js';
 import { modelManager } from '../models/model-manager.js';
 
 const PREFIX = '[open-factory]';
-const logger = { // eslint-disable-line no-console
+const logger = {  
   debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
   info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
   warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),

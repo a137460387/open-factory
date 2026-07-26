@@ -245,9 +245,9 @@ describe('getSpeakerBasedAngleSwitches', () => {
 
   it('detects speaker changes', () => {
     const segments = [
-      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, label: 'A' },
-      { speakerId: 1, startMs: 2000, endMs: 3000, confidence: 0.9, label: 'B' },
-      { speakerId: 0, startMs: 4000, endMs: 5000, confidence: 0.9, label: 'A' },
+      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'A' },
+      { speakerId: 1, startMs: 2000, endMs: 3000, confidence: 0.9, speakerLabel: 'B' },
+      { speakerId: 0, startMs: 4000, endMs: 5000, confidence: 0.9, speakerLabel: 'A' },
     ];
     const mapping = new Map([[0, 0], [1, 90]]);
     const result = getSpeakerBasedAngleSwitches(segments, mapping);
@@ -256,8 +256,8 @@ describe('getSpeakerBasedAngleSwitches', () => {
 
   it('skips speakers not in mapping', () => {
     const segments = [
-      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, label: 'A' },
-      { speakerId: 99, startMs: 2000, endMs: 3000, confidence: 0.9, label: 'B' },
+      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'A' },
+      { speakerId: 99, startMs: 2000, endMs: 3000, confidence: 0.9, speakerLabel: 'B' },
     ];
     const mapping = new Map([[0, 0]]);
     const result = getSpeakerBasedAngleSwitches(segments, mapping);
@@ -266,8 +266,8 @@ describe('getSpeakerBasedAngleSwitches', () => {
 
   it('respects minSwitchIntervalMs', () => {
     const segments = [
-      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, label: 'A' },
-      { speakerId: 1, startMs: 500, endMs: 1500, confidence: 0.9, label: 'B' },
+      { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'A' },
+      { speakerId: 1, startMs: 500, endMs: 1500, confidence: 0.9, speakerLabel: 'B' },
     ];
     const mapping = new Map([[0, 0], [1, 90]]);
     const result = getSpeakerBasedAngleSwitches(segments, mapping, 2000);
@@ -307,9 +307,9 @@ describe('validateDiarizationResult', () => {
   it('validates correct result', () => {
     const result = validateDiarizationResult({
       segments: [
-        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, label: 'Speaker 0' },
+        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
       ],
-      speakers: [{ id: 0, label: 'Speaker 0', embedding: [1, 0, 0] }],
+      speakers: [{ id: 0, speakerLabel: 'Speaker 0', embedding: [1, 0, 0] }],
       durationMs: 1000,
       stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 1000, speakerSwitches: 0 },
     });
@@ -329,7 +329,7 @@ describe('validateDiarizationResult', () => {
   it('detects invalid time', () => {
     const result = validateDiarizationResult({
       segments: [
-        { speakerId: 0, startMs: -1, endMs: 1000, confidence: 0.9, label: 'Speaker 0' },
+        { speakerId: 0, startMs: -1, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
       ],
       speakers: [],
       durationMs: 1000,
@@ -341,7 +341,7 @@ describe('validateDiarizationResult', () => {
   it('detects low confidence', () => {
     const result = validateDiarizationResult({
       segments: [
-        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.1, label: 'Speaker 0' },
+        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.1, speakerLabel: 'Speaker 0' },
       ],
       speakers: [],
       durationMs: 1000,
@@ -353,7 +353,7 @@ describe('validateDiarizationResult', () => {
   it('detects short segment', () => {
     const result = validateDiarizationResult({
       segments: [
-        { speakerId: 0, startMs: 0, endMs: 50, confidence: 0.9, label: 'Speaker 0' },
+        { speakerId: 0, startMs: 0, endMs: 50, confidence: 0.9, speakerLabel: 'Speaker 0' },
       ],
       speakers: [],
       durationMs: 50,
@@ -365,8 +365,8 @@ describe('validateDiarizationResult', () => {
   it('detects overlap', () => {
     const result = validateDiarizationResult({
       segments: [
-        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, label: 'Speaker 0' },
-        { speakerId: 1, startMs: 500, endMs: 1500, confidence: 0.9, label: 'Speaker 1' },
+        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
+        { speakerId: 1, startMs: 500, endMs: 1500, confidence: 0.9, speakerLabel: 'Speaker 1' },
       ],
       speakers: [],
       durationMs: 1500,

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import type { CanvasPoint, ClipTransformBox, PathPoint } from '@open-factory/editor-core';
+
+function makeBox(partial: Pick<ClipTransformBox, 'center' | 'width' | 'height' | 'rotation' | 'corners'>): ClipTransformBox {
+  const zero = { x: 0, y: 0 } as CanvasPoint;
+  return { ...partial, handles: { nw: zero, n: zero, ne: zero, e: zero, se: zero, s: zero, sw: zero, w: zero }, rotationHandle: zero, anchor: zero };
+}
 import {
   clampPathUnit,
   canvasPointStyle,
@@ -66,13 +71,13 @@ describe('canvasPointStyle', () => {
 
 describe('canvasBoxStyle', () => {
   it('returns CSSProperties for a transform box', () => {
-    const box: ClipTransformBox = {
+    const box = makeBox({
       center: { x: 640, y: 360 },
       width: 320,
       height: 180,
       rotation: 0,
-      corners: { topLeft: { x: 480, y: 270 }, topRight: { x: 800, y: 270 }, bottomRight: { x: 800, y: 450 }, bottomLeft: { x: 480, y: 450 } },
-    };
+      corners: { nw: { x: 480, y: 270 }, ne: { x: 800, y: 270 }, se: { x: 800, y: 450 }, sw: { x: 480, y: 450 } },
+    });
     const style = canvasBoxStyle(box);
     expect(style.left).toBe('50%');
     expect(style.top).toBe('50%');
@@ -82,13 +87,13 @@ describe('canvasBoxStyle', () => {
   });
 
   it('includes rotation in transform', () => {
-    const box: ClipTransformBox = {
+    const box = makeBox({
       center: { x: 0, y: 0 },
       width: 100,
       height: 100,
       rotation: 45,
-      corners: { topLeft: { x: -50, y: -50 }, topRight: { x: 50, y: -50 }, bottomRight: { x: 50, y: 50 }, bottomLeft: { x: -50, y: 50 } },
-    };
+      corners: { nw: { x: -50, y: -50 }, ne: { x: 50, y: -50 }, se: { x: 50, y: 50 }, sw: { x: -50, y: 50 } },
+    });
     const style = canvasBoxStyle(box);
     expect(style.transform).toContain('rotate(45deg)');
   });
@@ -204,14 +209,14 @@ describe('getAdaptiveQualityIndicatorClass', () => {
   });
 
   it('returns emerald for good/normal', () => {
-    expect(getAdaptiveQualityIndicatorClass('normal')).toBe('bg-emerald-400');
+    expect(getAdaptiveQualityIndicatorClass('full')).toBe('bg-emerald-400');
   });
 });
 
 describe('buildReviewAnnotationGeometry', () => {
   const baseDrag: ReviewAnnotationDrag = {
     pointerId: 1,
-    type: 'box',
+    type: 'rectangle',
     startPoint: { x: 100, y: 100 },
     canvasWidth: 1280,
     canvasHeight: 720,
@@ -308,13 +313,13 @@ describe('buildPathMaskDragPatch', () => {
 });
 
 describe('canvasPointToPathPoint / pathPointToCanvasPoint', () => {
-  const mockBox: ClipTransformBox = {
+  const mockBox = makeBox({
     center: { x: 640, y: 360 },
     width: 320,
     height: 180,
     rotation: 0,
-    corners: { topLeft: { x: 480, y: 270 }, topRight: { x: 800, y: 270 }, bottomRight: { x: 800, y: 450 }, bottomLeft: { x: 480, y: 450 } },
-  };
+    corners: { nw: { x: 480, y: 270 }, ne: { x: 800, y: 270 }, se: { x: 800, y: 450 }, sw: { x: 480, y: 450 } },
+  });
 
   const mockClip: EditableCanvasClip = {
     clip: {} as never,

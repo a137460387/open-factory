@@ -198,22 +198,22 @@ describe('calculateTextStats', () => {
 
 describe('normalizeTTSParams', () => {
   it('normalizes speed', () => {
-    const result = normalizeTTSParams({ text: 'hello', speed: 5 });
+    const result = normalizeTTSParams({ text: 'hello', voiceId: 'default', speed: 5 });
     expect(result.speed).toBeLessThanOrEqual(3);
   });
 
   it('normalizes pitch', () => {
-    const result = normalizeTTSParams({ text: 'hello', pitch: 5 });
+    const result = normalizeTTSParams({ text: 'hello', voiceId: 'default', pitch: 5 });
     expect(result.pitch).toBeLessThanOrEqual(2);
   });
 
   it('normalizes volume', () => {
-    const result = normalizeTTSParams({ text: 'hello', volume: 5 });
+    const result = normalizeTTSParams({ text: 'hello', voiceId: 'default', volume: 5 });
     expect(result.volume).toBeLessThanOrEqual(2);
   });
 
   it('uses defaults for missing values', () => {
-    const result = normalizeTTSParams({ text: 'hello' });
+    const result = normalizeTTSParams({ text: 'hello', voiceId: 'default' });
     expect(result.speed).toBeDefined();
     expect(result.pitch).toBeDefined();
     expect(result.volume).toBeDefined();
@@ -233,7 +233,7 @@ describe('adjustDurationBySpeed', () => {
 
 describe('adjustTimingsBySpeed', () => {
   it('adjusts timings', () => {
-    const timings = [{ word: 'hello', startMs: 1000, endMs: 2000 }];
+    const timings = [{ text: 'hello', startMs: 1000, endMs: 2000, confidence: 0.9 }];
     const result = adjustTimingsBySpeed(timings, 2);
     expect(result[0].startMs).toBe(500);
     expect(result[0].endMs).toBe(1000);

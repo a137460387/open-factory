@@ -35,7 +35,7 @@ export function normalizeBookmarkAnnotationText(text: string | undefined): strin
   return trimmed.slice(0, BOOKMARK_ANNOTATION_MAX_LENGTH);
 }
 
-export function sortBookmarks(
+function sortBookmarks(
   bookmarks: TimelineBookmark[],
   mode: BookmarkSortMode,
   groups?: BookmarkGroup[],

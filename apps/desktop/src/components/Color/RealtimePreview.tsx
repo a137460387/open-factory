@@ -260,7 +260,7 @@ export function RealtimePreview({
       processor.dispose();
       processorRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // 更新分辨率
   useEffect(() => {

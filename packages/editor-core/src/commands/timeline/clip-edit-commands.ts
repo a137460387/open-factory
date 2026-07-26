@@ -90,7 +90,7 @@ export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | '
 
 export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
 
-type ReplaceableMediaClip = Extract<Clip, { mediaId: string }>;
+export type ReplaceableMediaClip = Extract<Clip, { mediaId: string }>;
 
 export function calculateReplaceMediaPatch(
   clip: ReplaceableMediaClip,

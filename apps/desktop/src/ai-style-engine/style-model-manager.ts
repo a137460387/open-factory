@@ -123,7 +123,7 @@ export function createStyleModel(
   const mergedEditingProfile = mergeEditingProfiles(editingResults);
 
   // Analyze color preferences from all projects
-  const colorResults = projects.map((p) => analyzeColorPreferences(p));
+  const colorResults = projects.map((p) => analyzeColorPreferences(p as unknown as ProjectLike));
   const mergedColorProfile = mergeColorProfiles(colorResults);
 
   // Generate combined vector

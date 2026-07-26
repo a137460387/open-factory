@@ -8,6 +8,7 @@ import {
   type Project,
   type BeatSensitivity,
   type BeatSnapSuggestion,
+  type TransitionRecommendation,
   type ProjectAnnotation,
   type TimelineNote,
 } from '@open-factory/editor-core';
@@ -83,9 +84,9 @@ interface TimelineDialogsLayerProps {
   applyAiReframe: (clipId: string, aspect: 'source' | '16:9' | '9:16' | '1:1' | '4:5' | '21:9') => void;
 
   // Transition
-  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: Array<{ transitionType: string; duration: number; reason: string }> } | undefined;
+  transitionDialog: { clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined;
   setTransitionDialog: (v: undefined) => void;
-  applyAiTransition: (clipId: string, adjacentClipId: string, rec: { transitionType: string; duration: number; reason: string }) => void;
+  applyAiTransition: (clipId: string, adjacentClipId: string, rec: TransitionRecommendation) => void;
 
   // Annotations
   annotationPanelOpen: boolean;

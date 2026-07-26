@@ -483,8 +483,8 @@ export function calculateCoverCrop(
   }
 
   // 基于中心点定位裁剪区域
-  let cropX = Math.max(0, Math.min(1 - cropWidth, centerX - cropWidth / 2));
-  let cropY = Math.max(0, Math.min(1 - cropHeight, centerY - cropHeight / 2));
+  const cropX = Math.max(0, Math.min(1 - cropWidth, centerX - cropWidth / 2));
+  const cropY = Math.max(0, Math.min(1 - cropHeight, centerY - cropHeight / 2));
 
   return { x: cropX, y: cropY, width: cropWidth, height: cropHeight };
 }

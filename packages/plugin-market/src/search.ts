@@ -48,7 +48,7 @@ export class PluginSearchEngine {
     const { keyword, category, tags, minRating, sortBy, sortOrder, page, limit } = normalizeQuery(query);
 
     // Phase 1: Filter
-    let candidates = this.index.filter((entry) => {
+    const candidates = this.index.filter((entry) => {
       if (category && entry.entry.manifest.category !== category) return false;
       if (tags && tags.length > 0) {
         const hasTag = tags.some((t) => entry.tags.includes(t.toLowerCase()));

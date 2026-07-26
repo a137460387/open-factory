@@ -11,6 +11,7 @@ import {
   compareEditingStyles,
   type EditDecisionEntry,
   type EditingRhythmProfile,
+  type TimelineLike,
 } from './edit-rhythm-analyzer';
 
 // ==================== Test Helpers ====================
@@ -46,9 +47,9 @@ function makeTimeline(clips: Array<{ start: number; duration: number; mediaId?: 
 
 describe('parseEDLEntries', () => {
   it('returns empty array for null/undefined timeline', () => {
-    expect(parseEDLEntries(null)).toEqual([]);
-    expect(parseEDLEntries(undefined)).toEqual([]);
-    expect(parseEDLEntries({})).toEqual([]);
+    expect(parseEDLEntries(null as unknown as TimelineLike)).toEqual([]);
+    expect(parseEDLEntries(undefined as unknown as TimelineLike)).toEqual([]);
+    expect(parseEDLEntries({} as unknown as TimelineLike)).toEqual([]);
   });
 
   it('parses clips from timeline tracks', () => {
@@ -278,7 +279,7 @@ describe('generateStyleVector', () => {
 
 describe('analyzeEditingStyle', () => {
   it('returns zero profile for empty timeline', () => {
-    const result = analyzeEditingStyle(null);
+    const result = analyzeEditingStyle(null as unknown as TimelineLike);
     expect(result.rhythmProfile.avgShotDuration).toBe(0);
     expect(result.stats.totalClips).toBe(0);
     expect(result.styleVector.vector).toHaveLength(128);

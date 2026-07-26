@@ -10,7 +10,11 @@
     "composite": true,
     "rootDir": "src",
     "outDir": "dist",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@open-factory/editor-core": ["../editor-core/src/index.ts"],
+      "@open-factory/editor-core/*": ["../editor-core/src/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "references": [{ "path": "../editor-core" }]

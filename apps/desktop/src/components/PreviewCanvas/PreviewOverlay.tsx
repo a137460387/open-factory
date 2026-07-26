@@ -1,11 +1,11 @@
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from 'react';
 import type { ClipMask, ReviewAnnotation } from '@open-factory/editor-core';
 import { isPathMaskClosed } from '@open-factory/editor-core';
-import type { EditableCanvasClip } from '../types';
-import { canvasPointStyle, canvasBoxStyle, canvasHandleCursor, buildCanvasPathMaskSvgPath, resolvePathHandle, pathPointToCanvasPoint } from '../utils';
-import { CANVAS_TRANSFORM_HANDLES, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT } from '../types';
-import { zhCN } from '../../../i18n/strings';
-import type { CanvasTransformDrag, PathMaskDrag, ReviewAnnotationDrag } from '../types';
+import type { EditableCanvasClip } from './types';
+import { canvasPointStyle, canvasBoxStyle, canvasHandleCursor, buildCanvasPathMaskSvgPath, resolvePathHandle, pathPointToCanvasPoint, rgbCss } from './utils';
+import { CANVAS_TRANSFORM_HANDLES, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT } from './types';
+import { zhCN } from '../../i18n/strings';
+import type { CanvasTransformDrag, PathMaskDrag, ReviewAnnotationDrag } from './types';
 import type { CanvasTransformHandle, CanvasPoint } from '@open-factory/editor-core';
 import { buildClipTransformBox } from '@open-factory/editor-core';
 
@@ -25,13 +25,14 @@ export interface PreviewOverlayProps {
   fps: number;
   multicamLiveMode: boolean;
   isPlaying: boolean;
-  frameInspectorSample: import('../types').FrameInspectorSample | undefined;
+  frameInspectorSample: import('./types').FrameInspectorSample | undefined;
   selectedInspectorClip: import('@open-factory/editor-core').Clip | undefined;
   compareEnabled: boolean;
   compareShowsDifference: boolean;
   compareMode: string;
   compareSplitRatio: number;
   compareDividerDragging: boolean;
+  onCompareDividerDraggingChange: (dragging: boolean) => void;
   previewRenderSize: { width: number; height: number };
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   originalCanvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -251,7 +252,7 @@ function SafeFrameGuides() {
 }
 
 function FrameInspectorPopover({ sample, canApplyChroma, onApplyChroma }: {
-  sample: import('../types').FrameInspectorSample;
+  sample: import('./types').FrameInspectorSample;
   canApplyChroma: boolean;
   onApplyChroma(): void;
 }) {
@@ -510,7 +511,7 @@ function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: stri
 }
 
 // Helper imports for compare styles
-import { buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle } from '../../../lib/preview/compare';
+import { buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle } from '../../lib/preview/compare';
 
 function buildPreviewCompareOverlayStyle2(mode: string, ratio: number) {
   return buildPreviewCompareOverlayStyle(mode as any, ratio);

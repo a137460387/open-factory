@@ -19,11 +19,11 @@ import {
   UpdateClipCommand,
   UpdateMaskCommand,
 } from '@open-factory/editor-core';
-import { getWheelPreviewZoom, buildChromaKeySamplePatch } from '../../lib/preview/frame-inspector';
-import { calculatePreviewCompareSplitRatio, type PreviewCompareMode } from '../../lib/preview/compare';
-import { showToast } from '../../lib/toast';
-import { zhCN } from '../../i18n/strings';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
+import { getWheelPreviewZoom, buildChromaKeySamplePatch } from '../../../lib/preview/frame-inspector';
+import { calculatePreviewCompareSplitRatio, type PreviewCompareMode } from '../../../lib/preview/compare';
+import { showToast } from '../../../lib/toast';
+import { zhCN } from '../../../i18n/strings';
+import { commandManager, timelineAccessor } from '../../../store/commandManager';
 import type {
   CanvasTransformDrag,
   EditableCanvasClip,

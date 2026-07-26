@@ -27,6 +27,7 @@ function makeSample(overrides: Partial<ResourceSample> = {}): ResourceSample {
     memoryUsedMb: 1000,
     diskReadMbPerSec: 10,
     diskWriteMbPerSec: 5,
+    memoryTotalMb: 8000,
     ...overrides,
   };
 }

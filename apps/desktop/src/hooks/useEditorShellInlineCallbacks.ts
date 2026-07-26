@@ -40,7 +40,6 @@ import type { AutosaveRecoveryCandidate } from '../lib/projectFiles';
 import { getSubtitleDataImportTargetTrackId } from '../lib/timeline-clip-helpers';
 import type { ExportPreset } from '../export/export-presets';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
-import type { AutosaveRecoveryCandidate } from '../lib/projectFiles';
 import type { TutorialSignals } from '../tutorial/tutorialState';
 
 interface InlineCallbacksDeps {

@@ -81,7 +81,7 @@ const labels: Record<ReportLocale, Record<string, string>> = {
   },
 };
 
-export function sortCollaborationNotes(notes: readonly CollaborationNote[]): CollaborationNote[] {
+function sortCollaborationNotes(notes: readonly CollaborationNote[]): CollaborationNote[] {
   return normalizeCollaborationNotes([...notes]);
 }
 

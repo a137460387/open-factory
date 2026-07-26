@@ -617,7 +617,7 @@ export class SceneAnalyzer {
 
     let sharpness = 75;
     let exposure = 75;
-    let colorSaturation = 75;
+    const colorSaturation = 75;
     let stability = 75;
     let audioQuality = 75;
     let noiseLevel = 20;

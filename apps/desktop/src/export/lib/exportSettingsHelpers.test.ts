@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { Project } from '@open-factory/editor-core';
+import type { Project, ExportSubtitleFormat } from '@open-factory/editor-core';
 import {
   WATERMARK_POSITIONS,
   AUDIO_VISUALIZATION_FORMATS,
@@ -268,7 +268,7 @@ describe('normalizeDraftSettings', () => {
   });
 
   it('defaults subtitleFormat to srt', () => {
-    const result = normalizeDraftSettings({ ...minimalSettings, subtitleFormat: 'invalid' });
+    const result = normalizeDraftSettings({ ...minimalSettings, subtitleFormat: 'invalid' as ExportSubtitleFormat });
     expect(result.subtitleFormat).toBe('srt');
   });
 
@@ -320,7 +320,7 @@ describe('normalizeDraftSettings', () => {
   });
 
   it('normalizes watermark to null for audio mode', () => {
-    const result = normalizeDraftSettings({ ...minimalSettings, format: 'm4a', watermark: { enabled: true, type: 'text', text: 'test', position: 'center', color: '#fff', fontSize: 24 } });
+    const result = normalizeDraftSettings({ ...minimalSettings, format: 'm4a', watermark: { enabled: true, type: 'text' as const, text: 'test', fontFamily: 'sans-serif', position: 'center' as const, color: '#fff', fontSize: 24 } });
     expect(result.watermark).toBeNull();
   });
 

@@ -12,6 +12,7 @@ import {
   compareColorProfiles,
   type ColorGradingParams,
   type ColorPreferenceProfile,
+  type ProjectLike,
 } from './color-preference-learner';
 
 // ==================== Test Helpers ====================
@@ -27,7 +28,7 @@ function makeProject(tracks: Array<{ clips: Array<{ colorGrading?: ColorGradingP
 
 describe('extractColorParams', () => {
   it('returns empty for null project', () => {
-    expect(extractColorParams(null)).toEqual([]);
+    expect(extractColorParams(null as unknown as ProjectLike)).toEqual([]);
     expect(extractColorParams({})).toEqual([]);
   });
 
@@ -60,7 +61,7 @@ describe('extractColorParams', () => {
 
 describe('extractPresetParams', () => {
   it('returns empty for no presets', () => {
-    expect(extractPresetParams(null)).toEqual([]);
+    expect(extractPresetParams(null as unknown as ProjectLike)).toEqual([]);
     expect(extractPresetParams({})).toEqual([]);
   });
 
@@ -235,7 +236,7 @@ describe('generatePreferenceVector', () => {
 
 describe('analyzeColorPreferences', () => {
   it('returns zero profile for empty project', () => {
-    const result = analyzeColorPreferences(null);
+    const result = analyzeColorPreferences(null as unknown as ProjectLike);
     expect(result.stats.totalSamples).toBe(0);
     expect(result.profile.avgColorTemperature).toBe(5500);
     expect(result.profile.preferenceVector).toHaveLength(64);

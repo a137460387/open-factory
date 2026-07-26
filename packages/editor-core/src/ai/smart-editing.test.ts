@@ -210,9 +210,9 @@ function makeSegment(overrides: Partial<VideoSegment> = {}): VideoSegment {
       hasSpeech: false,
       hasMusic: false,
       spectralFeatures: {
-        centroid: 0,
-        rolloff: 0,
-        flatness: 0,
+        spectralCentroid: 0,
+        spectralRolloff: 0,
+        lowEnergy: 0,
       },
     },
     ...overrides,
@@ -347,7 +347,7 @@ describe('generateTrailer', () => {
   });
 
   it('generates trailer with custom style', () => {
-    const result = generateTrailer(segments, { style: 'energetic' });
+    const result = generateTrailer(segments, { style: 'action' as const });
     expect(result.segments.length).toBeGreaterThan(0);
   });
 
