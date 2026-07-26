@@ -5,7 +5,7 @@
 import type { ComputeEngine, ComputeCapabilities, ComputeBackend } from '../types.js';
 
 const PREFIX = '[open-factory]';
-const logger = {
+const logger = { // eslint-disable-line no-console
   debug: (msg: string, ...args: unknown[]) => console.debug(PREFIX, msg, ...args),
   info: (msg: string, ...args: unknown[]) => console.info(PREFIX, msg, ...args),
   warn: (msg: string, ...args: unknown[]) => console.warn(PREFIX, msg, ...args),

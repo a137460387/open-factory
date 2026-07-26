@@ -19,6 +19,7 @@ import type {
   PluginStorage,
 } from './plugin-types';
 import { PluginRegistry } from './plugin-registry';
+import { logger } from '../utils/logger';
 
 // --- Types ---
 
@@ -458,10 +459,10 @@ function createPluginContext(manifest: PluginManifest): PluginContext {
 function createLogger(pluginId: string): PluginLogger {
   const prefix = `[plugin:${pluginId}]`;
   return {
-    info: (message: string, ...args: unknown[]) => console.info(prefix, message, ...args),
-    warn: (message: string, ...args: unknown[]) => console.warn(prefix, message, ...args),
-    error: (message: string, ...args: unknown[]) => console.error(prefix, message, ...args),
-    debug: (message: string, ...args: unknown[]) => console.debug(prefix, message, ...args),
+    info: (message: string, ...args: unknown[]) => logger.info(prefix, message, ...args),
+    warn: (message: string, ...args: unknown[]) => logger.warn(prefix, message, ...args),
+    error: (message: string, ...args: unknown[]) => logger.error(prefix, message, ...args),
+    debug: (message: string, ...args: unknown[]) => logger.debug(prefix, message, ...args),
   };
 }
 

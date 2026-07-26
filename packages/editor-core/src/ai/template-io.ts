@@ -13,6 +13,7 @@ import type {
 } from '../models/template-schema';
 import { TEMPLATE_SCHEMA_VERSION, TEMPLATE_FILE_EXTENSION, validateTemplate } from '../models/template-schema';
 import { BUILTIN_TEMPLATES } from './builtin-templates';
+import { logger } from '../utils/logger';
 
 // ─── Checksum ────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ export async function importTemplate(jsonString: string): Promise<EditingTemplat
 
   // Version compatibility check
   if (oft.schemaVersion !== TEMPLATE_SCHEMA_VERSION) {
-    console.warn(
+    logger.warn(
       `[Template Import] Schema version mismatch: file=${oft.schemaVersion}, current=${TEMPLATE_SCHEMA_VERSION}. Attempting migration.`,
     );
   }
