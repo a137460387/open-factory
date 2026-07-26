@@ -1,6 +1,7 @@
 mod commands;
 pub mod db;
 pub mod input_validator;
+pub mod migrations;
 pub mod net_guard;
 pub mod path_validator;
 
@@ -16,6 +17,35 @@ static CLOSE_ALLOWED: OnceLock<Mutex<bool>> = OnceLock::new();
 
 fn close_allowed() -> &'static Mutex<bool> {
     CLOSE_ALLOWED.get_or_init(|| Mutex::new(false))
+}
+
+/// Returns the application version from Cargo.toml.
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Checks for application updates (placeholder — returns no update available).
+#[tauri::command]
+fn check_for_updates() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({
+        "updateAvailable": false,
+        "currentVersion": env!("CARGO_PKG_VERSION"),
+        "latestVersion": env!("CARGO_PKG_VERSION"),
+        "message": "No update available"
+    }))
+}
+
+/// Runs pending database migrations. Returns the list of newly-applied versions.
+#[tauri::command]
+fn run_migrations(app: tauri::AppHandle) -> Result<Vec<u32>, String> {
+    let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("resolve app data dir: {e}"))?;
+    let mut runner = migrations::MigrationRunner::new(data_dir);
+    runner.add(Box::new(migrations::InitialMigration));
+    runner.run_pending()
 }
 
 #[tauri::command]
@@ -198,7 +228,10 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             commands::audio_rhythm::analyze_audio_rhythm_command,
             commands::audio_rhythm::compute_fft_magnitudes,
             commands::visual_highlight::detect_visual_highlights_command,
-            commands::visual_highlight::merge_visual_with_audio_beats
+            commands::visual_highlight::merge_visual_with_audio_beats,
+            get_app_version,
+            check_for_updates,
+            run_migrations,
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();
