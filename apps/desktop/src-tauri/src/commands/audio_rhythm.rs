@@ -161,8 +161,10 @@ fn fft_magnitudes_radix2(input: &[f64]) -> Vec<f64> {
             let mut cur_imag = 0.0;
 
             for j in 0..half_size {
-                let t_real = cur_real * real[i + j + half_size] - cur_imag * imag[i + j + half_size];
-                let t_imag = cur_real * imag[i + j + half_size] + cur_imag * real[i + j + half_size];
+                let t_real =
+                    cur_real * real[i + j + half_size] - cur_imag * imag[i + j + half_size];
+                let t_imag =
+                    cur_real * imag[i + j + half_size] + cur_imag * real[i + j + half_size];
 
                 real[i + j + half_size] = real[i + j] - t_real;
                 imag[i + j + half_size] = imag[i + j] - t_imag;
@@ -269,11 +271,11 @@ pub fn calculate_band_energies(magnitudes: &[f64], sample_rate: f64, fft_size: u
     let bin_freq = sample_rate / fft_size as f64;
     let mut bands = [0.0f64; 6];
     let band_ranges: [(f64, f64); 6] = [
-        (20.0, 60.0),     // sub-bass
-        (60.0, 250.0),    // bass
-        (250.0, 500.0),   // low-mid
-        (500.0, 2000.0),  // mid
-        (2000.0, 4000.0), // high-mid
+        (20.0, 60.0),      // sub-bass
+        (60.0, 250.0),     // bass
+        (250.0, 500.0),    // low-mid
+        (500.0, 2000.0),   // mid
+        (2000.0, 4000.0),  // high-mid
         (4000.0, 20000.0), // high
     ];
     let mut band_counts = [0usize; 6];
@@ -302,7 +304,11 @@ pub fn calculate_band_energies(magnitudes: &[f64], sample_rate: f64, fft_size: u
 }
 
 /// Detect onsets from spectrum frames using spectral flux peaks
-pub fn detect_onsets(spectrum_frames: &[SpectrumFrame], threshold: f64, min_gap_seconds: f64) -> Vec<OnsetEvent> {
+pub fn detect_onsets(
+    spectrum_frames: &[SpectrumFrame],
+    threshold: f64,
+    min_gap_seconds: f64,
+) -> Vec<OnsetEvent> {
     if spectrum_frames.len() < 3 {
         return Vec::new();
     }
@@ -448,9 +454,17 @@ pub fn classify_rhythm_pattern(onsets: &[OnsetEvent]) -> RhythmPattern {
 
     let intervals: Vec<f64> = onsets.windows(2).map(|w| w[1].time - w[0].time).collect();
     let avg_interval = intervals.iter().sum::<f64>() / intervals.len() as f64;
-    let variance = intervals.iter().map(|&v| (v - avg_interval).powi(2)).sum::<f64>() / intervals.len() as f64;
+    let variance = intervals
+        .iter()
+        .map(|&v| (v - avg_interval).powi(2))
+        .sum::<f64>()
+        / intervals.len() as f64;
     let std_dev = variance.sqrt();
-    let cv = if avg_interval > 0.0 { std_dev / avg_interval } else { 1.0 };
+    let cv = if avg_interval > 0.0 {
+        std_dev / avg_interval
+    } else {
+        1.0
+    };
 
     // Check for buildup (decreasing intervals)
     let decreasing_count = intervals.windows(2).filter(|w| w[1] < w[0] * 0.95).count();
@@ -612,8 +626,16 @@ pub fn analyze_audio_rhythm(
         stats: AudioRhythmStats {
             total_frames,
             onset_count,
-            avg_spectral_centroid: if total_frames > 0 { total_centroid / total_frames as f64 } else { 0.0 },
-            avg_energy: if total_frames > 0 { total_energy / total_frames as f64 } else { 0.0 },
+            avg_spectral_centroid: if total_frames > 0 {
+                total_centroid / total_frames as f64
+            } else {
+                0.0
+            },
+            avg_energy: if total_frames > 0 {
+                total_energy / total_frames as f64
+            } else {
+                0.0
+            },
         },
     }
 }
@@ -708,8 +730,7 @@ mod tests {
             let samples: Vec<f64> = (0..size)
                 .map(|i| {
                     let t = i as f64 / 44100.0;
-                    (2.0 * PI * 440.0 * t).sin() * 0.5
-                        + (2.0 * PI * 880.0 * t).sin() * 0.3
+                    (2.0 * PI * 440.0 * t).sin() * 0.5 + (2.0 * PI * 880.0 * t).sin() * 0.3
                 })
                 .collect();
 

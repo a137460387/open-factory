@@ -3,7 +3,7 @@ import { BeatMarker, normalizeBeatMarkers } from '../../beats';
 import { ExportRange, ProtectedRange, Timeline, TimelineBookmark, createTimelineBookmark, normalizeExportRanges, normalizeProtectedRanges, normalizeTimelineBookmark, normalizeTimelineBookmarks } from '../../model';
 import { getTimelineDuration } from '../../timeline';
 import { Command } from '../command';
-import { ProjectAccessor, touchProject } from './utils';
+import { touchProject } from './utils';
 import { sortBookmarks } from './utils-nested';
 
 export interface AddProjectBookmarkInput {

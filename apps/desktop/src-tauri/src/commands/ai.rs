@@ -1,11 +1,11 @@
+use base64::Engine;
 use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
-use base64::Engine;
 use std::process::Command;
 use tauri::AppHandle;
 
-use crate::path_validator::validate_path;
 use super::binaries::ffmpeg_binary;
+use crate::path_validator::validate_path;
 
 const AI_KEYCHAIN_SERVICE: &str = "open-factory.ai";
 
@@ -52,7 +52,10 @@ pub struct OllamaModelsResult {
 }
 
 #[tauri::command]
-pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> Result<CallAiApiResult, String> {
+pub async fn call_ai_api(
+    request: CallAiApiRequest,
+    api_key: Option<String>,
+) -> Result<CallAiApiResult, String> {
     // Input validation
     crate::input_validator::validate_non_empty_string(&request.provider_id, "provider_id")?;
     crate::input_validator::validate_non_empty_string(&request.base_url, "base_url")?;
@@ -74,11 +77,16 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
     let start = std::time::Instant::now();
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(request.timeout_secs.unwrap_or(30)))
+        .timeout(std::time::Duration::from_secs(
+            request.timeout_secs.unwrap_or(30),
+        ))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    let url = format!("{}/chat/completions", request.base_url.trim_end_matches('/'));
+    let url = format!(
+        "{}/chat/completions",
+        request.base_url.trim_end_matches('/')
+    );
 
     let mut body = serde_json::json!({
         "model": request.model,
@@ -125,7 +133,11 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
         .map_err(|e| format!("Failed to read AI API response: {}", e))?;
 
     if !status.is_success() {
-        return Err(format!("AI API returned status {}: {}", status, truncate_error(&response_text)));
+        return Err(format!(
+            "AI API returned status {}: {}",
+            status,
+            truncate_error(&response_text)
+        ));
     }
 
     let parsed: serde_json::Value = serde_json::from_str(&response_text)
@@ -140,9 +152,18 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
         .unwrap_or("")
         .to_string();
 
-    let usage = parsed.get("usage").cloned().unwrap_or(serde_json::json!({}));
-    let input_tokens = usage.get("prompt_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-    let output_tokens = usage.get("completion_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+    let usage = parsed
+        .get("usage")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+    let input_tokens = usage
+        .get("prompt_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
+    let output_tokens = usage
+        .get("completion_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0) as u32;
     let latency_ms = start.elapsed().as_millis() as u64;
 
     Ok(CallAiApiResult {
@@ -154,7 +175,11 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
 }
 
 #[tauri::command]
-pub async fn test_ai_connection(base_url: String, api_key: Option<String>, provider_id: String) -> Result<bool, String> {
+pub async fn test_ai_connection(
+    base_url: String,
+    api_key: Option<String>,
+    provider_id: String,
+) -> Result<bool, String> {
     if provider_id != "ollama" {
         crate::net_guard::ensure_not_private(&base_url).await?;
     }
@@ -190,7 +215,10 @@ pub async fn read_ai_api_key(provider_id: String) -> Result<Option<String>, Stri
     match entry.get_password() {
         Ok(key) => Ok(Some(key)),
         Err(KeyringError::NoEntry) => Ok(None),
-        Err(error) => Err(format!("Unable to read AI API key from system keychain: {}", error)),
+        Err(error) => Err(format!(
+            "Unable to read AI API key from system keychain: {}",
+            error
+        )),
     }
 }
 
@@ -198,12 +226,15 @@ pub async fn read_ai_api_key(provider_id: String) -> Result<Option<String>, Stri
 pub async fn write_ai_api_key(provider_id: String, key: Option<String>) -> Result<(), String> {
     let entry = ai_key_entry(&provider_id)?;
     match normalize_key(key) {
-        Some(key) => entry.set_password(&key).map_err(|error| {
-            format!("Unable to write AI API key to system keychain: {}", error)
-        }),
+        Some(key) => entry
+            .set_password(&key)
+            .map_err(|error| format!("Unable to write AI API key to system keychain: {}", error)),
         None => match entry.delete_credential() {
             Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-            Err(error) => Err(format!("Unable to remove AI API key from system keychain: {}", error)),
+            Err(error) => Err(format!(
+                "Unable to remove AI API key from system keychain: {}",
+                error
+            )),
         },
     }
 }
@@ -231,9 +262,15 @@ pub async fn list_ollama_models() -> Result<OllamaModelsResult, String> {
     match client.get("http://localhost:11434/api/tags").send().await {
         Ok(response) => {
             if !response.status().is_success() {
-                return Ok(OllamaModelsResult { reachable: false, models: vec![] });
+                return Ok(OllamaModelsResult {
+                    reachable: false,
+                    models: vec![],
+                });
             }
-            let text = response.text().await.map_err(|e| format!("Failed to read Ollama response: {}", e))?;
+            let text = response
+                .text()
+                .await
+                .map_err(|e| format!("Failed to read Ollama response: {}", e))?;
             let parsed: serde_json::Value = serde_json::from_str(&text)
                 .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
             let models = parsed
@@ -249,16 +286,25 @@ pub async fn list_ollama_models() -> Result<OllamaModelsResult, String> {
                         .collect()
                 })
                 .unwrap_or_default();
-            Ok(OllamaModelsResult { reachable: true, models })
+            Ok(OllamaModelsResult {
+                reachable: true,
+                models,
+            })
         }
-        Err(_) => Ok(OllamaModelsResult { reachable: false, models: vec![] }),
+        Err(_) => Ok(OllamaModelsResult {
+            reachable: false,
+            models: vec![],
+        }),
     }
 }
 
 fn ai_key_entry(provider_id: &str) -> Result<Entry, String> {
     let account = normalize_provider_id(provider_id)?;
     Entry::new(AI_KEYCHAIN_SERVICE, &account).map_err(|error| {
-        format!("Unable to open AI API key entry in system keychain: {}", error)
+        format!(
+            "Unable to open AI API key entry in system keychain: {}",
+            error
+        )
     })
 }
 
@@ -279,14 +325,18 @@ fn normalize_provider_id(provider_id: &str) -> Result<String, String> {
         "together" => Ok("together".to_string()),
         "elevenlabs" => Ok("elevenlabs".to_string()),
         "ollama" => Ok("ollama".to_string()),
-        _ => {
-            Ok(provider_id
-                .trim()
-                .to_ascii_lowercase()
-                .chars()
-                .map(|ch| if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' { ch } else { '-' })
-                .collect())
-        }
+        _ => Ok(provider_id
+            .trim()
+            .to_ascii_lowercase()
+            .chars()
+            .map(|ch| {
+                if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                    ch
+                } else {
+                    '-'
+                }
+            })
+            .collect()),
     }
 }
 
@@ -363,7 +413,6 @@ fn extract_ai_frames_blocking(
     Ok(ExtractAiFramesResult { frames })
 }
 
-
 // --- TTS voiceover ---
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -392,14 +441,21 @@ pub struct CallTtsApiResult {
 }
 
 #[tauri::command]
-pub async fn call_tts_api(request: CallTtsApiRequest, api_key: Option<String>) -> Result<CallTtsApiResult, String> {
+pub async fn call_tts_api(
+    request: CallTtsApiRequest,
+    api_key: Option<String>,
+) -> Result<CallTtsApiResult, String> {
     crate::net_guard::ensure_not_private(&request.base_url).await?;
     let start = std::time::Instant::now();
     let engine = request.engine.as_deref().unwrap_or("compatible");
     let base = request.base_url.trim_end_matches('/');
     let (url, body) = match engine {
         "elevenlabs" => {
-            let url = format!("{}/text-to-speech/{}", base, urlencoding::encode(&request.voice_id));
+            let url = format!(
+                "{}/text-to-speech/{}",
+                base,
+                urlencoding::encode(&request.voice_id)
+            );
             let b = serde_json::json!({
                 "text": request.text,
                 "model_id": request.model.as_deref().unwrap_or("eleven_multilingual_v2"),
@@ -451,30 +507,46 @@ pub async fn call_tts_api(request: CallTtsApiRequest, api_key: Option<String>) -
         .map_err(|e| format!("Failed to read TTS API response: {}", e))?;
     if !status.is_success() {
         let error_text = String::from_utf8_lossy(&response_bytes);
-        return Err(format!("TTS API returned status {}: {}", status, truncate_error(&error_text)));
+        return Err(format!(
+            "TTS API returned status {}: {}",
+            status,
+            truncate_error(&error_text)
+        ));
     }
     let audio_base64 = base64::engine::general_purpose::STANDARD.encode(&response_bytes);
     let latency_ms = start.elapsed().as_millis() as u64;
-    Ok(CallTtsApiResult { audio_base64, latency_ms })
+    Ok(CallTtsApiResult {
+        audio_base64,
+        latency_ms,
+    })
 }
-
 
 fn validate_custom_header(name: &str) -> Result<(), String> {
     let lower = name.to_ascii_lowercase();
     const BLOCKED: &[&str] = &[
-        "host", "cookie", "authorization", "content-length",
-        "transfer-encoding", "connection", "proxy-authorization",
-        "upgrade", "te", "trailer",
+        "host",
+        "cookie",
+        "authorization",
+        "content-length",
+        "transfer-encoding",
+        "connection",
+        "proxy-authorization",
+        "upgrade",
+        "te",
+        "trailer",
     ];
     if BLOCKED.contains(&lower.as_str()) {
         return Err(format!(
-            "Custom header '{}' is not allowed for security reasons.", name
+            "Custom header '{}' is not allowed for security reasons.",
+            name
         ));
     }
     // RFC 7230 token: visible ASCII, no whitespace or separators
     if name.is_empty()
         || name.len() > 128
-        || !name.chars().all(|c| c.is_ascii_graphic() && !is_header_separator(c))
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_graphic() && !is_header_separator(c))
     {
         return Err(format!(
             "Custom header name '{}' is invalid. Must be a valid HTTP token (visible ASCII, no spaces/separators).",
@@ -485,8 +557,25 @@ fn validate_custom_header(name: &str) -> Result<(), String> {
 }
 
 fn is_header_separator(c: char) -> bool {
-    matches!(c, '(' | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '"' | '/' | '[' | ']' | '?' | '=' | '{' | '}' | ' ')
-        || c == '\u{005c}'
+    matches!(
+        c,
+        '(' | ')'
+            | '<'
+            | '>'
+            | '@'
+            | ','
+            | ';'
+            | ':'
+            | '"'
+            | '/'
+            | '['
+            | ']'
+            | '?'
+            | '='
+            | '{'
+            | '}'
+            | ' '
+    ) || c == '\u{005c}'
         || c.is_ascii_whitespace()
 }
 
@@ -511,7 +600,10 @@ mod tests {
     fn normalizes_empty_api_keys_to_delete() {
         assert_eq!(normalize_key(None), None);
         assert_eq!(normalize_key(Some(" ".to_string())), None);
-        assert_eq!(normalize_key(Some("  sk-test  ".to_string())), Some("sk-test".to_string()));
+        assert_eq!(
+            normalize_key(Some("  sk-test  ".to_string())),
+            Some("sk-test".to_string())
+        );
     }
 
     #[test]

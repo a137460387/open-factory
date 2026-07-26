@@ -109,6 +109,7 @@ export function reportLeakedListeners(): void {
     return;
   }
   logger.warn(`[EventListenerMonitor] ${leaked.length} active listener(s) detected:`);
+  // eslint-disable-next-line no-console
   console.table(
     leaked.map(r => ({
       target: r.target,

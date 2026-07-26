@@ -5,7 +5,7 @@ import type { Clip } from '../../model';
 import { TextAnimationDirection, TextAnimationPreset, buildTextAnimationKeyframes, mergeTextAnimationKeyframes, normalizeTextAnimationDirection, normalizeTextAnimationDuration, normalizeTextAnimationPreset } from '../../text-animation';
 import { detectOverlap, replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor, applySpeedKeyframeDuration, findClip, findTrack } from './utils';
+import { applySpeedKeyframeDuration, findClip, findTrack } from './utils';
 import { calculateDistributedKeyframeTimeMap, calculateKeyframeSelectionCenter, getBatchAlignValue, getBatchEditedKeyframeTime, groupKeyframeRefsByClip, keyframeRefKey, uniqueKeyframeRefs } from './utils-keyframe';
 
 export type KeyframePatch = Partial<

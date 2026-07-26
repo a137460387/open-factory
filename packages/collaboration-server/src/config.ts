@@ -5,6 +5,7 @@
  * SECURITY: JWT_SECRET is mandatory and must be >= 32 characters.
  * CORS origin defaults to deny-all when not explicitly configured.
  */
+/* eslint-disable no-console */
 
 import { z } from "zod";
 

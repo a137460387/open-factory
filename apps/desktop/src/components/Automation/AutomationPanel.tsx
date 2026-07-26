@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import { useState, useCallback, useMemo } from 'react';
 import type { Workflow, WorkflowTemplate, WorkflowStatus, WorkflowLogEntry } from '@open-factory/editor-core';
 import {
@@ -135,7 +136,7 @@ export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
         setExecutionLogs(ctx.logs);
         refreshWorkflows();
       } catch (error) {
-        console.error('执行失败:', error);
+        logger.error('[Automation] 执行失败:', error);
       }
     },
     [engine, refreshWorkflows],

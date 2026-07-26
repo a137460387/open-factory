@@ -71,9 +71,10 @@ fn send_smtp_email_blocking(request: SmtpEmailRequest) -> Result<(), String> {
     if recipients.is_empty() {
         return Err("SMTP recipient is required".to_string());
     }
-    let mut builder = Message::builder()
-        .from(from)
-        .subject(normalize_required(&request.subject, "SMTP subject is required")?);
+    let mut builder = Message::builder().from(from).subject(normalize_required(
+        &request.subject,
+        "SMTP subject is required",
+    )?);
     for recipient in recipients {
         builder = builder.to(recipient);
     }
@@ -82,7 +83,8 @@ fn send_smtp_email_blocking(request: SmtpEmailRequest) -> Result<(), String> {
         .body(request.html)
         .map_err(|error| format!("Unable to build SMTP message: {}", error))?;
     let mut transport_builder = if request.secure.unwrap_or(true) {
-        SmtpTransport::relay(&host).map_err(|error| format!("Unable to configure SMTP TLS: {}", error))?
+        SmtpTransport::relay(&host)
+            .map_err(|error| format!("Unable to configure SMTP TLS: {}", error))?
     } else {
         SmtpTransport::builder_dangerous(&host)
     };
@@ -104,9 +106,9 @@ async fn parse_webhook_url(url: &str) -> Result<reqwest::Url, String> {
     crate::net_guard::ensure_not_private(url).await
 }
 
-
-
-fn build_headers(headers: Option<std::collections::HashMap<String, String>>) -> Result<HeaderMap, String> {
+fn build_headers(
+    headers: Option<std::collections::HashMap<String, String>>,
+) -> Result<HeaderMap, String> {
     let mut map = HeaderMap::new();
     for (key, value) in headers.unwrap_or_default() {
         let key = key.trim();
@@ -139,7 +141,10 @@ fn normalize_required(value: &str, message: &str) -> Result<String, String> {
 }
 
 fn normalize_optional(value: Option<&str>) -> Option<String> {
-    value.map(str::trim).filter(|value| !value.is_empty()).map(ToOwned::to_owned)
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
 }
 
 #[cfg(test)]
@@ -149,8 +154,20 @@ mod tests {
     #[tokio::test]
     async fn parses_http_and_https_schemes() {
         // IP literal avoids DNS; verifies scheme gating only.
-        assert_eq!(parse_webhook_url("https://1.2.3.4/export").await.unwrap().scheme(), "https");
-        assert_eq!(parse_webhook_url("http://1.2.3.4/export").await.unwrap().scheme(), "http");
+        assert_eq!(
+            parse_webhook_url("https://1.2.3.4/export")
+                .await
+                .unwrap()
+                .scheme(),
+            "https"
+        );
+        assert_eq!(
+            parse_webhook_url("http://1.2.3.4/export")
+                .await
+                .unwrap()
+                .scheme(),
+            "http"
+        );
         assert!(parse_webhook_url("file:///tmp/export.json").await.is_err());
         assert!(parse_webhook_url("ftp://1.2.3.4/export").await.is_err());
     }
@@ -158,15 +175,24 @@ mod tests {
     #[tokio::test]
     async fn resolves_dns_and_blocks_private_loopback() {
         // localhost → 127.0.0.1 triggers the DNS resolution → private IP rejection path.
-        let err = parse_webhook_url("http://localhost:9999/export").await.unwrap_err();
-        assert!(err.contains("SSRF blocked"), "expected SSRF block, got: {err}");
+        let err = parse_webhook_url("http://localhost:9999/export")
+            .await
+            .unwrap_err();
+        assert!(
+            err.contains("SSRF blocked"),
+            "expected SSRF block, got: {err}"
+        );
     }
 
     #[tokio::test]
     async fn blocks_private_ip_webhook_urls() {
-        assert!(parse_webhook_url("http://127.0.0.1:8080/export").await.is_err());
+        assert!(parse_webhook_url("http://127.0.0.1:8080/export")
+            .await
+            .is_err());
         assert!(parse_webhook_url("http://10.0.0.1/export").await.is_err());
-        assert!(parse_webhook_url("http://192.168.1.1/export").await.is_err());
+        assert!(parse_webhook_url("http://192.168.1.1/export")
+            .await
+            .is_err());
     }
 
     #[test]

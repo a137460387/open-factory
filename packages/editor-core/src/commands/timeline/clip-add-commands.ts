@@ -2,7 +2,7 @@ import type { TimelineAccessor, ProjectAccessor } from "./index";
 import { Clip, Timeline, Track, createTrack } from '../../model';
 import { detectOverlap, removeClip } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor, findTrack, insertClip } from './utils';
+import { findTrack, insertClip } from './utils';
 
 export class AddClipCommand implements Command {
   readonly description: string;

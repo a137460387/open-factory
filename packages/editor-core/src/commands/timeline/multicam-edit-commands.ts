@@ -5,7 +5,7 @@ import { MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint } from '
 import { deleteSwitchPoint, updateSwitchPoint } from '../../multicam';
 import { replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { ProjectAccessor, findClip, touchProject } from './utils';
+import { findClip, touchProject } from './utils';
 
 export class DeleteSwitchPointCommand implements Command {
   readonly description = 'Delete switch point';

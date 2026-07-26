@@ -3,7 +3,7 @@ import { ClipMask, createMask, normalizeMask, normalizeMasks } from '../../model
 import type { Clip } from '../../model';
 import { replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor, findClip } from './utils';
+import { findClip } from './utils';
 
 export class AddMaskCommand implements Command {
   readonly description = 'Add mask';

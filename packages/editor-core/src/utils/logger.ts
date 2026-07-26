@@ -4,6 +4,7 @@
  * Replaces direct console.* calls with level-filtered, prefixed output.
  * In production builds (NODE_ENV=production) debug and info are silenced.
  */
+/* eslint-disable no-console */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

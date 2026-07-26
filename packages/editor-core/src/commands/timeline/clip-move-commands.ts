@@ -7,7 +7,7 @@ import { round } from '../../time';
 import { detectOverlap, moveClip, replaceClip } from '../../timeline';
 import { canMoveClipWithProtectedRanges } from '../../timeline-protection';
 import { Command } from '../command';
-import { TimelineAccessor, assertClipsNotOnLockedTrack, findClip, findTrack, timelineHasOverlaps } from './utils';
+import { assertClipsNotOnLockedTrack, findClip, findTrack, timelineHasOverlaps } from './utils';
 
 export class MoveClipCommand implements Command {
   readonly description = 'Move clip';

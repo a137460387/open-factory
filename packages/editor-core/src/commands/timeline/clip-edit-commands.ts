@@ -6,7 +6,7 @@ import { round } from '../../time';
 import { detectOverlap, getClipSpeed, removeClip, replaceClip } from '../../timeline';
 import { TimelineLabelColor } from '../../timeline-color-labels';
 import { Command } from '../command';
-import { TimelineAccessor, asReplaceableMediaClip, findClip, findTrack, insertClip, isReplaceableMediaClip } from './utils';
+import { asReplaceableMediaClip, findClip, findTrack, insertClip, isReplaceableMediaClip } from './utils';
 
 export class DeleteClipCommand implements Command {
   readonly description = 'Delete clip';

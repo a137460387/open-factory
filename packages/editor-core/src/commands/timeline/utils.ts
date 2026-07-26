@@ -9,15 +9,7 @@ import { calculateSpeedCurveSourceDuration, detectOverlap, getClipDisplayDuratio
 import { applyProtectedRippleDeleteToTrack } from '../../timeline-protection';
 import { ReplaceableMediaClip } from './clip-edit-commands';
 
-export interface TimelineAccessor {
-  getTimeline(): Timeline;
-  setTimeline(timeline: Timeline): void;
-}
 
-export interface ProjectAccessor {
-  getProject(): Project;
-  setProject(project: Project): void;
-}
 
 /**
  * Throws if any of the given clip IDs belong to a locked track.

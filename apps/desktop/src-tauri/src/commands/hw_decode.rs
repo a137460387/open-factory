@@ -2,8 +2,8 @@
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex, LazyLock};
 use std::collections::HashMap;
+use std::sync::{Arc, LazyLock, Mutex};
 
 /// 硬件加速后端类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -78,7 +78,7 @@ pub struct HardwareBackendInfo {
 /// 硬件解码设置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HwDecodeSettings {
-    pub mode: String,           // "auto" | "enabled" | "disabled"
+    pub mode: String, // "auto" | "enabled" | "disabled"
     pub preferred_backend: HardwareBackend,
     pub enable_frame_cache: bool,
     pub frame_cache_size: u32,
@@ -269,11 +269,10 @@ impl HardwareDecoder for FFmpegHardwareDecoder {
             if self.backend != HardwareBackend::Software {
                 // 回退到软件解码
                 let fallback_args = self.build_software_fallback_args(timestamp);
-                let fallback_output =
-                    std::process::Command::new(super::binaries::ffmpeg_binary())
-                        .args(&fallback_args)
-                        .output()
-                        .map_err(|e| format!("FFmpeg 软件解码也失败: {}", e))?;
+                let fallback_output = std::process::Command::new(super::binaries::ffmpeg_binary())
+                    .args(&fallback_args)
+                    .output()
+                    .map_err(|e| format!("FFmpeg 软件解码也失败: {}", e))?;
 
                 if !fallback_output.status.success() {
                     let fallback_stderr = String::from_utf8_lossy(&fallback_output.stderr);
@@ -528,11 +527,7 @@ pub async fn get_hw_decode_capabilities() -> Result<HardwareCapabilities, String
                 None
             },
             supported_codecs: if d3d11_available {
-                vec![
-                    "h264".to_string(),
-                    "hevc".to_string(),
-                    "vp9".to_string(),
-                ]
+                vec!["h264".to_string(), "hevc".to_string(), "vp9".to_string()]
             } else {
                 vec![]
             },
@@ -759,10 +754,7 @@ mod tests {
     #[test]
     fn test_hardware_backend_display() {
         assert_eq!(HardwareBackend::Cuda.to_string(), "CUDA (NVIDIA)");
-        assert_eq!(
-            HardwareBackend::QuickSync.to_string(),
-            "QuickSync (Intel)"
-        );
+        assert_eq!(HardwareBackend::QuickSync.to_string(), "QuickSync (Intel)");
         assert_eq!(HardwareBackend::Software.to_string(), "Software");
     }
 
@@ -865,10 +857,7 @@ mod tests {
         };
         let json = serde_json::to_string(&caps).unwrap();
         let deserialized: HardwareCapabilities = serde_json::from_str(&json).unwrap();
-        assert_eq!(
-            caps.recommended_backend,
-            deserialized.recommended_backend
-        );
+        assert_eq!(caps.recommended_backend, deserialized.recommended_backend);
         assert_eq!(
             deserialized.available_backends[0].device_name,
             Some("NVIDIA GeForce RTX 3080".to_string())

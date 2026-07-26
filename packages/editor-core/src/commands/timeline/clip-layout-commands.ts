@@ -4,7 +4,7 @@ import type { Clip } from '../../model';
 import { PiPLayoutPosition, calculatePiPTransform, createFullFrameTransform } from '../../pip-layout';
 import { SplitLayoutClipSource, SplitLayoutDefinition, calculateSplitLayoutTransforms } from '../../split-layout';
 import { Command } from '../command';
-import { TimelineAccessor, findClip, isPiPVisualClip } from './utils';
+import { findClip, isPiPVisualClip } from './utils';
 
 export interface PiPLayoutCommandOptions {
   position?: PiPLayoutPosition;

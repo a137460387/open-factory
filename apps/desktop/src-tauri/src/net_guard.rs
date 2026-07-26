@@ -15,12 +15,10 @@ pub fn is_private_ip(ip: IpAddr) -> bool {
                 || v4.octets()[0] == 169 && v4.octets()[1] == 254
         }
         IpAddr::V6(v6) => {
-            v6.is_loopback()
-                || v6.is_unspecified()
-                || {
-                    let segments = v6.segments();
-                    (segments[0] & 0xFE00) == 0xFC00 // fc00::/7 unique local
-                }
+            v6.is_loopback() || v6.is_unspecified() || {
+                let segments = v6.segments();
+                (segments[0] & 0xFE00) == 0xFC00 // fc00::/7 unique local
+            }
         }
     }
 }
@@ -81,12 +79,16 @@ mod tests {
         assert!(is_private_ip(IpAddr::V6(Ipv6Addr::LOCALHOST)));
         assert!(is_private_ip(IpAddr::V6(Ipv6Addr::UNSPECIFIED)));
         // fc00::/7
-        assert!(is_private_ip(IpAddr::V6(Ipv6Addr::new(0xfc00, 0, 0, 0, 0, 0, 0, 1))));
+        assert!(is_private_ip(IpAddr::V6(Ipv6Addr::new(
+            0xfc00, 0, 0, 0, 0, 0, 0, 1
+        ))));
     }
 
     #[tokio::test]
     async fn blocks_private_ip_urls() {
-        assert!(ensure_not_private("http://127.0.0.1:8080/api").await.is_err());
+        assert!(ensure_not_private("http://127.0.0.1:8080/api")
+            .await
+            .is_err());
         assert!(ensure_not_private("http://10.0.0.1/api").await.is_err());
         assert!(ensure_not_private("http://192.168.1.1/api").await.is_err());
     }

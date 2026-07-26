@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import { useState } from 'react';
 import { X, ArrowLeftRight } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
@@ -53,7 +54,7 @@ export function SequenceCompareDialog({ project, onClose, onDragClipToSequence }
         onDragClipToSequence(data.clipId, targetSequenceId, 0);
       }
     } catch (error) {
-      console.warn('[SequenceCompare] failed to load', error);
+      logger.warn('[SequenceCompare] failed to load', error);
     }
   }
 

@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import React from 'react';
 import {
   BatchUpdateTrackHeightCommand,
@@ -833,7 +834,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                           try {
                             commandManager.execute(new BatchUpdateTrackHeightCommand(projectAccessor, h));
                           } catch (error) {
-                            console.error('Failed to update track height:', error);
+                            logger.error('[Timeline] Failed to update track height:', error);
                           }
                         }
                         setEqualHeightPrompt(false);

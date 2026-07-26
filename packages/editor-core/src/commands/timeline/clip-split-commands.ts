@@ -3,7 +3,7 @@ import { Clip, ClipStabilization, DEFAULT_NESTED_SEQUENCE_NAME, Project, Timelin
 import { ProjectPlatformFitSuggestion } from '../../model-types';
 import { removeClip, replaceClip, splitClip } from '../../timeline';
 import { Command } from '../command';
-import { ProjectAccessor, TimelineAccessor, assertClipsNotOnLockedTrack, buildSplitRanges, findClip, findTrack, insertClip, replaceClipWithSlices } from './utils';
+import { assertClipsNotOnLockedTrack, buildSplitRanges, findClip, findTrack, insertClip, replaceClipWithSlices } from './utils';
 import { packNestedSequence } from './utils-nested';
 
 export class PackNestedSequenceCommand implements Command {

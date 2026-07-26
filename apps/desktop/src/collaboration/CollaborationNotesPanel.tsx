@@ -1,4 +1,5 @@
 import { CheckCircle2, Download, MessageSquareText, Plus, X } from 'lucide-react';
+import { logger } from '@open-factory/editor-core/utils';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AddCollaborationNoteCommand,
@@ -52,7 +53,7 @@ export default function CollaborationNotesPanel({ project, playheadTime, onClose
         }
       })
       .catch((error) => {
-        console.warn('Unable to load collaboration identity', error);
+        logger.warn('[Collab] Unable to load identity', error);
       });
     return () => {
       canceled = true;

@@ -3,7 +3,7 @@ import { Project, Subclip } from '../../model';
 import { BeatSnapSuggestion, MediaCollection, MulticamClip } from '../../model-types';
 import { TimelineLabelColor } from '../../timeline-color-labels';
 import { Command } from '../command';
-import { ProjectAccessor, touchProject } from './utils';
+import { touchProject } from './utils';
 
 export class AddSubclipCommand implements Command {
   readonly description: string;

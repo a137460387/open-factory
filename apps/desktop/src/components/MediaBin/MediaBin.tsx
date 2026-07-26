@@ -1,4 +1,5 @@
-﻿import {
+import { logger } from '@open-factory/editor-core/utils';
+import {
   MAX_MEDIA_FOLDER_DEPTH,
   TITLE_TEMPLATE_IDS,
   CONTENT_SCENE_TYPES,
@@ -454,7 +455,7 @@ export function MediaBin({
     setMediaLibraryView((current) => {
       const next = normalizeMediaLibraryViewSettings({ ...current, ...patch });
       void saveViewSettings({ mediaLibrary: next }).catch((error) => {
-        console.warn('Unable to save media library view settings', error);
+        logger.warn('[MediaBin] Unable to save view settings', error);
       });
       return next;
     });
@@ -526,7 +527,7 @@ export function MediaBin({
         }
       })
       .catch((error) => {
-        console.warn('Unable to load media library view settings', error);
+        logger.warn('[MediaBin] Unable to load view settings', error);
       });
     return () => {
       canceled = true;

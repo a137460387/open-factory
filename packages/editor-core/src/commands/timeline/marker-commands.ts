@@ -2,7 +2,6 @@ import type { TimelineAccessor, ProjectAccessor } from "./index";
 import { Timeline, TimelineMarker, createTimelineMarker, normalizeTimelineMarker } from '../../model';
 import { getTimelineDuration } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor } from './utils';
 import { sortMarkers } from './utils-nested';
 
 export interface AddTimelineMarkerInput {

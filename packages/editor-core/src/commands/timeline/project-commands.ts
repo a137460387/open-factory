@@ -9,7 +9,6 @@ import { normalizeProjectReleaseVersion } from '../../project/release-workflow';
 import { recalculateClipStartsForFrameRate } from '../../sequence-settings';
 import { clampTrackHeight } from '../../track-height';
 import { Command } from '../command';
-import { ProjectAccessor } from './utils';
 
 export class NewProjectCommand implements Command {
   description: string;

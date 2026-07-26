@@ -7,7 +7,7 @@ import { normalizeSubtitleStyleTemplateStyle } from '../../subtitles/style-templ
 import { round } from '../../time';
 import { detectOverlap, removeClip, replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor, cloneCommandValue, findClip, findTrack, insertClip, timelineHasOverlaps } from './utils';
+import { cloneCommandValue, findClip, findTrack, insertClip, timelineHasOverlaps } from './utils';
 
 export class AddSubtitleClipCommand implements Command {
   readonly description: string;

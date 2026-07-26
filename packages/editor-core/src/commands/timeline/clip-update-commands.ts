@@ -13,7 +13,7 @@ import { detectOverlap, getClipDisplayDuration, getClipSourceVisibleDuration, ge
 import { normalizeTimelineLabelColor } from '../../timeline-color-labels';
 import { Command } from '../command';
 import { ClipPatch } from './clip-edit-commands';
-import { TimelineAccessor, assertClipsNotOnLockedTrack, findClip, findTrack, mergeChromaKeyPatch } from './utils';
+import { assertClipsNotOnLockedTrack, findClip, findTrack, mergeChromaKeyPatch } from './utils';
 
 export class UpdateClipCommand implements Command {
   readonly description = 'Update clip';

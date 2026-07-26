@@ -5,7 +5,7 @@ import { filterShortSceneCuts } from '../../scene-cuts';
 import { SmartDialogueInterval, SmartMontageConfig, SmartRoughCutVisualClip, buildDialogueRoughCutClips, buildRhythmAssembleClips, buildSmartMontageClips } from '../../smart-rough-cut-v2';
 import { replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { LocalTimeRange, TimelineAccessor, buildKeptRanges, buildSplitRanges, findClip, insertGeneratedClips, removeClipsFromTimeline, replaceClipWithGeneratedClips, replaceClipWithSlices } from './utils';
+import { LocalTimeRange, buildKeptRanges, buildSplitRanges, findClip, insertGeneratedClips, removeClipsFromTimeline, replaceClipWithGeneratedClips, replaceClipWithSlices } from './utils';
 
 export interface BatchSplitAtSceneCutItem {
   clipId: string;

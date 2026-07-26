@@ -271,11 +271,7 @@ fn parse_progress_out_time_ms(line: &str) -> Option<f64> {
 fn parse_progress_frame(line: &str) -> Option<u64> {
     let marker = "frame=";
     let start = line.find(marker)? + marker.len();
-    line[start..]
-        .split_whitespace()
-        .next()?
-        .parse::<u64>()
-        .ok()
+    line[start..].split_whitespace().next()?.parse::<u64>().ok()
 }
 
 fn progress_payload(

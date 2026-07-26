@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import React, { useCallback, useState, useRef } from 'react';
 import type { ColorGradingLUTLayer, LUTLibraryEntry } from '@open-factory/editor-core/color-grading/lut';
 import { createColorGradingLUTLayer } from '@open-factory/editor-core/color-grading/lut';
@@ -36,7 +37,7 @@ export const LUTManager: React.FC<LUTManagerProps> = ({
           } else if (file.name.endsWith('.3dl')) {
             lutData = parse3dlFile(text);
           } else {
-            console.warn('Unsupported LUT format:', file.name);
+            logger.warn('[LUT] Unsupported format:', file.name);
             continue;
           }
 
@@ -52,7 +53,7 @@ export const LUTManager: React.FC<LUTManagerProps> = ({
 
           onLibraryChange([...library, entry]);
         } catch (err) {
-          console.error('Failed to parse LUT:', err);
+          logger.error('[LUT] Failed to parse:', err);
         }
       }
 

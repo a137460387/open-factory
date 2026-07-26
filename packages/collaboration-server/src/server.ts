@@ -3,6 +3,7 @@
  * Handles peer connection setup, room events, cursor/edit broadcasts,
  * and a REST management API.
  */
+/* eslint-disable no-console */
 
 import express from "express";
 import cors from "cors";

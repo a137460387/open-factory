@@ -166,12 +166,16 @@ fn run_demucs_process(
         .lock()
         .ok()
         .and_then(|mut children| children.remove(clip_id));
-    if is_demucs_canceled(clip_id) || maybe_child.is_none() {
+    let Some(mut child) = maybe_child else {
+        clear_demucs_canceled(clip_id);
+        emit_progress(app, clip_id, 0.0);
+        return Err("Demucs separation canceled.".to_string());
+    };
+    if is_demucs_canceled(clip_id) {
         clear_demucs_canceled(clip_id);
         emit_progress(app, clip_id, 0.0);
         return Err("Demucs separation canceled.".to_string());
     }
-    let mut child = maybe_child.expect("checked above");
     let status = child.wait().map_err(|error| error.to_string())?;
     if status.success() {
         clear_demucs_canceled(clip_id);

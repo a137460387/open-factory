@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * 插件哈希生成模块
  */

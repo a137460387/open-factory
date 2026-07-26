@@ -1,6 +1,7 @@
 /**
  * Compute engine abstraction
  */
+/* eslint-disable no-console */
 
 import type { ComputeEngine, ComputeCapabilities, ComputeBackend } from '../types.js';
 

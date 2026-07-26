@@ -21,10 +21,21 @@ static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = O
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HardwareEncoderInfo { id: String, name: String, vendor: String, supports_hevc: bool, presets: Vec<HardwareEncoderPresetOption>, default_cq: u32, supports_b_frames: bool }
+pub struct HardwareEncoderInfo {
+    id: String,
+    name: String,
+    vendor: String,
+    supports_hevc: bool,
+    presets: Vec<HardwareEncoderPresetOption>,
+    default_cq: u32,
+    supports_b_frames: bool,
+}
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct HardwareEncoderPresetOption { value: String, label: String }
+pub struct HardwareEncoderPresetOption {
+    value: String,
+    label: String,
+}
 #[cfg(test)]
 pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
@@ -529,14 +540,110 @@ fn detect_hardware_encoder(encoders: &str) -> HardwareEncoderProbe {
     probe
 }
 
-fn detect_all_hardware_encoders(encoders: &str) -> Vec<HardwareEncoderInfo> { hardware_encoder_candidates_for_os(std::env::consts::OS).into_iter().filter(|info| encoder_list_contains(encoders, &info.id)).collect() }
-fn hardware_encoder_candidates_for_os(os: &str) -> Vec<HardwareEncoderInfo> { match os { "windows" => vec![hw_nvenc("h264_nvenc","NVENC H264",false),hw_nvenc("hevc_nvenc","NVENC HEVC",true),hw_amf("h264_amf","AMF H264",false),hw_amf("hevc_amf","AMF HEVC",true),hw_qsv("h264_qsv","QSV H264",false),hw_qsv("hevc_qsv","QSV HEVC",true)], "macos" => vec![hw_vt("h264_videotoolbox","VT H264",false),hw_vt("hevc_videotoolbox","VT HEVC",true)], "linux" => vec![hw_vaapi("h264_vaapi","VAAPI H264",false)], _ => vec![] } }
-fn hw_nvenc(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo { HardwareEncoderInfo { id: id.to_string(), name: name.to_string(), vendor: "nvidia".to_string(), supports_hevc: hevc, presets: vec![hv("p1","P1"),hv("p2","P2"),hv("p3","P3"),hv("p4","P4"),hv("p5","P5"),hv("p6","P6"),hv("p7","P7")], default_cq: 23, supports_b_frames: true } }
-fn hw_amf(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo { HardwareEncoderInfo { id: id.to_string(), name: name.to_string(), vendor: "amd".to_string(), supports_hevc: hevc, presets: vec![hv("speed","Speed"),hv("balanced","Balanced"),hv("quality","Quality")], default_cq: 23, supports_b_frames: false } }
-fn hw_qsv(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo { HardwareEncoderInfo { id: id.to_string(), name: name.to_string(), vendor: "intel".to_string(), supports_hevc: hevc, presets: vec![hv("veryfast","Very Fast"),hv("faster","Faster"),hv("fast","Fast"),hv("medium","Medium"),hv("slow","Slow"),hv("slower","Slower")], default_cq: 23, supports_b_frames: false } }
-fn hw_vt(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo { HardwareEncoderInfo { id: id.to_string(), name: name.to_string(), vendor: "apple".to_string(), supports_hevc: hevc, presets: vec![hv("default","Default")], default_cq: 50, supports_b_frames: false } }
-fn hw_vaapi(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo { HardwareEncoderInfo { id: id.to_string(), name: name.to_string(), vendor: "vaapi".to_string(), supports_hevc: hevc, presets: vec![hv("default","Default")], default_cq: 23, supports_b_frames: false } }
-fn hv(v: &str, l: &str) -> HardwareEncoderPresetOption { HardwareEncoderPresetOption { value: v.to_string(), label: l.to_string() } }
+fn detect_all_hardware_encoders(encoders: &str) -> Vec<HardwareEncoderInfo> {
+    hardware_encoder_candidates_for_os(std::env::consts::OS)
+        .into_iter()
+        .filter(|info| encoder_list_contains(encoders, &info.id))
+        .collect()
+}
+fn hardware_encoder_candidates_for_os(os: &str) -> Vec<HardwareEncoderInfo> {
+    match os {
+        "windows" => vec![
+            hw_nvenc("h264_nvenc", "NVENC H264", false),
+            hw_nvenc("hevc_nvenc", "NVENC HEVC", true),
+            hw_amf("h264_amf", "AMF H264", false),
+            hw_amf("hevc_amf", "AMF HEVC", true),
+            hw_qsv("h264_qsv", "QSV H264", false),
+            hw_qsv("hevc_qsv", "QSV HEVC", true),
+        ],
+        "macos" => vec![
+            hw_vt("h264_videotoolbox", "VT H264", false),
+            hw_vt("hevc_videotoolbox", "VT HEVC", true),
+        ],
+        "linux" => vec![hw_vaapi("h264_vaapi", "VAAPI H264", false)],
+        _ => vec![],
+    }
+}
+fn hw_nvenc(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo {
+    HardwareEncoderInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        vendor: "nvidia".to_string(),
+        supports_hevc: hevc,
+        presets: vec![
+            hv("p1", "P1"),
+            hv("p2", "P2"),
+            hv("p3", "P3"),
+            hv("p4", "P4"),
+            hv("p5", "P5"),
+            hv("p6", "P6"),
+            hv("p7", "P7"),
+        ],
+        default_cq: 23,
+        supports_b_frames: true,
+    }
+}
+fn hw_amf(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo {
+    HardwareEncoderInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        vendor: "amd".to_string(),
+        supports_hevc: hevc,
+        presets: vec![
+            hv("speed", "Speed"),
+            hv("balanced", "Balanced"),
+            hv("quality", "Quality"),
+        ],
+        default_cq: 23,
+        supports_b_frames: false,
+    }
+}
+fn hw_qsv(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo {
+    HardwareEncoderInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        vendor: "intel".to_string(),
+        supports_hevc: hevc,
+        presets: vec![
+            hv("veryfast", "Very Fast"),
+            hv("faster", "Faster"),
+            hv("fast", "Fast"),
+            hv("medium", "Medium"),
+            hv("slow", "Slow"),
+            hv("slower", "Slower"),
+        ],
+        default_cq: 23,
+        supports_b_frames: false,
+    }
+}
+fn hw_vt(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo {
+    HardwareEncoderInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        vendor: "apple".to_string(),
+        supports_hevc: hevc,
+        presets: vec![hv("default", "Default")],
+        default_cq: 50,
+        supports_b_frames: false,
+    }
+}
+fn hw_vaapi(id: &str, name: &str, hevc: bool) -> HardwareEncoderInfo {
+    HardwareEncoderInfo {
+        id: id.to_string(),
+        name: name.to_string(),
+        vendor: "vaapi".to_string(),
+        supports_hevc: hevc,
+        presets: vec![hv("default", "Default")],
+        default_cq: 23,
+        supports_b_frames: false,
+    }
+}
+fn hv(v: &str, l: &str) -> HardwareEncoderPresetOption {
+    HardwareEncoderPresetOption {
+        value: v.to_string(),
+        label: l.to_string(),
+    }
+}
 
 #[tauri::command]
 pub fn list_hardware_encoders() -> Vec<HardwareEncoderInfo> {
@@ -2319,8 +2426,7 @@ fn parse_blackdetect_output(text: &str) -> Vec<DetectedMediaRangeDto> {
         .filter_map(|line| {
             let start = extract_named_number(line, &["black_start"])?;
             let end = extract_named_number(line, &["black_end"])?;
-            let duration =
-                extract_named_number(line, &["black_duration"]).unwrap_or(end - start);
+            let duration = extract_named_number(line, &["black_duration"]).unwrap_or(end - start);
             Some(DetectedMediaRangeDto {
                 start,
                 end,
@@ -2787,7 +2893,8 @@ fn write_text_artifacts(
             continue;
         }
         if artifact.path_mode.as_deref() == Some("motion-graphic-sequence") {
-            let sequence_path = materialize_motion_graphic_sequence(temp_dir, artifact, &safe_name)?;
+            let sequence_path =
+                materialize_motion_graphic_sequence(temp_dir, artifact, &safe_name)?;
             result.push((artifact.placeholder.clone(), sequence_path));
             continue;
         }
@@ -3090,7 +3197,10 @@ fn bake_motion_graphic_sequence(
     Ok(())
 }
 
-fn build_motion_graphic_frame_filter(manifest: &MotionGraphicSequenceManifest, time: f64) -> String {
+fn build_motion_graphic_frame_filter(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> String {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let template_type = manifest.motion_graphic.template_type.as_str();
@@ -3100,7 +3210,9 @@ fn build_motion_graphic_frame_filter(manifest: &MotionGraphicSequenceManifest, t
         "progress-bar" => filters.extend(build_motion_graphic_progress_bar_filters(manifest, time)),
         "data-chart" => filters.extend(build_motion_graphic_data_chart_filters(manifest, time)),
         "countdown" => filters.extend(build_motion_graphic_countdown_filters(manifest, time)),
-        "social-lower-third" => filters.extend(build_motion_graphic_social_lower_third_filters(manifest, time)),
+        "social-lower-third" => filters.extend(build_motion_graphic_social_lower_third_filters(
+            manifest, time,
+        )),
         "map-route" => filters.extend(build_motion_graphic_map_route_filters(manifest, time)),
         _ => filters.push(format!(
             "drawbox=x=0:y=0:w={}:h={}:color=white@0.05:t=fill",
@@ -3120,116 +3232,194 @@ fn build_motion_graphic_frame_filter(manifest: &MotionGraphicSequenceManifest, t
     raw.replace(":fontsize=", &format!("{}:fontsize=", fontfile))
 }
 
-fn build_motion_graphic_scoreboard_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_scoreboard_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
-    let background = css_color_to_ffmpeg(&motion_graphic_color_param(params, "backgroundColor", "#111827"));
-    let accent = css_color_to_ffmpeg(&motion_graphic_color_param(params, "accentColor", "#22d3ee"));
-    let background_opacity = motion_graphic_number_param(&manifest.motion_graphic, "backgroundOpacity", 0.82, time).clamp(0.0, 1.0);
-    let home_label = escape_drawtext_text(&motion_graphic_string_param(params, "homeLabel", "HOME"));
-    let away_label = escape_drawtext_text(&motion_graphic_string_param(params, "awayLabel", "AWAY"));
-    let period_label = escape_drawtext_text(&motion_graphic_string_param(params, "periodLabel", "Q4"));
-    let home_score = motion_graphic_number_param(&manifest.motion_graphic, "homeScore", 2.0, time).round().max(0.0) as i64;
-    let away_score = motion_graphic_number_param(&manifest.motion_graphic, "awayScore", 1.0, time).round().max(0.0) as i64;
+    let background = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "backgroundColor",
+        "#111827",
+    ));
+    let accent = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "accentColor",
+        "#22d3ee",
+    ));
+    let background_opacity =
+        motion_graphic_number_param(&manifest.motion_graphic, "backgroundOpacity", 0.82, time)
+            .clamp(0.0, 1.0);
+    let home_label =
+        escape_drawtext_text(&motion_graphic_string_param(params, "homeLabel", "HOME"));
+    let away_label =
+        escape_drawtext_text(&motion_graphic_string_param(params, "awayLabel", "AWAY"));
+    let period_label =
+        escape_drawtext_text(&motion_graphic_string_param(params, "periodLabel", "Q4"));
+    let home_score = motion_graphic_number_param(&manifest.motion_graphic, "homeScore", 2.0, time)
+        .round()
+        .max(0.0) as i64;
+    let away_score = motion_graphic_number_param(&manifest.motion_graphic, "awayScore", 1.0, time)
+        .round()
+        .max(0.0) as i64;
     let score_font = (height as f64 * 0.18).max(24.0);
     let label_font = (height as f64 * 0.055).max(14.0);
     let panel_height = height as f64 / 1.8;
     vec![
-      format!("drawbox=x=0:y=0:w={}:h={}:color={}@{}:t=fill", width, height, background, background_opacity),
-      format!("drawbox=x={}:y={}:w={}:h={}:color={}@1:t=fill", width / 20, height / 8, width / 2 - width / 10, format_seconds_arg(panel_height), accent),
-      format!("drawbox=x={}:y={}:w={}:h={}:color={}@0.20:t=fill", width / 2 + width / 20, height / 8, width / 2 - width / 10, format_seconds_arg(panel_height), accent),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.25-text_w/2)':y='{}'",
-        home_label,
-        format_seconds_arg(label_font),
-        format_seconds_arg(height as f64 * 0.20)
-      ),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.75-text_w/2)':y='{}'",
-        away_label,
-        format_seconds_arg(label_font),
-        format_seconds_arg(height as f64 * 0.20)
-      ),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.25-text_w/2)':y='{}'",
-        home_score,
-        format_seconds_arg(score_font),
-        format_seconds_arg(height as f64 * 0.42)
-      ),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.75-text_w/2)':y='{}'",
-        away_score,
-        format_seconds_arg(score_font),
-        format_seconds_arg(height as f64 * 0.42)
-      ),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor={}@1:x='(w-text_w)/2':y='{}'",
-        period_label,
-        format_seconds_arg(label_font),
-        accent,
-        format_seconds_arg(height as f64 * 0.82)
-      )
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color={}@{}:t=fill",
+            width, height, background, background_opacity
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@1:t=fill",
+            width / 20,
+            height / 8,
+            width / 2 - width / 10,
+            format_seconds_arg(panel_height),
+            accent
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@0.20:t=fill",
+            width / 2 + width / 20,
+            height / 8,
+            width / 2 - width / 10,
+            format_seconds_arg(panel_height),
+            accent
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.25-text_w/2)':y='{}'",
+            home_label,
+            format_seconds_arg(label_font),
+            format_seconds_arg(height as f64 * 0.20)
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.75-text_w/2)':y='{}'",
+            away_label,
+            format_seconds_arg(label_font),
+            format_seconds_arg(height as f64 * 0.20)
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.25-text_w/2)':y='{}'",
+            home_score,
+            format_seconds_arg(score_font),
+            format_seconds_arg(height as f64 * 0.42)
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w*0.75-text_w/2)':y='{}'",
+            away_score,
+            format_seconds_arg(score_font),
+            format_seconds_arg(height as f64 * 0.42)
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor={}@1:x='(w-text_w)/2':y='{}'",
+            period_label,
+            format_seconds_arg(label_font),
+            accent,
+            format_seconds_arg(height as f64 * 0.82)
+        ),
     ]
 }
 
-fn build_motion_graphic_progress_bar_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_progress_bar_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
-    let background = css_color_to_ffmpeg(&motion_graphic_color_param(params, "backgroundColor", "#0f172a"));
+    let background = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "backgroundColor",
+        "#0f172a",
+    ));
     let bar_color = css_color_to_ffmpeg(&motion_graphic_color_param(params, "barColor", "#34d399"));
-    let progress = motion_graphic_number_param(&manifest.motion_graphic, "progress", 0.65, time).clamp(0.0, 1.0);
-    let bar_height = motion_graphic_number_param(&manifest.motion_graphic, "height", 48.0, time).clamp(12.0, height as f64);
-    let radius = motion_graphic_number_param(&manifest.motion_graphic, "cornerRadius", 14.0, time).clamp(0.0, 80.0);
+    let progress = motion_graphic_number_param(&manifest.motion_graphic, "progress", 0.65, time)
+        .clamp(0.0, 1.0);
+    let bar_height = motion_graphic_number_param(&manifest.motion_graphic, "height", 48.0, time)
+        .clamp(12.0, height as f64);
+    let radius = motion_graphic_number_param(&manifest.motion_graphic, "cornerRadius", 14.0, time)
+        .clamp(0.0, 80.0);
     let bar_width = (width as f64 * 0.82).max(1.0);
     let fill_width = (bar_width * progress).max(1.0);
     let y = ((height as f64 - bar_height) / 2.0).max(0.0);
     let x = ((width as f64 - bar_width) / 2.0).max(0.0);
     let label = escape_drawtext_text(&motion_graphic_string_param(params, "label", "Progress"));
     vec![
-      format!("drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill", width, height),
-      format!("drawbox=x={}:y={}:w={}:h={}:color={}@0.35:t=fill", x, y, bar_width, bar_height, background),
-      format!("drawbox=x={}:y={}:w={}:h={}:color={}@1:t=fill", x, y, fill_width, bar_height, bar_color),
-      format!(
-        "drawbox=x={}:y={}:w={}:h={}:color={}@1:t={}",
-        x,
-        y,
-        bar_width,
-        bar_height,
-        bar_color,
-        radius.max(1.0)
-      ),
-      format!(
-        "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w-text_w)/2':y='{}'",
-        label,
-        format_seconds_arg((height as f64 * 0.1).max(14.0)),
-        format_seconds_arg(y - height as f64 * 0.14)
-      )
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill",
+            width, height
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@0.35:t=fill",
+            x, y, bar_width, bar_height, background
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@1:t=fill",
+            x, y, fill_width, bar_height, bar_color
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@1:t={}",
+            x,
+            y,
+            bar_width,
+            bar_height,
+            bar_color,
+            radius.max(1.0)
+        ),
+        format!(
+            "drawtext=text='{}':fontsize={}:fontcolor=white:x='(w-text_w)/2':y='{}'",
+            label,
+            format_seconds_arg((height as f64 * 0.1).max(14.0)),
+            format_seconds_arg(y - height as f64 * 0.14)
+        ),
     ]
 }
 
-fn build_motion_graphic_data_chart_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_data_chart_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
     let chart_kind = motion_graphic_string_param(params, "chartKind", "bar");
     let title = escape_drawtext_text(&motion_graphic_string_param(params, "title", "Data"));
-    let values = motion_graphic_number_list_param(params, "dataValues", &[38.0, 64.0, 46.0, 82.0, 58.0]);
-    let max_value = motion_graphic_number_param(&manifest.motion_graphic, "maxValue", 100.0, time).max(1.0);
-    let primary = css_color_to_ffmpeg(&motion_graphic_color_param(params, "primaryColor", "#60a5fa"));
-    let secondary = css_color_to_ffmpeg(&motion_graphic_color_param(params, "secondaryColor", "#f97316"));
+    let values =
+        motion_graphic_number_list_param(params, "dataValues", &[38.0, 64.0, 46.0, 82.0, 58.0]);
+    let max_value =
+        motion_graphic_number_param(&manifest.motion_graphic, "maxValue", 100.0, time).max(1.0);
+    let primary = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "primaryColor",
+        "#60a5fa",
+    ));
+    let secondary = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "secondaryColor",
+        "#f97316",
+    ));
     let show_labels = motion_graphic_bool_param(params, "showLabels", true);
     let mut filters = vec![
-        format!("drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill", width, height),
-        format!("drawbox=x={}:y={}:w={}:h={}:color=0x0f172a@0.9:t=fill", width / 20, height / 10, width - width / 10, height - height / 5),
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill",
+            width, height
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color=0x0f172a@0.9:t=fill",
+            width / 20,
+            height / 10,
+            width - width / 10,
+            height - height / 5
+        ),
         format!(
             "drawtext=text='{}':fontsize={}:fontcolor=white:x='{}':y='{}'",
             title,
             format_seconds_arg((height as f64 * 0.08).max(16.0)),
             format_seconds_arg(width as f64 * 0.08),
             format_seconds_arg(height as f64 * 0.12)
-        )
+        ),
     ];
     let plot_left = width as f64 * 0.08;
     let plot_top = height as f64 * 0.22;
@@ -3287,25 +3477,47 @@ fn build_motion_graphic_data_chart_filters(manifest: &MotionGraphicSequenceManif
     filters
 }
 
-fn build_motion_graphic_countdown_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_countdown_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
-    let background = css_color_to_ffmpeg(&motion_graphic_color_param(params, "backgroundColor", "#111827"));
+    let background = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "backgroundColor",
+        "#111827",
+    ));
     let color = css_color_to_ffmpeg(&motion_graphic_color_param(params, "color", "#ffffff"));
-    let start_seconds = motion_graphic_number_param(&manifest.motion_graphic, "startSeconds", 10.0, time).max(1.0);
+    let start_seconds =
+        motion_graphic_number_param(&manifest.motion_graphic, "startSeconds", 10.0, time).max(1.0);
     let remaining = (start_seconds - time).max(0.0);
     let display_value = remaining.ceil().max(0.0) as i64;
     let prefix = motion_graphic_string_param(params, "prefix", "");
     let suffix = motion_graphic_string_param(params, "suffix", "");
-    let font_size = motion_graphic_number_param(&manifest.motion_graphic, "fontSize", 112.0, time).clamp(16.0, 360.0);
-    let ring_thickness = motion_graphic_number_param(&manifest.motion_graphic, "ringThickness", 16.0, time).clamp(0.0, 80.0);
+    let font_size = motion_graphic_number_param(&manifest.motion_graphic, "fontSize", 112.0, time)
+        .clamp(16.0, 360.0);
+    let ring_thickness =
+        motion_graphic_number_param(&manifest.motion_graphic, "ringThickness", 16.0, time)
+            .clamp(0.0, 80.0);
     let ring_size = (height.min(width) as f64 * 0.52).max(1.0);
     let ring_x = ((width as f64 - ring_size) / 2.0).max(0.0);
     let ring_y = ((height as f64 - ring_size) / 2.0).max(0.0);
     vec![
-        format!("drawbox=x=0:y=0:w={}:h={}:color={}@1:t=fill", width, height, background),
-        format!("drawbox=x={}:y={}:w={}:h={}:color={}@0.9:t={}", ring_x, ring_y, ring_size, ring_size, color, ring_thickness.max(1.0)),
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color={}@1:t=fill",
+            width, height, background
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@0.9:t={}",
+            ring_x,
+            ring_y,
+            ring_size,
+            ring_size,
+            color,
+            ring_thickness.max(1.0)
+        ),
         format!(
             "drawtext=text='{}{}{}':fontsize={}:fontcolor={}@1:x='(w-text_w)/2':y='(h-text_h)/2'",
             escape_drawtext_text(&prefix),
@@ -3313,28 +3525,52 @@ fn build_motion_graphic_countdown_filters(manifest: &MotionGraphicSequenceManife
             escape_drawtext_text(&suffix),
             format_seconds_arg(font_size),
             color
-        )
+        ),
     ]
 }
 
-fn build_motion_graphic_social_lower_third_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_social_lower_third_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
-    let bar_color = css_color_to_ffmpeg(&motion_graphic_color_param(params, "accentColor", "#ff4fd8"));
-    let display_name = escape_drawtext_text(&motion_graphic_string_param(params, "displayName", "Open Factory"));
-    let handle = escape_drawtext_text(&motion_graphic_string_param(params, "handle", "@openfactory"));
+    let bar_color = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "accentColor",
+        "#ff4fd8",
+    ));
+    let display_name = escape_drawtext_text(&motion_graphic_string_param(
+        params,
+        "displayName",
+        "Open Factory",
+    ));
+    let handle = escape_drawtext_text(&motion_graphic_string_param(
+        params,
+        "handle",
+        "@openfactory",
+    ));
     let platform = motion_graphic_string_param(params, "platform", "custom");
-    let follower_count = motion_graphic_number_param(&manifest.motion_graphic, "followerCount", 12800.0, time).max(0.0) as i64;
-    let avatar_initials = escape_drawtext_text(&motion_graphic_string_param(params, "avatarInitials", "OF"));
+    let follower_count =
+        motion_graphic_number_param(&manifest.motion_graphic, "followerCount", 12800.0, time)
+            .max(0.0) as i64;
+    let avatar_initials =
+        escape_drawtext_text(&motion_graphic_string_param(params, "avatarInitials", "OF"));
     let show_icon = motion_graphic_bool_param(params, "showIcon", true);
     let band_height = (height as f64 * 0.28).max(1.0);
     let band_y = height as f64 - band_height - height as f64 * 0.1;
     let font_size = (height as f64 * 0.12).max(16.0);
     let handle_size = (height as f64 * 0.07).max(12.0);
     let mut filters = vec![
-        format!("drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill", width, height),
-        format!("drawbox=x=0:y={}:w={}:h={}:color={}@0.92:t=fill", band_y, width, band_height, bar_color),
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill",
+            width, height
+        ),
+        format!(
+            "drawbox=x=0:y={}:w={}:h={}:color={}@0.92:t=fill",
+            band_y, width, band_height, bar_color
+        ),
         format!(
             "drawbox=x={}:y={}:w={}:h={}:color=white@0.12:t=fill",
             width / 20,
@@ -3362,7 +3598,7 @@ fn build_motion_graphic_social_lower_third_filters(manifest: &MotionGraphicSeque
             format_seconds_arg(handle_size * 0.9),
             format_seconds_arg(width as f64 * 0.54),
             format_seconds_arg(band_y + band_height * 0.54)
-        )
+        ),
     ];
     if show_icon {
         filters.push(format!(
@@ -3391,24 +3627,45 @@ fn build_motion_graphic_social_lower_third_filters(manifest: &MotionGraphicSeque
     filters
 }
 
-fn build_motion_graphic_map_route_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {
+fn build_motion_graphic_map_route_filters(
+    manifest: &MotionGraphicSequenceManifest,
+    time: f64,
+) -> Vec<String> {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
     let params = &manifest.motion_graphic.params;
-    let line_color = css_color_to_ffmpeg(&motion_graphic_color_param(params, "lineColor", "#facc15"));
-    let map_tint = css_color_to_ffmpeg(&motion_graphic_color_param(params, "mapTintColor", "#1e293b"));
-    let progress = motion_graphic_number_param(&manifest.motion_graphic, "progress", 0.7, time).clamp(0.0, 1.0);
-    let stroke_width = motion_graphic_number_param(&manifest.motion_graphic, "strokeWidth", 12.0, time).clamp(2.0, 80.0);
-    let waypoint_count = motion_graphic_number_param(&manifest.motion_graphic, "waypointCount", 5.0, time).round().clamp(2.0, 12.0) as usize;
+    let line_color =
+        css_color_to_ffmpeg(&motion_graphic_color_param(params, "lineColor", "#facc15"));
+    let map_tint = css_color_to_ffmpeg(&motion_graphic_color_param(
+        params,
+        "mapTintColor",
+        "#1e293b",
+    ));
+    let progress = motion_graphic_number_param(&manifest.motion_graphic, "progress", 0.7, time)
+        .clamp(0.0, 1.0);
+    let stroke_width =
+        motion_graphic_number_param(&manifest.motion_graphic, "strokeWidth", 12.0, time)
+            .clamp(2.0, 80.0);
+    let waypoint_count =
+        motion_graphic_number_param(&manifest.motion_graphic, "waypointCount", 5.0, time)
+            .round()
+            .clamp(2.0, 12.0) as usize;
     let show_pins = motion_graphic_bool_param(params, "showPins", true);
-    let zoom = motion_graphic_number_param(&manifest.motion_graphic, "zoom", 1.0, time).clamp(0.5, 3.0);
+    let zoom =
+        motion_graphic_number_param(&manifest.motion_graphic, "zoom", 1.0, time).clamp(0.5, 3.0);
     let route_left = width as f64 * 0.14;
     let route_top = height as f64 * 0.2;
     let route_width = width as f64 * 0.72 * zoom.min(2.0);
     let route_height = height as f64 * 0.54;
     let mut filters = vec![
-        format!("drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill", width, height),
-        format!("drawbox=x={}:y={}:w={}:h={}:color={}@0.35:t=fill", route_left, route_top, route_width, route_height, map_tint),
+        format!(
+            "drawbox=x=0:y=0:w={}:h={}:color=black@0.0:t=fill",
+            width, height
+        ),
+        format!(
+            "drawbox=x={}:y={}:w={}:h={}:color={}@0.35:t=fill",
+            route_left, route_top, route_width, route_height, map_tint
+        ),
         format!(
             "drawbox=x={}:y={}:w={}:h={}:color={}@1:t=fill",
             route_left,
@@ -3416,7 +3673,7 @@ fn build_motion_graphic_map_route_filters(manifest: &MotionGraphicSequenceManife
             route_width * progress,
             stroke_width,
             line_color
-        )
+        ),
     ];
     for index in 0..waypoint_count {
         let position = if waypoint_count <= 1 {
@@ -3472,14 +3729,21 @@ fn motion_graphic_color_param(params: &Value, key: &str, fallback: &str) -> Stri
         .to_string()
 }
 
-fn motion_graphic_number_param(manifest: &MotionGraphicTemplateManifest, key: &str, fallback: f64, time: f64) -> f64 {
+fn motion_graphic_number_param(
+    manifest: &MotionGraphicTemplateManifest,
+    key: &str,
+    fallback: f64,
+    time: f64,
+) -> f64 {
     let static_value = manifest
         .params
         .get(key)
         .and_then(Value::as_f64)
         .unwrap_or(fallback);
     match manifest.param_keyframes.get(key) {
-        Some(frames) if !frames.is_empty() => interpolate_motion_graphic_keyframes(frames, time, static_value),
+        Some(frames) if !frames.is_empty() => {
+            interpolate_motion_graphic_keyframes(frames, time, static_value)
+        }
         _ => static_value,
     }
 }
@@ -3487,12 +3751,7 @@ fn motion_graphic_number_param(manifest: &MotionGraphicTemplateManifest, key: &s
 fn motion_graphic_number_list_param(params: &Value, key: &str, fallback: &[f64]) -> Vec<f64> {
     let values = params.get(key).and_then(Value::as_array).map_or_else(
         || fallback.to_vec(),
-        |items| {
-            items
-                .iter()
-                .filter_map(Value::as_f64)
-                .collect::<Vec<_>>()
-        },
+        |items| items.iter().filter_map(Value::as_f64).collect::<Vec<_>>(),
     );
     if values.is_empty() {
         fallback.to_vec()
@@ -3501,7 +3760,11 @@ fn motion_graphic_number_list_param(params: &Value, key: &str, fallback: &[f64])
     }
 }
 
-fn interpolate_motion_graphic_keyframes(frames: &[MotionGraphicKeyframeManifest], time: f64, fallback: f64) -> f64 {
+fn interpolate_motion_graphic_keyframes(
+    frames: &[MotionGraphicKeyframeManifest],
+    time: f64,
+    fallback: f64,
+) -> f64 {
     let mut points: Vec<(f64, f64)> = frames
         .iter()
         .filter(|frame| frame.time.is_finite() && frame.value.is_finite())
@@ -3510,7 +3773,11 @@ fn interpolate_motion_graphic_keyframes(frames: &[MotionGraphicKeyframeManifest]
     if points.is_empty() {
         return fallback;
     }
-    points.sort_by(|left, right| left.0.partial_cmp(&right.0).unwrap_or(std::cmp::Ordering::Equal));
+    points.sort_by(|left, right| {
+        left.0
+            .partial_cmp(&right.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let time = time.max(0.0);
     if time <= points[0].0 {
         return points[0].1;
@@ -4446,10 +4713,7 @@ unrelated line
         .expect("should return error result");
 
         assert!(!result.success);
-        assert!(result
-            .error
-            .unwrap()
-            .contains("bare command name"));
+        assert!(result.error.unwrap().contains("bare command name"));
     }
 
     #[test]
@@ -4497,7 +4761,6 @@ unrelated line
             .unwrap_or_default()
             .contains("Unable to start post-export script"));
     }
-
 
     #[test]
     fn rejects_post_export_script_with_absolute_path_program() {
@@ -4552,7 +4815,9 @@ unrelated line
 
         let result = run_post_export_script(
             Some(&PostExportScriptDto {
-                command: "__open_factory_missing_post_export_command__ --output C:/out.mp4 --name test".to_string(),
+                command:
+                    "__open_factory_missing_post_export_command__ --output C:/out.mp4 --name test"
+                        .to_string(),
             }),
             context,
         )

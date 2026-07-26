@@ -22,7 +22,9 @@ fn linux_deb_dependencies_include_webkit_and_ssl() {
     let dependencies = config["bundle"]["linux"]["deb"]["depends"]
         .as_array()
         .expect("deb depends array");
-    assert!(dependencies.iter().any(|value| value == "libwebkit2gtk-4.1-0"));
+    assert!(dependencies
+        .iter()
+        .any(|value| value == "libwebkit2gtk-4.1-0"));
     assert!(dependencies.iter().any(|value| value == "libssl3"));
 }
 

@@ -4,7 +4,7 @@ import type { Clip } from '../../model';
 import { detectOverlap, findAdjacentTransitionClips, replaceClip, trimClip } from '../../timeline';
 import { FillGapOperation, buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime } from '../../timeline-gap-fill';
 import { Command } from '../command';
-import { TimelineAccessor, assertClipsNotOnLockedTrack, buildSlipClip, clampTrimValues, closeTrackGap, findClip, findClipLocation, findTrack, findTrackGapAtTime, insertClip, rippleDeleteTrackClips, timelineHasOverlaps } from './utils';
+import { assertClipsNotOnLockedTrack, buildSlipClip, clampTrimValues, closeTrackGap, findClip, findClipLocation, findTrack, findTrackGapAtTime, insertClip, rippleDeleteTrackClips, timelineHasOverlaps } from './utils';
 import { buildRollingTrimClips, buildSlideClipEdit } from './utils-nested';
 
 export class SlipClipCommand implements Command {

@@ -2,8 +2,8 @@ use crate::path_validator::{validate_path, validate_path_for_write};
 use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use argon2::{Algorithm, Argon2, Params, Version};
 use argon2::Block as Argon2Block;
+use argon2::{Algorithm, Argon2, Params, Version};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
@@ -57,13 +57,12 @@ pub fn encrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u
     let mut nonce_bytes = [0_u8; NONCE_LEN];
     OsRng.fill_bytes(&mut salt);
     OsRng.fill_bytes(&mut nonce_bytes);
-    let key = derive_key_argon2(password.as_bytes(), &salt);
+    let key = derive_key_argon2(password.as_bytes(), &salt)?;
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|error| error.to_string())?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), contents)
         .map_err(|error| error.to_string())?;
-    let mut output =
-        Vec::with_capacity(MAGIC_V2.len() + SALT_LEN + NONCE_LEN + ciphertext.len());
+    let mut output = Vec::with_capacity(MAGIC_V2.len() + SALT_LEN + NONCE_LEN + ciphertext.len());
     output.extend_from_slice(MAGIC_V2);
     output.extend_from_slice(&salt);
     output.extend_from_slice(&nonce_bytes);
@@ -87,7 +86,7 @@ pub fn decrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u
     let key = if legacy {
         derive_key_legacy(password.as_bytes(), salt)
     } else {
-        derive_key_argon2(password.as_bytes(), salt)
+        derive_key_argon2(password.as_bytes(), salt)?
     };
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|error| error.to_string())?;
     cipher
@@ -107,15 +106,15 @@ fn normalize_password(password: &str) -> Result<&str, String> {
     Ok(trimmed)
 }
 
-fn derive_key_argon2(password: &[u8], salt: &[u8]) -> [u8; 32] {
-    let params = Params::new(65536, 3, 1, None).expect("valid argon2 params");
+fn derive_key_argon2(password: &[u8], salt: &[u8]) -> Result<[u8; 32], String> {
+    let params = Params::new(65536, 3, 1, None).map_err(|e| format!("valid argon2 params: {e}"))?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut output = [0_u8; 32];
     let mut blocks = vec![Argon2Block::default(); 65536];
     argon2
         .hash_password_into_with_memory(password, salt, &mut output, &mut blocks)
-        .expect("argon2 hash failed");
-    output
+        .map_err(|e| format!("argon2 hash failed: {e}"))?;
+    Ok(output)
 }
 
 /// Legacy SHA-256 iterative KDF (v1 format). Used only for reading old files.

@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { SubtitleStyle } from '@open-factory/editor-core';
 import {
@@ -176,7 +177,7 @@ export function SubtitleStylePresetManager({ currentStyle, onApplyPreset, onClos
           const newPresets = [...importedPresets, ...presets];
           savePresets(newPresets);
         } catch (error) {
-          console.error('Failed to import presets:', error);
+          logger.error('[SubtitleStyle] Failed to import:', error);
           alert('导入失败：文件格式不正确');
         }
       };

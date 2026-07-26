@@ -2,7 +2,6 @@ import type { TimelineAccessor, ProjectAccessor } from "./index";
 import { MediaFolderInput, addMediaFolderToProject, deleteMediaFolder, moveMediaAssetsToFolder, renameMediaFolder, setMediaFolderCollapsed } from '../../media-folders';
 import { MediaFolder, Project } from '../../model';
 import { Command } from '../command';
-import { ProjectAccessor } from './utils';
 
 export class AddMediaFolderCommand implements Command {
   readonly description = 'Add media folder';

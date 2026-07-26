@@ -164,16 +164,23 @@ fn generate_auto_tags(req: &AutoTagRequest) -> Vec<String> {
     // 文件名语义标签
     let name_lower = req.name.to_lowercase();
 
-    if name_lower.starts_with("img_") || name_lower.starts_with("dsc_") || name_lower.starts_with("dscn") {
+    if name_lower.starts_with("img_")
+        || name_lower.starts_with("dsc_")
+        || name_lower.starts_with("dscn")
+    {
         tags.push("照片".to_string());
     }
-    if name_lower.contains("screen") || name_lower.contains("录屏") || name_lower.contains("screenshot") {
+    if name_lower.contains("screen")
+        || name_lower.contains("录屏")
+        || name_lower.contains("screenshot")
+    {
         tags.push("录屏".to_string());
     }
     if name_lower.contains("clip") {
         tags.push("片段".to_string());
     }
-    if name_lower.contains("render") || name_lower.contains("输出") || name_lower.contains("export") {
+    if name_lower.contains("render") || name_lower.contains("输出") || name_lower.contains("export")
+    {
         tags.push("渲染输出".to_string());
     }
     if name_lower.contains("proxy") || name_lower.contains("代理") {

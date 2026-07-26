@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * 插件测试运行模块
  *

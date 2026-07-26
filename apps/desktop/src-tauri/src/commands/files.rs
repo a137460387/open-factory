@@ -100,7 +100,11 @@ pub fn read_file(app: AppHandle, path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn read_file_header_bytes(app: AppHandle, path: String, byte_count: Option<usize>) -> Result<Vec<u8>, String> {
+pub fn read_file_header_bytes(
+    app: AppHandle,
+    path: String,
+    byte_count: Option<usize>,
+) -> Result<Vec<u8>, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     let count = byte_count.unwrap_or(16).min(64);
     let data = fs::read(&safe_path)
@@ -338,7 +342,9 @@ pub fn write_binary_file(app: AppHandle, path: String, base64_data: String) -> R
             fs::create_dir_all(parent).map_err(|error| error.to_string())?;
         }
     }
-    let bytes = BASE64.decode(&base64_data).map_err(|e| format!("Invalid base64 data: {}", e))?;
+    let bytes = BASE64
+        .decode(&base64_data)
+        .map_err(|e| format!("Invalid base64 data: {}", e))?;
     fs::write(&safe_path, bytes)
         .map_err(|error| format!("Unable to write {}: {}", normalize_path(&safe_path), error))
 }

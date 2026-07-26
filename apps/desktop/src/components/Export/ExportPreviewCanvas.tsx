@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { listenBridge, convertLocalFileSrc } from '../../lib/tauri-bridge';
 import { useExportQueueStore } from '../../export/export-queue-store';
@@ -138,7 +139,7 @@ export function ExportPreviewCanvas({
           setFrames((prev) => prev.map((f) => (f.id === frame.id ? { ...f, loaded: true } : f)));
         };
         img.onerror = () => {
-          console.warn(`Failed to load preview frame: ${frame.src}`);
+          logger.warn('[ExportPreview] Failed to load frame:', frame.src);
         };
         img.src = frame.src;
       }

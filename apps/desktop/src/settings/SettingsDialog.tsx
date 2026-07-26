@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   FolderOpen,
@@ -462,7 +463,7 @@ export function SettingsDialog({
     void loadLocalModelsSettings();
     void readTouchOptimizationSettings()
       .then(setTouchOptimizationSettings)
-      .catch((error) => console.warn('Unable to load touch optimization settings', error));
+      .catch((error) => logger.warn('[Settings] Unable to load touch optimization', error));
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();

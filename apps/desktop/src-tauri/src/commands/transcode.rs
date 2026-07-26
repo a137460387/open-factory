@@ -283,7 +283,19 @@ fn run_transcode_task(
         .lock()
         .ok()
         .and_then(|mut children| children.remove(&task.task_id));
-    if is_task_canceled(&task.task_id) || maybe_child.is_none() {
+    let Some(mut child) = maybe_child else {
+        emit_progress(
+            app,
+            task,
+            Some(output_arg.clone()),
+            "canceled",
+            0.0,
+            current,
+            total,
+        );
+        return task_result(task, Some(output_arg), "canceled", None, started);
+    };
+    if is_task_canceled(&task.task_id) {
         emit_progress(
             app,
             task,
@@ -295,8 +307,6 @@ fn run_transcode_task(
         );
         return task_result(task, Some(output_arg), "canceled", None, started);
     }
-
-    let mut child = maybe_child.expect("checked above");
     match child.wait() {
         Ok(status) if status.success() => {
             emit_progress(

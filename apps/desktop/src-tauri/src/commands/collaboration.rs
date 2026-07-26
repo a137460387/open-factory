@@ -49,7 +49,9 @@ pub async fn start_collaboration_host(
     } else {
         request.port
     };
-    let network_mode = request.network_mode.unwrap_or_else(|| "localhost".to_string());
+    let network_mode = request
+        .network_mode
+        .unwrap_or_else(|| "localhost".to_string());
     let auth_token = request.auth_token.filter(|t| is_valid_token(t));
 
     if let Some(existing) = runtime_slot()
@@ -116,9 +118,11 @@ pub async fn start_collaboration_host(
                         let _ = socket.close(None).await;
                         return;
                     }
-                    let _ = socket.send(tokio_tungstenite::tungstenite::Message::Text(
-                        r#"{"type":"auth-ok"}"#.to_string(),
-                    )).await;
+                    let _ = socket
+                        .send(tokio_tungstenite::tungstenite::Message::Text(
+                            r#"{"type":"auth-ok"}"#.to_string(),
+                        ))
+                        .await;
                 }
                 let (mut write, mut read) = socket.split();
                 let incoming = async {
@@ -194,7 +198,14 @@ mod tests {
             network_mode: None,
             auth_token: None,
         };
-        assert_eq!(if request.port == 0 { 37822 } else { request.port }, 37822);
+        assert_eq!(
+            if request.port == 0 {
+                37822
+            } else {
+                request.port
+            },
+            37822
+        );
     }
 
     #[test]

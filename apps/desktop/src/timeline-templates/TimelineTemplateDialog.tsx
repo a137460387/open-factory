@@ -1,3 +1,4 @@
+import { logger } from '@open-factory/editor-core/utils';
 import {
   BUILT_IN_TIMELINE_TEMPLATES,
   getMissingTimelineTemplatePlaceholders,
@@ -60,7 +61,7 @@ export function TimelineTemplateDialog({
         }
       })
       .catch((error) => {
-        console.warn('Unable to load timeline templates', error);
+        logger.warn('[TimelineTemplate] Unable to load templates', error);
         showToast({
           kind: 'warning',
           title: copy.loadFailed,

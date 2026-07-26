@@ -6,7 +6,7 @@ import { addSwitchPoint, createMulticamSequenceProject } from '../../multicam';
 import { round } from '../../time';
 import { replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { ProjectAccessor, findClip, insertClip, touchProject } from './utils';
+import { findClip, insertClip, touchProject } from './utils';
 import { cutMulticamClip, trimMulticamClip } from './utils-nested';
 
 export class CreateMulticamSequenceCommand implements Command {

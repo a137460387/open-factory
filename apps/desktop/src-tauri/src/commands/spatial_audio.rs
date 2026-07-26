@@ -37,8 +37,9 @@ pub fn ensure_spatial_audio_assets(app: AppHandle) -> Result<SpatialAudioAssetsD
     let hrtf_path = root.join("kemar.bin");
     let mut copied = false;
     if should_copy_kemar_file(&hrtf_path) {
-        fs::write(&hrtf_path, generated_kemar_bytes())
-            .map_err(|error| format!("Unable to write {}: {}", normalize_path(&hrtf_path), error))?;
+        fs::write(&hrtf_path, generated_kemar_bytes()).map_err(|error| {
+            format!("Unable to write {}: {}", normalize_path(&hrtf_path), error)
+        })?;
         copied = true;
     }
 
@@ -67,7 +68,10 @@ pub(crate) fn should_copy_kemar_file(path: &Path) -> bool {
 }
 
 fn ensure_ir_file(path: &Path, seed: u16) -> Result<bool, String> {
-    if fs::metadata(path).map(|metadata| metadata.len() > 44).unwrap_or(false) {
+    if fs::metadata(path)
+        .map(|metadata| metadata.len() > 44)
+        .unwrap_or(false)
+    {
         return Ok(false);
     }
     fs::write(path, generated_impulse_response_wav(seed))
@@ -143,7 +147,10 @@ mod tests {
 
     #[test]
     fn generated_assets_have_expected_shapes() {
-        assert_eq!(generated_kemar_bytes().len(), KEMAR_HRTF_EXPECTED_BYTES as usize);
+        assert_eq!(
+            generated_kemar_bytes().len(),
+            KEMAR_HRTF_EXPECTED_BYTES as usize
+        );
         let ir = generated_impulse_response_wav(7);
         assert_eq!(&ir[0..4], b"RIFF");
         assert_eq!(&ir[8..12], b"WAVE");

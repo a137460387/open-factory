@@ -155,7 +155,10 @@ mod tests {
     #[test]
     fn normalizes_smtp_keychain_profiles() {
         assert_eq!(normalize_smtp_profile(" Default "), "default");
-        assert_eq!(normalize_smtp_profile("Team SMTP/Profile"), "team-smtp-profile");
+        assert_eq!(
+            normalize_smtp_profile("Team SMTP/Profile"),
+            "team-smtp-profile"
+        );
         assert_eq!(normalize_smtp_profile(" "), "default");
     }
 }

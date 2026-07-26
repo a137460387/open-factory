@@ -404,12 +404,9 @@ fn migrate_from_file_if_needed(
     let app_dir = app_data_dir(app)?;
     let password = decrypt_password_legacy(&app_dir, &secret)?;
     // Store in keyring
-    entry.set_password(&password).map_err(|error| {
-        format!(
-            "Unable to migrate WebDAV password to keyring: {}",
-            error
-        )
-    })?;
+    entry
+        .set_password(&password)
+        .map_err(|error| format!("Unable to migrate WebDAV password to keyring: {}", error))?;
     // Remove old file
     let _ = fs::remove_file(&secret_path);
     Ok(Some(password))

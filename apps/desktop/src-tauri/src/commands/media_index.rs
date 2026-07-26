@@ -108,11 +108,7 @@ pub fn batch_upsert_media_assets(
 
 /// 删除媒体资产索引
 #[tauri::command]
-pub fn delete_media_asset(
-    app: AppHandle,
-    project_path: String,
-    id: String,
-) -> Result<(), String> {
+pub fn delete_media_asset(app: AppHandle, project_path: String, id: String) -> Result<(), String> {
     let conn = db::open_db(&app, &project_path)?;
     conn.execute("DELETE FROM media_assets WHERE id = ?1", params![id])
         .map_err(|e| format!("删除资产失败: {}", e))?;
@@ -400,7 +396,11 @@ fn search_assets_internal(
                 m.imported_at, m.thumbnail_path, m.proxy_path
          FROM media_assets m {}
          ORDER BY {} {} LIMIT ?{} OFFSET ?{}",
-        where_clause, sort_field, sort_dir, param_idx, param_idx + 1
+        where_clause,
+        sort_field,
+        sort_dir,
+        param_idx,
+        param_idx + 1
     );
 
     let mut data_stmt = conn
@@ -464,9 +464,11 @@ pub fn add_tag_internal(
 
     // 获取标签 ID
     let tag_id: i64 = conn
-        .query_row("SELECT id FROM tags WHERE name = ?1", params![tag_name], |row| {
-            row.get(0)
-        })
+        .query_row(
+            "SELECT id FROM tags WHERE name = ?1",
+            params![tag_name],
+            |row| row.get(0),
+        )
         .map_err(|e| format!("查询标签 ID 失败: {}", e))?;
 
     // 关联资产和标签
@@ -512,7 +514,20 @@ fn days_to_ymd(mut days: u64) -> (u64, u64, u64) {
         year += 1;
     }
     let leap = is_leap_year(year);
-    let days_in_month = [31, if leap { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let days_in_month = [
+        31,
+        if leap { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1;
     for &dim in &days_in_month {
         if days < dim {

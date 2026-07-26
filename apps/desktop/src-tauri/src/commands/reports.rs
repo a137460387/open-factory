@@ -120,7 +120,8 @@ mod tests {
         let root = unique_temp_dir("video-summary-write");
         let path = root.join("nested").join("summary.html");
 
-        write_video_summary_file(&path, "<!doctype html><h1>Summary</h1>").expect("summary should write");
+        write_video_summary_file(&path, "<!doctype html><h1>Summary</h1>")
+            .expect("summary should write");
 
         let contents = fs::read_to_string(&path).expect("summary should exist");
         assert!(contents.contains("<h1>Summary</h1>"));
@@ -132,8 +133,8 @@ mod tests {
         let root = unique_temp_dir("video-summary-reject");
         let path = root.join("summary.txt");
 
-        let error =
-            write_video_summary_file(&path, "<h1>Summary</h1>").expect_err("txt should be rejected");
+        let error = write_video_summary_file(&path, "<h1>Summary</h1>")
+            .expect_err("txt should be rejected");
 
         assert_eq!(error, "video_summary_must_be_html");
         assert!(!path.exists());

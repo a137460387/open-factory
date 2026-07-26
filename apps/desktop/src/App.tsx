@@ -1,4 +1,5 @@
 import { logError } from './lib/error-handlers';
+import { logger } from '@open-factory/editor-core/utils';
 import { Suspense, useEffect, useSyncExternalStore } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n/i18next-config';
@@ -28,10 +29,10 @@ export function App() {
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('previewWindow') === '1';
   useEffect(() => {
     void initializeLanguageFromSettings().catch((error) => {
-      console.warn('Unable to initialize interface language', error);
+      logError('App')(error);
     });
     void initializeThemeFromSettings().catch((error) => {
-      console.warn('Unable to initialize interface theme', error);
+      logError('App')(error);
     });
     void initializeLocalModelStoresFromSettings();
     void runStartupExportPresetSync();
@@ -63,7 +64,7 @@ async function initializeLocalModelStoresFromSettings(): Promise<void> {
       usePrivacyDetectionSettingsStore.getState().setModelPath(settings.yunet.path);
     }
   } catch (error) {
-    console.warn('Unable to initialize local model settings', error);
+    logError('App')(error);
   }
 }
 
@@ -91,7 +92,7 @@ async function runStartupExportPresetSync(): Promise<void> {
     await saveExportPresetSyncSettings({ ...settings, lastSyncedAt: result.syncedAt, lastSyncWarning: undefined });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Export preset startup sync failed.';
-    console.warn('Unable to sync export presets on startup', error);
+    logger.warn('[App] Unable to sync export presets', error);
     const settings = await readExportPresetSyncSettings().catch(logError('Appx'));
     if (settings) {
       await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(logError('Appx'));

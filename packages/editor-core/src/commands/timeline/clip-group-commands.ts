@@ -3,7 +3,7 @@ import { ClipGroupBatchPatch, createClipGroup, normalizeClipGroups, removeClipId
 import { Clip, ClipGroup, ClipGroupColor, Project, Timeline, replaceProjectActiveTimeline } from '../../model';
 import { ApplyStyleTransferOptions, StyleSummary, applyStyleToClip } from '../../style-transfer';
 import { Command } from '../command';
-import { ProjectAccessor, TimelineAccessor, applyClipGroupBatchPatch, getProjectActiveClipIds, removeClipsFromTimeline, timelineHasOverlaps, touchProject } from './utils';
+import { applyClipGroupBatchPatch, getProjectActiveClipIds, removeClipsFromTimeline, timelineHasOverlaps, touchProject } from './utils';
 
 export interface CreateClipGroupOptions {
   id?: string;

@@ -2,7 +2,7 @@ import type { TimelineAccessor, ProjectAccessor } from "./index";
 import { ColorGradingConnection, ColorGradingNode } from '../../color-grading/types';
 import { Project } from '../../model';
 import { Command } from '../command';
-import { ProjectAccessor, touchProject } from './utils';
+import { touchProject } from './utils';
 import { updateClipColorGradingGraph } from './utils-nested';
 
 export class AddColorNodeCommand implements Command {

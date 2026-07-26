@@ -1,6 +1,7 @@
 /**
  * Text-to-video generation pipeline
  */
+/* eslint-disable no-console */
 
 import type {
   TextToVideoOptions,

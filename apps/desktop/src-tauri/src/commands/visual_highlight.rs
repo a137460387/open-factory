@@ -84,11 +84,7 @@ pub struct VisualHighlightStats {
 
 /// Calculate motion intensity between two frames using SIMD-accelerated pixel difference
 /// This is significantly faster than the TypeScript implementation
-pub fn calculate_motion_intensity(
-    prev_frame: &[u8],
-    curr_frame: &[u8],
-    pixel_count: usize,
-) -> f64 {
+pub fn calculate_motion_intensity(prev_frame: &[u8], curr_frame: &[u8], pixel_count: usize) -> f64 {
     if pixel_count == 0 {
         return 0.0;
     }
@@ -213,17 +209,13 @@ pub fn smooth_metrics(values: &[f64], window_size: usize) -> Vec<f64> {
 }
 
 /// Find local maxima in an array that exceed a threshold
-pub fn find_peaks(
-    values: &[f64],
-    threshold: f64,
-    min_gap: usize,
-) -> Vec<(usize, f64)> {
+pub fn find_peaks(values: &[f64], threshold: f64, min_gap: usize) -> Vec<(usize, f64)> {
     let mut peaks: Vec<(usize, f64)> = Vec::new();
 
     for i in 1..values.len() - 1 {
         if values[i] >= threshold && values[i] > values[i - 1] && values[i] >= values[i + 1] {
             // Check minimum gap from last peak
-            if peaks.is_empty() || i - peaks.last().expect("peaks non-empty").0 >= min_gap {
+            if peaks.is_empty() || i - peaks.last().map_or(0, |p| p.0) >= min_gap {
                 peaks.push((i, values[i]));
             }
         }
@@ -269,9 +261,12 @@ pub fn detect_visual_highlights(
                 visual_energy: 0.0,
             });
         } else {
-            let motion_intensity = calculate_motion_intensity(&frames[i - 1], &frames[i], pixel_count);
-            let scene_change_score = calculate_scene_change_score(&frames[i - 1], &frames[i], width, height, 8);
-            let visual_energy = calculate_visual_energy(motion_intensity, scene_change_score, 0.6, 0.4);
+            let motion_intensity =
+                calculate_motion_intensity(&frames[i - 1], &frames[i], pixel_count);
+            let scene_change_score =
+                calculate_scene_change_score(&frames[i - 1], &frames[i], width, height, 8);
+            let visual_energy =
+                calculate_visual_energy(motion_intensity, scene_change_score, 0.6, 0.4);
             raw_metrics.push(FrameVisualMetrics {
                 frame_index: i,
                 time,
@@ -299,19 +294,26 @@ pub fn detect_visual_highlights(
     // Find highlight peaks
     let min_gap_frames = (cfg.min_gap_seconds * cfg.fps).round().max(1.0) as usize;
     let motion_peaks = find_peaks(
-        &frame_metrics.iter().map(|m| m.motion_intensity).collect::<Vec<_>>(),
+        &frame_metrics
+            .iter()
+            .map(|m| m.motion_intensity)
+            .collect::<Vec<_>>(),
         cfg.motion_threshold,
         min_gap_frames,
     );
     let scene_peaks = find_peaks(
-        &frame_metrics.iter().map(|m| m.scene_change_score).collect::<Vec<_>>(),
+        &frame_metrics
+            .iter()
+            .map(|m| m.scene_change_score)
+            .collect::<Vec<_>>(),
         cfg.scene_change_threshold,
         min_gap_frames,
     );
     let energy_peaks = find_peaks(&smoothed_energies, cfg.motion_threshold, min_gap_frames);
 
     // Merge peaks into highlight markers
-    let mut highlight_map: std::collections::HashMap<usize, VisualHighlightMarker> = std::collections::HashMap::new();
+    let mut highlight_map: std::collections::HashMap<usize, VisualHighlightMarker> =
+        std::collections::HashMap::new();
 
     for (index, value) in motion_peaks {
         let m = &frame_metrics[index];
@@ -362,10 +364,17 @@ pub fn detect_visual_highlights(
     }
 
     let mut highlights: Vec<VisualHighlightMarker> = highlight_map.into_values().collect();
-    highlights.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    highlights.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     // Build energy curve for timeline display
-    let energy_curve: Vec<(f64, f64)> = frame_metrics.iter().map(|m| (m.time, m.visual_energy)).collect();
+    let energy_curve: Vec<(f64, f64)> = frame_metrics
+        .iter()
+        .map(|m| (m.time, m.visual_energy))
+        .collect();
 
     // Calculate stats
     let total_motion: f64 = frame_metrics.iter().map(|m| m.motion_intensity).sum();
@@ -380,8 +389,16 @@ pub fn detect_visual_highlights(
         stats: VisualHighlightStats {
             total_frames,
             highlight_count,
-            avg_motion_intensity: if total_frames > 0 { total_motion / total_frames as f64 } else { 0.0 },
-            avg_scene_change: if total_frames > 0 { total_scene_change / total_frames as f64 } else { 0.0 },
+            avg_motion_intensity: if total_frames > 0 {
+                total_motion / total_frames as f64
+            } else {
+                0.0
+            },
+            avg_scene_change: if total_frames > 0 {
+                total_scene_change / total_frames as f64
+            } else {
+                0.0
+            },
         },
     }
 }
@@ -427,7 +444,11 @@ pub fn extract_highlight_ranges(
     }
 
     let mut sorted = highlights.to_vec();
-    sorted.sort_by(|a, b| a.time.partial_cmp(&b.time).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| {
+        a.time
+            .partial_cmp(&b.time)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut ranges = Vec::new();
     let mut range_start = sorted[0].time;
@@ -599,7 +620,12 @@ mod tests {
 
             println!(
                 "Rust motion ({}x{}, {}px, {} iters): avg={:.2}µs ({:.4}ms)",
-                w, h, pixel_count, iterations, per_call_us, per_call_us / 1000.0,
+                w,
+                h,
+                pixel_count,
+                iterations,
+                per_call_us,
+                per_call_us / 1000.0,
             );
         }
     }
@@ -608,12 +634,7 @@ mod tests {
     /// Run with: cargo test --release -- visual_highlight::tests::bench_scene_change --nocapture
     #[test]
     fn bench_scene_change() {
-        let sizes: Vec<(usize, usize)> = vec![
-            (320, 240),
-            (640, 480),
-            (1280, 720),
-            (1920, 1080),
-        ];
+        let sizes: Vec<(usize, usize)> = vec![(320, 240), (640, 480), (1280, 720), (1920, 1080)];
         let iterations = 500;
 
         for (w, h) in &sizes {
@@ -630,7 +651,12 @@ mod tests {
 
             println!(
                 "Rust scene_change ({}x{}, {}px, {} iters): avg={:.2}µs ({:.4}ms)",
-                w, h, pixel_count, iterations, per_call_us, per_call_us / 1000.0,
+                w,
+                h,
+                pixel_count,
+                iterations,
+                per_call_us,
+                per_call_us / 1000.0,
             );
         }
     }
@@ -646,7 +672,9 @@ mod tests {
         let frames: Vec<Vec<u8>> = (0..frame_count)
             .map(|f| {
                 let offset = (f * 3) % 256;
-                (0..pixel_count).map(|i| ((i + offset) % 256) as u8).collect()
+                (0..pixel_count)
+                    .map(|i| ((i + offset) % 256) as u8)
+                    .collect()
             })
             .collect();
 
@@ -664,7 +692,10 @@ mod tests {
 
         println!(
             "Rust full pipeline ({}x{}, {} frames, {} iters): total={:.2}ms, avg={:.2}ms",
-            width, height, frame_count, iterations,
+            width,
+            height,
+            frame_count,
+            iterations,
             elapsed.as_secs_f64() * 1000.0,
             elapsed.as_secs_f64() * 1000.0 / iterations as f64,
         );
@@ -691,5 +722,9 @@ pub fn merge_visual_with_audio_beats(
     audio_beat_times: Vec<f64>,
     tolerance_seconds: f64,
 ) -> Result<Vec<VisualHighlightMarker>, String> {
-    Ok(merge_with_audio_beats(&visual_highlights, &audio_beat_times, tolerance_seconds))
+    Ok(merge_with_audio_beats(
+        &visual_highlights,
+        &audio_beat_times,
+        tolerance_seconds,
+    ))
 }

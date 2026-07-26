@@ -4,7 +4,7 @@ import { Keyframe, KeyframeEasing, KeyframeHandle, KeyframeHandleMode, KeyframeP
 import type { Clip } from '../../model';
 import { detectOverlap, replaceClip } from '../../timeline';
 import { Command } from '../command';
-import { TimelineAccessor, applySpeedKeyframeDuration, findClip, findTrack } from './utils';
+import { applySpeedKeyframeDuration, findClip, findTrack } from './utils';
 
 export interface PasteKeyframesInput {
   groups: ClipboardKeyframeGroup[];

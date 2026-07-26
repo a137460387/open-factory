@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * 插件创建模块
  */
