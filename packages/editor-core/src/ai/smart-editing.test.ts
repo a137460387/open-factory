@@ -211,6 +211,8 @@ function makeSegment(overrides: Partial<VideoSegment> = {}): VideoSegment {
       hasMusic: false,
       spectralFeatures: {
         spectralCentroid: 0,
+        midEnergy: 0,
+        highEnergy: 0,
         spectralRolloff: 0,
         lowEnergy: 0,
       },

@@ -539,7 +539,7 @@ describe('generateAssistEditingSuggestions', () => {
     const analysis: ContentAnalysisResult = {
       scenes: [],
       emotionCurve: [],
-      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      rhythmProfile: { bpm: 120, beatTimes: [], energyCurve: [], tempoChanges: [] },
       speakerSegments: [],
       keyFrames: [],
     };
@@ -551,11 +551,11 @@ describe('generateAssistEditingSuggestions', () => {
     const analysis: ContentAnalysisResult = {
       scenes: [
         { startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'test scene' },
-        { startTime: 5, endTime: 10, sceneType: 'dialog', confidence: 0.8, description: 'test dialog' },
+        { startTime: 5, endTime: 10, sceneType: 'dialogue', confidence: 0.8, description: 'test dialog' },
       ],
-      emotionCurve: [{ time: 2.5, value: 0.7 }],
-      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5, 1], tempoChanges: [] },
-      speakerSegments: [{ startTime: 0, endTime: 10, speakerId: 'sp1' }],
+      emotionCurve: [0.7],
+      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5, 1], energyCurve: [], tempoChanges: [] },
+      speakerSegments: [{ startTime: 0, endTime: 10, speakerId: 'sp1', text: '', emotion: 'neutral' }],
       keyFrames: [1, 5],
     };
     const result = generateAssistEditingSuggestions(analysis, config);
@@ -566,7 +566,7 @@ describe('generateAssistEditingSuggestions', () => {
     const analysis: ContentAnalysisResult = {
       scenes: [{ startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'test' }],
       emotionCurve: [],
-      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      rhythmProfile: { bpm: 120, beatTimes: [], energyCurve: [], tempoChanges: [] },
       speakerSegments: [],
       keyFrames: [],
     };
@@ -585,7 +585,7 @@ describe('buildAssistEditingUserPrompt', () => {
     const analysis: ContentAnalysisResult = {
       scenes: [],
       emotionCurve: [],
-      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      rhythmProfile: { bpm: 120, beatTimes: [], energyCurve: [], tempoChanges: [] },
       speakerSegments: [],
       keyFrames: [],
     };
@@ -601,9 +601,9 @@ describe('buildAssistEditingUserPrompt', () => {
       scenes: [
         { startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'exciting scene' },
       ],
-      emotionCurve: [{ time: 2.5, value: 0.8 }],
-      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5], tempoChanges: [{ time: 2, bpm: 140 }] },
-      speakerSegments: [{ startTime: 0, endTime: 5, speakerId: 'sp1', text: 'hello world' }],
+      emotionCurve: [0.8],
+      rhythmProfile: { bpm: 120, beatTimes: [0, 0.5], energyCurve: [], tempoChanges: [{ time: 2, bpm: 140 }] },
+      speakerSegments: [{ startTime: 0, endTime: 5, speakerId: 'sp1', text: 'hello world', emotion: 'neutral' }],
       keyFrames: [1, 3],
     };
     const prompt = buildAssistEditingUserPrompt(analysis, config);
@@ -616,7 +616,7 @@ describe('buildAssistEditingUserPrompt', () => {
     const analysis: ContentAnalysisResult = {
       scenes: [],
       emotionCurve: [],
-      rhythmProfile: { bpm: 120, beatTimes: [], tempoChanges: [] },
+      rhythmProfile: { bpm: 120, beatTimes: [], energyCurve: [], tempoChanges: [] },
       speakerSegments: [],
       keyFrames: [],
     };

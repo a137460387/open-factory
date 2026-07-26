@@ -309,7 +309,7 @@ describe('validateDiarizationResult', () => {
       segments: [
         { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
       ],
-      speakers: [{ id: 0, speakerLabel: 'Speaker 0', embedding: [1, 0, 0] }],
+      speakers: [{ speakerId: 0, speakerLabel: 'Speaker 0', embedding: [1, 0, 0], confidence: 0.9, sampleCount: 10 }],
       durationMs: 1000,
       stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 1000, speakerSwitches: 0 },
     });

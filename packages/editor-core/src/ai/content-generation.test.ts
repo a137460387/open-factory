@@ -585,7 +585,7 @@ describe('generateEffect - additional types', () => {
 
 describe('generateMusicStructure - additional genres', () => {
   const genres = ['electronic', 'jazz', 'classical', 'ambient', 'rock', 'cinematic'] as const;
-  const moods = ['happy', 'sad', 'energetic', 'calm', 'dramatic', 'mysterious'] as const;
+  const moods = ['happy', 'sad', 'energetic', 'calm', 'tense', 'mysterious'] as const;
 
   for (const genre of genres) {
     it(`handles ${genre} genre`, () => {
@@ -811,11 +811,11 @@ describe('generateEffect - intensity boundaries', () => {
 
 describe('generateSubtitle - speaker diarization', () => {
   it('handles speakerDiarization enabled', () => {
-    const result = generateSubtitle({
-      audioData: makeSineWave(440, 44100, 2.0, 0.5),
-      text: 'Hello world. This is a test.',
-      speakerDiarization: true,
-    });
+    const result = generateSubtitle(
+      makeSineWave(440, 44100, 2.0, 0.5),
+      44100,
+      { speakerDiarization: true },
+    );
     expect(result.type).toBe('subtitle');
   });
 });
