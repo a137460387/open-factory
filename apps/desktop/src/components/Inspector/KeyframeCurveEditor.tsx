@@ -1,36 +1,9 @@
-import {
-  EASING_PRESETS,
-  getEasingPresetsByCategory,
-  getPresetHandles,
-  isStepsPreset,
-  applyStepsEasing,
-  clamp01,
-  type EasingPreset,
-  type EasingPresetCategory,
-} from '@open-factory/editor-core';
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
-import type { Clip, Keyframe, KeyframeEasing, KeyframeHandleMode, KeyframeProperty } from '@open-factory/editor-core';
-import {
-  applyKeyframeHandlePatch,
-  calculateBezierHandleCoordinates,
-  calculateKeyframeSpeedSamples,
-  createId,
-  getClipSpeed,
-  interpolateKeyframes,
-  KEYFRAME_PROPERTY_LIMITS,
-  MAX_CLIP_SPEED,
-  MIN_CLIP_SPEED,
-  MOTION_GRAPHIC_TEMPLATE_TYPES,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import type { SelectedKeyframeRef } from '../../store/editorStore';
+import {getEasingPresetsByCategory, getPresetHandles, clamp01, type EasingPreset, type EasingPresetCategory} from '@open-factory/editor-core';
+import {useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent} from 'react';
+import type {Clip, Keyframe, KeyframeEasing, KeyframeHandleMode, KeyframeProperty} from '@open-factory/editor-core';
+import {applyKeyframeHandlePatch, calculateBezierHandleCoordinates, calculateKeyframeSpeedSamples, createId, getClipSpeed, interpolateKeyframes, KEYFRAME_PROPERTY_LIMITS, MAX_CLIP_SPEED, MIN_CLIP_SPEED} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import type {SelectedKeyframeRef} from '../../store/editorStore';
 
 export type SpeedCurveFrame = { id: string; time: number; value: number; easing: KeyframeEasing };
 

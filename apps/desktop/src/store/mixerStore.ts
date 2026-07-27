@@ -1,28 +1,7 @@
-import { create } from 'zustand';
-import type {
-  MixerChannel,
-  MixerState,
-  AudioBus,
-  AudioEffectSlot,
-  AutomationCurve,
-  AudioFollowMode,
-  MulticamAudioGroup,
-} from '@open-factory/editor-core';
-import {
-  createDefaultMixerState,
-  createMixerChannel,
-  createBus,
-  createEffectSlot,
-  EffectChainEngine,
-  buildNoiseReductionFilterString,
-  createMulticamAudioGroup,
-  updateGroupActiveAngle,
-  setGroupFollowMode,
-  updateChannelVolume as updateMcChannelVolume,
-  toggleChannelMute as toggleMcChannelMute,
-  setGroupMasterVolume as setMcGroupMasterVolume,
-} from '@open-factory/editor-core';
-import type { NoiseReductionParams } from '@open-factory/editor-core';
+import {create} from 'zustand';
+import type {MixerState, AudioBus, AudioEffectSlot, AutomationCurve, AudioFollowMode, MulticamAudioGroup} from '@open-factory/editor-core';
+import {createDefaultMixerState, createMixerChannel, createBus, createEffectSlot, buildNoiseReductionFilterString, createMulticamAudioGroup, updateGroupActiveAngle, setGroupFollowMode, updateChannelVolume as updateMcChannelVolume, toggleChannelMute as toggleMcChannelMute, setGroupMasterVolume as setMcGroupMasterVolume} from '@open-factory/editor-core';
+import type {NoiseReductionParams} from '@open-factory/editor-core';
 
 /** 混音器 UI 面板标签 */
 export type MixerPanelTab = 'mix' | 'effects' | 'automation' | 'spectrum' | 'analysis';

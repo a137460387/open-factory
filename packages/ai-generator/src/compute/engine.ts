@@ -3,7 +3,7 @@
  */
 /* eslint-disable no-console */
 
-import type { ComputeEngine, ComputeCapabilities, ComputeBackend } from '../types.js';
+import type {ComputeEngine, ComputeCapabilities, ComputeBackend} from '../types.js';
 
 const PREFIX = '[open-factory]';
 const logger = {  

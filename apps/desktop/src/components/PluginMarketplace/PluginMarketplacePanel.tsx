@@ -4,15 +4,11 @@
  * Browse, search, install, and manage plugins from the marketplace.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import {
-  type MarketplacePlugin,
-  type PluginCategory,
-  type MarketplaceSearchResult,
-} from '@open-factory/plugin-sdk';
+import React, {useState, useMemo} from 'react';
+import {Button} from '../ui/button';
+import {Input} from '../ui/input';
+import {Tabs, TabsList, TabsTrigger} from '../ui/tabs';
+import {type MarketplacePlugin, type PluginCategory, type MarketplaceSearchResult} from '@open-factory/plugin-sdk';
 
 // ─── Types ────────────────────────────────────────────
 

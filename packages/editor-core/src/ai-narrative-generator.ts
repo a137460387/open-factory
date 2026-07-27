@@ -6,9 +6,9 @@
  * Supports multiple narrative templates (documentary, vlog, tutorial, cinematic).
  */
 
-import type { ContentSceneType } from './content-analysis';
-import type { EmotionAnalysisResult, EmotionPoint } from './ai-emotion-analyzer';
-import type { SpeechUnderstandingResult } from './ai-speech-understanding';
+import type {ContentSceneType} from './content-analysis';
+import type {EmotionAnalysisResult} from './ai-emotion-analyzer';
+import type {SpeechUnderstandingResult} from './ai-speech-understanding';
 
 // ─── Types ────────────────────────────────────────────────
 

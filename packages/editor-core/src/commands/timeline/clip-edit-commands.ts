@@ -1,12 +1,12 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { CreditsRow, CreditsStyle } from '../../credits-roll';
-import { AudioFadeCurve, ChromaKey, Clip, ClipAudioDenoise, ClipBorder, ClipFrameInterpolation, ClipKeyframes, ClipMask, ClipPanoramaView, ClipProjection, ClipQualityEnhancement, ClipStabilization, ClipVideoRestoration, ColorCorrection, DEFAULT_CLIP_SPEED, MediaAsset, MotionTrackPoint, SubtitleMode, SubtitleStyle, SubtitleTrackType, TextPathOptions, TextStyle, Transform, normalizeAudioFadeDuration } from '../../model';
-import { ClipSpatialAudio } from '../../spatial-audio';
-import { round } from '../../time';
-import { detectOverlap, getClipSpeed, removeClip, replaceClip } from '../../timeline';
-import { TimelineLabelColor } from '../../timeline-color-labels';
-import { Command } from '../command';
-import { asReplaceableMediaClip, findClip, findTrack, insertClip, isReplaceableMediaClip } from './utils';
+import type {TimelineAccessor} from './index';
+import {CreditsRow, CreditsStyle} from '../../credits-roll';
+import {AudioFadeCurve, ChromaKey, Clip, ClipAudioDenoise, ClipBorder, ClipFrameInterpolation, ClipKeyframes, ClipMask, ClipPanoramaView, ClipProjection, ClipQualityEnhancement, ClipStabilization, ClipVideoRestoration, ColorCorrection, DEFAULT_CLIP_SPEED, MediaAsset, MotionTrackPoint, SubtitleMode, SubtitleStyle, SubtitleTrackType, TextPathOptions, TextStyle, Transform, normalizeAudioFadeDuration} from '../../model';
+import {ClipSpatialAudio} from '../../spatial-audio';
+import {round} from '../../time';
+import {detectOverlap, getClipSpeed, removeClip, replaceClip} from '../../timeline';
+import {TimelineLabelColor} from '../../timeline-color-labels';
+import {Command} from '../command';
+import {asReplaceableMediaClip, findClip, findTrack, insertClip, isReplaceableMediaClip} from './utils';
 
 export class DeleteClipCommand implements Command {
   readonly description = 'Delete clip';

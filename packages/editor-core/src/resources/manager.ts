@@ -3,23 +3,9 @@
  * Handles proxy generation, cache management, and duplicate detection
  */
 
-import type {
-  ResourceConfig,
-  ResourceFile,
-  ProxyFile,
-  DuplicateGroup,
-  CacheEntry,
-  ResourceStats,
-  ResourceReport,
-  CleanupRecommendation,
-  ResourceType,
-  ResourceStatus,
-  ProxyStatus,
-  CacheCategory,
-} from './types';
+import type {ResourceConfig, ResourceFile, ProxyFile, DuplicateGroup, CacheEntry, ResourceStats, ResourceReport, CleanupRecommendation, ResourceType, ResourceStatus, CacheCategory} from './types';
 
-import { DEFAULT_RESOURCE_CONFIG } from './types';
-import { formatDurationMs } from '../utils/time';
+import {DEFAULT_RESOURCE_CONFIG} from './types';
 export { formatDurationMs } from '../utils/time';
 
 let resourceIdCounter = 0;

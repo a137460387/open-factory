@@ -1,49 +1,15 @@
-import { lazy, Suspense } from 'react';
-import type { Project, Clip, MediaAsset, Track, BeatSensitivity } from '@open-factory/editor-core';
-import type { Command } from '@open-factory/editor-core';
-import type { TimelineAccessor } from '@open-factory/editor-core';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import {
-  useSpectrumAsset,
-  useSetSpectrumAsset,
-  useSetColorAnalysisBusy,
-  useSetColorAnalysisResults,
-  useSetColorAnalysisJumps,
-  useSetColorHeatmapPoints,
-  useSetColorAnalysisSamples,
-} from '../../store/mediaFeatureStore';
-import {
-  useSetSpeakerDiarizationResult,
-  useSetSpeakerDiarizationRunning,
-  useSetProfilerRecording,
-  useSetProfilerElapsedMs,
-  useSetProfilerReport,
-  useSetContentAnalysisRunningClipId,
-  useSetAudioSeparationClipId,
-  useSetAudioSeparationProgress,
-  useSetDemucsAvailability,
-} from '../../store/aiFeatureStore';
-import {
-  useSetOperationReplaySpeed,
-  useSetOperationRecording,
-  useSetOperationRecordingActive,
-  useSetOperationReplayRunning,
-  useSetOperationRecordingStep,
-} from '../../store/timelineFeatureStore';
-import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
-import type { VideoStitchWizardSettings } from '../../video-stitching/VideoStitchWizardDialog';
-import {
-  normalizeOperationReplaySpeed,
-  UpdateClipCommand,
-  type OperationRecordingFile,
-  type OperationReplaySpeed,
-  type SpeakerDiarizationSegment,
-  type TimelineColorAnalysisResult,
-  type SceneColorDifference,
-  type ColorAnalysisClipSample,
-  type PerformanceProfilerReport,
-} from '@open-factory/editor-core';
-import { PanelLoading } from '../PanelLoading';
+import {lazy, Suspense} from 'react';
+import type {Project, Clip, MediaAsset, Track, BeatSensitivity} from '@open-factory/editor-core';
+import type {Command} from '@open-factory/editor-core';
+import type {TimelineAccessor} from '@open-factory/editor-core';
+import {useEditorUIStore} from '../../store/editorUIStore';
+import {useSpectrumAsset, useSetSpectrumAsset} from '../../store/mediaFeatureStore';
+import {useSetSpeakerDiarizationResult} from '../../store/aiFeatureStore';
+import {useSetOperationReplaySpeed, useSetOperationRecording, useSetOperationRecordingActive, useSetOperationReplayRunning, useSetOperationRecordingStep} from '../../store/timelineFeatureStore';
+import type {ContentAnalysisTarget} from '../../media/ContentAnalysisDialog';
+import type {VideoStitchWizardSettings} from '../../video-stitching/VideoStitchWizardDialog';
+import {normalizeOperationReplaySpeed, UpdateClipCommand, type OperationRecordingFile, type OperationReplaySpeed, type SpeakerDiarizationSegment, type TimelineColorAnalysisResult, type SceneColorDifference, type PerformanceProfilerReport} from '@open-factory/editor-core';
+import {PanelLoading} from '../PanelLoading';
 
 const LutEditorDialog = lazy(() =>
   import('../../lut-editor/LutEditorDialog').then((m) => ({ default: m.LutEditorDialog })),

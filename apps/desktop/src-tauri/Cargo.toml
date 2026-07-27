@@ -45,3 +45,8 @@ tauri-plugin-i18n = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 trash = "5"
 nnnoiseless = "0.5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[dev-dependencies]
+tempfile = "3"

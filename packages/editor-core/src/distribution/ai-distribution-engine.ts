@@ -5,7 +5,7 @@
  * performance analytics, and A/B testing capabilities.
  */
 
-import type { DistributionPlatformId, DistributionPlatformSpec } from './platform-presets';
+import type {DistributionPlatformId} from './platform-presets';
 
 // ─── Content Analysis ────────────────────────────────────────────
 

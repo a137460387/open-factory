@@ -5,27 +5,10 @@
  * 连接 UI 层 (distributionStore) 和核心层 (editor-core distribution 模块)。
  */
 
-import type { Project } from '@open-factory/editor-core';
-import {
-  getDistributionPlatform,
-  getTimelinePlaybackDuration,
-  createDistributionBatch,
-  calculateBatchSmartCrops,
-  buildDistributionRecommendations,
-  type DistributionPlatformId,
-  type DistributionPlatformSpec,
-  type SmartCropResult,
-  type DistributionBatchResult,
-  type DistributionTask,
-  type CropAnalysisInput,
-} from '@open-factory/editor-core';
-import {
-  createBatchDistributionSchedules,
-  suggestOptimalPublishTime,
-  type DistributionSchedule,
-  type PublishConfig,
-} from '@open-factory/editor-core';
-import { useDistributionStore } from '../store/distributionStore';
+import type {Project} from '@open-factory/editor-core';
+import {getDistributionPlatform, getTimelinePlaybackDuration, createDistributionBatch, calculateBatchSmartCrops, buildDistributionRecommendations, type DistributionPlatformId, type SmartCropResult, type DistributionBatchResult, type CropAnalysisInput} from '@open-factory/editor-core';
+import {createBatchDistributionSchedules, suggestOptimalPublishTime, type DistributionSchedule, type PublishConfig} from '@open-factory/editor-core';
+import {useDistributionStore} from '../store/distributionStore';
 
 // ─── 分发服务接口 ────────────────────────────────────────────
 

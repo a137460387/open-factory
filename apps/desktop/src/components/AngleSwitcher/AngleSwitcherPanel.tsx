@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import type { MulticamClip, MulticamSyncMode, SwitchPoint } from '@open-factory/editor-core';
-import { MulticamPreviewGrid } from './MulticamPreviewGrid';
-import { SyncControls } from './SyncControls';
-import { SwitchPointEditor } from './SwitchPointEditor';
+import React, {useState, useEffect, useCallback} from 'react';
+import type {MulticamClip, MulticamSyncMode, SwitchPoint} from '@open-factory/editor-core';
+import {MulticamPreviewGrid} from './MulticamPreviewGrid';
+import {SyncControls} from './SyncControls';
+import {SwitchPointEditor} from './SwitchPointEditor';
 
 interface AngleSwitcherPanelProps {
   multicamClip: MulticamClip;

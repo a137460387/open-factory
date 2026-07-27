@@ -4,23 +4,10 @@
  * 管理统一编排流程的状态：分析进度、建议列表、报告。
  * 遵循 v4.26.0 模块化架构 —— 独立 Zustand Store。
  */
-import { create } from 'zustand';
-import type {
-  SmartRoughCutSuggestion,
-  SmartRoughCutOrchestrationResult,
-  SmartRoughCutReport,
-  SmartRoughCutOrchestratorOptions,
-  SmartRoughCutSuggestionType,
-} from '@open-factory/editor-core';
-import {
-  orchestrateSmartRoughCut,
-  toggleSuggestionSelection,
-  setAllSuggestionSelection,
-  selectSuggestionsByType,
-  getSelectedSuggestions,
-  reorderSuggestions,
-} from '@open-factory/editor-core';
-import type { SmartRoughCutAnalysisData } from '@open-factory/editor-core';
+import {create} from 'zustand';
+import type {SmartRoughCutSuggestion, SmartRoughCutOrchestrationResult, SmartRoughCutReport, SmartRoughCutOrchestratorOptions, SmartRoughCutSuggestionType} from '@open-factory/editor-core';
+import {orchestrateSmartRoughCut, toggleSuggestionSelection, setAllSuggestionSelection, selectSuggestionsByType, reorderSuggestions} from '@open-factory/editor-core';
+import type {SmartRoughCutAnalysisData} from '@open-factory/editor-core';
 
 export type OrchestratorPhase = 'idle' | 'analyzing' | 'ready' | 'applying' | 'done' | 'error';
 

@@ -1,37 +1,14 @@
-import { useMemo } from 'react';
-import {
-  type Clip,
-  type MediaAsset,
-  type Project,
-  type BeatMarker,
-  findSyncCompareClipRefs,
-  round,
-  estimateBpmFromBeatMarkers,
-} from '@open-factory/editor-core';
-import { selectClipById } from '../store/editorStore';
-import { isPiPVisualClip, isSceneReorderClip } from '../lib/timeline-clip-helpers';
-import { canSeparateAudioForClip } from '../lib/demucs';
-import {
-  collectContentAnalysisTargets,
-  findSpeakerDiarizationTarget,
-  collectAutoAudioSyncTargets,
-  summarizeContentAnalysisByMedia,
-} from '../lib/content-analysis-helpers';
-import type { DemucsAvailability } from '../lib/demucs';
-import type { AutoAudioSyncTarget } from '../lib/autoAudioSync';
-import {
-  applyWorkspaceLayout,
-  BUILT_IN_WORKSPACE_LAYOUT_IDS,
-  clampTimelineHeight,
-  getEffectivePanelState,
-  getWorkspaceLayoutById,
-  type WorkspaceLayoutDefinition,
-  type WorkspaceLayoutId,
-} from '../layout/layoutSettings';
-import { getReviewModeShellVisibility } from '../review/reviewMode';
-import type { TimelineInteractionSettings } from '../settings/appSettings';
-import type { EditorLayoutSettings } from '../layout/layoutSettings';
-import type { Track } from '@open-factory/editor-core';
+import {useMemo} from 'react';
+import {type Clip, type MediaAsset, type Project, type BeatMarker, findSyncCompareClipRefs, round, estimateBpmFromBeatMarkers} from '@open-factory/editor-core';
+import {selectClipById} from '../store/editorStore';
+import {isPiPVisualClip, isSceneReorderClip} from '../lib/timeline-clip-helpers';
+import {canSeparateAudioForClip} from '../lib/demucs';
+import {collectContentAnalysisTargets, findSpeakerDiarizationTarget, collectAutoAudioSyncTargets, summarizeContentAnalysisByMedia} from '../lib/content-analysis-helpers';
+import type {DemucsAvailability} from '../lib/demucs';
+import {BUILT_IN_WORKSPACE_LAYOUT_IDS, clampTimelineHeight, getEffectivePanelState, getWorkspaceLayoutById, type WorkspaceLayoutDefinition} from '../layout/layoutSettings';
+import {getReviewModeShellVisibility} from '../review/reviewMode';
+import type {EditorLayoutSettings} from '../layout/layoutSettings';
+import type {Track} from '@open-factory/editor-core';
 
 interface DerivedStateDeps {
   project: Project;

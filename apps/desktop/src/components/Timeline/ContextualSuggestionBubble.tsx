@@ -5,28 +5,11 @@
  * as non-blocking, dismissable bubbles.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Zap,
-  Star,
-  Volume2,
-  Palette,
-  X,
-  ChevronRight,
-  ChevronDown,
-  Check,
-  Lightbulb,
-} from 'lucide-react';
-import {
-  generateContextualSuggestions,
-  getSuggestionIcon,
-  type ContextualSuggestion,
-  type SuggestionCategory,
-  type TimelineContext,
-  type SuggestionConfig,
-} from '@open-factory/editor-core/contextual-suggestions';
-import type { Timeline, Clip, MediaAsset } from '@open-factory/editor-core/model-types';
-import { clsx } from 'clsx';
+import {useState, useEffect, useCallback, useMemo} from 'react';
+import {Zap, Star, Volume2, Palette, X, ChevronRight, ChevronDown, Check, Lightbulb} from 'lucide-react';
+import {generateContextualSuggestions, type ContextualSuggestion, type SuggestionCategory, type TimelineContext, type SuggestionConfig} from '@open-factory/editor-core/contextual-suggestions';
+import type {Timeline, MediaAsset} from '@open-factory/editor-core/model-types';
+import {clsx} from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -5,24 +5,10 @@
  * each supported gesture with camera preview and live feedback.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Hand,
-  ChevronRight,
-  ChevronLeft,
-  X,
-  Camera,
-  CameraOff,
-  Check,
-  SkipForward,
-} from 'lucide-react';
-import {
-  getGestureTutorialSteps,
-  type GestureType,
-  type GestureMapping,
-  DEFAULT_GESTURE_MAPPINGS,
-} from '@open-factory/editor-core/gesture-control';
-import { clsx } from 'clsx';
+import {useState, useEffect, useCallback, useRef} from 'react';
+import {Hand, ChevronRight, ChevronLeft, X, Camera, CameraOff, Check, SkipForward} from 'lucide-react';
+import {getGestureTutorialSteps, type GestureType, type GestureMapping, DEFAULT_GESTURE_MAPPINGS} from '@open-factory/editor-core/gesture-control';
+import {clsx} from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types

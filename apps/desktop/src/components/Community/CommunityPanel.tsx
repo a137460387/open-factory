@@ -4,16 +4,11 @@
  * Main community interface showing feed, works, and social features.
  */
 
-import React, { useState, useMemo } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import type {
-  CommunityWork,
-  CommunityUser,
-  ContentType,
-  Comment,
-} from '../../community/community-service';
+import React, {useState} from 'react';
+import {Button} from '../ui/button';
+import {Input} from '../ui/input';
+import {Tabs, TabsList, TabsTrigger, TabsContent} from '../ui/tabs';
+import type {CommunityWork, CommunityUser, ContentType} from '../../community/community-service';
 
 // ─── Types ────────────────────────────────────────────
 

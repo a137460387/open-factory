@@ -1,21 +1,10 @@
 import React from 'react';
-import {
-  ApplyShakeStabilizationCommand,
-  ApplyPipPlacementCommand,
-  KEYFRAME_PROPERTY_LIMITS,
-  type KeyframeEasing,
-  type KeyframeProperty,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { commandManager, projectAccessor } from '../../store/commandManager';
-import {
-  Section,
-  NumberField,
-  RangeNumberField,
-  ExpressionNumberField,
-} from './InspectorFields';
-import { KeyframeCurveEditor, formatKeyframeProperty, formatKeyframeValue } from './KeyframeCurveEditor';
-import type { ClipInspectorBodyProps } from './ClipInspectorBody';
+import {ApplyShakeStabilizationCommand, ApplyPipPlacementCommand, KEYFRAME_PROPERTY_LIMITS, type KeyframeEasing, type KeyframeProperty} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {commandManager, projectAccessor} from '../../store/commandManager';
+import {Section, NumberField, RangeNumberField, ExpressionNumberField} from './InspectorFields';
+import {KeyframeCurveEditor, formatKeyframeProperty, formatKeyframeValue} from './KeyframeCurveEditor';
+import type {ClipInspectorBodyProps} from './ClipInspectorBody';
 
 export function MotionPanel({
   clip,

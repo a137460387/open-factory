@@ -1,118 +1,9 @@
-import {
-  EASING_PRESETS,
-  getEasingPresetsByCategory,
-  getPresetHandles,
-  isStepsPreset,
-  applyStepsEasing,
-  type EasingPreset,
-  type EasingPresetCategory,
-} from '@open-factory/editor-core';
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react';
-import DOMPurify from 'dompurify';
-import type { Clip, Project, ProjectSettings } from '@open-factory/editor-core';
-import {
-  BatchProofreadSubtitleCommand,
-  BatchShiftSubtitleCommand,
-  BatchSubtitleTimingCommand,
-  UpdateClipCommand,
-  BUILTIN_AUDIO_VISUALIZATION_THEMES,
-  CUSTOM_SHADER_EXAMPLES,
-  AUDIO_SPECTRUM_POSITIONS,
-  AUDIO_SPECTRUM_STYLES,
-  DEFAULT_EFFECT_PARAMS,
-  DEFAULT_SUBTITLE_PROOFREADING_SETTINGS,
-  DEFAULT_THREE_WAY_COLOR,
-  EFFECT_TYPES,
-  KEYFRAME_PROPERTY_LIMITS,
-  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
-  MAX_CLIP_SPEED,
-  MIN_CLIP_SPEED,
-  MOTION_BLUR_SAMPLE_COUNTS,
-  MOTION_GRAPHIC_TEMPLATE_TYPES,
-  applyKeyframeHandlePatch,
-  calculateBezierHandleCoordinates,
-  calculateKeyframeSpeedSamples,
-  analyzeSubtitleProofreading,
-  buildSubtitleProofreadingFixes,
-  serializeSubtitleProofreadingCsv,
-  calculateSubtitleBatchAdjustUpdates,
-  calculateSubtitlePeakAlignUpdate,
-  calculateSubtitleScaleUpdates,
-  createDefaultColorCurves,
-  createDefaultMotionGraphic,
-  createId,
-  getClipSpeed,
-  getEffectNumberParam,
-  getEffectStringParam,
-  getMotionGraphicTemplateDefinition,
-  getTimelineDuration,
-  interpolateKeyframes,
-  normalizeAudioSpectrumParams,
-  normalizeColorCurves,
-  normalizeColorWheelValue,
-  normalizeCurvePoints,
-  normalizeCustomShaderParams,
-  normalizeMotionBlurParams,
-  normalizeMotionGraphic,
-  normalizePrivacyBlurEffect,
-  normalizeRichTextDocument,
-  normalizeThreeWayColor,
-  renderSubtitleStyleTemplatePreview,
-  richTextToPlainText,
-  sampleCurve,
-  secondsToTimecode,
-  setMotionGraphicParam,
-  setMotionGraphicParamKeyframe,
-  type ClipSlowMotionMode,
-  type ColorCurves,
-  type ColorWheelValue,
-  type CurvePoint,
-  type Effect,
-  type EffectType,
-  type EffectPatch,
-  type ClipMask,
-  type FrameInterpolationCompareMode,
-  type InputColorSpace,
-  type Keyframe,
-  type KeyframeEasing,
-  type KeyframeHandleMode,
-  type KeyframeProperty,
-  type MaskPatch,
-  type MotionGraphicParamDefinition,
-  type MotionGraphicParamValue,
-  type MotionGraphicTemplateType,
-  type PrivacyBlurEffect,
-  type RichTextDocument,
-  type RichTextRun,
-  type SubtitleProofreadingIssue,
-  type SubtitleProofreadingIssueType,
-  type SubtitleStyleTemplate,
-  type ThreeWayColor,
-} from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Plus, Trash2, Underline } from 'lucide-react';
-import { t, zhCN } from '../../i18n/strings';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { saveFileDialog, writeFile } from '../../lib/tauri-bridge';
-import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
-import { showToast } from '../../lib/toast';
-import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
-import { resolveSliderKeyboardValue } from '../../accessibility/keyboard-navigation';
-import { SubtitleStyleTemplatesPanel, SubtitleProofreadingPanel, SubtitleRetimingPanel, getSubtitleStyleTemplateLabel, mergeSubtitleStyleTemplateViews, makeSvgDataUri, getSubtitleProofreadingIssueLabel } from './SubtitleEditors';
-import { SpeedCurveEditor, EasingPresetSelector, KeyframeCurveEditor, CurveEditor, CURVE_CHANNELS, getCurveEditorFrames, normalizeCurveEditorFrames, drawKeyframeCurveCanvas, drawKeyframeVelocityCanvas, getInterpolatedCurveEditorValue, findNearestCurveHandle, findNearestCurveFrameIdByPoint, nextHandleMode, getKeyframeFallbackForCurve, eventToCurveEditorFrame, eventToCanvasPoint, curveFrameToPoint, findNearestCurveFrame, getCurveFrameIdsInBox, getSpeedCurveFrames, normalizeSpeedCurveFrames, eventToSpeedFrame, drawSpeedCurveCanvas, speedFrameToPoint, findNearestSpeedFrame, roundFinite, drawCurveCanvas, eventToCurvePoint, findNearestCurvePoint, drawColorWheel, eventToUnitPoint, wheelPointToOffsets, wheelOffsetsToPoint, hsvToRgb, clampUnit, clampSigned } from './CurveEditors';
-import { EffectsEditor, TextField, TextAreaField, CustomShaderEffectFields, AudioSpectrumEffectFields, MotionBlurEffectFields, formatMotionGraphicNumberValue, NumberField as EffectNumberField, RangeField, RangeNumberField, ExpressionNumberField, ColorField, ToggleField, formatNumberInputValue } from './EffectEditors';
-import { ThreeWayColorEditor, ColorWheelControl, THREE_WAY_CHANNELS } from './ColorEditors';
-import { RichTextEditor, parseRichTextFromElement, collectRichTextRuns, richTextToHtml, richTextRunToHtml, isParagraphNode, normalizeCssColorForModel, escapeHtml, escapeHtmlAttribute } from './RichTextEditor';
-import { MotionGraphicPanel } from './MotionGraphicPanel';
-import { MasksEditor } from './MasksEditor';
-
+import {type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode} from 'react';
+import type {Clip, Project} from '@open-factory/editor-core';
+import {normalizePrivacyBlurEffect, type ClipSlowMotionMode, type EffectType, type FrameInterpolationCompareMode, type InputColorSpace, type Keyframe, type KeyframeProperty, type PrivacyBlurEffect} from '@open-factory/editor-core';
+import {t, zhCN} from '../../i18n/strings';
+import {type SelectedKeyframeRef} from '../../store/editorStore';
+import {NumberField as EffectNumberField} from './EffectEditors';
 // Re-export extracted components for backward compatibility
 export { SubtitleStyleTemplatesPanel, SubtitleProofreadingPanel, SubtitleRetimingPanel, getSubtitleStyleTemplateLabel, mergeSubtitleStyleTemplateViews, makeSvgDataUri, getSubtitleProofreadingIssueLabel } from './SubtitleEditors';
 export { SpeedCurveEditor, EasingPresetSelector, KeyframeCurveEditor, CurveEditor, CURVE_CHANNELS, getCurveEditorFrames, normalizeCurveEditorFrames, drawKeyframeCurveCanvas, drawKeyframeVelocityCanvas, getInterpolatedCurveEditorValue, findNearestCurveHandle, findNearestCurveFrameIdByPoint, nextHandleMode, getKeyframeFallbackForCurve, eventToCurveEditorFrame, eventToCanvasPoint, curveFrameToPoint, findNearestCurveFrame, getCurveFrameIdsInBox, getSpeedCurveFrames, normalizeSpeedCurveFrames, eventToSpeedFrame, drawSpeedCurveCanvas, speedFrameToPoint, findNearestSpeedFrame, roundFinite, drawCurveCanvas, eventToCurvePoint, findNearestCurvePoint, drawColorWheel, eventToUnitPoint, wheelPointToOffsets, wheelOffsetsToPoint, hsvToRgb, clampUnit, clampSigned } from './CurveEditors';
@@ -393,4 +284,4 @@ export function resolveSelectedKeyframeEntries(
     const frame = clip?.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
     return clip && frame ? [{ ref, clip, frame }] : [];
   });
-}
+}

@@ -2,9 +2,9 @@
  * Error handling utilities
  */
 
-import type { FastifyRequest, FastifyReply } from 'fastify';
-import { AuthError } from '../middleware/auth.js';
-import { errorResponse, getHttpStatus } from './response.js';
+import type {FastifyRequest, FastifyReply} from 'fastify';
+import {AuthError} from '../middleware/auth.js';
+import {errorResponse} from './response.js';
 
 // ============================================================
 // Custom Error Classes

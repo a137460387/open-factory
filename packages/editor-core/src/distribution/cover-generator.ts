@@ -13,10 +13,8 @@
  * - 文字安全区（避免关键区域与字幕重叠）
  */
 
-import type { DistributionPlatformSpec, DistributionPlatformId } from './platform-presets';
-import { getDistributionPlatform, DISTRIBUTION_PLATFORMS } from './platform-presets';
-import { parseAspectRatio } from './smart-crop';
-
+import type {DistributionPlatformId} from './platform-presets';
+import {getDistributionPlatform} from './platform-presets';
 // ─── 封面帧候选 ────────────────────────────────────────────
 
 /** 视频帧信息 */

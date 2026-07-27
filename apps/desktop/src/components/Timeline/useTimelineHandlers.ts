@@ -1,209 +1,26 @@
-import {
-  AddKeyframeCommand,
-  AddClipCommand,
-  AddCreditsClipCommand,
-  AddProjectAnnotationCommand,
-  AddProjectBookmarkCommand,
-  AddTimelineNoteCommand,
-  AddTimelineMarkerCommand,
-  BatchAddMarkersCommand,
-  BatchAlignSubtitleCommand,
-  BatchKeyframeEditCommand,
-  BatchImportSubtitleCommand,
-  BatchSplitAtSceneCutsCommand,
-  BatchUpdateKeyframeCommand,
-  BatchUpdateTrackCommand,
-  AddTrackCommand,
-  AddTransitionCommand,
-  CloseGapCommand,
-  FillGapCommand,
-  CLIP_GROUP_COLORS,
-  DEFAULT_PROJECT_ANNOTATION_COLOR,
-  CreateClipGroupCommand,
-  DeleteGroupCommand,
-  DeleteClipsCommand,
-  PackNestedSequenceCommand,
-  DEFAULT_TIMELINE_NOTE_COLOR,
-  RemoveProjectBookmarkCommand,
-  UpdateTrackCommand,
-  RemoveProjectAnnotationCommand,
-  RemoveTimelineNoteCommand,
-  RemoveTimelineMarkerCommand,
-  RemoveTransitionCommand,
-  UpdateClipCommand,
-  UpdateProjectCoverCommand,
-  UpdateProjectAnnotationCommand,
-  UpdateProjectBookmarkCommand,
-  UpdateTimelineNoteCommand,
-  UngroupCommand,
-  UpdateClipGroupCommand,
-  buildSlideClipEdit,
-  buildSlipClip,
-  calculateSpeedCurveDisplayDuration,
-  calculateSpeedCurveSourceDuration,
-  calculateAnchoredScrollLeft,
-  calculateTimelineScrollLeftFromMinimapY,
-  buildVolumeFadeKeyframes,
-  buildEvenCoverFrameTimestamps,
-  clampTimelineZoom,
-  findTimelineSnapTargetWithGrid,
-  fitTimelineZoomToWindow,
-  ensurePlayheadVisible,
-  MoveClipCommand,
-  MoveClipsCommand,
-  RemoveKeyframeCommand,
-  RemoveSilenceCommand,
-  ReplaceMediaCommand,
-  RippleDeleteCommand,
-  RollingTrimCommand,
-  SlideClipCommand,
-  SlipClipCommand,
-  SwitchMediaVersionCommand,
-  UpdateKeyframeCommand,
-  UpdateProjectProtectedRangesCommand,
-  UpdateProjectBeatMarkersCommand,
-  UpdateProjectBookmarksCommand,
-  rectsIntersect,
-  replaceClip,
-  resolveTrackHeaderSelection,
-  SplitClipCommand,
-  TrimClipCommand,
-  canMoveClipWithProtectedRanges,
-  createId,
-  createBeatMarker,
-  buildSceneMarkerInputs,
-  filterShortSceneCuts,
-  getSceneDetectionAnalysisLimit,
-  compareDialogueWithWhisper,
-  createSubtitleClipsFromDialogues,
-  createProtectedRange,
-  createTrack,
-  detectOverlap,
-  getTimelineDuration,
-  buildGapFillCommandOperation,
-  getClipSourceVisibleDuration,
-  getClipSpeed,
-  createGapFillImageClip,
-  findTimelineGapAtTime,
-  dirname,
-  getReplaceMediaCompatibilityWarnings,
-  isFrameRateMismatch,
-  findMediaVersionOwner,
-  isNestedSequenceDepthExceeded,
-  instantiateTitleTemplate,
-  listMediaVersionEntries,
-  moveSelectedTrackIds,
-  moveClip,
-  parseTimecodeToSeconds,
-  round,
-  secondsToTimecode,
-  serializeTimelineNotesCsv,
-  snapTime,
-  snapTimelineTimeToGrid,
-  volumeEnvelopeControlPointToKeyframe,
-  sanitizeCoverFileStem,
-  buildSelectionMarqueeRect,
-  createSnapHighlight,
-  computeSampleTimes,
-  generateReframeKeyframes,
-  smoothKeyframes,
-  computeReframeConfidence,
-  recommendTransition,
-  detectAnomalies,
-  type Clip,
-  type ClipGroup,
-  type ClipGroupColor,
-  type KeyframeProperty,
-  type GapFillStrategy,
-  type MediaAsset,
-  type ProjectAnnotation,
-  type TimelineNote,
-  type ProtectedRange,
-  type SilentRange,
-  type SnapEdge,
-  type SelectionRect,
-  type TimelineSnapCandidate,
-  type TimelineGridSettings,
-  type TimelineLabelColor,
-  type MediaVersionEntry,
-  type DialogueInterval,
-  type DialogueSensitivity,
-  type DialogueWhisperMiss,
-  type Track,
-  type TrackPatch,
-  type ReplaceMediaDurationMode,
-  type ClipAIReframe,
-  type ReframeAIFrame,
-  type AnomalyInterval,
-  type FrameAnalysisSample,
-  type TransitionClipFeatures,
-  type TransitionRecommendation,
-  type TransitionType,
-  type TargetAspectRatio,
-  DEFAULT_TRANSITION_DURATION,
-} from '@open-factory/editor-core';
-import { LONG_PRESS_PAN_THRESHOLD_MS } from '@open-factory/editor-core';
-import type {
-  TransitionMenuState,
-  ClipMenuState,
-  VolumeEnvelopeMenuState,
-  GapMenuState,
-  RulerMenuState,
-  TrackBatchMenuState,
-} from './TimelineMenus';
-import type {
-  ReplaceMediaDialogState,
-  SilenceDialogState,
-  SceneDialogState,
-  WhisperDialogState,
-  CoverFrameDialogState,
-  AnnotationEditorState,
-  TimelineNoteEditorState,
-} from './TimelineDialogs';
-import type { TimelineNoteDraftState, BookmarkRenameState } from './TimelineOverlays';
-import { keyframeRefKey } from './TimelineOverlays';
-import type {
-  ClipMenuRequest,
-  DragState,
-  GapMenuRequest,
-  VolumeEnvelopeMenuRequest,
-  VolumeEnvelopePointRequest,
-} from './TimelineParts';
-import type { RulerContextMenuAction } from './timeline-ruler-menu';
-import type { WhisperAvailability } from '../../lib/whisper';
-import {
-  canGenerateSubtitlesForClip,
-  buildWhisperSubtitleTrackForClip,
-  getWhisperAvailability,
-} from '../../lib/whisper';
-import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
-import {
-  analyzeWaveform,
-  cancelSceneDetection,
-  detectSceneChanges,
-  extractCoverFrames,
-  generateGapFillMedia,
-  getAppDataDir,
-  listenBridge,
-  listenCoverFrameProgress,
-  openFileDialog,
-  saveFileDialog,
-  writeFile,
-  type CoverFrameResult,
-  type SceneDetectProgressEvent,
-  type WhisperProgressEvent,
-} from '../../lib/tauri-bridge';
-import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
-import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
-import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { zhCN } from '../../i18n/strings';
-import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
-import { probeMediaPath } from '../../lib/media';
-import { showToast } from '../../lib/toast';
-import { detectClipDialogue } from '../../lib/dialogueDetection';
-import { generateTtsVoiceover, collectSubtitleClipsForTts } from '../../lib/ttsVoiceover';
-import { buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds } from './timeline-keyboard';
-import { LABEL_WIDTH } from './TimelineParts';
+import {AddKeyframeCommand, AddClipCommand, AddCreditsClipCommand, AddProjectAnnotationCommand, AddProjectBookmarkCommand, AddTimelineNoteCommand, AddTimelineMarkerCommand, BatchAddMarkersCommand, BatchAlignSubtitleCommand, BatchKeyframeEditCommand, BatchImportSubtitleCommand, BatchSplitAtSceneCutsCommand, BatchUpdateKeyframeCommand, BatchUpdateTrackCommand, AddTrackCommand, AddTransitionCommand, CloseGapCommand, FillGapCommand, CLIP_GROUP_COLORS, DEFAULT_PROJECT_ANNOTATION_COLOR, CreateClipGroupCommand, DeleteGroupCommand, DeleteClipsCommand, PackNestedSequenceCommand, DEFAULT_TIMELINE_NOTE_COLOR, RemoveProjectBookmarkCommand, UpdateTrackCommand, RemoveProjectAnnotationCommand, RemoveTimelineNoteCommand, RemoveTimelineMarkerCommand, RemoveTransitionCommand, UpdateClipCommand, UpdateProjectCoverCommand, UpdateProjectAnnotationCommand, UpdateProjectBookmarkCommand, UpdateTimelineNoteCommand, UngroupCommand, UpdateClipGroupCommand, buildSlideClipEdit, buildSlipClip, calculateSpeedCurveDisplayDuration, calculateSpeedCurveSourceDuration, calculateAnchoredScrollLeft, calculateTimelineScrollLeftFromMinimapY, buildVolumeFadeKeyframes, buildEvenCoverFrameTimestamps, clampTimelineZoom, findTimelineSnapTargetWithGrid, fitTimelineZoomToWindow, ensurePlayheadVisible, MoveClipCommand, MoveClipsCommand, RemoveKeyframeCommand, RemoveSilenceCommand, ReplaceMediaCommand, RippleDeleteCommand, RollingTrimCommand, SlideClipCommand, SlipClipCommand, SwitchMediaVersionCommand, UpdateKeyframeCommand, UpdateProjectProtectedRangesCommand, UpdateProjectBeatMarkersCommand, UpdateProjectBookmarksCommand, rectsIntersect, replaceClip, resolveTrackHeaderSelection, SplitClipCommand, TrimClipCommand, canMoveClipWithProtectedRanges, createId, createBeatMarker, buildSceneMarkerInputs, filterShortSceneCuts, getSceneDetectionAnalysisLimit, compareDialogueWithWhisper, createSubtitleClipsFromDialogues, createProtectedRange, createTrack, detectOverlap, getTimelineDuration, buildGapFillCommandOperation, getClipSourceVisibleDuration, getClipSpeed, createGapFillImageClip, findTimelineGapAtTime, dirname, getReplaceMediaCompatibilityWarnings, isFrameRateMismatch, findMediaVersionOwner, isNestedSequenceDepthExceeded, instantiateTitleTemplate, listMediaVersionEntries, moveSelectedTrackIds, moveClip, parseTimecodeToSeconds, round, secondsToTimecode, serializeTimelineNotesCsv, snapTime, snapTimelineTimeToGrid, volumeEnvelopeControlPointToKeyframe, sanitizeCoverFileStem, buildSelectionMarqueeRect, createSnapHighlight, computeSampleTimes, generateReframeKeyframes, smoothKeyframes, computeReframeConfidence, recommendTransition, detectAnomalies, type Clip, type ClipGroup, type ClipGroupColor, type KeyframeProperty, type GapFillStrategy, type MediaAsset, type ProjectAnnotation, type TimelineNote, type ProtectedRange, type SilentRange, type SnapEdge, type SelectionRect, type TimelineSnapCandidate, type TimelineGridSettings, type TimelineLabelColor, type MediaVersionEntry, type DialogueInterval, type DialogueSensitivity, type DialogueWhisperMiss, type Track, type TrackPatch, type ClipAIReframe, type ReframeAIFrame, type AnomalyInterval, type FrameAnalysisSample, type TransitionClipFeatures, type TransitionRecommendation, type TransitionType, type TargetAspectRatio, DEFAULT_TRANSITION_DURATION} from '@open-factory/editor-core';
+import {LONG_PRESS_PAN_THRESHOLD_MS} from '@open-factory/editor-core';
+import type {TransitionMenuState, ClipMenuState, VolumeEnvelopeMenuState, GapMenuState, RulerMenuState, TrackBatchMenuState} from './TimelineMenus';
+import type {ReplaceMediaDialogState, SilenceDialogState, SceneDialogState, WhisperDialogState, CoverFrameDialogState, AnnotationEditorState, TimelineNoteEditorState} from './TimelineDialogs';
+import type {TimelineNoteDraftState, BookmarkRenameState} from './TimelineOverlays';
+import {keyframeRefKey} from './TimelineOverlays';
+import type {ClipMenuRequest, DragState, GapMenuRequest, VolumeEnvelopeMenuRequest, VolumeEnvelopePointRequest} from './TimelineParts';
+import type {RulerContextMenuAction} from './timeline-ruler-menu';
+import type {WhisperAvailability} from '../../lib/whisper';
+import {canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability} from '../../lib/whisper';
+import {TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId} from '../../lib/titleTemplates';
+import {analyzeWaveform, cancelSceneDetection, detectSceneChanges, extractCoverFrames, generateGapFillMedia, getAppDataDir, listenBridge, listenCoverFrameProgress, openFileDialog, saveFileDialog, writeFile, type CoverFrameResult, type SceneDetectProgressEvent, type WhisperProgressEvent} from '../../lib/tauri-bridge';
+import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
+import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore';
+import {useWhisperSettingsStore} from '../../store/whisperSettingsStore';
+import {zhCN} from '../../i18n/strings';
+import {createCreditsClip, createTextClip} from '../../lib/clipFactory';
+import {probeMediaPath} from '../../lib/media';
+import {showToast} from '../../lib/toast';
+import {detectClipDialogue} from '../../lib/dialogueDetection';
+import {generateTtsVoiceover, collectSubtitleClipsForTts} from '../../lib/ttsVoiceover';
+import {buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds} from './timeline-keyboard';
+import {LABEL_WIDTH} from './TimelineParts';
 
 // ---------------------------------------------------------------------------
 // Module-level helpers (originally in Timeline.tsx outside the component)

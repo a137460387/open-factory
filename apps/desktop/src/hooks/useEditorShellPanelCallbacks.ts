@@ -1,9 +1,6 @@
-import { useCallback, useMemo } from 'react';
-import type { MediaAsset, MediaLabelColor, MediaFlag, Subclip, MediaMetadata } from '@open-factory/editor-core';
-import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import type { AutoAudioSyncApplyMode, EffectPreset, TitleTemplateId, MediaRenamePreviewItem } from '@open-factory/editor-core';
+import {useMemo} from 'react';
+import type {MediaAsset, MediaLabelColor, MediaFlag, Subclip, MediaMetadata} from '@open-factory/editor-core';
+import type {EffectPreset, TitleTemplateId, MediaRenamePreviewItem} from '@open-factory/editor-core';
 
 interface PanelCallbacksDeps {
   importMedia: () => Promise<void>;

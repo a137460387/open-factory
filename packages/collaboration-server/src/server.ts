@@ -7,20 +7,12 @@
 
 import express from "express";
 import cors from "cors";
-import { createServer } from "node:http";
-import { Server } from "socket.io";
-import type { CollaborationConfig } from "./config.js";
-import { createAuthMiddleware, createExpressAuthMiddleware, AuthError } from "./auth.js";
-import { RoomManager, RoomError } from "./room-manager.js";
-import type {
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData,
-  TypedSocket,
-  EditOperation,
-  UserRole,
-} from "./types.js";
+import {createServer} from 'node:http';
+import {Server} from 'socket.io';
+import type {CollaborationConfig} from './config.js';
+import {createAuthMiddleware, createExpressAuthMiddleware} from './auth.js';
+import {RoomManager, RoomError} from './room-manager.js';
+import type {ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData, TypedSocket, EditOperation, UserRole} from './types.js';
 
 const PREFIX = '[open-factory]';
 const logger = {  

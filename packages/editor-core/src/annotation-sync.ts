@@ -1,4 +1,4 @@
-import { createId } from './model';
+import {createId} from './model';
 
 export type AnnotationSyncStatus = 'synced' | 'syncing' | 'conflict' | 'offline';
 

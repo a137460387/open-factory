@@ -1,5 +1,3 @@
-import { clamp } from '../math-utils';
-
 /**
  * 实时协作调色模块
  *
@@ -10,8 +8,6 @@ import { clamp } from '../math-utils';
  * 4. 用户在线状态与光标同步
  * 5. 调色历史与撤销
  */
-
-import type { PrimaryWheelParams, PrimarySliderParams } from '../color-grading/types';
 
 // ==================== 类型定义 ====================
 

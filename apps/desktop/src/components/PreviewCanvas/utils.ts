@@ -1,30 +1,11 @@
-import type { CSSProperties } from 'react';
-import type {
-  CanvasPoint,
-  CanvasTransformHandle,
-  ChromaKeyColor,
-  Clip,
-  ClipTransformBox,
-  PathPoint,
-  PathPointHandle,
-  Project,
-  Timeline,
-} from '@open-factory/editor-core';
-import {
-  buildClipTransformBox,
-  getRenderableTracks,
-  isPathMaskClosed,
-  normalizeClipProjection,
-} from '@open-factory/editor-core';
-import type { EditableCanvasClip, PreviewPixelRead } from './types';
-import { PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT } from './types';
-import type { PreviewPixelCoordinates } from '../../lib/preview/frame-inspector';
-import {
-  calculatePreviewPixelCoordinates,
-  rgbToHsl,
-  rgbToHex,
-} from '../../lib/preview/frame-inspector';
-import type { FrameInspectorSample } from './types';
+import type {CSSProperties} from 'react';
+import type {CanvasPoint, CanvasTransformHandle, ChromaKeyColor, Clip, ClipTransformBox, PathPoint, PathPointHandle, Project, Timeline} from '@open-factory/editor-core';
+import {buildClipTransformBox, getRenderableTracks, isPathMaskClosed} from '@open-factory/editor-core';
+import type {EditableCanvasClip, PreviewPixelRead} from './types';
+import {PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT} from './types';
+import type {PreviewPixelCoordinates} from '../../lib/preview/frame-inspector';
+import {calculatePreviewPixelCoordinates, rgbToHsl, rgbToHex} from '../../lib/preview/frame-inspector';
+import type {FrameInspectorSample} from './types';
 
 export function readPreviewCanvasPixel(
   canvas: HTMLCanvasElement,

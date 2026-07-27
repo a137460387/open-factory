@@ -1,19 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  getNoiseReductionPreset,
-  getNoiseReductionPresetLabel,
-  getNoiseReductionPresets,
-  normalizeNoiseReductionParams,
-  strengthToNoiseReductionParams,
-  estimateNoiseReduction,
-  buildNoiseReductionFilterString,
-  type NoiseReductionParams,
-  type NoiseReductionPreset,
-} from '@open-factory/editor-core';
-import { Volume2, Zap, Play, RotateCcw } from 'lucide-react';
-import { zhCN } from '../../i18n/strings';
-import { useEditorStore } from '../../store/editorStore';
-import { useMixerStore } from '../../store/mixerStore';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {getNoiseReductionPreset, getNoiseReductionPresetLabel, getNoiseReductionPresets, normalizeNoiseReductionParams, strengthToNoiseReductionParams, estimateNoiseReduction, buildNoiseReductionFilterString, type NoiseReductionParams, type NoiseReductionPreset} from '@open-factory/editor-core';
+import {Volume2, Zap, Play, RotateCcw} from 'lucide-react';
+import {useEditorStore} from '../../store/editorStore';
+import {useMixerStore} from '../../store/mixerStore';
 
 interface NoiseReductionDialogProps {
   open: boolean;

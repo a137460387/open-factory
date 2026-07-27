@@ -1,48 +1,15 @@
 import React from 'react';
-import {
-  AddEffectCommand,
-  RemoveEffectCommand,
-  ReorderEffectsCommand,
-  UpdateEffectCommand,
-  createId,
-  DEFAULT_COLOR_CORRECTION,
-  DEFAULT_EFFECT_PARAMS,
-  INPUT_COLOR_SPACES,
-  MAX_CHROMA_KEY_COLORS,
-  type ChromaKeyMode,
-  type ClipProjection,
-  type ClipPanoramaOutputProjection,
-  type InputColorSpace,
-  type VideoDeinterlaceMode,
-  type VideoDenoisePreset,
-} from '@open-factory/editor-core';
-import { Palette, Pipette, Plus, Trash2, X } from 'lucide-react';
-import { t, zhCN } from '../../i18n/strings';
-import { timelineAccessor } from '../../store/commandManager';
-import {
-  Section,
-  NumberField,
-  RangeNumberField,
-  ColorField,
-  ToggleField,
-  AnimatedField,
-  RangeField,
-} from './InspectorFields';
-import {
-  CurveEditor,
-  ThreeWayColorEditor,
-  PrivacyBlurPanel,
-  EffectsEditor,
-  rgbToHex,
-  hexToRgb,
-  formatLutPath,
-  formatInputColorSpaceLabel,
-} from './InspectorEditors';
-import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
-import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
-import { ProfessionalColorGradingPanel } from '../ColorGrading/ProfessionalColorGradingPanel';
-import { MasksEditor } from './MasksEditor';
-import type { ClipInspectorBodyProps } from './ClipInspectorBody';
+import {AddEffectCommand, RemoveEffectCommand, ReorderEffectsCommand, UpdateEffectCommand, createId, DEFAULT_COLOR_CORRECTION, DEFAULT_EFFECT_PARAMS, INPUT_COLOR_SPACES, MAX_CHROMA_KEY_COLORS, type ChromaKeyMode, type ClipProjection, type ClipPanoramaOutputProjection, type InputColorSpace, type VideoDeinterlaceMode, type VideoDenoisePreset} from '@open-factory/editor-core';
+import {Palette, Pipette, Plus, Trash2, X} from 'lucide-react';
+import {zhCN} from '../../i18n/strings';
+import {timelineAccessor} from '../../store/commandManager';
+import {Section, NumberField, RangeNumberField, ColorField, ToggleField} from './InspectorFields';
+import {CurveEditor, ThreeWayColorEditor, PrivacyBlurPanel, EffectsEditor, rgbToHex, hexToRgb, formatLutPath, formatInputColorSpaceLabel} from './InspectorEditors';
+import {AIColorGradingPanel, AILookMatchPanel} from './AIColorGradingPanel';
+import {ColorGradingWorkspace} from '../ColorGrading/ColorGradingWorkspace';
+import {ProfessionalColorGradingPanel} from '../ColorGrading/ProfessionalColorGradingPanel';
+import {MasksEditor} from './MasksEditor';
+import type {ClipInspectorBodyProps} from './ClipInspectorBody';
 
 export function EffectPanel({
   clip,

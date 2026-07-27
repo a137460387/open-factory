@@ -1,13 +1,7 @@
 // Permission Control System
 // Declarative permission management with runtime validation and audit logging.
 
-import type {
-  PermissionCategory,
-  PermissionDeclaration,
-  PermissionGrant,
-  PluginManifest,
-  SandboxViolation,
-} from './types.js';
+import type {PermissionCategory, PermissionDeclaration, PermissionGrant, SandboxViolation} from './types.js';
 
 /** Represents the runtime permission state for a loaded plugin. */
 export interface PermissionState {

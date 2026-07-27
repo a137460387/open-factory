@@ -4,18 +4,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import {
-  OpenFactoryApiClient,
-  createApiClient,
-  type ApiClientConfig,
-  type PluginSearchResponse,
-  type PluginDetail,
-  type CreatorDashboardData,
-  type CreatorProfile,
-  type CreatorStats,
-  type CreatorRevenue,
-} from './index.js';
+import {useState, useEffect, useCallback, useRef} from 'react';
+import {OpenFactoryApiClient, createApiClient, type ApiClientConfig, type PluginSearchResponse, type PluginDetail, type CreatorDashboardData, type CreatorProfile, type CreatorStats, type CreatorRevenue} from './index.js';
 
 // ============================================================
 // API Client Context

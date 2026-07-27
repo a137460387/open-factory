@@ -2,10 +2,10 @@
  * RBAC (Role-Based Access Control) middleware
  */
 
-import type { FastifyRequest, FastifyReply } from 'fastify';
-import { AuthError } from './auth.js';
-import type { UserRole, Permission } from '../types.js';
-import { ROLE_PERMISSIONS } from '../types.js';
+import type {FastifyRequest, FastifyReply} from 'fastify';
+import {AuthError} from './auth.js';
+import type {UserRole} from '../types.js';
+import {ROLE_PERMISSIONS} from '../types.js';
 
 // ============================================================
 // Permission Checking

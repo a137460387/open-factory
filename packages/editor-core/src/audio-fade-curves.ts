@@ -1,5 +1,3 @@
-import type { KeyframeEasing } from './model-types';
-
 export type AudioFadeCurveType = 'linear' | 'logarithmic' | 'exponential' | 's-curve';
 
 export const AUDIO_FADE_CURVE_TYPES: readonly AudioFadeCurveType[] = [

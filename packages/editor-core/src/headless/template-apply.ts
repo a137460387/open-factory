@@ -3,9 +3,9 @@
  * generates a project file, and optionally renders output.
  */
 
-import type { HeadlessConfig, HeadlessProgress } from './headless-editor-core';
-import type { ProjectFileV2 } from '../project/project-types';
-import type { Timeline, Track, Clip, MediaAsset } from '../model';
+import type {HeadlessProgress} from './headless-editor-core';
+import type {ProjectFileV2} from '../project/project-types';
+import type {Timeline, Track, Clip, MediaAsset} from '../model';
 
 export interface TemplateApplyRequest {
   /** Path to template file (.json) */

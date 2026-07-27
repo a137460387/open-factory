@@ -1,83 +1,13 @@
-import {
-  DEFAULT_COLOR_CURVES,
-  DEFAULT_THREE_WAY_COLOR,
-  normalizeColorCurves,
-  normalizeThreeWayColor,
-} from '../color-grading';
-import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from '../color-log-luts';
-import { normalizePathPoints } from '../masks/path-mask';
-import { round } from '../time';
-import { finiteOrDefault } from '../math-utils';
+import {normalizeColorCurves, normalizeThreeWayColor} from '../color-grading';
+import {normalizeInputColorSpace} from '../color-log-luts';
+import {normalizePathPoints} from '../masks/path-mask';
+import {round} from '../time';
+import {finiteOrDefault} from '../math-utils';
 export { finiteOrDefault };
-import { normalizeSceneCutTimes } from '../scene-cuts';
-import { normalizeLutLayers } from '../lut-normalize';
-import type {
-  AiPipPlacementSuggestion,
-  AudioChannelRoutingMode,
-  AudioFadeCurve,
-  BeatMarker,
-  ChromaKey,
-  ChromaKeyColor,
-  ChromaKeyMode,
-  ClipAILookMatch,
-  ClipAILocalDenoise,
-  ClipAudioDenoise,
-  ClipBorder,
-  ClipFrameInterpolation,
-  ClipKeyframes,
-  ClipMask,
-  ClipMaskKeyframe,
-  ClipPanoramaView,
-  ClipPrivacyBlur,
-  ClipProjection,
-  ClipQualityEnhancement,
-  ClipSlowMotionMode,
-  ClipStabilization,
-  ClipVideoRestoration,
-  ColorCorrection,
-  FrameInterpolationMode,
-  FrameInterpolationTargetFps,
-  KeyframeProperty,
-  MotionTrackPoint,
-  MulticamAiCutSuggestion,
-  MulticamSequence,
-  MulticamSwitch,
-  PathPoint,
-  PrivacyBlurEffect,
-  PrivacyRedactionType,
-  TextPathOptions,
-  VideoDeinterlaceMode,
-  VideoDenoisePreset,
-} from '../model-types';
-import {
-  CLIP_SLOW_MOTION_MODES,
-  DEFAULT_AI_LOCAL_DENOISE,
-  DEFAULT_AUDIO_DENOISE,
-  DEFAULT_AUDIO_FADE_CURVE,
-  DEFAULT_AUDIO_FADE_DURATION,
-  DEFAULT_AUDIO_PITCH_SEMITONES,
-  DEFAULT_CLIP_BORDER,
-  DEFAULT_CLIP_PANORAMA_VIEW,
-  DEFAULT_CLIP_PROJECTION,
-  DEFAULT_CLIP_SPEED,
-  DEFAULT_COLOR_CORRECTION,
-  DEFAULT_CHROMA_KEY,
-  DEFAULT_FRAME_INTERPOLATION,
-  DEFAULT_MASK,
-  DEFAULT_PRIVACY_BLUR,
-  DEFAULT_QUALITY_ENHANCEMENT,
-  DEFAULT_SLOW_MOTION_MODE,
-  DEFAULT_STABILIZATION,
-  DEFAULT_TEXT_PATH,
-  DEFAULT_TEXT_PATH_POINTS,
-  DEFAULT_VIDEO_RESTORATION,
-  FRAME_INTERPOLATION_MODES,
-  FRAME_INTERPOLATION_TARGET_FPS,
-  MAX_CHROMA_KEY_COLORS,
-  MAX_CLIP_SPEED,
-  MIN_CLIP_SPEED,
-  VIDEO_TEMPORAL_DENOISE_PRESETS,
-} from './defaults';
+import {normalizeSceneCutTimes} from '../scene-cuts';
+import {normalizeLutLayers} from '../lut-normalize';
+import type {AiPipPlacementSuggestion, AudioChannelRoutingMode, AudioFadeCurve, BeatMarker, ChromaKey, ChromaKeyColor, ChromaKeyMode, ClipAILookMatch, ClipAILocalDenoise, ClipAudioDenoise, ClipBorder, ClipFrameInterpolation, ClipKeyframes, ClipMask, ClipMaskKeyframe, ClipPanoramaView, ClipPrivacyBlur, ClipProjection, ClipQualityEnhancement, ClipSlowMotionMode, ClipStabilization, ClipVideoRestoration, ColorCorrection, FrameInterpolationMode, FrameInterpolationTargetFps, KeyframeProperty, MotionTrackPoint, MulticamAiCutSuggestion, MulticamSequence, MulticamSwitch, PathPoint, PrivacyBlurEffect, PrivacyRedactionType, TextPathOptions, VideoDeinterlaceMode, VideoDenoisePreset} from '../model-types';
+import {CLIP_SLOW_MOTION_MODES, DEFAULT_AI_LOCAL_DENOISE, DEFAULT_AUDIO_DENOISE, DEFAULT_AUDIO_FADE_CURVE, DEFAULT_AUDIO_FADE_DURATION, DEFAULT_AUDIO_PITCH_SEMITONES, DEFAULT_CLIP_BORDER, DEFAULT_CLIP_PANORAMA_VIEW, DEFAULT_CLIP_PROJECTION, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_CHROMA_KEY, DEFAULT_FRAME_INTERPOLATION, DEFAULT_MASK, DEFAULT_PRIVACY_BLUR, DEFAULT_SLOW_MOTION_MODE, DEFAULT_STABILIZATION, DEFAULT_TEXT_PATH, DEFAULT_TEXT_PATH_POINTS, DEFAULT_VIDEO_RESTORATION, FRAME_INTERPOLATION_MODES, FRAME_INTERPOLATION_TARGET_FPS, MAX_CHROMA_KEY_COLORS, MAX_CLIP_SPEED, MIN_CLIP_SPEED, VIDEO_TEMPORAL_DENOISE_PRESETS} from './defaults';
 
 // ---------------------------------------------------------------------------
 // ID generation

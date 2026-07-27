@@ -8,13 +8,12 @@
  *   workflow     Run a workflow definition file
  */
 
-import { Command } from 'commander';
-import { createLogger } from './core/output.js';
-import { registerRenderCommand } from './commands/render.js';
-import { registerApplyTemplateCommand } from './commands/apply-template.js';
-import { registerAnalyzeCommand } from './commands/analyze.js';
-import { registerWorkflowCommand } from './commands/workflow.js';
-import { logger } from '@open-factory/editor-core/utils';
+import {Command} from 'commander';
+import {registerRenderCommand} from './commands/render.js';
+import {registerApplyTemplateCommand} from './commands/apply-template.js';
+import {registerAnalyzeCommand} from './commands/analyze.js';
+import {registerWorkflowCommand} from './commands/workflow.js';
+import {logger} from '@open-factory/editor-core/utils';
 
 const VERSION = '0.1.0';
 

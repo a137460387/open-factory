@@ -2,12 +2,12 @@
  * Creator routes
  */
 
-import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { creatorService } from '../services/creator-service.js';
-import { authMiddleware } from '../middleware/auth.js';
-import { rbacMiddleware } from '../middleware/rbac.js';
-import { successResponse } from '../utils/response.js';
+import type {FastifyInstance} from 'fastify';
+import {z} from 'zod';
+import {creatorService} from '../services/creator-service.js';
+import {authMiddleware} from '../middleware/auth.js';
+import {rbacMiddleware} from '../middleware/rbac.js';
+import {successResponse} from '../utils/response.js';
 
 // ============================================================
 // Schemas

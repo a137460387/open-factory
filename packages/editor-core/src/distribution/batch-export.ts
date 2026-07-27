@@ -5,16 +5,14 @@
  * 为每个目标平台生成独立的导出任务，统一管理进度和错误处理。
  */
 
-import type { Project } from '../model-types';
-import type { ExportSettings } from '../export/export-types';
-import type { ExportTaskPriority } from '../export/export-queue';
-import type { DistributionPlatformSpec, DistributionPlatformId } from './platform-presets';
-import type { SmartCropResult } from './smart-crop';
-import { getDistributionPlatform } from './platform-presets';
-import { cropResultToReframeOffset } from './smart-crop';
-import { getTimelinePlaybackDuration } from '../timeline';
-import { formatDuration } from '../utils/time';
-
+import type {Project} from '../model-types';
+import type {ExportSettings} from '../export/export-types';
+import type {ExportTaskPriority} from '../export/export-queue';
+import type {DistributionPlatformSpec, DistributionPlatformId} from './platform-presets';
+import type {SmartCropResult} from './smart-crop';
+import {getDistributionPlatform} from './platform-presets';
+import {cropResultToReframeOffset} from './smart-crop';
+import {getTimelinePlaybackDuration} from '../timeline';
 // ─── 批量请求 ────────────────────────────────────────────
 
 export interface DistributionBatchRequest {

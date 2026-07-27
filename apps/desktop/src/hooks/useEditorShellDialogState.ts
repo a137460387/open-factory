@@ -1,13 +1,8 @@
-import { useState, useCallback } from 'react';
-import type { ExportTask } from '@open-factory/editor-core';
-import type { ExportPreset } from '../export/export-presets';
-import type { ArchiveProgress } from '../lib/projectArchive';
-import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
-import type { AutosaveRecoveryCandidate } from '../lib/projectFiles';
-import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
-import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
-import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
-
+import {useState} from 'react';
+import type {ArchiveProgress} from '../lib/projectArchive';
+import type {SharePackageWorkflowProgress} from '../lib/sharePackage';
+import type {AutosaveRecoveryCandidate} from '../lib/projectFiles';
+import type {ExportQueueRecoveryCandidate} from '../export/export-queue-persistence';
 /**
  * 从 EditorShell 中提取的对话框状态。
  * 将 20+ 个对话框的 useState 集中管理。

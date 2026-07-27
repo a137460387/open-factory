@@ -1,12 +1,5 @@
-import type {
-  Permission,
-  Role,
-  ResourcePermission,
-  PermissionPolicy,
-  ResourceType,
-  Action,
-} from './types.js';
-import { BUILT_IN_PERMISSIONS, BUILT_IN_ROLES } from './types.js';
+import type {Permission, Role, ResourcePermission, PermissionPolicy, ResourceType} from './types.js';
+import {BUILT_IN_PERMISSIONS, BUILT_IN_ROLES} from './types.js';
 
 export class PermissionChecker {
   private permissions = new Map<string, Permission>();

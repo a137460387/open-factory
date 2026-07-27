@@ -3,12 +3,12 @@
  * @module transitions/preview-args
  */
 
-import type { TransitionType } from '../../model-types';
-import { normalizeTransitionDuration } from '../../model/track-timeline';
-import { formatFfmpegSeconds } from '../ffmpeg-escape';
-import { getTransitionDefinition, isCustomTransition } from './transition-registry';
-import { getXfadeName } from './xfade-params';
-import { buildShapeGeqExpressionForPreview } from './custom-filters';
+import type {TransitionType} from '../../model-types';
+import {normalizeTransitionDuration} from '../../model/track-timeline';
+import {formatFfmpegSeconds} from '../ffmpeg-escape';
+import {getTransitionDefinition} from './transition-registry';
+import {getXfadeName} from './xfade-params';
+import {buildShapeGeqExpressionForPreview} from './custom-filters';
 
 /** 预览参数选项 */
 export interface TransitionThumbnailOptions {

@@ -8,7 +8,7 @@
  * 4. 快捷键冲突检测
  */
 
-import { logger } from '../utils/logger.js';
+import {logger} from '../utils/logger.js';
 
 // ==================== 类型定义 ====================
 

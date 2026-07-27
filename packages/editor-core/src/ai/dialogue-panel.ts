@@ -7,16 +7,9 @@
  * Users interact with LLM through natural language to generate editing plans.
  */
 
-import type { MaterialMetadata } from '../ai/semantic-extractor';
-import type {
-  EditPlan,
-  EditInstruction,
-  LLMMessage,
-  InstructionExecutionResult,
-  PlanExecutionResult,
-} from '../ai/llm-orchestrator';
-import { sortInstructionsByPriority } from '../ai/llm-orchestrator';
-import { formatTimeShort } from '../utils/time';
+import type {EditPlan, EditInstruction, LLMMessage, PlanExecutionResult} from '../ai/llm-orchestrator';
+import {sortInstructionsByPriority} from '../ai/llm-orchestrator';
+import {formatTimeShort} from '../utils/time';
 
 // ─── Panel State ────────────────────────────────────────────────
 

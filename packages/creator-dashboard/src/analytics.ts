@@ -5,21 +5,7 @@
  * and revenue breakdown functionality.
  */
 
-import type {
-  Analytics,
-  DownloadMetrics,
-  UserMetrics,
-  RatingMetrics,
-  RevenueMetrics,
-  DailyDataPoint,
-  RetentionData,
-  SourceData,
-  RatingDistribution,
-  RatingTrend,
-  RevenueTrend,
-  TimeRange,
-  ApiResponse
-} from './types';
+import type {Analytics, DownloadMetrics, UserMetrics, RatingMetrics, RevenueMetrics, DailyDataPoint, RatingDistribution, RevenueTrend, TimeRange, ApiResponse} from './types';
 
 /**
  * Analytics service for processing and calculating creator metrics

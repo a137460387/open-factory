@@ -14,25 +14,13 @@
  * Privacy: All analysis is local. Style fingerprints contain no media data.
  */
 
-import type {
-  Clip,
-  Timeline,
-  Track,
-  Transition,
-  TransitionType,
-  Project,
-} from '../model-types';
-import type { Effect, EffectType } from '../effects';
-import type { ColorCorrection } from '../model-types';
-import { normalizeColorCorrection } from '../model';
-import { round } from '../time';
-import {
-  calculateStyleSummary,
-  type StyleSummary,
-  type NumericStyleStat,
-  type EffectStyleSummary,
-} from '../style-transfer';
-import { clamp01 } from '../utils/math';
+import type {Clip, Timeline, Transition, TransitionType, Project} from '../model-types';
+import type {Effect, EffectType} from '../effects';
+import type {ColorCorrection} from '../model-types';
+import {normalizeColorCorrection} from '../model';
+import {round} from '../time';
+import {type StyleSummary, type NumericStyleStat} from '../style-transfer';
+import {clamp01} from '../utils/math';
 
 // ─── Style Fingerprint JSON Schema ──────────────────────────────
 

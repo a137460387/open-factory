@@ -1,14 +1,8 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import type { MulticamClip, MulticamSyncMode, SwitchPoint, MulticamSyncStatusSummary } from '@open-factory/editor-core';
-import {
-  buildSyncStatusSummary,
-  getSyncQualityColor,
-  getSyncQualityLabel,
-  formatOffsetDisplay,
-} from '@open-factory/editor-core';
-import { useEditorStore } from '../../store/editorStore';
-import { useMixerStore } from '../../store/mixerStore';
-import { useMulticamPreviewWorker } from '../../hooks/useMulticamPreviewWorker';
+import React, {useState, useCallback, useEffect, useRef, lazy, Suspense} from 'react';
+import type {MulticamClip, MulticamSyncMode, SwitchPoint, MulticamSyncStatusSummary} from '@open-factory/editor-core';
+import {getSyncQualityColor, getSyncQualityLabel, formatOffsetDisplay} from '@open-factory/editor-core';
+import {useEditorStore} from '../../store/editorStore';
+import {useMulticamPreviewWorker} from '../../hooks/useMulticamPreviewWorker';
 
 // ── 懒加载子组件 ──────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Loader2, Volume2, Play, Pause, Download, X, AlertCircle, CheckCircle, Settings } from 'lucide-react';
-import { useTTS } from '../../hooks/useTTS';
-import type { TTSSynthesisParams, TTSVoiceStyle } from '@open-factory/editor-core/ai/tts';
+import React, {useState, useCallback, useEffect} from 'react';
+import {Loader2, Volume2, Play, Download, X, AlertCircle, CheckCircle, Settings} from 'lucide-react';
+import {useTTS} from '../../hooks/useTTS';
+import type {TTSSynthesisParams, TTSVoiceStyle} from '@open-factory/editor-core/ai/tts';
 
 /** TTS面板属性 */
 export interface TTSPanelProps {

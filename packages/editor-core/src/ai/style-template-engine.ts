@@ -11,32 +11,11 @@
  * 4. User can customize variables before saving
  */
 
-import type {
-  EditingTemplate,
-  TemplateMetadata,
-  TemplateTrack,
-  TemplateClip,
-  TemplateTransition,
-  TemplateColorNode,
-  TemplateAudioMix,
-  TemplateAudioLayout,
-  TemplateKeyframe,
-  TemplateVariable,
-  TemplateCategory,
-} from '../models/template-schema';
-import { TEMPLATE_SCHEMA_VERSION, validateTemplate } from '../models/template-schema';
-import type {
-  StyleFingerprint,
-  StyleRhythmProfile,
-  ColorGradingStyle,
-  AudioProcessingStyle,
-  StyleTransitionPreference,
-  EffectUsagePattern,
-} from './style-analyzer';
-import { extractProjectStyle, mergeStyleFingerprints } from './style-analyzer';
-import type { Project, Timeline, Track, Clip, TransitionType } from '../model-types';
-import type { EffectType } from '../effects';
-
+import type {EditingTemplate, TemplateMetadata, TemplateTrack, TemplateClip, TemplateTransition, TemplateColorNode, TemplateAudioMix, TemplateAudioLayout, TemplateKeyframe, TemplateVariable, TemplateCategory} from '../models/template-schema';
+import {TEMPLATE_SCHEMA_VERSION} from '../models/template-schema';
+import type {StyleFingerprint, StyleRhythmProfile, ColorGradingStyle, AudioProcessingStyle, StyleTransitionPreference, EffectUsagePattern} from './style-analyzer';
+import {extractProjectStyle} from './style-analyzer';
+import type {Project} from '../model-types';
 // ─── Style-to-Template Mapping ───────────────────────────────────
 
 /** Map style rhythm to template track structure */

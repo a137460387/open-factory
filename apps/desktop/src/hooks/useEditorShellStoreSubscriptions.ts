@@ -1,15 +1,11 @@
-import { useState } from 'react';
-import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
-import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useCollaborationStore } from '../store/collaborationStore';
-import { useProxySettingsStore } from '../store/proxySettingsStore';
-import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
-import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
-import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
-import type { Clip, MediaAsset } from '@open-factory/editor-core';
-
+import {useEditorStore} from '../store/editorStore';
+import {useEditorUIStore} from '../store/editorUIStore';
+import {useEditorSettingsStore} from '../store/editorSettingsStore';
+import {useEditorFeatureStore} from '../store/editorFeatureStore';
+import {useCollaborationStore} from '../store/collaborationStore';
+import {useProxySettingsStore} from '../store/proxySettingsStore';
+import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
+import {useRecordingSettingsStore} from '../store/recordingSettingsStore';
 /**
  * 从 EditorShell 中提取的 Zustand store 订阅。
  * 将 277 个 store 订阅集中管理，避免 EditorShell 组件臃肿。

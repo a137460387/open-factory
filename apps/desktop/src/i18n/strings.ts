@@ -1,4 +1,4 @@
-import { formatSignedNumber } from './i18n-utils.js';
+import {formatSignedNumber} from './i18n-utils.js';
 
 const zh = {
   common: {

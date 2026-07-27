@@ -9,23 +9,9 @@
  * - Node editor "Personal Style" input node
  */
 
-import {
-  analyzeEditingStyle,
-  compareEditingStyles,
-  type EditingRhythmProfile,
-  type EditingStyleVector,
-  type EDLAnalysisResult,
-  type TimelineLike,
-} from './edit-rhythm-analyzer';
+import {analyzeEditingStyle, compareEditingStyles, type EditingRhythmProfile, type EditingStyleVector, type EDLAnalysisResult, type TimelineLike} from './edit-rhythm-analyzer';
 
-import {
-  analyzeColorPreferences,
-  compareColorProfiles,
-  type ColorPreferenceProfile,
-  type ColorGradingParams,
-  type ColorAnalysisResult,
-  type ProjectLike,
-} from './color-preference-learner';
+import {analyzeColorPreferences, compareColorProfiles, type ColorPreferenceProfile, type ColorGradingParams, type ColorAnalysisResult, type ProjectLike} from './color-preference-learner';
 
 // ==================== Types ====================
 

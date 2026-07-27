@@ -1,17 +1,9 @@
-import { logger } from '@open-factory/editor-core/utils';
-import { useState } from 'react';
-import { X, ArrowLeftRight } from 'lucide-react';
-import { zhCN } from '../i18n/strings';
-import type { Sequence, TimelineMarker, Project } from '@open-factory/editor-core';
-import {
-  findSyncMarkerPairs,
-  createSequenceCompareLayout,
-  saveSequenceCompareLayout,
-  loadSequenceCompareLayout,
-  normalizeSplitRatio,
-  areSequencesIndependent,
-  collectTimelineMarkers,
-} from '@open-factory/editor-core';
+import {logger} from '@open-factory/editor-core/utils';
+import {useState} from 'react';
+import {X, ArrowLeftRight} from 'lucide-react';
+import {zhCN} from '../i18n/strings';
+import type {Sequence, Project} from '@open-factory/editor-core';
+import {findSyncMarkerPairs, createSequenceCompareLayout, saveSequenceCompareLayout, loadSequenceCompareLayout, normalizeSplitRatio, areSequencesIndependent, collectTimelineMarkers} from '@open-factory/editor-core';
 
 interface SequenceCompareDialogProps {
   project: Project;

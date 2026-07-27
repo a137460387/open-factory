@@ -1,9 +1,9 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { ColorGradingConnection, ColorGradingNode } from '../../color-grading/types';
-import { Project } from '../../model';
-import { Command } from '../command';
-import { touchProject } from './utils';
-import { updateClipColorGradingGraph } from './utils-nested';
+import type {ProjectAccessor} from './index';
+import {ColorGradingConnection, ColorGradingNode} from '../../color-grading/types';
+import {Project} from '../../model';
+import {Command} from '../command';
+import {touchProject} from './utils';
+import {updateClipColorGradingGraph} from './utils-nested';
 
 export class AddColorNodeCommand implements Command {
   readonly description = 'Add color grading node';

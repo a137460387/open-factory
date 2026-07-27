@@ -1,28 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  RecordAngleCutCommand, TrimMulticamSwitchCommand,
-  diffTimelineSnapshots, isNestedSequenceDepthExceeded,
-  normalizeClipProjection, type Project, type ReviewAnnotationType,
-  type FrameSearchHistoryEntry,
-} from '@open-factory/editor-core';
-import { isEditableKeyboardTarget } from '../../accessibility/keyboard-navigation';
-import { zhCN } from '../../i18n/strings';
-import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../../lib/projectSnapshots';
-import { readFrameSearchHistory } from '../../lib/frameSearchHistory';
-import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, getPreviewAdaptiveQualityStatus } from '../../lib/preview/preview-performance';
-import { showToast } from '../../lib/toast';
-import { commandManager, projectAccessor } from '../../store/commandManager';
-import { useEditorStore } from '../../store/editorStore';
-import { useTheme } from '../../theme/useTheme';
-import type { EditableCanvasClip, PreviewCanvasProps } from './types';
-import { buildEditableCanvasClips, buildFrameSearchCandidates, isFrameJumpLikeQuery } from './utils';
-import { useCanvasRenderer } from './hooks/useCanvasRenderer';
-import { useCanvasInteraction } from './hooks/useCanvasInteraction';
-import { PreviewOverlay } from './PreviewOverlay';
-import { PreviewControls } from './PreviewControls';
-import { PreviewTimeline } from './PreviewTimeline';
-import { PreviewEffects } from './PreviewEffects';
-import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {RecordAngleCutCommand, TrimMulticamSwitchCommand, diffTimelineSnapshots, isNestedSequenceDepthExceeded, normalizeClipProjection, type Project, type ReviewAnnotationType, type FrameSearchHistoryEntry} from '@open-factory/editor-core';
+import {isEditableKeyboardTarget} from '../../accessibility/keyboard-navigation';
+import {zhCN} from '../../i18n/strings';
+import {listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry} from '../../lib/projectSnapshots';
+import {readFrameSearchHistory} from '../../lib/frameSearchHistory';
+import {DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, getPreviewAdaptiveQualityStatus} from '../../lib/preview/preview-performance';
+import {showToast} from '../../lib/toast';
+import {commandManager, projectAccessor} from '../../store/commandManager';
+import {useEditorStore} from '../../store/editorStore';
+import {useTheme} from '../../theme/useTheme';
+import type {PreviewCanvasProps} from './types';
+import {buildEditableCanvasClips, buildFrameSearchCandidates, isFrameJumpLikeQuery} from './utils';
+import {useCanvasRenderer} from './hooks/useCanvasRenderer';
+import {useCanvasInteraction} from './hooks/useCanvasInteraction';
+import {PreviewOverlay} from './PreviewOverlay';
+import {PreviewControls} from './PreviewControls';
+import {PreviewTimeline} from './PreviewTimeline';
+import {PreviewEffects} from './PreviewEffects';
+import {ColorScopesPanel} from '../ColorScopes/ColorScopesPanel';
 
 export type { PreviewCanvasProps };
 

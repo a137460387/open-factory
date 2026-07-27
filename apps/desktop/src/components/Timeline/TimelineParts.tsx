@@ -1,60 +1,16 @@
-import { memo } from 'react';
-import {
-  areClipsAdjacent,
-  CLIP_GROUP_COLOR_HEX,
-  DEFAULT_TIMELINE_LABEL_COLOR_HEX,
-  filterTimelineVirtualClips,
-  getEffectiveClipColorLabel,
-  getTimelineLabelColorHex,
-  getVolumeEnvelopePoints,
-  isFrameRateMismatch,
-  pitchNoteColor,
-  TIMELINE_THUMBNAIL_TRACK_HEIGHT,
-  TIMELINE_LABEL_COLORS,
-  buildTrimDurationBubble,
-  type Clip,
-  type CollaborationClipLock,
-  type AnomalyInterval,
-  type ClipGroup,
-  type ClipPitchDataPoint,
-  type DialogueInterval,
-  type KeyframeProperty,
-  type MediaAsset,
-  snapTime,
-  type TimelineLabelColor,
-  type TimelineRulerTick,
-  type TimelineThumbnailTrackSample,
-  type TimelineLargeProjectMode,
-  type TimelineVirtualRenderWindow,
-  type VolumeEnvelopePoint,
-  shouldLoadTimelineClipAssets,
-  type Track,
-  type Transition,
-  type TransitionType,
-  detectTrackGaps,
-  getEffectiveTrackHeight,
-  clampTrackHeight,
-  DEFAULT_TRACK_HEIGHT,
-  WAVEFORM_HIDE_THRESHOLD,
-  shouldShowWaveform,
-} from '@open-factory/editor-core';
-import { EMOTION_COLORS } from '@open-factory/editor-core';
-import { AlertTriangle, MoreHorizontal } from 'lucide-react';
-import type { TimelineRenderRange } from '@open-factory/editor-core';
-import type { TimelineDiffRange } from '@open-factory/editor-core';
-import { clsx } from 'clsx';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatTrackType, zhCN } from '../../i18n/strings';
-import {
-  getTimelineThumbnailFrame,
-  getTimelineThumbnailPlaceholder,
-  getTimelineThumbnailPlaceholders,
-  getTimelineThumbnails,
-  type TimelineThumbnailFrame,
-} from '../../media/timeline-thumbnails';
-import { getWaveform, type WaveformResult } from '../../media/waveform';
-import { getSilentFrequencyBands, useAudioMeterStore } from '../../store/audioMeterStore';
-import type { SelectedKeyframeRef } from '../../store/editorStore';
+import {memo} from 'react';
+import {areClipsAdjacent, CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, filterTimelineVirtualClips, getEffectiveClipColorLabel, getTimelineLabelColorHex, getVolumeEnvelopePoints, isFrameRateMismatch, pitchNoteColor, TIMELINE_THUMBNAIL_TRACK_HEIGHT, TIMELINE_LABEL_COLORS, buildTrimDurationBubble, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type ClipPitchDataPoint, type DialogueInterval, type KeyframeProperty, type MediaAsset, snapTime, type TimelineLabelColor, type TimelineRulerTick, type TimelineThumbnailTrackSample, type TimelineLargeProjectMode, type TimelineVirtualRenderWindow, type VolumeEnvelopePoint, shouldLoadTimelineClipAssets, type Track, type Transition, type TransitionType, detectTrackGaps, getEffectiveTrackHeight, clampTrackHeight, DEFAULT_TRACK_HEIGHT, shouldShowWaveform} from '@open-factory/editor-core';
+import {EMOTION_COLORS} from '@open-factory/editor-core';
+import {AlertTriangle, MoreHorizontal} from 'lucide-react';
+import type {TimelineRenderRange} from '@open-factory/editor-core';
+import type {TimelineDiffRange} from '@open-factory/editor-core';
+import {clsx} from 'clsx';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {formatTrackType, zhCN} from '../../i18n/strings';
+import {getTimelineThumbnailFrame, getTimelineThumbnailPlaceholder, getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineThumbnailFrame} from '../../media/timeline-thumbnails';
+import {getWaveform, type WaveformResult} from '../../media/waveform';
+import {getSilentFrequencyBands, useAudioMeterStore} from '../../store/audioMeterStore';
+import type {SelectedKeyframeRef} from '../../store/editorStore';
 
 type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
 

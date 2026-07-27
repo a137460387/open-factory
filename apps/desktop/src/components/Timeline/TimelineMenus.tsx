@@ -1,32 +1,11 @@
-import {
-  CLIP_GROUP_COLORS,
-  CLIP_GROUP_COLOR_HEX,
-  PROJECT_ANNOTATION_COLORS,
-  TIMELINE_LABEL_COLORS,
-  TIMELINE_NOTE_COLORS,
-  TRANSITION_TYPES,
-  getTimelineLabelColorHex,
-  isFrameRateMismatch,
-  secondsToTimecode,
-  type Clip,
-  type ClipGroup,
-  type ClipGroupColor,
-  type GapFillStrategy,
-  type MediaAsset,
-  type MediaVersionEntry,
-  type TimelineLabelColor,
-  type TimecodeFormat,
-  type Track,
-  type TrackPatch,
-  type TransitionType,
-} from '@open-factory/editor-core';
-import { clsx } from 'clsx';
-import { Star } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { zhCN } from '../../i18n/strings';
-import { canGenerateSubtitlesForClip } from '../../lib/whisper';
-import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
-import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
+import {CLIP_GROUP_COLORS, CLIP_GROUP_COLOR_HEX, TIMELINE_LABEL_COLORS, TRANSITION_TYPES, getTimelineLabelColorHex, isFrameRateMismatch, type Clip, type ClipGroup, type ClipGroupColor, type GapFillStrategy, type MediaAsset, type MediaVersionEntry, type TimelineLabelColor, type Track, type TrackPatch, type TransitionType} from '@open-factory/editor-core';
+import {clsx} from 'clsx';
+import {Star} from 'lucide-react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {zhCN} from '../../i18n/strings';
+import {canGenerateSubtitlesForClip} from '../../lib/whisper';
+import {readTransitionFavorites, toggleTransitionFavorite} from '../../timeline/transition-favorites';
+import {buildRulerContextMenuItems, type RulerContextMenuAction} from './timeline-ruler-menu';
 
 export interface TransitionMenuState {
   x: number;

@@ -10,15 +10,13 @@
  * - 输出标准化的建议与报告
  */
 
-import { round } from './time';
-import type { SilentRange } from './audio/silence-detection';
-import type { DialogueInterval } from './audio/dialogue-detection';
-import type { SceneDetectionResult, SceneBoundary } from './ai-scene-detector';
-import type { EmotionAnalysisResult } from './ai-emotion-analyzer';
-import type { SpeechUnderstandingResult } from './ai-speech-understanding';
-import type { NarrativeAnalysisResult } from './ai-narrative-analyzer';
-import type { ContentSceneType } from './content-analysis';
-
+import {round} from './time';
+import type {SilentRange} from './audio/silence-detection';
+import type {DialogueInterval} from './audio/dialogue-detection';
+import type {SceneDetectionResult, SceneBoundary} from './ai-scene-detector';
+import type {EmotionAnalysisResult} from './ai-emotion-analyzer';
+import type {SpeechUnderstandingResult} from './ai-speech-understanding';
+import type {NarrativeAnalysisResult} from './ai-narrative-analyzer';
 // ─── 建议类型 ──────────────────────────────────────────────
 
 export type SmartRoughCutSuggestionType =

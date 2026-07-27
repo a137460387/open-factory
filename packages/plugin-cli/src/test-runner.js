@@ -5,9 +5,9 @@
  * 在隔离环境中运行插件的单元测试，支持 vitest 集成。
  */
 
-import { readFile, access } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { execSync } from 'node:child_process';
+import {access} from 'node:fs/promises';
+import {join, resolve} from 'node:path';
+import {execSync} from 'node:child_process';
 
 /**
  * 运行插件测试套件。

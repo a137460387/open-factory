@@ -1,131 +1,33 @@
-import { logger } from '@open-factory/editor-core/utils';
-import {
-  MAX_MEDIA_FOLDER_DEPTH,
-  TITLE_TEMPLATE_IDS,
-  CONTENT_SCENE_TYPES,
-  collectSmartAlbums,
-  collectFingerprintReferences,
-  filterMediaAssets,
-  getMediaFolderDepth,
-  isFrameRateMismatch,
-  listFingerprintSourcePaths,
-  getMediaVersionLabel,
-  shouldGenerateProxy,
-  type MediaAsset,
-  type BatchEditableMediaMetadata,
-  type ClipContentAnalysis,
-  type ContentSceneType,
-  type MediaFlag,
-  type MediaFolder,
-  type MediaLabelColor,
-  type MediaMetadata,
-  type MediaMetadataFilter,
-  type MediaRenamePreviewItem,
-  type SmartAlbumId,
-  type TitleTemplateId,
-  type EffectPreset,
-  mapScoreToGrade,
-  buildQualityAssessmentSystemPrompt,
-  buildQualityAssessmentUserPrompt,
-  parseQualityAssessmentResponse,
-  hasAvailableTextProvider,
-  type QualityAssessmentResult,
-} from '@open-factory/editor-core';
-import {
-  createSubclip,
-  parseFavoritesSearchFilter,
-  type Subclip,
-  type TimelineLabelColor,
-} from '@open-factory/editor-core';
-import {
-  AlertCircle,
-  BadgeCheck,
-  ChevronDown,
-  ChevronRight,
-  FileAudio2,
-  FileImage,
-  FileText,
-  FileVideo2,
-  Flag,
-  Folder,
-  FolderPlus,
-  GalleryHorizontal,
-  Gauge,
-  Grid2X2,
-  Heart,
-  ImageDown,
-  Import,
-  Info,
-  Link2,
-  List,
-  Loader2,
-  Merge,
-  Plus,
-  RotateCcw,
-  Scissors,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Tag,
-  Trash2,
-  X,
-} from 'lucide-react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  createContext,
-  Fragment,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from 'react';
-import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
-import { BatchMetadataDialog, BatchRenameDialog, BatchTextField } from './BatchDialogs';
-import { MediaInfoDialog, formatBytes, formatDuration, type MediaInfoState } from './MediaInfoDialog';
-import { SubclipDialog } from './SubclipDialog';
-import { MediaCard, formatFrameRateLabel, formatMediaColorProfile, formatMediaFormat, formatMediaResolution, IconPreview } from './MediaCard';
-import { clsx } from 'clsx';
-import { zhCN } from '../../i18n/strings';
-import { isTauriRuntime } from '../../lib/tauri';
-import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
-import {
-  analyzeMedia,
-  callAiApi,
-  convertLocalFileSrc,
-  listenDragDrop,
-  readAiApiKey,
-  type MediaAnalysis,
-} from '../../lib/tauri-bridge';
-import { useMediaJobStore } from '../../media/media-job-store';
-import { useEditorStore } from '../../store/editorStore';
-import { useMediaIndexStore, hasActiveIndexFilters } from '../../store/mediaIndexStore';
-import {
-  DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS,
-  normalizeMediaLibraryViewSettings,
-  sortMediaLibraryAssets,
-  type MediaLibraryGridSize,
-  type MediaLibrarySortKey,
-  type MediaLibraryViewMode,
-  type MediaLibraryViewSettings,
-} from '../../media/mediaLibraryView';
-import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
-import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
-import { useProxySettingsStore } from '../../store/proxySettingsStore';
-import { useAISettingsStore } from '../../store/aiSettingsStore';
-import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
-import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
-import { AISemanticSearchPanel } from './AISemanticSearchPanel';
-import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
-import { AdvancedSearchPanel } from './AdvancedSearchPanel';
-import { MediaMetadataPanel } from './MediaMetadataPanel';
-import type { MediaCollection } from '@open-factory/editor-core';
-import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
+import {logger} from '@open-factory/editor-core/utils';
+import {MAX_MEDIA_FOLDER_DEPTH, TITLE_TEMPLATE_IDS, CONTENT_SCENE_TYPES, collectSmartAlbums, collectFingerprintReferences, filterMediaAssets, getMediaFolderDepth, listFingerprintSourcePaths, type MediaAsset, type BatchEditableMediaMetadata, type ClipContentAnalysis, type ContentSceneType, type MediaFlag, type MediaFolder, type MediaLabelColor, type MediaMetadata, type MediaMetadataFilter, type MediaRenamePreviewItem, type SmartAlbumId, type TitleTemplateId, type EffectPreset, buildQualityAssessmentSystemPrompt, buildQualityAssessmentUserPrompt, parseQualityAssessmentResponse, hasAvailableTextProvider, type QualityAssessmentResult} from '@open-factory/editor-core';
+import {parseFavoritesSearchFilter, type Subclip} from '@open-factory/editor-core';
+import {ChevronDown, ChevronRight, FileText, Folder, FolderPlus, GalleryHorizontal, Grid2X2, ImageDown, Import, Link2, List, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Sparkles, Trash2, X} from 'lucide-react';
+import {useVirtualizer} from '@tanstack/react-virtual';
+import {createContext, Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject} from 'react';
+import {BatchMetadataDialog, BatchRenameDialog} from './BatchDialogs';
+import {MediaInfoDialog, formatBytes, formatDuration, type MediaInfoState} from './MediaInfoDialog';
+import {SubclipDialog} from './SubclipDialog';
+import {MediaCard, formatFrameRateLabel, formatMediaColorProfile, formatMediaFormat, formatMediaResolution, IconPreview} from './MediaCard';
+import {clsx} from 'clsx';
+import {zhCN} from '../../i18n/strings';
+import {isTauriRuntime} from '../../lib/tauri';
+import {TITLE_TEMPLATE_DRAG_MIME} from '../../lib/titleTemplates';
+import {analyzeMedia, callAiApi, listenDragDrop, readAiApiKey} from '../../lib/tauri-bridge';
+import {useMediaJobStore} from '../../media/media-job-store';
+import {useEditorStore} from '../../store/editorStore';
+import {useMediaIndexStore, hasActiveIndexFilters} from '../../store/mediaIndexStore';
+import {DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings} from '../../media/mediaLibraryView';
+import {readViewSettings, saveViewSettings} from '../../settings/appSettings';
+import type {SharedLibraryResource} from '../../shared-library/sharedLibrary';
+import {useAISettingsStore} from '../../store/aiSettingsStore';
+import {loadLocalEffectPresets} from '../../effects/effect-preset-library';
+import {MediaAIAnalysisDialog} from './MediaAIAnalysisDialog';
+import {AISemanticSearchPanel} from './AISemanticSearchPanel';
+import {AIMediaOrganizePanel} from './AIMediaOrganizePanel';
+import {AdvancedSearchPanel} from './AdvancedSearchPanel';
+import {MediaMetadataPanel} from './MediaMetadataPanel';
+import type {MediaCollection} from '@open-factory/editor-core';
+import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
 
 interface MediaCardExtras {
   favoriteIds: Set<string>;

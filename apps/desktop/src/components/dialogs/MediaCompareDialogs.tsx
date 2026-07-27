@@ -1,8 +1,8 @@
-import { lazy, Suspense } from 'react';
-import type { Project, MediaVersionCompareRequest, SyncCompareClipRef } from '@open-factory/editor-core';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
-import { PanelLoading } from '../PanelLoading';
+import {lazy, Suspense} from 'react';
+import type {Project, SyncCompareClipRef} from '@open-factory/editor-core';
+import {useEditorUIStore} from '../../store/editorUIStore';
+import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import {PanelLoading} from '../PanelLoading';
 
 const ThumbnailGeneratorDialog = lazy(() =>
   import('../../thumbnail/ThumbnailGeneratorDialog').then((m) => ({ default: m.ThumbnailGeneratorDialog })),

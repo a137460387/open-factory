@@ -1,14 +1,12 @@
-import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from 'react';
-import type { ClipMask, ReviewAnnotation } from '@open-factory/editor-core';
-import { isPathMaskClosed } from '@open-factory/editor-core';
-import type { EditableCanvasClip } from './types';
-import { canvasPointStyle, canvasBoxStyle, canvasHandleCursor, buildCanvasPathMaskSvgPath, resolvePathHandle, pathPointToCanvasPoint, rgbCss } from './utils';
-import { CANVAS_TRANSFORM_HANDLES, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT } from './types';
-import { zhCN } from '../../i18n/strings';
-import type { CanvasTransformDrag, PathMaskDrag, ReviewAnnotationDrag } from './types';
-import type { CanvasTransformHandle, CanvasPoint } from '@open-factory/editor-core';
-import { buildClipTransformBox } from '@open-factory/editor-core';
-
+import type {PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent} from 'react';
+import type {ClipMask, ReviewAnnotation} from '@open-factory/editor-core';
+import {isPathMaskClosed} from '@open-factory/editor-core';
+import type {EditableCanvasClip} from './types';
+import {canvasPointStyle, canvasBoxStyle, canvasHandleCursor, buildCanvasPathMaskSvgPath, resolvePathHandle, pathPointToCanvasPoint, rgbCss} from './utils';
+import {CANVAS_TRANSFORM_HANDLES, PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT} from './types';
+import {zhCN} from '../../i18n/strings';
+import type {CanvasTransformDrag, PathMaskDrag} from './types';
+import type {CanvasTransformHandle} from '@open-factory/editor-core';
 export interface PreviewOverlayProps {
   safeFrameGuides: boolean;
   reviewMode: boolean;
@@ -511,7 +509,7 @@ function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: stri
 }
 
 // Helper imports for compare styles
-import { buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle } from '../../lib/preview/compare';
+import {buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle} from '../../lib/preview/compare';
 
 function buildPreviewCompareOverlayStyle2(mode: string, ratio: number) {
   return buildPreviewCompareOverlayStyle(mode as any, ratio);
@@ -522,7 +520,7 @@ function buildPreviewCompareDividerStyle2(mode: string, ratio: number) {
 }
 
 // Additional imports needed by inline components
-import { useRef, useMemo, useEffect } from 'react';
-import { ApplyMulticamAiCutSuggestionsCommand, getActiveMulticamAngle, buildMulticamSwitchHistory, findFrequentMulticamSwitchWarnings, secondsToTimecode } from '@open-factory/editor-core';
-import { commandManager, projectAccessor } from '../../store/commandManager';
-import { PreviewRenderer } from '../../lib/preview/renderer';
+import {useRef, useMemo, useEffect} from 'react';
+import {ApplyMulticamAiCutSuggestionsCommand, getActiveMulticamAngle, buildMulticamSwitchHistory, findFrequentMulticamSwitchWarnings, secondsToTimecode} from '@open-factory/editor-core';
+import {commandManager, projectAccessor} from '../../store/commandManager';
+import {PreviewRenderer} from '../../lib/preview/renderer';

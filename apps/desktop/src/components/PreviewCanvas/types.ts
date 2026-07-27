@@ -1,23 +1,10 @@
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
-import type {
-  CanvasPoint,
-  CanvasTransformHandle,
-  ChromaKeyColor,
-  Clip,
-  ClipMask,
-  ClipPatch,
-  ClipTransformBox,
-  PathPoint,
-  PathPointHandle,
-  Project,
-  ReviewAnnotationType,
-  Transform,
-} from '@open-factory/editor-core';
-import type { PreviewPixelCoordinates } from '../../lib/preview/frame-inspector';
-import type { PreviewCompareMode } from '../../lib/preview/compare';
-import type { GpuPreviewMetrics } from '../../lib/preview/gpu-acceleration';
-import type { PreviewPerformanceSettings } from '../../lib/preview/preview-performance';
-import type { PreviewRenderer, PreviewFrameReadback } from '../../lib/preview/renderer';
+import type {CSSProperties, PointerEvent as ReactPointerEvent} from 'react';
+import type {CanvasPoint, CanvasTransformHandle, ChromaKeyColor, Clip, ClipPatch, ClipTransformBox, PathPoint, PathPointHandle, ReviewAnnotationType, Transform} from '@open-factory/editor-core';
+import type {PreviewPixelCoordinates} from '../../lib/preview/frame-inspector';
+import type {PreviewCompareMode} from '../../lib/preview/compare';
+import type {GpuPreviewMetrics} from '../../lib/preview/gpu-acceleration';
+import type {PreviewPerformanceSettings} from '../../lib/preview/preview-performance';
+import type {PreviewRenderer, PreviewFrameReadback} from '../../lib/preview/renderer';
 
 export const PREVIEW_CANVAS_WIDTH = 1280;
 export const PREVIEW_CANVAS_HEIGHT = 720;

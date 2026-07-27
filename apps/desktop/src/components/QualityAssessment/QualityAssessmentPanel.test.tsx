@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {describe, it, expect, vi, beforeEach} from 'vitest';
+import {render} from '@testing-library/react';
 import React from 'react';
 
 // Mock Tauri bridge
@@ -46,7 +46,7 @@ vi.mock('@open-factory/editor-core', () => ({
   mapScoreToEnhancedGrade: vi.fn(() => 'A'),
 }));
 
-import { QualityAssessmentPanel } from './QualityAssessmentPanel';
+import {QualityAssessmentPanel} from './QualityAssessmentPanel';
 
 const mockProject = {
   id: 'proj-1',

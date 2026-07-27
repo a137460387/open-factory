@@ -1,33 +1,7 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import {
-  ZoomIn,
-  Settings,
-  Play,
-  Pause,
-  Download,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Gauge,
-  Sparkles,
-  Monitor,
-  X,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import type {
-  UpscaleFactor,
-  SuperResolutionModel,
-  SuperResolutionConfig,
-  SuperResolutionResult,
-  GPUMode,
-} from '@open-factory/editor-core/ai/super-resolution';
-import {
-  createDefaultSuperResolutionConfig,
-  validateSuperResolutionConfig,
-  selectOptimalModel,
-  evaluateQuality,
-} from '@open-factory/editor-core/ai/super-resolution';
+import React, {useState, useCallback, useRef, useEffect, useMemo} from 'react';
+import {Settings, Loader2, AlertCircle, Gauge, Sparkles, X, ChevronDown, ChevronUp} from 'lucide-react';
+import type {UpscaleFactor, SuperResolutionModel, SuperResolutionConfig, SuperResolutionResult, GPUMode} from '@open-factory/editor-core/ai/super-resolution';
+import {createDefaultSuperResolutionConfig, validateSuperResolutionConfig} from '@open-factory/editor-core/ai/super-resolution';
 
 /** 超分辨率预览面板属性 */
 export interface SuperResolutionPreviewProps {

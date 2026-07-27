@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from 'react';
-import { Loader2, Mic, Users, Play, Download, X, AlertCircle, CheckCircle } from 'lucide-react';
-import { useSpeakerDiarization } from '../../hooks/useSpeakerDiarization';
-import type { SpeakerDiarizationConfig } from '@open-factory/editor-core/ai/speaker-diarization';
+import React, {useState, useCallback} from 'react';
+import {Loader2, Mic, Users, X, AlertCircle, CheckCircle} from 'lucide-react';
+import {useSpeakerDiarization} from '../../hooks/useSpeakerDiarization';
+import type {SpeakerDiarizationConfig} from '@open-factory/editor-core/ai/speaker-diarization';
 
 /** 说话人分离面板属性 */
 export interface SpeakerDiarizationPanelProps {

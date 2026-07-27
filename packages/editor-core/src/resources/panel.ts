@@ -4,28 +4,11 @@
  * Manages resource state, proxy generation, and cleanup recommendations.
  */
 
-import type {
-  ResourceConfig,
-  ResourceFile,
-  ProxyFile,
-  DuplicateGroup,
-  CacheEntry,
-  ResourceStats,
-  ResourceReport,
-  CleanupRecommendation,
-} from '../resources/types';
+import type {ResourceConfig, ResourceFile, ProxyFile, DuplicateGroup, CacheEntry, ResourceStats, ResourceReport, CleanupRecommendation} from '../resources/types';
 
-import { DEFAULT_RESOURCE_CONFIG } from '../resources/types';
+import {DEFAULT_RESOURCE_CONFIG} from '../resources/types';
 
-import {
-  detectDuplicates,
-  identifyUnusedFiles,
-  analyzeCache,
-  generateResourceReport,
-  calculateResourceStats,
-  formatSize,
-  formatDurationMs,
-} from '../resources/manager';
+import {detectDuplicates, formatSize} from '../resources/manager';
 
 // ─── Panel State ────────────────────────────────────────────────
 

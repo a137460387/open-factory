@@ -3,9 +3,9 @@
  *
  * 支持拖拽手柄、选中切换、优先级/置信度展示。
  */
-import type { DragEvent } from 'react';
-import type { SmartRoughCutSuggestion, SmartRoughCutSuggestionType } from '@open-factory/editor-core';
-import { round } from '@open-factory/editor-core';
+import type {DragEvent} from 'react';
+import type {SmartRoughCutSuggestion, SmartRoughCutSuggestionType} from '@open-factory/editor-core';
+import {round} from '@open-factory/editor-core';
 
 const TYPE_ICONS: Record<SmartRoughCutSuggestionType, string> = {
   scene_split: '🎬',

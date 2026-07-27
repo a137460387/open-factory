@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Users, Video, Settings, Play, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { useSpeakerMulticam } from '../../hooks/useSpeakerMulticam';
-import type { SpeakerDiarizationResult } from '@open-factory/editor-core/ai/speaker-diarization';
-import type { MulticamClip, MulticamSequence, MulticamClipAngle } from '@open-factory/editor-core';
-import { formatTime } from '@open-factory/editor-core';
+import React, {useState, useCallback, useEffect} from 'react';
+import {Users, Video, Settings, Play, X, AlertCircle, Loader2} from 'lucide-react';
+import {useSpeakerMulticam} from '../../hooks/useSpeakerMulticam';
+import type {SpeakerDiarizationResult} from '@open-factory/editor-core/ai/speaker-diarization';
+import type {MulticamClip, MulticamSequence} from '@open-factory/editor-core';
+import {formatTime} from '@open-factory/editor-core';
 
 /** 说话人-多机位面板属性 */
 export interface SpeakerMulticamPanelProps {

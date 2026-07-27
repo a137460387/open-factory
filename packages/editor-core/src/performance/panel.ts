@@ -4,29 +4,11 @@
  * Manages real-time metrics, task analysis, and optimization recommendations.
  */
 
-import type {
-  MonitorConfig,
-  SystemMetrics,
-  TaskMetrics,
-  Bottleneck,
-  OptimizationRecommendation,
-  PerformanceTrend,
-  PerformanceDashboard,
-} from '../performance/types';
+import type {MonitorConfig, SystemMetrics, TaskMetrics, Bottleneck, OptimizationRecommendation} from '../performance/types';
 
-import { DEFAULT_MONITOR_CONFIG } from '../performance/types';
+import {DEFAULT_MONITOR_CONFIG} from '../performance/types';
 
-import {
-  collectSystemMetrics,
-  detectBottlenecks,
-  analyzeTaskPerformance,
-  generateOptimizations,
-  generateDashboard,
-  calculateTrend,
-  calculatePerformanceScore,
-  checkThreshold,
-  formatMetric,
-} from '../performance/monitor';
+import {collectSystemMetrics, detectBottlenecks, generateOptimizations, calculatePerformanceScore, checkThreshold} from '../performance/monitor';
 
 // ─── Panel State ────────────────────────────────────────────────
 

@@ -12,8 +12,8 @@
  * - 平台特定优化（如抖音前3秒强吸引）
  */
 
-import type { DistributionPlatformSpec, DistributionPlatformId } from './platform-presets';
-import { getDistributionPlatform, DISTRIBUTION_PLATFORMS } from './platform-presets';
+import type {DistributionPlatformSpec, DistributionPlatformId} from './platform-presets';
+import {getDistributionPlatform} from './platform-presets';
 
 // ─── 节奏风格 ────────────────────────────────────────────
 

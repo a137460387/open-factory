@@ -1,19 +1,5 @@
-import {
-  normalizeSubtitleStyleTemplateStyle,
-  type SubtitleStyleTemplate,
-  type TimelineTemplateDefinition,
-} from '@open-factory/editor-core';
-import {
-  createSharedLibraryArchive,
-  fsExists,
-  getAppDataDir,
-  importSharedLibraryArchive,
-  readFile,
-  writeFile,
-  type SharedLibraryArchiveFileEntry,
-  type SharedLibraryArchiveResult,
-  type SharedLibraryImportResult,
-} from '../lib/tauri-bridge';
+import {normalizeSubtitleStyleTemplateStyle, type SubtitleStyleTemplate} from '@open-factory/editor-core';
+import {createSharedLibraryArchive, fsExists, getAppDataDir, importSharedLibraryArchive, readFile, writeFile, type SharedLibraryArchiveFileEntry, type SharedLibraryArchiveResult, type SharedLibraryImportResult} from '../lib/tauri-bridge';
 
 type SharedLibraryResourceType =
   | 'export-preset'

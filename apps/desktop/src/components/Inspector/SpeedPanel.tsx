@@ -1,25 +1,9 @@
 import React from 'react';
-import {
-  CLIP_SLOW_MOTION_MODES,
-  FRAME_INTERPOLATION_MODES,
-  FRAME_INTERPOLATION_TARGET_FPS,
-  MAX_CLIP_SPEED,
-  MIN_CLIP_SPEED,
-  getClipSpeed,
-  frameInterpolationCompareModeToSlowMotionMode,
-  type ClipSlowMotionMode,
-  type FrameInterpolationMode,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import {
-  Section,
-  NumberField,
-  RangeNumberField,
-  ToggleField,
-  AnimatedField,
-} from './InspectorFields';
-import { SpeedCurveEditor, formatEstimatedDuration } from './InspectorEditors';
-import type { ClipInspectorBodyProps } from './ClipInspectorBody';
+import {CLIP_SLOW_MOTION_MODES, FRAME_INTERPOLATION_MODES, FRAME_INTERPOLATION_TARGET_FPS, MAX_CLIP_SPEED, MIN_CLIP_SPEED, getClipSpeed, frameInterpolationCompareModeToSlowMotionMode, type ClipSlowMotionMode, type FrameInterpolationMode} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {Section, NumberField, RangeNumberField, ToggleField, AnimatedField} from './InspectorFields';
+import {SpeedCurveEditor, formatEstimatedDuration} from './InspectorEditors';
+import type {ClipInspectorBodyProps} from './ClipInspectorBody';
 
 export function SpeedPanel({
   clip,

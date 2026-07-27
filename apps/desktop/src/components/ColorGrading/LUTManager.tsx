@@ -1,8 +1,8 @@
-import { logger } from '@open-factory/editor-core/utils';
-import React, { useCallback, useState, useRef } from 'react';
-import type { ColorGradingLUTLayer, LUTLibraryEntry } from '@open-factory/editor-core/color-grading/lut';
-import { createColorGradingLUTLayer } from '@open-factory/editor-core/color-grading/lut';
-import { parseCubeFile, parse3dlFile } from '@open-factory/editor-core/color-grading/lut-parser';
+import {logger} from '@open-factory/editor-core/utils';
+import React, {useCallback, useState, useRef} from 'react';
+import type {ColorGradingLUTLayer, LUTLibraryEntry} from '@open-factory/editor-core/color-grading/lut';
+import {createColorGradingLUTLayer} from '@open-factory/editor-core/color-grading/lut';
+import {parseCubeFile, parse3dlFile} from '@open-factory/editor-core/color-grading/lut-parser';
 
 interface LUTManagerProps {
   layers: ColorGradingLUTLayer[];

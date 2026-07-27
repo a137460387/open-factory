@@ -1,13 +1,13 @@
-import { lazy, Suspense } from 'react';
-import { getTimelineDuration } from '@open-factory/editor-core';
-import type { Project, Clip } from '@open-factory/editor-core';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
-import type { TimelineShortcutBindings } from '../../shortcuts/timeline-shortcuts';
-import type { ClipMacro, MacroHistoryEntry } from '../../macros/clip-macros';
-import type { PreviewPerformanceSettings, PreviewSkipFrames } from '../../lib/preview/preview-performance';
-import type { TimelineInteractionSettings } from '../../settings/appSettings';
-import { PanelLoading } from '../PanelLoading';
+import {lazy, Suspense} from 'react';
+import {getTimelineDuration} from '@open-factory/editor-core';
+import type {Project, Clip} from '@open-factory/editor-core';
+import {useEditorUIStore} from '../../store/editorUIStore';
+import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import type {TimelineShortcutBindings} from '../../shortcuts/timeline-shortcuts';
+import type {ClipMacro} from '../../macros/clip-macros';
+import type {PreviewPerformanceSettings, PreviewSkipFrames} from '../../lib/preview/preview-performance';
+import type {TimelineInteractionSettings} from '../../settings/appSettings';
+import {PanelLoading} from '../PanelLoading';
 
 const SettingsDialog = lazy(() => import('../../settings/SettingsDialog').then((m) => ({ default: m.SettingsDialog })));
 const MacroHistoryDialog = lazy(() =>

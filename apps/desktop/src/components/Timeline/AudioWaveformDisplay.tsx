@@ -8,13 +8,9 @@
  * keeping the main thread free during playback.
  */
 
-import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
-import type {
-  AudioRhythmResult,
-  SpectrumFrame,
-  OnsetEvent,
-} from '@open-factory/editor-core/audio-rhythm-analysis';
-import { formatTimeShort } from '@open-factory/editor-core';
+import {useRef, useEffect, useCallback, useState} from 'react';
+import type {AudioRhythmResult, SpectrumFrame} from '@open-factory/editor-core/audio-rhythm-analysis';
+import {formatTimeShort} from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types

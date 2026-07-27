@@ -8,7 +8,7 @@
  * 4. 减少无效重绘 - 脏区域检测与批量更新
  */
 
-import type { Timeline, MediaAsset, Clip } from '../model';
+import type {Timeline, MediaAsset, Clip} from '../model';
 
 // ==================== 类型定义 ====================
 

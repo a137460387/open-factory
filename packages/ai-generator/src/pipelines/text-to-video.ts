@@ -3,15 +3,9 @@
  */
 /* eslint-disable no-console */
 
-import type {
-  TextToVideoOptions,
-  TextToVideoResult,
-  VideoMetadata,
-  ComputeEngine,
-  ModelPrecision,
-} from '../types.js';
-import { getConfig } from '../config.js';
-import { modelManager } from '../models/model-manager.js';
+import type {TextToVideoOptions, TextToVideoResult, VideoMetadata, ComputeEngine} from '../types.js';
+import {getConfig} from '../config.js';
+import {modelManager} from '../models/model-manager.js';
 
 const PREFIX = '[open-factory]';
 const logger = {  

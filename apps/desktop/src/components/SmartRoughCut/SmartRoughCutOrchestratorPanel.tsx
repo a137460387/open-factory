@@ -4,39 +4,23 @@
  * 统一工作流：一键运行全部 AI 分析 → 预览建议 → 拖拽调整 → 一键应用到时间线。
  * 遵循 v4.26.0 模块化架构：独立 Store + 子组件 + lazy chunk。
  */
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import type { Clip, MediaAsset, SmartRoughCutAnalysisData, SmartRoughCutSuggestion } from '@open-factory/editor-core';
-import { getSelectedSuggestions, buildOrchestrationInput } from '@open-factory/editor-core';
-import {
-  AddTrackCommand,
-  BrollInsertCommand,
-  DialogueRoughCutCommand,
-  RemoveSilenceCommand,
-  RhythmAssembleCommand,
-  SplitClipAtTimesCommand,
-  buildBrollInsertClips,
-  createTrack,
-  getClipSpeed,
-  round,
-} from '@open-factory/editor-core';
-import type { Timeline, Track, SilentRange, SmartRoughCutVisualClip } from '@open-factory/editor-core';
-import { detectClipDialogue } from '../../lib/dialogueDetection';
-import { detectClipSilence } from '../../lib/silenceDetection';
-import { detectSceneChanges } from '../../lib/tauri-bridge';
-import {
-  buildWhisperSubtitleTrackForClip,
-  canGenerateSubtitlesForClip,
-  getWhisperAvailability,
-  type WhisperAvailability,
-} from '../../lib/whisper';
-import { showToast } from '../../lib/toast';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { useEditorStore } from '../../store/editorStore';
-import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { useSmartRoughCutOrchestratorStore, type OrchestratorPhase } from '../../store/smartRoughCutOrchestratorStore';
-import { WorkflowStepper } from './WorkflowStepper';
-import { SuggestionList } from './SuggestionList';
-import { OrchestrationReport } from './OrchestrationReport';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import type {Clip, MediaAsset, SmartRoughCutAnalysisData} from '@open-factory/editor-core';
+import {getSelectedSuggestions} from '@open-factory/editor-core';
+import {DialogueRoughCutCommand, RemoveSilenceCommand, RhythmAssembleCommand, SplitClipAtTimesCommand, getClipSpeed, round} from '@open-factory/editor-core';
+import type {SilentRange} from '@open-factory/editor-core';
+import {detectClipDialogue} from '../../lib/dialogueDetection';
+import {detectClipSilence} from '../../lib/silenceDetection';
+import {detectSceneChanges} from '../../lib/tauri-bridge';
+import {buildWhisperSubtitleTrackForClip, canGenerateSubtitlesForClip, getWhisperAvailability, type WhisperAvailability} from '../../lib/whisper';
+import {showToast} from '../../lib/toast';
+import {commandManager, timelineAccessor} from '../../store/commandManager';
+import {useEditorStore} from '../../store/editorStore';
+import {useWhisperSettingsStore} from '../../store/whisperSettingsStore';
+import {useSmartRoughCutOrchestratorStore} from '../../store/smartRoughCutOrchestratorStore';
+import {WorkflowStepper} from './WorkflowStepper';
+import {SuggestionList} from './SuggestionList';
+import {OrchestrationReport} from './OrchestrationReport';
 
 interface SmartRoughCutOrchestratorPanelProps {
   selectedClip?: Clip;

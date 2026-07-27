@@ -1,39 +1,12 @@
-import { logger } from '@open-factory/editor-core/utils';
-import { useState, useCallback, useMemo } from 'react';
-import type { Workflow, WorkflowTemplate, WorkflowStatus, WorkflowLogEntry } from '@open-factory/editor-core';
-import {
-  WorkflowEngine,
-  createDefaultWorkflow,
-  createDefaultStep,
-  createDefaultTrigger,
-  createDefaultAction,
-  BUILTIN_TEMPLATES,
-} from '@open-factory/editor-core';
-import {
-  Play,
-  Pause,
-  Square,
-  Plus,
-  Trash2,
-  Copy,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Zap,
-  FileText,
-  Workflow as WorkflowIcon,
-  Wand2,
-} from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
-import { SceneAnalysisView } from './SceneAnalysisView';
-import { AutoGeneratePanel } from './AutoGeneratePanel';
-import { Label } from '../ui/label';
-
+import {logger} from '@open-factory/editor-core/utils';
+import {useState, useCallback, useMemo} from 'react';
+import type {Workflow, WorkflowTemplate, WorkflowStatus, WorkflowLogEntry} from '@open-factory/editor-core';
+import {WorkflowEngine, createDefaultWorkflow, createDefaultStep, BUILTIN_TEMPLATES} from '@open-factory/editor-core';
+import {Play, Pause, Square, Plus, Trash2, ChevronDown, ChevronRight, Clock, CheckCircle, XCircle, Zap, FileText, Workflow as WorkflowIcon} from 'lucide-react';
+import {cn} from '../../lib/utils';
+import {Button} from '../ui/button';
+import {SceneAnalysisView} from './SceneAnalysisView';
+import {AutoGeneratePanel} from './AutoGeneratePanel';
 /* ------------------------------------------------------------------ */
 /*  状态样式                                                           */
 /* ------------------------------------------------------------------ */

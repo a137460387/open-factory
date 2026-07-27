@@ -1,5 +1,3 @@
-import type { ExportSettings } from './export-types';
-
 /**
  * 当前导出预设 schema 版本号。
  * 每次新增必填字段或废弃旧字段时递增。

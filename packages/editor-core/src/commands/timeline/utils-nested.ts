@@ -1,15 +1,15 @@
-import { ColorGradingGraph, createEmptyColorGradingGraph } from '../../color-grading/types';
-import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../../credits-roll';
-import { cloneEffects } from '../../effects';
-import { cloneClipKeyframes, normalizeClipKeyframes } from '../../keyframes';
-import { CollaborationNote, DEFAULT_NESTED_SEQUENCE_NAME, Project, ProjectAnnotation, ReviewAnnotation, Timeline, TimelineBookmark, TimelineMarker, TimelineNote, Track, createId, createNestedSequenceClip, createSequence, createTrack, normalizeAudioDenoise, normalizeChromaKey, normalizeClipPanoramaView, normalizeClipProjection, normalizeCollaborationNotes, normalizeColorCorrection, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizeQualityEnhancement, normalizeSequenceFrameRate, normalizeSlowMotionMode, normalizeStabilization, normalizeTextPath, normalizeTimelineNotes, normalizeVideoRestoration, replaceProjectActiveTimeline } from '../../model';
-import type { Clip } from '../../model';
-import { normalizeMotionGraphic } from '../../motion-graphics';
-import { setMulticamSwitch, trimMulticamSwitch } from '../../multicam';
-import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../../text-layout';
-import { round } from '../../time';
-import { areClipsAdjacent, calculateSpeedCurveSourceDuration, getClipDisplayDuration, getClipSpeed, moveClip, replaceClip, trimClip } from '../../timeline';
-import { findClip, findClipLocation, findTrack, getClipTotalSourceDuration, timelineHasOverlaps } from './utils';
+import {ColorGradingGraph, createEmptyColorGradingGraph} from '../../color-grading/types';
+import {normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle} from '../../credits-roll';
+import {cloneEffects} from '../../effects';
+import {cloneClipKeyframes, normalizeClipKeyframes} from '../../keyframes';
+import {CollaborationNote, DEFAULT_NESTED_SEQUENCE_NAME, Project, ProjectAnnotation, ReviewAnnotation, Timeline, TimelineBookmark, TimelineMarker, TimelineNote, createId, createNestedSequenceClip, createSequence, createTrack, normalizeAudioDenoise, normalizeChromaKey, normalizeClipPanoramaView, normalizeClipProjection, normalizeCollaborationNotes, normalizeColorCorrection, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizeQualityEnhancement, normalizeSequenceFrameRate, normalizeSlowMotionMode, normalizeStabilization, normalizeTextPath, normalizeTimelineNotes, normalizeVideoRestoration, replaceProjectActiveTimeline} from '../../model';
+import type {Clip} from '../../model';
+import {normalizeMotionGraphic} from '../../motion-graphics';
+import {setMulticamSwitch, trimMulticamSwitch} from '../../multicam';
+import {normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures} from '../../text-layout';
+import {round} from '../../time';
+import {areClipsAdjacent, calculateSpeedCurveSourceDuration, getClipDisplayDuration, getClipSpeed, moveClip, replaceClip, trimClip} from '../../timeline';
+import {findClip, findClipLocation, findTrack, getClipTotalSourceDuration, timelineHasOverlaps} from './utils';
 
 export function buildRollingTrimClips(
   left: Clip,

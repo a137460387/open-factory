@@ -6,19 +6,7 @@
  */
 
 import Decimal from 'decimal.js';
-import type {
-  Revenue,
-  RevenueType,
-  BillItem,
-  WithdrawalRequest,
-  WithdrawalStatus,
-  CommissionTier,
-  CreatorTier,
-  CreatorProgramConfig,
-  ApiResponse,
-  PaginatedResponse,
-  TimeRange
-} from './types';
+import type {Revenue, BillItem, WithdrawalRequest, CommissionTier, CreatorTier, CreatorProgramConfig, ApiResponse, PaginatedResponse} from './types';
 
 /** Default commission tiers configuration */
 const DEFAULT_COMMISSION_TIERS: CommissionTier[] = [

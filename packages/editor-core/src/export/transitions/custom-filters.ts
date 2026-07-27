@@ -3,10 +3,10 @@
  * @module transitions/custom-filters
  */
 
-import type { TransitionType } from '../../model-types';
-import { formatFfmpegSeconds } from '../ffmpeg-escape';
-import { formatFfmpegNumber } from '../ffmpeg-builder/utils';
-import { getTransitionDefinition } from './transition-registry';
+import type {TransitionType} from '../../model-types';
+import {formatFfmpegSeconds} from '../ffmpeg-escape';
+import {formatFfmpegNumber} from '../ffmpeg-builder/utils';
+import {getTransitionDefinition} from './transition-registry';
 
 /** 自定义滤镜生成选项 */
 export interface CustomFilterOptions {

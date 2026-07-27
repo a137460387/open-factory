@@ -1,13 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type {
-  MediaAsset,
-  TranscriptionSegment,
-  TranscriptionLanguage,
-  TranscriptionProgressEvent,
-} from '@open-factory/editor-core';
-import { parseWhisperSrt, processWhisperOutput } from '@open-factory/editor-core';
-import type { ASRState } from './useSubtitleWorkflow';
-import { zhCN } from '../../i18n/strings';
+import {useState, useEffect, useRef, useCallback} from 'react';
+import type {MediaAsset, TranscriptionSegment, TranscriptionLanguage, TranscriptionProgressEvent} from '@open-factory/editor-core';
+import {processWhisperOutput} from '@open-factory/editor-core';
+import type {ASRState} from './useSubtitleWorkflow';
+import {zhCN} from '../../i18n/strings';
 
 const t = zhCN.aiSubtitleWorkflow;
 

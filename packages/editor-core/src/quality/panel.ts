@@ -4,24 +4,11 @@
  * Manages inspection state, progress tracking, and result presentation.
  */
 
-import type {
-  InspectorConfig,
-  QualityReport,
-  InspectorQualityIssue,
-  IssueSeverity,
-  IssueCategory,
-} from '../quality/types';
+import type {InspectorConfig, QualityReport, InspectorQualityIssue, IssueSeverity, IssueCategory} from '../quality/types';
 
-import {
-  DEFAULT_INSPECTOR_CONFIG,
-  PLATFORM_SPECS,
-} from '../quality/types';
+import {DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS} from '../quality/types';
 
-import {
-  runQualityInspection,
-  formatTime,
-  scoreToGrade,
-} from '../quality/inspector';
+import {formatTime} from '../quality/inspector';
 
 // ─── Panel State ────────────────────────────────────────────────
 

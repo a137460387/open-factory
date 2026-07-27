@@ -1,11 +1,11 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { BatchEditableMediaMetadata } from '../../media-batch';
-import { Project, normalizeMediaMetadataEntry } from '../../model';
-import { ProjectHealthAutoRepairInput, ProjectHealthRepairReport, applyProjectHealthAutoRepair } from '../../project/project-health-repair';
-import { ProxyMigrationUpdate, applyProxyMigration } from '../../proxy/proxy-management';
-import { Command } from '../command';
-import { touchProject } from './utils';
-import { assertMediaAssetsExist, collectProjectMediaIds, mergeMediaReferences, normalizeAssetIdSet, removeMediaAssets } from './utils-media';
+import type {ProjectAccessor} from './index';
+import {BatchEditableMediaMetadata} from '../../media-batch';
+import {Project, normalizeMediaMetadataEntry} from '../../model';
+import {ProjectHealthAutoRepairInput, ProjectHealthRepairReport, applyProjectHealthAutoRepair} from '../../project/project-health-repair';
+import {ProxyMigrationUpdate, applyProxyMigration} from '../../proxy/proxy-management';
+import {Command} from '../command';
+import {touchProject} from './utils';
+import {assertMediaAssetsExist, collectProjectMediaIds, mergeMediaReferences, normalizeAssetIdSet, removeMediaAssets} from './utils-media';
 
 export class RemoveMediaCommand implements Command {
   readonly description = 'Remove media';

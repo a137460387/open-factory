@@ -1,49 +1,17 @@
-import { normalizeSubtitleLanguage, normalizeTextPath, type TextStyle } from '../../model';
-import {
-  buildCustomShaderFragmentSource,
-  getEnabledCustomShaderEffect,
-  normalizeCustomShaderParams,
-} from '../../effects';
-import {
-  buildArcTextLayout,
-  buildRichTextDrawSegments,
-  calculateTextAutoLayout,
-  formatOpenTypeFeatureList,
-  normalizeTextArc,
-  normalizeTextLayout,
-  normalizeTextOpenTypeFeatures,
-  richTextToPlainText,
-} from '../../text-layout';
-import { buildPathTextFrameLayouts } from '../../text-path';
-import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../../credits-roll';
-import {
-  serializeSubtitleCueInputsToAss,
-  serializeSubtitleCueInputsToSrt,
-  serializeSubtitleCueInputsToVtt,
-  type SubtitleCueInput,
-} from '../../subtitles/srt';
-import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../../data-subtitle';
-import { MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic } from '../../motion-graphics';
-import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath } from '../ffmpeg-escape';
-import type {
-  ExportClip,
-  ExportAudioVisualizationBackground,
-  ExportAudioVisualizationSettings,
-  ExportSubtitleFormat,
-  ExportSettings,
-  ExportTimeline,
-  TextArtifact,
-} from '../export-types';
-import { formatFfmpegNumber, safeLabel, getAnimatedFrames, buildTimelineExpression } from './utils';
-import {
-  CUSTOM_SHADER_SEQUENCE_KIND,
-  PATH_TEXT_SEQUENCE_KIND,
-  MOTION_GRAPHIC_SEQUENCE_PATH_MODE,
-} from './settings-normalize';
-import { resolveExportAudioVisualizationTheme } from './audio-visualization';
-import { buildOpacityFilters } from './visual-filters';
-import { expandAudioVisualizationTheme, type ExpandedAudioVisualizationTheme } from '../../audio-visualization-themes';
-
+import {normalizeSubtitleLanguage, normalizeTextPath, type TextStyle} from '../../model';
+import {buildCustomShaderFragmentSource, getEnabledCustomShaderEffect, normalizeCustomShaderParams} from '../../effects';
+import {buildArcTextLayout, buildRichTextDrawSegments, calculateTextAutoLayout, formatOpenTypeFeatureList, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, richTextToPlainText} from '../../text-layout';
+import {buildPathTextFrameLayouts} from '../../text-path';
+import {buildCreditsRollYExpression, formatCreditsRowsForTextfile} from '../../credits-roll';
+import {serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput} from '../../subtitles/srt';
+import {normalizeDataSubtitleSource, resolveDataSubtitleText} from '../../data-subtitle';
+import {MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic} from '../../motion-graphics';
+import {cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath} from '../ffmpeg-escape';
+import type {ExportClip, ExportAudioVisualizationBackground, ExportAudioVisualizationSettings, ExportSubtitleFormat, ExportSettings, ExportTimeline, TextArtifact} from '../export-types';
+import {formatFfmpegNumber, safeLabel, getAnimatedFrames, buildTimelineExpression} from './utils';
+import {CUSTOM_SHADER_SEQUENCE_KIND, PATH_TEXT_SEQUENCE_KIND, MOTION_GRAPHIC_SEQUENCE_PATH_MODE} from './settings-normalize';
+import {resolveExportAudioVisualizationTheme} from './audio-visualization';
+import {buildOpacityFilters} from './visual-filters';
 // ---------------------------------------------------------------------------
 // Input builders
 // ---------------------------------------------------------------------------

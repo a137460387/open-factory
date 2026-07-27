@@ -1,8 +1,4 @@
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import type { DemucsAvailability } from '../lib/demucs';
-import type { AutoAudioSyncResult, AutoAudioSyncApplyMode } from '@open-factory/editor-core';
-import type { OperationRecordingFile, OperationReplaySpeed, PerformanceProfilerReport } from '@open-factory/editor-core';
-
+import {useEditorFeatureStore} from '../store/editorFeatureStore';
 /**
  * Feature store selectors，优化 feature store 订阅。
  */

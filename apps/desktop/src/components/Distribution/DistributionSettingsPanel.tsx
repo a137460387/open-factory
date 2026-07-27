@@ -5,22 +5,12 @@
  * publish time optimization, and A/B testing management.
  */
 
-import React, { useState, useMemo } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
-import type {
-  DistributionPlatformSpec,
-  DistributionPlatformId,
-} from '@open-factory/editor-core';
-import type {
-  DistributionContentAnalysis,
-  PublishTimePrediction,
-  ABTest,
-  DistributionInsight,
-} from '@open-factory/editor-core';
+import React, {useState} from 'react';
+import {Button} from '../ui/button';
+import {Tabs, TabsList, TabsTrigger, TabsContent} from '../ui/tabs';
+import {Switch} from '../ui/switch';
+import type {DistributionPlatformSpec, DistributionPlatformId} from '@open-factory/editor-core';
+import type {DistributionContentAnalysis, PublishTimePrediction, ABTest, DistributionInsight} from '@open-factory/editor-core';
 
 // ─── Types ────────────────────────────────────────────
 

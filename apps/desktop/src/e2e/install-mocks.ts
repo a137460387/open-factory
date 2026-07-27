@@ -1,51 +1,16 @@
-import {
-  AddKeyframeCommand,
-  DEFAULT_CLIP_SPEED,
-  DEFAULT_COLOR_CORRECTION,
-  DEFAULT_SUBTITLE_MODE,
-  DEFAULT_SUBTITLE_STYLE,
-  DEFAULT_TRANSFORM,
-  DEFAULT_PRIMARY_SEQUENCE_NAME,
-  PRIMARY_SEQUENCE_ID,
-  createProject,
-  createTrack,
-  createVideoFingerprint,
-  type FfmpegExportPlan,
-  type KeyframeProperty,
-  type Clip,
-  type DenoiseFilterRecommendation,
-  type MediaAsset,
-  type Project,
-  type ProjectFileV2,
-  createMulticamClip,
-} from '@open-factory/editor-core';
-import { commandManager, timelineAccessor } from '../store/commandManager';
-import { useEditorUIStore } from '../store/editorUIStore';
-import { collaborationController } from '../collaboration/local-network';
-import { useCollaborationStore } from '../store/collaborationStore';
-import { useEditorStore } from '../store/editorStore';
-import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useAISettingsStore } from '../store/aiSettingsStore';
-import type {
-  BatchTranscodeTaskResult,
-  ExportPreviewSamplesResult,
-  GifExportRequest,
-  GifPreviewRequest,
-  PreviewWindowRequest,
-  PreviewWindowResolutionScale,
-  PreviewWindowState,
-  SmtpEmailRequest,
-  TauriMocks,
-  TranslationApiProvider,
-  WebhookJsonRequest,
-  WebdavExportUploadRequest,
-  WebdavProjectBackupRequest,
-  WebdavTextPutRequest,
-} from '../lib/tauri-bridge';
-import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
-import { useExportQueueStore } from '../export/export-queue-store';
-import { useMediaJobStore } from '../media/media-job-store';
+import {AddKeyframeCommand, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TRANSFORM, DEFAULT_PRIMARY_SEQUENCE_NAME, PRIMARY_SEQUENCE_ID, createProject, createTrack, createVideoFingerprint, type FfmpegExportPlan, type KeyframeProperty, type Clip, type DenoiseFilterRecommendation, type MediaAsset, type Project, type ProjectFileV2, createMulticamClip} from '@open-factory/editor-core';
+import {commandManager, timelineAccessor} from '../store/commandManager';
+import {useEditorUIStore} from '../store/editorUIStore';
+import {collaborationController} from '../collaboration/local-network';
+import {useCollaborationStore} from '../store/collaborationStore';
+import {useEditorStore} from '../store/editorStore';
+import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
+import {useEditorSettingsStore} from '../store/editorSettingsStore';
+import {useAISettingsStore} from '../store/aiSettingsStore';
+import type {BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, PreviewWindowRequest, PreviewWindowResolutionScale, PreviewWindowState, SmtpEmailRequest, TauriMocks, TranslationApiProvider, WebhookJsonRequest, WebdavExportUploadRequest, WebdavProjectBackupRequest, WebdavTextPutRequest} from '../lib/tauri-bridge';
+import {clearPluginHookLog, getPluginHookLog, refreshPluginRegistry} from '../plugins/plugin-manager';
+import {useExportQueueStore} from '../export/export-queue-store';
+import {useMediaJobStore} from '../media/media-job-store';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';

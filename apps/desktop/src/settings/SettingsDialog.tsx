@@ -1,253 +1,60 @@
-import { logger } from '@open-factory/editor-core/utils';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import {
-  FolderOpen,
-  GripVertical,
-  Play,
-  SlidersHorizontal,
-  Star,
-  X,
-  XCircle,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  buildProxyInventory,
-  buildProxyStorageTrend,
-  calculateProxyCoverageStats,
-  planProxyCleanup,
-  summarizeProxyInventory,
-  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
-  EXPORT_COLOR_SPACES,
-  PROJECT_COLOR_PIPELINES,
-  SUPPORTED_PROJECT_FPS,
-  BUILTIN_TIMELINE_SCRIPTS,
-  RunScriptCommand,
-  UpdateClipCommand,
-  UpdateProjectSettingsCommand,
-  createTimelineScriptSnapshot,
-  createEffectPresetFromClip,
-  serializeEffectPresetFile,
-  getTimelineScriptApiFunctionNames,
-  getTimelineScriptExportRequests,
-  getColorSpaceDisplayName,
-  normalizeProjectColorPipeline,
-  normalizeProjectFps,
-  normalizeProjectWorkingColorSpace,
-  normalizeTimecodeFormat,
-  normalizeVfrHandlingStrategy,
-  supportsDropFrameTimecode,
-  generateStressScenario,
-  measurePerfMetrics,
-  buildStressReport,
-  serializeStressReport,
-  type Clip,
-  type BuiltinTimelineScript,
-  type EffectPresetFilters,
-  type Project,
-  type ProjectColorPipeline,
-  type PostExportQualityAssuranceSettings,
-  type ProxyInventoryItem,
-  type TimecodeFormat,
-  type Timeline,
-  type TimelineScriptOperation,
-  type VfrHandlingStrategy,
-} from '@open-factory/editor-core';
-import type { StressScenarioId } from '@open-factory/editor-core';
-import { formatBackupDisplayTime } from '../backup/projectBackup';
-import { getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language } from '../i18n/strings';
-import { switchLanguage } from '../i18n/i18next-config';
-import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
-import { pickDemucsExecutablePath } from '../lib/demucs';
-import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import {
-  bridgeConfirm,
-  fsExists,
-  getFileStat,
-  getSystemResourceSnapshot,
-  openDirectoryDialog,
-  openFileDialog,
-  openPath,
-  readExportPresetSyncWebdavPassword,
-  readWebdavPassword,
-  writeExportPresetSyncWebdavPassword,
-  writeWebdavPassword,
-  type SystemResourceSnapshot,
-} from '../lib/tauri-bridge';
-import { showToast } from '../lib/toast';
-import {
-  PREVIEW_QUALITY_MODES,
-  PREVIEW_SKIP_FRAME_OPTIONS,
-  type PreviewPerformanceSettings,
-  type PreviewQualityMode,
-  type PreviewSkipFrames,
-} from '../lib/preview/preview-performance';
-import {
-  detectMacroShortcutConflicts,
-  exportClipMacrosToDialog,
-  getMacroSteps,
-  importClipMacrosFromDialog,
-  parseCommandSnapshotsJson,
-  serializeCommandSnapshots,
-  writeClipMacros,
-  type ClipMacro,
-  type CommandSnapshot,
-  type MacroShortcutConflict,
-} from '../macros/clip-macros';
-import {
-  getPluginRegistrySnapshot,
-  refreshPluginRegistry,
-  setPluginEnabled,
-  uninstallPlugin,
-  type LoadedPlugin,
-  type PluginRegistry,
-} from '../plugins/plugin-manager';
-import {
-  getCatalogEntryInstallState,
-  installCatalogPlugin,
-  installPluginFromFile,
-  loadPluginCatalog,
-  type PluginCatalogEntry,
-  type PluginCatalogResult,
-} from '../plugins/plugin-market';
-import { loadExportPresets, serializeExportPresetPackage } from '../export/export-presets';
-import {
-  filterPresetMarketCards,
-  installPresetMarketCard,
-  loadPresetMarket,
-  presetMarketCardHasCustomConflict,
-  readPresetMarketRatings,
-  writePresetMarketRating,
-  type PresetMarketCard,
-  type PresetMarketFilters,
-  type PresetMarketLoadResult,
-} from '../export/preset-market';
-import {
-  filterEffectPresetCommunityCards,
-  installEffectPresetCommunityCard,
-  loadEffectPresetCommunityLibrary,
-  type EffectPresetCommunityCard,
-  type EffectPresetCommunityLoadResult,
-} from '../effects/effect-preset-library';
-import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
-import { ensureMediaJobRunner } from '../media/media-job-runner';
-import { calculateMediaJobEtaSeconds, sortMediaJobsForMonitor } from '../media/media-job-monitor';
-import { useMediaJobStore, type MediaJob, type MediaJobStatus, type MediaJobType } from '../media/media-job-store';
-import { writeCustomKeybindings } from '../shortcuts/keybindings';
-import {
-  TIMELINE_SHORTCUT_DEFINITIONS,
-  detectTimelineShortcutConflicts,
-  eventToAccelerator,
-  getEffectiveTimelineShortcutBindings,
-  type TimelineShortcutAction,
-  type TimelineShortcutBindings,
-} from '../shortcuts/timeline-shortcuts';
-import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
-import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
-import { useEditorStore } from '../store/editorStore';
-import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import {
-  PROXY_RESOLUTION_PRESETS,
-  PROXY_TRIGGER_THRESHOLDS,
-  useProxySettingsStore,
-  type ProxyResolutionPreset,
-  type ProxyTriggerThreshold,
-} from '../store/proxySettingsStore';
-import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
-import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
-import { AIServicesSettingsPanel } from './AIServicesSettingsPanel';
-import { AppearanceSettingsPanel } from './AppearanceSettingsPanel';
-import { AutomationSettingsPanel } from './AutomationSettingsPanel';
-import { BackupSettingsPanel } from './BackupSettingsPanel';
-import { EffectPresetCommunityPanel } from './EffectPresetPanel';
-import { ExportPresetSyncSettingsPanel } from './ExportPresetSyncPanel';
-import { ExportQualityAssuranceSettingsPanel } from './ExportQualityAssurancePanel';
-import { ExportRulesSettingsPanel, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule } from './ExportRulesPanel';
-import { formatBytes, formatDateTime } from './formatHelpers';
-import { HardwareAccelerationSettingsPanel } from './HardwareAccelerationSettingsPanel';
-import { GesturePracticePanel } from '../components/GestureControl/GestureTutorial';
-import { LocalModelsSettingsPanel } from './LocalModelsPanel';
-import { MacroStepsEditor } from './MacroStepsEditor';
-import { PluginsSettingsPanel } from './PluginsSettingsPanel';
-import { PresetMarketPanel } from './PresetMarketPanel';
-import { ProxySettingsPanel } from './ProxySettingsPanel';
-import { TaskMonitorSettingsPanel } from './TaskMonitorSettingsPanel';
-import { TimelineScriptsSettingsPanel } from './TimelineScriptsSettingsPanel';
-import { TranslationSettingsPanel } from './TranslationSettingsPanel';
-import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
-import { applyLocalCoeditingSettings } from '../collaboration/settings';
-import { runTimelineScriptInWorker } from '../scripting/timeline-script-runtime';
-import {
-  deleteTimelineScript,
-  exportTimelineScriptToDialog,
-  importTimelineScriptFromDialog,
-  loadTimelineScripts,
-  saveTimelineScript,
-  type TimelineScriptFile,
-} from '../scripting/timeline-scripts';
-import {
-  DEFAULT_BACKUP_SETTINGS,
-  DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
-  DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
-  DEFAULT_LOCAL_COEDITING_SETTINGS,
-  readAutomationRules,
-  readBackupSettings,
-  readCollaborationIdentitySettings,
-  readDisplaySettings,
-  readExportBackgroundSettings,
-  readExportQualityAssuranceSettings,
-  readExportPresetSyncSettings,
-  readExportRules,
-  readLocalCoeditingSettings,
-  readLocalAiModelsSettings,
-  saveAutomationRules,
-  saveBackupSettings,
-  saveCollaborationIdentitySettings,
-  saveDisplaySettings,
-  saveExportBackgroundSettings,
-  saveExportQualityAssuranceSettings,
-  saveExportPresetSyncSettings,
-  saveExportRules,
-  saveLanguageSetting,
-  saveLocalCoeditingSettings,
-  saveLocalAiModelsSettings,
-  readUpdateSettings,
-  saveUpdateSettings,
-  type AutomationRule,
-  type BackupSettings,
-  type CollaborationIdentitySettings,
-  type DisplaySettings,
-  type ExportBackgroundSettings,
-  type ExportPresetSyncSettings,
-  type ExportConditionRule,
-  type LocalCoeditingSettings,
-  type TimelineInteractionSettings,
-  readTouchOptimizationSettings,
-  saveTouchOptimizationSettings,
-} from './appSettings';
-import type { TouchOptimizationSettings } from '@open-factory/editor-core';
-import {
-  LOCAL_AI_MODEL_DEFINITIONS,
-  LOCAL_AI_MODEL_IDS,
-  isLocalModelFileSizeValid,
-  resolveLocalModelStatus,
-  type LocalAiModelId,
-  type LocalAiModelResolvedStatus,
-  type LocalAiModelsSettings,
-} from './localModels';
-import {
-  BUILTIN_THEME_IDS,
-  DEFAULT_CUSTOM_THEME_COLORS,
-  deleteCustomTheme,
-  extractCustomThemeColors,
-  isBuiltinThemeId,
-  resolveTheme,
-  upsertCustomTheme,
-  type BuiltinThemeId,
-  type CustomThemeColors,
-  type ThemeSettings,
-} from '../theme/theme';
-import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
-import { DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings } from '../updater/update-settings';
+import {logger} from '@open-factory/editor-core/utils';
+import {useEffect, useMemo, useState} from 'react';
+import {FolderOpen, Star, X} from 'lucide-react';
+import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, EXPORT_COLOR_SPACES, PROJECT_COLOR_PIPELINES, SUPPORTED_PROJECT_FPS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateClipCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, getColorSpaceDisplayName, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, supportsDropFrameTimecode, generateStressScenario, measurePerfMetrics, buildStressReport, serializeStressReport, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type Timeline, type TimelineScriptOperation, type VfrHandlingStrategy} from '@open-factory/editor-core';
+import type {StressScenarioId} from '@open-factory/editor-core';
+import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
+import {switchLanguage} from '../i18n/i18next-config';
+import {parseAutomationRulesJson, serializeAutomationRulesJson} from '../automation/automation-rules';
+import {pickDemucsExecutablePath} from '../lib/demucs';
+import {loadLutLibrary, toggleLutFavorite, type LutLibraryItem} from '../lib/lutLibrary';
+import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword} from '../lib/tauri-bridge';
+import {showToast} from '../lib/toast';
+import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
+import {detectMacroShortcutConflicts, exportClipMacrosToDialog, getMacroSteps, importClipMacrosFromDialog, parseCommandSnapshotsJson, writeClipMacros, type ClipMacro, type CommandSnapshot, type MacroShortcutConflict} from '../macros/clip-macros';
+import {getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry} from '../plugins/plugin-manager';
+import {installCatalogPlugin, installPluginFromFile, loadPluginCatalog, type PluginCatalogEntry, type PluginCatalogResult} from '../plugins/plugin-market';
+import {loadExportPresets, serializeExportPresetPackage} from '../export/export-presets';
+import {filterPresetMarketCards, installPresetMarketCard, loadPresetMarket, presetMarketCardHasCustomConflict, readPresetMarketRatings, writePresetMarketRating, type PresetMarketCard, type PresetMarketFilters, type PresetMarketLoadResult} from '../export/preset-market';
+import {filterEffectPresetCommunityCards, installEffectPresetCommunityCard, loadEffectPresetCommunityLibrary, type EffectPresetCommunityCard, type EffectPresetCommunityLoadResult} from '../effects/effect-preset-library';
+import {writeCustomKeybindings} from '../shortcuts/keybindings';
+import {TIMELINE_SHORTCUT_DEFINITIONS, detectTimelineShortcutConflicts, eventToAccelerator, getEffectiveTimelineShortcutBindings, type TimelineShortcutAction, type TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
+import {commandManager, projectAccessor, timelineAccessor} from '../store/commandManager';
+import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
+import {useEditorStore} from '../store/editorStore';
+import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
+import {useProxySettingsStore} from '../store/proxySettingsStore';
+import {useRecordingSettingsStore} from '../store/recordingSettingsStore';
+import {useTranslationSettingsStore} from '../store/translationSettingsStore';
+import {AIServicesSettingsPanel} from './AIServicesSettingsPanel';
+import {AppearanceSettingsPanel} from './AppearanceSettingsPanel';
+import {AutomationSettingsPanel} from './AutomationSettingsPanel';
+import {BackupSettingsPanel} from './BackupSettingsPanel';
+import {EffectPresetCommunityPanel} from './EffectPresetPanel';
+import {ExportPresetSyncSettingsPanel} from './ExportPresetSyncPanel';
+import {ExportQualityAssuranceSettingsPanel} from './ExportQualityAssurancePanel';
+import {ExportRulesSettingsPanel, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule} from './ExportRulesPanel';
+import {formatBytes} from './formatHelpers';
+import {HardwareAccelerationSettingsPanel} from './HardwareAccelerationSettingsPanel';
+import {GesturePracticePanel} from '../components/GestureControl/GestureTutorial';
+import {LocalModelsSettingsPanel} from './LocalModelsPanel';
+import {MacroStepsEditor} from './MacroStepsEditor';
+import {PluginsSettingsPanel} from './PluginsSettingsPanel';
+import {PresetMarketPanel} from './PresetMarketPanel';
+import {ProxySettingsPanel} from './ProxySettingsPanel';
+import {TaskMonitorSettingsPanel} from './TaskMonitorSettingsPanel';
+import {TimelineScriptsSettingsPanel} from './TimelineScriptsSettingsPanel';
+import {TranslationSettingsPanel} from './TranslationSettingsPanel';
+import {useWhisperSettingsStore} from '../store/whisperSettingsStore';
+import {applyLocalCoeditingSettings} from '../collaboration/settings';
+import {runTimelineScriptInWorker} from '../scripting/timeline-script-runtime';
+import {deleteTimelineScript, exportTimelineScriptToDialog, importTimelineScriptFromDialog, loadTimelineScripts, saveTimelineScript, type TimelineScriptFile} from '../scripting/timeline-scripts';
+import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, readLocalAiModelsSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, saveLocalAiModelsSettings, readUpdateSettings, saveUpdateSettings, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
+import type {TouchOptimizationSettings} from '@open-factory/editor-core';
+import {LOCAL_AI_MODEL_DEFINITIONS, LOCAL_AI_MODEL_IDS, isLocalModelFileSizeValid, resolveLocalModelStatus, type LocalAiModelId, type LocalAiModelResolvedStatus, type LocalAiModelsSettings} from './localModels';
+import {DEFAULT_CUSTOM_THEME_COLORS, deleteCustomTheme, extractCustomThemeColors, isBuiltinThemeId, resolveTheme, upsertCustomTheme, type CustomThemeColors, type ThemeSettings} from '../theme/theme';
+import {getCurrentThemeSettings, setThemeSettings, useTheme} from '../theme/useTheme';
+import {DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings} from '../updater/update-settings';
 
 interface SettingsDialogProps {
   open: boolean;

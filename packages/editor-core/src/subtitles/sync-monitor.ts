@@ -1,5 +1,5 @@
-import type { Clip, SubtitleClip, Track } from '../model-types';
-import { round } from '../time';
+import type {SubtitleClip, Track} from '../model-types';
+import {round} from '../time';
 
 export type SubtitleSyncSensitivity = 'strict' | 'standard' | 'loose';
 

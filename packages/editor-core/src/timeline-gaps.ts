@@ -1,5 +1,5 @@
-import type { Clip, Timeline, Track } from './model-types';
-import { round } from './time';
+import type {Timeline, Track} from './model-types';
+import {round} from './time';
 
 const EPSILON = 0.000001;
 

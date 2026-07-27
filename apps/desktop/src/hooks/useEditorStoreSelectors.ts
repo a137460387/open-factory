@@ -1,13 +1,13 @@
-import { useMemo } from 'react';
-import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
-import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useCollaborationStore } from '../store/collaborationStore';
-import { useProxySettingsStore } from '../store/proxySettingsStore';
-import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
-import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
-import type { Clip, MediaAsset, Project } from '@open-factory/editor-core';
+import {useMemo} from 'react';
+import {useEditorStore} from '../store/editorStore';
+import {useEditorUIStore} from '../store/editorUIStore';
+import {useEditorSettingsStore} from '../store/editorSettingsStore';
+import {useEditorFeatureStore} from '../store/editorFeatureStore';
+import {useCollaborationStore} from '../store/collaborationStore';
+import {useProxySettingsStore} from '../store/proxySettingsStore';
+import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
+import {useRecordingSettingsStore} from '../store/recordingSettingsStore';
+import type {Clip, Project} from '@open-factory/editor-core';
 
 /**
  * 优化的 store selectors，避免不必要的重渲染。

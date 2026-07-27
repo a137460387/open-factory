@@ -1,22 +1,8 @@
-import { logger } from '@open-factory/editor-core/utils';
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { SubtitleStyle } from '@open-factory/editor-core';
-import {
-  createStylePreset,
-  updateStylePreset,
-  filterPresets,
-  sortPresets,
-  loadPresetsFromStorage,
-  savePresetsToStorage,
-  exportPresetsToJson,
-  importPresetsFromJson,
-  exportPresetToFile,
-  importPresetFromFile,
-  areStylesEqual,
-  diffStyles,
-  type SubtitleStylePreset,
-} from '@open-factory/editor-core';
-import { BUILTIN_SUBTITLE_STYLE_TEMPLATES, normalizeSubtitleStyleTemplateStyle } from '@open-factory/editor-core';
+import {logger} from '@open-factory/editor-core/utils';
+import {useState, useCallback, useEffect, useMemo} from 'react';
+import type {SubtitleStyle} from '@open-factory/editor-core';
+import {createStylePreset, updateStylePreset, filterPresets, sortPresets, loadPresetsFromStorage, savePresetsToStorage, exportPresetsToJson, importPresetsFromJson, exportPresetToFile, importPresetFromFile, type SubtitleStylePreset} from '@open-factory/editor-core';
+import {BUILTIN_SUBTITLE_STYLE_TEMPLATES, normalizeSubtitleStyleTemplateStyle} from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types

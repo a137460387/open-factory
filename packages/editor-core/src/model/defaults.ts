@@ -1,39 +1,9 @@
-import { DEFAULT_COLOR_CURVES, DEFAULT_THREE_WAY_COLOR } from '../color-grading';
-import { REC709_INPUT_COLOR_SPACE } from '../color-log-luts';
-import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from '../color-pipeline';
-import { normalizeProjectWorkingColorSpace } from '../color-management';
-import { normalizeProjectFps, normalizeTimecodeFormat } from '../time';
-import type {
-  AudioFadeCurve,
-  ChromaKey,
-  ClipAudioDenoise,
-  ClipAILocalDenoise,
-  ClipBorder,
-  ClipFrameInterpolation,
-  ClipPanoramaView,
-  ClipPrivacyBlur,
-  ClipProjection,
-  ClipQualityEnhancement,
-  ClipSlowMotionMode,
-  ClipStabilization,
-  ClipVideoTemporalDenoise,
-  ClipVideoRestoration,
-  FrameInterpolationMode,
-  FrameInterpolationTargetFps,
-  PathPoint,
-  ProjectSettings,
-  SubtitleLanguage,
-  SubtitleMode,
-  SubtitleStyle,
-  SubtitleTrackType,
-  TextStyle,
-  TextPathOptions,
-  TrackCompressor,
-  TrackEQ,
-  TransitionType,
-  VfrHandlingStrategy,
-  VideoDenoisePreset,
-} from '../model-types';
+import {DEFAULT_COLOR_CURVES, DEFAULT_THREE_WAY_COLOR} from '../color-grading';
+import {REC709_INPUT_COLOR_SPACE} from '../color-log-luts';
+import {DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline} from '../color-pipeline';
+import {normalizeProjectWorkingColorSpace} from '../color-management';
+import {normalizeProjectFps, normalizeTimecodeFormat} from '../time';
+import type {AudioFadeCurve, ChromaKey, ClipAudioDenoise, ClipAILocalDenoise, ClipBorder, ClipFrameInterpolation, ClipPanoramaView, ClipPrivacyBlur, ClipProjection, ClipQualityEnhancement, ClipSlowMotionMode, ClipStabilization, ClipVideoTemporalDenoise, ClipVideoRestoration, FrameInterpolationMode, FrameInterpolationTargetFps, PathPoint, ProjectSettings, SubtitleMode, SubtitleStyle, SubtitleTrackType, TextStyle, TextPathOptions, TrackCompressor, TrackEQ, TransitionType, VfrHandlingStrategy, VideoDenoisePreset} from '../model-types';
 
 export const MAX_CHROMA_KEY_COLORS = 3;
 

@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { SpeakerDiarizationResult } from '@open-factory/editor-core/ai/speaker-diarization';
-import { getSpeakerBasedAngleSwitches } from '@open-factory/editor-core/ai/speaker-diarization';
+import {useState, useCallback} from 'react';
+import type {SpeakerDiarizationResult} from '@open-factory/editor-core/ai/speaker-diarization';
+import {getSpeakerBasedAngleSwitches} from '@open-factory/editor-core/ai/speaker-diarization';
 
 /** 说话人-机位映射 */
 export interface SpeakerAngleMapping {

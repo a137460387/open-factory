@@ -1,83 +1,22 @@
-import {
-  DEFAULT_COLOR_CORRECTION,
-  isDefaultColorCorrection,
-  normalizeColorCorrection,
-  normalizeTransitionDuration,
-  isStabilizationExportable,
-  normalizeChromaKey,
-  normalizeClipBorder,
-  normalizeClipPanoramaView,
-  normalizeFrameInterpolation,
-  normalizeQualityEnhancement,
-  normalizeSlowMotionMode,
-  normalizeVideoRestoration,
-  normalizeLutLayers,
-  normalizeTransform,
-  normalizeMasks,
-  type ClipKeyframes,
-} from '../../model';
-import {
-  isDefaultColorCurves,
-  isNeutralThreeWayColor,
-  normalizeThreeWayColor,
-  serializeColorCurvesToCube,
-  PrimaryWheels,
-  PrimarySliders,
-  toFfmpegSelectiveColor,
-  type ColorWheelValue,
-  type ColorGradingGraph,
-  type CurvesNodeParams,
-  type LUTApplyNodeParams,
-  type PrimaryWheelParams,
-  type PrimarySliderParams,
-  type HSLQualifierParams,
-  type WindowMaskParams,
-  type ThreeWayColor,
-} from '../../color-grading';
-import {
-  buildColorNodeGraphFilterPlan,
-  detectColorNodeGraphCycle,
-  normalizeColorNodeGraph,
-} from '../../color-node-graph';
-import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../../color-log-luts';
-import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../../motion-blur';
-import { buildReframeCropFilter, isReframeEnabled } from '../../reframe';
-import { triangulatePathMask } from '../../masks/path-mask';
-import { getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode } from '../../blend-modes';
-import { getClipSpeed, calculateSpeedCurveSourceDuration } from '../../timeline';
-import { round } from '../../time';
-import {
-  averageClipMotionScore,
-  buildSceneBoundaryProtectionRanges,
-  resolveFrameInterpolationMode,
-} from '../frame-interpolation';
-import { buildZscaleColorConversionFilter, normalizeProjectWorkingColorSpace } from '../../color-management';
-import { buildPrivacyRedactionFFmpegExpressions } from '../../privacy-redaction';
-import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds } from '../ffmpeg-escape';
-import {
-  formatFfmpegNumber,
-  formatScale,
-  formatOpacity,
-  safeLabel,
-  formatOffsetExpression,
-  getAnimatedFrames,
-  buildTimelineExpression,
-} from './utils';
-import { SETPTS_EXPRESSION_LIMIT } from './settings-normalize';
-import type { Effect } from '../../effects';
-import { getEffectNumberParam } from '../../effects';
-import type {
-  ExportClip,
-  ExportClipKeyframes,
-  ExportKeyframe as ExportKeyframeType,
-  ExportKeyframe,
-  ExportTransition,
-  ExportTimeline,
-  ExportTrack,
-  ExportSettings,
-  FfmpegCapabilities,
-  TextArtifact,
-} from '../export-types';
+import {DEFAULT_COLOR_CORRECTION, isDefaultColorCorrection, normalizeColorCorrection, normalizeTransitionDuration, isStabilizationExportable, normalizeChromaKey, normalizeClipBorder, normalizeClipPanoramaView, normalizeQualityEnhancement, normalizeSlowMotionMode, normalizeVideoRestoration, normalizeLutLayers} from '../../model';
+import {isDefaultColorCurves, isNeutralThreeWayColor, normalizeThreeWayColor, serializeColorCurvesToCube, PrimaryWheels, PrimarySliders, toFfmpegSelectiveColor, type ColorWheelValue, type ColorGradingGraph, type CurvesNodeParams, type LUTApplyNodeParams, type PrimaryWheelParams, type PrimarySliderParams, type HSLQualifierParams, type WindowMaskParams, type ThreeWayColor} from '../../color-grading';
+import {buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph} from '../../color-node-graph';
+import {getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube} from '../../color-log-luts';
+import {buildMotionBlurExportFilter, normalizeMotionBlurParams} from '../../motion-blur';
+import {buildReframeCropFilter, isReframeEnabled} from '../../reframe';
+import {triangulatePathMask} from '../../masks/path-mask';
+import {getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode} from '../../blend-modes';
+import {getClipSpeed, calculateSpeedCurveSourceDuration} from '../../timeline';
+import {round} from '../../time';
+import {averageClipMotionScore, buildSceneBoundaryProtectionRanges, resolveFrameInterpolationMode} from '../frame-interpolation';
+import {buildZscaleColorConversionFilter, normalizeProjectWorkingColorSpace} from '../../color-management';
+import {buildPrivacyRedactionFFmpegExpressions} from '../../privacy-redaction';
+import {cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds} from '../ffmpeg-escape';
+import {formatFfmpegNumber, formatScale, formatOpacity, safeLabel, formatOffsetExpression, getAnimatedFrames, buildTimelineExpression} from './utils';
+import {SETPTS_EXPRESSION_LIMIT} from './settings-normalize';
+import type {Effect} from '../../effects';
+import {getEffectNumberParam} from '../../effects';
+import type {ExportClip, ExportTransition, ExportTimeline, ExportTrack, ExportSettings, FfmpegCapabilities, TextArtifact} from '../export-types';
 
 export type AnimatedProperty = 'x' | 'y' | 'scaleX' | 'scaleY' | 'speed' | 'opacity';
 

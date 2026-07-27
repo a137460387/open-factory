@@ -1,6 +1,5 @@
-import type { ExportStemFormat, ExportStemMode } from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import type { ExportPreset } from '../export-presets';
+import {zhCN} from '../../i18n/strings';
+import type {ExportPreset} from '../export-presets';
 
 export type SequenceBatchPresetMode = 'shared' | 'individual';
 

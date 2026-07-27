@@ -7,42 +7,10 @@
  * - Command history and preview
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import {
-  Command,
-  Mic,
-  MicOff,
-  CornerDownLeft,
-  Clock,
-  Search,
-  X,
-  Zap,
-  Scissors,
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Undo2,
-  Redo2,
-  Volume2,
-  VolumeX,
-  ZoomIn,
-  ZoomOut,
-  Download,
-  Copy,
-  Trash2,
-  SplitSquareHorizontal,
-  Palette,
-  Wand2,
-} from 'lucide-react';
-import {
-  parseCommand,
-  buildSpeechGrammarHints,
-  type ParsedCommand,
-  type CommandType,
-  type CommandParserConfig,
-} from '@open-factory/editor-core/natural-language-commands';
-import { clsx } from 'clsx';
+import {useState, useEffect, useRef, useMemo, useCallback} from 'react';
+import {Command, Mic, MicOff, CornerDownLeft, Clock, Search, X, Zap, Scissors, Play, Pause, SkipForward, SkipBack, Undo2, Redo2, Volume2, VolumeX, ZoomIn, ZoomOut, Download, Copy, Trash2, SplitSquareHorizontal, Palette, Wand2} from 'lucide-react';
+import {parseCommand, type ParsedCommand, type CommandType} from '@open-factory/editor-core/natural-language-commands';
+import {clsx} from 'clsx';
 
 // Web Speech API type (not in standard DOM lib)
 interface SpeechRecognition extends EventTarget {

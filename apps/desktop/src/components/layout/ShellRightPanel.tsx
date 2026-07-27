@@ -1,27 +1,19 @@
-import { lazy, Suspense, useMemo } from 'react';
-import type { Clip, Project } from '@open-factory/editor-core';
-import { getTimelinePlaybackDuration, AddClipCommand } from '@open-factory/editor-core';
-import type { NarrativeGenerationResult } from '@open-factory/editor-core';
-import { ChevronRight } from 'lucide-react';
-import { ErrorBoundary } from '../common/ErrorBoundary';
-import { PanelLoading } from '../PanelLoading';
-import { CollapsedPanelRail } from '../CollapsedPanelRail';
-import { zhCN } from '../../i18n/strings';
-import { featureStrings } from '../../i18n/featureStrings';
-import { selectClipById, useEditorStore } from '../../store/editorStore';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
-import {
-  useLayoutSettings,
-  useSetLayoutSettings,
-  useViewportSize,
-  useReviewMode,
-  usePersistLayoutPatch,
-  usePersistPanelVisibilityPatch,
-} from '../../store/panelStore';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import { useTransitionStore } from '../../store/transitionStore';
-import { getEffectivePanelState } from '../../layout/layoutSettings';
-import { getReviewModeShellVisibility } from '../../review/reviewMode';
+import {lazy, Suspense, useMemo} from 'react';
+import type {Clip} from '@open-factory/editor-core';
+import {getTimelinePlaybackDuration, AddClipCommand} from '@open-factory/editor-core';
+import {ChevronRight} from 'lucide-react';
+import {ErrorBoundary} from '../common/ErrorBoundary';
+import {PanelLoading} from '../PanelLoading';
+import {CollapsedPanelRail} from '../CollapsedPanelRail';
+import {zhCN} from '../../i18n/strings';
+import {featureStrings} from '../../i18n/featureStrings';
+import {selectClipById, useEditorStore} from '../../store/editorStore';
+import {commandManager, timelineAccessor} from '../../store/commandManager';
+import {useLayoutSettings, useSetLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch, usePersistPanelVisibilityPatch} from '../../store/panelStore';
+import {useEditorUIStore} from '../../store/editorUIStore';
+import {useTransitionStore} from '../../store/transitionStore';
+import {getEffectivePanelState} from '../../layout/layoutSettings';
+import {getReviewModeShellVisibility} from '../../review/reviewMode';
 
 const AudioMixer = lazy(() => import('../AudioMixer/AudioMixer').then((m) => ({ default: m.AudioMixer })));
 const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ default: m.Inspector })));

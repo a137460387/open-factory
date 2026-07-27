@@ -3,31 +3,11 @@
  * Combines traditional CV algorithms with AI-based content analysis
  */
 
-import type {
-  InspectorConfig,
-  QualityReport,
-  InspectorQualityIssue,
-  QualitySummary,
-  FrameAnalysis,
-  AudioAnalysis,
-  PacingSegment,
-  SceneTransition,
-  ComplianceResult,
-  ComplianceViolation,
-  PlatformSpec,
-  QualityPlatformTarget,
-  TimeRange,
-  IssueSeverity,
-  TechnicalDefectType,
-  ContentIssueType,
-} from './types';
-import { formatTime } from '../utils/time';
+import type {InspectorConfig, QualityReport, InspectorQualityIssue, QualitySummary, FrameAnalysis, AudioAnalysis, PacingSegment, SceneTransition, ComplianceResult, ComplianceViolation, QualityPlatformTarget} from './types';
+import {formatTime} from '../utils/time';
 export { formatTime } from '../utils/time';
 
-import {
-  DEFAULT_INSPECTOR_CONFIG,
-  PLATFORM_SPECS,
-} from './types';
+import {DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS} from './types';
 
 let issueCounter = 0;
 

@@ -6,8 +6,8 @@
  * InferenceEngine, enabling clean degradation when no real inference is available.
  */
 
-import type { ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType } from './inference-engine';
-import { logger } from '../utils/logger.js';
+import type {ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType} from './inference-engine';
+import {logger} from '../utils/logger.js';
 
 // ==================== Provider Interface ====================
 
@@ -79,7 +79,7 @@ export function listRegisteredProviders(): string[] {
 
 // ==================== Local Inference Provider ====================
 
-import { InferenceEngine } from './inference-engine';
+import {InferenceEngine} from './inference-engine';
 
 /** Local inference provider using browser-side compute (WebGPU/WebGL2/WASM/CPU). */
 export class LocalInferenceProvider implements InferenceProvider {

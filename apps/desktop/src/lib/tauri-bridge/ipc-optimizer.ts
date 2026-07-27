@@ -6,7 +6,7 @@
  * thumbnail buffers, and other large payloads. Falls back to JSON for small payloads.
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import {invoke} from '@tauri-apps/api/core';
 
 // ---------------------------------------------------------------------------
 // Types

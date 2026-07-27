@@ -5,13 +5,8 @@
  * 使用 Worker 线程进行并行解码，确保主线程 60fps 流畅。
  */
 
-import { useRef, useCallback, useEffect, useState } from 'react';
-import type {
-  MulticamPreviewFrameRequest,
-  MulticamPreviewWorkerInput,
-  MulticamPreviewWorkerOutput,
-  MulticamPreviewFrameResult,
-} from '../workers/multicam-preview.worker';
+import {useRef, useCallback, useEffect, useState} from 'react';
+import type {MulticamPreviewFrameRequest, MulticamPreviewWorkerInput, MulticamPreviewWorkerOutput} from '../workers/multicam-preview.worker';
 
 export interface MulticamPreviewFrame {
   angleId: string;

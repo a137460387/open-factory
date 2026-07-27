@@ -6,9 +6,9 @@
  *   echo '{"inputPath":"./video.mp4","type":"full"}' | of analyze --stdin
  */
 
-import type { Command } from 'commander';
-import { withCliOutput, createLogger, ExitCode, exitWith, createOutput } from '../core/output.js';
-import { hasStdinData, stdinToTempFile, readStdinJson } from '../core/stdin.js';
+import type {Command} from 'commander';
+import {createLogger, ExitCode, exitWith, createOutput} from '../core/output.js';
+import {hasStdinData, stdinToTempFile, readStdinJson} from '../core/stdin.js';
 
 export function registerAnalyzeCommand(program: Command): void {
   program

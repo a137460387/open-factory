@@ -1,6 +1,6 @@
-import { getTimelineDuration } from './timeline';
-import { round } from './time';
-import type { Clip, MediaAsset, Project, Timeline, Track } from './model-types';
+import {getTimelineDuration} from './timeline';
+import {round} from './time';
+import type {Clip, MediaAsset, Project, Timeline} from './model-types';
 
 const DEFAULT_HISTOGRAM_BINS = 12;
 const DEFAULT_DURATION_TOLERANCE = 0.2;

@@ -1,145 +1,26 @@
-import type { ExportState } from '../hooks/useExportState';
-import type { ExportActions } from '../hooks/useExportActions';
-import {
-  Cloud,
-  CloudDownload,
-  Download,
-  FolderOpen,
-  Loader2,
-  Save,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
-import { zhCN } from '../../i18n/strings';
-import {
-  TARGET_ASPECT_RATIOS,
-  getTimelinePlaybackDuration,
-  type ExportPresetSettings,
-  PLATFORM_LIMITS,
-  BUILTIN_BROADCAST_SPECS,
-  checkCompliance,
-  buildComplianceFix,
-  type ExportComplianceParams,
-  type ComplianceCheckResult,
-} from '@open-factory/editor-core';
-import {
-  EXPORT_COMPLETION_ACTIONS,
-  normalizeExportCompletionAction,
-  type ExportCompletionAction,
-} from '../export-background';
-import {
-  WATERMARK_POSITIONS,
-  AUDIO_VISUALIZATION_FORMATS,
-  VIDEO_EXPORT_FORMATS,
-  SUBTITLE_FORMATS,
-  DEFAULT_AUDIO_VISUALIZATION,
-  AUDIO_VISUALIZATION_STYLES,
-  AUDIO_VISUALIZATION_BACKGROUND_TYPES,
-  buildExportPreviewOutputPaths,
-  normalizeDraftSettings,
-  updateNumberSetting,
-  updateStringSetting,
-  updateOutputMode,
-  updateFormat,
-  updateAudioVisualizationStyle,
-  updateAudioVisualizationTheme,
-  updateAudioVisualizationColor,
-  updateAudioVisualizationBackgroundType,
-  updateAudioVisualizationBackgroundColor,
-  updateAudioVisualizationBackgroundImagePath,
-  updateSubtitleMode,
-  updateSubtitleFormat,
-  updateExportSidecarSubtitle,
-  updateSubtitleLanguageSelection,
-  updateSubtitleBurnInLanguage,
-  updateScaleMode,
-  updateTargetAspectRatio,
-  updateReframeOffset,
-  updateHardwareEncoding,
-  updateHardwareEncoderId,
-  updateHardwareEncoderPreset,
-  updateHardwareRateControlMode,
-  updateHardwareCq,
-  updateHardwareVideoBitrate,
-  updateHardwareMaxBitrate,
-  updateHardwareGopSize,
-  updateHardwareBFrames,
-  updateLoudnessNormalization,
-  updateMasterProcessing,
-  updateMasterEqEnabled,
-  updateMasterEqBand,
-  updateMasterStereoEnabled,
-  updateMasterStereoAmount,
-  updateMasterLimiterEnabled,
-  updateMasterLimiterLevel,
-  updateColorManagement,
-  updatePostExportScriptCommand,
-  updateTimecodeBurnInEnabled,
-  updateTimecodeBurnInPosition,
-  updateTimecodeBurnInFontSize,
-  updateTimecodeBurnInColor,
-  updateTimecodeBurnInFrameNumber,
-  updateSlateEnabled,
-  updateWatermarkEnabled,
-  updateWatermarkType,
-  updateWatermarkPosition,
-  updateImageWatermarkPath,
-  updateImageWatermarkScale,
-  updateImageWatermarkOpacity,
-  updateTextWatermarkText,
-  updateTextWatermarkFont,
-  updateTextWatermarkColor,
-  updateTextWatermarkSize,
-  normalizeWatermarkPosition,
-  isWatermarkPosition,
-  supportsLoudnessNormalization,
-  countSpatialDenoiseClips,
-  safePresetPackageFileName,
-  choosePresetPackageConflictMode,
-  collectSubtitleLanguageOptions,
-  timecodeBurnInFrom,
-  imageWatermarkFrom,
-  textWatermarkFrom,
-  enableWatermark,
-  formatSubtitleLanguageLabel,
-  type SubtitleLanguageOption,
-} from '../lib/exportSettingsHelpers';
-import {
-  BUILTIN_EXPORT_PRESETS,
-  EXPORT_PRESET_PACKAGE_EXTENSION,
-} from '../export-presets';
-import {
-  ExportCostEstimatePanel,
-} from './ExportCostEstimatePanel';
-import {
-  ExportOptimizationPanel,
-  formatOptimizationSuggestionTitle,
-} from './ExportOptimizationPanel';
-import {
-  WatermarkNumberField,
-  PresetNumberField,
-  PresetFpsField,
-  PresetTextField,
-  PresetColorField,
-  PresetSelectField,
-  PresetCheckboxField,
-} from './PresetFields';
-import { HardwareEncoderSettingsPanel } from './HardwareEncoderSettingsPanel';
-import { MasterProcessingSection } from './MasterProcessingSection';
-import { SubtitleLanguageSection } from './SubtitleLanguageSection';
-import { ColorManagementSection } from './ColorManagementSection';
-import { ThemePreviewButton, AudioVisualizationSection } from './AudioVisualizationSection';
-import { MonitoringSection, PostExportScriptSection } from './MonitoringAndPostScript';
-import { WatermarkSection } from './WatermarkSection';
-import { AIExportSuggestionPanel } from './AIExportSuggestionPanel';
-import { ReframeOffsetField, ReframePreviewBox } from './ReframePreview';
-import { ExportUploadSection } from './ExportUploadSection';
-import { AILoudnessSuggestionSection } from '../AILoudnessSuggestionSection';
-import { InfoRow } from '../export-utils';
-import { estimateExportFileSizeBytes, formatEstimatedFileSize } from '../export-size-estimate';
-import { estimateDimensions } from '../export-utils';
-import { formatExportWarning } from '../export-utils';
+import type {ExportState} from '../hooks/useExportState';
+import type {ExportActions} from '../hooks/useExportActions';
+import {Cloud, CloudDownload, Download, FolderOpen, Loader2, Save, Trash2, Upload} from 'lucide-react';
+import {zhCN} from '../../i18n/strings';
+import {TARGET_ASPECT_RATIOS, PLATFORM_LIMITS, BUILTIN_BROADCAST_SPECS} from '@open-factory/editor-core';
+import {EXPORT_COMPLETION_ACTIONS, normalizeExportCompletionAction} from '../export-background';
+import {SUBTITLE_FORMATS, DEFAULT_AUDIO_VISUALIZATION, updateNumberSetting, updateStringSetting, updateOutputMode, updateFormat, updateSubtitleMode, updateSubtitleFormat, updateExportSidecarSubtitle, updateScaleMode, updateTargetAspectRatio, updateHardwareEncoding} from '../lib/exportSettingsHelpers';
+import {ExportCostEstimatePanel} from './ExportCostEstimatePanel';
+import {ExportOptimizationPanel} from './ExportOptimizationPanel';
+import {PresetNumberField, PresetFpsField, PresetTextField, PresetSelectField, PresetCheckboxField} from './PresetFields';
+import {HardwareEncoderSettingsPanel} from './HardwareEncoderSettingsPanel';
+import {MasterProcessingSection} from './MasterProcessingSection';
+import {SubtitleLanguageSection} from './SubtitleLanguageSection';
+import {ColorManagementSection} from './ColorManagementSection';
+import {AudioVisualizationSection} from './AudioVisualizationSection';
+import {MonitoringSection, PostExportScriptSection} from './MonitoringAndPostScript';
+import {WatermarkSection} from './WatermarkSection';
+import {AIExportSuggestionPanel} from './AIExportSuggestionPanel';
+import {ReframeOffsetField, ReframePreviewBox} from './ReframePreview';
+import {ExportUploadSection} from './ExportUploadSection';
+import {AILoudnessSuggestionSection} from '../AILoudnessSuggestionSection';
+import {InfoRow} from '../export-utils';
+import {formatExportWarning} from '../export-utils';
 
 interface ExportConfigProps {
   state: ExportState;

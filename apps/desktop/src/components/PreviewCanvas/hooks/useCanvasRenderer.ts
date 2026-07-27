@@ -1,44 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { logger } from '@open-factory/editor-core/utils';
-import type { Timeline } from '@open-factory/editor-core';
-import {
-  buildTimelineRenderFrameKey,
-  buildTimelineRenderFrameRequests,
-  estimateRenderPassBreakdown,
-  getTimelineRenderInvalidationRanges,
-  getTimelinePlaybackDuration,
-} from '@open-factory/editor-core';
-import type { Project } from '@open-factory/editor-core';
-import { drawAudioOnlyPreview, countActivePreviewEffects, hasActiveCustomShader, waitForIdleFrame } from '../utils';
-import { zhCN } from '../../../i18n/strings';
-import { drawPreviewDifferenceFrame, type PreviewCompareMode } from '../../../lib/preview/compare';
-import { PreviewRenderer, type PreviewFrameReadback } from '../../../lib/preview/renderer';
-import {
-  DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE,
-  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
-  appendPreviewFpsSample,
-  calculatePreviewRenderSize,
-  calculatePreviewFpsAverage,
-  getDisabledPreviewEffectTypes,
-  isPreviewAudioOnly,
-  isPreviewLowQuality,
-  resolveAdaptivePreviewPerformance,
-  resolveEffectivePreviewPerformance,
-  shouldRenderPreviewFrame,
-  type PreviewFpsSample,
-  type PreviewPerformanceSettings,
-} from '../../../lib/preview/preview-performance';
-import {
-  DEFAULT_GPU_PREVIEW_METRICS,
-  GPU_TEXTURE_POOL_MAX_BYTES,
-  buildGpuPrefetchFrameRequests,
-  detectGpuPreviewCapabilities,
-  formatTextureMemoryMiB,
-  type GpuPreviewMetrics,
-} from '../../../lib/preview/gpu-acceleration';
-import { getTimelineRenderCacheController } from '../../../lib/preview/render-cache-controller';
-import { showToast } from '../../../lib/toast';
-import { useAudioMeterStore } from '../../../store/audioMeterStore';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {logger} from '@open-factory/editor-core/utils';
+import type {Timeline} from '@open-factory/editor-core';
+import {buildTimelineRenderFrameKey, buildTimelineRenderFrameRequests, estimateRenderPassBreakdown, getTimelineRenderInvalidationRanges, getTimelinePlaybackDuration} from '@open-factory/editor-core';
+import type {Project} from '@open-factory/editor-core';
+import {drawAudioOnlyPreview, countActivePreviewEffects, hasActiveCustomShader, waitForIdleFrame} from '../utils';
+import {zhCN} from '../../../i18n/strings';
+import {drawPreviewDifferenceFrame} from '../../../lib/preview/compare';
+import {PreviewRenderer, type PreviewFrameReadback} from '../../../lib/preview/renderer';
+import {DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE, appendPreviewFpsSample, calculatePreviewRenderSize, calculatePreviewFpsAverage, getDisabledPreviewEffectTypes, isPreviewAudioOnly, isPreviewLowQuality, resolveAdaptivePreviewPerformance, resolveEffectivePreviewPerformance, shouldRenderPreviewFrame, type PreviewFpsSample, type PreviewPerformanceSettings} from '../../../lib/preview/preview-performance';
+import {DEFAULT_GPU_PREVIEW_METRICS, GPU_TEXTURE_POOL_MAX_BYTES, buildGpuPrefetchFrameRequests, detectGpuPreviewCapabilities, formatTextureMemoryMiB, type GpuPreviewMetrics} from '../../../lib/preview/gpu-acceleration';
+import {getTimelineRenderCacheController} from '../../../lib/preview/render-cache-controller';
+import {showToast} from '../../../lib/toast';
+import {useAudioMeterStore} from '../../../store/audioMeterStore';
 
 export interface CanvasRendererParams {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -476,4 +449,4 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
   };
 }
 
-import { useEditorStore } from '../../../store/editorStore';
+import {useEditorStore} from '../../../store/editorStore';

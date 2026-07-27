@@ -1,10 +1,10 @@
-import type { Result, ProjectConfig, ExportConfig } from './types.js';
-import { EventEmitter } from './events.js';
-import { ProjectAPI } from './project.js';
-import { TimelineAPI } from './timeline.js';
-import { EffectsAPI } from './effects.js';
-import { ExportAPI } from './export.js';
-import { PluginsAPI } from './plugins.js';
+import type {Result} from './types.js';
+import {EventEmitter} from './events.js';
+import {ProjectAPI} from './project.js';
+import {TimelineAPI} from './timeline.js';
+import {EffectsAPI} from './effects.js';
+import {ExportAPI} from './export.js';
+import {PluginsAPI} from './plugins.js';
 
 /**
  * OpenFactory SDK client

@@ -1,4 +1,4 @@
-import { clamp } from '../math-utils';
+import {clamp} from '../math-utils';
 
 /**
  * WebSocket 协作传输层
@@ -11,23 +11,8 @@ import { clamp } from '../math-utils';
  * 5. 与 ColorCollaborationManager 集成
  */
 
-import type {
-  ColorCollabOperation,
-  ColorCollabUser,
-  ColorCollabEvent,
-  ColorCollabSessionConfig,
-  ColorCollabSessionState,
-  ColorCollabRole,
-} from './color-collaboration';
-import {
-  ColorCollaborationManager,
-  createDefaultCollabSessionConfig,
-  createCollabUser,
-  serializeOperation,
-  parseOperation,
-  serializeSessionSnapshot,
-  deserializeSessionSnapshot,
-} from './color-collaboration';
+import type {ColorCollabOperation, ColorCollabUser, ColorCollabRole} from './color-collaboration';
+import {ColorCollaborationManager, createDefaultCollabSessionConfig, createCollabUser} from './color-collaboration';
 
 // ==================== 类型定义 ====================
 

@@ -40,6 +40,7 @@ describe('EventListenerMonitor', () => {
       const consoleSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
       monitor.reportLeakedListeners();
       expect(consoleSpy).toHaveBeenCalledWith(
+        expect.any(String),
         expect.stringContaining('No leaked listeners'),
       );
       consoleSpy.mockRestore();

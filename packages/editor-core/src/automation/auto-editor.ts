@@ -6,12 +6,12 @@
  * 本地优先：所有处理在本地完成
  */
 
-import type { Clip, Track, Timeline, VideoClip, Transition, TransitionType, MediaAsset } from '../model-types';
-import type { SceneAnalysis, AnalysisReport } from './scene-analyzer';
-import type { EditTemplate, RhythmParams, ClipFilterRule } from './template-manager';
-import type { PreferenceWeights } from './style-memory';
-import { createId } from '../model/clip-normalize';
-import { createBaseClip } from '../model/factories';
+import type {Clip, VideoClip, Transition, TransitionType} from '../model-types';
+import type {SceneAnalysis, AnalysisReport} from './scene-analyzer';
+import type {EditTemplate, RhythmParams, ClipFilterRule} from './template-manager';
+import type {PreferenceWeights} from './style-memory';
+import {createId} from '../model/clip-normalize';
+import {createBaseClip} from '../model/factories';
 
 // ============================================================
 // 类型定义

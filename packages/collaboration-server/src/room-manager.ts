@@ -4,16 +4,8 @@
  */
 
 import Redis from "ioredis";
-import type { CollaborationConfig } from "./config.js";
-import type {
-  Collaborator,
-  EditOperation,
-  Room,
-  RoomOptions,
-  RoomSnapshot,
-  RoomState,
-  UserRole,
-} from "./types.js";
+import type {CollaborationConfig} from './config.js';
+import type {Collaborator, EditOperation, Room, RoomOptions, RoomSnapshot, RoomState, UserRole} from './types.js';
 
 // ============================================================
 // Constants

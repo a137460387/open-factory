@@ -1,13 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Timeline } from '@open-factory/editor-core';
-import {
-  searchSubtitles,
-  replaceSubtitles,
-  replaceSingleResult,
-  type SubtitleSearchResult,
-  type SubtitleSearchOptions,
-  formatTime,
-} from '@open-factory/editor-core';
+import {useState, useCallback, useEffect, useRef} from 'react';
+import type {Timeline} from '@open-factory/editor-core';
+import {searchSubtitles, replaceSubtitles, replaceSingleResult, type SubtitleSearchResult, formatTime} from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types

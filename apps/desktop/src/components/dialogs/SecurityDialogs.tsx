@@ -1,9 +1,8 @@
-import { lazy, Suspense } from 'react';
-import type { ProjectFileEncryptionOptions } from '../../lib/projectFiles';
-import type { ProjectPasswordRequest } from './ProjectPasswordDialog';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
-import { PanelLoading } from '../PanelLoading';
+import {lazy, Suspense} from 'react';
+import type {ProjectFileEncryptionOptions} from '../../lib/projectFiles';
+import {useEditorUIStore} from '../../store/editorUIStore';
+import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import {PanelLoading} from '../PanelLoading';
 
 const ProjectEncryptionSaveDialog = lazy(() =>
   import('./ProjectEncryptionSaveDialog').then((m) => ({ default: m.ProjectEncryptionSaveDialog })),

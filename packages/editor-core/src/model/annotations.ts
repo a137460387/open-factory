@@ -1,57 +1,21 @@
-import { round, clamp } from '../time';
-import {
-  createId,
-  normalizeChromaKey,
-  normalizeStabilization,
-  normalizeAudioDenoise,
-  normalizeVideoRestoration,
-  normalizeClipProjection,
-  normalizeClipPanoramaView,
-  normalizeMasks,
-  normalizeMotionTrack,
-  normalizeClipBorder,
-  normalizeMulticamSequence,
-  normalizeSequenceFrameRate,
-} from './clip-normalize';
-import { normalizeAudioRestoration } from '../audio-restoration';
-import { normalizeMotionGraphic } from '../motion-graphics';
-import { normalizeClipPitchData } from '../audio-pitch';
-import { normalizeDataSubtitleSource } from '../data-subtitle';
-import type { MixerState, MixerChannel, AudioBus } from '../audio/mixer-types';
-import { createDefaultMixerState, createMixerChannel, createBus } from '../audio/mixer-types';
-import { cloneEffects } from '../effects';
-import type { ClipAIReframe, ReframeKeyframe } from '../ai-reframe';
-import type { AnomalyInterval, AnomalyType, AnomalySeverity } from '../anomaly-detection';
-import type { FlashWarning } from '../flash-warning';
-import type { ReadingSpeedWarning, ReadingSpeedSeverity } from '../subtitle-reading-speed';
-import type { MusicStructurePoint } from '../music-structure';
-import type { ContinuityWarning } from '../continuity-check';
-import {
-  DEFAULT_COLLABORATION_NOTE_AUTHOR,
-  DEFAULT_TIMELINE_MARKER_COLOR,
-  DEFAULT_TIMELINE_NOTE_COLOR,
-  TIMELINE_NOTE_COLORS,
-} from './defaults';
-import { normalizeQualityEnhancement } from './clip-normalize';
-import { finiteOrDefault } from '../math-utils';
-import { normalizeOptionalHexColor } from '../math-utils';
-import type {
-  AiPipPlacementSuggestion,
-  ClipAILookMatch,
-  ClipKeyframes,
-  ClipPrivacyRedaction,
-  CollaborationNoteType,
-  KeyframeProperty,
-  LUTLayer,
-  MediaAsset,
-  PlatformFitSegment,
-  PrivacyRedactionType,
-  Project,
-  ProjectPlatformFitSuggestion,
-  ProjectSettings,
-  ReviewAnnotationType,
-  Timeline,
-} from '../model-types';
+import {round, clamp} from '../time';
+import {createId, normalizeChromaKey, normalizeStabilization, normalizeAudioDenoise, normalizeVideoRestoration, normalizeClipProjection, normalizeClipPanoramaView, normalizeMasks, normalizeMotionTrack, normalizeClipBorder, normalizeMulticamSequence, normalizeSequenceFrameRate} from './clip-normalize';
+import {normalizeAudioRestoration} from '../audio-restoration';
+import {normalizeMotionGraphic} from '../motion-graphics';
+import {normalizeClipPitchData} from '../audio-pitch';
+import {normalizeDataSubtitleSource} from '../data-subtitle';
+import type {MixerState, MixerChannel, AudioBus} from '../audio/mixer-types';
+import {createBus} from '../audio/mixer-types';
+import type {ClipAIReframe, ReframeKeyframe} from '../ai-reframe';
+import type {AnomalyInterval, AnomalyType, AnomalySeverity} from '../anomaly-detection';
+import type {FlashWarning} from '../flash-warning';
+import type {ReadingSpeedWarning, ReadingSpeedSeverity} from '../subtitle-reading-speed';
+import type {MusicStructurePoint} from '../music-structure';
+import type {ContinuityWarning} from '../continuity-check';
+import {DEFAULT_COLLABORATION_NOTE_AUTHOR, DEFAULT_TIMELINE_MARKER_COLOR, DEFAULT_TIMELINE_NOTE_COLOR, TIMELINE_NOTE_COLORS} from './defaults';
+import {normalizeQualityEnhancement} from './clip-normalize';
+import {finiteOrDefault} from '../math-utils';
+import type {AiPipPlacementSuggestion, ClipAILookMatch, ClipKeyframes, ClipPrivacyRedaction, CollaborationNoteType, KeyframeProperty, LUTLayer, MediaAsset, PlatformFitSegment, PrivacyRedactionType, Project, ProjectPlatformFitSuggestion, ProjectSettings, ReviewAnnotationType, Timeline} from '../model-types';
 
 export function serializeLegacyProject(project: Project): {
   version: '0.1';

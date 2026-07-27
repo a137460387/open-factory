@@ -6,10 +6,8 @@
  * motion, scene types, dialogue detection) — no external API calls.
  */
 
-import type { MediaAsset, MediaMetadata } from './model-types';
-import type { ClipContentAnalysis, ContentSceneType } from './content-analysis';
-import { CONTENT_SCENE_TYPES } from './content-analysis';
-
+import type {MediaAsset, MediaMetadata} from './model-types';
+import type {ClipContentAnalysis, ContentSceneType} from './content-analysis';
 // ─── Types ──────────────────────────────────────────────
 
 export interface SceneTag {

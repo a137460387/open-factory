@@ -3,8 +3,8 @@
  * 插件创建模块
  */
 
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import {mkdir, writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
 
 const VALID_TYPES = ['effect', 'export', 'workflow', 'ai-model'];
 

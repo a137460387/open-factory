@@ -11,11 +11,10 @@
  * for the user to browse, compare, and selectively apply.
  */
 
-import type { MaterialMetadata } from './semantic-extractor';
-import type { StyleFingerprint } from './style-analyzer';
-import type { LLMMessage, LLMResponse } from './llm-orchestrator';
-import { buildEditingPrompt } from './llm-orchestrator';
-import { clamp01 } from '../utils/math';
+import type {MaterialMetadata} from './semantic-extractor';
+import type {StyleFingerprint} from './style-analyzer';
+import type {LLMMessage} from './llm-orchestrator';
+import {clamp01} from '../utils/math';
 
 // ─── Suggestion Types ───────────────────────────────────────────
 

@@ -6,16 +6,16 @@
  * into a unified plugin system.
  */
 
-import type { OpenFactoryPluginManifest, PluginPermission } from './index';
-import { PluginLifecycleManager, type PluginMetadata, type PluginRegistryEntry } from './lifecycle';
-import { PluginSandbox, type SandboxPolicy } from './sandbox';
-import { PluginEditorAPIImpl } from './api/editor-api';
-import { PluginAIAPIImpl } from './api/ai-api';
-import { PluginUIAPIImpl } from './api/ui-api';
-import { PluginStorageAPIImpl } from './api/storage-api';
-import { PluginNetworkAPIImpl } from './api/network-api';
-import { PluginMarketplace, type MarketplacePlugin } from './marketplace';
-import { logger } from '@open-factory/editor-core/utils';
+import type {OpenFactoryPluginManifest} from './index';
+import {PluginLifecycleManager, type PluginMetadata, type PluginRegistryEntry} from './lifecycle';
+import {PluginSandbox, type SandboxPolicy} from './sandbox';
+import {PluginEditorAPIImpl} from './api/editor-api';
+import {PluginAIAPIImpl} from './api/ai-api';
+import {PluginUIAPIImpl} from './api/ui-api';
+import {PluginStorageAPIImpl} from './api/storage-api';
+import {PluginNetworkAPIImpl} from './api/network-api';
+import {PluginMarketplace} from './marketplace';
+import {logger} from '@open-factory/editor-core/utils';
 
 // ─── Host Configuration ────────────────────────────────────────────
 

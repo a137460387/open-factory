@@ -1,25 +1,20 @@
-import { useEditorShellProfiler } from './useEditorShellProfiler';
-import { useEditorShellViewSettingsCallbacks } from './useEditorShellViewSettingsCallbacks';
-import { useEditorShellProjectCallbacks } from './useEditorShellProjectCallbacks';
-import { useEditorShellMediaCallbacks } from './useEditorShellMediaCallbacks';
-import { useEditorShellMiscCallbacks } from './useEditorShellMiscCallbacks';
-import { useEditorShellPlaybackCallbacks } from './useEditorShellPlaybackCallbacks';
-import { useEditorShellTimelineCallbacks } from './useEditorShellTimelineCallbacks';
-import { useEditorShellInlineCallbacks } from './useEditorShellInlineCallbacks';
-import { useContentAnalysisCallbacks } from './useEditorShellContentAnalysisCallbacks';
-import {
-  useProjectHealthCallbacks,
-  useAudioAnalysisCallbacks,
-  useBeatSyncCallbacks,
-  useRecordingCallbacks,
-} from './useEditorShellCallbacks';
-import { useProxyCallbacks } from './useEditorShellProxyCallbacks';
-import { useEditorShellOperationRecording } from './useEditorShellOperationRecording';
-import { useEditorShellPanelCallbacks } from './useEditorShellPanelCallbacks';
-import { useEditorShellFloatingDialogsCallbacks } from './useEditorShellFloatingDialogsCallbacks';
-import type { useEditorShellDerivedState } from './useEditorShellDerivedState';
-import type { useEditorShellStoreSubscriptions } from './useEditorShellStoreSubscriptions';
-import type { useExportQueue } from './useExportQueue';
+import {useEditorShellProfiler} from './useEditorShellProfiler';
+import {useEditorShellViewSettingsCallbacks} from './useEditorShellViewSettingsCallbacks';
+import {useEditorShellProjectCallbacks} from './useEditorShellProjectCallbacks';
+import {useEditorShellMediaCallbacks} from './useEditorShellMediaCallbacks';
+import {useEditorShellMiscCallbacks} from './useEditorShellMiscCallbacks';
+import {useEditorShellPlaybackCallbacks} from './useEditorShellPlaybackCallbacks';
+import {useEditorShellTimelineCallbacks} from './useEditorShellTimelineCallbacks';
+import {useEditorShellInlineCallbacks} from './useEditorShellInlineCallbacks';
+import {useContentAnalysisCallbacks} from './useEditorShellContentAnalysisCallbacks';
+import {useProjectHealthCallbacks, useAudioAnalysisCallbacks, useBeatSyncCallbacks, useRecordingCallbacks} from './useEditorShellCallbacks';
+import {useProxyCallbacks} from './useEditorShellProxyCallbacks';
+import {useEditorShellOperationRecording} from './useEditorShellOperationRecording';
+import {useEditorShellPanelCallbacks} from './useEditorShellPanelCallbacks';
+import {useEditorShellFloatingDialogsCallbacks} from './useEditorShellFloatingDialogsCallbacks';
+import type {useEditorShellDerivedState} from './useEditorShellDerivedState';
+import type {useEditorShellStoreSubscriptions} from './useEditorShellStoreSubscriptions';
+import type {useExportQueue} from './useExportQueue';
 
 // Use ReturnType to derive types from hook return values
 type StoreSubscriptionsResult = ReturnType<typeof useEditorShellStoreSubscriptions>;

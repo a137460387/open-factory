@@ -3,50 +3,11 @@
  * 提供设备管理、同步状态、冲突解决等功能的UI界面
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Monitor,
-  Laptop,
-  Tablet,
-  Smartphone,
-  Wifi,
-  WifiOff,
-  RefreshCw,
-  Pause,
-  Play,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  HardDrive,
-  Battery,
-  Signal,
-  MoreVertical,
-  Settings,
-  Trash2,
-  Cloud,
-  CloudOff,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Info,
-  Zap,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import {
-  MultiDeviceSyncManager,
-  createSyncManager,
-  createLocalDevice,
-  type Device,
-  type DeviceType,
-  type DeviceStatus,
-  type DeviceSyncStatus,
-  type DeviceSyncConflict,
-  type OfflineQueueItem,
-  type SyncStats,
-  type DeviceSyncConfig,
-} from '@open-factory/editor-core/sync/multi-device-sync';
+import React, {useState, useCallback, useMemo, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
+import {Monitor, Laptop, Tablet, Smartphone, Wifi, WifiOff, RefreshCw, Pause, Play, AlertTriangle, CheckCircle, XCircle, Clock, Battery, Signal, MoreVertical, Settings, Trash2, Cloud, Loader2, ChevronDown, ChevronUp} from 'lucide-react';
+import {cn} from '@/lib/utils';
+import {MultiDeviceSyncManager, createSyncManager, createLocalDevice, type Device, type DeviceType, type DeviceStatus, type DeviceSyncStatus, type DeviceSyncConflict, type OfflineQueueItem, type DeviceSyncConfig} from '@open-factory/editor-core/sync/multi-device-sync';
 
 // ==================== 类型定义 ====================
 

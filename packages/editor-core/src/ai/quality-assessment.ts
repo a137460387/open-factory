@@ -14,9 +14,9 @@
  * 所有函数均为纯计算，无副作用。
  */
 
-import type { AiModuleResult, TranslateFn } from '../ai-module-types';
-import { identityTranslator } from '../ai-module-types';
-import { clamp } from '../utils/math';
+import type {AiModuleResult, TranslateFn} from '../ai-module-types';
+import {identityTranslator} from '../ai-module-types';
+import {clamp} from '../utils/math';
 
 // ==================== 类型定义 ====================
 

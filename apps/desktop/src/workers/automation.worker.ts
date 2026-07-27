@@ -3,22 +3,12 @@
  * 在后台线程执行工作流引擎和场景分析，不阻塞 UI
  */
 
-import {
-  WorkflowEngine,
-  SceneAnalyzer,
-  RuleEngine,
-  createDefaultWorkflow,
-  createDefaultStep,
-  BUILTIN_TEMPLATES,
-  BUILTIN_RULE_TEMPLATES,
-  autoEdit,
-  TemplateManager,
-} from '@open-factory/editor-core';
-import type { Workflow, WorkflowExecutionContext, ActionExecutor } from '@open-factory/editor-core';
-import type { SceneAnalysis, AnalysisReport } from '@open-factory/editor-core';
-import type { AutomationRule, RuleExecutionResult } from '@open-factory/editor-core';
-import type { EditTemplate, AutoEditorConfig, AutoEditResult } from '@open-factory/editor-core';
-import type { PreferenceWeights } from '@open-factory/editor-core';
+import {WorkflowEngine, SceneAnalyzer, RuleEngine, BUILTIN_TEMPLATES, BUILTIN_RULE_TEMPLATES, autoEdit, TemplateManager} from '@open-factory/editor-core';
+import type {Workflow} from '@open-factory/editor-core';
+import type {AnalysisReport} from '@open-factory/editor-core';
+import type {AutomationRule} from '@open-factory/editor-core';
+import type {AutoEditorConfig} from '@open-factory/editor-core';
+import type {PreferenceWeights} from '@open-factory/editor-core';
 
 // ============================================================
 // Worker 消息类型

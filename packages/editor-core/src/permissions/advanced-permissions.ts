@@ -5,7 +5,7 @@
  * 与现有协作系统深度集成
  */
 
-import { createId } from '../model';
+import {createId} from '../model';
 
 // ==================== 类型定义 ====================
 

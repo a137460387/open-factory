@@ -1,18 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Loader2, Sparkles, Plus, X } from 'lucide-react';
-import type { Clip, BrollSuggestion } from '@open-factory/editor-core';
-import {
-  detectCoverageGaps,
-  matchKeywords,
-  parseBrollAiResponse,
-  createBrollSuggestions,
-  normalizeBrollSuggestions,
-  hasAvailableTextProvider,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { useAISettingsStore } from '../../store/aiSettingsStore';
-import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
-import { showToast } from '../../lib/toast';
+import {useState, useCallback, useRef, useEffect} from 'react';
+import {Loader2, Sparkles, Plus, X} from 'lucide-react';
+import type {Clip, BrollSuggestion} from '@open-factory/editor-core';
+import {detectCoverageGaps, matchKeywords, parseBrollAiResponse, createBrollSuggestions, hasAvailableTextProvider} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {useAISettingsStore} from '../../store/aiSettingsStore';
+import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
+import {showToast} from '../../lib/toast';
 
 const t = zhCN.inspector.aiBrollSuggestion;
 

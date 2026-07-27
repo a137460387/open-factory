@@ -7,29 +7,13 @@
  * - One-click apply functionality
  */
 
-import { useState, useMemo } from 'react';
-import {
-  Zap,
-  Music,
-  BarChart3,
-  Clock,
-  Star,
-  Check,
-  Eye,
-  ArrowRight,
-  X,
-  Scissors,
-} from 'lucide-react';
-import {
-  generateRoughCutProposals,
-  type RoughCutResult,
-  type RoughCutProposal,
-  type RoughCutSegment,
-} from '@open-factory/editor-core/smart-rough-cut';
-import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
-import type { OnsetEvent, AudioRhythmResult } from '@open-factory/editor-core/audio-rhythm-analysis';
-import { formatTimeShort } from '@open-factory/editor-core';
-import { clsx } from 'clsx';
+import {useState, useMemo} from 'react';
+import {Zap, Music, BarChart3, Clock, Star, Check, Eye, X, Scissors} from 'lucide-react';
+import {generateRoughCutProposals, type RoughCutResult, type RoughCutProposal, type RoughCutSegment} from '@open-factory/editor-core/smart-rough-cut';
+import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
+import type {AudioRhythmResult} from '@open-factory/editor-core/audio-rhythm-analysis';
+import {formatTimeShort} from '@open-factory/editor-core';
+import {clsx} from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -2,17 +2,8 @@
  * Plugin service - business logic for plugin management
  */
 
-import type {
-  Plugin,
-  PluginManifest,
-  PluginSearchQuery,
-  PluginSearchResponse,
-  PluginSearchResult,
-  PluginReview,
-  PluginVersion,
-  PluginInstallResult,
-} from '../types.js';
-import { NotFoundError, ConflictError, ValidationError } from '../utils/errors.js';
+import type {Plugin, PluginManifest, PluginSearchQuery, PluginSearchResponse, PluginSearchResult, PluginReview, PluginVersion, PluginInstallResult} from '../types.js';
+import {NotFoundError, ConflictError, ValidationError} from '../utils/errors.js';
 
 // ============================================================
 // Mock Data (replace with database in production)

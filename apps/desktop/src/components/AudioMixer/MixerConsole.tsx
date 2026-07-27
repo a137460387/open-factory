@@ -1,6 +1,6 @@
-import React, { useCallback } from 'react';
-import type { MixerChannel, MixerState } from '@open-factory/editor-core';
-import { ChannelStrip } from './ChannelStrip';
+import React from 'react';
+import type {MixerChannel, MixerState} from '@open-factory/editor-core';
+import {ChannelStrip} from './ChannelStrip';
 
 interface MixerConsoleProps {
   state: MixerState;

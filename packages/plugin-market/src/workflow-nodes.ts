@@ -1,7 +1,7 @@
 // Workflow Node Registration
 // Manages plugin-contributed workflow nodes: registration, lookup, validation, and catalog.
 
-import type { WorkflowNodeDefinition, WorkflowPortDefinition } from './types.js';
+import type {WorkflowNodeDefinition} from './types.js';
 
 /** Resolved workflow node with its owning plugin. */
 export interface RegisteredWorkflowNode {

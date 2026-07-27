@@ -11,25 +11,11 @@
  * composed with the existing dialoguePanelReducer.
  */
 
-import type {
-  EditingSuggestion,
-  SuggestionCategory,
-  SuggestionRequest,
-  SuggestionResponse,
-  SuggestionComparison,
-} from './suggestion-engine';
-import {
-  buildSuggestionMessages,
-  parseSuggestionResponse,
-  enrichSuggestionWithStyle,
-  generateComparison,
-  recordFeedback,
-  filterSuggestions,
-  rankSuggestions,
-} from './suggestion-engine';
-import type { StyleFingerprint } from './style-analyzer';
-import type { MaterialMetadata } from './semantic-extractor';
-import type { EditPlan } from './llm-orchestrator';
+import type {EditingSuggestion, SuggestionCategory, SuggestionRequest, SuggestionResponse, SuggestionComparison} from './suggestion-engine';
+import {enrichSuggestionWithStyle, generateComparison, recordFeedback, filterSuggestions} from './suggestion-engine';
+import type {StyleFingerprint} from './style-analyzer';
+import type {MaterialMetadata} from './semantic-extractor';
+import type {EditPlan} from './llm-orchestrator';
 
 // ─── Suggestion State (additive to DialoguePanelState) ──────────
 

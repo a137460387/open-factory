@@ -1,11 +1,8 @@
-import { Gauge } from 'lucide-react';
-import type { GpuPreviewMetrics } from '../../lib/preview/gpu-acceleration';
-import { GPU_TEXTURE_POOL_MAX_BYTES, formatTextureMemoryMiB } from '../../lib/preview/gpu-acceleration';
-import { getPreviewAdaptiveQualityStatus, type PreviewPerformanceSettings } from '../../lib/preview/preview-performance';
-import { getAdaptiveQualityIndicatorClass } from './utils';
-import { zhCN } from '../../i18n/strings';
-import type { PreviewFpsSample } from '../../lib/preview/preview-performance';
-
+import {Gauge} from 'lucide-react';
+import type {GpuPreviewMetrics} from '../../lib/preview/gpu-acceleration';
+import {getPreviewAdaptiveQualityStatus, type PreviewPerformanceSettings} from '../../lib/preview/preview-performance';
+import {getAdaptiveQualityIndicatorClass} from './utils';
+import {zhCN} from '../../i18n/strings';
 export interface PreviewEffectsProps {
   adaptiveIndicatorStatus: ReturnType<typeof getPreviewAdaptiveQualityStatus>;
   adaptiveIndicatorTitle: string;

@@ -1,6 +1,7 @@
+use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -41,6 +42,8 @@ pub fn render_preview_cache(
     let project_dir = cache_dir.join(&request.project_id);
     fs::create_dir_all(&project_dir).map_err(|e| format!("Failed to create cache dir: {e}"))?;
 
+    let safe_source = validate_path(&app, Path::new(&request.source_path))?;
+
     let duration = request.end_sec - request.start_sec;
     if duration <= 0.0 {
         return Err("Invalid time range: end must be greater than start".to_string());
@@ -68,12 +71,13 @@ pub fn render_preview_cache(
     let duration_str = format!("{:.3}", duration);
     let size_str = format!("{}x{}", request.width, request.height);
     let vf_arg = format!("scale={size_str}");
+    let source_str = safe_source.to_string_lossy().to_string();
 
     let args = vec![
         "-ss",
         start_str.as_str(),
         "-i",
-        request.source_path.as_str(),
+        source_str.as_str(),
         "-t",
         duration_str.as_str(),
         "-vf",

@@ -1,13 +1,5 @@
-import type { Clip, ExportSettings, Project } from '@open-factory/editor-core';
-import type {
-  OpenFactoryPlugin,
-  OpenFactoryPluginManifest,
-  PluginHookName,
-  PluginHookPayloads,
-  PluginHooks,
-  PluginMessagePayload,
-  PluginPermission,
-} from '@open-factory/plugin-sdk';
+import type {ExportSettings, Project} from '@open-factory/editor-core';
+import type {OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginHooks, PluginMessagePayload, PluginPermission} from '@open-factory/plugin-sdk';
 
 export type {
   OpenFactoryPlugin,

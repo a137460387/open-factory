@@ -1,5 +1,5 @@
-import type { LocaleStrings } from "./strings.js";
-import { formatSignedNumber, formatTrackType } from "./i18n-utils.js";
+import type {LocaleStrings} from './strings.js';
+import {formatSignedNumber, formatTrackType} from './i18n-utils.js';
 type DeepPartial<T> = T extends (...args: any[]) => any ? T : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 export const enOverrides = {

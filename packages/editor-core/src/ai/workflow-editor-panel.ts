@@ -7,32 +7,9 @@
  * Designed to be consumed by any frontend framework (React, Vue, Svelte, etc.)
  */
 
-import type {
-  NodeWorkflow,
-  WorkflowNode,
-  WorkflowParameter,
-  NodeConnection,
-  NodePosition,
-  NodeDefinition,
-  NodeGraphValidationError,
-} from '../automation/workflow-node-editor';
-import {
-  createNodeWorkflow,
-  createNodeFromDefinition,
-  addNode,
-  removeNode,
-  connectNodes,
-  disconnectNodes,
-  updateNodeParams,
-  moveNode,
-  validateNodeWorkflow,
-  convertToWorkflow,
-  resolveParameters,
-  validateParameters,
-  BUILTIN_NODE_DEFINITIONS,
-  BUILTIN_NODE_TEMPLATES,
-} from '../automation/workflow-node-editor';
-import type { Workflow, WorkflowExecutionContext } from '../automation/workflow-engine';
+import type {NodeWorkflow, WorkflowNode, WorkflowParameter, NodePosition, NodeDefinition, NodeGraphValidationError} from '../automation/workflow-node-editor';
+import {createNodeWorkflow, createNodeFromDefinition, addNode, removeNode, connectNodes, disconnectNodes, updateNodeParams, moveNode, validateNodeWorkflow, convertToWorkflow, resolveParameters, validateParameters, BUILTIN_NODE_DEFINITIONS, BUILTIN_NODE_TEMPLATES} from '../automation/workflow-node-editor';
+import type {Workflow, WorkflowExecutionContext} from '../automation/workflow-engine';
 
 // ─── Panel State ────────────────────────────────────────────────
 

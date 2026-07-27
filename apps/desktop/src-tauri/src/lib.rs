@@ -3,6 +3,7 @@ pub mod db;
 pub mod input_validator;
 pub mod migrations;
 pub mod net_guard;
+pub mod observability;
 pub mod path_validator;
 
 use serde_json::json;
@@ -68,6 +69,9 @@ fn send_notification(app: tauri::AppHandle, title: String, body: String) -> Resu
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    observability::init_tracing();
+    tracing::info!("Open Factory starting, version {}", env!("CARGO_PKG_VERSION"));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

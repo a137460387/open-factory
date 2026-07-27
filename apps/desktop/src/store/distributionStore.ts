@@ -1,11 +1,11 @@
-import { create } from 'zustand';
-import type { DistributionPlatformId, DistributionPlatformSpec } from '@open-factory/editor-core';
-import type { SmartCropResult } from '@open-factory/editor-core';
-import type { DistributionTask, DistributionBatchResult } from '@open-factory/editor-core';
-import type { DistributionSchedule, DistributionHistoryEntry } from '@open-factory/editor-core';
-import type { FormatVariant, MultiFormatResult, FormatPreview } from '@open-factory/editor-core';
-import type { PlatformAdaptation, AdaptationSuggestion } from '@open-factory/editor-core';
-import type { GeneratedCover, CoverGenerationResult } from '@open-factory/editor-core';
+import {create} from 'zustand';
+import type {DistributionPlatformId} from '@open-factory/editor-core';
+import type {SmartCropResult} from '@open-factory/editor-core';
+import type {DistributionTask, DistributionBatchResult} from '@open-factory/editor-core';
+import type {DistributionSchedule, DistributionHistoryEntry} from '@open-factory/editor-core';
+import type {MultiFormatResult, FormatPreview} from '@open-factory/editor-core';
+import type {PlatformAdaptation, AdaptationSuggestion} from '@open-factory/editor-core';
+import type {CoverGenerationResult} from '@open-factory/editor-core';
 
 type Updater<T> = T | ((current: T) => T);
 

@@ -1,17 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
-import { History, BarChart3 } from 'lucide-react';
-import {
-  classifyExportHistory,
-  filterExportHistory,
-  calculateExportCategoryStats,
-  overrideEntryCategory,
-  EXPORT_CATEGORY_RULES,
-  type ClassifiedExportEntry,
-  type ExportCategoryTag,
-  type ExportHistoryFilter,
-} from '@open-factory/editor-core';
-import type { ExportTaskHistoryEntry } from '@open-factory/editor-core';
-import { featureStrings } from '../i18n/featureStrings';
+import {useState, useMemo, useCallback} from 'react';
+import {History, BarChart3} from 'lucide-react';
+import {classifyExportHistory, filterExportHistory, calculateExportCategoryStats, overrideEntryCategory, type ExportCategoryTag, type ExportHistoryFilter} from '@open-factory/editor-core';
+import type {ExportTaskHistoryEntry} from '@open-factory/editor-core';
+import {featureStrings} from '../i18n/featureStrings';
 
 interface ExportHistoryClassifierPanelProps {
   open: boolean;

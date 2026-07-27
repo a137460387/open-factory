@@ -1,26 +1,12 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { Project } from '@open-factory/editor-core';
-import {
-  buildChatSystemPrompt,
-  buildTimelineContext,
-  safeParseChatResponse,
-  describeChatCommand,
-  ChatHistory,
-  type ChatCommand,
-  type ChatMessage,
-  isProviderConfigured,
-  UpdateClipCommand,
-  SplitClipCommand,
-  DeleteClipsCommand,
-  TrimClipCommand,
-  BatchUpdateClipCommand,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { useAISettingsStore } from '../../store/aiSettingsStore';
-import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { useEditorStore } from '../../store/editorStore';
-import { showToast } from '../../lib/toast';
+import {useState, useCallback, useRef, useEffect} from 'react';
+import type {Project} from '@open-factory/editor-core';
+import {buildChatSystemPrompt, buildTimelineContext, safeParseChatResponse, describeChatCommand, ChatHistory, type ChatCommand, isProviderConfigured, UpdateClipCommand, SplitClipCommand, DeleteClipsCommand, TrimClipCommand, BatchUpdateClipCommand} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {useAISettingsStore} from '../../store/aiSettingsStore';
+import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
+import {commandManager, timelineAccessor} from '../../store/commandManager';
+import {useEditorStore} from '../../store/editorStore';
+import {showToast} from '../../lib/toast';
 
 const t = zhCN.aiChatEditor;
 

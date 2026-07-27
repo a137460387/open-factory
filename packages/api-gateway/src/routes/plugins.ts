@@ -2,12 +2,12 @@
  * Plugin routes
  */
 
-import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { pluginService } from '../services/plugin-service.js';
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
-import { rbacMiddleware } from '../middleware/rbac.js';
-import { successResponse, paginatedResponse } from '../utils/response.js';
+import type {FastifyInstance} from 'fastify';
+import {z} from 'zod';
+import {pluginService} from '../services/plugin-service.js';
+import {authMiddleware, optionalAuthMiddleware} from '../middleware/auth.js';
+import {rbacMiddleware} from '../middleware/rbac.js';
+import {successResponse} from '../utils/response.js';
 
 // ============================================================
 // Schemas

@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
-import { secondsToTimecode, parseFrameJumpQuery, getTimelinePlaybackDuration, type FrameJumpParseError, type FrameSearchHistoryEntry, type Project } from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { appendFrameSearchHistory, readFrameSearchHistory } from '../../lib/frameSearchHistory';
-import type { FrameSearchCandidate } from './types';
+import {secondsToTimecode, parseFrameJumpQuery, getTimelinePlaybackDuration, type FrameJumpParseError, type FrameSearchHistoryEntry, type Project} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {appendFrameSearchHistory} from '../../lib/frameSearchHistory';
+import type {FrameSearchCandidate} from './types';
 
 export interface PreviewTimelineProps {
   playheadTime: number;

@@ -1,30 +1,18 @@
-import { useMemo } from 'react';
-import type {
-  BatchEditableMediaMetadata,
-  Clip,
-  EffectPreset,
-  MediaAsset,
-  MediaFlag,
-  MediaLabelColor,
-  MediaRenamePreviewItem,
-  Subclip,
-  TitleTemplateId,
-} from '@open-factory/editor-core';
-import { UpdateProjectMediaCollectionsCommand } from '@open-factory/editor-core';
-import { ChevronLeft } from 'lucide-react';
-import { MediaBin } from '../MediaBin/MediaBin';
-import { CollapsedPanelRail } from '../CollapsedPanelRail';
-import { zhCN } from '../../i18n/strings';
-import { useEditorStore } from '../../store/editorStore';
-import { useLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch } from '../../store/panelStore';
-import { useEditorMiscStore } from '../../store/editorMiscStore';
-import { useEditorSettingsStore } from '../../store/editorSettingsStore';
-import { commandManager, projectAccessor } from '../../store/commandManager';
-import { getEffectivePanelState } from '../../layout/layoutSettings';
-import { getReviewModeShellVisibility } from '../../review/reviewMode';
-import { summarizeContentAnalysisByMedia, collectContentAnalysisTargets } from '../../lib/content-analysis-helpers';
-import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
-
+import {useMemo} from 'react';
+import type {BatchEditableMediaMetadata, EffectPreset, MediaAsset, MediaFlag, MediaLabelColor, MediaRenamePreviewItem, Subclip, TitleTemplateId} from '@open-factory/editor-core';
+import {UpdateProjectMediaCollectionsCommand} from '@open-factory/editor-core';
+import {ChevronLeft} from 'lucide-react';
+import {MediaBin} from '../MediaBin/MediaBin';
+import {CollapsedPanelRail} from '../CollapsedPanelRail';
+import {zhCN} from '../../i18n/strings';
+import {useEditorStore} from '../../store/editorStore';
+import {useLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch} from '../../store/panelStore';
+import {useEditorMiscStore} from '../../store/editorMiscStore';
+import {useEditorSettingsStore} from '../../store/editorSettingsStore';
+import {commandManager, projectAccessor} from '../../store/commandManager';
+import {getEffectivePanelState} from '../../layout/layoutSettings';
+import {getReviewModeShellVisibility} from '../../review/reviewMode';
+import {summarizeContentAnalysisByMedia, collectContentAnalysisTargets} from '../../lib/content-analysis-helpers';
 export interface ShellLeftPanelCallbacks {
   onImport: () => void;
   onImportPaths: (paths: string[]) => void;

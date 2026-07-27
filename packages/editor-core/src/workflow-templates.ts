@@ -5,12 +5,7 @@
  * video editing and AI processing tasks.
  */
 
-import type {
-  WorkflowTemplate,
-  WorkflowGraph,
-  WorkflowNode,
-  NodeConnection,
-} from './node-editor-types';
+import type {WorkflowTemplate, WorkflowGraph} from './node-editor-types';
 
 // ─── Built-in Templates ────────────────────────────────────────────────────
 

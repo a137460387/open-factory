@@ -2,14 +2,9 @@
  * Image-to-video generation pipeline
  */
 
-import type {
-  ImageToVideoOptions,
-  ImageToVideoResult,
-  VideoMetadata,
-  ComputeEngine,
-} from '../types.js';
-import { getConfig } from '../config.js';
-import { modelManager } from '../models/model-manager.js';
+import type {ImageToVideoOptions, ImageToVideoResult, VideoMetadata, ComputeEngine} from '../types.js';
+import {getConfig} from '../config.js';
+import {modelManager} from '../models/model-manager.js';
 
 // ============================================================
 // Image-to-Video Pipeline

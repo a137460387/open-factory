@@ -2,10 +2,10 @@
  * JWT authentication middleware
  */
 
-import type { FastifyRequest, FastifyReply } from 'fastify';
+import type {FastifyRequest, FastifyReply} from 'fastify';
 import jwt from 'jsonwebtoken';
-import { getConfig } from '../config.js';
-import type { TokenPayload, UserRole } from '../types.js';
+import {getConfig} from '../config.js';
+import type {TokenPayload} from '../types.js';
 
 // ============================================================
 // Auth Error

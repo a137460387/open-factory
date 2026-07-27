@@ -1,103 +1,31 @@
-import {
-  DEFAULT_SUBTITLE_MODE,
-  DEFAULT_SUBTITLE_STYLE,
-  DEFAULT_TEXT_STYLE,
-  PRIMARY_SEQUENCE_ID,
-  clampClipSpeed,
-  createSequence,
-  createTransition,
-  createTrack,
-  normalizeTimelineMarkers,
-  normalizeAudioFadeCurve,
-  normalizeAudioFadeDuration,
-  normalizeAudioDenoise,
-  normalizeAudioChannelRouting,
-  normalizeAudioPitchSemitones,
-  normalizeChromaKey,
-  normalizeClipBeatMarkers,
-  normalizeClipBorder,
-  normalizeClipPanoramaView,
-  normalizeClipProjection,
-  normalizeClipSceneCuts,
-  normalizeColorCorrection,
-  normalizeDetectedBpm,
-  normalizeFrameInterpolation,
-  normalizeMasks,
-  normalizeMasterVolume,
-  normalizeMediaMetadataEntry,
-  normalizeMediaColorProfile,
-  normalizeMotionTrack,
-  normalizeMulticamSequence,
-  normalizeProjectAnnotations,
-  normalizeReviewAnnotations,
-  normalizeCollaborationNotes,
-  normalizeQualityEnhancement,
-  normalizeTimelineNotes,
-  normalizeTimelineBookmarks,
-  normalizeExportRanges,
-  normalizeProtectedRanges,
-  normalizeProjectSettings,
-  normalizeProjectSpeakers,
-  normalizeSequenceFrameRate,
-  normalizeSequenceName,
-  normalizeSlowMotionMode,
-  normalizeStabilization,
-  normalizeSubtitleSoundDesc,
-  normalizeSubtitleSpeaker,
-  normalizeSubtitleTrackType,
-  normalizeTextPath,
-  normalizeTransform,
-  normalizeVideoRestoration,
-  normalizeClipAIReframe,
-  normalizeAnomalyIntervals,
-  normalizeSubtitleSpeakerId,
-  normalizeSpeakerLabels,
-  normalizeMixerState,
-} from '../model';
-import { normalizeColorNodeGraph } from '../color-node-graph';
-import type {
-  Clip,
-  ImageSequenceInfo,
-  MediaAsset,
-  MediaFolder,
-  MediaMetadata,
-  Project,
-  Sequence,
-  Subclip,
-  Timeline,
-  Transition,
-} from '../model-types';
-import type { TimingAdaptation, TtsSegment, DubbingAdaptationType } from '../model-types';
-import type { MixerState } from '../audio/mixer-types';
-import type { CharacterTimeline } from '../ai-character-timeline';
-import type { PreflightReport } from '../ai-preflight-checklist';
-import type { EmotionAnalysis, EmotionTone } from '../ai-emotion-tone';
-import { normalizeClipGroups } from '../clip-groups';
-import { normalizeClipBlendMode } from '../blend-modes';
-import { normalizeClipContentAnalysis } from '../content-analysis';
-import { normalizeSpatialAudio } from '../spatial-audio';
-import { normalizeClipPitchData } from '../audio-pitch';
-import { normalizeAudioRestoration } from '../audio-restoration';
-import { normalizeDataSubtitleSource } from '../data-subtitle';
-import { normalizeTimelineLabelColor } from '../timeline-color-labels';
-import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
-import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
-import { cloneEffects } from '../effects';
-import {
-  normalizeRichTextDocument,
-  normalizeTextArc,
-  normalizeTextLayout,
-  normalizeTextOpenTypeFeatures,
-} from '../text-layout';
-import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
-import { normalizeMotionGraphic } from '../motion-graphics';
-import { normalizeBeatMarkers } from '../beats';
-import { isVariableFrameRateProbe } from '../vfr';
-import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
-import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
-import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
-import { normalizeProjectDocumentation } from './documentation';
-import { normalizeProjectReleaseVersion } from './release-workflow';
+import {DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TEXT_STYLE, PRIMARY_SEQUENCE_ID, clampClipSpeed, createSequence, createTransition, createTrack, normalizeTimelineMarkers, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioDenoise, normalizeAudioChannelRouting, normalizeAudioPitchSemitones, normalizeChromaKey, normalizeClipBeatMarkers, normalizeClipBorder, normalizeClipPanoramaView, normalizeClipProjection, normalizeClipSceneCuts, normalizeColorCorrection, normalizeDetectedBpm, normalizeFrameInterpolation, normalizeMasks, normalizeMasterVolume, normalizeMediaMetadataEntry, normalizeMediaColorProfile, normalizeMotionTrack, normalizeMulticamSequence, normalizeProjectAnnotations, normalizeReviewAnnotations, normalizeCollaborationNotes, normalizeQualityEnhancement, normalizeTimelineNotes, normalizeTimelineBookmarks, normalizeExportRanges, normalizeProtectedRanges, normalizeProjectSettings, normalizeProjectSpeakers, normalizeSequenceFrameRate, normalizeSequenceName, normalizeSlowMotionMode, normalizeStabilization, normalizeSubtitleSoundDesc, normalizeSubtitleSpeaker, normalizeSubtitleTrackType, normalizeTextPath, normalizeTransform, normalizeVideoRestoration, normalizeClipAIReframe, normalizeAnomalyIntervals, normalizeSubtitleSpeakerId, normalizeSpeakerLabels, normalizeMixerState} from '../model';
+import {normalizeColorNodeGraph} from '../color-node-graph';
+import type {Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition} from '../model-types';
+import type {TimingAdaptation, TtsSegment, DubbingAdaptationType} from '../model-types';
+import type {CharacterTimeline} from '../ai-character-timeline';
+import type {PreflightReport} from '../ai-preflight-checklist';
+import type {EmotionAnalysis, EmotionTone} from '../ai-emotion-tone';
+import {normalizeClipGroups} from '../clip-groups';
+import {normalizeClipBlendMode} from '../blend-modes';
+import {normalizeClipContentAnalysis} from '../content-analysis';
+import {normalizeSpatialAudio} from '../spatial-audio';
+import {normalizeClipPitchData} from '../audio-pitch';
+import {normalizeAudioRestoration} from '../audio-restoration';
+import {normalizeDataSubtitleSource} from '../data-subtitle';
+import {normalizeTimelineLabelColor} from '../timeline-color-labels';
+import {normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt} from '../media-folders';
+import {cloneClipKeyframes, normalizeClipKeyframes} from '../keyframes';
+import {cloneEffects} from '../effects';
+import {normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures} from '../text-layout';
+import {normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle} from '../credits-roll';
+import {normalizeMotionGraphic} from '../motion-graphics';
+import {normalizeBeatMarkers} from '../beats';
+import {isVariableFrameRateProbe} from '../vfr';
+import {clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration} from '../timeline';
+import type {MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2} from './project-types';
+import {isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath} from './relative-paths';
+import {normalizeProjectDocumentation} from './documentation';
+import {normalizeProjectReleaseVersion} from './release-workflow';
 
 const DEFAULT_SETTINGS = {
   fps: 30,

@@ -1,12 +1,6 @@
-import type { SubtitleClip, SubtitleStyle, Timeline, Track } from '../model';
-import {
-  serializeSubtitleCueInputsToSrt,
-  serializeSubtitleCueInputsToVtt,
-  serializeSubtitleCueInputsToAss,
-  type SubtitleCueInput,
-  type SubtitleTextFormat,
-} from './srt';
-import { normalizeSubtitleLanguage } from '../model';
+import type {SubtitleClip, Timeline} from '../model';
+import {serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, serializeSubtitleCueInputsToAss, type SubtitleCueInput, type SubtitleTextFormat} from './srt';
+import {normalizeSubtitleLanguage} from '../model';
 
 // ---------------------------------------------------------------------------
 // Types

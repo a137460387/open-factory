@@ -43,45 +43,28 @@ export type {
 } from './model-types-primitives';
 
 // ─── 从 feature 模块导入高级类型 ─────────────────────────────────────────────
-import type { AIDenoiseRecommendation } from './ai-denoise-recommendation';
-import type { BrollSuggestion } from './ai-broll-suggestion';
-import type { VersionDiffSummary } from './ai-version-diff';
-import type { LoudnessSuggestion } from './ai-loudness-suggestion';
-import type { MediaAIAnalysis, AIColorGradingSuggestionItem } from './ai-service';
-import type { ColorCurves, ThreeWayColor } from './color-grading';
-import type { ColorGradingGraph } from './color-grading';
-import type { InputColorSpace } from './color-log-luts';
-import type { ClipBlendMode } from './blend-modes';
-import type { ClipContentAnalysis } from './content-analysis';
-import type { ColorNodeGraph } from './color-node-graph';
-import type { ProjectColorPipeline } from './color-pipeline';
-import type { MediaColorProfile, ProjectWorkingColorSpace } from './color-management';
-import type { ClipSpatialAudio } from './spatial-audio';
-import type { Effect } from './effects';
-import type { MixerState } from './audio/mixer-types';
-import type { TimecodeFormat } from './time';
-import type { MotionGraphic } from './motion-graphics';
-import type { CharacterTimeline } from './ai-character-timeline';
+import type {AIDenoiseRecommendation} from './ai-denoise-recommendation';
+import type {BrollSuggestion} from './ai-broll-suggestion';
+import type {VersionDiffSummary} from './ai-version-diff';
+import type {LoudnessSuggestion} from './ai-loudness-suggestion';
+import type {MediaAIAnalysis, AIColorGradingSuggestionItem} from './ai-service';
+import type {ColorCurves, ThreeWayColor} from './color-grading';
+import type {ColorGradingGraph} from './color-grading';
+import type {InputColorSpace} from './color-log-luts';
+import type {ClipBlendMode} from './blend-modes';
+import type {ClipContentAnalysis} from './content-analysis';
+import type {ColorNodeGraph} from './color-node-graph';
+import type {ProjectColorPipeline} from './color-pipeline';
+import type {MediaColorProfile, ProjectWorkingColorSpace} from './color-management';
+import type {ClipSpatialAudio} from './spatial-audio';
+import type {Effect} from './effects';
+import type {MixerState} from './audio/mixer-types';
+import type {TimecodeFormat} from './time';
+import type {MotionGraphic} from './motion-graphics';
+import type {CharacterTimeline} from './ai-character-timeline';
 
 // ─── 从 primitives 导入用于复合类型定义 ──────────────────────────────────────
-import type {
-  LUTLayer, PathPoint, ClipMaskKeyframe, ClipPrivacyBlur, ClipPrivacyRedaction,
-  ClipMask, TimelineMarker, TimelineBookmark, BeatMarker, ExportRange, ProtectedRange,
-  ClipGroup, TrackType, TimelineLabelColor, ChromaKey, ClipStabilization,
-  ClipFrameInterpolation, ClipSlowMotionMode, ClipPanoramaView, ClipVideoRestoration,
-  ClipQualityEnhancement, MotionTrackPoint, ClipBorder, ClipAudioDenoise,
-  ClipAILocalDenoise, ClipAudioRestoration, AudioFadeCurve, AudioChannelRoutingMode,
-  TextStyle, RichTextDocument, TextLayoutOptions, TextOpenTypeFeatures, TextArcOptions,
-  TextPathOptions, SubtitleMode, SubtitleLanguage, SubtitleTrackType, SubtitleStyle,
-  DataSubtitleSource, Transition, TrackEQ, TrackCompressor, SequenceSettings, Subclip,
-  ClipType, MulticamClipAngleBase, MulticamSequence, MulticamSyncMode, SwitchPoint,
-  ProjectVersion, ProjectSpeaker, ProjectDocumentation, MediaFolder, MediaMetadata,
-  ProjectAnnotation, ReviewAnnotation, CollaborationNote, TimelineNote,
-  ClipPitchDataPoint, BeatSnapSuggestion, MediaCollection, AiPipPlacementSuggestion,
-  TtsSegment, PacingAnalysis, MaskType, AssetType, ImageSequenceInfo,
-  VfrHandlingStrategy, Transform, ClipProjection, ClipAILookMatch, CreditsRow,
-  CreditsStyle, ProjectPlatformFitSuggestion, Keyframe, ClipKeyframes,
-} from './model-types-primitives';
+import type {LUTLayer, ClipPrivacyRedaction, ClipMask, TimelineMarker, TimelineBookmark, BeatMarker, ExportRange, ProtectedRange, ClipGroup, TrackType, TimelineLabelColor, ChromaKey, ClipStabilization, ClipFrameInterpolation, ClipSlowMotionMode, ClipPanoramaView, ClipVideoRestoration, ClipQualityEnhancement, MotionTrackPoint, ClipBorder, ClipAudioDenoise, ClipAILocalDenoise, ClipAudioRestoration, AudioFadeCurve, AudioChannelRoutingMode, TextStyle, RichTextDocument, TextLayoutOptions, TextOpenTypeFeatures, TextArcOptions, TextPathOptions, SubtitleMode, SubtitleLanguage, SubtitleTrackType, SubtitleStyle, DataSubtitleSource, Transition, TrackEQ, TrackCompressor, SequenceSettings, Subclip, MulticamClipAngleBase, MulticamSequence, MulticamSyncMode, SwitchPoint, ProjectVersion, ProjectSpeaker, ProjectDocumentation, MediaFolder, MediaMetadata, ProjectAnnotation, ReviewAnnotation, CollaborationNote, TimelineNote, ClipPitchDataPoint, BeatSnapSuggestion, MediaCollection, AiPipPlacementSuggestion, TtsSegment, PacingAnalysis, AssetType, ImageSequenceInfo, VfrHandlingStrategy, Transform, ClipProjection, ClipAILookMatch, CreditsRow, CreditsStyle, ProjectPlatformFitSuggestion, ClipKeyframes} from './model-types-primitives';
 
 // ─── 复合类型定义（依赖 feature 模块）──────────────────────────────────────
 

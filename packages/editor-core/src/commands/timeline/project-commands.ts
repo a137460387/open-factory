@@ -1,14 +1,14 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { FcpXmlImportOptions, FcpXmlImportResult, applyFcpXmlImport, buildFcpXmlImport } from '../../export/fcpxml-import';
-import { Cmx3600EdlImportOptions, Cmx3600EdlImportResult, applyCmx3600EdlImport, buildCmx3600EdlImport } from '../../export/timeline-import';
-import { Project, ProjectDocumentation, ProjectSettings, ProjectSpeaker, normalizeMasterVolume, normalizeProjectSettings, normalizeProjectSpeakers } from '../../model';
-import { SequenceSettings } from '../../model-types';
-import { ConformMediaReplacement, applyConformMedia } from '../../project/conform-media';
-import { normalizeProjectDocumentation } from '../../project/documentation';
-import { normalizeProjectReleaseVersion } from '../../project/release-workflow';
-import { recalculateClipStartsForFrameRate } from '../../sequence-settings';
-import { clampTrackHeight } from '../../track-height';
-import { Command } from '../command';
+import type {ProjectAccessor} from './index';
+import {FcpXmlImportOptions, FcpXmlImportResult, applyFcpXmlImport, buildFcpXmlImport} from '../../export/fcpxml-import';
+import {Cmx3600EdlImportOptions, Cmx3600EdlImportResult, applyCmx3600EdlImport, buildCmx3600EdlImport} from '../../export/timeline-import';
+import {Project, ProjectDocumentation, ProjectSettings, ProjectSpeaker, normalizeMasterVolume, normalizeProjectSettings, normalizeProjectSpeakers} from '../../model';
+import {SequenceSettings} from '../../model-types';
+import {ConformMediaReplacement, applyConformMedia} from '../../project/conform-media';
+import {normalizeProjectDocumentation} from '../../project/documentation';
+import {normalizeProjectReleaseVersion} from '../../project/release-workflow';
+import {recalculateClipStartsForFrameRate} from '../../sequence-settings';
+import {clampTrackHeight} from '../../track-height';
+import {Command} from '../command';
 
 export class NewProjectCommand implements Command {
   description: string;

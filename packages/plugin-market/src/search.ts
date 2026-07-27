@@ -1,14 +1,7 @@
 // Plugin Search Engine
 // Multi-dimensional search with scoring, filtering, and pagination.
 
-import type {
-  PluginRegistryEntry,
-  PluginSearchQuery,
-  PluginSearchResult,
-  PluginSearchResponse,
-  PluginCategory,
-  PluginSortField,
-} from './types.js';
+import type {PluginRegistryEntry, PluginSearchQuery, PluginSearchResult, PluginSearchResponse, PluginSortField} from './types.js';
 
 /** Search index entry with pre-computed text for fast matching. */
 interface SearchIndexEntry {

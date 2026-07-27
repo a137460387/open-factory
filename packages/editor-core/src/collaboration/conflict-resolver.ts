@@ -8,12 +8,7 @@
  * for stateful tracking and batch resolution.
  */
 
-import type {
-  SharedTrack,
-  SharedClip,
-  SharedTransition,
-  CrdtOperation,
-} from './crdt-integration';
+import type {SharedTrack, SharedClip, SharedTransition} from './crdt-integration';
 
 // ─── Types ─────────────────────────────────────────────────────────
 

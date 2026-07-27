@@ -5,7 +5,7 @@
  * and a collaboration status panel.
  */
 
-import type { AwarenessState, CollaboratorCursor } from './crdt-integration';
+import type {AwarenessState, CollaboratorCursor} from './crdt-integration';
 
 // ─── Collaborator Cursor Component Data ──────────────────────────
 

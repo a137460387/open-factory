@@ -1,40 +1,16 @@
-import { logger } from '@open-factory/editor-core/utils';
+import {logger} from '@open-factory/editor-core/utils';
 import React from 'react';
-import {
-  BatchUpdateTrackHeightCommand,
-  UpdateSequenceSettingsCommand,
-  type TimelineColorHeatmapPoint,
-  type SceneColorDifference,
-  type TimelineGridSettings,
-} from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { commandManager, projectAccessor } from '../../store/commandManager';
-import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT } from './TimelineParts';
-import {
-  TrackBatchMenu,
-  TransitionMenu,
-  GapActionMenu,
-  VolumeEnvelopeMenu,
-  RulerContextMenu,
-  ClipActionMenu,
-} from './TimelineMenus';
-import {
-  TimelineNoteLayer,
-  AnnotationBubble,
-  TimelineBookmarkOverlay,
-  TimelineMarkerOverlay,
-  SceneCutOverlay,
-  BeatMarkerOverlay,
-  SelectionMarquee,
-  TimelineMinimap,
-  TimelineColorHeatmapLayer,
-  TimelineHeatmapCanvas,
-} from './TimelineOverlays';
-import { SequenceSettingsDialog, GapStatsPanel } from './TimelineDialogs';
-import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
-import { ContextualSuggestionBubble } from './ContextualSuggestionBubble';
-import type { ContextualSuggestion, TimelineContext } from '@open-factory/editor-core/contextual-suggestions';
-import type { Timeline as CoreTimeline, MediaAsset } from '@open-factory/editor-core';
+import {BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, type TimelineColorHeatmapPoint, type SceneColorDifference} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {commandManager, projectAccessor} from '../../store/commandManager';
+import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT} from './TimelineParts';
+import {TrackBatchMenu, TransitionMenu, GapActionMenu, VolumeEnvelopeMenu, RulerContextMenu, ClipActionMenu} from './TimelineMenus';
+import {TimelineNoteLayer, AnnotationBubble, TimelineBookmarkOverlay, TimelineMarkerOverlay, SceneCutOverlay, BeatMarkerOverlay, SelectionMarquee, TimelineMinimap, TimelineColorHeatmapLayer, TimelineHeatmapCanvas} from './TimelineOverlays';
+import {SequenceSettingsDialog, GapStatsPanel} from './TimelineDialogs';
+import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
+import {ContextualSuggestionBubble} from './ContextualSuggestionBubble';
+import type {ContextualSuggestion, TimelineContext} from '@open-factory/editor-core/contextual-suggestions';
+import type {Timeline as CoreTimeline, MediaAsset} from '@open-factory/editor-core';
 
 interface TimelineTracksContainerProps {
   // Scroll container

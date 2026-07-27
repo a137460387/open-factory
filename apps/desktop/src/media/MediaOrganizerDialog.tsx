@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Archive, RefreshCw, Trash2, X } from 'lucide-react';
-import {
-  expandRenameTemplate,
-  type MediaAsset,
-  type MediaCleanupReport,
-  type SmartDuplicateGroup,
-} from '@open-factory/editor-core';
-import { zhCN } from '../i18n/strings';
+import {useEffect, useMemo, useState} from 'react';
+import {Archive, RefreshCw, Trash2, X} from 'lucide-react';
+import {expandRenameTemplate, type MediaCleanupReport, type SmartDuplicateGroup} from '@open-factory/editor-core';
+import {zhCN} from '../i18n/strings';
 
 export interface MediaOrganizerDuplicateSelection {
   groupId: string;

@@ -1,7 +1,7 @@
 // CLI Command Registration
 // Manages plugin-contributed CLI commands: registration, lookup, and execution dispatch.
 
-import type { CliCommandDefinition, CliOptionDefinition } from './types.js';
+import type {CliCommandDefinition} from './types.js';
 
 /** Result of parsing CLI arguments against a command definition. */
 export interface ParsedCliArgs {

@@ -1,10 +1,10 @@
-import { Download, ListPlus, Trash2, Upload } from 'lucide-react';
-import type { ExportPresetSettings } from '../export-presets';
-import type { ExportPreset } from '../export-presets';
-import type { VersionedExportReportRow, VersionedExportDefinition } from '@open-factory/editor-core';
-import { createVersionedExportJobs } from '@open-factory/editor-core';
-import { zhCN } from '../../i18n/strings';
-import { VersionedBatchReportTable } from './VersionedBatchReportTable';
+import {Download, ListPlus, Trash2, Upload} from 'lucide-react';
+import type {ExportPresetSettings} from '../export-presets';
+import type {ExportPreset} from '../export-presets';
+import type {VersionedExportReportRow} from '@open-factory/editor-core';
+import {createVersionedExportJobs} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
+import {VersionedBatchReportTable} from './VersionedBatchReportTable';
 
 export type VersionWatermarkMode = 'inherit' | 'none' | 'text';
 export type VersionRangeMode = 'default' | 'custom';

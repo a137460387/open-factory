@@ -1,59 +1,15 @@
-import {
-  getMediaVersionLabel,
-  isFrameRateMismatch,
-  mapScoreToGrade,
-  shouldGenerateProxy,
-  formatTimeShort,
-  type ClipContentAnalysis,
-  type MediaAsset,
-  type MediaFlag,
-  type MediaLabelColor,
-  type MediaMetadata,
-  type QualityAssessmentResult,
-} from '@open-factory/editor-core';
-import type { Subclip, TimelineLabelColor } from '@open-factory/editor-core';
-import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
-import { HighlightBadge } from './HighlightOverlay';
-import {
-  AlertCircle,
-  BadgeCheck,
-  ChevronDown,
-  ChevronRight,
-  FileAudio2,
-  FileImage,
-  FileVideo2,
-  Flag,
-  GalleryHorizontal,
-  Gauge,
-  Heart,
-  ImageDown,
-  Info,
-  Link2,
-  List,
-  Loader2,
-  Plus,
-  Scissors,
-  Search,
-  Sparkles,
-  Star,
-  Tag,
-  Trash2,
-  X,
-} from 'lucide-react';
-import {
-  createContext,
-  useContext,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from 'react';
-import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
-import { getMediaKeyboardNavigationIndex } from './media-keyboard';
-import { clsx } from 'clsx';
-import { zhCN } from '../../i18n/strings';
-import { convertLocalFileSrc } from '../../lib/tauri-bridge';
-import { useProxySettingsStore } from '../../store/proxySettingsStore';
+import {getMediaVersionLabel, isFrameRateMismatch, mapScoreToGrade, shouldGenerateProxy, formatTimeShort, type ClipContentAnalysis, type MediaAsset, type MediaFlag, type MediaLabelColor, type MediaMetadata, type QualityAssessmentResult} from '@open-factory/editor-core';
+import type {Subclip} from '@open-factory/editor-core';
+import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
+import {HighlightBadge} from './HighlightOverlay';
+import {AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileVideo2, Flag, GalleryHorizontal, Gauge, Heart, ImageDown, Info, Link2, List, Loader2, Plus, Scissors, Search, Sparkles, Star, Tag, Trash2} from 'lucide-react';
+import {createContext, useContext, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent} from 'react';
+import {computeMediaPreviewDelay, isMediaPreviewable} from './media-hover-preview';
+import {getMediaKeyboardNavigationIndex} from './media-keyboard';
+import {clsx} from 'clsx';
+import {zhCN} from '../../i18n/strings';
+import {convertLocalFileSrc} from '../../lib/tauri-bridge';
+import {useProxySettingsStore} from '../../store/proxySettingsStore';
 
 // ---------------------------------------------------------------------------
 // Contexts & shared types

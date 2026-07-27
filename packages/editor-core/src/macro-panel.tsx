@@ -5,14 +5,10 @@
  * and organizing macros. Supports import/export functionality.
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import type {
-  MacroDefinition,
-  MacroCategory,
-  MacroExecutionProgress,
-} from './macro-types';
-import { MacroStorage, getMacroStorage } from './macro-storage';
-import { MacroPlaybackEngine, createMacroPlaybackEngine } from './macro-playback';
+import React, {useState, useCallback, useMemo} from 'react';
+import type {MacroDefinition, MacroExecutionProgress} from './macro-types';
+import {getMacroStorage} from './macro-storage';
+import {createMacroPlaybackEngine} from './macro-playback';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

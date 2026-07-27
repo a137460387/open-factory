@@ -1,25 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-  DISTRIBUTION_PLATFORMS,
-  buildDistributionRecommendations,
-  formatPlatformSummary,
-  formatMaxDuration,
-  type DistributionPlatformId,
-  type DistributionPlatformSpec,
-} from '@open-factory/editor-core';
-import {
-  generateMultiFormats,
-  getPlatformAdaptation,
-  analyzeAdaptationNeeds,
-  generateCovers,
-  DEFAULT_MULTI_FORMAT_CONFIG,
-  DEFAULT_COVER_CONFIG,
-  type FormatVariant,
-  type PlatformAdaptation,
-  type AdaptationSuggestion,
-  type CoverGenerationResult,
-} from '@open-factory/editor-core';
-import { useDistributionStore } from '../../store/distributionStore';
+import React, {useCallback, useMemo, useState} from 'react';
+import {DISTRIBUTION_PLATFORMS, buildDistributionRecommendations, formatMaxDuration, type DistributionPlatformId, type DistributionPlatformSpec} from '@open-factory/editor-core';
+import {generateMultiFormats, getPlatformAdaptation, analyzeAdaptationNeeds, DEFAULT_MULTI_FORMAT_CONFIG, type FormatVariant, type PlatformAdaptation, type AdaptationSuggestion} from '@open-factory/editor-core';
+import {useDistributionStore} from '../../store/distributionStore';
 
 // ─── 平台卡片组件 ────────────────────────────────────────────
 

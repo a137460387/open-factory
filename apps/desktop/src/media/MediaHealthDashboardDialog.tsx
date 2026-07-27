@@ -1,7 +1,7 @@
-import type { MediaHealthDashboard, MediaHealthRepairTask } from '@open-factory/editor-core';
-import { AlertTriangle, Archive, CalendarDays, Database, Gauge, Link2, RefreshCw, Wrench, X } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { zhCN } from '../i18n/strings';
+import type {MediaHealthDashboard} from '@open-factory/editor-core';
+import {AlertTriangle, Archive, CalendarDays, Database, Gauge, Link2, RefreshCw, Wrench, X} from 'lucide-react';
+import type {ReactNode} from 'react';
+import {zhCN} from '../i18n/strings';
 
 interface MediaHealthDashboardDialogProps {
   dashboard?: MediaHealthDashboard;

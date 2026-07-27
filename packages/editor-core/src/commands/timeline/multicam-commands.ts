@@ -1,13 +1,13 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { DEFAULT_NESTED_SEQUENCE_NAME, Project, createId, createMulticamClip, normalizeMulticamSequence, replaceProjectActiveTimeline } from '../../model';
-import type { Clip } from '../../model';
-import { MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint, SwitchTransition } from '../../model-types';
-import { addSwitchPoint, createMulticamSequenceProject } from '../../multicam';
-import { round } from '../../time';
-import { replaceClip } from '../../timeline';
-import { Command } from '../command';
-import { findClip, insertClip, touchProject } from './utils';
-import { cutMulticamClip, trimMulticamClip } from './utils-nested';
+import type {ProjectAccessor} from './index';
+import {DEFAULT_NESTED_SEQUENCE_NAME, Project, createId, createMulticamClip, normalizeMulticamSequence, replaceProjectActiveTimeline} from '../../model';
+import type {Clip} from '../../model';
+import {MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint, SwitchTransition} from '../../model-types';
+import {addSwitchPoint, createMulticamSequenceProject} from '../../multicam';
+import {round} from '../../time';
+import {replaceClip} from '../../timeline';
+import {Command} from '../command';
+import {findClip, insertClip, touchProject} from './utils';
+import {cutMulticamClip, trimMulticamClip} from './utils-nested';
 
 export class CreateMulticamSequenceCommand implements Command {
   readonly description = 'Create multicam sequence';

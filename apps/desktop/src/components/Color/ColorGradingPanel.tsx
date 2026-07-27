@@ -9,10 +9,10 @@
  * 5. LUT管理 - 加载/应用/管理LUT
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
-import type { RGBColor } from '@open-factory/editor-core/color/aces';
-import type { ColorCorrectionParams } from '@open-factory/editor-core/ai/color-grading';
-import { clamp } from '@open-factory/editor-core/utils/math';
+import React, {useState, useCallback, useMemo} from 'react';
+import type {RGBColor} from '@open-factory/editor-core/color/aces';
+import type {ColorCorrectionParams} from '@open-factory/editor-core/ai/color-grading';
+import {clamp} from '@open-factory/editor-core/utils/math';
 
 // ==================== 类型定义 ====================
 

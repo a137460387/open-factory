@@ -9,24 +9,8 @@
  * - Windows D3D11VA
  */
 
-import {
-  type DecodedFrame,
-  type DecoderConfig,
-  type DecoderHandle,
-  type HardwareBackend,
-  type HardwareCapabilities,
-  type HwDecodeSettings,
-  type VideoInfo,
-  decodeVideoFrame,
-  decodeVideoFrames,
-  getDecoderVideoInfo,
-  getHwDecodeCapabilities,
-  getHwDecodeSettings,
-  initHardwareDecoder,
-  releaseDecoder,
-  setHwDecodeSettings,
-} from '../tauri-bridge';
-import { logger } from '@open-factory/editor-core/utils';
+import {type DecodedFrame, type DecoderConfig, type DecoderHandle, type HardwareBackend, type HardwareCapabilities, type HwDecodeSettings, type VideoInfo, decodeVideoFrame, decodeVideoFrames, getDecoderVideoInfo, getHwDecodeCapabilities, getHwDecodeSettings, initHardwareDecoder, releaseDecoder} from '../tauri-bridge';
+import {logger} from '@open-factory/editor-core/utils';
 
 export interface HardwareDecodeOptions {
   /** 视频文件路径 */

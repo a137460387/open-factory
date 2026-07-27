@@ -15,8 +15,8 @@
  * Raw video/audio streams are NEVER included.
  */
 
-import type { MaterialMetadata, KeyFrame } from './semantic-extractor';
-import type { AIProvider } from '../ai-service';
+import type {MaterialMetadata} from './semantic-extractor';
+import type {AIProvider} from '../ai-service';
 
 // ─── LLM Instruction Protocol ──────────────────────────────────
 

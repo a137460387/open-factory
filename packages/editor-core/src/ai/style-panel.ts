@@ -7,21 +7,9 @@
  * Designed to be consumed by any frontend framework (React, Vue, Svelte, etc.)
  */
 
-import type {
-  StyleFingerprint,
-  StyleTransitionPreference,
-  StyleRhythmProfile,
-  ColorGradingStyle,
-  AudioProcessingStyle,
-  EffectUsagePattern,
-} from './style-analyzer';
-import {
-  extractProjectStyle,
-  mergeStyleFingerprints,
-  computeStyleSimilarity,
-  STYLE_FINGERPRINT_VERSION,
-} from './style-analyzer';
-import type { Project } from '../model-types';
+import type {StyleFingerprint} from './style-analyzer';
+import {mergeStyleFingerprints, computeStyleSimilarity} from './style-analyzer';
+import type {Project} from '../model-types';
 
 // ─── Panel State ────────────────────────────────────────────────
 

@@ -2,8 +2,8 @@
  * Model manager - handles model loading, caching, and switching
  */
 
-import type { ModelConfig, ModelManifest, ModelPrecision, ComputeBackend } from '../types.js';
-import { getConfig } from '../config.js';
+import type {ModelConfig, ModelManifest, ModelPrecision} from '../types.js';
+import {getConfig} from '../config.js';
 
 // ============================================================
 // Model Cache

@@ -1,5 +1,5 @@
-import type { Clip, NestedSequenceClip, Sequence, Timeline, Track } from './model';
-import { round } from './time';
+import type {Clip, NestedSequenceClip, Sequence, Timeline} from './model';
+import {round} from './time';
 
 /** 匹配到的源素材时间点结果 */
 export interface MatchFrameResult {

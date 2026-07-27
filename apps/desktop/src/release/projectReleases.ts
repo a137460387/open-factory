@@ -1,6 +1,6 @@
-import { createReleaseRecordFileName, type ProjectReleaseRecord } from '@open-factory/editor-core';
-import { fileNameFromPath } from '../lib/tauri';
-import { fsExists, getAppDataDir, getFileStat, readFile, scanDirectory, writeFile } from '../lib/tauri-bridge';
+import {createReleaseRecordFileName, type ProjectReleaseRecord} from '@open-factory/editor-core';
+import {fileNameFromPath} from '../lib/tauri';
+import {fsExists, getAppDataDir, getFileStat, readFile, scanDirectory, writeFile} from '../lib/tauri-bridge';
 
 export interface ProjectReleaseEntry extends ProjectReleaseRecord {
   path: string;

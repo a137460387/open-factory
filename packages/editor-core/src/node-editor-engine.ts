@@ -5,17 +5,7 @@
  * Provides the foundation for workflow execution.
  */
 
-import type {
-  WorkflowGraph,
-  WorkflowNode,
-  NodeConnection,
-  NodeDefinition,
-  NodePort,
-  PortDataType,
-  PortDirection,
-  NodeCategory,
-  NodeEditorState,
-} from './node-editor-types';
+import type {WorkflowGraph, WorkflowNode, NodeConnection, NodeDefinition, NodePort, NodeCategory, NodeEditorState} from './node-editor-types';
 
 // ─── Built-in Node Definitions ─────────────────────────────────────────────
 

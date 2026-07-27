@@ -5,14 +5,7 @@
  * and dry-run mode for validation.
  */
 
-import type {
-  MacroDefinition,
-  MacroOperation,
-  MacroExecutionStatus,
-  MacroExecutionProgress,
-  MacroExecutionOptions,
-  MacroOperationType,
-} from './macro-types';
+import type {MacroDefinition, MacroOperation, MacroExecutionStatus, MacroExecutionProgress, MacroExecutionOptions, MacroOperationType} from './macro-types';
 
 /** Operation executor function type */
 export type OperationExecutor = (
