@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.72.0] - 2026-07-27
+
+### Changed
+- **版本号升至 v4.72.0**
+- 合并 agent/scan-tauri-unwrap-calls 分支到 main
+
 ## [v4.71.0] - 2026-07-24
 
 ### Changed
