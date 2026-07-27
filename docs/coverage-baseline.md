@@ -7,14 +7,14 @@
 
 | Metric | Value |
 |--------|-------|
-| Line Coverage | 71.72% |
-| Function Coverage | 84.84% |
-| Branch Coverage | 77.92% |
+| Line Coverage | 71.93% |
+| Function Coverage | 84.96% |
+| Branch Coverage | 77.98% |
 | Total Lines | 170,677 |
-| Covered Lines | ~122,370 |
-| Gap to 80% | ~14,170 lines |
-| Test Files | 576 |
-| Total Tests | 10,615 |
+| Covered Lines | ~122,780 |
+| Gap to 80% | ~13,760 lines |
+| Test Files | 581 |
+| Total Tests | 10,793 |
 | Rust Tests | 3 |
 
 ## Coverage by Category
@@ -27,7 +27,7 @@
 | Workers | 1,331 | 1,346 | 1.1% | 13 |
 | Tauri bridge | 1,132 | 1,545 | 26.7% | 10 |
 
-## New Tests Added (This Session)
+## New Tests Added (S5 Sprint)
 
 | Test File | Tests | Source Module |
 |-----------|-------|---------------|
@@ -47,7 +47,25 @@
 | `editor-core/__tests__/settings-normalize.test.ts` | 113 | FFmpeg settings normalizers |
 | `editor-core/__tests__/visual-filters.test.ts` | 67 | FFmpeg visual filter builders |
 | `export/lib/exportSettingsHelpers.test.ts` | +60 | Update helpers, format normalization |
-| **Total** | **~648** | |
+| `editor-core/__tests__/aces-math.test.ts` | 27 | ACES color math (clamp, lerp, matrix, LUT) |
+| `editor-core/__tests__/monitor-extended.test.ts` | 14 | Performance monitor (dashboard, thresholds) |
+| `editor-core/__tests__/annotations.test.ts` | 71 | Model annotations (30+ normalize functions) |
+| `editor-core/__tests__/quality-inspector.test.ts` | 37 | Quality inspector (black frame, audio, pacing) |
+| `editor-core/__tests__/performance-monitor-extended.test.ts` | 29 | Performance trends, bottlenecks, optimizations |
+| **Total** | **~826** | |
+
+## Component Splitting — SettingsDialog.tsx
+
+| File | Before | After | Reduction |
+|------|--------|-------|-----------|
+| `settings/SettingsDialog.tsx` | 2,724 | 1,720 | -36.9% |
+| `settings/GeneralSettingsPanel.tsx` | — | 679 | (extracted) |
+| `settings/ShortcutMacrosPanel.tsx` | — | 211 | (extracted) |
+| `settings/LutLibraryPanel.tsx` | — | 118 | (extracted) |
+| `settings/hooks/useLutLibrary.ts` | — | 103 | (hook) |
+| `settings/hooks/useShortcutMacros.ts` | — | 238 | (hook) |
+
+Extracted general tab (556 lines), shortcuts+macros tabs (161 lines), LUT library tab (96 lines) into separate panel components. Then extracted LUT state+handlers into `useLutLibrary` hook and shortcut/macro state+handlers into `useShortcutMacros` hook, further reducing SettingsDialog by 260 lines. Handler functions for shortcuts, macros, and LUT operations now live in their respective hooks instead of SettingsDialog.
 
 ## Integration Checks
 
@@ -56,7 +74,17 @@
 | TypeScript typecheck (`tsc --noEmit`) | PASS (0 errors) |
 | Rust clippy | PASS (0 warnings) |
 | Rust tests | PASS (3/3) |
-| Vitest (all tests) | PASS (10,615 tests, 576 files) |
+| Vitest (all tests) | PASS (10,793 tests, 581 files) |
+
+## SettingsDialog Refactoring Summary
+
+| Phase | Lines | Reduction | Method |
+|-------|-------|-----------|--------|
+| Original | 2,724 | — | — |
+| Phase 1: Extract panels | 1,980 | -27.3% | GeneralSettingsPanel, ShortcutMacrosPanel, LutLibraryPanel |
+| Phase 2: Extract hooks | 1,720 | -36.9% | useLutLibrary, useShortcutMacros |
+
+Remaining blockers for 40%: General tab handler functions (16 functions, ~160 lines) depend on shared state (exportBackgroundSettings, exportQualityAssuranceSettings, collaborationIdentity, localCoediting) that is also loaded by other panels. Moving these requires either duplicating state loading logic or introducing a shared settings context.
 
 ## Coverage Gap Analysis
 

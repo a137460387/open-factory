@@ -1,24 +1,21 @@
 import {logger} from '@open-factory/editor-core/utils';
 import {useEffect, useMemo, useState} from 'react';
-import {FolderOpen, Star, X} from 'lucide-react';
-import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, EXPORT_COLOR_SPACES, PROJECT_COLOR_PIPELINES, SUPPORTED_PROJECT_FPS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateClipCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, getColorSpaceDisplayName, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, supportsDropFrameTimecode, generateStressScenario, measurePerfMetrics, buildStressReport, serializeStressReport, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type Timeline, type TimelineScriptOperation, type VfrHandlingStrategy} from '@open-factory/editor-core';
-import type {StressScenarioId} from '@open-factory/editor-core';
+import {X} from 'lucide-react';
+import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type TimelineScriptOperation} from '@open-factory/editor-core';
 import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
 import {switchLanguage} from '../i18n/i18next-config';
 import {parseAutomationRulesJson, serializeAutomationRulesJson} from '../automation/automation-rules';
 import {pickDemucsExecutablePath} from '../lib/demucs';
-import {loadLutLibrary, toggleLutFavorite, type LutLibraryItem} from '../lib/lutLibrary';
 import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword} from '../lib/tauri-bridge';
 import {showToast} from '../lib/toast';
 import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
-import {detectMacroShortcutConflicts, exportClipMacrosToDialog, getMacroSteps, importClipMacrosFromDialog, parseCommandSnapshotsJson, writeClipMacros, type ClipMacro, type CommandSnapshot, type MacroShortcutConflict} from '../macros/clip-macros';
+import {type ClipMacro} from '../macros/clip-macros';
 import {getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry} from '../plugins/plugin-manager';
 import {installCatalogPlugin, installPluginFromFile, loadPluginCatalog, type PluginCatalogEntry, type PluginCatalogResult} from '../plugins/plugin-market';
 import {loadExportPresets, serializeExportPresetPackage} from '../export/export-presets';
 import {filterPresetMarketCards, installPresetMarketCard, loadPresetMarket, presetMarketCardHasCustomConflict, readPresetMarketRatings, writePresetMarketRating, type PresetMarketCard, type PresetMarketFilters, type PresetMarketLoadResult} from '../export/preset-market';
 import {filterEffectPresetCommunityCards, installEffectPresetCommunityCard, loadEffectPresetCommunityLibrary, type EffectPresetCommunityCard, type EffectPresetCommunityLoadResult} from '../effects/effect-preset-library';
-import {writeCustomKeybindings} from '../shortcuts/keybindings';
-import {TIMELINE_SHORTCUT_DEFINITIONS, detectTimelineShortcutConflicts, eventToAccelerator, getEffectiveTimelineShortcutBindings, type TimelineShortcutAction, type TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
+import {type TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
 import {commandManager, projectAccessor, timelineAccessor} from '../store/commandManager';
 import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
 import {useEditorStore} from '../store/editorStore';
@@ -32,13 +29,14 @@ import {AutomationSettingsPanel} from './AutomationSettingsPanel';
 import {BackupSettingsPanel} from './BackupSettingsPanel';
 import {EffectPresetCommunityPanel} from './EffectPresetPanel';
 import {ExportPresetSyncSettingsPanel} from './ExportPresetSyncPanel';
-import {ExportQualityAssuranceSettingsPanel} from './ExportQualityAssurancePanel';
-import {ExportRulesSettingsPanel, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule} from './ExportRulesPanel';
+import {EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule} from './ExportRulesPanel';
 import {formatBytes} from './formatHelpers';
 import {HardwareAccelerationSettingsPanel} from './HardwareAccelerationSettingsPanel';
+import {GeneralSettingsPanel} from './GeneralSettingsPanel';
+import {LutLibraryPanel} from './LutLibraryPanel';
+import {ShortcutMacrosPanel} from './ShortcutMacrosPanel';
 import {GesturePracticePanel} from '../components/GestureControl/GestureTutorial';
 import {LocalModelsSettingsPanel} from './LocalModelsPanel';
-import {MacroStepsEditor} from './MacroStepsEditor';
 import {PluginsSettingsPanel} from './PluginsSettingsPanel';
 import {PresetMarketPanel} from './PresetMarketPanel';
 import {ProxySettingsPanel} from './ProxySettingsPanel';
@@ -96,7 +94,7 @@ type SettingsTab =
   | 'ai-services'
   | 'hardware-acceleration'
   | 'gesture';
-const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
+
 export function SettingsDialog({
   open,
   project,
@@ -120,11 +118,6 @@ export function SettingsDialog({
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const [tab, setTab] = useState<SettingsTab>('general');
   const [language, setLanguage] = useState<Language>(() => getLanguage());
-  const [items, setItems] = useState<LutLibraryItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
-  const [capturingAction, setCapturingAction] = useState<TimelineShortcutAction>();
-  const [capturingMacroId, setCapturingMacroId] = useState<string>();
   const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [pluginsError, setPluginsError] = useState<string>();
@@ -225,13 +218,6 @@ export function SettingsDialog({
   const setProxyResolutionPreset = useProxySettingsStore((state) => state.setResolutionPreset);
   const setProxyTriggerShortEdge = useProxySettingsStore((state) => state.setTriggerShortEdge);
   const resetProxySettings = useProxySettingsStore((state) => state.reset);
-  const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
-  const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
-  const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
-  const macroConflicts = useMemo(
-    () => detectMacroShortcutConflicts(macros, shortcutBindings),
-    [macros, shortcutBindings],
-  );
   const currentTheme = useTheme();
   const [themeSettings, setThemeSettingsState] = useState<ThemeSettings>(() => getCurrentThemeSettings());
   const [customThemeName, setCustomThemeName] = useState('');
@@ -253,7 +239,6 @@ export function SettingsDialog({
     if (!open) {
       return;
     }
-    void refresh();
     void loadBackupSettings();
     void loadExportPresetSyncSettings();
     void loadPresetMarketPanel();
@@ -278,72 +263,8 @@ export function SettingsDialog({
     return () => setPreviewTimeline(undefined);
   }, [loadTranslationApiKey, open, setPreviewTimeline]);
 
-  useEffect(() => {
-    if (!capturingAction) {
-      return undefined;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      const accelerator = eventToAccelerator({
-        key: event.key,
-        code: event.code,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-      });
-      event.preventDefault();
-      event.stopPropagation();
-      if (!accelerator) {
-        return;
-      }
-      void updateShortcutBinding({ ...shortcutBindings, [capturingAction]: [accelerator] });
-      setCapturingAction(undefined);
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [capturingAction, shortcutBindings]);
-
-  useEffect(() => {
-    if (!capturingMacroId) {
-      return undefined;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      const accelerator = eventToAccelerator({
-        key: event.key,
-        code: event.code,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        altKey: event.altKey,
-        shiftKey: event.shiftKey,
-      });
-      event.preventDefault();
-      event.stopPropagation();
-      if (!accelerator) {
-        return;
-      }
-      void updateMacroShortcut(capturingMacroId, accelerator);
-      setCapturingMacroId(undefined);
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [capturingMacroId, macros]);
-
   if (!open) {
     return null;
-  }
-
-  async function refresh() {
-    try {
-      setLoading(true);
-      setError(undefined);
-      setItems(await loadLutLibrary());
-    } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : t.lutLibrary.loadFailedMessage;
-      setError(message);
-      showToast({ kind: 'warning', title: t.lutLibrary.loadFailed, message });
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function refreshPlugins() {
@@ -450,136 +371,6 @@ export function SettingsDialog({
   function close() {
     setPreviewTimeline(undefined);
     onClose();
-  }
-
-  function preview(item: LutLibraryItem) {
-    if (!selectedClipCanUseLut || !selectedClip) {
-      showToast({ kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage });
-      return;
-    }
-    setPreviewTimeline(buildPreviewTimelineWithLut(project.timeline, selectedClip.id, item.path));
-  }
-
-  function apply(item: LutLibraryItem) {
-    if (!selectedClipCanUseLut || !selectedClip) {
-      showToast({ kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage });
-      return;
-    }
-    try {
-      commandManager.execute(
-        new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorCorrection: { lutPath: item.path } }),
-      );
-      setPreviewTimeline(undefined);
-      showToast({ kind: 'success', title: t.lutLibrary.applied, message: item.name });
-    } catch (applyError) {
-      showToast({
-        kind: 'warning',
-        title: t.lutLibrary.applyFailed,
-        message: applyError instanceof Error ? applyError.message : t.lutLibrary.applyFailedMessage,
-      });
-    }
-  }
-
-  async function toggleFavorite(item: LutLibraryItem) {
-    try {
-      const favorites = new Set(await toggleLutFavorite(item.path));
-      setItems((current) => current.map((entry) => ({ ...entry, favorite: favorites.has(entry.path) })));
-    } catch (favoriteError) {
-      showToast({
-        kind: 'warning',
-        title: t.lutLibrary.favoriteFailed,
-        message: favoriteError instanceof Error ? favoriteError.message : t.lutLibrary.favoriteFailedMessage,
-      });
-    }
-  }
-
-  async function updateShortcutBinding(nextBindings: TimelineShortcutBindings) {
-    try {
-      const saved = await writeCustomKeybindings(nextBindings);
-      onShortcutBindingsChange(saved);
-    } catch (shortcutError) {
-      showToast({
-        kind: 'warning',
-        title: t.shortcuts.saveFailed,
-        message: shortcutError instanceof Error ? shortcutError.message : t.shortcuts.saveFailedMessage,
-      });
-    }
-  }
-
-  async function updateMacros(nextMacros: ClipMacro[]) {
-    try {
-      const saved = await writeClipMacros(nextMacros);
-      onMacrosChange(saved);
-    } catch (macroError) {
-      showToast({
-        kind: 'warning',
-        title: t.macros.saveFailed,
-        message: macroError instanceof Error ? macroError.message : t.macros.saveFailedMessage,
-      });
-    }
-  }
-
-  async function updateMacroShortcut(macroId: string, accelerator: string) {
-    await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: accelerator } : macro)));
-  }
-
-  function resetMacroShortcut(macroId: string) {
-    void updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: undefined } : macro)));
-  }
-
-  async function updateMacroSteps(macroId: string, steps: CommandSnapshot[]) {
-    if (steps.length === 0) {
-      showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
-      return;
-    }
-    await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, patch: undefined, steps } : macro)));
-  }
-
-  async function updateMacroStepsFromJson(macroId: string, raw: string) {
-    const steps = parseCommandSnapshotsJson(raw);
-    if (steps.length === 0) {
-      showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
-      return;
-    }
-    await updateMacroSteps(macroId, steps);
-  }
-
-  async function importMacros() {
-    try {
-      const imported = await importClipMacrosFromDialog();
-      if (imported) {
-        onMacrosChange(imported);
-        showToast({ kind: 'success', title: t.macros.imported, message: t.macros.importedMessage(imported.length) });
-      }
-    } catch (macroError) {
-      showToast({
-        kind: 'warning',
-        title: t.macros.importFailed,
-        message: macroError instanceof Error ? macroError.message : t.macros.importFailedMessage,
-      });
-    }
-  }
-
-  async function exportMacros() {
-    try {
-      const path = await exportClipMacrosToDialog(macros);
-      if (path) {
-        showToast({ kind: 'success', title: t.macros.exported, message: path });
-      }
-    } catch (macroError) {
-      showToast({
-        kind: 'warning',
-        title: t.macros.exportFailed,
-        message: macroError instanceof Error ? macroError.message : t.macros.exportFailedMessage,
-      });
-    }
-  }
-
-  function formatMacroConflict(conflict: MacroShortcutConflict): string {
-    if (conflict.type === 'timeline' && conflict.timelineAction) {
-      return (t.shortcuts.actions as Record<string, string>)[conflict.timelineAction] ?? conflict.timelineAction;
-    }
-    return conflict.macroName ?? conflict.macroId ?? t.macros.unknownMacro;
   }
 
   async function updateLanguage(value: string) {
@@ -1426,16 +1217,6 @@ export function SettingsDialog({
     }
   }
 
-  function resetShortcut(action: TimelineShortcutAction) {
-    const next = { ...shortcutBindings };
-    delete next[action];
-    void updateShortcutBinding(next);
-  }
-
-  function resetAllShortcuts() {
-    void updateShortcutBinding({});
-  }
-
   function updateProjectFrameRate(value: string) {
     const fps = normalizeProjectFps(Number(value));
     commandManager.execute(
@@ -1677,561 +1458,48 @@ export function SettingsDialog({
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
             {tab === 'general' ? (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-ink">{t.general.title}</h3>
-                  <p className="text-xs text-slate-500">{t.general.description}</p>
-                </div>
-                <label className="block text-xs font-medium text-slate-600">
-                  {t.general.language}
-                  <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                    value={language}
-                    data-testid="settings-language-select"
-                    onChange={(event) => void updateLanguage(event.target.value)}
-                  >
-                    <option value="zh">{t.general.options.zh}</option>
-                    <option value="en">{t.general.options.en}</option>
-                  </select>
-                </label>
-                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-                  {t.general.languageDescription}
-                </div>
-                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-update-section">
-                  <div className="mb-3">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.updatesTitle}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{t.general.updatesDescription}</p>
-                  </div>
-                  <label className="mb-3 flex items-start gap-2 text-xs text-slate-600">
-                    <input
-                      className="mt-0.5 h-4 w-4 accent-brand"
-                      type="checkbox"
-                      checked={updateSettings.autoCheckEnabled}
-                      data-testid="settings-update-auto-check"
-                      onChange={(event) => void updateAppUpdateSettings({ autoCheckEnabled: event.target.checked })}
-                    />
-                    <span>
-                      <span className="block font-semibold text-slate-700">{t.general.autoUpdateCheck}</span>
-                      <span className="mt-1 block">{t.general.autoUpdateCheckDescription}</span>
-                    </span>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.updateEndpoint}
-                    <input
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={updateSettings.customEndpoint ?? ''}
-                      placeholder={getEffectiveUpdaterEndpoint(DEFAULT_UPDATE_SETTINGS)}
-                      data-testid="settings-update-endpoint-input"
-                      onChange={(event) => void updateAppUpdateSettings({ customEndpoint: event.target.value })}
-                    />
-                  </label>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {updateSettings.customEndpoint
-                      ? t.general.updateEndpointDescription
-                      : t.general.defaultUpdateEndpoint}
-                  </p>
-                </div>
-                <div className="rounded-md border border-line bg-panel p-3">
-                  <div className="mb-2">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.previewPerformanceTitle}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{t.general.previewPerformanceDescription}</p>
-                  </div>
-                  <label className="mb-3 flex items-start gap-2 text-xs text-slate-600">
-                    <input
-                      className="mt-0.5 h-4 w-4 accent-brand"
-                      type="checkbox"
-                      checked={previewPerformance.adaptiveEnabled !== false}
-                      data-testid="settings-preview-adaptive-toggle"
-                      onChange={(event) => onPreviewPerformanceChange({ adaptiveEnabled: event.target.checked })}
-                    />
-                    <span>
-                      <span className="block font-semibold text-slate-700">{t.general.previewAdaptiveQuality}</span>
-                      <span className="mt-1 block">{t.general.previewAdaptiveQualityDescription}</span>
-                    </span>
-                  </label>
-                  <label className="mb-3 block text-xs font-medium text-slate-600">
-                    {t.general.previewFixedQuality}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                      value={previewPerformance.qualityMode}
-                      disabled={previewPerformance.adaptiveEnabled !== false}
-                      data-testid="settings-preview-fixed-quality-select"
-                      onChange={(event) =>
-                        onPreviewPerformanceChange({
-                          qualityMode: event.target.value as PreviewQualityMode,
-                          adaptiveEnabled: false,
-                        })
-                      }
-                    >
-                      {PREVIEW_QUALITY_MODES.map((mode) => (
-                        <option key={mode} value={mode}>
-                          {zhCN.toolbar.previewQualityOptions[mode]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.previewSkipFrames}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                      value={previewPerformance.skipFrames}
-                      disabled={previewPerformance.adaptiveEnabled !== false}
-                      data-testid="settings-preview-skip-frames-select"
-                      onChange={(event) => onPreviewSkipFramesChange(Number(event.target.value) as PreviewSkipFrames)}
-                    >
-                      {PREVIEW_SKIP_FRAME_OPTIONS.map((frames) => (
-                        <option key={frames} value={frames}>
-                          {t.general.previewSkipFrameOptions[frames]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-                  <input
-                    className="mt-0.5 h-4 w-4 accent-brand"
-                    type="checkbox"
-                    checked={timelineInteractionSettings.reduceMotion}
-                    data-testid="settings-reduce-motion-toggle"
-                    onChange={(event) => onTimelineInteractionSettingsChange({ reduceMotion: event.target.checked })}
-                  />
-                  <span>
-                    <span className="block font-semibold text-slate-700">{t.general.reduceMotion}</span>
-                    <span className="mt-1 block">{t.general.reduceMotionDescription}</span>
-                  </span>
-                </label>
-                <div className="rounded-md border border-line bg-panel p-3">
-                  <div className="mb-2">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.collaborationIdentityTitle}</h4>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.collaborationName}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        value={collaborationIdentity.name}
-                        data-testid="settings-collaboration-name-input"
-                        onChange={(event) => void updateCollaborationIdentity({ name: event.target.value })}
-                      />
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.collaborationColor}
-                      <input
-                        className="mt-1 h-9 w-full rounded-md border border-line bg-white px-1"
-                        type="color"
-                        value={collaborationIdentity.color}
-                        data-testid="settings-collaboration-color-input"
-                        onChange={(event) => void updateCollaborationIdentity({ color: event.target.value })}
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div
-                  className="rounded-md border border-line bg-panel p-3"
-                  data-testid="settings-local-coediting-section"
-                >
-                  <label className="flex items-start gap-2 text-xs text-slate-600">
-                    <input
-                      className="mt-0.5 h-4 w-4 accent-brand"
-                      type="checkbox"
-                      checked={localCoediting.enabled}
-                      data-testid="settings-local-coediting-enabled"
-                      onChange={(event) => void updateLocalCoediting({ enabled: event.target.checked })}
-                    />
-                    <span>
-                      <span className="block font-semibold text-slate-700">{t.general.localCoeditingTitle}</span>
-                      <span className="mt-1 block">{t.general.localCoeditingDescription}</span>
-                    </span>
-                  </label>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.localCoeditingMode}
-                      <select
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        value={localCoediting.mode}
-                        data-testid="settings-local-coediting-mode"
-                        onChange={(event) =>
-                          void updateLocalCoediting({ mode: event.target.value === 'client' ? 'client' : 'host' })
-                        }
-                      >
-                        <option value="host">{t.general.localCoeditingHost}</option>
-                        <option value="client">{t.general.localCoeditingClient}</option>
-                      </select>
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.localCoeditingPermission}
-                      <select
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        value={localCoediting.permission}
-                        data-testid="settings-local-coediting-permission"
-                        onChange={(event) =>
-                          void updateLocalCoediting({
-                            permission: event.target.value === 'read-only' ? 'read-only' : 'edit',
-                          })
-                        }
-                      >
-                        <option value="edit">{t.general.localCoeditingEdit}</option>
-                        <option value="read-only">{t.general.localCoeditingReadOnly}</option>
-                      </select>
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.localCoeditingPort}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        type="number"
-                        min={1}
-                        max={65535}
-                        value={localCoediting.port}
-                        data-testid="settings-local-coediting-port"
-                        onChange={(event) => void updateLocalCoediting({ port: Number(event.target.value) })}
-                      />
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.localCoeditingHostUrl}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        value={localCoediting.hostUrl ?? ''}
-                        placeholder="ws://192.168.1.10:37822"
-                        data-testid="settings-local-coediting-host-url"
-                        onChange={(event) => void updateLocalCoediting({ hostUrl: event.target.value })}
-                      />
-                    </label>
-                    {localCoediting.mode === 'host' && (
-                      <>
-                        <label className="block text-xs font-medium text-slate-600">
-                          {t.general.localCoeditingNetworkMode}
-                          <select
-                            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                            value={localCoediting.networkMode ?? 'localhost'}
-                            data-testid="settings-local-coediting-network-mode"
-                            onChange={(event) =>
-                              void updateLocalCoediting({
-                                networkMode: event.target.value === 'lan' ? 'lan' : 'localhost',
-                              })
-                            }
-                          >
-                            <option value="localhost">{t.general.localCoeditingNetworkLocalhost}</option>
-                            <option value="lan">{t.general.localCoeditingNetworkLan}</option>
-                          </select>
-                        </label>
-                        <label className="block text-xs font-medium text-slate-600">
-                          {t.general.localCoeditingAuthToken}
-                          <input
-                            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                            value={localCoediting.authToken ?? ''}
-                            placeholder={t.general.localCoeditingAuthTokenPlaceholder}
-                            data-testid="settings-local-coediting-auth-token"
-                            onChange={(event) =>
-                              void updateLocalCoediting({ authToken: event.target.value || undefined })
-                            }
-                          />
-                        </label>
-                      </>
-                    )}
-                    {localCoediting.mode === 'host' && localCoediting.networkMode === 'lan' && (
-                      <div
-                        className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800"
-                        data-testid="settings-local-coediting-lan-warning"
-                      >
-                        {t.general.localCoeditingLanWarning}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="rounded-md border border-line bg-panel p-3">
-                  <div className="mb-2">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.demucsTitle}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{t.general.demucsDescription}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      className="min-w-0 flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={demucsExecutablePath}
-                      placeholder={t.general.demucsExecutable}
-                      data-testid="settings-demucs-executable-input"
-                      onChange={(event) => setDemucsExecutablePath(event.target.value)}
-                    />
-                    <button
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
-                      type="button"
-                      title={t.general.chooseDemucsExecutable}
-                      aria-label={t.general.chooseDemucsExecutable}
-                      data-testid="settings-demucs-executable-choose-button"
-                      onClick={() => void chooseDemucsExecutable()}
-                    >
-                      <FolderOpen size={15} />
-                    </button>
-                  </div>
-                </div>
-                <div className="rounded-md border border-line bg-panel p-3">
-                  <div className="mb-2">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.privacyDetectionTitle}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{t.general.privacyDetectionDescription}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      className="min-w-0 flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={privacyDetectionModelPath}
-                      placeholder={t.general.privacyDetectionModel}
-                      data-testid="settings-privacy-model-input"
-                      onChange={(event) => setPrivacyDetectionModelPath(event.target.value)}
-                    />
-                    <button
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
-                      type="button"
-                      title={t.general.choosePrivacyDetectionModel}
-                      aria-label={t.general.choosePrivacyDetectionModel}
-                      data-testid="settings-privacy-model-choose-button"
-                      onClick={() => void choosePrivacyDetectionModel()}
-                    >
-                      <FolderOpen size={15} />
-                    </button>
-                  </div>
-                </div>
-                <div className="rounded-md border border-line bg-panel p-3">
-                  <div className="mb-2">
-                    <h4 className="text-xs font-semibold text-slate-700">{t.general.recordingTitle}</h4>
-                    <p className="mt-1 text-xs text-slate-500">{t.general.recordingDescription}</p>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.recordingWidth}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        type="number"
-                        min={320}
-                        max={7680}
-                        step={16}
-                        value={recordingSettings.width}
-                        data-testid="settings-recording-width-input"
-                        onChange={(event) => setRecordingSettings({ width: Number(event.target.value) })}
-                      />
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.recordingHeight}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        type="number"
-                        min={240}
-                        max={4320}
-                        step={16}
-                        value={recordingSettings.height}
-                        data-testid="settings-recording-height-input"
-                        onChange={(event) => setRecordingSettings({ height: Number(event.target.value) })}
-                      />
-                    </label>
-                    <label className="block text-xs font-medium text-slate-600">
-                      {t.general.recordingFrameRate}
-                      <input
-                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                        type="number"
-                        min={1}
-                        max={120}
-                        step={1}
-                        value={recordingSettings.frameRate}
-                        data-testid="settings-recording-framerate-input"
-                        onChange={(event) => setRecordingSettings({ frameRate: Number(event.target.value) })}
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.projectFrameRate}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={String(normalizeProjectFps(project.settings.fps))}
-                      data-testid="project-fps-select"
-                      onChange={(event) => updateProjectFrameRate(event.target.value)}
-                    >
-                      {SUPPORTED_PROJECT_FPS.map((fps) => (
-                        <option key={fps} value={fps}>
-                          {formatProjectFps(fps)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.timecodeFormat}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:bg-slate-100"
-                      value={normalizeTimecodeFormat(project.settings.timecodeFormat, project.settings.fps)}
-                      disabled={!supportsDropFrameTimecode(project.settings.fps)}
-                      data-testid="project-timecode-format-select"
-                      onChange={(event) => updateProjectTimecodeFormat(event.target.value)}
-                    >
-                      <option value="ndf">{t.general.timecodeNdf}</option>
-                      <option value="df">{t.general.timecodeDf}</option>
-                    </select>
-                    {!supportsDropFrameTimecode(project.settings.fps) ? (
-                      <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span>
-                    ) : null}
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.vfrHandling}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={normalizeVfrHandlingStrategy(project.settings.vfrHandling)}
-                      data-testid="project-vfr-handling-select"
-                      onChange={(event) => updateProjectVfrHandling(event.target.value)}
-                    >
-                      {VFR_HANDLING_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {t.general.vfrHandlingOptions[option]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.colorPipeline}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={normalizeProjectColorPipeline(project.settings.colorPipeline)}
-                      data-testid="project-color-pipeline-select"
-                      onChange={(event) => updateProjectColorPipeline(event.target.value)}
-                    >
-                      {PROJECT_COLOR_PIPELINES.map((pipeline) => (
-                        <option key={pipeline} value={pipeline}>
-                          {t.general.colorPipelineOptions[pipeline as ProjectColorPipeline]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block text-xs font-medium text-slate-600">
-                    {t.general.workingColorSpace}
-                    <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
-                      value={normalizeProjectWorkingColorSpace(project.settings.workingColorSpace)}
-                      data-testid="project-working-color-space-select"
-                      onChange={(event) => updateProjectWorkingColorSpace(event.target.value)}
-                    >
-                      {EXPORT_COLOR_SPACES.map((colorSpace) => (
-                        <option key={colorSpace} value={colorSpace}>
-                          {getColorSpaceDisplayName(colorSpace)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-                  <input
-                    className="mt-0.5 h-4 w-4 accent-brand"
-                    type="checkbox"
-                    checked={exportBackgroundSettings.allowPowerActions}
-                    data-testid="settings-export-power-actions-toggle"
-                    onChange={(event) =>
-                      void updateExportBackgroundSettings({
-                        ...exportBackgroundSettings,
-                        allowPowerActions: event.target.checked,
-                      })
-                    }
-                  />
-                  <span>
-                    <span className="block font-semibold text-slate-700">{t.general.allowExportPowerActions}</span>
-                    <span className="mt-1 block">{t.general.allowExportPowerActionsDescription}</span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-                  <input
-                    className="mt-0.5 h-4 w-4 accent-brand"
-                    type="checkbox"
-                    checked={exportBackgroundSettings.lowPowerMode}
-                    data-testid="settings-export-low-power-toggle"
-                    onChange={(event) =>
-                      void updateExportBackgroundSettings({
-                        ...exportBackgroundSettings,
-                        lowPowerMode: event.target.checked,
-                      })
-                    }
-                  />
-                  <span>
-                    <span className="block font-semibold text-slate-700">{t.general.lowPowerExportMode}</span>
-                    <span className="mt-1 block">{t.general.lowPowerExportModeDescription}</span>
-                  </span>
-                </label>
-                <ExportQualityAssuranceSettingsPanel
-                  settings={exportQualityAssuranceSettings}
-                  onChange={(patch) => void updateExportQualityAssuranceSettings(patch)}
-                />
-                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
-                  <input
-                    className="mt-0.5 h-4 w-4 accent-brand"
-                    type="checkbox"
-                    checked={touchOptimizationSettings.enabled}
-                    data-testid="settings-touch-optimization-toggle"
-                    onChange={(event) => void updateTouchOptimizationSettings({ enabled: event.target.checked })}
-                  />
-                  <span>
-                    <span className="block font-semibold text-slate-700">触屏优化模式</span>
-                    <span className="mt-1 block">
-                      开启后时间线交互元素自动放大、间距增加，适配触屏设备。关闭后使用标准鼠标交互尺寸。
-                    </span>
-                  </span>
-                </label>
-                <ExportRulesSettingsPanel
-                  rules={exportRules}
-                  onRuleChange={(rule) => void updateExportRule(rule)}
-                  onChooseCopyDirectory={() => void chooseExportRuleCopyDirectory()}
-                />
-                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-developer-section">
-                  <label className="flex items-start gap-2 text-xs text-slate-600">
-                    <input
-                      className="mt-0.5 h-4 w-4 accent-brand"
-                      type="checkbox"
-                      checked={developerMode}
-                      data-testid="settings-developer-mode-toggle"
-                      onChange={(e) => setDeveloperMode(e.target.checked)}
-                    />
-                    <span>
-                      <span className="block font-semibold text-slate-700">开发者模式</span>
-                      <span className="mt-1 block">开启后显示开发者工具，包括项目压力测试。</span>
-                    </span>
-                  </label>
-                  {developerMode ? (
-                    <div className="mt-3 space-y-2 border-t border-line pt-3" data-testid="stress-test-panel">
-                      <h4 className="text-xs font-semibold text-slate-700">项目压力测试</h4>
-                      <p className="text-[11px] text-slate-500">在独立临时项目中模拟极端场景，不影响当前工作。</p>
-                      <div className="flex flex-wrap gap-2">
-                        {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map(
-                          (sid) => (
-                            <button
-                              key={sid}
-                              className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-                              data-testid={`stress-run-${sid}`}
-                              onClick={() => {
-                                const { project, metrics: baseMetrics } = generateStressScenario(sid);
-                                const start = Date.now();
-                                const renderStart = performance.now();
-                                const _clone = JSON.parse(JSON.stringify(project));
-                                const renderTimeMs = performance.now() - renderStart;
-                                const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
-                                const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
-                                setStressTestResult(serializeStressReport(report));
-                              }}
-                            >
-                              {sid === 'mega-clips'
-                                ? '超大项目'
-                                : sid === 'long-timeline'
-                                  ? '超长TL'
-                                  : sid === 'mass-keyframes'
-                                    ? '大量KF'
-                                    : '深度嵌套'}
-                            </button>
-                          ),
-                        )}
-                      </div>
-                      {stressTestResult ? (
-                        <pre
-                          className="mt-2 max-h-48 overflow-auto rounded border border-line bg-white p-2 text-[10px] text-slate-700"
-                          data-testid="stress-test-result"
-                        >
-                          {stressTestResult}
-                        </pre>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+              <GeneralSettingsPanel
+                language={language}
+                updateLanguage={updateLanguage}
+                updateSettings={updateSettings}
+                updateAppUpdateSettings={updateAppUpdateSettings}
+                previewPerformance={previewPerformance}
+                onPreviewPerformanceChange={onPreviewPerformanceChange}
+                onPreviewSkipFramesChange={onPreviewSkipFramesChange}
+                timelineInteractionSettings={timelineInteractionSettings}
+                onTimelineInteractionSettingsChange={onTimelineInteractionSettingsChange}
+                collaborationIdentity={collaborationIdentity}
+                updateCollaborationIdentity={updateCollaborationIdentity}
+                localCoediting={localCoediting}
+                updateLocalCoediting={updateLocalCoediting}
+                demucsExecutablePath={demucsExecutablePath}
+                setDemucsExecutablePath={setDemucsExecutablePath}
+                chooseDemucsExecutable={chooseDemucsExecutable}
+                privacyDetectionModelPath={privacyDetectionModelPath}
+                setPrivacyDetectionModelPath={setPrivacyDetectionModelPath}
+                choosePrivacyDetectionModel={choosePrivacyDetectionModel}
+                recordingSettings={recordingSettings}
+                setRecordingSettings={setRecordingSettings}
+                project={project}
+                updateProjectFrameRate={updateProjectFrameRate}
+                updateProjectTimecodeFormat={updateProjectTimecodeFormat}
+                updateProjectVfrHandling={updateProjectVfrHandling}
+                updateProjectColorPipeline={updateProjectColorPipeline}
+                updateProjectWorkingColorSpace={updateProjectWorkingColorSpace}
+                exportBackgroundSettings={exportBackgroundSettings}
+                updateExportBackgroundSettings={updateExportBackgroundSettings}
+                exportQualityAssuranceSettings={exportQualityAssuranceSettings}
+                updateExportQualityAssuranceSettings={updateExportQualityAssuranceSettings}
+                touchOptimizationSettings={touchOptimizationSettings}
+                updateTouchOptimizationSettings={updateTouchOptimizationSettings}
+                exportRules={exportRules}
+                updateExportRule={updateExportRule}
+                chooseExportRuleCopyDirectory={chooseExportRuleCopyDirectory}
+                developerMode={developerMode}
+                setDeveloperMode={setDeveloperMode}
+                stressTestResult={stressTestResult}
+                setStressTestResult={setStressTestResult}
+              />
             ) : null}
             {tab === 'display' ? (
               <div className="space-y-4" data-testid="settings-display-panel">
@@ -2283,101 +1551,10 @@ export function SettingsDialog({
               />
             ) : null}
             {tab === 'lut-library' ? (
-              <>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-ink">{t.lutLibrary.title}</h3>
-                    <p className="text-xs text-slate-500">
-                      {selectedClipCanUseLut
-                        ? t.lutLibrary.readyForClip(selectedClip?.name ?? '')
-                        : t.lutLibrary.noClipSelectedMessage}
-                    </p>
-                  </div>
-                  <button
-                    className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                    type="button"
-                    onClick={() => void refresh()}
-                    data-testid="lut-library-refresh-button"
-                  >
-                    {t.lutLibrary.refresh}
-                  </button>
-                </div>
-                {loading ? (
-                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-                    {t.lutLibrary.loading}
-                  </div>
-                ) : null}
-                {error ? (
-                  <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                    {error}
-                  </div>
-                ) : null}
-                {!loading && items.length === 0 ? (
-                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-                    {t.lutLibrary.empty}
-                  </div>
-                ) : null}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {items.map((item) => (
-                    <div
-                      key={item.path}
-                      className="rounded-md border border-line bg-white p-3 shadow-sm"
-                      data-testid="lut-library-item"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
-                          {item.previewDataUrl ? (
-                            <img
-                              className="h-full w-full object-cover"
-                              src={item.previewDataUrl}
-                              alt=""
-                              loading="lazy"
-                            />
-                          ) : null}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-ink" title={item.path}>
-                            {item.name}
-                          </div>
-                          <div className="truncate text-xs text-slate-500" title={item.path}>
-                            {item.path}
-                          </div>
-                        </div>
-                        <button
-                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line ${item.favorite ? 'bg-amber-50 text-amber-600' : 'bg-white text-slate-500'} hover:bg-panel`}
-                          type="button"
-                          title={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
-                          aria-label={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
-                          data-testid="lut-library-favorite-button"
-                          onClick={() => void toggleFavorite(item)}
-                        >
-                          <Star size={15} fill={item.favorite ? 'currentColor' : 'none'} />
-                        </button>
-                      </div>
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          className="flex-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-                          type="button"
-                          disabled={!selectedClipCanUseLut}
-                          data-testid="lut-library-preview-button"
-                          onClick={() => preview(item)}
-                        >
-                          {t.lutLibrary.preview}
-                        </button>
-                        <button
-                          className="flex-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-                          type="button"
-                          disabled={!selectedClipCanUseLut}
-                          data-testid="lut-library-apply-button"
-                          onClick={() => apply(item)}
-                        >
-                          {t.lutLibrary.apply}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <LutLibraryPanel
+                selectedClip={selectedClip}
+                project={project}
+              />
             ) : null}
             {tab === 'effect-presets' ? (
               <EffectPresetCommunityPanel
@@ -2394,168 +1571,15 @@ export function SettingsDialog({
                 onShare={() => void shareSelectedEffectPreset()}
               />
             ) : null}
-            {tab === 'shortcuts' ? (
-              <div>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-ink">{t.shortcuts.title}</h3>
-                    <p className="text-xs text-slate-500">{t.shortcuts.description}</p>
-                  </div>
-                  <button
-                    className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                    type="button"
-                    onClick={resetAllShortcuts}
-                    data-testid="shortcuts-reset-all-button"
-                  >
-                    {t.shortcuts.resetAll}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => {
-                    const conflictList = conflicts[definition.action];
-                    const hasConflict = conflictList.length > 0;
-                    const label = t.shortcuts.actions[definition.action];
-                    return (
-                      <div
-                        key={definition.action}
-                        className={`rounded-md border p-3 ${hasConflict ? 'border-rose-300 bg-rose-50' : 'border-line bg-white'}`}
-                        data-testid={`shortcut-row-${definition.action}`}
-                        data-conflict={hasConflict ? 'true' : 'false'}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-ink">{label}</div>
-                            {hasConflict ? (
-                              <div className="text-xs font-medium text-rose-700">
-                                {t.shortcuts.conflict(conflictList.join(', '))}
-                              </div>
-                            ) : null}
-                          </div>
-                          <button
-                            className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
-                            type="button"
-                            data-testid={`shortcut-bind-${definition.action}`}
-                            onClick={() => {
-                              setCapturingMacroId(undefined);
-                              setCapturingAction(definition.action);
-                            }}
-                          >
-                            {capturingAction === definition.action
-                              ? t.shortcuts.pressKeys
-                              : effectiveBindings[definition.action].join(' / ')}
-                          </button>
-                          <button
-                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                            type="button"
-                            data-testid={`shortcut-reset-${definition.action}`}
-                            onClick={() => resetShortcut(definition.action)}
-                          >
-                            {zhCN.common.reset}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-            {tab === 'macros' ? (
-              <div>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-ink">{t.macros.title}</h3>
-                    <p className="text-xs text-slate-500">{t.macros.description}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                      type="button"
-                      data-testid="macros-import-button"
-                      onClick={() => void importMacros()}
-                    >
-                      {t.macros.import}
-                    </button>
-                    <button
-                      className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                      type="button"
-                      data-testid="macros-export-button"
-                      onClick={() => void exportMacros()}
-                    >
-                      {t.macros.export}
-                    </button>
-                  </div>
-                </div>
-                {macros.length === 0 ? (
-                  <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-                    {t.macros.empty}
-                  </div>
-                ) : null}
-                <div className="space-y-2">
-                  {macros.map((macro) => {
-                    const conflictList = macroConflicts[macro.id] ?? [];
-                    const hasConflict = conflictList.length > 0;
-                    return (
-                      <div
-                        key={macro.id}
-                        className={`rounded-md border p-3 ${hasConflict ? 'border-rose-300 bg-rose-50' : 'border-line bg-white'}`}
-                        data-testid={`macro-row-${macro.id}`}
-                        data-conflict={hasConflict ? 'true' : 'false'}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-ink">{macro.name}</div>
-                            {macro.description ? (
-                              <div className="text-xs text-slate-500">{macro.description}</div>
-                            ) : null}
-                            <div className="mt-1 text-xs text-slate-500">
-                              {t.macros.stepCount(getMacroSteps(macro).length)}
-                            </div>
-                            {hasConflict ? (
-                              <div className="mt-1 text-xs font-medium text-rose-700">
-                                {t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}
-                              </div>
-                            ) : null}
-                          </div>
-                          <button
-                            className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
-                            type="button"
-                            data-testid={`macro-bind-${macro.id}`}
-                            onClick={() => {
-                              setCapturingAction(undefined);
-                              setCapturingMacroId(macro.id);
-                            }}
-                          >
-                            {capturingMacroId === macro.id
-                              ? t.shortcuts.pressKeys
-                              : (macro.shortcut ?? t.macros.bindShortcut)}
-                          </button>
-                          <button
-                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                            type="button"
-                            data-testid={`macro-apply-${macro.id}`}
-                            onClick={() => onExecuteMacro(macro)}
-                          >
-                            {t.macros.apply}
-                          </button>
-                          <button
-                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                            type="button"
-                            data-testid={`macro-reset-${macro.id}`}
-                            onClick={() => resetMacroShortcut(macro.id)}
-                          >
-                            {zhCN.common.reset}
-                          </button>
-                        </div>
-                        <MacroStepsEditor
-                          macro={macro}
-                          onSave={(raw) => void updateMacroStepsFromJson(macro.id, raw)}
-                          onDeleteStep={(steps) => void updateMacroSteps(macro.id, steps)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {tab === 'shortcuts' || tab === 'macros' ? (
+              <ShortcutMacrosPanel
+                tab={tab as 'shortcuts' | 'macros'}
+                shortcutBindings={shortcutBindings}
+                onShortcutBindingsChange={onShortcutBindingsChange}
+                macros={macros}
+                onMacrosChange={onMacrosChange}
+                onExecuteMacro={onExecuteMacro}
+              />
             ) : null}
             {tab === 'automation' ? (
               <AutomationSettingsPanel
@@ -2693,32 +1717,4 @@ export function SettingsDialog({
       </div>
     </div>
   );
-}
-
-
-
-
-function formatProjectFps(fps: number): string {
-  return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
-}
-
-
-function buildPreviewTimelineWithLut(timeline: Timeline, clipId: string, lutPath: string): Timeline {
-  return {
-    ...timeline,
-    tracks: timeline.tracks.map((track) => ({
-      ...track,
-      clips: track.clips.map((clip) =>
-        clip.id === clipId
-          ? {
-              ...clip,
-              colorCorrection: {
-                ...clip.colorCorrection,
-                lutPath,
-              },
-            }
-          : clip,
-      ),
-    })),
-  };
 }
