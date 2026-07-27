@@ -1,12 +1,13 @@
 import {logger} from '@open-factory/editor-core/utils';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState, useCallback} from 'react';
 import {X} from 'lucide-react';
 import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type TimelineScriptOperation} from '@open-factory/editor-core';
 import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
 import {switchLanguage} from '../i18n/i18next-config';
 import {parseAutomationRulesJson, serializeAutomationRulesJson} from '../automation/automation-rules';
 import {pickDemucsExecutablePath} from '../lib/demucs';
-import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword} from '../lib/tauri-bridge';
+import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, getAppVersion, checkAppUpdate} from '../lib/tauri-bridge';
+import {isTauriRuntime} from '../lib/tauri';
 import {showToast} from '../lib/toast';
 import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
 import {type ClipMacro} from '../macros/clip-macros';
@@ -160,6 +161,7 @@ export function SettingsDialog({
     doubleTapMs: 300,
   }));
   const [updateSettings, setUpdateSettings] = useState<UpdateSettings>(() => ({ ...DEFAULT_UPDATE_SETTINGS }));
+  const [currentVersion, setCurrentVersion] = useState<string>('');
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<
     Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>
@@ -257,11 +259,29 @@ export function SettingsDialog({
       .then(setTouchOptimizationSettings)
       .catch((error) => logger.warn('[Settings] Unable to load touch optimization', error));
     void loadTranslationApiKey();
+    void loadCurrentVersion();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     void refreshPluginCatalog();
     return () => setPreviewTimeline(undefined);
   }, [loadTranslationApiKey, open, setPreviewTimeline]);
+
+  const loadCurrentVersion = useCallback(async () => {
+    try {
+      const version = await getAppVersion();
+      setCurrentVersion(version);
+    } catch (error) {
+      logger.warn('[Settings] Unable to load app version', error);
+    }
+  }, []);
+
+  const handleCheckForUpdates = useCallback(async (): Promise<{version: string} | null> => {
+    const update = await checkAppUpdate({ timeout: 10000 });
+    if (update) {
+      return { version: update.version };
+    }
+    return null;
+  }, []);
 
   if (!open) {
     return null;
@@ -1499,6 +1519,9 @@ export function SettingsDialog({
                 setDeveloperMode={setDeveloperMode}
                 stressTestResult={stressTestResult}
                 setStressTestResult={setStressTestResult}
+                currentVersion={currentVersion}
+                onCheckForUpdates={handleCheckForUpdates}
+                isTauri={isTauriRuntime()}
               />
             ) : null}
             {tab === 'display' ? (
