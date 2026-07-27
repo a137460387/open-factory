@@ -1,16 +1,24 @@
 import {logger} from '@open-factory/editor-core/utils';
 import React from 'react';
-import {BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, type TimelineColorHeatmapPoint, type SceneColorDifference} from '@open-factory/editor-core';
+import {
+  BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand,
+  type TimelineColorHeatmapPoint, type SceneColorDifference,
+  type TimelineRulerTick, type SelectionRect, type TimelineHeatmapSegment,
+  type TimelineMinimapLayout, type TimelineMinimapViewportRect,
+  type PacingSegment, type ProjectAnnotation, type TimelineNote,
+  type ProtectedRange, type Clip, type ClipGroup, type KeyframeProperty,
+  type Track,
+} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor} from '../../store/commandManager';
-import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT} from './TimelineParts';
-import {TrackBatchMenu, TransitionMenu, GapActionMenu, VolumeEnvelopeMenu, RulerContextMenu, ClipActionMenu} from './TimelineMenus';
+import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type DragState} from './TimelineParts';
+import {TrackBatchMenu, TransitionMenu, GapActionMenu, VolumeEnvelopeMenu, RulerContextMenu, ClipActionMenu, type TransitionMenuState, type ClipMenuState, type VolumeEnvelopeMenuState, type GapMenuState, type RulerMenuState} from './TimelineMenus';
 import {TimelineNoteLayer, AnnotationBubble, TimelineBookmarkOverlay, TimelineMarkerOverlay, SceneCutOverlay, BeatMarkerOverlay, SelectionMarquee, TimelineMinimap, TimelineColorHeatmapLayer, TimelineHeatmapCanvas} from './TimelineOverlays';
 import {SequenceSettingsDialog, GapStatsPanel} from './TimelineDialogs';
 import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
 import {ContextualSuggestionBubble} from './ContextualSuggestionBubble';
 import type {ContextualSuggestion, TimelineContext} from '@open-factory/editor-core/contextual-suggestions';
-import type {Timeline as CoreTimeline, MediaAsset} from '@open-factory/editor-core';
+import type {Timeline as CoreTimeline, MediaAsset, Marker, Bookmark, BeatMarker, SceneCut} from '@open-factory/editor-core';
 
 interface TimelineTracksContainerProps {
   // Scroll container
