@@ -1,0 +1,294 @@
+/**
+ * LLM Suggestion Engine
+ *
+ * Extends the LLM orchestrator with a "suggestion mode" that proactively
+ * generates multiple creative editing proposals based on:
+ * - Current material semantic analysis
+ * - User's style fingerprint library
+ * - Platform/audience context
+ *
+ * Distinct from "editing mode": suggestions are non-binding proposals
+ * for the user to browse, compare, and selectively apply.
+ */
+import { clamp01 } from '../utils/math';
+// ─── Prompt Construction ────────────────────────────────────────
+const SYSTEM_PROMPT_SUGGESTION = `You are a creative video editing advisor. You analyze media metadata and propose MULTIPLE distinct editing approaches.
+
+IMPORTANT RULES:
+1. You receive structured metadata (JSON) only - no raw media.
+2. Generate 3-5 DISTINCT suggestions, each with a different creative angle.
+3. Each suggestion must be a valid JSON object matching the schema below.
+4. Suggestions should vary in style: one conservative, one creative, one experimental.
+5. If a style fingerprint is provided, at least one suggestion should conform to that style.
+6. Always explain your creative rationale for each suggestion.
+7. Suggestions are PROPOSALS, not commands. The user will review and selectively apply.
+
+Output JSON schema:
+{
+  "suggestions": [
+    {
+      "id": "string - unique id",
+      "category": "creative|style-match|platform|efficiency|experimentation",
+      "title": "string - short descriptive title",
+      "description": "string - detailed description of the editing approach",
+      "confidence": "number 0-1",
+      "rationale": "string - why this approach works for the content",
+      "previewInstructions": [
+        {
+          "action": "string - edit action type",
+          "target": { "materialIndex": "number (optional)", "startSec": "number (optional)", "endSec": "number (optional)" },
+          "params": {},
+          "reason": "string"
+        }
+      ],
+      "tags": ["string"]
+    }
+  ],
+  "analysisNotes": "string - overall content analysis"
+}`;
+function buildSuggestionPrompt(request) {
+    const systemMessage = {
+        role: 'system',
+        content: SYSTEM_PROMPT_SUGGESTION,
+    };
+    // Compact material summary
+    const materialSummaries = request.materials.map((m, i) => ({
+        index: i,
+        fileName: m.source.fileName,
+        duration: m.source.durationSec,
+        resolution: `${m.source.width}x${m.source.height}`,
+        fps: m.source.fps,
+        tags: m.tags,
+        transcript: m.transcriptText.substring(0, 1500),
+        keyFrameCount: m.keyFrames.length,
+        audioProfile: m.audioProfile,
+        visualProfile: m.visualProfile,
+        summary: m.summary,
+    }));
+    // Compact style summary
+    const styleSummaries = request.styles.map((s) => ({
+        id: s.id,
+        name: s.name,
+        rhythm: {
+            avgClipDurationSec: s.rhythm.avgClipDurationSec,
+            cutsPerMinute: s.rhythm.cutsPerMinute,
+            regularity: s.rhythm.regularity,
+        },
+        colorGrading: {
+            temperatureTendency: s.colorGrading.temperatureTendency,
+            saturationMean: s.colorGrading.saturation.mean,
+            contrastMean: s.colorGrading.contrast.mean,
+        },
+        topTransitions: s.transitions.slice(0, 3).map((t) => ({
+            type: t.type,
+            ratio: t.ratio,
+        })),
+        tags: s.tags,
+    }));
+    const parts = [
+        `## Materials\n\n${JSON.stringify(materialSummaries, null, 2)}`,
+    ];
+    if (styleSummaries.length > 0) {
+        parts.push(`## User Style Profiles\n\n${JSON.stringify(styleSummaries, null, 2)}`);
+    }
+    if (request.platform) {
+        parts.push(`## Target Platform: ${request.platform}`);
+    }
+    if (request.categories && request.categories.length > 0) {
+        parts.push(`## Preferred Categories: ${request.categories.join(', ')}`);
+    }
+    const maxSuggestions = request.maxSuggestions ?? 4;
+    parts.push(`## Generate ${maxSuggestions} distinct editing suggestions in JSON format.`);
+    if (request.userGuidance) {
+        parts.push(`## User Guidance\n\n${request.userGuidance}`);
+    }
+    const userMessage = {
+        role: 'user',
+        content: parts.join('\n\n'),
+    };
+    return [systemMessage, userMessage];
+}
+// ─── Response Parsing ───────────────────────────────────────────
+function generateSuggestionId() {
+    return `sug-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+const VALID_CATEGORIES = [
+    'creative', 'style-match', 'platform', 'efficiency', 'experimentation',
+];
+/**
+ * Parse suggestion response from LLM JSON output.
+ */
+export function parseSuggestionResponse(jsonStr) {
+    let parsed;
+    try {
+        parsed = JSON.parse(jsonStr);
+    }
+    catch {
+        return null;
+    }
+    if (!parsed || typeof parsed !== 'object')
+        return null;
+    const obj = parsed;
+    if (!Array.isArray(obj.suggestions))
+        return null;
+    const suggestions = [];
+    for (const raw of obj.suggestions) {
+        if (!raw || typeof raw !== 'object')
+            continue;
+        const s = raw;
+        const category = typeof s.category === 'string' && VALID_CATEGORIES.includes(s.category)
+            ? s.category
+            : 'creative';
+        const previewInstructions = Array.isArray(s.previewInstructions)
+            ? s.previewInstructions
+                .filter((i) => i != null && typeof i === 'object')
+                .map((i) => ({
+                action: typeof i.action === 'string' ? i.action : 'unknown',
+                target: typeof i.target === 'object' && i.target !== null
+                    ? i.target
+                    : {},
+                params: typeof i.params === 'object' && i.params !== null
+                    ? i.params
+                    : {},
+                reason: typeof i.reason === 'string' ? i.reason : '',
+            }))
+            : [];
+        suggestions.push({
+            id: typeof s.id === 'string' ? s.id : generateSuggestionId(),
+            category,
+            title: typeof s.title === 'string' ? s.title : 'Untitled Suggestion',
+            description: typeof s.description === 'string' ? s.description : '',
+            confidence: typeof s.confidence === 'number' ? clamp01(s.confidence) : 0.5,
+            rationale: typeof s.rationale === 'string' ? s.rationale : '',
+            previewInstructions,
+            tags: Array.isArray(s.tags) ? s.tags.filter((t) => typeof t === 'string') : [],
+        });
+    }
+    return {
+        suggestions,
+        analysisNotes: typeof obj.analysisNotes === 'string' ? obj.analysisNotes : '',
+        usage: { inputTokens: 0, outputTokens: 0 },
+        latencyMs: 0,
+    };
+}
+// ─── Suggestion Generation ──────────────────────────────────────
+/**
+ * Build suggestion prompt messages for LLM.
+ * Use this with your existing LLM client, then parse with parseSuggestionResponse().
+ */
+export function buildSuggestionMessages(request) {
+    return buildSuggestionPrompt(request);
+}
+/**
+ * Apply a style fingerprint to suggestion instructions.
+ * Enriches instructions with style-specific parameters.
+ */
+export function enrichSuggestionWithStyle(suggestion, style, strength = 0.7) {
+    const clampedStrength = clamp01(strength);
+    const enrichedInstructions = suggestion.previewInstructions.map((inst) => {
+        const params = { ...inst.params };
+        if (inst.action === 'add_transition' && style.transitions.length > 0) {
+            const top = style.transitions[0];
+            if (!params.type)
+                params.type = top.type;
+            if (params.duration === undefined) {
+                params.duration = top.avgDurationSec * clampedStrength;
+            }
+        }
+        if (inst.action === 'adjust_audio') {
+            if (params.fadeIn === undefined && style.audioProcessing.avgFadeInSec > 0) {
+                params.fadeIn = style.audioProcessing.avgFadeInSec * clampedStrength;
+            }
+            if (params.fadeOut === undefined && style.audioProcessing.avgFadeOutSec > 0) {
+                params.fadeOut = style.audioProcessing.avgFadeOutSec * clampedStrength;
+            }
+        }
+        return { ...inst, params };
+    });
+    return {
+        ...suggestion,
+        previewInstructions: enrichedInstructions,
+        styleId: style.id,
+        tags: [...new Set([...suggestion.tags, ...style.tags])],
+    };
+}
+/**
+ * Generate a comparison matrix for a set of suggestions.
+ */
+export function generateComparison(suggestions) {
+    const dimensions = [
+        {
+            name: 'creativity',
+            description: 'How creative and unconventional the approach is',
+            scores: Object.fromEntries(suggestions.map((s) => [
+                s.id,
+                s.category === 'experimentation' ? 0.9 :
+                    s.category === 'creative' ? 0.7 :
+                        s.category === 'style-match' ? 0.5 :
+                            s.category === 'platform' ? 0.4 : 0.3,
+            ])),
+        },
+        {
+            name: 'confidence',
+            description: 'How confident the AI is in this suggestion',
+            scores: Object.fromEntries(suggestions.map((s) => [s.id, s.confidence])),
+        },
+        {
+            name: 'complexity',
+            description: 'How many edits are involved',
+            scores: Object.fromEntries(suggestions.map((s) => [
+                s.id,
+                Math.min(1, s.previewInstructions.length / 10),
+            ])),
+        },
+    ];
+    return { suggestions, dimensions };
+}
+/**
+ * Record user feedback on a suggestion.
+ */
+export function recordFeedback(suggestion, score, notes) {
+    return {
+        ...suggestion,
+        feedbackScore: Math.max(-1, Math.min(1, score)),
+        feedbackNotes: notes,
+    };
+}
+/**
+ * Filter suggestions by category, confidence threshold, or tags.
+ */
+export function filterSuggestions(suggestions, filters) {
+    return suggestions.filter((s) => {
+        if (filters.categories && filters.categories.length > 0) {
+            if (!filters.categories.includes(s.category))
+                return false;
+        }
+        if (filters.minConfidence !== undefined) {
+            if (s.confidence < filters.minConfidence)
+                return false;
+        }
+        if (filters.tags && filters.tags.length > 0) {
+            if (!filters.tags.some((t) => s.tags.includes(t)))
+                return false;
+        }
+        return true;
+    });
+}
+/**
+ * Rank suggestions by weighted score combining confidence, category preference, and feedback.
+ */
+export function rankSuggestions(suggestions, weights = {}) {
+    const w = {
+        confidence: weights.confidence ?? 0.4,
+        feedbackWeight: weights.feedbackWeight ?? 0.3,
+    };
+    const catPref = weights.categoryPreference ?? {};
+    const scored = suggestions.map((s) => {
+        const catScore = catPref[s.category] ?? 0.5;
+        const feedbackScore = s.feedbackScore !== undefined ? (s.feedbackScore + 1) / 2 : 0.5;
+        const totalScore = w.confidence * s.confidence + 0.3 * catScore + w.feedbackWeight * feedbackScore;
+        return { suggestion: s, score: totalScore };
+    });
+    return scored.sort((a, b) => b.score - a.score).map((s) => s.suggestion);
+}
+//# sourceMappingURL=suggestion-engine.js.map

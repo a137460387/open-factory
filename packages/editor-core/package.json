@@ -20,6 +20,46 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./timeline": {
+      "types": "./dist/timeline-index.d.ts",
+      "import": "./dist/timeline-index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai/index.d.ts",
+      "import": "./dist/ai/index.js"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "import": "./dist/export/index.js"
+    },
+    "./audio": {
+      "types": "./dist/audio/index.d.ts",
+      "import": "./dist/audio/index.js"
+    },
+    "./color": {
+      "types": "./dist/color/index.d.ts",
+      "import": "./dist/color/index.js"
+    },
+    "./subtitles": {
+      "types": "./dist/subtitles/index.d.ts",
+      "import": "./dist/subtitles/index.js"
+    },
+    "./project": {
+      "types": "./dist/project/index.d.ts",
+      "import": "./dist/project/index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "import": "./dist/commands/index.js"
+    },
+    "./effects": {
+      "types": "./dist/effects-index.d.ts",
+      "import": "./dist/effects-index.js"
+    },
     "./ai/color-grading": {
       "types": "./dist/ai/color-grading.d.ts",
       "import": "./dist/ai/color-grading.js"
@@ -91,6 +131,10 @@
     "./utils/math": {
       "types": "./dist/utils/math.d.ts",
       "import": "./dist/utils/math.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
     },
     "./natural-language-commands": {
       "types": "./dist/natural-language-commands.d.ts",

@@ -643,18 +643,29 @@ self.onmessage = async (event) => {
       // Validate plugin code before execution
       validatePluginCode(message.code);
       const module = { exports: {} };
-      const exports = module.exports;
-      const sandbox = {};
       const preliminaryId = message.manifest && typeof message.manifest.id === 'string' ? message.manifest.id : 'plugin';
       const openFactory = createPluginApi(preliminaryId);
-      sandbox.openFactory = openFactory;
       // Freeze prototypes to prevent prototype chain escapes
       try { Object.freeze(Object.prototype); } catch (_) { /* already frozen */ }
       try { Object.freeze(Function.prototype); } catch (_) { /* already frozen */ }
       try { Object.freeze(Array.prototype); } catch (_) { /* already frozen */ }
-      new Function('module', 'exports', 'globalThis', 'openFactory', '"use strict";\\n' + message.code)(module, exports, sandbox, openFactory);
+      // CSP-safe execution: use importScripts with blob URL instead of new Function()
+      // importScripts executes in Worker global scope, no CSP 'unsafe-eval' needed
+      const blob = new Blob([message.code], { type: 'text/javascript' });
+      const blobUrl = URL.createObjectURL(blob);
+      self.openFactory = openFactory;
+      self.module = module;
+      self.exports = module.exports;
+      try {
+        importScripts(blobUrl);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+        delete self.openFactory;
+        delete self.module;
+        delete self.exports;
+      }
       const exported = module.exports && Object.keys(module.exports).length > 0 ? module.exports : undefined;
-      loadedPlugin = normalizePlugin(module.exports.default || exported || sandbox.openFactoryPlugin || sandbox.plugin, message.manifest);
+      loadedPlugin = normalizePlugin(module.exports.default || exported || {}, message.manifest);
       self.postMessage({ id: message.id, ok: true, value: metadata(loadedPlugin) });
       return;
     }
