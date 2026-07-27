@@ -54,7 +54,21 @@ export default defineConfig({
             if (/\/(media-|duplicate-media|batch-media|thumbnail-|cover-|content-analysis|frame-|match-frame|selection-|broadcast-|scene-|vfr|smart-rough|storyboard|highlight-|anomaly-|flash-|profiler|complexity-|performance-|tag-|stress-|naming-|quick-|annotation-|distribution|batch-crop)/.test(normalized)) return 'editor-core-media';
             return 'editor-core';
           }
-          if (normalized.includes('/node_modules/')) return 'vendor';
+          // Split vendor into smaller chunks
+          if (normalized.includes('/node_modules/')) {
+            // React ecosystem
+            if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-dom/client')) return 'vendor-react';
+            // State management
+            if (normalized.includes('/node_modules/zustand/') || normalized.includes('/node_modules/use-sync-external-store/')) return 'vendor-state';
+            // UI libraries (Radix, Lucide)
+            if (normalized.includes('/node_modules/@radix-ui/') || normalized.includes('/node_modules/lucide-react/')) return 'vendor-ui';
+            // i18n
+            if (normalized.includes('/node_modules/i18next') || normalized.includes('/node_modules/react-i18next/')) return 'vendor-i18n';
+            // Tauri
+            if (normalized.includes('/node_modules/@tauri-apps/')) return 'vendor-tauri';
+            // Other vendor
+            return 'vendor-utils';
+          }
           if (normalized.includes('/apps/desktop/src/lib/') || normalized.includes('/apps/desktop/src/store/')) return 'app-utils';
           if (normalized.includes('/apps/desktop/src/i18n/')) return 'app-i18n';
           return undefined;

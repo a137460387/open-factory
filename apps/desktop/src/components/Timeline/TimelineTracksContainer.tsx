@@ -6,25 +6,28 @@ import {
   type TimelineRulerTick, type SelectionRect, type TimelineHeatmapSegment,
   type TimelineMinimapLayout, type TimelineMinimapViewportRect,
   type ProjectAnnotation, type TimelineNote,
-  type ProtectedRange, type Clip, type ClipGroup, type KeyframeProperty,
-  type Track, type TimelineRenderRange, type TimelineDiffRange,
-  type DialogueInterval, type Sequence, type Project,
-  type CollaborationUserPresence, type CollaborationClipLock,
+  type ProtectedRange, type Clip, type ClipGroup, type ClipGroupColor,
+  type KeyframeProperty, type Track, type TimelineRenderRange,
+  type TimelineDiffRange, type DialogueInterval, type Sequence,
+  type Project, type CollaborationUserPresence, type CollaborationClipLock,
   type TimelineNoteLayout, type TimelineVirtualRenderWindow,
   type TimelineLargeProjectMode, type Timeline as CoreTimeline,
-  type TimelineLabelColor,
+  type TimelineLabelColor, type AnomalyInterval, type MediaVersionEntry,
+  type MediaAsset, type TimelineMarker, type TimelineBookmark,
+  type BeatMarker, type TimelineThumbnailTrackSample,
+  type GapFillStrategy,
 } from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor} from '../../store/commandManager';
-import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type DragState} from './TimelineParts';
+import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type DragState, type VolumeEnvelopePointRequest, type VolumeEnvelopeMenuRequest, type ClipMenuRequest, type GapMenuRequest} from './TimelineParts';
 import {TrackBatchMenu, TransitionMenu, GapActionMenu, VolumeEnvelopeMenu, RulerContextMenu, ClipActionMenu, type TransitionMenuState, type ClipMenuState, type VolumeEnvelopeMenuState, type GapMenuState, type RulerMenuState, type TrackBatchMenuState} from './TimelineMenus';
-import {TimelineNoteLayer, AnnotationBubble, TimelineBookmarkOverlay, TimelineMarkerOverlay, SceneCutOverlay, BeatMarkerOverlay, SelectionMarquee, TimelineMinimap, TimelineColorHeatmapLayer, TimelineHeatmapCanvas} from './TimelineOverlays';
+import {TimelineNoteLayer, AnnotationBubble, TimelineBookmarkOverlay, TimelineMarkerOverlay, SceneCutOverlay, BeatMarkerOverlay, SelectionMarquee, TimelineMinimap, TimelineColorHeatmapLayer, TimelineHeatmapCanvas, type TimelineNoteDraftState} from './TimelineOverlays';
 import {SequenceSettingsDialog, GapStatsPanel} from './TimelineDialogs';
 import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
 import {ContextualSuggestionBubble} from './ContextualSuggestionBubble';
 import type {ContextualSuggestion, TimelineContext} from '@open-factory/editor-core/contextual-suggestions';
-import type {MediaAsset, TimelineMarker, TimelineBookmark, BeatMarker, TimelineThumbnailTrackSample} from '@open-factory/editor-core';
 import type {SelectedKeyframeRef} from '../../store/editorStore';
+import type {RulerContextMenuAction} from './timeline-ruler-menu';
 
 interface TimelineTracksContainerProps {
   // Scroll container
@@ -55,8 +58,8 @@ interface TimelineTracksContainerProps {
 
   // Note layer
   timelineNoteLayouts: TimelineNoteLayout[];
-  timelineNoteDraft: any;
-  setTimelineNoteDraft: (draft: any) => void;
+  timelineNoteDraft: TimelineNoteDraftState | undefined;
+  setTimelineNoteDraft: React.Dispatch<React.SetStateAction<TimelineNoteDraftState | undefined>>;
   onTimelineNoteRangeDraft: (start: number, end: number) => void;
   openTimelineNoteEditor: (start: number, end: number, note?: TimelineNote) => void;
 
@@ -91,14 +94,14 @@ interface TimelineTracksContainerProps {
   selectedKeyframes: SelectedKeyframeRef[];
   selectedTrackIds: string[];
   drag: DragState | undefined;
-  selectClip: (...args: any[]) => void;
-  selectKeyframe: (...args: any[]) => void;
-  onDragStart: (...args: any[]) => void;
-  onTrackPointerDown: (...args: any[]) => void;
-  updateTrack: (...args: any[]) => void;
-  selectTrackHeader: (...args: any[]) => void;
-  openTrackBatchMenu: (...args: any[]) => void;
-  reorderTracks: (...args: any[]) => void;
+  selectClip: (clipId: string, additive: boolean, forceSingle?: boolean) => void;
+  selectKeyframe: (keyframe: SelectedKeyframeRef, additive: boolean) => void;
+  onDragStart: (nextDrag: DragState) => void;
+  onTrackPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+  updateTrack: (trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>) => void;
+  selectTrackHeader: (trackId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  openTrackBatchMenu: (trackId: string, x: number, y: number) => void;
+  reorderTracks: (draggedTrackId: string, targetTrackId: string) => void;
 
   // Track row menus
   setGapMenu: (v: GapMenuState | undefined) => void;
@@ -106,13 +109,13 @@ interface TimelineTracksContainerProps {
   setVolumeEnvelopeMenu: (v: VolumeEnvelopeMenuState | undefined) => void;
   setRulerMenu: (v: RulerMenuState | undefined) => void;
   setTransitionMenu: (v: TransitionMenuState | undefined) => void;
-  openGapMenu: (...args: any[]) => void;
-  openClipMenu: (...args: any[]) => void;
-  addVolumeEnvelopePoint: (...args: any[]) => void;
-  updateVolumeEnvelopePoint: (...args: any[]) => void;
-  removeVolumeEnvelopePoint: (...args: any[]) => void;
-  openVolumeEnvelopeMenu: (...args: any[]) => void;
-  openNestedSequence: (...args: any[]) => void;
+  openGapMenu: (request: GapMenuRequest) => void;
+  openClipMenu: (request: ClipMenuRequest) => void;
+  addVolumeEnvelopePoint: (request: VolumeEnvelopePointRequest) => void;
+  updateVolumeEnvelopePoint: (request: Required<VolumeEnvelopePointRequest>) => void;
+  removeVolumeEnvelopePoint: (request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>) => void;
+  openVolumeEnvelopeMenu: (request: VolumeEnvelopeMenuRequest) => void;
+  openNestedSequence: (clip: Clip) => void;
 
   // Track row state
   largeProjectMode: TimelineLargeProjectMode;
@@ -123,7 +126,7 @@ interface TimelineTracksContainerProps {
   timelineColorFilter: TimelineLabelColor | null;
   envelopeEditMode: boolean;
   collaborationLocksByClipId: Map<string, CollaborationClipLock>;
-  removeAnomaly: (...args: any[]) => void;
+  removeAnomaly: (clipId: string, anomaly: AnomalyInterval) => void;
 
   // Overlays
   annotationMode: boolean;
@@ -137,18 +140,18 @@ interface TimelineTracksContainerProps {
 
   // Transition menu
   transitionMenu: TransitionMenuState | undefined;
-  addTransition: (...args: any[]) => void;
-  removeTransition: (...args: any[]) => void;
+  addTransition: () => void;
+  removeTransition: () => void;
 
   // Ruler menu
   rulerMenu: RulerMenuState | undefined;
-  runRulerMenuAction: (...args: any[]) => void;
-  jumpToRulerTimecode: (...args: any[]) => void;
+  runRulerMenuAction: (action: RulerContextMenuAction) => void;
+  jumpToRulerTimecode: () => void;
 
   // Gap menu
   gapMenu: GapMenuState | undefined;
-  closeGap: (...args: any[]) => void;
-  fillGap: (...args: any[]) => void;
+  closeGap: () => void;
+  fillGap: (strategy: GapFillStrategy) => Promise<void>;
 
   // Gap stats
   gapStatsOpen: boolean;
@@ -161,14 +164,14 @@ interface TimelineTracksContainerProps {
 
   // Volume envelope menu
   volumeEnvelopeMenu: VolumeEnvelopeMenuState | undefined;
-  applyVolumeEnvelopeFade: (...args: any[]) => void;
-  resetVolumeEnvelope: (...args: any[]) => void;
+  applyVolumeEnvelopeFade: (kind: 'in' | 'out') => void;
+  resetVolumeEnvelope: () => void;
 
   // Clip menu
   clipMenu: ClipMenuState | undefined;
   allClips: Clip[];
-  getClipMediaAsset: (...args: any[]) => any;
-  getClipMediaVersionEntries: (...args: any[]) => any;
+  getClipMediaAsset: (clip: Clip) => MediaAsset | undefined;
+  getClipMediaVersionEntries: (clip?: Clip) => MediaVersionEntry[];
   whisperAvailability: { ready: boolean; error?: string };
   openSilenceDetection: (clipId: string) => void;
   openSceneDetection: (clipId: string) => void;
@@ -185,17 +188,17 @@ interface TimelineTracksContainerProps {
   handleAnomalyDetect: (clipId: string) => void;
   onRoughCutCompare?: (clipId: string) => void;
   createGroupFromSelection: () => void;
-  ungroupSelected: (...args: any[]) => void;
-  deleteGroup: (...args: any[]) => void;
-  updateGroupColor: (...args: any[]) => void;
-  updateClipColor: (...args: any[]) => void;
+  ungroupSelected: (group?: ClipGroup) => void;
+  deleteGroup: (group: ClipGroup) => void;
+  updateGroupColor: (group: ClipGroup, color: ClipGroupColor) => void;
+  updateClipColor: (clipId: string, colorLabel: TimelineLabelColor | null) => void;
   deleteSelected: () => void;
   rippleDeleteSelected: () => void;
 
   // Track batch menu
   trackBatchMenu: TrackBatchMenuState | undefined;
   selectedTracksForBatch: () => Track[];
-  applyBatchTrackPatch: (...args: any[]) => void;
+  applyBatchTrackPatch: (patchForTrack: (track: Track) => Partial<Pick<Track, 'name' | 'color' | 'volume' | 'language' | 'pan' | 'eq' | 'compressor' | 'locked' | 'solo' | 'subtitleType' | 'muted'>>) => void;
   deleteSelectedEmptyTracks: () => void;
   setEqualHeightPrompt: (v: boolean) => void;
   setTrackBatchMenu: (v: TrackBatchMenuState | undefined) => void;
