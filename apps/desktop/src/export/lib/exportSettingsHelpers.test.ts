@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Project, ExportSubtitleFormat } from '@open-factory/editor-core';
 import {
   WATERMARK_POSITIONS,
@@ -17,8 +18,78 @@ import {
   formatSubtitleLanguageLabel,
   timecodeBurnInFrom,
   normalizeDraftSettings,
+  updateNumberSetting,
+  updateStringSetting,
+  updateOutputMode,
+  updateFormat,
+  updateAudioVisualizationStyle,
+  updateAudioVisualizationColor,
+  updateAudioVisualizationBackgroundType,
+  updateAudioVisualizationBackgroundColor,
+  updateAudioVisualizationBackgroundImagePath,
+  updateSubtitleMode,
+  updateSubtitleFormat,
+  updateExportSidecarSubtitle,
+  updateSubtitleLanguageSelection,
+  updateSubtitleBurnInLanguage,
+  updateScaleMode,
+  updateTargetAspectRatio,
+  updateReframeOffset,
+  updateHardwareEncoding,
+  updateHardwareEncoderId,
+  updateHardwareEncoderPreset,
+  updateHardwareRateControlMode,
+  updateHardwareCq,
+  updateHardwareVideoBitrate,
+  updateHardwareMaxBitrate,
+  updateHardwareGopSize,
+  updateHardwareBFrames,
+  updateLoudnessNormalization,
+  updateMasterProcessing,
+  updateMasterEqEnabled,
+  updateMasterEqBand,
+  updateMasterStereoEnabled,
+  updateMasterStereoAmount,
+  updateMasterLimiterEnabled,
+  updateMasterLimiterLevel,
+  updateColorManagement,
+  updatePostExportScriptCommand,
+  updateTimecodeBurnInEnabled,
+  updateTimecodeBurnInPosition,
+  updateTimecodeBurnInFontSize,
+  updateTimecodeBurnInColor,
+  updateTimecodeBurnInFrameNumber,
+  updateSlateEnabled,
+  updateWatermarkEnabled,
+  updateWatermarkType,
+  updateWatermarkPosition,
+  updateImageWatermarkPath,
+  updateImageWatermarkScale,
+  updateImageWatermarkOpacity,
+  updateTextWatermarkText,
 } from './exportSettingsHelpers';
 import type { ExportPresetSettings } from '../export-presets';
+import type { ExportMasterProcessingSettings } from '@open-factory/editor-core';
+
+// Helper: capture the updater function passed to setDraftSettings
+function applyUpdate<T>(
+  fn: (setter: Dispatch<SetStateAction<T>>, ...args: never[]) => void,
+  current: T,
+  ...args: never[]
+): T {
+  let captured: ((c: T) => T) | undefined;
+  const setter = (updater: SetStateAction<T>) => {
+    captured = updater as (c: T) => T;
+  };
+  fn(setter, ...args);
+  return captured!(current);
+}
+
+const MINIMAL: ExportPresetSettings = {
+  width: 1920,
+  height: 1080,
+  fps: 30,
+} as ExportPresetSettings;
 
 describe('constants', () => {
   it('WATERMARK_POSITIONS has 9 positions', () => {
@@ -327,5 +398,548 @@ describe('normalizeDraftSettings', () => {
   it('normalizes loudnessNormalization for gif', () => {
     const result = normalizeDraftSettings({ ...minimalSettings, format: 'gif' });
     expect(result.loudnessNormalization).toBe('off');
+  });
+});
+
+describe('updateNumberSetting', () => {
+  it('sets valid number', () => {
+    const result = applyUpdate(updateNumberSetting as never, MINIMAL, 'width', '1280');
+    expect(result.width).toBe(1280);
+  });
+
+  it('deletes key for empty string', () => {
+    const result = applyUpdate(updateNumberSetting as never, MINIMAL, 'width', '  ');
+    expect(result).not.toHaveProperty('width');
+  });
+
+  it('deletes key for non-finite number', () => {
+    const result = applyUpdate(updateNumberSetting as never, MINIMAL, 'width', 'abc');
+    expect(result).not.toHaveProperty('width');
+  });
+
+  it('deletes key for zero', () => {
+    const result = applyUpdate(updateNumberSetting as never, MINIMAL, 'width', '0');
+    expect(result).not.toHaveProperty('width');
+  });
+});
+
+describe('updateStringSetting', () => {
+  it('sets trimmed value', () => {
+    const result = applyUpdate(updateStringSetting as never, MINIMAL, 'videoBitrate', ' 5000k ');
+    expect(result.videoBitrate).toBe('5000k');
+  });
+
+  it('sets null for empty string', () => {
+    const result = applyUpdate(updateStringSetting as never, MINIMAL, 'videoBitrate', '  ');
+    expect(result.videoBitrate).toBeNull();
+  });
+});
+
+describe('updateOutputMode', () => {
+  it('switches to audio mode', () => {
+    const result = applyUpdate(updateOutputMode as never, MINIMAL, 'audio');
+    expect(result.outputMode).toBe('audio');
+    expect(result.format).toBe('m4a');
+    expect(result.watermark).toBeNull();
+  });
+
+  it('switches to audio-visualization mode', () => {
+    const result = applyUpdate(updateOutputMode as never, MINIMAL, 'audio-visualization');
+    expect(result.outputMode).toBe('audio-visualization');
+    expect(result.scaleMode).toBe('none');
+  });
+
+  it('switches to video mode from audio', () => {
+    const current = { ...MINIMAL, outputMode: 'audio' as const, format: 'm4a' as const };
+    const result = applyUpdate(updateOutputMode as never, current, 'video');
+    expect(result.outputMode).toBe('video');
+    expect(result.format).toBe('mp4');
+  });
+});
+
+describe('updateFormat', () => {
+  it('sets m4a format with audio mode', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'm4a');
+    expect(result.format).toBe('m4a');
+    expect(result.outputMode).toBe('audio');
+    expect(result.audioCodec).toBe('aac');
+  });
+
+  it('sets gif format', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'gif');
+    expect(result.format).toBe('gif');
+    expect(result.videoCodec).toBe('gif');
+    expect(result.fps).toBeLessThanOrEqual(30);
+  });
+
+  it('sets webm format with vp9 codec', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'webm');
+    expect(result.format).toBe('webm');
+    expect(result.videoCodec).toBe('libvpx-vp9');
+    expect(result.audioCodec).toBe('libopus');
+  });
+
+  it('sets webp format', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'webp');
+    expect(result.videoCodec).toBe('libwebp_anim');
+  });
+
+  it('sets apng format', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'apng');
+    expect(result.videoCodec).toBe('apng');
+  });
+
+  it('sets png-sequence format', () => {
+    const result = applyUpdate(updateFormat as never, MINIMAL, 'png-sequence');
+    expect(result.videoCodec).toBe('png');
+  });
+});
+
+describe('updateAudioVisualizationStyle', () => {
+  it('sets valid style', () => {
+    const result = applyUpdate(updateAudioVisualizationStyle as never, MINIMAL, 'spectrum-bars');
+    expect(result.audioVisualization?.style).toBe('spectrum-bars');
+  });
+
+  it('falls back for invalid style', () => {
+    const result = applyUpdate(updateAudioVisualizationStyle as never, MINIMAL, 'invalid' as never);
+    expect(result.audioVisualization?.style).toBe('waveform-line');
+  });
+});
+
+describe('updateAudioVisualizationColor', () => {
+  it('sets color', () => {
+    const result = applyUpdate(updateAudioVisualizationColor as never, MINIMAL, '#ff0000');
+    expect(result.audioVisualization?.color).toBe('#ff0000');
+  });
+});
+
+describe('updateAudioVisualizationBackgroundType', () => {
+  it('sets solid background', () => {
+    const result = applyUpdate(updateAudioVisualizationBackgroundType as never, MINIMAL, 'solid');
+    expect(result.audioVisualization?.background.type).toBe('solid');
+  });
+
+  it('sets gradient background', () => {
+    const result = applyUpdate(updateAudioVisualizationBackgroundType as never, MINIMAL, 'gradient');
+    expect(result.audioVisualization?.background.type).toBe('gradient');
+  });
+
+  it('sets image background', () => {
+    const result = applyUpdate(updateAudioVisualizationBackgroundType as never, MINIMAL, 'image');
+    expect(result.audioVisualization?.background.type).toBe('image');
+  });
+});
+
+describe('updateAudioVisualizationBackgroundColor', () => {
+  it('sets color on solid background', () => {
+    const result = applyUpdate(updateAudioVisualizationBackgroundColor as never, MINIMAL, 'color', '#123456');
+    expect(result.audioVisualization?.background.type).toBe('solid');
+  });
+
+  it('sets color on gradient background', () => {
+    const current = {
+      ...MINIMAL,
+      audioVisualization: { style: 'waveform-line' as const, color: '#fff', background: { type: 'gradient' as const, color: '#111', color2: '#222' } },
+    };
+    const result = applyUpdate(updateAudioVisualizationBackgroundColor as never, current, 'color2', '#333');
+    expect(result.audioVisualization?.background.type).toBe('gradient');
+  });
+});
+
+describe('updateAudioVisualizationBackgroundImagePath', () => {
+  it('sets image path', () => {
+    const result = applyUpdate(updateAudioVisualizationBackgroundImagePath as never, MINIMAL, '/bg.png');
+    expect(result.audioVisualization?.background.type).toBe('image');
+  });
+});
+
+describe('updateSubtitleMode', () => {
+  it('sets burn-in mode', () => {
+    const result = applyUpdate(updateSubtitleMode as never, MINIMAL, 'burn-in');
+    expect(result.subtitleMode).toBe('burn-in');
+  });
+
+  it('sets soft-sub mode', () => {
+    const result = applyUpdate(updateSubtitleMode as never, MINIMAL, 'soft-sub');
+    expect(result.subtitleMode).toBe('soft-sub');
+  });
+
+  it('deletes mode for invalid value', () => {
+    const result = applyUpdate(updateSubtitleMode as never, MINIMAL, 'off');
+    expect(result).not.toHaveProperty('subtitleMode');
+  });
+});
+
+describe('updateSubtitleFormat', () => {
+  it('sets valid format', () => {
+    const result = applyUpdate(updateSubtitleFormat as never, MINIMAL, 'vtt');
+    expect(result.subtitleFormat).toBe('vtt');
+  });
+
+  it('defaults to srt for invalid', () => {
+    const result = applyUpdate(updateSubtitleFormat as never, MINIMAL, 'invalid' as never);
+    expect(result.subtitleFormat).toBe('srt');
+  });
+});
+
+describe('updateExportSidecarSubtitle', () => {
+  it('sets checked state', () => {
+    const result = applyUpdate(updateExportSidecarSubtitle as never, MINIMAL, true);
+    expect(result.exportSidecarSubtitle).toBe(true);
+  });
+});
+
+describe('updateSubtitleLanguageSelection', () => {
+  it('adds language when checked', () => {
+    const result = applyUpdate(
+      updateSubtitleLanguageSelection as never,
+      MINIMAL,
+      'en',
+      true,
+      [{ language: 'en', label: 'English' }, { language: 'zh', label: 'Chinese' }],
+    );
+    expect(result.subtitleLanguages).toContain('en');
+  });
+
+  it('removes language when unchecked', () => {
+    const current = { ...MINIMAL, subtitleLanguages: ['en', 'zh'] };
+    const result = applyUpdate(
+      updateSubtitleLanguageSelection as never,
+      current,
+      'en',
+      false,
+      [{ language: 'en', label: 'English' }, { language: 'zh', label: 'Chinese' }],
+    );
+    expect(result.subtitleLanguages).not.toContain('en');
+    expect(result.subtitleLanguages).toContain('zh');
+  });
+});
+
+describe('updateSubtitleBurnInLanguage', () => {
+  it('sets burn-in language', () => {
+    const result = applyUpdate(updateSubtitleBurnInLanguage as never, MINIMAL, 'en');
+    expect(result.subtitleBurnInLanguage).toBe('en');
+  });
+});
+
+describe('updateScaleMode', () => {
+  it('sets fit mode', () => {
+    const result = applyUpdate(updateScaleMode as never, MINIMAL, 'fit');
+    expect(result.scaleMode).toBe('fit');
+  });
+
+  it('sets none mode for invalid', () => {
+    const result = applyUpdate(updateScaleMode as never, MINIMAL, 'stretch');
+    expect(result.scaleMode).toBe('none');
+  });
+});
+
+describe('updateTargetAspectRatio', () => {
+  it('sets source aspect ratio', () => {
+    const result = applyUpdate(updateTargetAspectRatio as never, MINIMAL, 'source');
+    expect(result.targetAspectRatio).toBe('source');
+  });
+
+  it('sets 16:9 aspect ratio with dimensions', () => {
+    const result = applyUpdate(updateTargetAspectRatio as never, MINIMAL, '16:9');
+    expect(result.targetAspectRatio).toBe('16:9');
+    expect(result.scaleMode).toBe('none');
+  });
+});
+
+describe('updateReframeOffset', () => {
+  it('sets x offset', () => {
+    const result = applyUpdate(updateReframeOffset as never, MINIMAL, 'x', '0.5');
+    expect(result.reframeOffsetX).toBe(0.5);
+  });
+
+  it('sets y offset', () => {
+    const result = applyUpdate(updateReframeOffset as never, MINIMAL, 'y', '-0.3');
+    expect(result.reframeOffsetY).toBe(-0.3);
+  });
+});
+
+describe('updateHardwareEncoding', () => {
+  it('enables hardware encoding', () => {
+    const result = applyUpdate(updateHardwareEncoding as never, MINIMAL, true);
+    expect(result.hardwareEncoding).toBe(true);
+  });
+
+  it('disables hardware encoding', () => {
+    const result = applyUpdate(updateHardwareEncoding as never, MINIMAL, false);
+    expect(result.hardwareEncoding).toBe(false);
+  });
+});
+
+describe('updateHardwareEncoderId', () => {
+  it('sets encoder id and enables hardware encoding', () => {
+    const result = applyUpdate(updateHardwareEncoderId as never, MINIMAL, 'nvenc');
+    expect(result.hardwareEncoding).toBe(true);
+    expect(result.hardwareEncoderSettings?.encoderId).toBe('nvenc');
+  });
+});
+
+describe('updateHardwareEncoderPreset', () => {
+  it('sets preset', () => {
+    const result = applyUpdate(updateHardwareEncoderPreset as never, MINIMAL, 'fast');
+    expect(result.hardwareEncoderSettings?.preset).toBe('fast');
+  });
+});
+
+describe('updateHardwareRateControlMode', () => {
+  it('sets rate control mode', () => {
+    const result = applyUpdate(updateHardwareRateControlMode as never, MINIMAL, 'cbr');
+    expect(result.hardwareEncoderSettings?.rateControlMode).toBe('cbr');
+  });
+});
+
+describe('updateHardwareCq', () => {
+  it('sets CQ value', () => {
+    const result = applyUpdate(updateHardwareCq as never, MINIMAL, '23');
+    expect(result.hardwareEncoderSettings?.cq).toBe(23);
+  });
+});
+
+describe('updateHardwareVideoBitrate', () => {
+  it('sets video bitrate', () => {
+    const result = applyUpdate(updateHardwareVideoBitrate as never, MINIMAL, '5000k');
+    expect(result.hardwareEncoderSettings?.videoBitrate).toBe('5000k');
+  });
+});
+
+describe('updateHardwareMaxBitrate', () => {
+  it('sets max bitrate', () => {
+    const result = applyUpdate(updateHardwareMaxBitrate as never, MINIMAL, '8000k');
+    expect(result.hardwareEncoderSettings?.maxBitrate).toBe('8000k');
+  });
+});
+
+describe('updateHardwareGopSize', () => {
+  it('sets GOP size', () => {
+    const result = applyUpdate(updateHardwareGopSize as never, MINIMAL, '60');
+    expect(result.hardwareEncoderSettings?.gopSize).toBe(60);
+  });
+});
+
+describe('updateHardwareBFrames', () => {
+  it('sets B-frames', () => {
+    const result = applyUpdate(updateHardwareBFrames as never, MINIMAL, '3');
+    expect(result.hardwareEncoderSettings?.bFrames).toBe(3);
+  });
+});
+
+describe('updateLoudnessNormalization', () => {
+  it('sets youtube mode', () => {
+    const result = applyUpdate(updateLoudnessNormalization as never, MINIMAL, 'youtube');
+    expect(result.loudnessNormalization).toBe('youtube');
+  });
+
+  it('sets off for invalid', () => {
+    const result = applyUpdate(updateLoudnessNormalization as never, MINIMAL, 'invalid');
+    expect(result.loudnessNormalization).toBe('off');
+  });
+});
+
+describe('updateMasterProcessing', () => {
+  it('applies updater to normalized processing', () => {
+    const result = applyUpdate(updateMasterProcessing as never, MINIMAL, (current: ExportMasterProcessingSettings) => ({
+      ...current,
+      eq: { ...current.eq, enabled: true },
+    }));
+    expect(result.masterProcessing?.eq.enabled).toBe(true);
+  });
+});
+
+describe('updateMasterEqEnabled', () => {
+  it('enables EQ', () => {
+    const result = applyUpdate(updateMasterEqEnabled as never, MINIMAL, true);
+    expect(result.masterProcessing?.eq.enabled).toBe(true);
+  });
+});
+
+describe('updateMasterEqBand', () => {
+  it('patches band at index', () => {
+    const result = applyUpdate(updateMasterEqBand as never, MINIMAL, 0, { gain: 5 });
+    expect(result.masterProcessing?.eq.bands[0].gain).toBe(5);
+  });
+});
+
+describe('updateMasterStereoEnabled', () => {
+  it('enables stereo enhancer', () => {
+    const result = applyUpdate(updateMasterStereoEnabled as never, MINIMAL, true);
+    expect(result.masterProcessing?.stereoEnhancer.enabled).toBe(true);
+  });
+});
+
+describe('updateMasterStereoAmount', () => {
+  it('sets amount', () => {
+    const result = applyUpdate(updateMasterStereoAmount as never, MINIMAL, '1.5');
+    expect(result.masterProcessing?.stereoEnhancer.amount).toBe(1.5);
+  });
+
+  it('clamps to valid range', () => {
+    const result = applyUpdate(updateMasterStereoAmount as never, MINIMAL, '5');
+    expect(result.masterProcessing?.stereoEnhancer.amount).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('updateMasterLimiterEnabled', () => {
+  it('enables limiter', () => {
+    const result = applyUpdate(updateMasterLimiterEnabled as never, MINIMAL, true);
+    expect(result.masterProcessing?.limiter.enabled).toBe(true);
+  });
+});
+
+describe('updateMasterLimiterLevel', () => {
+  it('sets level', () => {
+    const result = applyUpdate(updateMasterLimiterLevel as never, MINIMAL, '-6');
+    expect(result.masterProcessing?.limiter.levelOutDb).toBe(-6);
+  });
+});
+
+describe('updateColorManagement', () => {
+  it('patches color management', () => {
+    const result = applyUpdate(updateColorManagement as never, MINIMAL, { inputColorSpace: 'rec2020' });
+    expect(result.colorManagement?.inputColorSpace).toBe('rec2020');
+  });
+});
+
+describe('updatePostExportScriptCommand', () => {
+  it('sets command', () => {
+    const result = applyUpdate(updatePostExportScriptCommand as never, MINIMAL, 'echo done');
+    expect(result.postExportScript?.command).toBe('echo done');
+  });
+});
+
+describe('updateTimecodeBurnInEnabled', () => {
+  it('enables timecode burn-in', () => {
+    const result = applyUpdate(updateTimecodeBurnInEnabled as never, MINIMAL, true);
+    expect(result.timecodeBurnIn).not.toBeNull();
+    expect(result.timecodeBurnIn?.enabled).toBe(true);
+  });
+
+  it('disables timecode burn-in', () => {
+    const result = applyUpdate(updateTimecodeBurnInEnabled as never, MINIMAL, false);
+    expect(result.timecodeBurnIn).toBeNull();
+  });
+});
+
+describe('updateTimecodeBurnInPosition', () => {
+  it('sets valid position', () => {
+    const result = applyUpdate(updateTimecodeBurnInPosition as never, MINIMAL, 'top-left');
+    expect(result.timecodeBurnIn?.position).toBe('top-left');
+  });
+
+  it('falls back for invalid position', () => {
+    const result = applyUpdate(updateTimecodeBurnInPosition as never, MINIMAL, 'invalid');
+    expect(result.timecodeBurnIn?.position).toBe(DEFAULT_TIMECODE_BURN_IN.position);
+  });
+});
+
+describe('updateTimecodeBurnInFontSize', () => {
+  it('sets font size', () => {
+    const result = applyUpdate(updateTimecodeBurnInFontSize as never, MINIMAL, '36');
+    expect(result.timecodeBurnIn?.fontSize).toBe(36);
+  });
+
+  it('clamps to valid range', () => {
+    const result = applyUpdate(updateTimecodeBurnInFontSize as never, MINIMAL, '200');
+    expect(result.timecodeBurnIn?.fontSize).toBeLessThanOrEqual(96);
+  });
+});
+
+describe('updateTimecodeBurnInColor', () => {
+  it('sets color', () => {
+    const result = applyUpdate(updateTimecodeBurnInColor as never, MINIMAL, 'color', '#ff0000');
+    expect(result.timecodeBurnIn?.color).toBe('#ff0000');
+  });
+
+  it('sets background color', () => {
+    const result = applyUpdate(updateTimecodeBurnInColor as never, MINIMAL, 'backgroundColor', '#000000');
+    expect(result.timecodeBurnIn?.backgroundColor).toBe('#000000');
+  });
+});
+
+describe('updateTimecodeBurnInFrameNumber', () => {
+  it('enables frame number', () => {
+    const result = applyUpdate(updateTimecodeBurnInFrameNumber as never, MINIMAL, true);
+    expect(result.timecodeBurnIn?.includeFrameNumber).toBe(true);
+  });
+});
+
+describe('updateSlateEnabled', () => {
+  it('enables slate', () => {
+    const result = applyUpdate(updateSlateEnabled as never, MINIMAL, true);
+    expect(result.slate).toEqual({ enabled: true });
+  });
+
+  it('disables slate', () => {
+    const result = applyUpdate(updateSlateEnabled as never, MINIMAL, false);
+    expect(result.slate).toBeNull();
+  });
+});
+
+describe('updateWatermarkEnabled', () => {
+  it('enables watermark', () => {
+    const result = applyUpdate(updateWatermarkEnabled as never, MINIMAL, true);
+    expect(result.watermark).not.toBeNull();
+  });
+
+  it('disables watermark', () => {
+    const result = applyUpdate(updateWatermarkEnabled as never, MINIMAL, false);
+    expect(result.watermark).toBeNull();
+  });
+});
+
+describe('updateWatermarkType', () => {
+  it('sets image type', () => {
+    const result = applyUpdate(updateWatermarkType as never, MINIMAL, 'image');
+    expect(result.watermark?.type).toBe('image');
+  });
+
+  it('sets text type', () => {
+    const result = applyUpdate(updateWatermarkType as never, MINIMAL, 'text');
+    expect(result.watermark?.type).toBe('text');
+  });
+});
+
+describe('updateWatermarkPosition', () => {
+  it('sets valid position', () => {
+    const result = applyUpdate(updateWatermarkPosition as never, MINIMAL, 'top-left');
+    expect(result.watermark?.position).toBe('top-left');
+  });
+
+  it('falls back for invalid', () => {
+    const result = applyUpdate(updateWatermarkPosition as never, MINIMAL, 'invalid');
+    expect(result.watermark?.position).toBe('bottom-right');
+  });
+});
+
+describe('updateImageWatermarkPath', () => {
+  it('sets path', () => {
+    const result = applyUpdate(updateImageWatermarkPath as never, MINIMAL, '/logo.png');
+    expect(result.watermark?.type).toBe('image');
+  });
+});
+
+describe('updateImageWatermarkScale', () => {
+  it('sets scale', () => {
+    const result = applyUpdate(updateImageWatermarkScale as never, MINIMAL, '20');
+    expect(result.watermark?.type === 'image' ? result.watermark.scalePercent : null).toBe(20);
+  });
+});
+
+describe('updateImageWatermarkOpacity', () => {
+  it('sets opacity', () => {
+    const result = applyUpdate(updateImageWatermarkOpacity as never, MINIMAL, '0.5');
+    expect(result.watermark?.type === 'image' ? result.watermark.opacity : null).toBe(0.5);
+  });
+});
+
+describe('updateTextWatermarkText', () => {
+  it('sets text', () => {
+    const result = applyUpdate(updateTextWatermarkText as never, MINIMAL, 'Sample');
+    expect(result.watermark?.type === 'text' ? result.watermark.text : null).toBe('Sample');
   });
 });

@@ -70,7 +70,7 @@ mod tests {
         let binary_name = tool_file_name("ffmpeg");
 
         assert_eq!(
-            resolve_tool_binary_from_dirs(&binary_name, &[root.clone()]),
+            resolve_tool_binary_from_dirs(&binary_name, std::slice::from_ref(&root)),
             PathBuf::from(binary_name)
         );
 
