@@ -1,3 +1,17 @@
+/**
+ * @deprecated This barrel export causes tree-shaking failures.
+ * Use domain-specific imports instead:
+ *   import { ... } from '@open-factory/editor-core/timeline'
+ *   import { ... } from '@open-factory/editor-core/ai'
+ *   import { ... } from '@open-factory/editor-core/export'
+ *   import { ... } from '@open-factory/editor-core/audio'
+ *   import { ... } from '@open-factory/editor-core/color'
+ *   import { ... } from '@open-factory/editor-core/subtitles'
+ *   import { ... } from '@open-factory/editor-core/project'
+ *   import { ... } from '@open-factory/editor-core/plugins'
+ *   import { ... } from '@open-factory/editor-core/commands'
+ *   import { ... } from '@open-factory/editor-core/effects'
+ */
 export * from './time';
 export * from './model';
 export { formatTime, formatTimeShort, formatDuration, formatDurationMs } from './utils/time';
