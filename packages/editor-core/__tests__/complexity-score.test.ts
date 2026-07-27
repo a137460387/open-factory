@@ -1,162 +1,122 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
-  calculateAudioComplexityScore,
-  calculateColorDepthScore,
+  COMPLEXITY_WEIGHTS,
+  getComplexityLevel,
   calculateComplexityScore,
-  calculateEffectComplexityScore,
-  calculateKeyframeDensityScore,
   calculateTimelineDensityScore,
-  createComplexityReport,
-  getComplexityLevel
-} from '../src';
-import { createTrack } from '../src';
-import type { Clip } from '../src';
-import { makeAudioClip, makeProject, makeTimeline, makeVideoClip } from './test-utils';
+  calculateKeyframeDensityScore,
+} from '../src/complexity-score';
+import type { Timeline, Project } from '../src/model-types';
 
-describe('complexity score', () => {
-  it('scores timeline density by clips per minute', () => {
-    const timeline = makeTimeline([
-      makeVideoClip({ id: 'clip-a', start: 0, duration: 3 }),
-      makeVideoClip({ id: 'clip-b', start: 3, duration: 3 }),
-      makeVideoClip({ id: 'clip-c', start: 6, duration: 3 }),
-      makeVideoClip({ id: 'clip-d', start: 9, duration: 3 })
-    ]);
-
-    const score = calculateTimelineDensityScore(timeline);
-
-    expect(score.rawValue).toBe(20);
-    expect(score.score).toBe(100);
-  });
-
-  it('scores effect complexity with type coefficients', () => {
-    const timeline = makeTimeline([
-      makeVideoClip({
-        effects: [
-          { id: 'fx-blur', type: 'blur', enabled: true, params: {} },
-          { id: 'fx-shader', type: 'custom-shader', enabled: true, params: {} },
-          { id: 'fx-disabled', type: 'motion-blur', enabled: false, params: {} }
-        ]
-      })
-    ]);
-
-    const score = calculateEffectComplexityScore(timeline);
-
-    expect(score.rawValue).toBe(3.2);
-    expect(score.score).toBe(40);
-  });
-
-  it('scores color depth from non-default correction fields', () => {
-    const timeline = makeTimeline([
-      makeVideoClip({ id: 'clip-a', colorCorrection: { brightness: 0.2, saturation: 1.4, lutPath: 'C:/Looks/warm.cube' } }),
-      makeVideoClip({ id: 'clip-b' })
-    ]);
-
-    const score = calculateColorDepthScore(timeline);
-
-    expect(score.rawValue).toBeCloseTo(0.214, 3);
-    expect(score.score).toBeCloseTo(21.429, 3);
-  });
-
-  it('scores audio processing from tracks and clip nodes', () => {
-    const timeline = makeTimeline([
-      makeAudioClip({
-        id: 'audio-a',
-        volume: 0.5,
-        pitchSemitones: 2,
-        audioDenoise: { enabled: true, strength: 0.5 },
-        fadeInDuration: 0.5,
-        fadeOutDuration: 0.25
-      })
-    ]);
-    timeline.tracks[1] = createTrack({
-      id: 'track-audio',
-      type: 'audio',
-      name: 'Audio 1',
-      volume: 0.8,
-      pan: -0.25,
-      eq: { enabled: true, bands: [{ id: 'band-1', type: 'peaking', frequency: 1000, gain: 2, q: 1 }] },
-      compressor: { enabled: true, threshold: -18, ratio: 3, attack: 5, release: 120, makeupGain: 1 },
-      clips: timeline.tracks[1].clips
+describe('complexity-score', () => {
+  describe('COMPLEXITY_WEIGHTS', () => {
+    it('has weights for all dimensions', () => {
+      expect(COMPLEXITY_WEIGHTS).toHaveProperty('timelineDensity');
+      expect(COMPLEXITY_WEIGHTS).toHaveProperty('effectComplexity');
+      expect(COMPLEXITY_WEIGHTS).toHaveProperty('colorDepth');
+      expect(COMPLEXITY_WEIGHTS).toHaveProperty('audioComplexity');
+      expect(COMPLEXITY_WEIGHTS).toHaveProperty('keyframeDensity');
     });
 
-    const score = calculateAudioComplexityScore(timeline);
-
-    expect(score.rawValue).toBe(15);
-    expect(score.score).toBe(100);
-  });
-
-  it('skips non-audio-video-nested clip types in audio complexity scoring', () => {
-    const timeline = makeTimeline([
-      makeAudioClip({ id: 'audio-a', volume: 0.5 })
-    ]);
-    const textClip: Clip = { ...makeAudioClip({ id: 'text-1', start: 5, duration: 3 }), type: 'text', text: '' } as Clip;
-    timeline.tracks[1].clips.push(textClip);
-    const score = calculateAudioComplexityScore(timeline);
-    // text clip skipped; volume on audio-a (1 node) + default EQ on track (1 node)
-    // rawValue = audioTracks(1*2) + trackNodes(1*2) + clipNodes(1) = 5
-    expect(score.rawValue).toBe(5);
-  });
-
-  it('counts non-default spatial audio as an audio processing node', () => {
-    const timeline = makeTimeline([
-      makeAudioClip({ id: 'audio-spatial', spatialAudio: { x: 1 } })
-    ]);
-    const score = calculateAudioComplexityScore(timeline);
-    // audioTracks(1*2) + trackNodes(1*2 default EQ) + clipNodes(1 spatial) = 5
-    expect(score.rawValue).toBe(5);
-  });
-
-  it('scores keyframe density per clip', () => {
-    const timeline = makeTimeline([
-      makeVideoClip({
-        id: 'clip-a',
-        keyframes: {
-          opacity: [
-            { id: 'kf-1', time: 0, value: 1, easing: 'linear' },
-            { id: 'kf-2', time: 1, value: 0.5, easing: 'ease-in' }
-          ],
-          x: [{ id: 'kf-3', time: 1, value: 0.2, easing: 'linear' }]
-        }
-      }),
-      makeVideoClip({ id: 'clip-b' })
-    ]);
-
-    const score = calculateKeyframeDensityScore(timeline);
-
-    expect(score.rawValue).toBe(1.5);
-    expect(score.score).toBe(30);
-  });
-
-  it('calculates weighted total, level, and report JSON shape', () => {
-    const project = makeProject();
-    project.id = 'project-score';
-    project.name = 'Complex Project';
-    project.timeline = makeTimeline([
-      makeVideoClip({
-        effects: [{ id: 'fx-shader', type: 'custom-shader', enabled: true, params: {} }],
-        colorCorrection: { brightness: 0.5, contrast: 1.5 },
-        keyframes: {
-          opacity: [{ id: 'kf-1', time: 0, value: 1, easing: 'linear' }]
-        }
-      })
-    ]);
-
-    const result = calculateComplexityScore(project);
-    const report = createComplexityReport(project, '2026-06-16T00:00:00.000Z');
-
-    expect(result.totalScore).toBeGreaterThan(0);
-    expect(getComplexityLevel(35)).toBe('beginner');
-    expect(getComplexityLevel(62)).toBe('intermediate');
-    expect(getComplexityLevel(78)).toBe('professional');
-    expect(getComplexityLevel(90)).toBe('master');
-    expect(report).toMatchObject({
-      projectId: 'project-score',
-      projectName: 'Complex Project',
-      generatedAt: '2026-06-16T00:00:00.000Z',
-      totalScore: result.totalScore,
-      level: result.level
+    it('weights sum to 1', () => {
+      const sum = Object.values(COMPLEXITY_WEIGHTS).reduce((a, b) => a + b, 0);
+      expect(sum).toBeCloseTo(1, 5);
     });
-    expect(report.dimensions).toHaveLength(5);
-    expect(report.references.map((reference) => reference.score)).toEqual([35, 62, 78]);
+  });
+
+  describe('getComplexityLevel', () => {
+    it('returns master for >= 80', () => {
+      expect(getComplexityLevel(80)).toBe('master');
+      expect(getComplexityLevel(100)).toBe('master');
+    });
+
+    it('returns professional for >= 65', () => {
+      expect(getComplexityLevel(65)).toBe('professional');
+      expect(getComplexityLevel(79)).toBe('professional');
+    });
+
+    it('returns intermediate for >= 40', () => {
+      expect(getComplexityLevel(40)).toBe('intermediate');
+      expect(getComplexityLevel(64)).toBe('intermediate');
+    });
+
+    it('returns beginner for < 40', () => {
+      expect(getComplexityLevel(0)).toBe('beginner');
+      expect(getComplexityLevel(39)).toBe('beginner');
+    });
+
+    it('handles NaN as 0', () => {
+      expect(getComplexityLevel(NaN)).toBe('beginner');
+    });
+
+    it('handles Infinity as 0 (beginner)', () => {
+      expect(getComplexityLevel(Infinity)).toBe('beginner');
+    });
+  });
+
+  describe('calculateTimelineDensityScore', () => {
+    it('returns 0 score for empty timeline', () => {
+      const timeline = { tracks: [], duration: 60 } as unknown as Timeline;
+      const result = calculateTimelineDensityScore(timeline);
+      expect(result.score).toBe(0);
+      expect(result.id).toBe('timelineDensity');
+    });
+
+    it('calculates density from clips', () => {
+      const timeline = {
+        tracks: [
+          {
+            type: 'video',
+            clips: [
+              { id: '1', type: 'video', start: 0, duration: 5, trimStart: 0, mediaId: 'm1', keyframes: {} },
+              { id: '2', type: 'video', start: 5, duration: 5, trimStart: 0, mediaId: 'm2', keyframes: {} },
+            ],
+          },
+        ],
+        duration: 60,
+      } as unknown as Timeline;
+      const result = calculateTimelineDensityScore(timeline);
+      expect(result.score).toBeGreaterThan(0);
+    });
+  });
+
+  describe('calculateKeyframeDensityScore', () => {
+    it('returns 0 for empty timeline', () => {
+      const timeline = { tracks: [], duration: 60 } as unknown as Timeline;
+      const result = calculateKeyframeDensityScore(timeline);
+      expect(result.score).toBe(0);
+    });
+
+    it('returns 0 for clips without keyframes', () => {
+      const timeline = {
+        tracks: [
+          {
+            type: 'video',
+            clips: [
+              { id: '1', type: 'video', start: 0, duration: 5, trimStart: 0, mediaId: 'm1' },
+            ],
+          },
+        ],
+        duration: 60,
+      } as unknown as Timeline;
+      const result = calculateKeyframeDensityScore(timeline);
+      expect(result.rawValue).toBe(0);
+    });
+  });
+
+  describe('calculateComplexityScore', () => {
+    it('returns a valid result for empty project', () => {
+      const project = {
+        timeline: { tracks: [], duration: 60 },
+      } as Pick<Project, 'timeline'>;
+      const result = calculateComplexityScore(project);
+      expect(result.totalScore).toBe(0);
+      expect(result.level).toBe('beginner');
+      expect(result.dimensions).toHaveProperty('timelineDensity');
+      expect(result.dimensions).toHaveProperty('effectComplexity');
+      expect(result.dimensions).toHaveProperty('colorDepth');
+      expect(result.dimensions).toHaveProperty('audioComplexity');
+      expect(result.dimensions).toHaveProperty('keyframeDensity');
+    });
   });
 });

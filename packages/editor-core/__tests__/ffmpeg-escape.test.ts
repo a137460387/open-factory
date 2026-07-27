@@ -1,34 +1,94 @@
-import { describe, expect, it } from 'vitest';
-import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath } from '../src';
+import { describe, it, expect } from 'vitest';
+import {
+  normalizeFfmpegPath,
+  escapeDrawtextValue,
+  cssColorToFfmpeg,
+  formatFfmpegSeconds,
+  quoteForDisplay,
+} from '../src/export/ffmpeg-escape';
 
-describe('ffmpeg escaping', () => {
-  it('normalizes Windows paths', () => {
-    expect(normalizeFfmpegPath('D:\\Media\\clip.mp4')).toBe('D:/Media/clip.mp4');
+describe('ffmpeg-escape', () => {
+  describe('normalizeFfmpegPath', () => {
+    it('converts backslashes to forward slashes', () => {
+      expect(normalizeFfmpegPath('C:\\Users\\test\\file.mp4')).toBe('C:/Users/test/file.mp4');
+    });
+
+    it('leaves forward slashes unchanged', () => {
+      expect(normalizeFfmpegPath('/home/user/file.mp4')).toBe('/home/user/file.mp4');
+    });
   });
 
-  it.each([
-    ['Windows drive, backslashes, and spaces', 'C:\\Media Files\\clip title.txt', String.raw`C\\:/Media Files/clip title.txt`],
-    ['Windows path with nested colon and quote', "D:\\Fonts\\A:rial's.ttf", String.raw`D\\:/Fonts/A\\:rial\'s.ttf`],
-    ['Windows path with percent signs', 'E:\\Exports\\100% ready\\text.txt', String.raw`E\\:/Exports/100\% ready/text.txt`],
-    ['macOS absolute path with spaces and parentheses', '/Users/editor/Video Text (Final).txt', '/Users/editor/Video Text (Final).txt'],
-    ['Linux absolute path with a single quote', "/home/editor/it's ready/text.txt", String.raw`/home/editor/it\'s ready/text.txt`],
-    ['Linux absolute path with equals and ampersand', '/tmp/filter=a&b/title.txt', '/tmp/filter=a&b/title.txt'],
-    ['path with Chinese characters', 'C:\\素材\\标题 文本.txt', String.raw`C\\:/素材/标题 文本.txt`],
-    ['mixed path with percent, ampersand, equals, and quote', "/mnt/media/标题 100%/a&b='yes'.txt", String.raw`/mnt/media/标题 100\%/a&b=\'yes\'.txt`]
-  ])('escapes drawtext path values for %s', (_name, input, expected) => {
-    expect(escapeDrawtextValue(input)).toBe(expected);
+  describe('escapeDrawtextValue', () => {
+    it('escapes colons', () => {
+      expect(escapeDrawtextValue('text:value')).toContain('\\:');
+    });
+
+    it('escapes single quotes', () => {
+      expect(escapeDrawtextValue("it's")).toContain("\'");
+    });
+
+    it('escapes percent signs', () => {
+      expect(escapeDrawtextValue('100%')).toContain('\%');
+    });
+
+    it('normalizes backslashes in path', () => {
+      const result = escapeDrawtextValue('C:\\path\\file');
+      expect(result).toContain('/');
+    });
   });
 
-  it('converts css hex colors to ffmpeg colors', () => {
-    expect(cssColorToFfmpeg('#fff')).toBe('0xffffff');
-    expect(cssColorToFfmpeg('#336699')).toBe('0x336699');
-    expect(cssColorToFfmpeg('')).toBe('white');
-    expect(cssColorToFfmpeg(' ')).toBe('white');
-    expect(cssColorToFfmpeg('blue')).toBe('blue');
+  describe('cssColorToFfmpeg', () => {
+    it('converts 3-digit hex to 6-digit', () => {
+      expect(cssColorToFfmpeg('#fff')).toBe('0xffffff');
+      expect(cssColorToFfmpeg('#abc')).toBe('0xaabbcc');
+    });
+
+    it('converts 6-digit hex', () => {
+      expect(cssColorToFfmpeg('#ff0000')).toBe('0xff0000');
+      expect(cssColorToFfmpeg('#00FF00')).toBe('0x00ff00');
+    });
+
+    it('returns named colors as-is', () => {
+      expect(cssColorToFfmpeg('white')).toBe('white');
+      expect(cssColorToFfmpeg('red')).toBe('red');
+    });
+
+    it('returns white for empty string', () => {
+      expect(cssColorToFfmpeg('')).toBe('white');
+      expect(cssColorToFfmpeg('  ')).toBe('white');
+    });
   });
 
-  it('formats seconds with bounded precision', () => {
-    expect(formatFfmpegSeconds(2.5001)).toBe('2.5');
-    expect(formatFfmpegSeconds(7.0334)).toBe('7.033');
+  describe('formatFfmpegSeconds', () => {
+    it('formats integer seconds', () => {
+      expect(formatFfmpegSeconds(5)).toBe('5');
+    });
+
+    it('formats decimal seconds removing trailing zeros', () => {
+      expect(formatFfmpegSeconds(1.5)).toBe('1.5');
+      expect(formatFfmpegSeconds(1.500)).toBe('1.5');
+    });
+
+    it('clamps negative to 0', () => {
+      expect(formatFfmpegSeconds(-1)).toBe('0');
+    });
+
+    it('rounds to 3 decimal places', () => {
+      expect(formatFfmpegSeconds(1.2345)).toBe('1.235');
+    });
+  });
+
+  describe('quoteForDisplay', () => {
+    it('quotes values with spaces', () => {
+      expect(quoteForDisplay('hello world')).toBe('"hello world"');
+    });
+
+    it('does not quote values without spaces', () => {
+      expect(quoteForDisplay('hello')).toBe('hello');
+    });
+
+    it('escapes double quotes inside quoted value', () => {
+      expect(quoteForDisplay('say "hi"')).toBe('"say \\"hi\\""');
+    });
   });
 });

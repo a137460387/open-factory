@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTitleTemplateId, TITLE_TEMPLATE_DRAG_MIME } from '../titleTemplates';
+import { isTitleTemplateId, TITLE_TEMPLATE_DRAG_MIME } from './titleTemplates';
 
 describe('titleTemplates', () => {
   describe('TITLE_TEMPLATE_DRAG_MIME', () => {

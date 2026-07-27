@@ -5,7 +5,7 @@ import {
   collectClipKeyframeRefs,
   getSubtitleDataImportTargetTrackId,
   getClipSourceDimensions,
-} from '../timeline-clip-helpers';
+} from './timeline-clip-helpers';
 import type { Clip, Track, Timeline, Project } from '@open-factory/editor-core';
 
 function makeVideoClip(overrides: Partial<Clip> = {}): Clip {
