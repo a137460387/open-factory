@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {Clip, Project} from '@open-factory/editor-core';
-import {AddSubtitleClipCommand, AddTrackCommand, UpdateSubtitleStyleCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, createId, type SubtitleStyleTemplate} from '@open-factory/editor-core';
+import {AddSubtitleClipCommand, AddTrackCommand, UpdateSubtitleStyleCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, createId, createTrack, type SubtitleStyleTemplate} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, timelineAccessor} from '../../store/commandManager';
 import {bridgeConfirm} from '../../lib/tauri-bridge';

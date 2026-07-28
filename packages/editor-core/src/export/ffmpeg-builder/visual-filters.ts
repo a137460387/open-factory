@@ -1,19 +1,11 @@
-import {DEFAULT_COLOR_CORRECTION, isDefaultColorCorrection, normalizeColorCorrection, normalizeChromaKey, normalizeClipPanoramaView, normalizeLutLayers} from '../../model';
-import {isDefaultColorCurves, isNeutralThreeWayColor, normalizeThreeWayColor, serializeColorCurvesToCube, PrimaryWheels, PrimarySliders, toFfmpegSelectiveColor, type ColorWheelValue, type ColorGradingGraph, type CurvesNodeParams, type LUTApplyNodeParams, type PrimaryWheelParams, type PrimarySliderParams, type HSLQualifierParams, type WindowMaskParams, type ThreeWayColor} from '../../color-grading';
+import {normalizeChromaKey, normalizeClipPanoramaView} from '../../model';
 import {buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph} from '../../color-node-graph';
-import {getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube} from '../../color-log-luts';
-import {buildMotionBlurExportFilter, normalizeMotionBlurParams} from '../../motion-blur';
 import {isReframeEnabled} from '../../reframe';
 import {getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode} from '../../blend-modes';
-import {getClipSpeed, calculateSpeedCurveSourceDuration} from '../../timeline';
 import {round} from '../../time';
-import {buildZscaleColorConversionFilter, normalizeProjectWorkingColorSpace} from '../../color-management';
 import {buildPrivacyRedactionFFmpegExpressions} from '../../privacy-redaction';
-import {cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds} from '../ffmpeg-escape';
-import {formatFfmpegNumber, formatScale, formatOpacity, safeLabel, formatOffsetExpression, getAnimatedFrames, buildTimelineExpression} from './utils';
-import {SETPTS_EXPRESSION_LIMIT} from './settings-normalize';
-import type {Effect} from '../../effects';
-import {getEffectNumberParam} from '../../effects';
+import {escapeDrawtextValue, formatFfmpegSeconds} from '../ffmpeg-escape';
+import {formatFfmpegNumber, formatOpacity, safeLabel} from './utils';
 import type {ExportClip, ExportTransition, ExportTimeline, ExportTrack, ExportSettings, FfmpegCapabilities, TextArtifact} from '../export-types';
 
 // Re-export from sub-modules for backward compatibility
@@ -63,6 +55,30 @@ export {
   triangleArea,
 } from './visual-filters-masks';
 
+export {
+  isKenBurnsAnimatedScaleClip,
+  buildSetptsFilter,
+  buildStaticSetptsFilter,
+  buildSpeedRampSetptsExpression,
+  buildSpeedRampSegments,
+  getAverageClipSpeed,
+  buildScaleFilter,
+  buildKenBurnsZoompanFilter,
+  buildOpacityFilters,
+  buildOverlayXExpression,
+  buildOverlayYExpression,
+} from './visual-filters-compositing';
+
+export {
+  buildColorCorrectionFilters,
+  buildThreeWayColorFilter,
+  colorBalanceValue,
+  buildEffectFilters,
+  buildColorGradingFilters,
+  buildWindowMaskFfmpegFilter,
+  buildSourceColorSpaceConversionFilters,
+} from './visual-filters-color';
+
 // Import for internal use from sub-modules
 import {
   findExportTransitionPair,
@@ -87,9 +103,22 @@ import {
   buildPrivacyBlurMaskGraph,
   hasPrivacyBlurMasks,
   getPrivacyBlurMasks,
-  buildPrivacyBlurEffectFilter,
-  buildMaskTimelineExpression,
 } from './visual-filters-masks';
+import {
+  isKenBurnsAnimatedScaleClip,
+  buildSetptsFilter,
+  buildScaleFilter,
+  buildKenBurnsZoompanFilter,
+  buildOpacityFilters,
+  buildOverlayXExpression,
+  buildOverlayYExpression,
+} from './visual-filters-compositing';
+import {
+  buildColorCorrectionFilters,
+  buildEffectFilters,
+  buildColorGradingFilters,
+  buildSourceColorSpaceConversionFilters,
+} from './visual-filters-color';
 
 // ---- Types ----
 
@@ -766,403 +795,7 @@ export function buildPrivacyBlurClipFilter(
   return graph.join(';');
 }
 
-// ---- Transform helpers ----
-
-export function isKenBurnsAnimatedScaleClip(clip: ExportClip): boolean {
-  return (
-    clip.type === 'image' &&
-    clip.kenBurns &&
-    (getAnimatedFrames(clip, 'scaleX').length >= 2 || getAnimatedFrames(clip, 'scaleY').length >= 2)
-  );
-}
-
-export function buildSetptsFilter(clip: ExportClip, includeStartOffset: boolean, warnings?: string[]): string {
-  if (clip.type !== 'image' && getAnimatedFrames(clip, 'speed').length > 0) {
-    const expression = buildSpeedRampSetptsExpression(clip, includeStartOffset);
-    const filter = `setpts='${expression}'`;
-    if (filter.length <= SETPTS_EXPRESSION_LIMIT) {
-      return filter;
-    }
-    warnings?.push(`Speed ramp setpts for clip ${clip.id} exceeded 4096 characters and fell back to average speed.`);
-    return buildStaticSetptsFilter(clip, includeStartOffset, getAverageClipSpeed(clip));
-  }
-  return buildStaticSetptsFilter(clip, includeStartOffset, clip.speed);
-}
-
-export function buildStaticSetptsFilter(clip: ExportClip, includeStartOffset: boolean, speed: number): string {
-  const startOffset = `${formatFfmpegSeconds(clip.start)}/TB`;
-  const playbackSpeed = getClipSpeed({ speed });
-  if (Math.abs(playbackSpeed - 1) < 0.001 || clip.type === 'image') {
-    return includeStartOffset ? `setpts=PTS-STARTPTS+${startOffset}` : 'setpts=PTS-STARTPTS';
-  }
-  return includeStartOffset
-    ? `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(playbackSpeed)}+${startOffset}`
-    : `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(playbackSpeed)}`;
-}
-
-export function buildSpeedRampSetptsExpression(clip: ExportClip, includeStartOffset: boolean): string {
-  const sourceTime = '((PTS-STARTPTS)*TB)';
-  const segments = buildSpeedRampSegments(clip);
-  let secondsExpression = formatFfmpegSeconds(clip.duration);
-  for (let index = segments.length - 1; index >= 0; index -= 1) {
-    const segment = segments[index];
-    const localExpression = `${formatFfmpegSeconds(segment.displayStart)}+(${sourceTime}-${formatFfmpegSeconds(segment.sourceStart)})/${formatFfmpegSeconds(segment.speed)}`;
-    secondsExpression = `if(lte(${sourceTime},${formatFfmpegSeconds(segment.sourceEnd)}),${localExpression},${secondsExpression})`;
-  }
-  const startOffset = includeStartOffset ? `+${formatFfmpegSeconds(clip.start)}/TB` : '';
-  return `(${secondsExpression})/TB${startOffset}`;
-}
-
-export function buildSpeedRampSegments(
-  clip: ExportClip,
-): Array<{ displayStart: number; displayEnd: number; sourceStart: number; sourceEnd: number; speed: number }> {
-  const duration = Math.max(0, clip.duration);
-  const frames = getAnimatedFrames(clip, 'speed');
-  if (duration <= 0 || frames.length === 0) {
-    return [];
-  }
-
-  const points = [...frames];
-  if (points[0].time > 0.000001) {
-    points.unshift({ id: `${clip.id}-speed-start`, time: 0, value: clip.speed, easing: 'linear' });
-  } else {
-    points[0] = { ...points[0], time: 0 };
-  }
-  const lastPoint = points[points.length - 1];
-  if (lastPoint.time < duration - 0.000001) {
-    points.push({ ...lastPoint, id: `${clip.id}-speed-end`, time: duration });
-  } else {
-    points[points.length - 1] = { ...lastPoint, time: duration };
-  }
-
-  let sourceStart = 0;
-  const segments: Array<{
-    displayStart: number;
-    displayEnd: number;
-    sourceStart: number;
-    sourceEnd: number;
-    speed: number;
-  }> = [];
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const left = points[index];
-    const right = points[index + 1];
-    const displayStart = Math.max(0, Math.min(duration, left.time));
-    const displayEnd = Math.max(0, Math.min(duration, right.time));
-    const displayDuration = displayEnd - displayStart;
-    if (displayDuration <= 0.000001) {
-      continue;
-    }
-    const localSpeedFrames = {
-      speed: [
-        { ...left, time: 0 },
-        { ...right, time: displayDuration },
-      ],
-    };
-    const sourceDuration = calculateSpeedCurveSourceDuration(displayDuration, localSpeedFrames, left.value);
-    const segmentSpeed = Math.max(0.001, sourceDuration / displayDuration);
-    const sourceEnd = round(sourceStart + sourceDuration);
-    segments.push({
-      displayStart,
-      displayEnd,
-      sourceStart,
-      sourceEnd,
-      speed: segmentSpeed,
-    });
-    sourceStart = sourceEnd;
-  }
-  return segments;
-}
-
-export function getAverageClipSpeed(clip: ExportClip): number {
-  if (clip.duration <= 0.000001) {
-    return clip.speed;
-  }
-  return getClipSpeed({ speed: clip.sourceDuration / clip.duration });
-}
-
-export function buildScaleFilter(clip: ExportClip): string {
-  const scaleX = getAnimatedFrames(clip, 'scaleX');
-  const scaleY = getAnimatedFrames(clip, 'scaleY');
-  if (scaleX.length >= 2 || scaleY.length >= 2) {
-    const xExpression = buildTimelineExpression(scaleX, clip.start, clip.transform.scaleX ?? clip.transform.scale);
-    const yExpression = buildTimelineExpression(scaleY, clip.start, clip.transform.scaleY ?? clip.transform.scale);
-    return `scale=w='trunc(iw*(${xExpression})/2)*2':h='trunc(ih*(${yExpression})/2)*2':eval=frame`;
-  }
-  const staticScaleX = scaleX.length === 1 ? scaleX[0].value : (clip.transform.scaleX ?? clip.transform.scale);
-  const staticScaleY = scaleY.length === 1 ? scaleY[0].value : (clip.transform.scaleY ?? clip.transform.scale);
-  return `scale=trunc(iw*${formatScale(staticScaleX)}/2)*2:trunc(ih*${formatScale(staticScaleY)}/2)*2`;
-}
-
-export function buildKenBurnsZoompanFilter(clip: ExportClip, settings: ExportSettings): string {
-  const scaleX = getAnimatedFrames(clip, 'scaleX');
-  const scaleY = getAnimatedFrames(clip, 'scaleY');
-  const zoomFrames = scaleX.length >= 2 ? scaleX : scaleY;
-  const zoomExpression = buildTimelineExpression(zoomFrames, 0, clip.transform.scaleX ?? clip.transform.scale, 'ot');
-  return `zoompan=z='${zoomExpression}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=2:s=${settings.width}x${settings.height}:fps=${settings.fps}`;
-}
-
-export function buildOpacityFilters(clip: ExportClip, label: string): string[] {
-  const frames = getAnimatedFrames(clip, 'opacity');
-  if (frames.length === 0) {
-    return [`colorchannelmixer=aa=${formatOpacity(clip.transform.opacity)}[${label}]`];
-  }
-  if (frames.length === 1) {
-    return [`colorchannelmixer=aa=${formatOpacity(frames[0].value)}[${label}]`];
-  }
-  if (frames.length === 2) {
-    const [first, second] = frames;
-    const duration = Math.max(0.001, second.time - first.time);
-    const start = clip.start + first.time;
-    if (first.value <= 0.001 && second.value >= 0.999) {
-      return [
-        `colorchannelmixer=aa=1`,
-        `fade=t=in:st=${formatFfmpegSeconds(start)}:d=${formatFfmpegSeconds(duration)}:alpha=1[${label}]`,
-      ];
-    }
-    if (first.value >= 0.999 && second.value <= 0.001) {
-      return [
-        `colorchannelmixer=aa=1`,
-        `fade=t=out:st=${formatFfmpegSeconds(start)}:d=${formatFfmpegSeconds(duration)}:alpha=1[${label}]`,
-      ];
-    }
-  }
-  const expression = buildTimelineExpression(frames, clip.start, clip.transform.opacity, 'T');
-  return [`geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(${expression})'[${label}]`];
-}
-
-export function buildOverlayXExpression(clip: ExportClip): string {
-  const frames = getAnimatedFrames(clip, 'x');
-  if (frames.length >= 2) {
-    return `main_w/2-overlay_w/2+(main_w/2)*(${buildTimelineExpression(frames, clip.start, 0)})`;
-  }
-  if (frames.length === 1) {
-    return `main_w/2-overlay_w/2+(main_w/2)*${formatFfmpegNumber(frames[0].value)}`;
-  }
-  return `(main_w-overlay_w)/2${formatOffsetExpression(clip.transform.x)}`;
-}
-
-export function buildOverlayYExpression(clip: ExportClip): string {
-  const frames = getAnimatedFrames(clip, 'y');
-  if (frames.length >= 2) {
-    return `main_h/2-overlay_h/2+(main_h/2)*(${buildTimelineExpression(frames, clip.start, 0)})`;
-  }
-  if (frames.length === 1) {
-    return `main_h/2-overlay_h/2+(main_h/2)*${formatFfmpegNumber(frames[0].value)}`;
-  }
-  return `(main_h-overlay_h)/2${formatOffsetExpression(clip.transform.y)}`;
-}
-
-// ---- Color correction ----
-
-export function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifact[]): string[] {
-  const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
-  if (isDefaultColorCorrection(colorCorrection)) {
-    return [];
-  }
-  const filters: string[] = [];
-  const inputColorSpace = colorCorrection.inputColorSpace ?? DEFAULT_COLOR_CORRECTION.inputColorSpace ?? 'rec709';
-  if (isLogInputColorSpace(inputColorSpace)) {
-    const lut = getLogToRec709Lut(inputColorSpace);
-    if (lut) {
-      const safeClipId = safeLabel(clip.id);
-      const placeholder = `__LOG_LUT_${safeLabel(inputColorSpace)}_${safeClipId}__`;
-      textArtifacts.push({
-        clipId: `${clip.id}:input-color-space`,
-        text: serializeLogToRec709Cube(lut.colorSpace),
-        fileName: `log-${lut.colorSpace}-${safeClipId}.cube`,
-        placeholder,
-        pathMode: 'filter',
-      });
-      filters.push(`lut3d=file=${placeholder}`);
-    }
-  }
-  const lutLayers = normalizeLutLayers(colorCorrection.luts, colorCorrection.lutPath);
-  let lutBlendCounter = 0;
-  for (const layer of lutLayers) {
-    if (layer.intensity <= 0) continue;
-    if (Math.abs(layer.intensity - 1) < 0.001) {
-      filters.push(`lut3d=file=${escapeDrawtextValue(layer.path)}`);
-    } else {
-      const idx = lutBlendCounter++;
-      const intensity = formatFfmpegNumber(layer.intensity);
-      filters.push(
-        `split[lut${idx}a][lut${idx}b]`,
-        `[lut${idx}b]lut3d=file=${escapeDrawtextValue(layer.path)}[lut${idx}c]`,
-        `[lut${idx}a][lut${idx}c]blend=all_expr='A*(1-${intensity})+B*${intensity}'`,
-      );
-    }
-  }
-  const hasBasicCorrection =
-    colorCorrection.brightness !== DEFAULT_COLOR_CORRECTION.brightness ||
-    colorCorrection.contrast !== DEFAULT_COLOR_CORRECTION.contrast ||
-    colorCorrection.saturation !== DEFAULT_COLOR_CORRECTION.saturation ||
-    Math.abs(colorCorrection.hue) > 0.001;
-  if (hasBasicCorrection) {
-    filters.push(
-      `eq=brightness=${formatFfmpegNumber(colorCorrection.brightness)}:contrast=${formatFfmpegNumber(
-        colorCorrection.contrast,
-      )}:saturation=${formatFfmpegNumber(colorCorrection.saturation)}`,
-    );
-  }
-  if (Math.abs(colorCorrection.hue) > 0.001) {
-    filters.push(`hue=h=${formatFfmpegNumber(colorCorrection.hue)}`);
-  }
-  if (!isNeutralThreeWayColor(colorCorrection.threeWayColor)) {
-    filters.push(buildThreeWayColorFilter(colorCorrection.threeWayColor));
-  }
-  if (!isDefaultColorCurves(colorCorrection.colorCurves)) {
-    const safeClipId = safeLabel(clip.id);
-    const placeholder = `__CURVE_LUT_${safeClipId}__`;
-    textArtifacts.push({
-      clipId: `${clip.id}:color-curves`,
-      text: serializeColorCurvesToCube(colorCorrection.colorCurves, 17, `open-factory curves ${clip.id}`),
-      fileName: `curves-${safeClipId}.cube`,
-      placeholder,
-      pathMode: 'filter',
-    });
-    filters.push(`lut1d=file=${placeholder}`);
-  }
-  return filters;
-}
-
-export function buildThreeWayColorFilter(value: ThreeWayColor | undefined): string {
-  const color = normalizeThreeWayColor(value);
-  const params = [
-    ['rs', colorBalanceValue(color.lift, 'r')],
-    ['gs', colorBalanceValue(color.lift, 'g')],
-    ['bs', colorBalanceValue(color.lift, 'b')],
-    ['rm', colorBalanceValue(color.gamma, 'r')],
-    ['gm', colorBalanceValue(color.gamma, 'g')],
-    ['bm', colorBalanceValue(color.gamma, 'b')],
-    ['rh', colorBalanceValue(color.gain, 'r')],
-    ['gh', colorBalanceValue(color.gain, 'g')],
-    ['bh', colorBalanceValue(color.gain, 'b')],
-  ].filter(([, value]) => Math.abs(value as number) > 0.001);
-  return `colorbalance=${params.map(([name, value]) => `${name}=${formatFfmpegNumber(value as number)}`).join(':')}`;
-}
-
-export function colorBalanceValue(value: ColorWheelValue, channel: 'r' | 'g' | 'b'): number {
-  return Math.min(1, Math.max(-1, value[channel] + value.intensity - 1));
-}
-
-export function buildEffectFilters(effects: Effect[], fps = 30): string[] {
-  return effects.flatMap((effect) => {
-    if (!effect.enabled) {
-      return [];
-    }
-    if (effect.type === 'blur') {
-      return [`gblur=sigma=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'radius', 8))}`];
-    }
-    if (effect.type === 'sharpen') {
-      return [
-        `unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'strength', 1))}`,
-      ];
-    }
-    if (effect.type === 'vignette') {
-      const angle = formatFfmpegNumber((Math.PI / 4) * getEffectNumberParam(effect.params, 'intensity', 0.35));
-      return [`vignette=angle=${angle}:x0=w/2:y0=h/2:eval=frame`];
-    }
-    if (effect.type === 'film-grain') {
-      return [`noise=alls=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'strength', 0.2) * 100)}:allf=t`];
-    }
-    if (effect.type === 'chromatic-aberration') {
-      const strength = getEffectNumberParam(effect.params, 'strength', 4);
-      return [`rgbashift=rh=${formatFfmpegNumber(strength)}:bh=${formatFfmpegNumber(-strength)}`];
-    }
-    if (effect.type === 'motion-blur') {
-      const filter = buildMotionBlurExportFilter(normalizeMotionBlurParams(effect.params), fps);
-      return filter ? [filter] : [];
-    }
-    return [];
-  });
-}
-
-/**
- * Build FFmpeg filter chain for color grading graph
- */
-export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): string[] {
-  if (!graph || graph.nodes.length === 0) return [];
-
-  const filters: string[] = [];
-
-  const wheelNodes = graph.nodes.filter((n) => n.type === 'primary-wheel' && n.enabled);
-  const sliderNodes = graph.nodes.filter((n) => n.type === 'primary-slider' && n.enabled);
-  const curvesNodes = graph.nodes.filter((n) => n.type === 'curves' && n.enabled);
-  const hslNodes = graph.nodes.filter((n) => n.type === 'hsl-qualifier' && n.enabled);
-  const windowMaskNodes = graph.nodes.filter((n) => n.type === 'window-mask' && n.enabled);
-  const lutNodes = graph.nodes.filter((n) => n.type === 'lut-apply' && n.enabled);
-
-  for (const node of wheelNodes) {
-    const filter = PrimaryWheels.toFfmpegFilter(node.params as PrimaryWheelParams);
-    if (filter) filters.push(filter);
-  }
-
-  for (const node of sliderNodes) {
-    const filter = PrimarySliders.toFfmpegFilter(node.params as PrimarySliderParams);
-    if (filter) filters.push(filter);
-  }
-
-  for (const node of curvesNodes) {
-    const p = node.params as CurvesNodeParams;
-    const rStr = p.red.map((pt) => `${pt.x}/${pt.y}`).join(' ');
-    const gStr = p.green.map((pt) => `${pt.x}/${pt.y}`).join(' ');
-    const bStr = p.blue.map((pt) => `${pt.x}/${pt.y}`).join(' ');
-    filters.push(`curves=r='${rStr}':g='${gStr}':b='${bStr}'`);
-  }
-
-  for (const node of hslNodes) {
-    const hslFilter = toFfmpegSelectiveColor(node.params as HSLQualifierParams);
-    if (hslFilter) filters.push(hslFilter);
-  }
-
-  for (const node of windowMaskNodes) {
-    const maskFilter = buildWindowMaskFfmpegFilter(node.params as WindowMaskParams);
-    if (maskFilter) filters.push(maskFilter);
-  }
-
-  for (const node of lutNodes) {
-    const p = node.params as LUTApplyNodeParams;
-    if (p.lutId) {
-      filters.push(`lut3d=file='${escapeDrawtextValue(p.lutId)}'`);
-    }
-  }
-
-  return filters;
-}
-
-/**
- * Convert window mask params to FFmpeg geq filter
- */
-export function buildWindowMaskFfmpegFilter(params: WindowMaskParams): string {
-  if (params.shape === 'circle' && params.circle) {
-    const cx = formatFfmpegNumber(params.circle.center.x);
-    const cy = formatFfmpegNumber(params.circle.center.y);
-    const r = formatFfmpegNumber(params.circle.radius);
-    const s = formatFfmpegNumber(Math.max(0.001, params.circle.softness));
-    const invert = params.invert ? 1 : 0;
-    const maskExpr = `if(lte(pow((X/iw-${cx}),2)+pow((Y/ih-${cy}),2),pow(${r},2)),${invert ? 0 : 255},${invert ? 255 : 0})`;
-    return `geq=lum='clip(lum_expr,0,255)':cr='cb(X,Y)':cb='cr(X,Y)'`;
-  }
-  if (params.shape === 'linear-gradient' && params.linearGradient) {
-    const sx = formatFfmpegNumber(params.linearGradient.startPoint.x);
-    const sy = formatFfmpegNumber(params.linearGradient.startPoint.y);
-    const ex = formatFfmpegNumber(params.linearGradient.endPoint.x);
-    const ey = formatFfmpegNumber(params.linearGradient.endPoint.y);
-    const invert = params.invert ? 1 : 0;
-    return `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(${invert ? '(1-' : ''}255*clamp(((X/iw-(${sx}))*(${ex}-${sx})+(Y/ih-(${sy}))*(${ey}-${sy}))/(pow(${ex}-${sx},2)+pow(${ey}-${sy},2)+0.001),0,1)${invert ? ')' : ''},0,255)'`;
-  }
-  return '';
-}
-
-export function buildSourceColorSpaceConversionFilters(clip: ExportClip, settings: ExportSettings): string[] {
-  const source = clip.sourceColorProfile;
-  if (!source?.autoConvertToWorkingSpace) {
-    return [];
-  }
-  const target = normalizeProjectWorkingColorSpace(settings.workingColorSpace);
-  const filter = buildZscaleColorConversionFilter(source.sourceColorSpace, target);
-  return filter ? [filter] : [];
-}
+// ---- Utility ----
 
 export function getExportClipSourceDuration(clip: ExportClip): number {
   return clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence'

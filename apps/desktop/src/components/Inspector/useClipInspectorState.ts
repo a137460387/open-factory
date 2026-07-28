@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {logger} from '@open-factory/editor-core/utils';
 import type {Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker} from '@open-factory/editor-core';
-import {AddMaskCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, UpdateClipCommand, UpdateMaskCommand, RemoveMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, MAX_CHROMA_KEY_COLORS, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, type AudioFadeCurve, type AudioChannelRoutingMode, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
+import {AddMaskCommand, AddKeyframeCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, UpdateClipCommand, UpdateMaskCommand, RemoveMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeAudioRestoration, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, MAX_CHROMA_KEY_COLORS, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, type AudioFadeCurve, type AudioChannelRoutingMode, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
 import {analyzeClip, analyzeMotionTrack, cancelMotionTracking, detectPrivacyRegions, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent} from '../../lib/tauri-bridge';
@@ -19,6 +19,7 @@ import {useAudioDenoiseState} from './clip-inspector-audio-denoise';
 import {useBatchOperationsState} from './clip-inspector-batch-operations';
 import {useSubtitleStylesState} from './clip-inspector-subtitle-styles';
 import {useKeyframesState} from './clip-inspector-keyframes';
+import {useMotionAnalysisState} from './clip-inspector-motion-analysis';
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -63,9 +64,6 @@ export function useClipInspectorState({
   );
 
   // -- Shared state ---------------------------------------------------------
-  const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
-  const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
-  const [motionTrackingBusy, setMotionTrackingBusy] = useState(false);
   const [privacyBlurBusy, setPrivacyBlurBusy] = useState(false);
   const [curveProperty, setCurveProperty] = useState<KeyframeProperty>('opacity');
   const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
@@ -126,6 +124,8 @@ export function useClipInspectorState({
   const audioDenoiseState = useAudioDenoiseState({clip, asset, commit});
   const batchOpsState = useBatchOperationsState({clip, project, media, commit, runEffectCommand});
   const subtitleStylesState = useSubtitleStylesState({clip, project, translationSettings, setSelectedClipIds});
+  const stabilization = normalizeStabilization(clip.stabilization);
+  const motionAnalysisState = useMotionAnalysisState({clip, asset, commit, stabilization});
 
   const selectedKeyframeFrame =
     selectedKeyframe?.clipId === clip.id
@@ -254,7 +254,7 @@ export function useClipInspectorState({
     commit({ arcText: normalizeTextArc({ ...textArc, ...patch }) });
   };
   const addKeyframe = (property: KeyframeProperty, value = getClipKeyframeValue(clip, property, localKeyframeTime)) => {
-    try { commandManager.execute(new (require('@open-factory/editor-core').AddKeyframeCommand)(timelineAccessor, clip.id, property, { time: localKeyframeTime, value })); }
+    try { commandManager.execute(new AddKeyframeCommand(timelineAccessor, clip.id, property, { time: localKeyframeTime, value })); }
     catch (error) { showToast({kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed}); }
   };
   const setKenBurns = (enabled: boolean) => {
@@ -280,7 +280,6 @@ export function useClipInspectorState({
   const chromaKey = normalizeChromaKey(clip.chromaKey);
   const keyingMode: ChromaKeyMode | 'none' = chromaKey.enabled ? chromaKey.mode : 'none';
   const chromaKeyPickActive = chromaKeyPickClipId === clip.id;
-  const stabilization = normalizeStabilization(clip.stabilization);
   const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
   const audioRestorationComparison = buildAudioRestorationWaveformComparison(buildAudioRestorationPreviewPeaks(clip.pitchData), audioRestoration);
   const blendMode = normalizeClipBlendMode(clip.blendMode);
@@ -311,7 +310,6 @@ export function useClipInspectorState({
   const updateVideoRestoration = (patch: Partial<typeof videoRestoration>) => commit({ videoRestoration: normalizeVideoRestoration({ ...videoRestoration, ...patch }) });
   const updateQualityEnhancement = (patch: Partial<typeof qualityEnhancement>) => commit({ qualityEnhancement: normalizeQualityEnhancement({ ...qualityEnhancement, ...patch }) });
   const updateAudioRestoration = (patch: Partial<typeof audioRestoration>) => commit({ audioRestoration: normalizeAudioRestoration({ ...audioRestoration, ...patch }) });
-  const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
 
@@ -334,58 +332,6 @@ export function useClipInspectorState({
     if (chromaKeyPickActive) { setChromaKeyPickClipId(undefined); return; }
     setSelectedClipIds([clip.id]);
     setChromaKeyPickClipId(clip.id);
-  };
-
-  // -- Analysis progress listeners ------------------------------------------
-  useEffect(() => {
-    let disposed = false;
-    let unlistenAnalysis: (() => void) | undefined;
-    let unlistenMotionTrack: (() => void) | undefined;
-    void listenBridge<ClipAnalysisProgressEvent>('clip-analysis-progress', (p) => {
-      if (p.clipId === clip.id) setAnalysisProgress(p.progress);
-    }).then((d) => { if (disposed) d(); else unlistenAnalysis = d; });
-    void listenBridge<MotionTrackProgressEvent>('motion-track-progress', (p) => {
-      if (p.clipId === clip.id) setMotionTrackProgress(p.progress);
-    }).then((d) => { if (disposed) d(); else unlistenMotionTrack = d; });
-    return () => { disposed = true; unlistenAnalysis?.(); unlistenMotionTrack?.(); };
-  }, [clip.id]);
-
-  // -- Stabilization / motion track -----------------------------------------
-  const runStabilizationAnalysis = async () => {
-    if (clip.type !== 'video' || !asset?.path) return;
-    try {
-      setAnalysisProgress(0);
-      const result = await analyzeClip({ clipId: clip.id, mediaPath: asset.path, duration: clip.duration });
-      commit({ stabilization: { ...stabilization, enabled: true, analyzed: true, trfPath: result.trfPath } });
-      setAnalysisProgress(1);
-    } catch (error) {
-      setAnalysisProgress(undefined);
-      showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
-    }
-  };
-  const runMotionTrackAnalysis = async () => {
-    if (clip.type !== 'video' || !asset?.path) return;
-    try {
-      setMotionTrackingBusy(true);
-      setMotionTrackProgress(0);
-      const result = await analyzeMotionTrack({ clipId: clip.id, mediaPath: asset.path, duration: clip.duration });
-      const points = normalizeMotionTrack(result.points, clip.duration) ?? [];
-      commit({ motionTrack: points });
-      setMotionTrackProgress(1);
-      if (points.length === 0) showToast({kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: zhCN.inspector.motionTrack.noPoints});
-    } catch (error) {
-      showToast({kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage});
-      setMotionTrackProgress(undefined);
-    } finally { setMotionTrackingBusy(false); }
-  };
-  const cancelMotionTrackAnalysis = async () => {
-    try { await cancelMotionTracking(clip.id); }
-    catch (error) { showToast({kind: 'warning', title: zhCN.inspector.motionTrack.cancelFailed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage}); }
-    finally { setMotionTrackingBusy(false); setMotionTrackProgress(undefined); }
-  };
-  const bindMotionTrackKeyframes = () => {
-    const keyframes = bindMotionTrackToPositionKeyframes(clip.keyframes, motionTrack, clip.transform, clip.duration);
-    if (keyframes) commit({ keyframes });
   };
 
   // -- Data subtitle --------------------------------------------------------
@@ -471,8 +417,10 @@ export function useClipInspectorState({
     allTimelineSubtitleClips, translationSettings, projectSpeakers, soundDescriptionOptions,
     colorMatchReferenceClips: batchOpsState.colorMatchReferenceClips,
     selectedKeyframeEntries, keyframeProperties, pitchSummary,
-    analysisProgress, setAnalysisProgress, motionTrackProgress, setMotionTrackProgress,
-    motionTrackingBusy, setMotionTrackingBusy, privacyBlurBusy, setPrivacyBlurBusy,
+    analysisProgress: motionAnalysisState.analysisProgress, setAnalysisProgress: motionAnalysisState.setAnalysisProgress,
+    motionTrackProgress: motionAnalysisState.motionTrackProgress, setMotionTrackProgress: motionAnalysisState.setMotionTrackProgress,
+    motionTrackingBusy: motionAnalysisState.motionTrackingBusy, setMotionTrackingBusy: motionAnalysisState.setMotionTrackingBusy,
+    privacyBlurBusy, setPrivacyBlurBusy,
     batchShiftSeconds: batchOpsState.batchShiftSeconds, setBatchShiftSeconds: batchOpsState.setBatchShiftSeconds,
     batchScaleFactor: batchOpsState.batchScaleFactor, setBatchScaleFactor: batchOpsState.setBatchScaleFactor,
     batchEasing: batchOpsState.batchEasing, setBatchEasing: batchOpsState.setBatchEasing,
@@ -500,7 +448,7 @@ export function useClipInspectorState({
     asset, clipStartTimecode, clipDurationTimecode, assetDurationTimecode,
     subtitleTrack, subtitleType, activeSpeaker, activeSpeakerEntry, soundDescSelectValue, localKeyframeTime,
     textPath, textLayout, textOpenTypeFeatures, textArc,
-    colorCorrection, chromaKey, keyingMode, chromaKeyPickActive, stabilization,
+    colorCorrection, chromaKey, keyingMode, chromaKeyPickActive, stabilization: stabilization,
     frameInterpolation: frameInterpolationState.frameInterpolation,
     frameInterpolationUnavailable: frameInterpolationState.frameInterpolationUnavailable,
     slowMotionMode: frameInterpolationState.slowMotionMode,
@@ -513,7 +461,7 @@ export function useClipInspectorState({
     audioPitchSemitones, reverseAudio, fadeInDuration, fadeOutDuration, fadeInCurve, fadeOutCurve,
     spatialAudio, spatialRenderModeOptions, spatialDistanceOptions, spatialRoomOptions,
     audioChannelRouting, audioChannelRoutingOptions,
-    masks, privacyRedactions, motionTrack, colorCurves, threeWayColor,
+    masks, privacyRedactions, motionTrack: motionAnalysisState.motionTrack, colorCurves, threeWayColor,
     selectedKeyframeFrame, selectedKeyframeRefs, batchKeyframesSelected,
     textAnimationKeyframeCount: batchOpsState.textAnimationKeyframeCount,
     commit, runEffectCommand, chooseLut,
@@ -525,7 +473,10 @@ export function useClipInspectorState({
     addKeyframe, setKenBurns, updateKenBurnsEndScale,
     updatePanorama, updateVideoRestoration, updateQualityEnhancement, updateAudioRestoration,
     commitChromaKeyColors, updateChromaKeyColor, addChromaKeyColor, removeChromaKeyColor, toggleChromaKeyPicker,
-    runStabilizationAnalysis, runMotionTrackAnalysis, cancelMotionTrackAnalysis, bindMotionTrackKeyframes,
+    runStabilizationAnalysis: motionAnalysisState.runStabilizationAnalysis,
+    runMotionTrackAnalysis: motionAnalysisState.runMotionTrackAnalysis,
+    cancelMotionTrackAnalysis: motionAnalysisState.cancelMotionTrackAnalysis,
+    bindMotionTrackKeyframes: motionAnalysisState.bindMotionTrackKeyframes,
     bindDataSubtitleSource, updateDataSubtitleTemplate, clearDataSubtitleSource,
     runPitchAnalysis, exportPitchCsv,
     updateSelectedKeyframe: keyframesState.updateSelectedKeyframe,

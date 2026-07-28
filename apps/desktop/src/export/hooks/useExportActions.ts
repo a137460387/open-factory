@@ -12,6 +12,7 @@ import {updateAudioVisualizationBackgroundImagePath, updateImageWatermarkPath} f
 import type {ExportState} from './useExportState';
 import {useExportPresets} from './useExportPresets';
 import {useExportBatch, VERSIONED_BATCH_TEMPLATE_EXTENSION} from './useExportBatch';
+import {useExportHelpers} from './useExportHelpers';
 import {useExportPipeline} from './useExportPipeline';
 
 export {VERSIONED_BATCH_TEMPLATE_EXTENSION} from './useExportBatch';
@@ -140,14 +141,15 @@ export function useExportActions(state: ExportState) {
   // Sub-hooks
   const presets = useExportPresets(state);
   const batch = useExportBatch(state);
-  const pipeline = useExportPipeline(state, {
+  const helpers = useExportHelpers(state);
+  const pipeline = useExportPipeline(state, helpers, {
     buildVersionedBatchJobs: batch.buildVersionedBatchJobs,
     buildSequenceBatchJobs: batch.buildSequenceBatchJobs,
   });
 
   // savePreset wraps presets.savePreset with post-export script acknowledgment
   async function savePreset(): Promise<void> {
-    if (!(await pipeline.ensurePostExportScriptAcknowledged())) {
+    if (!(await helpers.ensurePostExportScriptAcknowledged())) {
       return;
     }
     await presets.savePreset();
@@ -207,28 +209,28 @@ export function useExportActions(state: ExportState) {
     previewExport: pipeline.previewExport,
 
     // Quality evaluation
-    evaluateHistoryQuality: pipeline.evaluateHistoryQuality,
-    cancelRunningQualityEvaluation: pipeline.cancelRunningQualityEvaluation,
+    evaluateHistoryQuality: helpers.evaluateHistoryQuality,
+    cancelRunningQualityEvaluation: helpers.cancelRunningQualityEvaluation,
 
     // Warmup
-    warmupSelectedJobs: pipeline.warmupSelectedJobs,
+    warmupSelectedJobs: helpers.warmupSelectedJobs,
 
     // Enqueue
-    enqueueSelectedJobs: pipeline.enqueueSelectedJobs,
+    enqueueSelectedJobs: helpers.enqueueSelectedJobs,
 
     // Post-export script
-    ensurePostExportScriptAcknowledged: pipeline.ensurePostExportScriptAcknowledged,
-    setPostExportScriptAcknowledged: pipeline.setPostExportScriptAcknowledged,
+    ensurePostExportScriptAcknowledged: helpers.ensurePostExportScriptAcknowledged,
+    setPostExportScriptAcknowledged: helpers.setPostExportScriptAcknowledged,
 
     // Upload settings
-    updateExportUploadSettings: pipeline.updateExportUploadSettings,
-    updateExportUploadPassword: pipeline.updateExportUploadPassword,
-    chooseExportUploadDirectory: pipeline.chooseExportUploadDirectory,
-    retryHistoryUpload: pipeline.retryHistoryUpload,
+    updateExportUploadSettings: helpers.updateExportUploadSettings,
+    updateExportUploadPassword: helpers.updateExportUploadPassword,
+    chooseExportUploadDirectory: helpers.chooseExportUploadDirectory,
+    retryHistoryUpload: helpers.retryHistoryUpload,
 
     // Preflight
-    collectPreflightIssues: pipeline.collectPreflightIssues,
-    collectPreflightIssuesForJobs: pipeline.collectPreflightIssuesForJobs,
+    collectPreflightIssues: helpers.collectPreflightIssues,
+    collectPreflightIssuesForJobs: helpers.collectPreflightIssuesForJobs,
     continueAfterWarnings: pipeline.continueAfterWarnings,
     relinkFromPreflight: pipeline.relinkFromPreflight,
 
