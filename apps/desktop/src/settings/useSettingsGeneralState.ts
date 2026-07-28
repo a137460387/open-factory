@@ -10,6 +10,7 @@ import {
   type Clip,
   type Project,
   type TimecodeFormat,
+  type TouchOptimizationSettings,
 } from '@open-factory/editor-core';
 import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
 import {switchLanguage} from '../i18n/i18next-config';
@@ -23,9 +24,7 @@ import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSetting
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useRecordingSettingsStore} from '../store/recordingSettingsStore';
 import {useTranslationSettingsStore} from '../store/translationSettingsStore';
-import {
-  applyLocalCoeditingSettings,
-} from '../collaboration/settings';
+import {applyLocalCoeditingSettings} from '../collaboration/settings';
 import {
   DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
   DEFAULT_LOCAL_COEDITING_SETTINGS,
@@ -44,7 +43,6 @@ import {
   type DisplaySettings,
   type LocalCoeditingSettings,
 } from './appSettings';
-import type {TouchOptimizationSettings} from '@open-factory/editor-core';
 import {useTheme} from '../theme/useTheme';
 import {DEFAULT_UPDATE_SETTINGS, type UpdateSettings} from '../updater/update-settings';
 import {usePluginSettings} from './usePluginSettings';
@@ -62,15 +60,10 @@ export function useSettingsGeneralState(
   const t = zhCN.settings;
 
   const pluginState = usePluginSettings(t.plugins);
-
   const presetMarketState = usePresetMarketSettings(selectedClip);
-
   const timelineScriptState = useTimelineScriptSettings(t.scripts, project);
-
   const localModelState = useLocalModelSettings(t.localModels);
-
   const themeState = useThemeSettings(t.appearance);
-
   const currentTheme = useTheme();
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
 
@@ -153,7 +146,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function loadCollaborationIdentity() {
     try {
       setCollaborationIdentity(await readCollaborationIdentitySettings());
@@ -165,7 +157,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function loadLocalCoediting() {
     try {
       setLocalCoediting(await readLocalCoeditingSettings());
@@ -177,7 +168,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function loadDisplaySettings() {
     try {
       setDisplaySettings(await readDisplaySettings());
@@ -189,7 +179,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function loadUpdateSettings() {
     try {
       setUpdateSettings(await readUpdateSettings());
@@ -201,7 +190,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function chooseDemucsExecutable() {
     try {
       const path = await pickDemucsExecutablePath();
@@ -216,7 +204,6 @@ export function useSettingsGeneralState(
       });
     }
   }
-
   async function choosePrivacyDetectionModel() {
     try {
       const [path] = await openFileDialog(false, [
@@ -348,35 +335,27 @@ export function useSettingsGeneralState(
   }
 
   return {
-    // Custom hook state
     ...pluginState,
     ...presetMarketState,
     ...timelineScriptState,
     ...localModelState,
     ...themeState,
-    // Theme
     currentTheme,
     setPreviewTimeline,
-    // Tab
     tab,
     setTab,
-    // Language
     language,
-    // Developer
     developerMode,
     setDeveloperMode,
     stressTestResult,
     setStressTestResult,
-    // Version
     currentVersion,
     handleCheckForUpdates,
-    // Settings state
     updateSettings,
     displaySettings,
     touchOptimizationSettings,
     collaborationIdentity,
     localCoediting,
-    // Translation store
     translationProvider,
     translationApiKey,
     translationApiKeyError,
@@ -385,31 +364,24 @@ export function useSettingsGeneralState(
     setTranslationProvider,
     setTranslationApiKey,
     setTranslationTargetLanguage,
-    // Demucs store
     demucsExecutablePath,
     setDemucsExecutablePath,
-    // Privacy store
     privacyDetectionModelPath,
     setPrivacyDetectionModelPath,
-    // Recording store
     recordingSettings,
     setRecordingSettings,
-    // Proxy store
     proxyResolutionPreset,
     proxyTriggerShortEdge,
     setProxyResolutionPreset,
     setProxyTriggerShortEdge,
     resetProxySettings,
-    // Load functions
     loadCollaborationIdentity,
     loadLocalCoediting,
     loadDisplaySettings,
     loadUpdateSettings,
     loadCurrentVersion,
-    // Touch settings
     readTouchOptimizationSettings,
     setTouchOptimizationSettings,
-    // Handlers
     close,
     updateLanguage,
     chooseDemucsExecutable,

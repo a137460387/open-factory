@@ -1,4 +1,4 @@
-import {useDeferredValue, useMemo, useRef} from 'react';
+import {useDeferredValue, useMemo} from 'react';
 import {
   buildTimelineMinimapLayout,
   buildTimelineRulerTicks,
@@ -18,6 +18,7 @@ import {
   secondsToTimecode,
   sortTimelineThumbnailSamplesByPriority,
   findCompleteClipGroup,
+  DEFAULT_TIMELINE_GRID_SETTINGS,
 } from '@open-factory/editor-core';
 import {LABEL_WIDTH, TRACK_HEIGHT} from './TimelineParts';
 import type {TimelineStateParams, TimelineState} from './timelineStateTypes';
