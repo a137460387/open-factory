@@ -16,6 +16,7 @@
 import { identityTranslator } from '../ai-module-types';
 import { clamp } from '../utils/math';
 // ==================== 工具函数 ====================
+// ==================== 工具函数 ====================
 /**
  * 安全地将 RGB 分量从 RGBA 扁平数组中提取
  * @param frame - RGBA 扁平像素数组

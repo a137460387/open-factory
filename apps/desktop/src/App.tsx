@@ -21,6 +21,7 @@ import { useDemucsSettingsStore } from './store/demucsSettingsStore';
 import { usePrivacyDetectionSettingsStore } from './store/privacyDetectionSettingsStore';
 import { useWhisperSettingsStore } from './store/whisperSettingsStore';
 import { initializeThemeFromSettings } from './theme/useTheme';
+import { DevPerfOverlay } from './components/DevPerfOverlay';
 import { StartupUpdateChecker } from './updater/StartupUpdateChecker';
 
 export function App() {
@@ -46,6 +47,7 @@ export function App() {
         {previewWindowMode ? null : <StartupUpdateChecker />}
         {previewWindowMode ? null : <NativePreviewSmokeRunner />}
         {previewWindowMode ? null : <NativeCancelSmokeRunner />}
+        <DevPerfOverlay />
       </Suspense>
     </I18nextProvider>
   );

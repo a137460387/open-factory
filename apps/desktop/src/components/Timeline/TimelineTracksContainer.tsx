@@ -390,6 +390,8 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
       <div
         ref={scrollRef}
         className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
+        role="application"
+        aria-label="视频编辑时间线"
         onWheel={onWheel}
         onScroll={syncScrollViewport}
         onDragOver={onTimelineDragOver}

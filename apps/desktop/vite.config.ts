@@ -2,7 +2,10 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  define: {
+    __DEV_PERF_MONITOR__: mode === 'development',
+  },
   plugins: [
     tailwindcss(),
     react({

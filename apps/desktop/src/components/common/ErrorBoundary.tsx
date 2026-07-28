@@ -13,13 +13,14 @@ interface ErrorBoundaryState {
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+  override state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
   }
 
-  componentDidCatch(error: unknown): void {
+  override componentDidCatch(error: unknown, errorInfo: React.ErrorInfo): void {
+    console.error(`[ErrorBoundary:${this.props.name}]`, error, errorInfo.componentStack);
     showToast({
       kind: 'error',
       title: zhCN.errors.panelCrashed(this.props.name),
@@ -27,7 +28,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     });
   }
 
-  render() {
+  override render() {
     if (!this.state.hasError) {
       return this.props.children;
     }
