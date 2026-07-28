@@ -1,23 +1,18 @@
 import {logger} from '@open-factory/editor-core/utils';
-import {useEffect, useMemo, useState, useCallback} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {X} from 'lucide-react';
-import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type TimelineScriptOperation} from '@open-factory/editor-core';
+import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, BUILTIN_TIMELINE_SCRIPTS, UpdateProjectSettingsCommand, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, type Clip, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat} from '@open-factory/editor-core';
 import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
 import {switchLanguage} from '../i18n/i18next-config';
 import {parseAutomationRulesJson, serializeAutomationRulesJson} from '../automation/automation-rules';
 import {pickDemucsExecutablePath} from '../lib/demucs';
-import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, getAppVersion, checkAppUpdate} from '../lib/tauri-bridge';
+import {openDirectoryDialog, openFileDialog, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, getAppVersion, checkAppUpdate} from '../lib/tauri-bridge';
 import {isTauriRuntime} from '../lib/tauri';
 import {showToast} from '../lib/toast';
 import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
 import {type ClipMacro} from '../macros/clip-macros';
-import {getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry} from '../plugins/plugin-manager';
-import {installCatalogPlugin, installPluginFromFile, loadPluginCatalog, type PluginCatalogEntry, type PluginCatalogResult} from '../plugins/plugin-market';
-import {loadExportPresets, serializeExportPresetPackage} from '../export/export-presets';
-import {filterPresetMarketCards, installPresetMarketCard, loadPresetMarket, presetMarketCardHasCustomConflict, readPresetMarketRatings, writePresetMarketRating, type PresetMarketCard, type PresetMarketFilters, type PresetMarketLoadResult} from '../export/preset-market';
-import {filterEffectPresetCommunityCards, installEffectPresetCommunityCard, loadEffectPresetCommunityLibrary, type EffectPresetCommunityCard, type EffectPresetCommunityLoadResult} from '../effects/effect-preset-library';
 import {type TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
-import {commandManager, projectAccessor, timelineAccessor} from '../store/commandManager';
+import {commandManager, projectAccessor} from '../store/commandManager';
 import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
 import {useEditorStore} from '../store/editorStore';
 import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
@@ -31,7 +26,6 @@ import {BackupSettingsPanel} from './BackupSettingsPanel';
 import {EffectPresetCommunityPanel} from './EffectPresetPanel';
 import {ExportPresetSyncSettingsPanel} from './ExportPresetSyncPanel';
 import {EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule} from './ExportRulesPanel';
-import {formatBytes} from './formatHelpers';
 import {HardwareAccelerationSettingsPanel} from './HardwareAccelerationSettingsPanel';
 import {GeneralSettingsPanel} from './GeneralSettingsPanel';
 import {LutLibraryPanel} from './LutLibraryPanel';
@@ -44,16 +38,17 @@ import {ProxySettingsPanel} from './ProxySettingsPanel';
 import {TaskMonitorSettingsPanel} from './TaskMonitorSettingsPanel';
 import {TimelineScriptsSettingsPanel} from './TimelineScriptsSettingsPanel';
 import {TranslationSettingsPanel} from './TranslationSettingsPanel';
-import {useWhisperSettingsStore} from '../store/whisperSettingsStore';
 import {applyLocalCoeditingSettings} from '../collaboration/settings';
-import {runTimelineScriptInWorker} from '../scripting/timeline-script-runtime';
-import {deleteTimelineScript, exportTimelineScriptToDialog, importTimelineScriptFromDialog, loadTimelineScripts, saveTimelineScript, type TimelineScriptFile} from '../scripting/timeline-scripts';
-import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, readLocalAiModelsSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, saveLocalAiModelsSettings, readUpdateSettings, saveUpdateSettings, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
+import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, readUpdateSettings, saveUpdateSettings, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
 import type {TouchOptimizationSettings} from '@open-factory/editor-core';
-import {LOCAL_AI_MODEL_DEFINITIONS, LOCAL_AI_MODEL_IDS, isLocalModelFileSizeValid, resolveLocalModelStatus, type LocalAiModelId, type LocalAiModelResolvedStatus, type LocalAiModelsSettings} from './localModels';
-import {DEFAULT_CUSTOM_THEME_COLORS, deleteCustomTheme, extractCustomThemeColors, isBuiltinThemeId, resolveTheme, upsertCustomTheme, type CustomThemeColors, type ThemeSettings} from '../theme/theme';
-import {getCurrentThemeSettings, setThemeSettings, useTheme} from '../theme/useTheme';
-import {DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings} from '../updater/update-settings';
+import {resolveTheme, type ThemeSettings} from '../theme/theme';
+import {getCurrentThemeSettings, useTheme} from '../theme/useTheme';
+import {DEFAULT_UPDATE_SETTINGS, type UpdateSettings} from '../updater/update-settings';
+import {usePluginSettings} from './usePluginSettings';
+import {usePresetMarketSettings} from './usePresetMarketSettings';
+import {useTimelineScriptSettings} from './useTimelineScriptSettings';
+import {useLocalModelSettings} from './useLocalModelSettings';
+import {useThemeSettings} from './useThemeSettings';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -116,16 +111,98 @@ export function SettingsDialog({
   onClose,
 }: SettingsDialogProps) {
   const t = zhCN.settings;
+
+  const {
+    pluginRegistry,
+    pluginsLoading,
+    pluginsError,
+    pluginCatalog,
+    pluginCatalogLoading,
+    pluginCatalogError,
+    installingPluginId,
+    refreshPlugins,
+    refreshPluginCatalog,
+    showCurrentPlugins,
+    installMarketPlugin,
+    installPluginFile,
+    togglePlugin,
+    removePlugin,
+  } = usePluginSettings(t.plugins);
+
+  const {
+    presetMarketCards,
+    presetMarketRatings,
+    presetMarketFilters,
+    setPresetMarketFilters,
+    presetMarketLoading,
+    presetMarketSource,
+    presetMarketWarning,
+    installingPresetMarketCardId,
+    filteredPresetMarketCards,
+    effectPresetCards,
+    effectPresetFilters,
+    setEffectPresetFilters,
+    effectPresetLoading,
+    effectPresetSource,
+    effectPresetWarning,
+    installingEffectPresetCardId,
+    filteredEffectPresetCards,
+    loadPresetMarketPanel,
+    loadEffectPresetLibraryPanel,
+    installMarketPreset,
+    installEffectPreset,
+    ratePresetMarketCard,
+    shareCustomExportPresets,
+    shareSelectedEffectPreset,
+  } = usePresetMarketSettings(selectedClip);
+
+  const {
+    timelineScripts,
+    selectedTimelineScriptId,
+    timelineScriptName,
+    timelineScriptCode,
+    timelineScriptPath,
+    timelineScriptRunning,
+    timelineScriptOutput,
+    timelineScriptError,
+    timelineScriptApiNames,
+    setTimelineScriptName,
+    setTimelineScriptCode,
+    loadTimelineScriptsPanel,
+    selectBuiltinTimelineScript,
+    selectTimelineScriptFile,
+    createNewTimelineScript,
+    saveCurrentTimelineScript,
+    deleteCurrentTimelineScript,
+    importTimelineScript,
+    exportTimelineScript,
+    runCurrentTimelineScript,
+  } = useTimelineScriptSettings(t.scripts, project);
+
+  const {
+    localModelsSettings,
+    localModelStatuses,
+    loadLocalModelsSettings,
+    chooseLocalModelFile,
+    openLocalModelDownload,
+  } = useLocalModelSettings(t.localModels);
+
+  const {
+    themeSettings,
+    customThemeName,
+    setCustomThemeName,
+    customThemeColors,
+    hydrateThemeForm,
+    selectTheme,
+    saveCustomTheme,
+    removeCustomTheme,
+    updateCustomThemeColor,
+  } = useThemeSettings(t.appearance);
+
+  const currentTheme = useTheme();
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const [tab, setTab] = useState<SettingsTab>('general');
   const [language, setLanguage] = useState<Language>(() => getLanguage());
-  const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
-  const [pluginsLoading, setPluginsLoading] = useState(false);
-  const [pluginsError, setPluginsError] = useState<string>();
-  const [pluginCatalog, setPluginCatalog] = useState<PluginCatalogResult>();
-  const [pluginCatalogLoading, setPluginCatalogLoading] = useState(false);
-  const [pluginCatalogError, setPluginCatalogError] = useState<string>();
-  const [installingPluginId, setInstallingPluginId] = useState<string>();
   const [backupSettings, setBackupSettings] = useState<BackupSettings>(() => ({
     ...DEFAULT_BACKUP_SETTINGS,
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
@@ -162,44 +239,10 @@ export function SettingsDialog({
   }));
   const [updateSettings, setUpdateSettings] = useState<UpdateSettings>(() => ({ ...DEFAULT_UPDATE_SETTINGS }));
   const [currentVersion, setCurrentVersion] = useState<string>('');
-  const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
-  const [localModelStatuses, setLocalModelStatuses] = useState<
-    Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>
-  >({});
   const [webdavPassword, setWebdavPassword] = useState('');
   const [developerMode, setDeveloperMode] = useState(false);
   const [stressTestResult, setStressTestResult] = useState<string | null>(null);
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
-  const [presetMarketCards, setPresetMarketCards] = useState<PresetMarketCard[]>([]);
-  const [presetMarketRatings, setPresetMarketRatings] = useState<Record<string, number>>({});
-  const [presetMarketFilters, setPresetMarketFilters] = useState<PresetMarketFilters>({
-    platform: 'all',
-    quality: 'all',
-    format: 'all',
-  });
-  const [presetMarketLoading, setPresetMarketLoading] = useState(false);
-  const [presetMarketSource, setPresetMarketSource] = useState<PresetMarketLoadResult['source']>('empty');
-  const [presetMarketWarning, setPresetMarketWarning] = useState<string>();
-  const [installingPresetMarketCardId, setInstallingPresetMarketCardId] = useState<string>();
-  const [effectPresetCards, setEffectPresetCards] = useState<EffectPresetCommunityCard[]>([]);
-  const [effectPresetFilters, setEffectPresetFilters] = useState<EffectPresetFilters>({ style: 'all', use: 'all' });
-  const [effectPresetLoading, setEffectPresetLoading] = useState(false);
-  const [effectPresetSource, setEffectPresetSource] = useState<EffectPresetCommunityLoadResult['source']>('empty');
-  const [effectPresetWarning, setEffectPresetWarning] = useState<string>();
-  const [installingEffectPresetCardId, setInstallingEffectPresetCardId] = useState<string>();
-  const firstBuiltinScript = BUILTIN_TIMELINE_SCRIPTS[0];
-  const [timelineScripts, setTimelineScripts] = useState<TimelineScriptFile[]>([]);
-  const [selectedTimelineScriptId, setSelectedTimelineScriptId] = useState(firstBuiltinScript?.id ?? 'bulk-speed');
-  const [timelineScriptName, setTimelineScriptName] = useState(() =>
-    firstBuiltinScript
-      ? t.scripts.examples[firstBuiltinScript.id as keyof typeof t.scripts.examples].name
-      : t.scripts.defaultScriptName,
-  );
-  const [timelineScriptCode, setTimelineScriptCode] = useState(() => firstBuiltinScript?.code ?? '');
-  const [timelineScriptPath, setTimelineScriptPath] = useState<string>();
-  const [timelineScriptRunning, setTimelineScriptRunning] = useState(false);
-  const [timelineScriptOutput, setTimelineScriptOutput] = useState<string[]>([]);
-  const [timelineScriptError, setTimelineScriptError] = useState<string>();
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationApiKeyError = useTranslationSettingsStore((state) => state.apiKeyError);
@@ -208,7 +251,6 @@ export function SettingsDialog({
   const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
   const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
-  const setWhisperModelPath = useWhisperSettingsStore((state) => state.setModelPath);
   const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
   const setDemucsExecutablePath = useDemucsSettingsStore((state) => state.setExecutablePath);
   const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
@@ -220,22 +262,23 @@ export function SettingsDialog({
   const setProxyResolutionPreset = useProxySettingsStore((state) => state.setResolutionPreset);
   const setProxyTriggerShortEdge = useProxySettingsStore((state) => state.setTriggerShortEdge);
   const resetProxySettings = useProxySettingsStore((state) => state.reset);
-  const currentTheme = useTheme();
-  const [themeSettings, setThemeSettingsState] = useState<ThemeSettings>(() => getCurrentThemeSettings());
-  const [customThemeName, setCustomThemeName] = useState('');
-  const [customThemeColors, setCustomThemeColors] = useState<CustomThemeColors>(() => ({
-    ...DEFAULT_CUSTOM_THEME_COLORS,
-  }));
-  const activeTheme = useMemo(() => resolveTheme(themeSettings), [themeSettings]);
-  const filteredPresetMarketCards = useMemo(
-    () => filterPresetMarketCards(presetMarketCards, presetMarketFilters),
-    [presetMarketCards, presetMarketFilters],
-  );
-  const filteredEffectPresetCards = useMemo(
-    () => filterEffectPresetCommunityCards(effectPresetCards, effectPresetFilters),
-    [effectPresetCards, effectPresetFilters],
-  );
-  const timelineScriptApiNames = useMemo(() => getTimelineScriptApiFunctionNames(), []);
+
+  const loadCurrentVersion = useCallback(async () => {
+    try {
+      const version = await getAppVersion();
+      setCurrentVersion(version);
+    } catch (error) {
+      logger.warn('[Settings] Unable to load app version', error);
+    }
+  }, []);
+
+  const handleCheckForUpdates = useCallback(async (): Promise<{version: string} | null> => {
+    const update = await checkAppUpdate({ timeout: 10000 });
+    if (update) {
+      return { version: update.version };
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -266,126 +309,8 @@ export function SettingsDialog({
     return () => setPreviewTimeline(undefined);
   }, [loadTranslationApiKey, open, setPreviewTimeline]);
 
-  const loadCurrentVersion = useCallback(async () => {
-    try {
-      const version = await getAppVersion();
-      setCurrentVersion(version);
-    } catch (error) {
-      logger.warn('[Settings] Unable to load app version', error);
-    }
-  }, []);
-
-  const handleCheckForUpdates = useCallback(async (): Promise<{version: string} | null> => {
-    const update = await checkAppUpdate({ timeout: 10000 });
-    if (update) {
-      return { version: update.version };
-    }
-    return null;
-  }, []);
-
   if (!open) {
     return null;
-  }
-
-  async function refreshPlugins() {
-    try {
-      setPluginsLoading(true);
-      setPluginsError(undefined);
-      setPluginRegistry(await refreshPluginRegistry());
-    } catch (pluginError) {
-      const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
-      setPluginsError(message);
-      showToast({ kind: 'warning', title: t.plugins.loadFailed, message });
-    } finally {
-      setPluginsLoading(false);
-    }
-  }
-
-  async function refreshPluginCatalog() {
-    try {
-      setPluginCatalogLoading(true);
-      setPluginCatalogError(undefined);
-      setPluginCatalog(await loadPluginCatalog());
-    } catch (catalogError) {
-      const message = catalogError instanceof Error ? catalogError.message : t.plugins.catalogLoadFailedMessage;
-      setPluginCatalogError(message);
-    } finally {
-      setPluginCatalogLoading(false);
-    }
-  }
-
-  function showCurrentPlugins() {
-    const snapshot = getPluginRegistrySnapshot();
-    if (snapshot) {
-      setPluginsError(undefined);
-      setPluginRegistry(snapshot);
-      return;
-    }
-    void refreshPlugins();
-  }
-
-  async function installMarketPlugin(entry: PluginCatalogEntry) {
-    try {
-      setInstallingPluginId(entry.id);
-      setPluginsError(undefined);
-      await installCatalogPlugin(entry);
-      setPluginRegistry(await refreshPluginRegistry());
-      showToast({ kind: 'info', title: t.plugins.installComplete, message: entry.name });
-    } catch (pluginError) {
-      const message = pluginError instanceof Error ? pluginError.message : t.plugins.installFailedMessage;
-      setPluginsError(message);
-      showToast({ kind: 'warning', title: t.plugins.installFailed, message });
-    } finally {
-      setInstallingPluginId(undefined);
-    }
-  }
-
-  async function installPluginFile() {
-    try {
-      const paths = await openFileDialog(false, [{ name: t.plugins.fileInstallFilter, extensions: ['js'] }]);
-      const sourcePath = paths[0];
-      if (!sourcePath) {
-        return;
-      }
-      setPluginsError(undefined);
-      await installPluginFromFile(sourcePath);
-      setPluginRegistry(await refreshPluginRegistry());
-      showToast({ kind: 'info', title: t.plugins.installComplete, message: sourcePath });
-    } catch (pluginError) {
-      const message = pluginError instanceof Error ? pluginError.message : t.plugins.installFailedMessage;
-      setPluginsError(message);
-      showToast({ kind: 'warning', title: t.plugins.installFailed, message });
-    }
-  }
-
-  async function togglePlugin(entry: LoadedPlugin) {
-    try {
-      const nextRegistry = setPluginEnabled(entry.plugin.id, !entry.enabled);
-      setPluginRegistry(nextRegistry ?? (await refreshPluginRegistry()));
-      showToast({
-        kind: 'info',
-        title: entry.enabled ? t.plugins.disabledTitle : t.plugins.enabledTitle,
-        message: entry.plugin.name,
-      });
-    } catch (pluginError) {
-      const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
-      setPluginsError(message);
-      showToast({ kind: 'warning', title: t.plugins.loadFailed, message });
-    }
-  }
-
-  async function removePlugin(entry: LoadedPlugin) {
-    try {
-      setPluginsLoading(true);
-      setPluginsError(undefined);
-      setPluginRegistry(await uninstallPlugin(entry.sourcePath));
-    } catch (pluginError) {
-      const message = pluginError instanceof Error ? pluginError.message : t.plugins.uninstallFailedMessage;
-      setPluginsError(message);
-      showToast({ kind: 'warning', title: t.plugins.uninstallFailed, message });
-    } finally {
-      setPluginsLoading(false);
-    }
   }
 
   function close() {
@@ -432,315 +357,6 @@ export function SettingsDialog({
         kind: 'warning',
         title: t.exportPresetSync.saveFailed,
         message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage,
-      });
-    }
-  }
-
-  async function loadPresetMarketPanel() {
-    try {
-      setPresetMarketLoading(true);
-      setPresetMarketWarning(undefined);
-      const [market, ratings] = await Promise.all([loadPresetMarket(), readPresetMarketRatings()]);
-      setPresetMarketCards(market.cards);
-      setPresetMarketRatings(ratings);
-      setPresetMarketSource(market.source);
-      setPresetMarketWarning(market.warning);
-      if (market.source === 'empty' && market.warning) {
-        showToast({ kind: 'warning', title: zhCN.presetMarket.loadFailed, message: market.warning });
-      }
-    } catch (marketError) {
-      const message = marketError instanceof Error ? marketError.message : zhCN.presetMarket.loadFailedMessage;
-      setPresetMarketCards([]);
-      setPresetMarketSource('empty');
-      setPresetMarketWarning(message);
-      showToast({ kind: 'warning', title: zhCN.presetMarket.loadFailed, message });
-    } finally {
-      setPresetMarketLoading(false);
-    }
-  }
-
-  async function loadEffectPresetLibraryPanel() {
-    try {
-      setEffectPresetLoading(true);
-      setEffectPresetWarning(undefined);
-      const library = await loadEffectPresetCommunityLibrary();
-      setEffectPresetCards(library.cards);
-      setEffectPresetSource(library.source);
-      setEffectPresetWarning(library.warning);
-      if (library.source === 'empty' && library.warning) {
-        showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.loadFailed, message: library.warning });
-      }
-    } catch (libraryError) {
-      const message = libraryError instanceof Error ? libraryError.message : zhCN.effectPresetLibrary.loadFailedMessage;
-      setEffectPresetCards([]);
-      setEffectPresetSource('empty');
-      setEffectPresetWarning(message);
-      showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.loadFailed, message });
-    } finally {
-      setEffectPresetLoading(false);
-    }
-  }
-
-  async function loadTimelineScriptsPanel() {
-    try {
-      const files = await loadTimelineScripts();
-      setTimelineScripts(files);
-    } catch (scriptError) {
-      showToast({
-        kind: 'warning',
-        title: t.scripts.loadFailed,
-        message: scriptError instanceof Error ? scriptError.message : t.scripts.loadFailedMessage,
-      });
-    }
-  }
-
-  function selectBuiltinTimelineScript(script: BuiltinTimelineScript) {
-    const label = t.scripts.examples[script.id as keyof typeof t.scripts.examples];
-    setSelectedTimelineScriptId(script.id);
-    setTimelineScriptName(label.name);
-    setTimelineScriptCode(script.code);
-    setTimelineScriptPath(undefined);
-    setTimelineScriptError(undefined);
-    setTimelineScriptOutput([]);
-  }
-
-  function selectTimelineScriptFile(file: TimelineScriptFile) {
-    setSelectedTimelineScriptId(file.id);
-    setTimelineScriptName(file.name);
-    setTimelineScriptCode(file.code);
-    setTimelineScriptPath(file.path);
-    setTimelineScriptError(undefined);
-    setTimelineScriptOutput([]);
-  }
-
-  function createNewTimelineScript() {
-    setSelectedTimelineScriptId('draft-script');
-    setTimelineScriptName(t.scripts.defaultScriptName);
-    setTimelineScriptCode('');
-    setTimelineScriptPath(undefined);
-    setTimelineScriptError(undefined);
-    setTimelineScriptOutput([]);
-  }
-
-  async function saveCurrentTimelineScript() {
-    try {
-      const saved = await saveTimelineScript(timelineScriptName, timelineScriptCode, timelineScriptPath);
-      setTimelineScripts((files) =>
-        [saved, ...files.filter((file) => file.path !== saved.path && file.path !== timelineScriptPath)].sort(
-          (left, right) => left.name.localeCompare(right.name),
-        ),
-      );
-      selectTimelineScriptFile(saved);
-      showToast({ kind: 'success', title: t.scripts.saved, message: saved.name });
-    } catch (saveError) {
-      showToast({
-        kind: 'warning',
-        title: t.scripts.saveFailed,
-        message: saveError instanceof Error ? saveError.message : t.scripts.saveFailedMessage,
-      });
-    }
-  }
-
-  async function deleteCurrentTimelineScript() {
-    if (!timelineScriptPath) {
-      return;
-    }
-    try {
-      await deleteTimelineScript(timelineScriptPath);
-      setTimelineScripts((files) => files.filter((file) => file.path !== timelineScriptPath));
-      if (firstBuiltinScript) {
-        selectBuiltinTimelineScript(firstBuiltinScript);
-      } else {
-        createNewTimelineScript();
-      }
-      showToast({ kind: 'success', title: t.scripts.deleted });
-    } catch (deleteError) {
-      showToast({
-        kind: 'warning',
-        title: t.scripts.deleteFailed,
-        message: deleteError instanceof Error ? deleteError.message : t.scripts.deleteFailedMessage,
-      });
-    }
-  }
-
-  async function importTimelineScript() {
-    try {
-      const imported = await importTimelineScriptFromDialog();
-      if (!imported) {
-        return;
-      }
-      setTimelineScripts((files) =>
-        [imported, ...files.filter((file) => file.path !== imported.path)].sort((left, right) =>
-          left.name.localeCompare(right.name),
-        ),
-      );
-      selectTimelineScriptFile(imported);
-      showToast({ kind: 'success', title: t.scripts.imported, message: imported.name });
-    } catch (importError) {
-      showToast({
-        kind: 'warning',
-        title: t.scripts.importFailed,
-        message: importError instanceof Error ? importError.message : t.scripts.importFailedMessage,
-      });
-    }
-  }
-
-  async function exportTimelineScript() {
-    try {
-      const outputPath = await exportTimelineScriptToDialog(timelineScriptName, timelineScriptCode);
-      if (outputPath) {
-        showToast({ kind: 'success', title: t.scripts.exported, message: outputPath });
-      }
-    } catch (exportError) {
-      showToast({
-        kind: 'warning',
-        title: t.scripts.exportFailed,
-        message: exportError instanceof Error ? exportError.message : t.scripts.exportFailedMessage,
-      });
-    }
-  }
-
-  async function runCurrentTimelineScript() {
-    try {
-      setTimelineScriptRunning(true);
-      setTimelineScriptError(undefined);
-      setTimelineScriptOutput([]);
-      const result = await runTimelineScriptInWorker({
-        script: timelineScriptCode,
-        snapshot: createTimelineScriptSnapshot(project),
-      });
-      const exportRequests = getTimelineScriptExportRequests(result.operations);
-      const timelineOperations = result.operations.filter(
-        (operation): operation is Exclude<TimelineScriptOperation, { type: 'exportProject' }> =>
-          operation.type !== 'exportProject',
-      );
-      if (timelineOperations.length > 0) {
-        commandManager.execute(new RunScriptCommand(timelineAccessor, timelineOperations, t.scripts.runCommand));
-      }
-      setTimelineScriptOutput([
-        ...result.logs,
-        t.scripts.operationSummary(timelineOperations.length),
-        ...(exportRequests.length > 0 ? [t.scripts.exportSummary(exportRequests.length)] : []),
-        t.scripts.elapsed(result.durationMs),
-      ]);
-    } catch (scriptError) {
-      const message = scriptError instanceof Error ? scriptError.message : t.scripts.runFailedMessage;
-      setTimelineScriptError(message);
-      setTimelineScriptOutput([message]);
-      showToast({ kind: 'warning', title: t.scripts.runFailed, message });
-    } finally {
-      setTimelineScriptRunning(false);
-    }
-  }
-
-  async function installMarketPreset(card: PresetMarketCard) {
-    try {
-      setInstallingPresetMarketCardId(card.id);
-      const existingPresets = await loadExportPresets();
-      let conflictMode: 'rename' | 'overwrite' = 'rename';
-      if (presetMarketCardHasCustomConflict(card, existingPresets)) {
-        const overwrite = await bridgeConfirm(zhCN.presetMarket.overwriteConfirm(card.name));
-        if (!overwrite) {
-          return;
-        }
-        conflictMode = 'overwrite';
-      }
-      const result = await installPresetMarketCard(card, conflictMode);
-      showToast({
-        kind: 'success',
-        title: zhCN.presetMarket.installed,
-        message: zhCN.presetMarket.installedMessage(result.imported, result.overwritten),
-      });
-    } catch (installError) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.presetMarket.installFailed,
-        message: installError instanceof Error ? installError.message : zhCN.presetMarket.installFailedMessage,
-      });
-    } finally {
-      setInstallingPresetMarketCardId(undefined);
-    }
-  }
-
-  async function installEffectPreset(card: EffectPresetCommunityCard) {
-    try {
-      setInstallingEffectPresetCardId(card.id);
-      const path = await installEffectPresetCommunityCard(card);
-      showToast({ kind: 'success', title: zhCN.effectPresetLibrary.installed, message: path });
-    } catch (installError) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.effectPresetLibrary.installFailed,
-        message: installError instanceof Error ? installError.message : zhCN.effectPresetLibrary.installFailedMessage,
-      });
-    } finally {
-      setInstallingEffectPresetCardId(undefined);
-    }
-  }
-
-  async function ratePresetMarketCard(cardId: string, rating: number) {
-    try {
-      setPresetMarketRatings(await writePresetMarketRating(cardId, rating));
-    } catch (ratingError) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.presetMarket.ratingFailed,
-        message: ratingError instanceof Error ? ratingError.message : zhCN.presetMarket.ratingFailedMessage,
-      });
-    }
-  }
-
-  async function shareCustomExportPresets() {
-    try {
-      const presets = (await loadExportPresets()).filter((preset) => !preset.builtin);
-      if (presets.length === 0) {
-        showToast({ kind: 'info', title: zhCN.presetMarket.shareEmpty });
-        return;
-      }
-      await navigator.clipboard.writeText(
-        serializeExportPresetPackage(presets, { creator: zhCN.presetMarket.localAuthor }),
-      );
-      showToast({
-        kind: 'success',
-        title: zhCN.presetMarket.shared,
-        message: zhCN.presetMarket.sharedMessage(presets.length),
-      });
-    } catch (shareError) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.presetMarket.shareFailed,
-        message: shareError instanceof Error ? shareError.message : zhCN.presetMarket.shareFailedMessage,
-      });
-    }
-  }
-
-  async function shareSelectedEffectPreset() {
-    try {
-      if (!selectedClip) {
-        showToast({
-          kind: 'info',
-          title: zhCN.effectPresetLibrary.noClipSelected,
-          message: zhCN.effectPresetLibrary.noClipSelectedMessage,
-        });
-        return;
-      }
-      const preset = createEffectPresetFromClip(selectedClip, {
-        id: `${selectedClip.id}-effect-preset`,
-        name: selectedClip.name || zhCN.effectPresetLibrary.defaultPresetName,
-        author: zhCN.effectPresetLibrary.localAuthor,
-        tags: [],
-      });
-      await navigator.clipboard.writeText(serializeEffectPresetFile(preset));
-      showToast({
-        kind: 'success',
-        title: zhCN.effectPresetLibrary.shared,
-        message: zhCN.effectPresetLibrary.sharedMessage,
-      });
-    } catch (shareError) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.effectPresetLibrary.shareFailed,
-        message: shareError instanceof Error ? shareError.message : zhCN.effectPresetLibrary.shareFailedMessage,
       });
     }
   }
@@ -842,98 +458,6 @@ export function SettingsDialog({
         message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage,
       });
     }
-  }
-
-  async function loadLocalModelsSettings() {
-    try {
-      const settings = await readLocalAiModelsSettings();
-      setLocalModelsSettings(settings);
-      syncLocalModelStores(settings);
-      await refreshLocalModelStatuses(settings);
-    } catch (modelError) {
-      showToast({
-        kind: 'warning',
-        title: t.localModels.saveFailed,
-        message: modelError instanceof Error ? modelError.message : t.localModels.saveFailedMessage,
-      });
-    }
-  }
-
-  async function refreshLocalModelStatuses(settings = localModelsSettings) {
-    const entries = await Promise.all(
-      LOCAL_AI_MODEL_IDS.map(
-        async (id) =>
-          [
-            id,
-            await resolveLocalModelStatus(id, settings[id], {
-              exists: fsExists,
-              stat: getFileStat,
-            }).catch((): LocalAiModelResolvedStatus => ({
-              id,
-              status: 'invalid',
-              path: settings[id]?.path,
-              reason: 'size',
-            })),
-          ] as const,
-      ),
-    );
-    setLocalModelStatuses(Object.fromEntries(entries) as Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>);
-  }
-
-  async function chooseLocalModelFile(id: LocalAiModelId) {
-    const definition = LOCAL_AI_MODEL_DEFINITIONS[id];
-    try {
-      const [path] = await openFileDialog(false, [
-        { name: t.localModels.models[id].name, extensions: definition.extensions },
-      ]);
-      if (!path) {
-        return;
-      }
-      const stat = await getFileStat(path);
-      if (!isLocalModelFileSizeValid(id, stat.size)) {
-        showToast({
-          kind: 'warning',
-          title: t.localModels.invalidFileTitle,
-          message: t.localModels.invalidFileSize(formatBytes(definition.minBytes), formatBytes(definition.maxBytes)),
-        });
-        return;
-      }
-      const nextSettings: LocalAiModelsSettings = {
-        ...localModelsSettings,
-        [id]: {
-          ...(localModelsSettings[id] ?? {}),
-          path,
-          version: definition.version,
-        },
-      };
-      const saved = await saveLocalAiModelsSettings(nextSettings);
-      setLocalModelsSettings(saved);
-      syncLocalModelStores(saved);
-      await refreshLocalModelStatuses(saved);
-      showToast({ kind: 'success', title: t.localModels.savedTitle, message: t.localModels.models[id].name });
-    } catch (modelError) {
-      showToast({
-        kind: 'warning',
-        title: t.localModels.chooseFailed,
-        message: modelError instanceof Error ? modelError.message : t.localModels.chooseFailedMessage,
-      });
-    }
-  }
-
-  function syncLocalModelStores(settings: LocalAiModelsSettings) {
-    if (settings.whisper?.path) {
-      setWhisperModelPath(settings.whisper.path);
-    }
-    if (settings.demucs?.path && settings.demucs.path !== demucsExecutablePath) {
-      setDemucsExecutablePath(settings.demucs.path);
-    }
-    if (settings.yunet?.path && settings.yunet.path !== privacyDetectionModelPath) {
-      setPrivacyDetectionModelPath(settings.yunet.path);
-    }
-  }
-
-  function openLocalModelDownload(id: LocalAiModelId) {
-    void openPath(LOCAL_AI_MODEL_DEFINITIONS[id].downloadUrl);
   }
 
   async function saveAutomationRulesFromJson() {
@@ -1132,65 +656,6 @@ export function SettingsDialog({
         message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage,
       });
     }
-  }
-
-  function hydrateThemeForm(settings: ThemeSettings) {
-    const normalized = getCurrentThemeSettings();
-    const nextSettings = settings ?? normalized;
-    const activeCustomTheme = nextSettings.customThemes.find((theme) => theme.id === nextSettings.activeThemeId);
-    const resolved = resolveTheme(nextSettings);
-    setThemeSettingsState(nextSettings);
-    setCustomThemeName(activeCustomTheme?.name ?? t.appearance.defaultCustomName);
-    setCustomThemeColors(activeCustomTheme?.colors ?? extractCustomThemeColors(resolved));
-  }
-
-  async function updateThemeSettings(nextSettings: ThemeSettings) {
-    setThemeSettingsState(nextSettings);
-    try {
-      await setThemeSettings(nextSettings);
-    } catch (themeError) {
-      showToast({
-        kind: 'warning',
-        title: t.appearance.saveFailed,
-        message: themeError instanceof Error ? themeError.message : t.appearance.saveFailedMessage,
-      });
-    }
-  }
-
-  async function selectTheme(themeId: string) {
-    const nextSettings: ThemeSettings = {
-      ...themeSettings,
-      activeThemeId: themeId,
-    };
-    hydrateThemeForm(nextSettings);
-    await updateThemeSettings(nextSettings);
-  }
-
-  async function saveCustomTheme() {
-    const activeCustomTheme = themeSettings.customThemes.find((theme) => theme.id === themeSettings.activeThemeId);
-    const result = upsertCustomTheme(themeSettings, {
-      id: activeCustomTheme?.id,
-      name: customThemeName,
-      colors: customThemeColors,
-    });
-    hydrateThemeForm(result.settings);
-    await updateThemeSettings(result.settings);
-  }
-
-  async function removeCustomTheme() {
-    if (isBuiltinThemeId(themeSettings.activeThemeId)) {
-      return;
-    }
-    const nextSettings = deleteCustomTheme(themeSettings, themeSettings.activeThemeId);
-    hydrateThemeForm(nextSettings);
-    await updateThemeSettings(nextSettings);
-  }
-
-  function updateCustomThemeColor(key: keyof CustomThemeColors, value: string) {
-    setCustomThemeColors((current) => ({
-      ...current,
-      [key]: value,
-    }));
   }
 
   async function chooseBackupDirectory() {
@@ -1562,7 +1027,7 @@ export function SettingsDialog({
             {tab === 'appearance' ? (
               <AppearanceSettingsPanel
                 settings={themeSettings}
-                activeTheme={activeTheme}
+                activeTheme={resolveTheme(themeSettings)}
                 liveTheme={currentTheme}
                 customName={customThemeName}
                 customColors={customThemeColors}
