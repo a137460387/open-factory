@@ -2,7 +2,7 @@
  * Validation types and helper functions for graph validation.
  */
 
-import type {NodePort, WorkflowGraph} from '../node-editor-types';
+import type {NodePort, NodeDefinition, WorkflowNode, WorkflowGraph} from '../node-editor-types';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -90,4 +90,47 @@ export function hasCycles(graph: WorkflowGraph): boolean {
   }
 
   return false;
+}
+
+// ─── Full Graph Validation ────────────────────────────────────────────────
+
+/** Validate graph nodes and structure. */
+export function validateGraphData(
+  nodes: WorkflowNode[],
+  connections: Array<{sourceNodeId: string; targetNodeId: string; targetPortId: string}>,
+  getNodeDef: (type: string) => NodeDefinition | undefined,
+  getIncoming: (nodeId: string) => Array<{targetPortId: string}>,
+): ValidationResult {
+  const errors: ValidationError[] = [];
+  const warnings: ValidationWarning[] = [];
+
+  for (const node of nodes) {
+    const def = getNodeDef(node.type);
+    if (!def) {
+      errors.push({ nodeId: node.id, message: `Unknown node type: ${node.type}` });
+      continue;
+    }
+
+    const requiredInputs = def.inputs.filter(p => p.required);
+    const incoming = getIncoming(node.id);
+
+    for (const input of requiredInputs) {
+      if (!incoming.some(c => c.targetPortId === input.id)) {
+        warnings.push({
+          nodeId: node.id,
+          message: `Required input "${input.name}" is not connected`,
+        });
+      }
+    }
+  }
+
+  if (hasCycles({
+    id: '', name: '', description: '', version: '', createdAt: '', updatedAt: '',
+    nodes, connections: connections as WorkflowGraph['connections'],
+    viewport: {x: 0, y: 0, zoom: 1}, tags: [],
+  })) {
+    errors.push({ nodeId: '', message: 'Graph contains cycles' });
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
 }

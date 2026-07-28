@@ -33,8 +33,8 @@ interface EffectsInput {
   bookmarkPanelOpen: boolean;
 
   // Other
-  whisperExecutablePath: string | undefined;
-  whisperModelPath: string | undefined;
+  whisperExecutablePath: string;
+  whisperModelPath: string;
   heatmapWorkerRef: React.MutableRefObject<Worker | null>;
   heatmapRequestIdRef: React.MutableRefObject<number>;
 

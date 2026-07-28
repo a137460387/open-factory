@@ -1,6 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 import {
   expandAudioVisualizationTheme,
+  normalizeSubtitleLanguage,
+  normalizeSubtitleLanguageList,
   type AudioVisualizationThemeDefinition,
   type CustomAudioVisualizationTheme,
   type ExportAudioVisualizationBackground,
@@ -12,6 +14,7 @@ import {
   AUDIO_VISUALIZATION_STYLES,
   DEFAULT_AUDIO_VISUALIZATION,
   MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+  type SubtitleLanguageOption,
 } from './constants';
 import {
   normalizeAudioVisualizationDraft,

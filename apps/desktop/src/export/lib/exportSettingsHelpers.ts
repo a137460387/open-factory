@@ -1,5 +1,6 @@
 // Barrel re-export – all public API preserved.
-// Split into: constants, draft-normalizers, update-helpers, watermark-helpers, project-helpers.
+// Split into: constants, draft-normalizers, format-updates, audio-vis-updates,
+//             settings-updates, watermark-helpers, project-helpers.
 
 export {
   WATERMARK_POSITIONS,
@@ -34,6 +35,9 @@ export {
   updateStringSetting,
   updateOutputMode,
   updateFormat,
+} from './format-updates';
+
+export {
   updateAudioVisualizationStyle,
   updateAudioVisualizationTheme,
   updateAudioVisualizationColor,
@@ -45,6 +49,9 @@ export {
   updateExportSidecarSubtitle,
   updateSubtitleLanguageSelection,
   updateSubtitleBurnInLanguage,
+} from './audio-vis-updates';
+
+export {
   updateScaleMode,
   updateTargetAspectRatio,
   updateReframeOffset,
@@ -83,7 +90,7 @@ export {
   updateTextWatermarkFont,
   updateTextWatermarkColor,
   updateTextWatermarkSize,
-} from './update-helpers';
+} from './settings-updates';
 
 export {
   countSpatialDenoiseClips,

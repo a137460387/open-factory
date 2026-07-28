@@ -10,7 +10,6 @@ import type {
   WorkflowNode,
   NodeConnection,
   NodeDefinition,
-  NodePort,
   NodeCategory,
   NodeEditorState,
 } from '../node-editor-types';
@@ -18,7 +17,7 @@ import {BUILTIN_NODES} from './builtin-nodes';
 import {
   arePortsCompatible,
   wouldCreateCycle,
-  hasCycles,
+  validateGraphData,
   type ValidationResult,
 } from './validation';
 import {
@@ -247,35 +246,12 @@ export class NodeEditorEngine {
 
   /** Validate the entire graph */
   validateGraph(): ValidationResult {
-    const errors: Array<{nodeId: string; message: string}> = [];
-    const warnings: Array<{nodeId: string; message: string}> = [];
-
-    for (const node of this.graph.nodes) {
-      const def = this.getNodeDefinition(node.type);
-      if (!def) {
-        errors.push({ nodeId: node.id, message: `Unknown node type: ${node.type}` });
-        continue;
-      }
-
-      const requiredInputs = def.inputs.filter(p => p.required);
-      const connections = this.getIncomingConnections(node.id);
-
-      for (const input of requiredInputs) {
-        const hasConnection = connections.some(c => c.targetPortId === input.id);
-        if (!hasConnection) {
-          warnings.push({
-            nodeId: node.id,
-            message: `Required input "${input.name}" is not connected`,
-          });
-        }
-      }
-    }
-
-    if (hasCycles(this.graph)) {
-      errors.push({ nodeId: '', message: 'Graph contains cycles' });
-    }
-
-    return { valid: errors.length === 0, errors, warnings };
+    return validateGraphData(
+      this.graph.nodes,
+      this.graph.connections,
+      (type) => this.getNodeDefinition(type),
+      (nodeId) => this.getIncomingConnections(nodeId),
+    );
   }
 
   // ─── Execution Order ─────────────────────────────────────────────────────
