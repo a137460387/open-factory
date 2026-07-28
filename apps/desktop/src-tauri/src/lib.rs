@@ -1,7 +1,10 @@
 mod commands;
 pub mod db;
+pub mod gpu_detect;
 pub mod input_validator;
+pub mod ltx_video;
 pub mod migrations;
+pub mod model_downloader;
 pub mod net_guard;
 pub mod observability;
 pub mod path_validator;
@@ -233,6 +236,15 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             commands::audio_rhythm::compute_fft_magnitudes,
             commands::visual_highlight::detect_visual_highlights_command,
             commands::visual_highlight::merge_visual_with_audio_beats,
+            ltx_video::commands::generate_video,
+            ltx_video::commands::get_generation_status,
+            ltx_video::commands::cancel_generation,
+            model_downloader::commands::download_model,
+            model_downloader::commands::list_local_models,
+            model_downloader::commands::delete_model,
+            model_downloader::commands::get_remote_model_info,
+            model_downloader::commands::list_remote_models,
+            gpu_detect::commands::detect_gpu,
             get_app_version,
             check_for_updates,
             run_migrations,
