@@ -158,6 +158,7 @@ pub fn download_model(
 }
 
 /// Downloads a single file with progress reporting and resume support.
+#[allow(clippy::too_many_arguments)]
 fn download_file_with_progress(
     app: &AppHandle,
     repo_id: &str,

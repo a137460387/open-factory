@@ -166,9 +166,10 @@ pub fn start_generation(
         .is_some();
 
     if !has_safetensors {
-        return Err(format!(
+        return Err(
             "Model directory exists but contains no model weights. Please re-download the model."
-        ));
+                .to_string(),
+        );
     }
 
     // Build command
@@ -329,11 +330,35 @@ pub fn start_generation(
                         .collect::<Vec<_>>()
                         .join("\n");
                     let error = format!("LTX-Video exited with status {}.\n{}", status, tail);
+
+                    // Clean up partial output file on crash
+                    if let Ok(output_dir) = resolve_output_dir(&app_for_wait) {
+                        let output_path =
+                            generate_output_path(&output_dir, &task_id_for_wait);
+                        if output_path.exists() {
+                            let _ = std::fs::remove_file(&output_path);
+                            tracing::info!(
+                                "Cleaned up partial output: {}",
+                                output_path.display()
+                            );
+                        }
+                    }
+
                     update_task_status(&task_id_for_wait, "failed", None, Some(error));
                     emit_completion(&app_for_wait, &task_id_for_wait, "failed", None);
                 }
                 Err(e) => {
                     let error = format!("Failed to wait for LTX-Video process: {}", e);
+
+                    // Clean up partial output file on error
+                    if let Ok(output_dir) = resolve_output_dir(&app_for_wait) {
+                        let output_path =
+                            generate_output_path(&output_dir, &task_id_for_wait);
+                        if output_path.exists() {
+                            let _ = std::fs::remove_file(&output_path);
+                        }
+                    }
+
                     update_task_status(&task_id_for_wait, "failed", None, Some(error));
                     emit_completion(&app_for_wait, &task_id_for_wait, "failed", None);
                 }

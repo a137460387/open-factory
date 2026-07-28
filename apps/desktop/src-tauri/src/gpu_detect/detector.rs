@@ -105,7 +105,7 @@ fn get_cuda_version() -> Option<String> {
             // Format: "CUDA Version: 12.2"
             if let Some(pos) = line.find("CUDA Version:") {
                 let rest = &line[pos + "CUDA Version:".len()..];
-                let version = rest.trim().split_whitespace().next()?;
+                let version = rest.split_whitespace().next()?;
                 return Some(version.to_string());
             }
         }

@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import {
+  saveTaskProgress,
+  deleteTaskProgress,
+  markActiveTasksAsFailed,
+  type TaskProgressEntry,
+} from '../lib/generation-history-db';
+import { showToast } from '../lib/toast';
 
 /** Video generation request parameters */
 export interface VideoGenerationParams {
@@ -113,6 +120,19 @@ export function useVideoGeneration() {
 
   // Listen for progress events
   useEffect(() => {
+    // Crash recovery: mark orphaned running tasks as failed
+    markActiveTasksAsFailed().then((orphaned) => {
+      for (const task of orphaned) {
+        showToast({
+          kind: 'warning',
+          title: 'Generation interrupted',
+          message: `Task "${task.prompt.slice(0, 50)}" was interrupted. Please try again.`,
+        });
+      }
+    }).catch(() => {
+      // DB errors are non-critical
+    });
+
     const unlistenProgress = listen<LtxProgressPayload>('ltx-video-progress', (event) => {
       const { progress, stage } = event.payload;
       setState((prev) => ({
@@ -121,10 +141,26 @@ export function useVideoGeneration() {
         stage,
         status: 'running',
       }));
+
+      // Persist progress to IndexedDB
+      const taskId = event.payload.taskId;
+      if (taskId) {
+        saveTaskProgress({
+          taskId,
+          status: 'running',
+          progress,
+          stage,
+          prompt: '',
+          startedAt: startTimeRef.current ?? Date.now(),
+          updatedAt: Date.now(),
+        }).catch(() => {
+          // Non-critical
+        });
+      }
     });
 
     const unlistenCompleted = listen<LtxCompletedPayload>('ltx-video-completed', (event) => {
-      const { status, videoPath } = event.payload;
+      const { status, videoPath, taskId } = event.payload;
       const durationMs = startTimeRef.current
         ? Date.now() - startTimeRef.current
         : null;
@@ -152,6 +188,13 @@ export function useVideoGeneration() {
           status: 'canceled',
           durationMs,
         }));
+      }
+
+      // Clean up task progress from IndexedDB on terminal state
+      if (taskId) {
+        deleteTaskProgress(taskId).catch(() => {
+          // Non-critical
+        });
       }
     });
 
@@ -191,6 +234,19 @@ export function useVideoGeneration() {
         taskId: response.taskId,
         status: 'running',
       }));
+
+      // Persist initial task progress
+      saveTaskProgress({
+        taskId: response.taskId,
+        status: 'running',
+        progress: 0,
+        stage: 'starting',
+        prompt: params.prompt,
+        startedAt: Date.now(),
+        updatedAt: Date.now(),
+      }).catch(() => {
+        // Non-critical
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       const errorType = classifyError(message);

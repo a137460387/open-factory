@@ -9,3 +9,8 @@ export type { ModelManagerProps } from './ModelManager';
 
 export { GpuInfoPanel } from './GpuInfoPanel';
 export type { GpuInfoPanelProps } from './GpuInfoPanel';
+
+export { PresetSelector } from './PresetSelector';
+export type { PresetSelectorProps } from './PresetSelector';
+
+export { useVideoImport } from '../../hooks/useVideoImport';

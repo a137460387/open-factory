@@ -20,6 +20,8 @@ import {
 import { useGpuDetect } from '../../hooks/useGpuDetect';
 import { useModelManager } from '../../hooks/useModelManager';
 import { useVideoImport } from '../../hooks/useVideoImport';
+import { PresetSelector } from './PresetSelector';
+import type { VideoPreset } from '../../lib/video-presets';
 
 /** VideoGenerationPanel props */
 export interface VideoGenerationPanelProps {
@@ -70,6 +72,8 @@ export function VideoGenerationPanel({
 
   const { state: gpuState, isGpuAvailable, isPytorchCompatible } = useGpuDetect();
   const { state: modelState, loadLocalModels } = useModelManager();
+  const { importToTimeline, revealInExplorer } = useVideoImport();
+  const [importing, setImporting] = useState(false);
 
   const [prompt, setPrompt] = useState(initialPrompt);
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -80,6 +84,15 @@ export function VideoGenerationPanel({
   const [resolution, setResolution] = useState(720);
   const [fps] = useState(24);
   const [seed, setSeed] = useState<string>('');
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>('builtin-standard');
+
+  const handlePresetChange = useCallback((preset: VideoPreset) => {
+    setSelectedPresetId(preset.id);
+    setResolution(preset.params.resolution);
+    setNumFrames(preset.params.numFrames);
+    setSteps(preset.params.steps);
+    setCfgScale(preset.params.cfgScale);
+  }, []);
 
   // Check if a model is available
   const hasModel = modelState.localModels.length > 0;
@@ -112,6 +125,16 @@ export function VideoGenerationPanel({
       onComplete(state.videoPath);
     }
   }, [state.videoPath, onComplete]);
+
+  const handleImportToTimeline = useCallback(async () => {
+    if (!state.videoPath) return;
+    setImporting(true);
+    try {
+      await importToTimeline(state.videoPath);
+    } finally {
+      setImporting(false);
+    }
+  }, [state.videoPath, importToTimeline]);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -172,6 +195,15 @@ export function VideoGenerationPanel({
               </div>
             )}
           </div>
+        )}
+
+        {/* Preset Selector */}
+        {!isRunning && !isCompleted && !isFailed && !isCanceled && (
+          <PresetSelector
+            selectedPresetId={selectedPresetId}
+            onSelect={handlePresetChange}
+            currentParams={{ numFrames, resolution, fps, steps, cfgScale }}
+          />
         )}
 
         {/* Prompt */}
@@ -406,25 +438,53 @@ export function VideoGenerationPanel({
             Cancel Generation
           </button>
         ) : isCompleted ? (
-          <div className="flex gap-2">
-            <button
-              onClick={reset}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5
-                         bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              New Video
-            </button>
-            {onComplete && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
               <button
-                onClick={handleComplete}
+                onClick={handleImportToTimeline}
+                disabled={importing}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5
-                           bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors"
+                           bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500
+                           rounded-lg text-sm font-medium transition-colors"
               >
-                <CheckCircle className="w-4 h-4" />
-                Use Video
+                {importing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Import className="w-4 h-4" />
+                )}
+                Import to Timeline
               </button>
-            )}
+              {onComplete && (
+                <button
+                  onClick={handleComplete}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5
+                             bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Use Video
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={reset}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2
+                           bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                New Video
+              </button>
+              {state.videoPath && (
+                <button
+                  onClick={() => revealInExplorer(state.videoPath!)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2
+                             bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Show in Explorer
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <button

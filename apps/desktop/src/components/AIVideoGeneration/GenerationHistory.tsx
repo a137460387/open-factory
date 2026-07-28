@@ -7,8 +7,10 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  FolderOpen,
 } from 'lucide-react';
 import { useGenerationHistory } from '../../hooks/useGenerationHistory';
+import { openPath } from '../../lib/tauri-bridge/window';
 import type { GenerationHistoryEntry } from '../../lib/generation-history-db';
 
 /** GenerationHistory props */
@@ -118,6 +120,16 @@ function HistoryEntryRow({
 
   const timeAgo = formatTimeAgo(entry.createdAt);
 
+  const handleRevealInExplorer = useCallback(async () => {
+    if (!entry.videoPath) return;
+    try {
+      const dir = entry.videoPath.replace(/[/\\][^/\\]+$/, '');
+      await openPath(dir);
+    } catch {
+      // silently fail
+    }
+  }, [entry.videoPath]);
+
   return (
     <div className="group flex items-start gap-2 p-2 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
       <div className="mt-0.5 flex-shrink-0">{statusIcon}</div>
@@ -143,6 +155,15 @@ function HistoryEntryRow({
             title="Retry"
           >
             <RotateCcw className="w-3.5 h-3.5 text-gray-400 hover:text-purple-400" />
+          </button>
+        )}
+        {entry.status === 'completed' && entry.videoPath && (
+          <button
+            onClick={handleRevealInExplorer}
+            className="p-1 hover:bg-gray-700 rounded transition-colors"
+            title="Show in Explorer"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-gray-400 hover:text-blue-400" />
           </button>
         )}
         <button

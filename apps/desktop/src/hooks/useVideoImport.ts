@@ -20,12 +20,17 @@ export function useVideoImport() {
         addMedia([asset]);
 
         // Extract cover frame in background (non-blocking)
+        const outputDir = videoPath.replace(/[/\\][^/\\]+$/, '');
+        const outputStem = videoPath
+          .replace(/^.*[/\\]/, '')
+          .replace(/\.[^.]+$/, '');
         extractCoverFrames({
-          inputPath: videoPath,
-          outputDir: videoPath.replace(/[/\\][^/\\]+$/, ''),
-          timestamps: [0],
-          width: 320,
-          height: 180,
+          clipId: asset.id,
+          sourcePath: videoPath,
+          outputDir,
+          outputStem,
+          mode: 'i-frame',
+          count: 1,
         }).catch(() => {
           // Cover frame extraction is best-effort; don't block import
         });
@@ -50,7 +55,6 @@ export function useVideoImport() {
 
   const revealInExplorer = useCallback(async (filePath: string) => {
     try {
-      // openPath opens the file directly; for revealing in folder we use the directory
       const dir = filePath.replace(/[/\\][^/\\]+$/, '');
       await openPath(dir);
     } catch (error) {
