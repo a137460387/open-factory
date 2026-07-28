@@ -9,16 +9,13 @@ import {
   normalizeVfrHandlingStrategy,
   type Clip,
   type Project,
-  type ProjectColorPipeline,
   type TimecodeFormat,
 } from '@open-factory/editor-core';
-import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, switchLanguage} from '../i18n/i18next-config';
-import {zhCN, type Language} from '../i18n/strings';
+import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
+import {switchLanguage} from '../i18n/i18next-config';
 import {pickDemucsExecutablePath} from '../lib/demucs';
 import {openFileDialog, getAppVersion, checkAppUpdate} from '../lib/tauri-bridge';
 import {showToast} from '../lib/toast';
-import type {ClipMacro} from '../macros/clip-macros';
-import type {TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
 import {commandManager, projectAccessor} from '../store/commandManager';
 import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
 import {useEditorStore} from '../store/editorStore';
