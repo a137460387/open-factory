@@ -43,11 +43,9 @@ import {
   type CollaborationIdentitySettings,
   type DisplaySettings,
   type LocalCoeditingSettings,
-  type TimelineInteractionSettings,
 } from './appSettings';
 import type {TouchOptimizationSettings} from '@open-factory/editor-core';
-import {resolveTheme, type ThemeSettings} from '../theme/theme';
-import {getCurrentThemeSettings, useTheme} from '../theme/useTheme';
+import {useTheme} from '../theme/useTheme';
 import {DEFAULT_UPDATE_SETTINGS, type UpdateSettings} from '../updater/update-settings';
 import {usePluginSettings} from './usePluginSettings';
 import {usePresetMarketSettings} from './usePresetMarketSettings';

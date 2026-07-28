@@ -4,7 +4,6 @@ import {X} from 'lucide-react';
 import {BUILTIN_TIMELINE_SCRIPTS} from '@open-factory/editor-core';
 import {zhCN} from '../i18n/strings';
 import {isTauriRuntime} from '../lib/tauri';
-import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS} from '../lib/preview/preview-performance';
 import {resolveTheme} from '../theme/theme';
 import {getCurrentThemeSettings} from '../theme/useTheme';
 import {AIServicesSettingsPanel} from './AIServicesSettingsPanel';

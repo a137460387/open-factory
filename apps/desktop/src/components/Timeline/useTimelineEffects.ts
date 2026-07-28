@@ -1,6 +1,7 @@
-import {useEffect, useRef} from 'react';
+import {useEffect} from 'react';
 import {calculateTimelineHeatmap} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
+import {getWhisperAvailability} from '../../lib/whisper';
 import {showToast} from '../../lib/toast';
 import type {HeatmapWorkerResponse, TimelineStateParams} from './timelineStateTypes';
 
@@ -30,7 +31,6 @@ interface EffectsInput {
   timelineNotes: {length: number};
   timelineDuration: number;
   bookmarkPanelOpen: boolean;
-  heatmapSegments: import('@open-factory/editor-core').TimelineHeatmapSegment[];
 
   // Other
   whisperExecutablePath: string | undefined;
@@ -77,8 +77,6 @@ export function useTimelineEffects(input: EffectsInput): void {
     handlerRefs,
     sceneDetectionRequestId = 0,
   } = params;
-
-  const projectDuration = getTimelineDuration(project.timeline);
 
   // useEffect - bookmark panel auto-close annotation panel
   useEffect(() => {
@@ -277,10 +275,6 @@ export function useTimelineEffects(input: EffectsInput): void {
   // useEffect - terminate heatmap worker on unmount
   useEffect(() => () => heatmapWorkerRef.current?.terminate(), []);
 }
-
-// Import needed for getTimelineDuration and getWhisperAvailability
-import {getTimelineDuration} from '@open-factory/editor-core';
-import {getWhisperAvailability} from '../../lib/whisper';
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   const element = target instanceof HTMLElement ? target : null;
