@@ -11,6 +11,8 @@ import type {
   DemucsResult,
   GapFillMediaRequest,
   GapFillMediaResult,
+  GlitchDetectRequest,
+  GlitchDetectionResult,
   MediaAnalysis,
   MediaIntegrityScanResult,
   MediaProbe,
@@ -160,6 +162,14 @@ export async function cancelSceneDetection(taskId: string): Promise<void> {
     return mock(taskId);
   }
   return invoke<void>('cancel_scene_detection', { taskId });
+}
+
+export async function detectGlitches(request: GlitchDetectRequest): Promise<GlitchDetectionResult> {
+  const mock = getTauriMocks()?.detectGlitches;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<GlitchDetectionResult>('detect_glitches', { request });
 }
 
 export async function runWhisper(request: WhisperRequest): Promise<WhisperResult> {

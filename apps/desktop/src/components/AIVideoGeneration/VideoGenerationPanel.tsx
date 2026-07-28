@@ -13,10 +13,10 @@ import {
   Import,
 } from 'lucide-react';
 import {
-  useVideoGeneration,
-  getErrorHint,
-  type VideoGenerationParams,
-} from '../../hooks/useVideoGeneration';
+  useVideoGenQueue,
+} from '../../video-gen';
+import { getErrorHint } from '../../hooks/useVideoGeneration';
+import type { VideoGenerationParams } from '../../hooks/useVideoGeneration';
 import { useGpuDetect } from '../../hooks/useGpuDetect';
 import { useModelManager } from '../../hooks/useModelManager';
 import { useVideoImport } from '../../hooks/useVideoImport';
@@ -60,20 +60,42 @@ export function VideoGenerationPanel({
   onOpenModelManager,
 }: VideoGenerationPanelProps) {
   const {
-    state,
-    startGeneration,
-    cancelGeneration,
-    reset,
-    isRunning,
-    isCompleted,
-    isFailed,
-    isCanceled,
-  } = useVideoGeneration();
+    activeTask,
+    submit,
+    cancel,
+    clearCompleted,
+    isRunning: queueRunning,
+  } = useVideoGenQueue();
 
   const { state: gpuState, isGpuAvailable, isPytorchCompatible } = useGpuDetect();
   const { state: modelState, loadLocalModels } = useModelManager();
   const { importToTimeline, revealInExplorer } = useVideoImport();
   const [importing, setImporting] = useState(false);
+  const [lastCompletedVideoPath, setLastCompletedVideoPath] = useState<string | null>(null);
+  const [lastDurationMs, setLastDurationMs] = useState<number | null>(null);
+  const startTimerRef = React.useRef<number | null>(null);
+
+  // Derive state from active task
+  const taskStatus = activeTask?.status ?? 'idle';
+  const progress = activeTask?.progress ?? 0;
+  const stage = activeTask?.stage ?? '';
+  const videoPath = activeTask?.videoPath ?? lastCompletedVideoPath;
+  const error = activeTask?.error ?? null;
+  const errorType = activeTask?.errorType ?? null;
+  const isRunning = taskStatus === 'running';
+  const isCompleted = taskStatus === 'completed';
+  const isFailed = taskStatus === 'failed';
+  const isCanceled = taskStatus === 'canceled';
+
+  // Track completion for display after task is cleared
+  React.useEffect(() => {
+    if (activeTask?.status === 'completed' && activeTask.videoPath) {
+      setLastCompletedVideoPath(activeTask.videoPath);
+      if (startTimerRef.current) {
+        setLastDurationMs(Date.now() - startTimerRef.current);
+      }
+    }
+  }, [activeTask?.status, activeTask?.videoPath]);
 
   const [prompt, setPrompt] = useState(initialPrompt);
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -96,7 +118,7 @@ export function VideoGenerationPanel({
 
   // Check if a model is available
   const hasModel = modelState.localModels.length > 0;
-  const canGenerate = hasModel && isGpuAvailable && isPytorchCompatible && !isRunning;
+  const canGenerate = hasModel && isGpuAvailable && isPytorchCompatible && !queueRunning;
 
   // Load models on mount
   React.useEffect(() => {
@@ -117,24 +139,32 @@ export function VideoGenerationPanel({
       seed: seed.trim() ? parseInt(seed.trim(), 10) : undefined,
     };
 
-    await startGeneration(params);
-  }, [prompt, negativePrompt, numFrames, resolution, fps, steps, cfgScale, seed, startGeneration]);
+    await submit(params);
+    startTimerRef.current = Date.now();
+  }, [prompt, negativePrompt, numFrames, resolution, fps, steps, cfgScale, seed, submit]);
 
   const handleComplete = useCallback(() => {
-    if (state.videoPath && onComplete) {
-      onComplete(state.videoPath);
+    if (videoPath && onComplete) {
+      onComplete(videoPath);
     }
-  }, [state.videoPath, onComplete]);
+  }, [videoPath, onComplete]);
 
   const handleImportToTimeline = useCallback(async () => {
-    if (!state.videoPath) return;
+    if (!videoPath) return;
     setImporting(true);
     try {
-      await importToTimeline(state.videoPath);
+      await importToTimeline(videoPath);
     } finally {
       setImporting(false);
     }
-  }, [state.videoPath, importToTimeline]);
+  }, [videoPath, importToTimeline]);
+
+  const handleReset = useCallback(() => {
+    clearCompleted();
+    setLastCompletedVideoPath(null);
+    setLastDurationMs(null);
+    startTimerRef.current = null;
+  }, [clearCompleted]);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
@@ -198,7 +228,7 @@ export function VideoGenerationPanel({
         )}
 
         {/* Preset Selector */}
-        {!isRunning && !isCompleted && !isFailed && !isCanceled && (
+        {!isRunning && !isCompleted && !isFailed && !isCanceled && !lastCompletedVideoPath && (
           <PresetSelector
             selectedPresetId={selectedPresetId}
             onSelect={handlePresetChange}
@@ -362,13 +392,13 @@ export function VideoGenerationPanel({
         {isRunning && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-400 capitalize">{state.stage || 'Starting...'}</span>
-              <span className="text-gray-500">{Math.round(state.progress * 100)}%</span>
+              <span className="text-gray-400 capitalize">{stage || 'Starting...'}</span>
+              <span className="text-gray-500">{Math.round(progress * 100)}%</span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
                 className="h-full bg-purple-500 rounded-full transition-all duration-300"
-                style={{ width: `${Math.round(state.progress * 100)}%` }}
+                style={{ width: `${Math.round(progress * 100)}%` }}
               />
             </div>
           </div>
@@ -380,24 +410,24 @@ export function VideoGenerationPanel({
             <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
             <div className="text-sm">
               <p className="text-green-300">Generation complete!</p>
-              {state.durationMs && (
+              {lastDurationMs && (
                 <p className="text-xs text-green-400/70 mt-0.5">
-                  Took {(state.durationMs / 1000).toFixed(1)}s
+                  Took {(lastDurationMs / 1000).toFixed(1)}s
                 </p>
               )}
             </div>
           </div>
         )}
 
-        {isFailed && state.error && (
+        {isFailed && error && (
           <div className="space-y-1.5 p-3 bg-red-900/30 border border-red-700 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-sm text-red-300">{state.error}</p>
+              <p className="text-sm text-red-300">{error}</p>
             </div>
-            {state.errorType && (
+            {errorType && (
               <p className="text-xs text-red-400/70 pl-6">
-                {getErrorHint(state.errorType)}
+                {getErrorHint(errorType as import('../../hooks/useVideoGeneration').GenerationErrorType)}
               </p>
             )}
           </div>
@@ -411,14 +441,14 @@ export function VideoGenerationPanel({
         )}
 
         {/* Video Preview */}
-        {isCompleted && state.videoPath && (
+        {videoPath && (
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-400">
               Generated Video
             </label>
             <div className="relative bg-black rounded-lg overflow-hidden">
               <video
-                src={`asset://localhost/${state.videoPath}`}
+                src={`asset://localhost/${videoPath}`}
                 controls
                 loop
                 className="w-full max-h-64 object-contain"
@@ -432,7 +462,7 @@ export function VideoGenerationPanel({
       <div className="px-4 py-3 border-t border-gray-700 space-y-2">
         {isRunning ? (
           <button
-            onClick={cancelGeneration}
+            onClick={() => activeTask && cancel(activeTask.id)}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                        bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
           >
@@ -469,16 +499,16 @@ export function VideoGenerationPanel({
             </div>
             <div className="flex gap-2">
               <button
-                onClick={reset}
+                onClick={handleReset}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2
                            bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 New Video
               </button>
-              {state.videoPath && (
+              {videoPath && (
                 <button
-                  onClick={() => revealInExplorer(state.videoPath!)}
+                  onClick={() => revealInExplorer(videoPath)}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2
                              bg-gray-800 hover:bg-gray-700 rounded-lg text-xs text-gray-400 transition-colors"
                 >
@@ -503,7 +533,7 @@ export function VideoGenerationPanel({
 
         {(isFailed || isCanceled) && (
           <button
-            onClick={reset}
+            onClick={handleReset}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5
                        bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
           >

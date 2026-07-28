@@ -35,6 +35,8 @@ import type {
   GapFillMediaRequest,
   GapFillMediaResult,
   GifExportRequest,
+  GlitchDetectRequest,
+  GlitchDetectionResult,
   GifPreviewRequest,
   GifWorkflowResult,
   MediaAnalysis,
@@ -233,6 +235,7 @@ export type TauriMocks = Partial<{
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
   cancelSceneDetection(taskId: string): Promise<void> | void;
+  detectGlitches(request: GlitchDetectRequest): Promise<GlitchDetectionResult> | GlitchDetectionResult;
   runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
   runDemucs(request: DemucsRequest): Promise<DemucsResult> | DemucsResult;
   cancelDemucs(clipId: string): Promise<void> | void;

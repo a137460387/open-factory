@@ -313,6 +313,7 @@ export * from './ai/enhanced-dialogue-panel';
 export * from './ai/template-adapter';
 export * from './ai/rhythm-matcher';
 export * from './ai/template-recommender';
+export * from './ai/glitch-detector';
 export * from './automation';
 
 // Sprint Z: AI Quality Inspector, Resource Manager, Performance Monitor

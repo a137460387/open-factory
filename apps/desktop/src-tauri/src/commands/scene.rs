@@ -372,6 +372,242 @@ fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+// ---------------------------------------------------------------------------
+// Glitch Detection
+// ---------------------------------------------------------------------------
+
+const GLITCH_CLUSTER_WINDOW_SECONDS: f64 = 0.5;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlitchDetectRequest {
+    path: String,
+    /// Scene detection threshold (0.1-1.0, default 0.3)
+    threshold: Option<f64>,
+    /// Start time in seconds (default: beginning)
+    start_time: Option<f64>,
+    /// End time in seconds (default: end of file)
+    end_time: Option<f64>,
+    task_id: Option<String>,
+    frame_rate: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlitchItem {
+    time: f64,
+    frame: u64,
+    glitch_type: String,
+    severity: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlitchDetectionResult {
+    glitches: Vec<GlitchItem>,
+    analyzed_duration: f64,
+    limited: bool,
+}
+
+#[tauri::command]
+pub async fn detect_glitches(
+    app: AppHandle,
+    request: GlitchDetectRequest,
+) -> Result<GlitchDetectionResult, String> {
+    let safe_path = validate_path(&app, Path::new(&request.path))?;
+    // Map user threshold (0.1-1.0) to scdet threshold (1-100)
+    let scdet_threshold = map_glitch_threshold(request.threshold);
+    let frame_rate = normalize_frame_rate(request.frame_rate);
+
+    let start_time = request
+        .start_time
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .unwrap_or(0.0);
+    let end_time = request.end_time.filter(|v| v.is_finite() && *v > 0.0);
+
+    let task_id = request
+        .task_id
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| format!("glitch-{}", normalize_path(&safe_path)));
+    clear_scene_cancel_request(&task_id);
+
+    let mut command = Command::new(ffmpeg_binary());
+    command.arg("-hide_banner");
+
+    // Seek to start time if specified
+    if start_time > 0.0 {
+        command.arg("-ss").arg(format_duration_arg(start_time));
+    }
+    command.arg("-i").arg(normalize_path(&safe_path));
+
+    // Duration limit
+    if let Some(end) = end_time {
+        let duration = if start_time > 0.0 {
+            end - start_time
+        } else {
+            end
+        };
+        if duration > 0.0 {
+            command.arg("-t").arg(format_duration_arg(duration));
+        }
+    }
+
+    let analyzed_duration = end_time
+        .map(|end| (end - start_time).max(0.0))
+        .unwrap_or(0.0);
+
+    command
+        .arg("-vf")
+        .arg(build_scene_detection_filter(scdet_threshold))
+        .arg("-an")
+        .arg("-f")
+        .arg("null")
+        .arg("-")
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped());
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("Unable to start glitch detection: {}", error))?;
+
+    let stdout_handle = child.stdout.take().map(|stdout| {
+        thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            let mut scene_times = Vec::<f64>::new();
+            for line in reader.lines().map_while(Result::ok) {
+                for time in parse_scdet_scene_times(&line) {
+                    push_unique_scene_time(&mut scene_times, time);
+                }
+            }
+            scene_times
+        })
+    });
+
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Unable to capture glitch detection output.".to_string())?;
+    let reader = BufReader::new(stderr);
+    let mut scene_times = Vec::<f64>::new();
+
+    for line in reader.lines().map_while(Result::ok) {
+        for time in parse_scdet_scene_times(&line) {
+            push_unique_scene_time(&mut scene_times, time);
+        }
+        if is_scene_detection_canceled(&task_id) {
+            let _ = child.kill();
+            let _ = child.wait();
+            clear_scene_cancel_request(&task_id);
+            return Err("Glitch detection canceled.".to_string());
+        }
+    }
+
+    let status = child.wait().map_err(|error| error.to_string())?;
+    if let Some(handle) = stdout_handle {
+        for time in handle
+            .join()
+            .map_err(|_| "Unable to join glitch detection reader.".to_string())?
+        {
+            push_unique_scene_time(&mut scene_times, time);
+        }
+    }
+    clear_scene_cancel_request(&task_id);
+    if !status.success() {
+        return Err(format!(
+            "Glitch detection exited with status {}",
+            status
+        ));
+    }
+
+    // Offset scene times by start_time since we used -ss
+    let offset_times: Vec<f64> = scene_times
+        .iter()
+        .map(|t| t + start_time)
+        .collect();
+
+    let glitches = aggregate_glitches(&offset_times, frame_rate);
+    Ok(GlitchDetectionResult {
+        glitches,
+        analyzed_duration: if analyzed_duration > 0.0 {
+            analyzed_duration
+        } else {
+            offset_times.last().copied().unwrap_or(0.0)
+        },
+        limited: request.end_time.is_some(),
+    })
+}
+
+/// Map user threshold (0.1-1.0) to ffmpeg scdet threshold (1-100)
+fn map_glitch_threshold(threshold: Option<f64>) -> f64 {
+    let user_threshold = threshold
+        .filter(|v| v.is_finite())
+        .unwrap_or(0.3)
+        .clamp(0.1, 1.0);
+    // Map 0.1-1.0 to 1.0-100.0 (inverse: lower user threshold = lower scdet threshold = more sensitive)
+    user_threshold * 100.0
+}
+
+/// Aggregate nearby scene changes into glitch clusters
+fn aggregate_glitches(scene_times: &[f64], frame_rate: f64) -> Vec<GlitchItem> {
+    if scene_times.is_empty() {
+        return Vec::new();
+    }
+
+    let mut glitches = Vec::new();
+    let mut cluster_start = scene_times[0];
+    let mut cluster_times = vec![scene_times[0]];
+
+    for &time in &scene_times[1..] {
+        if time - cluster_times.last().copied().unwrap_or(0.0) <= GLITCH_CLUSTER_WINDOW_SECONDS {
+            cluster_times.push(time);
+        } else {
+            // Emit current cluster
+            emit_glitch_cluster(&cluster_times, cluster_start, frame_rate, &mut glitches);
+            cluster_start = time;
+            cluster_times = vec![time];
+        }
+    }
+    // Emit last cluster
+    emit_glitch_cluster(&cluster_times, cluster_start, frame_rate, &mut glitches);
+
+    glitches
+}
+
+fn emit_glitch_cluster(
+    cluster: &[f64],
+    cluster_start: f64,
+    frame_rate: f64,
+    output: &mut Vec<GlitchItem>,
+) {
+    let representative_time = cluster_start;
+    let frame = (representative_time * frame_rate).round() as u64;
+
+    if cluster.len() >= 3 {
+        // Multiple rapid scene changes = likely a glitch
+        output.push(GlitchItem {
+            time: representative_time,
+            frame,
+            glitch_type: "rapid_scene_change".to_string(),
+            severity: (cluster.len() as f64 / 5.0).clamp(0.3, 1.0),
+        });
+    } else if cluster.len() == 2 {
+        output.push(GlitchItem {
+            time: representative_time,
+            frame,
+            glitch_type: "scene_cut".to_string(),
+            severity: 0.5,
+        });
+    } else {
+        output.push(GlitchItem {
+            time: representative_time,
+            frame,
+            glitch_type: "scene_cut".to_string(),
+            severity: 0.3,
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,5 +669,46 @@ lavfi.scd.time: 2.5\n\
     fn limits_long_analysis_duration() {
         assert_eq!(normalize_analysis_duration(Some(120.0)), (120.0, false));
         assert_eq!(normalize_analysis_duration(Some(3700.0)), (3600.0, true));
+    }
+
+    #[test]
+    fn maps_glitch_threshold_correctly() {
+        assert!((map_glitch_threshold(Some(0.3)) - 30.0).abs() < 0.01);
+        assert!((map_glitch_threshold(Some(0.1)) - 10.0).abs() < 0.01);
+        assert!((map_glitch_threshold(Some(1.0)) - 100.0).abs() < 0.01);
+        assert!((map_glitch_threshold(None) - 30.0).abs() < 0.01);
+        // Clamping
+        assert!((map_glitch_threshold(Some(0.05)) - 10.0).abs() < 0.01);
+        assert!((map_glitch_threshold(Some(2.0)) - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn aggregates_glitches_correctly() {
+        // Single isolated scene change
+        let result = aggregate_glitches(&[1.0], 30.0);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].glitch_type, "scene_cut");
+        assert_eq!(result[0].frame, 30);
+
+        // Two nearby scene changes within cluster window
+        let result = aggregate_glitches(&[1.0, 1.3], 30.0);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].glitch_type, "scene_cut");
+        assert!((result[0].severity - 0.5).abs() < 0.01);
+
+        // Three rapid scene changes = rapid_scene_change
+        let result = aggregate_glitches(&[1.0, 1.1, 1.2], 30.0);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].glitch_type, "rapid_scene_change");
+
+        // Two clusters separated by > 0.5s
+        let result = aggregate_glitches(&[1.0, 2.0, 3.0], 30.0);
+        assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn empty_scene_times_returns_empty_glitches() {
+        let result = aggregate_glitches(&[], 30.0);
+        assert!(result.is_empty());
     }
 }

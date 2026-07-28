@@ -30,5 +30,6 @@ pub mod shared_library;
 pub mod smoke;
 pub mod spatial_audio;
 pub mod transcode;
+pub mod video_gen;
 pub mod visual_highlight;
 pub mod whisper;

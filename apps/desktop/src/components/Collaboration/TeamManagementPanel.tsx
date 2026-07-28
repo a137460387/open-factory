@@ -7,7 +7,7 @@ import React, {useState, useCallback, useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Users, UserPlus, Settings, Shield, FolderOpen, Activity, MoreVertical, Mail, Crown, Eye, Trash2, Search, Check, X, Clock, UserCheck, UserX} from 'lucide-react';
 import {cn} from '@/lib/utils';
-import {TeamManager, createTeamManager, type Team, type TeamMember, type TeamRole, type TeamInvitation, type TeamProjectShare, type TeamAuditLog} from '@open-factory/editor-core/collaboration/team/team-management';
+import {TeamManager, createTeamManager, type Team, type TeamMember, type TeamRole, type TeamInvitation, type TeamProjectShare, type TeamAuditLog} from '@open-factory/editor-core/collaboration/team-management';
 
 // ==================== 类型定义 ====================
 

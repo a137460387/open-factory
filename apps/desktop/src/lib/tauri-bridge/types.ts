@@ -546,6 +546,28 @@ export interface SceneDetectProgressEvent {
   totalFrames?: number | null;
 }
 
+export interface GlitchDetectRequest {
+  path: string;
+  threshold?: number;
+  startTime?: number;
+  endTime?: number;
+  taskId?: string;
+  frameRate?: number;
+}
+
+export interface GlitchItem {
+  time: number;
+  frame: number;
+  glitchType: string;
+  severity: number;
+}
+
+export interface GlitchDetectionResult {
+  glitches: GlitchItem[];
+  analyzedDuration: number;
+  limited: boolean;
+}
+
 export interface WhisperRequest {
   executablePath: string;
   modelPath: string;
@@ -681,4 +703,28 @@ export interface RenderPreviewCacheProgressEvent {
   projectId: string;
   progress: number;
   stage: string;
+}
+
+/** Video generation task persisted in SQLite (mirrors Rust VideoGenTaskDb) */
+export interface VideoGenTaskDb {
+  id: string;
+  status: string;
+  progress: number;
+  stage: string;
+  input_path: string | null;
+  prompt: string;
+  negative_prompt: string | null;
+  steps: number;
+  guidance_scale: number;
+  fps: number;
+  num_frames: number;
+  resolution: number;
+  output_dir: string | null;
+  output_path: string | null;
+  error_message: string | null;
+  error_type: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  seq: number;
 }
