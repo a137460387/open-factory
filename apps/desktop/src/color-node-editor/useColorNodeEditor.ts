@@ -1,10 +1,13 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {
   BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES,
+  clamp,
   createDefaultColorNodeGraph,
   createId,
   detectColorNodeGraphCycle,
   normalizeColorNodeGraph,
+  parseColorNodeGraphFile,
+  serializeColorNodeGraphFile,
   type Clip,
   type ColorNode,
   type ColorNodeGraph,
@@ -16,7 +19,7 @@ import {zhCN} from '../i18n/strings';
 import {BOARD_HEIGHT, BOARD_WIDTH, NODE_HEIGHT, NODE_WIDTH} from './types';
 import type {ConnectionDragState, NodeDragState} from './types';
 import {buildAddNodeGraph, buildInitialGraph, normalizeNode} from './node-helpers';
-import {clamp, dedupeConnections, findOutputNodeId, findPredecessorNodeId, sanitizeFileBaseName} from './utils';
+import {dedupeConnections, findOutputNodeId, findPredecessorNodeId, sanitizeFileBaseName} from './utils';
 
 export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) => void, onClose: () => void) {
   const t = zhCN.colorNodeEditor;
@@ -30,7 +33,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
     () => graph.nodes.find((node) => node.id === selectedNodeId) ?? graph.nodes[0],
     [graph.nodes, selectedNodeId],
   );
-  const nodeCycleSummary = cycle ? cycle.join(' → ') : '';
+  const nodeCycleSummary = cycle ? cycle.join(' -> ') : '';
 
   useEffect(() => {
     const next = buildInitialGraph(clip);
@@ -114,7 +117,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
   };
 
   const addNode = (type: ColorNodeType): void => {
-    const {graph: nextGraph, newNodeId} = buildAddNodeGraph(graph, type, selectedNodeId);
+    const {newNodeId} = buildAddNodeGraph(graph, type, selectedNodeId);
     setGraph((current) => normalizeColorNodeGraph(buildAddNodeGraph(current, type, selectedNodeId).graph, clip.colorCorrection));
     setSelectedNodeId(newNodeId);
   };
@@ -220,7 +223,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
       if (!path) {
         return;
       }
-      await writeFile(path, serializeColorNodeGraphFileLocal(graph, clip.name));
+      await writeFile(path, serializeColorNodeGraphFile(graph, clip.name));
       showToast({kind: 'success', title: t.exportedTitle, message: path});
     } catch (error) {
       showToast({
@@ -240,7 +243,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
         return;
       }
       const contents = await readFile(path);
-      const next = parseColorNodeGraphFileLocal(contents);
+      const next = parseColorNodeGraphFile(contents);
       setGraph(next);
       setSelectedNodeId(
         next.nodes.find((node) => node.type !== 'input' && node.type !== 'output')?.id ?? next.outputNodeId,
@@ -261,7 +264,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
     setSelectedNodeId(next.outputNodeId);
   };
 
-  const boardPorts = useMemo(() => buildBoardPortsLocal(graph), [graph]);
+  const boardPorts = useMemo(() => buildBoardPorts(graph), [graph]);
   const cycleMessage = cycle ? t.cycleWarning(nodeCycleSummary) : undefined;
 
   return {
@@ -290,10 +293,7 @@ export function useColorNodeEditor(clip: Clip, onApply: (graph: ColorNodeGraph) 
   };
 }
 
-// Re-export helpers used by the dialog component
-export {BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES} from '@open-factory/editor-core';
-
-function buildBoardPortsLocal(
+function buildBoardPorts(
   graph: ColorNodeGraph,
 ): Map<string, {input: {x: number; y: number}; output: {x: number; y: number}}> {
   const ports = new Map<string, {input: {x: number; y: number}; output: {x: number; y: number}}>();
@@ -310,15 +310,4 @@ function buildBoardPortsLocal(
     });
   }
   return ports;
-}
-
-function serializeColorNodeGraphFileLocal(graph: ColorNodeGraph, name: string): string {
-  // Re-export from editor-core
-  const {serializeColorNodeGraphFile} = require('@open-factory/editor-core');
-  return serializeColorNodeGraphFile(graph, name);
-}
-
-function parseColorNodeGraphFileLocal(contents: string): ColorNodeGraph {
-  const {parseColorNodeGraphFile} = require('@open-factory/editor-core');
-  return parseColorNodeGraphFile(contents);
 }

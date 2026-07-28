@@ -1,25 +1,24 @@
 import {useEffect, useMemo, useState} from 'react';
 import {logger} from '@open-factory/editor-core/utils';
 import type {Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker} from '@open-factory/editor-core';
-import {AddSubtitleClipCommand, AddTrackCommand, AddKeyframeCommand, AddMaskCommand, BatchKeyframeEditCommand, BatchUpdateKeyframeCommand, UpdateSubtitleStyleCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, KEYFRAME_PROPERTY_LIMITS, MAX_CHROMA_KEY_COLORS, RemoveMaskCommand, RemoveKeyframeCommand, UpdateKeyframeCommand, UpdateClipCommand, UpdateMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioDenoise, normalizeAudioRestoration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, createTrack, parseKeyframeExpression, type AudioFadeCurve, type AudioChannelRoutingMode, type BatchKeyframeEditOperation, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type Keyframe, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
+import {AddMaskCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, UpdateClipCommand, UpdateMaskCommand, RemoveMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, MAX_CHROMA_KEY_COLORS, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, type AudioFadeCurve, type AudioChannelRoutingMode, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
-import {analyzeClip, analyzeMotionTrack, bridgeConfirm, cancelMotionTracking, detectPrivacyRegions, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent} from '../../lib/tauri-bridge';
-import {acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems} from '../../lib/subtitleTranslation';
-import {deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate} from '../../lib/subtitleStyleTemplates';
-import {addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource} from '../../shared-library/sharedLibrary';
+import {analyzeClip, analyzeMotionTrack, cancelMotionTracking, detectPrivacyRegions, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent} from '../../lib/tauri-bridge';
 import {showToast} from '../../lib/toast';
 import {markLocalAiModelUsed} from '../../settings/appSettings';
 import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore';
 import {usePrivacyDetectionSettingsStore} from '../../store/privacyDetectionSettingsStore';
-import {isTranslationConfigured, useTranslationSettingsStore, type TranslationProvider} from '../../store/translationSettingsStore';
+import {useTranslationSettingsStore} from '../../store/translationSettingsStore';
 import {analyzeClipPitch, exportClipPitchCsv} from '../../media/pitchAnalysis';
-import {buildAudioRestorationPreviewPeaks, mergeSubtitleStyleTemplateViews, getSubtitleStyleTemplateLabel, resolveSelectedKeyframeEntries} from './InspectorEditors';
+import {buildAudioRestorationPreviewPeaks, resolveSelectedKeyframeEntries} from './InspectorEditors';
 export type {ClipInspectorStateParams, ClipInspectorStateReturn} from './clip-inspector-types';
 import type {ClipInspectorStateParams, ClipInspectorStateReturn} from './clip-inspector-types';
 import {useFrameInterpolationState} from './clip-inspector-frame-interpolation';
 import {useAudioDenoiseState} from './clip-inspector-audio-denoise';
 import {useBatchOperationsState} from './clip-inspector-batch-operations';
+import {useSubtitleStylesState} from './clip-inspector-subtitle-styles';
+import {useKeyframesState} from './clip-inspector-keyframes';
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -63,20 +62,13 @@ export function useClipInspectorState({
     [translationApiKey, translationProvider, translationTargetLanguage],
   );
 
-  // -- Shared state not delegated to sub-hooks ------------------------------
+  // -- Shared state ---------------------------------------------------------
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
   const [motionTrackingBusy, setMotionTrackingBusy] = useState(false);
   const [privacyBlurBusy, setPrivacyBlurBusy] = useState(false);
   const [curveProperty, setCurveProperty] = useState<KeyframeProperty>('opacity');
   const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
-  const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{
-    completed: number;
-    total: number;
-  }>();
-  const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(
-    BUILTIN_SUBTITLE_STYLE_TEMPLATES,
-  );
   const [customSoundDescOpen, setCustomSoundDescOpen] = useState(false);
   const [pitchAnalyzing, setPitchAnalyzing] = useState(false);
 
@@ -105,7 +97,7 @@ export function useClipInspectorState({
     void loadTranslationApiKey();
   }, [loadTranslationApiKey, translationProvider]);
 
-  // -- commit helper --------------------------------------------------------
+  // -- Helpers --------------------------------------------------------------
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -117,8 +109,6 @@ export function useClipInspectorState({
       });
     }
   };
-
-  // -- runEffectCommand helper ----------------------------------------------
   const runEffectCommand = (command: Parameters<typeof commandManager.execute>[0]) => {
     try {
       commandManager.execute(command);
@@ -135,6 +125,25 @@ export function useClipInspectorState({
   const frameInterpolationState = useFrameInterpolationState({clip, asset, project, playheadTime, commit});
   const audioDenoiseState = useAudioDenoiseState({clip, asset, commit});
   const batchOpsState = useBatchOperationsState({clip, project, media, commit, runEffectCommand});
+  const subtitleStylesState = useSubtitleStylesState({clip, project, translationSettings, setSelectedClipIds});
+
+  const selectedKeyframeFrame =
+    selectedKeyframe?.clipId === clip.id
+      ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId)
+      : undefined;
+  const selectedKeyframeRefs =
+    selectedKeyframes.length > 0 ? selectedKeyframes : selectedKeyframe ? [selectedKeyframe] : [];
+  const selectedKeyframeEntries = useMemo(
+    () => resolveSelectedKeyframeEntries(project, selectedKeyframeRefs),
+    [project, selectedKeyframeRefs],
+  );
+  const keyframesState = useKeyframesState({
+    clip,
+    selectedKeyframe,
+    selectedKeyframeFrame,
+    selectedKeyframeEntries,
+    setSelectedKeyframes,
+  });
 
   // -- Ffmpeg capabilities (bridges frame interpolation + audio denoise) -----
   useEffect(() => {
@@ -159,9 +168,7 @@ export function useClipInspectorState({
 
   // -- Subtitle handlers ----------------------------------------------------
   const commitSubtitleType = (nextType: 'subtitle' | 'cc') => {
-    if (clip.type !== 'subtitle') {
-      return;
-    }
+    if (clip.type !== 'subtitle') return;
     try {
       commandManager.execute(
         new UpdateClipCommand(timelineAccessor, clip.id, {
@@ -172,11 +179,7 @@ export function useClipInspectorState({
       );
       commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: nextType }));
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
     }
   };
   const commitCcSpeaker = (speaker: string) => {
@@ -186,11 +189,7 @@ export function useClipInspectorState({
         commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
       }
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
     }
   };
   const commitCcSoundDesc = (soundDesc?: string) => {
@@ -200,183 +199,81 @@ export function useClipInspectorState({
         commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
       }
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
     }
   };
 
   // -- Speaker handlers -----------------------------------------------------
   const updateProjectSpeakers = (speakers: ProjectSpeaker[]) => {
-    try {
-      commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, speakers));
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
+    try { commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, speakers)); }
+    catch (error) { showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage}); }
   };
   const addActiveSpeakerToLibrary = () => {
-    if (!activeSpeaker) {
-      return;
-    }
-    const next = normalizeProjectSpeakers([...projectSpeakers, { id: createId('speaker'), name: activeSpeaker }]);
-    updateProjectSpeakers(next);
+    if (!activeSpeaker) return;
+    updateProjectSpeakers(normalizeProjectSpeakers([...projectSpeakers, { id: createId('speaker'), name: activeSpeaker }]));
   };
   const removeActiveSpeakerFromLibrary = () => {
-    if (!activeSpeakerEntry) {
-      return;
-    }
-    updateProjectSpeakers(projectSpeakers.filter((speaker) => speaker.id !== activeSpeakerEntry.id));
+    if (!activeSpeakerEntry) return;
+    updateProjectSpeakers(projectSpeakers.filter((s) => s.id !== activeSpeakerEntry.id));
   };
   const updateActiveSpeakerColor = (color: string) => {
-    if (!activeSpeakerEntry) {
-      return;
-    }
-    updateProjectSpeakers(
-      projectSpeakers.map((speaker) => (speaker.id === activeSpeakerEntry.id ? { ...speaker, color } : speaker)),
-    );
+    if (!activeSpeakerEntry) return;
+    updateProjectSpeakers(projectSpeakers.map((s) => (s.id === activeSpeakerEntry.id ? { ...s, color } : s)));
   };
 
-  // -- LUT handler ----------------------------------------------------------
+  // -- LUT ------------------------------------------------------------------
   const chooseLut = async () => {
     try {
       const paths = await openFileDialog(false, [{ name: zhCN.inspector.lutFilterName, extensions: ['cube'] }]);
-      const lutPath = paths[0];
-      if (lutPath) {
-        commit({ colorCorrection: { lutPath } });
-      }
+      if (paths[0]) commit({ colorCorrection: { lutPath: paths[0] } });
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.lutUnavailableTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.lutUnavailableMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.lutUnavailableTitle, message: error instanceof Error ? error.message : zhCN.inspector.lutUnavailableMessage});
     }
   };
 
-  // -- Text / keyframe / computed values ------------------------------------
+  // -- Text / keyframe computed values --------------------------------------
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
   const textPath = clip.type === 'text' ? normalizeTextPath(clip.pathText) : undefined;
   const textLayout = clip.type === 'text' ? normalizeTextLayout(clip.textLayout) : undefined;
   const textOpenTypeFeatures = clip.type === 'text' ? normalizeTextOpenTypeFeatures(clip.openTypeFeatures) : undefined;
   const textArc = clip.type === 'text' ? normalizeTextArc(clip.arcText) : undefined;
   const updateTextPath = (patch: Partial<NonNullable<typeof textPath>>) => {
-    if (clip.type !== 'text' || !textPath) {
-      return;
-    }
+    if (clip.type !== 'text' || !textPath) return;
     commit({ pathText: normalizeTextPath({ ...textPath, ...patch }) });
   };
   const updateTextLayout = (patch: Partial<TextLayoutOptions>) => {
-    if (clip.type !== 'text' || !textLayout) {
-      return;
-    }
+    if (clip.type !== 'text' || !textLayout) return;
     commit({ textLayout: normalizeTextLayout({ ...textLayout, ...patch }) });
   };
   const updateTextOpenTypeFeatures = (patch: Partial<TextOpenTypeFeatures>) => {
-    if (clip.type !== 'text' || !textOpenTypeFeatures) {
-      return;
-    }
+    if (clip.type !== 'text' || !textOpenTypeFeatures) return;
     commit({ openTypeFeatures: normalizeTextOpenTypeFeatures({ ...textOpenTypeFeatures, ...patch }) });
   };
   const updateTextArc = (patch: Partial<TextArcOptions>) => {
-    if (clip.type !== 'text' || !textArc) {
-      return;
-    }
+    if (clip.type !== 'text' || !textArc) return;
     commit({ arcText: normalizeTextArc({ ...textArc, ...patch }) });
   };
   const addKeyframe = (property: KeyframeProperty, value = getClipKeyframeValue(clip, property, localKeyframeTime)) => {
-    try {
-      commandManager.execute(
-        new AddKeyframeCommand(timelineAccessor, clip.id, property, { time: localKeyframeTime, value }),
-      );
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed,
-      });
-    }
+    try { commandManager.execute(new (require('@open-factory/editor-core').AddKeyframeCommand)(timelineAccessor, clip.id, property, { time: localKeyframeTime, value })); }
+    catch (error) { showToast({kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed}); }
   };
   const setKenBurns = (enabled: boolean) => {
-    if (clip.type !== 'image') {
-      return;
-    }
-    if (!enabled) {
-      commit({ kenBurns: false });
-      return;
-    }
-    commit({
-      kenBurns: true,
-      keyframes: {
-        ...clip.keyframes,
-        ...createKenBurnsKeyframes(clip.duration, clip.transform.scale, Math.max(clip.transform.scale + 0.5, 1.5)),
-      },
-    });
+    if (clip.type !== 'image') return;
+    if (!enabled) { commit({ kenBurns: false }); return; }
+    commit({ kenBurns: true, keyframes: { ...clip.keyframes, ...createKenBurnsKeyframes(clip.duration, clip.transform.scale, Math.max(clip.transform.scale + 0.5, 1.5)) } });
   };
   const updateKenBurnsEndScale = (scale: number) => {
-    if (clip.type !== 'image') {
-      return;
-    }
+    if (clip.type !== 'image') return;
     commit({ keyframes: setKenBurnsEndScaleKeyframes(clip.keyframes, clip.duration, scale) });
   };
-  const selectedKeyframeFrame =
-    selectedKeyframe?.clipId === clip.id
-      ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId)
-      : undefined;
-  const selectedKeyframeRefs =
-    selectedKeyframes.length > 0 ? selectedKeyframes : selectedKeyframe ? [selectedKeyframe] : [];
-  const selectedKeyframeEntries = useMemo(
-    () => resolveSelectedKeyframeEntries(project, selectedKeyframeRefs),
-    [project, selectedKeyframeRefs],
-  );
   const batchKeyframesSelected = selectedKeyframeEntries.length > 1;
   const keyframeProperties = useMemo(
-    () =>
-      (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).filter(
-        (property) => (clip.keyframes?.[property]?.length ?? 0) > 0,
-      ),
+    () => (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).filter((p) => (clip.keyframes?.[p]?.length ?? 0) > 0),
     [clip.keyframes],
   );
   useEffect(() => {
-    if (keyframeProperties.length > 0 && !keyframeProperties.includes(curveProperty)) {
-      setCurveProperty(keyframeProperties[0]);
-    }
+    if (keyframeProperties.length > 0 && !keyframeProperties.includes(curveProperty)) setCurveProperty(keyframeProperties[0]);
   }, [curveProperty, keyframeProperties]);
-
-  // -- Subtitle style template loading --------------------------------------
-  useEffect(() => {
-    let canceled = false;
-    if (clip.type !== 'subtitle') {
-      setSubtitleStyleTemplates([]);
-      return () => {
-        canceled = true;
-      };
-    }
-    Promise.all([loadSubtitleStyleTemplates(), loadSharedSubtitleStyleTemplates()])
-      .then(([templates, sharedTemplates]) => {
-        if (!canceled) {
-          setSubtitleStyleTemplates(mergeSubtitleStyleTemplateViews(templates, sharedTemplates));
-        }
-      })
-      .catch((error) => {
-        if (!canceled) {
-          setSubtitleStyleTemplates(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
-          showToast({
-            kind: 'warning',
-            title: zhCN.inspector.subtitleStyleTemplates.loadFailed,
-            message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-          });
-        }
-      });
-    return () => {
-      canceled = true;
-    };
-  }, [clip.type]);
 
   // -- Computed clip properties ---------------------------------------------
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
@@ -385,10 +282,7 @@ export function useClipInspectorState({
   const chromaKeyPickActive = chromaKeyPickClipId === clip.id;
   const stabilization = normalizeStabilization(clip.stabilization);
   const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
-  const audioRestorationComparison = buildAudioRestorationWaveformComparison(
-    buildAudioRestorationPreviewPeaks(clip.pitchData),
-    audioRestoration,
-  );
+  const audioRestorationComparison = buildAudioRestorationWaveformComparison(buildAudioRestorationPreviewPeaks(clip.pitchData), audioRestoration);
   const blendMode = normalizeClipBlendMode(clip.blendMode);
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
@@ -398,8 +292,7 @@ export function useClipInspectorState({
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
   const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
   const fadeInDuration = 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0;
-  const fadeOutDuration =
-    'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
+  const fadeOutDuration = 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const spatialAudio = 'volume' in clip ? normalizeSpatialAudio(clip.spatialAudio) : DEFAULT_SPATIAL_AUDIO;
@@ -414,50 +307,31 @@ export function useClipInspectorState({
       : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
   const masks = normalizeMasks(clip.masks);
   const privacyRedactions = normalizePrivacyRedactions(clip.privacyRedactions);
-  const updatePanorama = (patch: Partial<typeof panorama>) => {
-    commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
-  };
-  const updateVideoRestoration = (patch: Partial<typeof videoRestoration>) => {
-    commit({ videoRestoration: normalizeVideoRestoration({ ...videoRestoration, ...patch }) });
-  };
-  const updateQualityEnhancement = (patch: Partial<typeof qualityEnhancement>) => {
-    commit({ qualityEnhancement: normalizeQualityEnhancement({ ...qualityEnhancement, ...patch }) });
-  };
-  const updateAudioRestoration = (patch: Partial<typeof audioRestoration>) => {
-    commit({ audioRestoration: normalizeAudioRestoration({ ...audioRestoration, ...patch }) });
-  };
+  const updatePanorama = (patch: Partial<typeof panorama>) => commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
+  const updateVideoRestoration = (patch: Partial<typeof videoRestoration>) => commit({ videoRestoration: normalizeVideoRestoration({ ...videoRestoration, ...patch }) });
+  const updateQualityEnhancement = (patch: Partial<typeof qualityEnhancement>) => commit({ qualityEnhancement: normalizeQualityEnhancement({ ...qualityEnhancement, ...patch }) });
+  const updateAudioRestoration = (patch: Partial<typeof audioRestoration>) => commit({ audioRestoration: normalizeAudioRestoration({ ...audioRestoration, ...patch }) });
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
 
-  // -- Chroma key handlers --------------------------------------------------
+  // -- Chroma key -----------------------------------------------------------
   const commitChromaKeyColors = (colors: ChromaKeyColor[]) => {
     const nextColors = colors.slice(0, MAX_CHROMA_KEY_COLORS);
     const color = nextColors[0] ?? chromaKey.color;
     commit({ chromaKey: { ...chromaKey, color, colors: nextColors.length > 0 ? nextColors : [color] } });
   };
-  const updateChromaKeyColor = (index: number, color: ChromaKeyColor) => {
-    const nextColors = chromaKey.colors.map((item, itemIndex) => (itemIndex === index ? color : item));
-    commitChromaKeyColors(nextColors);
-  };
+  const updateChromaKeyColor = (index: number, color: ChromaKeyColor) => commitChromaKeyColors(chromaKey.colors.map((item, i) => (i === index ? color : item)));
   const addChromaKeyColor = () => {
-    if (chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS) {
-      return;
-    }
-    const fallback = chromaKey.colors.at(-1) ?? chromaKey.color;
-    commitChromaKeyColors([...chromaKey.colors, [...fallback] as ChromaKeyColor]);
+    if (chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS) return;
+    commitChromaKeyColors([...chromaKey.colors, [...(chromaKey.colors.at(-1) ?? chromaKey.color)] as ChromaKeyColor]);
   };
   const removeChromaKeyColor = (index: number) => {
-    if (chromaKey.colors.length <= 1) {
-      return;
-    }
-    commitChromaKeyColors(chromaKey.colors.filter((_, itemIndex) => itemIndex !== index));
+    if (chromaKey.colors.length <= 1) return;
+    commitChromaKeyColors(chromaKey.colors.filter((_, i) => i !== index));
   };
   const toggleChromaKeyPicker = () => {
-    if (chromaKeyPickActive) {
-      setChromaKeyPickClipId(undefined);
-      return;
-    }
+    if (chromaKeyPickActive) { setChromaKeyPickClipId(undefined); return; }
     setSelectedClipIds([clip.id]);
     setChromaKeyPickClipId(clip.id);
   };
@@ -467,40 +341,18 @@ export function useClipInspectorState({
     let disposed = false;
     let unlistenAnalysis: (() => void) | undefined;
     let unlistenMotionTrack: (() => void) | undefined;
-    void listenBridge<ClipAnalysisProgressEvent>('clip-analysis-progress', (payload) => {
-      if (payload.clipId === clip.id) {
-        setAnalysisProgress(payload.progress);
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlistenAnalysis = dispose;
-      }
-    });
-    void listenBridge<MotionTrackProgressEvent>('motion-track-progress', (payload) => {
-      if (payload.clipId === clip.id) {
-        setMotionTrackProgress(payload.progress);
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlistenMotionTrack = dispose;
-      }
-    });
-    return () => {
-      disposed = true;
-      unlistenAnalysis?.();
-      unlistenMotionTrack?.();
-    };
+    void listenBridge<ClipAnalysisProgressEvent>('clip-analysis-progress', (p) => {
+      if (p.clipId === clip.id) setAnalysisProgress(p.progress);
+    }).then((d) => { if (disposed) d(); else unlistenAnalysis = d; });
+    void listenBridge<MotionTrackProgressEvent>('motion-track-progress', (p) => {
+      if (p.clipId === clip.id) setMotionTrackProgress(p.progress);
+    }).then((d) => { if (disposed) d(); else unlistenMotionTrack = d; });
+    return () => { disposed = true; unlistenAnalysis?.(); unlistenMotionTrack?.(); };
   }, [clip.id]);
 
-  // -- Stabilization / motion track analysis ---------------------------------
+  // -- Stabilization / motion track -----------------------------------------
   const runStabilizationAnalysis = async () => {
-    if (clip.type !== 'video' || !asset?.path) {
-      return;
-    }
+    if (clip.type !== 'video' || !asset?.path) return;
     try {
       setAnalysisProgress(0);
       const result = await analyzeClip({ clipId: clip.id, mediaPath: asset.path, duration: clip.duration });
@@ -508,17 +360,11 @@ export function useClipInspectorState({
       setAnalysisProgress(1);
     } catch (error) {
       setAnalysisProgress(undefined);
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
     }
   };
   const runMotionTrackAnalysis = async () => {
-    if (clip.type !== 'video' || !asset?.path) {
-      return;
-    }
+    if (clip.type !== 'video' || !asset?.path) return;
     try {
       setMotionTrackingBusy(true);
       setMotionTrackProgress(0);
@@ -526,605 +372,135 @@ export function useClipInspectorState({
       const points = normalizeMotionTrack(result.points, clip.duration) ?? [];
       commit({ motionTrack: points });
       setMotionTrackProgress(1);
-      if (points.length === 0) {
-        showToast({
-          kind: 'warning',
-          title: zhCN.inspector.motionTrack.failed,
-          message: zhCN.inspector.motionTrack.noPoints,
-        });
-      }
+      if (points.length === 0) showToast({kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: zhCN.inspector.motionTrack.noPoints});
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.motionTrack.failed,
-        message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage});
       setMotionTrackProgress(undefined);
-    } finally {
-      setMotionTrackingBusy(false);
-    }
+    } finally { setMotionTrackingBusy(false); }
   };
   const cancelMotionTrackAnalysis = async () => {
-    try {
-      await cancelMotionTracking(clip.id);
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.motionTrack.cancelFailed,
-        message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage,
-      });
-    } finally {
-      setMotionTrackingBusy(false);
-      setMotionTrackProgress(undefined);
-    }
+    try { await cancelMotionTracking(clip.id); }
+    catch (error) { showToast({kind: 'warning', title: zhCN.inspector.motionTrack.cancelFailed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage}); }
+    finally { setMotionTrackingBusy(false); setMotionTrackProgress(undefined); }
   };
   const bindMotionTrackKeyframes = () => {
     const keyframes = bindMotionTrackToPositionKeyframes(clip.keyframes, motionTrack, clip.transform, clip.duration);
-    if (!keyframes) {
-      return;
-    }
-    commit({ keyframes });
+    if (keyframes) commit({ keyframes });
   };
 
-  // -- Data subtitle handlers -----------------------------------------------
+  // -- Data subtitle --------------------------------------------------------
   const bindDataSubtitleSource = async () => {
-    if (clip.type !== 'subtitle') {
-      return;
-    }
+    if (clip.type !== 'subtitle') return;
     try {
-      const [path] = await openFileDialog(false, [
-        { name: zhCN.fileDialogs.subtitleData, extensions: ['csv', 'json'] },
-      ]);
-      if (!path) {
-        return;
-      }
-      const sourceType: Exclude<DataSubtitleSourceType, 'template'> = path.toLowerCase().endsWith('.json')
-        ? 'json'
-        : 'csv';
+      const [path] = await openFileDialog(false, [{ name: zhCN.fileDialogs.subtitleData, extensions: ['csv', 'json'] }]);
+      if (!path) return;
+      const sourceType: Exclude<DataSubtitleSourceType, 'template'> = path.toLowerCase().endsWith('.json') ? 'json' : 'csv';
       const rows = parseDataSubtitleRows(await readFile(path), sourceType);
       const template = clip.dataSubtitle?.template ?? (clip.text.trim() || '{row.text}');
-      const dataSubtitle: DataSubtitleSource = { sourceType, template, rows, filePath: path };
-      commit({ dataSubtitle, text: template });
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.dataSubtitle.bound,
-        message: zhCN.inspector.dataSubtitle.rowCount(rows.length),
-      });
+      commit({ dataSubtitle: { sourceType, template, rows, filePath: path }, text: template });
+      showToast({kind: 'success', title: zhCN.inspector.dataSubtitle.bound, message: zhCN.inspector.dataSubtitle.rowCount(rows.length)});
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.dataSubtitle.failed,
-        message: error instanceof Error ? error.message : zhCN.inspector.dataSubtitle.failedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.dataSubtitle.failed, message: error instanceof Error ? error.message : zhCN.inspector.dataSubtitle.failedMessage});
     }
   };
   const updateDataSubtitleTemplate = (template: string) => {
-    if (clip.type !== 'subtitle') {
-      return;
-    }
-    const dataSubtitle: DataSubtitleSource = {
-      sourceType: clip.dataSubtitle?.sourceType ?? 'template',
-      template: template.trim() || '{row.text}',
-      rows: clip.dataSubtitle?.rows ?? [],
-      filePath: clip.dataSubtitle?.filePath,
-    };
+    if (clip.type !== 'subtitle') return;
+    const dataSubtitle: DataSubtitleSource = { sourceType: clip.dataSubtitle?.sourceType ?? 'template', template: template.trim() || '{row.text}', rows: clip.dataSubtitle?.rows ?? [], filePath: clip.dataSubtitle?.filePath };
     commit({ dataSubtitle, text: dataSubtitle.template });
   };
-  const clearDataSubtitleSource = () => {
-    if (clip.type === 'subtitle') {
-      commit({ dataSubtitle: undefined });
-    }
-  };
+  const clearDataSubtitleSource = () => { if (clip.type === 'subtitle') commit({ dataSubtitle: undefined }); };
 
   // -- Pitch analysis -------------------------------------------------------
   const runPitchAnalysis = async () => {
-    if (!asset || !('volume' in clip)) {
-      return;
-    }
+    if (!asset || !('volume' in clip)) return;
     try {
       setPitchAnalyzing(true);
       const pitchData = await analyzeClipPitch(asset);
       commit({ pitchData });
-      if (pitchData.length === 0) {
-        showToast({
-          kind: 'warning',
-          title: zhCN.inspector.pitchAnalysis.noDataTitle,
-          message: zhCN.inspector.pitchAnalysis.noDataMessage,
-        });
-      } else {
-        showToast({
-          kind: 'success',
-          title: zhCN.inspector.pitchAnalysis.completed,
-          message: zhCN.inspector.pitchAnalysis.pointCount(pitchData.length),
-        });
-      }
+      if (pitchData.length === 0) showToast({kind: 'warning', title: zhCN.inspector.pitchAnalysis.noDataTitle, message: zhCN.inspector.pitchAnalysis.noDataMessage});
+      else showToast({kind: 'success', title: zhCN.inspector.pitchAnalysis.completed, message: zhCN.inspector.pitchAnalysis.pointCount(pitchData.length)});
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.pitchAnalysis.failed,
-        message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage,
-      });
-    } finally {
-      setPitchAnalyzing(false);
-    }
+      showToast({kind: 'warning', title: zhCN.inspector.pitchAnalysis.failed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage});
+    } finally { setPitchAnalyzing(false); }
   };
   const exportPitchCsv = async () => {
     try {
       const exported = await exportClipPitchCsv(clip);
-      if (exported) {
-        showToast({
-          kind: 'success',
-          title: zhCN.inspector.pitchAnalysis.exported,
-          message: zhCN.inspector.pitchAnalysis.exportedMessage,
-        });
-      }
+      if (exported) showToast({kind: 'success', title: zhCN.inspector.pitchAnalysis.exported, message: zhCN.inspector.pitchAnalysis.exportedMessage});
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.pitchAnalysis.exportFailed,
-        message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage,
-      });
+      showToast({kind: 'warning', title: zhCN.inspector.pitchAnalysis.exportFailed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage});
     }
   };
 
-  // -- Keyframe handlers ----------------------------------------------------
-  const updateSelectedKeyframe = (
-    patch: Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>,
-  ) => {
-    if (!selectedKeyframe) {
-      return;
-    }
-    try {
-      commandManager.execute(
-        new UpdateKeyframeCommand(
-          timelineAccessor,
-          clip.id,
-          selectedKeyframe.property,
-          selectedKeyframe.keyframeId,
-          patch,
-        ),
-      );
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
-      });
-    }
-  };
-  const removeSelectedKeyframe = () => {
-    if (!selectedKeyframe) {
-      return;
-    }
-    try {
-      commandManager.execute(
-        new RemoveKeyframeCommand(timelineAccessor, clip.id, selectedKeyframe.property, selectedKeyframe.keyframeId),
-      );
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.removeKeyframeFailed,
-      });
-    }
-  };
-  const runBatchKeyframeEdit = (operation: BatchKeyframeEditOperation, clearAfter = false) => {
-    const refs = selectedKeyframeEntries.map((entry) => entry.ref);
-    if (refs.length === 0) {
-      return;
-    }
-    try {
-      commandManager.execute(new BatchKeyframeEditCommand(timelineAccessor, refs, operation));
-      if (clearAfter) {
-        setSelectedKeyframes([]);
-      }
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
-      });
-    }
-  };
-  const shiftSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'shift', delta: batchOpsState.batchShiftSeconds });
-  const scaleSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'scale-time', factor: batchOpsState.batchScaleFactor });
-  const updateSelectedKeyframeEasing = () => runBatchKeyframeEdit({ type: 'easing', easing: batchOpsState.batchEasing });
-  const distributeSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'distribute-time' });
-  const alignSelectedKeyframeValues = () => runBatchKeyframeEdit({ type: 'align-value' });
-  const deleteSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'delete' }, true);
-  const updateSelectedKeyframeExpression = (field: 'time' | 'value', expression: string) => {
-    if (!selectedKeyframe || !selectedKeyframeFrame) {
-      return;
-    }
-    const frames = [...(clip.keyframes?.[selectedKeyframe.property] ?? [])].sort(
-      (left, right) => left.time - right.time || left.id.localeCompare(right.id),
-    );
-    const frameIndex = frames.findIndex((frame) => frame.id === selectedKeyframe.keyframeId);
-    const previous = frameIndex > 0 ? frames[frameIndex - 1] : undefined;
-    const next = frameIndex >= 0 ? frames[frameIndex + 1] : undefined;
-    const limits =
-      field === 'time' ? { min: 0, max: clip.duration } : KEYFRAME_PROPERTY_LIMITS[selectedKeyframe.property];
-    try {
-      const parsed = parseKeyframeExpression(expression, {
-        prev: field === 'time' ? previous?.time : previous?.value,
-        current: field === 'time' ? selectedKeyframeFrame.time : selectedKeyframeFrame.value,
-        next: field === 'time' ? next?.time : next?.value,
-        min: limits.min,
-        max: limits.max,
-      });
-      updateSelectedKeyframe({ [field]: parsed });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
-      });
-    }
-  };
-  const updateCurveKeyframes = (property: KeyframeProperty, frames: Keyframe<number>[]) => {
-    try {
-      commandManager.execute(
-        new BatchUpdateKeyframeCommand(
-          timelineAccessor,
-          [
-            {
-              clipId: clip.id,
-              property,
-              replace: true,
-              keyframes: frames.map((frame) => ({
-                id: frame.id,
-                time: frame.time,
-                value: frame.value,
-                easing: frame.easing,
-                inHandle: frame.inHandle,
-                outHandle: frame.outHandle,
-                handleMode: frame.handleMode,
-              })),
-            },
-          ],
-          'Edit keyframe curve',
-        ),
-      );
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.keyframeRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed,
-      });
-    }
-  };
+  // -- Batch keyframe convenience functions ----------------------------------
+  const shiftSelectedKeyframes = () => keyframesState.runBatchKeyframeEdit({ type: 'shift', delta: batchOpsState.batchShiftSeconds });
+  const scaleSelectedKeyframes = () => keyframesState.runBatchKeyframeEdit({ type: 'scale-time', factor: batchOpsState.batchScaleFactor });
+  const updateSelectedKeyframeEasing = () => keyframesState.runBatchKeyframeEdit({ type: 'easing', easing: batchOpsState.batchEasing });
+  const distributeSelectedKeyframes = () => keyframesState.runBatchKeyframeEdit({ type: 'distribute-time' });
+  const alignSelectedKeyframeValues = () => keyframesState.runBatchKeyframeEdit({ type: 'align-value' });
+  const deleteSelectedKeyframes = () => keyframesState.runBatchKeyframeEdit({ type: 'delete' }, true);
 
   // -- Mask handlers --------------------------------------------------------
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
-  const updateMask = (maskId: string, patch: MaskPatch) =>
-    runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
+  const updateMask = (maskId: string, patch: MaskPatch) => runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
 
   // -- Privacy blur ---------------------------------------------------------
   const runPrivacyBlurDetection = async () => {
-    if (!privacyDetectionModelPath.trim()) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.privacyBlur.failed,
-        message: zhCN.inspector.privacyBlur.modelRequired,
-      });
-      return;
-    }
-    if (!asset?.path || !('mediaId' in clip)) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.privacyBlur.failed,
-        message: zhCN.inspector.privacyBlur.noMedia,
-      });
-      return;
-    }
+    if (!privacyDetectionModelPath.trim()) { showToast({kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.modelRequired}); return; }
+    if (!asset?.path || !('mediaId' in clip)) { showToast({kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.noMedia}); return; }
     try {
       setPrivacyBlurBusy(true);
-      await markLocalAiModelUsed('yunet', privacyDetectionModelPath.trim()).catch((error) => {
-        logger.warn('Unable to update YuNet model last-used time', error);
-      });
-      const result = await detectPrivacyRegions({
-        modelPath: privacyDetectionModelPath.trim(),
-        mediaPath: asset.path,
-        clipId: clip.id,
-        duration: clip.duration,
-      });
+      await markLocalAiModelUsed('yunet', privacyDetectionModelPath.trim()).catch((error) => { logger.warn('Unable to update YuNet model last-used time', error); });
+      const result = await detectPrivacyRegions({ modelPath: privacyDetectionModelPath.trim(), mediaPath: asset.path, clipId: clip.id, duration: clip.duration });
       const newMasks = buildPrivacyMasksFromDetections(result.boxes, { effect: privacyBlurEffect });
-      if (newMasks.length === 0) {
-        showToast({
-          kind: 'info',
-          title: zhCN.inspector.privacyBlur.title,
-          message: zhCN.inspector.privacyBlur.noDetections,
-        });
-        return;
-      }
+      if (newMasks.length === 0) { showToast({kind: 'info', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.noDetections}); return; }
       commit({ masks: [...masks, ...newMasks] });
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.privacyBlur.title,
-        message: zhCN.inspector.privacyBlur.applied(newMasks.length),
-      });
+      showToast({kind: 'success', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.applied(newMasks.length)});
     } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.privacyBlur.failed,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    } finally {
-      setPrivacyBlurBusy(false);
-    }
+      showToast({kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage});
+    } finally { setPrivacyBlurBusy(false); }
   };
 
-  // -- Subtitle translation -------------------------------------------------
-  const translateSubtitleTrack = async () => {
-    if (clip.type !== 'subtitle' || !isTranslationConfigured(translationSettings)) {
-      return;
-    }
-    const sourceTrack = project.timeline.tracks.find((track) => track.id === clip.trackId);
-    if (!sourceTrack || sourceTrack.type !== 'subtitle') {
-      return;
-    }
-    const sourceClips = sourceTrack.clips.filter(
-      (item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle',
-    );
-    try {
-      setSubtitleTranslationProgress({ completed: 0, total: sourceClips.length });
-      const requestTranslation = () =>
-        translateSubtitleItems(
-          subtitleClipsToTranslationItems(sourceClips),
-          translationSettings,
-          fetch,
-          (completed, total) => {
-            setSubtitleTranslationProgress({ completed, total });
-          },
-        );
-      let translated: Awaited<ReturnType<typeof translateSubtitleItems>>;
-      try {
-        translated = await requestTranslation();
-      } catch (error) {
-        if (!(error instanceof Error) || error.message !== 'TRANSLATION_TOS_NOT_ACCEPTED') {
-          throw error;
-        }
-        const accepted = await bridgeConfirm(zhCN.inspector.translation.tosMessage, {
-          title: zhCN.inspector.translation.tosTitle,
-          kind: 'warning',
-        });
-        if (!accepted) {
-          return;
-        }
-        acceptTranslationTOS();
-        translated = await requestTranslation();
-      }
-      const translatedById = new Map(translated.map((item) => [item.id, item.translatedText]));
-      const track = createTrack({
-        id: createId('track'),
-        type: 'subtitle',
-        language: translationSettings.targetLanguage,
-        name: zhCN.inspector.translation.trackName(sourceTrack.name, translationSettings.targetLanguage),
-        clips: [],
-      });
-      commandManager.execute(new AddTrackCommand(timelineAccessor, track));
-      const addedClipIds: string[] = [];
-      for (const sourceClip of sourceClips) {
-        const translatedText = translatedById.get(sourceClip.id) ?? sourceClip.text;
-        const translatedClip: Extract<Clip, { type: 'subtitle' }> = {
-          ...sourceClip,
-          id: createId('subtitle'),
-          trackId: track.id,
-          name: zhCN.inspector.translation.clipName(sourceClip.name, translationSettings.targetLanguage),
-          text: translatedText,
-          style: { ...sourceClip.style },
-          transform: { ...sourceClip.transform },
-          colorCorrection: { ...sourceClip.colorCorrection },
-        };
-        commandManager.execute(new AddSubtitleClipCommand(timelineAccessor, translatedClip));
-        addedClipIds.push(translatedClip.id);
-      }
-      if (addedClipIds[0]) {
-        setSelectedClipIds([addedClipIds[0]]);
-      }
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.translation.completeTitle,
-        message: zhCN.inspector.translation.completeMessage(addedClipIds.length),
-      });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.translation.failedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.translation.failedMessage,
-      });
-    } finally {
-      setSubtitleTranslationProgress(undefined);
-    }
-  };
-
-  // -- Subtitle style template handlers -------------------------------------
-  const applySubtitleStyleTemplate = (template: SubtitleStyleTemplate) => {
-    if (clip.type !== 'subtitle') {
-      return;
-    }
-    try {
-      commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, clip.id, template.style));
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.subtitleStyleTemplates.title,
-        message: zhCN.inspector.subtitleStyleTemplates.applied(getSubtitleStyleTemplateLabel(template)),
-      });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
-  };
-  const saveCurrentSubtitleStyleTemplate = async () => {
-    if (clip.type !== 'subtitle') {
-      return;
-    }
-    const name = window.prompt(zhCN.inspector.subtitleStyleTemplates.savePrompt, clip.name);
-    if (name === null) {
-      return;
-    }
-    try {
-      const templates = await saveCustomSubtitleStyleTemplate(name, clip.style);
-      setSubtitleStyleTemplates(templates);
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.subtitleStyleTemplates.title,
-        message: zhCN.inspector.subtitleStyleTemplates.saved(name.trim()),
-      });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.subtitleStyleTemplates.saveFailed,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
-  };
-  const deleteSubtitleStyleTemplate = async (templateId: string) => {
-    try {
-      const templates = await deleteCustomSubtitleStyleTemplate(templateId);
-      setSubtitleStyleTemplates(templates);
-      showToast({
-        kind: 'info',
-        title: zhCN.inspector.subtitleStyleTemplates.title,
-        message: zhCN.inspector.subtitleStyleTemplates.deleted,
-      });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.subtitleStyleTemplates.deleteFailed,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
-  };
-  const addSubtitleStyleTemplateToSharedLibrary = async (template: SubtitleStyleTemplate) => {
-    try {
-      await addSharedLibraryResource(subtitleStyleTemplateToSharedResource(template), 'overwrite');
-      window.dispatchEvent(new CustomEvent('open-factory:shared-library-updated'));
-      showToast({
-        kind: 'success',
-        title: zhCN.inspector.subtitleStyleTemplates.title,
-        message: zhCN.inspector.subtitleStyleTemplates.addedToShared(getSubtitleStyleTemplateLabel(template)),
-      });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.subtitleStyleTemplates.addToSharedFailed,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
-  };
-
-  // -- Merge and return -----------------------------------------------------
+  // -- Return ---------------------------------------------------------------
   return {
-    // Store subscriptions
-    project,
-    setSelectedClipIds,
-    setSelectedKeyframes,
-    chromaKeyPickClipId,
-    setChromaKeyPickClipId,
-    translationProvider,
-    translationApiKey,
-    translationApiKeyError,
-    translationTargetLanguage,
-    loadTranslationApiKey,
+    project, setSelectedClipIds, setSelectedKeyframes,
+    chromaKeyPickClipId, setChromaKeyPickClipId,
+    translationProvider, translationApiKey, translationApiKeyError, translationTargetLanguage, loadTranslationApiKey,
     privacyDetectionModelPath,
-
-    // useMemo values
-    allTimelineSubtitleClips,
-    translationSettings,
-    projectSpeakers,
-    soundDescriptionOptions,
+    allTimelineSubtitleClips, translationSettings, projectSpeakers, soundDescriptionOptions,
     colorMatchReferenceClips: batchOpsState.colorMatchReferenceClips,
-    selectedKeyframeEntries,
-    keyframeProperties,
-    pitchSummary,
-
-    // useState values
-    analysisProgress,
-    setAnalysisProgress,
-    motionTrackProgress,
-    setMotionTrackProgress,
-    motionTrackingBusy,
-    setMotionTrackingBusy,
-    privacyBlurBusy,
-    setPrivacyBlurBusy,
-    batchShiftSeconds: batchOpsState.batchShiftSeconds,
-    setBatchShiftSeconds: batchOpsState.setBatchShiftSeconds,
-    batchScaleFactor: batchOpsState.batchScaleFactor,
-    setBatchScaleFactor: batchOpsState.setBatchScaleFactor,
-    batchEasing: batchOpsState.batchEasing,
-    setBatchEasing: batchOpsState.setBatchEasing,
-    curveProperty,
-    setCurveProperty,
-    privacyBlurEffect,
-    setPrivacyBlurEffect,
-    frameInterpolationSupported: frameInterpolationState.frameInterpolationSupported,
-    setFrameInterpolationSupported: frameInterpolationState.setFrameInterpolationSupported,
-    frameInterpolationCompareRunning: frameInterpolationState.frameInterpolationCompareRunning,
-    setFrameInterpolationCompareRunning: frameInterpolationState.setFrameInterpolationCompareRunning,
-    frameInterpolationCompareItems: frameInterpolationState.frameInterpolationCompareItems,
-    setFrameInterpolationCompareItems: frameInterpolationState.setFrameInterpolationCompareItems,
-    frameInterpolationCompareError: frameInterpolationState.frameInterpolationCompareError,
-    setFrameInterpolationCompareError: frameInterpolationState.setFrameInterpolationCompareError,
-    frameInterpolationExpandedMode: frameInterpolationState.frameInterpolationExpandedMode,
-    setFrameInterpolationExpandedMode: frameInterpolationState.setFrameInterpolationExpandedMode,
-    frameInterpolationQualityRunning: frameInterpolationState.frameInterpolationQualityRunning,
-    setFrameInterpolationQualityRunning: frameInterpolationState.setFrameInterpolationQualityRunning,
-    frameInterpolationQualityError: frameInterpolationState.frameInterpolationQualityError,
-    setFrameInterpolationQualityError: frameInterpolationState.setFrameInterpolationQualityError,
-    audioDenoiseSupported: audioDenoiseState.audioDenoiseSupported,
-    setAudioDenoiseSupported: audioDenoiseState.setAudioDenoiseSupported,
-    aiLocalDenoiseProcessing: audioDenoiseState.aiLocalDenoiseProcessing,
-    setAiLocalDenoiseProcessing: audioDenoiseState.setAiLocalDenoiseProcessing,
-    aiLocalDenoiseProgress: audioDenoiseState.aiLocalDenoiseProgress,
-    setAiLocalDenoiseProgress: audioDenoiseState.setAiLocalDenoiseProgress,
-    aiLocalDenoiseStage: audioDenoiseState.aiLocalDenoiseStage,
-    setAiLocalDenoiseStage: audioDenoiseState.setAiLocalDenoiseStage,
-    aiLocalDenoiseResult: audioDenoiseState.aiLocalDenoiseResult,
-    setAiLocalDenoiseResult: audioDenoiseState.setAiLocalDenoiseResult,
-    colorMatchReferenceClipId: batchOpsState.colorMatchReferenceClipId,
-    setColorMatchReferenceClipId: batchOpsState.setColorMatchReferenceClipId,
-    colorMatchBusy: batchOpsState.colorMatchBusy,
-    setColorMatchBusy: batchOpsState.setColorMatchBusy,
-    subtitleTranslationProgress,
-    setSubtitleTranslationProgress,
-    subtitleStyleTemplates,
-    setSubtitleStyleTemplates,
-    customSoundDescOpen,
-    setCustomSoundDescOpen,
-    pitchAnalyzing,
-    setPitchAnalyzing,
-    textAnimationPreset: batchOpsState.textAnimationPreset,
-    setTextAnimationPreset: batchOpsState.setTextAnimationPreset,
-    textAnimationDuration: batchOpsState.textAnimationDuration,
-    setTextAnimationDuration: batchOpsState.setTextAnimationDuration,
-    textAnimationDirection: batchOpsState.textAnimationDirection,
-    setTextAnimationDirection: batchOpsState.setTextAnimationDirection,
-
-    // Computed values
-    asset,
-    clipStartTimecode,
-    clipDurationTimecode,
-    assetDurationTimecode,
-    subtitleTrack,
-    subtitleType,
-    activeSpeaker,
-    activeSpeakerEntry,
-    soundDescSelectValue,
-    localKeyframeTime,
-    textPath,
-    textLayout,
-    textOpenTypeFeatures,
-    textArc,
-    colorCorrection,
-    chromaKey,
-    keyingMode,
-    chromaKeyPickActive,
-    stabilization,
+    selectedKeyframeEntries, keyframeProperties, pitchSummary,
+    analysisProgress, setAnalysisProgress, motionTrackProgress, setMotionTrackProgress,
+    motionTrackingBusy, setMotionTrackingBusy, privacyBlurBusy, setPrivacyBlurBusy,
+    batchShiftSeconds: batchOpsState.batchShiftSeconds, setBatchShiftSeconds: batchOpsState.setBatchShiftSeconds,
+    batchScaleFactor: batchOpsState.batchScaleFactor, setBatchScaleFactor: batchOpsState.setBatchScaleFactor,
+    batchEasing: batchOpsState.batchEasing, setBatchEasing: batchOpsState.setBatchEasing,
+    curveProperty, setCurveProperty, privacyBlurEffect, setPrivacyBlurEffect,
+    frameInterpolationSupported: frameInterpolationState.frameInterpolationSupported, setFrameInterpolationSupported: frameInterpolationState.setFrameInterpolationSupported,
+    frameInterpolationCompareRunning: frameInterpolationState.frameInterpolationCompareRunning, setFrameInterpolationCompareRunning: frameInterpolationState.setFrameInterpolationCompareRunning,
+    frameInterpolationCompareItems: frameInterpolationState.frameInterpolationCompareItems, setFrameInterpolationCompareItems: frameInterpolationState.setFrameInterpolationCompareItems,
+    frameInterpolationCompareError: frameInterpolationState.frameInterpolationCompareError, setFrameInterpolationCompareError: frameInterpolationState.setFrameInterpolationCompareError,
+    frameInterpolationExpandedMode: frameInterpolationState.frameInterpolationExpandedMode, setFrameInterpolationExpandedMode: frameInterpolationState.setFrameInterpolationExpandedMode,
+    frameInterpolationQualityRunning: frameInterpolationState.frameInterpolationQualityRunning, setFrameInterpolationQualityRunning: frameInterpolationState.setFrameInterpolationQualityRunning,
+    frameInterpolationQualityError: frameInterpolationState.frameInterpolationQualityError, setFrameInterpolationQualityError: frameInterpolationState.setFrameInterpolationQualityError,
+    audioDenoiseSupported: audioDenoiseState.audioDenoiseSupported, setAudioDenoiseSupported: audioDenoiseState.setAudioDenoiseSupported,
+    aiLocalDenoiseProcessing: audioDenoiseState.aiLocalDenoiseProcessing, setAiLocalDenoiseProcessing: audioDenoiseState.setAiLocalDenoiseProcessing,
+    aiLocalDenoiseProgress: audioDenoiseState.aiLocalDenoiseProgress, setAiLocalDenoiseProgress: audioDenoiseState.setAiLocalDenoiseProgress,
+    aiLocalDenoiseStage: audioDenoiseState.aiLocalDenoiseStage, setAiLocalDenoiseStage: audioDenoiseState.setAiLocalDenoiseStage,
+    aiLocalDenoiseResult: audioDenoiseState.aiLocalDenoiseResult, setAiLocalDenoiseResult: audioDenoiseState.setAiLocalDenoiseResult,
+    colorMatchReferenceClipId: batchOpsState.colorMatchReferenceClipId, setColorMatchReferenceClipId: batchOpsState.setColorMatchReferenceClipId,
+    colorMatchBusy: batchOpsState.colorMatchBusy, setColorMatchBusy: batchOpsState.setColorMatchBusy,
+    subtitleTranslationProgress: subtitleStylesState.subtitleTranslationProgress, setSubtitleTranslationProgress: subtitleStylesState.setSubtitleTranslationProgress,
+    subtitleStyleTemplates: subtitleStylesState.subtitleStyleTemplates, setSubtitleStyleTemplates: subtitleStylesState.setSubtitleStyleTemplates,
+    customSoundDescOpen, setCustomSoundDescOpen, pitchAnalyzing, setPitchAnalyzing,
+    textAnimationPreset: batchOpsState.textAnimationPreset, setTextAnimationPreset: batchOpsState.setTextAnimationPreset,
+    textAnimationDuration: batchOpsState.textAnimationDuration, setTextAnimationDuration: batchOpsState.setTextAnimationDuration,
+    textAnimationDirection: batchOpsState.textAnimationDirection, setTextAnimationDirection: batchOpsState.setTextAnimationDirection,
+    asset, clipStartTimecode, clipDurationTimecode, assetDurationTimecode,
+    subtitleTrack, subtitleType, activeSpeaker, activeSpeakerEntry, soundDescSelectValue, localKeyframeTime,
+    textPath, textLayout, textOpenTypeFeatures, textArc,
+    colorCorrection, chromaKey, keyingMode, chromaKeyPickActive, stabilization,
     frameInterpolation: frameInterpolationState.frameInterpolation,
     frameInterpolationUnavailable: frameInterpolationState.frameInterpolationUnavailable,
     slowMotionMode: frameInterpolationState.slowMotionMode,
@@ -1132,95 +508,40 @@ export function useClipInspectorState({
     showSlowMotionMode: frameInterpolationState.showSlowMotionMode,
     audioDenoise: audioDenoiseState.audioDenoise,
     audioDenoiseUnavailable: audioDenoiseState.audioDenoiseUnavailable,
-    audioRestoration,
-    audioRestorationComparison,
-    blendMode,
-    projection,
-    panorama,
-    videoRestoration,
-    qualityEnhancement,
-    deinterlaceSuggestion,
-    audioPitchSemitones,
-    reverseAudio,
-    fadeInDuration,
-    fadeOutDuration,
-    fadeInCurve,
-    fadeOutCurve,
-    spatialAudio,
-    spatialRenderModeOptions,
-    spatialDistanceOptions,
-    spatialRoomOptions,
-    audioChannelRouting,
-    audioChannelRoutingOptions,
-    masks,
-    privacyRedactions,
-    motionTrack,
-    colorCurves,
-    threeWayColor,
-    selectedKeyframeFrame,
-    selectedKeyframeRefs,
-    batchKeyframesSelected,
+    audioRestoration, audioRestorationComparison, blendMode, projection, panorama,
+    videoRestoration, qualityEnhancement, deinterlaceSuggestion,
+    audioPitchSemitones, reverseAudio, fadeInDuration, fadeOutDuration, fadeInCurve, fadeOutCurve,
+    spatialAudio, spatialRenderModeOptions, spatialDistanceOptions, spatialRoomOptions,
+    audioChannelRouting, audioChannelRoutingOptions,
+    masks, privacyRedactions, motionTrack, colorCurves, threeWayColor,
+    selectedKeyframeFrame, selectedKeyframeRefs, batchKeyframesSelected,
     textAnimationKeyframeCount: batchOpsState.textAnimationKeyframeCount,
-
-    // Handlers
-    commit,
+    commit, runEffectCommand, chooseLut,
     runFrameInterpolationComparePreview: frameInterpolationState.runFrameInterpolationComparePreview,
     runFrameInterpolationQualityEvaluation: frameInterpolationState.runFrameInterpolationQualityEvaluation,
-    commitSubtitleType,
-    commitCcSpeaker,
-    commitCcSoundDesc,
-    updateProjectSpeakers,
-    addActiveSpeakerToLibrary,
-    removeActiveSpeakerFromLibrary,
-    updateActiveSpeakerColor,
-    runEffectCommand,
-    chooseLut,
-    updateTextPath,
-    updateTextLayout,
-    updateTextOpenTypeFeatures,
-    updateTextArc,
-    addKeyframe,
-    setKenBurns,
-    updateKenBurnsEndScale,
-    updatePanorama,
-    updateVideoRestoration,
-    updateQualityEnhancement,
-    updateAudioRestoration,
-    commitChromaKeyColors,
-    updateChromaKeyColor,
-    addChromaKeyColor,
-    removeChromaKeyColor,
-    toggleChromaKeyPicker,
-    runStabilizationAnalysis,
-    runMotionTrackAnalysis,
-    cancelMotionTrackAnalysis,
-    bindMotionTrackKeyframes,
-    bindDataSubtitleSource,
-    updateDataSubtitleTemplate,
-    clearDataSubtitleSource,
-    runPitchAnalysis,
-    exportPitchCsv,
-    updateSelectedKeyframe,
-    removeSelectedKeyframe,
-    runBatchKeyframeEdit,
-    shiftSelectedKeyframes,
-    scaleSelectedKeyframes,
-    updateSelectedKeyframeEasing,
-    distributeSelectedKeyframes,
-    alignSelectedKeyframeValues,
-    deleteSelectedKeyframes,
-    updateSelectedKeyframeExpression,
-    updateCurveKeyframes,
-    addMask,
-    updateMask,
-    removeMask,
-    runPrivacyBlurDetection,
+    commitSubtitleType, commitCcSpeaker, commitCcSoundDesc,
+    updateProjectSpeakers, addActiveSpeakerToLibrary, removeActiveSpeakerFromLibrary, updateActiveSpeakerColor,
+    updateTextPath, updateTextLayout, updateTextOpenTypeFeatures, updateTextArc,
+    addKeyframe, setKenBurns, updateKenBurnsEndScale,
+    updatePanorama, updateVideoRestoration, updateQualityEnhancement, updateAudioRestoration,
+    commitChromaKeyColors, updateChromaKeyColor, addChromaKeyColor, removeChromaKeyColor, toggleChromaKeyPicker,
+    runStabilizationAnalysis, runMotionTrackAnalysis, cancelMotionTrackAnalysis, bindMotionTrackKeyframes,
+    bindDataSubtitleSource, updateDataSubtitleTemplate, clearDataSubtitleSource,
+    runPitchAnalysis, exportPitchCsv,
+    updateSelectedKeyframe: keyframesState.updateSelectedKeyframe,
+    removeSelectedKeyframe: keyframesState.removeSelectedKeyframe,
+    runBatchKeyframeEdit: keyframesState.runBatchKeyframeEdit,
+    shiftSelectedKeyframes, scaleSelectedKeyframes, updateSelectedKeyframeEasing,
+    distributeSelectedKeyframes, alignSelectedKeyframeValues, deleteSelectedKeyframes,
+    updateSelectedKeyframeExpression: keyframesState.updateSelectedKeyframeExpression,
+    updateCurveKeyframes: keyframesState.updateCurveKeyframes,
+    addMask, updateMask, removeMask, runPrivacyBlurDetection,
     applyTextAnimation: batchOpsState.applyTextAnimation,
     applyColorMatch: batchOpsState.applyColorMatch,
-    translateSubtitleTrack,
-    applySubtitleStyleTemplate,
-    saveCurrentSubtitleStyleTemplate,
-    deleteSubtitleStyleTemplate,
-    addSubtitleStyleTemplateToSharedLibrary,
+    translateSubtitleTrack: subtitleStylesState.translateSubtitleTrack,
+    applySubtitleStyleTemplate: subtitleStylesState.applySubtitleStyleTemplate,
+    saveCurrentSubtitleStyleTemplate: subtitleStylesState.saveCurrentSubtitleStyleTemplate,
+    deleteSubtitleStyleTemplate: subtitleStylesState.deleteSubtitleStyleTemplate,
+    addSubtitleStyleTemplateToSharedLibrary: subtitleStylesState.addSubtitleStyleTemplateToSharedLibrary,
   };
 }
