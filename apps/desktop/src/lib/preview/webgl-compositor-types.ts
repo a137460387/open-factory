@@ -2,7 +2,7 @@
 
 import type {ChromaKey, ClipBlendMode, ClipMask, ColorCorrection, ColorNode, ColorNodeGraph, ColorWheelValue, EffectType, Effect, InputColorSpace, ProjectColorPipeline, SubtitleStyle, TextStyle, Transform, ColorGradingGraph} from '@open-factory/editor-core';
 
-interface ProgramInfo {
+export interface ProgramInfo {
   program: WebGLProgram;
   position: number;
   texCoord: number;
@@ -32,7 +32,7 @@ interface ProgramInfo {
   motionBlur: WebGLUniformLocation;
 }
 
-interface CustomShaderProgramInfo {
+export interface CustomShaderProgramInfo {
   program: WebGLProgram;
   position: number;
   texCoord: number;
@@ -42,7 +42,7 @@ interface CustomShaderProgramInfo {
   progress: WebGLUniformLocation | null;
 }
 
-interface PanoramaProgramInfo {
+export interface PanoramaProgramInfo {
   program: WebGLProgram;
   position: number;
   texCoord: number;

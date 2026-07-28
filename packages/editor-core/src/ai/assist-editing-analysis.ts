@@ -7,7 +7,7 @@
  * 所有函数均为纯计算，无副作用。
  */
 
-import type {SceneType, SceneInfo, RhythmProfile, SpeakerSegment} from './assist-editing';
+import type {SceneType, SceneInfo, RhythmProfile, SpeakerSegment} from './assist-editing-types';
 import {clamp} from '../utils/math';
 
 // ==================== 辅助工具函数 ====================
