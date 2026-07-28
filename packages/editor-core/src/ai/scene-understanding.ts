@@ -52,37 +52,33 @@ export {
   DEFAULT_SCENE_UNDERSTANDING_CONFIG,
 } from './scene-understanding-utils';
 
-// Re-export detection functions from detection module
-export { detectObjects, detectFaces } from './scene-understanding-detection';
+// Re-export detection functions
+export { detectObjects } from './scene-understanding-detection';
+
+// Re-export analysis functions
+export { detectFaces, describeScene } from './scene-understanding-analysis';
 
 import type {
   DetectedAction,
-  DetectedFace,
   DetectedObject,
   ImageData,
-  SceneDescription,
-  SceneMood,
   SceneUnderstandingConfig,
   SceneUnderstandingResult,
-  SceneType,
   SegmentationCategory,
   SemanticSegmentation,
-  TimeOfDay,
   TrackingState,
   VideoFrame,
-  LightingCondition,
   ActionCategory,
   ActionAttributes,
 } from './scene-understanding-types';
 import {
   generateId,
-  computeImageBrightness,
-  computeImageContrast,
   computeMotionLevel,
   computeIoU,
   DEFAULT_SCENE_UNDERSTANDING_CONFIG,
 } from './scene-understanding-utils';
-import { detectObjects, detectFaces } from './scene-understanding-detection';
+import { detectObjects } from './scene-understanding-detection';
+import { detectFaces, describeScene } from './scene-understanding-analysis';
 
 // ==================== 动作识别 ====================
 
@@ -271,213 +267,6 @@ function isSkinColor(r: number, g: number, b: number): boolean {
   const cr = 0.713 * (r / 255 - y) + 0.5;
 
   return y > 0.2 && y < 0.9 && cb > 0.35 && cb < 0.55 && cr > 0.45 && cr < 0.65;
-}
-
-// ==================== 场景描述 ====================
-
-/**
- * 场景描述生成
- */
-export function describeScene(
-  imageData: ImageData,
-  objects: DetectedObject[],
-  faces: DetectedFace[],
-): SceneDescription {
-  const { width, height } = imageData;
-  const brightness = computeImageBrightness(imageData);
-  const contrast = computeImageContrast(imageData);
-
-  // 场景类型检测
-  const sceneType = detectSceneType(imageData, objects);
-
-  // 氛围检测
-  const mood = detectSceneMood(brightness, contrast, objects, faces);
-
-  // 光照条件
-  const lighting = detectLightingCondition(brightness, contrast);
-
-  // 时间段
-  const timeOfDay = detectTimeOfDay(brightness, imageData);
-
-  // 复杂度（基于物体数量）
-  const complexity = Math.min(objects.length / 10, 1);
-
-  // 运动程度（需要多帧，这里使用默认值）
-  const motionLevel = 0;
-
-  // 主色调
-  const dominantColors = extractDominantColors(imageData);
-
-  return {
-    sceneType,
-    mood,
-    lighting,
-    timeOfDay,
-    complexity,
-    motionLevel,
-    dominantColors,
-  };
-}
-
-/**
- * 检测场景类型
- */
-function detectSceneType(imageData: ImageData, objects: DetectedObject[]): SceneType {
-  const { width, height } = imageData;
-  const brightness = computeImageBrightness(imageData);
-
-  // 基于物体类别判断
-  const categories = objects.map((obj) => obj.category);
-
-  if (categories.includes('nature')) {
-    return 'nature';
-  }
-
-  if (categories.includes('building')) {
-    return 'urban';
-  }
-
-  if (categories.includes('vehicle')) {
-    return 'urban';
-  }
-
-  // 基于亮度判断
-  if (brightness < 0.3) {
-    return 'indoor';
-  }
-
-  return 'outdoor';
-}
-
-/**
- * 检测场景氛围
- */
-function detectSceneMood(
-  brightness: number,
-  contrast: number,
-  objects: DetectedObject[],
-  faces: DetectedFace[],
-): SceneMood {
-  // 基于人脸表情判断
-  if (faces.length > 0) {
-    const expressions = faces.map((face) => face.expression.primary);
-
-    if (expressions.includes('happy')) {
-      return 'happy';
-    }
-
-    if (expressions.includes('sad')) {
-      return 'sad';
-    }
-
-    if (expressions.includes('angry') || expressions.includes('fearful')) {
-      return 'tense';
-    }
-  }
-
-  // 基于亮度和对比度判断
-  if (brightness < 0.3 && contrast > 0.5) {
-    return 'mysterious';
-  }
-
-  if (brightness > 0.7 && contrast < 0.3) {
-    return 'calm';
-  }
-
-  if (contrast > 0.6) {
-    return 'energetic';
-  }
-
-  return 'neutral';
-}
-
-/**
- * 检测光照条件
- */
-function detectLightingCondition(brightness: number, contrast: number): LightingCondition {
-  if (brightness < 0.3) {
-    return 'low';
-  }
-
-  if (brightness > 0.8) {
-    return 'bright';
-  }
-
-  if (contrast > 0.6) {
-    return 'side-lit';
-  }
-
-  if (contrast < 0.3) {
-    return 'diffused';
-  }
-
-  return 'natural';
-}
-
-/**
- * 检测时间段
- */
-function detectTimeOfDay(brightness: number, imageData: ImageData): TimeOfDay {
-  if (brightness < 0.2) {
-    return 'night';
-  }
-
-  if (brightness < 0.4) {
-    return 'dusk';
-  }
-
-  if (brightness > 0.8) {
-    return 'noon';
-  }
-
-  // 检测日落特征（暖色调）
-  const { data } = imageData;
-  let totalWarmth = 0;
-  const pixelCount = data.length / 4;
-
-  for (let i = 0; i < data.length; i += 16) {
-    // 采样
-    const r = data[i] / 255;
-    const b = data[i + 2] / 255;
-    totalWarmth += r - b;
-  }
-
-  const avgWarmth = totalWarmth / (pixelCount / 4);
-
-  if (avgWarmth > 0.2 && brightness > 0.4 && brightness < 0.7) {
-    return 'sunset';
-  }
-
-  return 'afternoon';
-}
-
-/**
- * 提取主色调
- */
-function extractDominantColors(imageData: ImageData): { r: number; g: number; b: number }[] {
-  const { data } = imageData;
-  const colorMap = new Map<string, { color: { r: number; g: number; b: number }; count: number }>();
-
-  // 采样像素
-  for (let i = 0; i < data.length; i += 16) {
-    const r = Math.round(data[i] / 32) * 32;
-    const g = Math.round(data[i + 1] / 32) * 32;
-    const b = Math.round(data[i + 2] / 32) * 32;
-    const key = `${r},${g},${b}`;
-
-    const existing = colorMap.get(key);
-    if (existing) {
-      existing.count++;
-    } else {
-      colorMap.set(key, { color: { r, g, b }, count: 1 });
-    }
-  }
-
-  // 返回前5个主色调
-  return Array.from(colorMap.values())
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-    .map((item) => item.color);
 }
 
 // ==================== 物体跟踪 ====================
