@@ -1,5 +1,4 @@
 import type {
-  AudioSpectrumParams,
   Clip,
   Effect,
   EffectType,
@@ -8,24 +7,16 @@ import type {
   ProjectColorPipeline,
   Sequence,
   Timeline,
-  Transition,
 } from '@open-factory/editor-core';
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
-  applyClipKeyframes,
-  getActiveClipsAtTime,
-  getClipPlaybackStart,
-  getEffectNumberParam,
-  getRenderableTracks,
-  getTimelinePlaybackDuration,
-  getTransitionPlaybackWindow,
-  normalizeAudioSpectrumParams,
-  expandAudioVisualizationTheme,
-  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
   normalizeColorCorrection,
+  getEffectNumberParam,
+  getTimelinePlaybackDuration,
 } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
+import { drawAudioSpectrumToCanvas } from './audio-spectrum-renderer';
 import { recordPreviewError, recordPreviewGpuMetrics, recordPreviewMode, recordPreviewReadback } from './debug';
 import type { GpuPreviewMetrics } from './gpu-acceleration';
 import { HardwareDecodeManager } from './hw-decode-manager';
@@ -39,6 +30,7 @@ import {
   drawText2d,
   drawTextWebGl,
 } from './text-renderer';
+import { getTransitionAwareClipInstances, withCanvasKeyframedPosition } from './transition-clip-helpers';
 import { drawVideo2d, drawVideoWebGl } from './video-renderer';
 import { drawTransformedSource2d } from './transform-2d';
 import { WebGlPreviewCompositor } from './webgl-compositor';
@@ -595,194 +587,6 @@ export class PreviewRenderer {
   }
 }
 
-function drawAudioSpectrumToCanvas(
-  timeline: Timeline,
-  playheadTime: number,
-  width: number,
-  height: number,
-  readAnalysisFrame: (kind: 'frequency' | 'waveform') => Uint8Array | undefined,
-): HTMLCanvasElement | undefined {
-  const activeParams = getActiveAudioSpectrumParams(timeline, playheadTime);
-  if (activeParams.length === 0) {
-    return undefined;
-  }
-  const overlay = document.createElement('canvas');
-  overlay.width = width;
-  overlay.height = height;
-  const context = overlay.getContext('2d');
-  if (!context) {
-    return undefined;
-  }
-  let drew = false;
-  for (const params of activeParams) {
-    const data = readAnalysisFrame(params.style === 'waveform' ? 'waveform' : 'frequency');
-    if (!data) {
-      continue;
-    }
-    drawAudioSpectrumOverlay(context, width, height, params, data);
-    drew = true;
-  }
-  return drew ? overlay : undefined;
-}
-
-function getActiveAudioSpectrumParams(timeline: Timeline, playheadTime: number): AudioSpectrumParams[] {
-  return getActiveClipsAtTime(timeline, playheadTime).flatMap((clip) =>
-    (clip.effects ?? []).flatMap((effect) => {
-      if (!effect.enabled || effect.type !== 'audio-spectrum') {
-        return [];
-      }
-      const params = normalizeAudioSpectrumParams(effect.params);
-      return params.height > 0 ? [params] : [];
-    }),
-  );
-}
-
-function drawAudioSpectrumOverlay(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  params: AudioSpectrumParams,
-  data: Uint8Array,
-): void {
-  const overlayHeight = Math.max(2, Math.round(height * (params.height / 100)));
-  const y = params.position === 'top' ? 0 : height - overlayHeight;
-  const theme =
-    params.themeId && params.themeId !== MANUAL_AUDIO_VISUALIZATION_THEME_ID
-      ? expandAudioVisualizationTheme({
-          themeId: params.themeId,
-          color: params.color,
-          colorStart: params.colorStart,
-          colorEnd: params.colorEnd,
-        })
-      : undefined;
-  const paint = context.createLinearGradient(0, y, 0, y + overlayHeight);
-  paint.addColorStop(0, params.colorStart);
-  paint.addColorStop(1, params.colorEnd);
-  context.save();
-  context.globalAlpha = 0.9;
-  if (theme?.background.type === 'solid') {
-    context.fillStyle = theme.background.color;
-    context.globalAlpha = 0.28;
-    context.fillRect(0, y, width, overlayHeight);
-    context.globalAlpha = 0.9;
-  } else if (theme?.background.type === 'gradient') {
-    const background = context.createLinearGradient(0, y, 0, y + overlayHeight);
-    background.addColorStop(0, theme.background.color);
-    background.addColorStop(1, theme.background.color2);
-    context.fillStyle = background;
-    context.globalAlpha = 0.28;
-    context.fillRect(0, y, width, overlayHeight);
-    context.globalAlpha = 0.9;
-  }
-  if (theme?.glow && theme.glowStrength > 0) {
-    context.shadowColor = theme.glowColor;
-    context.shadowBlur = 4 + theme.glowStrength * 16;
-  }
-  context.strokeStyle = paint;
-  context.fillStyle = paint;
-  context.lineWidth = 2;
-  if (params.style === 'waveform') {
-    drawWaveformSpectrum(context, width, overlayHeight, y, params.sensitivity, data, params.mirror);
-  } else if (params.style === 'circular') {
-    drawCircleSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
-  } else {
-    drawBarSpectrum(context, width, overlayHeight, y, params.sensitivity, data, params.mirror);
-  }
-  if (theme?.border && theme.borderWidth > 0) {
-    context.shadowBlur = 0;
-    context.globalAlpha = 0.85;
-    context.strokeStyle = theme.borderColor;
-    context.lineWidth = theme.borderWidth;
-    context.strokeRect(
-      theme.borderWidth / 2,
-      y + theme.borderWidth / 2,
-      width - theme.borderWidth,
-      overlayHeight - theme.borderWidth,
-    );
-  }
-  context.restore();
-}
-
-function drawBarSpectrum(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  y: number,
-  sensitivity: number,
-  data: Uint8Array,
-  mirror: boolean,
-): void {
-  const bars = Math.min(96, Math.max(16, Math.floor(width / 12)));
-  const barWidth = width / bars;
-  const centerY = y + height / 2;
-  for (let index = 0; index < bars; index += 1) {
-    const sample = data[Math.min(data.length - 1, Math.floor((index / bars) * data.length))] ?? 0;
-    const level = Math.min(1, (sample / 255) * sensitivity);
-    const barHeight = Math.max(1, level * (mirror ? height / 2 : height));
-    const x = index * barWidth + 1;
-    const drawWidth = Math.max(1, barWidth - 2);
-    if (mirror) {
-      context.fillRect(x, centerY - barHeight, drawWidth, barHeight * 2);
-    } else {
-      context.fillRect(x, y + height - barHeight, drawWidth, barHeight);
-    }
-  }
-}
-
-function drawWaveformSpectrum(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  y: number,
-  sensitivity: number,
-  data: Uint8Array,
-  mirror: boolean,
-): void {
-  const centerY = y + height / 2;
-  for (const direction of mirror ? [1, -1] : [1]) {
-    context.beginPath();
-    for (let index = 0; index < data.length; index += 1) {
-      const x = (index / Math.max(1, data.length - 1)) * width;
-      const normalized = ((data[index] ?? 128) - 128) / 128;
-      const nextY = centerY + normalized * direction * sensitivity * (height / 2);
-      if (index === 0) {
-        context.moveTo(x, nextY);
-      } else {
-        context.lineTo(x, nextY);
-      }
-    }
-    context.stroke();
-  }
-}
-
-function drawCircleSpectrum(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  y: number,
-  sensitivity: number,
-  data: Uint8Array,
-): void {
-  const centerX = width / 2;
-  const centerY = y + height / 2;
-  const radius = Math.max(8, height * 0.28);
-  const bars = 96;
-  context.beginPath();
-  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  context.stroke();
-  for (let index = 0; index < bars; index += 1) {
-    const angle = (index / bars) * Math.PI * 2 - Math.PI / 2;
-    const sample = data[Math.min(data.length - 1, Math.floor((index / bars) * data.length))] ?? 0;
-    const level = Math.min(1, (sample / 255) * sensitivity);
-    const inner = radius;
-    const outer = radius + level * height * 0.32;
-    context.beginPath();
-    context.moveTo(centerX + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner);
-    context.lineTo(centerX + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer);
-    context.stroke();
-  }
-}
-
 function readWebGlFrameSafely(webgl: WebGlPreviewCompositor): PreviewFrameReadback | undefined {
   try {
     const frame = webgl.readFramePixels();
@@ -846,103 +650,4 @@ function buildAdjustmentCanvasFilter(colorCorrection: Clip['colorCorrection'], e
     }
   }
   return filters.join(' ');
-}
-
-interface ClipRenderInstance {
-  clip: Clip;
-  playheadTime: number;
-  trackIndex: number;
-  start: number;
-}
-
-function getTransitionAwareClipInstances(timeline: Timeline, playheadTime: number): ClipRenderInstance[] {
-  const windows = (timeline.transitions ?? [])
-    .map((transition) => ({ transition, window: getTransitionPlaybackWindow(timeline, transition) }))
-    .filter(
-      (item): item is { transition: Transition; window: NonNullable<ReturnType<typeof getTransitionPlaybackWindow>> } =>
-        Boolean(item.window),
-    );
-
-  return getRenderableTracks(timeline)
-    .flatMap((track, trackIndex) =>
-      track.clips.map((clip) => {
-        const playbackStart = getClipPlaybackStart(timeline, clip.id) ?? clip.start;
-        return {
-          clip,
-          playbackStart,
-          playbackEnd: playbackStart + clip.duration,
-          trackIndex,
-        };
-      }),
-    )
-    .filter((item) => playheadTime >= item.playbackStart && playheadTime < item.playbackEnd)
-    .map((item) => {
-      const localTime = playheadTime - item.playbackStart;
-      const animatedClip = applyClipKeyframes(item.clip, localTime);
-      const opacity = getTransitionOpacity(windows, item.clip.id, playheadTime);
-      const clip = opacity >= 0.999 ? animatedClip : withOpacity(animatedClip, opacity);
-      return {
-        clip,
-        playheadTime: item.clip.start + localTime,
-        trackIndex: item.trackIndex,
-        start: item.playbackStart,
-      };
-    })
-    .filter((item) => item.clip.transform.opacity > 0.001)
-    .sort(
-      (left, right) =>
-        left.trackIndex - right.trackIndex || left.start - right.start || left.clip.id.localeCompare(right.clip.id),
-    );
-}
-
-function getTransitionOpacity(
-  windows: Array<{ transition: Transition; window: NonNullable<ReturnType<typeof getTransitionPlaybackWindow>> }>,
-  clipId: string,
-  playheadTime: number,
-): number {
-  const active = windows.find(
-    ({ window }) =>
-      playheadTime >= window.start &&
-      playheadTime < window.end &&
-      (window.fromClip.id === clipId || window.toClip.id === clipId),
-  );
-  if (!active) {
-    return 1;
-  }
-  const progress = Math.min(1, Math.max(0, (playheadTime - active.window.start) / active.window.duration));
-  if (active.transition.type === 'fade-black') {
-    if (clipId === active.window.fromClip.id) {
-      return progress < 0.5 ? 1 - progress * 2 : 0;
-    }
-    return progress > 0.5 ? (progress - 0.5) * 2 : 0;
-  }
-  return clipId === active.window.fromClip.id ? 1 - progress : progress;
-}
-
-function withOpacity<TClip extends Clip>(clip: TClip, opacity: number): TClip {
-  return {
-    ...clip,
-    transform: {
-      ...clip.transform,
-      opacity: clip.transform.opacity * Math.max(0, Math.min(1, opacity)),
-    },
-  };
-}
-
-function withCanvasKeyframedPosition<TClip extends Clip>(
-  clip: TClip,
-  canvasWidth: number,
-  canvasHeight: number,
-): TClip {
-  if (!clip.keyframes?.x && !clip.keyframes?.y) {
-    return clip;
-  }
-  return {
-    ...clip,
-    transform: {
-      ...clip.transform,
-      x: clip.keyframes?.x ? clip.transform.x * (canvasWidth / 2) : clip.transform.x,
-      y: clip.keyframes?.y ? clip.transform.y * (canvasHeight / 2) : clip.transform.y,
-    },
-  } as TClip;
 }
