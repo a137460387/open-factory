@@ -1,8 +1,12 @@
+import {logger} from '@open-factory/editor-core/utils';
 import {BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, generatePlatformFitSuggestion, ApplyPlatformFitCommand, RestorePlatformFitClipCommand, PLATFORM_LIMITS, getTimelinePlaybackDuration, type ExportComplianceParams, type ExportLoudnessNormalization} from '@open-factory/editor-core';
+import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor} from '../../store/commandManager';
 import {chooseExportPath} from '../../lib/exportVideo';
-import {openFileDialog} from '../../lib/tauri-bridge';
+import {openFileDialog, runExportPowerAction} from '../../lib/tauri-bridge';
 import {showToast} from '../../lib/toast';
+import {type ExportCompletionAction} from '../export-background';
+import {type ExportBackgroundSettings} from '../../settings/appSettings';
 import {updateAudioVisualizationBackgroundImagePath, updateImageWatermarkPath} from '../lib/exportSettingsHelpers';
 
 import type {ExportState} from './useExportState';

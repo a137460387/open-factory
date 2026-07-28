@@ -1,12 +1,10 @@
 import {useEffect, useMemo, useState} from 'react';
 import {logger} from '@open-factory/editor-core/utils';
 import type {Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker} from '@open-factory/editor-core';
-import {AddSubtitleClipCommand, AddTrackCommand, AddKeyframeCommand, AddMaskCommand, BatchKeyframeEditCommand, BatchUpdateKeyframeCommand, ApplyTextAnimationCommand, UpdateSubtitleStyleCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, KEYFRAME_PROPERTY_LIMITS, MAX_CHROMA_KEY_COLORS, RemoveMaskCommand, RemoveKeyframeCommand, UpdateKeyframeCommand, UpdateClipCommand, UpdateMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipSpeed, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioDenoise, normalizeAudioRestoration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeSlowMotionMode, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, frameInterpolationCachePath, createTrack, mapSsimToFrameInterpolationQualityGrade, parseKeyframeExpression, type AudioFadeCurve, type AudioChannelRoutingMode, type BatchKeyframeEditOperation, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type Keyframe, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type TextAnimationDirection, type TextAnimationPreset, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type FrameInterpolationCompareMode, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
+import {AddSubtitleClipCommand, AddTrackCommand, AddKeyframeCommand, AddMaskCommand, BatchKeyframeEditCommand, BatchUpdateKeyframeCommand, UpdateSubtitleStyleCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, KEYFRAME_PROPERTY_LIMITS, MAX_CHROMA_KEY_COLORS, RemoveMaskCommand, RemoveKeyframeCommand, UpdateKeyframeCommand, UpdateClipCommand, UpdateMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioDenoise, normalizeAudioRestoration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, createTrack, parseKeyframeExpression, type AudioFadeCurve, type AudioChannelRoutingMode, type BatchKeyframeEditOperation, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type Keyframe, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
 import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
-import {analyzeClip, analyzeMotionTrack, bridgeConfirm, cancelMotionTracking, detectPrivacyRegions, evaluateExportQuality, convertLocalFileSrc, getAppDataDir, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, runExportPreviewSamples, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent, type NoiseReductionProgressEvent} from '../../lib/tauri-bridge';
-import {buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS} from '../../lib/frameInterpolationComparePreview';
-import {buildClipColorMatchCurves} from '../../lib/colorMatch';
+import {analyzeClip, analyzeMotionTrack, bridgeConfirm, cancelMotionTracking, detectPrivacyRegions, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent} from '../../lib/tauri-bridge';
 import {acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems} from '../../lib/subtitleTranslation';
 import {deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate} from '../../lib/subtitleStyleTemplates';
 import {addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource} from '../../shared-library/sharedLibrary';
@@ -16,9 +14,12 @@ import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore'
 import {usePrivacyDetectionSettingsStore} from '../../store/privacyDetectionSettingsStore';
 import {isTranslationConfigured, useTranslationSettingsStore, type TranslationProvider} from '../../store/translationSettingsStore';
 import {analyzeClipPitch, exportClipPitchCsv} from '../../media/pitchAnalysis';
-import {buildAudioRestorationPreviewPeaks, mergeSubtitleStyleTemplateViews, getSubtitleStyleTemplateLabel, resolveSelectedKeyframeEntries, joinLocalPath, type FrameInterpolationComparePreviewViewItem} from './InspectorEditors';
+import {buildAudioRestorationPreviewPeaks, mergeSubtitleStyleTemplateViews, getSubtitleStyleTemplateLabel, resolveSelectedKeyframeEntries} from './InspectorEditors';
 export type {ClipInspectorStateParams, ClipInspectorStateReturn} from './clip-inspector-types';
 import type {ClipInspectorStateParams, ClipInspectorStateReturn} from './clip-inspector-types';
+import {useFrameInterpolationState} from './clip-inspector-frame-interpolation';
+import {useAudioDenoiseState} from './clip-inspector-audio-denoise';
+import {useBatchOperationsState} from './clip-inspector-batch-operations';
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -61,34 +62,14 @@ export function useClipInspectorState({
     () => ({ provider: translationProvider, apiKey: translationApiKey, targetLanguage: translationTargetLanguage }),
     [translationApiKey, translationProvider, translationTargetLanguage],
   );
+
+  // -- Shared state not delegated to sub-hooks ------------------------------
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
   const [motionTrackingBusy, setMotionTrackingBusy] = useState(false);
   const [privacyBlurBusy, setPrivacyBlurBusy] = useState(false);
-  const [batchShiftSeconds, setBatchShiftSeconds] = useState(0.1);
-  const [batchScaleFactor, setBatchScaleFactor] = useState(1);
-  const [batchEasing, setBatchEasing] = useState<KeyframeEasing>('linear');
   const [curveProperty, setCurveProperty] = useState<KeyframeProperty>('opacity');
   const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
-  const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
-  const [frameInterpolationCompareRunning, setFrameInterpolationCompareRunning] = useState(false);
-  const [frameInterpolationCompareItems, setFrameInterpolationCompareItems] = useState<
-    FrameInterpolationComparePreviewViewItem[]
-  >([]);
-  const [frameInterpolationCompareError, setFrameInterpolationCompareError] = useState<string>();
-  const [frameInterpolationExpandedMode, setFrameInterpolationExpandedMode] = useState<FrameInterpolationCompareMode>();
-  const [frameInterpolationQualityRunning, setFrameInterpolationQualityRunning] = useState(false);
-  const [frameInterpolationQualityError, setFrameInterpolationQualityError] = useState<string>();
-  const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
-  const [aiLocalDenoiseProcessing, setAiLocalDenoiseProcessing] = useState(false);
-  const [aiLocalDenoiseProgress, setAiLocalDenoiseProgress] = useState(0);
-  const [aiLocalDenoiseStage, setAiLocalDenoiseStage] = useState('');
-  const [aiLocalDenoiseResult, setAiLocalDenoiseResult] = useState<{
-    outputPath: string;
-    noiseReductionDb: number;
-  } | null>(null);
-  const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
-  const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{
     completed: number;
     total: number;
@@ -98,9 +79,7 @@ export function useClipInspectorState({
   );
   const [customSoundDescOpen, setCustomSoundDescOpen] = useState(false);
   const [pitchAnalyzing, setPitchAnalyzing] = useState(false);
-  const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
-  const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
-  const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
+
   const projectSpeakers = useMemo(() => normalizeProjectSpeakers(project.speakers), [project.speakers]);
   const subtitleTrack =
     clip.type === 'subtitle'
@@ -126,6 +105,7 @@ export function useClipInspectorState({
     void loadTranslationApiKey();
   }, [loadTranslationApiKey, translationProvider]);
 
+  // -- commit helper --------------------------------------------------------
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -137,121 +117,47 @@ export function useClipInspectorState({
       });
     }
   };
-  useEffect(() => {
-    setFrameInterpolationCompareItems([]);
-    setFrameInterpolationCompareError(undefined);
-    setFrameInterpolationQualityError(undefined);
-    setFrameInterpolationExpandedMode(undefined);
-  }, [clip.id]);
 
-  const runFrameInterpolationComparePreview = async () => {
-    if (clip.type !== 'video' || !asset) {
-      setFrameInterpolationCompareError(zhCN.inspector.frameInterpolationCompare.missingMedia);
-      return;
-    }
-    setFrameInterpolationCompareRunning(true);
-    setFrameInterpolationCompareError(undefined);
-    setFrameInterpolationExpandedMode(undefined);
+  // -- runEffectCommand helper ----------------------------------------------
+  const runEffectCommand = (command: Parameters<typeof commandManager.execute>[0]) => {
     try {
-      const outputDir = joinLocalPath(await getAppDataDir(), 'frame-interpolation-preview');
-      const plan = buildFrameInterpolationComparePreviewPlan(
-        project,
-        clip,
-        asset,
-        playheadTime,
-        outputDir,
-        zhCN.inspector.frameInterpolationCompare.modes,
-      );
-      const result = await runExportPreviewSamples({
-        samples: plan.samples,
-        timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
-      });
-      const resultById = new Map(result.samples.map((sample) => [sample.id, sample]));
-      setFrameInterpolationCompareItems(
-        plan.items.map((item) => {
-          const sample = resultById.get(`frame-interpolation-${item.mode}`);
-          const outputPath = sample?.path ?? item.outputPath;
-          return {
-            mode: item.mode,
-            label: item.label,
-            outputPath,
-            src: convertLocalFileSrc(outputPath),
-            estimatedMs: item.estimatedMs,
-            slowMotionMode: item.slowMotionMode,
-          };
-        }),
-      );
+      commandManager.execute(command);
     } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
-      setFrameInterpolationCompareError(message);
-      showToast({ kind: 'warning', title: zhCN.inspector.frameInterpolationCompare.failedTitle, message });
-    } finally {
-      setFrameInterpolationCompareRunning(false);
+      showToast({
+        kind: 'warning',
+        title: zhCN.inspector.propertyRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
+      });
     }
   };
-  const runFrameInterpolationQualityEvaluation = async () => {
-    if (clip.type !== 'video' || !asset?.path) {
-      setFrameInterpolationQualityError(zhCN.inspector.frameInterpolationCompare.missingMedia);
-      return;
-    }
-    setFrameInterpolationQualityRunning(true);
-    setFrameInterpolationQualityError(undefined);
-    try {
-      const appDataDir = await getAppDataDir();
-      const outputDir = frameInterpolationCachePath(appDataDir, asset.path, frameInterpolation);
-      const plan = buildFrameInterpolationComparePreviewPlan(
-        project,
-        clip,
-        asset,
-        playheadTime,
-        outputDir,
-        zhCN.inspector.frameInterpolationCompare.modes,
-      );
-      const preview = await runExportPreviewSamples({
-        samples: plan.samples,
-        timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
+
+  // -- Sub-hooks ------------------------------------------------------------
+  const frameInterpolationState = useFrameInterpolationState({clip, asset, project, playheadTime, commit});
+  const audioDenoiseState = useAudioDenoiseState({clip, asset, commit});
+  const batchOpsState = useBatchOperationsState({clip, project, media, commit, runEffectCommand});
+
+  // -- Ffmpeg capabilities (bridges frame interpolation + audio denoise) -----
+  useEffect(() => {
+    let disposed = false;
+    void getFfmpegCapabilities()
+      .then((capabilities) => {
+        if (!disposed) {
+          frameInterpolationState.setFrameInterpolationSupported(capabilities.available && capabilities.hasMinterpolate === true);
+          audioDenoiseState.setAudioDenoiseSupported(capabilities.available && capabilities.hasArnndn === true);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          frameInterpolationState.setFrameInterpolationSupported(false);
+          audioDenoiseState.setAudioDenoiseSupported(false);
+        }
       });
-      const samplesById = new Map(preview.samples.map((sample) => [sample.id, sample]));
-      const selectedMode =
-        frameInterpolation.mode === 'adaptive'
-          ? 'mci'
-          : frameInterpolation.mode === 'copy'
-            ? 'original'
-            : frameInterpolation.mode;
-      const baseline = samplesById.get('frame-interpolation-blend') ?? samplesById.get('frame-interpolation-original');
-      const candidate =
-        samplesById.get(`frame-interpolation-${selectedMode}`) ??
-        samplesById.get('frame-interpolation-mci') ??
-        baseline;
-      if (!baseline || !candidate) {
-        throw new Error(zhCN.inspector.frameInterpolationCompare.failedMessage);
-      }
-      const result = await evaluateExportQuality({
-        taskId: `frame-interpolation-quality-${clip.id}`,
-        sourcePath: baseline.path,
-        outputPath: candidate.path,
-        duration: clip.duration,
-      });
-      const ssim = Number.isFinite(result.ssim) ? result.ssim! : 0;
-      commit({
-        frameInterpolation: {
-          ...frameInterpolation,
-          quality: {
-            ssim,
-            grade: mapSsimToFrameInterpolationQualityGrade(ssim),
-            sampleCount: 10,
-            evaluatedAt: new Date().toISOString(),
-          },
-        },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
-      setFrameInterpolationQualityError(message);
-      showToast({ kind: 'warning', title: zhCN.inspector.frameInterpolationCompare.qualityFailedTitle, message });
-    } finally {
-      setFrameInterpolationQualityRunning(false);
-    }
-  };
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
+  // -- Subtitle handlers ----------------------------------------------------
   const commitSubtitleType = (nextType: 'subtitle' | 'cc') => {
     if (clip.type !== 'subtitle') {
       return;
@@ -301,6 +207,8 @@ export function useClipInspectorState({
       });
     }
   };
+
+  // -- Speaker handlers -----------------------------------------------------
   const updateProjectSpeakers = (speakers: ProjectSpeaker[]) => {
     try {
       commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, speakers));
@@ -333,17 +241,8 @@ export function useClipInspectorState({
       projectSpeakers.map((speaker) => (speaker.id === activeSpeakerEntry.id ? { ...speaker, color } : speaker)),
     );
   };
-  const runEffectCommand = (command: Parameters<typeof commandManager.execute>[0]) => {
-    try {
-      commandManager.execute(command);
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.propertyRejectedTitle,
-        message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage,
-      });
-    }
-  };
+
+  // -- LUT handler ----------------------------------------------------------
   const chooseLut = async () => {
     try {
       const paths = await openFileDialog(false, [{ name: zhCN.inspector.lutFilterName, extensions: ['cube'] }]);
@@ -359,6 +258,8 @@ export function useClipInspectorState({
       });
     }
   };
+
+  // -- Text / keyframe / computed values ------------------------------------
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
   const textPath = clip.type === 'text' ? normalizeTextPath(clip.pathText) : undefined;
   const textLayout = clip.type === 'text' ? normalizeTextLayout(clip.textLayout) : undefined;
@@ -423,13 +324,6 @@ export function useClipInspectorState({
     }
     commit({ keyframes: setKenBurnsEndScaleKeyframes(clip.keyframes, clip.duration, scale) });
   };
-  const colorMatchReferenceClips = useMemo(
-    () =>
-      project.timeline.tracks
-        .flatMap((track) => track.clips)
-        .filter((item) => item.id !== clip.id && (item.type === 'video' || item.type === 'image')),
-    [clip.id, project.timeline.tracks],
-  );
   const selectedKeyframeFrame =
     selectedKeyframe?.clipId === clip.id
       ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId)
@@ -453,6 +347,8 @@ export function useClipInspectorState({
       setCurveProperty(keyframeProperties[0]);
     }
   }, [curveProperty, keyframeProperties]);
+
+  // -- Subtitle style template loading --------------------------------------
   useEffect(() => {
     let canceled = false;
     if (clip.type !== 'subtitle') {
@@ -481,20 +377,13 @@ export function useClipInspectorState({
       canceled = true;
     };
   }, [clip.type]);
+
+  // -- Computed clip properties ---------------------------------------------
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   const chromaKey = normalizeChromaKey(clip.chromaKey);
   const keyingMode: ChromaKeyMode | 'none' = chromaKey.enabled ? chromaKey.mode : 'none';
   const chromaKeyPickActive = chromaKeyPickClipId === clip.id;
   const stabilization = normalizeStabilization(clip.stabilization);
-  const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
-  const frameInterpolationUnavailable = frameInterpolationSupported === false;
-  const slowMotionMode = normalizeSlowMotionMode(clip.slowMotionMode);
-  const frameInterpolationExpandedItem = frameInterpolationCompareItems.find(
-    (item) => item.mode === frameInterpolationExpandedMode,
-  );
-  const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
-  const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
-  const audioDenoiseUnavailable = audioDenoiseSupported === false;
   const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
   const audioRestorationComparison = buildAudioRestorationWaveformComparison(
     buildAudioRestorationPreviewPeaks(clip.pitchData),
@@ -540,6 +429,8 @@ export function useClipInspectorState({
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
+
+  // -- Chroma key handlers --------------------------------------------------
   const commitChromaKeyColors = (colors: ChromaKeyColor[]) => {
     const nextColors = colors.slice(0, MAX_CHROMA_KEY_COLORS);
     const color = nextColors[0] ?? chromaKey.color;
@@ -570,6 +461,8 @@ export function useClipInspectorState({
     setSelectedClipIds([clip.id]);
     setChromaKeyPickClipId(clip.id);
   };
+
+  // -- Analysis progress listeners ------------------------------------------
   useEffect(() => {
     let disposed = false;
     let unlistenAnalysis: (() => void) | undefined;
@@ -602,44 +495,8 @@ export function useClipInspectorState({
       unlistenMotionTrack?.();
     };
   }, [clip.id]);
-  useEffect(() => {
-    let disposed = false;
-    void getFfmpegCapabilities()
-      .then((capabilities) => {
-        if (!disposed) {
-          setFrameInterpolationSupported(capabilities.available && capabilities.hasMinterpolate === true);
-          setAudioDenoiseSupported(capabilities.available && capabilities.hasArnndn === true);
-        }
-      })
-      .catch(() => {
-        if (!disposed) {
-          setFrameInterpolationSupported(false);
-          setAudioDenoiseSupported(false);
-        }
-      });
-    return () => {
-      disposed = true;
-    };
-  }, []);
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    void listenBridge<NoiseReductionProgressEvent>('noise-reduction-progress', (payload) => {
-      if (payload.clipId === clip.id) {
-        setAiLocalDenoiseProgress(payload.progress);
-        setAiLocalDenoiseStage(payload.stage);
-      }
-    }).then((dispose) => {
-      unlisten = dispose;
-    });
-    return () => {
-      unlisten?.();
-    };
-  }, [clip.id]);
-  useEffect(() => {
-    if (!colorMatchReferenceClips.some((item) => item.id === colorMatchReferenceClipId)) {
-      setColorMatchReferenceClipId(colorMatchReferenceClips[0]?.id ?? '');
-    }
-  }, [colorMatchReferenceClipId, colorMatchReferenceClips]);
+
+  // -- Stabilization / motion track analysis ---------------------------------
   const runStabilizationAnalysis = async () => {
     if (clip.type !== 'video' || !asset?.path) {
       return;
@@ -708,6 +565,8 @@ export function useClipInspectorState({
     }
     commit({ keyframes });
   };
+
+  // -- Data subtitle handlers -----------------------------------------------
   const bindDataSubtitleSource = async () => {
     if (clip.type !== 'subtitle') {
       return;
@@ -756,6 +615,8 @@ export function useClipInspectorState({
       commit({ dataSubtitle: undefined });
     }
   };
+
+  // -- Pitch analysis -------------------------------------------------------
   const runPitchAnalysis = async () => {
     if (!asset || !('volume' in clip)) {
       return;
@@ -805,6 +666,8 @@ export function useClipInspectorState({
       });
     }
   };
+
+  // -- Keyframe handlers ----------------------------------------------------
   const updateSelectedKeyframe = (
     patch: Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>,
   ) => {
@@ -863,9 +726,9 @@ export function useClipInspectorState({
       });
     }
   };
-  const shiftSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'shift', delta: batchShiftSeconds });
-  const scaleSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'scale-time', factor: batchScaleFactor });
-  const updateSelectedKeyframeEasing = () => runBatchKeyframeEdit({ type: 'easing', easing: batchEasing });
+  const shiftSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'shift', delta: batchOpsState.batchShiftSeconds });
+  const scaleSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'scale-time', factor: batchOpsState.batchScaleFactor });
+  const updateSelectedKeyframeEasing = () => runBatchKeyframeEdit({ type: 'easing', easing: batchOpsState.batchEasing });
   const distributeSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'distribute-time' });
   const alignSelectedKeyframeValues = () => runBatchKeyframeEdit({ type: 'align-value' });
   const deleteSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'delete' }, true);
@@ -930,10 +793,14 @@ export function useClipInspectorState({
       });
     }
   };
+
+  // -- Mask handlers --------------------------------------------------------
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
   const updateMask = (maskId: string, patch: MaskPatch) =>
     runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
+
+  // -- Privacy blur ---------------------------------------------------------
   const runPrivacyBlurDetection = async () => {
     if (!privacyDetectionModelPath.trim()) {
       showToast({
@@ -987,47 +854,8 @@ export function useClipInspectorState({
       setPrivacyBlurBusy(false);
     }
   };
-  const applyTextAnimation = () => {
-    if (clip.type !== 'text') {
-      return;
-    }
-    runEffectCommand(
-      new ApplyTextAnimationCommand(timelineAccessor, clip.id, {
-        preset: textAnimationPreset,
-        duration: textAnimationDuration,
-        direction: textAnimationDirection,
-      }),
-    );
-  };
-  const textAnimationKeyframeCount = ['opacity', 'x', 'y', 'scaleX', 'scaleY'].reduce(
-    (total, property) => total + (clip.keyframes?.[property as KeyframeProperty]?.length ?? 0),
-    0,
-  );
-  const applyColorMatch = async () => {
-    const referenceClip = colorMatchReferenceClips.find((item) => item.id === colorMatchReferenceClipId);
-    if (!referenceClip) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.colorMatch.failed,
-        message: zhCN.inspector.colorMatch.referenceRequired,
-      });
-      return;
-    }
-    try {
-      setColorMatchBusy(true);
-      const colorCurves = await buildClipColorMatchCurves(clip, referenceClip, media);
-      commit({ colorCorrection: { colorCurves } });
-      showToast({ kind: 'success', title: zhCN.inspector.colorMatch.applied });
-    } catch (error) {
-      showToast({
-        kind: 'warning',
-        title: zhCN.inspector.colorMatch.failed,
-        message: error instanceof Error ? error.message : zhCN.inspector.colorMatch.failedMessage,
-      });
-    } finally {
-      setColorMatchBusy(false);
-    }
-  };
+
+  // -- Subtitle translation -------------------------------------------------
   const translateSubtitleTrack = async () => {
     if (clip.type !== 'subtitle' || !isTranslationConfigured(translationSettings)) {
       return;
@@ -1110,6 +938,8 @@ export function useClipInspectorState({
       setSubtitleTranslationProgress(undefined);
     }
   };
+
+  // -- Subtitle style template handlers -------------------------------------
   const applySubtitleStyleTemplate = (template: SubtitleStyleTemplate) => {
     if (clip.type !== 'subtitle') {
       return;
@@ -1188,6 +1018,7 @@ export function useClipInspectorState({
     }
   };
 
+  // -- Merge and return -----------------------------------------------------
   return {
     // Store subscriptions
     project,
@@ -1207,7 +1038,7 @@ export function useClipInspectorState({
     translationSettings,
     projectSpeakers,
     soundDescriptionOptions,
-    colorMatchReferenceClips,
+    colorMatchReferenceClips: batchOpsState.colorMatchReferenceClips,
     selectedKeyframeEntries,
     keyframeProperties,
     pitchSummary,
@@ -1221,44 +1052,44 @@ export function useClipInspectorState({
     setMotionTrackingBusy,
     privacyBlurBusy,
     setPrivacyBlurBusy,
-    batchShiftSeconds,
-    setBatchShiftSeconds,
-    batchScaleFactor,
-    setBatchScaleFactor,
-    batchEasing,
-    setBatchEasing,
+    batchShiftSeconds: batchOpsState.batchShiftSeconds,
+    setBatchShiftSeconds: batchOpsState.setBatchShiftSeconds,
+    batchScaleFactor: batchOpsState.batchScaleFactor,
+    setBatchScaleFactor: batchOpsState.setBatchScaleFactor,
+    batchEasing: batchOpsState.batchEasing,
+    setBatchEasing: batchOpsState.setBatchEasing,
     curveProperty,
     setCurveProperty,
     privacyBlurEffect,
     setPrivacyBlurEffect,
-    frameInterpolationSupported,
-    setFrameInterpolationSupported,
-    frameInterpolationCompareRunning,
-    setFrameInterpolationCompareRunning,
-    frameInterpolationCompareItems,
-    setFrameInterpolationCompareItems,
-    frameInterpolationCompareError,
-    setFrameInterpolationCompareError,
-    frameInterpolationExpandedMode,
-    setFrameInterpolationExpandedMode,
-    frameInterpolationQualityRunning,
-    setFrameInterpolationQualityRunning,
-    frameInterpolationQualityError,
-    setFrameInterpolationQualityError,
-    audioDenoiseSupported,
-    setAudioDenoiseSupported,
-    aiLocalDenoiseProcessing,
-    setAiLocalDenoiseProcessing,
-    aiLocalDenoiseProgress,
-    setAiLocalDenoiseProgress,
-    aiLocalDenoiseStage,
-    setAiLocalDenoiseStage,
-    aiLocalDenoiseResult,
-    setAiLocalDenoiseResult,
-    colorMatchReferenceClipId,
-    setColorMatchReferenceClipId,
-    colorMatchBusy,
-    setColorMatchBusy,
+    frameInterpolationSupported: frameInterpolationState.frameInterpolationSupported,
+    setFrameInterpolationSupported: frameInterpolationState.setFrameInterpolationSupported,
+    frameInterpolationCompareRunning: frameInterpolationState.frameInterpolationCompareRunning,
+    setFrameInterpolationCompareRunning: frameInterpolationState.setFrameInterpolationCompareRunning,
+    frameInterpolationCompareItems: frameInterpolationState.frameInterpolationCompareItems,
+    setFrameInterpolationCompareItems: frameInterpolationState.setFrameInterpolationCompareItems,
+    frameInterpolationCompareError: frameInterpolationState.frameInterpolationCompareError,
+    setFrameInterpolationCompareError: frameInterpolationState.setFrameInterpolationCompareError,
+    frameInterpolationExpandedMode: frameInterpolationState.frameInterpolationExpandedMode,
+    setFrameInterpolationExpandedMode: frameInterpolationState.setFrameInterpolationExpandedMode,
+    frameInterpolationQualityRunning: frameInterpolationState.frameInterpolationQualityRunning,
+    setFrameInterpolationQualityRunning: frameInterpolationState.setFrameInterpolationQualityRunning,
+    frameInterpolationQualityError: frameInterpolationState.frameInterpolationQualityError,
+    setFrameInterpolationQualityError: frameInterpolationState.setFrameInterpolationQualityError,
+    audioDenoiseSupported: audioDenoiseState.audioDenoiseSupported,
+    setAudioDenoiseSupported: audioDenoiseState.setAudioDenoiseSupported,
+    aiLocalDenoiseProcessing: audioDenoiseState.aiLocalDenoiseProcessing,
+    setAiLocalDenoiseProcessing: audioDenoiseState.setAiLocalDenoiseProcessing,
+    aiLocalDenoiseProgress: audioDenoiseState.aiLocalDenoiseProgress,
+    setAiLocalDenoiseProgress: audioDenoiseState.setAiLocalDenoiseProgress,
+    aiLocalDenoiseStage: audioDenoiseState.aiLocalDenoiseStage,
+    setAiLocalDenoiseStage: audioDenoiseState.setAiLocalDenoiseStage,
+    aiLocalDenoiseResult: audioDenoiseState.aiLocalDenoiseResult,
+    setAiLocalDenoiseResult: audioDenoiseState.setAiLocalDenoiseResult,
+    colorMatchReferenceClipId: batchOpsState.colorMatchReferenceClipId,
+    setColorMatchReferenceClipId: batchOpsState.setColorMatchReferenceClipId,
+    colorMatchBusy: batchOpsState.colorMatchBusy,
+    setColorMatchBusy: batchOpsState.setColorMatchBusy,
     subtitleTranslationProgress,
     setSubtitleTranslationProgress,
     subtitleStyleTemplates,
@@ -1267,12 +1098,12 @@ export function useClipInspectorState({
     setCustomSoundDescOpen,
     pitchAnalyzing,
     setPitchAnalyzing,
-    textAnimationPreset,
-    setTextAnimationPreset,
-    textAnimationDuration,
-    setTextAnimationDuration,
-    textAnimationDirection,
-    setTextAnimationDirection,
+    textAnimationPreset: batchOpsState.textAnimationPreset,
+    setTextAnimationPreset: batchOpsState.setTextAnimationPreset,
+    textAnimationDuration: batchOpsState.textAnimationDuration,
+    setTextAnimationDuration: batchOpsState.setTextAnimationDuration,
+    textAnimationDirection: batchOpsState.textAnimationDirection,
+    setTextAnimationDirection: batchOpsState.setTextAnimationDirection,
 
     // Computed values
     asset,
@@ -1294,13 +1125,13 @@ export function useClipInspectorState({
     keyingMode,
     chromaKeyPickActive,
     stabilization,
-    frameInterpolation,
-    frameInterpolationUnavailable,
-    slowMotionMode,
-    frameInterpolationExpandedItem,
-    showSlowMotionMode,
-    audioDenoise,
-    audioDenoiseUnavailable,
+    frameInterpolation: frameInterpolationState.frameInterpolation,
+    frameInterpolationUnavailable: frameInterpolationState.frameInterpolationUnavailable,
+    slowMotionMode: frameInterpolationState.slowMotionMode,
+    frameInterpolationExpandedItem: frameInterpolationState.frameInterpolationExpandedItem,
+    showSlowMotionMode: frameInterpolationState.showSlowMotionMode,
+    audioDenoise: audioDenoiseState.audioDenoise,
+    audioDenoiseUnavailable: audioDenoiseState.audioDenoiseUnavailable,
     audioRestoration,
     audioRestorationComparison,
     blendMode,
@@ -1329,12 +1160,12 @@ export function useClipInspectorState({
     selectedKeyframeFrame,
     selectedKeyframeRefs,
     batchKeyframesSelected,
-    textAnimationKeyframeCount,
+    textAnimationKeyframeCount: batchOpsState.textAnimationKeyframeCount,
 
     // Handlers
     commit,
-    runFrameInterpolationComparePreview,
-    runFrameInterpolationQualityEvaluation,
+    runFrameInterpolationComparePreview: frameInterpolationState.runFrameInterpolationComparePreview,
+    runFrameInterpolationQualityEvaluation: frameInterpolationState.runFrameInterpolationQualityEvaluation,
     commitSubtitleType,
     commitCcSpeaker,
     commitCcSoundDesc,
@@ -1384,8 +1215,8 @@ export function useClipInspectorState({
     updateMask,
     removeMask,
     runPrivacyBlurDetection,
-    applyTextAnimation,
-    applyColorMatch,
+    applyTextAnimation: batchOpsState.applyTextAnimation,
+    applyColorMatch: batchOpsState.applyColorMatch,
     translateSubtitleTrack,
     applySubtitleStyleTemplate,
     saveCurrentSubtitleStyleTemplate,
