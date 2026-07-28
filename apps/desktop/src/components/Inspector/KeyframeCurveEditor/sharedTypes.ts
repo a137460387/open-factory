@@ -1,6 +1,6 @@
-import {clamp01, type EasingPreset, type EasingPresetCategory} from '@open-factory/editor-core';
+import {clamp01} from '@open-factory/editor-core';
 import type {Keyframe, KeyframeEasing, KeyframeHandleMode, KeyframeProperty} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
+import {zhCN} from '../../../i18n/strings';
 
 export type SpeedCurveFrame = { id: string; time: number; value: number; easing: KeyframeEasing };
 

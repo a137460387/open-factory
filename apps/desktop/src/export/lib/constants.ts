@@ -4,6 +4,7 @@ import type {
   ExportSubtitleFormat,
   ExportWatermarkPosition,
 } from '@open-factory/editor-core';
+export { MANUAL_AUDIO_VISUALIZATION_THEME_ID } from '@open-factory/editor-core';
 import type { ExportPresetSettings } from '../export-presets';
 
 // ---------------------------------------------------------------------------

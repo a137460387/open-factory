@@ -407,7 +407,7 @@ export function updateSubtitleLanguageSelection(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   language: string,
   checked: boolean,
-  options: { language: string; label: string; trackCount: number }[],
+  options: SubtitleLanguageOption[],
 ): void {
   const normalized = normalizeSubtitleLanguage(language);
   setDraftSettings((current) => {

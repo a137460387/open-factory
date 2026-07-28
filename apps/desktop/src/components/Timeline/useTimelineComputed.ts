@@ -110,8 +110,6 @@ export function useTimelineComputed(
     [allClips.length],
   );
 
-  // useEffect - bookmark panel auto-close annotation panel
-
   const timelineGridBeatTimes = useMemo(
     () => (store.project.beatMarkers ?? []).map((marker) => marker.time),
     [store.project.beatMarkers],
@@ -284,7 +282,7 @@ export function useTimelineComputed(
   );
 
   const clipGroupByClipId = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, import('@open-factory/editor-core').ClipGroup>();
     for (const group of clipGroups) {
       for (const clipId of group.clipIds) {
         map.set(clipId, group);

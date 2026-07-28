@@ -6,7 +6,7 @@
  */
 
 import React, {useState, useCallback, useRef, useEffect, useMemo} from 'react';
-import type {WorkflowGraph, WorkflowNode, NodeDefinition, WorkflowExecutionProgress, WorkflowTemplate} from './node-editor-types';
+import type {WorkflowGraph, NodeDefinition, WorkflowExecutionProgress, WorkflowTemplate} from './node-editor-types';
 import {createNodeEditorEngine} from './node-editor-engine';
 import {createWorkflowExecutor} from './workflow-executor';
 import type {NodeEditorPanelProps} from './node-editor-panel-types';
@@ -15,7 +15,6 @@ import {NodePalette} from './node-palette';
 import {ConnectionLine} from './connection-line';
 import {ExecutionPanel} from './execution-panel';
 import {TemplateBrowser} from './template-browser';
-import {nodeEditorStyles} from './node-editor-panel-styles';
 
 export {nodeEditorStyles} from './node-editor-panel-styles';
 export type {NodeEditorPanelProps} from './node-editor-panel-types';
