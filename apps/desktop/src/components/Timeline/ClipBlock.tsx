@@ -1,5 +1,5 @@
 import {memo} from 'react';
-import {CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, getEffectiveClipColorLabel, getTimelineLabelColorHex, shouldShowWaveform, isFrameRateMismatch, buildTrimDurationBubble, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type KeyframeProperty, type MediaAsset, type TimelineLabelColor, type TimelineLargeProjectMode, type Track, type Transition, DEFAULT_TRACK_HEIGHT, EMOTION_COLORS} from '@open-factory/editor-core';
+import {CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, getEffectiveClipColorLabel, getTimelineLabelColorHex, shouldShowWaveform, isFrameRateMismatch, buildTrimDurationBubble, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type MediaAsset, type TimelineLabelColor, type TimelineLargeProjectMode, type Track, type Transition, DEFAULT_TRACK_HEIGHT, EMOTION_COLORS} from '@open-factory/editor-core';
 import {AlertTriangle} from 'lucide-react';
 import {clsx} from 'clsx';
 import {zhCN} from '../../i18n/strings';
@@ -577,43 +577,6 @@ export function ClipBlock({
     </div>
   );
 }
-
-import type {ClipAssetStripsProps} from './ClipAssetStrips';
-
-const ClipAssetStripsInline = memo(function ClipAssetStripsInline({
-  clip,
-  asset,
-  clipPixelWidth,
-  trackMuted,
-  waveformColor,
-  largeProjectMode,
-}: ClipAssetStripsProps) {
-  return (
-    <>
-      <VideoThumbnailStrip
-        clip={clip}
-        asset={asset}
-        pixelWidth={clipPixelWidth}
-        frameStep={largeProjectMode.previewFrameStep}
-      />
-      {asset.hasAudio ? (
-        <WaveformStrip
-          clipId={clip.id}
-          asset={asset}
-          pixelWidth={clipPixelWidth}
-          clipDuration={clip.duration}
-          muted={trackMuted || Boolean(clip.muted)}
-          color={waveformColor}
-          pitchData={clip.pitchData}
-          compact
-          resolutionScale={largeProjectMode.waveformResolutionScale}
-        />
-      ) : null}
-    </>
-  );
-});
-
-import {VideoThumbnailStrip} from './VideoThumbnailStrip';
 
 export const MemoizedClipBlock = memo(ClipBlock, areClipBlockPropsEqual);
 
