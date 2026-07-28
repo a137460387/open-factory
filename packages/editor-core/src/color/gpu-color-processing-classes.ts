@@ -1,5 +1,5 @@
 /**
- * GPU color processing classes: GPUColorProcessor, PreviewFrameCache, GPUPerformanceMonitor.
+ * GPU color processing core class: GPUColorProcessor.
  */
 
 import type {
@@ -18,7 +18,6 @@ import type {
 import {
   DEFAULT_PIPELINE_CONFIG,
   MAX_PERFORMANCE_SAMPLES,
-  CACHE_TTL_MS,
   validateGPUPipelineConfig,
 } from './gpu-color-processing-types';
 import { cpuProcessFrame } from './gpu-color-processing-cpu';

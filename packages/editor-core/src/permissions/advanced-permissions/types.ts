@@ -4,25 +4,16 @@
 
 import {createId} from '../../model';
 
-// ==================== Type Definitions ====================
-
-/** Permission level */
 export type PermissionLevel = 'none' | 'read' | 'write' | 'admin' | 'owner';
-
-/** Permission scope */
 export type PermissionScope = 'project' | 'folder' | 'file' | 'global';
-
-/** Permission subject type */
 export type PermissionSubjectType = 'user' | 'team' | 'role' | 'group';
 
-/** Permission subject */
 export interface PermissionSubject {
   type: PermissionSubjectType;
   id: string;
   name: string;
 }
 
-/** Permission target */
 export interface PermissionTarget {
   type: PermissionScope;
   id: string;
@@ -30,7 +21,6 @@ export interface PermissionTarget {
   parentId?: string;
 }
 
-/** Permission rule */
 export interface PermissionRule {
   id: string;
   subject: PermissionSubject;
@@ -43,19 +33,14 @@ export interface PermissionRule {
   metadata: PermissionRuleMetadata;
 }
 
-/** Permission conditions */
 export interface PermissionConditions {
   ipWhitelist?: string[];
-  timeRange?: {
-    start: string;
-    end: string;
-  };
+  timeRange?: { start: string; end: string };
   deviceRestrictions?: string[];
   requireMFA?: boolean;
   maxConcurrentSessions?: number;
 }
 
-/** Permission rule metadata */
 export interface PermissionRuleMetadata {
   description?: string;
   tags?: string[];
@@ -66,7 +51,6 @@ export interface PermissionRuleMetadata {
   evaluationCount: number;
 }
 
-/** Permission inheritance config */
 export interface PermissionInheritance {
   enabled: boolean;
   mode: 'strict' | 'lenient' | 'override';
@@ -75,19 +59,17 @@ export interface PermissionInheritance {
   overrideParent: boolean;
 }
 
-/** Permission group */
 export interface PermissionGroup {
   id: string;
   name: string;
   description: string;
   members: PermissionSubject[];
-  rules: string[]; // rule ID list
+  rules: string[];
   createdAt: string;
   updatedAt: string;
   createdBy: string;
 }
 
-/** Temporary permission */
 export interface TemporaryPermission {
   id: string;
   ruleId: string;
@@ -103,7 +85,6 @@ export interface TemporaryPermission {
   revokedBy?: string;
 }
 
-/** Permission audit log */
 export interface PermissionAuditLog {
   id: string;
   timestamp: string;
@@ -119,7 +100,6 @@ export interface PermissionAuditLog {
   userAgent?: string;
 }
 
-/** Permission audit action */
 export type PermissionAuditAction =
   | 'permission.granted'
   | 'permission.revoked'
@@ -136,7 +116,6 @@ export type PermissionAuditAction =
   | 'inheritance.disabled'
   | 'inheritance.overridden';
 
-/** Permission evaluation result */
 export interface PermissionEvaluationResult {
   allowed: boolean;
   level: PermissionLevel;
@@ -146,7 +125,6 @@ export interface PermissionEvaluationResult {
   warnings: string[];
 }
 
-/** Permission config */
 export interface PermissionConfig {
   inheritance: PermissionInheritance;
   defaultLevel: PermissionLevel;
@@ -159,7 +137,6 @@ export interface PermissionConfig {
   maxTemporaryDurationHours: number;
 }
 
-/** Permission state */
 export interface PermissionState {
   rules: PermissionRule[];
   groups: PermissionGroup[];
@@ -168,8 +145,6 @@ export interface PermissionState {
   config: PermissionConfig;
   cache: Map<string, PermissionEvaluationResult>;
 }
-
-// ==================== Constants ====================
 
 export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
   inheritance: {
@@ -186,10 +161,9 @@ export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
   maxRulesPerSubject: 100,
   maxGroupsPerUser: 10,
   enableTemporaryPermissions: true,
-  maxTemporaryDurationHours: 24 * 7, // 7 days
+  maxTemporaryDurationHours: 24 * 7,
 };
 
-/** Permission level weights */
 export const PERMISSION_LEVEL_WEIGHTS: Record<PermissionLevel, number> = {
   none: 0,
   read: 1,
@@ -198,8 +172,6 @@ export const PERMISSION_LEVEL_WEIGHTS: Record<PermissionLevel, number> = {
   owner: 4,
 };
 
-/** Permission level list */
 export const PERMISSION_LEVELS: PermissionLevel[] = ['none', 'read', 'write', 'admin', 'owner'];
 
-// Re-export createId for internal use by sibling modules
 export {createId};
