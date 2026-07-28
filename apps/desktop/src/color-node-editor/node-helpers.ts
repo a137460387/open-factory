@@ -2,7 +2,7 @@ import {createDefaultColorNodeGraph, createId, normalizeColorNodeGraph, type Cli
 import {openFileDialog} from '../lib/tauri-bridge';
 import {showToast} from '../lib/toast';
 import {zhCN} from '../i18n/strings';
-import {BOARD_HEIGHT, BOARD_WIDTH, NODE_HEIGHT, NODE_SPACING_X, NODE_SPACING_Y, NODE_WIDTH} from './types';
+import {BOARD_HEIGHT, NODE_HEIGHT, NODE_SPACING_X, NODE_SPACING_Y} from './types';
 import {clampNumber, dedupeConnections, defaultNodeName, findPredecessorNodeId} from './utils';
 
 export function buildInitialGraph(clip: Clip): ColorNodeGraph {
@@ -135,16 +135,4 @@ export function buildAddNodeGraph(
     },
     newNodeId,
   };
-}
-
-function dedupeConnectionsLocal(connections: ColorNodeGraph['connections']): ColorNodeGraph['connections'] {
-  const seen = new Set<string>();
-  return connections.filter((connection) => {
-    const key = `${connection.from}\0${connection.to}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
 }
