@@ -6,6 +6,7 @@ import {zhCN} from '../../i18n/strings';
 import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
 import {detectPrivacyRegions, getFfmpegCapabilities, openFileDialog, readFile} from '../../lib/tauri-bridge';
 import {showToast} from '../../lib/toast';
+import {markLocalAiModelUsed} from '../../settings/appSettings';
 import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore';
 import {usePrivacyDetectionSettingsStore} from '../../store/privacyDetectionSettingsStore';
 import {useTranslationSettingsStore} from '../../store/translationSettingsStore';

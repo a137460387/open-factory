@@ -13,7 +13,9 @@
  * - default-themes.ts - Default dark/light theme configs
  * - theme-presets.ts  - Theme presets
  * - css-variables.ts  - CSS variable generation
- * - theme-manager.ts  - ThemeManager class and factory functions
+ * - persistence.ts    - localStorage persistence
+ * - theme-manager.ts  - ThemeManager class
+ * - factory.ts        - Factory functions
  */
 
 export type {
