@@ -6,11 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [v4.72.0] - 2026-07-27
+## [v4.72.0] - 2026-07-28
+
+### Added
+- E2E 测试补强：app-launch/timeline-basic/playback-controls 三个 spec 共 12 个可执行测试
+- 性能预算精细化：budget.json 支持 per-vendor-chunk 独立上限（react/codemirror/zustand/tiptap）
+- bundle 分析报告：check-bundle-size 脚本输出 chunk 级别详情和 vendor 汇总
+- CHANGELOG 自动化：conventional-changelog 脚本支持
 
 ### Changed
-- **版本号升至 v4.72.0**
-- 合并 agent/scan-tauri-unwrap-calls 分支到 main
+- strictNullChecks 全局启用，0 类型错误
+- CI vendor chunk 预算卡点增强
 
 ## [v4.71.0] - 2026-07-24
 

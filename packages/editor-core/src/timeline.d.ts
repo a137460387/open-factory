@@ -1,7 +1,24 @@
 import type { Clip, ClipKeyframes, Timeline, Track, Transition } from './model-types';
+/** Maximum integration steps for speed curve duration calculation. */
 export declare const SPEED_CURVE_INTEGRATION_STEPS = 100;
+/**
+ * Find the clip at the given time on a track.
+ * @param track - Track to search
+ * @param time - Time in seconds
+ */
 export declare function findClipAtTime(track: Track, time: number): Clip | undefined;
+/**
+ * Get all active clips across all renderable tracks at the given time.
+ * @param timeline - Timeline instance
+ * @param time - Time in seconds
+ */
 export declare function getActiveClipsAtTime(timeline: Timeline, time: number): Clip[];
+/**
+ * Split a clip at the given time into two clips.
+ * @param clip - Clip to split
+ * @param splitTime - Time in seconds where to split (must be within clip bounds)
+ * @returns Tuple of [left clip, right clip]
+ */
 export declare function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [TClip, TClip];
 export declare function trimClip<TClip extends Clip>(clip: TClip, newTrimStart: number, newTrimEnd: number): TClip;
 export declare function moveClip<TClip extends Clip>(clip: TClip, newStart: number): TClip;

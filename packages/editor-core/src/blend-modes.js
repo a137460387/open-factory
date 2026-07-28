@@ -1,3 +1,4 @@
+/** Available blend modes for clips composited on the timeline. */
 export const CLIP_BLEND_MODES = [
     'normal',
     'overlay',
@@ -10,9 +11,17 @@ export const CLIP_BLEND_MODES = [
     'soft-light',
 ];
 const CLIP_BLEND_MODE_SET = new Set(CLIP_BLEND_MODES);
+/**
+ * Normalize an unknown value to a valid ClipBlendMode, defaulting to 'normal'.
+ * @param value - Raw value to normalize
+ */
 export function normalizeClipBlendMode(value) {
     return typeof value === 'string' && CLIP_BLEND_MODE_SET.has(value) ? value : 'normal';
 }
+/**
+ * Map a ClipBlendMode to its FFmpeg xfilter blend mode name.
+ * @param mode - Clip blend mode
+ */
 export function getFfmpegBlendMode(mode) {
     switch (normalizeClipBlendMode(mode)) {
         case 'color-burn':

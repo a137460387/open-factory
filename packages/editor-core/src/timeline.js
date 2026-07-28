@@ -4,13 +4,30 @@ import { cloneClipKeyframes, interpolateKeyframes, normalizeClipKeyframes } from
 import { normalizeMotionGraphic } from './motion-graphics';
 import { DEFAULT_SNAP_GRID, round, snap } from './time';
 const EPSILON = 0.000001;
+/** Maximum integration steps for speed curve duration calculation. */
 export const SPEED_CURVE_INTEGRATION_STEPS = 100;
+/**
+ * Find the clip at the given time on a track.
+ * @param track - Track to search
+ * @param time - Time in seconds
+ */
 export function findClipAtTime(track, time) {
     return track.clips.find((clip) => time >= clip.start && time < clip.start + clip.duration);
 }
+/**
+ * Get all active clips across all renderable tracks at the given time.
+ * @param timeline - Timeline instance
+ * @param time - Time in seconds
+ */
 export function getActiveClipsAtTime(timeline, time) {
     return getRenderableTracks(timeline).flatMap((track) => track.clips.filter((clip) => time >= clip.start && time < clip.start + clip.duration));
 }
+/**
+ * Split a clip at the given time into two clips.
+ * @param clip - Clip to split
+ * @param splitTime - Time in seconds where to split (must be within clip bounds)
+ * @returns Tuple of [left clip, right clip]
+ */
 export function splitClip(clip, splitTime) {
     const speed = getClipSpeed(clip);
     const clipEnd = clip.start + clip.duration;

@@ -1,4 +1,5 @@
 import { type Clip, type ClipKeyframes, type Keyframe, type KeyframeEasing, type KeyframeHandle, type KeyframeHandleMode, type KeyframeProperty, type Transform } from './model';
+/** Min/max limits for each keyframe property. */
 export declare const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, {
     min: number;
     max: number;
