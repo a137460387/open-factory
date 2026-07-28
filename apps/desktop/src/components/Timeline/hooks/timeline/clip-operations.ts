@@ -26,6 +26,7 @@ import {
   RippleDeleteCommand,
   SplitClipCommand,
   UngroupCommand,
+  UpdateClipCommand,
   UpdateClipGroupCommand,
   UpdateProjectAnnotationCommand,
   UpdateProjectBeatMarkersCommand,
@@ -93,7 +94,8 @@ export function createClipOperationsHandlers(
     setTransitionDialog,
     onConvertMediaFrameRate,
     onBookmarkPanelOpenChange,
-    snapTime: snapTimeFn,
+    setGapMenu,
+    setVolumeEnvelopeMenu,
   } = params;
 
   const {findClip, getClipMediaAsset, minFrameDuration} = helpers;
@@ -322,6 +324,23 @@ export function createClipOperationsHandlers(
         kind: 'warning',
         title: zhCN.timeline.beatMarkerRejectedTitle,
         message: error instanceof Error ? error.message : zhCN.timeline.addBeatMarkerFailed,
+      });
+    }
+  }
+
+  function removeBeatMarker(markerId: string): void {
+    try {
+      commandManager.execute(
+        new UpdateProjectBeatMarkersCommand(
+          projectAccessor,
+          (project.beatMarkers ?? []).filter((marker) => marker.id !== markerId),
+        ),
+      );
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.beatMarkerRejectedTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.removeBeatMarkerFailed,
       });
     }
   }
@@ -621,6 +640,7 @@ export function createClipOperationsHandlers(
     runRulerMenuAction,
     jumpToRulerTimecode,
     addBeatMarker,
+    removeBeatMarker,
     openAnnotationEditorAt,
     saveAnnotationEditor,
     removeProjectAnnotation,

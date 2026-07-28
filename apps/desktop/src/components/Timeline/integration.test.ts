@@ -30,9 +30,9 @@ describe('TimelineParts facade re-exports', () => {
 
   it('exports DragState and menu request types', async () => {
     const typesMod = await import('./timeline-parts-types');
-    // Verify types are accessible (compile-time check via typeof)
-    const _dragState: typeof typesMod.DragState extends never ? never : true = true;
-    expect(_dragState).toBe(true);
+    // DragState is a type-only export; verify module loads and constants are present
+    expect(typesMod.TRACK_HEIGHT).toBe(60);
+    expect(typesMod.LABEL_WIDTH).toBe(160);
   });
 
   it('sub-modules import from types without circular dependency', async () => {

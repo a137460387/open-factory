@@ -1,6 +1,7 @@
 import type {Clip, MediaAsset, DialogueInterval, DialogueSensitivity, DialogueWhisperMiss, SilentRange, TargetAspectRatio, TransitionRecommendation, TransitionClipFeatures, AnomalyInterval, FrameAnalysisSample, ClipAIReframe, ReframeAIFrame} from '@open-factory/editor-core';
 import {
   AddTrackCommand,
+  BatchAlignSubtitleCommand,
   BatchAddMarkersCommand,
   BatchImportSubtitleCommand,
   BatchSplitAtSceneCutsCommand,
@@ -8,10 +9,12 @@ import {
   RippleDeleteCommand,
   UpdateClipCommand,
   UpdateProjectBookmarksCommand,
+  UpdateProjectCoverCommand,
   buildSceneMarkerInputs,
   computeReframeConfidence,
   computeSampleTimes,
   createId,
+  createTrack,
   detectAnomalies,
   filterShortSceneCuts,
   generateReframeKeyframes,
@@ -609,7 +612,7 @@ export function createAiFeatureHandlers(
         { maxDistance: SUBTITLE_ALIGNMENT_MAX_DISTANCE, minDuration: 1 / Math.max(1, project.settings.fps) },
       );
       commandManager.execute(command);
-      setSelectedClipIds(command.report.updates.map((update) => update.clipId));
+      setSelectedClipIds(command.report.updates.map((update: {clipId: string}) => update.clipId));
       setSubtitleAlignReport({
         correctedCount: command.report.correctedCount,
         averageOffsetMs: command.report.averageOffsetMs,

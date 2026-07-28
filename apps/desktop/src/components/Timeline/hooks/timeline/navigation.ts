@@ -1,5 +1,6 @@
-import type {Clip, TimelineGridSettings, TimelineSnapCandidate, SnapEdge, SelectionRect} from '@open-factory/editor-core';
+import type {Clip, ProjectAnnotation, TimelineGridSettings, TimelineSnapCandidate, SnapEdge, SelectionRect} from '@open-factory/editor-core';
 import {
+  DEFAULT_PROJECT_ANNOTATION_COLOR,
   buildSelectionMarqueeRect,
   calculateAnchoredScrollLeft,
   calculateTimelineScrollLeftFromMinimapY,
@@ -17,6 +18,7 @@ import {
 } from '@open-factory/editor-core';
 import {LONG_PRESS_PAN_THRESHOLD_MS} from '@open-factory/editor-core';
 import {LABEL_WIDTH} from '../../TimelineParts';
+import {zhCN} from '../../../../i18n/strings';
 import type {TimelineHandlerParams} from './types';
 
 export function createNavigationHandlers(
@@ -55,9 +57,19 @@ export function createNavigationHandlers(
     selectionRect,
     setSelectionRect,
     setSelectedClipIds,
+    setAnnotationEditor,
   } = params;
 
   const {findClip, minFrameDuration} = helpers;
+
+  function openAnnotationEditorAt(time: number, annotation?: ProjectAnnotation): void {
+    setAnnotationEditor({
+      id: annotation?.id,
+      time: annotation?.time ?? Math.max(0, snapTime(time)),
+      text: annotation?.text ?? zhCN.timeline.annotationLabel((project.annotations?.length ?? 0) + 1),
+      color: annotation?.color ?? DEFAULT_PROJECT_ANNOTATION_COLOR,
+    });
+  }
 
   function onWheel(event: React.WheelEvent<HTMLDivElement>): void {
     if (event.ctrlKey || event.metaKey) {
@@ -215,7 +227,7 @@ export function createNavigationHandlers(
     event.preventDefault();
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
-    params.openAnnotationEditorAt((event.clientX - rect.left) / zoom);
+    openAnnotationEditorAt((event.clientX - rect.left) / zoom);
   }
 
   function findClipIdsIntersectingRect(rect: SelectionRect): string[] {
@@ -359,5 +371,6 @@ export function createNavigationHandlers(
     snapKeyframeTime,
     buildSnapCandidates,
     applyZoom,
+    openAnnotationEditorAt,
   };
 }

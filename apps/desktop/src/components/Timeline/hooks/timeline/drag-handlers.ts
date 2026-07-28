@@ -15,6 +15,7 @@ import {
   round,
   replaceClip,
   canMoveClipWithProtectedRanges,
+  snapTime,
   type KeyframeProperty,
 } from '@open-factory/editor-core';
 import {keyframeRefKey} from '../../TimelineOverlays';
@@ -34,7 +35,7 @@ export function createDragHandlers(
     buildKeyframeStartTimes: (refs: SelectedKeyframeRef[]) => Record<string, number>;
     snapKeyframeTime: (clip: Clip, localTime: number, disabled: boolean) => number;
     snapClipStart: (time: number, duration: number, clip: Clip, disabled: boolean) => number;
-    buildMovedPreviewTimeline: (previewStartsByClipId: Record<string, number>) => ReturnType<typeof import('../../../store/editorStore').useEditorStore.getState>['project']['timeline'];
+    buildMovedPreviewTimeline: (previewStartsByClipId: Record<string, number>) => ReturnType<typeof import('../../../../store/editorStore').useEditorStore.getState>['project']['timeline'];
     buildTrimPreview: (clip: Clip, edge: 'left' | 'right', delta: number, snappingDisabled: boolean) => Clip;
     minFrameDuration: () => number;
     canApplyProtectedMove: (startsByClipId: Record<string, number>) => boolean;
@@ -58,7 +59,6 @@ export function createDragHandlers(
     setSelectedKeyframes,
     setPreviewTimeline,
     setPlayheadTime,
-    snapTime: snapTimeFn,
   } = params;
 
   const {

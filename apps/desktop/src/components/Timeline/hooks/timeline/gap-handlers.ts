@@ -35,7 +35,7 @@ export function createGapHandlers(
 
   const {findClip, getClipMediaAsset} = helpers;
 
-  function openGapMenu(request: import('../TimelineParts').GapMenuRequest): void {
+  function openGapMenu(request: import('../../TimelineParts').GapMenuRequest): void {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
     setVolumeEnvelopeMenu(undefined);
@@ -195,5 +195,5 @@ function createGapFillImageClip(options: {
     keyframes: {},
     colorLabel: null,
     locked: false,
-  } as Clip;
+  } as unknown as Clip;
 }

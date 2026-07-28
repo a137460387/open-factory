@@ -153,6 +153,25 @@ export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHand
   }
 
   // Combine all handlers
+  const findClip = (clipId: string): Clip => {
+    const clip = params.allClips.find((item) => item.id === clipId);
+    if (!clip) throw new Error(`Clip ${clipId} not found`);
+    return clip;
+  };
+
+  const openClipMenu = (request: ClipMenuRequest): void => {
+    params.setTransitionMenu(undefined);
+    params.setGapMenu(undefined);
+    params.setVolumeEnvelopeMenu(undefined);
+    params.setRulerMenu(undefined);
+    params.setClipMenu({
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 260)),
+      clipId: request.clipId,
+      clipType: request.clipType,
+    });
+  };
+
   return {
     // Track management
     ...trackHandlers,
@@ -189,5 +208,9 @@ export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHand
 
     // Snap utils
     ...snapUtils,
+
+    // Facade-level helpers
+    findClip,
+    openClipMenu,
   };
 }
