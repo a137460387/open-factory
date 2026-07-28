@@ -169,6 +169,10 @@ function Ruler({
         </div>
         <div
           className="relative h-8"
+          role="slider"
+          aria-label="时间线位置"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(width / zoom)}
           data-testid="timeline-ruler"
           onPointerDown={(event) => {
             if (event.button !== 0) {
@@ -915,6 +919,7 @@ const TrackToggle = memo(function TrackToggle({
           : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel',
       )}
       title={title}
+      aria-label={title}
       type="button"
       data-testid={testId}
       aria-pressed={active}

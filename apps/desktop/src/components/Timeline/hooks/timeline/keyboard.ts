@@ -58,6 +58,12 @@ export function createKeyboardHandlers(
     if (event.defaultPrevented || isEditableKeyboardTarget(event.target)) {
       return;
     }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSelectedClipId(undefined);
+      setSelectedClipIds([]);
+      return;
+    }
     if (
       !event.ctrlKey &&
       !event.metaKey &&

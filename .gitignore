@@ -110,3 +110,6 @@ skills/
 
 # Audit evidence reports (local only)
 docs/evidence/
+
+# TypeDoc generated API docs
+docs/api/

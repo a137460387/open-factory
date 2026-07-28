@@ -40,7 +40,9 @@
     "check:release": "node scripts/check-release.mjs",
     "depcruise": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs",
     "depcruise:ci": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs --output-type err-long",
-    "lint": "eslint packages/ apps/desktop/src/"
+    "lint": "eslint packages/ apps/desktop/src/",
+    "docs:generate": "typedoc",
+    "docs:serve": "typedoc --watch --serve"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
@@ -57,6 +59,7 @@
     "jsdom": "^29.1.1",
     "prettier": "^3.9.5",
     "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.12.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "^3.2.7"
