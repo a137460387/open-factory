@@ -17,7 +17,6 @@ export {
 export {VolumeEnvelopeOverlay} from './VolumeEnvelopeOverlay';
 
 export {VideoThumbnailStrip} from './VideoThumbnailStrip';
-export type {VideoThumbnailStripProps} from './VideoThumbnailStrip';
 
 export {WaveformStrip} from './WaveformStrip';
 export type {WaveformStripProps} from './WaveformStrip';

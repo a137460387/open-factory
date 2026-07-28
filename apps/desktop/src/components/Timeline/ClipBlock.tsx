@@ -1,14 +1,15 @@
 import {memo} from 'react';
-import {CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, getEffectiveClipColorLabel, getTimelineLabelColorHex, shouldShowWaveform, isFrameRateMismatch, buildTrimDurationBubble, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type MediaAsset, type TimelineLabelColor, type TimelineLargeProjectMode, type Track, type Transition, DEFAULT_TRACK_HEIGHT, EMOTION_COLORS} from '@open-factory/editor-core';
+import {CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, getEffectiveClipColorLabel, getTimelineLabelColorHex, shouldShowWaveform, isFrameRateMismatch, buildTrimDurationBubble, DEFAULT_TRACK_HEIGHT} from '@open-factory/editor-core';
 import {AlertTriangle} from 'lucide-react';
 import {clsx} from 'clsx';
 import {zhCN} from '../../i18n/strings';
-import type {SelectedKeyframeRef} from '../../store/editorStore';
-import type {DragState, VolumeEnvelopePointRequest, VolumeEnvelopeMenuRequest, TransitionMenuRequest, ClipMenuRequest} from './timeline-parts-types';
-import {formatTransitionBadge, getClipKeyframeMarkers, getKeyframeMarkerTime, sameSelectedKeyframe, selectedKeyframeKey, getClipToneClass, getTrackWaveformColor, formatFrameRateLabel, formatTimelineKeyframeProperty} from './clip-helpers';
+import {formatTransitionBadge, getClipToneClass, getTrackWaveformColor, formatFrameRateLabel} from './clip-helpers';
 import {VolumeEnvelopeOverlay} from './VolumeEnvelopeOverlay';
 import {DeferredClipAssetStrips, DeferredWaveformStrip, ClipAssetStrips} from './ClipAssetStrips';
 import {WaveformStrip} from './WaveformStrip';
+import {ClipKeyframeMarkers} from './ClipKeyframeMarkers';
+import {ClipBadges} from './ClipBadges';
+import type {ClipBlockProps} from './clip-block-types';
 
 export function ClipBlock({
   clip,
@@ -49,46 +50,7 @@ export function ClipBlock({
   largeProjectMode,
   collaborationLock,
   onRemoveAnomaly,
-}: {
-  clip: Clip;
-  asset?: MediaAsset;
-  left: number;
-  width: number;
-  selected: boolean;
-  selectedKeyframe?: SelectedKeyframeRef;
-  selectedKeyframes: SelectedKeyframeRef[];
-  drag?: DragState;
-  onSelect(clipId: string, additive: boolean, forceSingle?: boolean): void;
-  onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
-  onDragStart(drag: DragState): void;
-  selectedClipIds: string[];
-  locked: boolean;
-  clipPixelWidth: number;
-  trackMuted: boolean;
-  trackType: Track['type'];
-  trackHeight?: number;
-  nextAdjacentClip?: Clip;
-  transition?: Transition;
-  onTransitionMenu(request: TransitionMenuRequest): void;
-  onClipMenu(request: ClipMenuRequest): void;
-  onVolumeEnvelopeAdd(request: VolumeEnvelopePointRequest): void;
-  onVolumeEnvelopeUpdate(request: Required<VolumeEnvelopePointRequest>): void;
-  onVolumeEnvelopeRemove(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void;
-  onVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void;
-  onClipDoubleClick(clip: Clip): void;
-  rollingTrimActive: boolean;
-  slipEditActive: boolean;
-  slideEditActive: boolean;
-  clipGroup?: ClipGroup;
-  trackColor: TimelineLabelColor | null;
-  projectFrameRate: number;
-  envelopeEditMode: boolean;
-  reduceMotion: boolean;
-  loadAssets: boolean;
-  largeProjectMode: TimelineLargeProjectMode;
-  collaborationLock?: CollaborationClipLock;
-  onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
-}) {
+}: ClipBlockProps) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
   const effectiveColorHex = effectiveColor
@@ -296,81 +258,7 @@ export function ClipBlock({
           <AlertTriangle size={11} />
         </span>
       ) : null}
-      {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
-        <span
-          className="absolute bottom-1 right-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow"
-          title={zhCN.preview.shakeAnalysisHigh}
-          data-testid={`shake-badge-${clip.id}`}
-        >
-          <AlertTriangle size={11} />
-        </span>
-      ) : null}
-      {'motionType' in clip && (clip as { motionType?: { type: string; confidence: number } }).motionType ? (
-        <span
-          className="absolute bottom-1 left-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white shadow"
-          title={
-            zhCN.motionType.title +
-            ': ' +
-            ((zhCN.motionType as Record<string, string>)[(clip as { motionType: { type: string } }).motionType.type] ??
-              (clip as { motionType: { type: string } }).motionType.type)
-          }
-          data-testid={`motion-type-badge-${clip.id}`}
-          data-motion-type={(clip as { motionType: { type: string } }).motionType.type}
-        >
-          <span className="text-[8px] font-bold">M</span>
-        </span>
-      ) : null}
-      {clip.type === 'video' && clip.aiPipSuggestion ? (
-        <span
-          className="absolute bottom-1 left-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-white shadow"
-          title={zhCN.preview.pipAvoidanceWarning}
-          data-testid={`pip-warning-${clip.id}`}
-        >
-          <AlertTriangle size={11} />
-        </span>
-      ) : null}
-      {Array.isArray(clip.flashWarnings) && clip.flashWarnings.length > 0 ? (
-        <span
-          className="absolute bottom-1 right-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white shadow"
-          title={zhCN.flashWarning.badge + ' (' + clip.flashWarnings.length + ')'}
-          data-testid={`flash-warning-badge-${clip.id}`}
-        >
-          <AlertTriangle size={11} />
-        </span>
-      ) : null}
-      {'readingSpeedWarning' in clip &&
-      (clip as { readingSpeedWarning?: { severity: string } | null }).readingSpeedWarning ? (
-        <span
-          className={`absolute bottom-1 right-9 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full ${(clip as { readingSpeedWarning: { severity: string } }).readingSpeedWarning.severity === 'critical' ? 'bg-[var(--color-danger)]' : 'bg-yellow-400'} text-white shadow`}
-          title={
-            zhCN.subtitleReadingSpeed.title +
-            ' (' +
-            (clip as { readingSpeedWarning: { charsPerSecond: number } }).readingSpeedWarning.charsPerSecond.toFixed(
-              1,
-            ) +
-            ' ' +
-            zhCN.subtitleReadingSpeed.charsPerSecond +
-            ')'
-          }
-          data-testid={`reading-speed-warning-${clip.id}`}
-        >
-          <AlertTriangle size={11} />
-        </span>
-      ) : null}
-      {'emotionAnalysis' in clip &&
-      (clip as { emotionAnalysis?: { emotionTone: string; intensity: number } }).emotionAnalysis ? (
-        <span
-          className="absolute bottom-0 left-0 right-0 z-20 h-[3px]"
-          style={{
-            backgroundColor:
-              EMOTION_COLORS[
-                (clip as { emotionAnalysis: { emotionTone: keyof typeof EMOTION_COLORS } }).emotionAnalysis.emotionTone
-              ],
-          }}
-          title={`${zhCN.emotionTone.title}: ${zhCN.emotionTone[(clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone as keyof typeof zhCN.emotionTone] ?? (clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone} (${Math.round((clip as { emotionAnalysis: { intensity: number } }).emotionAnalysis.intensity * 100)}%)`}
-          data-testid={`emotion-bar-${clip.id}`}
-        />
-      ) : null}
+      <ClipBadges clip={clip} transitionRightOffset={Boolean(transition)} />
       {locked ? null : (
         <span
           className="absolute left-0 top-0 z-30 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
@@ -434,79 +322,16 @@ export function ClipBlock({
           : clip.name}
       </span>
       <span className="relative z-10 ml-auto pl-2 tabular-nums">{clip.duration.toFixed(1)}s</span>
-      {getClipKeyframeMarkers(clip).map((marker) => {
-        const keyframeRef = { clipId: clip.id, property: marker.property, keyframeId: marker.id };
-        const isSelectedKeyframe =
-          selectedKeyframes.some((item) => sameSelectedKeyframe(item, keyframeRef)) ||
-          (selectedKeyframe?.clipId === clip.id &&
-            selectedKeyframe.property === marker.property &&
-            selectedKeyframe.keyframeId === marker.id);
-        const markerKey = selectedKeyframeKey(keyframeRef);
-        const previewMarkerTime = drag?.mode === 'keyframe' ? drag.previewKeyframeTimes?.[markerKey] : undefined;
-        const markerTime =
-          previewMarkerTime !== undefined
-            ? previewMarkerTime
-            : drag?.mode === 'keyframe' &&
-                drag.clip?.id === clip.id &&
-                drag.keyframeProperty === marker.property &&
-                drag.keyframeId === marker.id
-              ? (drag.previewKeyframeTime ?? marker.time)
-              : marker.time;
-        return (
-          <span
-            key={`${marker.property}-${marker.id}`}
-            className={clsx(
-              'absolute bottom-0 z-20 h-2.5 w-2.5 -translate-x-1/2 rotate-45 cursor-ew-resize border shadow',
-              isSelectedKeyframe ? 'border-black bg-[var(--color-bg-elevated)]' : 'border-white bg-coral',
-            )}
-            style={{ left: `${Math.min(100, Math.max(0, (markerTime / Math.max(0.001, clip.duration)) * 100))}%` }}
-            title={zhCN.timeline.keyframeTitle(formatTimelineKeyframeProperty(marker.property), marker.time)}
-            data-testid={`timeline-keyframe-${clip.id}-${marker.property}-${marker.id}`}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              if (locked) {
-                return;
-              }
-              event.currentTarget.setPointerCapture(event.pointerId);
-              const selectedBeforePointerDown = selectedKeyframes.some((item) =>
-                sameSelectedKeyframe(item, keyframeRef),
-              );
-              if (!event.shiftKey) {
-                onSelect(clip.id, false);
-              }
-              onKeyframeSelect(keyframeRef, event.shiftKey);
-              const dragKeyframes = event.shiftKey
-                ? selectedBeforePointerDown
-                  ? selectedKeyframes.filter((item) => !sameSelectedKeyframe(item, keyframeRef))
-                  : [...selectedKeyframes, keyframeRef]
-                : selectedBeforePointerDown && selectedKeyframes.length > 1
-                  ? selectedKeyframes
-                  : [keyframeRef];
-              const keyframeSelectionOnly = event.shiftKey && selectedBeforePointerDown;
-              onDragStart({
-                mode: 'keyframe',
-                clip,
-                keyframeProperty: marker.property,
-                keyframeId: marker.id,
-                keyframes: keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef],
-                keyframeSelectionOnly,
-                keyframeStartTimes: Object.fromEntries(
-                  (keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef]).map((ref) => [
-                    selectedKeyframeKey(ref),
-                    getKeyframeMarkerTime(clip, ref) ?? marker.time,
-                  ]),
-                ),
-                startX: event.clientX,
-                previewStart: marker.time,
-                previewDuration: clip.duration,
-                previewTrimStart: clip.trimStart,
-                previewTrimEnd: clip.trimEnd,
-                previewKeyframeTime: marker.time,
-              });
-            }}
-          />
-        );
-      })}
+      <ClipKeyframeMarkers
+        clip={clip}
+        selectedKeyframe={selectedKeyframe}
+        selectedKeyframes={selectedKeyframes}
+        drag={drag}
+        locked={locked}
+        onSelect={onSelect}
+        onKeyframeSelect={onKeyframeSelect}
+        onDragStart={onDragStart}
+      />
       {Array.isArray(clip.flashWarnings) && clip.flashWarnings.length > 0 ? (
         <span
           className="absolute bottom-1.5 left-0 right-0 z-10 flex h-1"
@@ -581,8 +406,8 @@ export function ClipBlock({
 export const MemoizedClipBlock = memo(ClipBlock, areClipBlockPropsEqual);
 
 function areClipBlockPropsEqual(
-  previous: Parameters<typeof ClipBlock>[0],
-  next: Parameters<typeof ClipBlock>[0],
+  previous: ClipBlockProps,
+  next: ClipBlockProps,
 ): boolean {
   return (
     previous.clip === next.clip &&
