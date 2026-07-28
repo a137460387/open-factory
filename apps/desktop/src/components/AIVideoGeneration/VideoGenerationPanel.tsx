@@ -9,6 +9,8 @@ import {
   Video,
   Settings,
   Download,
+  FolderOpen,
+  Import,
 } from 'lucide-react';
 import {
   useVideoGeneration,
@@ -17,6 +19,7 @@ import {
 } from '../../hooks/useVideoGeneration';
 import { useGpuDetect } from '../../hooks/useGpuDetect';
 import { useModelManager } from '../../hooks/useModelManager';
+import { useVideoImport } from '../../hooks/useVideoImport';
 
 /** VideoGenerationPanel props */
 export interface VideoGenerationPanelProps {

@@ -1,0 +1,66 @@
+import { useCallback } from 'react';
+import { probeMediaPath } from '../lib/media';
+import { extractCoverFrames } from '../lib/tauri-bridge';
+import { openPath } from '../lib/tauri-bridge/window';
+import { showToast } from '../lib/toast';
+import { useEditorStore } from '../store/editorStore';
+
+/**
+ * Hook for importing AI-generated video into the timeline.
+ * Probes the video file, adds it to the media bin, extracts a cover frame,
+ * and provides a function to reveal the file in the system file manager.
+ */
+export function useVideoImport() {
+  const addMedia = useEditorStore((s) => s.addMedia);
+
+  const importToTimeline = useCallback(
+    async (videoPath: string): Promise<boolean> => {
+      try {
+        const asset = await probeMediaPath(videoPath);
+        addMedia([asset]);
+
+        // Extract cover frame in background (non-blocking)
+        extractCoverFrames({
+          inputPath: videoPath,
+          outputDir: videoPath.replace(/[/\\][^/\\]+$/, ''),
+          timestamps: [0],
+          width: 320,
+          height: 180,
+        }).catch(() => {
+          // Cover frame extraction is best-effort; don't block import
+        });
+
+        showToast({
+          kind: 'success',
+          title: 'Video imported to timeline',
+          message: asset.name,
+        });
+        return true;
+      } catch (error) {
+        showToast({
+          kind: 'error',
+          title: 'Failed to import video',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+        return false;
+      }
+    },
+    [addMedia],
+  );
+
+  const revealInExplorer = useCallback(async (filePath: string) => {
+    try {
+      // openPath opens the file directly; for revealing in folder we use the directory
+      const dir = filePath.replace(/[/\\][^/\\]+$/, '');
+      await openPath(dir);
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: 'Failed to open file location',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }, []);
+
+  return { importToTimeline, revealInExplorer };
+}
