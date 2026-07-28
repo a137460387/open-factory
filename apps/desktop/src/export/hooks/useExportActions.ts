@@ -14,6 +14,7 @@ import {useExportPresets} from './useExportPresets';
 import {useExportBatch, VERSIONED_BATCH_TEMPLATE_EXTENSION} from './useExportBatch';
 import {useExportHelpers} from './useExportHelpers';
 import {useExportPipeline} from './useExportPipeline';
+import {useExportPreview} from './useExportPreview';
 
 export {VERSIONED_BATCH_TEMPLATE_EXTENSION} from './useExportBatch';
 
@@ -146,6 +147,7 @@ export function useExportActions(state: ExportState) {
     buildVersionedBatchJobs: batch.buildVersionedBatchJobs,
     buildSequenceBatchJobs: batch.buildSequenceBatchJobs,
   });
+  const preview = useExportPreview(state);
 
   // savePreset wraps presets.savePreset with post-export script acknowledgment
   async function savePreset(): Promise<void> {
@@ -206,7 +208,7 @@ export function useExportActions(state: ExportState) {
     createPublishPipelineTemplate: pipeline.createPublishPipelineTemplate,
 
     // Preview
-    previewExport: pipeline.previewExport,
+    previewExport: preview.previewExport,
 
     // Quality evaluation
     evaluateHistoryQuality: helpers.evaluateHistoryQuality,

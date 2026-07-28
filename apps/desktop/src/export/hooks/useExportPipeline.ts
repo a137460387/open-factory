@@ -33,7 +33,6 @@ export function useExportPipeline(
     setError,
     setPreflight,
     setOutputPath,
-    setCapabilities,
     setPipelineConfig,
     setPipelineStatuses,
     setPublishPipelineLogs,
@@ -42,12 +41,10 @@ export function useExportPipeline(
     // Computed values
     selectedPreset,
     exportSettings,
-    isAudioOnly,
     activeExportRanges,
     // Other state
     project,
     outputPath,
-    capabilities,
     preflight,
     exportMode,
     pipelineConfig,
@@ -315,54 +312,6 @@ export function useExportPipeline(
     setPublishPipelineLogs([]);
   }
 
-  // Preview
-  async function previewExport(): Promise<void> {
-    if (isAudioOnly) {
-      return;
-    }
-    setError(undefined);
-    state.setPreviewError(undefined);
-    state.setPreviewRunning(true);
-    try {
-      const nextCapabilities = capabilities ?? (await getFfmpegCapabilities());
-      if (!nextCapabilities.available) {
-        throw new Error(t.preview.ffmpegMissing);
-      }
-      if (!capabilities) {
-        setCapabilities(nextCapabilities);
-      }
-      const appDataDir = await getAppDataDir();
-      const outputPaths = buildExportPreviewOutputPaths(appDataDir);
-      const exportProject = buildExportProjectFromProject(project, {
-        outputPath: outputPath || outputPaths[0].replace(/\.png$/i, '.mp4'),
-        settings: exportSettings,
-      });
-      const samples = buildFfmpegPreviewSamplePlans(exportProject, outputPaths, nextCapabilities).map((sample) => ({
-        ...sample,
-        label: t.preview.sampleLabels[sample.kind],
-      }));
-      const result = await runExportPreviewSamples({ samples, timeoutMs: EXPORT_PREVIEW_TIMEOUT_MS });
-      state.setPreviewSamples(
-        result.samples.map((sample) => ({
-          id: sample.id,
-          kind: sample.kind,
-          label: t.preview.sampleLabels[sample.kind],
-          time: sample.time,
-          path: sample.path,
-          src: convertLocalFileSrc(sample.path),
-          durationMs: sample.durationMs,
-        })),
-      );
-      showToast({ kind: 'success', title: t.preview.readyTitle, message: t.preview.readyMessage });
-    } catch (reason) {
-      const message = reason instanceof Error ? reason.message : t.preview.failed;
-      state.setPreviewError(message);
-      showToast({ kind: 'error', title: t.preview.failedTitle, message });
-    } finally {
-      state.setPreviewRunning(false);
-    }
-  }
-
   async function continueAfterWarnings(): Promise<void> {
     if (!preflight || preflight.issues.some((issue) => issue.severity === 'blocking')) {
       return;
@@ -400,7 +349,6 @@ export function useExportPipeline(
     runPipelineUtilityNode,
     createPipelineTemplate,
     createPublishPipelineTemplate,
-    previewExport,
     continueAfterWarnings,
     relinkFromPreflight,
   };

@@ -15,6 +15,12 @@ import type {
 import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from './default-themes.js';
 import { THEME_PRESETS } from './theme-presets.js';
 import { generateCSSVariables } from './css-variables.js';
+import {
+  saveCustomThemes,
+  loadCustomThemes,
+  saveActiveThemeId,
+  loadActiveThemeId,
+} from './persistence.js';
 
 /**
  * Theme manager
@@ -25,7 +31,6 @@ export class ThemeManager {
   private themes: Map<string, ThemeConfig> = new Map();
   private activeTheme: ThemeConfig;
   private listeners: Set<(theme: ThemeConfig) => void> = new Set();
-  private storageKey: string = 'open-factory-themes';
 
   constructor() {
     // Load default themes
@@ -33,7 +38,7 @@ export class ThemeManager {
     this.themes.set(DEFAULT_LIGHT_THEME.id, DEFAULT_LIGHT_THEME);
 
     // Load custom themes from storage
-    this.loadCustomThemes();
+    loadCustomThemes(this.themes);
 
     // Set active theme
     this.activeTheme = DEFAULT_DARK_THEME;
@@ -57,7 +62,7 @@ export class ThemeManager {
 
     this.activeTheme = theme;
     this.applyTheme(theme);
-    this.saveActiveTheme(themeId);
+    saveActiveThemeId(themeId);
     this.notifyListeners();
 
     return true;
@@ -83,7 +88,7 @@ export class ThemeManager {
     };
 
     this.themes.set(theme.id, theme);
-    this.saveCustomThemes();
+    saveCustomThemes(this.themes);
 
     return theme;
   }
@@ -98,7 +103,7 @@ export class ThemeManager {
     }
 
     Object.assign(theme, updates, { updatedAt: Date.now() });
-    this.saveCustomThemes();
+    saveCustomThemes(this.themes);
 
     // If updating active theme, re-apply
     if (this.activeTheme.id === themeId) {
@@ -120,7 +125,7 @@ export class ThemeManager {
     }
 
     this.themes.delete(themeId);
-    this.saveCustomThemes();
+    saveCustomThemes(this.themes);
 
     // If deleting active theme, switch to default
     if (this.activeTheme.id === themeId) {
@@ -254,7 +259,7 @@ export class ThemeManager {
       updatedAt: Date.now(),
     });
 
-    this.saveCustomThemes();
+    saveCustomThemes(this.themes);
 
     if (this.activeTheme.id === themeId) {
       this.activeTheme = theme;
@@ -296,7 +301,7 @@ export class ThemeManager {
       theme.updatedAt = Date.now();
 
       this.themes.set(theme.id, theme);
-      this.saveCustomThemes();
+      saveCustomThemes(this.themes);
 
       return theme;
     } catch {
@@ -357,56 +362,12 @@ export class ThemeManager {
   }
 
   /**
-   * Save custom themes to storage
-   */
-  private saveCustomThemes(): void {
-    try {
-      const customThemes = Array.from(this.themes.values()).filter(t => !t.isDefault);
-      localStorage.setItem(this.storageKey, JSON.stringify(customThemes));
-    } catch {
-      // Storage not available
-    }
-  }
-
-  /**
-   * Load custom themes from storage
-   */
-  private loadCustomThemes(): void {
-    try {
-      const saved = localStorage.getItem(this.storageKey);
-      if (saved) {
-        const themes = JSON.parse(saved) as ThemeConfig[];
-        for (const theme of themes) {
-          this.themes.set(theme.id, theme);
-        }
-      }
-    } catch {
-      // Storage not available
-    }
-  }
-
-  /**
-   * Save active theme ID
-   */
-  private saveActiveTheme(themeId: string): void {
-    try {
-      localStorage.setItem(`${this.storageKey}-active`, themeId);
-    } catch {
-      // Storage not available
-    }
-  }
-
-  /**
    * Load active theme
    */
   loadActiveTheme(): void {
-    try {
-      const themeId = localStorage.getItem(`${this.storageKey}-active`);
-      if (themeId) {
-        this.switchTheme(themeId);
-      }
-    } catch {
-      // Storage not available
+    const themeId = loadActiveThemeId();
+    if (themeId) {
+      this.switchTheme(themeId);
     }
   }
 

@@ -5,7 +5,9 @@
  *
  * This file is the public entry point. Implementation split into:
  * - types.ts: type definitions, constants, and permission helpers
- * - team-manager.ts: TeamManager class, factory and serialization functions
+ * - team-manager-base.ts: TeamManagerBase class (state management, team CRUD)
+ * - team-manager-members.ts: TeamManagerB class (member & invitation management)
+ * - team-manager.ts: TeamManager class (project sharing, events, factory & serialization)
  */
 
 export * from './types';
