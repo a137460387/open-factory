@@ -50,13 +50,18 @@ export { TONE_MAPPING_FUNCTIONS } from './tone-mapping';
 // Color space conversions
 export { COLOR_SPACE_CONVERSIONS } from './color-space-conversions';
 
+// Matrices
+export { ACES_MATRICES } from './matrices';
+
+// OCIO config
+export { generateOCIOConfig } from './ocio-config';
+
 // LUT manager
 export { LUTManager } from './lut-manager';
 
 // ACES color manager and constants
 export {
   DEFAULT_COLOR_MANAGEMENT_CONFIG,
-  ACES_MATRICES,
   ACESColorManager,
   createDefaultColorManagementConfig,
   validateColorManagementConfig,

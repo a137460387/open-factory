@@ -1,12 +1,11 @@
 /**
- * ACES色彩管理模块 - ACES色彩管理器、常量与工具函数
+ * ACES色彩管理模块 - ACES色彩管理器与工具函数
  */
 
 import type {
   ColorSpace,
   ColorManagementConfig,
   ToneMappingMethod,
-  ColorMatrix3x3,
   RGBColor,
   LUTData,
   OCIOConfig,
@@ -14,6 +13,8 @@ import type {
 import { clamp, multiplyMatrix3x3 } from './math-utils';
 import { TRANSFER_FUNCTIONS } from './transfer-functions';
 import { TONE_MAPPING_FUNCTIONS } from './tone-mapping';
+import { ACES_MATRICES } from './matrices';
+import { generateOCIOConfig } from './ocio-config';
 import { LUTManager } from './lut-manager';
 
 /**
@@ -31,51 +32,6 @@ export const DEFAULT_COLOR_MANAGEMENT_CONFIG: ColorManagementConfig = {
   toneMappingMethod: 'aces-hill',
   enableLUT: true,
   lutSize: 33,
-};
-
-/**
- * ACES色彩空间转换矩阵
- */
-export const ACES_MATRICES = {
-  // sRGB到ACES2065-1 (AP0)
-  srgbToAP0: [
-    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
-  ] as ColorMatrix3x3,
-
-  // ACES2065-1 (AP0) 到 sRGB
-  ap0ToSrgb: [
-    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
-  ] as ColorMatrix3x3,
-
-  // ACEScg (AP1) 到 ACES2065-1 (AP0)
-  ap1ToAP0: [
-    0.6954522, 0.1406787, 0.163869, 0.0447946, 0.8596711, 0.0955343, -0.0055259, 0.0040252, 1.0015007,
-  ] as ColorMatrix3x3,
-
-  // ACES2065-1 (AP0) 到 ACEScg (AP1)
-  ap0ToAP1: [
-    1.4514393, -0.2365107, -0.2149286, -0.0765538, 1.1762297, -0.0996759, 0.0083162, -0.0060324, 0.9977163,
-  ] as ColorMatrix3x3,
-
-  // Rec.709 到 ACES2065-1 (AP0)
-  rec709ToAP0: [
-    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
-  ] as ColorMatrix3x3,
-
-  // ACES2065-1 (AP0) 到 Rec.709
-  ap0ToRec709: [
-    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
-  ] as ColorMatrix3x3,
-
-  // Rec.2020 到 ACES2065-1 (AP0)
-  rec2020ToAP0: [
-    0.4396744, 0.3829868, 0.1773388, 0.0897764, 0.8134392, 0.0967844, 0.0175417, 0.1115465, 0.8709118,
-  ] as ColorMatrix3x3,
-
-  // ACES2065-1 (AP0) 到 Rec.2020
-  ap0ToRec2020: [
-    2.5216474, -1.1366888, -0.3849586, -0.2754369, 1.3700779, -0.094641, -0.0159316, -0.1529726, 1.1689042,
-  ] as ColorMatrix3x3,
 };
 
 /**
@@ -150,7 +106,7 @@ export class ACESColorManager {
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.rec2020ToAP0, color);
 
-      case 'acescct':
+      case 'acescct': {
         // 先转换为线性
         const linear: RGBColor = {
           r: TRANSFER_FUNCTIONS.acescctToLinear(color.r),
@@ -158,6 +114,7 @@ export class ACESColorManager {
           b: TRANSFER_FUNCTIONS.acescctToLinear(color.b),
         };
         return multiplyMatrix3x3(ACES_MATRICES.ap1ToAP0, linear);
+      }
 
       default:
         // 默认假设为sRGB
@@ -189,7 +146,7 @@ export class ACESColorManager {
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToRec2020, color);
 
-      case 'acescct':
+      case 'acescct': {
         // 转换为ACEScg，然后应用ACEScct传输特性
         const ap1 = multiplyMatrix3x3(ACES_MATRICES.ap0ToAP1, color);
         return {
@@ -197,6 +154,7 @@ export class ACESColorManager {
           g: TRANSFER_FUNCTIONS.linearToACEScct(ap1.g),
           b: TRANSFER_FUNCTIONS.linearToACEScct(ap1.b),
         };
+      }
 
       default:
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToSrgb, color);
@@ -287,91 +245,7 @@ export class ACESColorManager {
    * 生成OCIO配置
    */
   generateOCIOConfig(): OCIOConfig {
-    return {
-      name: 'Open Factory ACES Config',
-      version: '1.0',
-      colorSpaces: [
-        {
-          name: 'sRGB',
-          family: 'Input',
-          description: 'sRGB色彩空间',
-          aliases: ['srgb', 'srgb_texture'],
-          isReference: false,
-          conversionType: 'matrix',
-          conversionParams: {
-            matrix: ACES_MATRICES.srgbToAP0,
-          },
-        },
-        {
-          name: 'Rec.709',
-          family: 'Input',
-          description: 'Rec.709色彩空间',
-          aliases: ['rec709', 'bt709'],
-          isReference: false,
-          conversionType: 'matrix',
-          conversionParams: {
-            matrix: ACES_MATRICES.rec709ToAP0,
-          },
-        },
-        {
-          name: 'ACES2065-1',
-          family: 'ACES',
-          description: 'ACES参考色彩空间',
-          aliases: ['ap0', 'aces'],
-          isReference: true,
-          conversionType: 'matrix',
-          conversionParams: {
-            matrix: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-          },
-        },
-        {
-          name: 'ACEScg',
-          family: 'ACES',
-          description: 'ACES工作色彩空间',
-          aliases: ['ap1', 'lin_acescg'],
-          isReference: false,
-          conversionType: 'matrix',
-          conversionParams: {
-            matrix: ACES_MATRICES.ap1ToAP0,
-          },
-        },
-        {
-          name: 'ACEScct',
-          family: 'ACES',
-          description: 'ACEScct色彩空间',
-          aliases: ['acescct'],
-          isReference: false,
-          conversionType: 'function',
-          conversionParams: {
-            function: 'linearToACEScct',
-          },
-        },
-      ],
-      views: [
-        {
-          name: 'ACES 1.0 SDR Video',
-          viewTransform: 'ACES Output - SDR Video',
-          toneMapping: 'aces-hill',
-        },
-        {
-          name: 'ACES 1.0 HDR Video (1000 nits)',
-          viewTransform: 'ACES Output - HDR Video',
-          toneMapping: 'aces-hill',
-        },
-      ],
-      displays: [
-        {
-          name: 'sRGB',
-          views: ['ACES 1.0 SDR Video'],
-        },
-        {
-          name: 'Rec.2020',
-          views: ['ACES 1.0 HDR Video (1000 nits)'],
-        },
-      ],
-      defaultDisplay: 'sRGB',
-      defaultView: 'ACES 1.0 SDR Video',
-    };
+    return generateOCIOConfig();
   }
 }
 
