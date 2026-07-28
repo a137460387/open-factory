@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.73.0] - 2026-07-29
+
+### Added
+- LTX-Video AI 视频生成功能：文字描述/图片 → 本地 AI 生成视频
+- 视频生成面板：实时进度条、阶段显示、GPU 信息、生成预览
+- 12 个视频生成预设（Quick Draft 到 Social Storyboard 等）+ 自定义预设
+- 模型自动下载管理器：进度追踪、SHA256 校验、HuggingFace 集成
+- GPU 检测与自动精度推荐（CUDA/MPS/CPU 三级回退）
+- 时间线集成：生成视频自动添加到时间线、缩略图预览、右键菜单位置
+- Toast 通知系统：生成完成/失败通知、进程恢复、进度持久化
+- 侧边栏工具栏「Generate Video」入口
+
 ## [v4.72.0] - 2026-07-28
 
 ### Added
