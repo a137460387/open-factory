@@ -24,6 +24,7 @@ import type {
   TextOpenTypeFeatures,
   ThreeWayColor,
   VideoDeinterlaceMode,
+  buildAudioRestorationWaveformComparison,
   normalizeAudioDenoise,
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
@@ -54,7 +55,7 @@ import type {
 import type {SelectedKeyframeRef} from '../../store/editorStore';
 import {commandManager} from '../../store/commandManager';
 import type {TranslationProvider} from '../../store/translationSettingsStore';
-import type {buildAudioRestorationWaveformComparison, resolveSelectedKeyframeEntries, FrameInterpolationComparePreviewViewItem} from './InspectorEditors';
+import type {resolveSelectedKeyframeEntries, FrameInterpolationComparePreviewViewItem} from './InspectorEditors';
 
 // ---------------------------------------------------------------------------
 // Params

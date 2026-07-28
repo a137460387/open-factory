@@ -40,10 +40,14 @@ export {
   computeColorBalance,
   mapScoreToEnhancedGrade,
   dimensionScoreToGrade,
+} from './quality-assessment-analysis.js';
+
+// Re-export from evaluation
+export {
   assessVideoQuality,
   assessAudioQuality,
   assessFrameQuality,
-} from './quality-assessment-analysis.js';
+} from './quality-assessment-evaluation.js';
 
 // Re-export from config
 export {

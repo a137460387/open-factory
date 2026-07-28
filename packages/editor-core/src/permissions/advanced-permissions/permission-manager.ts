@@ -1,349 +1,36 @@
 /**
- * 高级权限模块
- * 实现项目级别和文件夹级别的权限控制
- * 支持临时权限和审计日志
- * 与现有协作系统深度集成
+ * Advanced permission manager
+ * Provides complete permission control functionality
  */
 
-import {createId} from '../model';
+import {
+  type PermissionLevel,
+  type PermissionSubject,
+  type PermissionSubjectType,
+  type PermissionTarget,
+  type PermissionRule,
+  type PermissionGroup,
+  type PermissionAuditAction,
+  type PermissionAuditLog,
+  type PermissionEvaluationResult,
+  type PermissionConfig,
+  type PermissionState,
+  type TemporaryPermission,
+  DEFAULT_PERMISSION_CONFIG,
+  createId,
+} from './types';
 
-// ==================== 类型定义 ====================
-
-/** 权限级别 */
-export type PermissionLevel = 'none' | 'read' | 'write' | 'admin' | 'owner';
-
-/** 权限范围 */
-export type PermissionScope = 'project' | 'folder' | 'file' | 'global';
-
-/** 权限主体类型 */
-export type PermissionSubjectType = 'user' | 'team' | 'role' | 'group';
-
-/** 权限主体 */
-export interface PermissionSubject {
-  type: PermissionSubjectType;
-  id: string;
-  name: string;
-}
-
-/** 权限目标 */
-export interface PermissionTarget {
-  type: PermissionScope;
-  id: string;
-  name: string;
-  parentId?: string;
-}
-
-/** 权限规则 */
-export interface PermissionRule {
-  id: string;
-  subject: PermissionSubject;
-  target: PermissionTarget;
-  level: PermissionLevel;
-  grantedBy: string;
-  grantedAt: string;
-  expiresAt?: string;
-  conditions?: PermissionConditions;
-  metadata: PermissionRuleMetadata;
-}
-
-/** 权限条件 */
-export interface PermissionConditions {
-  ipWhitelist?: string[];
-  timeRange?: {
-    start: string;
-    end: string;
-  };
-  deviceRestrictions?: string[];
-  requireMFA?: boolean;
-  maxConcurrentSessions?: number;
-}
-
-/** 权限规则元数据 */
-export interface PermissionRuleMetadata {
-  description?: string;
-  tags?: string[];
-  priority: number;
-  isTemporary: boolean;
-  autoRevoke: boolean;
-  lastEvaluatedAt?: string;
-  evaluationCount: number;
-}
-
-/** 权限继承配置 */
-export interface PermissionInheritance {
-  enabled: boolean;
-  mode: 'strict' | 'lenient' | 'override';
-  inheritFromParent: boolean;
-  propagateToChildren: boolean;
-  overrideParent: boolean;
-}
-
-/** 权限组 */
-export interface PermissionGroup {
-  id: string;
-  name: string;
-  description: string;
-  members: PermissionSubject[];
-  rules: string[]; // 规则ID列表
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
-
-/** 临时权限 */
-export interface TemporaryPermission {
-  id: string;
-  ruleId: string;
-  subject: PermissionSubject;
-  target: PermissionTarget;
-  level: PermissionLevel;
-  grantedBy: string;
-  grantedAt: string;
-  expiresAt: string;
-  reason: string;
-  autoRevoke: boolean;
-  revokedAt?: string;
-  revokedBy?: string;
-}
-
-/** 权限审计日志 */
-export interface PermissionAuditLog {
-  id: string;
-  timestamp: string;
-  userId: string;
-  userName: string;
-  action: PermissionAuditAction;
-  subject: PermissionSubject;
-  target: PermissionTarget;
-  previousLevel?: PermissionLevel;
-  newLevel?: PermissionLevel;
-  details: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
-}
-
-/** 权限审计动作 */
-export type PermissionAuditAction =
-  | 'permission.granted'
-  | 'permission.revoked'
-  | 'permission.modified'
-  | 'permission.expired'
-  | 'permission.evaluated'
-  | 'permission.denied'
-  | 'group.created'
-  | 'group.updated'
-  | 'group.deleted'
-  | 'group.member_added'
-  | 'group.member_removed'
-  | 'inheritance.enabled'
-  | 'inheritance.disabled'
-  | 'inheritance.overridden';
-
-/** 权限评估结果 */
-export interface PermissionEvaluationResult {
-  allowed: boolean;
-  level: PermissionLevel;
-  reason: string;
-  matchedRules: PermissionRule[];
-  effectivePermissions: PermissionLevel;
-  warnings: string[];
-}
-
-/** 权限配置 */
-export interface PermissionConfig {
-  inheritance: PermissionInheritance;
-  defaultLevel: PermissionLevel;
-  requireExplicitDeny: boolean;
-  auditEnabled: boolean;
-  auditRetentionDays: number;
-  maxRulesPerSubject: number;
-  maxGroupsPerUser: number;
-  enableTemporaryPermissions: boolean;
-  maxTemporaryDurationHours: number;
-}
-
-/** 权限状态 */
-export interface PermissionState {
-  rules: PermissionRule[];
-  groups: PermissionGroup[];
-  temporaryPermissions: TemporaryPermission[];
-  auditLog: PermissionAuditLog[];
-  config: PermissionConfig;
-  cache: Map<string, PermissionEvaluationResult>;
-}
-
-// ==================== 默认配置 ====================
-
-export const DEFAULT_PERMISSION_CONFIG: PermissionConfig = {
-  inheritance: {
-    enabled: true,
-    mode: 'lenient',
-    inheritFromParent: true,
-    propagateToChildren: true,
-    overrideParent: false,
-  },
-  defaultLevel: 'none',
-  requireExplicitDeny: false,
-  auditEnabled: true,
-  auditRetentionDays: 90,
-  maxRulesPerSubject: 100,
-  maxGroupsPerUser: 10,
-  enableTemporaryPermissions: true,
-  maxTemporaryDurationHours: 24 * 7, // 7天
-};
-
-/** 权限级别权重 */
-export const PERMISSION_LEVEL_WEIGHTS: Record<PermissionLevel, number> = {
-  none: 0,
-  read: 1,
-  write: 2,
-  admin: 3,
-  owner: 4,
-};
-
-/** 权限级别列表 */
-export const PERMISSION_LEVELS: PermissionLevel[] = ['none', 'read', 'write', 'admin', 'owner'];
-
-// ==================== 工具函数 ====================
+import {
+  comparePermissionLevels,
+  hasSufficientPermission,
+  isPermissionExpired,
+  isTemporaryPermissionValid,
+  validatePermissionRule,
+} from './utils';
 
 /**
- * 比较权限级别
- */
-export function comparePermissionLevels(a: PermissionLevel, b: PermissionLevel): number {
-  return PERMISSION_LEVEL_WEIGHTS[a] - PERMISSION_LEVEL_WEIGHTS[b];
-}
-
-/**
- * 检查权限级别是否足够
- */
-export function hasSufficientPermission(required: PermissionLevel, actual: PermissionLevel): boolean {
-  return PERMISSION_LEVEL_WEIGHTS[actual] >= PERMISSION_LEVEL_WEIGHTS[required];
-}
-
-/**
- * 获取最高权限级别
- */
-export function getHighestPermission(levels: PermissionLevel[]): PermissionLevel {
-  if (levels.length === 0) return 'none';
-  return levels.reduce((highest, current) =>
-    PERMISSION_LEVEL_WEIGHTS[current] > PERMISSION_LEVEL_WEIGHTS[highest] ? current : highest,
-  );
-}
-
-/**
- * 检查权限是否过期
- */
-export function isPermissionExpired(rule: PermissionRule): boolean {
-  if (!rule.expiresAt) return false;
-  return new Date(rule.expiresAt) < new Date();
-}
-
-/**
- * 检查临时权限是否有效
- */
-export function isTemporaryPermissionValid(permission: TemporaryPermission): boolean {
-  if (permission.revokedAt) return false;
-  return new Date(permission.expiresAt) > new Date();
-}
-
-/**
- * 计算权限继承
- */
-export function calculateInheritedPermission(
-  parentLevel: PermissionLevel,
-  childLevel: PermissionLevel,
-  config: PermissionInheritance,
-): PermissionLevel {
-  if (!config.enabled) return childLevel;
-
-  switch (config.mode) {
-    case 'strict':
-      // 严格模式：取较低的权限
-      return comparePermissionLevels(parentLevel, childLevel) < 0 ? parentLevel : childLevel;
-    case 'lenient':
-      // 宽松模式：取较高的权限
-      return getHighestPermission([parentLevel, childLevel]);
-    case 'override':
-      // 覆盖模式：子权限覆盖父权限
-      return childLevel !== 'none' ? childLevel : parentLevel;
-    default:
-      return childLevel;
-  }
-}
-
-/**
- * 验证权限规则
- */
-export function validatePermissionRule(rule: Partial<PermissionRule>): string[] {
-  const errors: string[] = [];
-
-  if (!rule.subject) {
-    errors.push('缺少权限主体');
-  } else {
-    if (!rule.subject.id) errors.push('缺少主体ID');
-    if (!rule.subject.type) errors.push('缺少主体类型');
-  }
-
-  if (!rule.target) {
-    errors.push('缺少权限目标');
-  } else {
-    if (!rule.target.id) errors.push('缺少目标ID');
-    if (!rule.target.type) errors.push('缺少目标类型');
-  }
-
-  if (!rule.level || !PERMISSION_LEVELS.includes(rule.level)) {
-    errors.push('无效的权限级别');
-  }
-
-  if (rule.expiresAt && new Date(rule.expiresAt) <= new Date()) {
-    errors.push('过期时间必须在未来');
-  }
-
-  return errors;
-}
-
-/**
- * 创建权限规则
- */
-export function createPermissionRule(
-  subject: PermissionSubject,
-  target: PermissionTarget,
-  level: PermissionLevel,
-  grantedBy: string,
-  options?: {
-    expiresAt?: string;
-    conditions?: PermissionConditions;
-    description?: string;
-    tags?: string[];
-    priority?: number;
-  },
-): PermissionRule {
-  const now = new Date().toISOString();
-  return {
-    id: createId('perm'),
-    subject,
-    target,
-    level,
-    grantedBy,
-    grantedAt: now,
-    expiresAt: options?.expiresAt,
-    conditions: options?.conditions,
-    metadata: {
-      description: options?.description,
-      tags: options?.tags,
-      priority: options?.priority ?? 0,
-      isTemporary: !!options?.expiresAt,
-      autoRevoke: !!options?.expiresAt,
-      evaluationCount: 0,
-    },
-  };
-}
-
-// ==================== 权限管理器 ====================
-
-/**
- * 高级权限管理器
- * 提供完整的权限控制功能
+ * Advanced permission manager
+ * Provides complete permission control functionality
  */
 export class AdvancedPermissionManager {
   private state: PermissionState;
@@ -361,7 +48,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 获取权限状态
+   * Get permission state
    */
   getState(): PermissionState {
     return {
@@ -371,14 +58,14 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 获取配置
+   * Get config
    */
   getConfig(): PermissionConfig {
     return { ...this.state.config };
   }
 
   /**
-   * 更新配置
+   * Update config
    */
   updateConfig(config: Partial<PermissionConfig>): void {
     this.state.config = { ...this.state.config, ...config };
@@ -387,21 +74,19 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 添加权限规则
+   * Add permission rule
    */
   addRule(
     rule: Omit<PermissionRule, 'id' | 'metadata'>,
     operatorId: string,
     operatorName: string,
   ): PermissionRule | null {
-    // 验证规则
     const errors = validatePermissionRule(rule);
     if (errors.length > 0) {
       this.emit('rule.validation_failed', { rule, errors });
       return null;
     }
 
-    // 检查是否超过限制
     const subjectRules = this.state.rules.filter(
       (r) => r.subject.id === rule.subject.id && r.subject.type === rule.subject.type,
     );
@@ -410,13 +95,11 @@ export class AdvancedPermissionManager {
       return null;
     }
 
-    // 检查临时权限配置
     if (rule.expiresAt && !this.state.config.enableTemporaryPermissions) {
       this.emit('rule.temporary_disabled', { rule });
       return null;
     }
 
-    // 检查临时权限时长限制
     if (rule.expiresAt) {
       const durationHours =
         (new Date(rule.expiresAt).getTime() - new Date(rule.grantedAt).getTime()) / (1000 * 60 * 60);
@@ -440,7 +123,6 @@ export class AdvancedPermissionManager {
     this.state.rules.push(newRule);
     this.clearCache();
 
-    // 记录审计日志
     this.addAuditLog({
       userId: operatorId,
       userName: operatorName,
@@ -457,7 +139,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 移除权限规则
+   * Remove permission rule
    */
   removeRule(ruleId: string, operatorId: string, operatorName: string): boolean {
     const ruleIndex = this.state.rules.findIndex((r) => r.id === ruleId);
@@ -469,7 +151,6 @@ export class AdvancedPermissionManager {
     this.state.rules.splice(ruleIndex, 1);
     this.clearCache();
 
-    // 记录审计日志
     this.addAuditLog({
       userId: operatorId,
       userName: operatorName,
@@ -486,7 +167,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 修改权限规则
+   * Modify permission rule
    */
   modifyRule(
     ruleId: string,
@@ -511,7 +192,6 @@ export class AdvancedPermissionManager {
 
     this.clearCache();
 
-    // 记录审计日志
     this.addAuditLog({
       userId: operatorId,
       userName: operatorName,
@@ -529,14 +209,13 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 评估权限
+   * Evaluate permission
    */
   evaluate(
     subject: PermissionSubject,
     target: PermissionTarget,
     requiredLevel: PermissionLevel,
   ): PermissionEvaluationResult {
-    // 检查缓存
     const cacheKey = `${subject.id}:${target.id}:${requiredLevel}`;
     const cached = this.state.cache.get(cacheKey);
     if (cached) {
@@ -546,7 +225,6 @@ export class AdvancedPermissionManager {
     const warnings: string[] = [];
     const matchedRules: PermissionRule[] = [];
 
-    // 获取直接规则
     const directRules = this.state.rules.filter(
       (r) =>
         r.subject.id === subject.id &&
@@ -555,30 +233,23 @@ export class AdvancedPermissionManager {
         r.target.type === target.type,
     );
 
-    // 获取继承规则
     const inheritedRules = this.state.config.inheritance.enabled ? this.getInheritedRules(subject, target) : [];
 
-    // 获取组规则
     const groupRules = this.getGroupRules(subject, target);
 
-    // 获取临时权限
     const tempPermissions = this.state.temporaryPermissions.filter(
       (tp) => tp.subject.id === subject.id && tp.target.id === target.id && isTemporaryPermissionValid(tp),
     );
 
-    // 合并所有规则
     const allRules = [...directRules, ...inheritedRules, ...groupRules];
 
-    // 过滤过期规则
     const validRules = allRules.filter((r) => !isPermissionExpired(r));
     if (validRules.length < allRules.length) {
       warnings.push('部分规则已过期');
     }
 
-    // 按优先级排序
     validRules.sort((a, b) => b.metadata.priority - a.metadata.priority);
 
-    // 计算最终权限
     let effectiveLevel: PermissionLevel = this.state.config.defaultLevel;
 
     for (const rule of validRules) {
@@ -591,7 +262,6 @@ export class AdvancedPermissionManager {
       }
     }
 
-    // 应用临时权限
     for (const tempPerm of tempPermissions) {
       if (comparePermissionLevels(tempPerm.level, effectiveLevel) > 0) {
         effectiveLevel = tempPerm.level;
@@ -610,10 +280,8 @@ export class AdvancedPermissionManager {
       warnings,
     };
 
-    // 缓存结果
     this.state.cache.set(cacheKey, result);
 
-    // 记录审计日志
     if (this.state.config.auditEnabled) {
       this.addAuditLog({
         userId: subject.id,
@@ -632,7 +300,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 获取继承规则
+   * Get inherited rules
    */
   private getInheritedRules(subject: PermissionSubject, target: PermissionTarget): PermissionRule[] {
     if (!this.state.config.inheritance.inheritFromParent) {
@@ -641,7 +309,6 @@ export class AdvancedPermissionManager {
 
     const rules: PermissionRule[] = [];
 
-    // 递归获取父级规则
     const collectParentRules = (currentTarget: PermissionTarget) => {
       if (!currentTarget.parentId) return;
 
@@ -651,7 +318,6 @@ export class AdvancedPermissionManager {
 
       rules.push(...parentRules);
 
-      // 继续向上查找
       const parentTarget = this.state.rules.find((r) => r.target.id === currentTarget.parentId)?.target;
       if (parentTarget) {
         collectParentRules(parentTarget);
@@ -664,17 +330,15 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 获取组规则
+   * Get group rules
    */
   private getGroupRules(subject: PermissionSubject, target: PermissionTarget): PermissionRule[] {
     const rules: PermissionRule[] = [];
 
-    // 查找用户所属的组
     const userGroups = this.state.groups.filter((g) =>
       g.members.some((m) => m.id === subject.id && m.type === subject.type),
     );
 
-    // 获取组的规则
     for (const group of userGroups) {
       for (const ruleId of group.rules) {
         const rule = this.state.rules.find((r) => r.id === ruleId);
@@ -687,8 +351,10 @@ export class AdvancedPermissionManager {
     return rules;
   }
 
+  // ==================== Group Management ====================
+
   /**
-   * 创建权限组
+   * Create permission group
    */
   createGroup(name: string, description: string, operatorId: string, operatorName: string): PermissionGroup {
     const group: PermissionGroup = {
@@ -719,7 +385,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 更新权限组
+   * Update permission group
    */
   updateGroup(
     groupId: string,
@@ -749,7 +415,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 删除权限组
+   * Delete permission group
    */
   deleteGroup(groupId: string, operatorId: string, operatorName: string): boolean {
     const groupIndex = this.state.groups.findIndex((g) => g.id === groupId);
@@ -773,18 +439,16 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 添加组成员
+   * Add group member
    */
   addGroupMember(groupId: string, member: PermissionSubject, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
-    // 检查是否已在组中
     if (group.members.some((m) => m.id === member.id && m.type === member.type)) {
       return false;
     }
 
-    // 检查用户组数限制
     const userGroups = this.state.groups.filter((g) => g.members.some((m) => m.id === member.id));
     if (userGroups.length >= this.state.config.maxGroupsPerUser) {
       return false;
@@ -808,7 +472,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 移除组成员
+   * Remove group member
    */
   removeGroupMember(
     groupId: string,
@@ -842,18 +506,16 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 添加组规则
+   * Add group rule
    */
   addGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
-    // 检查规则是否存在
     if (!this.state.rules.some((r) => r.id === ruleId)) {
       return false;
     }
 
-    // 检查是否已添加
     if (group.rules.includes(ruleId)) {
       return false;
     }
@@ -867,7 +529,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 移除组规则
+   * Remove group rule
    */
   removeGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
@@ -884,8 +546,10 @@ export class AdvancedPermissionManager {
     return true;
   }
 
+  // ==================== Temporary Permissions ====================
+
   /**
-   * 创建临时权限
+   * Create temporary permission
    */
   createTemporaryPermission(
     subject: PermissionSubject,
@@ -922,7 +586,6 @@ export class AdvancedPermissionManager {
 
     this.state.temporaryPermissions.push(tempPermission);
 
-    // 设置自动撤销
     if (tempPermission.autoRevoke) {
       setTimeout(
         () => {
@@ -953,7 +616,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 撤销临时权限
+   * Revoke temporary permission
    */
   revokeTemporaryPermission(permissionId: string, revokedBy: string, revokedByName: string): boolean {
     const permission = this.state.temporaryPermissions.find((tp) => tp.id === permissionId);
@@ -977,29 +640,31 @@ export class AdvancedPermissionManager {
     return true;
   }
 
+  // ==================== Queries ====================
+
   /**
-   * 获取用户的权限
+   * Get user permissions
    */
   getUserPermissions(userId: string): PermissionRule[] {
     return this.state.rules.filter((r) => r.subject.id === userId);
   }
 
   /**
-   * 获取目标的权限
+   * Get target permissions
    */
   getTargetPermissions(targetId: string): PermissionRule[] {
     return this.state.rules.filter((r) => r.target.id === targetId);
   }
 
   /**
-   * 获取用户的组
+   * Get user groups
    */
   getUserGroups(userId: string): PermissionGroup[] {
     return this.state.groups.filter((g) => g.members.some((m) => m.id === userId));
   }
 
   /**
-   * 获取审计日志
+   * Get audit log
    */
   getAuditLog(filters?: {
     userId?: string;
@@ -1023,7 +688,6 @@ export class AdvancedPermissionManager {
       logs = logs.filter((l) => new Date(l.timestamp) <= new Date(filters.endDate!));
     }
 
-    // 按时间倒序
     logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     if (filters?.limit) {
@@ -1033,11 +697,12 @@ export class AdvancedPermissionManager {
     return logs;
   }
 
+  // ==================== Cleanup ====================
+
   /**
-   * 清除过期的临时权限
+   * Cleanup expired temporary permissions
    */
   cleanupExpiredPermissions(): number {
-    const now = new Date();
     const before = this.state.temporaryPermissions.length;
 
     this.state.temporaryPermissions = this.state.temporaryPermissions.filter((tp) => isTemporaryPermissionValid(tp));
@@ -1052,7 +717,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 清除审计日志
+   * Cleanup audit log
    */
   cleanupAuditLog(): number {
     const cutoffDate = new Date();
@@ -1066,14 +731,16 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 清除缓存
+   * Clear cache
    */
   clearCache(): void {
     this.state.cache.clear();
   }
 
+  // ==================== Internal ====================
+
   /**
-   * 记录审计日志
+   * Add audit log entry
    */
   private addAuditLog(entry: Omit<PermissionAuditLog, 'id' | 'timestamp'>): void {
     if (!this.state.config.auditEnabled) return;
@@ -1086,14 +753,13 @@ export class AdvancedPermissionManager {
 
     this.state.auditLog.push(log);
 
-    // 限制日志数量
     if (this.state.auditLog.length > 10000) {
       this.state.auditLog = this.state.auditLog.slice(-5000);
     }
   }
 
   /**
-   * 导出状态
+   * Export state
    */
   exportState(): string {
     return JSON.stringify(
@@ -1107,7 +773,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 导入状态
+   * Import state
    */
   importState(stateJson: string): boolean {
     try {
@@ -1129,7 +795,7 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 注册事件处理器
+   * Register event handler
    */
   on(event: string, handler: (data: unknown) => void): () => void {
     if (!this.eventHandlers.has(event)) {
@@ -1143,64 +809,17 @@ export class AdvancedPermissionManager {
   }
 
   /**
-   * 触发事件
+   * Emit event
    */
   private emit(event: string, data: unknown): void {
     this.eventHandlers.get(event)?.forEach((handler) => handler(data));
   }
 
   /**
-   * 释放资源
+   * Dispose resources
    */
   dispose(): void {
     this.eventHandlers.clear();
     this.state.cache.clear();
-  }
-}
-
-// ==================== 工厂函数 ====================
-
-/**
- * 创建权限管理器
- */
-export function createPermissionManager(config?: Partial<PermissionConfig>): AdvancedPermissionManager {
-  return new AdvancedPermissionManager(config);
-}
-
-/**
- * 从状态恢复权限管理器
- */
-export function restorePermissionManager(stateJson: string): AdvancedPermissionManager | null {
-  try {
-    const manager = new AdvancedPermissionManager();
-    if (manager.importState(stateJson)) {
-      return manager;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-// ==================== 序列化函数 ====================
-
-/**
- * 序列化权限状态
- */
-export function serializePermissionState(state: PermissionState): string {
-  return JSON.stringify({
-    ...state,
-    cache: undefined,
-  });
-}
-
-/**
- * 解析权限状态
- */
-export function parsePermissionState(json: string): PermissionState | null {
-  try {
-    return JSON.parse(json) as PermissionState;
-  } catch {
-    return null;
   }
 }

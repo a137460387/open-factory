@@ -1,6 +1,7 @@
 import {normalizeTransitionDuration} from '../../model';
 import {round} from '../../time';
-import {formatFfmpegNumber, formatFfmpegSeconds, safeLabel} from './utils';
+import {formatFfmpegSeconds} from '../ffmpeg-escape';
+import {formatFfmpegNumber} from './utils';
 import type {ExportClip, ExportTransition, ExportTimeline, ExportTrack, ExportSettings} from '../export-types';
 
 export function findExportTransitionPair(
