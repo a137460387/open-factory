@@ -89,6 +89,7 @@ export function EditorShell() {
     snapshotNameOpen, setSnapshotNameOpen, storyboardOpen, setStoryboardOpen,
     timelineCompareOpen, setTimelineCompareOpen, timelineSearchOpen, setTimelineSearchOpen,
     videoSummaryOpen, setVideoSummaryOpen,
+    videoGenerationOpen, setVideoGenerationOpen,
     setSettingsOpen, setAssistEditingOpen, setContentGenerationOpen, setQualityAssessmentOpen,
     layoutSettings, setLayoutSettings, viewportSize, setViewportSize,
     persistLayoutPatch, persistPanelVisibilityPatch,
@@ -190,12 +191,13 @@ export function EditorShell() {
     setContextualTranslationOpen(false);
     setAiChatEditorOpen(false);
     setVideoSummaryOpen(false);
+    setVideoGenerationOpen(false);
     setNarrationOpen(false);
   }, [
     setHistoryPanelOpen, setProjectDocumentationOpen,
     setSmartRoughCutOpen, setAiRoughCutOpen, setDirectorModeOpen,
     setMusicMatchOpen, setHighlightReelOpen, setContextualTranslationOpen,
-    setAiChatEditorOpen, setVideoSummaryOpen, setNarrationOpen,
+    setAiChatEditorOpen, setVideoSummaryOpen, setVideoGenerationOpen, setNarrationOpen,
   ]);
 
   return (
@@ -218,6 +220,7 @@ export function EditorShell() {
           onCreateMediaReport={() => void oc.createMediaReport()}
           onCreateClipReport={() => void oc.createClipReport()}
           onGenerateVideoSummary={() => setVideoSummaryOpen(true)}
+          onOpenVideoGeneration={() => setVideoGenerationOpen(true)}
           onGenerateNarration={() => setNarrationOpen(true)}
           onOpenAssistEditing={() => setAssistEditingOpen(true)}
           onOpenContentGeneration={() => setContentGenerationOpen(true)}

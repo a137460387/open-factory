@@ -1,5 +1,6 @@
 use crate::ltx_video::manager;
 use crate::ltx_video::types::{TaskPayload, GenerationStatus};
+use crate::ltx_video::manager::HealthCheckResult;
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
@@ -77,11 +78,19 @@ pub async fn generate_video(
     if let Some(ref path) = request.image_path {
         crate::input_validator::validate_string(path, "image_path")?;
     }
-    crate::input_validator::validate_range(request.num_frames, 1, 500, "num_frames")?;
-    crate::input_validator::validate_range(request.resolution, 256, 2048, "resolution")?;
+    crate::input_validator::validate_range(request.num_frames, 4, 128, "num_frames")?;
+    crate::input_validator::validate_range(request.resolution, 256, 1920, "resolution")?;
     crate::input_validator::validate_range(request.fps, 1, 60, "fps")?;
     crate::input_validator::validate_range(request.steps, 1, 150, "steps")?;
     crate::input_validator::validate_range(request.cfg_scale, 1.0, 30.0, "cfg_scale")?;
+
+    // Resolution must be a multiple of 8
+    if request.resolution % 8 != 0 {
+        return Err(format!(
+            "resolution must be a multiple of 8, got {}",
+            request.resolution
+        ));
+    }
 
     let task_id = manager::generate_task_id();
 
@@ -138,6 +147,12 @@ pub async fn cancel_generation(task_id: String) -> Result<(), String> {
     manager::cancel_generation(&task_id)
 }
 
+/// Performs a health check on the LTX-Video sidecar environment.
+#[tauri::command]
+pub async fn ltx_health_check(app: AppHandle) -> Result<HealthCheckResult, String> {
+    Ok(manager::health_check(&app))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,17 +166,31 @@ mod tests {
 
     #[test]
     fn validates_num_frames_range() {
-        assert!(crate::input_validator::validate_range(0u32, 1, 500, "num_frames").is_err());
-        assert!(crate::input_validator::validate_range(1u32, 1, 500, "num_frames").is_ok());
-        assert!(crate::input_validator::validate_range(500u32, 1, 500, "num_frames").is_ok());
-        assert!(crate::input_validator::validate_range(501u32, 1, 500, "num_frames").is_err());
+        assert!(crate::input_validator::validate_range(0u32, 4, 128, "num_frames").is_err());
+        assert!(crate::input_validator::validate_range(3u32, 4, 128, "num_frames").is_err());
+        assert!(crate::input_validator::validate_range(4u32, 4, 128, "num_frames").is_ok());
+        assert!(crate::input_validator::validate_range(128u32, 4, 128, "num_frames").is_ok());
+        assert!(crate::input_validator::validate_range(129u32, 4, 128, "num_frames").is_err());
     }
 
     #[test]
     fn validates_resolution_range() {
-        assert!(crate::input_validator::validate_range(256u32, 256, 2048, "resolution").is_ok());
-        assert!(crate::input_validator::validate_range(720u32, 256, 2048, "resolution").is_ok());
-        assert!(crate::input_validator::validate_range(100u32, 256, 2048, "resolution").is_err());
+        assert!(crate::input_validator::validate_range(256u32, 256, 1920, "resolution").is_ok());
+        assert!(crate::input_validator::validate_range(720u32, 256, 1920, "resolution").is_ok());
+        assert!(crate::input_validator::validate_range(100u32, 256, 1920, "resolution").is_err());
+        assert!(crate::input_validator::validate_range(1921u32, 256, 1920, "resolution").is_err());
+    }
+
+    #[test]
+    fn validates_resolution_multiple_of_8() {
+        // 720 is divisible by 8 (720/8 = 90)
+        assert!(720u32 % 8 == 0);
+        // 480 is divisible by 8 (480/8 = 60)
+        assert!(480u32 % 8 == 0);
+        // 1080 is divisible by 8 (1080/8 = 135)
+        assert!(1080u32 % 8 == 0);
+        // 721 is NOT divisible by 8
+        assert!(721u32 % 8 != 0);
     }
 
     #[test]

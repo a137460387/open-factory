@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { ChevronDown, Plus, Trash2, Save } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Save, AlertTriangle } from 'lucide-react';
 import type { VideoPreset } from '../../lib/video-presets';
 import { usePresets } from '../../hooks/usePresets';
 import type { VideoGenerationParams } from '../../hooks/useVideoGeneration';
+import type { Precision } from '../../hooks/useGpuDetect';
 
 export interface PresetSelectorProps {
   /** Currently selected preset ID */
@@ -11,6 +12,10 @@ export interface PresetSelectorProps {
   onSelect: (preset: VideoPreset) => void;
   /** Current params for saving as new preset */
   currentParams: Omit<VideoGenerationParams, 'prompt' | 'negativePrompt' | 'imagePath' | 'seed'>;
+  /** GPU VRAM in MB (null if unknown) */
+  vramMb?: number | null;
+  /** Whether GPU is compatible with PyTorch */
+  pytorchCompatible?: boolean;
 }
 
 /**
@@ -21,6 +26,8 @@ export function PresetSelector({
   selectedPresetId,
   onSelect,
   currentParams,
+  vramMb,
+  pytorchCompatible,
 }: PresetSelectorProps) {
   const { presets, createPreset, removePreset } = usePresets();
   const [isOpen, setIsOpen] = useState(false);
@@ -28,6 +35,13 @@ export function PresetSelector({
   const [newName, setNewName] = useState('');
 
   const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+
+  // Warn if HQ preset selected on low-end GPU (<8GB VRAM)
+  const showGpuWarning =
+    selectedPresetId === 'builtin-hq' &&
+    vramMb !== null &&
+    vramMb !== undefined &&
+    vramMb < 8000;
 
   const handleSelect = useCallback(
     (preset: VideoPreset) => {
@@ -142,6 +156,17 @@ export function PresetSelector({
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {/* GPU warning for HQ preset */}
+      {showGpuWarning && (
+        <div className="mt-2 flex items-start gap-2 p-2 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-300">
+            High Quality 1080p requires at least 8 GB VRAM. Your GPU has {vramMb} MB.
+            Consider using Standard 720p for better stability.
+          </p>
         </div>
       )}
     </div>

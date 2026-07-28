@@ -4,7 +4,14 @@ use crate::model_downloader::types::{
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
+
+/// Maximum number of retry attempts for a single file download.
+const MAX_RETRIES: u32 = 3;
+
+/// Base delay for exponential backoff (multiplied by 2^attempt).
+const BASE_RETRY_DELAY: Duration = Duration::from_secs(2);
 
 /// Resolves the base directory for storing downloaded models.
 pub fn resolve_models_base_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -157,7 +164,7 @@ pub fn download_model(
     Ok(local_info)
 }
 
-/// Downloads a single file with progress reporting and resume support.
+/// Downloads a single file with progress reporting, resume support, and retry logic.
 #[allow(clippy::too_many_arguments)]
 fn download_file_with_progress(
     app: &AppHandle,
@@ -170,7 +177,60 @@ fn download_file_with_progress(
     prior_bytes: u64,
     total_bytes: u64,
 ) -> Result<(), String> {
-    let client = reqwest::blocking::Client::new();
+    let mut last_error = String::new();
+
+    for attempt in 0..=MAX_RETRIES {
+        if attempt > 0 {
+            let delay = BASE_RETRY_DELAY * 2u32.pow(attempt - 1);
+            tracing::warn!(
+                "Retrying download {} (attempt {}/{}), waiting {:?}",
+                dest.display(),
+                attempt,
+                MAX_RETRIES,
+                delay
+            );
+            std::thread::sleep(delay);
+        }
+
+        match try_download_file(app, repo_id, url, dest, expected_size, file_index, total_files, prior_bytes, total_bytes) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                last_error = e;
+                tracing::warn!(
+                    "Download attempt {} failed for {}: {}",
+                    attempt,
+                    dest.display(),
+                    last_error
+                );
+            }
+        }
+    }
+
+    Err(format!(
+        "Download failed after {} retries for {}: {}",
+        MAX_RETRIES,
+        dest.display(),
+        last_error
+    ))
+}
+
+/// Single download attempt for a file.
+#[allow(clippy::too_many_arguments)]
+fn try_download_file(
+    app: &AppHandle,
+    repo_id: &str,
+    url: &str,
+    dest: &Path,
+    expected_size: u64,
+    file_index: u32,
+    total_files: u32,
+    prior_bytes: u64,
+    total_bytes: u64,
+) -> Result<(), String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(300))
+        .build()
+        .map_err(|e| format!("create HTTP client: {e}"))?;
 
     // Check for partial download (resume)
     let existing_len = if dest.exists() {

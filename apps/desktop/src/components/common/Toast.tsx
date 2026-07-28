@@ -38,7 +38,7 @@ export function ToastViewport() {
   }
 
   return (
-    <div className="fixed right-4 top-4 z-50 flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2">
+    <div className="fixed right-4 top-4 z-[90] flex w-[360px] max-w-[calc(100vw-2rem)] flex-col gap-2">
       {items.map((item) => (
         <div key={item.id} className={clsx('rounded-md border p-3 shadow-soft', toneClass[item.kind ?? 'info'])}>
           <div className="flex items-start gap-3">

@@ -122,6 +122,127 @@ pub fn generate_output_path(output_dir: &Path, task_id: &str) -> PathBuf {
     output_dir.join(format!("{}.mp4", safe_file_name(task_id)))
 }
 
+/// Result of a sidecar health check.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HealthCheckResult {
+    pub healthy: bool,
+    pub python_available: bool,
+    pub python_version: Option<String>,
+    pub script_found: bool,
+    pub model_dir_exists: bool,
+    pub model_weights_found: bool,
+    pub errors: Vec<String>,
+}
+
+/// Performs a health check on the LTX-Video sidecar environment.
+/// Validates Python interpreter, sidecar script, and model files.
+pub fn health_check(app: &AppHandle) -> HealthCheckResult {
+    let mut errors = Vec::new();
+
+    // Check Python interpreter
+    let python = resolve_python_interpreter();
+    let python_available = match Command::new(&python).arg("--version").output() {
+        Ok(output) if output.status.success() => true,
+        Ok(_) => {
+            errors.push("Python interpreter returned non-zero exit code.".to_string());
+            false
+        }
+        Err(e) => {
+            errors.push(format!("Python interpreter not found: {}", e));
+            false
+        }
+    };
+
+    let python_version = if python_available {
+        Command::new(&python)
+            .arg("--version")
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.trim().to_string())
+    } else {
+        None
+    };
+
+    // Check sidecar script
+    let script_found = match resolve_sidecar_script(app) {
+        Ok(path) => {
+            if path.exists() {
+                true
+            } else {
+                errors.push(format!("Sidecar script not found at '{}'.", path.display()));
+                false
+            }
+        }
+        Err(e) => {
+            errors.push(e);
+            false
+        }
+    };
+
+    // Check model directory
+    let model_dir_exists = match resolve_model_dir(app) {
+        Ok(dir) => {
+            if dir.exists() {
+                true
+            } else {
+                errors.push(format!("Model directory not found at '{}'.", dir.display()));
+                false
+            }
+        }
+        Err(e) => {
+            errors.push(e);
+            false
+        }
+    };
+
+    // Check model weights
+    let model_weights_found = if model_dir_exists {
+        match resolve_model_dir(app) {
+            Ok(dir) => {
+                let has_safetensors = std::fs::read_dir(&dir)
+                    .ok()
+                    .and_then(|mut entries| {
+                        entries.find_map(|e| {
+                            e.ok().and_then(|entry| {
+                                let name = entry.file_name().to_string_lossy().to_string();
+                                if name.ends_with(".safetensors") {
+                                    Some(())
+                                } else {
+                                    None
+                                }
+                            })
+                        })
+                    })
+                    .is_some();
+
+                if !has_safetensors {
+                    errors.push(
+                        "Model directory exists but contains no .safetensors weights.".to_string(),
+                    );
+                }
+                has_safetensors
+            }
+            Err(_) => false,
+        }
+    } else {
+        false
+    };
+
+    let healthy = python_available && script_found && model_dir_exists && model_weights_found;
+
+    HealthCheckResult {
+        healthy,
+        python_available,
+        python_version,
+        script_found,
+        model_dir_exists,
+        model_weights_found,
+        errors,
+    }
+}
+
 /// Starts the LTX-Video sidecar process for a generation task.
 /// Returns the task_id.
 pub fn start_generation(

@@ -239,6 +239,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             ltx_video::commands::generate_video,
             ltx_video::commands::get_generation_status,
             ltx_video::commands::cancel_generation,
+            ltx_video::commands::ltx_health_check,
             model_downloader::commands::download_model,
             model_downloader::commands::list_local_models,
             model_downloader::commands::delete_model,

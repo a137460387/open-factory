@@ -52,6 +52,7 @@ export const DIALOG_KEYS = [
   'contextualTranslationOpen',
   'aiChatEditorOpen',
   'videoSummaryOpen',
+  'videoGenerationOpen',
   'narrationOpen',
   'historyPanelOpen',
   'projectDocumentationOpen',

@@ -37,16 +37,16 @@ export interface VideoGenerationPanelProps {
 
 /** Resolution presets */
 const RESOLUTION_PRESETS = [
-  { label: '512p', value: 512 },
+  { label: '480p', value: 480 },
   { label: '720p', value: 720 },
   { label: '1080p', value: 1080 },
 ] as const;
 
 /** Frame count presets */
 const FRAME_PRESETS = [
-  { label: '2s', value: 49 },
-  { label: '4s', value: 97 },
-  { label: '6s', value: 145 },
+  { label: '~0.7s', value: 16 },
+  { label: '~1.3s', value: 32 },
+  { label: '~2.7s', value: 64 },
 ] as const;
 
 /**
@@ -80,7 +80,7 @@ export function VideoGenerationPanel({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [steps, setSteps] = useState(50);
   const [cfgScale, setCfgScale] = useState(7.5);
-  const [numFrames, setNumFrames] = useState(97);
+  const [numFrames, setNumFrames] = useState(32);
   const [resolution, setResolution] = useState(720);
   const [fps] = useState(24);
   const [seed, setSeed] = useState<string>('');
@@ -203,6 +203,8 @@ export function VideoGenerationPanel({
             selectedPresetId={selectedPresetId}
             onSelect={handlePresetChange}
             currentParams={{ numFrames, resolution, fps, steps, cfgScale }}
+            vramMb={gpuState.info?.vramTotalMb ?? null}
+            pytorchCompatible={isPytorchCompatible}
           />
         )}
 

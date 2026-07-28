@@ -107,6 +107,7 @@ export interface EditorUIState {
   contextualTranslationOpen: boolean;
   aiChatEditorOpen: boolean;
   videoSummaryOpen: boolean;
+  videoGenerationOpen: boolean;
   narrationOpen: boolean;
   historyPanelOpen: boolean;
   projectDocumentationOpen: boolean;
@@ -183,6 +184,7 @@ export interface EditorUIState {
   setContextualTranslationOpen: (updater: Updater<boolean>) => void;
   setAiChatEditorOpen: (updater: Updater<boolean>) => void;
   setVideoSummaryOpen: (updater: Updater<boolean>) => void;
+  setVideoGenerationOpen: (updater: Updater<boolean>) => void;
   setNarrationOpen: (updater: Updater<boolean>) => void;
   setHistoryPanelOpen: (updater: Updater<boolean>) => void;
   setProjectDocumentationOpen: (updater: Updater<boolean>) => void;

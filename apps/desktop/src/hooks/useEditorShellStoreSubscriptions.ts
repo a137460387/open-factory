@@ -76,6 +76,7 @@ export function useEditorShellStoreSubscriptions() {
     timelineCompareOpen: s.timelineCompareOpen,
     timelineSearchOpen: s.timelineSearchOpen,
     videoSummaryOpen: s.videoSummaryOpen,
+    videoGenerationOpen: s.videoGenerationOpen,
     mediaHealthDashboardOpen: s.mediaHealthDashboardOpen,
   })));
 
@@ -139,6 +140,7 @@ export function useEditorShellStoreSubscriptions() {
     setTimelineCompareOpen: s.setTimelineCompareOpen,
     setTimelineSearchOpen: s.setTimelineSearchOpen,
     setVideoSummaryOpen: s.setVideoSummaryOpen,
+    setVideoGenerationOpen: s.setVideoGenerationOpen,
     setSettingsOpen: s.setSettingsOpen,
     setAssistEditingOpen: s.setAssistEditingOpen,
     setContentGenerationOpen: s.setContentGenerationOpen,

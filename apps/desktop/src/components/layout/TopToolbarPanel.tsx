@@ -21,6 +21,7 @@ interface TopToolbarPanelProps {
   onCreateMediaReport: () => void;
   onCreateClipReport: () => void;
   onGenerateVideoSummary: () => void;
+  onOpenVideoGeneration: () => void;
   onGenerateNarration: () => void;
   onOpenAssistEditing: () => void;
   onOpenContentGeneration: () => void;

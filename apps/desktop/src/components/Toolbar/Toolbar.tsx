@@ -74,6 +74,7 @@ interface ToolbarProps {
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
   onGenerateVideoSummary(): void;
+  onOpenVideoGeneration(): void;
   onGenerateNarration(): void;
   onOpenAssistEditing(): void;
   onOpenContentGeneration(): void;
@@ -342,6 +343,7 @@ export function Toolbar(props: ToolbarProps) {
         onCreateMediaReport={props.onCreateMediaReport}
         onCreateClipReport={props.onCreateClipReport}
         onGenerateVideoSummary={props.onGenerateVideoSummary}
+        onOpenVideoGeneration={props.onOpenVideoGeneration}
         onConformMedia={props.onConformMedia}
         onArchiveProject={props.onArchiveProject}
         onOpenReleaseWorkflow={props.onOpenReleaseWorkflow}

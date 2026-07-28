@@ -14,6 +14,7 @@ export function FileMenu({
   onCreateMediaReport,
   onCreateClipReport,
   onGenerateVideoSummary,
+  onOpenVideoGeneration,
   onConformMedia,
   onArchiveProject,
   onOpenReleaseWorkflow,
@@ -34,6 +35,7 @@ export function FileMenu({
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
   onGenerateVideoSummary(): void;
+  onOpenVideoGeneration(): void;
   onConformMedia(): void;
   onArchiveProject(): void;
   onOpenReleaseWorkflow(): void;
@@ -53,6 +55,7 @@ export function FileMenu({
       <MenuItem label={t.mediaReport} testId="toolbar-file-media-report-menu-item" onClick={() => { close(); onCreateMediaReport(); }} />
       <MenuItem label={t.clipReport} testId="toolbar-file-clip-report-menu-item" onClick={() => { close(); onCreateClipReport(); }} />
       <MenuItem label={t.videoSummary} testId="toolbar-file-video-summary-menu-item" onClick={() => { close(); onGenerateVideoSummary(); }} />
+      <MenuItem label="AI Video Generation" testId="toolbar-file-video-generation-menu-item" onClick={() => { close(); onOpenVideoGeneration(); }} />
       <MenuItem label={t.conformMedia} testId="toolbar-file-conform-media-menu-item" onClick={() => { close(); onConformMedia(); }} />
       <MenuItem label={t.archiveProject} testId="toolbar-file-archive-project-menu-item" onClick={() => { close(); onArchiveProject(); }} />
       <MenuItem label={t.releaseVersion} testId="toolbar-file-release-version-menu-item" onClick={() => { close(); onOpenReleaseWorkflow(); }} />
