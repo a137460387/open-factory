@@ -1,0 +1,17 @@
+{
+  "entryPoints": [
+    "packages/editor-core/src/index.ts",
+    "packages/plugin-sdk/src/index.ts",
+    "packages/sdk/src/index.ts"
+  ],
+  "out": "docs/api",
+  "plugin": ["typedoc-plugin-markdown"],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "readme": "README.md",
+  "tsconfig": "tsconfig.json",
+  "entryPointStrategy": "resolve",
+  "githubPages": false,
+  "hideGenerator": true,
+  "sort": ["source-order"]
+}

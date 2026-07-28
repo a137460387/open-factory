@@ -6,11 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [v4.72.0] - 2026-07-27
+## [v4.73.0] - 2026-07-29
+
+### Added
+- LTX-Video AI 视频生成功能：文字描述/图片 → 本地 AI 生成视频
+- 视频生成面板：实时进度条、阶段显示、GPU 信息、生成预览
+- 12 个视频生成预设（Quick Draft 到 Social Storyboard 等）+ 自定义预设
+- 模型自动下载管理器：进度追踪、SHA256 校验、HuggingFace 集成
+- GPU 检测与自动精度推荐（CUDA/MPS/CPU 三级回退）
+- 时间线集成：生成视频自动添加到时间线、缩略图预览、右键菜单位置
+- Toast 通知系统：生成完成/失败通知、进程恢复、进度持久化
+- 侧边栏工具栏「Generate Video」入口
+
+## [v4.72.0] - 2026-07-28
+
+### Added
+- E2E 测试补强：app-launch/timeline-basic/playback-controls 三个 spec 共 12 个可执行测试
+- 性能预算精细化：budget.json 支持 per-vendor-chunk 独立上限（react/codemirror/zustand/tiptap）
+- bundle 分析报告：check-bundle-size 脚本输出 chunk 级别详情和 vendor 汇总
+- CHANGELOG 自动化：conventional-changelog 脚本支持
 
 ### Changed
-- **版本号升至 v4.72.0**
-- 合并 agent/scan-tauri-unwrap-calls 分支到 main
+- strictNullChecks 全局启用，0 类型错误
+- CI vendor chunk 预算卡点增强
 
 ## [v4.71.0] - 2026-07-24
 

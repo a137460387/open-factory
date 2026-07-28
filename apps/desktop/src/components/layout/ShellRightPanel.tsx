@@ -48,6 +48,9 @@ const AIChatEditorPanel = lazy(() =>
 const AIVideoSummaryPanel = lazy(() =>
   import('../AIVideoSummary/AIVideoSummaryPanel').then((m) => ({ default: m.AIVideoSummaryPanel })),
 );
+const VideoGenerationPanel = lazy(() =>
+  import('../AIVideoGeneration/VideoGenerationPanel').then((m) => ({ default: m.VideoGenerationPanel })),
+);
 const AINarrationPanel = lazy(() =>
   import('../AINarration/AINarrationPanel').then((m) => ({ default: m.AINarrationPanel })),
 );
@@ -111,6 +114,8 @@ export function ShellRightPanel() {
   const setAiChatEditorOpen = useEditorUIStore((s) => s.setAiChatEditorOpen);
   const videoSummaryOpen = useEditorUIStore((s) => s.videoSummaryOpen);
   const setVideoSummaryOpen = useEditorUIStore((s) => s.setVideoSummaryOpen);
+  const videoGenerationOpen = useEditorUIStore((s) => s.videoGenerationOpen);
+  const setVideoGenerationOpen = useEditorUIStore((s) => s.setVideoGenerationOpen);
   const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
   const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
@@ -167,7 +172,9 @@ export function ShellRightPanel() {
                   ? zhCN.aiChatEditor.title
                   : videoSummaryOpen
                     ? zhCN.aiVideoSummary.title
-                    : narrationOpen
+                    : videoGenerationOpen
+                      ? 'AI Video Generation'
+                      : narrationOpen
                       ? zhCN.aiNarration.title
                       : smartCreationOpen
                         ? featureStrings.smartCreation.title
@@ -270,6 +277,8 @@ export function ShellRightPanel() {
               <AIChatEditorPanel project={project} onClose={() => setAiChatEditorOpen(false)} />
             ) : videoSummaryOpen ? (
               <AIVideoSummaryPanel project={project} onClose={() => setVideoSummaryOpen(false)} />
+            ) : videoGenerationOpen ? (
+              <VideoGenerationPanel onClose={() => setVideoGenerationOpen(false)} />
             ) : narrationOpen ? (
               <AINarrationPanel project={project} onClose={() => setNarrationOpen(false)} />
             ) : aiSubtitleWorkflowOpen ? (

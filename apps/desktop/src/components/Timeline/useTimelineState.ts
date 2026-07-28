@@ -255,7 +255,7 @@ export interface TimelineState {
   virtualTrackWindow: ReturnType<typeof getTimelineVirtualTrackWindow>;
   virtualTracks: import('@open-factory/editor-core').Track[];
   thumbnailTrackSamples: ReturnType<typeof buildTimelineThumbnailTrackSamples>;
-  activeSequence: import('@open-factory/editor-core').Track | undefined;
+  activeSequence: import('@open-factory/editor-core').Sequence | undefined;
   isMainSequence: boolean;
   projectDuration: number;
   width: number;
@@ -1120,7 +1120,7 @@ export function useTimelineState(params: TimelineStateParams): TimelineState {
     virtualTrackWindow,
     virtualTracks,
     thumbnailTrackSamples,
-    activeSequence: activeSequence as import('@open-factory/editor-core').Track | undefined,
+    activeSequence: activeSequence as import('@open-factory/editor-core').Sequence | undefined,
     isMainSequence,
     projectDuration,
     width,

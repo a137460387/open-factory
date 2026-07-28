@@ -1,0 +1,50 @@
+import { getTimelineDuration } from '../timeline';
+import { buildExportProjectFromProject, buildFfmpegExportPlan } from './ffmpeg-builder';
+import { normalizeFfmpegPath } from './ffmpeg-escape';
+export * from './export-types';
+export * from './post-export-script';
+export * from './ffmpeg-builder';
+export * from './ffmpeg-escape';
+export * from './export-queue';
+export function buildSingleVideoTrackExportPlan(project) {
+    const videoTrack = project.timeline.tracks.find((track) => track.type === 'video');
+    const clips = (videoTrack?.clips ?? []).filter((clip) => clip.type === 'video' || clip.type === 'image');
+    const assetsById = new Map(project.media.map((asset) => [asset.id, asset]));
+    const segments = clips
+        .filter((clip) => clip.type === 'video')
+        .sort((a, b) => a.start - b.start)
+        .map((clip) => {
+        const asset = assetsById.get(clip.mediaId);
+        if (!asset) {
+            throw new Error(`Missing media asset for clip ${clip.name}`);
+        }
+        return {
+            inputPath: normalizeFfmpegPath(asset.path),
+            start: clip.trimStart,
+            duration: clip.duration,
+            name: clip.name,
+        };
+    });
+    return {
+        segments,
+        totalDuration: getTimelineDuration(project.timeline),
+        width: project.settings.width,
+        height: project.settings.height,
+        fps: project.settings.fps,
+        limitation: 'Current MVP exports the first video track only. Multi-track compositing and text export are planned for a later version.',
+    };
+}
+export function timelineHasExportableVideo(timeline) {
+    return timeline.tracks.some((track) => track.clips.some((clip) => clip.type === 'video' ||
+        clip.type === 'image' ||
+        clip.type === 'text' ||
+        clip.type === 'subtitle' ||
+        clip.type === 'credits' ||
+        clip.type === 'audio' ||
+        clip.type === 'nested-sequence' ||
+        clip.type === 'motion-graphic'));
+}
+export function buildProjectFfmpegExportPlan(project, outputPath) {
+    return buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath }));
+}
+//# sourceMappingURL=ffmpeg.js.map

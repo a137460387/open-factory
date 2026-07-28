@@ -287,3 +287,86 @@ The script `apps/desktop/scripts/tauri-smoke.mjs` launches the release executabl
 open-factory has no login, telemetry, media upload, or remote rendering. Media files remain on the local filesystem and are accessed through Tauri permissions and `convertFileSrc`.
 
 本地优先架构；字幕翻译为可选联网功能，需用户主动启用并同意服务条款。 When enabled, subtitle translation sends subtitle text only to the selected third-party translation provider; media files remain local.
+
+## AI Video Generation (LTX-Video)
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Frontend (React + TypeScript)                                  │
+│  ┌──────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │VideoGenerationPanel│  │PresetSelector│  │  useVideoGeneration│ │
+│  │  (prompt/params)  │  │(3 built-in + │  │  (lifecycle hook) │ │
+│  │                   │  │  custom)     │  │                   │ │
+│  └────────┬──────────┘  └──────────────┘  └────────┬──────────┘ │
+│           │                                         │            │
+│  ┌────────┴─────────────────────────────────────────┴────────┐  │
+│  │  Tauri IPC Commands                                       │  │
+│  │  generate_video / cancel_generation / ltx_health_check    │  │
+│  └────────────────────────────┬──────────────────────────────┘  │
+└───────────────────────────────┼─────────────────────────────────┘
+                                │
+┌───────────────────────────────┼─────────────────────────────────┐
+│  Backend (Rust / Tauri)       │                                 │
+│  ┌────────────────────────────┴──────────────────────────────┐  │
+│  │  ltx_video/commands.rs                                    │  │
+│  │  - Input validation (prompt, num_frames 4-128,            │  │
+│  │    resolution 256-1920 %8, steps, cfg_scale)              │  │
+│  │  - Health check (Python, script, model weights)           │  │
+│  └────────────────────────────┬──────────────────────────────┘  │
+│  ┌────────────────────────────┴──────────────────────────────┐  │
+│  │  ltx_video/manager.rs                                     │  │
+│  │  - OnceLock<Mutex<HashMap>> for active processes          │  │
+│  │  - Task lifecycle: spawn → stdin JSON → stdout JSON lines │  │
+│  │  - Progress/completion events via Tauri emit              │  │
+│  └────────────────────────────┬──────────────────────────────┘  │
+│  ┌────────────────────────────┴──────────────────────────────┐  │
+│  │  model_downloader/                                        │  │
+│  │  - HuggingFace API integration                            │  │
+│  │  - Resume support + exponential backoff retry (3x)        │  │
+│  │  - Progress events via Tauri emit                         │  │
+│  └────────────────────────────┬──────────────────────────────┘  │
+│  ┌────────────────────────────┴──────────────────────────────┐  │
+│  │  gpu_detect/                                              │  │
+│  │  - nvidia-smi + Vulkan fallback                           │  │
+│  │  - VRAM-based precision recommendation (fp16/bf16/fp32)   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────┼─────────────────────────────────┐
+│  Python Sidecar               │                                 │
+│  ┌────────────────────────────┴──────────────────────────────┐  │
+│  │  inference.py (stdin/stdout JSON lines)                   │  │
+│  │  - Commands: generate / cancel / shutdown                 │  │
+│  │  - Messages: progress / completed / error / ready         │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Files
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Frontend | `src/components/AIVideoGeneration/VideoGenerationPanel.tsx` | Main generation UI |
+| Frontend | `src/components/AIVideoGeneration/PresetSelector.tsx` | Preset selection with GPU warning |
+| Frontend | `src/hooks/useVideoGeneration.ts` | Generation lifecycle hook |
+| Frontend | `src/hooks/useVideoImport.ts` | Timeline import + cover frame extraction |
+| Frontend | `src/lib/video-presets.ts` | Built-in preset definitions |
+| Frontend | `src/lib/generation-history-db.ts` | IndexedDB persistence |
+| Backend | `src-tauri/src/ltx_video/manager.rs` | Process management + health check |
+| Backend | `src-tauri/src/ltx_video/commands.rs` | Tauri command handlers |
+| Backend | `src-tauri/src/ltx_video/types.rs` | Shared types + sidecar protocol |
+| Backend | `src-tauri/src/model_downloader/downloader.rs` | Model download with retry |
+| Backend | `src-tauri/src/gpu_detect/detector.rs` | GPU detection + precision |
+
+### Event Flow
+
+1. User opens File menu → "AI Video Generation" → `videoGenerationOpen` state
+2. `VideoGenerationPanel` mounts → calls `useGpuDetect()` + `useModelManager()`
+3. User selects preset, enters prompt, clicks "Generate"
+4. `invoke('generate_video', { request })` → Rust validates → spawns Python sidecar
+5. Python sends JSON lines to stdout → Rust parses → emits `ltx-video-progress` events
+6. Frontend listens → updates progress bar + persists to IndexedDB
+7. Python completes → Rust emits `ltx-video-completed` → frontend shows result
+8. User clicks "Import to Timeline" → `useVideoImport` probes media + adds to editor

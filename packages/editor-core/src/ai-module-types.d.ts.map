@@ -1,0 +1,1 @@
+{"version":3,"file":"ai-module-types.d.ts","sourceRoot":"","sources":["ai-module-types.ts"],"names":[],"mappings":"AAAA;;;;;;GAMG;AAEH,0EAA0E;AAC1E,MAAM,MAAM,WAAW,GAAG,CAAC,GAAG,EAAE,MAAM,KAAK,MAAM,CAAC;AAElD,wEAAwE;AACxE,eAAO,MAAM,kBAAkB,EAAE,WAA0B,CAAC;AAE5D,qEAAqE;AACrE,MAAM,WAAW,cAAc,CAAC,CAAC;IAC/B,IAAI,EAAE,CAAC,CAAC;IACR,KAAK,EAAE,MAAM,GAAG,IAAI,CAAC;CACtB"}

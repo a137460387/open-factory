@@ -1,12 +1,21 @@
+/** Default frames per second for the project timeline. */
 export const DEFAULT_FPS = 30;
+/** Default snap grid interval in seconds (1 frame at DEFAULT_FPS). */
 export const DEFAULT_SNAP_GRID = 1 / DEFAULT_FPS;
+/** Project timebase used for tick-based calculations (600 ticks per second). */
 export const PROJECT_TIMEBASE = 600;
+/** Supported project frame rates. */
 export const SUPPORTED_PROJECT_FPS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60] as const;
+/** Union of supported project frame rate values. */
 export type SupportedProjectFps = (typeof SUPPORTED_PROJECT_FPS)[number];
+/** Timecode format: non-drop-frame or drop-frame. */
 export type TimecodeFormat = 'ndf' | 'df';
+/** Error codes for timecode parsing failures. */
 export type TimecodeParseError = 'format' | 'minutes' | 'seconds' | 'frames' | 'duration';
+/** Error codes for frame jump query parsing failures. */
 export type FrameJumpParseError = TimecodeParseError | 'frame-number';
 
+/** Parsed timecode breakdown into hours, minutes, seconds, and frames. */
 export interface ParsedTimecode {
   seconds: number;
   totalFrames: number;
@@ -16,8 +25,10 @@ export interface ParsedTimecode {
   frames: number;
 }
 
+/** Result type for timecode parsing: success with ParsedTimecode or failure with error code. */
 export type ParseTimecodeResult = { ok: true; value: ParsedTimecode } | { ok: false; error: TimecodeParseError };
 
+/** Parsed frame jump query result, either a timecode or raw frame number. */
 export interface ParsedFrameJump {
   kind: 'timecode' | 'frame';
   seconds: number;
@@ -26,8 +37,15 @@ export interface ParsedFrameJump {
   frameNumber?: number;
 }
 
+/** Result type for frame jump query parsing. */
 export type ParseFrameJumpResult = { ok: true; value: ParsedFrameJump } | { ok: false; error: FrameJumpParseError };
 
+/**
+ * Clamp a number to [min, max] range.
+ * @param value - The number to clamp
+ * @param min - Minimum bound (must be <= max)
+ * @param max - Maximum bound
+ */
 export function clamp(value: number, min: number, max: number): number {
   if (min > max) {
     throw new RangeError('min cannot be greater than max');
@@ -35,11 +53,21 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+/**
+ * Round a number to the given decimal precision.
+ * @param value - Number to round
+ * @param precision - Decimal places (default 6)
+ */
 export function round(value: number, precision = 6): number {
   const factor = 10 ** precision;
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
+/**
+ * Snap a time value to the nearest grid boundary.
+ * @param time - Time in seconds
+ * @param grid - Grid interval in seconds (default: one frame)
+ */
 export function snap(time: number, grid = DEFAULT_SNAP_GRID): number {
   if (grid <= 0) {
     return round(time);
@@ -47,6 +75,11 @@ export function snap(time: number, grid = DEFAULT_SNAP_GRID): number {
   return round(Math.round(time / grid) * grid);
 }
 
+/**
+ * Convert seconds to frame count.
+ * @param seconds - Time in seconds
+ * @param fps - Frames per second (default 30)
+ */
 export function secondsToFrames(seconds: number, fps = DEFAULT_FPS): number {
   if (fps <= 0) {
     throw new RangeError('fps must be greater than 0');
@@ -54,6 +87,11 @@ export function secondsToFrames(seconds: number, fps = DEFAULT_FPS): number {
   return Math.round(seconds * fps);
 }
 
+/**
+ * Convert frame count to seconds.
+ * @param frames - Frame number
+ * @param fps - Frames per second (default 30)
+ */
 export function framesToSeconds(frames: number, fps = DEFAULT_FPS): number {
   if (fps <= 0) {
     throw new RangeError('fps must be greater than 0');
@@ -61,6 +99,12 @@ export function framesToSeconds(frames: number, fps = DEFAULT_FPS): number {
   return round(frames / fps);
 }
 
+/**
+ * Convert a frame number to timecode string.
+ * @param frameNumber - Zero-based frame number
+ * @param fps - Frames per second (default 30)
+ * @param format - Timecode format: 'ndf' or 'df' (default 'ndf')
+ */
 export function frameNumberToTimecode(frameNumber: number, fps = DEFAULT_FPS, format: TimecodeFormat = 'ndf'): string {
   if (!Number.isFinite(frameNumber) || frameNumber < 0) {
     throw new RangeError('frameNumber must be zero or greater');
@@ -68,6 +112,10 @@ export function frameNumberToTimecode(frameNumber: number, fps = DEFAULT_FPS, fo
   return secondsToTimecode(framesToSeconds(Math.floor(frameNumber), fps), fps, format);
 }
 
+/**
+ * Normalize an FPS value to the nearest supported project frame rate.
+ * @param value - Raw FPS value (may be undefined or non-finite)
+ */
 export function normalizeProjectFps(value: number | undefined): SupportedProjectFps {
   if (!Number.isFinite(value)) {
     return DEFAULT_FPS;
@@ -78,6 +126,10 @@ export function normalizeProjectFps(value: number | undefined): SupportedProject
   );
 }
 
+/**
+ * Check if the given FPS supports drop-frame timecode (29.97 or 59.94).
+ * @param fps - Frames per second
+ */
 export function supportsDropFrameTimecode(fps: number): boolean {
   const normalized = normalizeProjectFps(fps);
   return normalized === 29.97 || normalized === 59.94;
@@ -87,10 +139,18 @@ export function normalizeTimecodeFormat(format: TimecodeFormat | undefined, fps:
   return format === 'df' && supportsDropFrameTimecode(fps) ? 'df' : 'ndf';
 }
 
+/**
+ * Convert seconds to project ticks (600 ticks per second).
+ * @param seconds - Time in seconds
+ */
 export function secondsToTicks(seconds: number): number {
   return Math.max(0, Math.round(Math.max(0, Number.isFinite(seconds) ? seconds : 0) * PROJECT_TIMEBASE));
 }
 
+/**
+ * Convert project ticks to seconds.
+ * @param ticks - Tick count
+ */
 export function ticksToSeconds(ticks: number): number {
   return round(Math.max(0, Number.isFinite(ticks) ? ticks : 0) / PROJECT_TIMEBASE);
 }
@@ -99,6 +159,12 @@ export function ticksToTimecode(ticks: number, fps = DEFAULT_FPS, format: Timeco
   return secondsToTimecode(ticksToSeconds(ticks), fps, format);
 }
 
+/**
+ * Convert seconds to HH:MM:SS:FF timecode string.
+ * @param seconds - Time in seconds
+ * @param fps - Frames per second (default 30)
+ * @param format - Timecode format: 'ndf' or 'df' (default 'ndf')
+ */
 export function secondsToTimecode(seconds: number, fps = DEFAULT_FPS, format: TimecodeFormat = 'ndf'): string {
   const normalizedFps = normalizeProjectFps(fps);
   const nominalFps = Math.round(normalizedFps);
@@ -113,6 +179,11 @@ export function secondsToTimecode(seconds: number, fps = DEFAULT_FPS, format: Ti
   return [hours, minutes, displaySeconds, frames].map((part) => String(part).padStart(2, '0')).join(':');
 }
 
+/**
+ * Parse a HH:MM:SS:FF timecode string into seconds.
+ * @param value - Timecode string in HH:MM:SS:FF format
+ * @param options - Optional fps and duration constraints
+ */
 export function parseTimecodeToSeconds(
   value: string,
   options: { fps?: number; duration?: number } = {},
@@ -163,6 +234,11 @@ export function parseTimecodeToSeconds(
   };
 }
 
+/**
+ * Parse a frame jump query (timecode or f{N} frame syntax).
+ * @param value - Query string: HH:MM:SS:FF timecode or f123 frame syntax
+ * @param options - Optional fps, duration, and timecode format
+ */
 export function parseFrameJumpQuery(
   value: string,
   options: { fps?: number; duration?: number; timecodeFormat?: TimecodeFormat } = {},

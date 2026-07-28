@@ -1,0 +1,408 @@
+/** 创建调色预设 */
+export function createColorGradingPreset(name, graph, options) {
+    const now = new Date().toISOString();
+    return {
+        id: `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        author: options?.author || 'User',
+        description: options?.description,
+        tags: options?.tags || [],
+        graph,
+        thumbnail: options?.thumbnail,
+        createdAt: now,
+        updatedAt: now,
+    };
+}
+/** 序列化预设为文件 */
+export function serializeColorGradingPreset(preset) {
+    const file = {
+        schemaVersion: 1,
+        kind: 'open-factory.color-grading-preset',
+        preset,
+    };
+    return JSON.stringify(file, null, 2);
+}
+/** 从文件反序列化预设 */
+export function deserializeColorGradingPreset(json) {
+    try {
+        const file = JSON.parse(json);
+        if (file.schemaVersion !== 1 || file.kind !== 'open-factory.color-grading-preset') {
+            return null;
+        }
+        return file.preset;
+    }
+    catch {
+        return null;
+    }
+}
+/** 验证预设 */
+export function validateColorGradingPreset(preset) {
+    if (!preset || typeof preset !== 'object')
+        return false;
+    const p = preset;
+    return (typeof p.id === 'string' &&
+        typeof p.name === 'string' &&
+        typeof p.author === 'string' &&
+        p.graph !== undefined &&
+        typeof p.createdAt === 'string');
+}
+/** 内置预设 */
+export const BUILTIN_COLOR_PRESETS = [
+    {
+        id: 'builtin-cinematic',
+        name: '电影感',
+        author: 'open-factory',
+        description: '经典电影色调，低饱和度，高对比度',
+        tags: ['cinematic', 'film', 'classic'],
+        graph: {
+            nodes: [
+                {
+                    id: 'cinematic-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: -0.05, g: -0.05, b: 0.05, y: 0 },
+                        liftMaster: 0,
+                        gamma: { r: 0.02, g: 0, b: -0.02, y: 0 },
+                        gammaMaster: 0,
+                        gain: { r: 0.05, g: 0.03, b: -0.03, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'cinematic-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 10,
+                        tint: -5,
+                        contrast: 15,
+                        pivot: 0.5,
+                        saturation: 80,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-vintage',
+        name: '复古',
+        author: 'open-factory',
+        description: '复古胶片风格，暖色调',
+        tags: ['vintage', 'retro', 'warm'],
+        graph: {
+            nodes: [
+                {
+                    id: 'vintage-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: 0.1, g: 0.05, b: -0.05, y: 0 },
+                        liftMaster: 0,
+                        gamma: { r: 0.05, g: 0.02, b: -0.03, y: 0 },
+                        gammaMaster: 0,
+                        gain: { r: 0, g: 0, b: 0, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'vintage-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 25,
+                        tint: 0,
+                        contrast: 10,
+                        pivot: 0.5,
+                        saturation: 70,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-teal-orange',
+        name: 'Teal & Orange',
+        author: 'open-factory',
+        description: 'Cinematic teal shadows and orange highlights',
+        tags: ['cinematic', 'film'],
+        graph: {
+            nodes: [
+                {
+                    id: 'teal-orange-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 20,
+                        tint: 0,
+                        contrast: 0,
+                        pivot: 0.5,
+                        saturation: 80,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'teal-orange-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: -0.1, g: 0, b: 0.15, y: 0 },
+                        liftMaster: 0,
+                        gamma: { r: 0, g: 0, b: 0, y: 0 },
+                        gammaMaster: 0,
+                        gain: { r: 0.15, g: 0, b: -0.1, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-bleach-bypass',
+        name: 'Bleach Bypass',
+        author: 'open-factory',
+        description: 'Low saturation, high contrast film look',
+        tags: ['film', 'dramatic'],
+        graph: {
+            nodes: [
+                {
+                    id: 'bleach-bypass-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 0,
+                        tint: 0,
+                        contrast: 60,
+                        pivot: 0.5,
+                        saturation: 40,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-day-for-night',
+        name: 'Day for Night',
+        author: 'open-factory',
+        description: 'Convert daytime footage to night look',
+        tags: ['cinematic', 'effect'],
+        graph: {
+            nodes: [
+                {
+                    id: 'day-for-night-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: -30,
+                        tint: 0,
+                        contrast: 0,
+                        pivot: 0.5,
+                        saturation: 50,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'day-for-night-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: -0.2, g: -0.1, b: 0.1, y: -0.3 },
+                        liftMaster: 0,
+                        gamma: { r: 0, g: 0, b: 0.1, y: -0.2 },
+                        gammaMaster: 0,
+                        gain: { r: 0, g: 0, b: 0, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-bw',
+        name: 'Black & White',
+        author: 'open-factory',
+        description: 'Classic black and white with adjustable contrast',
+        tags: ['classic', 'bw'],
+        graph: {
+            nodes: [
+                {
+                    id: 'bw-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 0,
+                        tint: 0,
+                        contrast: 30,
+                        pivot: 0.5,
+                        saturation: 0,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-cross-process',
+        name: 'Cross Process',
+        author: 'open-factory',
+        description: 'Cross-processed film color shift',
+        tags: ['retro', 'creative'],
+        graph: {
+            nodes: [
+                {
+                    id: 'cross-process-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: 0.1, g: -0.05, b: -0.1, y: 0 },
+                        liftMaster: 0,
+                        gamma: { r: -0.1, g: 0.1, b: 0, y: 0 },
+                        gammaMaster: 0,
+                        gain: { r: 0, g: -0.05, b: 0.15, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'cross-process-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 0,
+                        tint: 0,
+                        contrast: 20,
+                        pivot: 0.5,
+                        saturation: 120,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+    {
+        id: 'builtin-film-print',
+        name: 'Film Print',
+        author: 'open-factory',
+        description: 'Warm film print emulation',
+        tags: ['film', 'warm'],
+        graph: {
+            nodes: [
+                {
+                    id: 'film-print-slider',
+                    type: 'primary-slider',
+                    enabled: true,
+                    params: {
+                        temperature: 15,
+                        tint: 0,
+                        contrast: 15,
+                        pivot: 0.5,
+                        saturation: 70,
+                        hue: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 0, y: 0 },
+                },
+                {
+                    id: 'film-print-wheel',
+                    type: 'primary-wheel',
+                    enabled: true,
+                    params: {
+                        lift: { r: 0.05, g: 0, b: -0.05, y: 0 },
+                        liftMaster: 0,
+                        gamma: { r: 0, g: 0, b: 0, y: 0 },
+                        gammaMaster: 0,
+                        gain: { r: 0.05, g: 0.02, b: -0.05, y: 0 },
+                        gainMaster: 0,
+                        offset: { r: 0, g: 0, b: 0, y: 0 },
+                        offsetMaster: 0,
+                    },
+                    inputs: [],
+                    output: null,
+                    position: { x: 200, y: 0 },
+                },
+            ],
+            connections: [],
+            activeNodeId: null,
+        },
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+    },
+];
+//# sourceMappingURL=color-grading-presets.js.map

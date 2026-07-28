@@ -1,0 +1,11 @@
+{
+  "maxChunkSizeKB": 600,
+  "maxTotalJSKB": 6800,
+  "maxTotalCSSKB": 160,
+  "vendorChunks": {
+    "react": { "maxKB": 200, "patterns": ["react", "react-dom"] },
+    "codemirror": { "maxKB": 200, "patterns": ["codemirror", "@codemirror"] },
+    "zustand": { "maxKB": 30, "patterns": ["zustand"] },
+    "tiptap": { "maxKB": 180, "patterns": ["tiptap", "@tiptap"] }
+  }
+}

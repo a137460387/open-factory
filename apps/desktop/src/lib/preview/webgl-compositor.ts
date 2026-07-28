@@ -51,6 +51,9 @@ import {
   type GpuPreviewMetrics,
 } from './gpu-acceleration';
 import { logger } from '@open-factory/editor-core/utils';
+import type {WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass} from './webgl-compositor-types.js';
+
+export type {WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass} from './webgl-compositor-types.js';
 
 interface ProgramInfo {
   program: WebGLProgram;
@@ -105,17 +108,6 @@ interface PanoramaProgramInfo {
   opacity: WebGLUniformLocation | null;
 }
 
-export interface WebGlSourceProcessingOptions {
-  bypassProcessing?: boolean;
-  customShaderTime?: number;
-  customShaderProgress?: number;
-  disabledEffectTypes?: EffectType[];
-  colorPipeline?: ProjectColorPipeline;
-  blendMode?: ClipBlendMode;
-  textureCacheKey?: string;
-  textureBytes?: number;
-}
-
 export interface WebGlResolvedSourceProcessing {
   correction: ColorCorrection;
   colorPipeline: ProjectColorPipeline;
@@ -123,12 +115,6 @@ export interface WebGlResolvedSourceProcessing {
   maskUniforms: ReturnType<typeof buildMaskUniforms>;
   effectParams: ReturnType<typeof buildPreviewEffectParams>;
   colorGradingGraph?: ColorGradingGraph;
-}
-
-export interface ColorNodeGraphPreviewPass {
-  nodeId: string;
-  nodeType: ColorNode['type'];
-  correction: ColorCorrection;
 }
 
 export class WebGlPreviewCompositor {

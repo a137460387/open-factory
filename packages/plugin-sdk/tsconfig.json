@@ -12,10 +12,23 @@
     "outDir": "dist",
     "skipLibCheck": true,
     "paths": {
-      "@open-factory/editor-core": ["../editor-core/src/index.ts"],
-      "@open-factory/editor-core/*": ["../editor-core/src/*"]
-    }
+      "@open-factory/editor-core": [
+        "../editor-core/src/index.ts"
+      ],
+      "@open-factory/editor-core/*": [
+        "../editor-core/src/*"
+      ]
+    },
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../editor-core" }]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../editor-core"
+    }
+  ]
 }

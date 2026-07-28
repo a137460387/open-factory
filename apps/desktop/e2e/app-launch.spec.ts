@@ -1,0 +1,47 @@
+import { expect, test } from '@playwright/test';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
+
+test.describe('App Launch', () => {
+  test('loads successfully with correct title', async ({ page }) => {
+    await page.goto('/');
+    await waitForE2eActions(page);
+
+    await expect(page).toHaveTitle(/Open Factory/i);
+  });
+
+  test('shows main interface elements', async ({ page }) => {
+    await page.goto('/');
+    await waitForE2eActions(page);
+    await waitForAppStore(page);
+
+    await expect(page.getByTestId('timeline-root')).toBeVisible();
+    await expect(page.getByTestId('timeline-ruler')).toBeVisible();
+    await expect(page.getByTestId('inspector-panel')).toBeVisible();
+    await expect(page.getByTestId('import-media-button')).toBeVisible();
+  });
+
+  test('loads without console errors', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+      }
+    });
+
+    await page.goto('/');
+    await waitForE2eActions(page);
+    await waitForAppStore(page);
+
+    const criticalErrors = errors.filter(
+      (e) => !e.includes('favicon') && !e.includes('devtools') && !e.includes('HMR'),
+    );
+    expect(criticalErrors).toEqual([]);
+  });
+
+  test('toolbar shows project name', async ({ page }) => {
+    await page.goto('/');
+    await waitForE2eActions(page);
+
+    await expect(page.getByTestId('toolbar-project-name')).toBeVisible();
+  });
+});
