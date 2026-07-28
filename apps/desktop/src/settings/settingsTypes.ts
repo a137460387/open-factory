@@ -1,4 +1,5 @@
-import type {Clip, Project, PreviewPerformanceSettings, PreviewSkipFrames} from '@open-factory/editor-core';
+import type {Clip, Project} from '@open-factory/editor-core';
+import type {PreviewPerformanceSettings, PreviewSkipFrames} from '../lib/preview/preview-performance';
 import type {ClipMacro} from '../macros/clip-macros';
 import type {TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
 import type {TimelineInteractionSettings} from './appSettings';
