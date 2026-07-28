@@ -123,6 +123,38 @@ export function createPermissionRule(
   };
 }
 
+export type AddRuleValidationError =
+  | { kind: 'validation'; errors: string[] }
+  | { kind: 'limit_exceeded' }
+  | { kind: 'temporary_disabled' }
+  | { kind: 'duration_exceeded'; maxHours: number };
+
+export function validateNewRuleConstraints(
+  rule: Omit<PermissionRule, 'id' | 'metadata'>,
+  existingRules: PermissionRule[],
+  config: { maxRulesPerSubject: number; enableTemporaryPermissions: boolean; maxTemporaryDurationHours: number },
+): AddRuleValidationError | null {
+  const errors = validatePermissionRule(rule);
+  if (errors.length > 0) return { kind: 'validation', errors };
+
+  const subjectRules = existingRules.filter(
+    (r) => r.subject.id === rule.subject.id && r.subject.type === rule.subject.type,
+  );
+  if (subjectRules.length >= config.maxRulesPerSubject) return { kind: 'limit_exceeded' };
+
+  if (rule.expiresAt && !config.enableTemporaryPermissions) return { kind: 'temporary_disabled' };
+
+  if (rule.expiresAt) {
+    const durationHours =
+      (new Date(rule.expiresAt).getTime() - new Date(rule.grantedAt).getTime()) / (1000 * 60 * 60);
+    if (durationHours > config.maxTemporaryDurationHours) {
+      return { kind: 'duration_exceeded', maxHours: config.maxTemporaryDurationHours };
+    }
+  }
+
+  return null;
+}
+
 // ==================== Audit Helper ====================
 
 export function buildAuditLogEntry(entry: Omit<PermissionAuditLog, 'id' | 'timestamp'>): PermissionAuditLog {

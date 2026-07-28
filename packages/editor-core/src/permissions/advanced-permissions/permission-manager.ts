@@ -1,7 +1,3 @@
-/**
- * Advanced permission manager
- */
-
 import {
   type PermissionLevel,
   type PermissionSubject,
@@ -18,12 +14,9 @@ import {
   DEFAULT_PERMISSION_CONFIG,
   createId,
 } from './types';
-
 import {
-  comparePermissionLevels,
   isPermissionExpired,
   isTemporaryPermissionValid,
-  validatePermissionRule,
   appendAuditLog,
   findGroup,
   findGroupMemberIndex,
@@ -38,6 +31,7 @@ import {
   collectInheritedRules,
   collectGroupRules,
   buildEvaluationResult,
+  validateNewRuleConstraints,
   importStateFromJson,
 } from './utils';
 
@@ -70,56 +64,34 @@ export class AdvancedPermissionManager {
     this.emit('config.updated', this.state.config);
   }
 
-  // ==================== Rule Management ====================
-
   addRule(
     rule: Omit<PermissionRule, 'id' | 'metadata'>,
     operatorId: string,
     operatorName: string,
   ): PermissionRule | null {
-    const errors = validatePermissionRule(rule);
-    if (errors.length > 0) {
-      this.emit('rule.validation_failed', { rule, errors });
-      return null;
-    }
-
-    const subjectRules = this.state.rules.filter(
-      (r) => r.subject.id === rule.subject.id && r.subject.type === rule.subject.type,
-    );
-    if (subjectRules.length >= this.state.config.maxRulesPerSubject) {
-      this.emit('rule.limit_exceeded', { subject: rule.subject });
-      return null;
-    }
-
-    if (rule.expiresAt && !this.state.config.enableTemporaryPermissions) {
-      this.emit('rule.temporary_disabled', { rule });
-      return null;
-    }
-
-    if (rule.expiresAt) {
-      const durationHours =
-        (new Date(rule.expiresAt).getTime() - new Date(rule.grantedAt).getTime()) / (1000 * 60 * 60);
-      if (durationHours > this.state.config.maxTemporaryDurationHours) {
-        this.emit('rule.duration_exceeded', { rule, maxHours: this.state.config.maxTemporaryDurationHours });
-        return null;
+    const validationError = validateNewRuleConstraints(rule, this.state.rules, this.state.config);
+    if (validationError) {
+      if (validationError.kind === 'validation') {
+        this.emit('rule.validation_failed', { rule, errors: validationError.errors });
+      } else {
+        this.emit(`rule.${validationError.kind}`, validationError.kind === 'duration_exceeded'
+          ? { rule, maxHours: validationError.maxHours }
+          : validationError.kind === 'limit_exceeded'
+            ? { subject: rule.subject }
+            : { rule });
       }
+      return null;
     }
-
     const newRule: PermissionRule = {
       ...rule,
       id: createId('perm'),
       metadata: { priority: 0, isTemporary: !!rule.expiresAt, autoRevoke: !!rule.expiresAt, evaluationCount: 0 },
     };
-
     this.state.rules.push(newRule);
     this.clearCache();
     appendAuditLog(this.state, {
-      userId: operatorId,
-      userName: operatorName,
-      action: 'permission.granted',
-      subject: rule.subject,
-      target: rule.target,
-      newLevel: rule.level,
+      userId: operatorId, userName: operatorName, action: 'permission.granted',
+      subject: rule.subject, target: rule.target, newLevel: rule.level,
       details: { ruleId: newRule.id, expiresAt: rule.expiresAt },
     });
     this.emit('rule.added', newRule);
@@ -133,13 +105,8 @@ export class AdvancedPermissionManager {
     this.state.rules.splice(ruleIndex, 1);
     this.clearCache();
     appendAuditLog(this.state, {
-      userId: operatorId,
-      userName: operatorName,
-      action: 'permission.revoked',
-      subject: rule.subject,
-      target: rule.target,
-      previousLevel: rule.level,
-      details: { ruleId },
+      userId: operatorId, userName: operatorName, action: 'permission.revoked',
+      subject: rule.subject, target: rule.target, previousLevel: rule.level, details: { ruleId },
     });
     this.emit('rule.removed', rule);
     return true;
@@ -163,20 +130,13 @@ export class AdvancedPermissionManager {
     if (updates.conditions) rule.conditions = updates.conditions;
     this.clearCache();
     appendAuditLog(this.state, {
-      userId: operatorId,
-      userName: operatorName,
-      action: 'permission.modified',
-      subject: rule.subject,
-      target: rule.target,
-      previousLevel,
-      newLevel: rule.level,
+      userId: operatorId, userName: operatorName, action: 'permission.modified',
+      subject: rule.subject, target: rule.target, previousLevel, newLevel: rule.level,
       details: { ruleId, updates },
     });
     this.emit('rule.modified', rule);
     return rule;
   }
-
-  // ==================== Evaluation ====================
 
   evaluate(
     subject: PermissionSubject,
@@ -186,49 +146,31 @@ export class AdvancedPermissionManager {
     const cacheKey = `${subject.id}:${target.id}:${requiredLevel}`;
     const cached = this.state.cache.get(cacheKey);
     if (cached) return cached;
-
     const directRules = collectDirectRules(this.state.rules, subject, target);
     const inheritedRules = this.state.config.inheritance.enabled
-      ? collectInheritedRules(this.state.rules, subject, target)
-      : [];
+      ? collectInheritedRules(this.state.rules, subject, target) : [];
     const groupRules = collectGroupRules(this.state, subject, target);
     const tempPermissions = this.state.temporaryPermissions.filter(
       (tp) => tp.subject.id === subject.id && tp.target.id === target.id && isTemporaryPermissionValid(tp),
     );
-
     const allRules = [...directRules, ...inheritedRules, ...groupRules];
     const validRules = allRules.filter((r) => !isPermissionExpired(r));
     const warnings = validRules.length < allRules.length ? ['部分规则已过期'] : [];
-
     validRules.sort((a, b) => b.metadata.priority - a.metadata.priority);
-
-    const { result, effectiveLevel } = buildEvaluationResult(
-      this.state.config,
-      validRules,
-      tempPermissions,
-      requiredLevel,
-    );
+    const { result, effectiveLevel } = buildEvaluationResult(this.state.config, validRules, tempPermissions, requiredLevel);
     result.warnings.push(...warnings);
-
     this.state.cache.set(cacheKey, result);
-
     if (this.state.config.auditEnabled) {
       appendAuditLog(this.state, {
-        userId: subject.id,
-        userName: subject.name,
+        userId: subject.id, userName: subject.name,
         action: result.allowed ? 'permission.evaluated' : 'permission.denied',
-        subject,
-        target,
-        newLevel: effectiveLevel,
+        subject, target, newLevel: effectiveLevel,
         details: { requiredLevel, allowed: result.allowed, warnings: result.warnings },
       });
     }
-
     this.emit('permission.evaluated', result);
     return result;
   }
-
-  // ==================== Group Management ====================
 
   createGroup(name: string, description: string, operatorId: string, operatorName: string): PermissionGroup {
     const group = createGroupRecord(operatorId);
@@ -242,10 +184,8 @@ export class AdvancedPermissionManager {
   }
 
   updateGroup(
-    groupId: string,
-    updates: Partial<Pick<PermissionGroup, 'name' | 'description'>>,
-    operatorId: string,
-    operatorName: string,
+    groupId: string, updates: Partial<Pick<PermissionGroup, 'name' | 'description'>>,
+    operatorId: string, operatorName: string,
   ): PermissionGroup | null {
     const group = findGroup(this.state, groupId);
     if (!group) return null;
@@ -276,18 +216,14 @@ export class AdvancedPermissionManager {
     if (countUserGroups(this.state, member.id) >= this.state.config.maxGroupsPerUser) return false;
     group.members.push(member);
     group.updatedAt = new Date().toISOString();
-    auditGroupAction(this.state, 'group.member_added', operatorId, operatorName, groupId, group.name,
-      member, { groupId });
+    auditGroupAction(this.state, 'group.member_added', operatorId, operatorName, groupId, group.name, member, { groupId });
     this.emit('group.member_added', { groupId, member });
     return true;
   }
 
   removeGroupMember(
-    groupId: string,
-    memberId: string,
-    memberType: PermissionSubjectType,
-    operatorId: string,
-    operatorName: string,
+    groupId: string, memberId: string, memberType: PermissionSubjectType,
+    operatorId: string, operatorName: string,
   ): boolean {
     const group = findGroup(this.state, groupId);
     if (!group) return false;
@@ -296,8 +232,7 @@ export class AdvancedPermissionManager {
     const member = group.members[memberIndex];
     group.members.splice(memberIndex, 1);
     group.updatedAt = new Date().toISOString();
-    auditGroupAction(this.state, 'group.member_removed', operatorId, operatorName, groupId, group.name,
-      member, { groupId });
+    auditGroupAction(this.state, 'group.member_removed', operatorId, operatorName, groupId, group.name, member, { groupId });
     this.emit('group.member_removed', { groupId, member });
     return true;
   }
@@ -324,50 +259,28 @@ export class AdvancedPermissionManager {
     return true;
   }
 
-  // ==================== Temporary Permissions ====================
-
   createTemporaryPermission(
-    subject: PermissionSubject,
-    target: PermissionTarget,
-    level: PermissionLevel,
-    durationHours: number,
-    reason: string,
-    grantedBy: string,
-    grantedByName: string,
+    subject: PermissionSubject, target: PermissionTarget, level: PermissionLevel,
+    durationHours: number, reason: string, grantedBy: string, grantedByName: string,
   ): TemporaryPermission | null {
     if (!this.state.config.enableTemporaryPermissions) return null;
     if (durationHours > this.state.config.maxTemporaryDurationHours) return null;
-
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
     const tempPermission: TemporaryPermission = {
-      id: createId('temp-perm'),
-      ruleId: createId('perm'),
-      subject,
-      target,
-      level,
-      grantedBy,
-      grantedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      reason,
-      autoRevoke: true,
+      id: createId('temp-perm'), ruleId: createId('perm'),
+      subject, target, level, grantedBy,
+      grantedAt: now.toISOString(), expiresAt: expiresAt.toISOString(),
+      reason, autoRevoke: true,
     };
-
     this.state.temporaryPermissions.push(tempPermission);
-
     if (tempPermission.autoRevoke) {
-      setTimeout(() => {
-        this.revokeTemporaryPermission(tempPermission.id, 'system', '系统');
-      }, durationHours * 60 * 60 * 1000);
+      setTimeout(() => { this.revokeTemporaryPermission(tempPermission.id, 'system', '系统'); },
+        durationHours * 60 * 60 * 1000);
     }
-
     appendAuditLog(this.state, {
-      userId: grantedBy,
-      userName: grantedByName,
-      action: 'permission.granted',
-      subject,
-      target,
-      newLevel: level,
+      userId: grantedBy, userName: grantedByName, action: 'permission.granted',
+      subject, target, newLevel: level,
       details: { temporary: true, durationHours, reason, expiresAt: expiresAt.toISOString() },
     });
     this.emit('temporary_permission.created', tempPermission);
@@ -380,19 +293,13 @@ export class AdvancedPermissionManager {
     permission.revokedAt = new Date().toISOString();
     permission.revokedBy = revokedBy;
     appendAuditLog(this.state, {
-      userId: revokedBy,
-      userName: revokedByName,
-      action: 'permission.revoked',
-      subject: permission.subject,
-      target: permission.target,
-      previousLevel: permission.level,
+      userId: revokedBy, userName: revokedByName, action: 'permission.revoked',
+      subject: permission.subject, target: permission.target, previousLevel: permission.level,
       details: { temporary: true, permissionId },
     });
     this.emit('temporary_permission.revoked', permission);
     return true;
   }
-
-  // ==================== Queries ====================
 
   getUserPermissions(userId: string): PermissionRule[] {
     return this.state.rules.filter((r) => r.subject.id === userId);
@@ -407,16 +314,11 @@ export class AdvancedPermissionManager {
   }
 
   getAuditLog(filters?: {
-    userId?: string;
-    action?: PermissionAuditAction;
-    startDate?: string;
-    endDate?: string;
-    limit?: number;
+    userId?: string; action?: PermissionAuditAction;
+    startDate?: string; endDate?: string; limit?: number;
   }): PermissionAuditLog[] {
     return filterAuditLogs(this.state.auditLog, filters);
   }
-
-  // ==================== Cleanup ====================
 
   cleanupExpiredPermissions(): number {
     const before = this.state.temporaryPermissions.length;
@@ -438,8 +340,6 @@ export class AdvancedPermissionManager {
     this.state.cache.clear();
   }
 
-  // ==================== State I/O ====================
-
   exportState(): string {
     return JSON.stringify({ ...this.state, cache: undefined }, null, 2);
   }
@@ -451,16 +351,12 @@ export class AdvancedPermissionManager {
     return true;
   }
 
-  // ==================== Events ====================
-
   on(event: string, handler: (data: unknown) => void): () => void {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, new Set());
     }
     this.eventHandlers.get(event)!.add(handler);
-    return () => {
-      this.eventHandlers.get(event)?.delete(handler);
-    };
+    return () => { this.eventHandlers.get(event)?.delete(handler); };
   }
 
   private emit(event: string, data: unknown): void {

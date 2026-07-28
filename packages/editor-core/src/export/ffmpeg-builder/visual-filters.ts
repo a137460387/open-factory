@@ -83,6 +83,7 @@ import {
 } from './visual-filters-effects';
 import {
   buildMaskFilters,
+  buildClipBorderFilters,
   buildPrivacyBlurMaskGraph,
   hasPrivacyBlurMasks,
   getPrivacyBlurMasks,
