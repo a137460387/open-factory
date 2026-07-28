@@ -1,34 +1,33 @@
-import type {
-  ClipGroup,
-  TimelineColorHeatmapPoint,
-  TimelineGridSettings,
-  TimelineHeatmapSegment,
-  TimelineLabelColor,
-  TimelineMinimapLayout,
-  TimelineMinimapViewportRect,
-  TimelineSnapHighlight,
-  SelectionRect,
-  SceneColorDifference,
-  DialogueInterval,
-  DialogueWhisperMiss,
-  TransitionRecommendation,
-  ProtectedRange,
-  TimelineNote,
-  Clip,
-  Sequence,
-  CollaborationClipLock,
+import {
+  type ClipGroup,
+  type TimelineColorHeatmapPoint,
+  type TimelineGridSettings,
+  type TimelineHeatmapSegment,
+  type TimelineLabelColor,
+  type TimelineMinimapLayout,
+  type TimelineMinimapViewportRect,
+  type TimelineSnapHighlight,
+  type SelectionRect,
+  type SceneColorDifference,
+  type DialogueInterval,
+  type DialogueWhisperMiss,
+  type getTimelineLargeProjectMode,
+  type getTimelineVirtualRenderWindow,
+  type getTimelineVirtualTrackWindow,
+  type buildTimelineRulerTicks,
+  type buildTimelineGridLines,
+  type buildTimelineThumbnailTrackSamples,
+  type buildTimelineNoteLayout,
 } from '@open-factory/editor-core';
-import type {buildTimelineRulerTicks, buildTimelineGridLines, buildTimelineThumbnailTrackSamples, buildTimelineNoteLayout} from '@open-factory/editor-core';
-import type {CollaborationUiState} from '../../store/collaborationStore';
-import type {EditorState} from '../../store/editorStore';
-import type {RenderCacheState} from '../../store/renderCacheStore';
-import type {WhisperAvailability} from '../../lib/whisper';
-import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
-import type {DragState} from './TimelineParts';
+import {type CollaborationUiState} from '../../store/collaborationStore';
+import {type EditorState} from '../../store/editorStore';
+import {type RenderCacheState} from '../../store/renderCacheStore';
+import {type WhisperAvailability} from '../../lib/whisper';
+import {type TimelineHeatmapViewSettings} from '../../settings/appSettings';
+import {type DragState} from './TimelineParts';
 import type {TransitionMenuState, ClipMenuState, VolumeEnvelopeMenuState, GapMenuState, RulerMenuState, TrackBatchMenuState} from './TimelineMenus';
 import type {ReplaceMediaDialogState, SilenceDialogState, SceneDialogState, WhisperDialogState, CoverFrameDialogState, AnnotationEditorState, TimelineNoteEditorState} from './TimelineDialogs';
 import type {TimelineNoteDraftState, BookmarkRenameState} from './TimelineOverlays';
-import type {getTimelineLargeProjectMode, getTimelineVirtualRenderWindow, getTimelineVirtualTrackWindow} from '@open-factory/editor-core';
 
 export interface HeatmapWorkerResponse {
   id: number;
@@ -147,7 +146,7 @@ export interface TimelineState {
     | {
         clipId: string;
         adjacentClipId: string;
-        recommendations: TransitionRecommendation[];
+        recommendations: import('@open-factory/editor-core').TransitionRecommendation[];
       }
     | undefined;
   setTransitionDialog: React.Dispatch<
@@ -155,7 +154,7 @@ export interface TimelineState {
       | {
           clipId: string;
           adjacentClipId: string;
-          recommendations: TransitionRecommendation[];
+          recommendations: import('@open-factory/editor-core').TransitionRecommendation[];
         }
       | undefined
     >
@@ -245,7 +244,7 @@ export interface TimelineState {
   deferredMinimapLayout: TimelineMinimapLayout;
 
   // useMemo / computed
-  allClips: Clip[];
+  allClips: import('@open-factory/editor-core').Clip[];
   largeProjectMode: ReturnType<typeof getTimelineLargeProjectMode>;
   timelineDuration: number;
   timelineGridBeatTimes: number[];
@@ -253,16 +252,16 @@ export interface TimelineState {
   playheadTimecode: string;
   gridLines: ReturnType<typeof buildTimelineGridLines>;
   remoteCollaborationUsers: CollaborationUiState['users'];
-  collaborationLocksByClipId: Map<string, CollaborationClipLock>;
+  collaborationLocksByClipId: Map<string, import('@open-factory/editor-core').CollaborationClipLock>;
   activeBeatMarkerId: string | undefined;
   exportRangeHighlights: { id: string; start: number; end: number }[];
   minimapHeight: number;
   minimapLayout: TimelineMinimapLayout;
   minimapViewport: TimelineMinimapViewportRect;
-  protectedRanges: ProtectedRange[];
-  timelineNotes: TimelineNote[];
+  protectedRanges: import('@open-factory/editor-core').ProtectedRange[];
+  timelineNotes: import('@open-factory/editor-core').TimelineNote[];
   timelineNoteLayouts: ReturnType<typeof buildTimelineNoteLayout>;
-  filteredTimelineNotes: TimelineNote[];
+  filteredTimelineNotes: import('@open-factory/editor-core').TimelineNote[];
   sceneCutOverlays: { id: string; clipId: string; time: number }[];
   clipGroups: ClipGroup[];
   clipGroupByClipId: Map<string, ClipGroup>;
@@ -272,7 +271,7 @@ export interface TimelineState {
   virtualTrackWindow: ReturnType<typeof getTimelineVirtualTrackWindow>;
   virtualTracks: import('@open-factory/editor-core').Track[];
   thumbnailTrackSamples: ReturnType<typeof buildTimelineThumbnailTrackSamples>;
-  activeSequence: Sequence | undefined;
+  activeSequence: import('@open-factory/editor-core').Sequence | undefined;
   isMainSequence: boolean;
   projectDuration: number;
   width: number;

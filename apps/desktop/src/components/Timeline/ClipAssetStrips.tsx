@@ -4,7 +4,7 @@ import {useEffect, useState} from 'react';
 import {VideoThumbnailStrip} from './VideoThumbnailStrip';
 import {WaveformStrip, type WaveformStripProps} from './WaveformStrip';
 
-interface ClipAssetStripsProps {
+export interface ClipAssetStripsProps {
   clip: Extract<Clip, { type: 'video' }>;
   asset: MediaAsset;
   clipPixelWidth: number;
@@ -62,7 +62,7 @@ export function scheduleLargeProjectAssetHydration(onReady: () => void): () => v
   };
 }
 
-const ClipAssetStrips = memo(function ClipAssetStrips({
+export const ClipAssetStrips = memo(function ClipAssetStrips({
   clip,
   asset,
   clipPixelWidth,
