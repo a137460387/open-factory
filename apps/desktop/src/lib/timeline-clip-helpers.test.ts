@@ -128,7 +128,7 @@ describe('timeline-clip-helpers', () => {
             { id: 'kf-1', time: 0, value: 1 } as any,
             { id: 'kf-2', time: 1, value: 0.5 } as any,
           ],
-          scale: [
+          scaleX: [
             { id: 'kf-3', time: 0, value: 1 } as any,
           ],
         },
@@ -137,7 +137,7 @@ describe('timeline-clip-helpers', () => {
       expect(refs).toHaveLength(3);
       expect(refs[0]).toEqual({ clipId: 'clip-1', property: 'opacity', keyframeId: 'kf-1' });
       expect(refs[1]).toEqual({ clipId: 'clip-1', property: 'opacity', keyframeId: 'kf-2' });
-      expect(refs[2]).toEqual({ clipId: 'clip-1', property: 'scale', keyframeId: 'kf-3' });
+      expect(refs[2]).toEqual({ clipId: 'clip-1', property: 'scaleX', keyframeId: 'kf-3' });
     });
 
     it('handles undefined keyframes gracefully', () => {
@@ -159,7 +159,7 @@ describe('timeline-clip-helpers', () => {
           { id: 'track-2', type: 'subtitle', clips: [{ id: 'clip-2' }] },
         ],
       } as unknown as Timeline;
-      expect(getSubtitleDataImportTargetTrackId(timeline, 'existing-track', ['clip-2'])).toBe('track-2');
+      expect(getSubtitleDataImportTargetTrackId(timeline, 'replace-current-track', ['clip-2'])).toBe('track-2');
     });
 
     it('falls back to first subtitle track when no selection matches', () => {
@@ -169,7 +169,7 @@ describe('timeline-clip-helpers', () => {
           { id: 'track-sub', type: 'subtitle', clips: [{ id: 'clip-sub' }] },
         ],
       } as unknown as Timeline;
-      expect(getSubtitleDataImportTargetTrackId(timeline, 'existing-track', ['nonexistent'])).toBe('track-sub');
+      expect(getSubtitleDataImportTargetTrackId(timeline, 'replace-current-track', ['nonexistent'])).toBe('track-sub');
     });
 
     it('returns undefined when no subtitle tracks exist', () => {
@@ -178,7 +178,7 @@ describe('timeline-clip-helpers', () => {
           { id: 'track-video', type: 'video', clips: [] },
         ],
       } as unknown as Timeline;
-      expect(getSubtitleDataImportTargetTrackId(timeline, 'existing-track', [])).toBeUndefined();
+      expect(getSubtitleDataImportTargetTrackId(timeline, 'replace-current-track', [])).toBeUndefined();
     });
   });
 

@@ -72,10 +72,11 @@ import type { ExportPresetSettings } from '../export-presets';
 import type { ExportMasterProcessingSettings } from '@open-factory/editor-core';
 
 // Helper: capture the updater function passed to setDraftSettings
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyUpdate<T>(
-  fn: (setter: Dispatch<SetStateAction<T>>, ...args: unknown[]) => void,
+  fn: (setter: Dispatch<SetStateAction<T>>, ...args: any[]) => void,
   current: T,
-  ...args: unknown[]
+  ...args: any[]
 ): T {
   let captured: ((c: T) => T) | undefined;
   const setter = (updater: SetStateAction<T>) => {

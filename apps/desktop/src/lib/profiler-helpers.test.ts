@@ -39,6 +39,7 @@ describe('profiler-helpers', () => {
       const sample: ProfilerFrameSample = {
         frameIndex: 42,
         timestampMs: 1000,
+        playheadTime: 1000,
         render: {
           totalMs: 16,
           compositeMs: 4,
@@ -46,7 +47,9 @@ describe('profiler-helpers', () => {
           effectsMs: 5,
           overlayMs: 4,
         },
-        reason: [],
+        drawCalls: 1,
+        textureBytes: 0,
+        reason: '',
       };
       const events = createProfilerTraceEventsForFrame(sample);
       // 1 frame event + 4 pass events
@@ -61,6 +64,7 @@ describe('profiler-helpers', () => {
       const sample: ProfilerFrameSample = {
         frameIndex: 1,
         timestampMs: 500,
+        playheadTime: 500,
         render: {
           totalMs: 10,
           compositeMs: 2,
@@ -68,7 +72,9 @@ describe('profiler-helpers', () => {
           effectsMs: 3,
           overlayMs: 3,
         },
-        reason: ['custom-shader'],
+        drawCalls: 1,
+        textureBytes: 0,
+        reason: 'custom-shader',
       };
       const events = createProfilerTraceEventsForFrame(sample);
       const effectsEvent = events.find((e) => e.category === 'effects');
@@ -79,6 +85,7 @@ describe('profiler-helpers', () => {
       const sample: ProfilerFrameSample = {
         frameIndex: 1,
         timestampMs: 500,
+        playheadTime: 500,
         render: {
           totalMs: 10,
           compositeMs: 2,
@@ -86,7 +93,9 @@ describe('profiler-helpers', () => {
           effectsMs: 3,
           overlayMs: 3,
         },
-        reason: [],
+        drawCalls: 1,
+        textureBytes: 0,
+        reason: '',
       };
       const events = createProfilerTraceEventsForFrame(sample);
       const effectsEvent = events.find((e) => e.category === 'effects');
@@ -97,6 +106,7 @@ describe('profiler-helpers', () => {
       const sample: ProfilerFrameSample = {
         frameIndex: 0,
         timestampMs: 100,
+        playheadTime: 100,
         render: {
           totalMs: 20,
           compositeMs: 5,
@@ -104,7 +114,9 @@ describe('profiler-helpers', () => {
           effectsMs: 5,
           overlayMs: 5,
         },
-        reason: [],
+        drawCalls: 1,
+        textureBytes: 0,
+        reason: '',
       };
       const events = createProfilerTraceEventsForFrame(sample);
       // frame starts at 100 - 20 = 80
