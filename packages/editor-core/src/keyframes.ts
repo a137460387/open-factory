@@ -18,6 +18,7 @@ const KEYFRAME_MIN_CLIP_SPEED = 0.25;
 const KEYFRAME_MAX_CLIP_SPEED = 4;
 const KEYFRAME_DEFAULT_CLIP_SPEED = 1;
 
+/** Min/max limits for each keyframe property. */
 export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; max: number }> = {
   opacity: { min: 0, max: 1 },
   volume: { min: 0, max: 2 },
