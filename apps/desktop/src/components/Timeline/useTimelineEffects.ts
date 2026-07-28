@@ -7,7 +7,7 @@ import type {HeatmapWorkerResponse, TimelineStateParams} from './timelineStateTy
 
 interface EffectsInput {
   // Store
-  project: import('@open-factory/editor-core').EditorState['project'];
+  project: import('../../store/editorStore').EditorState['project'];
   selectedClipId: string | undefined;
   selectedClipIds: string[];
 
@@ -18,7 +18,7 @@ interface EffectsInput {
   setSlipEditActive: React.Dispatch<React.SetStateAction<boolean>>;
   setSlideEditActive: React.Dispatch<React.SetStateAction<boolean>>;
   setEnvelopeEditMode: React.Dispatch<React.SetStateAction<boolean>>;
-  setVolumeEnvelopeMenu: React.Dispatch<React.SetStateAction<unknown>>;
+  setVolumeEnvelopeMenu: React.Dispatch<React.SetStateAction<import('./TimelineMenus').VolumeEnvelopeMenuState | undefined>>;
   setSelectedTrackIds: React.Dispatch<React.SetStateAction<string[]>>;
   setTrackSelectionAnchorId: React.Dispatch<React.SetStateAction<string | undefined>>;
   setAnnotationPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;

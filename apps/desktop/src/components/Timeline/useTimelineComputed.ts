@@ -91,7 +91,7 @@ export function useTimelineComputed(
   {store, ui, params, timelineDuration}: ComputedInput,
 ): ComputedOutput {
   const {
-    timelineGridSettings,
+    timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
   } = params;
 
   const deferredHeatmapSegments = useDeferredValue(ui.heatmapSegments);

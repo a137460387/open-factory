@@ -111,8 +111,8 @@ export interface UIStateOutput {
   setHeatmapSegments: React.Dispatch<React.SetStateAction<import('@open-factory/editor-core').TimelineHeatmapSegment[]>>;
   isPanning: boolean;
   setIsPanning: React.Dispatch<React.SetStateAction<boolean>>;
-  whisperExecutablePath: string | undefined;
-  whisperModelPath: string | undefined;
+  whisperExecutablePath: string;
+  whisperModelPath: string;
 }
 
 export function useTimelineUIState(params: TimelineStateParams): UIStateOutput {
