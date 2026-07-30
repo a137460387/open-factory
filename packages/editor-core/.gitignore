@@ -1,0 +1,2 @@
+# Compiled JS artifacts in source directory
+src/**/*.js
