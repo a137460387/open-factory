@@ -3,10 +3,11 @@ import {mapScoreToGrade} from '@open-factory/editor-core';
 import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
 import {HighlightBadge} from './HighlightOverlay';
 import {Flag, Heart, Loader2} from 'lucide-react';
-import {useContext} from 'react';
+import {useContext, useState} from 'react';
 import {clsx} from 'clsx';
 import {zhCN} from '../../i18n/strings';
 import {convertLocalFileSrc} from '../../lib/tauri-bridge';
+import {detectScopeDenied} from '../../lib/preview/media-elements';
 import {isMediaPreviewable} from './media-hover-preview';
 import {MediaCardExtrasCtx} from './MediaCardTypes';
 import {labelColorToHex, formatFrameRateLabel, formatPreciseFrameRate} from './MediaCardUtils';
@@ -40,6 +41,7 @@ export function MediaCardThumbnail({
   setVersionsOpen: (fn: (open: boolean) => boolean) => void;
 }) {
   const extras = useContext(MediaCardExtrasCtx);
+  const [scopeDenied, setScopeDenied] = useState(false);
 
   return (
     <div className="checkerboard relative aspect-video">
@@ -67,6 +69,10 @@ export function MediaCardThumbnail({
           playsInline
           preload="metadata"
           data-testid={`media-hover-preview-${asset.id}`}
+          onError={async () => {
+            const hint = await detectScopeDenied(convertLocalFileSrc(asset.path));
+            if (hint) setScopeDenied(true);
+          }}
         />
       ) : null}
       {asset.missing ? (
@@ -75,6 +81,15 @@ export function MediaCardThumbnail({
           data-testid={`missing-media-badge-${asset.id}`}
         >
           {zhCN.common.missing}
+        </span>
+      ) : null}
+      {scopeDenied ? (
+        <span
+          className="absolute left-2 top-10 rounded bg-amber-600 px-2 py-1 text-xs font-semibold text-white"
+          title={zhCN.mediaBin.assetScopeDeniedHint}
+          data-testid={`scope-denied-badge-${asset.id}`}
+        >
+          {zhCN.mediaBin.assetScopeDenied}
         </span>
       ) : null}
       {asset.variableFrameRate ? (

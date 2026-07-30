@@ -33,6 +33,8 @@ export const media = {
     versionCompareTitle: 'Compare Versions',
     versionCompareTime: (time: string) => `Time ${time}s`,
     versionMediaMissing: 'Version media missing',
+    assetScopeDenied: 'Path not allowed',
+    assetScopeDeniedHint: 'Move the file to Desktop, Documents, Downloads, Videos, Pictures, or Music before importing.',
     sharedLibrary: 'Shared Library',
     sharedResourceCount: (count: number) => `${count} shared resources`,
     sharedEmpty: 'No shared resources yet.',

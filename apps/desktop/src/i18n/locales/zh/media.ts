@@ -34,6 +34,8 @@ export const media = {
     versionCompareTitle: '对比版本',
     versionCompareTime: (time: string) => `时间点 ${time}s`,
     versionMediaMissing: '版本媒体缺失',
+    assetScopeDenied: '路径不在允许范围内',
+    assetScopeDeniedHint: '请将文件移动到桌面、文档、下载、视频、图片或音乐目录后再导入。',
     sharedLibrary: '共享库',
     sharedResourceCount: (count: number) => `${count} 个共享资源`,
     sharedEmpty: '共享库暂无资源。',
