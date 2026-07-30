@@ -3,7 +3,7 @@
 ## 通用约定
 
 - 除非是代码、命令或路径，所有的解释、分析、规划和最终报告必须使用简体中文输出。
-- 本项目是**本地优先**的桌面视频编辑器，禁止添加遥测、登录或云服务依赖。
+- 本项目是**本地优先**的桌面视频编辑器，禁止添加遥测、登录或云服务依赖（详见「核心架构约束→本地优先判定标准」）。
 
 ## 运行背景与核心约束
 
@@ -23,9 +23,9 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 ### 架构约束
 
 - `packages/editor-core` 必须保持纯 TypeScript，不依赖 Tauri 或浏览器 API
-- Timeline 变更必须通过命令对象（Command Pattern）执行，便于撤销/重做
-- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 `apps/desktop/src/lib/tauri-bridge.ts`
-- 本地媒体预览必须使用 Tauri `convertFileSrc`，禁止直接使用 `file://`
+- Timeline 变更必须通过命令对象执行（详见「核心架构约束→Timeline 命令对象约束」）
+- 所有 Tauri 调用必须通过 `tauri-bridge.ts`（详见「核心架构约束→Tauri Bridge 约束」）
+- 本地媒体预览必须使用 `convertFileSrc`（详见「特定模块约束→媒体处理」）
 
 ## 核心架构约束
 
@@ -46,12 +46,14 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 
 ### Tauri Bridge 约束
 
-- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 `tauri-bridge.ts`
+- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 `apps/desktop/src/lib/tauri-bridge.ts`
 - 新增 Tauri 命令必须在 `apps/desktop/src-tauri/src/lib.rs` 注册
 - FFmpeg 执行必须使用 `Command::new("ffmpeg").args(&plan.full_args)` 参数数组
 - **禁止**执行 shell 字符串，必须使用参数数组形式
 
-### Store 规范 (v4.26.0+)
+### Store 规范（自 Store 按功能域拆分重构后）
+
+> **背景**：此前 `editorUIStore.ts` 和 `editorFeatureStore.ts` 是承载所有 UI/功能状态的单体 store，现已按功能域拆分，新状态不应再加入这两个文件。
 
 - **禁止**向 `editorUIStore.ts` 或 `editorFeatureStore.ts` 添加新状态
 - 新 UI 状态按功能域添加到对应 Store：
@@ -72,15 +74,14 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 - 任何实现任务完成后必须通过 `bun run typecheck` 和 `bun run build`
 - `packages/editor-core` 包必须保持 80% 以上测试覆盖率
 - 修改 `ffmpeg-builder.ts` 必须有对应的 `ffmpeg-builder.test.ts` 覆盖
-- 修改项目 schema 必须有 `project-migration.ts` 和迁移测试
 
 ### 测试策略
 
 - 核心时间线算法必须有 Vitest 覆盖
-- 项目 schema 修改必须有迁移测试
-- 导出预设变更必须反映在 E2E 或 core builder 测试中
-- 缓存键规则变更必须更新 `cache-key.test.ts`
-- Relink 评分变更必须更新 `relink-score.test.ts`
+- 项目 schema 修改必须有迁移测试（详见「特定模块约束→项目文件」）
+- 导出预设变更必须有测试覆盖（详见「特定模块约束→导出系统」）
+- 缓存键规则变更必须更新 `cache-key.test.ts`（详见「特定模块约束→缓存系统」）
+- Relink 评分变更必须更新 `relink-score.test.ts`（详见「特定模块约束→缓存系统」）
 
 ### 构建要求
 
@@ -116,7 +117,7 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 
 ### 媒体处理
 
-- 本地媒体预览必须使用 Tauri `convertFileSrc` 封装后的路径
+- 本地媒体预览必须使用 Tauri `convertFileSrc` 封装后的路径，禁止直接使用 `file://`
 - 代理媒体必须保持为本地缓存数据
 - 预览可以使用代理，但导出必须继续使用原始源媒体
 - 后台媒体作业必须顺序执行或显式限流
@@ -158,9 +159,9 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 ### Rust
 
 - **格式化**：使用 `cargo fmt` 统一代码风格
-- **错误处理**：生产代码禁止使用 `expect()` 和 `unwrap()`，使用 `map_err` 或 `?` 运算符
+- **错误处理**：生产代码禁止使用 `expect()` 和 `unwrap()`，使用 `map_err` 或 `?` 运算符；测试代码（`#[cfg(test)]` 或 `tests/` 目录下）允许使用 `expect()`/`unwrap()`
 - **文档注释**：公共函数和结构体必须添加 `///` 文档注释
-- **FFmpeg 调用**：使用 `Command::new("ffmpeg").args(&plan.full_args)` 参数数组，禁止执行 shell 字符串
+- **FFmpeg 调用**：使用 `Command::new("ffmpeg").args(&plan.full_args)` 参数数组，禁止执行 shell 字符串（详见「核心架构约束→Tauri Bridge 约束」）
 
 ### 通用规范
 
