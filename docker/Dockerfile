@@ -37,11 +37,13 @@ LABEL version="4.55.0"
 
 WORKDIR /app
 
-# Install FFmpeg and runtime dependencies
+# Install FFmpeg, runtime dependencies, and gosu for user switching
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && gosu nobody true
 
 # Copy built application
 COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
@@ -54,8 +56,17 @@ COPY --from=builder /app/packages/editor-core/package.json ./packages/editor-cor
 RUN ln -s /app/packages/cli/dist/cli.js /usr/local/bin/of && \
     chmod +x /usr/local/bin/of
 
-# Create working directories
-RUN mkdir -p /tmp/open-factory /workspace
+# Create non-root user (UID 1001 — node:20-slim has node at 1000)
+RUN groupadd -g 1001 of && \
+    useradd -r -u 1001 -g of -m -s /bin/bash of
+
+# Create working directories and set ownership
+RUN mkdir -p /tmp/open-factory /workspace && \
+    chown -R of:of /tmp/open-factory /workspace
+
+# Copy entrypoint script
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Environment variables with sensible defaults
 ENV OF_FFMPEG_PATH=ffmpeg
@@ -70,6 +81,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # Default working directory for user projects
 WORKDIR /workspace
 
-# Default entrypoint
-ENTRYPOINT ["of"]
-CMD ["--help"]
+# Note: no USER directive — entrypoint.sh starts as root to fix volume
+# permissions, then drops to 'of' user via gosu before running the CMD.
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["of", "--help"]

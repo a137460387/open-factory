@@ -9,10 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install FFmpeg with NVIDIA support
+# Install FFmpeg and gosu for user switching
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && gosu nobody true
 
 WORKDIR /app
 
@@ -31,12 +33,21 @@ RUN npm install onnxruntime-node@1.17.0
 RUN ln -s /app/packages/cli/dist/cli.js /usr/local/bin/of && \
     chmod +x /usr/local/bin/of
 
-# Create temp directory
-RUN mkdir -p /tmp/open-factory
+# Create non-root user (UID 1001)
+RUN groupadd -g 1001 of && \
+    useradd -r -u 1001 -g of -m -s /bin/bash of
+
+# Create temp directory and set ownership
+RUN mkdir -p /tmp/open-factory && \
+    chown -R of:of /tmp/open-factory
+
+# Copy entrypoint script
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Set environment for GPU detection
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-ENTRYPOINT ["of"]
-CMD ["--help"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["of", "--help"]
