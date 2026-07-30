@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   resolve: {
+    extensions: ['.mts', '.ts', '.tsx', '.mjs', '.js', '.jsx', '.json'],
     alias: {
       '@': fileURLToPath(new URL('./apps/desktop/src', import.meta.url)),
       '@open-factory/editor-core': fileURLToPath(new URL('./packages/editor-core/src', import.meta.url)),
