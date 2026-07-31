@@ -3,13 +3,36 @@ import { zhCN } from '../../i18n/strings';
 import { getAudioPreviewMediaPath, getPreviewMediaPath } from '../../media/proxy';
 import { sourceUrl } from '../media';
 
+/**
+ * Check if a failed asset URL is due to a403 scope denial.
+ * Returns the scope-denied hint message if confirmed, otherwise undefined.
+ */
+export async function detectScopeDenied(url: string): Promise<string | undefined> {
+  try {
+    const resp = await fetch(url, { method: 'HEAD' });
+    if (resp.status === 403) {
+      return zhCN.mediaBin.assetScopeDeniedHint;
+    }
+  } catch {
+    // Network error or CORS — not a scope issue
+  }
+  return undefined;
+}
+
 export function createVideoElement(asset: MediaAsset): HTMLVideoElement {
   const video = document.createElement('video');
   video.preload = 'auto';
   video.muted = true;
   video.playsInline = true;
   video.crossOrigin = 'anonymous';
-  video.src = sourceUrl(getPreviewMediaPath(asset));
+  const url = sourceUrl(getPreviewMediaPath(asset));
+  video.src = url;
+  video.onerror = async () => {
+    const scopeHint = await detectScopeDenied(url);
+    video.dispatchEvent(
+      new CustomEvent('asset-error', { detail: { scopeHint }, bubbles: true }),
+    );
+  };
   return video;
 }
 
@@ -34,9 +57,13 @@ export async function seekVideo(video: HTMLVideoElement, time: number): Promise<
 export function loadImage(asset: MediaAsset): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    const url = sourceUrl(getPreviewMediaPath(asset));
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`无法加载图片 ${asset.name}`));
-    img.src = sourceUrl(getPreviewMediaPath(asset));
+    img.onerror = async () => {
+      const scopeHint = await detectScopeDenied(url);
+      reject(new Error(scopeHint ?? `Failed to load image ${asset.name}`));
+    };
+    img.src = url;
   });
 }
 
