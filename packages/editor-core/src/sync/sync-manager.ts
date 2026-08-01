@@ -146,6 +146,12 @@ export class MultiDeviceSyncManager {
     const conflicts = detectConflicts(localOps, changeSet);
 
     if (conflicts.length > 0) {
+      if (this.config.conflictResolution === 'manual') {
+        // Store conflicts for manual resolution
+        this.state.conflicts.push(...conflicts);
+        this.emit('conflict.detected', conflicts[0]);
+        return false;
+      }
       const resolved = this.resolveConflicts(conflicts);
       if (!resolved) {
         this.emit('sync.failed', { error: 'Conflict resolution failed', changeSet });
