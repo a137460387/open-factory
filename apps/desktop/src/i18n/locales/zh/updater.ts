@@ -1,0 +1,66 @@
+export const updater = {
+  updater: {
+    toastTitle: (version: string) => `v${version} 可用，点击更新`,
+    toastMessage: '已在后台完成版本检查。',
+    viewReleaseNotes: '查看更新',
+    dialogTitle: (version: string) => `版本 v${version} 可用`,
+    releaseNotes: '更新日志',
+    noReleaseNotes: '暂无更新日志。',
+    installAndRestart: '安装并重启',
+    installing: '正在安装更新...',
+    installFailed: '更新安装失败',
+    installFailedMessage: '请稍后重试或从发布页手动下载。',
+    sourceEndpoint: '更新端点',
+    sourceNative: '内置更新器',
+  },
+  timelineExport: {
+    title: '导出时间线',
+    description: '导出主序列为剪辑交换格式。',
+    format: '格式',
+    export: '导出',
+    exporting: '正在导出...',
+    importEdl: '导入 EDL',
+    importFcpXml: '导入 FCPXML',
+    importing: '正在导入...',
+    success: '时间线已导出',
+    failed: '时间线导出失败',
+    failedMessage: '无法导出时间线。',
+    importSuccess: 'EDL 已导入',
+    importFcpXmlSuccess: 'FCPXML 已导入',
+    importFailed: 'EDL 导入失败',
+    importFcpXmlFailed: 'FCPXML 导入失败',
+    importFailedMessage: '无法导入 EDL。',
+    importFcpXmlFailedMessage: '无法导入 FCPXML 文件。',
+    importSummary: (matched: number, missing: number) => `匹配 ${matched} 个片段，缺失 ${missing} 个片段。`,
+    filterName: (format: string) => (format === 'fcp-xml' ? 'Final Cut Pro XML' : 'CMX3600 EDL'),
+    formats: {
+      edl: 'CMX3600 EDL',
+      fcpXml: 'Final Cut Pro 7 XML',
+    },
+  },
+  professionalNleExport: {
+    title: '导出至专业 NLE',
+    description: '导出 AAF、OMF 或扩展 FCP XML，用于 Avid、Premiere 和旧版交换流程。',
+    format: '格式',
+    mediaMode: '媒体处理',
+    mediaModes: {
+      link: '仅链接原始媒体',
+      copy: '复制媒体到导出目录',
+    },
+    export: '导出',
+    exporting: '正在导出...',
+    success: '专业 NLE 文件已导出',
+    failed: '专业 NLE 导出失败',
+    failedMessage: '无法导出专业交换文件。',
+    filterName: (format: string) => {
+      if (format === 'aaf') return 'Advanced Authoring Format';
+      if (format === 'omf') return 'Open Media Framework';
+      return 'Final Cut Pro XML';
+    },
+    formats: {
+      aaf: 'AAF',
+      omf: 'OMF 2.0',
+      fcpXml: 'Final Cut Pro XML',
+    },
+  },
+};

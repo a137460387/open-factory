@@ -24,9 +24,15 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$APPDATA/**",
-          "$APPCACHE/**",
-          "$TEMP/open-factory-*/**"
+          "$APPDATA/open-factory/**",
+          "$APPCACHE/open-factory/**",
+          "$TEMP/open-factory-*/**",
+          "$DESKTOP/**",
+          "$DOCUMENT/**",
+          "$DOWNLOAD/**",
+          "$VIDEO/**",
+          "$PICTURE/**",
+          "$AUDIO/**"
         ]
       }
     }

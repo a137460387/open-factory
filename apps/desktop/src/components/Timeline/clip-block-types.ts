@@ -1,0 +1,44 @@
+import type {Clip, CollaborationClipLock, AnomalyInterval, ClipGroup, MediaAsset, TimelineLabelColor, TimelineLargeProjectMode, Track, Transition} from '@open-factory/editor-core';
+import type {SelectedKeyframeRef} from '../../store/editorStore';
+import type {DragState, VolumeEnvelopePointRequest, VolumeEnvelopeMenuRequest, TransitionMenuRequest, ClipMenuRequest} from './timeline-parts-types';
+
+export interface ClipBlockProps {
+  clip: Clip;
+  asset?: MediaAsset;
+  left: number;
+  width: number;
+  selected: boolean;
+  selectedKeyframe?: SelectedKeyframeRef;
+  selectedKeyframes: SelectedKeyframeRef[];
+  drag?: DragState;
+  onSelect(clipId: string, additive: boolean, forceSingle?: boolean): void;
+  onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
+  onDragStart(drag: DragState): void;
+  selectedClipIds: string[];
+  locked: boolean;
+  clipPixelWidth: number;
+  trackMuted: boolean;
+  trackType: Track['type'];
+  trackHeight?: number;
+  nextAdjacentClip?: Clip;
+  transition?: Transition;
+  onTransitionMenu(request: TransitionMenuRequest): void;
+  onClipMenu(request: ClipMenuRequest): void;
+  onVolumeEnvelopeAdd(request: VolumeEnvelopePointRequest): void;
+  onVolumeEnvelopeUpdate(request: Required<VolumeEnvelopePointRequest>): void;
+  onVolumeEnvelopeRemove(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void;
+  onVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void;
+  onClipDoubleClick(clip: Clip): void;
+  rollingTrimActive: boolean;
+  slipEditActive: boolean;
+  slideEditActive: boolean;
+  clipGroup?: ClipGroup;
+  trackColor: TimelineLabelColor | null;
+  projectFrameRate: number;
+  envelopeEditMode: boolean;
+  reduceMotion: boolean;
+  loadAssets: boolean;
+  largeProjectMode: TimelineLargeProjectMode;
+  collaborationLock?: CollaborationClipLock;
+  onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
+}

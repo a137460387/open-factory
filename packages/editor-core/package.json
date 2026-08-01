@@ -69,8 +69,8 @@
       "import": "./dist/ai/speaker-diarization.js"
     },
     "./ai/super-resolution": {
-      "types": "./dist/ai/super-resolution.d.ts",
-      "import": "./dist/ai/super-resolution.js"
+      "types": "./dist/ai/super-resolution/index.d.ts",
+      "import": "./dist/ai/super-resolution/index.js"
     },
     "./ai/transcription": {
       "types": "./dist/ai/transcription.d.ts",
@@ -85,8 +85,8 @@
       "import": "./dist/ai/video-repair.js"
     },
     "./ai/multicam-sync": {
-      "types": "./dist/ai/multicam-sync.d.ts",
-      "import": "./dist/ai/multicam-sync.js"
+      "types": "./dist/ai/multicam-sync/index.d.ts",
+      "import": "./dist/ai/multicam-sync/index.js"
     },
     "./color-grading/lut": {
       "types": "./dist/color-grading/lut.d.ts",
