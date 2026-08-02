@@ -95,8 +95,7 @@ jobs:
         with:
           max_attempts: 2
           timeout_minutes: 10
-          command: bun install --frozen-lockfile
-        working-directory: .
+          command: cd "$GITHUB_WORKSPACE" && bun install --frozen-lockfile
 
       - name: Build frontend
         run: bun run build
@@ -133,16 +132,14 @@ jobs:
         with:
           max_attempts: 2
           timeout_minutes: 10
-          command: cargo build
-        working-directory: apps/desktop/src-tauri
+          command: cd "$GITHUB_WORKSPACE/apps/desktop/src-tauri" && cargo build
 
       - name: Test
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
           timeout_minutes: 10
-          command: cargo test
-        working-directory: apps/desktop/src-tauri
+          command: cd "$GITHUB_WORKSPACE/apps/desktop/src-tauri" && cargo test
 
       - name: Audit
         uses: nick-fields/retry@v3
@@ -206,8 +203,7 @@ jobs:
         with:
           max_attempts: 2
           timeout_minutes: 10
-          command: bunx playwright test --workers=2 --reporter=list,html
-        working-directory: apps/desktop
+          command: cd "$GITHUB_WORKSPACE/apps/desktop" && bunx playwright test --workers=2 --reporter=list,html
 
       - name: Upload test report
         if: always()
