@@ -9,6 +9,21 @@ import type { Command } from 'commander';
 import { withCliOutput, createLogger } from '../core/output.js';
 import { hasStdinData, readStdinJson } from '../core/stdin.js';
 
+export const RENDER_DEFAULT_CONCURRENCY = 4;
+
+/**
+ * Whether the user explicitly passed a non-default `--concurrency` value.
+ * The headless renderer currently always runs a single FFmpeg process, so a
+ * non-default value would be silently ignored unless we warn about it.
+ */
+export function shouldWarnUnsupportedConcurrency(value: string | undefined): boolean {
+  if (value === undefined || value === '') {
+    return false;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed !== RENDER_DEFAULT_CONCURRENCY;
+}
+
 export function registerRenderCommand(program: Command): void {
   program
     .command('render')
@@ -24,7 +39,7 @@ export function registerRenderCommand(program: Command): void {
     .option('--range <start-end>', 'Render range in seconds (e.g. 10-30)')
     .option('--ffmpeg <path>', 'Path to ffmpeg binary', 'ffmpeg')
     .option('--temp-dir <path>', 'Temp directory for intermediate files')
-    .option('--concurrency <n>', 'Max concurrent render threads', '4')
+    .option('--concurrency <n>', 'Max concurrent render threads', String(RENDER_DEFAULT_CONCURRENCY))
     .option('--stdin', 'Read project config from stdin pipe', false)
     .action(async (opts) => {
       await withCliOutput('render', async () => {
@@ -55,6 +70,10 @@ export function registerRenderCommand(program: Command): void {
         if (!outputPath) throw new Error('No output file specified. Use -o <path> or pipe config with --stdin');
 
         logger.info(`Rendering ${inputPath} -> ${outputPath}`);
+
+        if (shouldWarnUnsupportedConcurrency(opts.concurrency)) {
+          logger.warn('--concurrency is not yet supported; rendering will proceed sequentially');
+        }
 
         const { headlessRender } = await import('@open-factory/editor-core/headless');
 
