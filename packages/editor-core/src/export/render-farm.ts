@@ -39,6 +39,8 @@ export interface RenderFarmRunContext {
   onSegments?(segments: RenderFarmSegmentStatus[]): void;
   onSegmentUpdate?(segment: RenderFarmSegmentStatus): void;
   onProgress?(progress: number): void;
+  /** Returns true when the owning task has been canceled/interrupted. */
+  isCanceled?(): boolean;
 }
 
 export const RENDER_FARM_SPLIT_THRESHOLD_SECONDS = 60;
@@ -211,7 +213,12 @@ export async function runRenderFarmWithFallback(context: RenderFarmRunContext): 
       `${context.taskId}:concat`,
     );
     return { report: result.report, usedFallback: false };
-  } catch {
+  } catch (error) {
+    // When the task was canceled, rethrow instead of falling back to a
+    // full export — a canceled task must not start a new FFmpeg process.
+    if (context.isCanceled?.()) {
+      throw error;
+    }
     segments = segments.map((segment) =>
       segment.status === 'success' ? segment : { ...segment, status: 'error', progress: 0 },
     );
@@ -231,10 +238,19 @@ async function runSegmentsInPool(context: RenderFarmRunContext, segments: Render
   let cursor = 0;
   let failure: unknown;
   async function worker(): Promise<void> {
-    while (cursor < segments.length && !failure) {
+    while (cursor < segments.length && !failure && !context.isCanceled?.()) {
       const segment = segments[cursor];
       cursor += 1;
       updateSegment(context, segments, segment.id, { status: 'running', progress: 0.05 });
+      if (context.isCanceled?.()) {
+        failure = new Error('Export canceled.');
+        updateSegment(context, segments, segment.id, {
+          status: 'error',
+          progress: 0,
+          error: 'Export canceled.',
+        });
+        break;
+      }
       try {
         await context.runPlan(
           buildRenderFarmSegmentPlan(context.plan, { ...segment, status: 'running', progress: 0.05 }),

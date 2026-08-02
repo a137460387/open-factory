@@ -691,15 +691,29 @@ fn encoder_list_contains(encoders: &str, encoder: &str) -> bool {
 #[tauri::command(rename_all = "camelCase")]
 pub fn cancel_export(task_id: Option<String>) -> Result<(), String> {
     let slot_id = export_slot_id(task_id.as_deref());
-    if let Some(mut child) = export_children()
+    let mut children = export_children()
         .lock()
-        .map_err(|_| "Unable to lock export process".to_string())?
-        .remove(&slot_id)
-    {
-        child.kill().map_err(|error| error.to_string())?;
-        let _ = child.wait();
+        .map_err(|_| "Unable to lock export process".to_string())?;
+    let slot_keys = collect_cancel_slot_keys(&slot_id, children.keys().cloned());
+    for key in slot_keys {
+        if let Some(mut child) = children.remove(&key) {
+            child.kill().map_err(|error| error.to_string())?;
+            let _ = child.wait();
+        }
     }
     Ok(())
+}
+
+/// Collect slot ids that belong to a task, including render-farm child
+/// slots named `<taskId>:<segment>` or `<taskId>:concat`.
+fn collect_cancel_slot_keys(
+    slot_id: &str,
+    keys: impl IntoIterator<Item = String>,
+) -> Vec<String> {
+    let prefix = format!("{}:", slot_id);
+    keys.into_iter()
+        .filter(|key| key == slot_id || key.starts_with(&prefix))
+        .collect()
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -4885,6 +4899,57 @@ unrelated line
         {
             let children = export_children().lock().expect("export child lock");
             assert!(!children.contains_key("task-a"));
+            assert!(children.contains_key("task-b"));
+        }
+        cancel_export(Some("task-b".to_string())).expect("task-b cleanup should not fail");
+    }
+
+    #[test]
+    fn collect_cancel_slot_keys_matches_exact_and_child_prefix() {
+        let keys = collect_cancel_slot_keys(
+            "task-a",
+            vec![
+                "task-a".to_string(),
+                "task-a:segment-0".to_string(),
+                "task-a:segment-1".to_string(),
+                "task-a:concat".to_string(),
+                "task-b".to_string(),
+                "task-ab".to_string(),
+            ],
+        );
+        assert_eq!(
+            keys,
+            vec![
+                "task-a".to_string(),
+                "task-a:segment-0".to_string(),
+                "task-a:segment-1".to_string(),
+                "task-a:concat".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn cancel_export_removes_child_slots_with_prefix() {
+        let _guard = export_children_test_guard();
+        let child_a = spawn_long_running_child();
+        let child_segment_0 = spawn_long_running_child();
+        let child_segment_1 = spawn_long_running_child();
+        let child_b = spawn_long_running_child();
+        {
+            let mut children = export_children().lock().expect("export child lock");
+            children.insert("task-a".to_string(), child_a);
+            children.insert("task-a:segment-0".to_string(), child_segment_0);
+            children.insert("task-a:segment-1".to_string(), child_segment_1);
+            children.insert("task-b".to_string(), child_b);
+        }
+
+        cancel_export(Some("task-a".to_string())).expect("task-a cancellation should not fail");
+
+        {
+            let children = export_children().lock().expect("export child lock");
+            assert!(!children.contains_key("task-a"));
+            assert!(!children.contains_key("task-a:segment-0"));
+            assert!(!children.contains_key("task-a:segment-1"));
             assert!(children.contains_key("task-b"));
         }
         cancel_export(Some("task-b".to_string())).expect("task-b cleanup should not fail");

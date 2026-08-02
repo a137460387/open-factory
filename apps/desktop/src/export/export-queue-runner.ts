@@ -383,6 +383,10 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           onSegments: (segments) => useExportQueueStore.getState().setTaskSegments(task.id, segments),
           onSegmentUpdate: (segment) => useExportQueueStore.getState().updateTaskSegment(task.id, segment.id, segment),
           onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress),
+          isCanceled: () => {
+            const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
+            return latest?.status === 'canceled' || latest?.status === 'interrupted';
+          },
         })
       : await runRecoverableLocalExportTask(task, (entries) => {
           recoveryEntries = entries;

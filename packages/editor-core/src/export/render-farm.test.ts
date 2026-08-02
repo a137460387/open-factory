@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   RENDER_FARM_SPLIT_THRESHOLD_SECONDS,
   RENDER_FARM_TARGET_SEGMENT_SECONDS,
@@ -9,7 +9,10 @@ import {
   buildRenderFarmConcatList,
   calculateRenderFarmProgress,
   createRenderFarmSegmentStatuses,
+  runRenderFarmWithFallback,
 } from './render-farm';
+import type { FfmpegExportPlan } from './export-types';
+import type { RenderFarmRunContext } from './render-farm';
 
 describe('constants', () => {
   it('has expected values', () => {
@@ -144,5 +147,85 @@ describe('calculateRenderFarmProgress', () => {
       { duration: 30, progress: 0.5 },
     ];
     expect(calculateRenderFarmProgress(statuses)).toBeCloseTo(0.75);
+  });
+});
+
+describe('runRenderFarmWithFallback cancellation', () => {
+  function makePlan(overrides: Partial<FfmpegExportPlan> = {}): FfmpegExportPlan {
+    return {
+      projectName: 'test',
+      inputs: [],
+      filterComplex: '',
+      maps: [],
+      outputArgs: ['/out.mp4'],
+      fullArgs: ['-y', '-i', 'in.mp4', '/out.mp4'],
+      warnings: [],
+      textArtifacts: [],
+      nestedPlans: [],
+      duration: 120,
+      ...overrides,
+    };
+  }
+
+  function makeContext(overrides: Partial<RenderFarmRunContext> = {}): RenderFarmRunContext {
+    return {
+      taskId: 'task-cancel',
+      outputPath: '/out.mp4',
+      plan: makePlan(),
+      config: { enabled: true, maxInstances: 1 },
+      tempSegmentsDir: '/tmp/segments',
+      runPlan: async () => ({ report: undefined }),
+      writeFile: async () => {},
+      removeFile: async () => {},
+      ...overrides,
+    };
+  }
+
+  it('rethrows without fallback when canceled after a segment failure', async () => {
+    // State-driven: once the segment run starts, the task becomes canceled.
+    // isCanceled is deliberately order-independent (returns current state).
+    let canceled = false;
+    const runPlan = vi.fn<(...args: Parameters<RenderFarmRunContext['runPlan']>) => Promise<{ report?: undefined }>>(
+      async () => {
+        canceled = true;
+        throw new Error('Export canceled.');
+      },
+    );
+    const isCanceled = vi.fn(() => canceled);
+    const removeFile = vi.fn().mockResolvedValue(undefined);
+    const context = makeContext({ runPlan, isCanceled, removeFile });
+
+    const outcome = await runRenderFarmWithFallback(context).then(
+      () => ({ rejected: false }),
+      () => ({ rejected: true }),
+    );
+
+    // A segment was attempted, but no full-export fallback was started
+    expect(outcome.rejected).toBe(true);
+    expect(runPlan).toHaveBeenCalledTimes(1);
+    const calledTaskId = (runPlan.mock.calls[0]?.[1] as string | undefined) ?? '';
+    expect(calledTaskId.startsWith('task-cancel:segment-')).toBe(true);
+  });
+
+  it('does not dispatch a new segment once canceled is observed', async () => {
+    // The task becomes canceled after the first isCanceled check, so the
+    // worker stops before spawning any segment.
+    const runPlan = vi.fn().mockResolvedValue({ report: undefined });
+    let checkCount = 0;
+    const isCanceled = vi.fn(() => {
+      checkCount += 1;
+      return checkCount > 1;
+    });
+    const removeFile = vi.fn().mockResolvedValue(undefined);
+    const context = makeContext({ runPlan, isCanceled, removeFile });
+
+    const outcome = await runRenderFarmWithFallback(context).then(
+      () => ({ rejected: false }),
+      () => ({ rejected: true }),
+    );
+
+    // No segment run was started at all
+    expect(outcome.rejected).toBe(true);
+    expect(runPlan).not.toHaveBeenCalled();
   });
 });
