@@ -130,7 +130,7 @@ describe('MacroRecorder', () => {
       expect(listener).toHaveBeenCalledTimes(4);
     });
 
-    it('should notify operation listeners', () => {
+    it('should notify operation listeners', async () => {
       const listener = vi.fn();
       recorder.onOperation(listener);
 
@@ -138,9 +138,8 @@ describe('MacroRecorder', () => {
       recorder.recordOperation('clip.trim', 'clip-1', { trimStart: 10 });
 
       // Wait for debounce
-      setTimeout(() => {
-        expect(listener).toHaveBeenCalledTimes(1);
-      }, 100);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(listener).toHaveBeenCalledTimes(1);
     });
 
     it('should unsubscribe listeners', () => {
