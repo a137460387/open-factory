@@ -1,5 +1,17 @@
-import { describe, test, expect } from 'vitest';
-import { parseFfmpegProgress } from '../../src/headless/headless-renderer';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EventEmitter } from 'node:events';
+import {
+  parseFfmpegProgress,
+  terminateFfmpegChildProcess,
+  FFMPEG_ABORT_KILL_DELAY_MS,
+} from '../../src/headless/headless-renderer';
+
+const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));
+
+vi.mock('node:child_process', () => ({ spawn: spawnMock }));
+vi.mock('node:fs/promises', () => ({
+  stat: vi.fn().mockResolvedValue({ size: 100 }),
+}));
 
 describe('parseFfmpegProgress', () => {
   test('parses frame, fps, and time from ffmpeg output', () => {
@@ -41,5 +53,153 @@ describe('parseFfmpegProgress', () => {
 
     expect(result).not.toBeNull();
     expect(result!.percent).toBeCloseTo(50, 0);
+  });
+});
+
+class FakeProc extends EventEmitter {
+  stderr = new EventEmitter();
+  stdout = new EventEmitter();
+  readonly kills: Array<string | number | undefined> = [];
+
+  kill(signal?: string | number): boolean {
+    this.kills.push(signal);
+    return true;
+  }
+}
+
+const BASE_OPTIONS = {
+  config: { ffmpegPath: 'ffmpeg' },
+  args: ['-i', 'in.mp4'],
+  outputPath: '/out.mp4',
+  duration: 10,
+};
+
+describe('terminateFfmpegChildProcess', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('sends SIGTERM on abort and SIGKILL after the delay when still running', () => {
+    const proc = new FakeProc();
+    const controller = new AbortController();
+    const cleanup = terminateFfmpegChildProcess(proc, controller.signal);
+
+    controller.abort();
+    expect(proc.kills).toEqual(['SIGTERM']);
+
+    vi.advanceTimersByTime(FFMPEG_ABORT_KILL_DELAY_MS);
+    expect(proc.kills).toEqual(['SIGTERM', 'SIGKILL']);
+
+    cleanup();
+  });
+
+  test('does not schedule SIGKILL when the process is already gone', () => {
+    const proc = new FakeProc();
+    proc.kill = (signal?: string | number) => {
+      proc.kills.push(signal);
+      return false;
+    };
+    const controller = new AbortController();
+    const cleanup = terminateFfmpegChildProcess(proc, controller.signal);
+
+    controller.abort();
+    expect(proc.kills).toEqual(['SIGTERM']);
+
+    vi.advanceTimersByTime(FFMPEG_ABORT_KILL_DELAY_MS);
+    expect(proc.kills).toEqual(['SIGTERM']);
+
+    cleanup();
+  });
+
+  test('handles an already-aborted signal', () => {
+    const proc = new FakeProc();
+    const controller = new AbortController();
+    controller.abort();
+    const cleanup = terminateFfmpegChildProcess(proc, controller.signal);
+
+    expect(proc.kills).toEqual(['SIGTERM']);
+    vi.advanceTimersByTime(FFMPEG_ABORT_KILL_DELAY_MS);
+    expect(proc.kills).toEqual(['SIGTERM', 'SIGKILL']);
+
+    cleanup();
+  });
+
+  test('cleanup stops abort handling and clears the kill timer', () => {
+    const proc = new FakeProc();
+    const controller = new AbortController();
+    const cleanup = terminateFfmpegChildProcess(proc, controller.signal);
+    cleanup();
+
+    controller.abort();
+    expect(proc.kills).toEqual([]);
+
+    vi.advanceTimersByTime(FFMPEG_ABORT_KILL_DELAY_MS);
+    expect(proc.kills).toEqual([]);
+  });
+});
+
+describe('executeFfmpegRender with AbortSignal', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    spawnMock.mockReset();
+  });
+
+  test('rejects with aborted result when signal aborts during render', async () => {
+    const proc = new FakeProc();
+    spawnMock.mockReturnValue(proc);
+    const { executeFfmpegRender } = await import('../../src/headless/headless-renderer');
+
+    const controller = new AbortController();
+    const promise = executeFfmpegRender(BASE_OPTIONS, controller.signal);
+    // executeFfmpegRender awaits dynamic imports before spawn; wait for it
+    await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+
+    controller.abort();
+    expect(proc.kills).toEqual(['SIGTERM']);
+
+    proc.emit('close', null);
+    const result = await promise;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('aborted');
+  });
+
+  test('kills an already-aborted signal immediately without registering a listener', async () => {
+    const proc = new FakeProc();
+    spawnMock.mockReturnValue(proc);
+    const { executeFfmpegRender } = await import('../../src/headless/headless-renderer');
+
+    const controller = new AbortController();
+    controller.abort();
+    const promise = executeFfmpegRender(BASE_OPTIONS, controller.signal);
+    await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+
+    expect(proc.kills).toEqual(['SIGTERM']);
+
+    proc.emit('close', null);
+    const result = await promise;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('aborted');
+  });
+
+  test('behaves identically when no signal is provided', async () => {
+    const proc = new FakeProc();
+    spawnMock.mockReturnValue(proc);
+    const { executeFfmpegRender } = await import('../../src/headless/headless-renderer');
+
+    const promise = executeFfmpegRender(BASE_OPTIONS);
+    await vi.waitFor(() => expect(spawnMock).toHaveBeenCalledTimes(1));
+
+    proc.emit('close', 0);
+    const result = await promise;
+
+    expect(result.success).toBe(true);
+    expect(result.outputPath).toBe('/out.mp4');
+    expect(proc.kills).toEqual([]);
   });
 });

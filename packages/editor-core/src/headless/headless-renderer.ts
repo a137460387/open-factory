@@ -16,6 +16,45 @@ export interface FfmpegRenderOptions {
   onProgress?: (progress: HeadlessProgress) => void;
 }
 
+/** Delay before force-killing the FFmpeg child process after abort. */
+export const FFMPEG_ABORT_KILL_DELAY_MS = 3000;
+
+/**
+ * Wire an AbortSignal to terminate an FFmpeg child process.
+ *
+ * Sends SIGTERM first (graceful), then force-kills with SIGKILL after
+ * FFMPEG_ABORT_KILL_DELAY_MS if the process has not exited. Returns a cleanup
+ * function that removes the abort listener and clears the forced-kill timer;
+ * call it once the child process has exited so no timer or listener leaks.
+ */
+export function terminateFfmpegChildProcess(
+  proc: { kill: (signal?: NodeJS.Signals | number) => boolean },
+  signal: AbortSignal,
+): () => void {
+  let forceKillTimer: ReturnType<typeof setTimeout> | undefined;
+  const onAbort = () => {
+    if (!proc.kill('SIGTERM')) {
+      return;
+    }
+    forceKillTimer = setTimeout(() => {
+      if (signal.aborted) {
+        proc.kill('SIGKILL');
+      }
+    }, FFMPEG_ABORT_KILL_DELAY_MS);
+  };
+  if (signal.aborted) {
+    onAbort();
+  } else {
+    signal.addEventListener('abort', onAbort, { once: true });
+  }
+  return () => {
+    signal.removeEventListener('abort', onAbort);
+    if (forceKillTimer) {
+      clearTimeout(forceKillTimer);
+    }
+  };
+}
+
 /**
  * Parse FFmpeg stderr output for progress information.
  */
@@ -61,7 +100,10 @@ export function parseFfmpegProgress(
 /**
  * Execute FFmpeg render in a child process.
  */
-export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise<HeadlessRenderResult> {
+export async function executeFfmpegRender(
+  options: FfmpegRenderOptions,
+  signal?: AbortSignal,
+): Promise<HeadlessRenderResult> {
   const { spawn } = await import('node:child_process');
   const { stat } = await import('node:fs/promises');
   const startTime = Date.now();
@@ -74,6 +116,7 @@ export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise
 
     let stderrBuffer = '';
     const warnings: string[] = [];
+    const cleanupAbort = signal ? terminateFfmpegChildProcess(proc, signal) : undefined;
 
     proc.stderr.on('data', (chunk: Buffer) => {
       stderrBuffer += chunk.toString();
@@ -95,7 +138,20 @@ export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise
     });
 
     proc.on('close', async (code) => {
+      cleanupAbort?.();
       const duration = (Date.now() - startTime) / 1000;
+
+      if (signal?.aborted) {
+        resolve({
+          success: false,
+          outputPath: '',
+          duration,
+          fileSize: 0,
+          warnings,
+          error: 'FFmpeg render aborted',
+        });
+        return;
+      }
 
       if (code !== 0) {
         resolve({
@@ -135,6 +191,7 @@ export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise
     });
 
     proc.on('error', (err) => {
+      cleanupAbort?.();
       resolve({
         success: false,
         outputPath: '',
@@ -153,6 +210,7 @@ export async function executeFfmpegRender(options: FfmpegRenderOptions): Promise
 export async function headlessRender(
   request: HeadlessRenderRequest,
   config: Partial<HeadlessConfig> = {},
+  signal?: AbortSignal,
 ): Promise<HeadlessRenderResult> {
   const core = new HeadlessEditorCore(config);
   const effectiveConfig = core.getConfig();
@@ -214,5 +272,5 @@ export async function headlessRender(
     outputPath: request.outputPath,
     duration,
     onProgress: request.onProgress,
-  });
+  }, signal);
 }
