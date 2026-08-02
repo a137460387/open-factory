@@ -4,16 +4,16 @@
 - Conventional-commit prefixes (`feat:`, `fix:`, `chore:`, etc.), code identifiers, file paths, and code itself are unaffected by the rule above.
 - Do not upload user media. open-factory is local-first and must not add telemetry, login, or cloud services.
 - Timeline mutation must go through command objects. Do not directly call Zustand setters to modify timeline clips or tracks from React components.
-- Core timeline algorithms must have Vitest coverage. Keep `packages/editor-core` coverage at or above 80%.
+- Core timeline algorithms must have Vitest coverage. Keep `packages/editor-core` coverage at or above 80%; enforced via the `thresholds` glob for `packages/editor-core/src/**` in `vitest.config.ts`.
 - Do not copy third-party project code, assets, logo, or wording. Keep implementation clean-room.
 - Local media preview must use Tauri `convertFileSrc`; never assign `file://` directly to video, image, or audio sources.
 - Run typecheck, tests, and build before summarizing completed work.
-- Follow the public roadmap and architecture docs for implementation order: core first, then app shell, media, timeline, preview, inspector, project files, export, shortcuts, error handling.
-- Modify `packages/editor-core/src/export/ffmpeg-builder.ts` only with matching `ffmpeg-builder.test.ts` coverage.
+- Before implementing a new feature, check module dependency order against `docs/roadmap.md` and `docs/architecture.md`; follow the order described there instead of any fixed sequence.
+- Modify `packages/editor-core/src/export/ffmpeg-builder/**` only with matching coverage in `packages/editor-core/__tests__/ffmpeg-builder.test.ts`.
 - Modify project schema only with matching `project-migration.ts` and migration tests.
 - Media import changes must consider `apps/desktop/src/cache/cache-service.ts`.
 - Main UI flow changes must keep useful `data-testid` coverage for Playwright E2E.
-- All Tauri invoke/listen/dialog/shell calls from frontend business code must go through `apps/desktop/src/lib/tauri-bridge.ts`.
+- All Tauri invoke/listen/dialog/shell calls from frontend business code must go through `apps/desktop/src/lib/tauri-bridge.ts`. Type-only imports (`import type` from `@tauri-apps/*`) are exempt; runtime invoke/listen/dialog/shell calls must use the bridge.
 - New Tauri commands must be registered in `apps/desktop/src-tauri/src/lib.rs`.
 - FFmpeg execution must use `Command::new("ffmpeg").args(&plan.full_args)` style argument arrays; do not execute shell strings.
 - Cache key rule changes must update `cache-key.test.ts`.
