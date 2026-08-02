@@ -146,7 +146,7 @@ jobs:
         with:
           max_attempts: 2
           timeout_minutes: 10
-          command: cargo audit
+          command: cd "$GITHUB_WORKSPACE/apps/desktop/src-tauri" && cargo audit
 
       - name: Upload test results
         if: always()
