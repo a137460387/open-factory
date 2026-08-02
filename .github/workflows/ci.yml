@@ -115,6 +115,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
+            ~/.cargo/bin
             apps/desktop/src-tauri/target
           key: cargo-${{ runner.os }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-
@@ -144,7 +145,11 @@ jobs:
         working-directory: apps/desktop/src-tauri
 
       - name: Audit
-        run: cargo audit
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 2
+          timeout_minutes: 10
+          command: cargo audit
 
       - name: Upload test results
         if: always()
