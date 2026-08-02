@@ -9,7 +9,7 @@ import {
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { getPreviewMediaPath } from './proxy';
-import { runBackgroundMediaTask } from './background-media-task-queue';
+import { runUiFeedbackTask } from './background-media-task-queue';
 import type { TimelineThumbnailWorkerInput, TimelineThumbnailWorkerOutput } from '../workers/timeline-thumbnail.worker';
 
 type VideoClip = Extract<Clip, { type: 'video' }>;
@@ -62,7 +62,7 @@ export async function getTimelineThumbnails(
   if (frames.every((frame) => thumbnailCache.has(frame.key))) {
     return frames.map((frame) => ({ ...frame, dataUrl: thumbnailCache.get(frame.key) }));
   }
-  return runBackgroundMediaTask(() => getTimelineThumbnailsUnthrottled(asset, clip, pixelWidth));
+  return runUiFeedbackTask(() => getTimelineThumbnailsUnthrottled(asset, clip, pixelWidth));
 }
 
 export async function getTimelineThumbnailFrame(asset: MediaAsset, timestamp: number): Promise<TimelineThumbnailFrame> {
@@ -70,7 +70,7 @@ export async function getTimelineThumbnailFrame(asset: MediaAsset, timestamp: nu
   if (thumbnailCache.has(frame.key)) {
     return { ...frame, dataUrl: thumbnailCache.get(frame.key) };
   }
-  return runBackgroundMediaTask(async () => {
+  return runUiFeedbackTask(async () => {
     const mediaPath = getPreviewMediaPath(asset);
     const pending =
       pendingFrames.get(frame.key) ??

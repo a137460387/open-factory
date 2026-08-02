@@ -6,9 +6,9 @@ import { createProxyForAsset } from './proxy';
 import { getWaveform } from './waveform';
 import { useMediaJobStore, type MediaJob } from './media-job-store';
 import { shouldIgnoreMediaJobCompletion } from './media-job-monitor';
+import { backgroundMediaPool } from './media-concurrency';
 
 let runnerPromise: Promise<void> | undefined;
-const MEDIA_JOB_MAX_CONCURRENT = 3;
 
 export function enqueueBackgroundMediaJobs(media: MediaAsset[], proxySettings?: ProxySettings): void {
   useMediaJobStore.getState().enqueueJobsForMedia(media, proxySettings);
@@ -30,7 +30,9 @@ export function ensureMediaJobRunner(): Promise<void> {
 async function runJobs(): Promise<void> {
   const running = new Set<Promise<void>>();
   while (true) {
-    while (running.size < MEDIA_JOB_MAX_CONCURRENT) {
+    // 共享全局后台池:proxy / 导入 waveform 等批量任务共用槽位,
+    // 避免一次导入大量素材时瞬间撑满系统资源(审计 H2)。
+    while (running.size < backgroundMediaPool.limit) {
       const job = useMediaJobStore.getState().startNextJob();
       if (!job) {
         break;

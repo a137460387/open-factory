@@ -12,6 +12,7 @@ import {useEditorUIStore} from '../store/editorUIStore';
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useMediaJobStore} from '../media/media-job-store';
 import {ensureMediaJobRunner} from '../media/media-job-runner';
+import {runBackgroundMediaTask} from '../media/background-media-task-queue';
 import {probeMediaPaths, pickMediaPaths} from '../lib/media';
 import {indexAndTagImportedMedia} from '../media/media-index-integration';
 import {generateMediaFingerprint, scanDuplicateMediaGroups} from '../lib/duplicateMedia';
@@ -273,10 +274,13 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
     try {
       const projectPath = useEditorStore.getState().projectPath;
       const baseDir = projectPath ? dirname(projectPath) : await getAppDataDir();
-      const result = await batchExtractCoverFrames({
-        outputDir: joinLocalPath(baseDir, 'covers'),
-        tasks,
-      });
+      // 批量封面帧走共享后台池,防止一次生成大量封面时撑满资源(审计 H2)。
+      const result = await runBackgroundMediaTask(() =>
+        batchExtractCoverFrames({
+          outputDir: joinLocalPath(baseDir, 'covers'),
+          tasks,
+        }),
+      );
       const completed = result.results.filter((item) => item.status === 'completed').length;
       if (completed === 0) {
         showToast({

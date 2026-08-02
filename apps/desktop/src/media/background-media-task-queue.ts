@@ -1,52 +1,24 @@
-const DEFAULT_BACKGROUND_MEDIA_TASK_LIMIT = 3;
+import {
+  MediaSemaphore,
+  backgroundMediaPool,
+  uiFeedbackPool,
+} from './media-concurrency';
 
-type PendingTask<T> = {
-  run: () => Promise<T> | T;
-  resolve: (value: T) => void;
-  reject: (error: unknown) => void;
-};
+/**
+ * 兼容旧 API:BackgroundMediaTaskQueue 即 MediaSemaphore。
+ * 保留该类名以避免破坏既有调用方与测试。
+ */
+export { MediaSemaphore as BackgroundMediaTaskQueue } from './media-concurrency';
 
-export class BackgroundMediaTaskQueue {
-  private active = 0;
-  private readonly pending: Array<PendingTask<unknown>> = [];
-
-  constructor(private readonly maxConcurrent = DEFAULT_BACKGROUND_MEDIA_TASK_LIMIT) {}
-
-  get activeCount(): number {
-    return this.active;
-  }
-
-  get pendingCount(): number {
-    return this.pending.length;
-  }
-
-  run<T>(run: () => Promise<T> | T): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      this.pending.push({ run, resolve, reject } as PendingTask<unknown>);
-      this.drain();
-    });
-  }
-
-  private drain(): void {
-    while (this.active < this.maxConcurrent && this.pending.length > 0) {
-      const task = this.pending.shift();
-      if (!task) {
-        return;
-      }
-      this.active += 1;
-      Promise.resolve()
-        .then(task.run)
-        .then(task.resolve, task.reject)
-        .finally(() => {
-          this.active -= 1;
-          this.drain();
-        });
-    }
-  }
+/** 排队运行一个后台/批量媒体任务(默认走共享后台池)。 */
+export function runBackgroundMediaTask<T>(
+  run: () => Promise<T> | T,
+  pool: MediaSemaphore = backgroundMediaPool,
+): Promise<T> {
+  return pool.run(run);
 }
 
-const backgroundMediaTaskQueue = new BackgroundMediaTaskQueue();
-
-export function runBackgroundMediaTask<T>(run: () => Promise<T> | T): Promise<T> {
-  return backgroundMediaTaskQueue.run(run);
+/** 排队运行一个实时 UI 反馈任务(时间线缩略图/波形等),走独立 UI 池。 */
+export function runUiFeedbackTask<T>(run: () => Promise<T> | T): Promise<T> {
+  return uiFeedbackPool.run(run);
 }

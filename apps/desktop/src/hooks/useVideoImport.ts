@@ -4,6 +4,7 @@ import { extractCoverFrames } from '../lib/tauri-bridge';
 import { openPath } from '../lib/tauri-bridge/window';
 import { showToast } from '../lib/toast';
 import { useEditorStore } from '../store/editorStore';
+import { runUiFeedbackTask } from '../media/background-media-task-queue';
 
 /**
  * Hook for importing AI-generated video into the timeline.
@@ -19,19 +20,23 @@ export function useVideoImport() {
         const asset = await probeMediaPath(videoPath);
         addMedia([asset]);
 
-        // Extract cover frame in background (non-blocking)
+        // Extract cover frame in background (non-blocking). Single-shot
+        // interaction path → UI feedback pool so it is not starved by
+        // batch background jobs.
         const outputDir = videoPath.replace(/[/\\][^/\\]+$/, '');
         const outputStem = videoPath
           .replace(/^.*[/\\]/, '')
           .replace(/\.[^.]+$/, '');
-        extractCoverFrames({
-          clipId: asset.id,
-          sourcePath: videoPath,
-          outputDir,
-          outputStem,
-          mode: 'i-frame',
-          count: 1,
-        }).catch(() => {
+        runUiFeedbackTask(() =>
+          extractCoverFrames({
+            clipId: asset.id,
+            sourcePath: videoPath,
+            outputDir,
+            outputStem,
+            mode: 'i-frame',
+            count: 1,
+          }),
+        ).catch(() => {
           // Cover frame extraction is best-effort; don't block import
         });
 

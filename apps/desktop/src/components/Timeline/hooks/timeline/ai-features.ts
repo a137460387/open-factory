@@ -38,6 +38,7 @@ import {createSubtitleClipsFromDialogues, compareDialogueWithWhisper} from '@ope
 import {AddTransitionCommand} from '@open-factory/editor-core';
 import type {TimelineHandlerParams} from './types';
 import {buildSubtitleAlignmentPeaks, isSubtitleAlignmentMediaClip, timelineRangesOverlap, getCoverFrameOutputDir, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND, SUBTITLE_ALIGNMENT_MAX_DISTANCE} from './utils';
+import {runUiFeedbackTask} from '../../../../media/background-media-task-queue';
 
 export function createAiFeatureHandlers(
   params: TimelineHandlerParams,
@@ -436,15 +437,18 @@ export function createAiFeatureHandlers(
       });
       const outputDir = await getCoverFrameOutputDir(projectPath);
       const timestamps = buildEvenCoverFrameTimestamps(asset.duration || clip.duration, 6);
-      const result = await extractCoverFrames({
-        clipId: clip.id,
-        sourcePath: asset.path,
-        outputDir,
-        outputStem: sanitizeCoverFileStem(`${project.name}-${clip.name}-${clip.id}`),
-        mode: 'interval',
-        count: 6,
-        timestamps,
-      });
+      // 单发交互路径(带进度弹窗)走 UI 池,不被后台批量任务挤占。
+      const result = await runUiFeedbackTask(() =>
+        extractCoverFrames({
+          clipId: clip.id,
+          sourcePath: asset.path,
+          outputDir,
+          outputStem: sanitizeCoverFileStem(`${project.name}-${clip.name}-${clip.id}`),
+          mode: 'interval',
+          count: 6,
+          timestamps,
+        }),
+      );
       if (result.frames.length === 0) {
         setCoverFrameDialog({ clip, frames: [], progress: 1, loading: false, error: zhCN.timeline.coverFrameEmpty });
         return;

@@ -3,11 +3,11 @@ import { serializePitchDataCsv, type Clip, type ClipPitchDataPoint, type MediaAs
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { saveFileDialog, writeFile } from '../lib/tauri-bridge';
-import { runBackgroundMediaTask } from './background-media-task-queue';
+import { runUiFeedbackTask } from './background-media-task-queue';
 import type { PitchAnalysisWorkerInput, PitchAnalysisWorkerOutput } from '../workers/pitch-analysis.worker';
 
 export async function analyzeClipPitch(asset: MediaAsset): Promise<ClipPitchDataPoint[]> {
-  return runBackgroundMediaTask(async () => {
+  return runUiFeedbackTask(async () => {
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextCtor) {
       return [];

@@ -4,7 +4,7 @@ import { readWaveformFromCache, writeWaveformToCache } from '../cache/cache-serv
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { analyzeWaveform, getFileStat, type FileStat } from '../lib/tauri-bridge';
-import { runBackgroundMediaTask } from './background-media-task-queue';
+import { runUiFeedbackTask } from './background-media-task-queue';
 import type { WaveformWorkerInput, WaveformWorkerOutput } from '../workers/waveform.worker';
 
 export interface WaveformResult {
@@ -27,7 +27,9 @@ export async function getWaveform(
   if (cached && cached.pointsPerSecond >= pointsPerSecond) {
     return toResult(cached);
   }
-  return runBackgroundMediaTask(() => getWaveformUnthrottled(asset, pointsPerSecond));
+  // 实时 UI 反馈任务走独立 UI 池:时间线展开/滚动时不被后台批量
+  // (proxy 等)挤占,同时避免导入侧经 media-job 池 + 内层队列的双重排队。
+  return runUiFeedbackTask(() => getWaveformUnthrottled(asset, pointsPerSecond));
 }
 
 async function getWaveformUnthrottled(
