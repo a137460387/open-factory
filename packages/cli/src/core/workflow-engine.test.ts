@@ -25,6 +25,18 @@ const mockLogger: CliLogger = {
   error: vi.fn(),
 };
 
+// Use `node -e "1"` instead of `echo` for cross-platform compatibility:
+// `echo` is a shell builtin on Windows and cannot be spawned directly.
+function noopCommand(id: string, overrides: Partial<CommandStep> = {}): CommandStep {
+  return {
+    id,
+    type: 'command',
+    command: process.execPath,
+    args: { code: '-e', value: '1' },
+    ...overrides,
+  };
+}
+
 function makeContext(vars: Record<string, string> = {}): WorkflowContext {
   return { variables: vars, logger: mockLogger };
 }
@@ -44,7 +56,7 @@ describe('Workflow Engine', () => {
   describe('validateWorkflow', () => {
     it('should validate a valid definition', () => {
       const def = makeDef([
-        { id: 'step1', type: 'command', command: 'echo' } satisfies CommandStep,
+        { id: 'step1', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } } satisfies CommandStep,
       ]);
       const result = validateWorkflow(def);
       expect(result.valid).toBe(true);
@@ -52,7 +64,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should error on missing name', () => {
-      const def = { name: '', version: '1.0', steps: [{ id: 'a', type: 'command' as const, command: 'echo' }] };
+      const def = { name: '', version: '1.0', steps: [{ id: 'a', type: 'command' as const, command: process.execPath }] };
       const result = validateWorkflow(def);
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Missing workflow name');
@@ -67,7 +79,7 @@ describe('Workflow Engine', () => {
 
     it('should warn on missing version', () => {
       const def = makeDef(
-        [{ id: 'a', type: 'command', command: 'echo' }],
+        [{ id: 'a', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } }],
         { version: '' },
       );
       const result = validateWorkflow(def);
@@ -76,7 +88,7 @@ describe('Workflow Engine', () => {
 
     it('should error on duplicate step IDs', () => {
       const def = makeDef([
-        { id: 'dup', type: 'command', command: 'echo' },
+        { id: 'dup', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } },
         { id: 'dup', type: 'command', command: 'ls' },
       ]);
       const result = validateWorkflow(def);
@@ -86,7 +98,7 @@ describe('Workflow Engine', () => {
 
     it('should error on missing step id', () => {
       const def = makeDef([
-        { id: '', type: 'command', command: 'echo' },
+        { id: '', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } },
       ]);
       const result = validateWorkflow(def);
       expect(result.valid).toBe(false);
@@ -95,7 +107,7 @@ describe('Workflow Engine', () => {
 
     it('should error on unknown dependency', () => {
       const def = makeDef([
-        { id: 'step1', type: 'command', command: 'echo', dependsOn: ['nonexistent'] },
+        { id: 'step1', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['nonexistent'] },
       ]);
       const result = validateWorkflow(def);
       expect(result.valid).toBe(false);
@@ -104,7 +116,7 @@ describe('Workflow Engine', () => {
 
     it('should accept valid dependencies', () => {
       const def = makeDef([
-        { id: 'step1', type: 'command', command: 'echo' },
+        { id: 'step1', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } },
         { id: 'step2', type: 'command', command: 'ls', dependsOn: ['step1'] },
       ]);
       const result = validateWorkflow(def);
@@ -125,8 +137,8 @@ describe('Workflow Engine', () => {
 
     it('should detect circular dependencies', async () => {
       const def = makeDef([
-        { id: 'a', type: 'command', command: 'echo', dependsOn: ['b'] },
-        { id: 'b', type: 'command', command: 'echo', dependsOn: ['a'] },
+        { id: 'a', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['b'] },
+        { id: 'b', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['a'] },
       ]);
       const result = await runWorkflow(def, makeContext());
       expect(result.success).toBe(false);
@@ -135,7 +147,7 @@ describe('Workflow Engine', () => {
 
     it('should fail on unmet dependencies', async () => {
       const def = makeDef([
-        { id: 'step2', type: 'command', command: 'echo', dependsOn: ['step1'] },
+        { id: 'step2', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['step1'] },
       ]);
       const result = await runWorkflow(def, makeContext());
       expect(result.success).toBe(false);
@@ -145,7 +157,7 @@ describe('Workflow Engine', () => {
 
     it('should merge variables from definition and context', async () => {
       const def = makeDef(
-        [{ id: 'a', type: 'command', command: 'echo' }],
+        [{ id: 'a', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } }],
         { variables: { fromDef: 'def-val' } },
       );
       const ctx = makeContext({ fromCtx: 'ctx-val' });
@@ -171,7 +183,7 @@ describe('Workflow Engine', () => {
           command: 'nonexistent-command-xyz',
           continueOnError: true,
         },
-        { id: 'next-step', type: 'command', command: 'echo', dependsOn: ['fail-step'] },
+        { id: 'next-step', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['fail-step'] },
       ]);
       const result = await runWorkflow(def, makeContext());
       // fail-step runs, next-step depends on fail-step which "completed" (with continueOnError)
@@ -181,7 +193,7 @@ describe('Workflow Engine', () => {
     it('should fail immediately when step fails without continueOnError', async () => {
       const def = makeDef([
         { id: 'fail', type: 'command', command: 'nonexistent-command-xyz' },
-        { id: 'never', type: 'command', command: 'echo' },
+        { id: 'never', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } },
       ]);
       const result = await runWorkflow(def, makeContext());
       expect(result.success).toBe(false);
@@ -193,7 +205,7 @@ describe('Workflow Engine', () => {
 
   describe('Conditional Steps', () => {
     it('should execute then branch when condition is true', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -206,8 +218,8 @@ describe('Workflow Engine', () => {
     });
 
     it('should execute else branch when condition is false', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
-      const elseStep: CommandStep = { id: 'else-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
+      const elseStep: CommandStep = { id: 'else-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -221,7 +233,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should succeed with no else branch when condition is false', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -234,7 +246,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should handle inequality condition', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -247,7 +259,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should handle truthy variable check', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -260,7 +272,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should treat "false" variable as falsy', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -273,7 +285,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should treat "0" variable as falsy', async () => {
-      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: 'echo' };
+      const thenStep: CommandStep = { id: 'then-cmd', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const condStep: ConditionalStep = {
         id: 'cond',
         type: 'conditional',
@@ -290,7 +302,7 @@ describe('Workflow Engine', () => {
 
   describe('Loop Steps', () => {
     it('should iterate over comma-separated items', async () => {
-      const bodyStep: CommandStep = { id: 'body', type: 'command', command: 'echo' };
+      const bodyStep: CommandStep = { id: 'body', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const loopStep: LoopStep = {
         id: 'loop',
         type: 'loop',
@@ -304,7 +316,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should resolve variables in items expression', async () => {
-      const bodyStep: CommandStep = { id: 'body', type: 'command', command: 'echo' };
+      const bodyStep: CommandStep = { id: 'body', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const loopStep: LoopStep = {
         id: 'loop',
         type: 'loop',
@@ -333,7 +345,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should handle empty items list', async () => {
-      const bodyStep: CommandStep = { id: 'body', type: 'command', command: 'echo' };
+      const bodyStep: CommandStep = { id: 'body', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const loopStep: LoopStep = {
         id: 'loop',
         type: 'loop',
@@ -351,8 +363,8 @@ describe('Workflow Engine', () => {
 
   describe('Parallel Steps', () => {
     it('should execute parallel steps concurrently', async () => {
-      const s1: CommandStep = { id: 'p1', type: 'command', command: 'echo' };
-      const s2: CommandStep = { id: 'p2', type: 'command', command: 'echo' };
+      const s1: CommandStep = { id: 'p1', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
+      const s2: CommandStep = { id: 'p2', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const parallel: ParallelStep = {
         id: 'par',
         type: 'parallel',
@@ -364,7 +376,7 @@ describe('Workflow Engine', () => {
     });
 
     it('should fail when any parallel step fails', async () => {
-      const s1: CommandStep = { id: 'p1', type: 'command', command: 'echo' };
+      const s1: CommandStep = { id: 'p1', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } };
       const s2: CommandStep = { id: 'p2', type: 'command', command: 'nonexistent-cmd-xyz' };
       const parallel: ParallelStep = {
         id: 'par',
@@ -401,8 +413,8 @@ describe('Workflow Engine', () => {
         {
           id: 'cmd',
           type: 'command',
-          command: 'echo',
-          args: { greeting: 'hello ${name}' },
+          command: process.execPath,
+          args: { code: '-e', value: 'process.stdout.write("${name}")' },
         },
       ]);
       const result = await runWorkflow(def, makeContext({ name: 'World' }));
@@ -433,9 +445,9 @@ describe('Workflow Engine', () => {
       const onStepComplete = vi.fn((stepId: string) => { order.push(stepId); });
 
       const def = makeDef([
-        { id: 'c', type: 'command', command: 'echo', dependsOn: ['a', 'b'] },
-        { id: 'a', type: 'command', command: 'echo' },
-        { id: 'b', type: 'command', command: 'echo', dependsOn: ['a'] },
+        { id: 'c', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['a', 'b'] },
+        { id: 'a', type: 'command', command: process.execPath, args: { code: '-e', value: '1' } },
+        { id: 'b', type: 'command', command: process.execPath, args: { code: '-e', value: '1' }, dependsOn: ['a'] },
       ]);
 
       const result = await runWorkflow(def, { ...makeContext(), onStepComplete });
