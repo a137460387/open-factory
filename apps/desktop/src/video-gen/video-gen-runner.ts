@@ -1,5 +1,10 @@
-import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import type { UnlistenFn } from '@tauri-apps/api/event';
+import {
+  cancelVideoGeneration,
+  listenLtxProgress,
+  listenLtxCompleted,
+  generateVideo,
+} from '../lib/tauri-bridge/ltx-video';
 import { useVideoGenQueueStore } from './video-gen-store';
 import {
   saveTaskProgress,
@@ -65,8 +70,8 @@ export async function startVideoGenRunner(): Promise<void> {
     }
   }
 
-  unlistenProgress = await listen<LtxProgressPayload>('ltx-video-progress', (event) => {
-    const { taskId, progress, stage } = event.payload;
+  unlistenProgress = await listenLtxProgress((payload) => {
+    const { taskId, progress, stage } = payload;
     const store = useVideoGenQueueStore.getState();
     store.updateTaskProgress(taskId, progress, stage);
 
@@ -81,8 +86,8 @@ export async function startVideoGenRunner(): Promise<void> {
     }).catch(() => {});
   });
 
-  unlistenCompleted = await listen<LtxCompletedPayload>('ltx-video-completed', (event) => {
-    const { taskId, status, videoPath } = event.payload;
+  unlistenCompleted = await listenLtxCompleted((payload) => {
+    const { taskId, status, videoPath } = payload;
     const store = useVideoGenQueueStore.getState();
 
     if (status === 'completed') {
@@ -118,22 +123,17 @@ async function processNextTask(): Promise<void> {
   if (!task) return;
 
   try {
-    const response = await invoke<{ taskId: string; status: string }>(
-      'generate_video',
-      {
-        request: {
-          prompt: task.params.prompt,
-          negativePrompt: task.params.negativePrompt ?? null,
-          imagePath: task.params.imagePath ?? null,
-          numFrames: task.params.numFrames,
-          resolution: task.params.resolution,
-          fps: task.params.fps,
-          steps: task.params.steps,
-          cfgScale: task.params.cfgScale,
-          seed: task.params.seed ?? null,
-        },
-      },
-    );
+    const response = await generateVideo({
+      prompt: task.params.prompt,
+      negativePrompt: task.params.negativePrompt ?? null,
+      imagePath: task.params.imagePath ?? null,
+      numFrames: task.params.numFrames,
+      resolution: task.params.resolution,
+      fps: task.params.fps,
+      steps: task.params.steps,
+      cfgScale: task.params.cfgScale,
+      seed: task.params.seed ?? null,
+    });
 
     // Persist initial task progress
     saveTaskProgress({
@@ -182,7 +182,7 @@ export async function cancelVideoGenTask(taskId: string): Promise<void> {
 
   if (task.status === 'running') {
     try {
-      await invoke('cancel_generation', { taskId });
+      await cancelVideoGeneration(taskId);
     } catch {
       // If cancel fails, still mark as canceled locally
     }

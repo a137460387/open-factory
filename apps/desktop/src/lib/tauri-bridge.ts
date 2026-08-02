@@ -5,3 +5,5 @@ export * from './tauri-bridge/media';
 export * from './tauri-bridge/export';
 export * from './tauri-bridge/window';
 export * from './tauri-bridge/ai-db';
+export * from './tauri-bridge/video-gen';
+export * from './tauri-bridge/ltx-video';

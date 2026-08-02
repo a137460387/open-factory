@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import {
+  generateVideo as generateVideoBridge,
+  cancelVideoGeneration,
+  listenLtxProgress,
+  listenLtxCompleted,
+} from '../lib/tauri-bridge/ltx-video';
 import {
   saveTaskProgress,
   deleteTaskProgress,
@@ -133,8 +137,8 @@ export function useVideoGeneration() {
       // DB errors are non-critical
     });
 
-    const unlistenProgress = listen<LtxProgressPayload>('ltx-video-progress', (event) => {
-      const { progress, stage } = event.payload;
+    const unlistenProgress = listenLtxProgress((payload) => {
+      const { progress, stage } = payload;
       setState((prev) => ({
         ...prev,
         progress,
@@ -143,7 +147,7 @@ export function useVideoGeneration() {
       }));
 
       // Persist progress to IndexedDB
-      const taskId = event.payload.taskId;
+      const taskId = payload.taskId;
       if (taskId) {
         saveTaskProgress({
           taskId,
@@ -159,8 +163,8 @@ export function useVideoGeneration() {
       }
     });
 
-    const unlistenCompleted = listen<LtxCompletedPayload>('ltx-video-completed', (event) => {
-      const { status, videoPath, taskId } = event.payload;
+    const unlistenCompleted = listenLtxCompleted((payload) => {
+      const { status, videoPath, taskId } = payload;
       const durationMs = startTimeRef.current
         ? Date.now() - startTimeRef.current
         : null;
@@ -212,22 +216,17 @@ export function useVideoGeneration() {
     startTimeRef.current = Date.now();
 
     try {
-      const response = await invoke<{ taskId: string; status: string }>(
-        'generate_video',
-        {
-          request: {
-            prompt: params.prompt,
-            negativePrompt: params.negativePrompt ?? null,
-            imagePath: params.imagePath ?? null,
-            numFrames: params.numFrames,
-            resolution: params.resolution,
-            fps: params.fps,
-            steps: params.steps,
-            cfgScale: params.cfgScale,
-            seed: params.seed ?? null,
-          },
-        },
-      );
+      const response = await generateVideoBridge({
+        prompt: params.prompt,
+        negativePrompt: params.negativePrompt ?? null,
+        imagePath: params.imagePath ?? null,
+        numFrames: params.numFrames,
+        resolution: params.resolution,
+        fps: params.fps,
+        steps: params.steps,
+        cfgScale: params.cfgScale,
+        seed: params.seed ?? null,
+      });
 
       setState((prev) => ({
         ...prev,
@@ -263,7 +262,7 @@ export function useVideoGeneration() {
     if (!state.taskId) return;
 
     try {
-      await invoke('cancel_generation', { taskId: state.taskId });
+      await cancelVideoGeneration(state.taskId);
       setState((prev) => ({
         ...prev,
         status: 'canceled',

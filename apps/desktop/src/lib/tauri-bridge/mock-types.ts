@@ -103,6 +103,21 @@ import type {
   TagWithCount,
   VideoInfo,
 } from '../tauri-bridge';
+import type {
+  GpuInfo,
+} from '../../hooks/useGpuDetect';
+import type {
+  LocalModelInfo,
+  ModelDownloadCompletedPayload,
+  ModelDownloadProgressPayload,
+  RemoteModelInfo,
+} from '../../hooks/useModelManager';
+import type {
+  GenerateVideoRequest,
+  GenerateVideoResponse,
+  ListLocalModelsResult,
+  ListRemoteModelsResult,
+} from './ltx-video';
 
 export type TauriMocks = Partial<{
   confirm(message: string, options?: unknown): Promise<boolean> | boolean;
@@ -266,6 +281,13 @@ export type TauriMocks = Partial<{
   getHwDecodeSettings(): Promise<HwDecodeSettings> | HwDecodeSettings;
   setHwDecodeSettings(settings: HwDecodeSettings): Promise<void> | void;
   releaseDecoder(handle: DecoderHandle): Promise<void> | void;
+  detectGpu(): Promise<GpuInfo> | GpuInfo;
+  listLocalModels(): Promise<ListLocalModelsResult> | ListLocalModelsResult;
+  listRemoteModels(): Promise<ListRemoteModelsResult> | ListRemoteModelsResult;
+  downloadModel(repoId: string): Promise<void> | void;
+  deleteModel(repoId: string): Promise<void> | void;
+  generateVideo(request: GenerateVideoRequest): Promise<GenerateVideoResponse> | GenerateVideoResponse;
+  cancelVideoGeneration(taskId: string): Promise<void> | void;
 }>;
 
 export function getTauriMocks(): TauriMocks | undefined {

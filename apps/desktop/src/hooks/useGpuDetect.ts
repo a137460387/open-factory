@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { detectGpu as detectGpuBridge } from '../lib/tauri-bridge/ltx-video';
 
 /** Inference precision option */
 export type Precision = 'fp16' | 'fp32' | 'bf16';
@@ -37,7 +37,7 @@ export function useGpuDetect() {
   const detect = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const info = await invoke<GpuInfo>('detect_gpu');
+      const info = await detectGpuBridge();
       setState({ info, isLoading: false, error: null });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

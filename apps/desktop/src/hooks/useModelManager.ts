@@ -1,6 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import {
+  listLocalModels as listLocalModelsBridge,
+  listRemoteModels as listRemoteModelsBridge,
+  downloadModel as downloadModelBridge,
+  deleteModel as deleteModelBridge,
+  listenModelDownloadProgress,
+  listenModelDownloadCompleted,
+} from '../lib/tauri-bridge/ltx-video';
 
 /** A single file within a local model directory */
 export interface LocalModelFile {
@@ -72,31 +78,25 @@ export function useModelManager() {
 
   // Listen for download progress events
   useEffect(() => {
-    const unlistenProgress = listen<ModelDownloadProgressPayload>(
-      'model-download-progress',
-      (event) => {
-        const { overallProgress, filename } = event.payload;
-        setState((prev) => ({
-          ...prev,
-          downloadProgress: overallProgress,
-          downloadFilename: filename,
-        }));
-      },
-    );
+    const unlistenProgress = listenModelDownloadProgress((payload) => {
+      const { overallProgress, filename } = payload;
+      setState((prev) => ({
+        ...prev,
+        downloadProgress: overallProgress,
+        downloadFilename: filename,
+      }));
+    });
 
-    const unlistenCompleted = listen<ModelDownloadCompletedPayload>(
-      'model-download-completed',
-      (_event) => {
-        setState((prev) => ({
-          ...prev,
-          downloadingRepoId: null,
-          downloadProgress: 1,
-          downloadFilename: '',
-        }));
-        // Reload local models after download
-        void loadLocalModels();
-      },
-    );
+    const unlistenCompleted = listenModelDownloadCompleted(() => {
+      setState((prev) => ({
+        ...prev,
+        downloadingRepoId: null,
+        downloadProgress: 1,
+        downloadFilename: '',
+      }));
+      // Reload local models after download
+      void loadLocalModels();
+    });
 
     return () => {
       void unlistenProgress.then((fn) => fn());
@@ -107,10 +107,7 @@ export function useModelManager() {
   const loadLocalModels = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      const response = await invoke<{
-        models: LocalModelInfo[];
-        totalSize: number;
-      }>('list_local_models');
+      const response = await listLocalModelsBridge();
       setState((prev) => ({
         ...prev,
         localModels: response.models,
@@ -129,9 +126,7 @@ export function useModelManager() {
 
   const loadRemoteModels = useCallback(async () => {
     try {
-      const response = await invoke<{ models: RemoteModelInfo[] }>(
-        'list_remote_models',
-      );
+      const response = await listRemoteModelsBridge();
       setState((prev) => ({
         ...prev,
         remoteModels: response.models,
@@ -152,9 +147,7 @@ export function useModelManager() {
     }));
 
     try {
-      await invoke('download_model', {
-        request: { repoId },
-      });
+      await downloadModelBridge(repoId);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       setState((prev) => ({
@@ -169,7 +162,7 @@ export function useModelManager() {
   const deleteModel = useCallback(
     async (repoId: string) => {
       try {
-        await invoke('delete_model', { repoId });
+        await deleteModelBridge(repoId);
         await loadLocalModels();
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
