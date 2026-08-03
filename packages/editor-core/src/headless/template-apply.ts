@@ -149,7 +149,7 @@ function buildProjectFromTemplate(
   // Create media assets from files
   const assets: MediaAsset[] = mediaFiles.map((path, i) => ({
     id: `media-${i}`,
-    name: path.split('/').pop() ?? path.split('\\').pop() ?? `media-${i}`,
+    name: path.split(/[\\/]/).pop() || `media-${i}`,
     path,
     type: detectMediaType(path),
     duration: 0, // Will be resolved during render
