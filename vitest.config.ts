@@ -51,6 +51,12 @@ export default defineConfig({
         '**/dist/**',
       ],
       thresholds: {
+        'packages/editor-core/src/**': {
+          lines: 80,
+          functions: 80,
+          branches: 80,
+          statements: 80,
+        },
         lines: 70,
         functions: 70,
         branches: 70,
