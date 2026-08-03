@@ -1,1 +1,0 @@
-{"version":3,"file":"shortcut-types.js","sourceRoot":"","sources":["shortcut-types.ts"],"names":[],"mappings":"AAmHA,WAAW;AACX,MAAM,CAAC,MAAM,uBAAuB,GAAmB;IACrD,OAAO,EAAE,IAAI;IACb,cAAc,EAAE,UAAU;IAC1B,YAAY,EAAE,IAAI;IAClB,YAAY,EAAE,GAAG;IACjB,eAAe,EAAE,IAAI;IACrB,cAAc,EAAE,GAAG;IACnB,iBAAiB,EAAE,EAAE;IACrB,uBAAuB,EAAE,IAAI;IAC7B,UAAU,EAAE,wBAAwB;CACrC,CAAC"}
