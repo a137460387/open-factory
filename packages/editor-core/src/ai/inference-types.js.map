@@ -1,1 +1,0 @@
-{"version":3,"file":"inference-types.js","sourceRoot":"","sources":["inference-types.ts"],"names":[],"mappings":"AAAA;;GAEG;AAgBH,MAAM,CAAC,MAAM,wBAAwB,GAAoB;IACvD,OAAO,EAAE,QAAQ;IACjB,YAAY,EAAE,MAAM;IACpB,SAAS,EAAE,CAAC;IACZ,iBAAiB,EAAE,GAAG;IACtB,oBAAoB,EAAE,IAAI;IAC1B,mBAAmB,EAAE,IAAI;IACzB,gBAAgB,EAAE,CAAC;CACpB,CAAC"}
