@@ -115,3 +115,15 @@ docs/evidence/
 
 # TypeDoc generated API docs
 docs/api/
+
+# Stale compiled artifacts in editor-core src (use dist/ instead).
+# Prevents render-farm-style test ambiguity: vitest could otherwise load a
+# stale .js sibling instead of the .ts source. Rules are scoped to
+# editor-core/src so plugin-cli/src/*.js (legit JS source) is unaffected.
+packages/editor-core/src/**/*.js
+packages/editor-core/src/**/*.js.map
+packages/editor-core/src/**/*.d.ts
+packages/editor-core/src/**/*.d.ts.map
+# Re-include hand-written ambient declarations (no sibling .ts source).
+!packages/editor-core/src/types/earcut.d.ts
+!packages/editor-core/src/types/webgpu.d.ts
