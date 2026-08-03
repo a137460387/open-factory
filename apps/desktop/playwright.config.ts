@@ -21,7 +21,10 @@ export default defineConfig({
     video: 'retain-on-failure',
     /* 自定义 action 超时 */
     actionTimeout: 10_000,
-    navigationTimeout: 30_000
+    navigationTimeout: 30_000,
+    /* 页面跳转等 DOM 就绪即可,不等图片/字体(7/14 后首页资源变重,
+       'load' 策略在 CI 慢机器上易超时) */
+    gotoOptions: { waitUntil: 'domcontentloaded' }
   },
   webServer: {
     command: 'bun run dev -- --host localhost',
