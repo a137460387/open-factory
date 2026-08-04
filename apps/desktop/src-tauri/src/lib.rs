@@ -1,5 +1,6 @@
 mod commands;
 pub mod db;
+pub mod ffmpeg_semaphore;
 pub mod gpu_detect;
 pub mod input_validator;
 pub mod ltx_video;
