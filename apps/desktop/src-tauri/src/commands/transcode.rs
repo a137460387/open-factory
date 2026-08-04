@@ -1,4 +1,5 @@
 use super::binaries::{ffmpeg_binary, ffprobe_binary};
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -173,6 +174,28 @@ fn run_transcode_task(
     let output_arg = normalize_path(&safe_output);
     let expected_duration_us = ffprobe_duration_us(&source_path).unwrap_or(0);
     let args = build_transcode_args(&source_arg, &output_arg, preset);
+    // 覆盖 spawn ffmpeg 转码全程。batch 内串行执行，每任务各占各释放。
+    let _permit = match try_acquire_ffmpeg_permit() {
+        Ok(permit) => permit,
+        Err(error) => {
+            emit_progress(
+                app,
+                task,
+                Some(output_arg.clone()),
+                "failed",
+                0.0,
+                current,
+                total,
+            );
+            return task_result(
+                task,
+                Some(output_arg),
+                "failed",
+                Some(error),
+                started,
+            );
+        }
+    };
     emit_progress(
         app,
         task,

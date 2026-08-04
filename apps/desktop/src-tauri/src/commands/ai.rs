@@ -5,6 +5,7 @@ use std::process::Command;
 use tauri::AppHandle;
 
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 
 const AI_KEYCHAIN_SERVICE: &str = "open-factory.ai";
@@ -378,6 +379,8 @@ fn extract_ai_frames_blocking(
     app: AppHandle,
     request: ExtractAiFramesRequest,
 ) -> Result<ExtractAiFramesResult, String> {
+    // 1 个 permit 覆盖整个抽帧循环（每帧独立 spawn ffmpeg），不放在循环内。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let safe_source = validate_path(&app, std::path::Path::new(&request.source_path))?;
     let source = safe_source.to_string_lossy().to_string();
     let mut frames = Vec::new();

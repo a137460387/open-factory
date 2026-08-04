@@ -790,6 +790,11 @@ pub async fn run_export(
     plan: FfmpegExportPlanDto,
     task_id: Option<String>,
 ) -> Result<ExportResult, String> {
+    // H2 方案 B 兜底：在导出全链路（含 nested_plans 烘焙与主 spawn）入口获取 permit，
+    // 覆盖 run_nested_export_plans → bake_*_sequence → run_materialized_export_plan
+    // → spawn_and_wait_with_progress 的完整过程。底层共用函数不再自行 acquire，
+    // 避免与 run_export_preview_samples_parallel(946) 的并行 permit 嵌套虚耗。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let mut plan = plan;
     if plan.full_args.is_empty() {
         return Err("FFmpeg argument list is empty.".to_string());
@@ -1064,6 +1069,8 @@ fn evaluate_export_quality_blocking(
     app: AppHandle,
     request: QualityEvaluationRequest,
 ) -> Result<QualityEvaluationResult, String> {
+    // 覆盖 spawn_and_capture_quality_evaluation 的 ffmpeg spawn 全程。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     if request.task_id.trim().is_empty() {
         return Err("Quality evaluation task id is required.".to_string());
     }
@@ -1105,6 +1112,9 @@ fn run_post_export_quality_assurance_blocking(
     app: AppHandle,
     request: PostExportQualityAssuranceRequest,
 ) -> Result<PostExportQualityAssuranceResult, String> {
+    // 覆盖 run_ffmpeg_capture 的黑场/静音检测 ffmpeg spawn 全程。
+    // probe_post_export_media 用 ffprobe，虽不占 ffmpeg 配额，但被同一 permit 覆盖无妨。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     if request.task_id.trim().is_empty() {
         return Err("Post-export quality task id is required.".to_string());
     }
@@ -1161,6 +1171,8 @@ fn analyze_clip_blocking(
     app: AppHandle,
     request: AnalyzeClipRequest,
 ) -> Result<AnalyzeClipResult, String> {
+    // 覆盖 spawn_and_wait_for_clip_analysis 的 ffmpeg spawn 全程。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let safe_input = validate_path(&app, Path::new(&request.media_path))?;
     let output_dir = app
         .path()
@@ -1202,6 +1214,8 @@ fn analyze_motion_track_blocking(
     app: AppHandle,
     request: AnalyzeMotionTrackRequest,
 ) -> Result<AnalyzeMotionTrackResult, String> {
+    // 覆盖 spawn_and_capture_motion_tracking 的 ffmpeg spawn 全程。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let safe_input = validate_path(&app, Path::new(&request.media_path))?;
     let args = build_motion_track_args(&safe_input);
     let started = Instant::now();

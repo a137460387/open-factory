@@ -1,3 +1,4 @@
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -94,6 +95,8 @@ pub fn render_preview_cache(
         output_str.as_str(),
     ];
 
+    // 覆盖 ffmpeg 预览缓存渲染 spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let start_time = std::time::Instant::now();
 
     let status = Command::new(&ffmpeg)

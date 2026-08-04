@@ -1,4 +1,5 @@
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -89,6 +90,8 @@ fn run_gif_export(app: AppHandle, request: GifExportRequest) -> Result<GifWorkfl
         loop_count: request.loop_count,
         dither: request.dither,
     };
+    // 覆盖 run_gif_command 的 ffmpeg spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     run_gif_command(&source_path, &output_path, &options)
 }
 
@@ -106,6 +109,8 @@ fn run_gif_preview(
         loop_count: 0,
         dither: request.dither,
     };
+    // 覆盖 run_gif_command 的 ffmpeg spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     run_gif_command(&source_path, &output_path, &options)
 }
 

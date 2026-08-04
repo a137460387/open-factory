@@ -1,4 +1,5 @@
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -42,6 +43,8 @@ pub async fn run_whisper(app: AppHandle, request: WhisperRequest) -> Result<Whis
 }
 
 fn run_whisper_blocking(app: AppHandle, request: WhisperRequest) -> Result<WhisperResult, String> {
+    // 覆盖 prepare_whisper_audio 的 ffmpeg spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     validate_whisper_request(&request)?;
     let executable = validate_path(&app, Path::new(&request.executable_path))?;
     let model = validate_path(&app, Path::new(&request.model_path))?;

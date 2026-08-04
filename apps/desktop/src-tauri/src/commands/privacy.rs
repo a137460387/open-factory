@@ -1,4 +1,5 @@
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -55,6 +56,8 @@ fn detect_privacy_regions_blocking(
     let media = validate_path(&app, Path::new(&request.media_path))?;
     let started = Instant::now();
     let args = build_privacy_detection_args(&media, &model, request.duration);
+    // 覆盖 ffmpeg dnn_detect spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let mut child = Command::new(ffmpeg_binary())
         .args(&args)
         .stdout(Stdio::null())
