@@ -86,7 +86,7 @@ ffmpeg.rs 的真实并发防护来自 **TS 侧 export queue 的 `maxConcurrent=2
 - Rust 侧 `run_export_preview_samples_parallel`（`ffmpeg.rs:933-953`）对每个 sample **各起一个 OS 线程** `std::thread::spawn`，每个线程独立 spawn 一个 ffmpeg
 - 样本数固定 3 个（`validate_export_preview_sample_count` 强制，`ffmpeg.rs:929-1034`），所以一次调用最多 3 个 ffmpeg 并发
 - TS 侧也无池（直接 invoke `run_export_preview_samples`）
-- 另外有 4 处直接 `await runExport()` 绕过队列：`media/BatchWatermarkDialog.tsx:115`、`projectBatch/BatchProjectProcessingDialog.tsx:373,387`、`thumbnail/ThumbnailGeneratorDialog.tsx:598`、`lib/exportVideo.ts:52`
+- 另外有 5 处直接 `await runExport()` 绕过队列：`media/BatchWatermarkDialog.tsx:115`、`projectBatch/BatchProjectProcessingDialog.tsx:373,387`、`thumbnail/ThumbnailGeneratorDialog.tsx:598`、`lib/exportVideo.ts:52`
 
 **这是和 H2 最初想解决的同一类风险**——Rust 侧主动发起多线程并发 spawn 且无任何限流。
 
@@ -119,7 +119,7 @@ ffmpeg.rs 的真实并发防护来自 **TS 侧 export queue 的 `maxConcurrent=2
 
 | 文件 | spawn | 现有真实防护 | 并发触发可能性 | 风险 | 核心理由 |
 |------|-------|------------|--------------|------|---------|
-| **ffmpeg.rs** | 12 | TS export queue `maxConcurrent=2`（主路径）；EXPORT_CHILDREN 仅管取消；**runExportPreviewSamples 3 线程裸并发缺口** | 主路径：用户显式导出；绕过路径：preview samples + 4 处直接 runExport | **中** | 主路径有 TS 队列，但绕过路径无 Rust 侧兜底；export_children 不是限流器 |
+| **ffmpeg.rs** | 12 | TS export queue `maxConcurrent=2`（主路径）；EXPORT_CHILDREN 仅管取消；**runExportPreviewSamples 3 线程裸并发缺口** | 主路径：用户显式导出；绕过路径：preview samples + 5 处直接 runExport | **中** | 主路径有 TS 队列，但绕过路径无 Rust 侧兜底；export_children 不是限流器 |
 | **ai.rs** | 1 | for 循环串行抽帧 | 3 个面板入口（AIVideoSummary/AIColorGrading/MediaAIAnalysis）可能并发调用 | **中低** | 单次调用内部串行，但多面板并发入口无任何拦截 |
 | **hw_decode.rs** | 3 | DECODER_MANAGER 全局 Mutex 串行化 | seek/预览可能高频，但 Mutex 保证不并发 | **低** | Mutex 保证同一时间只有 1 个 ffmpeg；但每次 spawn 完整进程开销大 |
 | **transcode.rs** | 2 | Rust `for` 循环串行处理 batch | 用户手动触发转码对话框 | **低** | 单次 batch 内部串行 |
@@ -135,7 +135,7 @@ ffmpeg.rs 的真实并发防护来自 **TS 侧 export queue 的 `maxConcurrent=2
 ### 总结
 
 - **无高风险文件**：没有"无防护 + 可能被批量自动触发"的组合
-- **1 个中风险**：ffmpeg.rs，主因是 runExportPreviewSamples 的裸并发缺口和 4 处绕过队列的 runExport
+- **1 个中风险**：ffmpeg.rs，主因是 runExportPreviewSamples 的裸并发缺口和 5 处绕过队列的 runExport
 - **1 个中低风险**：ai.rs，多面板并发入口
 - **其余 10 个文件均为低/极低**：各有串行/Mutex/UI 单发/手动触发等防护
 
@@ -143,11 +143,33 @@ ffmpeg.rs 的真实并发防护来自 **TS 侧 export queue 的 `maxConcurrent=2
 
 ## 5. 建议的后续优先级
 
-### P1：ffmpeg.rs — runExportPreviewSamples 裸并发缺口
+### P1：ffmpeg.rs — runExportPreviewSamples 裸并发缺口 ✅ 已处理（commit 3f63d7c6）
 
 **问题**：`run_export_preview_samples_parallel`（`ffmpeg.rs:933-953`）对 3 个 sample 各起一个 OS 线程并发 spawn ffmpeg，完全绕过 TS export queue 和任何限流池。这是目前全仓库唯一一个 Rust 侧主动发起多线程并发 spawn 且无任何限流的路径。
 
-**建议**：在 `run_export_preview_sample_blocking` 或 `run_materialized_export_plan` 入口处接入 `try_acquire_ffmpeg_permit()`，使 3 个并发线程各自 acquire 一个 permit。由于信号量阈值 6 ≥ 3，正常情况下不会拒绝；但如果同时有其他 export task 在跑（maxConcurrent=2 的队列导出），会起到兜底限制作用。
+**实施**：在 `run_export_preview_samples_parallel` 的 3 个线程闭包内各自 acquire 一个 `try_acquire_ffmpeg_permit()`，permit 生命周期覆盖 `runner(sample)` → `run_export_preview_sample_blocking` → `spawn_and_wait_with_progress` → `Command::new(ffmpeg).spawn()` + `try_wait` 轮询直到完成的全程。选择在闭包内 acquire 而非 `run_export_preview_sample_blocking` 内部，是因为后者也被测试代码直接调用（如 `real_ffmpeg_failure_is_reported_and_child_slot_is_cleared` test），在闭包内 acquire 只影响并发路径。
+
+3 个独立并行线程各持有 1 个 permit，每个 permit 对应 1 个真实并发 ffmpeg，无嵌套虚耗——与 H2-B 批3c 的同一调用链嵌套场景本质不同。3 ≤ 阈值 6，正常不阻塞。
+
+**测试**：2 个单元测试，使用 mock runner（不依赖真实 ffmpeg）：
+- `preview_samples_acquire_and_release_permits`：验证正常情况 3 线程各自 acquire 成功、runner 调用 3 次、执行后 permit 恢复满额
+- `preview_samples_rejected_when_semaphore_exhausted`：验证信号量已满时 3 线程全部 acquire 失败、runner 从不执行、返回明确错误
+
+测试复用 `ffmpeg_semaphore.rs` 提到模块级别的 `pub fn test_guard()` 和 `pub fn drain_and_release_all()` 串行化信号量操作，确保跨模块测试共享同一把锁不互相干扰。本地无 Rust 工具链，依赖 CI `cargo test` 验证。
+
+**TS 侧 5 处绕过队列的 runExport 调用——经核实不在本次处理范围**：
+
+原始文档记录的 5 处直接 `await runExport()` 绕过 export queue 的调用点，经本次精确核实：
+
+| 调用点 | 触发场景 | 串行/并发 | 核实结论 |
+|--------|---------|----------|---------|
+| `apps/desktop/src/media/BatchWatermarkDialog.tsx:115` | 单次水印预览生成 | 串行单发 | 每次只 spawn 1 个 ffmpeg |
+| `apps/desktop/src/projectBatch/BatchProjectProcessingDialog.tsx:373` | 批量导出（`batch-export`） | **串行** | 走 `runProjectBatchQueue`（`apps/desktop/src/projectBatch/projectBatch.ts:78-80`）的 `for...of` + `await` 循环，不是 `Promise.all` |
+| `apps/desktop/src/projectBatch/BatchProjectProcessingDialog.tsx:387` | 封面帧导出（`cover-frame`） | **串行** | 同上，外层 `for...of` + `await` |
+| `apps/desktop/src/thumbnail/ThumbnailGeneratorDialog.tsx:598` | 单次缩略图生成 | 串行单发 | 每次只 spawn 1 个 ffmpeg |
+| `apps/desktop/src/lib/exportVideo.ts:52` | 单次视频导出工具函数 | 串行单发 | 每次只 spawn 1 个 ffmpeg |
+
+这 5 处虽然绕过 TS export queue（maxConcurrent=2），但各自调用场景都是串行的，单次调用只 spawn 1 个 ffmpeg，没有裸并发风险。它们走的是 `run_export` command → `spawn_and_wait_with_progress`，Rust 侧已有 EXPORT_CHILDREN 取消机制。给它们接入 TS 侧限流涉及多文件改动，和 Rust 侧信号量接入是不同层面的工作。如果后续要给 `spawn_and_wait_with_progress` 本身加信号量兜底（属于 P3 范围），应单独排期。本次不处理，作为 P3 待办保留。
 
 ### P2：ai.rs — extractAiFrames 多面板入口
 
