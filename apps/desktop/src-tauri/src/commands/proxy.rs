@@ -36,9 +36,23 @@ pub async fn generate_proxy(app: AppHandle, plan: ProxyPlanDto) -> Result<ProxyR
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
+    run_proxy_generation(plan, &input_path, &output_path)
+}
+
+/// 执行 proxy 生成（acquire permit → 构建 args → spawn ffmpeg → 等待结果）。
+///
+/// 从 `generate_proxy` 提取为独立函数，使其可在不依赖 `AppHandle` 的前提下
+/// 进行单元测试。permit 在函数返回时通过 `Drop` 自动释放（含 `Err` 提前返回
+/// 和 panic），覆盖 spawn + `.status()` 等待的完整过程。
+fn run_proxy_generation(
+    plan: ProxyPlanDto,
+    input_path: &Path,
+    output_path: &Path,
+) -> Result<ProxyResult, String> {
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let started = Instant::now();
-    let input_arg = normalize_path(&input_path);
-    let output_arg = normalize_path(&output_path);
+    let input_arg = normalize_path(input_path);
+    let output_arg = normalize_path(output_path);
     let filter = build_proxy_video_filter(plan.width, plan.height, plan.cfr_frame_rate);
     let args = build_proxy_args(&plan, &input_arg, &filter, &output_arg);
     let status = Command::new(if cfg!(windows) {
@@ -134,6 +148,41 @@ fn trim_float(value: f64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ffmpeg_semaphore;
+    use std::sync::OnceLock;
+
+    static PROXY_TEST_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+
+    fn proxy_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        PROXY_TEST_LOCK
+            .get_or_init(|| std::sync::Mutex::new(()))
+            .lock()
+            .expect("proxy test lock")
+    }
+
+    /// 排空信号量到满额：acquire 所有可用 permit 再全部释放。
+    fn drain_and_release_all_permits() {
+        let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            permits.push(p);
+        }
+        drop(permits);
+    }
+
+    fn make_test_plan(input_path: &str, output_path: &str) -> ProxyPlanDto {
+        ProxyPlanDto {
+            asset_id: "test-asset".to_string(),
+            input_path: input_path.to_string(),
+            output_path: output_path.to_string(),
+            width: 1280,
+            height: 720,
+            video_bitrate: "2500k".to_string(),
+            reason: "test".to_string(),
+            cfr_frame_rate: None,
+            source_start: None,
+            source_duration: None,
+        }
+    }
 
     #[test]
     fn builds_proxy_filter_with_optional_cfr_fps() {
@@ -183,6 +232,74 @@ mod tests {
                 "-i",
                 "C:/Media/source.mp4"
             ]
+        );
+    }
+
+    /// 测试 1：permit 占满时 run_proxy_generation 在 spawn 之前返回信号量错误。
+    ///
+    /// 验证 try_acquire_ffmpeg_permit()? 这一行确实被执行到了，且行为正确——
+    /// acquire 失败时函数立即返回错误，不会走到 spawn ffmpeg 那行。
+    #[test]
+    fn run_proxy_generation_fails_when_semaphore_saturated() {
+        let _guard = proxy_test_guard();
+        drain_and_release_all_permits();
+
+        // 占满全部 6 个 permit，使 run_proxy_generation 的 acquire 必然失败
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let plan = make_test_plan("input.mp4", "output.mp4");
+        let result = run_proxy_generation(plan, std::path::Path::new("input.mp4"), std::path::Path::new("output.mp4"));
+
+        // 必须返回 Err，且错误信息是信号量拒绝（不是 ffmpeg 相关错误）
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+        // 输出文件不应存在——证明 spawn 从未执行
+        assert!(
+            !std::path::Path::new("output.mp4").exists(),
+            "output file should not exist (ffmpeg never spawned)"
+        );
+
+        drop(held);
+    }
+
+    /// 测试 2：permit 在 run_proxy_generation 执行期间被占用、返回后恢复满额。
+    ///
+    /// 不管 run_proxy_generation 最终返回 Ok 还是 Err（这里 ffmpeg 可能不存在
+    /// 或路径校验在 Rust 侧不生效），只验证 permit 的获取/释放生命周期：
+    /// 调用前满额 → 调用后必须恢复满额。
+    #[test]
+    fn run_proxy_generation_releases_permit_regardless_of_outcome() {
+        let _guard = proxy_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let plan = make_test_plan("input.mp4", "output.mp4");
+        // 不管结果如何——ffmpeg 可能不存在、可能失败，都不影响 permit 释放
+        let _ = run_proxy_generation(
+            plan,
+            std::path::Path::new("input.mp4"),
+            std::path::Path::new("output.mp4"),
+        );
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after run_proxy_generation returns \
+             (Ok or Err), proving permit was released via Drop"
         );
     }
 }
