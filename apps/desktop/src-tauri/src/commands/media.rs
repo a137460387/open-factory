@@ -1538,6 +1538,7 @@ pub(crate) fn build_cover_frame_batch_task_count(tasks: &[CoverFrameBatchTaskReq
 }
 
 fn run_cover_ffmpeg(args: &[String], label: &str) -> Result<(), String> {
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let output = Command::new(ffmpeg_binary())
         .args(args)
         .output()
@@ -1620,6 +1621,7 @@ fn emit_cover_frame_progress(
 }
 
 fn run_gap_fill_ffmpeg(args: &[String], label: &str) -> Result<(), String> {
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let output = Command::new(ffmpeg_binary())
         .args(args)
         .output()
@@ -1701,7 +1703,9 @@ fn normalize_cover_file_name(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ffmpeg_semaphore;
     use std::fs;
+    use std::sync::OnceLock;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -2212,5 +2216,118 @@ mod tests {
             bytes.extend_from_slice(&((sample * i16::MAX as f64) as i16).to_le_bytes());
         }
         fs::write(path, bytes)
+    }
+
+    // ── H2 方案 B 批3a：run_cover_ffmpeg / run_gap_fill_ffmpeg 信号量接线测试 ──
+
+    static MEDIA_TEST_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+
+    fn media_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        MEDIA_TEST_LOCK
+            .get_or_init(|| std::sync::Mutex::new(()))
+            .lock()
+            .expect("media test lock")
+    }
+
+    fn drain_and_release_all_permits() {
+        let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            permits.push(p);
+        }
+        drop(permits);
+    }
+
+    #[test]
+    fn run_cover_ffmpeg_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        // 占满全部 permit，使 run_cover_ffmpeg 的 acquire 必然失败
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let args = vec!["-version".to_string()];
+        let result = run_cover_ffmpeg(&args, "test");
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn run_cover_ffmpeg_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        // 不管 ffmpeg 是否存在或成功，只验证 permit 释放
+        let args = vec!["-version".to_string()];
+        let _ = run_cover_ffmpeg(&args, "test");
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after run_cover_ffmpeg returns"
+        );
+    }
+
+    #[test]
+    fn run_gap_fill_ffmpeg_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let args = vec!["-version".to_string()];
+        let result = run_gap_fill_ffmpeg(&args, "test");
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn run_gap_fill_ffmpeg_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let args = vec!["-version".to_string()];
+        let _ = run_gap_fill_ffmpeg(&args, "test");
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after run_gap_fill_ffmpeg returns"
+        );
     }
 }
