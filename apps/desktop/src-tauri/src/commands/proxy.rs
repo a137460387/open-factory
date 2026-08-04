@@ -149,25 +149,6 @@ fn trim_float(value: f64) -> String {
 mod tests {
     use super::*;
     use crate::ffmpeg_semaphore;
-    use std::sync::OnceLock;
-
-    static PROXY_TEST_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
-
-    fn proxy_test_guard() -> std::sync::MutexGuard<'static, ()> {
-        PROXY_TEST_LOCK
-            .get_or_init(|| std::sync::Mutex::new(()))
-            .lock()
-            .expect("proxy test lock")
-    }
-
-    /// 排空信号量到满额：acquire 所有可用 permit 再全部释放。
-    fn drain_and_release_all_permits() {
-        let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
-        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
-            permits.push(p);
-        }
-        drop(permits);
-    }
 
     fn make_test_plan(input_path: &str, output_path: &str) -> ProxyPlanDto {
         ProxyPlanDto {
@@ -241,8 +222,8 @@ mod tests {
     /// acquire 失败时函数立即返回错误，不会走到 spawn ffmpeg 那行。
     #[test]
     fn run_proxy_generation_fails_when_semaphore_saturated() {
-        let _guard = proxy_test_guard();
-        drain_and_release_all_permits();
+        let _guard = ffmpeg_semaphore::test_guard();
+        ffmpeg_semaphore::drain_and_release_all();
 
         // 占满全部 6 个 permit，使 run_proxy_generation 的 acquire 必然失败
         let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
@@ -278,8 +259,8 @@ mod tests {
     /// 调用前满额 → 调用后必须恢复满额。
     #[test]
     fn run_proxy_generation_releases_permit_regardless_of_outcome() {
-        let _guard = proxy_test_guard();
-        drain_and_release_all_permits();
+        let _guard = ffmpeg_semaphore::test_guard();
+        ffmpeg_semaphore::drain_and_release_all();
 
         assert_eq!(
             ffmpeg_semaphore::available_permits(),

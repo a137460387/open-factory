@@ -938,7 +938,14 @@ fn run_export_preview_samples_parallel(
         .into_iter()
         .map(|sample| {
             let runner = Arc::clone(&runner);
-            std::thread::spawn(move || runner(sample))
+            std::thread::spawn(move || {
+                // H2 方案 B 兜底：每个预览采样线程各自获取一个 permit，
+                // 覆盖 spawn ffmpeg + 等待完成的全程。3 个独立并行线程
+                // 各持有 1 个 permit，无嵌套虚耗——与批3c 的同一调用链
+                // 嵌套场景本质不同。
+                let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
+                runner(sample)
+            })
         })
         .collect::<Vec<_>>();
     let mut results = Vec::with_capacity(handles.len());
@@ -5017,6 +5024,103 @@ unrelated line
             assert!(args.iter().any(|arg| arg.ends_with(".png")));
             assert!(!args.iter().any(|arg| arg.contains("cmd /C")));
         }
+    }
+
+    #[test]
+    fn preview_samples_acquire_and_release_permits() {
+        let _guard = crate::ffmpeg_semaphore::test_guard();
+        crate::ffmpeg_semaphore::drain_and_release_all();
+
+        let call_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let runner: PreviewSampleRunner = {
+            let call_count = Arc::clone(&call_count);
+            Arc::new(move |sample| {
+                call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(ExportPreviewSampleResult {
+                    id: sample.id,
+                    kind: sample.kind,
+                    label: sample.label,
+                    time: sample.time,
+                    path: sample.output_path,
+                    duration_ms: 1,
+                })
+            })
+        };
+
+        let samples = vec![
+            preview_sample("start", "C:/Previews/start.png", "0"),
+            preview_sample("middle", "C:/Previews/middle.png", "3"),
+            preview_sample("end", "C:/Previews/end.png", "6"),
+        ];
+
+        let initial = crate::ffmpeg_semaphore::available_permits();
+        let result = run_export_preview_samples_parallel(samples, runner);
+        assert!(
+            result.is_ok(),
+            "parallel should succeed with permits available"
+        );
+        assert_eq!(
+            call_count.load(std::sync::atomic::Ordering::SeqCst),
+            3,
+            "runner should be called once per sample"
+        );
+        assert_eq!(
+            crate::ffmpeg_semaphore::available_permits(),
+            initial,
+            "permits should be restored after all threads complete"
+        );
+    }
+
+    #[test]
+    fn preview_samples_rejected_when_semaphore_exhausted() {
+        let _guard = crate::ffmpeg_semaphore::test_guard();
+        crate::ffmpeg_semaphore::drain_and_release_all();
+
+        // 排空信号量，模拟 6 个 permit 已被其他操作占用的场景
+        let mut permits = Vec::new();
+        while let Ok(p) = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            permits.push(p);
+        }
+        assert_eq!(
+            crate::ffmpeg_semaphore::available_permits(),
+            0,
+            "semaphore should be fully exhausted before test"
+        );
+
+        let call_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let runner: PreviewSampleRunner = {
+            let call_count = Arc::clone(&call_count);
+            Arc::new(move |sample| {
+                call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(ExportPreviewSampleResult {
+                    id: sample.id,
+                    kind: sample.kind,
+                    label: sample.label,
+                    time: sample.time,
+                    path: sample.output_path,
+                    duration_ms: 1,
+                })
+            })
+        };
+
+        let samples = vec![
+            preview_sample("start", "C:/Previews/start.png", "0"),
+            preview_sample("middle", "C:/Previews/middle.png", "3"),
+            preview_sample("end", "C:/Previews/end.png", "6"),
+        ];
+
+        let result = run_export_preview_samples_parallel(samples, runner);
+        assert!(
+            result.is_err(),
+            "should fail when semaphore is exhausted"
+        );
+        assert_eq!(
+            call_count.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "runner should never be called when permits are exhausted"
+        );
+
+        drop(permits);
     }
 
     #[test]

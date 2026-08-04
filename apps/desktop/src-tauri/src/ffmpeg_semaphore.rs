@@ -47,35 +47,41 @@ pub fn available_permits() -> usize {
     ffmpeg_semaphore().available_permits()
 }
 
+/// 在测试间串行化信号量操作，避免并发测试互相干扰。
+/// 提到模块级别并标为 pub，供其他模块（如 ffmpeg.rs）的测试复用，
+/// 确保跨模块的信号量测试共享同一把锁，不会互相干扰。
+#[cfg(test)]
+static TEST_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+
+/// 获取测试串行化锁。所有涉及全局信号量的测试都必须在开头调用此函数，
+/// 否则会与并行执行的其他测试产生状态污染。各模块（proxy.rs/media.rs/
+/// ffmpeg.rs 等）的信号量测试都应调用此函数，而不是各自定义独立的锁。
+#[cfg(test)]
+pub fn test_guard() -> std::sync::MutexGuard<'static, ()> {
+    TEST_LOCK
+        .get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .expect("test lock")
+}
+
+/// 排空信号量到满额状态：持续 try_acquire 并立即 drop 直到获取失败，
+/// 再把已持有的全部释放。但更简单的方式：acquire 所有可用 permit 再全部释放。
+#[cfg(test)]
+pub fn drain_and_release_all() {
+    let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+    while let Ok(p) = ffmpeg_semaphore().try_acquire_owned() {
+        permits.push(p);
+    }
+    // 现在 permits 持有全部 permit，drop 后全部释放
+    drop(permits);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::process::{Child, Command};
     use std::thread;
     use std::time::Duration;
-
-    /// 在测试间串行化信号量操作，避免并发测试互相干扰。
-    /// 同时在获取锁时清空信号量（通过重新初始化——但 OnceLock 只初始化一次，
-    /// 所以用 acquire-then-release 方式将 permit 恢复到满额）。
-    static TEST_LOCK: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
-
-    fn test_guard() -> std::sync::MutexGuard<'static, ()> {
-        TEST_LOCK
-            .get_or_init(|| std::sync::Mutex::new(()))
-            .lock()
-            .expect("test lock")
-    }
-
-    /// 排空信号量到满额状态：持续 try_acquire 并立即 drop 直到获取失败，
-    /// 再把已持有的全部释放。但更简单的方式：acquire 所有可用 permit 再全部释放。
-    fn drain_and_release_all() {
-        let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
-        while let Ok(p) = ffmpeg_semaphore().try_acquire_owned() {
-            permits.push(p);
-        }
-        // 现在 permits 持有全部 permit，drop 后全部释放
-        drop(permits);
-    }
 
     #[cfg(windows)]
     fn spawn_long_running_child() -> Child {
