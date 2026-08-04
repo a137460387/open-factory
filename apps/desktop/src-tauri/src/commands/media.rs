@@ -291,6 +291,16 @@ struct FfprobePacket {
 pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     let input_path = normalize_path(&safe_path);
+    run_probe_media(&input_path)
+}
+
+/// 执行 ffprobe 探测（acquire permit → spawn ffprobe → 解析 JSON）。
+///
+/// 从 `probe_media` 提取为独立函数，使其可在不依赖 `AppHandle` 的前提下
+/// 进行单元测试。permit 覆盖 spawn + `.output()` 等待的完整过程，
+/// Drop 在函数返回时自动释放（含 Err 提前返回和 panic）。
+fn run_probe_media(input_path: &str) -> Result<MediaProbe, String> {
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let output = Command::new(ffprobe_binary())
         .args(["-v", "error", "-show_streams", "-of", "json", &input_path])
         .output()
@@ -390,16 +400,27 @@ pub fn scan_media_integrity(
     scan_media_integrity_path(&safe_path)
 }
 
+/// acquire 逻辑因依赖 AppHandle 无法直接单元测试，已通过
+/// analyze_audio_spectrum_path 的现有测试覆盖业务逻辑 + CI build
+/// 确认接线正确。不要误删这行 acquire。
 #[tauri::command]
 pub fn analyze_audio_spectrum(
     app: AppHandle,
     path: String,
 ) -> Result<AudioSpectrumAnalysis, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
+    // permit 覆盖 analyze_audio_spectrum_path 内部的 generate_spectrogram_png
+    // + analyze_ebur128_stats 的完整过程。acquire 失败时通过 ? 返回 Err，
+    // TS 侧 .catch 会显示 toast 让用户感知到"并发过高被拒绝"。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     Ok(analyze_audio_spectrum_path(&safe_path))
 }
 
 pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
+    // permit 覆盖 ffprobe 探测 + analyze_loudness_path 的 ffmpeg loudnorm
+    // 的完整过程。analyze_loudness_path 自身不 acquire（由本函数覆盖），
+    // 避免嵌套 acquire 虚耗额度。Drop 在函数返回时自动释放。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let input_path = normalize_path(path);
     let metadata = fs::metadata(path).ok();
     let output = Command::new(ffprobe_binary())
@@ -431,6 +452,9 @@ pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
 }
 
 pub(crate) fn scan_media_integrity_path(path: &Path) -> Result<MediaIntegrityScanResult, String> {
+    // permit 覆盖 spawn + .output() 等待的完整过程，
+    // Drop 在函数返回时自动释放（含 Err 提前返回和 panic）。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let input_path = normalize_path(path);
     let output = Command::new(ffmpeg_binary())
         .args(build_media_integrity_scan_args(&input_path))
@@ -636,6 +660,9 @@ fn build_bitrate_points(packets: &[FfprobePacket]) -> Vec<BitratePoint> {
         .collect()
 }
 
+/// 本函数不 acquire permit——由调用者 `analyze_media_path` 覆盖，
+/// 避免嵌套 acquire 虚耗额度。如果未来本函数被独立调用（新入口），
+/// 需重新评估是否补 acquire。
 fn analyze_loudness_path(path: &Path) -> Result<f64, String> {
     let input_path = normalize_path(path);
     let output = Command::new(ffmpeg_binary())
@@ -650,6 +677,9 @@ fn analyze_loudness_path(path: &Path) -> Result<f64, String> {
         .ok_or_else(|| "Unable to parse loudnorm integrated LUFS.".to_string())
 }
 
+/// 本函数不 acquire permit——由调用链上层 `analyze_audio_spectrum` command 覆盖，
+/// 避免嵌套 acquire 虚耗额度。如果未来本函数被独立调用（新入口），
+/// 需重新评估是否补 acquire。
 fn generate_spectrogram_png(input_path: &str, output_path: &str) -> Result<(), String> {
     if let Some(parent) = Path::new(output_path).parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -666,6 +696,9 @@ fn generate_spectrogram_png(input_path: &str, output_path: &str) -> Result<(), S
     }
 }
 
+/// 本函数不 acquire permit——由调用链上层 `analyze_audio_spectrum` command 覆盖，
+/// 避免嵌套 acquire 虚耗额度。如果未来本函数被独立调用（新入口），
+/// 需重新评估是否补 acquire。
 fn analyze_ebur128_stats(input_path: &str) -> Result<AudioSpectrumStats, String> {
     let args = build_ebur128_stats_args(input_path);
     let output = Command::new(ffmpeg_binary())
@@ -2477,4 +2510,144 @@ mod tests {
             "permits must be restored to full after analyze_rms_path returns"
         );
     }
+
+    // ── H2 方案 B 批3c：command handler 信号量接线测试 ──
+    // run_probe_media / analyze_media_path / scan_media_integrity_path
+    // （analyze_audio_spectrum 的 acquire 在外层 command，无法单元测试）
+
+    #[test]
+    fn run_probe_media_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = run_probe_media("input.mp4");
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn run_probe_media_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let _ = run_probe_media("input.mp4");
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after run_probe_media returns"
+        );
+    }
+
+    #[test]
+    fn analyze_media_path_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = analyze_media_path(std::path::Path::new("input.mp4"));
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn analyze_media_path_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let _ = analyze_media_path(std::path::Path::new("input.mp4"));
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after analyze_media_path returns"
+        );
+    }
+
+    #[test]
+    fn scan_media_integrity_path_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = scan_media_integrity_path(std::path::Path::new("input.mp4"));
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn scan_media_integrity_path_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let _ = scan_media_integrity_path(std::path::Path::new("input.mp4"));
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after scan_media_integrity_path returns"
+        );
+    }
+
+    // analyze_audio_spectrum 的 acquire 在外层 command（依赖 AppHandle），
+    // 无法直接单元测试，靠 CI cargo build 确认接线 + analyze_audio_spectrum_path
+    // 现有测试覆盖业务逻辑。
 }
