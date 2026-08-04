@@ -1036,6 +1036,9 @@ fn batch_extract_cover_frames_blocking(
 }
 
 pub(crate) fn analyze_waveform_path(path: &Path, samples_per_sec: u32) -> Result<Vec<f32>, String> {
+    // permit 覆盖 spawn + 流式读取 stdout + child.wait() 的完整过程，
+    // 在函数返回时通过 Drop 自动释放（含 Err 提前返回和 panic）。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let samples_per_sec = samples_per_sec.clamp(1, 1_000);
     let samples_per_bucket =
         ((WAVEFORM_SAMPLE_RATE as f64) / (samples_per_sec as f64)).ceil() as usize;
@@ -1142,6 +1145,9 @@ pub(crate) fn detect_silence_path(
     threshold_db: f64,
     min_gap_ms: f64,
 ) -> Result<Vec<[f64; 2]>, String> {
+    // permit 覆盖 spawn + 流式读取 stderr + child.wait() 的完整过程，
+    // 在函数返回时通过 Drop 自动释放（含 Err 提前返回和 panic）。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let input_path = normalize_path(path);
     let threshold_db = threshold_db.clamp(-120.0, 0.0);
     let min_duration = (min_gap_ms.max(1.0) / 1_000.0).max(0.001);
@@ -1207,6 +1213,10 @@ pub(crate) fn analyze_rms_path(
     path: &Path,
     samples_per_sec: u32,
 ) -> Result<Vec<RmsSample>, String> {
+    // permit 覆盖 spawn + 流式读取 stdout + child.wait() 的完整过程，
+    // 在函数返回时通过 Drop 自动释放（含 Err 提前返回和 panic）。
+    // detect_beats_path 调用本函数，自身不 spawn，不需要单独 acquire。
+    let _permit = crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit()?;
     let samples_per_sec = samples_per_sec.clamp(1, 200);
     let samples_per_bucket =
         ((BEAT_RMS_SAMPLE_RATE as f64) / (samples_per_sec as f64)).ceil() as usize;
@@ -2328,6 +2338,143 @@ mod tests {
             ffmpeg_semaphore::available_permits(),
             6,
             "permits must be restored to full after run_gap_fill_ffmpeg returns"
+        );
+    }
+
+    // ── H2 方案 B 批3b：流式 spawn 信号量接线测试 ──
+    // analyze_waveform_path / detect_silence_path / analyze_rms_path
+    // permit 覆盖 spawn + 流式读取 + child.wait() 全过程
+
+    #[test]
+    fn analyze_waveform_path_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = analyze_waveform_path(std::path::Path::new("input.mp4"), 10);
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn analyze_waveform_path_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        // 不管 ffmpeg 是否存在或成功，只验证 permit 释放
+        let _ = analyze_waveform_path(std::path::Path::new("input.mp4"), 10);
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after analyze_waveform_path returns"
+        );
+    }
+
+    #[test]
+    fn detect_silence_path_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = detect_silence_path(std::path::Path::new("input.mp4"), -30.0, 500.0);
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn detect_silence_path_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let _ = detect_silence_path(std::path::Path::new("input.mp4"), -30.0, 500.0);
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after detect_silence_path returns"
+        );
+    }
+
+    #[test]
+    fn analyze_rms_path_fails_when_semaphore_saturated() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        let mut held: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
+        while let Ok(p) = ffmpeg_semaphore::try_acquire_ffmpeg_permit() {
+            held.push(p);
+        }
+        assert_eq!(ffmpeg_semaphore::available_permits(), 0);
+
+        let result = analyze_rms_path(std::path::Path::new("input.mp4"), 10);
+
+        assert!(result.is_err(), "should return error when semaphore saturated");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("已达上限"),
+            "error should be semaphore rejection, got: {}",
+            err
+        );
+
+        drop(held);
+    }
+
+    #[test]
+    fn analyze_rms_path_releases_permit_regardless_of_outcome() {
+        let _guard = media_test_guard();
+        drain_and_release_all_permits();
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits should be full before call"
+        );
+
+        let _ = analyze_rms_path(std::path::Path::new("input.mp4"), 10);
+
+        assert_eq!(
+            ffmpeg_semaphore::available_permits(),
+            6,
+            "permits must be restored to full after analyze_rms_path returns"
         );
     }
 }
