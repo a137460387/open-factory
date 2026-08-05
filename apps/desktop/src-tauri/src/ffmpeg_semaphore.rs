@@ -9,7 +9,7 @@
 //! 无 spawn_blocking 包装），阻塞等待会冻结 UI 并连锁阻塞所有 command 调用。
 //! 因此 permit 拿不到时立即返回明确错误，不等待。
 
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::Semaphore;
 
 /// 全局信号量阈值：最多 6 个 FFmpeg 子进程同时运行。
@@ -18,11 +18,15 @@ use tokio::sync::Semaphore;
 /// Rust 侧兜底设 6，略紧于 TS 合计上限但留有余量——正常情况下不会触发。
 const FFMPEG_SEMAPHORE_LIMIT: usize = 6;
 
-static FFMPEG_SEMAPHORE: OnceLock<Semaphore> = OnceLock::new();
+static FFMPEG_SEMAPHORE: OnceLock<Arc<Semaphore>> = OnceLock::new();
 
 /// 获取全局 FFmpeg 信号量的静态引用。
-fn ffmpeg_semaphore() -> &'static Semaphore {
-    FFMPEG_SEMAPHORE.get_or_init(|| Semaphore::new(FFMPEG_SEMAPHORE_LIMIT))
+///
+/// 使用 `Arc<Semaphore>` 而非 `Semaphore`，因为 `try_acquire_owned()`
+/// 的签名要求 `Arc<Self>`——它返回的 `OwnedSemaphorePermit` 可跨线程转移
+/// 所有权，不绑定 `&Semaphore` 的生命周期。
+fn ffmpeg_semaphore() -> &'static Arc<Semaphore> {
+    FFMPEG_SEMAPHORE.get_or_init(|| Arc::new(Semaphore::new(FFMPEG_SEMAPHORE_LIMIT)))
 }
 
 /// 尝试获取一个 FFmpeg 子进程 permit。
@@ -33,7 +37,7 @@ fn ffmpeg_semaphore() -> &'static Semaphore {
 /// 这是一个非阻塞调用——拿不到 permit 立即返回 `Err`，不会在主线程上
 /// 等待，从而避免 UI 冻结和 command 调用连锁阻塞。
 pub fn try_acquire_ffmpeg_permit() -> Result<tokio::sync::OwnedSemaphorePermit, String> {
-    match ffmpeg_semaphore().try_acquire_owned() {
+    match ffmpeg_semaphore().clone().try_acquire_owned() {
         Ok(permit) => Ok(permit),
         Err(_) => Err(format!(
             "当前并发 FFmpeg 操作已达上限（{}），请稍后重试。如果持续出现此错误，请检查是否有新的媒体处理入口未接入 TS 侧限流池。",
@@ -69,7 +73,7 @@ pub fn test_guard() -> std::sync::MutexGuard<'static, ()> {
 #[cfg(test)]
 pub fn drain_and_release_all() {
     let mut permits: Vec<tokio::sync::OwnedSemaphorePermit> = Vec::new();
-    while let Ok(p) = ffmpeg_semaphore().try_acquire_owned() {
+    while let Ok(p) = ffmpeg_semaphore().clone().try_acquire_owned() {
         permits.push(p);
     }
     // 现在 permits 持有全部 permit，drop 后全部释放

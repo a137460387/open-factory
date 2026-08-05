@@ -1,3 +1,4 @@
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 use nnnoiseless::DenoiseState;
 use serde::{Deserialize, Serialize};
@@ -94,6 +95,8 @@ fn process_blocking(
     app: AppHandle,
     req: NoiseReductionRequest,
 ) -> Result<NoiseReductionResult, String> {
+    // 单个 permit 覆盖 decode_to_pcm + encode_pcm 两个串行 ffmpeg spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let started = Instant::now();
     if req.media_path.trim().is_empty() {
         return Err("Media path is missing.".into());

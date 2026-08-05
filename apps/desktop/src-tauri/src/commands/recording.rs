@@ -1,4 +1,5 @@
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -8,6 +9,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
+use tokio::sync::OwnedSemaphorePermit;
 
 static RECORDING_CHILDREN: OnceLock<Mutex<HashMap<String, RecordingProcess>>> = OnceLock::new();
 
@@ -19,6 +21,11 @@ struct RecordingProcess {
     child: Child,
     output_path: PathBuf,
     started: Instant,
+    /// 录制是长驻 ffmpeg 子进程，permit 需随录制进程生命周期存活，
+    /// 在 stop_recording 取出 RecordingProcess 后随结构 Drop 自动释放。
+    /// 该字段不被读取，仅靠 Drop 释放信号量配额。
+    #[allow(dead_code)]
+    permit: Option<OwnedSemaphorePermit>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -92,6 +99,14 @@ fn start_recording_blocking(
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
     let args = build_recording_args_for_current_platform(&request, &output_path);
+    // 录制是长驻 ffmpeg 子进程，spawn 前获取 permit 并存入 RecordingProcess，
+    // 使其覆盖录制全程（而非仅 spawn 瞬间）。acquire 失败时给出明确提示，
+    // 避免"点击录制无响应"被误认为 bug。
+    let permit = try_acquire_ffmpeg_permit().map_err(|error| {
+        format!(
+            "录制启动失败：当前并发 FFmpeg 操作已达上限，请关闭其他媒体操作后重试。({error})"
+        )
+    })?;
     let child = Command::new(ffmpeg_binary())
         .args(&args)
         .stdin(Stdio::piped())
@@ -108,6 +123,7 @@ fn start_recording_blocking(
                 child,
                 output_path: output_path.clone(),
                 started: Instant::now(),
+                permit: Some(permit),
             },
         );
     Ok(RecordingStartResult {

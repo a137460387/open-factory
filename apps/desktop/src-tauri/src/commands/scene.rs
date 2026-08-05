@@ -1,4 +1,5 @@
 use super::binaries::ffmpeg_binary;
+use crate::ffmpeg_semaphore::try_acquire_ffmpeg_permit;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -59,6 +60,8 @@ pub async fn detect_scene_changes(
     clear_scene_cancel_request(&task_id);
 
     let total_frames = estimate_total_frames(analyzed_duration, frame_rate);
+    // 覆盖 scdet spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let _ = app.emit(
         "scene-detect-progress",
         SceneDetectProgressPayload {
@@ -432,6 +435,8 @@ pub async fn detect_glitches(
         .unwrap_or_else(|| format!("glitch-{}", normalize_path(&safe_path)));
     clear_scene_cancel_request(&task_id);
 
+    // 覆盖 scdet spawn 全程。
+    let _permit = try_acquire_ffmpeg_permit()?;
     let mut command = Command::new(ffmpeg_binary());
     command.arg("-hide_banner");
 
