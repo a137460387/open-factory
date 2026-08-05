@@ -107,6 +107,10 @@ export interface EditorUIState {
   contextualTranslationOpen: boolean;
   aiChatEditorOpen: boolean;
   videoSummaryOpen: boolean;
+  // NOTE: 状态来源已迁移至 dialogStore/dialog-state.ts (DIALOG_KEYS)。
+  // 此处显式声明仅为 EditorUIState 的 backward-compatibility 类型层，
+  // 运行时由 dialogBooleans 从 DIALOG_KEYS 自动展开 (见下方 create() 内)。
+  // AGENTS.md:59 的"冻结"约束执行方式见 issue #108。
   videoGenerationOpen: boolean;
   narrationOpen: boolean;
   historyPanelOpen: boolean;
@@ -184,6 +188,8 @@ export interface EditorUIState {
   setContextualTranslationOpen: (updater: Updater<boolean>) => void;
   setAiChatEditorOpen: (updater: Updater<boolean>) => void;
   setVideoSummaryOpen: (updater: Updater<boolean>) => void;
+  // NOTE: setter 由 dialogSetters 从 DIALOG_KEYS 自动生成 (见下方 create() 内)，
+  // 此处显式声明仅为类型兼容。状态管理域已在 dialogStore/dialog-state.ts。
   setVideoGenerationOpen: (updater: Updater<boolean>) => void;
   setNarrationOpen: (updater: Updater<boolean>) => void;
   setHistoryPanelOpen: (updater: Updater<boolean>) => void;
