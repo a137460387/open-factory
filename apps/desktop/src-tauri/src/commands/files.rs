@@ -93,23 +93,50 @@ pub fn authorize_paths(app: AppHandle, paths: Vec<String>) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn read_file(app: AppHandle, path: String) -> Result<String, String> {
-    let safe_path = validate_path(&app, Path::new(&path))?;
-    fs::read_to_string(&safe_path)
-        .map_err(|error| format!("Unable to read {}: {}", normalize_path(&safe_path), error))
+pub async fn read_file(app: AppHandle, path: String) -> Result<String, String> {
+    // 同步文件 IO 移入 spawn_blocking，避免阻塞 Tauri 异步运行时线程
+    tauri::async_runtime::spawn_blocking(move || {
+        let safe_path = validate_path(&app, Path::new(&path))?;
+        fs::read_to_string(&safe_path)
+            .map_err(|error| format!("Unable to read {}: {}", normalize_path(&safe_path), error))
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]
-pub fn read_file_header_bytes(
+pub async fn read_file_header_bytes(
     app: AppHandle,
     path: String,
     byte_count: Option<usize>,
 ) -> Result<Vec<u8>, String> {
-    let safe_path = validate_path(&app, Path::new(&path))?;
+    // 同步文件 IO 移入 spawn_blocking，避免阻塞 Tauri 异步运行时线程。
+    // 只读取所需头部字节（File::open + Read::take），不整读大文件后丢弃。
+    tauri::async_runtime::spawn_blocking(move || {
+        let safe_path = validate_path(&app, Path::new(&path))?;
+        read_file_header_bytes_blocking(&safe_path, byte_count)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+/// 只读文件头部 N 字节（默认 16，上限 64）。
+///
+/// 使用 `File::open` + `Read::take` 限制读取量，避免将整个文件读入内存后
+/// 再截取前 N 字节（对大文件会浪费内存和 IO 时间）。
+fn read_file_header_bytes_blocking(
+    safe_path: &Path,
+    byte_count: Option<usize>,
+) -> Result<Vec<u8>, String> {
+    use std::io::Read;
     let count = byte_count.unwrap_or(16).min(64);
-    let data = fs::read(&safe_path)
-        .map_err(|error| format!("Unable to read {}: {}", normalize_path(&safe_path), error))?;
-    Ok(data.into_iter().take(count).collect())
+    let file = fs::File::open(safe_path)
+        .map_err(|error| format!("Unable to read {}: {}", normalize_path(safe_path), error))?;
+    let mut buf = Vec::with_capacity(count);
+    file.take(count as u64)
+        .read_to_end(&mut buf)
+        .map_err(|error| format!("Unable to read {}: {}", normalize_path(safe_path), error))?;
+    Ok(buf)
 }
 
 #[tauri::command]
@@ -360,6 +387,7 @@ fn temp_segments_dir_path() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn normalize_path_rewrites_windows_separators() {
@@ -382,5 +410,52 @@ mod tests {
                 .and_then(|value| value.to_str()),
             Some("open-factory")
         );
+    }
+
+    #[test]
+    fn read_file_header_bytes_only_reads_requested_count() {
+        // 写入 1MB 内容，验证只返回请求的 16 字节而非全文件
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        let payload = vec![0xAB_u8; 1024 * 1024];
+        file.write_all(&payload).expect("write payload");
+        file.flush().expect("flush");
+
+        let result = read_file_header_bytes_blocking(file.path(), Some(16))
+            .expect("read header should succeed");
+        assert_eq!(result.len(), 16);
+        assert_eq!(result, vec![0xAB_u8; 16]);
+    }
+
+    #[test]
+    fn read_file_header_bytes_defaults_to_16_and_caps_at_64() {
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        file.write_all(&[0x42_u8; 128]).expect("write payload");
+        file.flush().expect("flush");
+
+        // 默认 16 字节
+        let defaulted = read_file_header_bytes_blocking(file.path(), None).expect("default read");
+        assert_eq!(defaulted.len(), 16);
+
+        // 上限 64 字节
+        let capped =
+            read_file_header_bytes_blocking(file.path(), Some(4096)).expect("capped read");
+        assert_eq!(capped.len(), 64);
+    }
+
+    #[test]
+    fn read_file_header_bytes_reads_prefix_correctly() {
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        file.write_all(b"OFCUTENC2rest-of-file").expect("write payload");
+        file.flush().expect("flush");
+
+        let result = read_file_header_bytes_blocking(file.path(), Some(9)).expect("header read");
+        assert_eq!(result, b"OFCUTENC2");
+    }
+
+    #[test]
+    fn read_file_header_bytes_missing_file_returns_error() {
+        let result =
+            read_file_header_bytes_blocking(Path::new("/nonexistent/definitely-missing"), None);
+        assert!(result.is_err(), "missing file should return error");
     }
 }

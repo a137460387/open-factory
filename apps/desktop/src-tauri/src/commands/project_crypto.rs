@@ -45,10 +45,27 @@ pub fn decrypt_project_file(
 }
 
 #[tauri::command]
-pub fn is_encrypted_project_file(app: AppHandle, path: String) -> Result<bool, String> {
-    let safe_path = validate_path(&app, Path::new(&path))?;
-    let bytes = fs::read(&safe_path).map_err(|error| error.to_string())?;
-    Ok(is_encrypted_project_bytes(&bytes))
+pub async fn is_encrypted_project_file(app: AppHandle, path: String) -> Result<bool, String> {
+    // 同步文件 IO 移入 spawn_blocking，避免阻塞 Tauri 异步运行时线程。
+    // 加密标记只需前 9 字节 magic，只读头部，不整读大文件。
+    tauri::async_runtime::spawn_blocking(move || {
+        let safe_path = validate_path(&app, Path::new(&path))?;
+        is_encrypted_project_file_blocking(&safe_path)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+/// 只读文件前 magic 字节判断是否为加密项目文件。
+fn is_encrypted_project_file_blocking(safe_path: &Path) -> Result<bool, String> {
+    use std::io::Read;
+    let magic_len = MAGIC_V1.len(); // 9 字节
+    let file = fs::File::open(safe_path).map_err(|error| error.to_string())?;
+    let mut header = Vec::with_capacity(magic_len);
+    file.take(magic_len as u64)
+        .read_to_end(&mut header)
+        .map_err(|error| error.to_string())?;
+    Ok(is_encrypted_project_bytes(&header))
 }
 
 pub fn encrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u8>, String> {
@@ -203,5 +220,51 @@ mod tests {
 
         let error = decrypt_project_contents(&v1_blob, "wrong").unwrap_err();
         assert_eq!(error, PASSWORD_ERROR);
+    }
+
+    #[test]
+    fn is_encrypted_project_file_blocking_detects_v2_magic_in_header() {
+        use std::io::Write;
+        // 加密标记在前 9 字节，后面是大量填充，验证只读头部即可判断
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        file.write_all(MAGIC_V2).expect("write magic");
+        file.write_all(&[0x00_u8; 1024 * 1024]).expect("write payload");
+        file.flush().expect("flush");
+
+        let result =
+            is_encrypted_project_file_blocking(file.path()).expect("detection should succeed");
+        assert!(result, "v2 magic at header should be detected");
+    }
+
+    #[test]
+    fn is_encrypted_project_file_blocking_detects_v1_magic_in_header() {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        file.write_all(MAGIC_V1).expect("write magic");
+        file.flush().expect("flush");
+
+        let result =
+            is_encrypted_project_file_blocking(file.path()).expect("detection should succeed");
+        assert!(result, "v1 magic at header should be detected");
+    }
+
+    #[test]
+    fn is_encrypted_project_file_blocking_returns_false_for_plain_file() {
+        use std::io::Write;
+        let mut file = tempfile::NamedTempFile::new().expect("create temp file");
+        file.write_all(br#"{"schemaVersion":2}"#).expect("write payload");
+        file.flush().expect("flush");
+
+        let result =
+            is_encrypted_project_file_blocking(file.path()).expect("detection should succeed");
+        assert!(!result, "plain project should not be detected as encrypted");
+    }
+
+    #[test]
+    fn is_encrypted_project_file_blocking_missing_file_returns_error() {
+        let result = is_encrypted_project_file_blocking(
+            std::path::Path::new("/nonexistent/definitely-missing"),
+        );
+        assert!(result.is_err(), "missing file should return error");
     }
 }
