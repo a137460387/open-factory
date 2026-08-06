@@ -11,6 +11,7 @@ import {
   saveLocalEffectPreset,
   type EffectPresetLibraryStorage,
 } from './effect-preset-library';
+import { zhCN } from '../i18n/strings';
 
 describe('effect preset library', () => {
   it('loads community cards from cache when the static directory request fails', async () => {
@@ -26,6 +27,38 @@ describe('effect preset library', () => {
     expect(result.source).toBe('cache');
     expect(result.warning).toContain('offline');
     expect(result.cards.map((card) => card.id)).toEqual(['cache-film']);
+  });
+
+  it('skips the remote request and reads cache when online content is disabled', async () => {
+    const storage = createMemoryStorage();
+    const cachePath = getEffectPresetCommunityCachePath(storage.appDataDir);
+    storage.files.set(cachePath, makeCommunityJson('cache-film', ['cinematic', 'portrait']));
+    let fetched = false;
+    const fetcher = async () => {
+      fetched = true;
+      throw new Error('should not fetch while disabled');
+    };
+
+    const result = await loadEffectPresetCommunityLibrary({
+      storage,
+      fetcher: fetcher as unknown as typeof fetch,
+      remoteEnabled: false,
+    });
+
+    expect(fetched).toBe(false);
+    expect(result.source).toBe('cache');
+    expect(result.warning).toBeUndefined();
+    expect(result.cards.map((card) => card.id)).toEqual(['cache-film']);
+  });
+
+  it('reports the disabled notice when online content is off and no cache exists', async () => {
+    const storage = createMemoryStorage();
+
+    const result = await loadEffectPresetCommunityLibrary({ storage, remoteEnabled: false });
+
+    expect(result.source).toBe('empty');
+    expect(result.cards).toEqual([]);
+    expect(result.warning).toBe(zhCN.effectPresetLibrary.onlineContentDisabled);
   });
 
   it('installs community presets into the local effect preset directory', async () => {

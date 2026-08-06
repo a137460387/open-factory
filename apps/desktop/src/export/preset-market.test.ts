@@ -11,6 +11,7 @@ import {
   type PresetMarketStorage,
 } from './preset-market';
 import type { ExportPreset } from './export-presets';
+import { zhCN } from '../i18n/strings';
 
 describe('preset market', () => {
   it('parses preset card JSON into normalized market cards', () => {
@@ -89,6 +90,41 @@ describe('preset market', () => {
     expect(result.source).toBe('cache');
     expect(result.warning).toContain('offline');
     expect(result.cards.map((card) => card.id)).toEqual(['cached']);
+  });
+
+  it('skips the remote request and reads cache when online content is disabled', async () => {
+    const storage = createMemoryStorage();
+    const cached = JSON.stringify({
+      schemaVersion: 1,
+      presets: [makeMarketCard('cached', ['YouTube', '1080p', 'MP4'])],
+    });
+    storage.files.set(getPresetMarketCachePath('C:/Users/E2E/AppData/Roaming/open-factory'), cached);
+    let fetched = false;
+    const spyingFetch = async () => {
+      fetched = true;
+      throw new Error('should not fetch while disabled');
+    };
+
+    const result = await loadPresetMarket({
+      storage,
+      fetcher: spyingFetch as unknown as typeof fetch,
+      remoteEnabled: false,
+    });
+
+    expect(fetched).toBe(false);
+    expect(result.source).toBe('cache');
+    expect(result.warning).toBeUndefined();
+    expect(result.cards.map((card) => card.id)).toEqual(['cached']);
+  });
+
+  it('reports the disabled notice when online content is off and no cache exists', async () => {
+    const storage = createMemoryStorage();
+
+    const result = await loadPresetMarket({ storage, remoteEnabled: false });
+
+    expect(result.source).toBe('empty');
+    expect(result.cards).toEqual([]);
+    expect(result.warning).toBe(zhCN.presetMarket.onlineContentDisabled);
   });
 
   it('detects duplicate custom presets before overwrite confirmation', () => {

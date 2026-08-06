@@ -51,6 +51,11 @@ export interface PresetMarketLoadOptions {
   storage?: PresetMarketStorage;
   fetcher?: typeof fetch;
   url?: string;
+  /**
+   * 本地优先约束（AGENTS.md）：远程市场内容必须由用户显式开启。
+   * 设为 false 时跳过远程请求，仅读取本地缓存。
+   */
+  remoteEnabled?: boolean;
 }
 
 const MARKET_CACHE_DIR = 'market-cache';
@@ -105,6 +110,12 @@ export function filterPresetMarketCards(
 export async function loadPresetMarket(options: PresetMarketLoadOptions = {}): Promise<PresetMarketLoadResult> {
   const storage = options.storage ?? bridgePresetMarketStorage;
   const cachePath = getPresetMarketCachePath(await storage.getAppDataDir());
+  if (options.remoteEnabled === false) {
+    if (await storage.fsExists(cachePath)) {
+      return { cards: parsePresetMarketJson(await storage.readFile(cachePath)), source: 'cache' };
+    }
+    return { cards: [], source: 'empty', warning: zhCN.presetMarket.onlineContentDisabled };
+  }
   try {
     const response = await (options.fetcher ?? fetch)(options.url ?? EXPORT_PRESET_MARKET_URL, { cache: 'no-store' });
     if (!response.ok) {
