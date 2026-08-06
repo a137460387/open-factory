@@ -6,7 +6,7 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { TransitionDefinition } from '@open-factory/editor-core';
+import type { TransitionDefinition, TransitionType } from '@open-factory/editor-core';
 import { createWebGLTransitionRenderer, type WebGLTransitionRenderer } from './webgl-transition-renderer';
 
 interface TransitionCardProps {
@@ -14,7 +14,7 @@ interface TransitionCardProps {
   isFavorite: boolean;
   isHovered: boolean;
   onHover: (type: string | null) => void;
-  onToggleFavorite: (type: string) => void;
+  onToggleFavorite: (type: TransitionType) => void;
   onSelect: (type: string) => void;
   onDragStart?: (type: string, e: React.DragEvent) => void;
 }

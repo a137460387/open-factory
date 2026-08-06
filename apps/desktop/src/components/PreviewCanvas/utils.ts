@@ -402,7 +402,7 @@ export function buildFrameSearchCandidates(project: Project, query: string): imp
   const clipCandidates = project.timeline.tracks.flatMap((tr) =>
     tr.clips
       .filter((c) => {
-        const asset = 'mediaId' in c ? project.media.find((a) => a.id === (c as any).mediaId) : undefined;
+        const asset = 'mediaId' in c ? project.media.find((a) => a.id === c.mediaId) : undefined;
         return [c.name, asset?.name, asset?.path].some((v) => v?.toLowerCase().includes(normalizedQuery));
       })
       .map((c): import('./types').FrameSearchCandidate => ({ id: c.id, type: 'clip', label: c.name, time: c.start })),

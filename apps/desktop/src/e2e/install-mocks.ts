@@ -5009,25 +5009,24 @@ window.__E2E_ACTIONS__ = {
     if (!clip) return undefined;
     // Handle independent MulticamClip (type: 'multicam')
     if (clip.type === 'multicam') {
-      const mc = clip as any;
       return {
-        angleCount: mc.angles?.length ?? 0,
-        switchCount: mc.switchPoints?.length ?? 0,
+        angleCount: clip.angles.length,
+        switchCount: clip.switchPoints.length,
         switches:
-          mc.switchPoints?.map((sp: any) => ({ time: sp.time, angleId: mc.angles?.[sp.targetAngle]?.id ?? '' })) ?? [],
-        activeAngle: mc.angles?.[mc.activeAngle]?.id,
-        angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+          clip.switchPoints.map((sp) => ({ time: sp.time, angleId: clip.angles[sp.targetAngle]?.id ?? '' })),
+        activeAngle: clip.angles[clip.activeAngle]?.id,
+        angles: clip.angles.map((a) => ({ id: a.id, name: a.name, offset: a.offset })),
       };
     }
     // Handle NestedSequenceClip with multicam property (legacy)
-    if (!(clip as any).multicam) return undefined;
-    const mc = (clip as any).multicam;
+    if (!('multicam' in clip) || !clip.multicam) return undefined;
+    const mc = clip.multicam;
     return {
-      angleCount: mc.angles?.length ?? 0,
-      switchCount: mc.switches?.length ?? 0,
-      switches: mc.switches ?? [],
-      activeAngle: mc.activeAngle,
-      angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+      angleCount: mc.angles.length,
+      switchCount: mc.switches.length,
+      switches: mc.switches,
+      activeAngle: undefined,
+      angles: mc.angles.map((a) => ({ id: a.id, name: a.name, offset: a.offset })),
     };
   },
   setupShakeAnalysisFixture: () => {
@@ -5155,7 +5154,7 @@ window.__E2E_ACTIONS__ = {
   },
   setupPlatformFitFixture: () => {
     const project = createProject('Platform Fit E2E');
-    const clips = [];
+    const clips: Clip[] = [];
     for (let i = 0; i < 5; i++) {
       clips.push({
         id: `clip-pf-${i}`,
@@ -5172,7 +5171,7 @@ window.__E2E_ACTIONS__ = {
         transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
         volume: 1,
         platformFitRemoved: i >= 3 ? true : undefined,
-      } as any);
+      });
     }
     const assets: MediaAsset[] = [];
     for (let i = 0; i < 5; i++) {
@@ -6079,7 +6078,6 @@ window.__E2E_ACTIONS__ = {
       activeSequenceId: PRIMARY_SEQUENCE_ID,
     });
   },
-  commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
   setupMotionTypeFixture: () => {
     const project = createProject('Motion Type E2E');
     const assetPan = {
@@ -8235,7 +8233,7 @@ function setupMulticamAiCutFixtureInner() {
                 { time: 7, angleId: 'angle-a', confidence: 0.78, reason: 'close-up' },
               ],
             },
-          } as any,
+          },
         ],
       }),
     ],
