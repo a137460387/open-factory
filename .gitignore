@@ -32,6 +32,14 @@ media-compat-report.json
 e2e-*.txt
 e2e-*.json
 
+# Local CI/test/audit run logs (dashed or underscored prefixes)
+.audit_log.txt
+.ci_*.txt
+.e2e_*.txt
+.m1_*.txt
+.rust_*.txt
+apps/desktop/.adj_*.txt
+
 # Logs and error output
 *.log
 *.err
@@ -109,6 +117,12 @@ apps/desktop/ffprobe.exe
 # Claude Code local tooling artifacts
 .superpowers/
 skills/
+
+# ZCode local tooling artifacts
+.zcode/
+
+# Pending local patches/notes (session work, not tracked)
+.pending-patches/
 
 # Audit evidence reports (local only)
 docs/evidence/
