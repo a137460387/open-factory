@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import type {MixerState, AudioBus, AudioEffectSlot, AutomationCurve, AudioFollowMode, MulticamAudioGroup} from '@open-factory/editor-core';
+import type {MixerState, AudioBus, AudioEffectSlot, AudioEffectType, AutomationCurve, AudioFollowMode, MulticamAudioGroup} from '@open-factory/editor-core';
 import {createDefaultMixerState, createMixerChannel, createBus, createEffectSlot, buildNoiseReductionFilterString, createMulticamAudioGroup, updateGroupActiveAngle, setGroupFollowMode, updateChannelVolume as updateMcChannelVolume, toggleChannelMute as toggleMcChannelMute, setGroupMasterVolume as setMcGroupMasterVolume} from '@open-factory/editor-core';
 import type {NoiseReductionParams} from '@open-factory/editor-core';
 
@@ -49,7 +49,7 @@ export interface MixerStoreState {
   updateChannelEffects: (trackId: string, effects: AudioEffectSlot[]) => void;
 
   /** 添加效果到通道 */
-  addEffectToChannel: (trackId: string, effectType: string) => void;
+  addEffectToChannel: (trackId: string, effectType: AudioEffectType) => void;
 
   /** 从通道移除效果 */
   removeEffectFromChannel: (trackId: string, effectId: string) => void;
@@ -240,7 +240,7 @@ export const useMixerStore = create<MixerStoreState>((set, get) => ({
     const state = get();
     const channel = state.mixerState.channels.find((ch) => ch.trackId === trackId);
     if (!channel) return;
-    const newEffect = createEffectSlot(effectType as any);
+    const newEffect = createEffectSlot(effectType);
     newEffect.order = channel.effectsChain.length;
     set((prev) => ({
       mixerState: {

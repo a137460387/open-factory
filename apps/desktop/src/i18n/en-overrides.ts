@@ -4304,6 +4304,8 @@ export const enOverrides = {
     title: 'Preset Market',
     description:
       'Browse static community export presets. Offline mode uses the local cache, and installs stay in the local preset list.',
+    onlineContentToggle: 'Enable online preset market (fetch latest community presets)',
+    onlineContentDisabled: 'Online content is off; showing local cache only.',
     refresh: 'Refresh Market',
     loading: 'Loading preset market...',
     empty: 'No matching market presets.',
@@ -4364,6 +4366,8 @@ export const enOverrides = {
     title: 'Effect Preset Library',
     description:
       'Browse static community effect stacks. Offline mode uses the local cache, and installs stay in the local effect preset directory.',
+    onlineContentToggle: 'Enable online effect preset library (fetch latest community presets)',
+    onlineContentDisabled: 'Online content is off; showing local cache only.',
     refresh: 'Refresh Library',
     loading: 'Loading effect preset library...',
     empty: 'No matching effect presets.',

@@ -5078,6 +5078,8 @@ const zh = {
   presetMarket: {
     title: '预设市场',
     description: '浏览静态社区导出预设；离线时显示本地缓存，安装后写入本机预设列表。',
+    onlineContentToggle: '启用在线预设市场（联网获取最新社区预设）',
+    onlineContentDisabled: '在线内容已关闭，仅显示本地缓存。',
     refresh: '刷新市场',
     loading: '正在加载预设市场...',
     empty: '没有匹配的市场预设。',
@@ -5137,6 +5139,8 @@ const zh = {
   effectPresetLibrary: {
     title: '特效预设库',
     description: '浏览静态社区特效参数组合；离线时读取本地缓存，安装后写入本机特效预设目录。',
+    onlineContentToggle: '启用在线特效预设库（联网获取最新社区预设）',
+    onlineContentDisabled: '在线内容已关闭，仅显示本地缓存。',
     refresh: '刷新预设库',
     loading: '正在加载特效预设库...',
     empty: '没有匹配的特效预设。',

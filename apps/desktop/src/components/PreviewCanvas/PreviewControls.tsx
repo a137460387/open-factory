@@ -1,6 +1,7 @@
 import { Columns2, Rows2, Blend, MousePointer2, Pipette, GitCompareArrows, BarChart3, Pause, Play, FileDown, Type as TypeIcon, RectangleHorizontal, ArrowUpRight } from 'lucide-react';
 import type { ReviewAnnotationType } from '@open-factory/editor-core';
 import type { ProjectSnapshotEntry } from '../../lib/projectSnapshots';
+import type { PreviewCompareMode } from '../../lib/preview/compare';
 import { zhCN } from '../../i18n/strings';
 
 export interface PreviewControlsProps {
@@ -8,7 +9,7 @@ export interface PreviewControlsProps {
   previewCanvasSizeLabel: string;
   reviewMode: boolean;
   compareEnabled: boolean;
-  compareMode: string;
+  compareMode: PreviewCompareMode | 'off';
   canvasEditMode: boolean;
   frameInspectMode: boolean;
   scopesOpen: boolean;
@@ -20,7 +21,7 @@ export interface PreviewControlsProps {
   reviewText: string;
   onSnapshotCompareSelect: (path: string) => void;
   onSnapshotPointerDown: () => void;
-  onCompareModeChange: (mode: string) => void;
+  onCompareModeChange: (mode: PreviewCompareMode) => void;
   onToggleCompare: () => void;
   onToggleCanvasEditMode: () => void;
   onToggleFrameInspectMode: () => void;

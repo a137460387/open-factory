@@ -11,6 +11,8 @@ test('installs a mocked community effect preset and applies it to the selected c
   await page.getByTestId('settings-tab-effect-presets').click();
 
   await expect(page.getByTestId('effect-preset-community-panel')).toBeVisible();
+  // 本地优先：在线内容默认关闭，需显式开启后才允许远程拉取（审计 C3/L3）
+  await page.getByTestId('effect-preset-online-toggle').click();
   await expect(page.getByTestId('effect-preset-source')).toHaveAttribute('data-source', 'remote');
   const communityCard = page.locator('[data-testid="effect-preset-community-card"][data-preset-id="e2e-film-glow"]');
   await expect(communityCard).toBeVisible();

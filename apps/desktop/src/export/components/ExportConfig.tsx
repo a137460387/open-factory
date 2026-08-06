@@ -253,7 +253,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
             <select
               className="w-full rounded-md border border-line px-2 py-1.5"
               value={exportRangeMode}
-              onChange={(event) => setExportRangeMode(event.target.value as any)}
+              onChange={(event) => setExportRangeMode(event.target.value as typeof exportRangeMode)}
               data-testid="export-range-select"
             >
               {(['all', 'in-out', 'selected-clips'] as const).map((mode) => (
@@ -750,7 +750,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
           <select
             className="rounded-md border border-line px-2 py-1.5 text-sm"
             value={priority}
-            onChange={(event) => setPriority(event.target.value as any)}
+            onChange={(event) => setPriority(event.target.value as typeof priority)}
             data-testid="export-priority-select"
           >
             {(['high', 'normal', 'low'] as const).map((value) => (

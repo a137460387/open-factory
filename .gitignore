@@ -85,6 +85,8 @@ tauri.key
 /cache/
 **/.cache/
 .turbo/
+__pycache__/
+*.pyc
 *.tsbuildinfo
 *.bak
 *.tmp

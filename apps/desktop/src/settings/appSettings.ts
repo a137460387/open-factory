@@ -280,6 +280,7 @@ export interface AppSettings {
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
   update?: UpdateSettings;
+  onlineContentEnabled?: boolean;
   disableExportRecommendations?: boolean;
   thumbnailPrerenderEnabled?: boolean;
   touchOptimization?: TouchOptimizationSettings;
@@ -532,6 +533,21 @@ export async function saveUpdateSettings(update: Partial<UpdateSettings>): Promi
   const nextUpdate = normalizeUpdateSettings({ ...settings.update, ...update });
   await writeAppSettings({ ...settings, update: nextUpdate });
   return nextUpdate;
+}
+
+/**
+ * 本地优先约束（AGENTS.md）：在线内容（预设市场/社区特效库远程拉取）
+ * 默认关闭，需用户在设置中显式开启。
+ */
+export async function readOnlineContentEnabled(): Promise<boolean> {
+  const settings = await readAppSettings();
+  return settings.onlineContentEnabled ?? false;
+}
+
+export async function saveOnlineContentEnabled(enabled: boolean): Promise<boolean> {
+  const settings = await readAppSettings();
+  await writeAppSettings({ ...settings, onlineContentEnabled: enabled });
+  return enabled;
 }
 
 export async function savePreviewPerformanceSettings(
