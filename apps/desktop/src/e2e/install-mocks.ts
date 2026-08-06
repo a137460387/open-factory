@@ -241,6 +241,10 @@ exists.set('C:/Missing/tiny-audio.wav', false);
 exists.set('C:/Missing/test-image.png', false);
 restorePersistedFiles();
 ensureTutorialSkippedByDefault(false);
+// 手势教程会在首启 2s 后自动弹出（useEditorShellEffects），全屏遮罩拦截所有点击。
+// e2e 每个用例都是全新 context（localStorage 为空），不跳过会导致全部 spec 被遮罩卡死
+// （issue #114 验证阶段发现的第二个系统性卡点），与上方主教程跳过同属确定性环境预置。
+localStorage.setItem('open-factory:gesture-tutorial-seen', '1');
 
 const mocks: TauriMocks = {
   confirm: (message) => {

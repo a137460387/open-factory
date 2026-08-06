@@ -14,6 +14,8 @@ const renderCounts = new Map<string, number>();
 const renderListeners = new Set<() => void>();
 let renderVersion = 0;
 let cachedCountsSnapshot: ReadonlyMap<string, number> = new Map();
+/** 有未通知的渲染计数变更时为 true，由 FPS 心跳统一 flush（见 flushDirtyNotifies） */
+let renderDirty = false;
 
 function notifyRenderListeners() {
   renderVersion++;
@@ -24,12 +26,17 @@ function notifyRenderListeners() {
 /**
  * Track render count for a named component.
  * Returns the current count for that component.
+ *
+ * 只负责计数，不同步通知订阅者：若此处同步 notify，订阅了渲染计数的组件
+ * （DevPerfOverlay）会因自身计数增长而重渲染，重渲染又调用 trackRender，
+ * 形成无限渲染闭环（issue #114 根因）。订阅者通知统一延迟到 FPS 心跳
+ * （notifyFpsListeners → flushDirtyNotifies，约 500ms 一轮）在渲染相位外派发。
  */
 export function trackRender(name: string): number {
   if (typeof __DEV_PERF_MONITOR__ === 'undefined' || !__DEV_PERF_MONITOR__) return 0;
   const next = (renderCounts.get(name) ?? 0) + 1;
   renderCounts.set(name, next);
-  notifyRenderListeners();
+  renderDirty = true;
   return next;
 }
 
@@ -39,7 +46,25 @@ export function getRenderCounts(): ReadonlyMap<string, number> {
 
 export function resetRenderCounts(): void {
   renderCounts.clear();
+  renderDirty = false;
   notifyRenderListeners();
+}
+
+/**
+ * 将被标记为脏的计数/订阅日志变更统一通知给订阅者。
+ * 仅由 FPS 心跳（渲染相位之外）或显式重置触发，绝不在 trackRender /
+ * logStoreSubscription 的写入点同步调用，以切断"写入 → 通知 → 订阅者
+ * 重渲染 → 再写入"的无限闭环（issue #114）。
+ */
+function flushDirtyNotifies(): void {
+  if (renderDirty) {
+    renderDirty = false;
+    notifyRenderListeners();
+  }
+  if (subDirty) {
+    subDirty = false;
+    notifySubListeners();
+  }
 }
 
 function subscribeRenderCounts(cb: () => void) {
@@ -74,6 +99,9 @@ function fpsTick(now: number) {
 }
 
 function notifyFpsListeners() {
+  // 心跳是渲染相位外的固定节拍，顺带把累积的计数/订阅日志变更 flush 给订阅者，
+  // 使面板数据以 ~500ms 节奏刷新，且永不触发"写入即通知"的闭环。
+  flushDirtyNotifies();
   fpsVersion++;
   const history = fpsHistory.slice(-60);
   const current = history[history.length - 1] ?? 0;
@@ -124,6 +152,8 @@ const MAX_SUB_LOG = 200;
 const subListeners = new Set<() => void>();
 let subVersion = 0;
 let cachedSubSnapshot: readonly SubscriptionEvent[] = [];
+/** 有未通知的订阅日志变更时为 true，由 FPS 心跳统一 flush（见 flushDirtyNotifies） */
+let subDirty = false;
 
 function notifySubListeners() {
   subVersion++;
@@ -133,6 +163,9 @@ function notifySubListeners() {
 
 /**
  * Log a store subscription trigger. Call this from Zustand middleware or selectors.
+ *
+ * 只记录日志，不同步通知订阅者（同 trackRender，避免写入即通知造成的渲染闭环，
+ * issue #114）。订阅者通知延迟到 FPS 心跳 flushDirtyNotifies 统一派发。
  */
 export function logStoreSubscription(store: string, field: string): void {
   if (typeof __DEV_PERF_MONITOR__ === 'undefined' || !__DEV_PERF_MONITOR__) return;
@@ -140,7 +173,7 @@ export function logStoreSubscription(store: string, field: string): void {
   if (subscriptionLog.length > MAX_SUB_LOG) {
     subscriptionLog.splice(0, subscriptionLog.length - MAX_SUB_LOG);
   }
-  notifySubListeners();
+  subDirty = true;
 }
 
 export function getSubscriptionLog(): readonly SubscriptionEvent[] {
@@ -149,6 +182,7 @@ export function getSubscriptionLog(): readonly SubscriptionEvent[] {
 
 export function clearSubscriptionLog(): void {
   subscriptionLog.length = 0;
+  subDirty = false;
   notifySubListeners();
 }
 
