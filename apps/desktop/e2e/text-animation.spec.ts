@@ -11,8 +11,8 @@ test('applies a fade text animation preset and exports the generated keyframes',
   const clipId = await textClip.getAttribute('data-clip-id');
   expect(clipId).toBeTruthy();
 
-  await page.getByTestId('clip-text-input').fill('Animated Title');
-  await page.getByTestId('clip-text-input').blur();
+  await page.getByTestId('rich-text-editor-content').fill('Animated Title');
+  await page.getByTestId('rich-text-editor-content').blur();
   await page.getByTestId('text-animation-preset-select').selectOption('fade');
   await page.getByTestId('text-animation-duration-input').fill('0.5');
   await page.getByTestId('text-animation-direction-select').selectOption('in');
