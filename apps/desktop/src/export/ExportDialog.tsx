@@ -43,6 +43,7 @@ export function ExportDialog(props: ExportDialogProps) {
             <button
               key={step}
               type="button"
+              data-testid={`export-step-${step}`}
               className={`rounded px-3 py-1.5 text-xs font-semibold ${
                 currentStep === step
                   ? 'bg-brand text-white'
