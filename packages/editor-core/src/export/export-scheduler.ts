@@ -568,15 +568,26 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
 }
 
 /**
- * 替换或添加命令行参数
+ * 替换或添加输出选项。
+ *
+ * 顺序约束：buildFfmpegFullArgs 与各 outputArgs 构造器约定"输出路径（或
+ * `-f null -` 的输出终结符 `-`）始终是参数数组的最后一个元素"，Rust 侧
+ * run_export 与 e2e mock 都按 fullArgs.at(-1) 读取输出路径；ffmpeg 本身也
+ * 要求所有输出选项出现在输出文件之前。因此当 key 不存在、需要插入新选项
+ * 时，只能插在最后一个元素（输出终结符）之前，绝不能追加到其后——否则
+ * ffmpeg 会把这些选项误解为属于"下一个输出文件"，且所有按末位读取输出
+ * 路径的下游逻辑都会读到错误值（1ff08c92 引入的真实回归）。
  */
 function replaceOrAddArg(args: string[], key: string, value: string): void {
   const index = args.indexOf(key);
-  if (index >= 0 && index + 1 < args.length) {
+  if (index >= 0) {
+    // key 已存在：原位替换其值（构造约定下 key 不会出现在末位之后，
+    // 原位替换不改变顺序约束）。
     args[index + 1] = value;
-  } else {
-    args.push(key, value);
+    return;
   }
+  const insertAt = Math.max(0, args.length - 1);
+  args.splice(insertAt, 0, key, value);
 }
 
 /**
