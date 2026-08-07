@@ -8,6 +8,8 @@ test('generates three export preview thumbnails from sampled frames', async ({ p
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page, 0);
   await openExportDialog(page);
+  // 向导拆分（bd315fd6）后预览面板在 preview 步，需先切步
+  await page.getByTestId('export-step-preview').click();
 
   await page.getByTestId('export-preview-button').click();
   await expect(page.getByTestId('export-preview-thumbnail')).toHaveCount(3);
