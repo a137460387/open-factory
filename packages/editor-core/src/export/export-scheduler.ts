@@ -491,6 +491,16 @@ export function scheduleExport(
   };
 }
 
+/** 判断参数列表中 -c:v 指定的视频编码器是否为硬件编码器。 */
+function isHardwareEncoderArgs(args: string[]): boolean {
+  const idx = args.indexOf('-c:v');
+  if (idx < 0 || idx + 1 >= args.length) {
+    return false;
+  }
+  const encoder = args[idx + 1];
+  return /_(nvenc|amf|qsv|vaapi)$/.test(encoder) || encoder.endsWith('_videotoolbox');
+}
+
 /**
  * 将调度决策应用到导出计划
  */
@@ -498,16 +508,26 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
   const outputArgs = [...(plan.outputArgs ?? [])];
   const fullArgs = [...(plan.fullArgs ?? [])];
 
-  // 应用 preset
-  replaceOrAddArg(outputArgs, '-preset', decision.preset);
-  replaceOrAddArg(fullArgs, '-preset', decision.preset);
+  // 硬件加速与否：既看调度决策，也看计划里实际使用的编码器。调度配置可能未
+  // 感知到用户在导出设置里开启的硬件编码（getRecommendedExportConfig 默认
+  // hardwareAccelerationEnabled=false），此时若仅凭 decision 判断，会把 x264
+  // 速度档 preset（veryslow 等，对 NVENC 非法）和 CRF 覆盖到硬件编码器参数上。
+  const hardwareActive = decision.useHardwareAcceleration || isHardwareEncoderArgs(fullArgs);
+
+  // 应用 preset（仅软件编码）。硬件编码器有自己的 preset 档位（如 NVENC 的
+  // p1-p7），decision.preset 是 x264 速度档名称（veryslow/slow/...），对硬件
+  // 编码器是非法值；硬件编码时保留计划自身的 preset。
+  if (!hardwareActive) {
+    replaceOrAddArg(outputArgs, '-preset', decision.preset);
+    replaceOrAddArg(fullArgs, '-preset', decision.preset);
+  }
 
   // 应用线程数
   replaceOrAddArg(outputArgs, '-threads', String(decision.threads));
   replaceOrAddArg(fullArgs, '-threads', String(decision.threads));
 
   // 应用 CRF（仅软件编码）
-  if (decision.useHardwareAcceleration) {
+  if (hardwareActive) {
     // 硬件加速时移除 CRF 参数
     removeArg(outputArgs, '-crf');
     removeArg(fullArgs, '-crf');
@@ -525,9 +545,12 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
   // 处理多 pass
   const passes = plan.passes?.map((pass) => {
     const passArgs = [...pass.fullArgs];
-    replaceOrAddArg(passArgs, '-preset', decision.preset);
+    const passHardwareActive = decision.useHardwareAcceleration || isHardwareEncoderArgs(passArgs);
+    if (!passHardwareActive) {
+      replaceOrAddArg(passArgs, '-preset', decision.preset);
+    }
     replaceOrAddArg(passArgs, '-threads', String(decision.threads));
-    if (decision.useHardwareAcceleration) {
+    if (passHardwareActive) {
       removeArg(passArgs, '-crf');
     } else {
       replaceOrAddArg(passArgs, '-crf', String(decision.crf));
