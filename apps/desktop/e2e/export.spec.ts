@@ -220,8 +220,7 @@ test('blocks export when preflight finds missing media and allows export after r
 
   await toolbar.openExport();
   await exportDialog.enqueue();
-  // 向导拆分（bd315fd6）后 preflight 面板在 export 步；入队被拦截时不会自动切步
-  await page.getByTestId('export-step-export').click();
+  // preflight 拦截时对话框自动切到 export 步（面板所在步骤），无需手动切步
   await expect(exportDialog.preflightPanel).toBeVisible();
   await expect(exportDialog.preflightIssue).toHaveAttribute('data-type', 'missing-media');
   await expect(exportDialog.preflightPanel).toContainText('tiny-video.mp4');
