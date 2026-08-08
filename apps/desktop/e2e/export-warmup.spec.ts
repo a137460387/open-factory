@@ -14,6 +14,8 @@ test('shows export warmup status before queueing export', async ({ page }) => {
 
   await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
+  // 向导拆分（bd315fd6）后 warmup 状态在 export 步，入队期间需先切步
+  await page.getByTestId('export-step-export').click();
   await expect(page.getByTestId('export-warmup-status')).toBeVisible();
   await expect(page.getByTestId('export-warmup-status')).toContainText('正在准备导出');
   await expect(page.getByTestId('export-warmup-status')).toHaveAttribute('data-status', 'running');

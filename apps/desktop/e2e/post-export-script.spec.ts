@@ -18,6 +18,8 @@ test('runs configured post-export script and shows stdout in export history', as
 
   await expectExportTaskStatus(page, 0, 'success');
 
+  // 向导拆分（bd315fd6）后脚本执行结果在 complete 步，需先切步
+  await page.getByTestId('export-step-complete').click();
   await expect(page.getByTestId('export-history-entry')).toHaveCount(1);
   await expect(page.getByTestId('export-post-script-result')).toBeVisible();
   await expect(page.getByTestId('export-post-script-stdout')).toContainText('C:/Exports/post-script-output.mp4');

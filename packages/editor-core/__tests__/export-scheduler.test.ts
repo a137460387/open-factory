@@ -550,6 +550,46 @@ describe('applySchedulerDecision', () => {
     const updatedPlan = applySchedulerDecision(plan, decision);
     expect(updatedPlan.outputArgs).not.toContain('-crf');
   });
+
+  it('计划使用硬件编码器时不应用 x264 速度档 preset/CRF 覆盖（issue #114 NVENC 回归）', () => {
+    // 复现真实场景：调度决策未感知硬件编码（useHardwareAcceleration=false），
+    // 但计划的 -c:v 已是硬件编码器 h264_nvenc。此时不应把 x264 速度档
+    // preset（veryslow，对 NVENC 非法）和 CRF 覆盖到硬件编码器参数上。
+    const plan = createSimpleExportPlan();
+    plan.outputArgs = ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23', '-c:a', 'aac'];
+    plan.fullArgs = [
+      '-i', '/media/video1.mp4',
+      '-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23', '-c:a', 'aac',
+      '/output/test.mp4',
+    ];
+    const decision: ExportSchedulerDecision = {
+      preset: 'veryslow',
+      threads: 4,
+      crf: 15,
+      useHardwareAcceleration: false,
+      reasons: [],
+      resourceEstimate: {
+        cpuCost: 1,
+        memoryMb: 1000,
+        diskMb: 500,
+        effectCount: 0,
+        memoryClass: 'light',
+        parallelEligible: true,
+        reasons: [],
+      },
+      estimatedSpeedMultiplier: 1,
+      estimatedFileSizeMb: 100,
+    };
+
+    const updatedPlan = applySchedulerDecision(plan, decision);
+    // 硬件编码器保留自身 preset（p4），不被 x264 速度档 veryslow 覆盖
+    expect(updatedPlan.outputArgs).toContain('p4');
+    expect(updatedPlan.outputArgs).not.toContain('veryslow');
+    expect(updatedPlan.fullArgs).toContain('p4');
+    expect(updatedPlan.fullArgs).not.toContain('veryslow');
+    // 硬件编码不应带 CRF
+    expect(updatedPlan.fullArgs).not.toContain('-crf');
+  });
 });
 
 describe('getRecommendedExportConfig', () => {

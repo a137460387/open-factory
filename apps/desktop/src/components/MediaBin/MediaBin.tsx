@@ -805,7 +805,7 @@ function VirtualMediaCardGrid({ media, gridSize, mediaMetadata, mediaContentAnal
   const paddingTop = virtualItems.length > 0 ? virtualItems[0]!.start : 0;
   const paddingBottom = virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end : 0;
   return (
-    <div ref={parentRef} className="flex-1 min-h-0 overflow-auto" data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
+    <div ref={parentRef} className="flex-1 min-h-[240px] overflow-auto" data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)`, paddingTop, paddingBottom }}>
         {virtualItems.map((virtualRow) => {
           const rowStart = virtualRow.index * columnCount;

@@ -3,7 +3,7 @@
  * Shows render counts, FPS gauge, and store subscription log.
  * Gated behind __DEV_PERF_MONITOR__ — zero bundle impact in production.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usePerfMonitor, trackRender } from '../hooks/usePerfMonitor';
 
 declare const __DEV_PERF_MONITOR__: boolean;
@@ -64,10 +64,16 @@ export function DevPerfOverlay() {
 }
 
 function DevPerfOverlayInner() {
-  trackRender('DevPerfOverlay');
   const data = usePerfMonitor();
   const [tab, setTab] = useState<Tab>('renders');
   const [collapsed, setCollapsed] = useState(false);
+
+  // 统计自身渲染次数必须放在 commit 之后（useEffect）：在渲染函数体内调用
+  // trackRender 会在渲染相位内同步通知订阅者（本组件自身也订阅了渲染计数），
+  // 形成"渲染→通知→重渲染"的无限闭环（issue #114 根因）。
+  useEffect(() => {
+    trackRender('DevPerfOverlay');
+  });
 
   const tabBtn = useCallback((t: Tab, label: string) => (
     <button

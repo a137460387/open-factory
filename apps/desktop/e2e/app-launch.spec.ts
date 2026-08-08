@@ -6,7 +6,8 @@ test.describe('App Launch', () => {
     await page.goto('/');
     await waitForE2eActions(page);
 
-    await expect(page).toHaveTitle(/Open Factory/i);
+    // index.html 的 <title> 为 "open-factory"（连字符小写），旧断言 "Open Factory"（带空格）已过时
+    await expect(page).toHaveTitle(/open-factory/i);
   });
 
   test('shows main interface elements', async ({ page }) => {

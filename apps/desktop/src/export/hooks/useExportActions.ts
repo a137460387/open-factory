@@ -838,7 +838,14 @@ export function useExportActions(state: ExportState) {
         return;
       }
       await warmupSelectedJobs(selectedJobs);
-      await enqueueSelectedJobs(selectedJobs);
+      const queuedTasks = await enqueueSelectedJobs(selectedJobs);
+      // 入队成功后自动切到 export 步骤，让用户立即看到队列/进度，
+      // 对齐 07-14 拆分向导（bd315fd6）前"队列始终可见"的旧体验。
+      // 校验不通过/未确认时 enqueueSelectedJobs 返回 []，不跳转；
+      // 抛错则进入 catch，同样不会执行到此处。
+      if (queuedTasks.length > 0) {
+        setCurrentStep('export');
+      }
     } catch (reason) {
       setError(
         reason instanceof SequenceDependencyCycleError
