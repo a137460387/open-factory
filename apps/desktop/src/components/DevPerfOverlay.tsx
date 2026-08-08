@@ -68,6 +68,13 @@ function DevPerfOverlayInner() {
   const [tab, setTab] = useState<Tab>('renders');
   const [collapsed, setCollapsed] = useState(false);
 
+  // e2e 下 overlay 只作"可见"的性能证据（没有任何 spec 与它交互），但其固定
+  // 右下定位会系统性拦截底部全宽面板/居中对话框的右下点击（preflight-checklist:55、
+  // dubbing-adaptation:47 等已知 7 例；四个角落均有 spec 依赖的点击入口，移动位置
+  // 只是移动受害者）。故 e2e 下整体点击穿透、从根上消除拦截；人工 dev 保留原有
+  // 交互；生产不渲染本组件。
+  const e2eClickThrough = import.meta.env.VITE_E2E === 'true';
+
   // 统计自身渲染次数必须放在 commit 之后（useEffect）：在渲染函数体内调用
   // trackRender 会在渲染相位内同步通知订阅者（本组件自身也订阅了渲染计数），
   // 形成"渲染→通知→重渲染"的无限闭环（issue #114 根因）。
@@ -106,6 +113,7 @@ function DevPerfOverlayInner() {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
+          pointerEvents: e2eClickThrough ? 'none' : undefined,
         }}
       >
         <FpsBar fps={data.fps.current} />
@@ -129,6 +137,7 @@ function DevPerfOverlayInner() {
         color: '#eee',
         fontSize: 11,
         backdropFilter: 'blur(8px)',
+        pointerEvents: e2eClickThrough ? 'none' : undefined,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>

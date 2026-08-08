@@ -186,7 +186,8 @@ function createSimpleExportPlan(): FfmpegExportPlan {
     inputs: [{ index: 0, path: '/media/video1.mp4', args: [] }],
     filterComplex: '[0:v]scale=1920:1080[v]',
     maps: ['-map', '[v]', '-map', '0:a'],
-    outputArgs: ['-c:v', 'libx264', '-preset', 'medium', '-crf', '23', '-c:a', 'aac'],
+    // 与真实 buildFfmpegExportPlan 一致：outputArgs 以输出路径收尾
+    outputArgs: ['-c:v', 'libx264', '-preset', 'medium', '-crf', '23', '-c:a', 'aac', '/output/test.mp4'],
     fullArgs: [
       '-i', '/media/video1.mp4',
       '-filter_complex', '[0:v]scale=1920:1080[v]',
@@ -207,6 +208,28 @@ function createDefaultConfig(): ExportSchedulerConfig {
     hardwareConcurrency: 8,
     availableMemoryMb: 8192,
     hardwareAccelerationEnabled: false,
+  };
+}
+
+function createDecision(overrides: Partial<ExportSchedulerDecision> = {}): ExportSchedulerDecision {
+  return {
+    preset: 'veryslow',
+    threads: 12,
+    crf: 15,
+    useHardwareAcceleration: false,
+    reasons: [],
+    resourceEstimate: {
+      cpuCost: 1,
+      memoryMb: 1000,
+      diskMb: 500,
+      effectCount: 0,
+      memoryClass: 'light',
+      parallelEligible: true,
+      reasons: [],
+    },
+    estimatedSpeedMultiplier: 1,
+    estimatedFileSizeMb: 100,
+    ...overrides,
   };
 }
 
@@ -556,7 +579,7 @@ describe('applySchedulerDecision', () => {
     // 但计划的 -c:v 已是硬件编码器 h264_nvenc。此时不应把 x264 速度档
     // preset（veryslow，对 NVENC 非法）和 CRF 覆盖到硬件编码器参数上。
     const plan = createSimpleExportPlan();
-    plan.outputArgs = ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23', '-c:a', 'aac'];
+    plan.outputArgs = ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23', '-c:a', 'aac', '/output/test.mp4'];
     plan.fullArgs = [
       '-i', '/media/video1.mp4',
       '-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23', '-c:a', 'aac',
@@ -589,6 +612,175 @@ describe('applySchedulerDecision', () => {
     expect(updatedPlan.fullArgs).not.toContain('veryslow');
     // 硬件编码不应带 CRF
     expect(updatedPlan.fullArgs).not.toContain('-crf');
+    // 即便追加 -threads，输出路径仍必须在末位（同参数顺序回归）
+    expect(updatedPlan.fullArgs[updatedPlan.fullArgs.length - 1]).toBe('/output/test.mp4');
+  });
+
+  it('新增参数必须插在输出路径之前，输出路径始终保持 fullArgs 末位（1ff08c92 参数顺序回归）', () => {
+    // 复现真实软件编码计划：buildVideoEncodingArgs 的基础参数不含
+    // -preset/-crf/-threads，调度决策三者全部走"追加"分支。构建层约定输出
+    // 路径是数组最后一个元素，Rust run_export 按 full_args.last() 读取输出
+    // 路径、e2e mock 按 fullArgs.at(-1) 写产物；若新参数被追加到输出路径
+    // 之后，ffmpeg 命令行畸形且下游读取输出路径全部错位。
+    const plan = createSimpleExportPlan();
+    plan.outputArgs = [
+      '-c:v', 'libx264', '-b:v', '8M', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-t', '6', '-movflags', '+faststart',
+      '/output/test.mp4',
+    ];
+    plan.fullArgs = [
+      '-y', '-progress', 'pipe:2', '-nostats',
+      '-i', '/media/video1.mp4',
+      '-filter_complex', '[0:v]scale=1920:1080[v]',
+      '-map', '[v]', '-map', '0:a',
+      '-c:v', 'libx264', '-b:v', '8M', '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac', '-t', '6', '-movflags', '+faststart',
+      '/output/test.mp4',
+    ];
+
+    const updatedPlan = applySchedulerDecision(plan, createDecision());
+
+    // 输出路径仍是 fullArgs / outputArgs 的最后一个元素
+    expect(updatedPlan.fullArgs[updatedPlan.fullArgs.length - 1]).toBe('/output/test.mp4');
+    expect(updatedPlan.outputArgs[updatedPlan.outputArgs.length - 1]).toBe('/output/test.mp4');
+    // 三个新参数确实被写入，且全部位于输出路径之前
+    for (const args of [updatedPlan.fullArgs, updatedPlan.outputArgs]) {
+      const outputIndex = args.lastIndexOf('/output/test.mp4');
+      for (const key of ['-preset', '-threads', '-crf']) {
+        const keyIndex = args.indexOf(key);
+        expect(keyIndex).toBeGreaterThanOrEqual(0);
+        expect(keyIndex).toBeLessThan(outputIndex);
+      }
+    }
+    expect(updatedPlan.fullArgs).toContain('veryslow');
+    expect(updatedPlan.fullArgs).toContain('12');
+    expect(updatedPlan.fullArgs).toContain('15');
+    // 基础参数相对顺序不被破坏：-movflags +faststart 仍相邻，且位于新插入参数之前
+    const fullArgs = updatedPlan.fullArgs;
+    const movflagsIndex = fullArgs.indexOf('-movflags');
+    expect(fullArgs[movflagsIndex + 1]).toBe('+faststart');
+    expect(movflagsIndex).toBeLessThan(fullArgs.indexOf('-preset'));
+  });
+
+  it('多 pass 计划同样保持输出终结符在末位（loudness 分析 pass 输出为 -f null -）', () => {
+    const plan = createSimpleExportPlan();
+    plan.passes = [
+      {
+        name: 'loudness-analysis',
+        kind: 'loudness-analysis',
+        fullArgs: [
+          '-y', '-progress', 'pipe:2', '-nostats',
+          '-i', '/media/video1.mp4',
+          '-filter_complex', 'loudnorm=I=-16[aloud]',
+          '-map', '[aloud]',
+          '-f', 'null', '-',
+        ],
+        duration: 30,
+      },
+      {
+        name: 'loudness-render',
+        kind: 'render',
+        fullArgs: [
+          '-y', '-progress', 'pipe:2', '-nostats',
+          '-i', '/media/video1.mp4',
+          '-map', '[v]', '-map', '0:a',
+          '-c:v', 'libx264', '-c:a', 'aac',
+          '/output/test.mp4',
+        ],
+        duration: 30,
+      },
+    ];
+
+    const updatedPlan = applySchedulerDecision(plan, createDecision());
+    const passes = updatedPlan.passes ?? [];
+    expect(passes).toHaveLength(2);
+
+    // 分析 pass：无 -c:v、非 x264 系编码目标，任何调优参数都不注入，末位仍是 `-`
+    const analysisArgs = passes[0].fullArgs;
+    expect(analysisArgs[analysisArgs.length - 1]).toBe('-');
+    for (const key of ['-preset', '-threads', '-crf']) {
+      expect(analysisArgs.indexOf(key)).toBe(-1);
+    }
+
+    // 渲染 pass：末位仍是输出路径，新参数插在其前
+    const renderArgs = passes[1].fullArgs;
+    expect(renderArgs[renderArgs.length - 1]).toBe('/output/test.mp4');
+    expect(renderArgs.indexOf('-crf')).toBeGreaterThanOrEqual(0);
+    expect(renderArgs.indexOf('-crf')).toBeLessThan(renderArgs.length - 1);
+  });
+
+  it('无视频编码器的目标（image2/PNG 序列）不注入 -preset/-crf/-threads，保持构建层输出原样', () => {
+    // 复现 png-sequence-export 真实计划：builder 对 PNG 序列只产出
+    // -r/-f image2，没有 -c:v（png 编码器由 ffmpeg 按 muxer 隐式选择），
+    // 调度器不得向其注入编码器专属参数（e2e 对 outputArgs 有严格 toEqual 断言）。
+    const plan = createSimpleExportPlan();
+    plan.outputArgs = ['-r', '30', '-f', 'image2', '/output/frames/frame%04d.png'];
+    plan.fullArgs = [
+      '-y', '-progress', 'pipe:2', '-nostats',
+      '-i', '/media/sequence.mp4',
+      '-filter_complex', '[0:v]scale=1280:720[vout]',
+      '-map', '[vout]',
+      '-r', '30', '-f', 'image2',
+      '/output/frames/frame%04d.png',
+    ];
+
+    const updatedPlan = applySchedulerDecision(plan, createDecision());
+
+    // outputArgs 与构建层输出完全一致（对应 e2e 的严格断言）
+    expect(updatedPlan.outputArgs).toEqual(['-r', '30', '-f', 'image2', '/output/frames/frame%04d.png']);
+    for (const args of [updatedPlan.outputArgs, updatedPlan.fullArgs]) {
+      for (const key of ['-preset', '-crf', '-threads']) {
+        expect(args.indexOf(key)).toBe(-1);
+      }
+      expect(args).not.toContain('veryslow');
+    }
+    // 输出路径仍保持末位
+    expect(updatedPlan.fullArgs[updatedPlan.fullArgs.length - 1]).toBe('/output/frames/frame%04d.png');
+  });
+
+  it('纯音频计划不注入编码器调优参数', () => {
+    const plan = createSimpleExportPlan();
+    plan.outputArgs = ['-c:a', 'libmp3lame', '-b:a', '192k', '/output/audio.mp3'];
+    plan.fullArgs = [
+      '-y', '-progress', 'pipe:2', '-nostats',
+      '-i', '/media/video1.mp4',
+      '-map', '[aout]',
+      '-c:a', 'libmp3lame', '-b:a', '192k',
+      '/output/audio.mp3',
+    ];
+
+    const updatedPlan = applySchedulerDecision(plan, createDecision());
+
+    for (const args of [updatedPlan.outputArgs, updatedPlan.fullArgs]) {
+      for (const key of ['-preset', '-crf', '-threads']) {
+        expect(args.indexOf(key)).toBe(-1);
+      }
+    }
+    expect(updatedPlan.fullArgs[updatedPlan.fullArgs.length - 1]).toBe('/output/audio.mp3');
+  });
+
+  it('非 x264 系软件编码器（libwebp_anim）不注入 -preset/-crf，但 -threads 仍应用', () => {
+    const plan = createSimpleExportPlan();
+    plan.outputArgs = [
+      '-c:v', 'libwebp_anim', '-loop', '0', '-r', '30', '-f', 'webp', '/output/anim.webp',
+    ];
+    plan.fullArgs = [
+      '-y', '-progress', 'pipe:2', '-nostats',
+      '-i', '/media/video1.mp4',
+      '-map', '[vout]',
+      '-c:v', 'libwebp_anim', '-loop', '0', '-r', '30', '-f', 'webp',
+      '/output/anim.webp',
+    ];
+
+    const updatedPlan = applySchedulerDecision(plan, createDecision());
+
+    for (const args of [updatedPlan.outputArgs, updatedPlan.fullArgs]) {
+      expect(args.indexOf('-preset')).toBe(-1);
+      expect(args.indexOf('-crf')).toBe(-1);
+      // -threads 是通用编码器选项，存在视频编码器时仍应用
+      expect(args.indexOf('-threads')).toBeGreaterThanOrEqual(0);
+    }
+    expect(updatedPlan.fullArgs[updatedPlan.fullArgs.length - 1]).toBe('/output/anim.webp');
   });
 });
 

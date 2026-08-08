@@ -53,4 +53,16 @@ describe('DevPerfOverlay', () => {
     expect(container.innerHTML).toBe('');
     vi.stubGlobal('__DEV_PERF_MONITOR__', true);
   });
+
+  it('is click-through in e2e mode but interactive in plain dev', () => {
+    const env = import.meta.env;
+    const original = env.VITE_E2E;
+    env.VITE_E2E = 'true';
+    const { container: e2eContainer } = render(<DevPerfOverlay />);
+    expect((e2eContainer.firstElementChild as HTMLElement).style.pointerEvents).toBe('none');
+    cleanup();
+    env.VITE_E2E = original;
+    const { container: devContainer } = render(<DevPerfOverlay />);
+    expect((devContainer.firstElementChild as HTMLElement).style.pointerEvents).toBe('');
+  });
 });

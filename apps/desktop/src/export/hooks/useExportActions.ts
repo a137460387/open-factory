@@ -744,6 +744,9 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs });
+          // preflight 面板只渲染在 export 步（ExportProgress），
+          // 拦截/警告发生时必须切过去，否则用户点入队后看不到任何反馈。
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -756,6 +759,8 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs });
+          // 同 version-batch：preflight 面板在 export 步，必须切步才可见。
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -786,6 +791,7 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs, codecCompareJobs: compareJobs });
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -835,6 +841,9 @@ export function useExportActions(state: ExportState) {
       const issues = await collectPreflightIssues(project, exportSettings);
       if (issues.length > 0) {
         setPreflight({ issues, selectedJobs });
+        // preflight 面板（blocking 拦截与 warning 确认）只渲染在 export 步，
+        // 不切步的话用户点"加入队列"后界面毫无反馈（静默拦截）。
+        setCurrentStep('export');
         return;
       }
       await warmupSelectedJobs(selectedJobs);
@@ -1076,6 +1085,10 @@ export function useExportActions(state: ExportState) {
 
   // Warmup
   async function warmupSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
+    // warmup 状态面板（export-warmup-status）只渲染在 export 步，
+    // warmup 启动即切步，让用户看到"正在准备导出"进度；
+    // continueAfterWarnings 场景用户本就在 export 步，此调用为幂等。
+    setCurrentStep('export');
     let sawColdWarmup = false;
     for (const job of selectedJobs) {
       const warmupProject = job.project ?? project;
