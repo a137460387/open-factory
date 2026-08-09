@@ -9,7 +9,8 @@ test('enables temporal video denoise and includes hqdn3d in export args', async 
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await expect(page.getByTestId('video-restoration-section')).toBeVisible();
+  // 视频修复控件在 Inspector 内（Section 容器无 testid，直接等控件）
+  await expect(page.getByTestId('video-restoration-temporal-preset')).toBeVisible();
   await page.getByTestId('video-restoration-temporal-preset').selectOption('medium');
 
   await openExportDialog(page);
@@ -28,7 +29,8 @@ test('enables deblock quality enhancement and includes deblock in export args', 
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await expect(page.getByTestId('quality-enhancement-section')).toBeVisible();
+  // 画质增强控件在 Inspector 内（Section 容器无 testid，直接等控件）
+  await expect(page.getByTestId('quality-enhancement-deblock-toggle')).toBeVisible();
   await page.getByTestId('quality-enhancement-deblock-toggle').check();
 
   await openExportDialog(page);

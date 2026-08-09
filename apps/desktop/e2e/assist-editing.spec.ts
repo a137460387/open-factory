@@ -14,18 +14,18 @@ test('AI assist editing: panel opens with preset selection and config controls',
   await expect(panel).toContainText('AI 辅助剪辑');
 
   // Preset buttons should be visible
-  await expect(page.getByTestId('assist-preset-quick-cut')).toBeVisible();
-  await expect(page.getByTestId('assist-preset-rhythm-match')).toBeVisible();
-  await expect(page.getByTestId('assist-preset-emotion-driven')).toBeVisible();
-  await expect(page.getByTestId('assist-preset-content-aware')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-preset-quick-cut')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-preset-rhythm-match')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-preset-emotion-driven')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-preset-content-aware')).toBeVisible();
 
   // Click a preset
-  await page.getByTestId('assist-preset-rhythm-match').click();
+  await page.getByTestId('assist-editing-preset-rhythm-match').click();
 
   // Config controls should exist
-  await expect(page.getByTestId('assist-config-min-duration')).toBeVisible();
-  await expect(page.getByTestId('assist-config-max-duration')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-min-duration')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-max-duration')).toBeVisible();
 
   // Generate button should be visible
-  await expect(page.getByTestId('assist-generate-btn')).toBeVisible();
+  await expect(page.getByTestId('assist-editing-generate')).toBeVisible();
 });
