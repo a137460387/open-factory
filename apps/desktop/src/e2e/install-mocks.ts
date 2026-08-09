@@ -7223,6 +7223,9 @@ window.__E2E_ACTIONS__ = {
           root.unmount();
           container?.remove();
         },
+        // 组件仅在提供 onApply 时渲染"应用"按钮（sr-apply-btn），
+        // fixture 必须传入，否则 spec 对 apply 按钮的断言永远失败
+        onApply: () => {},
       }),
     );
   },
