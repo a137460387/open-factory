@@ -14,21 +14,21 @@ test('AI content generation: panel opens with tab navigation', async ({ page }) 
   await expect(panel).toContainText('AI 内容生成');
 
   // Tab buttons should be visible
-  await expect(page.getByTestId('cg-tab-subtitle')).toBeVisible();
-  await expect(page.getByTestId('cg-tab-dubbing')).toBeVisible();
-  await expect(page.getByTestId('cg-tab-music')).toBeVisible();
-  await expect(page.getByTestId('cg-tab-effect')).toBeVisible();
+  await expect(page.getByTestId('content-gen-tab-subtitle')).toBeVisible();
+  await expect(page.getByTestId('content-gen-tab-tts')).toBeVisible();
+  await expect(page.getByTestId('content-gen-tab-music')).toBeVisible();
+  await expect(page.getByTestId('content-gen-tab-effect')).toBeVisible();
 
   // Click music tab
-  await page.getByTestId('cg-tab-music').click();
+  await page.getByTestId('content-gen-tab-music').click();
 
   // Music config should be visible
-  await expect(page.getByTestId('cg-music-genre')).toBeVisible();
-  await expect(page.getByTestId('cg-music-mood')).toBeVisible();
+  await expect(page.getByTestId('content-gen-music-genre')).toBeVisible();
+  await expect(page.getByTestId('content-gen-music-mood')).toBeVisible();
 
   // Click effect tab
-  await page.getByTestId('cg-tab-effect').click();
+  await page.getByTestId('content-gen-tab-effect').click();
 
   // Effect config should be visible
-  await expect(page.getByTestId('cg-effect-type')).toBeVisible();
+  await expect(page.getByTestId('content-gen-effect-type')).toBeVisible();
 });
