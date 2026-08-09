@@ -47,12 +47,11 @@ jobs:
           timeout_minutes: 10
           command: bun install --frozen-lockfile
 
-      # GHSA-qwww-vcr4-c8h2 (react-router@7.18.1 / react-router-dom@^7.18.1,
-      # RSC Mode CSRF): 仅影响 unstable RSC API,creator-dashboard-web 未使用,
-      # 2026-08-03 确认风险可控故以 --ignore 豁免。升级 react-router 至
-      # >=8.3.0 后应移除本 ignore;升级待办见 docs/audit/react-router-7-8-upgrade-todo.md。
+      # GHSA-qwww-vcr4-c8h2 (react-router RSC Mode CSRF) 已随 react-router-dom
+      # 升级至 7.18.2 修复(2026-08-10,v7 内回溯修复版本),原 --ignore 豁免移除。
+      # react-router 8.x 升级评估另见 docs/audit/react-router-7-8-upgrade-todo.md。
       - name: Audit npm dependencies
-        run: bun audit --audit-level=high --ignore=GHSA-qwww-vcr4-c8h2
+        run: bun audit --audit-level=high
 
       - name: Typecheck
         run: bun run typecheck
@@ -245,10 +244,10 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit
 
-      # 同 frontend job:忽略 GHSA-qwww-vcr4-c8h2 (react-router,仅影响 unstable
-      # RSC API,本项目未使用,2026-08-03 确认),升级 >=8.3.0 后移除。
+      # 同 frontend job:GHSA-qwww-vcr4-c8h2 已随 react-router-dom 7.18.2 修复
+      # (2026-08-10),--ignore 豁免随之移除。
       - name: Audit npm dependencies (high level)
-        run: bun audit --audit-level=high --ignore=GHSA-qwww-vcr4-c8h2
+        run: bun audit --audit-level=high
 
       - name: Audit npm dependencies (moderate level)
         run: bun audit --audit-level=moderate || true
