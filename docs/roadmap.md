@@ -111,13 +111,15 @@
 - [ ] Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
 - [ ] Priority scheduling and explicit throttling controls for background media jobs.
 - [ ] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
-- [ ] Main bundle code splitting for heavy panels and settings pages.
+- [x] Main bundle code splitting for heavy panels and settings pages.
 - [ ] macOS/Linux native dialog automation where unattended host control is available.
 - [ ] WASM/GPU export acceleration and advanced preview effects.
 - [ ] Headless automation mode once the desktop editing surface is stable enough to expose safely.
-- [ ] React 19 upgrade and Tailwind CSS 4 migration.
-- [ ] Enhanced plugin ecosystem with marketplace integration.
+- [x] React 19 upgrade and Tailwind CSS 4 migration.
+- [x] Enhanced plugin ecosystem with marketplace integration.
+
+> 2026-08-10 核对勾选：code splitting（Timeline/Inspector 等 React.lazy 独立 chunk，v4.26.0 落地）；React 19 + Tailwind CSS 4（apps/desktop 与 apps/creator-dashboard 现役版本）；插件市场（Settings→Plugins 面板 + apps/plugin-market + SHA-256 安装校验）。其余未勾选项未逐项核实，保持原状。
 
 ---
 
-*Last updated: 2026-07-14*
+*Last updated: 2026-08-10*
