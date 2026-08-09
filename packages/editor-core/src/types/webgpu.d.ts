@@ -1,8 +1,12 @@
 /**
  * WebGPU 类型声明
  *
- * 为 TypeScript 提供 WebGPU API 的类型定义
+ * 为 TypeScript 提供 WebGPU API 的类型定义。
+ * 空接口（GPUTextureView/GPUSampler 等）是环境声明文件中表达
+ * "不透明句柄类型"的惯用写法，与官方 WebGPU 类型的最小声明一致，
+ * 故在本文件范围内豁免 no-empty-object-type，不改变类型语义。
  */
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 
 interface GPUDevice {
   createBuffer(descriptor: GPUBufferDescriptor): GPUBuffer;
@@ -214,12 +218,6 @@ interface GPUTextureViewDescriptor {
 interface GPUSamplerDescriptor {
   magFilter?: string;
   minFilter?: string;
-  label?: string;
-}
-
-interface GPUTextureViewDescriptor {
-  format?: string;
-  dimension?: string;
   label?: string;
 }
 
