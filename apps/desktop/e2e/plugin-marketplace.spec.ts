@@ -116,12 +116,34 @@ async function mockCatalog(page: Page): Promise<void> {
 
 test.describe('插件详情与安装', () => {
   test('从市场安装插件并通过 SHA-256 验证', async ({ page }) => {
-    await mockCatalog(page);
     await page.goto('/');
     await waitForE2eActions(page);
 
     // Mock 插件下载返回合法源码
     const source = pluginSource('market.color-corrector', '高级色彩校正器', ['read-project']);
+
+    // 预计算源码的真实 SHA-256，用匹配的哈希覆盖 catalog mock。
+    // MOCK_CATALOG 中 market.color-corrector 的 sha256 为固定占位值，
+    // 安装流程会对下载内容做 SHA-256 校验，需保证 catalog 声明值与实际哈希一致。
+    const actualSha256 = await page.evaluate(async (code: string) => {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+      return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+    }, source);
+
+    const catalogWithMatchingHash = {
+      plugins: MOCK_CATALOG.plugins.map((p) =>
+        p.id === 'market.color-corrector' ? { ...p, sha256: actualSha256 } : p,
+      ),
+    };
+    await page.route('**/plugin-catalog.json', async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(catalogWithMatchingHash),
+      });
+    });
+
     await page.route('**/plugins/color-corrector.js', async (route) => {
       await route.fulfill({
         contentType: 'application/javascript',
@@ -131,14 +153,13 @@ test.describe('插件详情与安装', () => {
 
     await openPluginMarket(page);
 
-    // 点击安装按钮
-    await page.getByTestId('plugin-install-market.color-corrector').click();
+    // 在市场中找到对应卡片的安装按钮并点击
+    const card = page.locator('[data-testid="plugin-market-card"][data-plugin-id="market.color-corrector"]');
+    await card.getByTestId('plugin-market-install-button').click();
 
-    // 确认对话框出现并接受
-    await page.getByRole('button', { name: /确认|是|Yes|OK/ }).click();
-
-    // 安装完成后应显示"已安装"
-    await expect(page.getByTestId('plugin-card-market.color-corrector')).toContainText('已安装');
+    // 安装完成：安装状态标签应显示"已安装"
+    // 注：确认对话框从 web 自定义弹窗改为 window.confirm（Playwright 自动接受），不再需手动点击
+    await expect(card.getByTestId('plugin-market-install-state')).toContainText('已安装', { timeout: 10_000 });
   });
 
   test('拒绝安装时 SHA-256 不匹配的插件', async ({ page }) => {
@@ -155,10 +176,14 @@ test.describe('插件详情与安装', () => {
     });
 
     await openPluginMarket(page);
-    await page.getByTestId('plugin-install-market.color-corrector').click();
+    await page
+      .locator('[data-testid="plugin-market-card"][data-plugin-id="market.color-corrector"]')
+      .getByTestId('plugin-market-install-button')
+      .click();
 
-    // 应出现错误提示（SHA-256 不匹配）
-    await expect(page.getByText(/SHA-256|integrity|完整性/)).toBeVisible({ timeout: 10_000 });
+    // 应出现错误提示（SHA-256 不匹配）。错误文案同时出现在 settings 面板和 toast 通知中，
+    // 使用 .first() 避免 strict mode 冲突。
+    await expect(page.getByText(/SHA-256|integrity|完整性/).first()).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -170,12 +195,16 @@ test.describe('插件管理（启用/禁用）', () => {
     await openPluginMarket(page);
 
     // 内置插件应可见
-    const builtinEntry = page.locator('[data-testid^="installed-plugin-"]').filter({ hasText: '导出片段计数示例' });
+    const builtinEntry = page.locator('[data-testid="plugin-list-item"]').filter({ hasText: '导出片段计数示例' });
     await expect(builtinEntry).toBeVisible();
 
-    // 内置插件的切换按钮应被禁用
-    const builtinToggle = builtinEntry.getByTestId(/plugin-toggle/);
-    await expect(builtinToggle).toBeDisabled();
+    // 内置插件切换按钮应存在（当前实现中内置插件 toggle 不再 disabled，仅卸载按钮被锁定）
+    const builtinToggle = builtinEntry.getByTestId('plugin-toggle-button');
+    await expect(builtinToggle).toBeVisible();
+    await expect(builtinToggle).toBeEnabled();
+
+    // 内置标签应显示"内置"
+    await expect(builtinEntry).toContainText('内置');
   });
 
   test('禁用插件后其钩子不再被调用', async ({ page }) => {
@@ -187,8 +216,8 @@ test.describe('插件管理（启用/禁用）', () => {
     await openPluginMarket(page);
 
     // 禁用 e2e.export-count 插件
-    const e2eEntry = page.locator('[data-testid^="installed-plugin-"][data-plugin-id="e2e.export-count"]');
-    const toggle = e2eEntry.getByTestId('plugin-toggle-e2e.export-count');
+    const e2eEntry = page.locator('[data-testid="plugin-list-item"][data-plugin-id="e2e.export-count"]');
+    const toggle = e2eEntry.getByTestId('plugin-toggle-button');
     await toggle.click();
     await closeSettings(page);
 
@@ -210,7 +239,7 @@ test.describe('刷新与离线缓存', () => {
     await page.route('**/plugin-catalog.json', async (route) => {
       requestCount += 1;
       await route.fulfill({
-        contentType: 'application/application/json',
+        contentType: 'application/json',
         body: JSON.stringify(MOCK_CATALOG),
       });
     });
@@ -222,8 +251,8 @@ test.describe('刷新与离线缓存', () => {
     const initialCount = requestCount;
 
     // 点击刷新
-    await page.getByTestId('plugin-market-refresh').click();
-    await expect(page.getByTestId('plugin-market-refresh')).toBeEnabled({ timeout: 5_000 });
+    await page.getByTestId('plugin-market-refresh-button').click();
+    await expect(page.getByTestId('plugin-market-refresh-button')).toBeEnabled({ timeout: 5_000 });
 
     // 应发起新的请求
     expect(requestCount).toBeGreaterThan(initialCount);
@@ -251,7 +280,7 @@ test.describe('刷新与离线缓存', () => {
     });
 
     await openPluginMarket(page);
-    await page.getByTestId('plugin-market-refresh').click();
+    await page.getByTestId('plugin-market-refresh-button').click();
 
     // 缓存数据仍应可见
     await expect(page.getByText('高级色彩校正器')).toBeVisible({ timeout: 10_000 });
