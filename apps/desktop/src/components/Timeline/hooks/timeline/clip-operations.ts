@@ -571,11 +571,21 @@ export function createClipOperationsHandlers(
     }
   }
 
+  /**
+   * 键盘删除聚焦中的 clip/分组后，被聚焦的 DOM 节点随渲染移除，焦点会落回
+   * body，导致时间线快捷键 scope 判定失效（例如紧接着的 Ctrl+Z 撤销无法
+   * 触发）。删除成功后把焦点收回时间线容器，保持键盘工作流连续。
+   */
+  function refocusTimelineRoot(): void {
+    params.rootRef.current?.focus();
+  }
+
   function deleteGroup(group: ClipGroup): void {
     try {
       commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
       clearSelectedClipIds();
       setClipMenu(undefined);
+      refocusTimelineRoot();
     } catch (error) {
       showToast({
         kind: 'warning',
@@ -608,6 +618,7 @@ export function createClipOperationsHandlers(
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, selectedClipIds));
     clearSelectedClipIds();
+    refocusTimelineRoot();
   }
 
   function rippleDeleteSelected(): void {
@@ -620,6 +631,7 @@ export function createClipOperationsHandlers(
     }
     commandManager.execute(new RippleDeleteCommand(timelineAccessor, selectedClipIds, project.protectedRanges));
     clearSelectedClipIds();
+    refocusTimelineRoot();
   }
 
   return {
