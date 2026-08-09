@@ -19,8 +19,7 @@ test.describe('Color Grading', () => {
     await clip.click({ force: true });
     // 等待 Inspector 面板加载
     await expect(page.getByTestId('clip-brightness-input')).toBeVisible({ timeout: 10_000 });
-    // 展开"调色"折叠面板
-    await page.locator('summary', { hasText: /^调色$/ }).click();
+    // 注：Inspector Section 已从 details/summary 折叠改为静态常开，无需展开
   });
 
   test('should open color grading workspace and add primary wheel node', async ({ colorGradingPage }) => {
