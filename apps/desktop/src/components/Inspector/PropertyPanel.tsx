@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   getTimelineDuration,
+  getTransformScaleX,
+  getTransformScaleY,
   richTextToPlainText,
   DEFAULT_TEXT_ARC,
   DEFAULT_TEXT_LAYOUT,
@@ -103,6 +105,12 @@ export function PropertyPanel(props: ClipInspectorBodyProps) {
         <NumberField label="X" value={clip.transform.x} step={1} onCommit={(x) => commit({ transform: { x } })} hideLabel testId="clip-transform-x-input" />
         <NumberField label="Y" value={clip.transform.y} step={1} onCommit={(y) => commit({ transform: { y } })} hideLabel testId="clip-transform-y-input" />
         <RangeField label={zhCN.inspector.fields.scale} value={clip.transform.scale} min={0.1} max={4} step={0.05} format={(value) => `${Math.round(value * 100)}%`} onCommit={(scale) => commit({ transform: { scale } })} hideLabel testId="clip-scale-slider" />
+        {/* 独立 X/Y 缩放：bd315fd6 拆分时丢失（模型 scaleX/scaleY 与预览
+            合成一直支持），按原实现恢复 */}
+        <div className="grid grid-cols-2 gap-2">
+          <RangeNumberField label={zhCN.inspector.fields.scaleX} value={getTransformScaleX(clip.transform)} min={0.01} max={4} step={0.01} format={(value) => `${Math.round(value * 100)}%`} onCommit={(scaleX) => commit({ transform: { scaleX } })} testId="clip-scale-x-input" />
+          <RangeNumberField label={zhCN.inspector.fields.scaleY} value={getTransformScaleY(clip.transform)} min={0.01} max={4} step={0.01} format={(value) => `${Math.round(value * 100)}%`} onCommit={(scaleY) => commit({ transform: { scaleY } })} testId="clip-scale-y-input" />
+        </div>
         <NumberField label={zhCN.inspector.fields.rotation} value={clip.transform.rotation} min={-180} max={180} step={1} onCommit={(rotation) => commit({ transform: { rotation } })} testId="clip-rotation-input" />
       </Section>
 
