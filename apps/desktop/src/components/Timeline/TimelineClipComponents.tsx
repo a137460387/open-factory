@@ -747,6 +747,11 @@ export function ClipBlock({
           });
           return;
         }
+        // 菜单的删除/波纹删除等操作作用于当前选区；右键未选中的 clip 时
+        // 先选中它（标准 NLE 行为），否则菜单删除会静默无效。
+        if (!selectedClipIds.includes(clip.id)) {
+          onSelect(clip.id, false);
+        }
         onClipMenu({ x: event.clientX, y: event.clientY, clipId: clip.id, clipType: clip.type });
       }}
       onDoubleClick={(event) => {
