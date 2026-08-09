@@ -50,6 +50,7 @@ import {
 import type {AnnotationEditorState, TimelineNoteEditorState} from '../../TimelineDialogs';
 import type {RulerContextMenuAction} from '../../timeline-ruler-menu';
 import {commandManager, projectAccessor, timelineAccessor} from '../../../../store/commandManager';
+import {useEditorStore} from '../../../../store/editorStore';
 import {zhCN} from '../../../../i18n/strings';
 import {createCreditsClip, createTextClip} from '../../../../lib/clipFactory';
 import {showToast} from '../../../../lib/toast';
@@ -303,12 +304,54 @@ export function createClipOperationsHandlers(
     });
   }
 
+  // 标尺右键菜单动作：恢复 2026-07-28 拆分（d17ffe76）时遗留的空壳实现，
+  // 原实现位于 useTimelineHandlers.ts，拆分时丢失导致 add-marker /
+  // add-protected-range / set-in / set-out 全部静默失效。
   function runRulerMenuAction(action: RulerContextMenuAction): void {
-    // This will be handled by the facade
+    const menu = params.rulerMenu;
+    if (!menu) {
+      return;
+    }
+    if (action === 'add-marker') {
+      addTimelineMarker(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'add-protected-range') {
+      addProtectedRangeAt(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-in') {
+      useEditorStore.getState().setInPoint(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-out') {
+      useEditorStore.getState().setOutPoint(menu.time);
+      setRulerMenu(undefined);
+    }
   }
 
   function jumpToRulerTimecode(): void {
-    // This will be handled by the facade
+    const menu = params.rulerMenu;
+    if (!menu) {
+      return;
+    }
+    const parsed = parseTimecodeToSeconds(menu.timecode, {
+      fps: project.settings.fps || 30,
+      duration: projectDuration,
+    });
+    if (!parsed.ok) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.invalidTimecodeTitle,
+        message: zhCN.timeline.invalidTimecodeMessage,
+      });
+      return;
+    }
+    params.setPlayheadTime(parsed.value.seconds);
+    setRulerMenu(undefined);
   }
 
   function addBeatMarker(): void {
