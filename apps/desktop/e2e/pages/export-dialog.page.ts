@@ -53,9 +53,12 @@ export class ExportDialogPage extends BasePage {
     await this.safeSelect('export-range-select', range);
   }
 
-  /** 填写批量输出路径（换行分隔） */
+  /** 填写输出路径。
+   * 注：旧的 export-batch-paths 多行 textarea 已下线，现为单路径
+   * export-output-path input；多路径批量需走 version-batch/sequence-batch
+   * 模式（相关 spec 迁移不在本轮范围）。 */
   async fillBatchPaths(paths: string): Promise<void> {
-    await this.safeFill('export-batch-paths', paths);
+    await this.safeFill('export-output-path', paths);
   }
 
   /** 点击入队按钮 */
