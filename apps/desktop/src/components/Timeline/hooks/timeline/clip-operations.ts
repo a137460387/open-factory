@@ -81,6 +81,7 @@ export function createClipOperationsHandlers(
     projectDuration,
     timelineGridSettings,
     timelineGridBeatTimes,
+    transitionMenu,
     setTransitionMenu,
     setClipMenu,
     setRulerMenu,
@@ -126,12 +127,36 @@ export function createClipOperationsHandlers(
     onConvertMediaFrameRate(asset.id);
   }
 
+  // 转场菜单的添加/移除：同样是 d17ffe76 拆分时遗留的空壳，按原实现恢复。
   function addTransition(): void {
-    // This will be handled by the facade
+    if (!transitionMenu) {
+      return;
+    }
+    try {
+      commandManager.execute(
+        new AddTransitionCommand(timelineAccessor, {
+          type: transitionMenu.type,
+          duration: transitionMenu.duration,
+          fromClipId: transitionMenu.fromClipId,
+          toClipId: transitionMenu.toClipId,
+        }),
+      );
+      setTransitionMenu(undefined);
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.transitionUnavailableTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.transitionUnavailableMessage,
+      });
+    }
   }
 
   function removeTransition(): void {
-    // This will be handled by the facade
+    if (!transitionMenu?.existingTransitionId) {
+      return;
+    }
+    commandManager.execute(new RemoveTransitionCommand(timelineAccessor, transitionMenu.existingTransitionId));
+    setTransitionMenu(undefined);
   }
 
   function addText(): void {
