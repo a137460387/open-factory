@@ -23,7 +23,7 @@ export interface TimelineThumbnailFrame {
 const THUMBNAIL_HEIGHT = 45;
 const thumbnailCache = new Map<string, string>();
 const pendingFrames = new Map<string, Promise<string>>();
-const videos = new Map<string, HTMLVideoElement>();
+const videos = new Map<string, Promise<HTMLVideoElement>>();
 const workerRequests = new Map<string, { resolve(dataUrl: string): void; reject(error: Error): void }>();
 let worker: Worker | undefined;
 let workerUnavailable = false;
@@ -121,7 +121,8 @@ async function generateTimelineThumbnail(mediaPath: string, timestamp: number): 
   return drawThumbnailOnMainThread(video);
 }
 
-async function getVideo(mediaPath: string): Promise<HTMLVideoElement> {
+/** 导出仅为单测可测性（验证"加载失败不缓存、不挂起"语义）；内部实现细节，勿在功能代码直接使用。 */
+export function getVideo(mediaPath: string): Promise<HTMLVideoElement> {
   const existing = videos.get(mediaPath);
   if (existing) {
     return existing;
@@ -132,9 +133,19 @@ async function getVideo(mediaPath: string): Promise<HTMLVideoElement> {
   video.playsInline = true;
   video.crossOrigin = 'anonymous';
   video.src = sourceUrl(mediaPath);
-  videos.set(mediaPath, video);
-  await once(video, 'loadedmetadata');
-  return video;
+  // 缓存"加载 Promise"而非裸 video 元素：此前先 set 缓存再 await loadedmetadata，
+  // 一旦加载失败（如 e2e mock 媒体不可播放），坏 video 滞留缓存，后续调用拿到它
+  // 在 seekVideo 等待永不触发的 'seeked' 而永久挂起，占满 uiFeedbackPool，
+  // 饿死同池的封面帧提取等任务（cover-frames:4 根因）。缓存 Promise 使并发/
+  // 后续调用共享同一加载结果；失败即清缓存并 reject，绝不挂起。
+  const loaded = once(video, 'loadedmetadata')
+    .then(() => video)
+    .catch((error) => {
+      videos.delete(mediaPath);
+      throw error;
+    });
+  videos.set(mediaPath, loaded);
+  return loaded;
 }
 
 function seekVideo(video: HTMLVideoElement, time: number): Promise<void> {
