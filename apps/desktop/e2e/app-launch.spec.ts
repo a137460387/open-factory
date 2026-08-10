@@ -17,7 +17,8 @@ test.describe('App Launch', () => {
 
     await expect(page.getByTestId('timeline-root')).toBeVisible();
     await expect(page.getByTestId('timeline-ruler')).toBeVisible();
-    await expect(page.getByTestId('inspector-panel')).toBeVisible();
+    // Inspector 无独立根 testid；启动时未选中 clip，渲染空态占位。
+    await expect(page.getByTestId('inspector-empty-state')).toBeVisible();
     await expect(page.getByTestId('import-media-button')).toBeVisible();
   });
 
