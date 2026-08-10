@@ -6275,13 +6275,37 @@ let enLoadPromise: Promise<LocaleStrings> | null = null;
 async function ensureEnglishLocale(): Promise<LocaleStrings> {
   if (locales.en) return locales.en;
   if (!enLoadPromise) {
-    enLoadPromise = import('./en-overrides.js').then((mod) => {
-      const merged = mergeLocale<LocaleStrings>(zh, mod.enOverrides);
-      locales.en = merged;
-      return merged;
-    });
+    enLoadPromise = import('./en-overrides.js')
+      .then((mod) => {
+        const merged = mergeLocale<LocaleStrings>(zh, mod.enOverrides);
+        locales.en = merged;
+        return merged;
+      })
+      .catch((error: unknown) => {
+        // 加载失败不得永久缓存：否则一次瞬时失败（如 dev server 重启、
+        // 模块图失效期间的动态 import 失败）会让本页面会话之内切换到英文
+        // 永久不可用且无法重试。重置 Promise，后续调用自然重试。
+        enLoadPromise = null;
+        throw error;
+      });
   }
   return enLoadPromise;
+}
+
+/**
+ * 后台预热英文 locale（fire-and-forget）。
+ *
+ * 英文 locale 按需懒加载；若不预热，首次 zh→en 切换要等待动态 import +
+ * 深度合并完成才触发 notifyListeners，该窗口内 UI 保持旧语言。窗口遇上
+ * 慢加载或 import 失败时，语言切换表现为"不生效"（e2e i18n:6 的根因）。
+ * 启动后预热使实际切换几乎总是命中同步路径；预热失败静默忽略——失败缓存
+ * 已在 ensureEnglishLocale 中重置，真正切换时会再次加载并重试。
+ */
+export function prefetchEnglishLocale(): Promise<void> {
+  return ensureEnglishLocale().then(
+    () => undefined,
+    () => undefined, // 预热失败不阻塞启动；真正切换时会再次加载（失败不缓存）
+  );
 }
 
 // 初始化 i18next（副作用导入，确保在模块加载时执行）

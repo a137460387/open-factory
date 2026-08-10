@@ -289,7 +289,14 @@ export interface AppSettings {
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
+  // 记录异步读取前的语言；若用户在读取期间已主动切换，则不得用挂载时的
+  // 初始值覆盖用户选择（冷启动下 readAppSettings 较慢，晚到的 resolve 会把
+  // 用户刚切换的语言回退，e2e i18n:6 根因）。
+  const languageBeforeRead = getLanguage();
   const settings = await readAppSettings();
+  if (getLanguage() !== languageBeforeRead) {
+    return getLanguage();
+  }
   const initialLanguage =
     settings.language ?? languageFromNavigator(typeof navigator === 'undefined' ? undefined : navigator.language);
   return setLanguage(initialLanguage);

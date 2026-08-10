@@ -65,6 +65,8 @@ export interface EditorUIState {
   layoutSettings: EditorLayoutSettings;
   reviewMode: boolean;
   viewportSize: { width: number; height: number };
+  /** 语言变更计数：strings.ts 的语言切换经此 store 广播，驱动组件树重渲染 */
+  languageVersion: number;
 
   // Dialog / panel open states (from dialog-state module)
   dialogState: DialogState;
@@ -147,6 +149,7 @@ export interface EditorUIState {
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
   setReviewMode: (updater: Updater<boolean>) => void;
   setViewportSize: (size: { width: number; height: number }) => void;
+  bumpLanguageVersion: () => void;
   persistLayoutPatch: (patch: Partial<EditorLayoutSettings>) => void;
   persistPanelVisibilityPatch: (patch: Partial<EditorLayoutSettings['panels']>) => void;
 
@@ -249,6 +252,7 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
     layoutSettings: DEFAULT_EDITOR_LAYOUT_SETTINGS,
     reviewMode: typeof window === 'undefined' ? false : window.location.hash === '#review',
     viewportSize: readViewportSize(),
+    languageVersion: 0,
 
     // Dialog state (single source of truth)
     dialogState: initialDialogs,
@@ -279,6 +283,10 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
 
     setViewportSize(size) {
       set({ viewportSize: size });
+    },
+
+    bumpLanguageVersion() {
+      set((state) => ({ languageVersion: state.languageVersion + 1 }));
     },
 
     persistLayoutPatch(patch) {
