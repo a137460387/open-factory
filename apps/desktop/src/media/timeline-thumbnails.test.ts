@@ -28,7 +28,7 @@ describe('getVideo load caching', () => {
     return created;
   }
 
-  it('rejects and clears cache when the video fails to load (no hang, next call retries)', async () => {
+  it('rejects without hanging when the video fails to load, and caches the failure (no retry storm)', async () => {
     const created = mockVideoCreation();
     const path = 'media://unit-test-failing-video';
 
@@ -39,13 +39,11 @@ describe('getVideo load caching', () => {
     created[0].dispatchEvent(new Event('error'));
     await expect(first).rejects.toThrow();
 
-    // 失败必须清缓存：再次调用会创建新 video（而不是复用坏缓存并挂起）
+    // 失败结果同样缓存：再次调用复用同一被拒 Promise——不创建新 video、不挂起、
+    // 不对不可播放媒体反复重试（避免刷加载错误）。这正是 cover-frames:4 根因修复语义。
     const second = getVideo(path);
-    expect(created).toHaveLength(2);
-
-    // 第二次加载可正常完成，证明不会卡在坏缓存上
-    created[1].dispatchEvent(new Event('loadedmetadata'));
-    await expect(second).resolves.toBe(created[1]);
+    expect(created).toHaveLength(1);
+    await expect(second).rejects.toThrow();
   });
 
   it('caches a successful load so concurrent callers share one video', async () => {

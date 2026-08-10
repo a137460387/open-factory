@@ -137,13 +137,9 @@ export function getVideo(mediaPath: string): Promise<HTMLVideoElement> {
   // 一旦加载失败（如 e2e mock 媒体不可播放），坏 video 滞留缓存，后续调用拿到它
   // 在 seekVideo 等待永不触发的 'seeked' 而永久挂起，占满 uiFeedbackPool，
   // 饿死同池的封面帧提取等任务（cover-frames:4 根因）。缓存 Promise 使并发/
-  // 后续调用共享同一加载结果；失败即清缓存并 reject，绝不挂起。
-  const loaded = once(video, 'loadedmetadata')
-    .then(() => video)
-    .catch((error) => {
-      videos.delete(mediaPath);
-      throw error;
-    });
+  // 后续调用共享同一加载结果；失败即 reject，绝不挂起。失败结果同样缓存：
+  // 对不可播放媒体不反复创建 video 元素、不反复触发加载错误（避免 performance 回归）。
+  const loaded = once(video, 'loadedmetadata').then(() => video);
   videos.set(mediaPath, loaded);
   return loaded;
 }
