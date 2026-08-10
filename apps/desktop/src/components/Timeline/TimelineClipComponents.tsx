@@ -747,6 +747,11 @@ export function ClipBlock({
           });
           return;
         }
+        // 菜单的删除/波纹删除等操作作用于当前选区；右键未选中的 clip 时
+        // 先选中它（标准 NLE 行为），否则菜单删除会静默无效。
+        if (!selectedClipIds.includes(clip.id)) {
+          onSelect(clip.id, false);
+        }
         onClipMenu({ x: event.clientX, y: event.clientY, clipId: clip.id, clipType: clip.type });
       }}
       onDoubleClick={(event) => {
@@ -766,10 +771,10 @@ export function ClipBlock({
           event.preventDefault();
           onSelect(clip.id, event.shiftKey);
         }
-        if (event.key === 'Delete' || event.key === 'Backspace') {
-          event.preventDefault();
-          onSelect(clip.id, false, true);
-        }
+        // Delete/Backspace 不在此拦截：事件冒泡到全局快捷键处理器执行
+        // delete-selected（useShortcuts 在 defaultPrevented 时直接 return）。
+        // 此前版本在此 preventDefault 却只做选择不删除，导致聚焦 clip 时
+        // Delete 键完全失效（真回归，2026-07-28 引入）。
       }}
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}

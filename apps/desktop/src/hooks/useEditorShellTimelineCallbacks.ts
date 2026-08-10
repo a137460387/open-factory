@@ -110,6 +110,19 @@ interface TimelineCallbacksDeps {
   setCustomSplitLayouts: (layouts: SplitLayoutDefinition[]) => void;
 }
 
+/**
+ * 键盘删除聚焦中的 clip 后，被聚焦的 DOM 节点随渲染移除，焦点落回 body，
+ * useShortcuts 的时间线 scope 判定（data-timeline-shortcuts-root）随之失效，
+ * 导致紧接着的 Ctrl+Z 撤销等快捷键无法触发。删除成功后把焦点收回时间线
+ * 容器，保持键盘工作流连续。
+ */
+function refocusTimelineRoot(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  document.querySelector<HTMLElement>('[data-timeline-shortcuts-root="true"]')?.focus();
+}
+
 /** 时间线/Clip 编辑操作相关的回调组（约 28 个回调） */
 export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   const {
@@ -364,10 +377,12 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     if (group) {
       commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
       state.clearSelectedClipIds();
+      refocusTimelineRoot();
       return;
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, ids));
     state.clearSelectedClipIds();
+    refocusTimelineRoot();
   }, []);
 
   const rippleDeleteSelected = useCallback(() => {
@@ -378,6 +393,7 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     }
     commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids, state.project.protectedRanges));
     state.clearSelectedClipIds();
+    refocusTimelineRoot();
   }, []);
 
   const selectAllTimelineItems = useCallback(() => {

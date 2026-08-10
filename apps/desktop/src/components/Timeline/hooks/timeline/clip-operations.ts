@@ -50,6 +50,7 @@ import {
 import type {AnnotationEditorState, TimelineNoteEditorState} from '../../TimelineDialogs';
 import type {RulerContextMenuAction} from '../../timeline-ruler-menu';
 import {commandManager, projectAccessor, timelineAccessor} from '../../../../store/commandManager';
+import {useEditorStore} from '../../../../store/editorStore';
 import {zhCN} from '../../../../i18n/strings';
 import {createCreditsClip, createTextClip} from '../../../../lib/clipFactory';
 import {showToast} from '../../../../lib/toast';
@@ -80,6 +81,7 @@ export function createClipOperationsHandlers(
     projectDuration,
     timelineGridSettings,
     timelineGridBeatTimes,
+    transitionMenu,
     setTransitionMenu,
     setClipMenu,
     setRulerMenu,
@@ -125,12 +127,36 @@ export function createClipOperationsHandlers(
     onConvertMediaFrameRate(asset.id);
   }
 
+  // 转场菜单的添加/移除：同样是 d17ffe76 拆分时遗留的空壳，按原实现恢复。
   function addTransition(): void {
-    // This will be handled by the facade
+    if (!transitionMenu) {
+      return;
+    }
+    try {
+      commandManager.execute(
+        new AddTransitionCommand(timelineAccessor, {
+          type: transitionMenu.type,
+          duration: transitionMenu.duration,
+          fromClipId: transitionMenu.fromClipId,
+          toClipId: transitionMenu.toClipId,
+        }),
+      );
+      setTransitionMenu(undefined);
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.transitionUnavailableTitle,
+        message: error instanceof Error ? error.message : zhCN.timeline.transitionUnavailableMessage,
+      });
+    }
   }
 
   function removeTransition(): void {
-    // This will be handled by the facade
+    if (!transitionMenu?.existingTransitionId) {
+      return;
+    }
+    commandManager.execute(new RemoveTransitionCommand(timelineAccessor, transitionMenu.existingTransitionId));
+    setTransitionMenu(undefined);
   }
 
   function addText(): void {
@@ -303,12 +329,54 @@ export function createClipOperationsHandlers(
     });
   }
 
+  // 标尺右键菜单动作：恢复 2026-07-28 拆分（d17ffe76）时遗留的空壳实现，
+  // 原实现位于 useTimelineHandlers.ts，拆分时丢失导致 add-marker /
+  // add-protected-range / set-in / set-out 全部静默失效。
   function runRulerMenuAction(action: RulerContextMenuAction): void {
-    // This will be handled by the facade
+    const menu = params.rulerMenu;
+    if (!menu) {
+      return;
+    }
+    if (action === 'add-marker') {
+      addTimelineMarker(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'add-protected-range') {
+      addProtectedRangeAt(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-in') {
+      useEditorStore.getState().setInPoint(menu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-out') {
+      useEditorStore.getState().setOutPoint(menu.time);
+      setRulerMenu(undefined);
+    }
   }
 
   function jumpToRulerTimecode(): void {
-    // This will be handled by the facade
+    const menu = params.rulerMenu;
+    if (!menu) {
+      return;
+    }
+    const parsed = parseTimecodeToSeconds(menu.timecode, {
+      fps: project.settings.fps || 30,
+      duration: projectDuration,
+    });
+    if (!parsed.ok) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.invalidTimecodeTitle,
+        message: zhCN.timeline.invalidTimecodeMessage,
+      });
+      return;
+    }
+    params.setPlayheadTime(parsed.value.seconds);
+    setRulerMenu(undefined);
   }
 
   function addBeatMarker(): void {
@@ -571,11 +639,21 @@ export function createClipOperationsHandlers(
     }
   }
 
+  /**
+   * 键盘删除聚焦中的 clip/分组后，被聚焦的 DOM 节点随渲染移除，焦点会落回
+   * body，导致时间线快捷键 scope 判定失效（例如紧接着的 Ctrl+Z 撤销无法
+   * 触发）。删除成功后把焦点收回时间线容器，保持键盘工作流连续。
+   */
+  function refocusTimelineRoot(): void {
+    params.rootRef.current?.focus();
+  }
+
   function deleteGroup(group: ClipGroup): void {
     try {
       commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
       clearSelectedClipIds();
       setClipMenu(undefined);
+      refocusTimelineRoot();
     } catch (error) {
       showToast({
         kind: 'warning',
@@ -608,6 +686,7 @@ export function createClipOperationsHandlers(
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, selectedClipIds));
     clearSelectedClipIds();
+    refocusTimelineRoot();
   }
 
   function rippleDeleteSelected(): void {
@@ -620,6 +699,7 @@ export function createClipOperationsHandlers(
     }
     commandManager.execute(new RippleDeleteCommand(timelineAccessor, selectedClipIds, project.protectedRanges));
     clearSelectedClipIds();
+    refocusTimelineRoot();
   }
 
   return {
