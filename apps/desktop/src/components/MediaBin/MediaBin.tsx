@@ -6,7 +6,7 @@ import {useVirtualizer} from '@tanstack/react-virtual';
 import {BatchMetadataDialog, BatchRenameDialog} from './BatchDialogs';
 import {MediaInfoDialog, formatBytes, formatDuration, type MediaInfoState} from './MediaInfoDialog';
 import {SubclipDialog} from './SubclipDialog';
-import {MediaCard, formatFrameRateLabel, formatMediaColorProfile, formatMediaFormat, formatMediaResolution, IconPreview} from './MediaCard';
+import {MediaCard, MediaCardExtrasCtx, formatFrameRateLabel, formatMediaColorProfile, formatMediaFormat, formatMediaResolution, IconPreview, type MediaCardExtras} from './MediaCard';
 import {clsx} from 'clsx';
 import {zhCN} from '../../i18n/strings';
 import {TITLE_TEMPLATE_DRAG_MIME} from '../../lib/titleTemplates';
@@ -22,20 +22,9 @@ import {MediaBinFilterBar} from './MediaBinFilterBar';
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
 
-interface MediaCardExtras {
-  favoriteIds: Set<string>;
-  onToggleFavorite(assetId: string): void;
-  onRevealInTimeline(assetId: string): void;
-  pinnedIds: Set<string>;
-  onPinToSession(assetId: string): void;
-  onAnalyzeAI(assetId: string): void;
-  qualityResults: Map<string, QualityAssessmentResult>;
-  qualityErrors: Map<string, string>;
-  qualityLoading: Set<string>;
-  onQualityAssess(assetId: string): void;
-  onBatchQualityScan(): void;
-}
-const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
+// MediaCardExtras/MediaCardExtrasCtx 统一由 MediaCard.tsx 导出；
+// c43c5d4c 拆分时此处曾复制出第二个 context 实例，导致 Provider 与
+// MediaCard 的 useContext 不是同一对象，AI 分析/质量评估等菜单项失效。
 
 interface MediaGridNavCtxValue {
   columnCount: number;
@@ -166,7 +155,7 @@ export function MediaBin({
     onImportPaths, onAddSubclip, onUpdateSubclip, onDeleteSubclip, onAddSubclipToTimeline, onUpdateMediaCollections,
   });
 
-  const _extrasValue: MediaCardExtras = {
+  const extrasValue: MediaCardExtras = {
     favoriteIds: new Set(favoriteIds),
     onToggleFavorite,
     onRevealInTimeline,
@@ -196,7 +185,7 @@ export function MediaBin({
         onToggleSubclipExpanded: state.handleToggleSubclipExpanded,
       }}
     >
-      <MediaCardExtrasCtx.Provider value={_extrasValue}>
+      <MediaCardExtrasCtx.Provider value={extrasValue}>
         <aside
           className={clsx('flex h-full min-h-0 flex-col bg-panel', state.dragOver && 'ring-2 ring-inset ring-brand')}
           onDragOver={(event) => { event.preventDefault(); state.setDragOver(true); }}

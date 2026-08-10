@@ -1,5 +1,5 @@
 import React from 'react';
-import {AddEffectCommand, RemoveEffectCommand, ReorderEffectsCommand, UpdateEffectCommand, createId, DEFAULT_COLOR_CORRECTION, DEFAULT_EFFECT_PARAMS, INPUT_COLOR_SPACES, MAX_CHROMA_KEY_COLORS, type ChromaKeyMode, type ClipProjection, type ClipPanoramaOutputProjection, type InputColorSpace, type VideoDeinterlaceMode, type VideoDenoisePreset} from '@open-factory/editor-core';
+import {AddEffectCommand, RemoveEffectCommand, ReorderEffectsCommand, UpdateEffectCommand, createId, CLIP_BLEND_MODES, DEFAULT_COLOR_CORRECTION, DEFAULT_EFFECT_PARAMS, INPUT_COLOR_SPACES, MAX_CHROMA_KEY_COLORS, type ChromaKeyMode, type ClipBlendMode, type ClipProjection, type ClipPanoramaOutputProjection, type InputColorSpace, type VideoDeinterlaceMode, type VideoDenoisePreset} from '@open-factory/editor-core';
 import {Palette, Pipette, Plus, Trash2, X} from 'lucide-react';
 import {zhCN} from '../../i18n/strings';
 import {timelineAccessor} from '../../store/commandManager';
@@ -61,6 +61,27 @@ export function EffectPanel({
 }: ClipInspectorBodyProps) {
   return (
     <>
+      {/* 混合模式：bd315fd6 拆分时该 Section 整段丢失（blendMode 状态与
+          commit 链路一直存活），按原实现恢复 */}
+      {clip.type === 'video' || clip.type === 'image' ? (
+        <Section title={zhCN.inspector.sections.blend}>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
+            {zhCN.inspector.fields.blendMode}
+            <select
+              className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
+              value={blendMode}
+              data-testid="clip-blend-mode-select"
+              onChange={(event) => commit({ blendMode: event.target.value as ClipBlendMode })}
+            >
+              {CLIP_BLEND_MODES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {zhCN.inspector.blendModes[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </Section>
+      ) : null}
       {/* Projection / Panorama */}
       {clip.type === 'video' ? (
         <Section title={zhCN.inspector.sections.projection}>

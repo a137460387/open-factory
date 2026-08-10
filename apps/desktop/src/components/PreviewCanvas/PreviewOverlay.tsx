@@ -32,6 +32,7 @@ export interface PreviewOverlayProps {
   compareDividerDragging: boolean;
   onCompareDividerDraggingChange: (dragging: boolean) => void;
   previewRenderSize: { width: number; height: number };
+  previewQualityMode: string;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   originalCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   differenceCanvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -72,7 +73,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
     selectedPanoramaClip, chromaKeyPickTarget, project, playheadTime, fps,
     multicamLiveMode, isPlaying, frameInspectorSample, selectedInspectorClip,
     compareEnabled, compareShowsDifference, compareMode, compareSplitRatio,
-    compareDividerDragging, previewRenderSize, canvasRef, originalCanvasRef,
+    compareDividerDragging, previewRenderSize, previewQualityMode, canvasRef, originalCanvasRef,
     differenceCanvasRef, previewSurfaceRef, previewSurfaceStyle, previewZoom,
   } = props;
 
@@ -92,6 +93,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
           height={previewRenderSize.height}
           className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
           data-testid="preview-canvas"
+          data-preview-quality={previewQualityMode}
         />
         {compareEnabled ? (
           <canvas
