@@ -53,12 +53,13 @@ export class ExportDialogPage extends BasePage {
     await this.safeSelect('export-range-select', range);
   }
 
-  /** 填写输出路径。
-   * 注：旧的 export-batch-paths 多行 textarea 已下线，现为单路径
-   * export-output-path input；多路径批量需走 version-batch/sequence-batch
-   * 模式（相关 spec 迁移不在本轮范围）。 */
+  /** 填写导出路径（支持多行批量：每行一个输出路径，入队时每行一个任务）。
+   * 对应 single 模式的 export-batch-paths 多行 textarea（绑定 batchOutputPaths，
+   * useExportActions 入队时按换行拆分；为空才回退单路径 export-output-path）。
+   * 注：该 textarea 曾在向导拆分（bd315fd6）中丢失、helper 一度被误导向单路径
+   * export-output-path（f8355019），现已随 UI 恢复回填原控件。 */
   async fillBatchPaths(paths: string): Promise<void> {
-    await this.safeFill('export-output-path', paths);
+    await this.safeFill('export-batch-paths', paths);
   }
 
   /** 点击入队按钮 */
