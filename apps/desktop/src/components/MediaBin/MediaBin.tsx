@@ -1,4 +1,4 @@
-import {MAX_MEDIA_FOLDER_DEPTH, TITLE_TEMPLATE_IDS, collectFingerprintReferences, listFingerprintSourcePaths, type MediaAsset, type BatchEditableMediaMetadata, type ClipContentAnalysis, type MediaFlag, type MediaFolder, type MediaLabelColor, type MediaMetadata, type MediaRenamePreviewItem, type TitleTemplateId, type EffectPreset, type QualityAssessmentResult} from '@open-factory/editor-core';
+import {MAX_MEDIA_FOLDER_DEPTH, TITLE_TEMPLATE_IDS, collectFingerprintReferences, listFingerprintSourcePaths, type MediaAsset, type BatchEditableMediaMetadata, type ClipContentAnalysis, type MediaFlag, type MediaFolder, type MediaLabelColor, type MediaMetadata, type MediaRenamePreviewItem, type TitleTemplateId, type EffectPreset, type QualityAssessmentResult, type SmartAlbumId} from '@open-factory/editor-core';
 import {parseFavoritesSearchFilter, type Subclip} from '@open-factory/editor-core';
 import {ChevronDown, ChevronRight, FileText, Folder, FolderPlus, Import, Link2, Merge, Plus, RotateCcw, SlidersHorizontal, Trash2, X} from 'lucide-react';
 import {createContext, Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject} from 'react';
@@ -21,6 +21,16 @@ import {MediaBinFilterBar} from './MediaBinFilterBar';
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
+
+/**
+ * 网格数据按 scope 选择（方案 E 的"切数据不切组件"契约）：
+ * - 智能相册 scope：网格直接展示全部可见素材（不按文件夹分流）；
+ * - 普通 scope（'none'）：网格只展示未分类素材，已分类素材由 MediaFolderTree 渲染。
+ * 与重构前两个三元分支各自的 media 表达式逐字等价。
+ */
+export function selectMediaGridScopeMedia(sortedVisibleMedia: MediaAsset[], smartAlbumId: SmartAlbumId | 'none'): MediaAsset[] {
+  return smartAlbumId === 'none' ? sortedVisibleMedia.filter((asset) => !asset.folderId) : sortedVisibleMedia;
+}
 
 // MediaCardExtras/MediaCardExtrasCtx 统一由 MediaCard.tsx 导出；
 // c43c5d4c 拆分时此处曾复制出第二个 context 实例，导致 Provider 与
@@ -334,53 +344,46 @@ export function MediaBin({
               </div>
             ) : state.mediaLibraryView.mode === 'timeline' ? (
               <MediaLibraryTimelineView media={state.importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
-            ) : state.smartAlbumId !== 'none' ? (
-              <div className="flex min-h-full flex-col">
-                <VirtualMediaCardGrid
-                  media={state.sortedVisibleMedia}
-                  gridSize={state.mediaLibraryView.gridSize}
-                  mediaMetadata={mediaMetadata}
-                  mediaContentAnalysis={mediaContentAnalysis}
-                  projectFrameRate={projectFrameRate}
-                  onAddToTimeline={onAddToTimeline} onAddVersion={onAddVersion} onCompareVersions={onCompareVersions}
-                  onRelink={onRelink} onGenerateProxy={onGenerateProxy} onConvertToCfr={onConvertToCfr}
-                  onSetLabel={onSetLabel} onSetRating={onSetRating} onSetFlag={onSetFlag}
-                  onBatchTranscode={onBatchTranscode} onExportGif={onExportGif} onAnalyzeSpectrum={onAnalyzeSpectrum}
-                  onShowInfo={(asset) => void state.openMediaInfo(asset)}
-                  onFindSources={state.findSourcePaths}
-                  selectedMediaIds={state.selectedMediaIds}
-                  onToggleSelected={state.toggleSelectedMedia}
-                  onOpenBatchMetadata={state.openBatchMetadataEditor}
-                  onOpenBatchRename={state.openBatchRenameEditor}
-                  mediaHighlights={state.mediaHighlights}
-                />
-              </div>
             ) : (
+              /* 方案 E（media-rating:4 根因修复）：VirtualMediaCardGrid 在普通/智能相册
+                 两种 scope 间常驻挂载，切换只变更 media 数据 prop。
+                 根因：此前智能相册是独立三元分支，点击切换会在离散同步事件提交内
+                 卸载旧网格并首次挂载新网格，@tanstack/react-virtual 挂载期测量后
+                 派发的 rerender 在该场景下不会被提交，网格永久空白直到外部重渲染。
+                 常驻挂载后切换不再触发"挂载期同步测量"，从根源避开触发条件。
+                 文件夹树/根拖放区仍按 scope 挂载/卸载（非虚拟化组件，无此问题），
+                 key 仅用于协调稳定性（保证网格同位置复用、不随兄弟节点增删而重挂载）。 */
               <div className="flex min-h-full flex-col gap-3">
-                <MediaFolderTree
-                  folders={mediaFolders}
-                  media={state.sortedVisibleMedia}
-                  mediaMetadata={mediaMetadata}
-                  mediaContentAnalysis={mediaContentAnalysis}
-                  gridSize={state.mediaLibraryView.gridSize}
-                  projectFrameRate={projectFrameRate}
-                  onCreateFolder={onCreateFolder} onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder}
-                  onSetFolderCollapsed={onSetFolderCollapsed} onMoveMediaToFolder={onMoveMediaToFolder}
-                  onAddToTimeline={onAddToTimeline} onAddVersion={onAddVersion} onCompareVersions={onCompareVersions}
-                  onRelink={onRelink} onGenerateProxy={onGenerateProxy} onConvertToCfr={onConvertToCfr}
-                  onSetLabel={onSetLabel} onSetRating={onSetRating} onSetFlag={onSetFlag}
-                  onBatchTranscode={onBatchTranscode} onExportGif={onExportGif} onAnalyzeSpectrum={onAnalyzeSpectrum}
-                  onShowInfo={(asset) => void state.openMediaInfo(asset)}
-                  onFindSources={state.findSourcePaths}
-                  selectedMediaIds={state.selectedMediaIds}
-                  onToggleSelected={state.toggleSelectedMedia}
-                  onOpenBatchMetadata={state.openBatchMetadataEditor}
-                  onOpenBatchRename={state.openBatchRenameEditor}
-                  mediaHighlights={state.mediaHighlights}
-                />
-                <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
+                {state.smartAlbumId === 'none' ? (
+                  <Fragment key="media-folder-chrome">
+                    <MediaFolderTree
+                      folders={mediaFolders}
+                      media={state.sortedVisibleMedia}
+                      mediaMetadata={mediaMetadata}
+                      mediaContentAnalysis={mediaContentAnalysis}
+                      gridSize={state.mediaLibraryView.gridSize}
+                      projectFrameRate={projectFrameRate}
+                      onCreateFolder={onCreateFolder} onRenameFolder={onRenameFolder} onDeleteFolder={onDeleteFolder}
+                      onSetFolderCollapsed={onSetFolderCollapsed} onMoveMediaToFolder={onMoveMediaToFolder}
+                      onAddToTimeline={onAddToTimeline} onAddVersion={onAddVersion} onCompareVersions={onCompareVersions}
+                      onRelink={onRelink} onGenerateProxy={onGenerateProxy} onConvertToCfr={onConvertToCfr}
+                      onSetLabel={onSetLabel} onSetRating={onSetRating} onSetFlag={onSetFlag}
+                      onBatchTranscode={onBatchTranscode} onExportGif={onExportGif} onAnalyzeSpectrum={onAnalyzeSpectrum}
+                      onShowInfo={(asset) => void state.openMediaInfo(asset)}
+                      onFindSources={state.findSourcePaths}
+                      selectedMediaIds={state.selectedMediaIds}
+                      onToggleSelected={state.toggleSelectedMedia}
+                      onOpenBatchMetadata={state.openBatchMetadataEditor}
+                      onOpenBatchRename={state.openBatchRenameEditor}
+                      mediaHighlights={state.mediaHighlights}
+                    />
+                    <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
+                  </Fragment>
+                ) : null}
                 <VirtualMediaCardGrid
-                  media={state.sortedVisibleMedia.filter((asset) => !asset.folderId)}
+                  key="media-grid"
+                  media={selectMediaGridScopeMedia(state.sortedVisibleMedia, state.smartAlbumId)}
+                  viewScope={state.smartAlbumId}
                   gridSize={state.mediaLibraryView.gridSize}
                   mediaMetadata={mediaMetadata}
                   mediaContentAnalysis={mediaContentAnalysis}
@@ -767,8 +770,8 @@ function MediaCardGrid({ media, gridSize, mediaMetadata, mediaContentAnalysis, p
   );
 }
 
-function VirtualMediaCardGrid({ media, gridSize, mediaMetadata, mediaContentAnalysis, projectFrameRate, onAddToTimeline, onAddVersion, onCompareVersions, onRelink, onGenerateProxy, onConvertToCfr, onSetLabel, onSetRating, onSetFlag, onBatchTranscode, onExportGif, onAnalyzeSpectrum, onShowInfo, onFindSources, selectedMediaIds, onToggleSelected, onOpenBatchMetadata, onOpenBatchRename, mediaHighlights }: {
-  media: MediaAsset[]; gridSize: string; mediaMetadata: Record<string, MediaMetadata>;
+export function VirtualMediaCardGrid({ media, viewScope, gridSize, mediaMetadata, mediaContentAnalysis, projectFrameRate, onAddToTimeline, onAddVersion, onCompareVersions, onRelink, onGenerateProxy, onConvertToCfr, onSetLabel, onSetRating, onSetFlag, onBatchTranscode, onExportGif, onAnalyzeSpectrum, onShowInfo, onFindSources, selectedMediaIds, onToggleSelected, onOpenBatchMetadata, onOpenBatchRename, mediaHighlights }: {
+  media: MediaAsset[]; viewScope: SmartAlbumId | 'none'; gridSize: string; mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>; projectFrameRate: number;
   onAddToTimeline(assetId: string): void; onAddVersion(assetId: string): void; onCompareVersions(assetId: string): void;
   onRelink(assetId: string): void; onGenerateProxy(assetId: string): void; onConvertToCfr(assetId: string): void;
@@ -786,9 +789,16 @@ function VirtualMediaCardGrid({ media, gridSize, mediaMetadata, mediaContentAnal
   const rowHeight = GRID_ROW_HEIGHTS[gridSize] ?? 170;
   const virtualizer = useVirtualizer({ count: rowCount, getScrollElement: () => parentRef.current, estimateSize: () => rowHeight + 12, overscan: 3 });
   const prevMediaLenRef = useRef(media.length);
+  const prevViewScopeRef = useRef(viewScope);
   useEffect(() => {
-    if (media.length !== prevMediaLenRef.current) { prevMediaLenRef.current = media.length; virtualizer.scrollToIndex(0, { align: 'start' }); }
-  }, [media.length, virtualizer]);
+    // 网格常驻挂载后（方案 E），scope 切换不再经由卸载/重挂载自然归零滚动位置，
+    // 改由数据变化（length）或 scope 变化显式重置到顶部，不依赖生命周期副作用。
+    if (media.length !== prevMediaLenRef.current || viewScope !== prevViewScopeRef.current) {
+      prevMediaLenRef.current = media.length;
+      prevViewScopeRef.current = viewScope;
+      virtualizer.scrollToIndex(0, { align: 'start' });
+    }
+  }, [media.length, viewScope, virtualizer]);
   if (media.length === 0) return null;
   const virtualItems = virtualizer.getVirtualItems();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0]!.start : 0;
