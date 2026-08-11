@@ -7484,6 +7484,10 @@ window.__E2E_ACTIONS__ = {
       ],
       activeSequenceId: PRIMARY_SEQUENCE_ID,
     });
+    // 隐藏音频混音器，避免其遮挡自动化面板（与相邻自动化 fixture 一致的写法）。
+    // 依赖 layoutSettingsTouched 竞态修复：该程序化设置不再被挂载时的
+    // readLayoutSettings 异步加载覆盖（auto-generate:68 根因修复后稳定生效）。
+    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useEditorUIStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
