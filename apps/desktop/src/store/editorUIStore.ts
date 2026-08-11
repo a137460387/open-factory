@@ -91,6 +91,8 @@ export interface EditorUIState {
   sceneReorderOpen: boolean;
   styleTransferOpen: boolean;
   collaborationNotesOpen: boolean;
+  collaborationPanelOpen: boolean;
+  colorGradingWorkspaceOpen: boolean;
   operationRecordingOpen: boolean;
   complexityScoreOpen: boolean;
   smartRecommendationsOpen: boolean;
@@ -175,6 +177,8 @@ export interface EditorUIState {
   setSceneReorderOpen: (updater: Updater<boolean>) => void;
   setStyleTransferOpen: (updater: Updater<boolean>) => void;
   setCollaborationNotesOpen: (updater: Updater<boolean>) => void;
+  setCollaborationPanelOpen: (updater: Updater<boolean>) => void;
+  setColorGradingWorkspaceOpen: (updater: Updater<boolean>) => void;
   setOperationRecordingOpen: (updater: Updater<boolean>) => void;
   setComplexityScoreOpen: (updater: Updater<boolean>) => void;
   setSmartRecommendationsOpen: (updater: Updater<boolean>) => void;

@@ -96,6 +96,8 @@ export function useEditorShellStoreSubscriptions() {
     setSceneReorderOpen: s.setSceneReorderOpen,
     setStyleTransferOpen: s.setStyleTransferOpen,
     setCollaborationNotesOpen: s.setCollaborationNotesOpen,
+    setCollaborationPanelOpen: s.setCollaborationPanelOpen,
+    setColorGradingWorkspaceOpen: s.setColorGradingWorkspaceOpen,
     setOperationRecordingOpen: s.setOperationRecordingOpen,
     setComplexityScoreOpen: s.setComplexityScoreOpen,
     setSmartRecommendationsOpen: s.setSmartRecommendationsOpen,

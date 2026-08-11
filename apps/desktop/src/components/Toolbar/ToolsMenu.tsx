@@ -61,6 +61,8 @@ export function ToolsMenu({
   onOpenSceneDetection,
   onOpenStyleTransfer,
   onOpenCollaborationNotes,
+  onOpenCollaborationPanel,
+  onOpenColorGradingWorkspace,
   onOpenOperationRecording,
   onOpenComplexityScore,
   onOpenSmartRecommendations,
@@ -126,6 +128,8 @@ export function ToolsMenu({
   onOpenSceneDetection(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
+  onOpenCollaborationPanel(): void;
+  onOpenColorGradingWorkspace(): void;
   onOpenOperationRecording(): void;
   onOpenComplexityScore(): void;
   onOpenSmartRecommendations(): void;
@@ -176,6 +180,8 @@ export function ToolsMenu({
       <MenuItem label={t.sceneDetection} testId="toolbar-tools-scene-detection-menu-item" disabled={!canOpenSceneDetection} icon={<Scissors size={14} />} onClick={() => { close(); onOpenSceneDetection(); }} />
       <MenuItem label={t.styleTransfer} testId="toolbar-tools-style-transfer-menu-item" icon={<WandSparkles size={14} />} onClick={() => { close(); onOpenStyleTransfer(); }} />
       <MenuItem label={t.collaborationNotes} testId="toolbar-tools-collaboration-notes-menu-item" icon={<MessageSquareText size={14} />} onClick={() => { close(); onOpenCollaborationNotes(); }} />
+      <MenuItem label={t.collaborationPanel} testId="toolbar-tools-collaboration-menu-item" icon={<MessageSquareText size={14} />} onClick={() => { close(); onOpenCollaborationPanel(); }} />
+      <MenuItem label={t.colorGradingWorkspace} testId="toolbar-tools-color-grading-menu-item" icon={<Palette size={14} />} onClick={() => { close(); onOpenColorGradingWorkspace(); }} />
       <MenuItem label={t.operationRecording} testId="toolbar-tools-operation-recording-menu-item" icon={<History size={14} />} onClick={() => { close(); onOpenOperationRecording(); }} />
       <MenuItem label={t.complexityScore} testId="toolbar-tools-complexity-score-menu-item" icon={<Activity size={14} />} onClick={() => { close(); onOpenComplexityScore(); }} />
       <MenuItem label={t.smartRecommendations} testId="toolbar-tools-smart-recommendations-menu-item" icon={<WandSparkles size={14} />} onClick={() => { close(); onOpenSmartRecommendations(); }} />

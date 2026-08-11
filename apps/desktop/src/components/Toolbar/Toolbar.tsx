@@ -107,6 +107,8 @@ interface ToolbarProps {
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
+  onOpenCollaborationPanel(): void;
+  onOpenColorGradingWorkspace(): void;
   onOpenOperationRecording(): void;
   onOpenComplexityScore(): void;
   onOpenSmartRecommendations(): void;
@@ -420,6 +422,8 @@ export function Toolbar(props: ToolbarProps) {
         onOpenSceneDetection={props.onOpenSceneDetection}
         onOpenStyleTransfer={props.onOpenStyleTransfer}
         onOpenCollaborationNotes={props.onOpenCollaborationNotes}
+        onOpenCollaborationPanel={props.onOpenCollaborationPanel}
+        onOpenColorGradingWorkspace={props.onOpenColorGradingWorkspace}
         onOpenOperationRecording={props.onOpenOperationRecording}
         onOpenComplexityScore={props.onOpenComplexityScore}
         onOpenSmartRecommendations={props.onOpenSmartRecommendations}

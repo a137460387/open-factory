@@ -49,6 +49,7 @@ export function EditorShell() {
     setVideoStitchWizardOpen, setSmartMontageOpen,
     syncCompareOpen, setSyncCompareOpen, setSceneReorderOpen, setStyleTransferOpen,
     collaborationNotesOpen, setCollaborationNotesOpen, setOperationRecordingOpen,
+    setCollaborationPanelOpen, setColorGradingWorkspaceOpen,
     complexityScoreOpen, setComplexityScoreOpen, setSmartRecommendationsOpen, setContentAnalysisOpen, setProfilerOpen,
     setRhythmAnalysisOpen, autoAudioSyncOpen, setAutoAudioSyncOpen,
     setErrorKnowledgeOpen, setSequenceCompareOpen, setSubtitleSyncOpen, setProxyVerifyOpen,
@@ -252,6 +253,8 @@ export function EditorShell() {
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenStyleTransfer={() => setStyleTransferOpen(true)}
           onOpenCollaborationNotes={() => setCollaborationNotesOpen(true)}
+          onOpenCollaborationPanel={() => setCollaborationPanelOpen(true)}
+          onOpenColorGradingWorkspace={() => setColorGradingWorkspaceOpen(true)}
           onOpenOperationRecording={() => setOperationRecordingOpen(true)}
           onOpenComplexityScore={() => setComplexityScoreOpen(true)}
           onOpenSmartRecommendations={() => setSmartRecommendationsOpen(true)}
