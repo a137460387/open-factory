@@ -18,7 +18,9 @@ test.describe('自动剪辑生成器 - 一键生成流程', () => {
     await page.getByTestId('tab-generate').click();
     const autoPanel = page.getByTestId('auto-generate-panel');
     await expect(autoPanel).toBeVisible();
-    await expect(page.getByText('一键生成')).toBeVisible();
+    // 面板标题 h3 与底部"一键生成"按钮同文本，getByText 会命中两者触发
+    // strict mode violation；按角色精确定位标题。
+    await expect(page.getByRole('heading', { name: '一键生成' })).toBeVisible();
   });
 
   test('模板选择器显示内置模板', async ({ page }) => {
