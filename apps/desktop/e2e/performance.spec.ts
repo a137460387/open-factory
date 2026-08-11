@@ -54,8 +54,19 @@ test.describe('Timeline Performance for Large Projects', () => {
       await page.waitForTimeout(50); // 短暂等待以允许渲染
     }
 
-    // 验证没有控制台错误
-    const criticalErrors = errors.filter((e) => !e.includes('ResizeObserver'));
+    // 验证没有控制台错误。
+    // 仅放行两类已知噪声，其余任何 console 错误仍会被捕获：
+    // 1) ResizeObserver 循环警告（浏览器良性）；
+    // 2) e2e mock 媒体不可播放导致的时间线缩略图加载失败——来源标签
+    //    [timeline-thumbnails] + 文案"媒体事件失败"。cover-frames 修复
+    //    （getVideo 失败即 reject 不再挂起）后该失败由静默挂起变为正确
+    //    reject 并经 logError('timeline-thumbnails') 打印，属预期环境噪声、
+    //    非真实回归，故按来源精确放行；其他来源错误不受影响。
+    const isKnownThumbnailLoadFailure = (text: string): boolean =>
+      text.includes('[timeline-thumbnails]') && text.includes('媒体事件失败');
+    const criticalErrors = errors.filter(
+      (e) => !e.includes('ResizeObserver') && !isKnownThumbnailLoadFailure(e),
+    );
     expect(criticalErrors).toHaveLength(0);
 
     // 验证滚动后仍有可见的片段
