@@ -38,9 +38,11 @@ test.describe('自动剪辑生成器 - 一键生成流程', () => {
   test('选择模板后显示模板预览', async ({ page }) => {
     await page.getByText('生成', { exact: true }).click();
 
-    // 选择短视频模板
+    // 选择短视频模板。Playwright 对 selectOption 的正则 label 匹配存在已知缺陷
+    // （options[0].label: expected string, got object），value/index/精确字符串均正常；
+    // 模板 value 稳定，按 value 选择最稳健。
     const templateSelect = page.getByTestId('template-select');
-    await templateSelect.selectOption({ label: /短视频/ });
+    await templateSelect.selectOption('builtin-short-video');
 
     // 模板预览应该显示
     const preview = page.getByTestId('template-preview');
