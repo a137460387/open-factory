@@ -224,8 +224,14 @@ export function useEditorShellSettings(): void {
     let canceled = false;
     void readLayoutSettings()
       .then((settings) => {
-        if (!canceled) {
-          useEditorUIStore.getState().setLayoutSettings(settings);
+        if (canceled) {
+          return;
+        }
+        // 时序竞态修复：加载结果到达前若布局已被程序化/用户显式设置
+        // （layoutSettingsTouched=true），则不用加载结果覆盖，避免先到的
+        // 程序化设置被异步持久化加载覆盖（auto-generate:68 根因）。
+        if (!useEditorUIStore.getState().layoutSettingsTouched) {
+          useEditorUIStore.getState().applyLoadedLayoutSettings(settings);
         }
       })
       .catch((error) => {
