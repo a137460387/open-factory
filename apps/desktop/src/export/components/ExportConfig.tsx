@@ -744,6 +744,26 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
           setDraftSettings={setDraftSettings}
         />
 
+        {/* Batch output paths（仅 single 模式）。
+            拆分前（bd315fd6^）mode 区是三目链：pipeline/codec-compare/version-batch/
+            sequence-batch/stem 各有分支，else 分支即本 textarea；五个非 single 模式
+            均有显式分支，故 else 等价于 exportMode === 'single'。拆分提交 bd315fd6
+            丢失该 JSX，batchOutputPaths 沦为孤儿 state（后端 useExportActions 换行
+            拆分多路径入队逻辑一直存活），导致 export.spec:3/:81 多路径只入队 1 任务。
+            此处按拆分前原样接回。 */}
+        {exportMode === 'single' ? (
+          <div className="grid grid-cols-[110px_1fr] gap-2">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
+            <textarea
+              className="min-h-16 resize-y rounded-md border border-line px-2 py-1.5 text-xs"
+              placeholder={t.batchPlaceholder}
+              value={batchOutputPaths}
+              onChange={(event) => setBatchOutputPaths(event.target.value)}
+              data-testid="export-batch-paths"
+            />
+          </div>
+        ) : null}
+
         {/* Priority */}
         <div className="grid grid-cols-[110px_220px] gap-2">
           <label className="pt-1.5 text-xs font-medium text-slate-600">{t.priority}</label>
