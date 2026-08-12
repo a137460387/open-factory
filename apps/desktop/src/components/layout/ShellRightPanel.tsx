@@ -17,13 +17,8 @@ import {getReviewModeShellVisibility} from '../../review/reviewMode';
 
 const AudioMixer = lazy(() => import('../AudioMixer/AudioMixer').then((m) => ({ default: m.AudioMixer })));
 const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ default: m.Inspector })));
-const SmartRoughCutPanel = lazy(() =>
-  import('../SmartRoughCut/SmartRoughCutPanel').then((m) => ({ default: m.SmartRoughCutPanel })),
-);
-const SmartRoughCutOrchestratorPanel = lazy(() =>
-  import('../SmartRoughCut/SmartRoughCutOrchestratorPanel').then((m) => ({
-    default: m.SmartRoughCutOrchestratorPanel,
-  })),
+const SmartRoughCutStepPanel = lazy(() =>
+  import('../SmartRoughCut/SmartRoughCutStepPanel').then((m) => ({ default: m.SmartRoughCutStepPanel })),
 );
 const AIRoughCutPanel = lazy(() =>
   import('../AIRoughCut/AIRoughCutPanel').then((m) => ({ default: m.AIRoughCutPanel })),
@@ -288,7 +283,7 @@ export function ShellRightPanel() {
                 onClose={() => setAiSubtitleWorkflowOpen(false)}
               />
             ) : smartRoughCutOpen ? (
-              <SmartRoughCutOrchestratorPanel selectedClip={selectedClip} media={project.media} />
+              <SmartRoughCutStepPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (
               <SmartCreationPanel
                 open={smartCreationOpen}
