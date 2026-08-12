@@ -2,8 +2,13 @@ import type {ExportState} from '../hooks/useExportState';
 import type {ExportActions} from '../hooks/useExportActions';
 import {Cloud, CloudDownload, Download, FolderOpen, Loader2, Save, Trash2, Upload} from 'lucide-react';
 import {zhCN} from '../../i18n/strings';
-import {TARGET_ASPECT_RATIOS, PLATFORM_LIMITS, BUILTIN_BROADCAST_SPECS} from '@open-factory/editor-core';
+import {TARGET_ASPECT_RATIOS, PLATFORM_LIMITS, BUILTIN_BROADCAST_SPECS, type ExportTaskStatus} from '@open-factory/editor-core';
 import {EXPORT_COMPLETION_ACTIONS, normalizeExportCompletionAction} from '../export-background';
+import {MAX_CODEC_COMPARE_PRESETS, type CodecCompareRecommendationMode, type CodecCompareSortKey} from '../codec-compare';
+import {formatBytes, formatMilliseconds, formatOptionalNumber} from '../lib/exportFormatHelpers';
+import {showToast} from '../../lib/toast';
+import {PipelineSection} from './PipelineSection';
+import {SequenceBatchSection} from './SequenceBatchSection';
 import {SUBTITLE_FORMATS, DEFAULT_AUDIO_VISUALIZATION, updateNumberSetting, updateStringSetting, updateOutputMode, updateFormat, updateSubtitleMode, updateSubtitleFormat, updateExportSidecarSubtitle, updateScaleMode, updateTargetAspectRatio, updateHardwareEncoding} from '../lib/exportSettingsHelpers';
 import {ExportCostEstimatePanel} from './ExportCostEstimatePanel';
 import {ExportOptimizationPanel} from './ExportOptimizationPanel';
@@ -68,6 +73,22 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     setCustomPresetName,
     batchOutputPaths,
     setBatchOutputPaths,
+    pipelineConfig,
+    pipelineStatuses,
+    publishPipelineLogs,
+    codecComparePresetIds,
+    codecCompareResults,
+    codecCompareSort,
+    codecCompareRecommendationMode,
+    setCodecCompareRecommendationMode,
+    codecCompareEvaluatingTaskId,
+    codecCompareRecommendation,
+    sortedCodecCompareResults,
+    sequenceBatchTemplate,
+    setSequenceBatchTemplate,
+    sequenceBatchPresetMode,
+    setSequenceBatchPresetMode,
+    sequenceBatchRows,
     priority,
     setPriority,
     scheduleEnabled,
@@ -744,14 +765,197 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
           setDraftSettings={setDraftSettings}
         />
 
-        {/* Batch output paths（仅 single 模式）。
+        {/* Mode 区设置分支。
             拆分前（bd315fd6^）mode 区是三目链：pipeline/codec-compare/version-batch/
-            sequence-batch/stem 各有分支，else 分支即本 textarea；五个非 single 模式
-            均有显式分支，故 else 等价于 exportMode === 'single'。拆分提交 bd315fd6
-            丢失该 JSX，batchOutputPaths 沦为孤儿 state（后端 useExportActions 换行
-            拆分多路径入队逻辑一直存活），导致 export.spec:3/:81 多路径只入队 1 任务。
-            此处按拆分前原样接回。 */}
-        {exportMode === 'single' ? (
+            sequence-batch/stem 各有显式 JSX 分支，else 分支为 single 的批量路径
+            textarea。拆分提交 bd315fd6 丢失全部非 single 分支：b466f1a1 先接回
+            single 分支（batchOutputPaths，修复 export.spec:3/:81）；此处按拆分前
+            原样接回 pipeline/codec-compare/sequence-batch 三个分支（后端
+            useExportActions 的四模式入队分发与各模式 state 一直存活，仅 UI 断裂）。
+            version-batch 另有跨步结构问题留待单独任务，stem 无对应用例，均保持 null。 */}
+        {exportMode === 'pipeline' ? (
+          <PipelineSection
+            pipeline={pipelineConfig}
+            statuses={pipelineStatuses}
+            publishLogs={publishPipelineLogs}
+            onCreateTemplate={() => actions.createPipelineTemplate()}
+            onCreatePublishTemplate={() => actions.createPublishPipelineTemplate()}
+          />
+        ) : exportMode === 'codec-compare' ? (
+          <div
+            className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3"
+            data-testid="export-codec-compare-tab"
+          >
+            <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>
+            <div className="space-y-3">
+              <p className="text-xs text-slate-500">{t.codecCompare.description(MAX_CODEC_COMPARE_PRESETS)}</p>
+              <div className="grid gap-2 md:grid-cols-2" data-testid="export-codec-compare-preset-list">
+                {presets.map((preset) => {
+                  const checked = codecComparePresetIds.includes(preset.id);
+                  const disabled = !checked && codecComparePresetIds.length >= MAX_CODEC_COMPARE_PRESETS;
+                  return (
+                    <label
+                      key={preset.id}
+                      className={`flex items-start gap-2 rounded-md border border-line p-2 text-xs ${disabled ? 'opacity-50' : ''}`}
+                      data-testid="export-codec-compare-preset-row"
+                    >
+                      <input
+                        className="mt-0.5 h-4 w-4 accent-brand"
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={(event) => actions.toggleCodecComparePreset(preset.id, event.target.checked)}
+                        data-testid={`export-codec-compare-preset-${preset.id}`}
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-slate-700">{preset.name}</span>
+                        <span className="block text-[11px] text-slate-500">
+                          {preset.settings.videoCodec ?? zhCN.common.auto} ·{' '}
+                          {preset.settings.videoBitrate ?? zhCN.common.auto} · {preset.settings.format ?? 'mp4'}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {codecComparePresetIds.length < 2 ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                  {t.codecCompare.selectAtLeastTwo}
+                </div>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <label className="inline-flex items-center gap-2 font-medium text-slate-600">
+                  <span>{t.codecCompare.recommendationMode}</span>
+                  <select
+                    className="rounded-md border border-line px-2 py-1.5"
+                    value={codecCompareRecommendationMode}
+                    onChange={(event) =>
+                      setCodecCompareRecommendationMode(event.target.value as CodecCompareRecommendationMode)
+                    }
+                    data-testid="export-codec-compare-recommendation-mode"
+                  >
+                    <option value="quality">{t.codecCompare.recommendationModes.quality}</option>
+                    <option value="size">{t.codecCompare.recommendationModes.size}</option>
+                  </select>
+                </label>
+                <button
+                  className="rounded-md border border-line px-2 py-1.5 font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  disabled={!codecCompareRecommendation}
+                  data-testid="export-codec-compare-recommend-button"
+                  onClick={() => {
+                    if (codecCompareRecommendation) {
+                      setPresetId(codecCompareRecommendation.presetId);
+                      showToast({
+                        kind: 'info',
+                        title: t.codecCompare.recommendedTitle,
+                        message: codecCompareRecommendation.presetName,
+                      });
+                    }
+                  }}
+                >
+                  {codecCompareRecommendation
+                    ? t.codecCompare.chooseRecommended(codecCompareRecommendation.presetName)
+                    : t.codecCompare.chooseBest}
+                </button>
+                {codecCompareEvaluatingTaskId ? (
+                  <span className="text-slate-500" data-testid="export-codec-compare-quality-running">
+                    {t.codecCompare.evaluating}
+                  </span>
+                ) : null}
+              </div>
+              {codecCompareResults.length > 0 ? (
+                <div
+                  className="overflow-hidden rounded-md border border-line"
+                  data-testid="export-codec-compare-results"
+                >
+                  <table className="w-full border-collapse text-xs">
+                    <thead className="bg-panel text-slate-600">
+                      <tr>
+                        {(['presetName', 'fileSizeBytes', 'durationMs', 'ssim', 'psnr'] as CodecCompareSortKey[]).map(
+                          (key) => (
+                            <th key={key} className="px-2 py-2 text-left font-semibold">
+                              <button
+                                className="inline-flex items-center gap-1 hover:text-ink"
+                                type="button"
+                                data-testid={`export-codec-compare-sort-${key}`}
+                                onClick={() => actions.toggleCodecCompareSort(key)}
+                              >
+                                {t.codecCompare.columns[key]}
+                                {codecCompareSort.key === key ? (
+                                  <span>{codecCompareSort.direction === 'asc' ? '↑' : '↓'}</span>
+                                ) : null}
+                              </button>
+                            </th>
+                          ),
+                        )}
+                        <th className="px-2 py-2 text-left font-semibold">{t.codecCompare.columns.status}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortedCodecCompareResults.map((result) => (
+                        <tr
+                          key={`${result.presetId}-${result.outputPath}`}
+                          className={
+                            codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined
+                          }
+                          data-testid="export-codec-compare-result-row"
+                          data-preset-id={result.presetId}
+                        >
+                          <td className="px-2 py-2 font-medium text-slate-800">{result.presetName}</td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">
+                            {formatBytes(result.fileSizeBytes)}
+                          </td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">
+                            {formatMilliseconds(result.durationMs)}
+                          </td>
+                          <td
+                            className="px-2 py-2 tabular-nums text-slate-600"
+                            data-testid="export-codec-compare-ssim"
+                          >
+                            {formatOptionalNumber(result.ssim, 3)}
+                          </td>
+                          <td
+                            className="px-2 py-2 tabular-nums text-slate-600"
+                            data-testid="export-codec-compare-psnr"
+                          >
+                            {formatOptionalNumber(result.psnr, 1)}
+                          </td>
+                          <td className="px-2 py-2 text-slate-600">
+                            {result.qualityStatus === 'running'
+                              ? t.codecCompare.evaluating
+                              : result.qualityStatus === 'error'
+                                ? (result.qualityError ?? t.quality.failedMessage)
+                                : (t.status[result.status as ExportTaskStatus] ?? result.status)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : exportMode === 'sequence-batch' ? (
+          <SequenceBatchSection
+            sequenceBatchTemplate={sequenceBatchTemplate}
+            setSequenceBatchTemplate={setSequenceBatchTemplate}
+            sequenceBatchPresetMode={sequenceBatchPresetMode}
+            setSequenceBatchPresetMode={setSequenceBatchPresetMode}
+            sequenceBatchRows={sequenceBatchRows}
+            toggleSequenceBatchSelection={(sequenceId, selected) =>
+              actions.toggleSequenceBatchSelection(sequenceId, selected)
+            }
+            updateSequenceBatchOutput={(sequenceId, outputPath) =>
+              actions.updateSequenceBatchOutput(sequenceId, outputPath)
+            }
+            updateSequenceBatchPreset={(sequenceId, presetId) =>
+              actions.updateSequenceBatchPreset(sequenceId, presetId)
+            }
+            presets={presets}
+            selectedPreset={selectedPreset}
+          />
+        ) : exportMode === 'single' ? (
           <div className="grid grid-cols-[110px_1fr] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
             <textarea
