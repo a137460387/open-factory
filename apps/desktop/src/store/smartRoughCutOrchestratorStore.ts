@@ -2,12 +2,23 @@
  * 智能粗剪编排器 Store
  *
  * 管理统一编排流程的状态：分析进度、建议列表、报告。
+ * 同时承载分步编排（scene/silence/whisper/dialogue/broll/rhythm）的步骤状态机与累计报告，
+ * 供分步编排面板 SmartRoughCutStepPanel 消费。
  * 遵循 v4.26.0 模块化架构 —— 独立 Zustand Store。
  */
 import {create} from 'zustand';
 import type {SmartRoughCutSuggestion, SmartRoughCutOrchestrationResult, SmartRoughCutReport, SmartRoughCutOrchestratorOptions, SmartRoughCutSuggestionType} from '@open-factory/editor-core';
 import {orchestrateSmartRoughCut, toggleSuggestionSelection, setAllSuggestionSelection, selectSuggestionsByType, reorderSuggestions} from '@open-factory/editor-core';
 import type {SmartRoughCutAnalysisData} from '@open-factory/editor-core';
+import {
+  createInitialSmartRoughCutState,
+  markSmartRoughCutStepComplete,
+  markSmartRoughCutStepError,
+  markSmartRoughCutStepRunning,
+  type SmartRoughCutReport as SmartRoughCutStepReport,
+  type SmartRoughCutState as SmartRoughCutStepState,
+  type SmartRoughCutStep,
+} from '../components/SmartRoughCut/smart-rough-cut-state';
 
 export type OrchestratorPhase = 'idle' | 'analyzing' | 'ready' | 'applying' | 'done' | 'error';
 
@@ -28,6 +39,8 @@ export interface SmartRoughCutOrchestratorState {
   options: SmartRoughCutOrchestratorOptions;
   /** 最近一次分析的原始数据（用于重新编排） */
   lastAnalysisData: SmartRoughCutAnalysisData | null;
+  /** 分步编排状态（各步骤状态机 + 累计报告），供 SmartRoughCutStepPanel 消费 */
+  stepState: SmartRoughCutStepState;
 
   // ── Actions ──
   /** 运行编排（接受预分析数据） */
@@ -50,6 +63,12 @@ export interface SmartRoughCutOrchestratorState {
   setError: (error: string | null) => void;
   /** 重置 */
   reset: () => void;
+  /** 标记分步步骤为运行中 */
+  markStepRunning: (step: SmartRoughCutStep) => void;
+  /** 标记分步步骤完成，并合并报告计数 */
+  markStepComplete: (step: SmartRoughCutStep, reportPatch?: Partial<SmartRoughCutStepReport>) => void;
+  /** 标记分步步骤失败 */
+  markStepError: (step: SmartRoughCutStep, message: string) => void;
 }
 
 const DEFAULT_OPTIONS: SmartRoughCutOrchestratorOptions = {
@@ -73,6 +92,7 @@ export const useSmartRoughCutOrchestratorStore = create<SmartRoughCutOrchestrato
   error: null,
   options: { ...DEFAULT_OPTIONS },
   lastAnalysisData: null,
+  stepState: createInitialSmartRoughCutState(),
 
   runOrchestration: (data) => {
     const { options } = get();
@@ -139,5 +159,14 @@ export const useSmartRoughCutOrchestratorStore = create<SmartRoughCutOrchestrato
       report: null,
       error: null,
       lastAnalysisData: null,
+      stepState: createInitialSmartRoughCutState(),
     }),
+
+  markStepRunning: (step) => set((state) => ({ stepState: markSmartRoughCutStepRunning(state.stepState, step) })),
+
+  markStepComplete: (step, reportPatch) =>
+    set((state) => ({ stepState: markSmartRoughCutStepComplete(state.stepState, step, reportPatch) })),
+
+  markStepError: (step, message) =>
+    set((state) => ({ stepState: markSmartRoughCutStepError(state.stepState, step, message) })),
 }));
