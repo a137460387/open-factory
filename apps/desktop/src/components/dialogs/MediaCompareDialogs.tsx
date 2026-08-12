@@ -17,6 +17,7 @@ const SyncComparePanel = lazy(() =>
   import('../../sync-compare/SyncComparePanel').then((m) => ({ default: m.SyncComparePanel })),
 );
 const CollaborationNotesPanel = lazy(() => import('../../collaboration/CollaborationNotesPanel'));
+const CollaborationPanel = lazy(() => import('../../collaboration/CollaborationPanel'));
 
 export interface MediaCompareDialogsProps {
   project: Project;
@@ -41,6 +42,8 @@ export function MediaCompareDialogs({
   const setSyncCompareOpen = useEditorUIStore((s) => s.setSyncCompareOpen);
   const collaborationNotesOpen = useEditorUIStore((s) => s.collaborationNotesOpen);
   const setCollaborationNotesOpen = useEditorUIStore((s) => s.setCollaborationNotesOpen);
+  const collaborationPanelOpen = useEditorUIStore((s) => s.collaborationPanelOpen);
+  const setCollaborationPanelOpen = useEditorUIStore((s) => s.setCollaborationPanelOpen);
 
   return (
     <Suspense fallback={<PanelLoading label="媒体对比" />}>
@@ -78,6 +81,9 @@ export function MediaCompareDialogs({
           playheadTime={playheadTime}
           onClose={() => setCollaborationNotesOpen(false)}
         />
+      ) : null}
+      {collaborationPanelOpen ? (
+        <CollaborationPanel onClose={() => setCollaborationPanelOpen(false)} />
       ) : null}
     </Suspense>
   );

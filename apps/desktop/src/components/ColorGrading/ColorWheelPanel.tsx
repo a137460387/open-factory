@@ -4,6 +4,8 @@ import type { PrimaryWheelParams } from '@open-factory/editor-core';
 interface ColorWheelPanelProps {
   params: PrimaryWheelParams;
   onChange: (params: PrimaryWheelParams) => void;
+  /** 只读（协作查看者）：禁用色轮点击与主滑块。 */
+  disabled?: boolean;
 }
 
 /** 单个色轮组件 */
@@ -11,22 +13,24 @@ const ColorWheel: React.FC<{
   label: string;
   value: { r: number; g: number; b: number; y: number };
   onChange: (value: { r: number; g: number; b: number; y: number }) => void;
-}> = ({ label, value, onChange }) => {
+  disabled?: boolean;
+}> = ({ label, value, onChange, disabled = false }) => {
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (disabled) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const y = ((e.clientY - rect.top) / rect.height) * 2 - 1;
       onChange({ ...value, r: Math.max(-1, Math.min(1, x)), b: Math.max(-1, Math.min(1, -y)) });
     },
-    [value, onChange],
+    [value, onChange, disabled],
   );
 
   return (
     <div className="flex flex-col items-center gap-1">
       <span className="text-xs text-gray-400">{label}</span>
       <div
-        className="relative w-24 h-24 rounded-full border border-gray-600 cursor-crosshair bg-gray-800"
+        className={`relative w-24 h-24 rounded-full border border-gray-600 bg-gray-800 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-crosshair'}`}
         onClick={handleClick}
         data-testid={`color-wheel-${label.toLowerCase()}`}
       >
@@ -47,7 +51,8 @@ const MasterSlider: React.FC<{
   label: string;
   value: number;
   onChange: (value: number) => void;
-}> = ({ label, value, onChange }) => (
+  disabled?: boolean;
+}> = ({ label, value, onChange, disabled = false }) => (
   <div className="flex items-center gap-2">
     <span className="text-xs text-gray-400 w-12">{label}</span>
     <input
@@ -57,6 +62,7 @@ const MasterSlider: React.FC<{
       value={value * 100}
       onChange={(e) => onChange(Number(e.target.value) / 100)}
       className="flex-1"
+      disabled={disabled}
       data-testid={`master-slider-${label.toLowerCase()}`}
     />
     <span className="text-xs w-8 text-right">{(value * 100).toFixed(0)}</span>
@@ -64,7 +70,7 @@ const MasterSlider: React.FC<{
 );
 
 /** 一级色轮面板 */
-export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChange }) => {
+export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChange, disabled = false }) => {
   const updateLift = useCallback(
     (value: { r: number; g: number; b: number; y: number }) => {
       onChange({ ...params, lift: value });
@@ -97,23 +103,25 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChan
     <div className="p-3 space-y-4" data-testid="color-wheel-panel">
       <h3 className="text-sm font-medium text-gray-200">一级色轮</h3>
       <div className="grid grid-cols-2 gap-4">
-        <ColorWheel label="Lift (暗部)" value={params.lift} onChange={updateLift} />
-        <ColorWheel label="Gamma (中间调)" value={params.gamma} onChange={updateGamma} />
-        <ColorWheel label="Gain (高光)" value={params.gain} onChange={updateGain} />
-        <ColorWheel label="Offset (偏移)" value={params.offset} onChange={updateOffset} />
+        <ColorWheel label="Lift (暗部)" value={params.lift} onChange={updateLift} disabled={disabled} />
+        <ColorWheel label="Gamma (中间调)" value={params.gamma} onChange={updateGamma} disabled={disabled} />
+        <ColorWheel label="Gain (高光)" value={params.gain} onChange={updateGain} disabled={disabled} />
+        <ColorWheel label="Offset (偏移)" value={params.offset} onChange={updateOffset} disabled={disabled} />
       </div>
       <div className="space-y-2">
-        <MasterSlider label="Lift" value={params.liftMaster} onChange={(v) => onChange({ ...params, liftMaster: v })} />
+        <MasterSlider label="Lift" value={params.liftMaster} onChange={(v) => onChange({ ...params, liftMaster: v })} disabled={disabled} />
         <MasterSlider
           label="Gamma"
           value={params.gammaMaster}
           onChange={(v) => onChange({ ...params, gammaMaster: v })}
+          disabled={disabled}
         />
-        <MasterSlider label="Gain" value={params.gainMaster} onChange={(v) => onChange({ ...params, gainMaster: v })} />
+        <MasterSlider label="Gain" value={params.gainMaster} onChange={(v) => onChange({ ...params, gainMaster: v })} disabled={disabled} />
         <MasterSlider
           label="Offset"
           value={params.offsetMaster}
           onChange={(v) => onChange({ ...params, offsetMaster: v })}
+          disabled={disabled}
         />
       </div>
     </div>

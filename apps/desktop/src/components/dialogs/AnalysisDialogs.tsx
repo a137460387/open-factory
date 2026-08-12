@@ -1,14 +1,17 @@
-import {lazy, Suspense} from 'react';
-import type {Project, Clip, MediaAsset, Track, BeatSensitivity} from '@open-factory/editor-core';
+import {lazy, Suspense, useMemo, useState} from 'react';
+import {X} from 'lucide-react';
+import {zhCN} from '../../i18n/strings';
+import type {Project, Clip, MediaAsset, Track, BeatSensitivity, ColorGradingGraph} from '@open-factory/editor-core';
 import type {Command} from '@open-factory/editor-core';
 import type {TimelineAccessor} from '@open-factory/editor-core';
 import {useEditorUIStore} from '../../store/editorUIStore';
+import {useCollaborationStore} from '../../store/collaborationStore';
 import {useSpectrumAsset, useSetSpectrumAsset} from '../../store/mediaFeatureStore';
 import {useSetSpeakerDiarizationResult} from '../../store/aiFeatureStore';
 import {useSetOperationReplaySpeed, useSetOperationRecording, useSetOperationRecordingActive, useSetOperationReplayRunning, useSetOperationRecordingStep} from '../../store/timelineFeatureStore';
 import type {ContentAnalysisTarget} from '../../media/ContentAnalysisDialog';
 import type {VideoStitchWizardSettings} from '../../video-stitching/VideoStitchWizardDialog';
-import {normalizeOperationReplaySpeed, UpdateClipCommand, type OperationRecordingFile, type OperationReplaySpeed, type SpeakerDiarizationSegment, type TimelineColorAnalysisResult, type SceneColorDifference, type PerformanceProfilerReport} from '@open-factory/editor-core';
+import {normalizeOperationReplaySpeed, UpdateClipCommand, createColorGradingNode, createEmptyColorGradingGraph, type OperationRecordingFile, type OperationReplaySpeed, type SpeakerDiarizationSegment, type TimelineColorAnalysisResult, type SceneColorDifference, type PerformanceProfilerReport} from '@open-factory/editor-core';
 import {PanelLoading} from '../PanelLoading';
 
 const LutEditorDialog = lazy(() =>
@@ -40,6 +43,9 @@ const RhythmAnalysisDialog = lazy(() =>
 );
 const SmartMontageDialog = lazy(() =>
   import('../SmartMontage/SmartMontageDialog').then((m) => ({ default: m.SmartMontageDialog })),
+);
+const ColorGradingWorkspace = lazy(() =>
+  import('../ColorGrading/ColorGradingWorkspace').then((m) => ({ default: m.ColorGradingWorkspace })),
 );
 
 export interface AnalysisDialogsProps {
@@ -156,6 +162,10 @@ export function AnalysisDialogs({
   const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
   const colorAnalysisOpen = useEditorUIStore((s) => s.colorAnalysisOpen);
   const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
+  const colorGradingWorkspaceOpen = useEditorUIStore((s) => s.colorGradingWorkspaceOpen);
+  const setColorGradingWorkspaceOpen = useEditorUIStore((s) => s.setColorGradingWorkspaceOpen);
+  // 协作查看者角色 → 调色工作台只读
+  const collabPermission = useCollaborationStore((s) => s.permission);
   const videoStitchWizardOpen = useEditorUIStore((s) => s.videoStitchWizardOpen);
   const setVideoStitchWizardOpen = useEditorUIStore((s) => s.setVideoStitchWizardOpen);
   const sceneReorderOpen = useEditorUIStore((s) => s.sceneReorderOpen);
@@ -195,6 +205,16 @@ export function AnalysisDialogs({
             commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorNodeGraph: graph }));
           }}
           onClose={() => setColorNodeEditorOpen(false)}
+        />
+      ) : null}
+      {colorGradingWorkspaceOpen ? (
+        <ColorGradingWorkspaceDialog
+          clip={selectedClip && selectedClip.type !== 'audio' ? selectedClip : undefined}
+          readOnly={collabPermission === 'read-only'}
+          onPersistGraph={(clipId, graph) => {
+            commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { colorGradingGraph: graph }));
+          }}
+          onClose={() => setColorGradingWorkspaceOpen(false)}
         />
       ) : null}
       {colorAnalysisOpen ? (
@@ -313,5 +333,60 @@ export function AnalysisDialogs({
         />
       ) : null}
     </Suspense>
+  );
+}
+
+/** 独立调色工作台：无节点时注入默认 primary-wheel 节点，保证色轮始终可见。 */
+function buildInitialColorGradingGraph(clip?: Clip): ColorGradingGraph {
+  const existing = clip?.colorGradingGraph;
+  if (existing && existing.nodes.length > 0) {
+    return existing;
+  }
+  const node = createColorGradingNode('primary-wheel', { x: 60, y: 60 });
+  return { ...createEmptyColorGradingGraph(), nodes: [node], activeNodeId: node.id };
+}
+
+function ColorGradingWorkspaceDialog({
+  clip,
+  readOnly,
+  onPersistGraph,
+  onClose,
+}: {
+  clip?: Clip;
+  readOnly: boolean;
+  onPersistGraph: (clipId: string, graph: ColorGradingGraph) => void;
+  onClose: () => void;
+}) {
+  const initialGraph = useMemo(() => buildInitialColorGradingGraph(clip), [clip]);
+  const [graph, setGraph] = useState<ColorGradingGraph>(initialGraph);
+
+  const handleChange = (next: ColorGradingGraph) => {
+    setGraph(next);
+    if (clip) {
+      onPersistGraph(clip.id, next);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="color-grading-dialog">
+      <section className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-md border border-line bg-gray-900 shadow-soft">
+        <header className="flex items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-100">{zhCN.toolbar.colorGradingWorkspace}</h2>
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-700 text-gray-300 hover:bg-gray-800"
+            title={zhCN.common.close}
+            aria-label={zhCN.common.close}
+            data-testid="color-grading-close-button"
+            onClick={onClose}
+          >
+            <X size={16} />
+          </button>
+        </header>
+        <div className="min-h-[420px] flex-1 overflow-hidden">
+          <ColorGradingWorkspace graph={graph} onGraphChange={handleChange} readOnly={readOnly} />
+        </div>
+      </section>
+    </div>
   );
 }

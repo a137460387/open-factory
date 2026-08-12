@@ -75,15 +75,20 @@ test.describe('协作调色', () => {
       window.__E2E_ACTIONS__!.setOpenFileDialogPaths!(['C:/Media/tiny-video.mp4']);
     });
     await page.getByTestId('import-media-button').click();
-    await expect(page.getByTestId('media-card-0')).toBeVisible();
+    // 媒体卡 testid 为 id 型（media-card-{uuid}），按 data-media-index 定位第一张导入的卡
+    await expect(page.locator('[data-media-card="true"][data-media-index="0"]')).toBeVisible();
 
     // 模拟协作会话已建立
     await page.evaluate(() => {
       window.__E2E_ACTIONS__!.simulateCollabSessionActive?.();
     });
 
-    // 选择时间线片段
-    await page.getByTestId('media-card-0').dragTo(page.getByTestId('timeline-track-0'));
+    // 添加到时间线：媒体卡拖到时间线不受产品支持（onTimelineDrop 不处理 MEDIA_CARD_DRAG_MIME），
+    // 与其他用例一致，走媒体卡上的 add-to-timeline 按钮
+    await page
+      .locator('[data-media-card="true"][data-media-index="0"]')
+      .locator('[data-testid^="add-to-timeline-"]')
+      .click();
     await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
     // 修改调色参数

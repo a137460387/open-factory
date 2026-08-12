@@ -77,6 +77,48 @@ let collaborationHostActive = false;
 let collaborationHostPort = 37822;
 let collaborationBroadcastMessages: string[] = [];
 
+// 启动期 useEditorShellSettings 会异步执行 applyLocalCoeditingSettings（默认设置
+// enabled=false → collaborationController.disable()），它会异步清空协作 store。
+// 若 simulateCollab* 钩子在其落地前模拟会话，会被这次 disable 抹掉（竞态）。
+// 这里包装 disable/enableHost/enableClient，在启动期首次落地时解析一个 Promise，
+// 供 simulateCollab* 钩子先等待启动设置应用完成、再模拟会话，从根上避开竞态。
+let resolveCollabStartupSettled: (() => void) | undefined;
+const collabStartupSettledPromise = new Promise<void>((resolve) => {
+  resolveCollabStartupSettled = resolve;
+});
+const COLLAB_STARTUP_SETTLE_TIMEOUT_MS = 3000;
+let collabStartupSettled = false;
+const markCollabStartupSettled = (): void => {
+  if (!collabStartupSettled) {
+    collabStartupSettled = true;
+    resolveCollabStartupSettled?.();
+  }
+};
+const originalCollabDisable = collaborationController.disable.bind(collaborationController);
+const originalCollabEnableHost = collaborationController.enableHost.bind(collaborationController);
+const originalCollabEnableClient = collaborationController.enableClient.bind(collaborationController);
+collaborationController.disable = async (...args: Parameters<typeof originalCollabDisable>) => {
+  const result = await originalCollabDisable(...args);
+  markCollabStartupSettled();
+  return result;
+};
+collaborationController.enableHost = async (...args: Parameters<typeof originalCollabEnableHost>) => {
+  const result = await originalCollabEnableHost(...args);
+  markCollabStartupSettled();
+  return result;
+};
+collaborationController.enableClient = async (...args: Parameters<typeof originalCollabEnableClient>) => {
+  const result = await originalCollabEnableClient(...args);
+  markCollabStartupSettled();
+  return result;
+};
+async function waitForCollabStartupSettled(): Promise<void> {
+  await Promise.race([
+    collabStartupSettledPromise,
+    new Promise<void>((resolve) => setTimeout(resolve, COLLAB_STARTUP_SETTLE_TIMEOUT_MS)),
+  ]);
+}
+
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
 const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
@@ -3207,6 +3249,48 @@ window.__E2E_ACTIONS__ = {
   getCollaborationState: () => collaborationController.getState(),
   getCollaborationBroadcastMessages: () => [...collaborationBroadcastMessages],
   getCollaborationHostState: () => ({ active: collaborationHostActive, port: collaborationHostPort }),
+  // collaboration.spec.ts 的 simulateCollab* 钩子：本机模拟协同（方案 A：app.emit 扇出）。
+  simulateCollabSessionActive: async () => {
+    // 先等启动期 applyLocalCoeditingSettings 落地，避免其异步 disable 抹掉模拟会话。
+    await waitForCollabStartupSettled();
+    const state = collaborationController.getState();
+    if (!state.enabled || !state.sessionId) {
+      await collaborationController.createSession({ port: 37822, userId: 'local-e2e' });
+      collaborationController.updatePresence(useEditorStore.getState().playheadTime, 'E2E Local', '#38bdf8');
+    }
+    return collaborationController.getState();
+  },
+  simulateCollabUserJoin: async (input: unknown) => {
+    const user = (input && typeof input === 'object' ? input : {}) as {
+      userId?: string;
+      userName?: string;
+      role?: string;
+      color?: string;
+    };
+    // 先等启动期 applyLocalCoeditingSettings 落地，避免其异步 disable 抹掉模拟会话。
+    await waitForCollabStartupSettled();
+    const state = collaborationController.getState();
+    if (!state.enabled) {
+      await collaborationController.createSession({ port: 37822, userId: 'local-e2e' });
+      collaborationController.updatePresence(useEditorStore.getState().playheadTime, 'E2E Local', '#38bdf8');
+    }
+    collaborationController.addRemoteUser({
+      userId: user.userId ?? 'remote-user',
+      name: user.userName ?? 'Remote User',
+      playheadTime: useEditorStore.getState().playheadTime,
+      ...(user.color ? { color: user.color } : {}),
+    });
+    return collaborationController.getState();
+  },
+  simulateCollabRole: (role: unknown) => {
+    collaborationController.setLocalRole(role === 'viewer' ? 'viewer' : 'editor');
+    return collaborationController.getState();
+  },
+  simulateCollabLock: (userId: unknown) => {
+    collaborationController.lockSession(typeof userId === 'string' ? userId : 'other-user');
+    return collaborationController.getState();
+  },
+  getCollabOperationsSent: () => collaborationController.getSentOperations(),
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
   selectClip: (clipId: unknown) => {
     if (typeof clipId === 'string') {
