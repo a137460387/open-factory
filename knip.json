@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     "packages/editor-core": {
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/desktop": {
       "project": ["src/**/*.{ts,tsx}"]

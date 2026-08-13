@@ -12,6 +12,7 @@ import {
 } from '../lib/generation-history-db';
 import { updateVideoGenTaskStatus } from '../lib/tauri-bridge/video-gen';
 import type { LtxProgressPayload, LtxCompletedPayload } from '../hooks/useVideoGeneration';
+import { silentError } from '../lib/error-handlers';
 
 let unlistenProgress: UnlistenFn | null = null;
 let unlistenCompleted: UnlistenFn | null = null;
@@ -83,7 +84,7 @@ export async function startVideoGenRunner(): Promise<void> {
       prompt: store.getTask(taskId)?.params.prompt ?? '',
       startedAt: store.getTask(taskId)?.startedAt ?? Date.now(),
       updatedAt: Date.now(),
-    }).catch(() => {});
+    }).catch(silentError('video-gen: save task progress'));
   });
 
   unlistenCompleted = await listenLtxCompleted((payload) => {
@@ -98,7 +99,7 @@ export async function startVideoGenRunner(): Promise<void> {
       store.failTask(taskId, 'Generation failed');
     }
 
-    deleteTaskProgress(taskId).catch(() => {});
+    deleteTaskProgress(taskId).catch(silentError('video-gen: delete task progress'));
     // Process next queued task
     processNextTask();
   });
@@ -144,7 +145,7 @@ async function processNextTask(): Promise<void> {
       prompt: task.params.prompt,
       startedAt: Date.now(),
       updatedAt: Date.now(),
-    }).catch(() => {});
+    }).catch(silentError('video-gen: persist initial task progress'));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     const store = useVideoGenQueueStore.getState();
