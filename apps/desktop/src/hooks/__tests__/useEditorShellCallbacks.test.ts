@@ -97,7 +97,7 @@ describe('useProjectHealthCallbacks', () => {
 
   it('returns expected callback functions', () => {
     const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: null }),
+      useProjectHealthCallbacks({ projectHealthReport: undefined }),
     );
 
     expect(typeof result.current.refreshProjectHealth).toBe('function');
@@ -108,7 +108,7 @@ describe('useProjectHealthCallbacks', () => {
 
   it('setMediaHealthAutoShow calls store setter', () => {
     const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: null }),
+      useProjectHealthCallbacks({ projectHealthReport: undefined }),
     );
 
     act(() => {
@@ -120,7 +120,7 @@ describe('useProjectHealthCallbacks', () => {
 
   it('openProjectHealth triggers UI state', () => {
     const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: null }),
+      useProjectHealthCallbacks({ projectHealthReport: undefined }),
     );
 
     act(() => {
