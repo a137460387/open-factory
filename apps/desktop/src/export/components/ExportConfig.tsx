@@ -9,6 +9,8 @@ import {formatBytes, formatMilliseconds, formatOptionalNumber} from '../lib/expo
 import {showToast} from '../../lib/toast';
 import {PipelineSection} from './PipelineSection';
 import {SequenceBatchSection} from './SequenceBatchSection';
+import {ExportVersionBatchSection} from './ExportVersionBatchSection';
+import {ExportProgress} from './ExportProgress';
 import {SUBTITLE_FORMATS, DEFAULT_AUDIO_VISUALIZATION, updateNumberSetting, updateStringSetting, updateOutputMode, updateFormat, updateSubtitleMode, updateSubtitleFormat, updateExportSidecarSubtitle, updateScaleMode, updateTargetAspectRatio, updateHardwareEncoding} from '../lib/exportSettingsHelpers';
 import {ExportCostEstimatePanel} from './ExportCostEstimatePanel';
 import {ExportOptimizationPanel} from './ExportOptimizationPanel';
@@ -89,6 +91,10 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     sequenceBatchPresetMode,
     setSequenceBatchPresetMode,
     sequenceBatchRows,
+    versionedBatchTemplate,
+    setVersionedBatchTemplate,
+    versionedBatchRows,
+    versionedBatchReportRows,
     priority,
     setPriority,
     scheduleEnabled,
@@ -772,7 +778,8 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
             single 分支（batchOutputPaths，修复 export.spec:3/:81）；此处按拆分前
             原样接回 pipeline/codec-compare/sequence-batch 三个分支（后端
             useExportActions 的四模式入队分发与各模式 state 一直存活，仅 UI 断裂）。
-            version-batch 另有跨步结构问题留待单独任务，stem 无对应用例，均保持 null。 */}
+            version-batch 分支同样在拆分中丢失，其跨步问题的处理见分支内注释；
+            stem 无对应用例，保持 null。 */}
         {exportMode === 'pipeline' ? (
           <PipelineSection
             pipeline={pipelineConfig}
@@ -936,6 +943,29 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
               ) : null}
             </div>
           </div>
+        ) : exportMode === 'version-batch' ? (
+          /* 拆分前单视图下版本批次区与导出队列区同屏；拆分后队列区（含
+              export-max-concurrent-select 与任务状态）移到 export 步，而本模式
+              用例要求入队前后均在同屏看到版本行、队列状态与对比报告。按方案 A
+              单视图还原：版本批次区 + ExportProgress（队列区）一并渲染在 config
+              步，配套 useExportActions.warmupSelectedJobs 对本模式跳过自动切步。 */
+          <>
+            <ExportVersionBatchSection
+              versionedBatchTemplate={versionedBatchTemplate}
+              setVersionedBatchTemplate={setVersionedBatchTemplate}
+              exportVersionedBatchTemplate={() => actions.exportVersionedBatchTemplate()}
+              importVersionedBatchTemplate={() => actions.importVersionedBatchTemplate()}
+              versionedBatchRows={versionedBatchRows}
+              updateVersionedBatchRow={(rowId, patch) => actions.updateVersionedBatchRow(rowId, patch)}
+              removeVersionedBatchRow={(rowId) => actions.removeVersionedBatchRow(rowId)}
+              addVersionedBatchRow={() => actions.addVersionedBatchRow()}
+              presets={presets}
+              exportSettings={exportSettings}
+              buildVersionSettings={(row) => actions.buildVersionSettings(row)}
+              versionedBatchReportRows={versionedBatchReportRows}
+            />
+            <ExportProgress state={state} actions={actions} />
+          </>
         ) : exportMode === 'sequence-batch' ? (
           <SequenceBatchSection
             sequenceBatchTemplate={sequenceBatchTemplate}

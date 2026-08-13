@@ -1088,10 +1088,11 @@ export function useExportActions(state: ExportState) {
     // warmup 状态面板（export-warmup-status）只渲染在 export 步，
     // warmup 启动即切步，让用户看到"正在准备导出"进度；
     // continueAfterWarnings 场景用户本就在 export 步，此调用为幂等。
-    // 例外：pipeline / codec-compare 两个模式的执行状态 UI（流水线节点状态、
-    // 发布日志、对比结果表）渲染在 config 步的 mode 分支内，切步会将其卸载，
-    // 拆分前单视图下这些内容与队列本就同屏可见，故这两个模式停留 config 步。
-    if (exportMode !== 'pipeline' && exportMode !== 'codec-compare') {
+    // 例外：pipeline / codec-compare / version-batch 三个模式的执行状态 UI
+    //（流水线节点状态、发布日志、对比结果表、版本批次区 + 队列区）渲染在
+    // config 步的 mode 分支内，切步会将其卸载，拆分前单视图下这些内容与队列
+    // 本就同屏可见，故这三个模式停留 config 步。
+    if (exportMode !== 'pipeline' && exportMode !== 'codec-compare' && exportMode !== 'version-batch') {
       setCurrentStep('export');
     }
     let sawColdWarmup = false;
