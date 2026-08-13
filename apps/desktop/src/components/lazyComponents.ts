@@ -2,9 +2,6 @@ import { lazy } from 'react';
 
 export const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 export const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
-export const SmartRoughCutPanel = lazy(() =>
-  import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })),
-);
 export const SmartRoughCutOrchestratorPanel = lazy(() =>
   import('./SmartRoughCut/SmartRoughCutOrchestratorPanel').then((module) => ({
     default: module.SmartRoughCutOrchestratorPanel,
