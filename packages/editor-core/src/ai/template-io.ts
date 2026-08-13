@@ -58,29 +58,7 @@ export async function exportTemplate(template: EditingTemplate): Promise<string>
   return JSON.stringify(oftFile, null, 2);
 }
 
-/**
- * Export template as a downloadable .oft file (browser environment).
- */
-export function createTemplateBlob(template: EditingTemplate): Promise<Blob> {
-  return exportTemplate(template).then(
-    (json) => new Blob([json], { type: 'application/json' }),
-  );
-}
 
-/**
- * Trigger browser download of a template file.
- */
-export async function downloadTemplate(template: EditingTemplate): Promise<void> {
-  const blob = await createTemplateBlob(template);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${template.metadata.name}${TEMPLATE_FILE_EXTENSION}`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 // ─── Import ──────────────────────────────────────────────────────
 
@@ -135,30 +113,14 @@ export async function importTemplate(jsonString: string): Promise<EditingTemplat
   return oft.template;
 }
 
-/**
- * Import template from a File object (browser environment).
- */
-export async function importTemplateFromFile(file: File): Promise<EditingTemplate> {
-  if (!file.name.endsWith(TEMPLATE_FILE_EXTENSION)) {
-    throw new Error(`Expected .oft file, got: ${file.name}`);
-  }
 
-  const text = await file.text();
-  return importTemplate(text);
-}
 
 // ─── Template Library Management ─────────────────────────────────
 
 /** In-memory template library (user templates + built-in) */
 const userTemplates: Map<string, EditingTemplate> = new Map();
 
-/**
- * Initialize the template library with built-in templates.
- */
-export function initTemplateLibrary(): void {
-  // Built-in templates are always available
-  // User templates are loaded from storage
-}
+
 
 /**
  * Add a user template to the library.
@@ -268,41 +230,4 @@ export function searchTemplates(filter: TemplateFilter): TemplateLibraryEntry[] 
   return results;
 }
 
-/**
- * Export all user templates as a bundle.
- */
-export async function exportUserTemplates(): Promise<string> {
-  const templates = Array.from(userTemplates.values());
-  const bundle = {
-    format: 'open-factory-template-bundle',
-    version: TEMPLATE_SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    templates,
-  };
-  return JSON.stringify(bundle, null, 2);
-}
 
-/**
- * Import user templates from a bundle.
- */
-export async function importUserTemplatesBundle(json: string): Promise<number> {
-  const bundle = JSON.parse(json) as {
-    format?: string;
-    templates?: EditingTemplate[];
-  };
-
-  if (bundle.format !== 'open-factory-template-bundle') {
-    throw new Error('Invalid template bundle format');
-  }
-
-  let imported = 0;
-  for (const tpl of bundle.templates ?? []) {
-    const validation = validateTemplate(tpl);
-    if (validation.valid) {
-      userTemplates.set(tpl.metadata.id, tpl);
-      imported++;
-    }
-  }
-
-  return imported;
-}

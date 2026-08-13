@@ -420,9 +420,4 @@ export class WorkflowExecutor {
   }
 }
 
-/**
- * Create a workflow executor
- */
-export function createWorkflowExecutor(editorEngine: NodeEditorEngine): WorkflowExecutor {
-  return new WorkflowExecutor(editorEngine);
-}
+
