@@ -6,15 +6,6 @@
  *   cat video.mp4 | of analyze --stdin -t quality
  */
 
-export interface StdinOptions {
-  /** Read input from stdin instead of file */
-  stdin?: boolean;
-  /** Expected input format */
-  format?: 'json' | 'binary';
-  /** Max bytes to read from stdin */
-  maxBytes?: number;
-}
-
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024; // 100MB
 
 /**
@@ -118,10 +109,4 @@ export async function stdinToTempFile(extension = 'tmp', maxBytes?: number): Pro
   return tmpFile;
 }
 
-/**
- * Add stdin options to a commander command.
- */
-export function addStdinOptions(cmd: { option: (flags: string, description: string, defaultValue?: unknown) => unknown }): void {
-  cmd.option('--stdin', 'Read input from stdin pipe', false);
-  cmd.option('--stdin-format <format>', 'stdin input format (json|binary)', 'json');
-}
+

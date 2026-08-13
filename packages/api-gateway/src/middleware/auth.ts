@@ -62,17 +62,6 @@ export function generateToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): strin
   });
 }
 
-export function generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
-  const config = getConfig();
-
-  return jwt.sign(payload as any, config.jwt.secret as string, {
-    algorithm: 'HS256',
-    issuer: config.jwt.issuer,
-    audience: config.jwt.audience,
-    expiresIn: config.jwt.refreshExpiresIn as any,
-  });
-}
-
 // ============================================================
 // Fastify Middleware
 // ============================================================
