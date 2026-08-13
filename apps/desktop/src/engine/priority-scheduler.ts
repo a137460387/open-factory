@@ -361,4 +361,4 @@ export class PriorityScheduler {
 // Singleton instance
 // ---------------------------------------------------------------------------
 
-export const aiScheduler = new PriorityScheduler();
+

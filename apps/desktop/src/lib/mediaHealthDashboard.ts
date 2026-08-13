@@ -55,13 +55,6 @@ export async function scanMediaHealthDashboard(
   };
 }
 
-export function readMediaHealthAutoShowEnabled(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  return window.localStorage.getItem(MEDIA_HEALTH_AUTO_SHOW_KEY) === 'true';
-}
-
 export function writeMediaHealthAutoShowEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') {
     return;
