@@ -436,45 +436,6 @@ export function compareStyleModels(model1: PersonalStyleModel, model2: PersonalS
   return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
 }
 
-/**
- * Find the best matching style cluster for given params
- */
-export function findMatchingCluster(
-  model: PersonalStyleModel,
-  params: ColorGradingParams,
-): { cluster: string; similarity: number } | null {
-  if (model.colorProfile.styleClusters.length === 0) return null;
-
-  // Create a temporary profile for comparison
-  const tempProfile: ColorPreferenceProfile = {
-    ...model.colorProfile,
-    dominantStyle: null,
-    styleClusters: [],
-    preferenceVector: [],
-  };
-
-  // Compare against each cluster representative
-  let bestMatch: { cluster: string; similarity: number } | null = null;
-
-  for (const cluster of model.colorProfile.styleClusters) {
-    const clusterResult = analyzeColorPreferences({
-      timeline: {
-        tracks: [{
-          clips: [{ colorGrading: cluster.representative }],
-        }],
-      },
-    });
-
-    const similarity = compareColorProfiles(tempProfile, clusterResult.profile);
-
-    if (!bestMatch || similarity > bestMatch.similarity) {
-      bestMatch = { cluster: cluster.name, similarity };
-    }
-  }
-
-  return bestMatch;
-}
-
 // ==================== Node Editor Integration ====================
 
 /**
@@ -700,9 +661,4 @@ export class LocalStyleModelStorage implements StyleModelStorage {
   }
 }
 
-/**
- * Create default storage instance
- */
-export function createDefaultStorage(): StyleModelStorage {
-  return new LocalStyleModelStorage();
-}
+

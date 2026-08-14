@@ -129,12 +129,6 @@ function autosaveProject(project: Project): void {
   getBrowserStorage()?.setItem(AUTOSAVE_KEY, JSON.stringify(serializeProject(project), null, 2));
 }
 
-export function readAutosaveIntervalSeconds(): number {
-  const raw = getBrowserStorage()?.getItem(AUTOSAVE_INTERVAL_KEY);
-  const parsed = raw ? Number(raw) : DEFAULT_AUTOSAVE_INTERVAL_SECONDS;
-  return Number.isFinite(parsed) ? Math.min(600, Math.max(1, Math.round(parsed))) : DEFAULT_AUTOSAVE_INTERVAL_SECONDS;
-}
-
 export function writeAutosaveIntervalSeconds(seconds: number): number {
   const normalized = Math.min(600, Math.max(1, Math.round(seconds || DEFAULT_AUTOSAVE_INTERVAL_SECONDS)));
   getBrowserStorage()?.setItem(AUTOSAVE_INTERVAL_KEY, String(normalized));

@@ -76,23 +76,4 @@ export function isOwner(userId: string, resourceOwnerId: string): boolean {
   return userId === resourceOwnerId;
 }
 
-export function canAccessResource(
-  userRoles: UserRole[],
-  userId: string,
-  resourceOwnerId: string,
-  resource: string,
-  action: 'read' | 'write' | 'delete'
-): boolean {
-  // Admin can access everything
-  if (userRoles.includes('admin')) {
-    return true;
-  }
 
-  // Owner can access their own resources
-  if (isOwner(userId, resourceOwnerId)) {
-    return true;
-  }
-
-  // Check role-based permissions
-  return hasPermission(userRoles, resource, action);
-}

@@ -312,21 +312,4 @@ export class MacroStorage {
   }
 }
 
-/**
- * Create a macro storage instance
- */
-export function createMacroStorage(): MacroStorage {
-  return new MacroStorage();
-}
 
-/**
- * Macro storage singleton
- */
-let macroStorageInstance: MacroStorage | null = null;
-
-export function getMacroStorage(): MacroStorage {
-  if (!macroStorageInstance) {
-    macroStorageInstance = new MacroStorage();
-  }
-  return macroStorageInstance;
-}

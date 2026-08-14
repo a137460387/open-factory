@@ -150,38 +150,6 @@ export interface MacroCategory {
 
 // ─── Operation Parameter Schemas ────────────────────────────────────────────
 
-/** Trim operation parameters */
-export interface ClipTrimParams {
-  trimStart?: number;
-  trimEnd?: number;
-}
-
-/** Split operation parameters */
-export interface ClipSplitParams {
-  splitTime: number;
-}
-
-/** Color correction parameters */
-export interface ColorCorrectParams {
-  brightness?: number;
-  contrast?: number;
-  saturation?: number;
-  hue?: number;
-}
-
-/** Speed change parameters */
-export interface SpeedChangeParams {
-  speed: number;
-  keepPitch?: boolean;
-}
-
-/** Volume adjustment parameters */
-export interface VolumeAdjustParams {
-  volume: number;
-  fadeIn?: number;
-  fadeOut?: number;
-}
-
 /** Effect parameters */
 export interface EffectParams {
   effectId: string;

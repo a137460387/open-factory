@@ -327,24 +327,4 @@ export class HardwareDecodeManager {
   }
 }
 
-/**
- * 创建硬件解码管理器实例
- */
-export function createHardwareDecodeManager(): HardwareDecodeManager {
-  return new HardwareDecodeManager();
-}
 
-/**
- * 检测系统硬件加速能力
- */
-export async function detectHardwareCapabilities(): Promise<HardwareCapabilities> {
-  return getHwDecodeCapabilities();
-}
-
-/**
- * 检查指定后端是否可用
- */
-export async function isBackendAvailable(backend: HardwareBackend): Promise<boolean> {
-  const caps = await getHwDecodeCapabilities();
-  return caps.availableBackends.some((b) => b.backend === backend && b.available);
-}
