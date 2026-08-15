@@ -1,3 +1,4 @@
+// KI-001 fake-base code change verify
 import type { Project, Clip, MediaAsset, ClipContentAnalysis } from '@open-factory/editor-core';
 import { round } from '@open-factory/editor-core';
 import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
