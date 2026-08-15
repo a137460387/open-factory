@@ -1,0 +1,56 @@
+// @vitest-environment jsdom
+import { describe, expect, it, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+
+vi.mock('../../store/editorStore', () => ({ useEditorStore: { getState: () => ({ project: { media: [] } }) } }));
+vi.mock('../../store/editorUIStore', () => ({ useEditorUIStore: { getState: () => ({}) } }));
+vi.mock('../../store/editorFeatureStore', () => ({ useEditorFeatureStore: { getState: () => ({}) } }));
+vi.mock('../../lib/toast', () => ({ showToast: vi.fn() }));
+
+import { useEditorShellFloatingDialogsCallbacks } from '../../hooks/useEditorShellFloatingDialogsCallbacks';
+
+const baseDeps = {
+  templateExportPreset: null, exportDialogOpen: false, setExportDialogOpen: vi.fn(),
+  timelineExportDialogOpen: false, setTimelineExportDialogOpen: vi.fn(),
+  lastExportPath: null, setLastExportPath: vi.fn(), setTutorialSignals: vi.fn(), runAutomationForMedia: vi.fn(),
+  relinkAllMissing: vi.fn(), importEdlTimeline: vi.fn(), importFcpXmlTimeline: vi.fn(), addMedia: vi.fn(),
+  createProjectFromTemplate: vi.fn(), createProjectFromTimelineTemplate: vi.fn(),
+  colorAnalysisResults: null, colorAnalysisJumps: null, colorAnalysisBusy: false,
+  runTimelineColorAnalysis: vi.fn(), alignTimelineColorToReference: vi.fn(),
+  seekSpectrumTime: vi.fn(), setSpectrumSelectionRange: vi.fn(), splitSpectrumAtTime: vi.fn(),
+  importVideosForStitchWizard: vi.fn(), generateVideoStitchTimeline: vi.fn(), generateSmartMontage: vi.fn(),
+  addAssetToTimeline: vi.fn(),
+  analyzeContentClip: vi.fn(), analyzePreferredContentTargets: vi.fn(), exportContentAnalysis: vi.fn(),
+  applySpeakerDiarization: vi.fn(), speakerDiarizationResult: null, contentAnalysisTargets: [],
+  operationRecording: null, operationRecordingActive: false, operationReplayRunning: false,
+  operationRecordingStep: 0, operationReplaySpeed: 1,
+  startOperationRecording: vi.fn(), stopOperationRecording: vi.fn(), saveOperationRecording: vi.fn(),
+  loadOperationRecording: vi.fn(), replayOperationRecording: vi.fn(), pauseOperationReplay: vi.fn(),
+  jumpOperationRecording: vi.fn(), exportOperationRecordingSlides: vi.fn(),
+  profilerRecording: false, profilerElapsedMs: 0, profilerReport: null,
+  startProfilerRecording: vi.fn(), stopProfilerRecording: vi.fn(), exportProfilerReportJson: vi.fn(),
+  saveNamedSnapshot: vi.fn(), restoreSnapshotProject: vi.fn(), applySnapshotDiffSelection: vi.fn(),
+  updateProjectReleaseVersion: vi.fn(), syncCompareClipRefs: [], jumpToMediaAsset: vi.fn(),
+  detectedBeatBpm: null, beatSyncBeatTimes: [], canDetectBeats: false, canSnapToBeats: false,
+  applyManualBeatBpm: vi.fn(), detectSelectedBeats: vi.fn(), snapSelectedToBeats: vi.fn(),
+  updatePreviewPerformance: vi.fn(), updateTimelineInteractionSettings: vi.fn(),
+  deleteProxiesForMedia: vi.fn(), regenerateProxiesForMedia: vi.fn(), migrateProxiesToDirectory: vi.fn(),
+  executeMacro: vi.fn(), confirmProjectEncryptionSave: vi.fn(),
+  refreshProjectHealth: vi.fn(), autoRepairProjectHealth: vi.fn(), relinkMissingFromHealth: vi.fn(),
+  removeOrphanFromHealth: vi.fn(), mergeDuplicateFromHealth: vi.fn(), queueProxyFromHealth: vi.fn(),
+  mergeDuplicateMediaGroups: vi.fn(), refreshMediaHealthDashboard: vi.fn(), repairFromMediaHealthDashboard: vi.fn(),
+  openMediaHealthRelinkPanel: vi.fn(), refreshMediaOrganizer: vi.fn(),
+  confirmMediaOrganizerDuplicateGroups: vi.fn(), removeMediaOrganizerReferences: vi.fn(),
+  archiveUnusedMedia: vi.fn(), renameUnusedMedia: vi.fn(),
+  recoveryCandidate: null, exportQueueRecovery: null, archiveProgress: null, sharePackageProgress: null,
+  restoreRecovery: vi.fn(), discardRecovery: vi.fn(),
+  restoreExportQueueRecovery: vi.fn(), discardExportQueueRecovery: vi.fn(),
+  skipTutorial: vi.fn(), closeTutorialCelebration: vi.fn(),
+};
+
+describe('useEditorShellFloatingDialogsCallbacks', () => {
+  it('returns floatingDialogsCallbacks', () => {
+    const { result } = renderHook(() => useEditorShellFloatingDialogsCallbacks(baseDeps as any));
+    expect(result.current.floatingDialogsCallbacks).toBeDefined();
+  });
+});
