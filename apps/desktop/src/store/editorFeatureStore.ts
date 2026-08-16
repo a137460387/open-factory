@@ -1,5 +1,5 @@
 /**
- * Editor feature state — barrel re-export entry point (H5 refactor).
+ * Editor feature state — combined store (H5 refactor).
  *
  * This file has been refactored into domain-specific sub-stores:
  * - aiFeatureStore.ts       — profiler, diarization, content analysis, audio separation, demucs, auto sync
@@ -7,7 +7,8 @@
  * - timelineFeatureStore.ts — macro/operation recording, replay, template mode, keyframe, project lifecycle
  * - mediaFeatureStore.ts    — color analysis, health dashboards, duplicate/organizer, recording, version compare
  *
- * The combined `useEditorFeatureStore` is preserved for backward compatibility.
+ * The combined `useEditorFeatureStore` is preserved for backward compatibility
+ * （phase5 1c 起不再重导出子 store selector hooks，全部消费者已直连子 store）.
  * New code should import from the specific sub-store directly.
  *
  * @deprecated Prefer `useAIFeatureStore`, `useExportFeatureStore`,
@@ -48,123 +49,8 @@ import type { ArchiveProgress } from '../lib/projectArchive';
 import type { RecordingSource } from '../lib/tauri-bridge';
 import type { DroppedFile } from '../components/FormatConverterDialog';
 
-// Re-export sub-store hooks and selector utilities for convenience
-export {
-  useAIFeatureStore,
-  useProfilerRecording,
-  useProfilerElapsedMs,
-  useProfilerReport,
-  useSetProfilerRecording,
-  useSetProfilerElapsedMs,
-  useSetProfilerReport,
-  useSpeakerDiarizationRunning,
-  useSpeakerDiarizationResult,
-  useSetSpeakerDiarizationRunning,
-  useSetSpeakerDiarizationResult,
-  useContentAnalysisRunningClipId,
-  useSetContentAnalysisRunningClipId,
-  useAudioSeparationClipId,
-  useAudioSeparationProgress,
-  useSetAudioSeparationClipId,
-  useSetAudioSeparationProgress,
-  useDemucsAvailability,
-  useSetDemucsAvailability,
-  useAutoAudioSyncRunning,
-  useAutoAudioSyncPrimaryClipId,
-  useAutoAudioSyncMode,
-  useAutoAudioSyncResults,
-  useSetAutoAudioSyncRunning,
-  useSetAutoAudioSyncPrimaryClipId,
-  useSetAutoAudioSyncMode,
-  useSetAutoAudioSyncResults,
-} from './aiFeatureStore';
-export {
-  useExportFeatureStore,
-  useBatchTranscodeInitialPaths,
-  useSetBatchTranscodeInitialPaths,
-  useTemplateExportPreset,
-  useSetTemplateExportPreset,
-  useGifExportAsset,
-  useSetGifExportAsset,
-  useThumbnailGeneratorAssetIds,
-  useSetThumbnailGeneratorAssetIds,
-  useMockExportHistory,
-  useSetMockExportHistory,
-  useFormatConverterMockFiles,
-  useSetFormatConverterMockFiles,
-} from './exportFeatureStore';
-export {
-  useTimelineFeatureStore,
-  useMacroRecordingActive,
-  useMacroRecordingStepCount,
-  useSetMacroRecordingActive,
-  useSetMacroRecordingStepCount,
-  useOperationRecording,
-  useOperationRecordingActive,
-  useOperationRecordingStep,
-  useOperationReplaySpeed,
-  useOperationReplayRunning,
-  useSetOperationRecording,
-  useSetOperationRecordingActive,
-  useSetOperationRecordingStep,
-  useSetOperationReplaySpeed,
-  useSetOperationReplayRunning,
-  useTimelineTemplateMode,
-  useSetTimelineTemplateMode,
-  usePasteKeyframeDialogGroups,
-  useSetPasteKeyframeDialogGroups,
-  useMacroHistory,
-  useSetMacroHistory,
-  useMockSubtitleClips,
-  useSetMockSubtitleClips,
-  useProjectPasswordRequest,
-  useRecoveryCandidate,
-  useArchiveProgress,
-  useSetProjectPasswordRequest,
-  useSetRecoveryCandidate,
-  useSetArchiveProgress,
-} from './timelineFeatureStore';
-export {
-  useMediaFeatureStore,
-  useColorAnalysisBusy,
-  useColorAnalysisResults,
-  useColorAnalysisJumps,
-  useColorHeatmapPoints,
-  useColorAnalysisSamples,
-  useSetColorAnalysisBusy,
-  useSetColorAnalysisResults,
-  useSetColorAnalysisJumps,
-  useSetColorHeatmapPoints,
-  useSetColorAnalysisSamples,
-  useProjectHealthReport,
-  useProjectHealthRepairReport,
-  useProjectHealthScanning,
-  useMediaHealthDashboard,
-  useMediaHealthScanning,
-  useMediaHealthAutoShowEnabled,
-  useSetProjectHealthReport,
-  useSetProjectHealthRepairReport,
-  useSetProjectHealthScanning,
-  useSetMediaHealthDashboard,
-  useSetMediaHealthScanning,
-  useSetMediaHealthAutoShowEnabled,
-  useDuplicateMediaGroups,
-  useMediaOrganizerGroups,
-  useMediaOrganizerCleanup,
-  useMediaOrganizerScanning,
-  useSetDuplicateMediaGroups,
-  useSetMediaOrganizerGroups,
-  useSetMediaOrganizerCleanup,
-  useSetMediaOrganizerScanning,
-  useRecordingTask,
-  useRecordingElapsedSeconds,
-  useSetRecordingTask,
-  useSetRecordingElapsedSeconds,
-  useMediaVersionCompare,
-  useSetMediaVersionCompare,
-  useSpectrumAsset,
-  useSetSpectrumAsset,
-} from './mediaFeatureStore';
+// （兼容重导出层已于 phase5 1c 移除：108 项死重导出行删除，
+//   子 store 的 selector hooks 请从对应子 store 文件直接导入）
 
 type Updater<T> = T | ((current: T) => T);
 
