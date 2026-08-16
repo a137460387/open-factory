@@ -92,3 +92,11 @@
 - frontend: 仅已知 fast-uri GHSA-7p8r-x3mc-p8w7（2 high），无新增
 - e2e: 已知 flaky 信号（ai-local-denoise、app-launch:25、ai-scene-match），无新增确定性回归
 - ai-loudness-suggestion: 经 2 次独立 run 验证，8 次执行仅 1 次失败，确认为环境性 flaky
+
+## KI-001 修复完成记录
+
+- **修复 PR**: #144（merge commit 7e7d3824）
+- **方案**: docs/audit/KI-001-fix-proposal.md（正向代码路径 filter + dorny/paths-filter + 三 job step 级门控）
+- **验证**: 已通过真实 CI 端到端验证（fake-base 方法，纯文档 PR → code=false → 三 job success；代码 PR → code=true → 完整跑）
+- **修复 commit**: 7e7d3824
+- **known-issues.md 已更新**: KI-001 标记"已修复"，advanced-text.spec.ts:4:1 记录为已知 flaky（证据强度低）
