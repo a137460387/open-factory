@@ -45,7 +45,7 @@ import { type SelectedKeyframeRef } from '../../store/editorStore';
 
 export type SpeedCurveFrame = { id: string; time: number; value: number; easing: KeyframeEasing };
 
-function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
+export function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
   const frames = normalizeSpeedCurveFrames(
     (clip.keyframes?.speed ?? []) as SpeedCurveFrame[],
     Math.max(0.001, clip.duration),
@@ -62,7 +62,7 @@ function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
   );
 }
 
-function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number): SpeedCurveFrame[] {
+export function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number): SpeedCurveFrame[] {
   return frames
     .map((frame) => ({
       id: frame.id || createId('speed-keyframe'),
@@ -73,7 +73,7 @@ function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number):
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function eventToSpeedFrame(
+export function eventToSpeedFrame(
   event: { clientX: number; clientY: number },
   canvas: HTMLCanvasElement,
   duration: number,
@@ -89,7 +89,7 @@ function eventToSpeedFrame(
   };
 }
 
-function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame[], duration: number): void {
+export function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame[], duration: number): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -136,7 +136,7 @@ function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame
   }
 }
 
-function speedFrameToPoint(
+export function speedFrameToPoint(
   frame: SpeedCurveFrame,
   duration: number,
   width: number,
@@ -152,7 +152,7 @@ function speedFrameToPoint(
   };
 }
 
-function findNearestSpeedFrame(
+export function findNearestSpeedFrame(
   frames: SpeedCurveFrame[],
   target: SpeedCurveFrame,
   duration: number,
@@ -294,7 +294,7 @@ type CurveEditorDrag =
 type CanvasPoint = { x: number; y: number };
 type CurveEditorFrame = Keyframe<number>;
 
-function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
+export function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
   return normalizeCurveEditorFrames(
     (clip.keyframes?.[property] ?? []) as CurveEditorFrame[],
     property,
@@ -302,7 +302,7 @@ function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEdit
   );
 }
 
-function normalizeCurveEditorFrames(
+export function normalizeCurveEditorFrames(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -321,7 +321,7 @@ function normalizeCurveEditorFrames(
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-function drawKeyframeCurveCanvas(
+export function drawKeyframeCurveCanvas(
   canvas: HTMLCanvasElement,
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
@@ -446,7 +446,7 @@ function drawKeyframeCurveCanvas(
   }
 }
 
-function drawKeyframeVelocityCanvas(
+export function drawKeyframeVelocityCanvas(
   canvas: HTMLCanvasElement,
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
@@ -485,11 +485,11 @@ function drawKeyframeVelocityCanvas(
   context.stroke();
 }
 
-function getInterpolatedCurveEditorValue(left: CurveEditorFrame, right: CurveEditorFrame, time: number): number {
+export function getInterpolatedCurveEditorValue(left: CurveEditorFrame, right: CurveEditorFrame, time: number): number {
   return interpolateKeyframes([left, right], time, left.value);
 }
 
-function findNearestCurveHandle(
+export function findNearestCurveHandle(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -530,7 +530,7 @@ function findNearestCurveHandle(
   return nearest;
 }
 
-function findNearestCurveFrameIdByPoint(
+export function findNearestCurveFrameIdByPoint(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -551,7 +551,7 @@ function findNearestCurveFrameIdByPoint(
   return nearest;
 }
 
-function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMode {
+export function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMode {
   if (mode === 'unified') {
     return 'independent';
   }
@@ -561,7 +561,7 @@ function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMod
   return 'unified';
 }
 
-function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
+export function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
   if (
     property === 'opacity' ||
     property === 'volume' ||
@@ -574,7 +574,7 @@ function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
   return 0;
 }
 
-function eventToCurveEditorFrame(
+export function eventToCurveEditorFrame(
   event: ReactPointerEvent<HTMLCanvasElement>,
   canvas: HTMLCanvasElement,
   property: KeyframeProperty,
@@ -593,7 +593,10 @@ function eventToCurveEditorFrame(
   };
 }
 
-function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CanvasPoint {
+export function eventToCanvasPoint(
+  event: { clientX: number; clientY: number },
+  canvas: HTMLCanvasElement,
+): CanvasPoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.min(canvas.width, Math.max(0, ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width)),
@@ -601,7 +604,7 @@ function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas:
   };
 }
 
-function curveFrameToPoint(
+export function curveFrameToPoint(
   frame: CurveEditorFrame,
   property: KeyframeProperty,
   duration: number,
@@ -615,7 +618,7 @@ function curveFrameToPoint(
   };
 }
 
-function findNearestCurveFrame(
+export function findNearestCurveFrame(
   frames: CurveEditorFrame[],
   target: CurveEditorFrame,
   property: KeyframeProperty,
@@ -639,7 +642,7 @@ function findNearestCurveFrame(
   return nearest;
 }
 
-function getCurveFrameIdsInBox(
+export function getCurveFrameIdsInBox(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -657,11 +660,11 @@ function getCurveFrameIdsInBox(
   });
 }
 
-function formatKeyframeProperty(property: KeyframeProperty): string {
+export function formatKeyframeProperty(property: KeyframeProperty): string {
   return zhCN.inspector.keyframeProperty[property] ?? property;
 }
 
-function formatKeyframeValue(property: KeyframeProperty, value: number): string {
+export function formatKeyframeValue(property: KeyframeProperty, value: number): string {
   if (property === 'speed') {
     return `${value.toFixed(2)}x`;
   }
@@ -685,7 +688,7 @@ function formatKeyframeValue(property: KeyframeProperty, value: number): string 
 // ---------------------------------------------------------------------------
 
 /** 缓动预设选择器组件（exported for testing） */
-function EasingPresetSelector({
+export function EasingPresetSelector({
   selectedIds,
   frames,
   onApplyPreset,
@@ -1310,12 +1313,12 @@ function hsvToRgb(hue: number, saturation: number, value: number): { r: number; 
 // Shared numeric utilities
 // ---------------------------------------------------------------------------
 
-function roundFinite(value: number): number {
+export function roundFinite(value: number): number {
   return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : 0;
 }
 
 /** @deprecated 使用 clamp01 代替 */
-const clampUnit = clamp01;
+export const clampUnit = clamp01;
 
 /** @deprecated 使用 clamp(value, -1, 1) 代替 */
 const clampSigned = (value: number): number => clamp(value, -1, 1);

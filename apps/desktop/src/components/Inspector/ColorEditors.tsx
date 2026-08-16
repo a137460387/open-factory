@@ -164,81 +164,8 @@ function ColorWheelControl({
   );
 }
 
-export function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], strokeColor: string): void {
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-  const width = canvas.width;
-  const height = canvas.height;
-  context.clearRect(0, 0, width, height);
-  context.fillStyle = '#0f172a';
-  context.fillRect(0, 0, width, height);
-  context.strokeStyle = 'rgba(148, 163, 184, 0.28)';
-  context.lineWidth = 1;
-  for (let index = 0; index <= 4; index += 1) {
-    const position = (index / 4) * width;
-    context.beginPath();
-    context.moveTo(position, 0);
-    context.lineTo(position, height);
-    context.moveTo(0, position);
-    context.lineTo(width, position);
-    context.stroke();
-  }
-  context.strokeStyle = 'rgba(255, 255, 255, 0.24)';
-  context.beginPath();
-  context.moveTo(0, height);
-  context.lineTo(width, 0);
-  context.stroke();
 
-  context.strokeStyle = strokeColor;
-  context.lineWidth = 2;
-  context.beginPath();
-  for (let x = 0; x < width; x += 1) {
-    const sampleX = x / (width - 1);
-    const sampleY = sampleCurve(points, sampleX);
-    const y = (1 - sampleY) * (height - 1);
-    if (x === 0) {
-      context.moveTo(x, y);
-    } else {
-      context.lineTo(x, y);
-    }
-  }
-  context.stroke();
 
-  for (const point of normalizeCurvePoints(points)) {
-    const x = point.x * width;
-    const y = (1 - point.y) * height;
-    context.beginPath();
-    context.fillStyle = '#ffffff';
-    context.arc(x, y, 4, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = strokeColor;
-    context.lineWidth = 2;
-    context.stroke();
-  }
-}
-
-export function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: clampUnit((event.clientX - rect.left) / rect.width),
-    y: clampUnit(1 - (event.clientY - rect.top) / rect.height),
-  };
-}
-
-export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDistance: number): number | null {
-  let nearestIndex: number | null = null;
-  let nearestDistance = maxDistance;
-  points.forEach((candidate, index) => {
-    const distance = Math.hypot(candidate.x - point.x, candidate.y - point.y);
-    if (distance <= nearestDistance) {
-      nearestDistance = distance;
-      nearestIndex = index;
-    }
-  });
-  return nearestIndex;
-}
 
 function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
   const context = canvas.getContext('2d');

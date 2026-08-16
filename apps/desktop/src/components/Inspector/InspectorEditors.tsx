@@ -257,28 +257,7 @@ export function getKenBurnsEndScale(clip: Extract<Clip, { type: 'image' }>): num
   return clip.keyframes?.scaleX?.at(-1)?.value ?? clip.transform.scale;
 }
 
-export function formatKeyframeProperty(property: KeyframeProperty): string {
-  return zhCN.inspector.keyframeProperty[property] ?? property;
-}
 
-export function formatKeyframeValue(property: KeyframeProperty, value: number): string {
-  if (property === 'speed') {
-    return `${value.toFixed(2)}x`;
-  }
-  if (
-    property === 'opacity' ||
-    property === 'volume' ||
-    property === 'scaleX' ||
-    property === 'scaleY' ||
-    property === 'pathStartOffset'
-  ) {
-    return `${Math.round(value * 100)}%`;
-  }
-  if (property === 'yaw' || property === 'pitch' || property === 'roll') {
-    return `${Math.round(value)}°`;
-  }
-  return value.toFixed(2);
-}
 
 export function resolveSelectedKeyframeEntries(
   project: Project,
