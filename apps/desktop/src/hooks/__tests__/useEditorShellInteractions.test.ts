@@ -6,14 +6,14 @@ vi.mock('../../store/editorStore', () => ({
   useEditorStore: { getState: () => ({ project: { media: [], timeline: { tracks: [] } } }) },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: {
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: {
     getState: () => ({ setViewportSize: vi.fn(), setSettingsOpen: vi.fn(), viewportSize: { width: 1920, height: 1080 } }),
   },
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: { getState: () => ({ mediaHealthAutoShowEnabled: false }) },
+vi.mock('../../store/mediaFeatureStore', () => ({
+  useMediaFeatureStore: { getState: () => ({ mediaHealthAutoShowEnabled: false }) },
 }));
 
 vi.mock('../../store/proxySettingsStore', () => ({

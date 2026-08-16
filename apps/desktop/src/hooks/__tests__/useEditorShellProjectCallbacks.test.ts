@@ -42,8 +42,8 @@ vi.mock('../../store/editorSettingsStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: {
+vi.mock('../../store/timelineFeatureStore', () => ({
+  useTimelineFeatureStore: {
     getState: () => ({
       setProjectPasswordRequest: mockSetProjectPasswordRequest,
       setArchiveProgress: mockSetArchiveProgress,
@@ -53,8 +53,8 @@ vi.mock('../../store/editorFeatureStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: {
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: {
     getState: () => ({
       setProjectEncryptionSaveOpen: mockSetProjectEncryptionSaveOpen,
       setSnapshotNameOpen: mockSetSnapshotNameOpen,

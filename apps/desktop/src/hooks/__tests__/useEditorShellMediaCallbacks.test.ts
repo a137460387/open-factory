@@ -25,8 +25,8 @@ vi.mock('../../store/editorSettingsStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: {
+vi.mock('../../store/mediaFeatureStore', () => ({
+  useMediaFeatureStore: {
     getState: () => ({
       setDuplicateMediaGroups: vi.fn(),
       setMediaOrganizerGroups: vi.fn(),
@@ -37,8 +37,8 @@ vi.mock('../../store/editorFeatureStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: {
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: {
     getState: () => ({
       setDuplicateMediaOpen: vi.fn(),
       setMediaOrganizerOpen: vi.fn(),

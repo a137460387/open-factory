@@ -163,16 +163,16 @@ vi.mock('../../store/editorStore', () => ({
   useEditorStore: (selector: any) => selector(mockEditorState),
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: (selector: any) => selector(mockUIState),
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: (selector: any) => selector(mockUIState),
 }));
 
 vi.mock('../../store/editorSettingsStore', () => ({
   useEditorSettingsStore: (selector: any) => selector(mockSettingsState),
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: (selector: any) => selector(mockFeatureState),
+vi.mock('../../store/mediaFeatureStore', () => ({
+  useMediaFeatureStore: (selector: any) => selector(mockFeatureState),
 }));
 
 vi.mock('../../store/collaborationStore', () => ({

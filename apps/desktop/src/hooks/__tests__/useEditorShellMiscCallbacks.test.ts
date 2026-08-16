@@ -29,8 +29,8 @@ vi.mock('../../store/editorStore', () => ({
   ),
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: Object.assign(
+vi.mock('../../store/mediaFeatureStore', () => ({
+  useMediaFeatureStore: Object.assign(
     (selector: any) => {
       if (typeof selector === 'function') return selector(mockEditorFeatureState);
       return undefined;
@@ -41,8 +41,8 @@ vi.mock('../../store/editorFeatureStore', () => ({
   ),
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: Object.assign(
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: Object.assign(
     (selector: any) => {
       if (typeof selector === 'function') return selector(mockEditorUIState);
       return undefined;

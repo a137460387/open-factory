@@ -4,8 +4,8 @@ import { renderHook } from '@testing-library/react';
 
 // ── Mock dependencies ──────────────────────────────────────────
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: { getState: () => ({ setSmartDistributionOpen: vi.fn() }) },
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: { getState: () => ({ setSmartDistributionOpen: vi.fn() }) },
 }));
 
 vi.mock('../../store/performanceMonitorStore', () => ({

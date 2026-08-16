@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
-vi.mock('../../store/editorFeatureStore', () => ({ useEditorFeatureStore: (selector: any) => selector({}) }));
+vi.mock('../../store/aiFeatureStore', () => ({ useAIFeatureStore: (selector: any) => selector({}) }));
 vi.mock('@open-factory/editor-core/utils', () => ({ logger: { warn: vi.fn() } }));
 
 import { useEditorShellProfiler } from '../../hooks/useEditorShellProfiler';
