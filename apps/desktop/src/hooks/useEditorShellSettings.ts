@@ -22,7 +22,7 @@ import { findStartupAutosaveRecovery } from '../lib/projectFiles';
 import { getPreviewWindowState } from '../lib/tauri-bridge';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useTimelineFeatureStore } from '../store/timelineFeatureStore';
 
 /**
  * 从 EditorShell 中提取的挂载时设置加载 effects。
@@ -152,7 +152,7 @@ export function useEditorShellSettings(): void {
     void findStartupAutosaveRecovery()
       .then((candidate) => {
         if (!canceled && candidate) {
-          useEditorFeatureStore.getState().setRecoveryCandidate(candidate);
+          useTimelineFeatureStore.getState().setRecoveryCandidate(candidate);
         }
       })
       .catch((error) => {
@@ -193,7 +193,7 @@ export function useEditorShellSettings(): void {
     void readMacroHistory()
       .then((entries) => {
         if (!canceled) {
-          useEditorFeatureStore.getState().setMacroHistory(entries);
+          useTimelineFeatureStore.getState().setMacroHistory(entries);
         }
       })
       .catch((error) => {

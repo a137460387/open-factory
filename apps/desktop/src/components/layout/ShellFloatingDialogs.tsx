@@ -22,7 +22,7 @@ import type {
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
 import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
+import { useTimelineFeatureStore } from '../../store/timelineFeatureStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { usePerformanceMonitorStore } from '../../store/performanceMonitorStore';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
@@ -225,8 +225,8 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
   const pasteKeyframeDialogOpen = useEditorUIStore((s) => s.pasteKeyframeDialogOpen);
   const setPasteKeyframeDialogOpen = useEditorUIStore((s) => s.setPasteKeyframeDialogOpen);
 
-  const timelineTemplateMode = useEditorFeatureStore((s) => s.timelineTemplateMode);
-  const setTimelineTemplateMode = useEditorFeatureStore((s) => s.setTimelineTemplateMode);
+  const timelineTemplateMode = useTimelineFeatureStore((s) => s.timelineTemplateMode);
+  const setTimelineTemplateMode = useTimelineFeatureStore((s) => s.setTimelineTemplateMode);
 
   const shortcutBindings = useEditorSettingsStore((s) => s.shortcutBindings);
   const macros = useEditorSettingsStore((s) => s.macros);

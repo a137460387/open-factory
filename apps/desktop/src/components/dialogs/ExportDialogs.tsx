@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import type { Project, MediaAsset } from '@open-factory/editor-core';
 import type { ExportPreset } from '../../export/export-presets';
 import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
+import { useExportFeatureStore } from '../../store/exportFeatureStore';
 import type { TimelineImportSummary } from '../../timeline-export/TimelineExportDialog';
 import { PanelLoading } from '../PanelLoading';
 
@@ -70,10 +70,10 @@ export function ExportDialogs({
   const setBatchWatermarkOpen = useEditorUIStore((s) => s.setBatchWatermarkOpen);
   const batchProjectProcessingOpen = useEditorUIStore((s) => s.batchProjectProcessingOpen);
   const setBatchProjectProcessingOpen = useEditorUIStore((s) => s.setBatchProjectProcessingOpen);
-  const batchTranscodeInitialPaths = useEditorFeatureStore((s) => s.batchTranscodeInitialPaths);
-  const setBatchTranscodeInitialPaths = useEditorFeatureStore((s) => s.setBatchTranscodeInitialPaths);
-  const gifExportAsset = useEditorFeatureStore((s) => s.gifExportAsset);
-  const setGifExportAsset = useEditorFeatureStore((s) => s.setGifExportAsset);
+  const batchTranscodeInitialPaths = useExportFeatureStore((s) => s.batchTranscodeInitialPaths);
+  const setBatchTranscodeInitialPaths = useExportFeatureStore((s) => s.setBatchTranscodeInitialPaths);
+  const gifExportAsset = useExportFeatureStore((s) => s.gifExportAsset);
+  const setGifExportAsset = useExportFeatureStore((s) => s.setGifExportAsset);
 
   return (
     <Suspense fallback={<PanelLoading label="导出" />}>

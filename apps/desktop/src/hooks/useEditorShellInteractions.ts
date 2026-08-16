@@ -18,7 +18,7 @@ import { shouldAutoShowMediaHealthDashboard } from '@open-factory/editor-core';
 import { saveLayoutSettings } from '../settings/appSettings';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorUIStore } from '../store/editorUIStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import type { ClipboardKeyframeGroup } from '@open-factory/editor-core';
@@ -200,7 +200,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         showToast({ kind: 'warning', title: zhCN.keyframePaste.noTarget });
         return;
       }
-      useEditorFeatureStore.getState().setPasteKeyframeDialogGroups(groups);
+      useMediaFeatureStore.getState().setPasteKeyframeDialogGroups(groups);
       useEditorUIStore.getState().setPasteKeyframeDialogOpen(true);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -242,7 +242,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
   // === 媒体健康自动显示 ===
   const mediaHealthAutoShowCheckedRef = useRef(false);
   useEffect(() => {
-    const mediaHealthAutoShowEnabled = useEditorFeatureStore.getState().mediaHealthAutoShowEnabled;
+    const mediaHealthAutoShowEnabled = useMediaFeatureStore.getState().mediaHealthAutoShowEnabled;
     if (mediaHealthAutoShowCheckedRef.current || !mediaHealthAutoShowEnabled) {
       return;
     }
@@ -253,8 +253,8 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         if (disposed) {
           return;
         }
-        useEditorFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
-        useEditorFeatureStore.getState().setProjectHealthReport(result.report);
+        useMediaFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
+        useMediaFeatureStore.getState().setProjectHealthReport(result.report);
         if (
           shouldAutoShowMediaHealthDashboard({
             enabled: mediaHealthAutoShowEnabled,

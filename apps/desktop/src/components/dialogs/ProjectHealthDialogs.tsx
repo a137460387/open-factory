@@ -1,7 +1,7 @@
 import {lazy, Suspense} from 'react';
 import type {Project, DuplicateMediaIssue, MissingMediaIssue, OrphanMediaIssue, ProxyMissingIssue} from '@open-factory/editor-core';
 import {useEditorUIStore} from '../../store/editorUIStore';
-import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import {useMediaFeatureStore} from '../../store/mediaFeatureStore';
 import type {DuplicateMediaMergeSelection} from '../../media/DuplicateMediaDialog';
 import type {MediaOrganizerDuplicateSelection} from '../../media/MediaOrganizerDialog';
 import {PanelLoading} from '../PanelLoading';
@@ -68,17 +68,17 @@ export function ProjectHealthDialogs({
   const mediaOrganizerOpen = useEditorUIStore((s) => s.mediaOrganizerOpen);
   const setMediaOrganizerOpen = useEditorUIStore((s) => s.setMediaOrganizerOpen);
 
-  const projectHealthReport = useEditorFeatureStore((s) => s.projectHealthReport);
-  const projectHealthRepairReport = useEditorFeatureStore((s) => s.projectHealthRepairReport);
-  const projectHealthScanning = useEditorFeatureStore((s) => s.projectHealthScanning);
-  const mediaHealthDashboard = useEditorFeatureStore((s) => s.mediaHealthDashboard);
-  const mediaHealthScanning = useEditorFeatureStore((s) => s.mediaHealthScanning);
-  const mediaHealthAutoShowEnabled = useEditorFeatureStore((s) => s.mediaHealthAutoShowEnabled);
-  const setMediaHealthAutoShowEnabled = useEditorFeatureStore((s) => s.setMediaHealthAutoShowEnabled);
-  const duplicateMediaGroups = useEditorFeatureStore((s) => s.duplicateMediaGroups);
-  const mediaOrganizerGroups = useEditorFeatureStore((s) => s.mediaOrganizerGroups);
-  const mediaOrganizerCleanup = useEditorFeatureStore((s) => s.mediaOrganizerCleanup);
-  const mediaOrganizerScanning = useEditorFeatureStore((s) => s.mediaOrganizerScanning);
+  const projectHealthReport = useMediaFeatureStore((s) => s.projectHealthReport);
+  const projectHealthRepairReport = useMediaFeatureStore((s) => s.projectHealthRepairReport);
+  const projectHealthScanning = useMediaFeatureStore((s) => s.projectHealthScanning);
+  const mediaHealthDashboard = useMediaFeatureStore((s) => s.mediaHealthDashboard);
+  const mediaHealthScanning = useMediaFeatureStore((s) => s.mediaHealthScanning);
+  const mediaHealthAutoShowEnabled = useMediaFeatureStore((s) => s.mediaHealthAutoShowEnabled);
+  const setMediaHealthAutoShowEnabled = useMediaFeatureStore((s) => s.setMediaHealthAutoShowEnabled);
+  const duplicateMediaGroups = useMediaFeatureStore((s) => s.duplicateMediaGroups);
+  const mediaOrganizerGroups = useMediaFeatureStore((s) => s.mediaOrganizerGroups);
+  const mediaOrganizerCleanup = useMediaFeatureStore((s) => s.mediaOrganizerCleanup);
+  const mediaOrganizerScanning = useMediaFeatureStore((s) => s.mediaOrganizerScanning);
 
   return (
     <Suspense fallback={<PanelLoading label="健康检查" />}>

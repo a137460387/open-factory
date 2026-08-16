@@ -14,7 +14,7 @@ import {applyTimelineVersionDiffSelection, replaceProjectActiveTimeline} from '@
 import {commandManager, projectAccessor} from '../store/commandManager';
 import {useEditorStore} from '../store/editorStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useEditorFeatureStore} from '../store/editorFeatureStore';
+import {useTimelineFeatureStore} from '../store/timelineFeatureStore';
 import {useEditorUIStore} from '../store/editorUIStore';
 import {copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile} from '../lib/tauri-bridge';
 import {normalizeTutorialProgressSettings, skipTutorialProgress, DEFAULT_TUTORIAL_SIGNALS} from '../tutorial/tutorialState';
@@ -45,7 +45,7 @@ function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; des
 export function useEditorShellProjectCallbacks() {
   const requestProjectPassword = useCallback((title: string, description: string) => {
     return new Promise<string | undefined>((resolve) => {
-      useEditorFeatureStore.getState().setProjectPasswordRequest({ title, description, resolve });
+      useTimelineFeatureStore.getState().setProjectPasswordRequest({ title, description, resolve });
     });
   }, []);
 
@@ -148,11 +148,11 @@ export function useEditorShellProjectCallbacks() {
         return;
       }
       const plan = createProjectArchivePlan(project, archiveParentDir, { skipSourcePaths: preflight.missingPaths });
-      useEditorFeatureStore
+      useTimelineFeatureStore
         .getState()
         .setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
       await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, (progress) =>
-        useEditorFeatureStore.getState().setArchiveProgress(progress),
+        useTimelineFeatureStore.getState().setArchiveProgress(progress),
       );
       commandManager.clear();
       state.setProject(plan.project, plan.projectPath);
@@ -166,7 +166,7 @@ export function useEditorShellProjectCallbacks() {
         message: error instanceof Error ? error.message : zhCN.projectArchive.failedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setArchiveProgress(undefined);
+      useTimelineFeatureStore.getState().setArchiveProgress(undefined);
     }
   }, []);
 
@@ -187,7 +187,7 @@ export function useEditorShellProjectCallbacks() {
       setActiveProjectEncryptionPassword(undefined);
       state.setProjectPath(undefined);
       state.setDirty(false);
-      useEditorFeatureStore.getState().setTemplateExportPreset(nextTemplatePreset);
+      useTimelineFeatureStore.getState().setTemplateExportPreset(nextTemplatePreset);
     },
     [],
   );
@@ -227,7 +227,7 @@ export function useEditorShellProjectCallbacks() {
         return;
       }
       executeNewProject(nextProject);
-      useEditorFeatureStore.getState().setTimelineTemplateMode(undefined);
+      useTimelineFeatureStore.getState().setTimelineTemplateMode(undefined);
     },
     [executeNewProject],
   );
@@ -252,7 +252,7 @@ export function useEditorShellProjectCallbacks() {
       commandManager.clear();
       state.setProject(nextProject, path);
       // Note: runAutomationForMedia will be called from the component
-      useEditorFeatureStore.getState().setTemplateExportPreset(undefined);
+      useTimelineFeatureStore.getState().setTemplateExportPreset(undefined);
       showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
     } catch (error) {
       showToast({

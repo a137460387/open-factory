@@ -1,7 +1,7 @@
 import {useEditorStore} from '../store/editorStore';
 import {useEditorUIStore} from '../store/editorUIStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useEditorFeatureStore} from '../store/editorFeatureStore';
+import {useMediaFeatureStore} from '../store/mediaFeatureStore';
 import {useCollaborationStore} from '../store/collaborationStore';
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
@@ -210,7 +210,7 @@ export function useEditorShellStoreSubscriptions() {
   })));
 
   // --- EditorFeatureStore (merged with useShallow) ---
-  const features = useEditorFeatureStore(useShallow((s) => ({
+  const features = useMediaFeatureStore(useShallow((s) => ({
     batchTranscodeInitialPaths: s.batchTranscodeInitialPaths,
     setBatchTranscodeInitialPaths: s.setBatchTranscodeInitialPaths,
     thumbnailGeneratorAssetIds: s.thumbnailGeneratorAssetIds,

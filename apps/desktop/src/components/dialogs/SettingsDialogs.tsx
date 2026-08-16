@@ -2,7 +2,7 @@ import {lazy, Suspense} from 'react';
 import {getTimelineDuration} from '@open-factory/editor-core';
 import type {Project, Clip} from '@open-factory/editor-core';
 import {useEditorUIStore} from '../../store/editorUIStore';
-import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import {useExportFeatureStore} from '../../store/exportFeatureStore';
 import type {TimelineShortcutBindings} from '../../shortcuts/timeline-shortcuts';
 import type {ClipMacro} from '../../macros/clip-macros';
 import type {PreviewPerformanceSettings, PreviewSkipFrames} from '../../lib/preview/preview-performance';
@@ -103,10 +103,10 @@ export function SettingsDialogs({
   const exportHistoryClassifierOpen = useEditorUIStore((s) => s.exportHistoryClassifierOpen);
   const setExportHistoryClassifierOpen = useEditorUIStore((s) => s.setExportHistoryClassifierOpen);
 
-  const macroHistory = useEditorFeatureStore((s) => s.macroHistory);
-  const formatConverterMockFiles = useEditorFeatureStore((s) => s.formatConverterMockFiles);
-  const mockSubtitleClips = useEditorFeatureStore((s) => s.mockSubtitleClips);
-  const mockExportHistory = useEditorFeatureStore((s) => s.mockExportHistory);
+  const macroHistory = useExportFeatureStore((s) => s.macroHistory);
+  const formatConverterMockFiles = useExportFeatureStore((s) => s.formatConverterMockFiles);
+  const mockSubtitleClips = useExportFeatureStore((s) => s.mockSubtitleClips);
+  const mockExportHistory = useExportFeatureStore((s) => s.mockExportHistory);
 
   return (
     <Suspense fallback={<PanelLoading label="设置" />}>

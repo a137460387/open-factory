@@ -43,7 +43,7 @@ import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useAIFeatureStore } from '../store/aiFeatureStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useEditorUIStore } from '../store/editorUIStore';
@@ -64,7 +64,7 @@ import { probeMediaPaths } from '../lib/media';
 
 interface ProjectHealthCallbacksDeps {
   /** 可选的已扫描报告，用于 autoRepair 跳过重复扫描 */
-  projectHealthReport: ReturnType<typeof useEditorFeatureStore.getState>['projectHealthReport'];
+  projectHealthReport: ReturnType<typeof useAIFeatureStore.getState>['projectHealthReport'];
 }
 
 /** 项目健康相关的回调组 */
@@ -73,9 +73,9 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
 
   const refreshProjectHealth = useCallback(async () => {
     try {
-      useEditorFeatureStore.getState().setProjectHealthScanning(true);
+      useAIFeatureStore.getState().setProjectHealthScanning(true);
       const state = useEditorStore.getState();
-      useEditorFeatureStore
+      useAIFeatureStore
         .getState()
         .setProjectHealthReport(await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
     } catch (error) {
@@ -85,23 +85,23 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.scanFailedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setProjectHealthScanning(false);
+      useAIFeatureStore.getState().setProjectHealthScanning(false);
     }
   }, []);
 
   const openProjectHealth = useCallback(() => {
-    useEditorFeatureStore.getState().setProjectHealthRepairReport(undefined);
+    useAIFeatureStore.getState().setProjectHealthRepairReport(undefined);
     useEditorUIStore.getState().setProjectHealthOpen(true);
     void refreshProjectHealth();
   }, [refreshProjectHealth]);
 
   const refreshMediaHealthDashboard = useCallback(async () => {
     try {
-      useEditorFeatureStore.getState().setMediaHealthScanning(true);
+      useAIFeatureStore.getState().setMediaHealthScanning(true);
       const state = useEditorStore.getState();
       const result = await scanMediaHealthDashboard(state.project, useProxySettingsStore.getState().settings);
-      useEditorFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
-      useEditorFeatureStore.getState().setProjectHealthReport(result.report);
+      useAIFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
+      useAIFeatureStore.getState().setProjectHealthReport(result.report);
       return result;
     } catch (error) {
       showToast({
@@ -111,7 +111,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
       });
       return undefined;
     } finally {
-      useEditorFeatureStore.getState().setMediaHealthScanning(false);
+      useAIFeatureStore.getState().setMediaHealthScanning(false);
     }
   }, []);
 
@@ -121,7 +121,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
   }, [refreshMediaHealthDashboard]);
 
   const setMediaHealthAutoShow = useCallback((enabled: boolean) => {
-    useEditorFeatureStore.getState().setMediaHealthAutoShowEnabled(enabled);
+    useAIFeatureStore.getState().setMediaHealthAutoShowEnabled(enabled);
     writeMediaHealthAutoShowEnabled(enabled);
   }, []);
 
@@ -280,7 +280,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
         unusedFolderName: zhCN.projectHealth.unusedFolder,
       });
       commandManager.execute(command);
-      useEditorFeatureStore.getState().setProjectHealthRepairReport(command.report);
+      useAIFeatureStore.getState().setProjectHealthRepairReport(command.report);
       showToast({
         kind: command.report?.successCount ? 'success' : 'warning',
         title: zhCN.projectHealth.toasts.autoRepairComplete,
@@ -337,7 +337,7 @@ interface AudioAnalysisCallbacksDeps {
   demucsExecutablePath: string;
   audioSeparationClipId: string | undefined;
   speakerDiarizationTarget: { clip: Extract<Clip, { type: 'audio' | 'video' }>; asset: MediaAsset } | undefined;
-  speakerDiarizationResult: ReturnType<typeof useEditorFeatureStore.getState>['speakerDiarizationResult'];
+  speakerDiarizationResult: ReturnType<typeof useAIFeatureStore.getState>['speakerDiarizationResult'];
   autoAudioSyncTargets: AutoAudioSyncTarget[];
   resolvedAutoAudioSyncPrimaryClipId: string;
   autoAudioSyncResults: AutoAudioSyncResult[];
@@ -378,8 +378,8 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       });
       return;
     }
-    useEditorFeatureStore.getState().setAudioSeparationClipId(selectedClip.id);
-    useEditorFeatureStore.getState().setAudioSeparationProgress(0);
+    useAIFeatureStore.getState().setAudioSeparationClipId(selectedClip.id);
+    useAIFeatureStore.getState().setAudioSeparationProgress(0);
     showToast({ kind: 'info', title: zhCN.demucs.runningTitle, message: zhCN.demucs.runningMessage(0) });
     try {
       const separation = await separateAudioForClip(selectedClip, selectedClipMedia, {
@@ -405,8 +405,8 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
         message,
       });
     } finally {
-      useEditorFeatureStore.getState().setAudioSeparationClipId(undefined);
-      useEditorFeatureStore.getState().setAudioSeparationProgress(undefined);
+      useAIFeatureStore.getState().setAudioSeparationClipId(undefined);
+      useAIFeatureStore.getState().setAudioSeparationProgress(undefined);
     }
   }, [addMedia, demucsAvailability, demucsExecutablePath, selectedClip, selectedClipMedia, setSelectedClipIds]);
 
@@ -420,7 +420,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       });
       return;
     }
-    useEditorFeatureStore.getState().setSpeakerDiarizationRunning(true);
+    useAIFeatureStore.getState().setSpeakerDiarizationRunning(true);
     showToast({
       kind: 'info',
       title: zhCN.speakerDiarization.runningTitle,
@@ -430,7 +430,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       const dialogueIntervals = collectSpeakerDiarizationDialogueIntervals(project, target.clip);
       const analysis = await analyzeSpeakerDiarizationForClip(target.clip, target.asset, dialogueIntervals);
       if (analysis.segments.length === 0 || analysis.tracks.length === 0) {
-        useEditorFeatureStore.getState().setSpeakerDiarizationResult(undefined);
+        useAIFeatureStore.getState().setSpeakerDiarizationResult(undefined);
         showToast({
           kind: 'warning',
           title: zhCN.speakerDiarization.noResultsTitle,
@@ -439,7 +439,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
         return;
       }
       setSelectedClipId(target.clip.id);
-      useEditorFeatureStore.getState().setSpeakerDiarizationResult({
+      useAIFeatureStore.getState().setSpeakerDiarizationResult({
         sourceName: target.clip.name || target.asset.name,
         segments: analysis.segments,
         tracks: analysis.tracks,
@@ -451,7 +451,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
         message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setSpeakerDiarizationRunning(false);
+      useAIFeatureStore.getState().setSpeakerDiarizationRunning(false);
     }
   }, [project, setSelectedClipId, speakerDiarizationTarget]);
 
@@ -480,7 +480,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
           speakerDiarizationResult.segments.length,
         ),
       });
-      useEditorFeatureStore.getState().setSpeakerDiarizationResult(undefined);
+      useAIFeatureStore.getState().setSpeakerDiarizationResult(undefined);
     } catch (error) {
       showToast({
         kind: 'error',
@@ -499,14 +499,14 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       });
       return;
     }
-    useEditorFeatureStore
+    useAIFeatureStore
       .getState()
       .setAutoAudioSyncPrimaryClipId((current) =>
         current && autoAudioSyncTargets.some((target) => target.clip.id === current)
           ? current
           : autoAudioSyncTargets[0].clip.id,
       );
-    useEditorFeatureStore.getState().setAutoAudioSyncResults([]);
+    useAIFeatureStore.getState().setAutoAudioSyncResults([]);
     useEditorUIStore.getState().setAutoAudioSyncOpen(true);
   }, [autoAudioSyncTargets]);
 
@@ -523,11 +523,11 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
       });
       return;
     }
-    useEditorFeatureStore.getState().setAutoAudioSyncRunning(true);
+    useAIFeatureStore.getState().setAutoAudioSyncRunning(true);
     showToast({ kind: 'info', title: zhCN.autoAudioSync.runningTitle, message: zhCN.autoAudioSync.runningMessage });
     try {
       const analysis = await analyzeAutoAudioSyncTargets(primary, secondaryTargets);
-      useEditorFeatureStore.getState().setAutoAudioSyncResults(analysis.results);
+      useAIFeatureStore.getState().setAutoAudioSyncResults(analysis.results);
       const lowCount = analysis.results.filter((result) => result.confidence === 'low' || !result.applied).length;
       if (lowCount > 0) {
         showToast({
@@ -543,7 +543,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
         message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setAutoAudioSyncRunning(false);
+      useAIFeatureStore.getState().setAutoAudioSyncRunning(false);
     }
   }, [autoAudioSyncTargets, resolvedAutoAudioSyncPrimaryClipId]);
 
@@ -829,7 +829,7 @@ export function useBeatSyncCallbacks(deps: BeatSyncCallbacksDeps) {
 interface RecordingCallbacksDeps {
   addMedia: (media: MediaAsset[]) => void;
   persistMediaFingerprints: (media: MediaAsset[]) => Promise<void>;
-  recordingTask: ReturnType<typeof useEditorFeatureStore.getState>['recordingTask'];
+  recordingTask: ReturnType<typeof useAIFeatureStore.getState>['recordingTask'];
   recordingSettings: ReturnType<typeof useRecordingSettingsStore.getState>['settings'];
 }
 
@@ -851,7 +851,7 @@ export function useRecordingCallbacks(deps: RecordingCallbacksDeps) {
           height: recordingSettings.height,
           frameRate: recordingSettings.frameRate,
         });
-        useEditorFeatureStore
+        useAIFeatureStore
           .getState()
           .setRecordingTask({ taskId: result.taskId, source, outputPath: result.outputPath, startedAt: Date.now() });
         showToast({ kind: 'info', title: zhCN.recording.startedTitle, message: zhCN.recording.startedMessage(source) });
@@ -890,8 +890,8 @@ export function useRecordingCallbacks(deps: RecordingCallbacksDeps) {
         message: error instanceof Error ? error.message : zhCN.recording.failedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setRecordingTask(undefined);
-      useEditorFeatureStore.getState().setRecordingElapsedSeconds(0);
+      useAIFeatureStore.getState().setRecordingTask(undefined);
+      useAIFeatureStore.getState().setRecordingElapsedSeconds(0);
     }
   }, [addMedia, persistMediaFingerprints, recordingTask]);
 
