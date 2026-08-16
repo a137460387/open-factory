@@ -110,7 +110,8 @@ knip 标记 11 个 store 文件共 266 项（evidence: `docs/evidence/knip-json-
 **方案 B：完成迁移后废弃 barrel（与 H4.5/H5.4 合并执行）**
 - 内容：先把 21（feature）+ 27（UI）个组合 hook 消费者迁到子 store 直连，再删除 barrel 的重导出行；组合 hook `useEditorFeatureStore`/`useEditorUIStore` 本身是否保留可再议（它们未被标记、有真实消费者）
 - 工作量：大——48 个文件的消费者迁移（多数是 EditorShell hooks 系列大文件），是原计划 H4.5/H5.4 的全部工作量，估 5-8 人日；其中把 `useEditorFeatureStore(s => s.x)` 选择器用法改写为子 store selector 时需逐个核对状态归属
-- 风险：中——状态归属易错（组合 store 与子 store 是两份独立状态副本？经查组合 store 在 editorFeatureStore.ts:337 自建全套 state，与子 store **不共享实例**，迁移时若漏改会出现双状态源 bug，此点需在迁移方案中特别处理）
+- 风险：~~中~~ **低（已下调，订正依据见下）**——~~状态归属易错（组合 store 与子 store 是两份独立状态副本？经查组合 store 在 editorFeatureStore.ts:337 自建全套 state，与子 store **不共享实例**，迁移时若漏改会出现双状态源 bug，此点需在迁移方案中特别处理）~~
+  > **【已订正 2026-08-16】**上述"双状态源"判断**错误**，被阶段 1a 验证证伪（commit `d1120899`，`apps/desktop/src/store/storeMigrationSafety.test.ts` 14/14 通过）：8 个 H4/H5 子 store **均不自建 zustand store**，它们只 re-export 组合 hook 并在同一实例上提供 selector hooks（佐证：全仓 `from 'zustand'` 的 20 个文件中无任何子 store；现有 editorFeatureStore.test.ts / editorUIStore.test.ts 亦早有 hook 同一性断言）。因此消费者在组合 hook 与子 store 直连之间混用/漏改**不会产生状态分歧**，只影响导入路径一致性。原判断错误根因：调研时只读了 editorFeatureStore.ts:337 的 `create()`，未读子 store 文件内容。风险据此由"中"下调为"低"：剩余风险仅为机械迁移中的导入路径/标识符改名笔误，typecheck 可在编译期完全捕获；唯一潜在行为差异来源（模块加载顺序副作用）经查不存在（store 模块为纯状态定义）。
 - 破坏性：对仓库内部是重构（typecheck 可兜底）；**对外部无破坏**（store 属 apps/desktop 内部，无包发布，见 §3.3）
 - 收益顺带：222 项零消费符号中有 ~100 项子 store selector hooks 若确认不作为迁移目标 API，可直接删除，不必等迁移
 
@@ -286,7 +287,7 @@ components/ 子树共 32 个文件 288 项（evidence: `docs/evidence/phase5-com
 1. **重复定义是三类共同底色**：Inspector 曲线工具（2-3 份）、色彩换算（3 份）、ffmpeg-builder 常量/函数（2-3 份）、tauri-bridge 类型 vs editor-core 类型（2 份）。即使不做任何"死代码清理"，仅重复收敛就值得单独立项；反过来，只删导出不收敛重复，问题只解决一半
 2. **重构模式缺陷**：每次大文件拆分（store/Inspector/ffmpeg-builder/tauri-bridge）都产生"兼容重导出层 + 消费者只迁一半 + 工具函数复制而非引用"三件套。若不改进拆分流程（拆分即迁消费者、工具函数归一），本次清理后下一轮拆分会再生产同类 200+ 项
 3. **knip 可信度**：本次 792 项中，除 examples/plugins 7 项 CJS 盲区外，**未发现任何 knip 误报**；7/3 事件中的大面积误报来自 grep 而非 knip。建议后续把 knip 纳入 CI（roadmap 已有此待办）并固化为 dead-code 门禁
-4. **组合 store 与子 store 是独立状态实例**（editorFeatureStore.ts:337 自建全套 state），这是方案 B 迁移时最大的正确性风险点
+4. ~~**组合 store 与子 store 是独立状态实例**（editorFeatureStore.ts:337 自建全套 state），这是方案 B 迁移时最大的正确性风险点~~ **【已订正 2026-08-16，原判断错误】**：8 个子 store 均不自建实例，与组合 store 共享同一 zustand store，已由阶段 1a 测试证伪（commit `d1120899`），方案 B 迁移无状态分歧风险，风险等级已由"中"下调为"低"（详见 §1.5 订正说明）
 
 ## 5. 建议的裁决问题清单（仅供提问，不预设答案）
 
