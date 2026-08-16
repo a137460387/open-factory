@@ -146,18 +146,3 @@ export async function deleteTaskProgress(taskId: string): Promise<void> {
     tx.oncomplete = () => db.close();
   });
 }
-
-/** Mark all active tasks as failed (used on app startup for crash recovery) */
-export async function markActiveTasksAsFailed(): Promise<TaskProgressEntry[]> {
-  const activeTasks = await getActiveTaskProgress();
-  const now = Date.now();
-  for (const task of activeTasks) {
-    await saveTaskProgress({
-      ...task,
-      status: 'failed',
-      error: 'Application was closed while generation was in progress.',
-      updatedAt: now,
-    });
-  }
-  return activeTasks;
-}
