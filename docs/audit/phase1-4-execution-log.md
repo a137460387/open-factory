@@ -79,3 +79,12 @@
 | dd6e9325 | test: P1 smoke tests |
 | 4c20e33a | test: P2 smoke tests |
 | 5c6288dc | test: P3 smoke tests |
+---
+
+## KI-001 修复完成记录
+
+- **修复 PR**: #144（merge commit 7e7d3824）
+- **方案**: docs/audit/KI-001-fix-proposal.md（正向代码路径 filter + dorny/paths-filter + 三 job step 级门控）
+- **验证**: 已通过真实 CI 端到端验证（fake-base 方法，纯文档 PR → code=false → 三 job success；代码 PR → code=true → 完整跑）
+- **修复 commit**: 7e7d3824
+- **known-issues.md 已更新**: KI-001 标记"已修复"，advanced-text.spec.ts:4:1 记录为已知 flaky（证据强度低）

@@ -39,3 +39,33 @@ tauri 2.11.2 → tauri-utils 2.9.2 → plist 1.9.0 → quick-xml 0.39.4
 
 - 检查 [plist crate](https://crates.io/crates/plist) 是否发布支持 quick-xml ≥0.41.0 的新版本
 - 若上游已修复：直接 `cargo update -p plist` 即可
+---
+
+# Known Issues — 2026-08-15 更新
+
+## KI-001：纯文档 PR 无法触发 required rust check（已修复）
+
+**状态**: ✅ 已修复
+**修复 commit**: 7e7d3824（Merge PR #144）
+**修复方案**: docs/audit/KI-001-fix-proposal.md（正向代码路径 filter + dorny/paths-filter 探测 + 三 job step 级门控）
+**修复时间**: 2026-08-15
+
+原问题：ci.yml 的 workflow 级 paths-ignore 导致纯文档 PR 跳过全部 job，
+required "rust" check 永不产生，PR 永久卡 pending。
+现已移除 paths-ignore，改为 changes job 探测改动类型，纯文档改动时三 job 快速通过。
+
+---
+
+## 已知 flaky：advanced-text.spec.ts:4:1
+
+**测试**: e2e/advanced-text.spec.ts:4:1（bolds part of a rich text clip and exports multiple drawtext filters）
+**首次记录**: 2026-08-15（PR #144 CI 观察）
+**证据强度**: **低**
+
+证据来源（弱）：
+- 仅在 PR #144 的 attempt 1 失败一次，同次 run 的 retry 通过（未做两次独立 run 验证）；
+- 一次更早的 main 基线 run（31758987639）中也曾 ✘✘ 失败，作为间接佐证；
+- 未做像 ai-loudness-suggestion 那样的两次独立 run 验证。
+
+**后续处理建议**: 若该测试再次失败，按 ai-loudness-suggestion 的方式做两次独立 run 验证，
+不要因"已记录在案"就直接跳过不查。
