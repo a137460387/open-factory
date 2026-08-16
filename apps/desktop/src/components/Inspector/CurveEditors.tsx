@@ -1214,69 +1214,6 @@ export function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommi
   );
 }
 
-// ---------------------------------------------------------------------------
-// Color wheel helpers
-// ---------------------------------------------------------------------------
-
-export function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-  const size = canvas.width;
-  const radius = size / 2;
-  const image = context.createImageData(size, size);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const dx = (x + 0.5 - radius) / radius;
-      const dy = (y + 0.5 - radius) / radius;
-      const distance = Math.hypot(dx, dy);
-      const offset = (y * size + x) * 4;
-      if (distance > 1) {
-        image.data[offset + 3] = 0;
-        continue;
-      }
-      const hue = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
-      const rgb = hsvToRgb(hue, distance, 1);
-      image.data[offset] = Math.round(rgb.r * 255);
-      image.data[offset + 1] = Math.round(rgb.g * 255);
-      image.data[offset + 2] = Math.round(rgb.b * 255);
-      image.data[offset + 3] = 255;
-    }
-  }
-  context.putImageData(image, 0, 0);
-  const marker = wheelOffsetsToPoint(value);
-  context.beginPath();
-  context.arc(radius + marker.x * radius, radius + marker.y * radius, 5, 0, Math.PI * 2);
-  context.fillStyle = '#ffffff';
-  context.fill();
-  context.strokeStyle = '#0f172a';
-  context.lineWidth = 2;
-  context.stroke();
-}
-
-export function eventToUnitPoint(
-  event: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
-  const length = Math.hypot(x, y);
-  if (length <= 1) {
-    return { x, y };
-  }
-  return { x: x / length, y: y / length };
-}
-
-export function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelValue, 'r' | 'g' | 'b'> {
-  return {
-    r: clampSigned(point.x),
-    g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
-    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y),
-  };
-}
-
 function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
   const x = value.r;
   const y = (value.b - value.g) / 1.7320508;

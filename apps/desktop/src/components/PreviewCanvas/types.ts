@@ -1,17 +1,25 @@
-import type {CSSProperties, PointerEvent as ReactPointerEvent} from 'react';
-import type {CanvasPoint, CanvasTransformHandle, ChromaKeyColor, Clip, ClipPatch, ClipTransformBox, PathPoint, PathPointHandle, ReviewAnnotationType, Transform} from '@open-factory/editor-core';
-import type {PreviewPixelCoordinates} from '../../lib/preview/frame-inspector';
-import type {PreviewCompareMode} from '../../lib/preview/compare';
-import type {GpuPreviewMetrics} from '../../lib/preview/gpu-acceleration';
-import type {PreviewPerformanceSettings} from '../../lib/preview/preview-performance';
-import type {PreviewRenderer, PreviewFrameReadback} from '../../lib/preview/renderer';
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
+import type {
+  CanvasPoint,
+  CanvasTransformHandle,
+  ChromaKeyColor,
+  Clip,
+  ClipPatch,
+  ClipTransformBox,
+  PathPoint,
+  PathPointHandle,
+  ReviewAnnotationType,
+  Transform,
+} from '@open-factory/editor-core';
+import type { PreviewPixelCoordinates } from '../../lib/preview/frame-inspector';
+import type { PreviewCompareMode } from '../../lib/preview/compare';
+import type { GpuPreviewMetrics } from '../../lib/preview/gpu-acceleration';
+import type { PreviewPerformanceSettings } from '../../lib/preview/preview-performance';
+import type { PreviewRenderer, PreviewFrameReadback } from '../../lib/preview/renderer';
 
 export const PREVIEW_CANVAS_WIDTH = 1280;
 export const PREVIEW_CANVAS_HEIGHT = 720;
 export const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-export const SAFE_FRAME_ACTION_STYLE: CSSProperties = { left: '5%', top: '5%', width: '90%', height: '90%' };
-export const SAFE_FRAME_TITLE_STYLE: CSSProperties = { left: '10%', top: '10%', width: '80%', height: '80%' };
-export const MULTICAM_GRID_STYLE: CSSProperties = { gridTemplateColumns: 'minmax(0,1fr) minmax(210px, 0.32fr)' };
 
 export interface EditableCanvasClip {
   clip: Clip;
@@ -102,6 +110,9 @@ export interface PreviewCanvasProps {
   onColorScopesVisibleChange?(visible: boolean): void;
   reviewMode?: boolean;
   onProfilerFrame?(sample: import('@open-factory/editor-core').ProfilerFrameSample): void;
-  onAddReviewAnnotation?(annotation: Omit<import('@open-factory/editor-core').ReviewAnnotation, 'id'> & Partial<Pick<import('@open-factory/editor-core').ReviewAnnotation, 'id'>>): void;
+  onAddReviewAnnotation?(
+    annotation: Omit<import('@open-factory/editor-core').ReviewAnnotation, 'id'> &
+      Partial<Pick<import('@open-factory/editor-core').ReviewAnnotation, 'id'>>,
+  ): void;
   onExportReviewReport?(): void;
 }

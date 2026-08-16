@@ -40,8 +40,6 @@ export interface DragState {
 export const TRACK_HEIGHT = 60;
 export const LABEL_WIDTH = 160;
 export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
-export const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
-export const LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS = 2_500;
 
 export interface VolumeEnvelopePointRequest {
   clipId: string;
