@@ -49,7 +49,7 @@ import { zhCN, t } from '../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useEditorStore, selectClipById } from '../store/editorStore';
 import { useMediaFeatureStore } from '../store/mediaFeatureStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -148,8 +148,8 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   const setColorAnalysisJumps = useMediaFeatureStore((s) => s.setColorAnalysisJumps);
   const setColorAnalysisSamples = useMediaFeatureStore((s) => s.setColorAnalysisSamples);
   const setColorHeatmapPoints = useMediaFeatureStore((s) => s.setColorHeatmapPoints);
-  const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
-  const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
+  const setColorAnalysisOpen = useDialogStore((s) => s.setColorAnalysisOpen);
+  const setColorNodeEditorOpen = useDialogStore((s) => s.setColorNodeEditorOpen);
 
   // -----------------------------------------------------------------------
   // Clip 添加到时间线

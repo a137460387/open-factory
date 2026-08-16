@@ -1,7 +1,7 @@
 import {lazy, Suspense} from 'react';
 import {getTimelineDuration} from '@open-factory/editor-core';
 import type {Project, Clip} from '@open-factory/editor-core';
-import {useEditorUIStore} from '../../store/editorUIStore';
+import {useDialogStore} from '../../store/dialogStore';
 import {useExportFeatureStore} from '../../store/exportFeatureStore';
 import type {TimelineShortcutBindings} from '../../shortcuts/timeline-shortcuts';
 import type {ClipMacro} from '../../macros/clip-macros';
@@ -84,24 +84,24 @@ export function SettingsDialogs({
   onMigrateProxies,
   onRepairSubtitle,
 }: SettingsDialogsProps) {
-  const settingsOpen = useEditorUIStore((s) => s.settingsOpen);
-  const setSettingsOpen = useEditorUIStore((s) => s.setSettingsOpen);
-  const macroHistoryOpen = useEditorUIStore((s) => s.macroHistoryOpen);
-  const setMacroHistoryOpen = useEditorUIStore((s) => s.setMacroHistoryOpen);
-  const errorKnowledgeOpen = useEditorUIStore((s) => s.errorKnowledgeOpen);
-  const setErrorKnowledgeOpen = useEditorUIStore((s) => s.setErrorKnowledgeOpen);
-  const sequenceCompareOpen = useEditorUIStore((s) => s.sequenceCompareOpen);
-  const setSequenceCompareOpen = useEditorUIStore((s) => s.setSequenceCompareOpen);
-  const subtitleSyncOpen = useEditorUIStore((s) => s.subtitleSyncOpen);
-  const setSubtitleSyncOpen = useEditorUIStore((s) => s.setSubtitleSyncOpen);
-  const proxyVerifyOpen = useEditorUIStore((s) => s.proxyVerifyOpen);
-  const setProxyVerifyOpen = useEditorUIStore((s) => s.setProxyVerifyOpen);
-  const formatConverterOpen = useEditorUIStore((s) => s.formatConverterOpen);
-  const setFormatConverterOpen = useEditorUIStore((s) => s.setFormatConverterOpen);
-  const emotionAnalysisOpen = useEditorUIStore((s) => s.emotionAnalysisOpen);
-  const setEmotionAnalysisOpen = useEditorUIStore((s) => s.setEmotionAnalysisOpen);
-  const exportHistoryClassifierOpen = useEditorUIStore((s) => s.exportHistoryClassifierOpen);
-  const setExportHistoryClassifierOpen = useEditorUIStore((s) => s.setExportHistoryClassifierOpen);
+  const settingsOpen = useDialogStore((s) => s.settingsOpen);
+  const setSettingsOpen = useDialogStore((s) => s.setSettingsOpen);
+  const macroHistoryOpen = useDialogStore((s) => s.macroHistoryOpen);
+  const setMacroHistoryOpen = useDialogStore((s) => s.setMacroHistoryOpen);
+  const errorKnowledgeOpen = useDialogStore((s) => s.errorKnowledgeOpen);
+  const setErrorKnowledgeOpen = useDialogStore((s) => s.setErrorKnowledgeOpen);
+  const sequenceCompareOpen = useDialogStore((s) => s.sequenceCompareOpen);
+  const setSequenceCompareOpen = useDialogStore((s) => s.setSequenceCompareOpen);
+  const subtitleSyncOpen = useDialogStore((s) => s.subtitleSyncOpen);
+  const setSubtitleSyncOpen = useDialogStore((s) => s.setSubtitleSyncOpen);
+  const proxyVerifyOpen = useDialogStore((s) => s.proxyVerifyOpen);
+  const setProxyVerifyOpen = useDialogStore((s) => s.setProxyVerifyOpen);
+  const formatConverterOpen = useDialogStore((s) => s.formatConverterOpen);
+  const setFormatConverterOpen = useDialogStore((s) => s.setFormatConverterOpen);
+  const emotionAnalysisOpen = useDialogStore((s) => s.emotionAnalysisOpen);
+  const setEmotionAnalysisOpen = useDialogStore((s) => s.setEmotionAnalysisOpen);
+  const exportHistoryClassifierOpen = useDialogStore((s) => s.exportHistoryClassifierOpen);
+  const setExportHistoryClassifierOpen = useDialogStore((s) => s.setExportHistoryClassifierOpen);
 
   const macroHistory = useExportFeatureStore((s) => s.macroHistory);
   const formatConverterMockFiles = useExportFeatureStore((s) => s.formatConverterMockFiles);

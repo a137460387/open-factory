@@ -46,7 +46,7 @@ import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { useAIFeatureStore } from '../store/aiFeatureStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
@@ -91,7 +91,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
 
   const openProjectHealth = useCallback(() => {
     useAIFeatureStore.getState().setProjectHealthRepairReport(undefined);
-    useEditorUIStore.getState().setProjectHealthOpen(true);
+    useDialogStore.getState().setProjectHealthOpen(true);
     void refreshProjectHealth();
   }, [refreshProjectHealth]);
 
@@ -116,7 +116,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
   }, []);
 
   const openMediaHealthDashboard = useCallback(() => {
-    useEditorUIStore.getState().setMediaHealthDashboardOpen(true);
+    useDialogStore.getState().setMediaHealthDashboardOpen(true);
     void refreshMediaHealthDashboard();
   }, [refreshMediaHealthDashboard]);
 
@@ -126,7 +126,7 @@ export function useProjectHealthCallbacks(deps: ProjectHealthCallbacksDeps) {
   }, []);
 
   const openMediaHealthRelinkPanel = useCallback(() => {
-    useEditorUIStore.getState().setMediaHealthDashboardOpen(false);
+    useDialogStore.getState().setMediaHealthDashboardOpen(false);
     openProjectHealth();
   }, [openProjectHealth]);
 
@@ -507,7 +507,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
           : autoAudioSyncTargets[0].clip.id,
       );
     useAIFeatureStore.getState().setAutoAudioSyncResults([]);
-    useEditorUIStore.getState().setAutoAudioSyncOpen(true);
+    useDialogStore.getState().setAutoAudioSyncOpen(true);
   }, [autoAudioSyncTargets]);
 
   const runAutoAudioSync = useCallback(async () => {
@@ -580,7 +580,7 @@ export function useAudioAnalysisCallbacks(deps: AudioAnalysisCallbacksDeps) {
           message: zhCN.autoAudioSync.skippedLowConfidence(route.skippedLowConfidenceClipIds.length),
         });
       }
-      useEditorUIStore.getState().setAutoAudioSyncOpen(false);
+      useDialogStore.getState().setAutoAudioSyncOpen(false);
     } catch (error) {
       showToast({
         kind: 'error',

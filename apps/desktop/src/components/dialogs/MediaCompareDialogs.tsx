@@ -1,6 +1,6 @@
 import {lazy, Suspense} from 'react';
 import type {Project, SyncCompareClipRef} from '@open-factory/editor-core';
-import {useEditorUIStore} from '../../store/editorUIStore';
+import {useDialogStore} from '../../store/dialogStore';
 import {useMediaFeatureStore} from '../../store/mediaFeatureStore';
 import {PanelLoading} from '../PanelLoading';
 
@@ -36,14 +36,14 @@ export function MediaCompareDialogs({
   const setThumbnailGeneratorAssetIds = useMediaFeatureStore((s) => s.setThumbnailGeneratorAssetIds);
   const mediaVersionCompare = useMediaFeatureStore((s) => s.mediaVersionCompare);
   const setMediaVersionCompare = useMediaFeatureStore((s) => s.setMediaVersionCompare);
-  const mediaPrecheckOpen = useEditorUIStore((s) => s.mediaPrecheckOpen);
-  const setMediaPrecheckOpen = useEditorUIStore((s) => s.setMediaPrecheckOpen);
-  const syncCompareOpen = useEditorUIStore((s) => s.syncCompareOpen);
-  const setSyncCompareOpen = useEditorUIStore((s) => s.setSyncCompareOpen);
-  const collaborationNotesOpen = useEditorUIStore((s) => s.collaborationNotesOpen);
-  const setCollaborationNotesOpen = useEditorUIStore((s) => s.setCollaborationNotesOpen);
-  const collaborationPanelOpen = useEditorUIStore((s) => s.collaborationPanelOpen);
-  const setCollaborationPanelOpen = useEditorUIStore((s) => s.setCollaborationPanelOpen);
+  const mediaPrecheckOpen = useDialogStore((s) => s.mediaPrecheckOpen);
+  const setMediaPrecheckOpen = useDialogStore((s) => s.setMediaPrecheckOpen);
+  const syncCompareOpen = useDialogStore((s) => s.syncCompareOpen);
+  const setSyncCompareOpen = useDialogStore((s) => s.setSyncCompareOpen);
+  const collaborationNotesOpen = useDialogStore((s) => s.collaborationNotesOpen);
+  const setCollaborationNotesOpen = useDialogStore((s) => s.setCollaborationNotesOpen);
+  const collaborationPanelOpen = useDialogStore((s) => s.collaborationPanelOpen);
+  const setCollaborationPanelOpen = useDialogStore((s) => s.setCollaborationPanelOpen);
 
   return (
     <Suspense fallback={<PanelLoading label="媒体对比" />}>

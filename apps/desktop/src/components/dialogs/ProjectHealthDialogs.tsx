@@ -1,6 +1,6 @@
 import {lazy, Suspense} from 'react';
 import type {Project, DuplicateMediaIssue, MissingMediaIssue, OrphanMediaIssue, ProxyMissingIssue} from '@open-factory/editor-core';
-import {useEditorUIStore} from '../../store/editorUIStore';
+import {useDialogStore} from '../../store/dialogStore';
 import {useMediaFeatureStore} from '../../store/mediaFeatureStore';
 import type {DuplicateMediaMergeSelection} from '../../media/DuplicateMediaDialog';
 import type {MediaOrganizerDuplicateSelection} from '../../media/MediaOrganizerDialog';
@@ -59,14 +59,14 @@ export function ProjectHealthDialogs({
   archiveUnusedMedia,
   renameUnusedMedia,
 }: ProjectHealthDialogsProps) {
-  const projectHealthOpen = useEditorUIStore((s) => s.projectHealthOpen);
-  const setProjectHealthOpen = useEditorUIStore((s) => s.setProjectHealthOpen);
-  const mediaHealthDashboardOpen = useEditorUIStore((s) => s.mediaHealthDashboardOpen);
-  const setMediaHealthDashboardOpen = useEditorUIStore((s) => s.setMediaHealthDashboardOpen);
-  const duplicateMediaOpen = useEditorUIStore((s) => s.duplicateMediaOpen);
-  const setDuplicateMediaOpen = useEditorUIStore((s) => s.setDuplicateMediaOpen);
-  const mediaOrganizerOpen = useEditorUIStore((s) => s.mediaOrganizerOpen);
-  const setMediaOrganizerOpen = useEditorUIStore((s) => s.setMediaOrganizerOpen);
+  const projectHealthOpen = useDialogStore((s) => s.projectHealthOpen);
+  const setProjectHealthOpen = useDialogStore((s) => s.setProjectHealthOpen);
+  const mediaHealthDashboardOpen = useDialogStore((s) => s.mediaHealthDashboardOpen);
+  const setMediaHealthDashboardOpen = useDialogStore((s) => s.setMediaHealthDashboardOpen);
+  const duplicateMediaOpen = useDialogStore((s) => s.duplicateMediaOpen);
+  const setDuplicateMediaOpen = useDialogStore((s) => s.setDuplicateMediaOpen);
+  const mediaOrganizerOpen = useDialogStore((s) => s.mediaOrganizerOpen);
+  const setMediaOrganizerOpen = useDialogStore((s) => s.setMediaOrganizerOpen);
 
   const projectHealthReport = useMediaFeatureStore((s) => s.projectHealthReport);
   const projectHealthRepairReport = useMediaFeatureStore((s) => s.projectHealthRepairReport);

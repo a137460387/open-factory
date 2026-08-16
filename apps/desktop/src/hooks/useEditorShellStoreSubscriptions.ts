@@ -1,5 +1,5 @@
 import {useEditorStore} from '../store/editorStore';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
 import {useMediaFeatureStore} from '../store/mediaFeatureStore';
 import {useCollaborationStore} from '../store/collaborationStore';
@@ -40,7 +40,7 @@ export function useEditorShellStoreSubscriptions() {
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
 
   // --- EditorUIStore: Dialog open states (merged with useShallow) ---
-  const dialogStates = useEditorUIStore(useShallow((s) => ({
+  const dialogStates = useDialogStore(useShallow((s) => ({
     professionalNleExportOpen: s.professionalNleExportOpen,
     mediaPrecheckOpen: s.mediaPrecheckOpen,
     syncCompareOpen: s.syncCompareOpen,
@@ -81,7 +81,7 @@ export function useEditorShellStoreSubscriptions() {
   })));
 
   // --- EditorUIStore: Setters (stable references, grouped with useShallow) ---
-  const uiSetters = useEditorUIStore(useShallow((s) => ({
+  const uiSetters = useDialogStore(useShallow((s) => ({
     setBatchTranscodeOpen: s.setBatchTranscodeOpen,
     setBatchWatermarkOpen: s.setBatchWatermarkOpen,
     setBatchProjectProcessingOpen: s.setBatchProjectProcessingOpen,

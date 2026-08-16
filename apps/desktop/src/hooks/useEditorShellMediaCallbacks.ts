@@ -8,7 +8,7 @@ import {commandManager, projectAccessor} from '../store/commandManager';
 import {useEditorStore} from '../store/editorStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
 import {useMediaFeatureStore} from '../store/mediaFeatureStore';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useMediaJobStore} from '../media/media-job-store';
 import {ensureMediaJobRunner} from '../media/media-job-runner';
@@ -258,7 +258,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
     useMediaFeatureStore.getState().setBatchTranscodeInitialPaths(paths);
-    useEditorUIStore.getState().setBatchTranscodeOpen(true);
+    useDialogStore.getState().setBatchTranscodeOpen(true);
   }, []);
 
   const batchGenerateCovers = useCallback(async () => {
@@ -462,7 +462,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         return;
       }
       useMediaFeatureStore.getState().setDuplicateMediaGroups(groups);
-      useEditorUIStore.getState().setDuplicateMediaOpen(true);
+      useDialogStore.getState().setDuplicateMediaOpen(true);
     } catch (error) {
       showToast({
         kind: 'error',
@@ -477,7 +477,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       for (const selection of selections) {
         commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, selection.assetIds));
       }
-      useEditorUIStore.getState().setDuplicateMediaOpen(false);
+      useDialogStore.getState().setDuplicateMediaOpen(false);
       useMediaFeatureStore.getState().setDuplicateMediaGroups([]);
       showToast({
         kind: 'success',
@@ -516,7 +516,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
   }, []);
 
   const openMediaOrganizer = useCallback(() => {
-    useEditorUIStore.getState().setMediaOrganizerOpen(true);
+    useDialogStore.getState().setMediaOrganizerOpen(true);
     void refreshMediaOrganizer();
   }, [refreshMediaOrganizer]);
 

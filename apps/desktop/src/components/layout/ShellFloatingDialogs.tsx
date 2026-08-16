@@ -21,7 +21,7 @@ import type {
 } from '@open-factory/editor-core';
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
-import { useEditorUIStore } from '../../store/editorUIStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { useTimelineFeatureStore } from '../../store/timelineFeatureStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { usePerformanceMonitorStore } from '../../store/performanceMonitorStore';
@@ -216,14 +216,14 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
   const outPoint = useEditorStore((s) => s.outPoint);
   const projectPath = useEditorStore((s) => s.projectPath);
 
-  const projectTemplateOpen = useEditorUIStore((s) => s.projectTemplateOpen);
-  const setProjectTemplateOpen = useEditorUIStore((s) => s.setProjectTemplateOpen);
-  const timelineSearchOpen = useEditorUIStore((s) => s.timelineSearchOpen);
-  const setTimelineSearchOpen = useEditorUIStore((s) => s.setTimelineSearchOpen);
-  const shortcutCheatsheetOpen = useEditorUIStore((s) => s.shortcutCheatsheetOpen);
-  const setShortcutCheatsheetOpen = useEditorUIStore((s) => s.setShortcutCheatsheetOpen);
-  const pasteKeyframeDialogOpen = useEditorUIStore((s) => s.pasteKeyframeDialogOpen);
-  const setPasteKeyframeDialogOpen = useEditorUIStore((s) => s.setPasteKeyframeDialogOpen);
+  const projectTemplateOpen = useDialogStore((s) => s.projectTemplateOpen);
+  const setProjectTemplateOpen = useDialogStore((s) => s.setProjectTemplateOpen);
+  const timelineSearchOpen = useDialogStore((s) => s.timelineSearchOpen);
+  const setTimelineSearchOpen = useDialogStore((s) => s.setTimelineSearchOpen);
+  const shortcutCheatsheetOpen = useDialogStore((s) => s.shortcutCheatsheetOpen);
+  const setShortcutCheatsheetOpen = useDialogStore((s) => s.setShortcutCheatsheetOpen);
+  const pasteKeyframeDialogOpen = useDialogStore((s) => s.pasteKeyframeDialogOpen);
+  const setPasteKeyframeDialogOpen = useDialogStore((s) => s.setPasteKeyframeDialogOpen);
 
   const timelineTemplateMode = useTimelineFeatureStore((s) => s.timelineTemplateMode);
   const setTimelineTemplateMode = useTimelineFeatureStore((s) => s.setTimelineTemplateMode);

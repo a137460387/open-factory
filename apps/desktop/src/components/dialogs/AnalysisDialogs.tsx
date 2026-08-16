@@ -4,7 +4,7 @@ import {zhCN} from '../../i18n/strings';
 import type {Project, Clip, MediaAsset, Track, BeatSensitivity, ColorGradingGraph} from '@open-factory/editor-core';
 import type {Command} from '@open-factory/editor-core';
 import type {TimelineAccessor} from '@open-factory/editor-core';
-import {useEditorUIStore} from '../../store/editorUIStore';
+import {useDialogStore} from '../../store/dialogStore';
 import {useCollaborationStore} from '../../store/collaborationStore';
 import {useSpectrumAsset, useSetSpectrumAsset} from '../../store/mediaFeatureStore';
 import {useSetSpeakerDiarizationResult} from '../../store/aiFeatureStore';
@@ -155,35 +155,35 @@ export function AnalysisDialogs({
   stopProfilerRecording,
   exportProfilerReportJson,
 }: AnalysisDialogsProps) {
-  // UI open/close states from useEditorUIStore
-  const lutEditorOpen = useEditorUIStore((s) => s.lutEditorOpen);
-  const setLutEditorOpen = useEditorUIStore((s) => s.setLutEditorOpen);
-  const colorNodeEditorOpen = useEditorUIStore((s) => s.colorNodeEditorOpen);
-  const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
-  const colorAnalysisOpen = useEditorUIStore((s) => s.colorAnalysisOpen);
-  const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
-  const colorGradingWorkspaceOpen = useEditorUIStore((s) => s.colorGradingWorkspaceOpen);
-  const setColorGradingWorkspaceOpen = useEditorUIStore((s) => s.setColorGradingWorkspaceOpen);
+  // UI open/close states from useDialogStore
+  const lutEditorOpen = useDialogStore((s) => s.lutEditorOpen);
+  const setLutEditorOpen = useDialogStore((s) => s.setLutEditorOpen);
+  const colorNodeEditorOpen = useDialogStore((s) => s.colorNodeEditorOpen);
+  const setColorNodeEditorOpen = useDialogStore((s) => s.setColorNodeEditorOpen);
+  const colorAnalysisOpen = useDialogStore((s) => s.colorAnalysisOpen);
+  const setColorAnalysisOpen = useDialogStore((s) => s.setColorAnalysisOpen);
+  const colorGradingWorkspaceOpen = useDialogStore((s) => s.colorGradingWorkspaceOpen);
+  const setColorGradingWorkspaceOpen = useDialogStore((s) => s.setColorGradingWorkspaceOpen);
   // 协作查看者角色 → 调色工作台只读
   const collabPermission = useCollaborationStore((s) => s.permission);
-  const videoStitchWizardOpen = useEditorUIStore((s) => s.videoStitchWizardOpen);
-  const setVideoStitchWizardOpen = useEditorUIStore((s) => s.setVideoStitchWizardOpen);
-  const sceneReorderOpen = useEditorUIStore((s) => s.sceneReorderOpen);
-  const setSceneReorderOpen = useEditorUIStore((s) => s.setSceneReorderOpen);
-  const styleTransferOpen = useEditorUIStore((s) => s.styleTransferOpen);
-  const setStyleTransferOpen = useEditorUIStore((s) => s.setStyleTransferOpen);
-  const operationRecordingOpen = useEditorUIStore((s) => s.operationRecordingOpen);
-  const setOperationRecordingOpen = useEditorUIStore((s) => s.setOperationRecordingOpen);
-  const smartRecommendationsOpen = useEditorUIStore((s) => s.smartRecommendationsOpen);
-  const setSmartRecommendationsOpen = useEditorUIStore((s) => s.setSmartRecommendationsOpen);
-  const contentAnalysisOpen = useEditorUIStore((s) => s.contentAnalysisOpen);
-  const setContentAnalysisOpen = useEditorUIStore((s) => s.setContentAnalysisOpen);
-  const profilerOpen = useEditorUIStore((s) => s.profilerOpen);
-  const setProfilerOpen = useEditorUIStore((s) => s.setProfilerOpen);
-  const rhythmAnalysisOpen = useEditorUIStore((s) => s.rhythmAnalysisOpen);
-  const setRhythmAnalysisOpen = useEditorUIStore((s) => s.setRhythmAnalysisOpen);
-  const smartMontageOpen = useEditorUIStore((s) => s.smartMontageOpen);
-  const setSmartMontageOpen = useEditorUIStore((s) => s.setSmartMontageOpen);
+  const videoStitchWizardOpen = useDialogStore((s) => s.videoStitchWizardOpen);
+  const setVideoStitchWizardOpen = useDialogStore((s) => s.setVideoStitchWizardOpen);
+  const sceneReorderOpen = useDialogStore((s) => s.sceneReorderOpen);
+  const setSceneReorderOpen = useDialogStore((s) => s.setSceneReorderOpen);
+  const styleTransferOpen = useDialogStore((s) => s.styleTransferOpen);
+  const setStyleTransferOpen = useDialogStore((s) => s.setStyleTransferOpen);
+  const operationRecordingOpen = useDialogStore((s) => s.operationRecordingOpen);
+  const setOperationRecordingOpen = useDialogStore((s) => s.setOperationRecordingOpen);
+  const smartRecommendationsOpen = useDialogStore((s) => s.smartRecommendationsOpen);
+  const setSmartRecommendationsOpen = useDialogStore((s) => s.setSmartRecommendationsOpen);
+  const contentAnalysisOpen = useDialogStore((s) => s.contentAnalysisOpen);
+  const setContentAnalysisOpen = useDialogStore((s) => s.setContentAnalysisOpen);
+  const profilerOpen = useDialogStore((s) => s.profilerOpen);
+  const setProfilerOpen = useDialogStore((s) => s.setProfilerOpen);
+  const rhythmAnalysisOpen = useDialogStore((s) => s.rhythmAnalysisOpen);
+  const setRhythmAnalysisOpen = useDialogStore((s) => s.setRhythmAnalysisOpen);
+  const smartMontageOpen = useDialogStore((s) => s.smartMontageOpen);
+  const setSmartMontageOpen = useDialogStore((s) => s.setSmartMontageOpen);
 
   // Data from sub-store selector hooks
   const spectrumAsset = useSpectrumAsset();

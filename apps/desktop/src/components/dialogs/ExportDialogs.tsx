@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import type { Project, MediaAsset } from '@open-factory/editor-core';
 import type { ExportPreset } from '../../export/export-presets';
-import { useEditorUIStore } from '../../store/editorUIStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { useExportFeatureStore } from '../../store/exportFeatureStore';
 import type { TimelineImportSummary } from '../../timeline-export/TimelineExportDialog';
 import { PanelLoading } from '../PanelLoading';
@@ -62,14 +62,14 @@ export function ExportDialogs({
   onImportFcpXml,
   onAddMedia,
 }: ExportDialogsProps) {
-  const professionalNleExportOpen = useEditorUIStore((s) => s.professionalNleExportOpen);
-  const setProfessionalNleExportOpen = useEditorUIStore((s) => s.setProfessionalNleExportOpen);
-  const batchTranscodeOpen = useEditorUIStore((s) => s.batchTranscodeOpen);
-  const setBatchTranscodeOpen = useEditorUIStore((s) => s.setBatchTranscodeOpen);
-  const batchWatermarkOpen = useEditorUIStore((s) => s.batchWatermarkOpen);
-  const setBatchWatermarkOpen = useEditorUIStore((s) => s.setBatchWatermarkOpen);
-  const batchProjectProcessingOpen = useEditorUIStore((s) => s.batchProjectProcessingOpen);
-  const setBatchProjectProcessingOpen = useEditorUIStore((s) => s.setBatchProjectProcessingOpen);
+  const professionalNleExportOpen = useDialogStore((s) => s.professionalNleExportOpen);
+  const setProfessionalNleExportOpen = useDialogStore((s) => s.setProfessionalNleExportOpen);
+  const batchTranscodeOpen = useDialogStore((s) => s.batchTranscodeOpen);
+  const setBatchTranscodeOpen = useDialogStore((s) => s.setBatchTranscodeOpen);
+  const batchWatermarkOpen = useDialogStore((s) => s.batchWatermarkOpen);
+  const setBatchWatermarkOpen = useDialogStore((s) => s.setBatchWatermarkOpen);
+  const batchProjectProcessingOpen = useDialogStore((s) => s.batchProjectProcessingOpen);
+  const setBatchProjectProcessingOpen = useDialogStore((s) => s.setBatchProjectProcessingOpen);
   const batchTranscodeInitialPaths = useExportFeatureStore((s) => s.batchTranscodeInitialPaths);
   const setBatchTranscodeInitialPaths = useExportFeatureStore((s) => s.setBatchTranscodeInitialPaths);
   const gifExportAsset = useExportFeatureStore((s) => s.gifExportAsset);

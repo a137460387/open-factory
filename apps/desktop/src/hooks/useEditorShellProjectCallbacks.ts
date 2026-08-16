@@ -15,7 +15,7 @@ import {commandManager, projectAccessor} from '../store/commandManager';
 import {useEditorStore} from '../store/editorStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
 import {useTimelineFeatureStore} from '../store/timelineFeatureStore';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile} from '../lib/tauri-bridge';
 import {normalizeTutorialProgressSettings, skipTutorialProgress, DEFAULT_TUTORIAL_SIGNALS} from '../tutorial/tutorialState';
 import {saveTutorialProgressSettings} from '../settings/appSettings';
@@ -85,7 +85,7 @@ export function useEditorShellProjectCallbacks() {
   }, []);
 
   const saveEncryptedProject = useCallback(() => {
-    useEditorUIStore.getState().setProjectEncryptionSaveOpen(true);
+    useDialogStore.getState().setProjectEncryptionSaveOpen(true);
   }, []);
 
   const startTutorial = useCallback(() => {
@@ -119,7 +119,7 @@ export function useEditorShellProjectCallbacks() {
 
   const confirmProjectEncryptionSave = useCallback(
     async (options: ProjectFileEncryptionOptions) => {
-      useEditorUIStore.getState().setProjectEncryptionSaveOpen(false);
+      useDialogStore.getState().setProjectEncryptionSaveOpen(false);
       await saveProject(options);
     },
     [saveProject],
@@ -215,7 +215,7 @@ export function useEditorShellProjectCallbacks() {
         builtin: true,
         settings: instance.exportSettings,
       });
-      useEditorUIStore.getState().setProjectTemplateOpen(false);
+      useDialogStore.getState().setProjectTemplateOpen(false);
     },
     [executeNewProject],
   );
@@ -268,7 +268,7 @@ export function useEditorShellProjectCallbacks() {
     try {
       const state = useEditorStore.getState();
       const snapshot = await saveProjectSnapshot(state.project, name, state.projectPath);
-      useEditorUIStore.getState().setSnapshotNameOpen(false);
+      useDialogStore.getState().setSnapshotNameOpen(false);
       showToast({ kind: 'success', title: zhCN.projectSnapshots.saved, message: snapshot.name });
     } catch (error) {
       showToast({

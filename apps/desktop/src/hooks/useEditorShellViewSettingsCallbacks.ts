@@ -22,7 +22,7 @@ import {
 import { clampTimelineHeight, createCustomWorkspaceLayout, type EditorLayoutSettings } from '../layout/layoutSettings';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { usePanelStore } from '../store/panelStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -160,7 +160,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     try {
       const settings = await readPreviewWindowSettings();
       const state = await openPreviewWindow(settings);
-      useEditorUIStore.getState().setPreviewWindowOpen(state.open);
+      usePanelStore.getState().setPreviewWindowOpen(state.open);
       useEditorSettingsStore.getState().setPreviewWindowResolutionScale(state.resolutionScale);
       if (state.bounds) {
         persistPreviewWindowState(state);
@@ -192,7 +192,7 @@ export function useEditorShellViewSettingsCallbacks(deps: ViewSettingsCallbacksD
     if (state) {
       persistPreviewWindowState(state);
     }
-    useEditorUIStore.getState().setPreviewWindowOpen(false);
+    usePanelStore.getState().setPreviewWindowOpen(false);
   }, [persistPreviewWindowState]);
 
   const updateTimelineGridSettings = useCallback((patch: Partial<TimelineGridSettings>) => {

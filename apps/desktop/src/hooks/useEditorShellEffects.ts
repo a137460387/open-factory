@@ -1,6 +1,6 @@
 import {useEffect} from 'react';
 import {logger} from '@open-factory/editor-core/utils';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {usePerformanceMonitorStore} from '../store/performanceMonitorStore';
 import {initMediaIndexDb, listenBridge, type DemucsProgressEvent} from '../lib/tauri-bridge';
 import {getDemucsAvailability, type DemucsAvailability} from '../lib/demucs';
@@ -110,7 +110,7 @@ export function useEditorShellEffects(deps: EffectsDeps) {
         setMockSubtitleClips,
         setMockExportHistory,
         setArchiveProgress,
-        setSmartDistributionOpen: useEditorUIStore.getState().setSmartDistributionOpen,
+        setSmartDistributionOpen: useDialogStore.getState().setSmartDistributionOpen,
       };
     }
   }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen, setArchiveProgress]);
