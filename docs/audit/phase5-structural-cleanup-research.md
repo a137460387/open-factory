@@ -261,7 +261,12 @@ components/ 子树共 32 个文件 288 项（evidence: `docs/evidence/phase5-com
 
 ### 3.5 处理方向选项（不做选择）
 
-**方案 A：全部保留为"预留公共 API"**
+> **裁决记录（2026-08-16）**：**方案 A 已采纳**——本类全部保留，不做任何代码改动。
+> 配套措施：knip.json 已通过 `ignoreIssues` 覆盖本类三类文件（desktop barrel / packages / examples），
+> knip 报告中本类 206 项已归零（验证：792 − 206 = 586 项剩余，evidence: `docs/evidence/knip-after-cat3-ignore-2026-08-16.txt`）。
+> 注意：ignore 范围按目录 glob 生效，这些目录下**未来新增**的死导出也不会再被报告，如需收紧为精确文件清单可另行调整。
+
+**方案 A：全部保留为"预留公共 API"**【已裁决采纳】
 - 工作量 0；风险：editor-core 的 94 项未用类型持续膨胀公共面、拖累 tree-shaking 与类型检查；破坏性无
 - plugin-sdk 本身 0 项被标记——**插件生态的契约面是干净的**，本类清理不影响插件生态的稳定性
 

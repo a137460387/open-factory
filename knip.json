@@ -14,5 +14,15 @@
     "**/*.spec.*",
     "**/e2e/**"
   ],
+  "ignoreIssues": {
+    "apps/desktop/src/lib/tauri-bridge/**": ["exports", "types"],
+    "apps/desktop/src/observability/**": ["exports", "types"],
+    "apps/desktop/src/video-gen/**": ["exports", "types"],
+    "packages/editor-core/src/**": ["exports", "types"],
+    "packages/cli/src/**": ["exports", "types"],
+    "packages/creator-dashboard/src/**": ["exports", "types"],
+    "packages/api-gateway/src/**": ["exports", "types"],
+    "examples/plugins/**": ["exports", "types"]
+  },
   "include": ["exports", "types"]
 }
