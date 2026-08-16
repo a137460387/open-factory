@@ -10,17 +10,13 @@ import {
   type CurvePoint,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
-import {
-  useEffect,
-  useRef,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { zhCN } from '../../i18n/strings';
 import { RangeNumberField } from './EffectEditors';
 
 export type ThreeWayKey = keyof ThreeWayColor;
 
-export const THREE_WAY_CHANNELS: Array<{ key: ThreeWayKey; label: string }> = [
+const THREE_WAY_CHANNELS: Array<{ key: ThreeWayKey; label: string }> = [
   { key: 'lift', label: zhCN.inspector.fields.lift },
   { key: 'gamma', label: zhCN.inspector.fields.gamma },
   { key: 'gain', label: zhCN.inspector.fields.gain },
@@ -66,7 +62,7 @@ export function ThreeWayColorEditor({
   );
 }
 
-export function ColorWheelControl({
+function ColorWheelControl({
   label,
   value,
   onCommit,
@@ -244,7 +240,7 @@ export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, m
   return nearestIndex;
 }
 
-export function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
+function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -281,7 +277,7 @@ export function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue
   context.stroke();
 }
 
-export function eventToUnitPoint(
+function eventToUnitPoint(
   event: { clientX: number; clientY: number },
   canvas: HTMLCanvasElement,
 ): { x: number; y: number } {
@@ -295,7 +291,7 @@ export function eventToUnitPoint(
   return { x: x / length, y: y / length };
 }
 
-export function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelValue, 'r' | 'g' | 'b'> {
+function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelValue, 'r' | 'g' | 'b'> {
   return {
     r: clampSigned(point.x),
     g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
@@ -303,7 +299,7 @@ export function wheelPointToOffsets(point: { x: number; y: number }): Pick<Color
   };
 }
 
-export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
+function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
   const x = value.r;
   const y = (value.b - value.g) / 1.7320508;
   const length = Math.hypot(x, y);
@@ -313,7 +309,7 @@ export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: num
   return { x: x / length, y: y / length };
 }
 
-export function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
+function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
   const sector = Math.floor(hue * 6);
   const fraction = hue * 6 - sector;
   const p = value * (1 - saturation);
@@ -336,7 +332,7 @@ export function hsvToRgb(hue: number, saturation: number, value: number): { r: n
 }
 
 /** @deprecated 使用 clamp01 代替 */
-export const clampUnit = clamp01;
+const clampUnit = clamp01;
 
 /** @deprecated 使用 clamp(value, -1, 1) 代替 */
-export const clampSigned = (value: number): number => clamp(value, -1, 1);
+const clampSigned = (value: number): number => clamp(value, -1, 1);

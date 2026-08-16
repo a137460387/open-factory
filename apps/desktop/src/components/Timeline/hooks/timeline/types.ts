@@ -1,10 +1,31 @@
 import type React from 'react';
-import type {TransitionMenuState, ClipMenuState, VolumeEnvelopeMenuState, GapMenuState, RulerMenuState, TrackBatchMenuState} from '../../TimelineMenus';
-import type {ReplaceMediaDialogState, SilenceDialogState, SceneDialogState, WhisperDialogState, CoverFrameDialogState, AnnotationEditorState, TimelineNoteEditorState} from '../../TimelineDialogs';
-import type {TimelineNoteDraftState, BookmarkRenameState} from '../../TimelineOverlays';
-import type {ClipMenuRequest, DragState, GapMenuRequest, VolumeEnvelopeMenuRequest, VolumeEnvelopePointRequest} from '../../TimelineParts';
-import type {RulerContextMenuAction} from '../../timeline-ruler-menu';
-import type {WhisperAvailability} from '../../../../lib/whisper';
+import type {
+  TransitionMenuState,
+  ClipMenuState,
+  VolumeEnvelopeMenuState,
+  GapMenuState,
+  RulerMenuState,
+  TrackBatchMenuState,
+} from '../../TimelineMenus';
+import type {
+  ReplaceMediaDialogState,
+  SilenceDialogState,
+  SceneDialogState,
+  WhisperDialogState,
+  CoverFrameDialogState,
+  AnnotationEditorState,
+  TimelineNoteEditorState,
+} from '../../TimelineDialogs';
+import type { TimelineNoteDraftState, BookmarkRenameState } from '../../TimelineOverlays';
+import type {
+  ClipMenuRequest,
+  DragState,
+  GapMenuRequest,
+  VolumeEnvelopeMenuRequest,
+  VolumeEnvelopePointRequest,
+} from '../../TimelineParts';
+import type { RulerContextMenuAction } from '../../timeline-ruler-menu';
+import type { WhisperAvailability } from '../../../../lib/whisper';
 import type {
   Clip,
   ClipGroup,
@@ -37,10 +58,10 @@ import type {
   TimelineSnapCandidate,
   SnapEdge,
 } from '@open-factory/editor-core';
-import type {useEditorStore, SelectedKeyframeRef} from '../../../../store/editorStore';
-import type {CoverFrameResult} from '../../../../lib/tauri-bridge';
+import type { useEditorStore, SelectedKeyframeRef } from '../../../../store/editorStore';
+import type { CoverFrameResult } from '../../../../lib/tauri-bridge';
 
-export type SubtitleClip = Extract<Clip, { type: 'subtitle' }>;
+type SubtitleClip = Extract<Clip, { type: 'subtitle' }>;
 export type SubtitleAlignmentMediaClip = Extract<Clip, { type: 'audio' | 'video' }>;
 
 export interface TimelineHandlerParams {

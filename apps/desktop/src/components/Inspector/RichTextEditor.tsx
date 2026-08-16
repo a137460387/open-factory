@@ -137,13 +137,17 @@ export function RichTextEditor({
         suppressContentEditableWarning
         data-testid="rich-text-editor-content"
         onBlur={commitFromDom}
-        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(richTextToHtml(clip.richText ?? { paragraphs: [{ runs: [{ text: clip.text }] }] })) }}
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(
+            richTextToHtml(clip.richText ?? { paragraphs: [{ runs: [{ text: clip.text }] }] }),
+          ),
+        }}
       />
     </div>
   );
 }
 
-export function parseRichTextFromElement(element: HTMLElement, fallbackText: string): RichTextDocument {
+function parseRichTextFromElement(element: HTMLElement, fallbackText: string): RichTextDocument {
   const blockNodes = Array.from(element.childNodes).filter((node) => isParagraphNode(node));
   const paragraphs = (blockNodes.length > 0 ? blockNodes : [element]).map((node) => {
     const runs = collectRichTextRuns(node, {});
@@ -152,7 +156,7 @@ export function parseRichTextFromElement(element: HTMLElement, fallbackText: str
   return normalizeRichTextDocument({ paragraphs }, fallbackText);
 }
 
-export function collectRichTextRuns(node: Node, inherited: Omit<RichTextRun, 'text'>): RichTextRun[] {
+function collectRichTextRuns(node: Node, inherited: Omit<RichTextRun, 'text'>): RichTextRun[] {
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent ?? '';
     return text ? [{ text, ...inherited }] : [];
@@ -189,13 +193,13 @@ export function collectRichTextRuns(node: Node, inherited: Omit<RichTextRun, 'te
   return Array.from(node.childNodes).flatMap((child) => collectRichTextRuns(child, next));
 }
 
-export function richTextToHtml(document: RichTextDocument): string {
+function richTextToHtml(document: RichTextDocument): string {
   return document.paragraphs
     .map((paragraph) => `<div>${paragraph.runs.map((run) => richTextRunToHtml(run)).join('') || '<br>'}</div>`)
     .join('');
 }
 
-export function richTextRunToHtml(run: RichTextRun): string {
+function richTextRunToHtml(run: RichTextRun): string {
   const styles = [
     run.color ? `color:${escapeHtmlAttribute(run.color)}` : '',
     run.fontSize ? `font-size:${run.fontSize}px` : '',
@@ -211,11 +215,11 @@ export function richTextRunToHtml(run: RichTextRun): string {
   return html;
 }
 
-export function isParagraphNode(node: Node): boolean {
+function isParagraphNode(node: Node): boolean {
   return node instanceof HTMLElement && ['div', 'p'].includes(node.tagName.toLowerCase());
 }
 
-export function normalizeCssColorForModel(color: string): string | undefined {
+function normalizeCssColorForModel(color: string): string | undefined {
   const value = color.trim();
   if (!value) {
     return undefined;
@@ -227,10 +231,10 @@ export function normalizeCssColorForModel(color: string): string | undefined {
   return value;
 }
 
-export function escapeHtml(value: string): string {
+function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function escapeHtmlAttribute(value: string): string {
+function escapeHtmlAttribute(value: string): string {
   return escapeHtml(value).replace(/'/g, '&#39;');
 }

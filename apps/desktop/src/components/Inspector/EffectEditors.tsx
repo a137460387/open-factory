@@ -247,7 +247,7 @@ export function TextAreaField({
   );
 }
 
-export function CustomShaderEffectFields({
+function CustomShaderEffectFields({
   effect,
   onUpdate,
 }: {
@@ -398,7 +398,7 @@ export function NumberField({
   );
 }
 
-export function AudioSpectrumEffectFields({
+function AudioSpectrumEffectFields({
   effect,
   onUpdate,
 }: {
@@ -498,7 +498,7 @@ export function AudioSpectrumEffectFields({
   );
 }
 
-export function MotionBlurEffectFields({
+function MotionBlurEffectFields({
   effect,
   onUpdate,
 }: {
@@ -557,7 +557,7 @@ export function MotionBlurEffectFields({
   );
 }
 
-export function formatNumberInputValue(value: number): string {
+function formatNumberInputValue(value: number): string {
   return String(Number(value.toFixed(3)));
 }
 

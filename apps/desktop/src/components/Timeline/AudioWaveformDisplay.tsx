@@ -8,15 +8,15 @@
  * keeping the main thread free during playback.
  */
 
-import {useRef, useEffect, useCallback, useState} from 'react';
-import type {AudioRhythmResult, SpectrumFrame} from '@open-factory/editor-core/audio-rhythm-analysis';
-import {formatTimeShort} from '@open-factory/editor-core';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import type { AudioRhythmResult, SpectrumFrame } from '@open-factory/editor-core/audio-rhythm-analysis';
+import { formatTimeShort } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface AudioWaveformDisplayProps {
+interface AudioWaveformDisplayProps {
   /** Audio rhythm analysis result */
   rhythmResult: AudioRhythmResult | null;
   /** Width of the display in pixels */
@@ -72,7 +72,9 @@ function drawWaveform(
   for (let x = 0; x < width; x += 2) {
     const time = (x + scrollLeft) / pixelsPerSecond;
     // Find nearest spectrum frame
-    const frameIdx = Math.round(time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)));
+    const frameIdx = Math.round(
+      time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)),
+    );
     const frame = spectrumFrames[Math.max(0, Math.min(frameIdx, spectrumFrames.length - 1))];
 
     if (!frame) continue;
@@ -86,7 +88,9 @@ function drawWaveform(
   // Mirror
   for (let x = width - 1; x >= 0; x -= 2) {
     const time = (x + scrollLeft) / pixelsPerSecond;
-    const frameIdx = Math.round(time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)));
+    const frameIdx = Math.round(
+      time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)),
+    );
     const frame = spectrumFrames[Math.max(0, Math.min(frameIdx, spectrumFrames.length - 1))];
 
     if (!frame) continue;
@@ -190,16 +194,10 @@ export function AudioWaveformDisplay({
       const offscreen = canvas.transferControlToOffscreen();
       offscreenRef.current = offscreen;
 
-      const worker = new Worker(
-        new URL('../workers/waveform-render.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
+      const worker = new Worker(new URL('../workers/waveform-render.worker.ts', import.meta.url), { type: 'module' });
       workerRef.current = worker;
 
-      worker.postMessage(
-        { type: 'init', canvas: offscreen },
-        [offscreen],
-      );
+      worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
 
       return () => {
         worker.terminate();
@@ -288,7 +286,9 @@ export function AudioWaveformDisplay({
     : null;
 
   const patternLabel = rhythmResult?.pattern
-    ? { steady: '稳定', syncopated: '切分', buildup: '渐快', breakdown: '渐慢', irregular: '不规则' }[rhythmResult.pattern.type]
+    ? { steady: '稳定', syncopated: '切分', buildup: '渐快', breakdown: '渐慢', irregular: '不规则' }[
+        rhythmResult.pattern.type
+      ]
     : null;
 
   return (
@@ -307,9 +307,7 @@ export function AudioWaveformDisplay({
       {onBeatSnapToggle ? (
         <button
           className={`absolute right-2 top-1 rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
-            beatSnapEnabled
-              ? 'bg-amber-500 text-white'
-              : 'bg-black/40 text-white/70 hover:bg-black/60'
+            beatSnapEnabled ? 'bg-amber-500 text-white' : 'bg-black/40 text-white/70 hover:bg-black/60'
           }`}
           type="button"
           title={beatSnapEnabled ? '关闭节拍吸附' : '开启节拍吸附'}
@@ -351,9 +349,7 @@ export function snapToBeat(
 ): { snapped: boolean; time: number } {
   if (beatTimes.length === 0) return { snapped: false, time };
 
-  const nearest = beatTimes.reduce((prev, curr) =>
-    Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev,
-  );
+  const nearest = beatTimes.reduce((prev, curr) => (Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev));
 
   if (Math.abs(nearest - time) <= toleranceSeconds) {
     return { snapped: true, time: nearest };

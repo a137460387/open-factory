@@ -5,17 +5,17 @@
  * with color-coded badges and a hover tooltip showing highlight time points.
  */
 
-import {useState, useMemo} from 'react';
-import {Star} from 'lucide-react';
-import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
-import {extractHighlightRanges} from '@open-factory/editor-core/visual-highlight-engine';
-import {formatTimeShort} from '@open-factory/editor-core';
+import { useState, useMemo } from 'react';
+import { Star } from 'lucide-react';
+import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
+import { extractHighlightRanges } from '@open-factory/editor-core/visual-highlight-engine';
+import { formatTimeShort } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface HighlightOverlayProps {
+interface HighlightOverlayProps {
   /** Highlight markers from visual-highlight-engine */
   highlights: VisualHighlightMarker[];
   /** Total media duration in seconds */
@@ -31,15 +31,15 @@ export interface HighlightOverlayProps {
 // ---------------------------------------------------------------------------
 
 const HIGHLIGHT_TYPE_COLORS: Record<VisualHighlightMarker['type'], string> = {
-  'motion-peak': '#f97316',     // orange
-  'scene-change': '#8b5cf6',    // violet
-  'combined': '#10b981',        // emerald
+  'motion-peak': '#f97316', // orange
+  'scene-change': '#8b5cf6', // violet
+  combined: '#10b981', // emerald
 };
 
 const HIGHLIGHT_TYPE_LABELS: Record<VisualHighlightMarker['type'], string> = {
   'motion-peak': '运动峰值',
   'scene-change': '场景切换',
-  'combined': '综合高光',
+  combined: '综合高光',
 };
 
 // ---------------------------------------------------------------------------
@@ -60,12 +60,7 @@ export function HighlightBadge({ count, className }: { count: number; className?
   );
 }
 
-export function HighlightOverlay({
-  highlights,
-  duration,
-  onSeekToHighlight,
-  compact = false,
-}: HighlightOverlayProps) {
+export function HighlightOverlay({ highlights, duration, onSeekToHighlight, compact = false }: HighlightOverlayProps) {
   const [hovering, setHovering] = useState(false);
   const ranges = useMemo(() => extractHighlightRanges(highlights, 0.5), [highlights]);
 
@@ -125,13 +120,9 @@ export function HighlightOverlay({
                     className="inline-block h-2 w-2 rounded-full"
                     style={{ backgroundColor: HIGHLIGHT_TYPE_COLORS[h.type] }}
                   />
-                  <span className="text-[var(--color-text-secondary)]">
-                    {HIGHLIGHT_TYPE_LABELS[h.type]}
-                  </span>
+                  <span className="text-[var(--color-text-secondary)]">{HIGHLIGHT_TYPE_LABELS[h.type]}</span>
                 </span>
-                <span className="font-mono text-[var(--color-text-muted)]">
-                  {formatTimeShort(h.time)}
-                </span>
+                <span className="font-mono text-[var(--color-text-muted)]">{formatTimeShort(h.time)}</span>
               </button>
             ))}
           </div>
@@ -150,13 +141,7 @@ export function HighlightOverlay({
  * Compact highlight summary shown in MediaCard thumbnail area.
  * Uses colored dots for quick visual scan.
  */
-export function HighlightDots({
-  highlights,
-  maxDots = 3,
-}: {
-  highlights: VisualHighlightMarker[];
-  maxDots?: number;
-}) {
+export function HighlightDots({ highlights, maxDots = 3 }: { highlights: VisualHighlightMarker[]; maxDots?: number }) {
   if (highlights.length === 0) return null;
 
   const topHighlights = highlights.slice(0, maxDots);

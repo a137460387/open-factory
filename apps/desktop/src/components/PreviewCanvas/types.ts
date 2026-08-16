@@ -95,8 +95,6 @@ export interface FrameSearchCandidate {
   time: number;
 }
 
-export type { PreviewRenderer, PreviewFrameReadback, PreviewCompareMode, GpuPreviewMetrics, PreviewPerformanceSettings };
-
 export interface PreviewCanvasProps {
   safeFrameGuides?: boolean;
   previewPerformance?: import('../../lib/preview/preview-performance').PreviewPerformanceSettings;

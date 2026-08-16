@@ -5,7 +5,7 @@ import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { featureStrings } from '../../i18n/featureStrings';
 
 /** Scene boundary point from scene detection. */
-export interface SceneBoundary {
+interface SceneBoundary {
   time: number;
   score: number;
   histogramDiff: number;

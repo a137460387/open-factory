@@ -1,9 +1,43 @@
-import {getEasingPresetsByCategory, getPresetHandles, clamp01, clamp, type EasingPreset, type EasingPresetCategory} from '@open-factory/editor-core';
-import {useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent} from 'react';
-import type {Clip} from '@open-factory/editor-core';
-import {KEYFRAME_PROPERTY_LIMITS, MAX_CLIP_SPEED, MIN_CLIP_SPEED, applyKeyframeHandlePatch, calculateBezierHandleCoordinates, calculateKeyframeSpeedSamples, createDefaultColorCurves, createId, getClipSpeed, interpolateKeyframes, normalizeColorCurves, normalizeCurvePoints, sampleCurve, type ColorCurves, type ColorWheelValue, type CurvePoint, type Keyframe, type KeyframeEasing, type KeyframeHandleMode, type KeyframeProperty} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {type SelectedKeyframeRef} from '../../store/editorStore';
+import {
+  getEasingPresetsByCategory,
+  getPresetHandles,
+  clamp01,
+  clamp,
+  type EasingPreset,
+  type EasingPresetCategory,
+} from '@open-factory/editor-core';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import type { Clip } from '@open-factory/editor-core';
+import {
+  KEYFRAME_PROPERTY_LIMITS,
+  MAX_CLIP_SPEED,
+  MIN_CLIP_SPEED,
+  applyKeyframeHandlePatch,
+  calculateBezierHandleCoordinates,
+  calculateKeyframeSpeedSamples,
+  createDefaultColorCurves,
+  createId,
+  getClipSpeed,
+  interpolateKeyframes,
+  normalizeColorCurves,
+  normalizeCurvePoints,
+  sampleCurve,
+  type ColorCurves,
+  type ColorWheelValue,
+  type CurvePoint,
+  type Keyframe,
+  type KeyframeEasing,
+  type KeyframeHandleMode,
+  type KeyframeProperty,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { type SelectedKeyframeRef } from '../../store/editorStore';
 
 // ---------------------------------------------------------------------------
 // Speed curve helpers
@@ -11,7 +45,7 @@ import {type SelectedKeyframeRef} from '../../store/editorStore';
 
 export type SpeedCurveFrame = { id: string; time: number; value: number; easing: KeyframeEasing };
 
-export function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
+function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
   const frames = normalizeSpeedCurveFrames(
     (clip.keyframes?.speed ?? []) as SpeedCurveFrame[],
     Math.max(0.001, clip.duration),
@@ -28,7 +62,7 @@ export function getSpeedCurveFrames(clip: Clip): SpeedCurveFrame[] {
   );
 }
 
-export function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number): SpeedCurveFrame[] {
+function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: number): SpeedCurveFrame[] {
   return frames
     .map((frame) => ({
       id: frame.id || createId('speed-keyframe'),
@@ -39,7 +73,7 @@ export function normalizeSpeedCurveFrames(frames: SpeedCurveFrame[], duration: n
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-export function eventToSpeedFrame(
+function eventToSpeedFrame(
   event: { clientX: number; clientY: number },
   canvas: HTMLCanvasElement,
   duration: number,
@@ -55,7 +89,7 @@ export function eventToSpeedFrame(
   };
 }
 
-export function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame[], duration: number): void {
+function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCurveFrame[], duration: number): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -102,7 +136,7 @@ export function drawSpeedCurveCanvas(canvas: HTMLCanvasElement, frames: SpeedCur
   }
 }
 
-export function speedFrameToPoint(
+function speedFrameToPoint(
   frame: SpeedCurveFrame,
   duration: number,
   width: number,
@@ -118,7 +152,7 @@ export function speedFrameToPoint(
   };
 }
 
-export function findNearestSpeedFrame(
+function findNearestSpeedFrame(
   frames: SpeedCurveFrame[],
   target: SpeedCurveFrame,
   duration: number,
@@ -252,15 +286,15 @@ export function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(fram
 // Keyframe curve editor types & helpers
 // ---------------------------------------------------------------------------
 
-export type CurveEditorDrag =
+type CurveEditorDrag =
   | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }
   | { mode: 'points'; start: CurveEditorFrame; base: CurveEditorFrame[]; selectedIds: string[] }
   | { mode: 'handle'; keyframeId: string; handle: 'in' | 'out'; base: CurveEditorFrame[] };
 
-export type CanvasPoint = { x: number; y: number };
-export type CurveEditorFrame = Keyframe<number>;
+type CanvasPoint = { x: number; y: number };
+type CurveEditorFrame = Keyframe<number>;
 
-export function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
+function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
   return normalizeCurveEditorFrames(
     (clip.keyframes?.[property] ?? []) as CurveEditorFrame[],
     property,
@@ -268,7 +302,7 @@ export function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): Cu
   );
 }
 
-export function normalizeCurveEditorFrames(
+function normalizeCurveEditorFrames(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -287,7 +321,7 @@ export function normalizeCurveEditorFrames(
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
-export function drawKeyframeCurveCanvas(
+function drawKeyframeCurveCanvas(
   canvas: HTMLCanvasElement,
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
@@ -412,7 +446,7 @@ export function drawKeyframeCurveCanvas(
   }
 }
 
-export function drawKeyframeVelocityCanvas(
+function drawKeyframeVelocityCanvas(
   canvas: HTMLCanvasElement,
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
@@ -451,11 +485,11 @@ export function drawKeyframeVelocityCanvas(
   context.stroke();
 }
 
-export function getInterpolatedCurveEditorValue(left: CurveEditorFrame, right: CurveEditorFrame, time: number): number {
+function getInterpolatedCurveEditorValue(left: CurveEditorFrame, right: CurveEditorFrame, time: number): number {
   return interpolateKeyframes([left, right], time, left.value);
 }
 
-export function findNearestCurveHandle(
+function findNearestCurveHandle(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -496,7 +530,7 @@ export function findNearestCurveHandle(
   return nearest;
 }
 
-export function findNearestCurveFrameIdByPoint(
+function findNearestCurveFrameIdByPoint(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -517,7 +551,7 @@ export function findNearestCurveFrameIdByPoint(
   return nearest;
 }
 
-export function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMode {
+function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMode {
   if (mode === 'unified') {
     return 'independent';
   }
@@ -527,7 +561,7 @@ export function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHa
   return 'unified';
 }
 
-export function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
+function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
   if (
     property === 'opacity' ||
     property === 'volume' ||
@@ -540,7 +574,7 @@ export function getKeyframeFallbackForCurve(property: KeyframeProperty): number 
   return 0;
 }
 
-export function eventToCurveEditorFrame(
+function eventToCurveEditorFrame(
   event: ReactPointerEvent<HTMLCanvasElement>,
   canvas: HTMLCanvasElement,
   property: KeyframeProperty,
@@ -559,10 +593,7 @@ export function eventToCurveEditorFrame(
   };
 }
 
-export function eventToCanvasPoint(
-  event: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-): CanvasPoint {
+function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CanvasPoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.min(canvas.width, Math.max(0, ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width)),
@@ -570,7 +601,7 @@ export function eventToCanvasPoint(
   };
 }
 
-export function curveFrameToPoint(
+function curveFrameToPoint(
   frame: CurveEditorFrame,
   property: KeyframeProperty,
   duration: number,
@@ -584,7 +615,7 @@ export function curveFrameToPoint(
   };
 }
 
-export function findNearestCurveFrame(
+function findNearestCurveFrame(
   frames: CurveEditorFrame[],
   target: CurveEditorFrame,
   property: KeyframeProperty,
@@ -608,7 +639,7 @@ export function findNearestCurveFrame(
   return nearest;
 }
 
-export function getCurveFrameIdsInBox(
+function getCurveFrameIdsInBox(
   frames: CurveEditorFrame[],
   property: KeyframeProperty,
   duration: number,
@@ -626,11 +657,11 @@ export function getCurveFrameIdsInBox(
   });
 }
 
-export function formatKeyframeProperty(property: KeyframeProperty): string {
+function formatKeyframeProperty(property: KeyframeProperty): string {
   return zhCN.inspector.keyframeProperty[property] ?? property;
 }
 
-export function formatKeyframeValue(property: KeyframeProperty, value: number): string {
+function formatKeyframeValue(property: KeyframeProperty, value: number): string {
   if (property === 'speed') {
     return `${value.toFixed(2)}x`;
   }
@@ -654,7 +685,7 @@ export function formatKeyframeValue(property: KeyframeProperty, value: number): 
 // ---------------------------------------------------------------------------
 
 /** 缓动预设选择器组件（exported for testing） */
-export function EasingPresetSelector({
+function EasingPresetSelector({
   selectedIds,
   frames,
   onApplyPreset,
@@ -714,7 +745,7 @@ export function EasingPresetSelector({
 // KeyframeCurveEditor component
 // ---------------------------------------------------------------------------
 
-export function KeyframeCurveEditor({
+function KeyframeCurveEditor({
   clip,
   property,
   selectedKeyframes,
@@ -948,7 +979,7 @@ export function KeyframeCurveEditor({
 // Color curve helpers
 // ---------------------------------------------------------------------------
 
-export function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], strokeColor: string): void {
+function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], strokeColor: string): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -1003,7 +1034,7 @@ export function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[],
   }
 }
 
-export function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
+function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: clampUnit((event.clientX - rect.left) / rect.width),
@@ -1011,7 +1042,7 @@ export function eventToCurvePoint(event: { clientX: number; clientY: number }, c
   };
 }
 
-export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDistance: number): number | null {
+function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDistance: number): number | null {
   let nearestIndex: number | null = null;
   let nearestDistance = maxDistance;
   points.forEach((candidate, index) => {
@@ -1030,7 +1061,7 @@ export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, m
 
 export type CurveChannel = keyof ColorCurves;
 
-export const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }> = [
+const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }> = [
   { key: 'master', label: zhCN.inspector.fields.masterCurve, color: '#f8fafc' },
   { key: 'r', label: zhCN.inspector.fields.redCurve, color: '#ef4444' },
   { key: 'g', label: zhCN.inspector.fields.greenCurve, color: '#22c55e' },
@@ -1243,7 +1274,7 @@ export function wheelPointToOffsets(point: { x: number; y: number }): Pick<Color
   };
 }
 
-export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
+function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
   const x = value.r;
   const y = (value.b - value.g) / 1.7320508;
   const length = Math.hypot(x, y);
@@ -1253,7 +1284,7 @@ export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: num
   return { x: x / length, y: y / length };
 }
 
-export function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
+function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
   const sector = Math.floor(hue * 6);
   const fraction = hue * 6 - sector;
   const p = value * (1 - saturation);
@@ -1279,12 +1310,12 @@ export function hsvToRgb(hue: number, saturation: number, value: number): { r: n
 // Shared numeric utilities
 // ---------------------------------------------------------------------------
 
-export function roundFinite(value: number): number {
+function roundFinite(value: number): number {
   return Number.isFinite(value) ? Math.round(value * 1000) / 1000 : 0;
 }
 
 /** @deprecated 使用 clamp01 代替 */
-export const clampUnit = clamp01;
+const clampUnit = clamp01;
 
 /** @deprecated 使用 clamp(value, -1, 1) 代替 */
-export const clampSigned = (value: number): number => clamp(value, -1, 1);
+const clampSigned = (value: number): number => clamp(value, -1, 1);

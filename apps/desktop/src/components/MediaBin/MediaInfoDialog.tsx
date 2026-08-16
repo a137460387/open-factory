@@ -20,7 +20,7 @@ export function formatBytes(bytes?: number): string {
   return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
-export function formatBitRate(bitRate?: number): string {
+function formatBitRate(bitRate?: number): string {
   if (bitRate === undefined || !Number.isFinite(bitRate)) {
     return zhCN.common.unavailable;
   }
@@ -33,7 +33,7 @@ export function formatBitRate(bitRate?: number): string {
   return `${Math.round(bitRate)} bps`;
 }
 
-export function formatDateTime(timestamp?: number): string {
+function formatDateTime(timestamp?: number): string {
   if (timestamp === undefined || !Number.isFinite(timestamp)) {
     return zhCN.common.unavailable;
   }
