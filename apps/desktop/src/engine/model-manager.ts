@@ -338,9 +338,3 @@ export type ModelManagerEvent =
   | { type: 'unloading'; modelId: string }
   | { type: 'unloaded'; modelId: string }
   | { type: 'error'; modelId: string; error: Error };
-
-// ---------------------------------------------------------------------------
-// Singleton instance
-// ---------------------------------------------------------------------------
-
-export const modelManager = new ModelManager();

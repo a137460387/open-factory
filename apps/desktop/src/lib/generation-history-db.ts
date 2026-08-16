@@ -6,25 +6,6 @@ const STORE_NAME = 'generation-history';
 const PRESET_STORE_NAME = 'presets';
 const TASK_PROGRESS_STORE = 'task-progress';
 
-/** Generation history entry stored in IndexedDB */
-export interface GenerationHistoryEntry {
-  id: string;
-  prompt: string;
-  negativePrompt?: string;
-  imagePath?: string;
-  numFrames: number;
-  resolution: number;
-  fps: number;
-  steps: number;
-  cfgScale: number;
-  seed?: number;
-  status: 'completed' | 'failed' | 'canceled';
-  videoPath?: string;
-  error?: string;
-  durationMs?: number;
-  createdAt: number;
-}
-
 /** Open the IndexedDB database */
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {

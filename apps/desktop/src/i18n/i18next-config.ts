@@ -76,12 +76,4 @@ export async function switchLanguage(lng: 'zh' | 'en'): Promise<void> {
   }
 }
 
-/**
- * Get current language
- */
-export function getCurrentLanguage(): 'zh' | 'en' {
-  const lng = i18n.language;
-  return lng?.startsWith('en') ? 'en' : 'zh';
-}
-
 export default i18n;
