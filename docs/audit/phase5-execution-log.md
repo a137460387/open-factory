@@ -62,6 +62,59 @@
 
 ---
 
+## 类别二（组件 prop 导出，288 项）全过程记录（2026-08-16 晚）
+
+### 前置：vi.mock 路径修复（fdcf1f43）
+
+1b 迁移后 15 个 hooks 测试文件的 `vi.mock` 仍打在旧 barrel 路径上（拦截失效、测试意图弱化）。修复：
+- 13 个文件：mock 路径改到生产代码实际导入的子 store（dialogStore/panelStore/aiFeatureStore/mediaFeatureStore/timelineFeatureStore）+ 符号重命名；结构断言 63 对 mock/import 路径全对齐
+- 2 个文件（FloatingDialogsCallbacks/PanelCallbacks）：生产文件无任何 store 运行时依赖，barrel mock 为纯残留 → 删除
+- 拦截生效验证：Profiler 测试破坏 selector mock → 测试立即失败（行为学证明生产读的是 mock）；Effects/Interactions 用例不触及 store 调用路径（用例窄，结构对齐保证拦截）
+- 验证：hooks 套件 20 文件 187 测试全过；typecheck 过
+- codemod 中途暴露 CRLF 行尾坑与 PanelCallbacks 的 editorStore mock（范围外，未动）
+
+### B1：死重导出行（5023cbd4）
+
+- 文档预估 ~105 项实测为 **86 项**（预估把非 components/ 的重导出项计入，如实修正）
+- 3 文件：InspectorEditors（62）、TimelineParts（23）、EmotionCurveChart（1）；整删 4 条语句 + 修剪 6 条
+- 验证：420 组件/store 测试过；knip 449→363（−86 精确对账）
+
+### B2：多余 export 关键字（fea9323d）
+
+- 词频复核后实际处理 **136 项**（原估 160：其中 66 项 ownfile-unused 转 B4、lazyComponents 42 项转 B4）
+- 24 文件；含 PreviewCanvas/types.ts 的无 from 本地类型导出句整删
+- **两次事故与修复**（如实记录）：
+  1. prefix 正则误伤 `export type { X };` 形态 → TS2457，人工修复 + 全仓排查无同类
+  2. 首次 commit 因 `prettier --write` glob 把 components/ 全部 130 文件重排（+8820 行无关改动，违反"禁止全仓 format"）→ reset 重做，剥离为 24 个语义文件
+- 验证：typecheck（真实退出码）+ 265 组件测试；knip 363→227（−136，集合级 diff 全部来自预期文件、无新增）
+
+### B3：重复定义收敛（1a3434c8）
+
+- **逐行 diff 结论（用户停止点核查）**：8 对死副本 vs 活副本全部语义等价（5 对逐行相同、3 对仅差 export 前缀、TextAreaField 仅差声明形式）；CurveEditors↔KeyframeCurveEditor 26 个同名定义中 25 个逐行等价、clampUnit 逐字相同、KeyframeCurveEditor 组件唯一差异是一条注释语言（非行为分歧，收敛保留中文注释版）→ **无行为分歧，未触发停止**
+- 执行：删 8 个死副本（InspectorEditors 2 / EffectEditors 3 / ColorEditors 3）；KeyframeCurveEditor.tsx 以 TS AST 精确删除 25 个重复定义改为从 CurveEditors 导入（948→约 400 行）；CurveEditors 25 个共享符号恢复导出
+- **事故与修复**：首次用括号平衡启发式删除导致语法损坏（clampUnit 单行 const 块判定吞并后续函数）→ 回滚两文件，改用 TypeScript AST API 精确定位后成功
+- 验证：typecheck + 265 测试；净删 759 行；knip 227→219
+
+### B4：真死代码（5ab20070）
+
+- 58 项逐项复核（**复核器自身两次翻车均被识别并修正**：Windows cmd 下 shell grep 路径失效产生全 DEAD 假象 → 改 Node 原生遍历；纯标识符匹配对 lazyComponents 产生 48 个假 KEEP → 结合 knip 模块级信号 + EditorShell 消费清单 + 人工查证逐一澄清为路径字符串/同名私有副本碰撞）
+- 删除：lazyComponents 42 个死 wrapper、2 个 default 导出行、8 个常量、AudioWaveformDisplay/HighlightOverlay 等组件、曲线色彩轮 3 个死副本、SpeedCurveEditor 死副本等
+- 附带发现：`drawColorWheel` 存在 **4 份私有副本**（ColorEditors/ProfessionalColorGradingPanel/LutEditorDialog 三份活 + CurveEditors 一份死已删），三份活副本的归一留作后续
+- 验证：typecheck + 265 测试；knip 219→162，**components/ 桶 288→0**
+
+### 类别二总账
+
+B1 86 + B2 136 + B3 8 + B4 58 = **288 项，与调研清单精确闭合**。
+
+### 最终完整验证（1c 同规格，2026-08-16）
+
+- typecheck：exit 0（真实退出码）
+- 全量单测：625 文件 / **11234 通过**（3 skipped，0 失败；2 个 unhandled errors 为已 A/B 定性的存量错误路径 rejection）
+- 全量 e2e：**522 通过**（31.2 分钟，exit 0；证据 `docs/evidence/phase5-cat2-e2e-2026-08-16.txt`）
+- knip 终值：**162 项**（类别二开始前 449 → 162；components/ 桶归零；剩余为类别三已裁决保留范围外的新死代码候选，如 markActiveTasksAsFailed）
+
+---
+
 ## 其他工作线摘要
 
 | Commit | 内容 |
@@ -75,7 +128,8 @@
 
 ## 待用户裁决的遗留项
 
-1. **15 个测试文件的 barrel 路径 vi.mock 脱靶**（1b 连带发现，见上）
+1. ~~15 个测试文件的 barrel 路径 vi.mock 脱靶~~（已修复，fdcf1f43）
 2. **markActiveTasksAsFailed**：useVideoGeneration hook 删除后成为新死代码（knip 已标记）
-3. **类别二（288 项）四批清理**：等启动指令
+3. ~~类别二（288 项）四批清理~~（已完成）
 4. 组合 hook（useEditorFeatureStore/useEditorUIStore）已无外部消费者，是否最终退役另行裁决
+5. **drawColorWheel 等 3 份活私有副本归一**（B4 附带发现，涉及 ColorEditors/ProfessionalColorGradingPanel/LutEditorDialog）
