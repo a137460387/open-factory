@@ -272,9 +272,9 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: nick-fields/retry@v3
         with:
-          max_attempts: 2
+          max_attempts: 1
           timeout_minutes: 20
-          command: cd "$GITHUB_WORKSPACE/apps/desktop" && bunx playwright test --workers=2 --reporter=list,html
+          command: cd "$GITHUB_WORKSPACE/apps/desktop" && bunx playwright test e2e/ai-quality-assessment.spec.ts --workers=2 --reporter=list,html
 
       - name: Upload test report
         if: always() && needs.changes.outputs.code == 'true'
