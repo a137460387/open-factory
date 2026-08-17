@@ -100,6 +100,7 @@
 - 58 项逐项复核（**复核器自身两次翻车均被识别并修正**：Windows cmd 下 shell grep 路径失效产生全 DEAD 假象 → 改 Node 原生遍历；纯标识符匹配对 lazyComponents 产生 48 个假 KEEP → 结合 knip 模块级信号 + EditorShell 消费清单 + 人工查证逐一澄清为路径字符串/同名私有副本碰撞）
 - 删除：lazyComponents 42 个死 wrapper、2 个 default 导出行、8 个常量、AudioWaveformDisplay/HighlightOverlay 等组件、曲线色彩轮 3 个死副本、SpeedCurveEditor 死副本等
 - 附带发现：`drawColorWheel` 存在 **4 份私有副本**（ColorEditors/ProfessionalColorGradingPanel/LutEditorDialog 三份活 + CurveEditors 一份死已删），三份活副本的归一留作后续
+- **该判断后续被更正（见下节）**：实际为 2 份等价 + 1 份同名异功能，非三份重复
 - 验证：typecheck + 265 测试；knip 219→162，**components/ 桶 288→0**
 
 ### 类别二总账
@@ -126,10 +127,26 @@ B1 86 + B2 136 + B3 8 + B4 58 = **288 项，与调研清单精确闭合**。
 
 ---
 
+### 色彩轮"3 份副本"的误判与更正（2026-08-17，用户裁决 B）
+
+B4 汇报曾把 drawColorWheel 归为"3 份活私有副本"。逐行 diff（证据 `docs/evidence/phase5-tail1-diff-2026-08-17.txt`）更正：**同名不等于重复**——
+
+- **ColorEditors ↔ LutEditor 两份语义等价**：drawColorWheel/wheelPointToOffsets 逐行相同；eventToUnitPoint 仅 if/三元风格差异；hsvToRgb 仅变量名差异（t vs tt）；另含内部依赖 clampSigned/wheelOffsetsToPoint
+- **ProfessionalColorGradingPanel 是同名异功能独立实现**：双轴 r/b 模型（无 g 通道，返回 Partial）、HSL 色相扇区绘制（非 HSV 像素级 ImageData）、y 轴取反且无长度归一化、React.PointerEvent 签名——三个函数均与另两份行为不同
+
+**误判根因**：B4 复核用纯标识符匹配（同名即算副本）未做逐行验证。本项目第三次同类教训（ASRState/StyleSummary 名字碰撞、lazyComponents 假 KEEP、本次），方法论结论：**同名符号必须逐行 diff 后才能定性为重复**。
+
+**处理（裁决 B，一个 commit）**：
+1. 等价两份归一到 `apps/desktop/src/lib/color-wheel.ts`（单一来源：导出 drawColorWheel/eventToUnitPoint/wheelPointToOffsets，私有 hsvToRgb/clampSigned/wheelOffsetsToPoint），ColorEditors 与 LutEditor 改为导入
+2. ProfessionalColorGradingPanel 三函数纯改名消歧（行为零改动）：drawColorWheel→drawHslWheel、wheelPointToOffsets→biaxialPointToOffsets、eventToUnitPoint→eventToBiaxialPoint（定义+调用点各 x2，无遗漏）
+3. 验证：typecheck ✓ + 265 组件测试 ✓
+
+---
+
 ## 待用户裁决的遗留项
 
 1. ~~15 个测试文件的 barrel 路径 vi.mock 脱靶~~（已修复，fdcf1f43）
 2. **markActiveTasksAsFailed**：useVideoGeneration hook 删除后成为新死代码（knip 已标记）
 3. ~~类别二（288 项）四批清理~~（已完成）
 4. 组合 hook（useEditorFeatureStore/useEditorUIStore）已无外部消费者，是否最终退役另行裁决
-5. **drawColorWheel 等 3 份活私有副本归一**（B4 附带发现，涉及 ColorEditors/ProfessionalColorGradingPanel/LutEditorDialog）
+5. ~~drawColorWheel 3 份活副本归一~~（已完成，见「色彩轮误判与更正」节）
