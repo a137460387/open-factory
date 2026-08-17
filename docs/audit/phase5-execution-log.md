@@ -150,3 +150,32 @@ B4 汇报曾把 drawColorWheel 归为"3 份活私有副本"。逐行 diff（证�
 3. ~~类别二（288 项）四批清理~~（已完成）
 4. 组合 hook（useEditorFeatureStore/useEditorUIStore）已无外部消费者，是否最终退役另行裁决
 5. ~~drawColorWheel 3 份活副本归一~~（已完成，见「色彩轮误判与更正」节）
+
+---
+
+## 收尾：push + CI 核对 + 合并（2026-08-17）
+
+### 分支推送
+
+- 分支 `refactor/phase5-structural-cleanup` 已推送至 origin，PR #146 head 为 `7c6c107d`
+
+### 合并前 CI 核对（对照 main 权威基线，run 32021207887）
+
+| 检查 | 结果 | 判定 |
+|------|------|------|
+| rust（必需） | pass | ✓ |
+| frontend | fail（仅已知 fast-uri GHSA-7p8r-x3mc-p8w7，无新增） | ✓ |
+| e2e | fail（已知 flaky：ai-local-denoise:4、app-launch:25 稳定失败 + 20 分钟超时） | ✓ 无新增 |
+
+### ai-quality-assessment 环境性 flaky 定性（对等验证）
+
+- main 基线与 PR 分支在**单测试对等条件**下均 **3/3 稳定通过**
+- 失败**仅见于全量 e2e 高并发负载场景**
+- 定性：环境性 flaky，与本次改动无关；已记录至 `docs/audit/known-issues.md`
+
+### 合并
+
+- 合并方式：merge commit（符合仓库惯例）
+- merge commit：`e1831ca1c53b5675fcc484eb3c62954f4de48c38`
+- 合并时间：2026-08-17 20:26:40 (+0800)，由 a137460387（luoxiaoyu）执行
+- 远程分支删除：`refactor/phase5-structural-cleanup` 已删除
