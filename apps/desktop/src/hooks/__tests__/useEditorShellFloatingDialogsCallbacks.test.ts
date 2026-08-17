@@ -3,8 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 vi.mock('../../store/editorStore', () => ({ useEditorStore: { getState: () => ({ project: { media: [] } }) } }));
-vi.mock('../../store/editorUIStore', () => ({ useEditorUIStore: { getState: () => ({}) } }));
-vi.mock('../../store/editorFeatureStore', () => ({ useEditorFeatureStore: { getState: () => ({}) } }));
 vi.mock('../../lib/toast', () => ({ showToast: vi.fn() }));
 
 import { useEditorShellFloatingDialogsCallbacks } from '../../hooks/useEditorShellFloatingDialogsCallbacks';

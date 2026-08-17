@@ -1,7 +1,7 @@
 import {lazy, Suspense} from 'react';
 import type {ProjectFileEncryptionOptions} from '../../lib/projectFiles';
-import {useEditorUIStore} from '../../store/editorUIStore';
-import {useEditorFeatureStore} from '../../store/editorFeatureStore';
+import {useDialogStore} from '../../store/dialogStore';
+import {useTimelineFeatureStore} from '../../store/timelineFeatureStore';
 import {PanelLoading} from '../PanelLoading';
 
 const ProjectEncryptionSaveDialog = lazy(() =>
@@ -16,10 +16,10 @@ export interface SecurityDialogsProps {
 }
 
 export function SecurityDialogs({ confirmProjectEncryptionSave }: SecurityDialogsProps) {
-  const projectEncryptionSaveOpen = useEditorUIStore((s) => s.projectEncryptionSaveOpen);
-  const setProjectEncryptionSaveOpen = useEditorUIStore((s) => s.setProjectEncryptionSaveOpen);
-  const projectPasswordRequest = useEditorFeatureStore((s) => s.projectPasswordRequest);
-  const setProjectPasswordRequest = useEditorFeatureStore((s) => s.setProjectPasswordRequest);
+  const projectEncryptionSaveOpen = useDialogStore((s) => s.projectEncryptionSaveOpen);
+  const setProjectEncryptionSaveOpen = useDialogStore((s) => s.setProjectEncryptionSaveOpen);
+  const projectPasswordRequest = useTimelineFeatureStore((s) => s.projectPasswordRequest);
+  const setProjectPasswordRequest = useTimelineFeatureStore((s) => s.setProjectPasswordRequest);
 
   return (
     <Suspense fallback={<PanelLoading label="安全" />}>

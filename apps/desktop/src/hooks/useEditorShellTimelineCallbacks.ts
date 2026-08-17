@@ -48,8 +48,8 @@ import { showToast } from '../lib/toast';
 import { zhCN, t } from '../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useEditorStore, selectClipById } from '../store/editorStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -143,13 +143,13 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   const setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
   const setSelectedKeyframes = useEditorStore((s) => s.setSelectedKeyframes);
-  const setColorAnalysisBusy = useEditorFeatureStore((s) => s.setColorAnalysisBusy);
-  const setColorAnalysisResults = useEditorFeatureStore((s) => s.setColorAnalysisResults);
-  const setColorAnalysisJumps = useEditorFeatureStore((s) => s.setColorAnalysisJumps);
-  const setColorAnalysisSamples = useEditorFeatureStore((s) => s.setColorAnalysisSamples);
-  const setColorHeatmapPoints = useEditorFeatureStore((s) => s.setColorHeatmapPoints);
-  const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
-  const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
+  const setColorAnalysisBusy = useMediaFeatureStore((s) => s.setColorAnalysisBusy);
+  const setColorAnalysisResults = useMediaFeatureStore((s) => s.setColorAnalysisResults);
+  const setColorAnalysisJumps = useMediaFeatureStore((s) => s.setColorAnalysisJumps);
+  const setColorAnalysisSamples = useMediaFeatureStore((s) => s.setColorAnalysisSamples);
+  const setColorHeatmapPoints = useMediaFeatureStore((s) => s.setColorHeatmapPoints);
+  const setColorAnalysisOpen = useDialogStore((s) => s.setColorAnalysisOpen);
+  const setColorNodeEditorOpen = useDialogStore((s) => s.setColorNodeEditorOpen);
 
   // -----------------------------------------------------------------------
   // Clip 添加到时间线

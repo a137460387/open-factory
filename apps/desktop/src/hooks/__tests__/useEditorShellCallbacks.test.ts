@@ -20,12 +20,12 @@ vi.mock('../../store/commandManager', () => ({
   timelineAccessor: { getTimeline: () => ({ tracks: [] }), setTimeline: vi.fn() },
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: { getState: () => mockFeatureState },
+vi.mock('../../store/aiFeatureStore', () => ({
+  useAIFeatureStore: { getState: () => mockFeatureState },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: { getState: () => mockUIState },
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: { getState: () => mockUIState },
 }));
 
 vi.mock('../../store/editorSettingsStore', () => ({

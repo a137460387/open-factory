@@ -1,5 +1,5 @@
 import type { BeatSensitivity } from '@open-factory/editor-core';
-import { useEditorUIStore } from '../../store/editorUIStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { zhCN } from '../../i18n/strings';
 
@@ -22,8 +22,8 @@ export function BeatSyncDialog({
   detectSelectedBeats,
   snapSelectedToBeats,
 }: BeatSyncDialogProps) {
-  const beatSyncOpen = useEditorUIStore((s) => s.beatSyncOpen);
-  const setBeatSyncOpen = useEditorUIStore((s) => s.setBeatSyncOpen);
+  const beatSyncOpen = useDialogStore((s) => s.beatSyncOpen);
+  const setBeatSyncOpen = useDialogStore((s) => s.setBeatSyncOpen);
   const beatSensitivity = useEditorSettingsStore((s) => s.beatSensitivity);
   const setBeatSensitivity = useEditorSettingsStore((s) => s.setBeatSensitivity);
   const beatSyncManualBpm = useEditorSettingsStore((s) => s.beatSyncManualBpm);

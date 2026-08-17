@@ -10,7 +10,7 @@ import {
   type MediaRenameRules,
 } from '@open-factory/editor-core';
 
-export function BatchTextField({
+function BatchTextField({
   label,
   value,
   onChange,

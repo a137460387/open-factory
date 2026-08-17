@@ -17,7 +17,7 @@ import {
 } from './settings/appSettings';
 import { NativeCancelSmokeRunner } from './smoke/NativeCancelSmokeRunner';
 import { NativePreviewSmokeRunner } from './smoke/NativePreviewSmokeRunner';
-import { useEditorUIStore } from './store/editorUIStore';
+import { usePanelStore } from './store/panelStore';
 import { useDemucsSettingsStore } from './store/demucsSettingsStore';
 import { usePrivacyDetectionSettingsStore } from './store/privacyDetectionSettingsStore';
 import { useWhisperSettingsStore } from './store/whisperSettingsStore';
@@ -32,8 +32,8 @@ export function App() {
   // 订阅回调被调用后 React 偶发不重渲染（语言状态已切、UI 停在旧语言，
   // e2e i18n:6 根因）。改用 Zustand 通道——与 viewportSize/resize 同一机制，
   // 该通道的订阅者重渲染在本应用被证明可靠。
-  useEditorUIStore((state) => state.languageVersion);
-  useEffect(() => subscribeLanguage(() => useEditorUIStore.getState().bumpLanguageVersion()), []);
+  usePanelStore((state) => state.languageVersion);
+  useEffect(() => subscribeLanguage(() => usePanelStore.getState().bumpLanguageVersion()), []);
   const previewWindowMode =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('previewWindow') === '1';
   useEffect(() => {

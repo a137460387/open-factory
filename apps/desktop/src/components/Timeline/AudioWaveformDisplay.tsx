@@ -8,15 +8,15 @@
  * keeping the main thread free during playback.
  */
 
-import {useRef, useEffect, useCallback, useState} from 'react';
-import type {AudioRhythmResult, SpectrumFrame} from '@open-factory/editor-core/audio-rhythm-analysis';
-import {formatTimeShort} from '@open-factory/editor-core';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import type { AudioRhythmResult, SpectrumFrame } from '@open-factory/editor-core/audio-rhythm-analysis';
+import { formatTimeShort } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export interface AudioWaveformDisplayProps {
+interface AudioWaveformDisplayProps {
   /** Audio rhythm analysis result */
   rhythmResult: AudioRhythmResult | null;
   /** Width of the display in pixels */
@@ -72,7 +72,9 @@ function drawWaveform(
   for (let x = 0; x < width; x += 2) {
     const time = (x + scrollLeft) / pixelsPerSecond;
     // Find nearest spectrum frame
-    const frameIdx = Math.round(time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)));
+    const frameIdx = Math.round(
+      time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)),
+    );
     const frame = spectrumFrames[Math.max(0, Math.min(frameIdx, spectrumFrames.length - 1))];
 
     if (!frame) continue;
@@ -86,7 +88,9 @@ function drawWaveform(
   // Mirror
   for (let x = width - 1; x >= 0; x -= 2) {
     const time = (x + scrollLeft) / pixelsPerSecond;
-    const frameIdx = Math.round(time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)));
+    const frameIdx = Math.round(
+      time * (spectrumFrames.length / (spectrumFrames[spectrumFrames.length - 1]?.time || 1)),
+    );
     const frame = spectrumFrames[Math.max(0, Math.min(frameIdx, spectrumFrames.length - 1))];
 
     if (!frame) continue;
@@ -157,190 +161,6 @@ function drawBeatMarkers(
 
 const supportsOffscreenCanvas = typeof OffscreenCanvas !== 'undefined';
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export function AudioWaveformDisplay({
-  rhythmResult,
-  width,
-  height = 64,
-  pixelsPerSecond,
-  scrollLeft = 0,
-  showBeatMarkers = true,
-  beatSnapEnabled = false,
-  onBeatSnapToggle,
-  onBeatClick,
-  currentTime = 0,
-}: AudioWaveformDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const workerRef = useRef<Worker | null>(null);
-  const offscreenRef = useRef<OffscreenCanvas | null>(null);
-  const [hoverTime, setHoverTime] = useState<number | null>(null);
-  const renderCountRef = useRef(0);
-
-  // Initialize OffscreenCanvas worker
-  useEffect(() => {
-    if (!supportsOffscreenCanvas) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    try {
-      const offscreen = canvas.transferControlToOffscreen();
-      offscreenRef.current = offscreen;
-
-      const worker = new Worker(
-        new URL('../workers/waveform-render.worker.ts', import.meta.url),
-        { type: 'module' },
-      );
-      workerRef.current = worker;
-
-      worker.postMessage(
-        { type: 'init', canvas: offscreen },
-        [offscreen],
-      );
-
-      return () => {
-        worker.terminate();
-        workerRef.current = null;
-        offscreenRef.current = null;
-      };
-    } catch {
-      // OffscreenCanvas not available, fall back to main thread
-      return;
-    }
-  }, []);
-
-  // Render waveform
-  useEffect(() => {
-    const dpr = window.devicePixelRatio || 1;
-
-    if (workerRef.current && offscreenRef.current) {
-      // OffscreenCanvas path: send render data to worker
-      workerRef.current.postMessage({
-        type: 'render',
-        spectrumFrames: rhythmResult?.spectrumFrames ?? [],
-        beatTimes: rhythmResult?.beatTimes ?? [],
-        width,
-        height,
-        pixelsPerSecond,
-        scrollLeft,
-        currentTime,
-        showBeatMarkers,
-        dpr,
-      });
-    } else {
-      // Main thread fallback
-      const canvas = canvasRef.current;
-      if (!canvas || !rhythmResult) return;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
-
-      drawWaveform(ctx, rhythmResult.spectrumFrames, width, height, pixelsPerSecond, scrollLeft, currentTime);
-
-      if (showBeatMarkers && rhythmResult.beatTimes.length > 0) {
-        drawBeatMarkers(ctx, rhythmResult.beatTimes, width, height, pixelsPerSecond, scrollLeft);
-      }
-    }
-  }, [rhythmResult, width, height, pixelsPerSecond, scrollLeft, showBeatMarkers, currentTime]);
-
-  // Handle click for beat seeking
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!rhythmResult || !onBeatClick) return;
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const clickTime = (x + scrollLeft) / pixelsPerSecond;
-
-      if (beatSnapEnabled && rhythmResult.beatTimes.length > 0) {
-        // Snap to nearest beat
-        const nearest = rhythmResult.beatTimes.reduce((prev, curr) =>
-          Math.abs(curr - clickTime) < Math.abs(prev - clickTime) ? curr : prev,
-        );
-        onBeatClick(nearest);
-      } else {
-        onBeatClick(clickTime);
-      }
-    },
-    [rhythmResult, scrollLeft, pixelsPerSecond, beatSnapEnabled, onBeatClick],
-  );
-
-  // Handle mouse move for hover time display
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const time = (x + scrollLeft) / pixelsPerSecond;
-      setHoverTime(time);
-    },
-    [scrollLeft, pixelsPerSecond],
-  );
-
-  const tempoLabel = rhythmResult?.tempo
-    ? `${rhythmResult.tempo.bpm} BPM (${Math.round(rhythmResult.tempo.confidence * 100)}%)`
-    : null;
-
-  const patternLabel = rhythmResult?.pattern
-    ? { steady: '稳定', syncopated: '切分', buildup: '渐快', breakdown: '渐慢', irregular: '不规则' }[rhythmResult.pattern.type]
-    : null;
-
-  return (
-    <div className="relative" data-testid="audio-waveform-display">
-      <canvas
-        ref={canvasRef}
-        className="w-full cursor-crosshair"
-        style={{ height: `${height}px` }}
-        data-testid="audio-waveform-canvas"
-        onClick={handleClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoverTime(null)}
-      />
-
-      {/* Beat snap toggle */}
-      {onBeatSnapToggle ? (
-        <button
-          className={`absolute right-2 top-1 rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
-            beatSnapEnabled
-              ? 'bg-amber-500 text-white'
-              : 'bg-black/40 text-white/70 hover:bg-black/60'
-          }`}
-          type="button"
-          title={beatSnapEnabled ? '关闭节拍吸附' : '开启节拍吸附'}
-          data-testid="beat-snap-toggle"
-          onClick={() => onBeatSnapToggle(!beatSnapEnabled)}
-        >
-          {beatSnapEnabled ? '🎵 吸附' : '🎵'}
-        </button>
-      ) : null}
-
-      {/* Tempo info */}
-      {tempoLabel ? (
-        <div className="absolute left-2 top-1 flex items-center gap-2 text-[10px] text-white/70">
-          <span>{tempoLabel}</span>
-          {patternLabel ? <span>· {patternLabel}</span> : null}
-        </div>
-      ) : null}
-
-      {/* Hover time tooltip */}
-      {hoverTime !== null ? (
-        <div
-          className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white"
-          data-testid="waveform-hover-time"
-        >
-          {formatTimeShort(hoverTime)}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 /**
  * Beat snap helper: snaps a given time to the nearest beat.
  */
@@ -351,9 +171,7 @@ export function snapToBeat(
 ): { snapped: boolean; time: number } {
   if (beatTimes.length === 0) return { snapped: false, time };
 
-  const nearest = beatTimes.reduce((prev, curr) =>
-    Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev,
-  );
+  const nearest = beatTimes.reduce((prev, curr) => (Math.abs(curr - time) < Math.abs(prev - time) ? curr : prev));
 
   if (Math.abs(nearest - time) <= toleranceSeconds) {
     return { snapped: true, time: nearest };

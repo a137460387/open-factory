@@ -17,8 +17,8 @@ import { scanMediaHealthDashboard } from '../lib/mediaHealthDashboard';
 import { shouldAutoShowMediaHealthDashboard } from '@open-factory/editor-core';
 import { saveLayoutSettings } from '../settings/appSettings';
 import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import type { ClipboardKeyframeGroup } from '@open-factory/editor-core';
@@ -36,7 +36,7 @@ interface EditorShellInteractions {
 export function useEditorShellInteractions(): EditorShellInteractions {
   // === 视口大小监听 ===
   useEffect(() => {
-    const updateViewport = () => useEditorUIStore.getState().setViewportSize(readViewportSize());
+    const updateViewport = () => useDialogStore.getState().setViewportSize(readViewportSize());
     updateViewport();
     window.addEventListener('resize', updateViewport);
     return () => window.removeEventListener('resize', updateViewport);
@@ -44,20 +44,20 @@ export function useEditorShellInteractions(): EditorShellInteractions {
 
   // === Ctrl+F 全局搜索 + 工作区布局快捷键 ===
   const applyWorkspaceLayoutById = useCallback((layoutId: WorkspaceLayoutId) => {
-    const layoutSettings = useEditorUIStore.getState().layoutSettings;
+    const layoutSettings = useDialogStore.getState().layoutSettings;
     const layout = getWorkspaceLayoutById(layoutSettings, layoutId);
     if (!layout) {
       showToast({ kind: 'warning', title: zhCN.layout.workspaceApplyFailed, message: zhCN.layout.workspaceMissing });
       return;
     }
     const next = applyWorkspaceLayout(layoutSettings, layout);
-    useEditorUIStore.getState().setLayoutSettings(next);
-    useEditorUIStore.getState().setHistoryPanelOpen(layout.panels.history);
-    useEditorUIStore.getState().setSmartRoughCutOpen(false);
-    useEditorUIStore.getState().setAiRoughCutOpen(false);
-    useEditorUIStore.getState().setAiChatEditorOpen(false);
-    useEditorUIStore.getState().setVideoSummaryOpen(false);
-    useEditorUIStore.getState().setNarrationOpen(false);
+    useDialogStore.getState().setLayoutSettings(next);
+    useDialogStore.getState().setHistoryPanelOpen(layout.panels.history);
+    useDialogStore.getState().setSmartRoughCutOpen(false);
+    useDialogStore.getState().setAiRoughCutOpen(false);
+    useDialogStore.getState().setAiChatEditorOpen(false);
+    useDialogStore.getState().setVideoSummaryOpen(false);
+    useDialogStore.getState().setNarrationOpen(false);
     void saveLayoutSettings(next).catch((error) => {
       logger.warn('Unable to save workspace layout', error);
     });
@@ -68,10 +68,10 @@ export function useEditorShellInteractions(): EditorShellInteractions {
     function onKeyDown(event: KeyboardEvent): void {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
         event.preventDefault();
-        useEditorUIStore.getState().setTimelineSearchOpen(true);
+        useDialogStore.getState().setTimelineSearchOpen(true);
         return;
       }
-      const layoutSettings = useEditorUIStore.getState().layoutSettings;
+      const layoutSettings = useDialogStore.getState().layoutSettings;
       const workspaceLayoutId = resolveWorkspaceLayoutShortcut(event, layoutSettings.customWorkspaceLayouts);
       if (workspaceLayoutId && !isEditableKeyboardEventTarget(event.target)) {
         event.preventDefault();
@@ -84,14 +84,14 @@ export function useEditorShellInteractions(): EditorShellInteractions {
 
   // === 审核模式 URL hash 监听 ===
   useEffect(() => {
-    const onHashChange = () => useEditorUIStore.getState().setReviewMode(window.location.hash === '#review');
+    const onHashChange = () => useDialogStore.getState().setReviewMode(window.location.hash === '#review');
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   // === Shift+D 切换项目文档 ===
   const toggleProjectDocumentation = useCallback(() => {
-    const store = useEditorUIStore.getState();
+    const store = useDialogStore.getState();
     store.setProjectDocumentationOpen((open) => {
       const next = !open;
       if (next) {
@@ -131,16 +131,16 @@ export function useEditorShellInteractions(): EditorShellInteractions {
   // === 快捷键速查表 ===
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && useEditorUIStore.getState().shortcutCheatsheetOpen) {
+      if (event.key === 'Escape' && useDialogStore.getState().shortcutCheatsheetOpen) {
         event.preventDefault();
-        useEditorUIStore.getState().setShortcutCheatsheetOpen(false);
+        useDialogStore.getState().setShortcutCheatsheetOpen(false);
         return;
       }
       if (event.defaultPrevented || isEditableKeyboardTarget(event.target) || !isShortcutCheatsheetKey(event)) {
         return;
       }
       event.preventDefault();
-      useEditorUIStore.getState().setShortcutCheatsheetOpen(true);
+      useDialogStore.getState().setShortcutCheatsheetOpen(true);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -200,8 +200,8 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         showToast({ kind: 'warning', title: zhCN.keyframePaste.noTarget });
         return;
       }
-      useEditorFeatureStore.getState().setPasteKeyframeDialogGroups(groups);
-      useEditorUIStore.getState().setPasteKeyframeDialogOpen(true);
+      useMediaFeatureStore.getState().setPasteKeyframeDialogGroups(groups);
+      useDialogStore.getState().setPasteKeyframeDialogOpen(true);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -242,7 +242,7 @@ export function useEditorShellInteractions(): EditorShellInteractions {
   // === 媒体健康自动显示 ===
   const mediaHealthAutoShowCheckedRef = useRef(false);
   useEffect(() => {
-    const mediaHealthAutoShowEnabled = useEditorFeatureStore.getState().mediaHealthAutoShowEnabled;
+    const mediaHealthAutoShowEnabled = useMediaFeatureStore.getState().mediaHealthAutoShowEnabled;
     if (mediaHealthAutoShowCheckedRef.current || !mediaHealthAutoShowEnabled) {
       return;
     }
@@ -253,15 +253,15 @@ export function useEditorShellInteractions(): EditorShellInteractions {
         if (disposed) {
           return;
         }
-        useEditorFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
-        useEditorFeatureStore.getState().setProjectHealthReport(result.report);
+        useMediaFeatureStore.getState().setMediaHealthDashboard(result.dashboard);
+        useMediaFeatureStore.getState().setProjectHealthReport(result.report);
         if (
           shouldAutoShowMediaHealthDashboard({
             enabled: mediaHealthAutoShowEnabled,
             issueCount: result.dashboard.issueCount,
           })
         ) {
-          useEditorUIStore.getState().setMediaHealthDashboardOpen(true);
+          useDialogStore.getState().setMediaHealthDashboardOpen(true);
         }
       })
       .catch((error) => {

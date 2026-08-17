@@ -2,8 +2,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: { getState: () => ({ setViewportSize: vi.fn() }) },
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: { getState: () => ({ setViewportSize: vi.fn() }) },
 }));
 
 vi.mock('../../store/editorSettingsStore', () => ({
@@ -27,8 +27,8 @@ vi.mock('../../store/editorSettingsStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorFeatureStore', () => ({
-  useEditorFeatureStore: {
+vi.mock('../../store/timelineFeatureStore', () => ({
+  useTimelineFeatureStore: {
     getState: () => ({
       setMacroHistory: vi.fn(),
       setRecoveryCandidate: vi.fn(),

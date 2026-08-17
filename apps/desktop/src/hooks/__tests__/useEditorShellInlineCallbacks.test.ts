@@ -14,8 +14,8 @@ vi.mock('../../store/commandManager', () => ({
   timelineAccessor: { getTimeline: () => ({ tracks: [] }), setTimeline: vi.fn() },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: { getState: () => ({}) },
+vi.mock('../../store/dialogStore', () => ({
+  useDialogStore: { getState: () => ({}) },
 }));
 
 vi.mock('../../lib/media', () => ({

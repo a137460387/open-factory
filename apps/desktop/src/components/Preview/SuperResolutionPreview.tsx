@@ -1,7 +1,16 @@
-import React, {useState, useCallback, useRef, useEffect, useMemo} from 'react';
-import {Settings, Loader2, AlertCircle, Gauge, Sparkles, X, ChevronDown, ChevronUp} from 'lucide-react';
-import type {UpscaleFactor, SuperResolutionModel, SuperResolutionConfig, SuperResolutionResult, GPUMode} from '@open-factory/editor-core/ai/super-resolution';
-import {createDefaultSuperResolutionConfig, validateSuperResolutionConfig} from '@open-factory/editor-core/ai/super-resolution';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { Settings, Loader2, AlertCircle, Gauge, Sparkles, X, ChevronDown, ChevronUp } from 'lucide-react';
+import type {
+  UpscaleFactor,
+  SuperResolutionModel,
+  SuperResolutionConfig,
+  SuperResolutionResult,
+  GPUMode,
+} from '@open-factory/editor-core/ai/super-resolution';
+import {
+  createDefaultSuperResolutionConfig,
+  validateSuperResolutionConfig,
+} from '@open-factory/editor-core/ai/super-resolution';
 
 /** 超分辨率预览面板属性 */
 export interface SuperResolutionPreviewProps {
@@ -524,5 +533,3 @@ function SliderControl({
     </div>
   );
 }
-
-export default SuperResolutionPreview;

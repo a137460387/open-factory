@@ -20,9 +20,9 @@ import { applyLocalCoeditingSettings } from '../collaboration/settings';
 import { readClipMacros, readMacroHistory } from '../macros/clip-macros';
 import { findStartupAutosaveRecovery } from '../lib/projectFiles';
 import { getPreviewWindowState } from '../lib/tauri-bridge';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useTimelineFeatureStore } from '../store/timelineFeatureStore';
 
 /**
  * 从 EditorShell 中提取的挂载时设置加载 effects。
@@ -67,7 +67,7 @@ export function useEditorShellSettings(): void {
     void getPreviewWindowState()
       .then((state) => {
         if (!canceled) {
-          useEditorUIStore.getState().setPreviewWindowOpen(state.open);
+          useDialogStore.getState().setPreviewWindowOpen(state.open);
           useEditorSettingsStore.getState().setPreviewWindowResolutionScale(state.resolutionScale);
         }
       })
@@ -152,7 +152,7 @@ export function useEditorShellSettings(): void {
     void findStartupAutosaveRecovery()
       .then((candidate) => {
         if (!canceled && candidate) {
-          useEditorFeatureStore.getState().setRecoveryCandidate(candidate);
+          useTimelineFeatureStore.getState().setRecoveryCandidate(candidate);
         }
       })
       .catch((error) => {
@@ -193,7 +193,7 @@ export function useEditorShellSettings(): void {
     void readMacroHistory()
       .then((entries) => {
         if (!canceled) {
-          useEditorFeatureStore.getState().setMacroHistory(entries);
+          useTimelineFeatureStore.getState().setMacroHistory(entries);
         }
       })
       .catch((error) => {
@@ -230,8 +230,8 @@ export function useEditorShellSettings(): void {
         // 时序竞态修复：加载结果到达前若布局已被程序化/用户显式设置
         // （layoutSettingsTouched=true），则不用加载结果覆盖，避免先到的
         // 程序化设置被异步持久化加载覆盖（auto-generate:68 根因）。
-        if (!useEditorUIStore.getState().layoutSettingsTouched) {
-          useEditorUIStore.getState().applyLoadedLayoutSettings(settings);
+        if (!useDialogStore.getState().layoutSettingsTouched) {
+          useDialogStore.getState().applyLoadedLayoutSettings(settings);
         }
       })
       .catch((error) => {

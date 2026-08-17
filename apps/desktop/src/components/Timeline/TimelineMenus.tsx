@@ -1,11 +1,28 @@
-import {CLIP_GROUP_COLORS, CLIP_GROUP_COLOR_HEX, TIMELINE_LABEL_COLORS, TRANSITION_TYPES, getTimelineLabelColorHex, isFrameRateMismatch, type Clip, type ClipGroup, type ClipGroupColor, type GapFillStrategy, type MediaAsset, type MediaVersionEntry, type TimelineLabelColor, type Track, type TrackPatch, type TransitionType} from '@open-factory/editor-core';
-import {clsx} from 'clsx';
-import {Star} from 'lucide-react';
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {zhCN} from '../../i18n/strings';
-import {canGenerateSubtitlesForClip} from '../../lib/whisper';
-import {readTransitionFavorites, toggleTransitionFavorite} from '../../timeline/transition-favorites';
-import {buildRulerContextMenuItems, type RulerContextMenuAction} from './timeline-ruler-menu';
+import {
+  CLIP_GROUP_COLORS,
+  CLIP_GROUP_COLOR_HEX,
+  TIMELINE_LABEL_COLORS,
+  TRANSITION_TYPES,
+  getTimelineLabelColorHex,
+  isFrameRateMismatch,
+  type Clip,
+  type ClipGroup,
+  type ClipGroupColor,
+  type GapFillStrategy,
+  type MediaAsset,
+  type MediaVersionEntry,
+  type TimelineLabelColor,
+  type Track,
+  type TrackPatch,
+  type TransitionType,
+} from '@open-factory/editor-core';
+import { clsx } from 'clsx';
+import { Star } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { zhCN } from '../../i18n/strings';
+import { canGenerateSubtitlesForClip } from '../../lib/whisper';
+import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
+import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
 export interface TransitionMenuState {
   x: number;
@@ -333,7 +350,7 @@ export function TransitionMenu({
   );
 }
 
-export function TransitionPreviewCanvas({ type, active }: { type: TransitionType; active: boolean }) {
+function TransitionPreviewCanvas({ type, active }: { type: TransitionType; active: boolean }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -418,12 +435,7 @@ export function TransitionPreviewCanvas({ type, active }: { type: TransitionType
   );
 }
 
-export function drawPreviewShape(
-  context: CanvasRenderingContext2D,
-  type: TransitionType,
-  width: number,
-  height: number,
-) {
+function drawPreviewShape(context: CanvasRenderingContext2D, type: TransitionType, width: number, height: number) {
   context.save();
   context.translate(width / 2, height / 2);
   context.fillStyle = '#f8fafc';

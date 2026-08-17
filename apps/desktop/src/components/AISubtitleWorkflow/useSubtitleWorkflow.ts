@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type { SubtitleClip } from '@open-factory/editor-core';
 
 export type WorkflowStage = 'asr' | 'polish' | 'style' | 'export';
-export type StageStatus = 'idle' | 'running' | 'done' | 'error';
+type StageStatus = 'idle' | 'running' | 'done' | 'error';
 
 export interface ASRState {
   status: StageStatus;

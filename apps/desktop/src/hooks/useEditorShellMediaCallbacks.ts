@@ -7,8 +7,8 @@ import {zhCN} from '../i18n/strings';
 import {commandManager, projectAccessor} from '../store/commandManager';
 import {useEditorStore} from '../store/editorStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useEditorFeatureStore} from '../store/editorFeatureStore';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useMediaFeatureStore} from '../store/mediaFeatureStore';
+import {useDialogStore} from '../store/dialogStore';
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useMediaJobStore} from '../media/media-job-store';
 import {ensureMediaJobRunner} from '../media/media-job-runner';
@@ -257,8 +257,8 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
   );
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
-    useEditorFeatureStore.getState().setBatchTranscodeInitialPaths(paths);
-    useEditorUIStore.getState().setBatchTranscodeOpen(true);
+    useMediaFeatureStore.getState().setBatchTranscodeInitialPaths(paths);
+    useDialogStore.getState().setBatchTranscodeOpen(true);
   }, []);
 
   const batchGenerateCovers = useCallback(async () => {
@@ -461,8 +461,8 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         showToast({ kind: 'info', title: zhCN.duplicateMedia.empty });
         return;
       }
-      useEditorFeatureStore.getState().setDuplicateMediaGroups(groups);
-      useEditorUIStore.getState().setDuplicateMediaOpen(true);
+      useMediaFeatureStore.getState().setDuplicateMediaGroups(groups);
+      useDialogStore.getState().setDuplicateMediaOpen(true);
     } catch (error) {
       showToast({
         kind: 'error',
@@ -477,8 +477,8 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       for (const selection of selections) {
         commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, selection.assetIds));
       }
-      useEditorUIStore.getState().setDuplicateMediaOpen(false);
-      useEditorFeatureStore.getState().setDuplicateMediaGroups([]);
+      useDialogStore.getState().setDuplicateMediaOpen(false);
+      useMediaFeatureStore.getState().setDuplicateMediaGroups([]);
       showToast({
         kind: 'success',
         title: zhCN.duplicateMedia.mergedTitle,
@@ -495,15 +495,15 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
 
   // --- 媒体整理 ---
   const refreshMediaOrganizer = useCallback(async () => {
-    useEditorFeatureStore.getState().setMediaOrganizerScanning(true);
+    useMediaFeatureStore.getState().setMediaOrganizerScanning(true);
     try {
       const currentProject = useEditorStore.getState().project;
       const [groups, cleanup] = await Promise.all([
         scanSmartDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata),
         scanMediaCleanupReport(currentProject),
       ]);
-      useEditorFeatureStore.getState().setMediaOrganizerGroups(groups);
-      useEditorFeatureStore.getState().setMediaOrganizerCleanup(cleanup);
+      useMediaFeatureStore.getState().setMediaOrganizerGroups(groups);
+      useMediaFeatureStore.getState().setMediaOrganizerCleanup(cleanup);
     } catch (error) {
       showToast({
         kind: 'error',
@@ -511,12 +511,12 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         message: error instanceof Error ? error.message : zhCN.mediaOrganizer.scanFailedMessage,
       });
     } finally {
-      useEditorFeatureStore.getState().setMediaOrganizerScanning(false);
+      useMediaFeatureStore.getState().setMediaOrganizerScanning(false);
     }
   }, []);
 
   const openMediaOrganizer = useCallback(() => {
-    useEditorUIStore.getState().setMediaOrganizerOpen(true);
+    useDialogStore.getState().setMediaOrganizerOpen(true);
     void refreshMediaOrganizer();
   }, [refreshMediaOrganizer]);
 
@@ -581,7 +581,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
   );
 
   const archiveUnusedMedia = useCallback(async () => {
-    const cleanup = useEditorFeatureStore.getState().mediaOrganizerCleanup;
+    const cleanup = useMediaFeatureStore.getState().mediaOrganizerCleanup;
     const unused = cleanup?.unused ?? [];
     if (unused.length === 0) {
       return;
@@ -618,7 +618,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
 
   const renameUnusedMedia = useCallback(
     async (template: string) => {
-      const cleanup = useEditorFeatureStore.getState().mediaOrganizerCleanup;
+      const cleanup = useMediaFeatureStore.getState().mediaOrganizerCleanup;
       const unused = cleanup?.unused ?? [];
       if (unused.length === 0) {
         return;

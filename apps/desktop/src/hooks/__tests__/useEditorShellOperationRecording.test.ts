@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 vi.mock('../../store/editorStore', () => ({ useEditorStore: { getState: () => ({ project: { media: [], timeline: { tracks: [] } } }) } }));
-vi.mock('../../store/editorFeatureStore', () => ({ useEditorFeatureStore: { getState: () => ({}) } }));
+vi.mock('../../store/timelineFeatureStore', () => ({ useTimelineFeatureStore: { getState: () => ({}) } }));
 vi.mock('../../store/editorSettingsStore', () => ({ useEditorSettingsStore: { getState: () => ({}) } }));
 vi.mock('../../store/commandManager', () => ({ commandManager: { execute: vi.fn() }, projectAccessor: {}, timelineAccessor: { getTimeline: () => ({ tracks: [] }) }, addOnExecuteListener: vi.fn(() => vi.fn()) }));
 vi.mock('../../lib/tauri-bridge', () => ({ saveFileDialog: vi.fn(), writeFile: vi.fn(), readFile: vi.fn(), openFileDialog: vi.fn() }));

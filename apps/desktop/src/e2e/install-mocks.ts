@@ -1,6 +1,6 @@
 import {AddKeyframeCommand, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TRANSFORM, DEFAULT_PRIMARY_SEQUENCE_NAME, PRIMARY_SEQUENCE_ID, createProject, createTrack, createVideoFingerprint, type FfmpegExportPlan, type KeyframeProperty, type Clip, type DenoiseFilterRecommendation, type MediaAsset, type Project, type ProjectFileV2, createMulticamClip} from '@open-factory/editor-core';
 import {commandManager, timelineAccessor} from '../store/commandManager';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {collaborationController} from '../collaboration/local-network';
 import {useCollaborationStore} from '../store/collaborationStore';
 import {useEditorStore} from '../store/editorStore';
@@ -3207,7 +3207,7 @@ window.__E2E_ACTIONS__ = {
   closePreviewWindow: () => {
     previewWindowState = { ...previewWindowState, open: false };
     emit('preview-window-closed', previewWindowState);
-    useEditorUIStore.getState().setPreviewWindowOpen(false);
+    useDialogStore.getState().setPreviewWindowOpen(false);
   },
   getPreviewWindowState: () => previewWindowState,
   setPlayheadTime: (time: unknown) => {
@@ -7105,7 +7105,7 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
+    useDialogStore.getState().setAiSubtitleWorkflowOpen(true);
     commandManager.clear();
   },
   setupAISubtitleWorkflowFixtureWithClip: () => {
@@ -7163,7 +7163,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setSelectedClipIds(['clip-subtitle-workflow-video']);
     useEditorStore.getState().setSelectedClipId('clip-subtitle-workflow-video');
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
+    useDialogStore.getState().setAiSubtitleWorkflowOpen(true);
     commandManager.clear();
   },
   setupSmartCreationDeepFixture: () => {
@@ -7358,7 +7358,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAssistEditingOpen(true);
+    useDialogStore.getState().setAssistEditingOpen(true);
     commandManager.clear();
   },
   setupContentGenerationFixture: () => {
@@ -7402,7 +7402,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setContentGenerationOpen(true);
+    useDialogStore.getState().setContentGenerationOpen(true);
     commandManager.clear();
   },
   setupQualityAssessmentFixture: () => {
@@ -7443,7 +7443,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setQualityAssessmentOpen(true);
+    useDialogStore.getState().setQualityAssessmentOpen(true);
     commandManager.clear();
   },
   openAutomationPanel: () => {
@@ -7485,13 +7485,13 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
     // 关闭其他可能遮挡的面板
-    useEditorUIStore.getState().setQualityAssessmentOpen(false);
-    useEditorUIStore.getState().setContentGenerationOpen(false);
-    useEditorUIStore.getState().setAssistEditingOpen(false);
-    useEditorUIStore.getState().setAiRoughCutOpen(false);
+    useDialogStore.getState().setQualityAssessmentOpen(false);
+    useDialogStore.getState().setContentGenerationOpen(false);
+    useDialogStore.getState().setAssistEditingOpen(false);
+    useDialogStore.getState().setAiRoughCutOpen(false);
     // 确保 audio-mixer 不遮挡右侧面板
-    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
-    useEditorUIStore.getState().setAutomationOpen(true);
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
   openSceneAnalysisView: () => {
@@ -7532,12 +7532,12 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setQualityAssessmentOpen(false);
-    useEditorUIStore.getState().setContentGenerationOpen(false);
-    useEditorUIStore.getState().setAssistEditingOpen(false);
-    useEditorUIStore.getState().setAiRoughCutOpen(false);
-    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
-    useEditorUIStore.getState().setAutomationOpen(true);
+    useDialogStore.getState().setQualityAssessmentOpen(false);
+    useDialogStore.getState().setContentGenerationOpen(false);
+    useDialogStore.getState().setAssistEditingOpen(false);
+    useDialogStore.getState().setAiRoughCutOpen(false);
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
 
@@ -7571,8 +7571,8 @@ window.__E2E_ACTIONS__ = {
     // 隐藏音频混音器，避免其遮挡自动化面板（与相邻自动化 fixture 一致的写法）。
     // 依赖 layoutSettingsTouched 竞态修复：该程序化设置不再被挂载时的
     // readLayoutSettings 异步加载覆盖（auto-generate:68 根因修复后稳定生效）。
-    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
-    useEditorUIStore.getState().setAutomationOpen(true);
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
 };

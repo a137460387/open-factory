@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 vi.mock('../../store/editorStore', () => ({ useEditorStore: { getState: () => ({ project: { media: [] } }) } }));
-vi.mock('../../store/editorUIStore', () => ({ useEditorUIStore: { getState: () => ({}) } }));
 
 import { useEditorShellPanelCallbacks } from '../../hooks/useEditorShellPanelCallbacks';
 

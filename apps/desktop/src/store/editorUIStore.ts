@@ -1,5 +1,5 @@
 /**
- * Editor UI state — barrel re-export entry point (H4 refactor).
+ * Editor UI state — combined store (H4 refactor).
  *
  * This file has been refactored into domain-specific sub-stores:
  * - panelStore.ts   — layout settings, panel visibility, viewport, review mode
@@ -7,7 +7,8 @@
  * - toolbarStore.ts — toolbar/menu state (re-exports from dialogStore)
  * - modalStore.ts   — modal dialog state (re-exports from dialogStore)
  *
- * The combined `useEditorUIStore` is preserved for backward compatibility.
+ * The combined `useEditorUIStore` is preserved for backward compatibility
+ * （phase5 1c 起不再重导出子 store selector hooks，全部消费者已直连子 store）.
  * New code should import from the specific sub-store directly.
  *
  * @deprecated Prefer `usePanelStore` or `useDialogStore` for new code.
@@ -30,25 +31,8 @@ import {
   type DialogState,
 } from './dialog-state';
 
-// Re-export sub-store hooks and selector utilities for convenience
-export {
-  usePanelStore,
-  useLayoutSettings,
-  useReviewMode,
-  useViewportSize,
-  useSetLayoutSettings,
-  useSetReviewMode,
-  useSetViewportSize,
-  usePersistLayoutPatch,
-  usePersistPanelVisibilityPatch,
-} from './panelStore';
-export { useDialogStore, useDialogState, dialogBooleanSelector, dialogSetterSelector } from './dialogStore';
-export { useToolbarStore } from './toolbarStore';
-export { useModalStore } from './modalStore';
-
-// Re-export dialog-state utilities
-export type { DialogKey, DialogState } from './dialog-state';
-export { DIALOG_KEYS, createInitialDialogState, applyDialogUpdate } from './dialog-state';
+// Re-export dialog-state utilities（兼容重导出层已于 phase5 1c 移除，仅保留仍有消费的 DialogKey）
+export type { DialogKey } from './dialog-state';
 
 type Updater<T> = T | ((current: T) => T);
 

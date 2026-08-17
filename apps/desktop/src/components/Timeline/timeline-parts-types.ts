@@ -1,7 +1,15 @@
-import type {Clip, ClipGroup, CollaborationClipLock, AnomalyInterval, KeyframeProperty, TimelineLabelColor, TransitionType} from '@open-factory/editor-core';
-import type {SelectedKeyframeRef} from '../../store/editorStore';
+import type {
+  Clip,
+  ClipGroup,
+  CollaborationClipLock,
+  AnomalyInterval,
+  KeyframeProperty,
+  TimelineLabelColor,
+  TransitionType,
+} from '@open-factory/editor-core';
+import type { SelectedKeyframeRef } from '../../store/editorStore';
 
-export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
+type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
 
 export interface DragState {
   mode: DragMode;
@@ -32,8 +40,6 @@ export interface DragState {
 export const TRACK_HEIGHT = 60;
 export const LABEL_WIDTH = 160;
 export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
-export const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
-export const LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS = 2_500;
 
 export interface VolumeEnvelopePointRequest {
   clipId: string;
