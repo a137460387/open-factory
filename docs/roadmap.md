@@ -107,7 +107,7 @@
 
 ## Next (v4.26+)
 
-- [ ] Ripple edit, gap close, rolling trim, grouped clips, and related professional timeline shortcuts.
+- [x] Ripple edit, gap close, rolling trim, grouped clips, and related professional timeline shortcuts.
 - [ ] Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
 - [ ] Priority scheduling and explicit throttling controls for background media jobs.
 - [ ] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
@@ -119,7 +119,9 @@
 - [x] Enhanced plugin ecosystem with marketplace integration.
 
 > 2026-08-10 核对勾选：code splitting（Timeline/Inspector 等 React.lazy 独立 chunk，v4.26.0 落地）；React 19 + Tailwind CSS 4（apps/desktop 与 apps/creator-dashboard 现役版本）；插件市场（Settings→Plugins 面板 + apps/plugin-market + SHA-256 安装校验）。其余未勾选项未逐项核实，保持原状。
+>
+> 2026-08-18 核对勾选：时间线高级编辑工具（Ripple edit / gap close / rolling trim / grouped clips / 专业快捷键）已落地——波纹删除（RippleDeleteCommand + rippleDeleteSelected + 工具栏按钮 + 右键菜单 + e2e）、间隙关闭（CloseGapCommand/FillGapCommand/gap-handlers.ts）、滚动修剪（rollingTrimActive）、分组片段（editor-core `clip-groups.ts` + `clip-group-commands.ts`，desktop 129 处消费）、滑移/滑行模式与 S 键指示器；E2E `apps/desktop/e2e/timeline-advanced-tools.spec.ts`（4 用例）在列；typecheck exit 0。
 
 ---
 
-*Last updated: 2026-08-10*
+*Last updated: 2026-08-18*
