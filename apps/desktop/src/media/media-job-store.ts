@@ -1,6 +1,7 @@
 import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { shouldGenerateProxy } from '@open-factory/editor-core';
 import { create } from 'zustand';
+import { useMediaJobSettingsStore } from '../store/mediaJobSettingsStore';
 import {
   compareMediaJobPriority,
   moveMediaJobBefore as reorderMediaJobs,
@@ -58,6 +59,7 @@ export interface MediaJobState {
   runnerActive: boolean;
   enqueueJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings) => void;
   enqueueProxyJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings, options?: MediaJobOptions) => void;
+  enqueueWaveformJobsForMedia: (media: MediaAsset[]) => void;
   enqueueMonitorJob: (job: MediaJobInput) => string;
   startNextJob: () => MediaJob | undefined;
   updateJobProgress: (jobId: string, progress: number) => void;
@@ -78,8 +80,21 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   runnerActive: false,
   enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
+    const autoGenerateWaveform = useMediaJobSettingsStore.getState().autoGenerateWaveform;
     const jobsToAdd = media
       .flatMap((asset) => buildJobsForAsset(asset, proxySettings, { priority: 'low' }))
+      .filter((job) => !existingKeys.has(job.key))
+      .filter((job) => job.type !== 'waveform' || autoGenerateWaveform);
+    if (jobsToAdd.length === 0) {
+      return;
+    }
+    set((state) => ({ jobs: sortQueueJobs([...state.jobs, ...jobsToAdd]) }));
+  },
+  enqueueWaveformJobsForMedia: (media) => {
+    const existingKeys = new Set(get().jobs.map((job) => job.key));
+    const jobsToAdd = media
+      .filter((asset) => !asset.missing && (asset.type === 'audio' || (asset.type === 'video' && asset.hasAudio)))
+      .map((asset) => createJob(asset, 'waveform'))
       .filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;

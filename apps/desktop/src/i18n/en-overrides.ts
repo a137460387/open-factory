@@ -1669,6 +1669,7 @@ export const enOverrides = {
     batchRenameFailedMessage: 'Project references were rolled back and disk renaming stopped.',
     batchGenerateCovers: 'Batch Covers',
     batchGenerateThumbnails: (count: number) => (count > 0 ? `Generate Thumbnails (${count})` : 'Generate Thumbnails'),
+    batchGenerateWaveforms: 'Generate Waveforms',
     selectForThumbnail: 'Select for batch thumbnail generation',
     exportGif: 'Export as GIF',
     spectrumAnalysis: 'Spectrum Analysis',
