@@ -10,7 +10,7 @@ import {
 export type MediaJobType =
   'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
 export type MediaJobStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
-type MediaJobPriority = 'high' | 'low';
+export type MediaJobPriority = 'high' | 'normal' | 'low';
 
 export interface MediaJob {
   id: string;
@@ -68,6 +68,7 @@ export interface MediaJobState {
   retryJob: (jobId: string) => void;
   retryFailedJobs: () => void;
   moveJobBefore: (jobId: string, targetJobId: string) => void;
+  setJobPriority: (jobId: string, priority: MediaJobPriority) => void;
   setRunnerActive: (runnerActive: boolean) => void;
   clearFinishedJobs: () => void;
 }
@@ -242,6 +243,18 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
     }));
   },
   moveJobBefore: (jobId, targetJobId) => set((state) => ({ jobs: reorderMediaJobs(state.jobs, jobId, targetJobId) })),
+  setJobPriority: (jobId, priority) => {
+    const updatedAt = new Date().toISOString();
+    set((state) => ({
+      jobs: sortQueueJobs(
+        state.jobs.map((job) =>
+          job.id === jobId && job.status === 'pending'
+            ? { ...job, priority, updatedAt }
+            : job,
+        ),
+      ),
+    }));
+  },
   setRunnerActive: (runnerActive) => set({ runnerActive }),
   clearFinishedJobs: () => {
     set((state) => ({ jobs: state.jobs.filter((job) => job.status === 'pending' || job.status === 'running') }));
@@ -291,7 +304,7 @@ function createJob(
     type,
     status: 'pending',
     progress: 0,
-    priority: options.priority ?? 'low',
+    priority: options.priority ?? 'normal',
     force: options.force || undefined,
     cfrFrameRate: options.cfrFrameRate,
     sourceStart: options.sourceStart,

@@ -65,6 +65,20 @@ describe('media job monitor', () => {
     expect(useMediaJobStore.getState().startNextJob()?.id).toBe('high');
   });
 
+  it('setJobPriority updates a pending job priority and re-sorts the queue', () => {
+    useMediaJobStore.setState({
+      jobs: [
+        makeJob('a', 'pending', '2026-06-15T10:00:00.000Z'),
+        makeJob('b', 'pending', '2026-06-15T10:00:01.000Z'),
+      ],
+    });
+
+    useMediaJobStore.getState().setJobPriority('b', 'high');
+
+    expect(useMediaJobStore.getState().jobs.find((job) => job.id === 'b')?.priority).toBe('high');
+    expect(useMediaJobStore.getState().startNextJob()?.id).toBe('b');
+  });
+
   it('calculates remaining time from progress speed', () => {
     const eta = calculateMediaJobEtaSeconds(
       makeJob('running', 'running', '2026-06-15T10:00:00.000Z', 0.25, '2026-06-15T10:00:00.000Z'),
