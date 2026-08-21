@@ -18,6 +18,7 @@ import {
 } from '@open-factory/editor-core';
 import { parseFavoritesSearchFilter, type Subclip } from '@open-factory/editor-core';
 import {
+  AudioWaveform,
   ChevronDown,
   ChevronRight,
   FileText,
@@ -60,6 +61,7 @@ import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { useMediaJobStore } from '../../media/media-job-store';
+import { ensureMediaJobRunner } from '../../media/media-job-runner';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { MediaMetadataPanel } from './MediaMetadataPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
@@ -315,6 +317,18 @@ export function MediaBin({
               >
                 <Import size={15} />
                 {t.batchGenerateThumbnails(state.selectedVideoIds.length)}
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
+                onClick={() => {
+                  const selected = media.filter((asset) => state.selectedMediaIds.has(asset.id));
+                  useMediaJobStore.getState().enqueueWaveformJobsForMedia(selected);
+                  void ensureMediaJobRunner();
+                }}
+                data-testid="batch-generate-waveforms-button"
+              >
+                <AudioWaveform size={15} />
+                {t.batchGenerateWaveforms}
               </button>
               <button
                 className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"

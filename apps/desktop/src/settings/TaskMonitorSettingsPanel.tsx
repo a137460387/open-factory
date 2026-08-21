@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GripVertical, RotateCcw, XCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, RotateCcw, XCircle } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import { getSystemResourceSnapshot, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { calculateMediaJobEtaSeconds, sortMediaJobsForMonitor } from '../media/media-job-monitor';
-import { useMediaJobStore, type MediaJobStatus, type MediaJobType } from '../media/media-job-store';
+import { useMediaJobStore, type MediaJobPriority, type MediaJobStatus, type MediaJobType } from '../media/media-job-store';
+import { useMediaJobSettingsStore, type BackgroundConcurrency } from '../store/mediaJobSettingsStore';
 import { formatBytes } from './formatHelpers';
+
+const PRIORITY_STEPS: MediaJobPriority[] = ['high', 'normal', 'low'];
 
 export function TaskMonitorSettingsPanel() {
   const t = zhCN.settings.taskMonitor;
@@ -16,6 +19,11 @@ export function TaskMonitorSettingsPanel() {
   const retryFailedJobs = useMediaJobStore((state) => state.retryFailedJobs);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
   const moveJobBefore = useMediaJobStore((state) => state.moveJobBefore);
+  const setJobPriority = useMediaJobStore((state) => state.setJobPriority);
+  const backgroundConcurrency = useMediaJobSettingsStore((state) => state.backgroundConcurrency);
+  const setBackgroundConcurrency = useMediaJobSettingsStore((state) => state.setBackgroundConcurrency);
+  const paused = useMediaJobSettingsStore((state) => state.paused);
+  const setPaused = useMediaJobSettingsStore((state) => state.setPaused);
   const [draggedJobId, setDraggedJobId] = useState<string>();
   const [resourceSnapshot, setResourceSnapshot] = useState<SystemResourceSnapshot>();
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -56,6 +64,24 @@ export function TaskMonitorSettingsPanel() {
     void ensureMediaJobRunner();
   }
 
+  function togglePaused(): void {
+    const next = !paused;
+    setPaused(next);
+    if (!next) {
+      void ensureMediaJobRunner();
+    }
+  }
+
+  function stepPriority(jobId: string, direction: -1 | 1): void {
+    const job = jobs.find((item) => item.id === jobId);
+    if (!job || job.status !== 'pending') {
+      return;
+    }
+    const index = PRIORITY_STEPS.indexOf(job.priority);
+    const nextIndex = Math.min(PRIORITY_STEPS.length - 1, Math.max(0, index + direction));
+    setJobPriority(jobId, PRIORITY_STEPS[nextIndex]);
+  }
+
   return (
     <div className="space-y-4" data-testid="task-monitor-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -64,6 +90,29 @@ export function TaskMonitorSettingsPanel() {
           <p className="text-xs text-slate-500">{t.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <label className="flex items-center gap-1.5 text-xs text-slate-600">
+            {t.backgroundConcurrency}
+            <select
+              className="rounded-md border border-line bg-white px-2 py-1.5 text-xs text-slate-700"
+              value={String(backgroundConcurrency)}
+              data-testid="task-monitor-background-concurrency"
+              onChange={(event) => setBackgroundConcurrency(parseBackgroundConcurrency(event.target.value))}
+            >
+              <option value="auto">{t.backgroundConcurrencyAuto}</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </label>
+          <button
+            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="task-monitor-toggle-pause"
+            onClick={togglePaused}
+          >
+            {paused ? t.resume : t.pause}
+          </button>
           <button
             className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
             type="button"
@@ -149,7 +198,18 @@ export function TaskMonitorSettingsPanel() {
                 <div className="truncate text-sm font-semibold text-ink" data-testid={`task-monitor-file-${job.id}`}>
                   {job.assetName}
                 </div>
-                <div className="text-xs text-slate-500">{taskTypeLabel(job.type)}</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>{taskTypeLabel(job.type)}</span>
+                  {job.status === 'pending' ? (
+                    <span
+                      className={'inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ' + priorityTone(job.priority)}
+                      data-testid={'task-monitor-priority-' + job.id}
+                      data-priority={job.priority}
+                    >
+                      {priorityLabel(job.priority)}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <div className="min-w-0">
                 <div className="h-2 overflow-hidden rounded-full bg-slate-200">
@@ -178,6 +238,32 @@ export function TaskMonitorSettingsPanel() {
                 {etaSeconds === undefined ? t.etaUnknown : t.etaSeconds(Math.ceil(etaSeconds))}
               </span>
               <div className="flex justify-end gap-1">
+                {job.status === 'pending' ? (
+                  <>
+                    <button
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+                      type="button"
+                      title={t.raisePriority}
+                      aria-label={t.raisePriority}
+                      data-testid={'task-monitor-raise-' + job.id}
+                      disabled={PRIORITY_STEPS.indexOf(job.priority) === 0}
+                      onClick={() => stepPriority(job.id, -1)}
+                    >
+                      <ArrowUp size={14} />
+                    </button>
+                    <button
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
+                      type="button"
+                      title={t.lowerPriority}
+                      aria-label={t.lowerPriority}
+                      data-testid={'task-monitor-lower-' + job.id}
+                      disabled={PRIORITY_STEPS.indexOf(job.priority) === PRIORITY_STEPS.length - 1}
+                      onClick={() => stepPriority(job.id, 1)}
+                    >
+                      <ArrowDown size={14} />
+                    </button>
+                  </>
+                ) : null}
                 {job.status === 'pending' || job.status === 'running' ? (
                   <button
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line text-slate-600 hover:bg-panel"
@@ -226,6 +312,30 @@ function taskTypeLabel(type: MediaJobType): string {
 
 function taskStatusLabel(status: MediaJobStatus): string {
   return zhCN.settings.taskMonitor.statuses[status];
+}
+
+function parseBackgroundConcurrency(value: string): BackgroundConcurrency {
+  return value === 'auto' ? 'auto' : (Number(value) as BackgroundConcurrency);
+}
+
+function priorityLabel(priority: MediaJobPriority): string {
+  if (priority === 'high') {
+    return zhCN.settings.taskMonitor.priorityHigh;
+  }
+  if (priority === 'normal') {
+    return zhCN.settings.taskMonitor.priorityNormal;
+  }
+  return zhCN.settings.taskMonitor.priorityLow;
+}
+
+function priorityTone(priority: MediaJobPriority): string {
+  if (priority === 'high') {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+  if (priority === 'normal') {
+    return 'border-slate-200 bg-slate-50 text-slate-600';
+  }
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 }
 
 function taskStatusTone(status: MediaJobStatus): string {

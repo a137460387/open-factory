@@ -6,13 +6,34 @@
  *   避免一次导入大量素材时瞬间撑满系统资源(AGENTS.md 规则 24)。
  * - uiFeedbackPool:时间线滚动等实时 UI 反馈任务(缩略图、波形、单发封面),
  *   保证用户交互不被后台批量任务饿死。
+ *
+ * 两个池的并发上限支持运行时动态调整(mediaJobSettingsStore 驱动 setLimit),
+ * 满足 roadmap「explicit throttling controls」。
  */
 
 export class MediaSemaphore {
   private active = 0;
   private readonly pending: Array<() => void> = [];
+  private limitValue: number;
 
-  constructor(readonly limit: number) {}
+  constructor(limit: number) {
+    this.limitValue = Math.max(1, Math.floor(limit));
+  }
+
+  get limit(): number {
+    return this.limitValue;
+  }
+
+  /**
+   * 动态调整并发上限。
+   * 增大时唤醒排队任务至新上限；减小时已运行任务不缩减，仅约束新 acquire。
+   */
+  setLimit(limit: number): void {
+    this.limitValue = Math.max(1, Math.floor(limit));
+    while (this.active < this.limitValue && this.pending.length > 0) {
+      this.pending.shift()?.();
+    }
+  }
 
   get activeCount(): number {
     return this.active;
@@ -24,7 +45,7 @@ export class MediaSemaphore {
 
   /** Acquire a slot; resolves with a release function once a slot is free. */
   acquire(): Promise<() => void> {
-    if (this.active < this.limit) {
+    if (this.active < this.limitValue) {
       this.active += 1;
       return Promise.resolve(this.createRelease());
     }

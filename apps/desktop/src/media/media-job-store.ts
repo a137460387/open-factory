@@ -1,6 +1,7 @@
 import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { shouldGenerateProxy } from '@open-factory/editor-core';
 import { create } from 'zustand';
+import { useMediaJobSettingsStore } from '../store/mediaJobSettingsStore';
 import {
   compareMediaJobPriority,
   moveMediaJobBefore as reorderMediaJobs,
@@ -10,7 +11,7 @@ import {
 export type MediaJobType =
   'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
 export type MediaJobStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
-type MediaJobPriority = 'high' | 'low';
+export type MediaJobPriority = 'high' | 'normal' | 'low';
 
 export interface MediaJob {
   id: string;
@@ -58,6 +59,7 @@ export interface MediaJobState {
   runnerActive: boolean;
   enqueueJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings) => void;
   enqueueProxyJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings, options?: MediaJobOptions) => void;
+  enqueueWaveformJobsForMedia: (media: MediaAsset[]) => void;
   enqueueMonitorJob: (job: MediaJobInput) => string;
   startNextJob: () => MediaJob | undefined;
   updateJobProgress: (jobId: string, progress: number) => void;
@@ -68,6 +70,7 @@ export interface MediaJobState {
   retryJob: (jobId: string) => void;
   retryFailedJobs: () => void;
   moveJobBefore: (jobId: string, targetJobId: string) => void;
+  setJobPriority: (jobId: string, priority: MediaJobPriority) => void;
   setRunnerActive: (runnerActive: boolean) => void;
   clearFinishedJobs: () => void;
 }
@@ -77,8 +80,21 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   runnerActive: false,
   enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
+    const autoGenerateWaveform = useMediaJobSettingsStore.getState().autoGenerateWaveform;
     const jobsToAdd = media
       .flatMap((asset) => buildJobsForAsset(asset, proxySettings, { priority: 'low' }))
+      .filter((job) => !existingKeys.has(job.key))
+      .filter((job) => job.type !== 'waveform' || autoGenerateWaveform);
+    if (jobsToAdd.length === 0) {
+      return;
+    }
+    set((state) => ({ jobs: sortQueueJobs([...state.jobs, ...jobsToAdd]) }));
+  },
+  enqueueWaveformJobsForMedia: (media) => {
+    const existingKeys = new Set(get().jobs.map((job) => job.key));
+    const jobsToAdd = media
+      .filter((asset) => !asset.missing && (asset.type === 'audio' || (asset.type === 'video' && asset.hasAudio)))
+      .map((asset) => createJob(asset, 'waveform'))
       .filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;
@@ -242,6 +258,18 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
     }));
   },
   moveJobBefore: (jobId, targetJobId) => set((state) => ({ jobs: reorderMediaJobs(state.jobs, jobId, targetJobId) })),
+  setJobPriority: (jobId, priority) => {
+    const updatedAt = new Date().toISOString();
+    set((state) => ({
+      jobs: sortQueueJobs(
+        state.jobs.map((job) =>
+          job.id === jobId && job.status === 'pending'
+            ? { ...job, priority, updatedAt }
+            : job,
+        ),
+      ),
+    }));
+  },
   setRunnerActive: (runnerActive) => set({ runnerActive }),
   clearFinishedJobs: () => {
     set((state) => ({ jobs: state.jobs.filter((job) => job.status === 'pending' || job.status === 'running') }));
@@ -291,7 +319,7 @@ function createJob(
     type,
     status: 'pending',
     progress: 0,
-    priority: options.priority ?? 'low',
+    priority: options.priority ?? 'normal',
     force: options.force || undefined,
     cfrFrameRate: options.cfrFrameRate,
     sourceStart: options.sourceStart,
