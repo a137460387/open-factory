@@ -29,7 +29,8 @@ export type TimelineShortcutAction =
   | 'navigate-next-instance'
   | 'render-in-out'
   | 'navigate-prev-gap'
-  | 'navigate-next-gap';
+  | 'navigate-next-gap'
+  | 'close-gap';
 
 export interface TimelineShortcutKey {
   key: string;
@@ -67,6 +68,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'add-annotation', defaultBindings: ['N'] },
   { action: 'add-bookmark', defaultBindings: ['B'] },
   { action: 'toggle-grid-snap', defaultBindings: ['G'] },
+  { action: 'close-gap', defaultBindings: ['Alt+G'] },
   { action: 'jump-prev-navigation-point', defaultBindings: ['Ctrl+ArrowLeft'] },
   { action: 'jump-next-navigation-point', defaultBindings: ['Ctrl+ArrowRight'] },
   { action: 'undo', defaultBindings: ['Ctrl+Z'] },

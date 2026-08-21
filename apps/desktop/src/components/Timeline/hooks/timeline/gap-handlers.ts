@@ -52,7 +52,7 @@ export function createGapHandlers(
       return;
     }
     try {
-      commandManager.execute(new CloseGapCommand(timelineAccessor, gapMenu.trackId, gapMenu.time));
+      commandManager.execute(new CloseGapCommand(timelineAccessor, gapMenu.trackId, gapMenu.time, project.clipGroups));
       setGapMenu(undefined);
     } catch (error) {
       showToast({
