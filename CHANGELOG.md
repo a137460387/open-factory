@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.74.0] - 2026-08-21
+
+### Added
+- 剪辑组感知的专业时间线操作守卫（editor-core 纯函数 clip-group-relations）：
+  - Rolling Trim：相邻两片段共享边界联动调整，总时长不变；跨界组边界被拒绝并提示
+  - Close Gap：一键闭合轨道间隙；横跨间隙的剪辑组被保护（拒绝并提示组名）
+- Alt+G 快捷键：闭合 playhead 所在（或其后首个）间隙；无间隙时静默无操作；守卫拒绝时 toast 告知原因而非静默跳轨
+- 快捷键面板（中/英）新增「闭合间隙 / Close Gap」条目
+- timeline-advanced.spec.ts：12 个 E2E 用例覆盖 ripple/rolling trim/组守卫/Alt+G/锁轨
+
+### Fixed
+- RollingTrimCommand / CloseGapCommand / FillGapCommand 补齐锁轨断言：
+  锁定轨道上的边界拖拽、间隙闭合与填充现在被命令层拒绝（错误消息统一，
+  桌面端 toast 直出）；此前 CloseGap/FillGap 在锁轨上照常执行
+
+### Changed
+- RippleDeleteCommand / CloseGapCommand / RollingTrimCommand 构造函数新增可选
+  clipGroups 参数（默认空数组，现有调用完全兼容）；桌面端接线传入项目剪辑组
+
+### Known Issues
+- 组内 trim 不联动（设计决策）：剪辑组仅绑定移动/删除/边界守卫，成员入出点
+  独立可修剪——与 DaVinci Resolve clip group 行为一致，避免与相邻非组片段
+  产生 overlap 冲突
+- UI 点击组成员会自动扩展选区为整组：ripple delete 的实际语义是整组删除；
+  命令层单成员删除（组收缩/解散）面向脚本与协作重放路径
+- ripple delete 左移量为被删区间总时长，被删片段前后的既有间隙保留（v4.73
+  既有行为，本版测试已锁定该基线）
+
 ## [v4.73.0] - 2026-07-29
 
 ### Added

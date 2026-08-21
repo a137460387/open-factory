@@ -1260,6 +1260,7 @@ const zh = {
         'add-annotation': '添加批注',
         'add-bookmark': '添加书签',
         'toggle-grid-snap': '切换网格吸附',
+        'close-gap': '闭合间隙',
         'jump-prev-navigation-point': '上一书签/标记',
         'jump-next-navigation-point': '下一书签/标记',
         undo: '撤销',
