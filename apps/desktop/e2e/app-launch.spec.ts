@@ -40,6 +40,26 @@ test.describe('App Launch', () => {
     expect(criticalErrors).toEqual([]);
   });
 
+  test('suppresses startup update check in e2e environment', async ({ page }) => {
+    // 更新检查在 e2e 默认抑制：若未抑制，启动后会 fetch github releases
+    // latest.json（被 CORS 拦截）。此处锁定该 fetch 完全不发起。
+    const updateRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('releases/latest')) {
+        updateRequests.push(request.url());
+      }
+    });
+
+    await page.goto('/');
+    await waitForE2eActions(page);
+    await waitForAppStore(page);
+    // 更新检查链（readUpdateSettings → getAppVersion → fetch）在组件挂载后
+    // 异步执行，留缓冲窗口确保未抑制场景下请求已可观测。
+    await page.waitForTimeout(1_000);
+
+    expect(updateRequests).toEqual([]);
+  });
+
   test('toolbar shows project name', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
