@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildAtempoFilters,
   buildBeatSyncSpeedKeyframes,
@@ -41,6 +41,7 @@ import {
 import type { AudioEffectSlot, MixerState } from '../src/audio/mixer-types';
 import { createDefaultMixerState, createMixerChannel } from '../src/audio/mixer-types';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { cssColorToAssColor } from '../src/export/ffmpeg-builder';
 
 function makeAudioVisualizationProject(): Project {
   const project = makeProject();
@@ -1049,7 +1050,8 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('subtitles=filename=__SUBTITLEFILE_export_subtitles__');
     expect(plan.filterComplex).toContain("force_style='FontSize=42,PrimaryColour=&H00FFFFFF");
     expect(plan.filterComplex).toContain('OutlineColour=&H00332211');
-    expect(plan.filterComplex).toContain('BackColour=&H00665544');
+    // backgroundOpacity=0 → ASS alpha=FF 全透明（CSS opacity 反转为 ASS alpha）
+    expect(plan.filterComplex).toContain('BackColour=&HFF665544');
     expect(plan.filterComplex).toContain('BorderStyle=1');
     expect(plan.filterComplex).toContain('Outline=3');
     expect(plan.filterComplex).toContain('Shadow=2');
@@ -4717,4 +4719,31 @@ describe('buildHardwareEncoderArgs', () => {
   it('B-frames VAAPI skip', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_vaapi', rateControlMode: 'cqp', bFrames: 3 }, 30, caps, w); expect(a).not.toContain('-bf'); });
   it('fallback', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc' }, 30, { ...caps, hardwareEncoders: [] }, w); expect(a).toContain('libx264'); expect(w).toHaveLength(1); });
   it('HEVC', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'hevc_nvenc', rateControlMode: 'cqp', cq: 25 }, 30, caps, w); expect(a).toContain('hevc_nvenc'); });
+});
+
+describe('cssColorToAssColor', () => {
+  it('converts white to ASS BGR with opaque alpha prefix', () => {
+    expect(cssColorToAssColor('#ffffff')).toBe('&H00FFFFFF');
+  });
+
+  it('converts black to fully transparent-safe zero color', () => {
+    expect(cssColorToAssColor('#000000')).toBe('&H00000000');
+  });
+
+  it('converts red to BGR channel order', () => {
+    expect(cssColorToAssColor('#ff0000')).toBe('&H000000FF');
+  });
+
+  it('inverts CSS opacity into ASS alpha (1 = opaque, 0 = fully transparent, 0.5 = half)', () => {
+    expect(cssColorToAssColor('#ffffff', 1)).toBe('&H00FFFFFF');
+    expect(cssColorToAssColor('#ffffff', 0.5)).toBe('&H80FFFFFF');
+    expect(cssColorToAssColor('#ffffff', 0)).toBe('&HFFFFFFFF');
+  });
+
+  it('falls back to opaque white for invalid color input and tolerates whitespace and missing #', () => {
+    expect(cssColorToAssColor('not-a-color')).toBe('&H00FFFFFF');
+    expect(cssColorToAssColor('#GG0000')).toBe('&H00FFFFFF');
+    expect(cssColorToAssColor('  #ffffff  ')).toBe('&H00FFFFFF');
+    expect(cssColorToAssColor('ffffff')).toBe('&H00FFFFFF');
+  });
 });
