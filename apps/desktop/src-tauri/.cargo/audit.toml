@@ -47,4 +47,15 @@ ignore = [
     # Tracked: remove once plist or tauri-utils updates to quick-xml >= 0.41.0
     "RUSTSEC-2026-0194", # quick-xml quadratic attribute check DoS
     "RUSTSEC-2026-0195", # quick-xml NsReader memory-exhaustion DoS
+
+    # h2 0.4.15 unbounded empty DATA frames (RUSTSEC-2026-0258, disclosed 2026-08-17):
+    # Transitive via tauri/wry/reqwest (HTTP/2 stack). DoS-class: a malicious
+    # peer can exhaust memory by streaming empty DATA frames. Local-first
+    # desktop app: h2 endpoints are Tauri-internal (dev server / asset
+    # protocol / updater fetch) and never listen on a public network surface,
+    # so no untrusted peer can reach the affected code path.
+    # Fix path: cargo update -p h2 (>= 0.4.16, requires network) or next
+    # tauri ecosystem lockfile refresh.
+    # Tracked: remove once h2 is upgraded to >= 0.4.16.
+    "RUSTSEC-2026-0258", # h2 unbounded empty DATA frames DoS
 ]

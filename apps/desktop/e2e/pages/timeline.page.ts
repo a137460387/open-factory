@@ -190,6 +190,32 @@ export class TimelinePage extends BasePage {
     await this.waitForClips();
   }
 
+  /** 加载时间线高级操作 fixture（3 个片段 + a/b 成组） */
+  async setupTimelineAdvancedFixture(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.__E2E_ACTIONS__!.setupTimelineAdvancedFixture!();
+    });
+    await this.waitForClips();
+  }
+
+  /** 加载组守卫 fixture（a/b 分居 gap 两侧成组，playhead 命中 gap） */
+  async setupTimelineAdvancedGuardFixture(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.__E2E_ACTIONS__!.setupTimelineAdvancedGuardFixture!();
+    });
+    await this.waitForClips();
+  }
+
+  /** Alt+G 闭合 playhead 处间隙 */
+  async closeGapAtPlayhead(): Promise<void> {
+    await this.page.keyboard.press('Alt+G');
+  }
+
+  /** 锁定轨道（点击轨道表头锁定按钮） */
+  async lockFirstTrack(): Promise<void> {
+    await this.safeClick('track-lock-track-video');
+  }
+
   /** 等待时间线进入指定编辑模式 */
   async waitForEditingMode(mode: 'rolling-trim' | 'slip' | 'slide', timeout = 5_000): Promise<void> {
     await expect(this.root).toHaveAttribute('data-editing-mode', mode, { timeout });

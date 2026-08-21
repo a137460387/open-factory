@@ -521,7 +521,9 @@ export function buildDrawtextPositionExpression(clip: ExportClip, axis: 'x' | 'y
   if (frames.length === 1) {
     return `(${dimension}-${textDimension})/2+(${dimension}/2)*${formatFfmpegNumber(frames[0].value)}`;
   }
-  return `(${dimension}-${textDimension})/2+${formatSigned(fallback)}`;
+  // formatSigned 自带符号（正 +N / 负 -N / 零省略），模板不得再硬编码 "+"，
+  // 否则零偏移产出尾部裸 "+" 的残缺表达式，ffmpeg drawtext 解析失败
+  return `(${dimension}-${textDimension})/2${formatSigned(fallback)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -760,11 +762,14 @@ export function formatSigned(value: number): string {
 }
 
 export function cssColorToAssColor(hex: string, opacity?: number): string {
-  const trimmed = hex.trim().replace(/^#/, '');
-  const r = parseInt(trimmed.slice(0, 2), 16) || 0;
-  const g = parseInt(trimmed.slice(2, 4), 16) || 0;
-  const b = parseInt(trimmed.slice(4, 6), 16) || 0;
-  const alpha = opacity !== undefined ? Math.round(Math.min(1, Math.max(0, opacity)) * 255) : 0;
+  // ASS 颜色格式为 &HAABBGGRR；alpha 00 = 不透明，FF = 全透明。
+  // opacity 为 CSS 语义（1 = 不透明），需反转为 ASS alpha。
+  const match = /^#?([a-fA-F0-9]{6})$/.exec(hex.trim());
+  const rgb = match ? match[1] : 'ffffff';
+  const r = rgb.slice(0, 2);
+  const g = rgb.slice(2, 4);
+  const b = rgb.slice(4, 6);
+  const alpha = opacity !== undefined ? Math.round((1 - Math.min(1, Math.max(0, opacity))) * 255) : 0;
   const toHex = (v: number) => v.toString(16).padStart(2, '0');
-  return `&H${toHex(alpha)}${toHex(b)}${toHex(g)}${toHex(r)}`.toUpperCase();
+  return `&H${toHex(alpha)}${b}${g}${r}`.toUpperCase();
 }

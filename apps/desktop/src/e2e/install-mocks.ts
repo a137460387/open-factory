@@ -1879,6 +1879,100 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupTimelineAdvancedFixture: () => {
+    const project = createProject('Timeline Advanced E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-adv-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-b', 2, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-c', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-adv-1', name: 'Advanced Group', clipIds: ['clip-adv-a', 'clip-adv-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupTimelineAdvancedGuardFixture: () => {
+    // 组 [a,b] 横跨 gap (2,4)：playhead=3 命中 gap，闭合会被组撕裂守卫拒绝
+    const project = createProject('Timeline Advanced Guard E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-guard-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-guard-b', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-guard-1', name: 'Guard Group', clipIds: ['clip-guard-a', 'clip-guard-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(3);
+    commandManager.clear();
+  },
   setupGapFillFixture: () => {
     const project = createProject('Gap Fill E2E');
     const asset: MediaAsset = {

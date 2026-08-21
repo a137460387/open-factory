@@ -290,6 +290,7 @@ export function createDragHandlers(
             current.rightClip.id,
             current.previewRollingDelta ?? 0,
             minFrameDuration(),
+            project.clipGroups,
           ),
         );
       } else if (current.mode === 'slip') {

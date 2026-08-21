@@ -108,6 +108,9 @@
 ## Next (v4.26+)
 
 - [x] Ripple edit, gap close, rolling trim, grouped clips, and related professional timeline shortcuts.
+  - 2026-08-21 落地：RippleDelete/CloseGap/RollingTrim 命令级锁轨断言与组守卫（clip-group-relations 纯函数）、
+    Alt+G playhead 间隙闭合、组感知 ripple 删除（桌面选区自动扩组）、timeline-advanced.spec.ts E2E 11 用例。
+    已知边界：组内 trim 不联动（设计决策，见 v4.74.0 Release Notes）。
 - [x] Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
 - [ ] Priority scheduling and explicit throttling controls for background media jobs.
 - [ ] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
