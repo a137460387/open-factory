@@ -521,7 +521,9 @@ export function buildDrawtextPositionExpression(clip: ExportClip, axis: 'x' | 'y
   if (frames.length === 1) {
     return `(${dimension}-${textDimension})/2+(${dimension}/2)*${formatFfmpegNumber(frames[0].value)}`;
   }
-  return `(${dimension}-${textDimension})/2+${formatSigned(fallback)}`;
+  // formatSigned 自带符号（正 +N / 负 -N / 零省略），模板不得再硬编码 "+"，
+  // 否则零偏移产出尾部裸 "+" 的残缺表达式，ffmpeg drawtext 解析失败
+  return `(${dimension}-${textDimension})/2${formatSigned(fallback)}`;
 }
 
 // ---------------------------------------------------------------------------

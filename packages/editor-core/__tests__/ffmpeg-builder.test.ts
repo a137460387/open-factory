@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildAtempoFilters,
   buildBeatSyncSpeedKeyframes,
@@ -41,6 +41,7 @@ import {
 import type { AudioEffectSlot, MixerState } from '../src/audio/mixer-types';
 import { createDefaultMixerState, createMixerChannel } from '../src/audio/mixer-types';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { buildDrawtextPositionExpression } from '../src/export/ffmpeg-builder';
 
 function makeAudioVisualizationProject(): Project {
   const project = makeProject();
@@ -4717,4 +4718,36 @@ describe('buildHardwareEncoderArgs', () => {
   it('B-frames VAAPI skip', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_vaapi', rateControlMode: 'cqp', bFrames: 3 }, 30, caps, w); expect(a).not.toContain('-bf'); });
   it('fallback', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'h264_nvenc' }, 30, { ...caps, hardwareEncoders: [] }, w); expect(a).toContain('libx264'); expect(w).toHaveLength(1); });
   it('HEVC', () => { const w: string[] = []; const a = buildHardwareEncoderArgs({ encoderId: 'hevc_nvenc', rateControlMode: 'cqp', cq: 25 }, 30, caps, w); expect(a).toContain('hevc_nvenc'); });
+});
+
+describe('buildDrawtextPositionExpression', () => {
+  // fixture 形状对齐 smoke:golden text-drawtext 用例：无关键帧的静态 text clip
+  // （transform x:0 / y:-12），走静态回退分支
+  const clip = {
+    id: 'clip-text-title',
+    start: 0,
+    duration: 1.5,
+    transform: { x: 0, y: -12, scale: 1, rotation: 0, opacity: 1 },
+    keyframes: {},
+  } as unknown as Parameters<typeof buildDrawtextPositionExpression>[0];
+
+  it('omits the offset entirely for zero fallback instead of emitting a dangling "+"', () => {
+    expect(buildDrawtextPositionExpression(clip, 'x', 0)).toBe('(w-text_w)/2');
+    expect(buildDrawtextPositionExpression(clip, 'y', 0)).toBe('(h-text_h)/2');
+  });
+
+  it('emits a single signed "+" for positive fallback', () => {
+    expect(buildDrawtextPositionExpression(clip, 'x', 12)).toBe('(w-text_w)/2+12');
+    expect(buildDrawtextPositionExpression(clip, 'y', 12)).toBe('(h-text_h)/2+12');
+  });
+
+  it('emits a single signed "-" for negative fallback', () => {
+    expect(buildDrawtextPositionExpression(clip, 'x', -12)).toBe('(w-text_w)/2-12');
+    expect(buildDrawtextPositionExpression(clip, 'y', -12)).toBe('(h-text_h)/2-12');
+  });
+
+  it('formats fractional positive fallback without trailing zeros', () => {
+    expect(buildDrawtextPositionExpression(clip, 'x', 0.5)).toBe('(w-text_w)/2+0.5');
+    expect(buildDrawtextPositionExpression(clip, 'y', 0.5)).toBe('(h-text_h)/2+0.5');
+  });
 });
