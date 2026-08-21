@@ -98,7 +98,6 @@ export * from './vfr';
 export * from './beats';
 export * from './scene-cuts';
 export * from './smart-rough-cut-v2';
-export * from './smart-rough-cut-orchestrator';
 export * from './smart-stutter-detection';
 export * from './ai-scene-tagger';
 export * from './storyboard';
