@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.74.1] - 2026-08-21
+
+### Fixed
+- 文本导出 drawtext 表达式残缺（transform 偏移为 0 时尾部裸 "+" 导致 ffmpeg 解析失败）
+- 字幕背景透明度反转（ASS alpha 语义修正，opacity=1 现在正确渲染为不透明）
+- 统一 ASS 颜色格式实现（&HAABBGGRR），非法色值回退白色
+
 ## [v4.74.0] - 2026-08-21
 
 ### Added
