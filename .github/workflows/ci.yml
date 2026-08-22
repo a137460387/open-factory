@@ -273,7 +273,10 @@ jobs:
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
-          timeout_minutes: 20
+          # 全量 530 用例 CI 实测约 40 分钟（2026-08-21 run 32492907683：
+          # 20 分钟仅跑到 265/530），50 分钟留约 25% 余量；此前 20 分钟
+          # 导致两轮 attempt 均结构性截断、无汇总数据
+          timeout_minutes: 50
           command: cd "$GITHUB_WORKSPACE/apps/desktop" && bunx playwright test --workers=2 --reporter=list,html
 
       - name: Upload test report

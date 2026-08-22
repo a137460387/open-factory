@@ -75,7 +75,8 @@
     "linkify-it": "^5.0.2",
     "postcss": ">=8.5.26",
     "sharp": ">=0.35.0",
-    "undici": "^7.29.0"
+    "undici": "^7.29.0",
+    "fast-uri": "4.1.2"
   },
   "dependencies": {}
 }
