@@ -10,7 +10,10 @@ test('AI loudness: measure shows suggestion, apply gain updates audio chain', as
   await openExportDialog(page);
 
   // Expand loudness section
-  await expect(page.getByTestId('ai-loudness-section')).toBeVisible();
+  // 15s：openExportDialog 只点击不等待，本断言是点击后首个等待，需覆盖
+  // ExportDialog 双层 lazy chunk 加载+渲染链（与 nested-sequence-export
+  // export-dialog 挂点同根因，run 32625097893 慢 runner 上默认 5s 不够）
+  await expect(page.getByTestId('ai-loudness-section')).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('ai-loudness-section').locator('summary').click();
 
   // Click measure

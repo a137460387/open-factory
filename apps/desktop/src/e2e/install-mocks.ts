@@ -1184,10 +1184,13 @@ const mocks: TauriMocks = {
   },
   cancelDemucs: () => undefined,
   processAudioNoiseReduction: async ({ mediaPath, clipId }) => {
+    // 每段 400ms：慢 runner 上 React 渲染调度积压时，瞬时态（processing
+    // 分支）与完成态会合并进同一次渲染导致 ai-local-denoise-progress
+    // 元素从未出现（run 32625097893 12/12 稳定失败根因）
     emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
     const outputPath = mediaPath.replace(/(\.[^.]+)$/, '-denoised$1');
     return { outputPath, originalPath: mediaPath, durationMs: 15, noiseReductionDb: 6.5 };
@@ -1249,7 +1252,10 @@ const mocks: TauriMocks = {
     return () => set.delete(handler as (payload: unknown) => void);
   },
   callAiApi: async (request) => {
-    await new Promise((r) => setTimeout(r, 100));
+    // 400ms：慢 runner 上 loading 瞬时态（quality-badge-loading 等）与完成态
+    // 会合并进同一次 React 渲染导致 loading 元素从未出现（run 32625097893
+    // ai-quality-assessment 稳定失败根因，与 processAudioNoiseReduction 同模式）
+    await new Promise((r) => setTimeout(r, 400));
     const systemContent = typeof request.messages[0]?.content === 'string' ? request.messages[0].content : '';
     if (systemContent.includes('字幕编辑助手')) {
       return {

@@ -273,10 +273,11 @@ jobs:
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
-          # 全量 530 用例 CI 实测约 40 分钟（2026-08-21 run 32492907683：
-          # 20 分钟仅跑到 265/530），50 分钟留约 25% 余量；此前 20 分钟
-          # 导致两轮 attempt 均结构性截断、无汇总数据
-          timeout_minutes: 50
+          # timeout 选型依据：慢 runner（noisy-neighbor，image 20260816.277.1
+          # 与全绿轮相同）下单轮实测 42.9-43.8m（含失败重试），50m 余量仅 13%
+          # （2026-08-23 run 32625097893 两轮 + rerun 共 4 attempt 均此量级）；
+          # 60m 对慢跑常态化留约 27% 余量，保留双层重试的 infra 韧性
+          timeout_minutes: 60
           command: cd "$GITHUB_WORKSPACE/apps/desktop" && bunx playwright test --workers=2 --reporter=list,html
 
       - name: Upload test report
