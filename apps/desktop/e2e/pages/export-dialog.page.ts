@@ -18,7 +18,10 @@ export class ExportDialogPage extends BasePage {
   }
 
   /** 等待导出对话框可见 */
-  async waitForOpen(timeout = 10_000): Promise<void> {
+  async waitForOpen(timeout = 15_000): Promise<void> {
+    // 15s：ExportDialog 为双层 lazy chunk（ShellFloatingDialogs →
+    // ExportDialogs → ExportDialog），慢 runner 上加载+渲染链实测可超
+    // 10s（run 32625097893 nested-sequence-export 两用例稳定失败根因）
     await expect(this.dialog).toBeVisible({ timeout });
   }
 
