@@ -1,3 +1,5 @@
+use aes_gcm::aead::rand_core::RngCore;
+use aes_gcm::aead::OsRng;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::net::{Ipv4Addr, SocketAddr};
@@ -20,6 +22,8 @@ pub struct CollaborationHostState {
     pub active: bool,
     pub port: u16,
     pub network_mode: String,
+    /// 会话实际生效的认证 token：请求携带时原样返回，否则后端自动生成。
+    pub auth_token: Option<String>,
 }
 
 struct CollaborationRuntime {
@@ -27,6 +31,7 @@ struct CollaborationRuntime {
     shutdown: broadcast::Sender<()>,
     port: u16,
     network_mode: String,
+    auth_token: String,
 }
 
 static COLLABORATION_RUNTIME: OnceLock<Mutex<Option<CollaborationRuntime>>> = OnceLock::new();
@@ -37,6 +42,13 @@ fn runtime_slot() -> &'static Mutex<Option<CollaborationRuntime>> {
 
 fn is_valid_token(token: &str) -> bool {
     !token.is_empty() && token.len() <= 256 && token.chars().all(|c| !c.is_control())
+}
+
+/// 生成 64 字符 hex 随机认证 token（32 字节 OS 随机源）。
+fn generate_auth_token() -> String {
+    let mut bytes = [0_u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 #[tauri::command]
@@ -52,7 +64,12 @@ pub async fn start_collaboration_host(
     let network_mode = request
         .network_mode
         .unwrap_or_else(|| "localhost".to_string());
-    let auth_token = request.auth_token.filter(|t| is_valid_token(t));
+    // 安全约束：会话必须带认证 token。请求未携带有效 token 时自动生成，
+    // 防止无认证的 WebSocket 端点被本机恶意网页或局域网客户端直连。
+    let auth_token = request
+        .auth_token
+        .filter(|t| is_valid_token(t))
+        .unwrap_or_else(generate_auth_token);
 
     if let Some(existing) = runtime_slot()
         .lock()
@@ -63,6 +80,7 @@ pub async fn start_collaboration_host(
             active: true,
             port: existing.port,
             network_mode: existing.network_mode.clone(),
+            auth_token: Some(existing.auth_token.clone()),
         });
     }
 
@@ -89,9 +107,11 @@ pub async fn start_collaboration_host(
             shutdown: shutdown.clone(),
             port: local_port,
             network_mode: network_mode.clone(),
+            auth_token: auth_token.clone(),
         });
     }
 
+    let runtime_auth_token = auth_token.clone();
     tauri::async_runtime::spawn(async move {
         loop {
             let accepted = tokio::select! {
@@ -104,26 +124,26 @@ pub async fn start_collaboration_host(
             let app_handle = app.clone();
             let mut receiver = sender.subscribe();
             let sender_for_incoming = sender.clone();
-            let expected_token = auth_token.clone();
+            let expected_token = runtime_auth_token.clone();
             tauri::async_runtime::spawn(async move {
                 let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {
                     return;
                 };
-                if let Some(expected) = expected_token {
-                    let auth_msg = match socket.next().await {
-                        Some(Ok(msg)) => msg.into_text().unwrap_or_default(),
-                        _ => return,
-                    };
-                    if auth_msg.trim() != expected {
-                        let _ = socket.close(None).await;
-                        return;
-                    }
-                    let _ = socket
-                        .send(tokio_tungstenite::tungstenite::Message::Text(
-                            r#"{"type":"auth-ok"}"#.to_string(),
-                        ))
-                        .await;
+                // 强制认证：token 由 host 创建时确定（用户指定或自动生成），
+                // 首条消息必须精确匹配，否则立即关闭连接。
+                let auth_msg = match socket.next().await {
+                    Some(Ok(msg)) => msg.into_text().unwrap_or_default(),
+                    _ => return,
+                };
+                if auth_msg.trim() != expected_token {
+                    let _ = socket.close(None).await;
+                    return;
                 }
+                let _ = socket
+                    .send(tokio_tungstenite::tungstenite::Message::Text(
+                        r#"{"type":"auth-ok"}"#.to_string(),
+                    ))
+                    .await;
                 let (mut write, mut read) = socket.split();
                 let incoming = async {
                     while let Some(message) = read.next().await {
@@ -157,6 +177,7 @@ pub async fn start_collaboration_host(
         active: true,
         port: local_port,
         network_mode,
+        auth_token: Some(auth_token),
     })
 }
 
@@ -221,5 +242,30 @@ mod tests {
     #[test]
     fn rejects_control_chars_in_token() {
         assert!(!is_valid_token("bad\x00token"));
+    }
+
+    #[test]
+    fn generated_auth_token_is_64_hex_chars_and_unique() {
+        let first = generate_auth_token();
+        let second = generate_auth_token();
+        assert_eq!(first.len(), 64);
+        assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(first, second, "each session must get a fresh token");
+    }
+
+    #[test]
+    fn token_selection_prefers_valid_request_token_over_generated() {
+        // 无效 token（空串）会被过滤，回退到自动生成路径。
+        let request_token = Some(String::new());
+        let selected = request_token
+            .filter(|t| is_valid_token(t))
+            .unwrap_or_else(generate_auth_token);
+        assert_eq!(selected.len(), 64, "invalid request token falls back to generated");
+
+        let request_token = Some("my-secret-token-123".to_string());
+        let selected = request_token
+            .filter(|t| is_valid_token(t))
+            .unwrap_or_else(generate_auth_token);
+        assert_eq!(selected, "my-secret-token-123");
     }
 }

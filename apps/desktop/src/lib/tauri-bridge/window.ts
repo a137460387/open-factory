@@ -54,7 +54,8 @@ export async function startCollaborationHost(request: CollaborationHostRequest):
     return mock(request);
   }
   if (!isTauriRuntime()) {
-    return { active: true, port: request.port };
+    // 浏览器环境无后端，返回确定性占位 token 保持返回结构与桌面端一致。
+    return { active: true, port: request.port, authToken: request.authToken ?? 'browser-session-token' };
   }
   return invoke<CollaborationHostState>('start_collaboration_host', { request });
 }

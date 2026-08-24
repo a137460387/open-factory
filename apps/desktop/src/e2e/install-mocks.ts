@@ -1224,10 +1224,15 @@ const mocks: TauriMocks = {
     persistFiles();
     return { taskId, outputPath: task.outputPath, durationMs: Date.now() - task.startedAt };
   },
-  startCollaborationHost: ({ port }) => {
+  startCollaborationHost: ({ port, authToken }) => {
     collaborationHostActive = true;
     collaborationHostPort = port || 37822;
-    return { active: true, port: collaborationHostPort };
+    // 模拟真实后端：请求未携带 token 时自动生成，确保客户端必须认证。
+    return {
+      active: true,
+      port: collaborationHostPort,
+      authToken: authToken ?? 'mock-session-token',
+    };
   },
   stopCollaborationHost: () => {
     collaborationHostActive = false;
