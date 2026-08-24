@@ -3,6 +3,7 @@ import {
   assignCollaborationUserColors,
   buildCollaborationClipLocks,
   canApplyCollaborationOperation,
+  isCollaborationProjectPayload,
   parseCollaborationOperation,
   serializeCollaborationOperation,
   type CollaborationClipLock,
@@ -237,6 +238,10 @@ class LocalNetworkCollaborationController {
       return;
     }
     if (message.type === 'project-sync' && this.state.role === 'client') {
+      // 远端载荷结构守卫：拒绝缺少 Project 必要字段的 project-sync 消息。
+      if (!isCollaborationProjectPayload(message.project)) {
+        return;
+      }
       this.applyingRemote = true;
       try {
         const result = applyCollaborationReconnectState(useEditorStore.getState().project, message.project);
@@ -256,10 +261,11 @@ class LocalNetworkCollaborationController {
     }
     this.rememberOperation(message.operation);
     const project = message.operation.params.project;
-    if (project && typeof project === 'object') {
+    // 远端载荷结构守卫：operation 携带的 project 必须通过校验才能替换本地状态。
+    if (isCollaborationProjectPayload(project)) {
       this.applyingRemote = true;
       try {
-        useEditorStore.getState().setProject(project as Project, useEditorStore.getState().projectPath);
+        useEditorStore.getState().setProject(project, useEditorStore.getState().projectPath);
       } finally {
         this.applyingRemote = false;
       }
