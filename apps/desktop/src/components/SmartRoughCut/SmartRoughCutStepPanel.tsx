@@ -3,359 +3,64 @@
  *
  * 分步编排 scene/silence/whisper/dialogue（broll/rhythm 保留扩展位）：
  * 每步独立运行按钮 + 状态徽标 + 结果预览 + 逐项勾选 + 命令化应用，底部累计报告。
- * 步骤状态机与累计报告并入 smartRoughCutOrchestratorStore（stepState）。
- * 检测后端与命令对象全部复用现有实现，零改动。
+ * 编排逻辑在 useSmartRoughCut（状态机并入 smartRoughCutOrchestratorStore.stepState），
+ * 纯函数在 smart-rough-cut-utils，本文件只负责渲染。
  */
-import {
-  AddTrackCommand,
-  BrollInsertCommand,
-  DialogueRoughCutCommand,
-  RemoveSilenceCommand,
-  RhythmAssembleCommand,
-  SplitClipAtTimesCommand,
-  buildBrollInsertClips,
-  createTrack,
-  getClipSpeed,
-  round,
-  type Clip,
-  type MediaAsset,
-  type Project,
-  type SilentRange,
-  type SmartRoughCutBrollCandidate,
-  type SmartRoughCutVisualClip,
-  type Timeline,
-  type Track,
-} from '@open-factory/editor-core';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { Clip, MediaAsset, Track } from '@open-factory/editor-core';
+import { useState, type ReactNode } from 'react';
 import { zhCN } from '../../i18n/strings';
-import { detectClipDialogue } from '../../lib/dialogueDetection';
-import { detectClipSilence } from '../../lib/silenceDetection';
-import { detectSceneChanges } from '../../lib/tauri-bridge';
 import {
-  buildWhisperSubtitleTrackForClip,
-  canGenerateSubtitlesForClip,
-  getWhisperAvailability,
-  type WhisperAvailability,
-} from '../../lib/whisper';
-import { showToast } from '../../lib/toast';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { useEditorStore } from '../../store/editorStore';
-import { useSmartRoughCutOrchestratorStore } from '../../store/smartRoughCutOrchestratorStore';
-import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import {
-  createSmartRoughCutSelection,
   getSelectedSmartRoughCutIds,
   setAllSmartRoughCutSelection,
-  type SmartRoughCutReport,
   type SmartRoughCutSelection,
-  type SmartRoughCutStep,
   type SmartRoughCutStepStatus,
 } from './smart-rough-cut-state';
+import {
+  formatSeconds,
+  sumSilentDuration,
+  type SceneCandidate,
+  type SilenceCandidate,
+} from './smart-rough-cut-utils';
+import { useSmartRoughCut } from './useSmartRoughCut';
 
 interface SmartRoughCutStepPanelProps {
   selectedClip?: Clip;
   media: MediaAsset[];
 }
 
-interface SceneCandidate {
-  id: string;
-  start: number;
-  end: number;
-  splitTime?: number;
-  thumbnail?: string;
-}
-
-interface SilenceCandidate {
-  id: string;
-  range: SilentRange;
-}
-
 type SmartRoughCutTab = 'basic' | 'dialogue' | 'broll' | 'rhythm';
 
 export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutStepPanelProps) {
-  const [pendingScene, setPendingScene] = useState<{
-    clipId: string;
-    items: SceneCandidate[];
-    selection: SmartRoughCutSelection;
-  }>();
-  const [pendingSilence, setPendingSilence] = useState<{
-    clipId: string;
-    items: SilenceCandidate[];
-    selection: SmartRoughCutSelection;
-  }>();
   const [activeTab, setActiveTab] = useState<SmartRoughCutTab>('basic');
-  const [brollTrackId, setBrollTrackId] = useState('');
-  const [rhythmTrackId, setRhythmTrackId] = useState('');
-  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({
-    ready: false,
-    error: zhCN.whisper.notConfigured,
-  });
-  const stepState = useSmartRoughCutOrchestratorStore((store) => store.stepState);
-  const markStepRunning = useSmartRoughCutOrchestratorStore((store) => store.markStepRunning);
-  const markStepComplete = useSmartRoughCutOrchestratorStore((store) => store.markStepComplete);
-  const markStepError = useSmartRoughCutOrchestratorStore((store) => store.markStepError);
-  const whisperExecutablePath = useWhisperSettingsStore((item) => item.executablePath);
-  const whisperModelPath = useWhisperSettingsStore((item) => item.modelPath);
-  const project = useEditorStore((item) => item.project);
-  const selectedClipIds = useEditorStore((item) => item.selectedClipIds);
-  const setSelectedClipId = useEditorStore((item) => item.setSelectedClipId);
-  const timeline = project.timeline;
-  const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
-  const selectedTimelineClips = useMemo(
-    () => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)),
-    [selectedClipIds, timeline],
-  );
-  const selectedVisualClips = useMemo(() => selectedTimelineClips.filter(isVisualClip), [selectedTimelineClips]);
-  const mainVisualClips = useMemo(
-    () => getPrimaryVisualClips(timeline, selectedVisualClips),
-    [selectedVisualClips, timeline],
-  );
-  const videoTracks = useMemo(() => timeline.tracks.filter((track) => track.type === 'video'), [timeline]);
-  const rhythmBeatTimes = useMemo(
-    () => getRhythmBeatTimes(project, selectedTimelineClips),
-    [project, selectedTimelineClips],
-  );
-  const anyRunning = Object.values(stepState.steps).some((step) => step.status === 'running');
-  const canRunScene = selectedClip?.type === 'video' && Boolean(asset);
-  const canRunSilence = Boolean(
-    selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)),
-  );
-  const canRunWhisper = canGenerateSubtitlesForClip(selectedClip, asset, whisperAvailability.ready);
-  const canRunDialogue = Boolean(
-    selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)),
-  );
-  const canRunBroll = mainVisualClips.length > 0 && buildBrollCandidates(media, selectedTimelineClips).length > 0;
-  const canRunRhythm = selectedVisualClips.length > 0 && rhythmBeatTimes.length >= 2;
-
-  useEffect(() => {
-    let disposed = false;
-    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then(
-      (availability) => {
-        if (!disposed) {
-          setWhisperAvailability(availability);
-        }
-      },
-    );
-    return () => {
-      disposed = true;
-    };
-  }, [whisperExecutablePath, whisperModelPath]);
-
-  useEffect(() => {
-    if (rhythmTrackId && videoTracks.some((track) => track.id === rhythmTrackId)) {
-      return;
-    }
-    setRhythmTrackId(selectedVisualClips[0]?.trackId ?? videoTracks[0]?.id ?? '');
-  }, [rhythmTrackId, selectedVisualClips, videoTracks]);
-
-  async function runSceneDetection(): Promise<void> {
-    await runStep('scene', async () => {
-      const { clip, mediaAsset } = requireSelectedMedia('scene');
-      if (clip.type !== 'video') {
-        throw new Error(zhCN.smartRoughCut.sceneUnavailable);
-      }
-      const speed = getClipSpeed(clip);
-      const sourceStart = clip.trimStart;
-      const sourceEnd = sourceStart + clip.duration * speed;
-      const result = await detectSceneChanges({
-        path: mediaAsset.path,
-        threshold: 0.3,
-        duration: mediaAsset.duration || clip.duration,
-      });
-      const splitTimes = result.sceneTimes
-        .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
-        .map((time) => round((time - sourceStart) / speed));
-      const items = buildSceneCandidates(splitTimes, clip.duration, mediaAsset.thumbnail);
-      setPendingScene({
-        clipId: clip.id,
-        items,
-        selection: createSmartRoughCutSelection(items.map((item) => item.id)),
-      });
-      return {};
-    });
-  }
-
-  async function runSilenceDetection(): Promise<void> {
-    await runStep('silence', async () => {
-      const { clip, mediaAsset } = requireSelectedMedia('silence');
-      if (clip.type !== 'audio' && clip.type !== 'video') {
-        throw new Error(zhCN.smartRoughCut.silenceUnavailable);
-      }
-      if (clip.type === 'video' && !mediaAsset.hasAudio) {
-        throw new Error(zhCN.smartRoughCut.silenceUnavailable);
-      }
-      const ranges = await detectClipSilence(clip, mediaAsset, {
-        thresholdDb: -40,
-        minSilenceDuration: 0.5,
-        marginDuration: 0.1,
-      });
-      const items = ranges.map((range, index) => ({ id: `silence-${index}`, range }));
-      setPendingSilence({
-        clipId: clip.id,
-        items,
-        selection: createSmartRoughCutSelection(items.map((item) => item.id)),
-      });
-      return {};
-    });
-  }
-
-  function applySceneSplit(): void {
-    if (!pendingScene) {
-      return;
-    }
-    try {
-      const selectedIds = new Set(getSelectedSmartRoughCutIds(pendingScene.selection));
-      const splitTimes = pendingScene.items
-        .filter((item) => selectedIds.has(item.id) && typeof item.splitTime === 'number')
-        .map((item) => item.splitTime!);
-      if (splitTimes.length > 0) {
-        commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, pendingScene.clipId, splitTimes));
-      }
-      markStepComplete('scene', { sceneSplits: splitTimes.length });
-      setPendingScene(undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
-      markStepError('scene', message);
-      showToast({ kind: 'warning', title: zhCN.smartRoughCut.stepFailed(zhCN.smartRoughCut.steps.scene), message });
-    }
-  }
-
-  function applySilenceRemoval(): void {
-    if (!pendingSilence) {
-      return;
-    }
-    try {
-      const selectedIds = new Set(getSelectedSmartRoughCutIds(pendingSilence.selection));
-      const ranges = pendingSilence.items.filter((item) => selectedIds.has(item.id)).map((item) => item.range);
-      if (ranges.length > 0) {
-        commandManager.execute(new RemoveSilenceCommand(timelineAccessor, pendingSilence.clipId, ranges));
-      }
-      markStepComplete('silence', { removedSilenceSeconds: sumSilentDuration(ranges) });
-      setPendingSilence(undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
-      markStepError('silence', message);
-      showToast({ kind: 'warning', title: zhCN.smartRoughCut.stepFailed(zhCN.smartRoughCut.steps.silence), message });
-    }
-  }
-
-  async function runWhisper(): Promise<void> {
-    await runStep('whisper', async () => {
-      const { clip, mediaAsset } = requireSelectedMedia('whisper');
-      const availability = await getWhisperAvailability({
-        executablePath: whisperExecutablePath,
-        modelPath: whisperModelPath,
-      });
-      if (!availability.ready) {
-        throw new Error(availability.error ?? zhCN.whisper.notConfigured);
-      }
-      if ((clip.type !== 'audio' && clip.type !== 'video') || !canGenerateSubtitlesForClip(clip, mediaAsset, true)) {
-        throw new Error(zhCN.smartRoughCut.whisperUnavailable);
-      }
-      const track = await buildWhisperSubtitleTrackForClip(
-        clip,
-        mediaAsset,
-        useEditorStore.getState().project.timeline,
-        {
-          executablePath: whisperExecutablePath,
-          modelPath: whisperModelPath,
-        },
-      );
-      if (track.clips.length === 0) {
-        throw new Error(zhCN.whisper.noSubtitleCues);
-      }
-      commandManager.execute(new AddTrackCommand(timelineAccessor, track));
-      setSelectedClipId(track.clips[0]?.id);
-      return { subtitleClips: track.clips.length };
-    });
-  }
-
-  async function runDialogueRoughCut(): Promise<void> {
-    await runStep('dialogue', async () => {
-      const { clip, mediaAsset } = requireSelectedMedia('dialogue');
-      if (clip.type !== 'audio' && clip.type !== 'video') {
-        throw new Error(zhCN.smartRoughCut.dialogueUnavailable);
-      }
-      if (clip.type === 'video' && !mediaAsset.hasAudio) {
-        throw new Error(zhCN.smartRoughCut.dialogueUnavailable);
-      }
-      const intervals = await detectClipDialogue(clip, mediaAsset, 'medium');
-      const command = new DialogueRoughCutCommand(timelineAccessor, clip.id, intervals);
-      commandManager.execute(command);
-      setSelectedClipId(`${clip.id}-dialogue-1`);
-      return { dialogueClips: command.clipCount };
-    });
-  }
-
-  async function runBrollInsert(): Promise<void> {
-    await runStep('broll', async () => {
-      const candidates = buildBrollCandidates(media, selectedTimelineClips);
-      const targetTrackId = brollTrackId || 'track-broll-auto';
-      ensureVideoTrack(targetTrackId, zhCN.smartRoughCut.steps.broll);
-      const clips = buildBrollInsertClips(mainVisualClips, candidates, targetTrackId);
-      if (clips.length === 0) {
-        throw new Error(zhCN.smartRoughCut.brollUnavailable);
-      }
-      commandManager.execute(new BrollInsertCommand(timelineAccessor, clips));
-      setSelectedClipId(clips[0]?.id);
-      return { brollClips: clips.length };
-    });
-  }
-
-  async function runRhythmAssemble(): Promise<void> {
-    await runStep('rhythm', async () => {
-      const targetTrackId = rhythmTrackId || selectedVisualClips[0]?.trackId || videoTracks[0]?.id;
-      if (!targetTrackId || selectedVisualClips.length === 0 || rhythmBeatTimes.length < 2) {
-        throw new Error(zhCN.smartRoughCut.rhythmUnavailable);
-      }
-      const command = new RhythmAssembleCommand(
-        timelineAccessor,
-        selectedVisualClips.map((clip) => clip.id),
-        rhythmBeatTimes,
-        targetTrackId,
-      );
-      commandManager.execute(command);
-      setSelectedClipId(`${selectedVisualClips[0].id}-rhythm-1`);
-      return { rhythmClips: command.clipCount };
-    });
-  }
-
-  async function runStep(step: SmartRoughCutStep, execute: () => Promise<Partial<SmartRoughCutReport>>): Promise<void> {
-    markStepRunning(step);
-    try {
-      const reportPatch = await execute();
-      markStepComplete(step, reportPatch);
-      showToast({ kind: 'success', title: zhCN.smartRoughCut.stepComplete(zhCN.smartRoughCut.steps[step]) });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
-      markStepError(step, message);
-      showToast({ kind: 'warning', title: zhCN.smartRoughCut.stepFailed(zhCN.smartRoughCut.steps[step]), message });
-    }
-  }
-
-  function requireSelectedMedia(step: SmartRoughCutStep): { clip: Clip; mediaAsset: MediaAsset } {
-    if (!selectedClip || !asset) {
-      throw new Error(
-        step === 'scene'
-          ? zhCN.smartRoughCut.sceneUnavailable
-          : step === 'silence'
-            ? zhCN.smartRoughCut.silenceUnavailable
-            : step === 'dialogue'
-              ? zhCN.smartRoughCut.dialogueUnavailable
-              : zhCN.smartRoughCut.whisperUnavailable,
-      );
-    }
-    return { clip: selectedClip, mediaAsset: asset };
-  }
-
-  function ensureVideoTrack(trackId: string, name: string): void {
-    if (timelineAccessor.getTimeline().tracks.some((track) => track.id === trackId)) {
-      return;
-    }
-    commandManager.execute(
-      new AddTrackCommand(timelineAccessor, createTrack({ id: trackId, type: 'video', name, clips: [] })),
-    );
-  }
+  const {
+    stepState,
+    pendingScene,
+    setPendingScene,
+    pendingSilence,
+    setPendingSilence,
+    whisperAvailability,
+    anyRunning,
+    canRunScene,
+    canRunSilence,
+    canRunWhisper,
+    canRunDialogue,
+    canRunBroll,
+    canRunRhythm,
+    videoTracks,
+    rhythmBeatTimes,
+    brollTrackId,
+    setBrollTrackId,
+    rhythmTrackId,
+    setRhythmTrackId,
+    runSceneDetection,
+    runSilenceDetection,
+    runWhisper,
+    runDialogueRoughCut,
+    runBrollInsert,
+    runRhythmAssemble,
+    applySceneSplit,
+    applySilenceRemoval,
+  } = useSmartRoughCut(selectedClip, media);
 
   return (
     <section className="flex min-h-0 flex-col bg-white" data-testid="smart-rough-cut-panel">
@@ -715,7 +420,7 @@ function SelectableResultList({
   applyLabel: string;
   onSelectionChange(selection: SmartRoughCutSelection): void;
   onApply(): void;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <div
@@ -758,73 +463,4 @@ function SelectableResultList({
       </button>
     </div>
   );
-}
-
-function getClipMediaAsset(clip: Clip | undefined, media: MediaAsset[]): MediaAsset | undefined {
-  if (!clip || !('mediaId' in clip)) {
-    return undefined;
-  }
-  return media.find((asset) => asset.id === clip.mediaId);
-}
-
-function getTimelineClips(timeline: Timeline): Clip[] {
-  return timeline.tracks.flatMap((track) => track.clips);
-}
-
-function isVisualClip(clip: Clip): clip is SmartRoughCutVisualClip {
-  return clip.type === 'video' || clip.type === 'image';
-}
-
-function getPrimaryVisualClips(
-  timeline: Timeline,
-  selectedVisualClips: SmartRoughCutVisualClip[],
-): SmartRoughCutVisualClip[] {
-  if (selectedVisualClips.length > 0) {
-    return selectedVisualClips;
-  }
-  return (timeline.tracks.find((track) => track.type === 'video')?.clips ?? []).filter(isVisualClip);
-}
-
-function buildBrollCandidates(media: MediaAsset[], selectedClips: Clip[]): SmartRoughCutBrollCandidate[] {
-  const selectedMediaIds = new Set(selectedClips.flatMap((clip) => ('mediaId' in clip ? [clip.mediaId] : [])));
-  const preferred = media.filter(
-    (asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing && !selectedMediaIds.has(asset.id),
-  );
-  const fallback =
-    preferred.length > 0
-      ? preferred
-      : media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing);
-  return fallback.map((asset) => ({ kind: 'media', asset }));
-}
-
-function getRhythmBeatTimes(project: Project, selectedClips: Clip[]): number[] {
-  const projectBeats = (project.beatMarkers ?? []).map((marker) => marker.time);
-  if (projectBeats.length >= 2) {
-    return projectBeats;
-  }
-  return selectedClips
-    .flatMap((clip) => (clip.beatMarkers ?? []).map((marker) => round(clip.start + marker.time)))
-    .sort((left, right) => left - right);
-}
-
-function sumSilentDuration(ranges: SilentRange[]): number {
-  return round(ranges.reduce((total, range) => total + range.duration, 0));
-}
-
-function buildSceneCandidates(splitTimes: number[], duration: number, thumbnail?: string): SceneCandidate[] {
-  const points = Array.from(new Set(splitTimes.map((time) => round(Math.min(duration, Math.max(0, time))))))
-    .filter((time) => time > 0.000001 && time < duration - 0.000001)
-    .sort((left, right) => left - right);
-  const boundaries = [0, ...points, duration];
-  return boundaries.slice(0, -1).map((start, index) => ({
-    id: `scene-${index}`,
-    start,
-    end: boundaries[index + 1],
-    splitTime: index < points.length ? boundaries[index + 1] : undefined,
-    thumbnail,
-  }));
-}
-
-function formatSeconds(value: number): string {
-  return `${round(value).toFixed(2)}s`;
 }
