@@ -3,9 +3,10 @@ import {Timeline} from '../../model';
 import type {Clip} from '../../model';
 import {filterShortSceneCuts} from '../../scene-cuts';
 import {SmartDialogueInterval, SmartMontageConfig, SmartRoughCutVisualClip, buildDialogueRoughCutClips, buildRhythmAssembleClips, buildSmartMontageClips} from '../../smart-rough-cut-v2';
-import {replaceClip} from '../../timeline';
+import type {RoughCutSegment} from '../../smart-rough-cut';
+import {getClipSpeed, replaceClip} from '../../timeline';
 import {Command} from '../command';
-import {LocalTimeRange, buildKeptRanges, buildSplitRanges, findClip, insertGeneratedClips, removeClipsFromTimeline, replaceClipWithGeneratedClips, replaceClipWithSlices} from './utils';
+import {LocalTimeRange, buildKeptRanges, buildSplitRanges, findClip, insertGeneratedClips, normalizeLocalTimeRanges, removeClipsFromTimeline, replaceClipWithGeneratedClips, replaceClipWithSlices} from './utils';
 
 export interface BatchSplitAtSceneCutItem {
   clipId: string;
@@ -247,4 +248,64 @@ export class SmartMontageCommand implements Command {
       this.accessor.setTimeline(this.before);
     }
   }
+}
+
+/**
+ * 应用智能粗剪提案：按提案选中段保留 clip 片段并波纹删除段间间隙。
+ * 提案 segments 的 sourceStart/sourceEnd 为源素材时间，命令内部按 clip
+ * trimStart/speed 换算为 clip 本地时间后复用 replaceClipWithSlices。
+ */
+export class ApplyRoughCutProposalCommand implements Command {
+  readonly description = 'Apply rough cut proposal';
+  private before?: Timeline;
+  private after?: Timeline;
+  private keptCount = 0;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly segments: RoughCutSegment[],
+  ) {}
+
+  /** 应用后保留的片段数量 */
+  get keptSegmentCount(): number {
+    return this.keptCount;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const clip = findClip(timeline, this.clipId);
+      const ranges = buildProposalLocalRanges(clip, this.segments);
+      if (ranges.length === 0) {
+        throw new Error('No proposal segments inside clip bounds');
+      }
+      if (ranges.length === 1 && ranges[0].start <= 0.000001 && ranges[0].end >= clip.duration - 0.000001) {
+        throw new Error('Proposal keeps the entire clip');
+      }
+      this.keptCount = ranges.length;
+      this.after = replaceClipWithSlices(timeline, this.clipId, ranges, true);
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    this.accessor.setTimeline(this.before);
+  }
+}
+
+/** 将提案 source 域时间段换算为 clip 本地保留区间（排序、合并、钳制、滤零长）。 */
+function buildProposalLocalRanges(clip: Clip, segments: RoughCutSegment[]): LocalTimeRange[] {
+  const speed = getClipSpeed(clip);
+  return normalizeLocalTimeRanges(
+    segments.map((segment) => ({
+      start: (segment.sourceStart - clip.trimStart) / speed,
+      end: (segment.sourceEnd - clip.trimStart) / speed,
+    })),
+    clip.duration,
+  );
 }
