@@ -45,6 +45,7 @@ export * from './rhythm-analysis';
 export * from './spatial-audio';
 export * from './timeline-color-labels';
 export * from './clip-groups';
+export * from './clip-group-relations';
 export * from './timeline-compare';
 export * from './media-filter';
 export * from './media-folders';

@@ -1,8 +1,9 @@
 import type {TimelineAccessor} from './index';
 import {ProtectedRange, Timeline, Transition} from '../../model';
-import type {Clip} from '../../model';
+import type {Clip, ClipGroup} from '../../model';
 import {detectOverlap, findAdjacentTransitionClips, replaceClip, trimClip} from '../../timeline';
 import {FillGapOperation, buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime} from '../../timeline-gap-fill';
+import {findGroupSplitByGap, isRollingTrimBoundaryLocked} from '../../clip-group-relations';
 import {Command} from '../command';
 import {assertClipsNotOnLockedTrack, buildSlipClip, clampTrimValues, closeTrackGap, findClip, findClipLocation, findTrack, findTrackGapAtTime, insertClip, rippleDeleteTrackClips, timelineHasOverlaps} from './utils';
 import {buildRollingTrimClips, buildSlideClipEdit} from './utils-nested';
@@ -195,6 +196,7 @@ export class CloseGapCommand implements Command {
     private readonly accessor: TimelineAccessor,
     private readonly trackId: string,
     private readonly time: number,
+    private readonly clipGroups: readonly ClipGroup[] = [],
   ) {}
 
   execute(): void {
@@ -202,9 +204,16 @@ export class CloseGapCommand implements Command {
     this.before ??= timeline;
     if (!this.after) {
       const track = findTrack(timeline, this.trackId);
+      if (track.locked) {
+        throw new Error(`Cannot modify clips on locked track "${track.name || track.id}". Unlock the track first.`);
+      }
       const gap = findTrackGapAtTime(track, this.time);
       if (!gap) {
         throw new Error('No closeable gap at this time');
+      }
+      const splitGroup = findGroupSplitByGap(this.clipGroups, timeline, this.trackId, gap.start, gap.end);
+      if (splitGroup) {
+        throw new Error(`Closing this gap would split clip group "${splitGroup.name}"`);
       }
       this.after = {
         ...timeline,
@@ -241,6 +250,9 @@ export class FillGapCommand implements Command {
     this.before ??= timeline;
     if (!this.after) {
       const track = findTrack(timeline, this.trackId);
+      if (track.locked) {
+        throw new Error(`Cannot modify clips on locked track "${track.name || track.id}". Unlock the track first.`);
+      }
       const gap = findTimelineGapAtTime(timeline, this.trackId, this.time);
       if (!gap) {
         throw new Error('No fillable gap at this time');
@@ -298,15 +310,20 @@ export class RollingTrimCommand implements Command {
     private readonly rightClipId: string,
     private readonly delta: number,
     private readonly minDuration = 1 / 30,
+    private readonly clipGroups: readonly ClipGroup[] = [],
   ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
     this.before ??= timeline;
     if (!this.after) {
+      assertClipsNotOnLockedTrack(timeline, [this.leftClipId, this.rightClipId]);
       const pair = findAdjacentTransitionClips(timeline, this.leftClipId, this.rightClipId);
       if (!pair) {
         throw new Error('Rolling trim requires adjacent clips on the same track');
+      }
+      if (isRollingTrimBoundaryLocked(this.clipGroups, this.leftClipId, this.rightClipId)) {
+        throw new Error('Rolling trim boundary is locked by a clip group');
       }
       const { left, right } = buildRollingTrimClips(pair.fromClip, pair.toClip, this.delta, this.minDuration);
       this.after = {

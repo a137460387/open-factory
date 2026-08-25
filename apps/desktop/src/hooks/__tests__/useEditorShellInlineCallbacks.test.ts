@@ -104,6 +104,7 @@ const baseDeps = {
   navigatePrevGap: vi.fn(),
   navigateNextGap: vi.fn(),
   renderInOutRegion: vi.fn(),
+  closeGapAtPlayhead: vi.fn(),
 };
 
 describe('useEditorShellInlineCallbacks', () => {

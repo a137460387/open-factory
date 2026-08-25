@@ -5,6 +5,8 @@ interface Window {
   __TAURI_MOCKS__?: import('./lib/tauri-bridge').TauriMocks;
   __E2E_ACTIONS__?: Record<string, (...args: unknown[]) => unknown>;
   __OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__?: boolean;
+  /** E2E 逃生口：startup-update.spec 需真实触发更新检查时置 true */
+  __OPEN_FACTORY_E2E_STARTUP_UPDATE_CHECK__?: boolean;
   __OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__?: number;
   __OPEN_FACTORY_PREVIEW_DEBUG__?: {
     mode?: 'webgl' | '2d';

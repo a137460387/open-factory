@@ -2021,9 +2021,9 @@ async function validateSubtitleBurnInFixture(context) {
       },
       {
         name: 'subtitle-force-style',
-        passed: context.plan.filterComplex.includes('PrimaryColour=&Hffffff&') && context.plan.filterComplex.includes('MarginV=72'),
+        passed: context.plan.filterComplex.includes('PrimaryColour=&H00FFFFFF') && context.plan.filterComplex.includes('MarginV=72'),
         actual: {
-          hasWhitePrimary: context.plan.filterComplex.includes('PrimaryColour=&Hffffff&'),
+          hasWhitePrimary: context.plan.filterComplex.includes('PrimaryColour=&H00FFFFFF'),
           hasBottomMargin: context.plan.filterComplex.includes('MarginV=72')
         },
         expected: 'white subtitle force style with bottom margin'
