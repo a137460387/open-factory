@@ -15,6 +15,8 @@ test('AI local noise reduction: enable, process and verify completion', async ({
   await page.waitForTimeout(200);
 
   await page.getByTestId('ai-local-denoise-process').click();
-  await expect(page.getByTestId('ai-local-denoise-progress')).toBeVisible();
+  // 15s：processing 瞬时态依赖 mock 的 400ms 间隔渲染出来，慢 runner 上
+  // 渲染调度积压需更宽容的等待（run 32625097893 12/12 稳定失败挂点）
+  await expect(page.getByTestId('ai-local-denoise-progress')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('ai-local-denoise-complete')).toBeVisible({ timeout: 10_000 });
 });

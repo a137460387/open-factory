@@ -12,9 +12,14 @@ describe('English locale lazy-load robustness', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.resetModules();
+    vi.unstubAllGlobals();
   });
 
   it('failed en-overrides import is not cached: a later switch retries and succeeds', async () => {
+    // 初始语言来自 navigator（Node 全局 navigator 跟随 OS locale：本地 zh /
+    // CI en-US）。本用例的前提是"初始 zh"，stub 使其在任何环境确定成立。
+    vi.stubGlobal('navigator', { language: 'zh-CN' });
+
     let shouldFail = true;
     vi.doMock('./en-overrides.js', () => {
       if (shouldFail) {

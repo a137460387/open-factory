@@ -697,6 +697,8 @@ export interface CollaborationHostRequest {
 export interface CollaborationHostState {
   active: boolean;
   port: number;
+  /** 会话实际生效的认证 token（请求未携带时由后端自动生成），客户端连接时需提供 */
+  authToken?: string;
 }
 
 export interface RenderPreviewCacheProgressEvent {

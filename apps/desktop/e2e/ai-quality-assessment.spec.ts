@@ -22,7 +22,9 @@ test('AI quality assessment: right-click media card shows quality badge', async 
   await assessBtn.click();
 
   // Wait for loading badge to appear then disappear
-  await expect(page.getByTestId('quality-badge-loading-media-qa-a')).toBeVisible();
+  // 15s：loading 瞬时态依赖 callAiApi mock 的 400ms 延迟窗口内被渲染出来
+  // （mock 层已修合并问题），慢 runner 上首次渲染调度延迟需更宽容的等待
+  await expect(page.getByTestId('quality-badge-loading-media-qa-a')).toBeVisible({ timeout: 15_000 });
 
   // Wait for the quality badge to appear (mock returns score 85)
   await expect(page.getByTestId('quality-badge-media-qa-a')).toBeVisible({ timeout: 10_000 });

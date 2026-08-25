@@ -206,6 +206,7 @@ export {
   buildSubtitleInputArgs,
   buildSoftSubtitleCodec,
   normalizeSubtitleFormat,
+  cssColorToAssColor,
 } from './ffmpeg-builder/text-subtitle-filters';
 
 // Audio filters — master, track, per-clip audio processing
@@ -266,6 +267,5 @@ export {
   formatCompressorLinear,
   formatSigned,
   formatOffsetExpression,
-  cssColorToAssColor,
   buildHardwareEncoderArgs,
 } from './ffmpeg-builder/utils';

@@ -272,21 +272,6 @@ export function formatOffsetExpression(value: number): string {
   return value < 0 ? formatted : `+${formatted}`;
 }
 
-export function cssColorToAssColor(value: string, opacity?: number): string {
-  const match = /^#?([a-fA-F0-9]{6})$/.exec(value.trim());
-  const hex = match ? match[1] : 'ffffff';
-  const red = hex.slice(0, 2);
-  const green = hex.slice(2, 4);
-  const blue = hex.slice(4, 6);
-  if (opacity === undefined) {
-    return `&H${blue}${green}${red}&`;
-  }
-  const alpha = Math.round((1 - Math.min(1, Math.max(0, opacity))) * 255)
-    .toString(16)
-    .padStart(2, '0');
-  return `&H${alpha}${blue}${green}${red}&`;
-}
-
 export function buildHardwareEncoderArgs(
   settings: HardwareEncoderSettings,
   fps: number,

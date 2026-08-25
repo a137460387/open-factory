@@ -5,12 +5,14 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   BatchImportSubtitleCommand,
+  CloseGapCommand,
   SmartMontageCommand,
   UpdateProjectSpeakersCommand,
   buildVideoStitchSequence,
   createTrack,
   createId,
   detectSubtitleDataOverlaps,
+  findTrackGapAtTime,
   mergeOverlappingSubtitleDataCues,
   mergeProjectSpeakers,
   type BeatSensitivity,
@@ -92,6 +94,7 @@ interface InlineCallbacksDeps {
   navigatePrevGap: () => void;
   navigateNextGap: () => void;
   renderInOutRegion: () => Promise<void>;
+  closeGapAtPlayhead: () => void;
 }
 
 /**
@@ -151,6 +154,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
     navigatePrevGap,
     navigateNextGap,
     renderInOutRegion,
+    closeGapAtPlayhead,
   } = deps;
 
   const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
@@ -389,6 +393,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       navigatePrevGap,
       navigateNextGap,
       renderInOut: () => void renderInOutRegion(),
+      closeGapAtPlayhead,
     }),
     [
       togglePlayback, reversePlayback, pausePlayback, forwardPlayback, stepFrame,
@@ -398,7 +403,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       toggleTimelineGridSnap, jumpTimelineNavigationPoint, undo,
       switchToPreviousHistoryBranch, redo, saveProject, exportCurrentFrame,
       matchFrameToSource, revealMediaInTimeline, navigateToNextInstance,
-      navigatePrevGap, navigateNextGap, renderInOutRegion,
+      navigatePrevGap, navigateNextGap, renderInOutRegion, closeGapAtPlayhead,
     ],
   );
 

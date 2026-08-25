@@ -3,6 +3,7 @@ import {
   assignCollaborationUserColors,
   buildCollaborationClipLocks,
   canApplyCollaborationOperation,
+  isCollaborationProjectPayload,
   parseCollaborationOperation,
   serializeCollaborationOperation,
   type CollaborationClipLock,
@@ -35,6 +36,8 @@ interface CollaborationControllerState {
   permission: CollaborationPermission;
   userId: string;
   sessionId?: string;
+  /** host 会话认证 token（后端自动生成或用户配置），客户端入会时需提供 */
+  authToken?: string;
   sessionLockedBy?: string;
   users: CollaborationUserPresence[];
   locks: CollaborationClipLock[];
@@ -65,7 +68,7 @@ class LocalNetworkCollaborationController {
   }
 
   async enableHost(request: CollaborationHostRequest & { userId?: string } = { port: 37822 }): Promise<void> {
-    await startCollaborationHost(request);
+    const hostState = await startCollaborationHost(request);
     this.state = {
       ...this.state,
       enabled: true,
@@ -74,6 +77,8 @@ class LocalNetworkCollaborationController {
       userId: request.userId ?? this.state.userId,
       // 会话 ID 仅内存态：host 会话建立即视为"已创建会话"（对应面板 collab-session-id）。
       sessionId: this.state.sessionId ?? `collab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      // 记录后端生效的认证 token（用户配置或自动生成），供面板展示与客户端入会使用。
+      authToken: hostState.authToken ?? this.state.authToken,
     };
     this.publishState();
     await this.ensureListening();
@@ -97,6 +102,7 @@ class LocalNetworkCollaborationController {
       ...this.state,
       enabled: false,
       sessionId: undefined,
+      authToken: undefined,
       sessionLockedBy: undefined,
       users: [],
       locks: [],
@@ -232,6 +238,10 @@ class LocalNetworkCollaborationController {
       return;
     }
     if (message.type === 'project-sync' && this.state.role === 'client') {
+      // 远端载荷结构守卫：拒绝缺少 Project 必要字段的 project-sync 消息。
+      if (!isCollaborationProjectPayload(message.project)) {
+        return;
+      }
       this.applyingRemote = true;
       try {
         const result = applyCollaborationReconnectState(useEditorStore.getState().project, message.project);
@@ -251,10 +261,11 @@ class LocalNetworkCollaborationController {
     }
     this.rememberOperation(message.operation);
     const project = message.operation.params.project;
-    if (project && typeof project === 'object') {
+    // 远端载荷结构守卫：operation 携带的 project 必须通过校验才能替换本地状态。
+    if (isCollaborationProjectPayload(project)) {
       this.applyingRemote = true;
       try {
-        useEditorStore.getState().setProject(project as Project, useEditorStore.getState().projectPath);
+        useEditorStore.getState().setProject(project, useEditorStore.getState().projectPath);
       } finally {
         this.applyingRemote = false;
       }
