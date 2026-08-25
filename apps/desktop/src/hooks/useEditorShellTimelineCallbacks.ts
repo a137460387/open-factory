@@ -6,6 +6,7 @@ import {
   ApplyEffectPresetCommand,
   ApplySplitLayoutCommand,
   BatchUpdateClipCommand,
+  CloseGapCommand,
   CreateMulticamSequenceCommand,
   DeleteClipsCommand,
   DeleteGroupCommand,
@@ -22,6 +23,8 @@ import {
   createTrack,
   detectSceneColorJumps,
   findCompleteClipGroup,
+  findGroupSplitByGap,
+  findTrackGapAtTime,
   getClipSourceVisibleDuration,
   getSplitLayoutDefinition,
   getTimelineDuration,
@@ -849,6 +852,38 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     if (target) state.setPlayheadTime(target.start);
   }, []);
 
+  const closeGapAtPlayhead = useCallback(() => {
+    const state = useEditorStore.getState();
+    const timeline = state.project.timeline;
+    // 仅闭合 playhead 命中的 gap（首轨优先）；锁轨有可见标识，静默跳过
+    for (const track of timeline.tracks) {
+      if (track.locked) {
+        continue;
+      }
+      const gap = findTrackGapAtTime(track, state.playheadTime);
+      if (!gap) {
+        continue;
+      }
+      // 组撕裂守卫预检：用户明确想闭合此 gap，被拒时告知原因并停止，
+      // 不再静默跳到别轨改其他间隙
+      const splitGroup = findGroupSplitByGap(state.project.clipGroups, timeline, track.id, gap.start, gap.end);
+      if (splitGroup) {
+        showToast({
+          kind: 'warning',
+          title: zhCN.timeline.closeGapFailedTitle,
+          message: `Closing this gap would split clip group "${splitGroup.name}"`,
+        });
+        return;
+      }
+      try {
+        commandManager.execute(new CloseGapCommand(timelineAccessor, track.id, gap.start, state.project.clipGroups));
+        return;
+      } catch {
+        // 其余守卫拒绝（命令层兜底）→ 静默跳下一轨
+      }
+    }
+  }, []);
+
   return {
     addAssetToTimeline,
     handleAddSubclipToTimeline,
@@ -879,5 +914,6 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     renderInOutRegion,
     navigatePrevGap,
     navigateNextGap,
+    closeGapAtPlayhead,
   };
 }

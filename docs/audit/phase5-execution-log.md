@@ -146,9 +146,9 @@ B4 汇报曾把 drawColorWheel 归为"3 份活私有副本"。逐行 diff（证�
 ## 待用户裁决的遗留项
 
 1. ~~15 个测试文件的 barrel 路径 vi.mock 脱靶~~（已修复，fdcf1f43）
-2. **markActiveTasksAsFailed**：useVideoGeneration hook 删除后成为新死代码（knip 已标记）
+2. ~~markActiveTasksAsFailed~~（已删除，ab69c223「chore: remove dead markActiveTasksAsFailed」；2026-08-18 grep 核实代码中已无此符号，仅存日志 3 处文字引用）
 3. ~~类别二（288 项）四批清理~~（已完成）
-4. 组合 hook（useEditorFeatureStore/useEditorUIStore）已无外部消费者，是否最终退役另行裁决
+4. ~~组合 hook（useEditorFeatureStore/useEditorUIStore）是否最终退役~~（已裁决 2026-08-18：**保留**，见文末「组合 hook 退役裁决」节）
 5. ~~drawColorWheel 3 份活副本归一~~（已完成，见「色彩轮误判与更正」节）
 
 ---
@@ -179,3 +179,28 @@ B4 汇报曾把 drawColorWheel 归为"3 份活私有副本"。逐行 diff（证�
 - merge commit：`e1831ca1c53b5675fcc484eb3c62954f4de48c38`
 - 合并时间：2026-08-17 20:26:40 (+0800)，由 a137460387（luoxiaoyu）执行
 - 远程分支删除：`refactor/phase5-structural-cleanup` 已删除
+
+---
+
+## 组合 hook 退役裁决（2026-08-18）
+
+遗留项 #4「组合 hook（useEditorFeatureStore/useEditorUIStore）是否最终退役」经只读核实裁决为**保留（不退役）**。
+
+### 结论
+
+`useEditorFeatureStore` / `useEditorUIStore` 不是死代码，而是两个 zustand **根 store 实例**（`create()`），是全部 H4/H5 子 store 的底层状态源。删除即破坏整个 feature/UI store 体系。
+
+### 证据（2026-08-18 只读核实，行号引用）
+
+1. **根实例定义**：`apps/desktop/src/store/editorFeatureStore.ts` 以 `export const useEditorFeatureStore = create<EditorFeatureState>((set) => ...)` 真正创建 store（全 483 行）；`apps/desktop/src/store/editorUIStore.ts` 以 `export const useEditorUIStore = create<EditorUIState>((set, get) => ...)` 创建（全 314 行）。
+2. **子 store 依赖组合 hook 作为底层实例**（`import { useEditorXStore } from './editorXStore'`，非自建 store）：
+   - `aiFeatureStore.ts:10`、`exportFeatureStore.ts:10`、`mediaFeatureStore.ts:11`、`timelineFeatureStore.ts:11` → `useEditorFeatureStore`
+   - `dialogStore.ts:13`、`panelStore.ts:13` → `useEditorUIStore`
+   - 子 store 头注释明示：「This module does NOT create its own zustand store. Instead it re-exports `useEditorXStore`」。
+3. **类型层 re-export**：`aiFeatureStore.ts:54`、`exportFeatureStore.ts:40`、`mediaFeatureStore.ts:67`、`timelineFeatureStore.ts:59`、`dialogStore.ts:49`、`panelStore.ts:43` 均 `export type { EditorXState } from './editorXStore'`。
+4. **测试护栏**：`storeMigrationSafety.test.ts`（8 个子 store hook 与组合 hook 引用同一性 + 跨别名读写可见性）依赖组合 hook 存在；`editorFeatureStore.test.ts` / `editorUIStore.test.ts` 直接测试组合 hook。
+
+### 语义澄清
+
+phase5 日志「已无外部消费者」指「业务组件已全部改走子 store selector hooks，不再直接 import 组合 hook」；但组合 hook 始终是子 store 的**内部地基**，二者不矛盾。此遗留项不存在「退役」选项，故直接裁决保留，无需代码改动。
+

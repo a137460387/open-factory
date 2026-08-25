@@ -180,10 +180,12 @@ describe('AuditLogger', () => {
 
     it('should detect tampered hash', async () => {
       await logger.log({ type: 'user.login', severity: 'info', userId: 'u1', userName: 'U', description: 'Login' });
-      await logger.log({ type: 'project.create', severity: 'info', userId: 'u1', userName: 'U', description: 'Create' });
-      // Tamper with the previousHash of the second event to break chain
-      const allEvents = await storage.query({ limit: 100 });
-      (allEvents[1] as { previousHash: string }).previousHash = 'tampered-hash';
+      const secondEvent = await logger.log({ type: 'project.create', severity: 'info', userId: 'u1', userName: 'U', description: 'Create' });
+      // Tamper with the previousHash of the second event to break chain。
+      // log() 返回值与 InMemoryAuditStorage 存储的是同一对象引用，直接篡改
+      // 即写入存储；避免 query 降序顺序在同毫秒写入时的不确定性（此前
+      // allEvents[1] 可能错位成 genesis 事件，其 previousHash 不被链检查覆盖）
+      secondEvent.previousHash = 'tampered-hash';
       const result = await logger.verifyIntegrity();
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);

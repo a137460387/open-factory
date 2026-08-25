@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 vi.mock('../../store/dialogStore', () => ({
-  useDialogStore: { getState: () => ({ setViewportSize: vi.fn() }) },
+  useDialogStore: { getState: () => ({ setViewportSize: vi.fn(), setPreviewWindowOpen: vi.fn() }) },
 }));
 
 vi.mock('../../store/editorSettingsStore', () => ({
@@ -54,7 +54,11 @@ vi.mock('../../tutorial/tutorialState', () => ({ normalizeTutorialProgressSettin
 vi.mock('../../shortcuts/keybindings', () => ({ readCustomKeybindings: vi.fn(() => Promise.resolve([])) }));
 vi.mock('../../macros/clip-macros', () => ({ readClipMacros: vi.fn(() => Promise.resolve([])), readMacroHistory: vi.fn(() => Promise.resolve([])) }));
 vi.mock('../../lib/projectFiles', () => ({ findStartupAutosaveRecovery: vi.fn(() => Promise.resolve(undefined)) }));
-vi.mock('../../lib/tauri-bridge', () => ({ getPreviewWindowState: vi.fn(() => Promise.resolve(null)) }));
+vi.mock('../../lib/tauri-bridge', () => ({
+  getPreviewWindowState: vi.fn(() =>
+    Promise.resolve({ open: false, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 1 }),
+  ),
+}));
 vi.mock('../../collaboration/settings', () => ({ applyLocalCoeditingSettings: vi.fn() }));
 vi.mock('@open-factory/editor-core/utils', () => ({ logger: { warn: vi.fn() } }));
 
