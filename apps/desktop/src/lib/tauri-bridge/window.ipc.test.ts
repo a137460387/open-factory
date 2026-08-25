@@ -260,8 +260,12 @@ describe('window bridge：浏览器回退路径', () => {
     await expect(setPreviewWindowResolutionScale(0.5)).resolves.toMatchObject({ resolutionScale: 0.5 });
   });
 
-  it('startCollaborationHost 浏览器返回本地激活状态', async () => {
-    await expect(startCollaborationHost({ port: 9000 } as never)).resolves.toEqual({ active: true, port: 9000 });
+  it('startCollaborationHost 浏览器返回本地激活状态（含认证 token）', async () => {
+    await expect(startCollaborationHost({ port: 9000 } as never)).resolves.toEqual({
+      active: true,
+      port: 9000,
+      authToken: 'browser-session-token',
+    });
   });
 
   it('forceCloseWindow 浏览器调用 window.close', async () => {

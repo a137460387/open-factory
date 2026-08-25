@@ -4,6 +4,7 @@ import {
   assignCollaborationUserColors,
   buildCollaborationClipLocks,
   canApplyCollaborationOperation,
+  isCollaborationProjectPayload,
   parseCollaborationOperation,
   rebaseCollaborationOperations,
   serializeCollaborationOperation,
@@ -56,6 +57,23 @@ describe('local network collaboration', () => {
     expect(canApplyCollaborationOperation('read-only', { kind: 'comment' })).toBe(true);
     expect(canApplyCollaborationOperation('read-only', { kind: 'playhead' })).toBe(true);
     expect(canApplyCollaborationOperation('edit', { kind: 'timeline-command' })).toBe(true);
+  });
+
+  it('accepts a well-formed project payload from collaboration messages', () => {
+    expect(isCollaborationProjectPayload(makeProject())).toBe(true);
+  });
+
+  it('rejects malformed collaboration project payloads before they can replace local state', () => {
+    expect(isCollaborationProjectPayload(null)).toBe(false);
+    expect(isCollaborationProjectPayload(undefined)).toBe(false);
+    expect(isCollaborationProjectPayload('project')).toBe(false);
+    expect(isCollaborationProjectPayload([])).toBe(false);
+    expect(isCollaborationProjectPayload({})).toBe(false);
+    expect(isCollaborationProjectPayload({ ...makeProject(), id: '' })).toBe(false);
+    expect(isCollaborationProjectPayload({ ...makeProject(), name: 42 })).toBe(false);
+    expect(isCollaborationProjectPayload({ ...makeProject(), timeline: null })).toBe(false);
+    expect(isCollaborationProjectPayload({ ...makeProject(), timeline: { tracks: 'many' } })).toBe(false);
+    expect(isCollaborationProjectPayload({ ...makeProject(), media: 'none' })).toBe(false);
   });
 
   it('assigns deterministic colors to multiple user playheads', () => {
