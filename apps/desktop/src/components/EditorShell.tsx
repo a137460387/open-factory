@@ -1,5 +1,5 @@
-import { Suspense, useCallback, useState } from 'react';
-import { getTimelineDuration } from '@open-factory/editor-core';
+import { Suspense, useCallback, useMemo, useState } from 'react';
+import { ApplyRoughCutProposalCommand } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { useAutosave } from '../hooks/useAutosave';
@@ -24,6 +24,8 @@ import {
   GestureTutorialOverlay,
   RoughCutComparePanel,
 } from './lazyComponents';
+import { useRoughCutAnalysis } from './SmartRoughCut/useRoughCutAnalysis';
+import { commandManager, timelineAccessor } from '../store/commandManager';
 import { revealExport } from '../lib/exportVideo';
 import { writeAutosaveIntervalSeconds } from '../lib/projectFiles';
 import { zhCN } from '../i18n/strings';
@@ -36,6 +38,7 @@ export function EditorShell() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [gestureTutorialOpen, setGestureTutorialOpen] = useState(false);
   const [roughCutCompareOpen, setRoughCutCompareOpen] = useState(false);
+  const [roughCutCompareClipId, setRoughCutCompareClipId] = useState('');
 
   const store = useEditorShellStoreSubscriptions();
   const {
@@ -156,6 +159,16 @@ export function EditorShell() {
   const oc = useEditorShellOrchestrator(store, derived, exportQueue, {
     setCommandPaletteOpen, setGestureTutorialOpen, setRoughCutCompareOpen,
   });
+
+  // 粗剪提案对比：从选中 clip 的 contentAnalysis 派生提案引擎输入（D1-B）
+  const roughCutCompareClip = useMemo(
+    () =>
+      roughCutCompareClipId
+        ? project?.timeline.tracks.flatMap((track) => track.clips).find((clip) => clip.id === roughCutCompareClipId)
+        : undefined,
+    [project, roughCutCompareClipId],
+  );
+  const roughCutAnalysis = useRoughCutAnalysis(roughCutCompareClip);
 
   // Effects, autosave, close guard, shortcuts
   useEditorShellEffects({
@@ -420,7 +433,10 @@ export function EditorShell() {
           reduceMotion={timelineInteractionSettings.reduceMotion}
           convertVfrMediaToCfr={oc.convertVfrMediaToCfr}
           sceneDetectionRequestId={sceneDetectionRequestId}
-          onRoughCutCompare={() => setRoughCutCompareOpen(true)}
+          onRoughCutCompare={(clipId) => {
+            setRoughCutCompareClipId(clipId);
+            setRoughCutCompareOpen(true);
+          }}
           leftPanelCallbacks={oc.leftPanelCallbacks}
           beginTimelineResize={oc.beginTimelineResize}
         />
@@ -481,10 +497,15 @@ export function EditorShell() {
           {roughCutCompareOpen && project ? (
             <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
               <RoughCutComparePanel
-                highlights={[]}
-                rhythmResult={null}
-                sourceDuration={getTimelineDuration(project.timeline)}
-                onApply={() => setRoughCutCompareOpen(false)}
+                highlights={roughCutAnalysis.highlights}
+                onsets={roughCutAnalysis.onsets}
+                sourceDuration={roughCutAnalysis.sourceDuration}
+                onApply={(proposal) => {
+                  commandManager.execute(
+                    new ApplyRoughCutProposalCommand(timelineAccessor, roughCutCompareClipId, proposal.segments),
+                  );
+                  setRoughCutCompareOpen(false);
+                }}
                 onClose={() => setRoughCutCompareOpen(false)}
               />
             </div>
