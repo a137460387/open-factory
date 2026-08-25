@@ -10,7 +10,8 @@ const STATUS_ORDER: Record<MediaJobStatus, number> = {
 
 const PRIORITY_ORDER = {
   high: 0,
-  low: 1,
+  normal: 1,
+  low: 2,
 } as const;
 
 export function sortMediaJobsForMonitor(jobs: MediaJob[]): MediaJob[] {
