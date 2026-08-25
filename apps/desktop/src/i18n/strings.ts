@@ -1709,6 +1709,7 @@ const zh = {
     batchRenameFailedMessage: '项目内引用已回退，磁盘文件未继续重命名。',
     batchGenerateCovers: '批量生成封面',
     batchGenerateThumbnails: (count: number) => (count > 0 ? `生成缩略图 (${count})` : '生成缩略图'),
+    batchGenerateWaveforms: '批量生成波形',
     selectForThumbnail: '选择用于批量生成缩略图',
     exportGif: '导出为 GIF',
     spectrumAnalysis: '频谱分析',

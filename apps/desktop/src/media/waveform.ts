@@ -19,6 +19,32 @@ export const NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES = 50 * 1024 * 1024;
 const WORKER_THRESHOLD_BYTES = 50 * 1024 * 1024;
 const SAMPLED_THRESHOLD_BYTES = 500 * 1024 * 1024;
 
+/**
+ * 浏览器 WebAudio（decodeAudioData）通常无法解码的音频 codec。
+ * 命中即跳过 WebAudio，直接走 FFmpeg 原生解码（准确、全 codec 支持）。
+ */
+const BROWSER_UNSUPPORTED_AUDIO_CODECS = [
+  'flac',
+  'alac',
+  'opus',
+  'vorbis',
+  'dts',
+  'ac3',
+  'eac3',
+  'mp2',
+  'ape',
+  'wavpack',
+  'tta',
+];
+
+function isBrowserUnsupportedCodec(codec: string | undefined): boolean {
+  if (!codec) {
+    return false;
+  }
+  const normalized = codec.toLowerCase();
+  return BROWSER_UNSUPPORTED_AUDIO_CODECS.some((candidate) => normalized.includes(candidate));
+}
+
 export async function getWaveform(
   asset: MediaAsset,
   pointsPerSecond = DEFAULT_POINTS_PER_SECOND,
@@ -42,6 +68,18 @@ async function getWaveformUnthrottled(
   }
   const stat = await getNativeFileStat(asset);
   const sizeBeforeFetch = asset.size ?? stat?.size;
+  // codec 预判：浏览器不支持的格式直接走 FFmpeg 原生解码，跳过 WebAudio 失败开销。
+  if (isBrowserUnsupportedCodec(asset.audioCodec)) {
+    const result = await getNativeWaveform(asset, pointsPerSecond);
+    await writeWaveformToCache(stat ? { ...asset, size: stat.size, mtimeMs: stat.mtimeMs } : asset, {
+      peaks: result.peaks,
+      duration: result.duration,
+      channels: result.channels,
+      pointsPerSecond,
+      isSampled: true,
+    });
+    return result;
+  }
   if (typeof sizeBeforeFetch === 'number' && sizeBeforeFetch > NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES) {
     const result = await getNativeWaveform(asset, pointsPerSecond);
     await writeWaveformToCache(stat ? { ...asset, size: stat.size, mtimeMs: stat.mtimeMs } : asset, {
@@ -61,9 +99,12 @@ async function getWaveformUnthrottled(
   const result = isSampled
     ? await extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration)
     : await decodeWaveform(arrayBuffer.slice(0), pointsPerSecond).catch(() =>
-        size >= WORKER_THRESHOLD_BYTES
-          ? extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration)
-          : extractPeaks(new Uint8Array(arrayBuffer), pointsPerSecond, asset.duration, false),
+        // WebAudio 失败 → FFmpeg 原生解码准确回退，再失败才降级到字节峰值兜底。
+        getNativeWaveform(asset, pointsPerSecond).catch(() =>
+          size >= WORKER_THRESHOLD_BYTES
+            ? extractWithWorker(arrayBuffer, pointsPerSecond, asset.duration)
+            : extractPeaks(new Uint8Array(arrayBuffer), pointsPerSecond, asset.duration, false),
+        ),
       );
 
   await writeWaveformToCache(asset, {
@@ -71,7 +112,7 @@ async function getWaveformUnthrottled(
     duration: result.duration,
     channels: result.channels,
     pointsPerSecond,
-    isSampled,
+    isSampled: isSampled || result.isSampled,
   });
   return { ...result, isSampled: isSampled || result.isSampled };
 }

@@ -26,6 +26,7 @@ describe('mediaJobSettingsStore', () => {
       backgroundConcurrency: 'auto',
       uiFeedbackConcurrency: 3,
       paused: false,
+      autoGenerateWaveform: true,
     });
   });
 
@@ -55,10 +56,18 @@ describe('mediaJobSettingsStore', () => {
   it('reset restores defaults', () => {
     useMediaJobSettingsStore.getState().setBackgroundConcurrency(4);
     useMediaJobSettingsStore.getState().setPaused(true);
+    useMediaJobSettingsStore.getState().setAutoGenerateWaveform(false);
     useMediaJobSettingsStore.getState().reset();
     expect(useMediaJobSettingsStore.getState().backgroundConcurrency).toBe('auto');
     expect(useMediaJobSettingsStore.getState().paused).toBe(false);
     expect(useMediaJobSettingsStore.getState().uiFeedbackConcurrency).toBe(3);
+    expect(useMediaJobSettingsStore.getState().autoGenerateWaveform).toBe(true);
+  });
+
+  it('setAutoGenerateWaveform toggles and persists', () => {
+    useMediaJobSettingsStore.getState().setAutoGenerateWaveform(false);
+    expect(useMediaJobSettingsStore.getState().autoGenerateWaveform).toBe(false);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}').autoGenerateWaveform).toBe(false);
   });
 
   it('resolveBackgroundConcurrency maps auto and passes through numbers', () => {
