@@ -78,6 +78,35 @@ export function canApplyCollaborationOperation(
   return operation.kind === 'comment' || operation.kind === 'playhead';
 }
 
+/**
+ * 校验协作消息中的 project 载荷是否具备 Project 的必要结构。
+ *
+ * 协作消息来自网络对端（WebSocket 广播），setProject 前必须做结构守卫，
+ * 防止恶意或损坏的载荷直接替换本地项目状态。
+ * 这里只做形态校验（id/name/timeline.tracks/media 均为期望类型），
+ * 不做深度规范化——深度迁移仍走项目文件导入的 migrateProjectFile 路径。
+ */
+export function isCollaborationProjectPayload(value: unknown): value is Project {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.id !== 'string' || record.id.length === 0) {
+    return false;
+  }
+  if (typeof record.name !== 'string') {
+    return false;
+  }
+  const timeline = record.timeline;
+  if (!timeline || typeof timeline !== 'object' || Array.isArray(timeline)) {
+    return false;
+  }
+  if (!Array.isArray((timeline as Record<string, unknown>).tracks)) {
+    return false;
+  }
+  return Array.isArray(record.media);
+}
+
 export function applyCollaborationReconnectState(
   clientProject: Project,
   hostProject: Project,

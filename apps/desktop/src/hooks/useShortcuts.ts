@@ -33,6 +33,7 @@ interface ShortcutHandlers {
   navigatePrevGap(): void;
   navigateNextGap(): void;
   renderInOut(): void;
+  closeGapAtPlayhead(): void;
 }
 
 export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShortcutBindings = {}): void {
@@ -163,6 +164,9 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'render-in-out':
           handlers.renderInOut();
+          break;
+        case 'close-gap':
+          handlers.closeGapAtPlayhead();
           break;
       }
     };

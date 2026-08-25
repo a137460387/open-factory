@@ -1260,6 +1260,7 @@ const zh = {
         'add-annotation': '添加批注',
         'add-bookmark': '添加书签',
         'toggle-grid-snap': '切换网格吸附',
+        'close-gap': '闭合间隙',
         'jump-prev-navigation-point': '上一书签/标记',
         'jump-next-navigation-point': '下一书签/标记',
         undo: '撤销',
@@ -6398,11 +6399,15 @@ export function setLanguage(language: string): Language {
  */
 export async function setLanguageAsync(language: string): Promise<Language> {
   const next = normalizeLanguage(language);
+  // 目标语言为 en 时必须确保 en locale 已加载，即使当前已是 en：
+  // 初始语言来自 navigator（英文系统默认 en），此时 en-overrides 尚未加载，
+  // 若直接 early-return 会让 t() 持续回退 zh（本函数的契约是返回即保证翻译可用，
+  // 亦是启动 prefetch 瞬时失败后显式切换英文的唯一自愈路径）。
+  if (next === 'en' && !locales.en) {
+    await ensureEnglishLocale();
+  }
   if (next === currentLanguage) {
     return currentLanguage;
-  }
-  if (next === 'en') {
-    await ensureEnglishLocale();
   }
   currentLanguage = next;
   persistLanguage(next);

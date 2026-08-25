@@ -150,6 +150,7 @@ export function useEditorShellOrchestrator(
     deleteSelected, rippleDeleteSelected, selectAllTimelineItems,
     matchFrameToSource, revealMediaInTimeline, navigateToNextInstance,
     renderInOutRegion, navigatePrevGap, navigateNextGap,
+    closeGapAtPlayhead,
   } = useEditorShellTimelineCallbacks({
     colorAnalysisBusy: store.colorAnalysisBusy,
     colorAnalysisResults: store.colorAnalysisResults,
@@ -188,6 +189,7 @@ export function useEditorShellOrchestrator(
     undo, switchToPreviousHistoryBranch, redo,
     saveProject, exportCurrentFrame: exportQueue.exportCurrentFrame,
     matchFrameToSource, revealMediaInTimeline, navigateToNextInstance, navigatePrevGap, navigateNextGap, renderInOutRegion,
+    closeGapAtPlayhead,
   });
 
   // Content analysis, health, audio, recording, beat sync, proxy

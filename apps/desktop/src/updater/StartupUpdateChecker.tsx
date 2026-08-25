@@ -13,6 +13,12 @@ export function StartupUpdateChecker() {
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
+    // E2E 环境默认抑制启动更新检查：浏览器 fetch github latest.json 必被 CORS
+    // 拦截并污染 console error 断言。生产构建 VITE_E2E 为 undefined，零影响；
+    // startup-update.spec 通过 window 逃生口显式启用以保留真实触发路径。
+    if (import.meta.env.VITE_E2E === 'true' && window.__OPEN_FACTORY_E2E_STARTUP_UPDATE_CHECK__ !== true) {
+      return;
+    }
     let canceled = false;
     const fetchJson = async (url: string): Promise<unknown> => {
       const response = await fetch(url, { headers: { Accept: 'application/json' } });

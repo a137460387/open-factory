@@ -1184,10 +1184,13 @@ const mocks: TauriMocks = {
   },
   cancelDemucs: () => undefined,
   processAudioNoiseReduction: async ({ mediaPath, clipId }) => {
+    // 每段 400ms：慢 runner 上 React 渲染调度积压时，瞬时态（processing
+    // 分支）与完成态会合并进同一次渲染导致 ai-local-denoise-progress
+    // 元素从未出现（run 32625097893 12/12 稳定失败根因）
     emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
     const outputPath = mediaPath.replace(/(\.[^.]+)$/, '-denoised$1');
     return { outputPath, originalPath: mediaPath, durationMs: 15, noiseReductionDb: 6.5 };
@@ -1221,10 +1224,15 @@ const mocks: TauriMocks = {
     persistFiles();
     return { taskId, outputPath: task.outputPath, durationMs: Date.now() - task.startedAt };
   },
-  startCollaborationHost: ({ port }) => {
+  startCollaborationHost: ({ port, authToken }) => {
     collaborationHostActive = true;
     collaborationHostPort = port || 37822;
-    return { active: true, port: collaborationHostPort };
+    // 模拟真实后端：请求未携带 token 时自动生成，确保客户端必须认证。
+    return {
+      active: true,
+      port: collaborationHostPort,
+      authToken: authToken ?? 'mock-session-token',
+    };
   },
   stopCollaborationHost: () => {
     collaborationHostActive = false;
@@ -1249,7 +1257,10 @@ const mocks: TauriMocks = {
     return () => set.delete(handler as (payload: unknown) => void);
   },
   callAiApi: async (request) => {
-    await new Promise((r) => setTimeout(r, 100));
+    // 400ms：慢 runner 上 loading 瞬时态（quality-badge-loading 等）与完成态
+    // 会合并进同一次 React 渲染导致 loading 元素从未出现（run 32625097893
+    // ai-quality-assessment 稳定失败根因，与 processAudioNoiseReduction 同模式）
+    await new Promise((r) => setTimeout(r, 400));
     const systemContent = typeof request.messages[0]?.content === 'string' ? request.messages[0].content : '';
     if (systemContent.includes('字幕编辑助手')) {
       return {
@@ -1877,6 +1888,100 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupTimelineAdvancedFixture: () => {
+    const project = createProject('Timeline Advanced E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-adv-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-b', 2, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-c', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-adv-1', name: 'Advanced Group', clipIds: ['clip-adv-a', 'clip-adv-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupTimelineAdvancedGuardFixture: () => {
+    // 组 [a,b] 横跨 gap (2,4)：playhead=3 命中 gap，闭合会被组撕裂守卫拒绝
+    const project = createProject('Timeline Advanced Guard E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-guard-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-guard-b', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-guard-1', name: 'Guard Group', clipIds: ['clip-guard-a', 'clip-guard-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(3);
     commandManager.clear();
   },
   setupGapFillFixture: () => {

@@ -1214,6 +1214,7 @@ export const enOverrides = {
         'add-annotation': 'Add Annotation',
         'add-bookmark': 'Add Bookmark',
         'toggle-grid-snap': 'Toggle Grid Snap',
+        'close-gap': 'Close Gap',
         'jump-prev-navigation-point': 'Previous Bookmark/Marker',
         'jump-next-navigation-point': 'Next Bookmark/Marker',
         undo: 'Undo',
