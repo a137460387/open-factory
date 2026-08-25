@@ -857,7 +857,8 @@ export function ClipActionMenu({
         <button
           className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
           type="button"
-          disabled={clip?.type !== 'video'}
+          disabled={clip?.type !== 'video' || !clip?.contentAnalysis}
+          title={clip && clip.type === 'video' && !clip.contentAnalysis ? '请先在内容分析中分析此素材' : undefined}
           data-testid="clip-action-rough-cut-compare"
           onClick={onRoughCutCompare}
         >

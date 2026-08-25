@@ -2629,6 +2629,75 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupRoughCutCompareFixture: () => {
+    const project = createProject('Rough Cut Compare E2E');
+    const asset: MediaAsset = {
+      id: 'media-roughcut-video',
+      type: 'video',
+      name: 'roughcut-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // contentAnalysis 派生 cutPoints = [0.3, 1.0, 1.8, 2.4]（onset 2.4 距最近
+    // highlight 1.8 为 0.6 > minGap 0.5，不被 nearVisual 吸收），
+    // 提案段 [0,0.3] 与 [2.4,2.5] 因 < minClipDuration(0.5) 被跳过 → apply 后
+    // 保留 [0.3,2.4] 并波纹删除首尾间隙。
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              id: 'clip-roughcut-video',
+              name: 'roughcut-video.mp4',
+              mediaId: 'media-roughcut-video',
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-25T00:00:00.000Z',
+                sceneTypes: ['indoor'],
+                primarySceneType: 'indoor',
+                segments: [
+                  { start: 0.3, end: 1, sceneTypes: ['action'], brightness: 0.5, motion: 0.9, loudness: 0.2 },
+                  { start: 1, end: 1.8, sceneTypes: ['action'], brightness: 0.5, motion: 0.85, loudness: 0.2 },
+                  { start: 1.8, end: 2.5, sceneTypes: ['action'], brightness: 0.5, motion: 0.8, loudness: 0.2 },
+                ],
+                emotionCurve: [],
+                dialogueTurns: [{ start: 2.4, end: 2.45, loudness: 0.7 }],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-roughcut-video']);
+    useEditorStore.getState().setSelectedClipId('clip-roughcut-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupAIRoughCutFixture: async () => {
     const project = createProject('AI Rough Cut E2E');
     const mediaAssets: MediaAsset[] = [
