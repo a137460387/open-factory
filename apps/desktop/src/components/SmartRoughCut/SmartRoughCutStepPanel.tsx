@@ -52,6 +52,17 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
     setBrollTrackId,
     rhythmTrackId,
     setRhythmTrackId,
+    sceneThreshold,
+    setSceneThreshold,
+    silenceMinDb,
+    setSilenceMinDb,
+    silenceMinDuration,
+    setSilenceMinDuration,
+    silenceMargin,
+    setSilenceMargin,
+    dialogueSensitivity,
+    setDialogueSensitivity,
+    setPlayheadTime,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
@@ -100,6 +111,16 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
               disabled={anyRunning || !canRunScene}
               onRun={() => void runSceneDetection()}
             >
+              <ParamSlider
+                testId="smart-scene-threshold"
+                label="阈值"
+                value={sceneThreshold}
+                min={0.1}
+                max={0.5}
+                step={0.05}
+                disabled={anyRunning}
+                onChange={setSceneThreshold}
+              />
               {pendingScene ? (
                 <SceneResultList
                   items={pendingScene.items}
@@ -108,6 +129,7 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
                     setPendingScene((current) => (current ? { ...current, selection } : current))
                   }
                   onApply={applySceneSplit}
+                  onPreviewTime={setPlayheadTime}
                 />
               ) : null}
             </SmartStep>
@@ -121,6 +143,36 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
               disabled={anyRunning || !canRunSilence}
               onRun={() => void runSilenceDetection()}
             >
+              <ParamSlider
+                testId="smart-silence-min-db"
+                label="阈值 dB"
+                value={silenceMinDb}
+                min={-60}
+                max={-20}
+                step={5}
+                disabled={anyRunning}
+                onChange={setSilenceMinDb}
+              />
+              <ParamSlider
+                testId="smart-silence-min-duration"
+                label="最短时长"
+                value={silenceMinDuration}
+                min={0.1}
+                max={2}
+                step={0.1}
+                disabled={anyRunning}
+                onChange={setSilenceMinDuration}
+              />
+              <ParamSlider
+                testId="smart-silence-margin"
+                label="边距"
+                value={silenceMargin}
+                min={0}
+                max={0.5}
+                step={0.05}
+                disabled={anyRunning}
+                onChange={setSilenceMargin}
+              />
               {pendingSilence ? (
                 <SilenceResultList
                   items={pendingSilence.items}
@@ -129,6 +181,7 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
                     setPendingSilence((current) => (current ? { ...current, selection } : current))
                   }
                   onApply={applySilenceRemoval}
+                  onPreviewTime={setPlayheadTime}
                 />
               ) : null}
             </SmartStep>
@@ -158,7 +211,29 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
             buttonLabel={zhCN.smartRoughCut.generateDialogueCut}
             disabled={anyRunning || !canRunDialogue}
             onRun={() => void runDialogueRoughCut()}
-          />
+          >
+            <div
+              className="mt-2 flex gap-1 rounded-md border border-line bg-panel p-1"
+              data-testid="smart-dialogue-sensitivity"
+              data-value={dialogueSensitivity}
+            >
+              {(['low', 'medium', 'high'] as const).map((level) => (
+                <button
+                  key={level}
+                  className={`flex-1 rounded px-2 py-1 text-xs font-medium ${
+                    dialogueSensitivity === level ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white'
+                  }`}
+                  type="button"
+                  disabled={anyRunning}
+                  data-testid={`smart-dialogue-sensitivity-${level}`}
+                  aria-pressed={dialogueSensitivity === level}
+                  onClick={() => setDialogueSensitivity(level)}
+                >
+                  {level === 'low' ? '低' : level === 'medium' ? '中' : '高'}
+                </button>
+              ))}
+            </div>
+          </SmartStep>
         ) : null}
         {activeTab === 'broll' ? (
           <SmartStep
@@ -214,6 +289,44 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
         </div>
       </div>
     </section>
+  );
+}
+
+function ParamSlider({
+  testId,
+  label,
+  value,
+  min,
+  max,
+  step,
+  disabled,
+  onChange,
+}: {
+  testId: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled: boolean;
+  onChange(value: number): void;
+}) {
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+      <span className="w-14 flex-none font-medium text-slate-700">{label}</span>
+      <input
+        className="min-w-0 flex-1 accent-brand"
+        type="range"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        disabled={disabled}
+        data-testid={testId}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
+      <span className="w-12 flex-none text-right tabular-nums text-slate-500">{value}</span>
+    </label>
   );
 }
 
@@ -304,11 +417,13 @@ function SceneResultList({
   selection,
   onSelectionChange,
   onApply,
+  onPreviewTime,
 }: {
   items: SceneCandidate[];
   selection: SmartRoughCutSelection;
   onSelectionChange(selection: SmartRoughCutSelection): void;
   onApply(): void;
+  onPreviewTime(time: number): void;
 }) {
   const selectedCount = getSelectedSmartRoughCutIds(selection).length;
   return (
@@ -329,6 +444,7 @@ function SceneResultList({
           key={item.id}
           className="flex items-center gap-2 rounded border border-line bg-white p-2"
           data-testid={`smart-scene-item-${item.id}`}
+          onMouseEnter={() => onPreviewTime(item.start)}
         >
           <input
             className="h-4 w-4 accent-brand"
@@ -356,11 +472,13 @@ function SilenceResultList({
   selection,
   onSelectionChange,
   onApply,
+  onPreviewTime,
 }: {
   items: SilenceCandidate[];
   selection: SmartRoughCutSelection;
   onSelectionChange(selection: SmartRoughCutSelection): void;
   onApply(): void;
+  onPreviewTime(time: number): void;
 }) {
   const selectedIds = new Set(getSelectedSmartRoughCutIds(selection));
   const selectedRanges = items.filter((item) => selectedIds.has(item.id)).map((item) => item.range);
@@ -380,6 +498,7 @@ function SilenceResultList({
           key={item.id}
           className="flex items-center gap-2 rounded border border-line bg-white p-2"
           data-testid={`smart-silence-item-${item.id}`}
+          onMouseEnter={() => onPreviewTime(item.range.start)}
         >
           <input
             className="h-4 w-4 accent-brand"
