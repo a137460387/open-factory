@@ -65,6 +65,8 @@ function makeHookResult(overrides: Record<string, unknown> = {}) {
     dialogueSensitivity: 'medium' as const,
     setDialogueSensitivity: vi.fn(),
     setPlayheadTime: vi.fn(),
+    speechUnderstanding: { ready: false, transcript: '', timeAlignment: [], segmentCount: 0, understanding: undefined },
+    semanticSuggestions: [],
     runSceneDetection: vi.fn(),
     runSilenceDetection: vi.fn(),
     runWhisper: vi.fn(),
@@ -140,5 +142,79 @@ describe('SmartRoughCutStepPanel param controls', () => {
         .getAllByTestId(/^smart-dialogue-sensitivity-(low|medium|high)$/)
         .every((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
+  });
+});
+
+// ── M3-2：语义建议列表接线（hook 返回值 → 组件 props） ──────
+
+describe('SmartRoughCutStepPanel semantic suggestion list', () => {
+  it('renders the gated hint when speechUnderstanding is not ready', () => {
+    renderPanel();
+
+    const section = screen.getByTestId('smart-semantic');
+    expect(section.getAttribute('data-ready')).toBe('false');
+    expect(screen.getByTestId('smart-semantic-hint')).toBeDefined();
+  });
+
+  it('renders hook-provided suggestions with ready state on the basic tab', () => {
+    renderPanel({
+      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticSuggestions: [
+        {
+          id: 'semantic-0',
+          timeRange: { start: 1.6, end: 2.5 },
+          markerType: 'climax',
+          confidence: 0.7,
+          label: '高潮片段',
+          reason: '重点内容',
+        },
+      ],
+    });
+
+    expect(screen.getByTestId('smart-semantic').getAttribute('data-ready')).toBe('true');
+    const item = screen.getByTestId('smart-semantic-item-semantic-0');
+    expect(item.getAttribute('data-climax')).toBe('true');
+    expect(item.textContent).toContain('高潮片段');
+  });
+
+  it('forwards item hover to the hook setPlayheadTime with the range start', () => {
+    const setPlayheadTime = vi.fn();
+    renderPanel({
+      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticSuggestions: [
+        {
+          id: 'semantic-0',
+          timeRange: { start: 1.6, end: 2.5 },
+          markerType: 'climax',
+          confidence: 0.7,
+          label: '高潮片段',
+          reason: '重点内容',
+        },
+      ],
+      setPlayheadTime,
+    });
+
+    fireEvent.mouseEnter(screen.getByTestId('smart-semantic-item-semantic-0'));
+
+    expect(setPlayheadTime).toHaveBeenCalledWith(1.6);
+  });
+
+  it('keeps the semantic list on the basic tab only', () => {
+    renderPanel({
+      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticSuggestions: [
+        {
+          id: 'semantic-0',
+          timeRange: { start: 0, end: 1 },
+          markerType: 'opening',
+          confidence: 0.8,
+          label: '开场',
+          reason: '开场白',
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByTestId('smart-rough-cut-tab-dialogue'));
+    expect(screen.queryByTestId('smart-semantic')).toBeNull();
   });
 });
