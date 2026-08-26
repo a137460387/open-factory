@@ -97,3 +97,53 @@ export function buildSceneCandidates(splitTimes: number[], duration: number, thu
 export function formatSeconds(value: number): string {
   return `${round(value).toFixed(2)}s`;
 }
+
+// ─── 转写文本 → 语义引擎桥接（understandSpeech 入参组装） ────
+
+/** 重叠判定容差（与 gap 操作的 1e-6 惯例一致） */
+const TRANSCRIPT_OVERLAP_EPSILON = 1e-6;
+
+export interface SubtitleTranscriptSource {
+  /** 拼接后的转写文本（各 subtitle clip 以换行分隔） */
+  transcript: string;
+  /** 与 transcript 各段一一对应的时间区间（时间线绝对时间，秒） */
+  timeAlignment: Array<{ start: number; end: number }>;
+  /** 收集到的非空 subtitle clip 数量 */
+  segmentCount: number;
+}
+
+/**
+ * 从时间线 subtitle 轨收集与指定 clip 时间范围重叠的转写文本。
+ *
+ * whisper 产出的 subtitle clip 携带 clip 级 text 与时间对齐
+ * （start/duration，时间线绝对时间，见 lib/subtitles.ts
+ * buildSubtitleTrackFromSrt）。此处按 start 排序拼接文本并组装
+ * understandSpeech(transcript, timeAlignment) 所需入参；
+ * 纯函数，零 store / 零 React 依赖。
+ */
+export function collectSubtitleTranscriptForClip(
+  timeline: Timeline,
+  clip: Clip | undefined,
+): SubtitleTranscriptSource {
+  if (!clip) {
+    return { transcript: '', timeAlignment: [], segmentCount: 0 };
+  }
+  const clipStart = clip.start;
+  const clipEnd = clip.start + clip.duration;
+  const subtitles = timeline.tracks
+    .filter((track) => track.type === 'subtitle')
+    .flatMap((track) => track.clips)
+    .filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle')
+    .filter((item) => item.text.trim().length > 0)
+    .filter(
+      (item) =>
+        item.start < clipEnd - TRANSCRIPT_OVERLAP_EPSILON &&
+        item.start + item.duration > clipStart + TRANSCRIPT_OVERLAP_EPSILON,
+    )
+    .sort((left, right) => left.start - right.start);
+  return {
+    transcript: subtitles.map((item) => item.text.trim()).join('\n'),
+    timeAlignment: subtitles.map((item) => ({ start: item.start, end: round(item.start + item.duration) })),
+    segmentCount: subtitles.length,
+  };
+}
