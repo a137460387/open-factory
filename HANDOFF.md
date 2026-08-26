@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-26 | 基线：main = `72206d66`（PR #171 merge）| 版本：v4.74.1（已发布）
+> 更新时间：2026-08-26 | 基线：main = `5183ae89`（PR #175 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
 
 ---
 
@@ -13,6 +13,7 @@
 1. **v4.74.1 patch 发布 + CI 基建稳定性专项**（已完成，2026-08-22 前收尾）：三轮 CI 修复解锁 frontend 徽章与 coverage 产出，为 v4.75 主线决策提供数据——历史摘录见 2.1
 2. **P0-1 覆盖率攻坚专项**（已结项，2026-08-24）：desktop 覆盖 47.68% → 72.65%，一期预估"70% 需 4-5 期"按期达成并留 2.65pp 缓冲——详见 2.2
 3. **P1-2 Smart Rough-Cut 主线**（已结项，2026-08-26）：M1 结构拆分 → M1b 提案对比接活 → M2 参数化，三阶段全部合入——详见 2.3
+4. **v4.75.0 发版 + P2 前置桥接**（已合入，2026-08-26）：#173 发版 / #174 发版工作流文档 / #175 转写文本→语义引擎桥接，P2 由 no-go 转 go——详见 2.4
 
 ---
 
@@ -78,17 +79,41 @@
 - D2-A：检测参数 hook 本地 state（会话级），不新增 store
 - D3/D4：语义智能建议（M3）与批量处理留 P2——M3 启动前提 = whisper 转写可用性 + contentAnalysis dialogueTurns 覆盖率达可用阈值（待勘察）
 
+### 2.4 v4.75.0 发版 + P2 前置桥接（main 推进 3 PR）
+
+**推进轨迹**（自 #172 HANDOFF 归档点 72206d66 起）：
+
+| PR | merge commit | 主要内容 |
+|---|---|---|
+| #173 | `70cf89d8` | v4.75.0 发版：三文件 bump（4.74.1→4.75.0，Cargo.lock 经 `cargo update -w --offline` 同步）+ CHANGELOG（Features/Bug Fixes/Refactor/Tests/Docs 分组）；bump 提交 `39e7cf74`；lightweight tag v4.75.0 触发 release.yml 三平台构建自动建 Release（6 资产），`gh release edit` 校正标题「v4.75.0 智能粗剪」并替换 notes；CI 全绿（e2e 534 passed） |
+| #174 | `f8eece75` | RELEASING.md 发版工作流文档（97 行）：固化三处既有惯例——lightweight tag 打 bump 提交 / release.yml 自动建 + edit 校正 / merge 信息 `release:` 前缀 |
+| #175 | `5183ae89` | P2 前置桥接管线：`collectSubtitleTranscriptForClip`（subtitle 轨按 clip 范围收集 text + 时间对齐，1e-6 容差）+ `useTranscriptForClip` hook（组装 `(transcript, timeAlignment)` 调用 understandSpeech）+ `useSmartRoughCut` 返回值 `speechUnderstanding` 扩展位；4 文件 +260 行，新 hook 覆盖率 100%，e2e 534 零回归 |
+
+**P2 no-go → go 转折点记录**：
+
+1. **勘察结论 no-go**（2026-08-26，P1-2 结项后）：M3 语义建议需"带时间对齐的转写文本"，两个前置数据可用性评估均不达标——whisper 转写管线真实可用但转写文本不回流 contentAnalysis；contentAnalysis dialogueTurns 产出率 54% 但零语义能力（纯能量启发式，无文本输入）；唯一语义引擎 understandSpeech 沉睡在 core，smart-creation-orchestrator 因 `aiAnalysis.transcript` 字段不存在而恒空转
+2. **桥接补齐**（PR #175）：不动 understandSpeech 内部实现（沉睡资产激活而非重写）、不动 whisper.rs（转写管线已可用，只接其产物），从时间线 subtitle 轨直读 whisper 产物组装入参
+3. **go 判定**：understandSpeech 已激活，`speechUnderstanding`（含 keywords/topics/narrativeMarkers/summary + ready 就绪信号）可从 `useSmartRoughCut` 直接消费——M3 启动的数据前提已补齐
+
+**M3 待决策项**（启动前需决策，勘察项 3 已定位挂载点两处均现成）：
+
+- **挂载点**：SmartRoughCutStepPanel 扩展位（M1 拆分预留，面板头注释明示模式）vs RoughCutComparePanel 路径（Compare 已有 contentAnalysis 数据就绪门控模式可类比）
+- **产品形态**：基于叙事标记的粗剪建议列表——understanding 产出的 narrativeMarkers（opening/rising/**climax**/falling/ending）天然适配"高光优先"式建议，keywords/topics 可作建议的语义注脚 vs 其他形态
+- **数据就绪信号复用**：`speechUnderstanding.ready` 是否作为 M3 入口门控（类比 Compare 入口依赖 contentAnalysis 的模式：未分析 clip 入口禁用）
+
+**观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线；VAD 纯音乐误报 30s"对话轮"（能量启发式天花板）
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `72206d66`（PR #171 merge），工作区干净，专项分支全部删除。P0-1 与 P1-2 专项均结项，v4.75 后续主线待定（M3 语义建议与批量处理留 P2，见 2.3 决策存档）。
+**位置**：main = `5183ae89`（PR #175 merge），工作区干净，专项分支全部删除。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 桥接管线已合入，M3 语义建议数据前提就绪（no-go → go，见 2.4），启动前待决策项见 2.4。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.04%（本地实测，P1-2 M2 后）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
-- 全量单测：669 文件全过 exit 0（12383 passed + 3 skipped），~165s，无 unhandled rejection
-- e2e：P1-2 三阶段（#169/#170/#171）CI 全绿零 flaky 零重试；最近一轮 534 passed 41.2m
+- desktop 覆盖（口径 B）= **73.02%（CI #175 artifact 实测，桥接合入后）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- 全量单测：670 文件全过 exit 0（12390 passed + 3 skipped，含桥接 +7），~150s，无 unhandled rejection
+- e2e：534 用例零回归（#175 CI 一次全绿，42.3m）；最近一轮 534 passed
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -121,6 +146,8 @@
 | estimateTextureBytes(NaN) 保守归一 | 四期-B | NaN 污染整积归一为 1，保守设计 |
 | relaunch 命名差异 | 五期 | 实际命令为 plugin:process\|restart |
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
+| ASRStage worker 请求参数空占位未接线 | P2 勘察（2026-08-26） | 不在 M3 范围 |
+| VAD 纯音乐误报 30s"对话轮" | P2 勘察（2026-08-26） | 能量启发式天花板 |
 
 ---
 
@@ -132,7 +159,9 @@
 - `release.yml`：`on: push: tags: 'v*'`，tauri-action 三平台构建自动建 Release
 - **audit 豁免机制**：`apps/desktop/src-tauri/.cargo/audit.toml`（每条豁免须附风险评估注释 + 升级待办）
 
-### 5.2 发布流程惯例（v4.74.1 确立）
+### 5.2 发布流程惯例（v4.74.1 确立，v4.75.0 沿用）
+
+> 详细工作流已固化为 `RELEASING.md`（PR #174）。
 
 1. fix 分支 --no-ff merge 进 main（信息 `release: vX.Y.Z <中文标题>`）
 2. bump 三文件 + CHANGELOG 条目 + bump 提交（`chore: bump version to vX.Y.Z`）
@@ -143,9 +172,9 @@
 
 ### 5.3 测试基线（当前健康度）
 
-- 全量单测：669 文件全过 exit 0，~165s，无 unhandled rejection
-- 全量 e2e：534 用例，CI 单轮 28-45 分钟（慢 runner 区间），P1-2 三阶段连续 3 轮全绿零 flaky
-- 覆盖率：desktop（口径 B）73.04% 本地实测（历史本地-CI 偏差 ≤0.04pp）；editor-core thresholds 80% 无违规
+- 全量单测：670 文件全过 exit 0（12390 passed + 3 skipped），~150s，无 unhandled rejection
+- 全量 e2e：534 用例，CI 单轮 28-45 分钟（慢 runner 区间），#175 一轮全绿零 flaky
+- 覆盖率：desktop（口径 B）73.02% CI #175 artifact 实测（历史本地-CI 偏差 ≤0.04pp）；editor-core thresholds 80% 无违规
 - vitest 默认 `reportOnFailure=false`：**测试失败时 coverage 不生成**（CI coverage 依赖测试全绿）
 
 ### 5.4 长命令执行方式（TRAE 终端约束）
