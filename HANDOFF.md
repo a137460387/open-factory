@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-24 | 基线：main = `2b8e03ac`（PR #166 merge）| 版本：v4.74.1（已发布）
+> 更新时间：2026-08-26 | 基线：main = `72206d66`（PR #171 merge）| 版本：v4.74.1（已发布）
 
 ---
 
@@ -12,6 +12,7 @@
 
 1. **v4.74.1 patch 发布 + CI 基建稳定性专项**（已完成，2026-08-22 前收尾）：三轮 CI 修复解锁 frontend 徽章与 coverage 产出，为 v4.75 主线决策提供数据——历史摘录见 2.1
 2. **P0-1 覆盖率攻坚专项**（已结项，2026-08-24）：desktop 覆盖 47.68% → 72.65%，一期预估"70% 需 4-5 期"按期达成并留 2.65pp 缓冲——详见 2.2
+3. **P1-2 Smart Rough-Cut 主线**（已结项，2026-08-26）：M1 结构拆分 → M1b 提案对比接活 → M2 参数化，三阶段全部合入——详见 2.3
 
 ---
 
@@ -60,17 +61,34 @@
 | webgl-compositor（1178 行，11.63%） | 四期-B | ~600 行 GLSL 字符串 + 类方法需完整 GL 上下文 mock，ROI 低；长期候选 = Playwright 截图对比路径 |
 | workers 9 文件 550 行 | 五期维持 | 消息循环宿主桩，与一期同因 |
 
+### 2.3 P1-2 Smart Rough-Cut 主线（结项）
+
+**推进轨迹**（基线 ec769bb4 = #150 退役一键编排器后，分步路径为唯一入口）：
+
+| 阶段 | PR | merge commit | 主要内容 |
+|---|---|---|---|
+| M1 结构拆分 | #169 | `80ea5ece` | SmartRoughCutStepPanel 830 行 → 466 行纯渲染 + `useSmartRoughCut`（414 行 hook）+ `smart-rough-cut-utils`（99 行），行为等价（effect deps/memo deps/getState 非响应式读取逐字搬移，e2e 契约零变更） |
+| M1b 提案对比接活 | #170 | `de806e12` | RoughCutComparePanel 影子功能转正：`useRoughCutAnalysis`（contentAnalysis 派生 highlights/onsets，D1-B 决策）+ `ApplyRoughCutProposalCommand`（core 命令，ripple 删间隙 + undo/redo）+ EditorShell stub 接线；未分析 clip 入口禁用（Step 1B 限制） |
+| M2 参数化 + 联动 | #171 | `72206d66` | 5 检测参数状态化（sceneThreshold 0.3 / silenceMinDb -40 / silenceMinDuration 0.5 / silenceMargin 0.1 / dialogueSensitivity 'medium'，默认值=原硬编码零回归）+ ParamSlider/segmented 控件（disabled 联动 anyRunning）+ 结果项 hover playhead 联动 |
+
+**累计**：16 文件 +2335/-424（`git diff ec769bb4..72206d66` 实测；逐 PR 合计 +2341/-430）；SmartRoughCut 域单测 3 → 76 用例（utils 27 + hook 29 + 面板 5 + core 命令 5 + state 3 + Compare hook 7）；e2e 531 → 534（rough-cut-compare.spec 2 例 + smart-rough-cut.spec 新增 2 例，既有 3 例零改动）；desktop 覆盖（口径 B）72.84%（ec769bb4 实测）→ 73.04%（+0.20pp，三阶段全程无回落）；三阶段 CI 全绿零 flaky。
+
+**关键决策存档**：
+- D1-B：Compare 数据源走 contentAnalysis 派生（帧采样留后续增强）；onsets 从 segments.loudness 上升沿 + dialogueTurns 起点派生，不调 bridge
+- D2-A：检测参数 hook 本地 state（会话级），不新增 store
+- D3/D4：语义智能建议（M3）与批量处理留 P2——M3 启动前提 = whisper 转写可用性 + contentAnalysis dialogueTurns 覆盖率达可用阈值（待勘察）
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `2b8e03ac`（PR #166 merge），工作区干净，专项分支全部删除。P0-1 专项结项，v4.75 后续主线待定。
+**位置**：main = `72206d66`（PR #171 merge），工作区干净，专项分支全部删除。P0-1 与 P1-2 专项均结项，v4.75 后续主线待定（M3 语义建议与批量处理留 P2，见 2.3 决策存档）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **72.65%（本地）/ 72.61%（CI）**；本地-CI 偏差 **0.04pp**（连续 5 次测量 ≤0.04pp 稳定规律；CI artifact lcov 可下载复核）
-- 全量单测：664 文件全过 exit 0（12321 passed + 3 skipped），~165s，无 unhandled rejection
-- e2e：连续 7 轮 = 6 轮全绿 + 1 轮 3 flaky（环境归因）后复绿；最近一轮 531 passed 零 flaky 零重试 31.9m
+- desktop 覆盖（口径 B）= **73.04%（本地实测，P1-2 M2 后）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- 全量单测：669 文件全过 exit 0（12383 passed + 3 skipped），~165s，无 unhandled rejection
+- e2e：P1-2 三阶段（#169/#170/#171）CI 全绿零 flaky 零重试；最近一轮 534 passed 41.2m
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -125,9 +143,9 @@
 
 ### 5.3 测试基线（当前健康度）
 
-- 全量单测：664 文件全过 exit 0，~165s，无 unhandled rejection
-- 全量 e2e：531 用例，CI 单轮 28-45 分钟（慢 runner 区间），连续 7 轮 6 全绿 + 1 轮 3 flaky 环境归因后复绿
-- 覆盖率：desktop（口径 B）72.65% 本地 / 72.61% CI（偏差 0.04pp）；editor-core thresholds 80% 无违规
+- 全量单测：669 文件全过 exit 0，~165s，无 unhandled rejection
+- 全量 e2e：534 用例，CI 单轮 28-45 分钟（慢 runner 区间），P1-2 三阶段连续 3 轮全绿零 flaky
+- 覆盖率：desktop（口径 B）73.04% 本地实测（历史本地-CI 偏差 ≤0.04pp）；editor-core thresholds 80% 无违规
 - vitest 默认 `reportOnFailure=false`：**测试失败时 coverage 不生成**（CI coverage 依赖测试全绿）
 
 ### 5.4 长命令执行方式（TRAE 终端约束）
