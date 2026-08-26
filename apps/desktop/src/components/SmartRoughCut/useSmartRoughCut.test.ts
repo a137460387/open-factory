@@ -91,6 +91,7 @@ function makeEditorState(project: Project, overrides: Record<string, unknown> = 
     project,
     selectedClipIds: [] as string[],
     setSelectedClipId: vi.fn(),
+    setPlayheadTime: vi.fn(),
     ...overrides,
   };
 }
@@ -100,6 +101,7 @@ function setupHook(overrides: {
   media?: ReturnType<typeof makeAsset>[];
   project?: Project;
   selectedClipIds?: string[];
+  setPlayheadTime?: ReturnType<typeof vi.fn>;
 } = {}) {
   const clip =
     overrides.clip ??
@@ -108,7 +110,10 @@ function setupHook(overrides: {
   const project =
     overrides.project ??
     makeProject({ tracks: [makeTrack({ id: 'track-video', clips: [clip] })], media });
-  editorState = makeEditorState(project, { selectedClipIds: overrides.selectedClipIds ?? [] });
+  editorState = makeEditorState(project, {
+    selectedClipIds: overrides.selectedClipIds ?? [],
+    ...(overrides.setPlayheadTime ? { setPlayheadTime: overrides.setPlayheadTime } : {}),
+  });
   mockTimeline = project.timeline;
   return renderHook(() => useSmartRoughCut(clip, media));
 }
@@ -126,6 +131,79 @@ beforeEach(() => {
   mockCanGenerateSubtitlesForClip.mockImplementation(
     (clip: unknown, asset: unknown, ready: boolean) => Boolean(ready && clip && asset),
   );
+});
+
+// ── 检测参数（默认值零回归 + 注入 run 函数） ─────────────────
+
+describe('useSmartRoughCut detection params', () => {
+  it('defaults every detection param to the original hardcoded value', () => {
+    const { result } = setupHook();
+    // 默认值 = M2 之前的硬编码值，零行为回归
+    expect(result.current.sceneThreshold).toBe(0.3);
+    expect(result.current.silenceMinDb).toBe(-40);
+    expect(result.current.silenceMinDuration).toBe(0.5);
+    expect(result.current.silenceMargin).toBe(0.1);
+    expect(result.current.dialogueSensitivity).toBe('medium');
+  });
+
+  it('passes the configured scene threshold to detectSceneChanges', async () => {
+    mockDetectSceneChanges.mockResolvedValue({ sceneTimes: [2] });
+    const { result } = setupHook();
+
+    act(() => {
+      result.current.setSceneThreshold(0.2);
+    });
+    await act(async () => {
+      await result.current.runSceneDetection();
+    });
+
+    expect(mockDetectSceneChanges).toHaveBeenCalledWith(
+      expect.objectContaining({ threshold: 0.2 }),
+    );
+  });
+
+  it('passes the configured silence params to detectClipSilence', async () => {
+    mockDetectClipSilence.mockResolvedValue([{ start: 1, end: 2, duration: 1 }]);
+    const { result } = setupHook();
+
+    act(() => {
+      result.current.setSilenceMinDb(-55);
+      result.current.setSilenceMinDuration(0.2);
+      result.current.setSilenceMargin(0.25);
+    });
+    await act(async () => {
+      await result.current.runSilenceDetection();
+    });
+
+    expect(mockDetectClipSilence).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { thresholdDb: -55, minSilenceDuration: 0.2, marginDuration: 0.25 },
+    );
+  });
+
+  it('passes the configured dialogue sensitivity to detectClipDialogue', async () => {
+    mockDetectClipDialogue.mockResolvedValue([{ start: 0.5, end: 1.5 }]);
+    const { result } = setupHook();
+
+    act(() => {
+      result.current.setDialogueSensitivity('high');
+    });
+    await act(async () => {
+      await result.current.runDialogueRoughCut();
+    });
+
+    expect(mockDetectClipDialogue).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'high');
+  });
+
+  it('exposes setPlayheadTime from the editor store', () => {
+    const setPlayheadTime = vi.fn();
+    const { result } = setupHook({ setPlayheadTime });
+    act(() => {
+      result.current.setPlayheadTime(1.5);
+    });
+    expect(setPlayheadTime).toHaveBeenCalledWith(1.5);
+  });
 });
 
 // ── 门控派生 ────────────────────────────────────────────────

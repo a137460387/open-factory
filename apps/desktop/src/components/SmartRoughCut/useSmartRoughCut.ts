@@ -17,6 +17,7 @@ import {
   getClipSpeed,
   round,
   type Clip,
+  type DialogueSensitivity,
   type MediaAsset,
   type Track,
 } from '@open-factory/editor-core';
@@ -96,6 +97,23 @@ export interface UseSmartRoughCutResult {
   setBrollTrackId: Dispatch<SetStateAction<string>>;
   rhythmTrackId: string;
   setRhythmTrackId: Dispatch<SetStateAction<string>>;
+  /** 场景检测阈值（默认 0.3，与原硬编码一致） */
+  sceneThreshold: number;
+  setSceneThreshold: Dispatch<SetStateAction<number>>;
+  /** 静音检测阈值 dB（默认 -40，与原硬编码一致） */
+  silenceMinDb: number;
+  setSilenceMinDb: Dispatch<SetStateAction<number>>;
+  /** 静音最短时长秒（默认 0.5，与原硬编码一致） */
+  silenceMinDuration: number;
+  setSilenceMinDuration: Dispatch<SetStateAction<number>>;
+  /** 静音边距秒（默认 0.1，与原硬编码一致） */
+  silenceMargin: number;
+  setSilenceMargin: Dispatch<SetStateAction<number>>;
+  /** 对话检测灵敏度（默认 'medium'，与原硬编码一致） */
+  dialogueSensitivity: DialogueSensitivity;
+  setDialogueSensitivity: Dispatch<SetStateAction<DialogueSensitivity>>;
+  /** playhead 跳转（结果项 hover 联动预览） */
+  setPlayheadTime: (time: number) => void;
   runSceneDetection(): Promise<void>;
   runSilenceDetection(): Promise<void>;
   runWhisper(): Promise<void>;
@@ -111,6 +129,12 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
   const [pendingSilence, setPendingSilence] = useState<PendingSilenceResult>();
   const [brollTrackId, setBrollTrackId] = useState('');
   const [rhythmTrackId, setRhythmTrackId] = useState('');
+  // 检测参数（默认值与原硬编码完全一致，零行为回归）
+  const [sceneThreshold, setSceneThreshold] = useState(0.3);
+  const [silenceMinDb, setSilenceMinDb] = useState(-40);
+  const [silenceMinDuration, setSilenceMinDuration] = useState(0.5);
+  const [silenceMargin, setSilenceMargin] = useState(0.1);
+  const [dialogueSensitivity, setDialogueSensitivity] = useState<DialogueSensitivity>('medium');
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({
     ready: false,
     error: zhCN.whisper.notConfigured,
@@ -124,6 +148,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
   const project = useEditorStore((item) => item.project);
   const selectedClipIds = useEditorStore((item) => item.selectedClipIds);
   const setSelectedClipId = useEditorStore((item) => item.setSelectedClipId);
+  const setPlayheadTime = useEditorStore((item) => item.setPlayheadTime);
   const timeline = project.timeline;
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
   const selectedTimelineClips = useMemo(
@@ -184,7 +209,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
       const sourceEnd = sourceStart + clip.duration * speed;
       const result = await detectSceneChanges({
         path: mediaAsset.path,
-        threshold: 0.3,
+        threshold: sceneThreshold,
         duration: mediaAsset.duration || clip.duration,
       });
       const splitTimes = result.sceneTimes
@@ -210,9 +235,9 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
         throw new Error(zhCN.smartRoughCut.silenceUnavailable);
       }
       const ranges = await detectClipSilence(clip, mediaAsset, {
-        thresholdDb: -40,
-        minSilenceDuration: 0.5,
-        marginDuration: 0.1,
+        thresholdDb: silenceMinDb,
+        minSilenceDuration: silenceMinDuration,
+        marginDuration: silenceMargin,
       });
       const items = ranges.map((range, index) => ({ id: `silence-${index}`, range }));
       setPendingSilence({
@@ -304,7 +329,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
       if (clip.type === 'video' && !mediaAsset.hasAudio) {
         throw new Error(zhCN.smartRoughCut.dialogueUnavailable);
       }
-      const intervals = await detectClipDialogue(clip, mediaAsset, 'medium');
+      const intervals = await detectClipDialogue(clip, mediaAsset, dialogueSensitivity);
       const command = new DialogueRoughCutCommand(timelineAccessor, clip.id, intervals);
       commandManager.execute(command);
       setSelectedClipId(`${clip.id}-dialogue-1`);
@@ -402,6 +427,17 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     setBrollTrackId,
     rhythmTrackId,
     setRhythmTrackId,
+    sceneThreshold,
+    setSceneThreshold,
+    silenceMinDb,
+    setSilenceMinDb,
+    silenceMinDuration,
+    setSilenceMinDuration,
+    silenceMargin,
+    setSilenceMargin,
+    dialogueSensitivity,
+    setDialogueSensitivity,
+    setPlayheadTime,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
