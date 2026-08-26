@@ -121,3 +121,77 @@ async function getVideoClipCount(page: Page): Promise<number> {
     return timeline.tracks.find((track) => track.id === 'track-video')?.clips.length ?? 0;
   });
 }
+
+/** 含叙事标记的中文转写（opening/rising/climax 全命中，时间对齐 0 / 0.8 / 1.6） */
+const SEMANTIC_SRT = [
+  '1',
+  '00:00:00,000 --> 00:00:00,800',
+  '大家好，欢迎观看本期节目。',
+  '',
+  '2',
+  '00:00:00,800 --> 00:00:01,600',
+  '今天我们介绍项目背景与目标。',
+  '',
+  '3',
+  '00:00:01,600 --> 00:00:02,400',
+  '这部分是最关键的核心要点。',
+  '',
+].join('\n');
+
+async function setupSemanticFixture(page: Page): Promise<void> {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate((srt) => {
+    window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!();
+    window.__E2E_ACTIONS__!.setWhisperSrtContents!(srt);
+  }, SEMANTIC_SRT);
+}
+
+test('smart rough cut semantic suggestions are gated until whisper transcript exists', async ({ page }) => {
+  await setupSemanticFixture(page);
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await expect(page.getByTestId('smart-rough-cut-panel')).toBeVisible();
+
+  // 未转写：入口门控（提示可见、列表不渲染）
+  await expect(page.getByTestId('smart-semantic')).toHaveAttribute('data-ready', 'false');
+  await expect(page.getByTestId('smart-semantic-hint')).toContainText('请先运行 Whisper 字幕生成转写文本');
+  await expect(page.locator('[data-testid^="smart-semantic-item-"]')).toHaveCount(0);
+
+  // 生成转写 → 语义建议就绪
+  await page.getByTestId('whisper-executable-path-input').fill('C:/Tools/whisper.exe');
+  await page.getByTestId('whisper-model-path-input').fill('C:/Models/base.bin');
+  await page.getByTestId('smart-whisper-button').click();
+  await expect(page.getByTestId('smart-whisper-status')).toHaveAttribute('data-status', 'complete');
+
+  // whisper 完成后 hook 选中首个 subtitle clip；选回视频 clip 使语义收集覆盖完整转写范围
+  await page.evaluate(() => window.__E2E_ACTIONS__!.selectClip!('clip-smart-video'));
+
+  await expect(page.getByTestId('smart-semantic')).toHaveAttribute('data-ready', 'true');
+  // 3 项建议：climax 优先（DOM 首位）+ opening/rising 按时间殿后
+  await expect(page.locator('[data-testid^="smart-semantic-item-"]')).toHaveCount(3);
+  const climaxItems = page.locator('[data-testid^="smart-semantic-item-"][data-climax="true"]');
+  await expect(climaxItems).toHaveCount(1);
+  await expect(climaxItems).toContainText('高潮片段');
+  await expect(climaxItems).toContainText('1.60s - 2.50s');
+  await expect(climaxItems).toContainText('置信度 70%');
+  await expect(page.getByTestId('smart-semantic-item-semantic-0')).toContainText('开场');
+  await expect(page.getByTestId('smart-semantic-item-semantic-1')).toContainText('铺垫');
+});
+
+test('smart rough cut hovering a semantic suggestion moves the playhead to its start', async ({ page }) => {
+  await setupSemanticFixture(page);
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await page.getByTestId('whisper-executable-path-input').fill('C:/Tools/whisper.exe');
+  await page.getByTestId('whisper-model-path-input').fill('C:/Models/base.bin');
+  await page.getByTestId('smart-whisper-button').click();
+  await expect(page.getByTestId('smart-whisper-status')).toHaveAttribute('data-status', 'complete');
+  await page.evaluate(() => window.__E2E_ACTIONS__!.selectClip!('clip-smart-video'));
+
+  // hover climax 建议项（区间 [1.6, 2.5]，start=1.6）→ playhead 跳到 1.6
+  await page.getByTestId('smart-semantic-item-semantic-2').hover();
+  await expect
+    .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getPlayheadTime!()))
+    .toBe(1.6);
+});

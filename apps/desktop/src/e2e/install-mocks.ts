@@ -46,6 +46,18 @@ let proxyGenerationDelayMs = 10;
 let nextExportError: string | undefined;
 let effectPresetCommunityResponse: string | undefined;
 let mockSceneTimes = [1];
+// 可注入的 Whisper SRT 内容（默认英文两段，保持既有用例零回归；
+// setWhisperSrtContents 可注入含叙事标记的中文转写供语义建议 e2e 消费）
+let mockWhisperSrtContents = [
+  '1',
+  '00:00:00,000 --> 00:00:01,200',
+  'First generated caption',
+  '',
+  '2',
+  '00:00:01,400 --> 00:00:02,400',
+  'Second generated caption',
+  '',
+].join('\n');
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
@@ -1155,16 +1167,7 @@ const mocks: TauriMocks = {
     await wait(10);
     emit('whisper-progress', { clipId, progress: 1, progressPct: 100 });
     const srtPath = `C:/Users/E2E/AppData/Roaming/open-factory/whisper/${clipId}.srt`;
-    const contents = [
-      '1',
-      '00:00:00,000 --> 00:00:01,200',
-      'First generated caption',
-      '',
-      '2',
-      '00:00:01,400 --> 00:00:02,400',
-      'Second generated caption',
-      '',
-    ].join('\n');
+    const contents = mockWhisperSrtContents;
     files.set(srtPath, contents);
     exists.set(srtPath, true);
     mtimes.set(srtPath, Date.now());
@@ -3539,6 +3542,11 @@ window.__E2E_ACTIONS__ = {
     mockSceneTimes = Array.isArray(times)
       ? times.filter((time): time is number => typeof time === 'number' && Number.isFinite(time))
       : [1];
+  },
+  setWhisperSrtContents: (contents: unknown) => {
+    if (typeof contents === 'string' && contents.trim().length > 0) {
+      mockWhisperSrtContents = contents;
+    }
   },
   setAvailableMemoryBytes: (bytes: unknown) => {
     if (typeof bytes === 'number' && Number.isFinite(bytes)) {

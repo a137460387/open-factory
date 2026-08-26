@@ -22,6 +22,7 @@ import {
   type SilenceCandidate,
 } from './smart-rough-cut-utils';
 import { useSmartRoughCut } from './useSmartRoughCut';
+import { SemanticSuggestionList } from './SemanticSuggestionList';
 
 interface SmartRoughCutStepPanelProps {
   selectedClip?: Clip;
@@ -63,6 +64,8 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
     dialogueSensitivity,
     setDialogueSensitivity,
     setPlayheadTime,
+    speechUnderstanding,
+    semanticSuggestions,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
@@ -198,6 +201,11 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
               buttonLabel={zhCN.smartRoughCut.generateSubtitles}
               disabled={anyRunning || !canRunWhisper}
               onRun={() => void runWhisper()}
+            />
+            <SemanticSuggestionList
+              suggestions={semanticSuggestions}
+              ready={speechUnderstanding.ready}
+              onPreviewTime={setPlayheadTime}
             />
           </div>
         ) : null}

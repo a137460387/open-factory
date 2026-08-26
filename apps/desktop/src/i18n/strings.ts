@@ -3077,6 +3077,11 @@ const zh = {
       `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕 / ${dialogueClips} 个对话 clip / ${brollClips} 个 B-roll / ${rhythmClips} 个节奏 clip。`,
     stepComplete: (step: string) => `${step}完成`,
     stepFailed: (step: string) => `${step}失败`,
+    semanticTitle: '语义建议',
+    semanticNotReady: '请先运行 Whisper 字幕生成转写文本，再查看语义粗剪建议。',
+    semanticEmpty: '暂无语义粗剪建议（转写文本中未检测到叙事标记）。',
+    semanticRange: (start: string, end: string) => `${start} - ${end}`,
+    semanticConfidence: (value: number) => `置信度 ${Math.round(value * 100)}%`,
   },
   aiRoughCut: {
     title: 'AI粗剪助手',
