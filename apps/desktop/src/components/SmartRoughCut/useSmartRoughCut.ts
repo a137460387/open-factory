@@ -46,6 +46,7 @@ import {
   type SmartRoughCutStep,
 } from './smart-rough-cut-state';
 import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
+import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } from './semantic-suggestion';
 import {
   buildBrollCandidates,
   buildSceneCandidates,
@@ -121,6 +122,12 @@ export interface UseSmartRoughCutResult {
    * keywords/topics/narrativeMarkers（含 climax）供 M3 语义建议消费。
    */
   speechUnderstanding: UseTranscriptForClipResult;
+  /**
+   * M3-1 语义建议列表（narrativeMarkers 派生扩展位）：
+   * climax 优先排序，每项含时间区间供 M3-2 hover 预览；无转写或
+   * 无 marker 时为空数组。
+   */
+  semanticSuggestions: SemanticRoughCutSuggestion[];
   runSceneDetection(): Promise<void>;
   runSilenceDetection(): Promise<void>;
   runWhisper(): Promise<void>;
@@ -159,6 +166,11 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
   const timeline = project.timeline;
   // 桥接扩展位：subtitle 轨转写文本 → understandSpeech 语义理解
   const speechUnderstanding = useTranscriptForClip(selectedClip, timeline);
+  // M3-1 扩展位：narrativeMarkers → 语义粗剪建议列表（纯派生，零副作用）
+  const semanticSuggestions = useMemo(
+    () => generateSemanticRoughCutSuggestions(speechUnderstanding.understanding, selectedClip),
+    [speechUnderstanding.understanding, selectedClip],
+  );
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
   const selectedTimelineClips = useMemo(
     () => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)),
@@ -448,6 +460,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     setDialogueSensitivity,
     setPlayheadTime,
     speechUnderstanding,
+    semanticSuggestions,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
