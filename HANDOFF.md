@@ -1,6 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-26 | 基线：main = `5183ae89`（PR #175 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
+> 更新时间：2026-08-27 | 基线：main = `4367f9d9`（PR #178 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
+>
+> e2e 基线（双口径）：**发现数 537 / passed 537 零 flaky**。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -14,6 +16,7 @@
 2. **P0-1 覆盖率攻坚专项**（已结项，2026-08-24）：desktop 覆盖 47.68% → 72.65%，一期预估"70% 需 4-5 期"按期达成并留 2.65pp 缓冲——详见 2.2
 3. **P1-2 Smart Rough-Cut 主线**（已结项，2026-08-26）：M1 结构拆分 → M1b 提案对比接活 → M2 参数化，三阶段全部合入——详见 2.3
 4. **v4.75.0 发版 + P2 前置桥接**（已合入，2026-08-26）：#173 发版 / #174 发版工作流文档 / #175 转写文本→语义引擎桥接，P2 由 no-go 转 go——详见 2.4
+5. **P2 主线 M3 语义建议两阶段**（M3-1/M3-2 已合入，2026-08-26/27；M3-3 未启动待决策）：数据层 narrativeMarkers 派生建议纯函数 + SemanticSuggestionList 列表 UI；本工作线起 e2e 基线统一为发现数口径 537——详见 2.5
 
 ---
 
@@ -85,7 +88,7 @@
 
 | PR | merge commit | 主要内容 |
 |---|---|---|
-| #173 | `70cf89d8` | v4.75.0 发版：三文件 bump（4.74.1→4.75.0，Cargo.lock 经 `cargo update -w --offline` 同步）+ CHANGELOG（Features/Bug Fixes/Refactor/Tests/Docs 分组）；bump 提交 `39e7cf74`；lightweight tag v4.75.0 触发 release.yml 三平台构建自动建 Release（6 资产），`gh release edit` 校正标题「v4.75.0 智能粗剪」并替换 notes；CI 全绿（e2e 534 passed） |
+| #173 | `70cf89d8` | v4.75.0 发版：三文件 bump（4.74.1→4.75.0，Cargo.lock 经 `cargo update -w --offline` 同步）+ CHANGELOG（Features/Bug Fixes/Refactor/Tests/Docs 分组）；bump 提交 `39e7cf74`；lightweight tag v4.75.0 触发 release.yml 三平台构建自动建 Release（6 资产），`gh release edit` 校正标题「v4.75.0 智能粗剪」并替换 notes；CI 全绿（e2e 原记录 534 passed，run 原文实为 535 passed——见 2.5 口径修正） |
 | #174 | `f8eece75` | RELEASING.md 发版工作流文档（97 行）：固化三处既有惯例——lightweight tag 打 bump 提交 / release.yml 自动建 + edit 校正 / merge 信息 `release:` 前缀 |
 | #175 | `5183ae89` | P2 前置桥接管线：`collectSubtitleTranscriptForClip`（subtitle 轨按 clip 范围收集 text + 时间对齐，1e-6 容差）+ `useTranscriptForClip` hook（组装 `(transcript, timeAlignment)` 调用 understandSpeech）+ `useSmartRoughCut` 返回值 `speechUnderstanding` 扩展位；4 文件 +260 行，新 hook 覆盖率 100%，e2e 534 零回归 |
 
@@ -103,17 +106,51 @@
 
 **观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线；VAD 纯音乐误报 30s"对话轮"（能量启发式天花板）
 
+### 2.5 P2 主线 M3 语义建议两阶段（M3-1/M3-2 已合入，M3-3 未启动）
+
+**三阶段规划总览**（M3 启动数据前提已由 #175 补齐，go 判定见 2.4）：
+
+| 阶段 | PR / merge commit | 状态 | 主要内容 |
+|---|---|---|---|
+| M3-1 数据层 | #177 / `1b42a9c0` | ✅ 已合入（2026-08-26） | 桥接产出派生建议列表纯函数 |
+| M3-2 UI 层 | #178 / `4367f9d9` | ✅ 已合入（2026-08-27） | SemanticSuggestionList 组件 + ready 门控 |
+| M3-3 应用整合 | — | ⏸ 未启动 | 待决策项见本节末 |
+
+**#177（M3-1，纯数据层）**：`SemanticRoughCutSuggestion` 类型 + `generateSemanticRoughCutSuggestions` 纯函数（从语义桥接产出 narrativeMarkers 派生建议列表：区间 = marker.time → 下一 marker.time，末项延伸至 clip 末端；climax 按 confidence 降序优先、其余时间升序殿后；clip 范围外 marker 剔除）+ `useSmartRoughCut.semanticSuggestions` 扩展位接线（useMemo 派生）。零 UI 改动，上游 understandSpeech / useTranscriptForClip 零改动，类型不落库不入持久化 schema。semantic-suggestion.ts 行覆盖 **100%**（lcov LF/LH = 41/41 实测），单测 13 例，e2e 发现数 535 零回归。
+
+**#178（M3-2，UI 层）**：`SemanticSuggestionList` 只读组件（label + timeRange + reason + confidence 展示，climax 项 `data-climax` 标记高亮；只读呈现不自动应用——应用整合属 M3-3 范围），挂载 SmartRoughCutStepPanel basic tab whisper 步后扩展位（2.4 决策预留位之一）；hover playhead 联动复用 M2 结果项 onMouseEnter 路径（无 leave 回调，行为对齐）；`speechUnderstanding.ready` 门控对齐 Compare 入口惯例（未就绪显示提示文案，类比 Compare 依赖 contentAnalysis 就绪信号）。e2e +2 例（门控→转写→列表渲染含 climax 高亮 / hover playhead 断言）：whisper mock SRT 变量化 + `setWhisperSrtContents` e2e action 注入叙事标记转写，默认值不变保既有用例兼容。累计 7 文件 +417/-10。
+
+**CI major outage 事件记录**（供未来故障参考）：2026-08-26T15:21:05Z 起，PR #178 分支 pull_request run（id 32984802342）持续卡 queued 约 3h20m 无进展——GitHub API 显示 run 内零 job 被调度、updatedAt 冻结在创建时刻（定性平台侧僵死，非正常排队等待）；18:41:29Z close → 18:41:31Z reopen 重触发新 run（18:41:34Z 创建）一次全绿，处置成功。处置要点：长时卡 queued 先查 API 层 job 是否存在与 updatedAt 是否推进，确认僵死后 close+reopen 强制新建 run，优于无限等待。
+
+**e2e 口径修正记录**（双口径确立，逐 run CI 实测汇总）：
+
+| 时点 | main 位置 | 静态套件 | Playwright 汇总原文 |
+|---|---|---|---|
+| v4.75.0 发版 | `70cf89d8`（run 32931852510） | 535 specs | `535 passed (32.5m)` |
+| #175 merge | `5183ae89`（run 32943128891） | 535 specs | `1 flaky / 534 passed (41.5m)` |
+| #176 merge | `02a052eb`（run 32971840207） | docs-only | e2e job 走 Docs-only 跳过路径 |
+| #177 merge | `1b42a9c0`（run 32979199629） | 535 specs | `535 passed (32.0m)` |
+| #178 merge 后 main | `4367f9d9`（run 33004915434） | 537 specs（+2） | `537 passed (41.8m)` 零 flaky |
+
+自 v4.75.0 发版至 #177，spec 文件零变更（`git diff 70cf89d8..1b42a9c0 -- apps/desktop/e2e/` 为空），静态发现数恒为 535。此前 HANDOFF 各处 "534" 均为 passed 数口径（其中 2.4 表内 "#173 e2e 534 passed" 行与发版 run 原文 `535 passed` 不符，系笔误沿袭 M2 时期数字）；#175 merge run 的 `1 flaky / 534 passed` 中 flaky 用例为 nested-sequence-export.spec.ts:67「批量序列渲染入队」（观察池既有项，只记录不修），重试通过不计入 passed 即 534 与发现数 535 并存的根因。自本文档起统一以发现数表述：当前基线**发现数 537 = passed 537 零 flaky**。
+
+**M3-3 待决策项**（启动前需决策，三项择一）：
+
+- **Compare 策略语义增强**：语义建议并入 RoughCutComparePanel 策略对比体系（叙事标记如何参与策略对比轴待设计）
+- **建议应用整合 ApplyCommand 化**：建议应用走命令对象——涉撤销栈与既有命令体系关系（Timeline 命令对象约束要求 undo/redo 完整，M1b ApplyRoughCutProposalCommand 波纹删除为先例）
+- **或暂缓**：保持两阶段产出只读呈现，整合排期另行评估
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `5183ae89`（PR #175 merge），工作区干净，专项分支全部删除。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 桥接管线已合入，M3 语义建议数据前提就绪（no-go → go，见 2.4），启动前待决策项见 2.4。
+**位置**：main = `4367f9d9`（PR #178 merge），工作区干净，专项分支全部删除。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 主线 M3 两阶段（M3-1 数据层 + M3-2 UI 层）已合入，M3-3 未启动待决策（见 2.5）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.02%（CI #175 artifact 实测，桥接合入后）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
-- 全量单测：670 文件全过 exit 0（12390 passed + 3 skipped，含桥接 +7），~150s，无 unhandled rejection
-- e2e：534 用例零回归（#175 CI 一次全绿，42.3m）；最近一轮 534 passed
+- desktop 覆盖（口径 B）= **73.04%（CI artifact lcov 实测 @ 4367f9d9）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- 全量单测：672 文件全过 exit 0（12415 passed + 3 skipped，含 M3 两阶段 +25），CI 实测 ~273s，无 unhandled rejection
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 537 / passed 537 零 flaky**（4367f9d9 run 33004915434 实测，41.8m）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -172,9 +209,9 @@
 
 ### 5.3 测试基线（当前健康度）
 
-- 全量单测：670 文件全过 exit 0（12390 passed + 3 skipped），~150s，无 unhandled rejection
-- 全量 e2e：534 用例，CI 单轮 28-45 分钟（慢 runner 区间），#175 一轮全绿零 flaky
-- 覆盖率：desktop（口径 B）73.02% CI #175 artifact 实测（历史本地-CI 偏差 ≤0.04pp）；editor-core thresholds 80% 无违规
+- 全量单测：672 文件全过 exit 0（12415 passed + 3 skipped），CI 实测 ~273s，无 unhandled rejection
+- 全量 e2e：**发现数 537 / passed 537 零 flaky**（双口径纪律见头部注与 2.5 口径修正记录；历史 "534" 为 passed 数口径）；CI 单轮 28-45 分钟（慢 runner 区间）
+- 覆盖率：desktop（口径 B）73.04%（4367f9d9 CI artifact 实测，历史本地-CI 偏差 ≤0.04pp）；editor-core thresholds 80% 无违规
 - vitest 默认 `reportOnFailure=false`：**测试失败时 coverage 不生成**（CI coverage 依赖测试全绿）
 
 ### 5.4 长命令执行方式（TRAE 终端约束）
