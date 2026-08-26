@@ -73,6 +73,46 @@ test('smart rough cut dialogue mode creates one clip per detected voice interval
   await expect(page.getByTestId('smart-rough-cut-report')).toContainText('2 个对话 clip');
 });
 
+test('smart rough cut scene threshold slider adjusts detection sensitivity', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!());
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  // 默认阈值 0.3 → mock 返回 1 个切点（fixture 默认 mockSceneTimes=[1]）
+  await page.getByTestId('smart-scene-button').click();
+  await expect(page.getByTestId('smart-scene-status')).toHaveAttribute('data-status', 'complete');
+  await expect(page.getByTestId('smart-scene-preview')).toContainText('检测到 1 个切点');
+
+  // 重置后调低阈值到 0.2 → mock 追加切点 2 → 2 个切点
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!());
+  await page.getByTestId('smart-scene-threshold').fill('0.2');
+  await expect(page.getByTestId('smart-scene-threshold')).toHaveValue('0.2');
+  await page.getByTestId('smart-scene-button').click();
+  await expect(page.getByTestId('smart-scene-status')).toHaveAttribute('data-status', 'complete');
+  await expect(page.getByTestId('smart-scene-preview')).toContainText('检测到 2 个切点');
+});
+
+test('smart rough cut hovering a scene result item moves the playhead to its start', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => {
+    window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!();
+    window.__E2E_ACTIONS__!.setSceneDetectionTimes!([0.8, 1.7]);
+  });
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await page.getByTestId('smart-scene-button').click();
+  await expect(page.getByTestId('smart-scene-status')).toHaveAttribute('data-status', 'complete');
+  await expect(page.locator('[data-testid^="smart-scene-item-"]')).toHaveCount(3);
+
+  // hover scene-1（区间 [0.8, 1.7]，start=0.8）→ playhead 跳到 0.8
+  await page.getByTestId('smart-scene-item-scene-1').hover();
+  await expect
+    .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getPlayheadTime!()))
+    .toBe(0.8);
+});
+
 async function getVideoClipCount(page: Page): Promise<number> {
   return page.evaluate(() => {
     const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {

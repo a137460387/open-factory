@@ -1142,7 +1142,12 @@ const mocks: TauriMocks = {
     });
     await wait(10);
     emit('scene-detect-progress', { progress: 1, ptsTime: request.duration, analyzedFrames: totalFrames, totalFrames });
-    return { sceneTimes: mockSceneTimes, limited: false, analyzedDuration: request.duration ?? 0 };
+    // 低阈值（更敏感）时返回更多切点，供参数可调 e2e 断言 threshold 传参生效
+    const sceneTimes =
+      typeof request.threshold === 'number' && request.threshold <= 0.2
+        ? Array.from(new Set([...mockSceneTimes, 2]))
+        : mockSceneTimes;
+    return { sceneTimes, limited: false, analyzedDuration: request.duration ?? 0 };
   },
   cancelSceneDetection: () => undefined,
   runWhisper: async ({ clipId }) => {
