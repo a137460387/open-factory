@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.76.0] - 2026-08-27
+
+本版本主线为智能粗剪语义建议两阶段落地（P2 主线 M3-1/M3-2）：从叙事标记到只读建议列表的完整数据链路，应用整合（M3-3）留待决策。
+
+### Added
+- 智能粗剪语义建议生成层（M3-1）：`generateSemanticRoughCutSuggestions` 纯函数从语义理解产出 narrativeMarkers 派生建议列表——区间取 marker.time 至下一 marker.time（末项延伸至片段末端），climax 按 confidence 降序置顶、其余时间升序殿后，片段范围外标记剔除；经 `useSmartRoughCut.semanticSuggestions` 扩展位暴露，类型不落库不入持久化 schema
+- 智能粗剪语义建议列表 UI（M3-2）：SemanticSuggestionList 只读组件（label + timeRange + reason + confidence，climax 项高亮标记）挂载分步面板 whisper 步后扩展位；结果项 hover playhead 联动预览（复用检测参数化阶段的 onMouseEnter 路径）；speechUnderstanding.ready 就绪门控（未就绪显示提示文案，类比提案对比面板惯例）；只读呈现不自动应用，应用整合属后续决策项
+- 智能粗剪转写文本桥接：从时间线字幕轨收集 whisper 产物并组装时间对齐参数调用语义引擎 understandSpeech（keywords/topics/narrativeMarkers/summary + ready 信号），为语义建议提供数据前提
+
+### Tests
+- e2e 用例数自本版本起统一以**发现数**口径表述：发现数 537 / passed 537 零 flaky（新增语义建议 2 例：ready 门控→转写→列表渲染含 climax 高亮、hover playhead 断言；历史记录的 534 为 passed 数口径，实际发现数为 535，其中 1 例 flaky 重试通过不计入 passed）
+- desktop 覆盖率（口径 B）73.02% → 73.04%（CI artifact lcov 实测）；semantic-suggestion.ts 行覆盖 100%
+- 全量单测 672 文件 12415 passed + 3 skipped，无 unhandled rejection
+
+### Docs
+- 新增 RELEASING.md 发版工作流文档（lightweight tag 打 bump 提交 / release.yml 自动建 Release + gh release edit 校正 / merge 信息 release: 前缀三惯例固化）
+- HANDOFF 交接文档两轮刷新（v4.75.0 发版与 P2 转折点基线归档、M3 两阶段归档与 e2e 口径双口径修正）
+
 ## [v4.75.0] - 2026-08-26
 
 本版本主线为 Smart Rough-Cut 智能粗剪三阶段增强（P1-2），并合入后台媒体作业调度、波形预生成两项 roadmap 功能与协作安全加固。
