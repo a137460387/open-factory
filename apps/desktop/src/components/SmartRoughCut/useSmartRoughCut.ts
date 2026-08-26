@@ -45,6 +45,7 @@ import {
   type SmartRoughCutState,
   type SmartRoughCutStep,
 } from './smart-rough-cut-state';
+import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
 import {
   buildBrollCandidates,
   buildSceneCandidates,
@@ -114,6 +115,12 @@ export interface UseSmartRoughCutResult {
   setDialogueSensitivity: Dispatch<SetStateAction<DialogueSensitivity>>;
   /** playhead 跳转（结果项 hover 联动预览） */
   setPlayheadTime: (time: number) => void;
+  /**
+   * 转写文本语义理解（subtitle 轨 → understandSpeech 桥接扩展位）：
+   * ready 为 Compare 面板数据就绪信号，understanding 含
+   * keywords/topics/narrativeMarkers（含 climax）供 M3 语义建议消费。
+   */
+  speechUnderstanding: UseTranscriptForClipResult;
   runSceneDetection(): Promise<void>;
   runSilenceDetection(): Promise<void>;
   runWhisper(): Promise<void>;
@@ -150,6 +157,8 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
   const setSelectedClipId = useEditorStore((item) => item.setSelectedClipId);
   const setPlayheadTime = useEditorStore((item) => item.setPlayheadTime);
   const timeline = project.timeline;
+  // 桥接扩展位：subtitle 轨转写文本 → understandSpeech 语义理解
+  const speechUnderstanding = useTranscriptForClip(selectedClip, timeline);
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
   const selectedTimelineClips = useMemo(
     () => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)),
@@ -438,6 +447,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     dialogueSensitivity,
     setDialogueSensitivity,
     setPlayheadTime,
+    speechUnderstanding,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
