@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-27 | 基线：main = `4367f9d9`（PR #178 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
+> 更新时间：2026-08-27 | 基线：main = `74da84a4`（PR #182 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
 >
-> e2e 基线（双口径）：**发现数 537 / passed 537 零 flaky**。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 535 / passed 535 零 flaky**（PR #182 run 33045131192 实测 `535 passed (41.5m)`）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535（2026-08-27 归档更新）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -16,7 +16,8 @@
 2. **P0-1 覆盖率攻坚专项**（已结项，2026-08-24）：desktop 覆盖 47.68% → 72.65%，一期预估"70% 需 4-5 期"按期达成并留 2.65pp 缓冲——详见 2.2
 3. **P1-2 Smart Rough-Cut 主线**（已结项，2026-08-26）：M1 结构拆分 → M1b 提案对比接活 → M2 参数化，三阶段全部合入——详见 2.3
 4. **v4.75.0 发版 + P2 前置桥接**（已合入，2026-08-26）：#173 发版 / #174 发版工作流文档 / #175 转写文本→语义引擎桥接，P2 由 no-go 转 go——详见 2.4
-5. **P2 主线 M3 语义建议两阶段**（M3-1/M3-2 已合入，2026-08-26/27；M3-3 未启动待决策）：数据层 narrativeMarkers 派生建议纯函数 + SemanticSuggestionList 列表 UI；本工作线起 e2e 基线统一为发现数口径 537——详见 2.5
+5. **P2 主线 M3 语义建议两阶段**（M3-1/M3-2 已合入，2026-08-26/27；M3-3 未启动待决策）：数据层 narrativeMarkers 派生建议纯函数 + SemanticSuggestionList 列表 UI；本工作线起 e2e 基线统一为发现数口径 537（后经 #181 重写净减至 535，见头部基线注）——详见 2.5
+6. **P2 收官双修复 + 观察池销账**（已合入，2026-08-27）：#181 ASRStage 死链路退役 / #182 VAD 纯音乐误报治理 + `lib/asr.ts` 桩删除，观察池篇章收官——详见 2.6
 
 ---
 
@@ -75,7 +76,7 @@
 | M1b 提案对比接活 | #170 | `de806e12` | RoughCutComparePanel 影子功能转正：`useRoughCutAnalysis`（contentAnalysis 派生 highlights/onsets，D1-B 决策）+ `ApplyRoughCutProposalCommand`（core 命令，ripple 删间隙 + undo/redo）+ EditorShell stub 接线；未分析 clip 入口禁用（Step 1B 限制） |
 | M2 参数化 + 联动 | #171 | `72206d66` | 5 检测参数状态化（sceneThreshold 0.3 / silenceMinDb -40 / silenceMinDuration 0.5 / silenceMargin 0.1 / dialogueSensitivity 'medium'，默认值=原硬编码零回归）+ ParamSlider/segmented 控件（disabled 联动 anyRunning）+ 结果项 hover playhead 联动 |
 
-**累计**：16 文件 +2335/-424（`git diff ec769bb4..72206d66` 实测；逐 PR 合计 +2341/-430）；SmartRoughCut 域单测 3 → 76 用例（utils 27 + hook 29 + 面板 5 + core 命令 5 + state 3 + Compare hook 7）；e2e 531 → 534（rough-cut-compare.spec 2 例 + smart-rough-cut.spec 新增 2 例，既有 3 例零改动）；desktop 覆盖（口径 B）72.84%（ec769bb4 实测）→ 73.04%（+0.20pp，三阶段全程无回落）；三阶段 CI 全绿零 flaky。
+**累计**：16 文件 +2335/-424（`git diff ec769bb4..72206d66` 实测；逐 PR 合计 +2341/-430）；SmartRoughCut 域单测 3 → 76 用例（utils 27 + hook 29 + 面板 5 + core 命令 5 + state 3 + Compare hook 7）；e2e 531 → 534（rough-cut-compare.spec 2 例 + smart-rough-cut.spec 新增 2 例，既有 3 例零改动）；desktop 覆盖（口径 B）72.84%（ec769bb4 实测）→ 73.04%（+0.20pp，三阶段全程无回落；**口径 B 勘误注（2026-08-27）**：73.04% 等 desktop 覆盖数字一律指 desktop 口径 B = `apps/desktop/src/**` 排除 `src/e2e/**` 的 ΣLH/ΣLF，勿与 editor-core 全局口径混用——后者受 vitest thresholds 80% 强制，实测 91.7% 量级）；三阶段 CI 全绿零 flaky。
 
 **关键决策存档**：
 - D1-B：Compare 数据源走 contentAnalysis 派生（帧采样留后续增强）；onsets 从 segments.loudness 上升沿 + dialogueTurns 起点派生，不调 bridge
@@ -114,7 +115,7 @@
 |---|---|---|---|
 | M3-1 数据层 | #177 / `1b42a9c0` | ✅ 已合入（2026-08-26） | 桥接产出派生建议列表纯函数 |
 | M3-2 UI 层 | #178 / `4367f9d9` | ✅ 已合入（2026-08-27） | SemanticSuggestionList 组件 + ready 门控 |
-| M3-3 应用整合 | — | ⏸ 未启动 | 待决策项见本节末 |
+| M3-3 应用整合 | — | ⏸ 未启动（方向待人类定调：A1 Compare 策略语义增强 / A2 ApplyCommand 应用整合 / A3 暂缓转入发版） | 待决策项见本节末 |
 
 **#177（M3-1，纯数据层）**：`SemanticRoughCutSuggestion` 类型 + `generateSemanticRoughCutSuggestions` 纯函数（从语义桥接产出 narrativeMarkers 派生建议列表：区间 = marker.time → 下一 marker.time，末项延伸至 clip 末端；climax 按 confidence 降序优先、其余时间升序殿后；clip 范围外 marker 剔除）+ `useSmartRoughCut.semanticSuggestions` 扩展位接线（useMemo 派生）。零 UI 改动，上游 understandSpeech / useTranscriptForClip 零改动，类型不落库不入持久化 schema。semantic-suggestion.ts 行覆盖 **100%**（lcov LF/LH = 41/41 实测），单测 13 例，e2e 发现数 535 零回归。
 
@@ -132,7 +133,7 @@
 | #177 merge | `1b42a9c0`（run 32979199629） | 535 specs | `535 passed (32.0m)` |
 | #178 merge 后 main | `4367f9d9`（run 33004915434） | 537 specs（+2） | `537 passed (41.8m)` 零 flaky |
 
-自 v4.75.0 发版至 #177，spec 文件零变更（`git diff 70cf89d8..1b42a9c0 -- apps/desktop/e2e/` 为空），静态发现数恒为 535。此前 HANDOFF 各处 "534" 均为 passed 数口径（其中 2.4 表内 "#173 e2e 534 passed" 行与发版 run 原文 `535 passed` 不符，系笔误沿袭 M2 时期数字）；#175 merge run 的 `1 flaky / 534 passed` 中 flaky 用例为 nested-sequence-export.spec.ts:67「批量序列渲染入队」（观察池既有项，只记录不修），重试通过不计入 passed 即 534 与发现数 535 并存的根因。自本文档起统一以发现数表述：当前基线**发现数 537 = passed 537 零 flaky**。
+自 v4.75.0 发版至 #177，spec 文件零变更（`git diff 70cf89d8..1b42a9c0 -- apps/desktop/e2e/` 为空），静态发现数恒为 535。此前 HANDOFF 各处 "534" 均为 passed 数口径（其中 2.4 表内 "#173 e2e 534 passed" 行与发版 run 原文 `535 passed` 不符，系笔误沿袭 M2 时期数字）；#175 merge run 的 `1 flaky / 534 passed` 中 flaky 用例为 nested-sequence-export.spec.ts:67「批量序列渲染入队」（观察池既有项，只记录不修），重试通过不计入 passed 即 534 与发现数 535 并存的根因。自本文档起统一以发现数表述；该时点基线 537 后经 #181 smart-subtitles.spec 9→7 例重写净减 2 例，当前基线**发现数 535 = passed 535 零 flaky**（PR #182 run 33045131192 实测，41.5m，2026-08-27 归档更新）。
 
 **M3-3 待决策项**（启动前需决策，三项择一）：
 
@@ -140,17 +141,24 @@
 - **建议应用整合 ApplyCommand 化**：建议应用走命令对象——涉撤销栈与既有命令体系关系（Timeline 命令对象约束要求 undo/redo 完整，M1b ApplyRoughCutProposalCommand 波纹删除为先例）
 - **或暂缓**：保持两阶段产出只读呈现，整合排期另行评估
 
+### 2.6 P2 收官双修复 + 观察池销账（2026-08-27）
+
+| PR | 代码提交 | merge commit | 主要内容 |
+|---|---|---|---|
+| #181 | `93c12e31` | `c1e2f4e5` | ASRStage 死链路退役：四断点实证（请求参数空占位 / worker `tauri-request` 无主线程应答器 / audioPath 结构性缺失 / `whisperReady` 恒 false）定性死链路而非接线；执行「保下游、去上游」切割（删除 ASRStage.tsx 与 ai-transcription.worker.ts，转写生成字幕由分步面板 whisper 步与 Timeline 右键承接）；e2e smart-subtitles.spec 9→7 例壳层重写，发现数 537→535 |
+| #182 | `f5ecaf03` | `74da84a4` | detectDialogueTurns maxTurnDuration 判据治理纯音乐误报（默认 15s 可配，六形态回归矩阵固化入 content-analysis.test.ts）+ `lib/asr.ts` 空壳桩及桩测试删除（死代码自证闭环）；run2 实测 e2e `535 passed (41.5m)` 零 flaky；desktop 口径 B 覆盖率 73.1881%（基线 73.04%，+0.15pp） |
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `4367f9d9`（PR #178 merge），工作区干净，专项分支全部删除。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 主线 M3 两阶段（M3-1 数据层 + M3-2 UI 层）已合入，M3-3 未启动待决策（见 2.5）。
+**位置**：main = `74da84a4`（PR #182 merge），工作区干净，专项分支全部删除。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 主线 M3 两阶段（M3-1 数据层 + M3-2 UI 层）与收官双修复（#181/#182，见 2.6）均已合入，M3-3 未启动待决策（见 2.5）。
 
 **基线数据**：
 
 - desktop 覆盖（口径 B）= **73.04%（CI artifact lcov 实测 @ 4367f9d9）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
 - 全量单测：672 文件全过 exit 0（12415 passed + 3 skipped，含 M3 两阶段 +25），CI 实测 ~273s，无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 537 / passed 537 零 flaky**（4367f9d9 run 33004915434 实测，41.8m）
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 535 / passed 535 零 flaky**（PR #182 run 33045131192 实测，41.5m；537→535 变更来源 = #181 smart-subtitles.spec 9→7 例重写净减 2 例）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -171,6 +179,7 @@
 | e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控 |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
 | e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见，rich text drawtext 导出用例重试通过，只记录不修 |
+| **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
 | useClipInspectorState 拆分重构候选 | 三期 | hook 结构过大 |
@@ -186,10 +195,13 @@
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
 | ASRStage worker 请求参数空占位未接线 | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：定性死链路退役，见下方销账记录 |
 | VAD 纯音乐误报 30s"对话轮" | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：detectDialogueTurns 治理，见下方销账记录 |
+| issue #104 SettingsDialog hooks rewrite | 悬置（2026-08-27 收官归档） | 去留待人类定调：关闭 wontfix 或救活重实现 |
 
 **观察池销账记录（ASRStage 死链路退役，2026-08-27）**：四断点实证定性 b) 死链路而非接线——①请求参数空占位（原 ASRStage.tsx L113-115）②worker `tauri-request` 消息无主线程应答器，调用必挂起至内置超时 ③audioPath 结构性缺失（selectedClip 仅 `{id,name}` 无媒体路径）④`whisperReady` 全仓无写入 true 路径恒 false。执行「保下游、去上游」：删除 ASRStage.tsx 与 ai-transcription.worker.ts（后者经穷举核实全仓唯一消费方为 ASRStage），面板流程改为润色→样式→导出三阶段直入，Polish/Style/Export 组件渲染契约零变更；转写生成字幕由分步面板 whisper 步与 Timeline 右键「生成字幕」承接（均 `buildWhisperSubtitleTrackForClip` 命令化入轨、e2e 覆盖）。e2e smart-subtitles.spec 由 9 例重写为 7 例壳层用例，`setupAISubtitleWorkflowFixtureWithClip` action 同步移除。附带发现未处理（仅记录）：`lib/asr.ts` 为独立空壳桩且全仓无消费者，属另一既有死代码候选。
 
 **观察池销账记录（VAD 纯音乐误报治理，2026-08-27）**：`detectDialogueTurns` 新增结构化判据——超过 maxTurnDuration（默认 15s，可配）的完全无切分连续高能量块判定为非对话性能量流（纯音乐/环境声典型形态：能量 VAD 无法区分语音与音乐，真实对话必有换气停顿被 mergeGap 切分）而剔除。六形态回归矩阵固化入 content-analysis.test.ts（2Hz 合成口径）：纯音乐 1×30.5s 假 turn → **0**；近静音/无音频轨/访谈 7 轮/vlog 3 轮/电影对白 14 轮全部零变化（前后对照实测）。消费方零外溢：ai-scene-tagger 对话占比与轮次数、Compare onsets 假触发点、sceneTypes dialogue 虚标均自动正向修正或不变。附带预授权项同步完成：`lib/asr.ts` 空壳桩及其桩测试删除（修正上轮记录：桩存在唯一消费方为其自身 8 行测试文件，属死代码自证闭环）。
+
+**观察池收尾（2026-08-27）**：本轮观察池治理完毕，进入准稳态，主线开放项收敛为上述两项待调决策（M3-3 方向 A1/A2/A3 择一、issue #104 去留）。
 
 ---
 
