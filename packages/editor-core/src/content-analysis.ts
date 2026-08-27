@@ -122,13 +122,26 @@ export function sampleEmotionCurve(
   });
 }
 
+/**
+ * 能量 VAD 派生对话轮。
+ *
+ * 结构化限制：能量启发式无法区分语音与音乐/环境声（连续高能量均表现为单一长块），
+ * 真实对话必然存在呼吸换气等静默停顿被 mergeGap 切分；超过 maxTurnDuration 的
+ * 完全无切分连续块判定为非对话性能量流（纯音乐典型形态）而剔除。
+ */
 export function detectDialogueTurns(
   samples: ContentAnalysisAudioSample[],
-  options: { silenceThreshold?: number; minTurnDuration?: number; mergeGap?: number } = {},
+  options: {
+    silenceThreshold?: number;
+    minTurnDuration?: number;
+    mergeGap?: number;
+    maxTurnDuration?: number;
+  } = {},
 ): ContentDialogueTurn[] {
   const silenceThreshold = options.silenceThreshold ?? 0.08;
   const minTurnDuration = options.minTurnDuration ?? 0.35;
   const mergeGap = options.mergeGap ?? 0.28;
+  const maxTurnDuration = options.maxTurnDuration ?? 15;
   const sorted = [...samples]
     .filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.loudness))
     .sort((left, right) => left.time - right.time);
@@ -150,12 +163,12 @@ export function detectDialogueTurns(
       continue;
     }
     if (active && sample.time - active.end > mergeGap) {
-      pushDialogueTurn(turns, active, minTurnDuration);
+      pushDialogueTurn(turns, active, minTurnDuration, maxTurnDuration);
       active = undefined;
     }
   }
   if (active) {
-    pushDialogueTurn(turns, active, minTurnDuration);
+    pushDialogueTurn(turns, active, minTurnDuration, maxTurnDuration);
   }
   return turns;
 }
@@ -363,8 +376,14 @@ function pushDialogueTurn(
   turns: ContentDialogueTurn[],
   active: { start: number; end: number; values: number[] },
   minTurnDuration: number,
+  maxTurnDuration: number,
 ): void {
-  if (active.end - active.start < minTurnDuration) {
+  const duration = active.end - active.start;
+  if (duration < minTurnDuration) {
+    return;
+  }
+  if (duration > maxTurnDuration) {
+    // 超长无切分连续块：非对话性连续能量（纯音乐/环境声），剔除而非标为对话轮
     return;
   }
   turns.push({ start: round(active.start), end: round(active.end), loudness: round(average(active.values)) });

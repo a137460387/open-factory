@@ -183,3 +183,114 @@ describe('content analysis', () => {
     expect(result?.primarySceneType).toBe('indoor');
   });
 });
+
+// -- 六形态回归矩阵（复刻 P2 勘察合成口径：2Hz loudness，默认阈值） --
+describe('detectDialogueTurns 六形态回归矩阵', () => {
+  function music30(): Array<{ time: number; loudness: number }> {
+    const out = [];
+    for (let i = 0; i <= 60; i++) out.push({ time: +(i * 0.5).toFixed(3), loudness: 0.55 + 0.02 * (i % 3) });
+    return out;
+  }
+
+  function nearSilent30(): Array<{ time: number; loudness: number }> {
+    const out = [];
+    for (let i = 0; i <= 60; i++) out.push({ time: +(i * 0.5).toFixed(3), loudness: i % 2 ? 0.01 : 0.03 });
+    return out;
+  }
+
+  function interview60(): Array<{ time: number; loudness: number }> {
+    const out = [];
+    let t = 0;
+    for (const b of [5, 6, 4, 7, 5, 6, 5]) {
+      for (let i = 0; i < b * 2; i++) out.push({ time: +(t + i * 0.5).toFixed(3), loudness: 0.4 + 0.03 * ((i * 7) % 10) });
+      t += b;
+      for (let i = 0; i < 2; i++) out.push({ time: +(t + i * 0.5).toFixed(3), loudness: i % 2 ? 0.02 : 0.04 });
+      t += 1;
+    }
+    return out;
+  }
+
+  function vlog45(): Array<{ time: number; loudness: number }> {
+    const out = [];
+    let t = 0;
+    for (const b of [9, 11, 10]) {
+      for (let i = 0; i < b * 2; i++) {
+        out.push({ time: +(t + i * 0.5).toFixed(3), loudness: i % 8 === 0 ? 0.06 : 0.5 + 0.02 * ((i * 5) % 6) });
+      }
+      t += b;
+      for (let i = 0; i < 2; i++) out.push({ time: +(t + i * 0.5).toFixed(3), loudness: 0.03 });
+      t += 1;
+    }
+    return out;
+  }
+
+  function filmDialogue90(): Array<{ time: number; loudness: number }> {
+    const out = [];
+    let t = 0;
+    for (let r = 0; r < 14; r++) {
+      const len = 2 + (r % 3);
+      for (let i = 0; i < len * 2; i++) {
+        out.push({ time: +(t + i * 0.5).toFixed(3), loudness: 0.45 + 0.04 * ((i * 3) % 8) });
+      }
+      t += len;
+      // 0.6~0.9s 清晰停顿 → 2Hz 下 2-3 个静音采样点，保证 mergeGap 切分生效
+      const gapSamples = 2 + (r % 2);
+      for (let i = 0; i < gapSamples; i++) out.push({ time: +(t + i * 0.5).toFixed(3), loudness: 0.03 });
+      t += gapSamples * 0.5;
+    }
+    return out;
+  }
+
+  function covered(turns: Array<{ start: number; end: number }>): number {
+    return round(turns.reduce((total, turn) => total + (turn.end - turn.start), 0));
+  }
+
+  function round(value: number): number {
+    return Math.round(value * 1000) / 1000;
+  }
+
+  it('纯音乐连续高能量不再误报为对话式长 turn（治理目标）', () => {
+    expect(detectDialogueTurns(music30())).toEqual([]);
+  });
+
+  it('近静音素材保持零检出', () => {
+    expect(detectDialogueTurns(nearSilent30())).toEqual([]);
+  });
+
+  it('无音频轨保持零检出', () => {
+    expect(detectDialogueTurns([])).toEqual([]);
+  });
+
+  it('访谈多轮形态行为不变（7 轮 / 覆盖 38s，与勘察基线一致）', () => {
+    const turns = detectDialogueTurns(interview60());
+    expect(turns).toHaveLength(7);
+    expect(covered(turns)).toBe(38);
+    for (const turn of turns) {
+      expect(turn.end - turn.start).toBeLessThanOrEqual(15);
+    }
+  });
+
+  it('vlog 独白长块形态行为不变（3 轮 / 覆盖 28.5s）', () => {
+    const turns = detectDialogueTurns(vlog45());
+    expect(turns).toHaveLength(3);
+    expect(covered(turns)).toBe(28.5);
+    expect(turns.map((turn) => turn.end - turn.start)).toEqual([8.5, 10.5, 9.5]);
+  });
+
+  it('电影对白清晰停顿形态行为不变（14 轮 / 覆盖 41s）', () => {
+    const turns = detectDialogueTurns(filmDialogue90());
+    expect(turns).toHaveLength(14);
+    expect(covered(turns)).toBe(41);
+    for (const turn of turns) {
+      expect(turn.end - turn.start).toBeLessThanOrEqual(15);
+    }
+  });
+
+  it('maxTurnDuration 可配置收紧（10s 上限剔除 vlog 10.5s 块）', () => {
+    const turns = detectDialogueTurns(vlog45(), { maxTurnDuration: 10 });
+    expect(turns).toHaveLength(2);
+    for (const turn of turns) {
+      expect(turn.end - turn.start).toBeLessThanOrEqual(10);
+    }
+  });
+});
