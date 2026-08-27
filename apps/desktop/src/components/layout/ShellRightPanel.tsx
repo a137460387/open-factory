@@ -277,11 +277,7 @@ export function ShellRightPanel() {
             ) : narrationOpen ? (
               <AINarrationPanel project={project} onClose={() => setNarrationOpen(false)} />
             ) : aiSubtitleWorkflowOpen ? (
-              <AISubtitleWorkflowPanel
-                selectedClip={selectedClip}
-                media={project.media}
-                onClose={() => setAiSubtitleWorkflowOpen(false)}
-              />
+              <AISubtitleWorkflowPanel media={project.media} onClose={() => setAiSubtitleWorkflowOpen(false)} />
             ) : smartRoughCutOpen ? (
               <SmartRoughCutStepPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (

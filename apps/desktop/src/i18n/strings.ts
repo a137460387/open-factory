@@ -3299,22 +3299,9 @@ const zh = {
   aiSubtitleWorkflow: {
     title: '智能字幕工作流',
     stages: {
-      asr: '语音识别',
       polish: 'AI润色',
       style: '样式推荐',
       export: '导出',
-    },
-    asr: {
-      selectClip: '选择目标片段',
-      noClipSelected: '请在时间线上选择一个音频或视频片段',
-      whisperNotConfigured: 'Whisper 未配置',
-      whisperReady: 'Whisper 就绪',
-      startRecognition: '开始识别',
-      recognizing: '正在识别...',
-      recognitionComplete: '识别完成',
-      recognitionFailed: '识别失败',
-      previewTitle: '识别结果预览',
-      noResults: '未识别到字幕',
     },
     polish: {
       selectTrack: '选择字幕轨道',

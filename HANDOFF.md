@@ -104,7 +104,7 @@
 - **产品形态**：基于叙事标记的粗剪建议列表——understanding 产出的 narrativeMarkers（opening/rising/**climax**/falling/ending）天然适配"高光优先"式建议，keywords/topics 可作建议的语义注脚 vs 其他形态
 - **数据就绪信号复用**：`speechUnderstanding.ready` 是否作为 M3 入口门控（类比 Compare 入口依赖 contentAnalysis 的模式：未分析 clip 入口禁用）
 
-**观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线；VAD 纯音乐误报 30s"对话轮"（能量启发式天花板）
+**观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线（已于 2026-08-27 销账——定性死链路退役，见 4.2 销账记录）；VAD 纯音乐误报 30s"对话轮"（能量启发式天花板）
 
 ### 2.5 P2 主线 M3 语义建议两阶段（M3-1/M3-2 已合入，M3-3 未启动）
 
@@ -183,8 +183,10 @@
 | estimateTextureBytes(NaN) 保守归一 | 四期-B | NaN 污染整积归一为 1，保守设计 |
 | relaunch 命名差异 | 五期 | 实际命令为 plugin:process\|restart |
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
-| ASRStage worker 请求参数空占位未接线 | P2 勘察（2026-08-26） | 不在 M3 范围 |
+| ASRStage worker 请求参数空占位未接线 | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：定性死链路退役，见下方销账记录 |
 | VAD 纯音乐误报 30s"对话轮" | P2 勘察（2026-08-26） | 能量启发式天花板 |
+
+**观察池销账记录（ASRStage 死链路退役，2026-08-27）**：四断点实证定性 b) 死链路而非接线——①请求参数空占位（原 ASRStage.tsx L113-115）②worker `tauri-request` 消息无主线程应答器，调用必挂起至内置超时 ③audioPath 结构性缺失（selectedClip 仅 `{id,name}` 无媒体路径）④`whisperReady` 全仓无写入 true 路径恒 false。执行「保下游、去上游」：删除 ASRStage.tsx 与 ai-transcription.worker.ts（后者经穷举核实全仓唯一消费方为 ASRStage），面板流程改为润色→样式→导出三阶段直入，Polish/Style/Export 组件渲染契约零变更；转写生成字幕由分步面板 whisper 步与 Timeline 右键「生成字幕」承接（均 `buildWhisperSubtitleTrackForClip` 命令化入轨、e2e 覆盖）。e2e smart-subtitles.spec 由 9 例重写为 7 例壳层用例，`setupAISubtitleWorkflowFixtureWithClip` action 同步移除。附带发现未处理（仅记录）：`lib/asr.ts` 为独立空壳桩且全仓无消费者，属另一既有死代码候选。
 
 ---
 
