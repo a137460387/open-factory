@@ -653,6 +653,24 @@ describe('useSmartRoughCut applySemanticSuggestion', () => {
     expect(outcome?.ok).toBe(false);
     expect(mockExecute).not.toHaveBeenCalled();
   });
+
+  it('records a local adoption event on success but not on failure', () => {
+    localStorage.removeItem('open-factory:semantic-suggestion-adoptions');
+    const success = setupHook();
+    act(() => {
+      success.result.current.applySemanticSuggestion(makeSemanticSuggestion({ start: 1, end: 3 }));
+    });
+    expect(JSON.parse(localStorage.getItem('open-factory:semantic-suggestion-adoptions') ?? '[]')).toEqual([
+      { source: 'narrative', ts: expect.any(Number) },
+    ]);
+
+    // 整 clip 建议失败 → 不追加第二笔
+    act(() => {
+      success.result.current.applySemanticSuggestion(makeSemanticSuggestion({ start: 0, end: 4 }));
+    });
+    expect(JSON.parse(localStorage.getItem('open-factory:semantic-suggestion-adoptions') ?? '[]')).toHaveLength(1);
+    localStorage.removeItem('open-factory:semantic-suggestion-adoptions');
+  });
 });
 
 // ── semanticSuggestions 双源派生与 semanticReady 门控（M3 扩展） ──

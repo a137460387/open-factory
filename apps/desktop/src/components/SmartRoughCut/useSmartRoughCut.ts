@@ -49,6 +49,7 @@ import {
 import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
 import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } from './semantic-suggestion';
 import { deriveTightenSuggestions, mergeSemanticSuggestions } from './semantic-tighten-suggestion';
+import { recordSuggestionAdoption } from './semantic-suggestion-adoption-log';
 import { suggestionToSegments } from './semantic-suggestion-review';
 import {
   buildBrollCandidates,
@@ -345,6 +346,8 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
       commandManager.execute(
         new ApplyRoughCutProposalCommand(timelineAccessor, selectedClip.id, suggestionToSegments(suggestion, selectedClip)),
       );
+      // 采纳成功入账（纯本地零上报；失败分支不入账）
+      recordSuggestionAdoption(suggestion.source);
       return { ok: true };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage };
