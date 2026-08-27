@@ -17,6 +17,7 @@ function makeSuggestion(overrides: Partial<SemanticRoughCutSuggestion> & { id: s
     confidence: 0.7,
     label: '高潮片段',
     reason: '重点内容',
+    source: 'narrative',
     ...overrides,
   };
 }
@@ -101,6 +102,38 @@ describe('SemanticSuggestionList rendering', () => {
     expect(screen.getByTestId('smart-semantic-empty')).toBeDefined();
     expect(screen.queryByTestId('smart-semantic-list')).toBeNull();
     expect(screen.getByTestId('smart-semantic').getAttribute('data-ready')).toBe('true');
+  });
+
+  it('marks tighten items with data-source and the heuristic tag, narrative without tag', () => {
+    const mixed: SemanticRoughCutSuggestion[] = [
+      makeSuggestion({ id: 'semantic-0' }),
+      makeSuggestion({
+        id: 'semantic-head-trim',
+        markerType: 'opening',
+        label: '掐头收紧',
+        reason: '片头存在可收紧的空余区间（启发式判定，请人工确认）',
+        source: 'head-trim',
+        timeRange: { start: 0.3, end: 2.5 },
+      }),
+      makeSuggestion({
+        id: 'semantic-tail-trim',
+        markerType: 'ending',
+        label: '收尾收紧',
+        reason: '片尾存在可收紧的低能量区间（启发式判定，请人工确认）',
+        source: 'tail-trim',
+        timeRange: { start: 0, end: 2 },
+      }),
+    ];
+    renderList({ suggestions: mixed });
+
+    expect(screen.getByTestId('smart-semantic-item-semantic-0').getAttribute('data-source')).toBe('narrative');
+    expect(screen.queryByTestId('smart-semantic-source-semantic-0')).toBeNull();
+    const head = screen.getByTestId('smart-semantic-item-semantic-head-trim');
+    expect(head.getAttribute('data-source')).toBe('head-trim');
+    expect(screen.getByTestId('smart-semantic-source-semantic-head-trim').textContent).toContain('启发式');
+    expect(screen.getByTestId('smart-semantic-item-semantic-tail-trim').getAttribute('data-source')).toBe('tail-trim');
+    expect(head.textContent).toContain('掐头收紧');
+    expect(head.textContent).toContain('片头存在可收紧的空余区间');
   });
 });
 

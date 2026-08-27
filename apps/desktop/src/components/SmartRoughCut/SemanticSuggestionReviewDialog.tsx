@@ -112,6 +112,11 @@ function SemanticSuggestionReviewDialogImpl({
           data-testid="semantic-review-summary"
         >
           <span className="text-xs font-semibold text-ink">{suggestion.label}</span>
+          {suggestion.source !== 'narrative' ? (
+            <span className="ml-1 rounded border border-line px-1 py-0.5 text-[9px] text-slate-500">
+              {zhCN.smartRoughCut.semanticHeuristicTag}
+            </span>
+          ) : null}
           <span className="ml-2 text-[10px] tabular-nums text-slate-500">
             {zhCN.smartRoughCut.semanticRange(
               formatSeconds(suggestion.timeRange.start),

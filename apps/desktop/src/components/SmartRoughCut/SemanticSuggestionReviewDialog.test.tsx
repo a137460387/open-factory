@@ -22,6 +22,7 @@ function makeSuggestion(
     confidence: 0.7,
     label: '高潮片段',
     reason: '重点内容',
+    source: 'narrative',
     ...overrides,
   };
 }
@@ -71,6 +72,24 @@ describe('SemanticSuggestionReviewDialog rendering', () => {
     renderDialog({ suggestion: makeSuggestion({ timeRange: { start: 0, end: 10 } }) });
 
     expect(screen.getByTestId('semantic-review-after-bar')).toBeDefined();
+  });
+
+  it('shows the heuristic source tag for head-trim/tail-trim suggestions but not narrative ones', () => {
+    renderDialog();
+    expect(screen.getByTestId('semantic-review-summary').textContent).not.toContain('启发式');
+    cleanup();
+
+    renderDialog({
+      suggestion: makeSuggestion({
+        id: 'semantic-head-trim',
+        markerType: 'opening',
+        label: '掐头收紧',
+        source: 'head-trim',
+        timeRange: { start: 1, end: 10 },
+      }),
+    });
+    expect(screen.getByTestId('semantic-review-summary').textContent).toContain('掐头收紧');
+    expect(screen.getByTestId('semantic-review-summary').textContent).toContain('启发式');
   });
 });
 

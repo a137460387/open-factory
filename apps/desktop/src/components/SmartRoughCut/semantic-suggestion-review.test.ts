@@ -24,6 +24,7 @@ function makeSuggestion(
     confidence: 0.7,
     label: '高潮片段',
     reason: '重点内容',
+    source: 'narrative',
     ...overrides,
   };
 }

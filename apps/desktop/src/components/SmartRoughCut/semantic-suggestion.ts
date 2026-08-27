@@ -6,8 +6,15 @@
  * 升序殿后；区间 = marker.time → 下一个 marker.time（最后项延伸至
  * clip 末端）。仅数据层，零 UI / 零 e2e 依赖；上游（understandSpeech
  * 桥接）零改动，只在桥接产出之上派生。
+ *
+ * M3 扩展·首实施：新增 source 字段区分建议来源（narrative = 转写叙事
+ * 标记派生；head-trim / tail-trim = contentAnalysis 派生的收紧建议，
+ * 生成逻辑见 semantic-tighten-suggestion.ts）。
  */
 import type { Clip, NarrativeMarker, SpeechUnderstandingResult } from '@open-factory/editor-core';
+
+/** 建议来源：narrative = whisper 转写叙事标记；head-trim/tail-trim = contentAnalysis 收紧启发式 */
+export type SemanticSuggestionSource = 'narrative' | 'head-trim' | 'tail-trim';
 
 /** 语义粗剪建议（M3 产品输出契约，非持久化 schema，不落库） */
 export interface SemanticRoughCutSuggestion {
@@ -15,12 +22,14 @@ export interface SemanticRoughCutSuggestion {
   /** 时间线绝对时间区间（秒） */
   timeRange: { start: number; end: number };
   markerType: NarrativeMarker['type'];
-  /** 透传 narrativeMarker.confidence */
+  /** 透传 narrativeMarker.confidence（启发式建议为固定强度） */
   confidence: number;
   /** 中文展示标签 */
   label: string;
-  /** 透传 narrativeMarker.description */
+  /** 透传 narrativeMarker.description（启发式建议为启发式提醒文案） */
   reason: string;
+  /** 建议来源（向后兼容：narrative 建议默认补 'narrative'） */
+  source: SemanticSuggestionSource;
 }
 
 /** marker.type → 中文展示标签 */
@@ -74,6 +83,7 @@ export function generateSemanticRoughCutSuggestions(
       confidence: marker.confidence,
       label: MARKER_LABELS[marker.type],
       reason: marker.description,
+      source: 'narrative' as const,
     };
   });
   const ordered = [

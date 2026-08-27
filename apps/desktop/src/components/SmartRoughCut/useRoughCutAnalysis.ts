@@ -27,10 +27,10 @@ export interface UseRoughCutAnalysisResult {
   hasAnalysis: boolean;
 }
 
-/** loudness 上升沿判定阈值（相邻采样增量） */
-const ONSET_DELTA_THRESHOLD = 0.2;
-/** onset 触发的最低 loudness 水平 */
-const ONSET_LOUDNESS_FLOOR = 0.25;
+/** loudness 上升沿判定阈值（相邻采样增量）；semantic-tighten-suggestion 源域派生同口径复用 */
+export const ONSET_DELTA_THRESHOLD = 0.2;
+/** onset 触发的最低 loudness 水平；semantic-tighten-suggestion 源域派生同口径复用 */
+export const ONSET_LOUDNESS_FLOOR = 0.25;
 
 export function useRoughCutAnalysis(selectedClip: Clip | undefined): UseRoughCutAnalysisResult {
   return useMemo(() => deriveRoughCutAnalysis(selectedClip), [selectedClip]);

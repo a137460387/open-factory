@@ -48,6 +48,7 @@ export function SemanticSuggestionList({ suggestions, ready, onPreviewTime, onRe
               }`}
               data-testid={`smart-semantic-item-${item.id}`}
               data-climax={item.markerType === 'climax' ? 'true' : 'false'}
+              data-source={item.source}
               onMouseEnter={() => onPreviewTime(item.timeRange.start)}
             >
               <span
@@ -57,6 +58,14 @@ export function SemanticSuggestionList({ suggestions, ready, onPreviewTime, onRe
               >
                 {item.label}
               </span>
+              {item.source !== 'narrative' ? (
+                <span
+                  className="flex-none rounded border border-line px-1 py-0.5 text-[9px] text-slate-500"
+                  data-testid={`smart-semantic-source-${item.id}`}
+                >
+                  {zhCN.smartRoughCut.semanticHeuristicTag}
+                </span>
+              ) : null}
               <span className="min-w-0 flex-1 text-xs text-slate-700">
                 <span className="block tabular-nums">
                   {zhCN.smartRoughCut.semanticRange(

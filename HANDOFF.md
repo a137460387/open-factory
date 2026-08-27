@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-27 | 基线：main = `e8f94590`（PR #184 merge）| 版本：v4.77.0（本 PR 发布，主题「语义建议应用」；上版 v4.76.0「语义建议」/ bump `87d83f6a`）
+> 更新时间：2026-08-27 | 基线：main = `3e661490`（PR #185 merge，v4.77.0 发版）| 版本：v4.77.0（已发布，主题「语义建议应用」；上版 v4.76.0「语义建议」/ bump `87d83f6a`）；本分支为 M3 扩展·首实施（PR #186，main 基线上开工）
 >
-> e2e 基线（双口径）：**发现数 538 / passed 536 + 2 flaky**（M3-3 A1 新增 3 例：535 + 3，#184 run 33052967308 实测 `536 passed (43.8m)`，2 flaky 均池内已知项）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 541 / passed 539 + 2 flaky**（M3 扩展·首实施新增 3 例：538 + 3，#186 run 33077635573 实测 `539 passed (43.1m)`，2 flaky 均池内已知项）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -20,6 +20,7 @@
 6. **v4.76.0 发版**（历史回填，2026-08-26）：bump `87d83f6a` / release merge `f6c36efd`（PR #180），主题「语义建议」，含 M3 两阶段；发版时未同步 HANDOFF，本条为 2026-08-27 v4.77.0 发版前补记
 7. **P2 收官双修复 + 观察池销账**（已合入，2026-08-27）：#181 ASRStage 死链路退役 / #182 VAD 纯音乐误报治理 + `lib/asr.ts` 桩删除，观察池篇章收官——详见 2.6
 8. **M3-3 A1 语义建议接入 Compare 审阅与应用**（PR #184 / merge `e8f94590`，2026-08-27 定调后落地）：单条建议对比审阅（before/after + 保留比例）+ 显式采纳走既有 ApplyRoughCutProposalCommand 通道 + undo 链路 e2e 断言；A2 批量整合降格为设计候选——详见 2.5 定调记录
+9. **M3 扩展·首实施：语义建议多源「掐头去尾」+ 采纳计数**（PR #186，2026-08-27）：双源勘察共识第一梯队 b+d 落地（contentAnalysis 派生掐头/收尾收紧建议接入既有审阅采纳链）+ 情感高潮 top-K 算法内核入池 + 纯本地采纳记录器——详见 2.5 扩展记录
 
 ---
 
@@ -134,6 +135,7 @@
 | #176 merge | `02a052eb`（run 32971840207） | docs-only | e2e job 走 Docs-only 跳过路径 |
 | #177 merge | `1b42a9c0`（run 32979199629） | 535 specs | `535 passed (32.0m)` |
 | #178 merge 后 main | `4367f9d9`（run 33004915434） | 537 specs（+2） | `537 passed (41.8m)` 零 flaky |
+| #186（M3 扩展·首实施） | feat 分支（run 33077635573） | 541 specs（+3） | `2 flaky / 539 passed (43.1m)`，flaky 均池内已知（ai-multicam-cut / nested-sequence-export） |
 
 自 v4.75.0 发版至 #177，spec 文件零变更（`git diff 70cf89d8..1b42a9c0 -- apps/desktop/e2e/` 为空），静态发现数恒为 535。此前 HANDOFF 各处 "534" 均为 passed 数口径（其中 2.4 表内 "#173 e2e 534 passed" 行与发版 run 原文 `535 passed` 不符，系笔误沿袭 M2 时期数字）；#175 merge run 的 `1 flaky / 534 passed` 中 flaky 用例为 nested-sequence-export.spec.ts:67「批量序列渲染入队」（观察池既有项，只记录不修），重试通过不计入 passed 即 534 与发现数 535 并存的根因。自本文档起统一以发现数表述；该时点基线 537 后经 #181 smart-subtitles.spec 9→7 例重写净减 2 例，当前基线**发现数 535 = passed 535 零 flaky**（PR #182 run 33045131192 实测，41.5m，2026-08-27 归档更新）。
 
@@ -147,6 +149,8 @@
 
 **M3-3 A1 实现（PR #184，merge `e8f94590`）**：新增纯函数层 `semantic-suggestion-review.ts`（时间线绝对时间 → 源素材时间换算 `source = trimStart + (abs − clip.start) × speed`、单元素 segments 构造、before/after 审阅视图模型、整 clip 覆盖预判——与 ApplyRoughCutProposalCommand 命令侧守卫口径一致）+ `SemanticSuggestionReviewDialog`（before/after 双条带 + 保留比例 + 「采纳此建议」单一显式入口 + 成功/失败即时反馈；整 clip 建议禁用采纳并说明）+ `useSmartRoughCut.applySemanticSuggestion`（try-catch 包既有命令通道，失败零时间线变更）+ `SemanticSuggestionList` 项内「对比审阅」入口。审阅目标打开时快照 clip（采纳以新 id 切片替换原 clip，实时 selectedClip 会失联）。红线遵守：无多选/批量/自动应用、无新增 store/持久化、撤销只走既有 undo 栈、MediaState 撤销栈内部零触碰、detectDialogueTurns/maxTurnDuration 零改动。e2e +3 例（审阅打开断言 / 采纳成功+undo 恢复 / 整 clip 建议预判禁用），发现数 535 → 538（run 33052967308：`536 passed + 2 flaky`，flaky 均池内：advanced-text:4 / nested-sequence-export:67）；desktop 口径 B 73.2213%。
 
+**M3 扩展·首实施（PR #186，双源勘察共识第一梯队，2026-08-27）**：b（掐头收紧 head-trim）+ d（收尾收紧 tail-trim）落地——均为单区间 keep-range，审阅采纳链零改造复用（suggestionToSegments → ApplyRoughCutProposalCommand → undo 既有链路，审阅模型与 coversEntireClip 不做多区间改造）；c（情感高潮 top-K）仅交付通用算法内核 `selectTopKMutuallyExclusive`（高潮点向后 windowDuration 成区间、score 降序贪心互斥、端点相接不算重叠、并列 score 时间升序决断），本期组装层不消费；a（长静默）/ e（节拍对齐）/ f（冗余台词）三方向评估不碰；A2 批量整合维持人类决议挂起，本轮任何形态不涉及多选/批量应用。实现分层：editor-core 三个只增纯函数（`detectHeadTrimStart`：首个内容起点 + `HEAD_TRIM_MARGIN_SECONDS=0.3` 余量、onset 兜底、极短 clip 保护 `TIGHTEN_MIN_KEEP_SECONDS=1`；`detectTailTrimEnd`：尾部低能量回溯、防误伤片尾淡出的 silenceThreshold 显式参数（默认 0.08 与 detectDialogueTurns 同口径，参照 maxTurnDuration 先例定性）；单测矩阵 42 例，detectDialogueTurns/maxTurnDuration 零改动）+ desktop 派生层 `semantic-tighten-suggestion.ts`（contentAnalysis 源域 → 时间线绝对域换算 + loudness 上升沿 onset 兜底，阈值常量自 useRoughCutAnalysis 导出复用防重复实现）+ 合并去重规则（确定性并配测：climax 优先（confidence 降序）→ 非 climax narrative 时间升序 → head-trim → tail-trim；派生项与 narrative 项 timeRange 完全相等（1e-6 容差）时剔除派生项，同区间重复出现视为缺陷）+ `SemanticRoughCutSuggestion.source` 字段（narrative/head-trim/tail-trim，向后兼容补默认值）+ `semanticReady` 双源门控（转写或内容分析任一就绪即呈现各自部分）+ UI「掐头收紧」「收尾收紧」文案与「启发式」来源标签（zh 文案，en-overrides 不动，沿 M3-2 先例）。**情感高潮 top-K 闸门**：入池待裁——待 b+d 真实使用信号后再裁是否组装接入，且届时须同时回答与 Compare 方案卡的双入口分工。**采纳计数器**：`open-factory:semantic-suggestion-adoptions` 键（`{source, ts}[]` 封顶 500 截旧），挂点 applySemanticSuggestion 成功分支（失败不入账，写入异常静默）；纯本地零上报、不进项目持久化 schema；用途 = 可按任意口径（来源类型/时间窗）聚合，作为建议质量评估与后续拓展方向（含 top-K 闸门判定）的长期候选拓展信号积累。e2e +3 例（混合门控：仅分析就绪时收紧类条目出现且 narrative 缺席 / head-tighten 审阅+采纳时长缩短+undo 还原 / tail-tighten 同款），发现数 538 → 541（run 33077635573：`539 passed + 2 flaky` 均池内已知项）；desktop 口径 B 73.2941%（基线 73.1881%，+0.11pp）。
+
 ### 2.6 P2 收官双修复 + 观察池销账（2026-08-27）
 
 | PR | 代码提交 | merge commit | 主要内容 |
@@ -158,13 +162,14 @@
 
 ## 3. 当前状态
 
-**位置**：main = `e8f94590`（PR #184 merge，M3-3 A1 落地），本分支为 v4.77.0 发版（主题「语义建议应用」，bump 见本 PR），工作区干净。v4.76.0「语义建议」已发布（2026-08-26，历史回填见工作线条目 6）。M3 主线：M3-1/M3-2/M3-3 A1 全部合入，M3-3 A2 为下一个小版本设计候选（见 2.5）。
+**位置**：main = `3e661490`（PR #185 merge，v4.77.0 发版完成），本分支为 M3 扩展·首实施（PR #186：语义建议多源「掐头去尾」+ 采纳计数，自 main `3e661490` 开工），工作区干净。v4.77.0「语义建议应用」已发布（2026-08-27）。M3 主线：M3-1/M3-2/M3-3 A1 全部合入，M3 扩展·首实施（b+d）见 2.5 扩展记录；M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.2213%（CI artifact lcov 实测 @ e8f94590，#184 run）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
-- 全量单测：673 文件全过 exit 0（12443 passed + 3 skipped，#184 CI 实测 ~290s），无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 538**（#184 run 33052967308 实测 `536 passed + 2 flaky`，flaky 均池内已知项；M3-3 A1 新增 3 例：535 + 3；537→535 变更来源 = #181 smart-subtitles.spec 9→7 例重写净减 2 例）
+- desktop 覆盖（口径 B）= **73.2941%（CI artifact lcov 实测，#186 run 33077635573）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- editor-core 行覆盖 = **91.7356%**（CI artifact lcov 实测，#186 run；阈值 80%）
+- 全量单测：675 文件全过 exit 0（**12494 passed + 3 skipped**，#186 本地实测），无 unhandled rejection
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#186 run 33077635573 实测 `539 passed + 2 flaky`，flaky 均池内已知项：ai-multicam-cut / nested-sequence-export；M3 扩展·首实施新增 3 例：538 + 3；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
 - typecheck 0 错误；coverage 稳定生成
 
 ---

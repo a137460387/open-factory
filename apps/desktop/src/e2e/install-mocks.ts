@@ -2637,6 +2637,74 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupSemanticTightenFixture: () => {
+    const project = createProject('Semantic Tighten E2E');
+    const asset: MediaAsset = {
+      id: 'media-smart-video',
+      type: 'video',
+      name: 'smart-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // 收紧形态：首内容点 0.6（head keep [0.3, 2.5]）+ 尾部低能量段 1.8 起
+    // （tail keep [0, 2.0]）；无 whisper 转写 → 仅收紧类建议（混合门控用例）
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-27T00:00:00.000Z',
+                sceneTypes: ['dialogue'],
+                primarySceneType: 'dialogue',
+                segments: [
+                  { start: 0, end: 0.6, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.05 },
+                  { start: 0.6, end: 1.2, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.6 },
+                  { start: 1.2, end: 1.8, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.55 },
+                  { start: 1.8, end: 2.5, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.04 },
+                ],
+                emotionCurve: [],
+                dialogueTurns: [
+                  { start: 0.6, end: 1.2, loudness: 0.6 },
+                  { start: 1.2, end: 1.8, loudness: 0.55 },
+                ],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
+    useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupRoughCutCompareFixture: () => {
     const project = createProject('Rough Cut Compare E2E');
     const asset: MediaAsset = {
