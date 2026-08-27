@@ -170,6 +170,7 @@
 |---|---|---|
 | e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控 |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
+| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见，rich text drawtext 导出用例重试通过，只记录不修 |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
 | useClipInspectorState 拆分重构候选 | 三期 | hook 结构过大 |
