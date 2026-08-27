@@ -104,7 +104,7 @@
 - **产品形态**：基于叙事标记的粗剪建议列表——understanding 产出的 narrativeMarkers（opening/rising/**climax**/falling/ending）天然适配"高光优先"式建议，keywords/topics 可作建议的语义注脚 vs 其他形态
 - **数据就绪信号复用**：`speechUnderstanding.ready` 是否作为 M3 入口门控（类比 Compare 入口依赖 contentAnalysis 的模式：未分析 clip 入口禁用）
 
-**观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线（已于 2026-08-27 销账——定性死链路退役，见 4.2 销账记录）；VAD 纯音乐误报 30s"对话轮"（能量启发式天花板）
+**观察池追加**（勘察发现，不在 M3 范围）：ASRStage worker 请求参数空占位未接线（已于 2026-08-27 销账——定性死链路退役，见 4.2 销账记录）；VAD 纯音乐误报 30s"对话轮"（已于 2026-08-27 销账——detectDialogueTurns 结构化治理，见 4.2 销账记录）
 
 ### 2.5 P2 主线 M3 语义建议两阶段（M3-1/M3-2 已合入，M3-3 未启动）
 
@@ -170,6 +170,7 @@
 |---|---|---|
 | e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控 |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
+| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见，rich text drawtext 导出用例重试通过，只记录不修 |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
 | useClipInspectorState 拆分重构候选 | 三期 | hook 结构过大 |
@@ -184,9 +185,11 @@
 | relaunch 命名差异 | 五期 | 实际命令为 plugin:process\|restart |
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
 | ASRStage worker 请求参数空占位未接线 | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：定性死链路退役，见下方销账记录 |
-| VAD 纯音乐误报 30s"对话轮" | P2 勘察（2026-08-26） | 能量启发式天花板 |
+| VAD 纯音乐误报 30s"对话轮" | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：detectDialogueTurns 治理，见下方销账记录 |
 
 **观察池销账记录（ASRStage 死链路退役，2026-08-27）**：四断点实证定性 b) 死链路而非接线——①请求参数空占位（原 ASRStage.tsx L113-115）②worker `tauri-request` 消息无主线程应答器，调用必挂起至内置超时 ③audioPath 结构性缺失（selectedClip 仅 `{id,name}` 无媒体路径）④`whisperReady` 全仓无写入 true 路径恒 false。执行「保下游、去上游」：删除 ASRStage.tsx 与 ai-transcription.worker.ts（后者经穷举核实全仓唯一消费方为 ASRStage），面板流程改为润色→样式→导出三阶段直入，Polish/Style/Export 组件渲染契约零变更；转写生成字幕由分步面板 whisper 步与 Timeline 右键「生成字幕」承接（均 `buildWhisperSubtitleTrackForClip` 命令化入轨、e2e 覆盖）。e2e smart-subtitles.spec 由 9 例重写为 7 例壳层用例，`setupAISubtitleWorkflowFixtureWithClip` action 同步移除。附带发现未处理（仅记录）：`lib/asr.ts` 为独立空壳桩且全仓无消费者，属另一既有死代码候选。
+
+**观察池销账记录（VAD 纯音乐误报治理，2026-08-27）**：`detectDialogueTurns` 新增结构化判据——超过 maxTurnDuration（默认 15s，可配）的完全无切分连续高能量块判定为非对话性能量流（纯音乐/环境声典型形态：能量 VAD 无法区分语音与音乐，真实对话必有换气停顿被 mergeGap 切分）而剔除。六形态回归矩阵固化入 content-analysis.test.ts（2Hz 合成口径）：纯音乐 1×30.5s 假 turn → **0**；近静音/无音频轨/访谈 7 轮/vlog 3 轮/电影对白 14 轮全部零变化（前后对照实测）。消费方零外溢：ai-scene-tagger 对话占比与轮次数、Compare onsets 假触发点、sceneTypes dialogue 虚标均自动正向修正或不变。附带预授权项同步完成：`lib/asr.ts` 空壳桩及其桩测试删除（修正上轮记录：桩存在唯一消费方为其自身 8 行测试文件，属死代码自证闭环）。
 
 ---
 
