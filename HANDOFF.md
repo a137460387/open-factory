@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-27 | 基线：main = `74da84a4`（PR #182 merge）| 版本：v4.75.0（已发布，tag 指向 bump 提交 `39e7cf74`，Release 标题「v4.75.0 智能粗剪」，三平台 6 资产）
+> 更新时间：2026-08-27 | 基线：main = `e8f94590`（PR #184 merge）| 版本：v4.77.0（本 PR 发布，主题「语义建议应用」；上版 v4.76.0「语义建议」/ bump `87d83f6a`）
 >
-> e2e 基线（双口径）：**发现数 538 / passed 538 零 flaky**（M3-3 A1 新增 3 例：535 + 3，本 PR CI run log 为准）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 538 / passed 536 + 2 flaky**（M3-3 A1 新增 3 例：535 + 3，#184 run 33052967308 实测 `536 passed (43.8m)`，2 flaky 均池内已知项）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -17,8 +17,9 @@
 3. **P1-2 Smart Rough-Cut 主线**（已结项，2026-08-26）：M1 结构拆分 → M1b 提案对比接活 → M2 参数化，三阶段全部合入——详见 2.3
 4. **v4.75.0 发版 + P2 前置桥接**（已合入，2026-08-26）：#173 发版 / #174 发版工作流文档 / #175 转写文本→语义引擎桥接，P2 由 no-go 转 go——详见 2.4
 5. **P2 主线 M3 语义建议两阶段**（M3-1/M3-2 已合入，2026-08-26/27；M3-3 未启动待决策）：数据层 narrativeMarkers 派生建议纯函数 + SemanticSuggestionList 列表 UI；本工作线起 e2e 基线统一为发现数口径 537（后经 #181 重写净减至 535，见头部基线注）——详见 2.5
-6. **P2 收官双修复 + 观察池销账**（已合入，2026-08-27）：#181 ASRStage 死链路退役 / #182 VAD 纯音乐误报治理 + `lib/asr.ts` 桩删除，观察池篇章收官——详见 2.6
-7. **M3-3 A1 语义建议接入 Compare 审阅与应用**（本 PR，2026-08-27 定调后落地）：单条建议对比审阅（before/after + 保留比例）+ 显式采纳走既有 ApplyRoughCutProposalCommand 通道 + undo 链路 e2e 断言；A2 批量整合降格为设计候选——详见 2.5 定调记录
+6. **v4.76.0 发版**（历史回填，2026-08-26）：bump `87d83f6a` / release merge `f6c36efd`（PR #180），主题「语义建议」，含 M3 两阶段；发版时未同步 HANDOFF，本条为 2026-08-27 v4.77.0 发版前补记
+7. **P2 收官双修复 + 观察池销账**（已合入，2026-08-27）：#181 ASRStage 死链路退役 / #182 VAD 纯音乐误报治理 + `lib/asr.ts` 桩删除，观察池篇章收官——详见 2.6
+8. **M3-3 A1 语义建议接入 Compare 审阅与应用**（PR #184 / merge `e8f94590`，2026-08-27 定调后落地）：单条建议对比审阅（before/after + 保留比例）+ 显式采纳走既有 ApplyRoughCutProposalCommand 通道 + undo 链路 e2e 断言；A2 批量整合降格为设计候选——详见 2.5 定调记录
 
 ---
 
@@ -116,7 +117,7 @@
 |---|---|---|---|
 | M3-1 数据层 | #177 / `1b42a9c0` | ✅ 已合入（2026-08-26） | 桥接产出派生建议列表纯函数 |
 | M3-2 UI 层 | #178 / `4367f9d9` | ✅ 已合入（2026-08-27） | SemanticSuggestionList 组件 + ready 门控 |
-| M3-3 应用整合 | —（本 PR：A1 语义建议接入 Compare 审阅与应用） | ▶ 进行中·A1（2026-08-27 定调：A1 先行，落地后发 v4.77.0；A2 批量整合降格为下一个小版本设计候选——前置条件 = Compare 单条应用的真实使用信号证明批量入口必要 + 应用整合设计文档（MediaState 撤销边界/draft 合成/冲突消解）过审） | A1 边界：单条审阅+显式采纳；A2 备注见本节末 |
+| M3-3 应用整合 | #184（A1）/ `e8f94590` | ✅ A1 已合入（2026-08-27；定调：A1 先行，落地后发 v4.77.0；A2 批量整合降格为下一个小版本设计候选——前置条件 = Compare 单条应用的真实使用信号证明批量入口必要 + 应用整合设计文档（MediaState 撤销边界/draft 合成/冲突消解）过审） | A1 边界：单条审阅+显式采纳；A2 备注见本节末 |
 
 **#177（M3-1，纯数据层）**：`SemanticRoughCutSuggestion` 类型 + `generateSemanticRoughCutSuggestions` 纯函数（从语义桥接产出 narrativeMarkers 派生建议列表：区间 = marker.time → 下一 marker.time，末项延伸至 clip 末端；climax 按 confidence 降序优先、其余时间升序殿后；clip 范围外 marker 剔除）+ `useSmartRoughCut.semanticSuggestions` 扩展位接线（useMemo 派生）。零 UI 改动，上游 understandSpeech / useTranscriptForClip 零改动，类型不落库不入持久化 schema。semantic-suggestion.ts 行覆盖 **100%**（lcov LF/LH = 41/41 实测），单测 13 例，e2e 发现数 535 零回归。
 
@@ -144,7 +145,7 @@
 
 **2026-08-27 定调记录**：M3-3 方向择定为 A1（语义建议接入 Compare 审阅 + 单条显式应用），A1 合并后另行发 v4.77.0；A2（批量/多选整合）降格为下一个小版本设计候选，启动前置条件 = ①Compare 单条应用的真实使用信号证明批量入口必要 ②应用整合设计文档（MediaState 撤销边界 / draft 合成 / 冲突消解）过审；A3（暂缓）不再单独跟踪。
 
-**M3-3 A1 实现（本 PR）**：新增纯函数层 `semantic-suggestion-review.ts`（时间线绝对时间 → 源素材时间换算 `source = trimStart + (abs − clip.start) × speed`、单元素 segments 构造、before/after 审阅视图模型、整 clip 覆盖预判——与 ApplyRoughCutProposalCommand 命令侧守卫口径一致）+ `SemanticSuggestionReviewDialog`（before/after 双条带 + 保留比例 + 「采纳此建议」单一显式入口 + 成功/失败即时反馈；整 clip 建议禁用采纳并说明）+ `useSmartRoughCut.applySemanticSuggestion`（try-catch 包既有命令通道，失败零时间线变更）+ `SemanticSuggestionList` 项内「对比审阅」入口。审阅目标打开时快照 clip（采纳以新 id 切片替换原 clip，实时 selectedClip 会失联）。红线遵守：无多选/批量/自动应用、无新增 store/持久化、撤销只走既有 undo 栈、MediaState 撤销栈内部零触碰、detectDialogueTurns/maxTurnDuration 零改动。e2e +3 例（审阅打开断言 / 采纳成功+undo 恢复 / 整 clip 建议预判禁用），发现数 535 → 538。
+**M3-3 A1 实现（PR #184，merge `e8f94590`）**：新增纯函数层 `semantic-suggestion-review.ts`（时间线绝对时间 → 源素材时间换算 `source = trimStart + (abs − clip.start) × speed`、单元素 segments 构造、before/after 审阅视图模型、整 clip 覆盖预判——与 ApplyRoughCutProposalCommand 命令侧守卫口径一致）+ `SemanticSuggestionReviewDialog`（before/after 双条带 + 保留比例 + 「采纳此建议」单一显式入口 + 成功/失败即时反馈；整 clip 建议禁用采纳并说明）+ `useSmartRoughCut.applySemanticSuggestion`（try-catch 包既有命令通道，失败零时间线变更）+ `SemanticSuggestionList` 项内「对比审阅」入口。审阅目标打开时快照 clip（采纳以新 id 切片替换原 clip，实时 selectedClip 会失联）。红线遵守：无多选/批量/自动应用、无新增 store/持久化、撤销只走既有 undo 栈、MediaState 撤销栈内部零触碰、detectDialogueTurns/maxTurnDuration 零改动。e2e +3 例（审阅打开断言 / 采纳成功+undo 恢复 / 整 clip 建议预判禁用），发现数 535 → 538（run 33052967308：`536 passed + 2 flaky`，flaky 均池内：advanced-text:4 / nested-sequence-export:67）；desktop 口径 B 73.2213%。
 
 ### 2.6 P2 收官双修复 + 观察池销账（2026-08-27）
 
@@ -157,13 +158,13 @@
 
 ## 3. 当前状态
 
-**位置**：main = `74da84a4`（PR #182 merge），本分支为 M3-3 A1（PR 见工作线条目 7），工作区干净。v4.75.0 已发布（tag 指向 bump 提交 `39e7cf74`）。P2 主线 M3 两阶段与收官双修复（#181/#182）均已合入；M3-3 A1 进行中（2026-08-27 定调，合并后发 v4.77.0，见 2.5）。
+**位置**：main = `e8f94590`（PR #184 merge，M3-3 A1 落地），本分支为 v4.77.0 发版（主题「语义建议应用」，bump 见本 PR），工作区干净。v4.76.0「语义建议」已发布（2026-08-26，历史回填见工作线条目 6）。M3 主线：M3-1/M3-2/M3-3 A1 全部合入，M3-3 A2 为下一个小版本设计候选（见 2.5）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.04%（CI artifact lcov 实测 @ 4367f9d9）**；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
-- 全量单测：672 文件全过 exit 0（12415 passed + 3 skipped，含 M3 两阶段 +25），CI 实测 ~273s，无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 538 / passed 538 零 flaky**（M3-3 A1 本 PR 新增 3 例：535 + 3，CI run log 为准；537→535 变更来源 = #181 smart-subtitles.spec 9→7 例重写净减 2 例）
+- desktop 覆盖（口径 B）= **73.2213%（CI artifact lcov 实测 @ e8f94590，#184 run）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- 全量单测：673 文件全过 exit 0（12443 passed + 3 skipped，#184 CI 实测 ~290s），无 unhandled rejection
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 538**（#184 run 33052967308 实测 `536 passed + 2 flaky`，flaky 均池内已知项；M3-3 A1 新增 3 例：535 + 3；537→535 变更来源 = #181 smart-subtitles.spec 9→7 例重写净减 2 例）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -183,7 +184,7 @@
 |---|---|---|
 | e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控 |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
-| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见，rich text drawtext 导出用例重试通过，只记录不修 |
+| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
 | **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
