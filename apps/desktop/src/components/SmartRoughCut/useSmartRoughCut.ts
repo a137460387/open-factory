@@ -7,6 +7,7 @@
  */
 import {
   AddTrackCommand,
+  ApplyRoughCutProposalCommand,
   BrollInsertCommand,
   DialogueRoughCutCommand,
   RemoveSilenceCommand,
@@ -47,6 +48,7 @@ import {
 } from './smart-rough-cut-state';
 import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
 import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } from './semantic-suggestion';
+import { suggestionToSegments } from './semantic-suggestion-review';
 import {
   buildBrollCandidates,
   buildSceneCandidates,
@@ -136,6 +138,13 @@ export interface UseSmartRoughCutResult {
   runRhythmAssemble(): Promise<void>;
   applySceneSplit(): void;
   applySilenceRemoval(): void;
+  /**
+   * M3-3 A1 采纳单条语义建议：换算为源域 segments 后走既有
+   * ApplyRoughCutProposalCommand（undo 自动入撤销栈）。失败（如建议
+   * 覆盖整个 clip 的命令侧守卫抛错）不变更时间线，返回 error 供
+   * 审阅对话框即时反馈。
+   */
+  applySemanticSuggestion(suggestion: SemanticRoughCutSuggestion): { ok: boolean; error?: string };
 }
 
 export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAsset[]): UseSmartRoughCutResult {
@@ -310,6 +319,20 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     }
   }
 
+  function applySemanticSuggestion(suggestion: SemanticRoughCutSuggestion): { ok: boolean; error?: string } {
+    if (!selectedClip) {
+      return { ok: false, error: zhCN.smartRoughCut.noSelection };
+    }
+    try {
+      commandManager.execute(
+        new ApplyRoughCutProposalCommand(timelineAccessor, selectedClip.id, suggestionToSegments(suggestion, selectedClip)),
+      );
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage };
+    }
+  }
+
   async function runWhisper(): Promise<void> {
     await runStep('whisper', async () => {
       const { clip, mediaAsset } = requireSelectedMedia('whisper');
@@ -469,5 +492,6 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     runRhythmAssemble,
     applySceneSplit,
     applySilenceRemoval,
+    applySemanticSuggestion,
   };
 }

@@ -23,6 +23,8 @@ import {
 } from './smart-rough-cut-utils';
 import { useSmartRoughCut } from './useSmartRoughCut';
 import { SemanticSuggestionList } from './SemanticSuggestionList';
+import { SemanticSuggestionReviewDialog } from './SemanticSuggestionReviewDialog';
+import type { SemanticRoughCutSuggestion } from './semantic-suggestion';
 
 interface SmartRoughCutStepPanelProps {
   selectedClip?: Clip;
@@ -33,6 +35,9 @@ type SmartRoughCutTab = 'basic' | 'dialogue' | 'broll' | 'rhythm';
 
 export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutStepPanelProps) {
   const [activeTab, setActiveTab] = useState<SmartRoughCutTab>('basic');
+  // 审阅目标在打开时快照：采纳会以新 id 切片替换原 clip，实时 selectedClip
+  // 随之失联；快照保证审阅/反馈不因时间线变更被卸载
+  const [reviewTarget, setReviewTarget] = useState<{ suggestion: SemanticRoughCutSuggestion; clip: Clip } | null>(null);
   const {
     stepState,
     pendingScene,
@@ -74,6 +79,7 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
     runRhythmAssemble,
     applySceneSplit,
     applySilenceRemoval,
+    applySemanticSuggestion,
   } = useSmartRoughCut(selectedClip, media);
 
   return (
@@ -206,6 +212,11 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
               suggestions={semanticSuggestions}
               ready={speechUnderstanding.ready}
               onPreviewTime={setPlayheadTime}
+              onReview={(suggestion) => {
+                if (selectedClip) {
+                  setReviewTarget({ suggestion, clip: selectedClip });
+                }
+              }}
             />
           </div>
         ) : null}
@@ -296,6 +307,14 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
           )}
         </div>
       </div>
+      {reviewTarget ? (
+        <SemanticSuggestionReviewDialog
+          suggestion={reviewTarget.suggestion}
+          clip={reviewTarget.clip}
+          onApply={applySemanticSuggestion}
+          onClose={() => setReviewTarget(null)}
+        />
+      ) : null}
     </section>
   );
 }

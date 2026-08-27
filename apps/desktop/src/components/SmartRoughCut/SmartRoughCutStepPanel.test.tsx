@@ -75,6 +75,7 @@ function makeHookResult(overrides: Record<string, unknown> = {}) {
     runRhythmAssemble: vi.fn(),
     applySceneSplit: vi.fn(),
     applySilenceRemoval: vi.fn(),
+    applySemanticSuggestion: vi.fn(),
     ...overrides,
   };
 }
