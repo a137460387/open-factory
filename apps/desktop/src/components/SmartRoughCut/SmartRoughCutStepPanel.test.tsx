@@ -67,6 +67,7 @@ function makeHookResult(overrides: Record<string, unknown> = {}) {
     setPlayheadTime: vi.fn(),
     speechUnderstanding: { ready: false, transcript: '', timeAlignment: [], segmentCount: 0, understanding: undefined },
     semanticSuggestions: [],
+    semanticReady: false,
     runSceneDetection: vi.fn(),
     runSilenceDetection: vi.fn(),
     runWhisper: vi.fn(),
@@ -159,7 +160,7 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
 
   it('renders hook-provided suggestions with ready state on the basic tab', () => {
     renderPanel({
-      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticReady: true,
       semanticSuggestions: [
         {
           id: 'semantic-0',
@@ -168,6 +169,7 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
           confidence: 0.7,
           label: '高潮片段',
           reason: '重点内容',
+          source: 'narrative',
         },
       ],
     });
@@ -175,13 +177,14 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
     expect(screen.getByTestId('smart-semantic').getAttribute('data-ready')).toBe('true');
     const item = screen.getByTestId('smart-semantic-item-semantic-0');
     expect(item.getAttribute('data-climax')).toBe('true');
+    expect(item.getAttribute('data-source')).toBe('narrative');
     expect(item.textContent).toContain('高潮片段');
   });
 
   it('forwards item hover to the hook setPlayheadTime with the range start', () => {
     const setPlayheadTime = vi.fn();
     renderPanel({
-      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticReady: true,
       semanticSuggestions: [
         {
           id: 'semantic-0',
@@ -190,6 +193,7 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
           confidence: 0.7,
           label: '高潮片段',
           reason: '重点内容',
+          source: 'narrative',
         },
       ],
       setPlayheadTime,
@@ -202,7 +206,7 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
 
   it('keeps the semantic list on the basic tab only', () => {
     renderPanel({
-      speechUnderstanding: { ready: true, transcript: 'x', timeAlignment: [], segmentCount: 1, understanding: undefined },
+      semanticReady: true,
       semanticSuggestions: [
         {
           id: 'semantic-0',
@@ -211,6 +215,7 @@ describe('SmartRoughCutStepPanel semantic suggestion list', () => {
           confidence: 0.8,
           label: '开场',
           reason: '开场白',
+          source: 'narrative',
         },
       ],
     });

@@ -604,6 +604,7 @@ describe('useSmartRoughCut applySemanticSuggestion', () => {
       confidence: 0.7,
       label: '高潮片段',
       reason: '重点内容',
+      source: 'narrative' as const,
     };
   }
 
@@ -651,5 +652,60 @@ describe('useSmartRoughCut applySemanticSuggestion', () => {
 
     expect(outcome?.ok).toBe(false);
     expect(mockExecute).not.toHaveBeenCalled();
+  });
+});
+
+// ── semanticSuggestions 双源派生与 semanticReady 门控（M3 扩展） ──
+
+describe('useSmartRoughCut semanticSuggestions dual source', () => {
+  /** contentAnalysis 收紧形态：首 turn（源域 1.6）+ 尾部低能量段（源域 4.3 起） */
+  function makeTightenableClip(): ReturnType<typeof makeClip> {
+    return makeClip({
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      mediaId: 'media-1',
+      duration: 4,
+      trimStart: 1,
+      contentAnalysis: {
+        version: 1,
+        analyzedAt: '2026-08-27T00:00:00.000Z',
+        sceneTypes: ['dialogue'],
+        primarySceneType: 'dialogue',
+        segments: [
+          { start: 1, end: 1.6, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.05 },
+          { start: 1.6, end: 4.3, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.6 },
+          { start: 4.3, end: 5, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.04 },
+        ],
+        emotionCurve: [],
+        dialogueTurns: [
+          { start: 1.6, end: 4.3, loudness: 0.6 },
+        ],
+      },
+    });
+  }
+
+  it('gates semanticReady off when neither transcript nor contentAnalysis is ready', () => {
+    const { result } = setupHook();
+
+    expect(result.current.semanticReady).toBe(false);
+    expect(result.current.semanticSuggestions).toEqual([]);
+  });
+
+  it('enables semanticReady and derives tighten suggestions when only contentAnalysis exists', () => {
+    const clip = makeTightenableClip();
+    const { result } = setupHook({ clip });
+
+    expect(result.current.semanticReady).toBe(true);
+    // 无转写 → 无 narrative；仅收紧类
+    expect(result.current.semanticSuggestions.map((item) => item.source)).toEqual(['head-trim', 'tail-trim']);
+    // head：源 1.6−0.3=1.3 → abs = 0 + (1.3−1) = 0.3；keep [0.3, 4]
+    const head = result.current.semanticSuggestions[0];
+    expect(head.id).toBe('semantic-head-trim');
+    expect(head.timeRange).toEqual({ start: 0.3, end: 4 });
+    // tail：run 起点 4.3 + 0.2 = 4.5 → abs = 0 + (4.5−1) = 3.5；keep [0, 3.5]
+    const tail = result.current.semanticSuggestions[1];
+    expect(tail.id).toBe('semantic-tail-trim');
+    expect(tail.timeRange).toEqual({ start: 0, end: 3.5 });
   });
 });

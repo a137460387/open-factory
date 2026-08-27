@@ -274,3 +274,68 @@ test('smart rough cut whole-clip semantic suggestion disables apply with an expl
   await expect(page.getByTestId('semantic-review-apply')).toBeDisabled();
   await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.5);
 });
+
+// ── M3 扩展·首实施：contentAnalysis 派生掐头/收尾收紧建议 ─────
+
+/** 打开面板并使 contentAnalysis 收紧建议就绪（无转写，仅分析就绪） */
+async function openPanelWithTightenReady(page: Page): Promise<void> {
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupSemanticTightenFixture!());
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await expect(page.getByTestId('smart-rough-cut-panel')).toBeVisible();
+  await expect(page.getByTestId('smart-semantic')).toHaveAttribute('data-ready', 'true');
+}
+
+test('smart rough cut tighten suggestions appear from analysis alone without transcript', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await openPanelWithTightenReady(page);
+
+  // 混合门控：无转写但有内容分析 → 收紧类条目出现，narrative 条目缺席
+  await expect(page.getByTestId('smart-semantic-item-semantic-head-trim')).toHaveAttribute('data-source', 'head-trim');
+  await expect(page.getByTestId('smart-semantic-item-semantic-tail-trim')).toHaveAttribute('data-source', 'tail-trim');
+  await expect(page.getByTestId('smart-semantic-item-semantic-head-trim')).toContainText('掐头收紧');
+  await expect(page.getByTestId('smart-semantic-item-semantic-tail-trim')).toContainText('收尾收紧');
+  // 启发式来源标签可见（标注启发式提醒）
+  await expect(page.getByTestId('smart-semantic-source-semantic-head-trim')).toContainText('启发式');
+  await expect(page.locator('[data-testid^="smart-semantic-item-"][data-source="narrative"]')).toHaveCount(0);
+});
+
+test('smart rough cut applying the head-trim suggestion tightens the clip and undo restores it', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await openPanelWithTightenReady(page);
+
+  await page.getByTestId('smart-semantic-review-semantic-head-trim').click();
+  await expect(page.getByTestId('semantic-review-dialog')).toBeVisible();
+  await expect(page.getByTestId('semantic-review-summary')).toContainText('掐头收紧');
+  // 保留 0.3→2.5 = 2.2s / 原 2.5s = 88%
+  await expect(page.getByTestId('semantic-review-ratio')).toContainText('保留 88%');
+
+  await page.getByTestId('semantic-review-apply').click();
+  await expect(page.getByTestId('semantic-review-feedback')).toHaveAttribute('data-result', 'success');
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.2);
+
+  await page.getByTestId('semantic-review-close').click();
+  await page.getByTestId('toolbar-undo-button').click();
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.5);
+});
+
+test('smart rough cut applying the tail-trim suggestion tightens the clip and undo restores it', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await openPanelWithTightenReady(page);
+
+  await page.getByTestId('smart-semantic-review-semantic-tail-trim').click();
+  await expect(page.getByTestId('semantic-review-dialog')).toBeVisible();
+  await expect(page.getByTestId('semantic-review-summary')).toContainText('收尾收紧');
+  // 保留 0→2.0 = 2.0s / 原 2.5s = 80%
+  await expect(page.getByTestId('semantic-review-ratio')).toContainText('保留 80%');
+
+  await page.getByTestId('semantic-review-apply').click();
+  await expect(page.getByTestId('semantic-review-feedback')).toHaveAttribute('data-result', 'success');
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2);
+
+  await page.getByTestId('semantic-review-close').click();
+  await page.getByTestId('toolbar-undo-button').click();
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.5);
+});

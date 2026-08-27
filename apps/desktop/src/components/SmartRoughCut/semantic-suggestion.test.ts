@@ -200,6 +200,8 @@ describe('generateSemanticRoughCutSuggestions passthrough contract', () => {
     expect(byType.get('rising')).toMatchObject({ confidence: 0.6, reason: '内容递增', label: '铺垫' });
     expect(byType.get('falling')).toMatchObject({ confidence: 0.6, reason: '内容递减', label: '回落' });
     expect(byType.get('ending')).toMatchObject({ confidence: 0.8, reason: '结尾总结', label: '收尾' });
+    // M3 扩展：narrative 建议默认补 source='narrative'（向后兼容）
+    expect(new Set(suggestions.map((item) => item.source))).toEqual(new Set(['narrative']));
     // id 唯一且稳定（按升序索引生成）
     expect(new Set(suggestions.map((item) => item.id)).size).toBe(suggestions.length);
     expect(suggestions.map((item) => item.id)).toContain('semantic-0');

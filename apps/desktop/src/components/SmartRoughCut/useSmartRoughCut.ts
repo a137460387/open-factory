@@ -48,6 +48,7 @@ import {
 } from './smart-rough-cut-state';
 import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
 import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } from './semantic-suggestion';
+import { deriveTightenSuggestions, mergeSemanticSuggestions } from './semantic-tighten-suggestion';
 import { suggestionToSegments } from './semantic-suggestion-review';
 import {
   buildBrollCandidates,
@@ -130,6 +131,11 @@ export interface UseSmartRoughCutResult {
    * 无 marker 时为空数组。
    */
   semanticSuggestions: SemanticRoughCutSuggestion[];
+  /**
+   * M3 扩展：语义建议就绪门控（转写或内容分析任一就绪即 true，
+   * 列表呈现各自可产出部分；收紧类建议派生自 contentAnalysis）。
+   */
+  semanticReady: boolean;
   runSceneDetection(): Promise<void>;
   runSilenceDetection(): Promise<void>;
   runWhisper(): Promise<void>;
@@ -176,10 +182,22 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
   // 桥接扩展位：subtitle 轨转写文本 → understandSpeech 语义理解
   const speechUnderstanding = useTranscriptForClip(selectedClip, timeline);
   // M3-1 扩展位：narrativeMarkers → 语义粗剪建议列表（纯派生，零副作用）
-  const semanticSuggestions = useMemo(
+  const narrativeSuggestions = useMemo(
     () => generateSemanticRoughCutSuggestions(speechUnderstanding.understanding, selectedClip),
     [speechUnderstanding.understanding, selectedClip],
   );
+  // M3 扩展：contentAnalysis → 掐头/收尾收紧建议（单区间 keep-range，纯派生）
+  const tightenSuggestions = useMemo(
+    () => deriveTightenSuggestions(selectedClip?.contentAnalysis, selectedClip),
+    [selectedClip],
+  );
+  // 双源合并：climax 优先 → 非 climax narrative 时间升序 → head-trim → tail-trim（含同区间去重）
+  const semanticSuggestions = useMemo(
+    () => mergeSemanticSuggestions(narrativeSuggestions, tightenSuggestions),
+    [narrativeSuggestions, tightenSuggestions],
+  );
+  // 门控：转写或内容分析任一就绪即呈现（各自部分）
+  const semanticReady = speechUnderstanding.ready || Boolean(selectedClip?.contentAnalysis);
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
   const selectedTimelineClips = useMemo(
     () => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)),
@@ -484,6 +502,7 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     setPlayheadTime,
     speechUnderstanding,
     semanticSuggestions,
+    semanticReady,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,

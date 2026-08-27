@@ -69,8 +69,8 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
     dialogueSensitivity,
     setDialogueSensitivity,
     setPlayheadTime,
-    speechUnderstanding,
     semanticSuggestions,
+    semanticReady,
     runSceneDetection,
     runSilenceDetection,
     runWhisper,
@@ -210,7 +210,7 @@ export function SmartRoughCutStepPanel({ selectedClip, media }: SmartRoughCutSte
             />
             <SemanticSuggestionList
               suggestions={semanticSuggestions}
-              ready={speechUnderstanding.ready}
+              ready={semanticReady}
               onPreviewTime={setPlayheadTime}
               onReview={(suggestion) => {
                 if (selectedClip) {
