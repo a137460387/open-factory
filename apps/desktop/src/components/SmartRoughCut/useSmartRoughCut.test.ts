@@ -591,3 +591,65 @@ describe('useSmartRoughCut effects', () => {
     expect(withoutSelection.result.current.rhythmTrackId).toBe('track-video');
   });
 });
+
+// ── applySemanticSuggestion（M3-3 A1 单条采纳） ──────────────
+
+describe('useSmartRoughCut applySemanticSuggestion', () => {
+  /** setupHook 默认 clip：时间线 [0, 4)，trimStart=1，speed=1 → 源域 [1, 5) */
+  function makeSemanticSuggestion(timeRange: { start: number; end: number }) {
+    return {
+      id: 'semantic-0',
+      timeRange,
+      markerType: 'climax' as const,
+      confidence: 0.7,
+      label: '高潮片段',
+      reason: '重点内容',
+    };
+  }
+
+  it('applies a partial suggestion through ApplyRoughCutProposalCommand and trims the clip', () => {
+    const { result } = setupHook();
+
+    let outcome: { ok: boolean; error?: string } | undefined;
+    act(() => {
+      // 建议绝对区间 [1, 3) → 源域 [2, 4)，保留 2s（原 4s）
+      outcome = result.current.applySemanticSuggestion(makeSemanticSuggestion({ start: 1, end: 3 }));
+    });
+
+    expect(outcome).toEqual({ ok: true });
+    expect(mockExecute).toHaveBeenCalledTimes(1);
+    const command = mockExecute.mock.calls[0][0];
+    expect(command.constructor.name).toBe('ApplyRoughCutProposalCommand');
+    const trimmed = mockTimeline.tracks[0].clips[0];
+    expect(trimmed.duration).toBeCloseTo(2, 6);
+    expect(trimmed.start).toBeCloseTo(0, 6);
+  });
+
+  it('returns a failure result without mutating the timeline for a whole-clip suggestion', () => {
+    const { result } = setupHook();
+    const before = mockTimeline;
+
+    let outcome: { ok: boolean; error?: string } | undefined;
+    act(() => {
+      // 建议覆盖整个 clip [0, 4) → 命令侧守卫抛错
+      outcome = result.current.applySemanticSuggestion(makeSemanticSuggestion({ start: 0, end: 4 }));
+    });
+
+    expect(outcome?.ok).toBe(false);
+    expect(outcome?.error).toContain('entire clip');
+    expect(mockTimeline).toBe(before);
+    expect(mockTimeline.tracks[0].clips[0].duration).toBe(4);
+  });
+
+  it('returns a failure result when no clip is selected', () => {
+    const { result } = renderHook(() => useSmartRoughCut(undefined, []));
+
+    let outcome: { ok: boolean; error?: string } | undefined;
+    act(() => {
+      outcome = result.current.applySemanticSuggestion(makeSemanticSuggestion({ start: 1, end: 3 }));
+    });
+
+    expect(outcome?.ok).toBe(false);
+    expect(mockExecute).not.toHaveBeenCalled();
+  });
+});

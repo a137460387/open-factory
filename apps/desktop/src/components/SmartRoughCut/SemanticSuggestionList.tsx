@@ -18,9 +18,11 @@ export interface SemanticSuggestionListProps {
   ready: boolean;
   /** hover 联动 playhead 跳转（M2 同款模式） */
   onPreviewTime(time: number): void;
+  /** 打开单条建议的对比审阅对话框（M3-3 A1 单条入口） */
+  onReview(suggestion: SemanticRoughCutSuggestion): void;
 }
 
-export function SemanticSuggestionList({ suggestions, ready, onPreviewTime }: SemanticSuggestionListProps) {
+export function SemanticSuggestionList({ suggestions, ready, onPreviewTime, onReview }: SemanticSuggestionListProps) {
   return (
     <section
       className="mb-3 rounded-md border border-line bg-white p-3"
@@ -67,6 +69,17 @@ export function SemanticSuggestionList({ suggestions, ready, onPreviewTime }: Se
               <span className="flex-none text-[10px] tabular-nums text-slate-500">
                 {zhCN.smartRoughCut.semanticConfidence(item.confidence)}
               </span>
+              <button
+                type="button"
+                className="flex-none rounded border border-line bg-white px-1.5 py-0.5 text-[10px] text-slate-600 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+                data-testid={`smart-semantic-review-${item.id}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReview(item);
+                }}
+              >
+                {zhCN.smartRoughCut.semanticReviewButton}
+              </button>
             </div>
           ))}
         </div>

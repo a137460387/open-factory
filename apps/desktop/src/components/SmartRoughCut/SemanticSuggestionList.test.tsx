@@ -41,16 +41,18 @@ const SUGGESTIONS: SemanticRoughCutSuggestion[] = [
   }),
 ];
 
-function renderList(overrides: { suggestions?: SemanticRoughCutSuggestion[]; ready?: boolean; onPreviewTime?: ReturnType<typeof vi.fn> } = {}) {
+function renderList(overrides: { suggestions?: SemanticRoughCutSuggestion[]; ready?: boolean; onPreviewTime?: ReturnType<typeof vi.fn>; onReview?: ReturnType<typeof vi.fn> } = {}) {
   const onPreviewTime = overrides.onPreviewTime ?? vi.fn();
+  const onReview = overrides.onReview ?? vi.fn();
   render(
     <SemanticSuggestionList
       suggestions={overrides.suggestions ?? SUGGESTIONS}
       ready={overrides.ready ?? true}
       onPreviewTime={onPreviewTime}
+      onReview={onReview}
     />,
   );
-  return { onPreviewTime };
+  return { onPreviewTime, onReview };
 }
 
 beforeEach(() => {
@@ -139,11 +141,11 @@ describe('SemanticSuggestionList ready gating', () => {
 
   it('switches from the hint to the list when ready becomes true', () => {
     const { rerender } = render(
-      <SemanticSuggestionList suggestions={SUGGESTIONS} ready={false} onPreviewTime={vi.fn()} />,
+      <SemanticSuggestionList suggestions={SUGGESTIONS} ready={false} onPreviewTime={vi.fn()} onReview={vi.fn()} />,
     );
     expect(screen.getByTestId('smart-semantic-hint')).toBeDefined();
 
-    rerender(<SemanticSuggestionList suggestions={SUGGESTIONS} ready onPreviewTime={vi.fn()} />);
+    rerender(<SemanticSuggestionList suggestions={SUGGESTIONS} ready onPreviewTime={vi.fn()} onReview={vi.fn()} />);
 
     expect(screen.queryByTestId('smart-semantic-hint')).toBeNull();
     expect(screen.getByTestId('smart-semantic-list')).toBeDefined();
@@ -152,9 +154,31 @@ describe('SemanticSuggestionList ready gating', () => {
 
   it('does not fire hover previews while gated off', () => {
     const onPreviewTime = vi.fn();
-    render(<SemanticSuggestionList suggestions={SUGGESTIONS} ready={false} onPreviewTime={onPreviewTime} />);
+    render(<SemanticSuggestionList suggestions={SUGGESTIONS} ready={false} onPreviewTime={onPreviewTime} onReview={vi.fn()} />);
 
     // 门控态下列表不渲染，无从 hover；断言回调零调用
+    expect(onPreviewTime).not.toHaveBeenCalled();
+  });
+});
+
+// ── MS-D：对比审阅入口（M3-3 A1）────────────────────────────
+
+describe('SemanticSuggestionList review entry', () => {
+  it('renders a review button per suggestion and forwards the item on click', () => {
+    const { onReview } = renderList();
+
+    fireEvent.click(screen.getByTestId('smart-semantic-review-semantic-1'));
+
+    expect(onReview).toHaveBeenCalledTimes(1);
+    expect(onReview).toHaveBeenCalledWith(SUGGESTIONS[1]);
+  });
+
+  it('does not trigger the hover preview when clicking the review button', () => {
+    const { onPreviewTime, onReview } = renderList();
+
+    fireEvent.click(screen.getByTestId('smart-semantic-review-semantic-0'));
+
+    expect(onReview).toHaveBeenCalledTimes(1);
     expect(onPreviewTime).not.toHaveBeenCalled();
   });
 });
