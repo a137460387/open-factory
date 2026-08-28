@@ -272,3 +272,84 @@ describe('mergeSemanticSuggestions ordering and dedup', () => {
     expect(mergeSemanticSuggestions([], tighten)).toEqual(tighten);
   });
 });
+
+// ── mergeSemanticSuggestions 第三源：emotional-climax ────────
+
+function makeClimaxSuggestion(
+  id: string,
+  timeRange: { start: number; end: number },
+  confidence: number,
+): SemanticRoughCutSuggestion {
+  return {
+    id,
+    timeRange,
+    markerType: 'climax',
+    confidence,
+    label: '情感高潮',
+    reason: 'top-K',
+    source: 'emotional-climax',
+  };
+}
+
+describe('mergeSemanticSuggestions emotional-climax integration', () => {
+  it('sorts the climax group (narrative + emotional) by confidence desc before other items', () => {
+    const narrative = [
+      makeNarrativeSuggestion('semantic-0', { start: 0, end: 2 }, 'climax', 0.7),
+      makeNarrativeSuggestion('semantic-1', { start: 4, end: 5 }, 'opening'),
+    ];
+    const climax = [
+      makeClimaxSuggestion('semantic-emotional-climax-0', { start: 6, end: 11 }, 0.9),
+      makeClimaxSuggestion('semantic-emotional-climax-1', { start: 12, end: 17 }, 0.5),
+    ];
+
+    const merged = mergeSemanticSuggestions(narrative, [], climax);
+
+    expect(merged.map((item) => item.id)).toEqual([
+      'semantic-emotional-climax-0', // 0.9
+      'semantic-0', // narrative climax 0.7
+      'semantic-emotional-climax-1', // 0.5
+      'semantic-1', // 非 climax narrative
+    ]);
+  });
+
+  it('drops an emotional-climax suggestion whose range exactly equals a narrative suggestion', () => {
+    const narrative = [makeNarrativeSuggestion('semantic-0', { start: 6, end: 11 }, 'climax', 0.7)];
+    const climax = [makeClimaxSuggestion('semantic-emotional-climax-0', { start: 6, end: 11 }, 0.9)];
+
+    const merged = mergeSemanticSuggestions(narrative, [], climax);
+
+    expect(merged.map((item) => item.id)).toEqual(['semantic-0']);
+  });
+
+  it('places emotional-climax items before head/tail tighten suggestions', () => {
+    const tighten = [
+      makeTightenSuggestion('head-trim', { start: 0.3, end: 5 }),
+      makeTightenSuggestion('tail-trim', { start: 0, end: 4.6 }),
+    ];
+    const climax = [makeClimaxSuggestion('semantic-emotional-climax-0', { start: 1, end: 6 }, 0.8)];
+
+    const merged = mergeSemanticSuggestions([], tighten, climax);
+
+    expect(merged.map((item) => item.id)).toEqual([
+      'semantic-emotional-climax-0',
+      'semantic-head-trim',
+      'semantic-tail-trim',
+    ]);
+  });
+
+  it('remains backward compatible with two-argument calls (climax defaults to empty)', () => {
+    const narrative = [makeNarrativeSuggestion('semantic-0', { start: 0, end: 2 }, 'opening')];
+    expect(mergeSemanticSuggestions(narrative, [])).toEqual(narrative);
+  });
+
+  it('never emits duplicate ranges across all three sources', () => {
+    const narrative = [makeNarrativeSuggestion('semantic-0', { start: 0, end: 2 }, 'climax', 0.7)];
+    const tighten = [makeTightenSuggestion('head-trim', { start: 0.3, end: 5 })];
+    const climax = [makeClimaxSuggestion('semantic-emotional-climax-0', { start: 2.5, end: 7.5 }, 0.8)];
+
+    const merged = mergeSemanticSuggestions(narrative, tighten, climax);
+
+    const ranges = merged.map((item) => `${item.timeRange.start.toFixed(6)}-${item.timeRange.end.toFixed(6)}`);
+    expect(new Set(ranges).size).toBe(merged.length);
+  });
+});

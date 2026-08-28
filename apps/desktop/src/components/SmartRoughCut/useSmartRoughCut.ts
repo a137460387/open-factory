@@ -49,6 +49,7 @@ import {
 import { useTranscriptForClip, type UseTranscriptForClipResult } from './useTranscriptForClip';
 import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } from './semantic-suggestion';
 import { deriveTightenSuggestions, mergeSemanticSuggestions } from './semantic-tighten-suggestion';
+import { deriveEmotionalClimaxSuggestions } from './semantic-climax-suggestion';
 import { recordSuggestionAdoption } from './semantic-suggestion-adoption-log';
 import { suggestionToSegments } from './semantic-suggestion-review';
 import {
@@ -192,10 +193,16 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     () => deriveTightenSuggestions(selectedClip?.contentAnalysis, selectedClip),
     [selectedClip],
   );
-  // 双源合并：climax 优先 → 非 climax narrative 时间升序 → head-trim → tail-trim（含同区间去重）
+  // M3 扩展·第二梯队：emotionCurve → 情感高潮 top-K 局部高光区间（纯派生）
+  const climaxSuggestions = useMemo(
+    () => deriveEmotionalClimaxSuggestions(selectedClip?.contentAnalysis, selectedClip),
+    [selectedClip],
+  );
+  // 多源合并：climax 组（narrative + emotional）优先 → 非 climax narrative 时间升序
+  // → head-trim → tail-trim（含同区间去重）
   const semanticSuggestions = useMemo(
-    () => mergeSemanticSuggestions(narrativeSuggestions, tightenSuggestions),
-    [narrativeSuggestions, tightenSuggestions],
+    () => mergeSemanticSuggestions(narrativeSuggestions, tightenSuggestions, climaxSuggestions),
+    [narrativeSuggestions, tightenSuggestions, climaxSuggestions],
   );
   // 门控：转写或内容分析任一就绪即呈现（各自部分）
   const semanticReady = speechUnderstanding.ready || Boolean(selectedClip?.contentAnalysis);

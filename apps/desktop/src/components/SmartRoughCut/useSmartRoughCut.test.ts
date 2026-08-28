@@ -726,4 +726,34 @@ describe('useSmartRoughCut semanticSuggestions dual source', () => {
     expect(tail.id).toBe('semantic-tail-trim');
     expect(tail.timeRange).toEqual({ start: 0, end: 3.5 });
   });
+
+  it('derives emotional-climax top-K suggestions from emotionCurve alongside tighten sources', () => {
+    // 源窗口 [1, 5)：高潮点 2（0.9）→ [2, 7] → clamp [2, 5] → abs [1, 4]
+    const clip = makeClip({
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-video',
+      mediaId: 'media-1',
+      duration: 4,
+      trimStart: 1,
+      contentAnalysis: {
+        version: 1,
+        analyzedAt: '2026-08-28T00:00:00.000Z',
+        sceneTypes: ['dialogue'],
+        primarySceneType: 'dialogue',
+        segments: [],
+        emotionCurve: [{ time: 2, value: 0.9, brightness: 0.9 }],
+        dialogueTurns: [],
+      },
+    });
+    const { result } = setupHook({ clip });
+
+    expect(result.current.semanticReady).toBe(true);
+    expect(result.current.semanticSuggestions.map((item) => item.source)).toEqual(['emotional-climax']);
+    const climax = result.current.semanticSuggestions[0];
+    expect(climax.id).toBe('semantic-emotional-climax-0');
+    expect(climax.markerType).toBe('climax');
+    expect(climax.timeRange).toEqual({ start: 1, end: 4 });
+    expect(climax.confidence).toBe(0.9);
+  });
 });

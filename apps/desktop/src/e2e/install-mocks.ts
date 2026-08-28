@@ -2705,6 +2705,67 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupEmotionalClimaxFixture: () => {
+    const project = createProject('Emotional Climax E2E');
+    const asset: MediaAsset = {
+      id: 'media-smart-video',
+      type: 'video',
+      name: 'smart-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // 情感高潮形态：高潮点 0.5（0.85）→ 延伸 [0.5, 5.5] → clamp [0.5, 2.5]
+    // （2.0s ≥ 1s 极短保护）；无 dialogueTurns/segments → 无 head/tail-trim；
+    // 无 whisper 转写 → 无 narrative（仅 emotional-climax 单源形态）
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-28T00:00:00.000Z',
+                sceneTypes: ['dialogue'],
+                primarySceneType: 'dialogue',
+                segments: [],
+                emotionCurve: [{ time: 0.5, value: 0.85, brightness: 0.85 }],
+                dialogueTurns: [],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
+    useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupRoughCutCompareFixture: () => {
     const project = createProject('Rough Cut Compare E2E');
     const asset: MediaAsset = {

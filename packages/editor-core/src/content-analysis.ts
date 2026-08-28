@@ -556,6 +556,54 @@ export function selectTopKMutuallyExclusive(
   return picked;
 }
 
+export interface SelectEmotionalClimaxOptions {
+  /** 选取区间数量上限（默认 2） */
+  k?: number;
+  /** 高潮点向后延伸的区间时长秒（默认 5，透传内核） */
+  windowDuration?: number;
+  /** 入选最低分值（默认 0，透传内核：须严格大于） */
+  minScore?: number;
+  /**
+   * clamp 后区间最短保留时长（秒），默认 TIGHTEN_MIN_KEEP_SECONDS：
+   * 高潮点贴近窗口末端时区间被压缩过短，不值得建议（与掐头收紧的
+   * 极短保护同口径）。
+   */
+  minIntervalDuration?: number;
+}
+
+/**
+ * 情感高潮 top-K 区间选取（组装层入口：窗口过滤 + 内核选取 + 边界 clamp）。
+ *
+ * 在 selectTopKMutuallyExclusive 内核（零改动）之上完成组装：
+ * 1. 高潮点候选过滤至 [windowStart, windowEnd]（窗口外点不参与选取）；
+ * 2. 内核贪心互斥选取（组内互斥，score 降序返回）；
+ * 3. 区间端点 clamp 至窗口（高潮点向后延伸的 windowDuration 可能越窗）；
+ * 4. clamp 后短于 minIntervalDuration 的区间剔除。
+ */
+export function selectEmotionalClimaxIntervals(
+  curve: ContentEmotionPoint[],
+  windowStart: number,
+  windowEnd: number,
+  options: SelectEmotionalClimaxOptions = {},
+): CurveInterval[] {
+  const { k = 2, windowDuration, minScore, minIntervalDuration = TIGHTEN_MIN_KEEP_SECONDS } = options;
+  if (!Number.isFinite(windowStart) || !Number.isFinite(windowEnd) || windowEnd <= windowStart) {
+    return [];
+  }
+  const inWindow = curve.filter(
+    (point) =>
+      Number.isFinite(point.time) && point.time >= windowStart - 0.000001 && point.time <= windowEnd + 0.000001,
+  );
+  const picked = selectTopKMutuallyExclusive(inWindow, k, { windowDuration, minScore });
+  return picked
+    .map((interval) => ({
+      start: round(Math.max(interval.start, windowStart)),
+      end: round(Math.min(interval.end, windowEnd)),
+      score: interval.score,
+    }))
+    .filter((interval) => interval.end - interval.start >= minIntervalDuration);
+}
+
 function average(values: number[]): number {
   if (values.length === 0) {
     return 0;

@@ -339,3 +339,61 @@ test('smart rough cut applying the tail-trim suggestion tightens the clip and un
   await page.getByTestId('toolbar-undo-button').click();
   await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.5);
 });
+
+// ── M3 扩展·第二梯队：情感高潮 top-K 建议（emotionCurve 派生） ──
+
+/** 打开面板并使情感高潮建议就绪（仅内容分析，无转写/收紧源） */
+async function openPanelWithClimaxReady(page: Page): Promise<void> {
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupEmotionalClimaxFixture!());
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await expect(page.getByTestId('smart-rough-cut-panel')).toBeVisible();
+  await expect(page.getByTestId('smart-semantic')).toHaveAttribute('data-ready', 'true');
+}
+
+test('smart rough cut emotional climax top-K suggestion appears from analysis alone', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await openPanelWithClimaxReady(page);
+
+  // 单源形态：仅情感高潮条目（无转写 → 无 narrative；无 turns/segments → 无收紧）
+  await expect(page.locator('[data-testid^="smart-semantic-item-"]')).toHaveCount(1);
+  const item = page.getByTestId('smart-semantic-item-semantic-emotional-climax-0');
+  await expect(item).toHaveAttribute('data-source', 'emotional-climax');
+  await expect(item).toHaveAttribute('data-climax', 'true');
+  await expect(item).toContainText('情感高潮');
+  // 高潮点 0.5 延伸 clamp 至 clip 末端 → [0.5, 2.5]
+  await expect(item).toContainText('0.50s - 2.50s');
+  // 启发式来源标签可见
+  await expect(page.getByTestId('smart-semantic-source-semantic-emotional-climax-0')).toContainText('启发式');
+});
+
+test('smart rough cut applying the emotional climax suggestion trims the clip, counts adoption, and undo restores it', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await openPanelWithClimaxReady(page);
+
+  await page.getByTestId('smart-semantic-review-semantic-emotional-climax-0').click();
+  await expect(page.getByTestId('semantic-review-dialog')).toBeVisible();
+  await expect(page.getByTestId('semantic-review-summary')).toContainText('情感高潮');
+  // 保留 0.5→2.5 = 2.0s / 原 2.5s = 80%
+  await expect(page.getByTestId('semantic-review-ratio')).toContainText('保留 80%');
+
+  // 采纳 → 裁剪 + 计数入账（emotional-climax 源）
+  await page.getByTestId('semantic-review-apply').click();
+  await expect(page.getByTestId('semantic-review-feedback')).toHaveAttribute('data-result', 'success');
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('open-factory:semantic-suggestion-adoptions');
+        const entries = raw ? (JSON.parse(raw) as Array<{ source: string }>) : [];
+        return entries.filter((entry) => entry.source === 'emotional-climax').length;
+      }),
+    )
+    .toBe(1);
+
+  // 撤销恢复原时长
+  await page.getByTestId('semantic-review-close').click();
+  await page.getByTestId('toolbar-undo-button').click();
+  await expect.poll(() => getVideoClipDuration(page)).toBeCloseTo(2.5);
+});

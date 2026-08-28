@@ -10,11 +10,16 @@
  * M3 扩展·首实施：新增 source 字段区分建议来源（narrative = 转写叙事
  * 标记派生；head-trim / tail-trim = contentAnalysis 派生的收紧建议，
  * 生成逻辑见 semantic-tighten-suggestion.ts）。
+ * M3 扩展·第二梯队：emotional-climax = emotionCurve top-K 互斥选取的
+ * 局部高光区间（生成逻辑见 semantic-climax-suggestion.ts）。
  */
 import type { Clip, NarrativeMarker, SpeechUnderstandingResult } from '@open-factory/editor-core';
 
-/** 建议来源：narrative = whisper 转写叙事标记；head-trim/tail-trim = contentAnalysis 收紧启发式 */
-export type SemanticSuggestionSource = 'narrative' | 'head-trim' | 'tail-trim';
+/**
+ * 建议来源：narrative = whisper 转写叙事标记；head-trim/tail-trim =
+ * contentAnalysis 收紧启发式；emotional-climax = 情感曲线 top-K 高光
+ */
+export type SemanticSuggestionSource = 'narrative' | 'head-trim' | 'tail-trim' | 'emotional-climax';
 
 /** 语义粗剪建议（M3 产品输出契约，非持久化 schema，不落库） */
 export interface SemanticRoughCutSuggestion {
