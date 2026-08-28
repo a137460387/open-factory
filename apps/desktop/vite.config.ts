@@ -121,23 +121,49 @@ export default defineConfig(({ mode }) => ({
         manualChunks(id) {
           if (id.includes('.worker.') || id.includes('worker-')) return undefined;
           const normalized = id.replace(/\\/g, '/');
+          // editor-core 家族（packages/editor-core 与其 workspace 镜像）合并为单一
+          // 'editor-core' 块，不再按文件名正则拆分多个域块。
+          //
+          // 安全边界（v4.78.0 生产黑屏事故定性，方案 B 回退）：
+          // 1. 此前按文件名正则拆出 editor-core-{timeline,subtitles,color,audio,
+          //    project,media,export,bridge,barrel,ai} 等块，但包内真实模块图存在
+          //    大量跨"域"环（commands/* → 全部域；model/factories → audio/color/media；
+          //    域 → model），实测文件级 import 边：兜底块→域 92 条、域→兜底 300+ 条、
+          //    域间互引 40+ 条，Rollup 产出 15+ 组 Circular chunk 警告。
+          // 2. 多个域文件在模块顶层立即求值常量并访问跨块绑定
+          //    （timeline-templates → DEFAULT_COLOR_CORRECTION；subtitle 样式表 →
+          //    默认样式），块循环求值时序下直接 TDZ 崩溃：
+          //    ReferenceError: Cannot access 'x' before initialization → #root 空。
+          // 3. 文件级路由无法打破这些环（一个文件常同时依赖多个域），结构性
+          //    脆弱；合并为单块后环回到 chunk 内部，由 Rollup 的模块拓扑排序
+          //    保证求值顺序（块级执行序由浏览器 import 决定、Rollup 失去控制，
+          //    这正是多块循环爆 TDZ 的机制）。缓存粒度损失可接受（本地 Tauri
+          //    桌面加载无网络往返，且 editor-core 单块保留了包级缓存语义）。
           if (normalized.includes('/node_modules/@open-factory/editor-core/') || normalized.includes('/packages/editor-core/')) {
-            if (/\/ai-[^/]+$/.test(normalized) || /\/ai\/[^/]+$/.test(normalized)) return 'editor-core-ai';
-            if (/\/editor-core\/(?:src|dist)\/(?:exports\/)?index\.(ts|js)$/.test(normalized)) return 'editor-core-barrel';
-            if (/\/(timeline-commands|timeline-scripting|project-health-check)\.(ts|js)$/.test(normalized)) return 'editor-core-bridge';
-            if (normalized.includes('/export/') || normalized.includes('/exports/pipeline')) return 'editor-core-export';
-            if (/\/(timeline-|clip-groups|keyframes|easing-|render-cache|track-|sequence-|director-|continuity-|sync-|collaboration|touch-|operation-)/.test(normalized)) return 'editor-core-timeline';
-            if (/\/(subtitles?\/|subtitle-|data-subtitle|contextual-translation)/.test(normalized)) return 'editor-core-subtitles';
-            if (/\/(color-|color\/|scopes\/|style-transfer|lut-|ai-color-)/.test(normalized)) return 'editor-core-color';
-            if (/\/(audio-|audio\/|rhythm-|spatial-|beats|music-|ai-loudness)/.test(normalized)) return 'editor-core-audio';
-            if (/\/(project\/|archive-encryption)/.test(normalized)) return 'editor-core-project';
-            if (/\/(media-|duplicate-media|batch-media|thumbnail-|cover-|content-analysis|frame-|match-frame|selection-|broadcast-|scene-|vfr|smart-rough|storyboard|highlight-|anomaly-|flash-|profiler|complexity-|performance-|tag-|stress-|naming-|quick-|annotation-|distribution|batch-crop)/.test(normalized)) return 'editor-core-media';
             return 'editor-core';
           }
           // Split vendor into smaller chunks
           if (normalized.includes('/node_modules/')) {
-            // React ecosystem
-            if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/') || normalized.includes('/node_modules/react-dom/client')) return 'vendor-react';
+            // React 生态闭包：react / react-dom 及其直接依赖 scheduler 必须同分块
+            // （vendor-react），否则 react-dom → scheduler 落入 vendor-utils 会形成
+            // vendor-react ↔ vendor-utils 双向分块循环，React 模块体未求值时
+            // vendor-utils 内模块级 React 绑定访问即崩溃（v4.78.0 黑屏第一根因，
+            // v4.73.0 manualChunks 拆分引入起潜伏，dev server 无分块故 e2e 不拦截）。
+            // @tanstack/* 独立成块：其模块级代码（typeof document<"u" ?
+            // React.useLayoutEffect : React.useEffect）依赖 React 初始化完成，
+            // 独立块对 vendor-react 保持单向依赖（React 不反向依赖 tanstack），
+            // 单向即可保证求值顺序安全，且避免 vendor-react 超出 200KB 预算。
+            if (
+              normalized.includes('/node_modules/react/') ||
+              normalized.includes('/node_modules/react-dom/') ||
+              normalized.includes('/node_modules/react-dom/client') ||
+              normalized.includes('/node_modules/scheduler/')
+            ) {
+              return 'vendor-react';
+            }
+            if (normalized.includes('/node_modules/@tanstack/')) {
+              return 'vendor-tanstack';
+            }
             // State management
             if (normalized.includes('/node_modules/zustand/') || normalized.includes('/node_modules/use-sync-external-store/')) return 'vendor-state';
             // UI libraries (Radix, Lucide)

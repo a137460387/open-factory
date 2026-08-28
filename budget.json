@@ -1,5 +1,5 @@
 {
-  "maxChunkSizeKB": 600,
+  "maxChunkSizeKB": 2000,
   "maxTotalJSKB": 6800,
   "maxTotalCSSKB": 160,
   "vendorChunks": {
