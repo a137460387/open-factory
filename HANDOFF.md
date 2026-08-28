@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-28 | 基线：main = `96448b69`（PR #187 merge，v4.78.0 发版）| 版本：v4.78.1 热修中（本 PR，主题「修复生产包启动黑屏 + 生产冒烟入 CI」；上版 v4.78.0「语义建议多源·掐头去尾 + 采纳计数」/ bump `e54d5704`）
+> 更新时间：2026-08-28 | 基线：main = `20e93ba5`（PR #188 merge，v4.78.1 热修合入）| 版本：v4.78.1（本 PR 发布，主题「修复生产包启动黑屏 + 生产冒烟入 CI」；上版 v4.78.0「语义建议多源·掐头去尾 + 采纳计数」/ bump `e54d5704`）
 >
-> e2e 基线（双口径）：**发现数 541 / passed 541 零 flaky**（M3 扩展·首实施新增 3 例：538 + 3，#186 终局 run 33083102729 实测 `541 passed (34.1m)`；首 run 33077635573 为 539 passed + 2 flaky 均池内已知项）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 541 / passed 540 + 1 flaky**（#188 run 33133132292 实测 `540 passed (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾达 `541 passed (34.1m)` 零 flaky）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -23,7 +23,7 @@
 9. **M3 扩展·首实施：语义建议多源「掐头去尾」+ 采纳计数**（PR #186 / merge `a609d8f5`，2026-08-27）：双源勘察共识第一梯队 b+d 落地（contentAnalysis 派生掐头/收尾收紧建议接入既有审阅采纳链）+ 情感高潮 top-K 算法内核入池 + 纯本地采纳记录器——详见 2.5 扩展记录
 10. **v4.77.0 发版**（历史回填，2026-08-27）：bump `9afaa8a3` / release merge `3e661490`（PR #185），主题「语义建议应用」，含 M3-3 A1 + P2 收官双修复；发版时 HANDOFF 工作线未及立目（发版事实当时只记于头部基线行与 §3 位置行），本条为 2026-08-28 v4.78.0 发版前补记
 11. **v4.78.0 发版**（2026-08-28）：主题「语义建议多源·掐头去尾 + 采纳计数」，正式收录 PR #186（M3 扩展首梯队：head-trim/tail-trim 双源 + 采纳计数器 + top-K 互斥内核入池），零功能代码变更
-12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（本 PR，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7
+12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（PR #188 / merge `20e93ba5`，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7；本条目随本发版 PR（release/v4.78.1）收录
 
 ---
 
@@ -180,18 +180,20 @@
 
 **本地验证证据**：修复前 prod-smoke 断言超时（#root 30s 未挂载，pageerror 实录 TDZ）；修复后 `{"passed":true,"rootChildElementCount":1,"pageErrors":[]}` exit 0；typecheck / 全量单测（675 文件 12494 passed + 3 skipped）/ `bun run build` / check:bundle 全部 exit 0。本 PR 零 spec 文件变更（e2e 发现数 541 不变）、零 src 代码变更（覆盖率口径 B 预期持平，CI 复核）。
 
+**CI 实测（PR #188 run 33133132292 全绿）**：changes / frontend（4m52s）/ rust（6m15s）/ **prod-smoke（2m18s，新基建首跑即绿）** / e2e（45m58s）全部 pass；e2e 汇总 `1 flaky + 540 passed (44.8m)` = 发现数 541 不变（flaky 为池内已知 nested-sequence-export 第 3 次复发，只记录不修）；desktop 口径 B **73.2941%**（CI artifact lcov 实测，与 #186 基线逐位一致，零回归实锤）≥ 门槛 73.1881%。
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `96448b69`（PR #187 merge，v4.78.0 发版），本分支为 v4.78.1 热修（主题「修复生产包启动黑屏 + 生产冒烟入 CI」），工作区干净。v4.78.0「语义建议多源·掐头去尾 + 采纳计数」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
+**位置**：main = `20e93ba5`（PR #188 merge，v4.78.1 热修合入），本分支为 v4.78.1 发版（主题「修复生产包启动黑屏 + 生产冒烟入 CI」，bump 见本 PR），工作区干净。v4.78.0「语义建议多源·掐头去尾 + 采纳计数」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.2941%（CI artifact lcov 实测，#186 run 33077635573）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- desktop 覆盖（口径 B）= **73.2941%（CI artifact lcov 实测，#188 run 33133132292 逐位复现 #186 基线）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%（a609d8f5 → 20e93ba5 持平）；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
 - editor-core 行覆盖 = **91.7356%**（CI artifact lcov 实测，#186 run；阈值 80%）
-- 全量单测：675 文件全过 exit 0（**12494 passed + 3 skipped**，#186 本地实测），无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#186 终局 run 33083102729 实测 `541 passed (34.1m)` 零 flaky；首 run 33077635573 为 539 passed + 2 flaky 均池内已知项：ai-multicam-cut / nested-sequence-export；M3 扩展·首实施新增 3 例：538 + 3；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
+- 全量单测：675 文件全过 exit 0（**12494 passed + 3 skipped**，#188 本地实测同 #186），无 unhandled rejection
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#188 run 33133132292 实测 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾 `541 passed (34.1m)` 零 flaky；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -209,7 +211,7 @@
 
 | 观察项 | 来源期次 | 说明 |
 |---|---|---|
-| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控 |
+| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 3 次复发（#175 首见 / #184 复发 / #188 再现），重试均通过 |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
 | e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
 | **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
