@@ -154,9 +154,9 @@ describe('ltx-video bridge：浏览器回退路径', () => {
     await expect(listRemoteModels()).resolves.toEqual({ models: [] });
   });
 
-  it('downloadModel/deleteModel 无 mock 时直接走 invoke（无 runtime 拦截，拒绝）', async () => {
-    await expect(downloadModel('r')).rejects.toThrow();
-    await expect(deleteModel('r')).rejects.toThrow();
+  it('downloadModel/deleteModel 无 Tauri 运行时以明确错误拒绝（写操作不可静默成功）', async () => {
+    await expect(downloadModel('r')).rejects.toThrow('Tauri 运行时不可用');
+    await expect(deleteModel('r')).rejects.toThrow('Tauri 运行时不可用');
   });
 });
 

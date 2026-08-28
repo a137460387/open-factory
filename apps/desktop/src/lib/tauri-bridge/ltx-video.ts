@@ -75,6 +75,11 @@ export function downloadModel(repoId: string): Promise<void> {
   if (mock) {
     return Promise.resolve(mock(repoId));
   }
+  // 写操作不可静默成功：浏览器环境（无 Tauri 运行时）以明确错误拒绝，
+  // 调用方（useModelManager）经 try-catch 展示 state.error
+  if (!isTauriRuntime()) {
+    return Promise.reject(new Error('Tauri 运行时不可用'));
+  }
   return invoke<void>('download_model', { request: { repoId } });
 }
 
@@ -82,6 +87,10 @@ export function deleteModel(repoId: string): Promise<void> {
   const mock = getTauriMocks()?.deleteModel;
   if (mock) {
     return Promise.resolve(mock(repoId));
+  }
+  // 写操作不可静默成功：浏览器环境（无 Tauri 运行时）以明确错误拒绝
+  if (!isTauriRuntime()) {
+    return Promise.reject(new Error('Tauri 运行时不可用'));
   }
   return invoke<void>('delete_model', { repoId });
 }
