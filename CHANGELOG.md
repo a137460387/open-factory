@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.78.1] - 2026-08-28
+
+热修版本：修复 v4.78.0 生产安装包启动黑屏（manualChunks 循环分块求值），并将生产产物冒烟纳入 CI 门禁。
+
+### Fixed
+- 生产包启动黑屏：循环分块下 @tanstack/react-virtual 的模块级代码在 React 初始化前求值（react-dom 的 scheduler 依赖被兜底路由进 vendor-utils，与 react-virtual → React 形成 vendor-react ↔ vendor-utils 双向分块循环），入口崩溃致 #root 空；连带塌缩 vendor 层修复后暴露的 editor-core 域分块 TDZ（域文件顶层求值访问跨块绑定）。经 v4.77.0 产物 hash 同构实证定性为 v4.73.0 分块拆分引入的遗留债，非近期功能回归
+
+### Changed
+- 生产产物冒烟入 CI：新增 prod-smoke job（vite build → preview 静态服务 + 无头 Chromium 断言 #root 挂载与零 pageerror），填补 e2e 仅覆盖 dev server（无生产分块）的流程盲区
+- 生产分块结构收敛：vendor-react 收敛为 React 生态闭包（react / react-dom / scheduler 同块）、@tanstack 独立成单向分块、editor-core 家族合并为单块（循环回到块内由 Rollup 模块拓扑排序保证求值顺序）；budget.json 单块预算 600KB → 2000KB（正确性塌缩的结构性代价，总量与 vendor-react 预算不变仍受控）
+
+### Tests
+- e2e 发现数 541 持平（零用例变更；540 passed + 1 flaky 均池内已知项）；desktop 覆盖率（口径 B）73.2941% 持平（零 src 代码变更，CI artifact lcov 逐位复现）；全量单测 675 文件 12494 passed + 3 skipped
+
 ## [v4.78.0] - 2026-08-28
 
 本版本主线为语义建议多源扩展首梯队（M3 扩展·首实施）：智能粗剪语义建议在叙事标记之外接入内容分析派生的「掐头/收尾收紧」双源，并以纯本地采纳计数器开始积累建议质量信号；同时交付情感高潮 top-K 互斥算法内核（入池待真实使用信号后裁组装）。
