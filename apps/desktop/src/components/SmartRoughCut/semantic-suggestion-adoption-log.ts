@@ -18,7 +18,7 @@ export interface SuggestionAdoptionEntry {
   ts: number;
 }
 
-const VALID_SOURCES: ReadonlySet<string> = new Set(['narrative', 'head-trim', 'tail-trim']);
+const VALID_SOURCES: ReadonlySet<string> = new Set(['narrative', 'head-trim', 'tail-trim', 'emotional-climax']);
 
 /** 记录一次采纳事件（写入失败静默忽略，不阻断采纳主流程） */
 export function recordSuggestionAdoption(source: SemanticSuggestionSource, timestamp: number = Date.now()): void {
