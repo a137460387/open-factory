@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-28 | 基线：main = `20e93ba5`（PR #188 merge，v4.78.1 热修合入）| 版本：v4.78.1（本 PR 发布，主题「修复生产包启动黑屏 + 生产冒烟入 CI」；上版 v4.78.0「语义建议多源·掐头去尾 + 采纳计数」/ bump `e54d5704`）
+> 更新时间：2026-08-28 | 基线：main = `d74769b7`（PR #190 merge，v4.78.2 修复合入）| 版本：v4.78.2（本 PR 发布，主题「隐藏控制台窗口」；上版 v4.78.1「修复生产包启动黑屏 + 生产冒烟入 CI」/ bump `b7eb9a8b`）
 >
 > e2e 基线（双口径）：**发现数 541 / passed 540 + 1 flaky**（#188 run 33133132292 实测 `540 passed (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾达 `541 passed (34.1m)` 零 flaky）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
 
@@ -24,6 +24,7 @@
 10. **v4.77.0 发版**（历史回填，2026-08-27）：bump `9afaa8a3` / release merge `3e661490`（PR #185），主题「语义建议应用」，含 M3-3 A1 + P2 收官双修复；发版时 HANDOFF 工作线未及立目（发版事实当时只记于头部基线行与 §3 位置行），本条为 2026-08-28 v4.78.0 发版前补记
 11. **v4.78.0 发版**（2026-08-28）：主题「语义建议多源·掐头去尾 + 采纳计数」，正式收录 PR #186（M3 扩展首梯队：head-trim/tail-trim 双源 + 采纳计数器 + top-K 互斥内核入池），零功能代码变更
 12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（PR #188 / merge `20e93ba5`，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7；本条目随本发版 PR（release/v4.78.1）收录
+13. **v4.78.2 维护发版：Windows 正式包隐藏控制台窗口**（PR #190 / merge `d74769b7`，2026-08-28）：v4.78.1 真机冒烟发现正式包启动伴随黑色控制台窗口，根因为 `src-tauri/src/main.rs` 缺失 `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`（Windows 正式构建按 console 子系统编译）；单行属性补齐（release 隐控制台 / dev 保留日志），零功能变更；本条目随本发版 PR（release/v4.78.2）收录
 
 ---
 
@@ -186,14 +187,14 @@
 
 ## 3. 当前状态
 
-**位置**：main = `20e93ba5`（PR #188 merge，v4.78.1 热修合入），本分支为 v4.78.1 发版（主题「修复生产包启动黑屏 + 生产冒烟入 CI」，bump 见本 PR），工作区干净。v4.78.0「语义建议多源·掐头去尾 + 采纳计数」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
+**位置**：main = `d74769b7`（PR #190 merge，v4.78.2 修复合入），本分支为 v4.78.2 发版（主题「隐藏控制台窗口」，bump 见本 PR），工作区干净。v4.78.1「修复生产包启动黑屏 + 生产冒烟入 CI」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
 
 **基线数据**：
 
 - desktop 覆盖（口径 B）= **73.2941%（CI artifact lcov 实测，#188 run 33133132292 逐位复现 #186 基线）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%（a609d8f5 → 20e93ba5 持平）；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
 - editor-core 行覆盖 = **91.7356%**（CI artifact lcov 实测，#186 run；阈值 80%）
 - 全量单测：675 文件全过 exit 0（**12494 passed + 3 skipped**，#188 本地实测同 #186），无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#188 run 33133132292 实测 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾 `541 passed (34.1m)` 零 flaky；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#190 run 33141956888 实测 `541 passed (34.1m)` 零 flaky；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾 `541 passed (34.1m)` 零 flaky；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -216,6 +217,7 @@
 | e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
 | **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
 | **生产构建分块顺序监控规则** | v4.78.1 热修（2026-08-28） | 事故根因为 manualChunks 循环分块 + 模块级求值访问跨块绑定（v4.73.0 起潜伏）。监控规则：任何 manualChunks 规则改动后本地必跑 `node scripts/prod-smoke.mjs`；CI prod-smoke job 持续把关。新增 vendor 依赖或调整路由时检查 vendor-react 闭包完整性与 chunk 依赖方向单向性（vite build 输出出现 Circular chunk 警告即红灯） |
+| **正式包 Rust stdout 不可见** | v4.78.2（2026-08-28） | 正式包 Rust stdout（tracing JSON）自 v4.78.2 起 windows_subsystem=windows 后不再可见，属预期行为；后端诊断以 CDP 前端取证为主通道（v4.78.0 事故中已验证有效） |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
 | useClipInspectorState 拆分重构候选 | 三期 | hook 结构过大 |
