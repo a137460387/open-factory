@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.78.2] - 2026-08-28
+
+维护版本：Windows 正式包隐藏控制台窗口。
+
+### Fixed
+- Windows 正式包启动不再弹出控制台窗口（`windows_subsystem` 属性补齐）；正式包 Rust stdout 日志随之不再可见，属预期行为
+
 ## [v4.78.1] - 2026-08-28
 
 热修版本：修复 v4.78.0 生产安装包启动黑屏（manualChunks 循环分块求值），并将生产产物冒烟纳入 CI 门禁。
