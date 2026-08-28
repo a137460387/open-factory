@@ -112,8 +112,8 @@
     Alt+G playhead 间隙闭合、组感知 ripple 删除（桌面选区自动扩组）、timeline-advanced.spec.ts E2E 11 用例。
     已知边界：组内 trim 不联动（设计决策，见 v4.74.0 Release Notes）。
 - [x] Smart rough-cut panel that coordinates scene detection, silence removal, local Whisper subtitles, and an edit report.
-- [ ] Priority scheduling and explicit throttling controls for background media jobs.
-- [ ] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
+- [x] Priority scheduling and explicit throttling controls for background media jobs.
+- [x] Batch waveform pre-generation controls and more codec-aware audio decoding fallbacks.
 - [x] Main bundle code splitting for heavy panels and settings pages.
 - [ ] macOS/Linux native dialog automation where unattended host control is available.
 - [ ] WASM/GPU export acceleration and advanced preview effects.
@@ -126,7 +126,9 @@
 > 2026-08-18 核对勾选：时间线高级编辑工具（Ripple edit / gap close / rolling trim / grouped clips / 专业快捷键）已落地——波纹删除（RippleDeleteCommand + rippleDeleteSelected + 工具栏按钮 + 右键菜单 + e2e）、间隙关闭（CloseGapCommand/FillGapCommand/gap-handlers.ts）、滚动修剪（rollingTrimActive）、分组片段（editor-core `clip-groups.ts` + `clip-group-commands.ts`，desktop 129 处消费）、滑移/滑行模式与 S 键指示器；E2E `apps/desktop/e2e/timeline-advanced-tools.spec.ts`（4 用例）在列；typecheck exit 0。
 >
 > 2026-08-18 核对勾选：Smart rough-cut panel 已实现并转绿——分步编排面板 SmartRoughCutStepPanel 挂载于 ShellRightPanel.tsx:285-286；e2e 实测 smart-rough-cut.spec.ts 3 passed（39s，:4/:35/:62）；历史 7c58da7a「智能粗剪分步编排面板，3 例转绿 (issue #114)」、35b68295 清理旧孤儿面板。
+>
+> 2026-08-28 核对勾选：后台媒体作业优先级调度与显式限流、批量波形预生成与 codec 感知音频解码回退两项已于 v4.75.0 交付（CHANGELOG v4.75.0 Added「后台媒体作业优先级调度与显式限流控制（roadmap 项）」「批量波形预生成与 codec 感知音频解码回退（roadmap 项）」），本次补勾。其余未勾选项（macOS/Linux 原生对话框自动化 / WASM-GPU 导出加速 / Headless 自动化）未逐项核实，保持原状。
 
 ---
 
-*Last updated: 2026-08-18*
+*Last updated: 2026-08-28*
