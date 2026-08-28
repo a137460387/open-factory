@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-28 | 基线：main = `a609d8f5`（PR #186 merge）| 版本：v4.78.0（本 PR 发布，主题「语义建议多源·掐头去尾 + 采纳计数」；上版 v4.77.0「语义建议应用」/ bump `9afaa8a3`）
+> 更新时间：2026-08-28 | 基线：main = `96448b69`（PR #187 merge，v4.78.0 发版）| 版本：v4.78.1 热修中（本 PR，主题「修复生产包启动黑屏 + 生产冒烟入 CI」；上版 v4.78.0「语义建议多源·掐头去尾 + 采纳计数」/ bump `e54d5704`）
 >
 > e2e 基线（双口径）：**发现数 541 / passed 541 零 flaky**（M3 扩展·首实施新增 3 例：538 + 3，#186 终局 run 33083102729 实测 `541 passed (34.1m)`；首 run 33077635573 为 539 passed + 2 flaky 均池内已知项）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
 
@@ -22,7 +22,8 @@
 8. **M3-3 A1 语义建议接入 Compare 审阅与应用**（PR #184 / merge `e8f94590`，2026-08-27 定调后落地）：单条建议对比审阅（before/after + 保留比例）+ 显式采纳走既有 ApplyRoughCutProposalCommand 通道 + undo 链路 e2e 断言；A2 批量整合降格为设计候选——详见 2.5 定调记录
 9. **M3 扩展·首实施：语义建议多源「掐头去尾」+ 采纳计数**（PR #186 / merge `a609d8f5`，2026-08-27）：双源勘察共识第一梯队 b+d 落地（contentAnalysis 派生掐头/收尾收紧建议接入既有审阅采纳链）+ 情感高潮 top-K 算法内核入池 + 纯本地采纳记录器——详见 2.5 扩展记录
 10. **v4.77.0 发版**（历史回填，2026-08-27）：bump `9afaa8a3` / release merge `3e661490`（PR #185），主题「语义建议应用」，含 M3-3 A1 + P2 收官双修复；发版时 HANDOFF 工作线未及立目（发版事实当时只记于头部基线行与 §3 位置行），本条为 2026-08-28 v4.78.0 发版前补记
-11. **v4.78.0 发版**（本 PR，2026-08-28）：主题「语义建议多源·掐头去尾 + 采纳计数」，正式收录 PR #186（M3 扩展首梯队：head-trim/tail-trim 双源 + 采纳计数器 + top-K 互斥内核入池），零功能代码变更
+11. **v4.78.0 发版**（2026-08-28）：主题「语义建议多源·掐头去尾 + 采纳计数」，正式收录 PR #186（M3 扩展首梯队：head-trim/tail-trim 双源 + 采纳计数器 + top-K 互斥内核入池），零功能代码变更
+12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（本 PR，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7
 
 ---
 
@@ -160,11 +161,30 @@
 | #181 | `93c12e31` | `c1e2f4e5` | ASRStage 死链路退役：四断点实证（请求参数空占位 / worker `tauri-request` 无主线程应答器 / audioPath 结构性缺失 / `whisperReady` 恒 false）定性死链路而非接线；执行「保下游、去上游」切割（删除 ASRStage.tsx 与 ai-transcription.worker.ts，转写生成字幕由分步面板 whisper 步与 Timeline 右键承接）；e2e smart-subtitles.spec 9→7 例壳层重写，发现数 537→535 |
 | #182 | `f5ecaf03` | `74da84a4` | detectDialogueTurns maxTurnDuration 判据治理纯音乐误报（默认 15s 可配，六形态回归矩阵固化入 content-analysis.test.ts）+ `lib/asr.ts` 空壳桩及桩测试删除（死代码自证闭环）；run2 实测 e2e `535 passed (41.5m)` 零 flaky；desktop 口径 B 覆盖率 73.1881%（基线 73.04%，+0.15pp） |
 
+### 2.7 v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI（2026-08-28）
+
+**事故与诊断**：v4.78.0 真机冒烟发现安装包启动黑屏（#root 空、React 挂载中断）。机器侧 CDP 程序取证定位：生产构建 vendor 分块拆分下，vendor-utils 中 @tanstack/react-virtual 的模块级代码 `const Wn=typeof document<"u"?N.useLayoutEffect:N.useEffect`（N=React 导入绑定，为 undefined）在 React 初始化前求值，入口模块求值期崩溃。本地 vite build 复现实锤循环：入口 index 首行 import vendor-react → vendor-react 首行 import vendor-utils（react-dom 的直接依赖 scheduler 被 manualChunks 兜底规则路由进 vendor-utils）→ vendor-utils 首行 import vendor-react（react-virtual 依赖 React）——**双向 chunk 级循环**，vendor-utils 模块体先于 react 模块体求值。
+
+**考古定性（遗留债，非 #186 回归）**：@tanstack/react-virtual ^3.14.5 引入于 `8bf7a5f4`（2026-07-04，v4.13.0 起在产）；manualChunks vendor 拆分引入于 `d17ffe76`（2026-07-28，v4.73.0 起生效）；两者均早于 v4.77.0（bump `9afaa8a3`）。实证：checkout v4.77.0 + vite build（产物落 TEMP 自证后清），其 vendor-utils-BI0vssp6.js / vendor-react-D38zqad2.js 块名 hash 与 main 构建完全一致——**分块结构同构，v4.73.0～v4.78.0 生产包均带病**，此前从未被真机冒烟检验；v4.77.0→v4.78.0 vite.config.ts 零 diff、package.json 仅版本号变更，排除 #186 回归。
+
+**e2e 漏网原因**：e2e 全量跑 dev server（vite dev 无 rollup 分块，浏览器原生 ESM 加载序不同），生产分块崩溃对 e2e 不可见——这是本事故的流程盲区，生产冒烟基建即为此补齐。
+
+**修复（方案 B 循环塌缩，两层，commit `23795583`）**：
+
+1. **vendor 层**：vendor-react 收敛为 React 生态闭包（react + react-dom + scheduler 同块，消除 react-dom→vendor-utils 反向边）；@tanstack 独立成 vendor-tanstack，对 vendor-react 保持单向依赖（React 不反向依赖 tanstack），既保证求值序安全又守住 vendor-react 200KB 预算（实测 194.65KB）。
+2. **editor-core 层（修复 vendor 后暴露的第二层 TDZ）**：vendor 修复后冒烟复跑发现 `ReferenceError: Cannot access 'w' before initialization`（editor-core-timeline 块，timeline-templates 顶层求值 BUILT_IN_TIMELINE_TEMPLATES 访问 model 的 DEFAULT_COLOR_CORRECTION）；逐层定位后实测 editor-core 家族按文件名正则拆出的 10 个域块存在 **92+ 条兜底→域、300+ 条域→兜底、40+ 条域间文件级循环边**（Rollup 15+ 组 Circular chunk 警告实锤），多个域文件顶层求值访问跨块绑定，打地鼠不可持续——**合并为单一 editor-core 块**，环回到 chunk 内部由 Rollup 模块拓扑排序保证求值顺序（块级执行序由浏览器 import 决定、Rollup 失去控制，正是多块循环爆 TDZ 的机制）。原分块缓存粒度损失可接受（本地 Tauri 桌面加载无网络往返，包级缓存语义保留）。
+
+**配套变更**：`budget.json` maxChunkSizeKB 600→2000（editor-core 单块 1547KB，正确性塌缩的结构性代价；总量 6800KB 与 vendor-react 200KB 预算不变仍受控，check:bundle 实测 PASS）。
+
+**生产冒烟基建（事故核心产出）**：`apps/desktop/scripts/prod-smoke.mjs`（vite preview 起静态服务 + 无头 Chromium 加载首页，断言 #root childElementCount>0 且零 pageerror；纯浏览器下 Tauri invoke 不可用的 console error 为环境预期项，不计入门禁）+ CI 新增 `prod-smoke` job（commit `e9025f37`，与 e2e 并行：bun install → playwright chromium → bun run build → node scripts/prod-smoke.mjs）。
+
+**本地验证证据**：修复前 prod-smoke 断言超时（#root 30s 未挂载，pageerror 实录 TDZ）；修复后 `{"passed":true,"rootChildElementCount":1,"pageErrors":[]}` exit 0；typecheck / 全量单测（675 文件 12494 passed + 3 skipped）/ `bun run build` / check:bundle 全部 exit 0。本 PR 零 spec 文件变更（e2e 发现数 541 不变）、零 src 代码变更（覆盖率口径 B 预期持平，CI 复核）。
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `a609d8f5`（PR #186 merge，M3 扩展·首实施落地），本分支为 v4.78.0 发版（主题「语义建议多源·掐头去尾 + 采纳计数」，bump 见本 PR），工作区干净。v4.77.0「语义建议应用」已发布（2026-08-27）。M3 主线：M3-1/M3-2/M3-3 A1 与 M3 扩展·首实施（b+d）全部合入；M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
+**位置**：main = `96448b69`（PR #187 merge，v4.78.0 发版），本分支为 v4.78.1 热修（主题「修复生产包启动黑屏 + 生产冒烟入 CI」），工作区干净。v4.78.0「语义建议多源·掐头去尾 + 采纳计数」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
 
 **基线数据**：
 
@@ -193,6 +213,7 @@
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
 | e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
 | **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
+| **生产构建分块顺序监控规则** | v4.78.1 热修（2026-08-28） | 事故根因为 manualChunks 循环分块 + 模块级求值访问跨块绑定（v4.73.0 起潜伏）。监控规则：任何 manualChunks 规则改动后本地必跑 `node scripts/prod-smoke.mjs`；CI prod-smoke job 持续把关。新增 vendor 依赖或调整路由时检查 vendor-react 闭包完整性与 chunk 依赖方向单向性（vite build 输出出现 Circular chunk 警告即红灯） |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
 | getClipSpeed 重复实现 | 二期 | ai-features.ts vs editor-core |
 | useClipInspectorState 拆分重构候选 | 三期 | hook 结构过大 |
@@ -222,7 +243,7 @@
 
 ### 5.1 CI 结构（`.github/workflows/`）
 
-- `ci.yml`：changes（paths-filter）→ rust（required，含 cargo-audit）+ frontend（bun audit → typecheck → vitest --coverage）+ e2e（playwright，timeout 60 分钟 × retry 2）+ security-scan（仅 schedule）
+- `ci.yml`：changes（paths-filter）→ rust（required，含 cargo-audit）+ frontend（bun audit → typecheck → vitest --coverage）+ e2e（playwright，timeout 60 分钟 × retry 2）+ prod-smoke（生产产物冒烟：vite build → preview + 无头 Chromium 断言 #root 挂载，v4.78.1 起与 e2e 并行）+ security-scan（仅 schedule）
 - `release.yml`：`on: push: tags: 'v*'`，tauri-action 三平台构建自动建 Release
 - **audit 豁免机制**：`apps/desktop/src-tauri/.cargo/audit.toml`（每条豁免须附风险评估注释 + 升级待办）
 
