@@ -7,6 +7,7 @@ import {
   detectTailTrimEnd,
   normalizeClipContentAnalysis,
   sampleEmotionCurve,
+  selectEmotionalClimaxIntervals,
   selectTopKMutuallyExclusive,
   serializeClipContentAnalysisJson,
   type ClipContentAnalysis,
@@ -459,6 +460,58 @@ describe('selectTopKMutuallyExclusive 单测矩阵', () => {
   it('minScore 显式参数：抬升入选门槛', () => {
     const curve = [point(0, 0.2), point(10, 0.9)];
     expect(selectTopKMutuallyExclusive(curve, 2, { minScore: 0.5 })).toEqual([
+      { start: 10, end: 15, score: 0.9 },
+    ]);
+  });
+});
+
+describe('selectEmotionalClimaxIntervals 组装层（窗口过滤 + 内核 + clamp）', () => {
+  function point(time: number, value: number): ContentEmotionPoint {
+    return { time, value, brightness: value };
+  }
+
+  it('常规：窗口内高潮点选取并延伸，越窗端点 clamp 至窗口末端', () => {
+    // 窗口 [0, 8]：高潮点 1（0.9）延伸 [1,6] 不越窗；高潮点 7（0.8）延伸 [7,12] → clamp [7,8]
+    const curve = [point(1, 0.9), point(7, 0.8)];
+    expect(selectEmotionalClimaxIntervals(curve, 0, 8)).toEqual([
+      { start: 1, end: 6, score: 0.9 },
+      { start: 7, end: 8, score: 0.8 },
+    ]);
+  });
+
+  it('窗口过滤：窗口外高潮点不参与选取', () => {
+    // 窗口 [2, 10]：点 0（0.95）在窗外剔除；点 3（0.7）入选
+    const curve = [point(0, 0.95), point(3, 0.7)];
+    expect(selectEmotionalClimaxIntervals(curve, 2, 10)).toEqual([{ start: 3, end: 8, score: 0.7 }]);
+  });
+
+  it('默认 k=2：候选多于 2 时只取 score 最高的两个互斥区间', () => {
+    const curve = [point(0, 0.5), point(6, 0.9), point(12, 0.7)];
+    expect(selectEmotionalClimaxIntervals(curve, 0, 20)).toEqual([
+      { start: 6, end: 11, score: 0.9 },
+      { start: 12, end: 17, score: 0.7 },
+    ]);
+  });
+
+  it('极短保护：clamp 后区间短于 minIntervalDuration（默认 1s）剔除', () => {
+    // 高潮点 7.8 延伸 [7.8, 12.8] → clamp [7.8, 8] 仅 0.2s < 1 → 剔除
+    expect(selectEmotionalClimaxIntervals([point(7.8, 0.9)], 0, 8)).toEqual([]);
+    // 显式放宽最短时长后可保留
+    expect(selectEmotionalClimaxIntervals([point(7.8, 0.9)], 0, 8, { minIntervalDuration: 0.1 })).toEqual([
+      { start: 7.8, end: 8, score: 0.9 },
+    ]);
+  });
+
+  it('边界：空曲线 / 非法窗口 / 全零能量 → []', () => {
+    expect(selectEmotionalClimaxIntervals([], 0, 8)).toEqual([]);
+    expect(selectEmotionalClimaxIntervals([point(1, 0.9)], 8, 8)).toEqual([]);
+    expect(selectEmotionalClimaxIntervals([point(1, 0.9)], Number.NaN, 8)).toEqual([]);
+    expect(selectEmotionalClimaxIntervals([point(1, 0), point(2, 0)], 0, 8)).toEqual([]);
+  });
+
+  it('窗口起点非零：区间起点不早于窗口起点（窗口起点后高潮点正常）', () => {
+    // 窗口 [10, 20]：高潮点 10（0.9）→ [10, 15]
+    expect(selectEmotionalClimaxIntervals([point(10, 0.9)], 10, 20)).toEqual([
       { start: 10, end: 15, score: 0.9 },
     ]);
   });

@@ -104,23 +104,28 @@ export function deriveTightenSuggestions(
 }
 
 /**
- * 双源建议合并（排序 + 去重共存规则，确定性逻辑）。
+ * 多源建议合并（排序 + 去重共存规则，确定性逻辑）。
  *
- * 排序：climax（confidence 降序）→ 非 climax narrative（时间升序）→
- * head-trim → tail-trim（climax 优先原则不变，派生启发式殿后）。
- * 去重：派生项与任一 narrative 项 timeRange 完全相等（容差 1e-6）时
- * 剔除派生项（narrative 语义建议优先）；head 与 tail 结构上不可能完全
- * 相等（head.start 严格大于 clip.start，tail.end 严格小于 clip 末端）。
+ * 排序：climax 组（narrative climax + emotional-climax，confidence 降序）
+ * → 非 climax narrative（时间升序）→ head-trim → tail-trim（climax 优先
+ * 原则不变，派生启发式殿后）。
+ * 去重：派生项（head/tail/emotional-climax）与任一 narrative 项 timeRange
+ * 完全相等（容差 1e-6）时剔除派生项（narrative 语义建议优先）；head 与
+ * tail 结构上不可能完全相等（head.start 严格大于 clip.start，tail.end
+ * 严格小于 clip 末端）；emotional-climax 组内由 top-K 内核保证互斥无重复。
  * 同区间重复出现视为缺陷，由测试断言合并结果无重复区间兜底。
  */
 export function mergeSemanticSuggestions(
   narrative: SemanticRoughCutSuggestion[],
   tighten: SemanticRoughCutSuggestion[],
+  climax: SemanticRoughCutSuggestion[] = [],
 ): SemanticRoughCutSuggestion[] {
+  const orderedClimax = [
+    ...narrative.filter((item) => item.markerType === 'climax'),
+    ...climax,
+  ].sort((left, right) => right.confidence - left.confidence);
   const orderedNarrative = [
-    ...narrative
-      .filter((item) => item.markerType === 'climax')
-      .sort((left, right) => right.confidence - left.confidence),
+    ...orderedClimax,
     ...narrative
       .filter((item) => item.markerType !== 'climax')
       .sort((left, right) => left.timeRange.start - right.timeRange.start),
