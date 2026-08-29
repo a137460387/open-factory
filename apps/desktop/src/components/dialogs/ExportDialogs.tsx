@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import type { Project, MediaAsset } from '@open-factory/editor-core';
 import type { ExportPreset } from '../../export/export-presets';
 import { useDialogStore } from '../../store/dialogStore';
@@ -74,6 +74,21 @@ export function ExportDialogs({
   const setBatchTranscodeInitialPaths = useExportFeatureStore((s) => s.setBatchTranscodeInitialPaths);
   const gifExportAsset = useExportFeatureStore((s) => s.gifExportAsset);
   const setGifExportAsset = useExportFeatureStore((s) => s.setGifExportAsset);
+
+  // 内层对话框 chunk 首次打开才 import，dev ESM 瀑布在慢机/CI 上可令
+  // export-dialog 挂载超过 10s（HANDOFF 2.9 勘察）。启动后空闲时预热
+  // ExportDialog，点击时命中模块缓存；idle 回调不阻塞首屏，不可用时回退 setTimeout。
+  useEffect(() => {
+    const warm = () => {
+      void import('../../export/ExportDialog');
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(warm);
+      return () => window.cancelIdleCallback(idleId);
+    }
+    const timer = window.setTimeout(warm, 2_000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <Suspense fallback={<PanelLoading label="导出" />}>
