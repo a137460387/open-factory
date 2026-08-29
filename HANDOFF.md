@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-28 | 基线：main = `d74769b7`（PR #190 merge，v4.78.2 修复合入）| 版本：v4.78.2（本 PR 发布，主题「隐藏控制台窗口」；上版 v4.78.1「修复生产包启动黑屏 + 生产冒烟入 CI」/ bump `b7eb9a8b`）
+> 更新时间：2026-08-28 | 基线：main = `c6bf6365`（PR #193 merge，v4.79.0 功能 + 搭车维护合入）| 版本：v4.78.2 已发布（主题「隐藏控制台窗口」/ bump `89fb5d12`）；v4.79.0 待发（主题「情感高潮 top-K 建议」，收录 PR #192 + #193，发版分支随后）
 >
-> e2e 基线（双口径）：**发现数 541 / passed 540 + 1 flaky**（#188 run 33133132292 实测 `540 passed (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾达 `541 passed (34.1m)` 零 flaky）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27）——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 543 / passed 542 + 1 flaky**（main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 第 2 次；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，nested-sequence-export 第 3 次）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27），M3 扩展·第二梯队 +2 例至 543（2026-08-28）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -25,6 +25,7 @@
 11. **v4.78.0 发版**（2026-08-28）：主题「语义建议多源·掐头去尾 + 采纳计数」，正式收录 PR #186（M3 扩展首梯队：head-trim/tail-trim 双源 + 采纳计数器 + top-K 互斥内核入池），零功能代码变更
 12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（PR #188 / merge `20e93ba5`，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7；本条目随本发版 PR（release/v4.78.1）收录
 13. **v4.78.2 维护发版：Windows 正式包隐藏控制台窗口**（PR #190 / merge `d74769b7`，2026-08-28）：v4.78.1 真机冒烟发现正式包启动伴随黑色控制台窗口，根因为 `src-tauri/src/main.rs` 缺失 `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`（Windows 正式构建按 console 子系统编译）；单行属性补齐（release 隐控制台 / dev 保留日志），零功能变更；本条目随本发版 PR（release/v4.78.2）收录
+14. **M3 扩展·第二梯队：情感高潮 top-K 建议组装接入**（PR #192 / merge `0706cf38` + 搭车维护 PR #193 / merge `c6bf6365`，2026-08-28）：top-K 闸门经人类定调放行（单一用户项目，用户本人已实际采纳 b+d 建议，原判定标准「b+d 真实使用信号」以定调记录方式关闭）；`selectEmotionalClimaxIntervals` 组装层（窗口过滤 + 内核互斥选取 + 边界 clamp + 极短保护，内核零改动）+ `semantic-climax-suggestion` 派生层 + 多源合并第三源（climax 组 confidence 降序）+ 采纳计数器 `emotional-climax` 枚举；搭车维护 = roadmap 补勾两项 + ltx-video downloadModel/deleteModel 浏览器回退补齐 + PR #104 wontfix 关闭（hooks 拆分思路并入 #108）——详见 2.8
 
 ---
 
@@ -153,7 +154,7 @@
 
 **M3-3 A1 实现（PR #184，merge `e8f94590`）**：新增纯函数层 `semantic-suggestion-review.ts`（时间线绝对时间 → 源素材时间换算 `source = trimStart + (abs − clip.start) × speed`、单元素 segments 构造、before/after 审阅视图模型、整 clip 覆盖预判——与 ApplyRoughCutProposalCommand 命令侧守卫口径一致）+ `SemanticSuggestionReviewDialog`（before/after 双条带 + 保留比例 + 「采纳此建议」单一显式入口 + 成功/失败即时反馈；整 clip 建议禁用采纳并说明）+ `useSmartRoughCut.applySemanticSuggestion`（try-catch 包既有命令通道，失败零时间线变更）+ `SemanticSuggestionList` 项内「对比审阅」入口。审阅目标打开时快照 clip（采纳以新 id 切片替换原 clip，实时 selectedClip 会失联）。红线遵守：无多选/批量/自动应用、无新增 store/持久化、撤销只走既有 undo 栈、MediaState 撤销栈内部零触碰、detectDialogueTurns/maxTurnDuration 零改动。e2e +3 例（审阅打开断言 / 采纳成功+undo 恢复 / 整 clip 建议预判禁用），发现数 535 → 538（run 33052967308：`536 passed + 2 flaky`，flaky 均池内：advanced-text:4 / nested-sequence-export:67）；desktop 口径 B 73.2213%。
 
-**M3 扩展·首实施（PR #186，双源勘察共识第一梯队，2026-08-27）**：b（掐头收紧 head-trim）+ d（收尾收紧 tail-trim）落地——均为单区间 keep-range，审阅采纳链零改造复用（suggestionToSegments → ApplyRoughCutProposalCommand → undo 既有链路，审阅模型与 coversEntireClip 不做多区间改造）；c（情感高潮 top-K）仅交付通用算法内核 `selectTopKMutuallyExclusive`（高潮点向后 windowDuration 成区间、score 降序贪心互斥、端点相接不算重叠、并列 score 时间升序决断），本期组装层不消费；a（长静默）/ e（节拍对齐）/ f（冗余台词）三方向评估不碰；A2 批量整合维持人类决议挂起，本轮任何形态不涉及多选/批量应用。实现分层：editor-core 三个只增纯函数（`detectHeadTrimStart`：首个内容起点 + `HEAD_TRIM_MARGIN_SECONDS=0.3` 余量、onset 兜底、极短 clip 保护 `TIGHTEN_MIN_KEEP_SECONDS=1`；`detectTailTrimEnd`：尾部低能量回溯、防误伤片尾淡出的 silenceThreshold 显式参数（默认 0.08 与 detectDialogueTurns 同口径，参照 maxTurnDuration 先例定性）；单测矩阵 42 例，detectDialogueTurns/maxTurnDuration 零改动）+ desktop 派生层 `semantic-tighten-suggestion.ts`（contentAnalysis 源域 → 时间线绝对域换算 + loudness 上升沿 onset 兜底，阈值常量自 useRoughCutAnalysis 导出复用防重复实现）+ 合并去重规则（确定性并配测：climax 优先（confidence 降序）→ 非 climax narrative 时间升序 → head-trim → tail-trim；派生项与 narrative 项 timeRange 完全相等（1e-6 容差）时剔除派生项，同区间重复出现视为缺陷）+ `SemanticRoughCutSuggestion.source` 字段（narrative/head-trim/tail-trim，向后兼容补默认值）+ `semanticReady` 双源门控（转写或内容分析任一就绪即呈现各自部分）+ UI「掐头收紧」「收尾收紧」文案与「启发式」来源标签（zh 文案，en-overrides 不动，沿 M3-2 先例）。**情感高潮 top-K 闸门**：入池待裁——待 b+d 真实使用信号后再裁是否组装接入，且届时须同时回答与 Compare 方案卡的双入口分工。**采纳计数器**：`open-factory:semantic-suggestion-adoptions` 键（`{source, ts}[]` 封顶 500 截旧），挂点 applySemanticSuggestion 成功分支（失败不入账，写入异常静默）；纯本地零上报、不进项目持久化 schema；用途 = 可按任意口径（来源类型/时间窗）聚合，作为建议质量评估与后续拓展方向（含 top-K 闸门判定）的长期候选拓展信号积累。e2e +3 例（混合门控：仅分析就绪时收紧类条目出现且 narrative 缺席 / head-tighten 审阅+采纳时长缩短+undo 还原 / tail-tighten 同款），发现数 538 → 541（run 33077635573：`539 passed + 2 flaky` 均池内已知项）；desktop 口径 B 73.2941%（基线 73.1881%，+0.11pp）。
+**M3 扩展·首实施（PR #186，双源勘察共识第一梯队，2026-08-27）**：b（掐头收紧 head-trim）+ d（收尾收紧 tail-trim）落地——均为单区间 keep-range，审阅采纳链零改造复用（suggestionToSegments → ApplyRoughCutProposalCommand → undo 既有链路，审阅模型与 coversEntireClip 不做多区间改造）；c（情感高潮 top-K）仅交付通用算法内核 `selectTopKMutuallyExclusive`（高潮点向后 windowDuration 成区间、score 降序贪心互斥、端点相接不算重叠、并列 score 时间升序决断），本期组装层不消费；a（长静默）/ e（节拍对齐）/ f（冗余台词）三方向评估不碰；A2 批量整合维持人类决议挂起，本轮任何形态不涉及多选/批量应用。实现分层：editor-core 三个只增纯函数（`detectHeadTrimStart`：首个内容起点 + `HEAD_TRIM_MARGIN_SECONDS=0.3` 余量、onset 兜底、极短 clip 保护 `TIGHTEN_MIN_KEEP_SECONDS=1`；`detectTailTrimEnd`：尾部低能量回溯、防误伤片尾淡出的 silenceThreshold 显式参数（默认 0.08 与 detectDialogueTurns 同口径，参照 maxTurnDuration 先例定性）；单测矩阵 42 例，detectDialogueTurns/maxTurnDuration 零改动）+ desktop 派生层 `semantic-tighten-suggestion.ts`（contentAnalysis 源域 → 时间线绝对域换算 + loudness 上升沿 onset 兜底，阈值常量自 useRoughCutAnalysis 导出复用防重复实现）+ 合并去重规则（确定性并配测：climax 优先（confidence 降序）→ 非 climax narrative 时间升序 → head-trim → tail-trim；派生项与 narrative 项 timeRange 完全相等（1e-6 容差）时剔除派生项，同区间重复出现视为缺陷）+ `SemanticRoughCutSuggestion.source` 字段（narrative/head-trim/tail-trim，向后兼容补默认值）+ `semanticReady` 双源门控（转写或内容分析任一就绪即呈现各自部分）+ UI「掐头收紧」「收尾收紧」文案与「启发式」来源标签（zh 文案，en-overrides 不动，沿 M3-2 先例）。**情感高潮 top-K 闸门**：入池待裁——待 b+d 真实使用信号后再裁是否组装接入，且届时须同时回答与 Compare 方案卡的双入口分工。**销项（人类定调，2026-08-28）**：单一用户项目，用户本人已实际采纳 b+d 建议，原判定标准「b+d 真实使用信号」以定调记录方式关闭，组装接入放行（定调与双入口分工答案详见 2.8）；落地 = PR #192。**采纳计数器**：`open-factory:semantic-suggestion-adoptions` 键（`{source, ts}[]` 封顶 500 截旧），挂点 applySemanticSuggestion 成功分支（失败不入账，写入异常静默）；纯本地零上报、不进项目持久化 schema；用途 = 可按任意口径（来源类型/时间窗）聚合，作为建议质量评估与后续拓展方向（含 top-K 闸门判定）的长期候选拓展信号积累。e2e +3 例（混合门控：仅分析就绪时收紧类条目出现且 narrative 缺席 / head-tighten 审阅+采纳时长缩短+undo 还原 / tail-tighten 同款），发现数 538 → 541（run 33077635573：`539 passed + 2 flaky` 均池内已知项）；desktop 口径 B 73.2941%（基线 73.1881%，+0.11pp）。
 
 ### 2.6 P2 收官双修复 + 观察池销账（2026-08-27）
 
@@ -183,18 +184,43 @@
 
 **CI 实测（PR #188 run 33133132292 全绿）**：changes / frontend（4m52s）/ rust（6m15s）/ **prod-smoke（2m18s，新基建首跑即绿）** / e2e（45m58s）全部 pass；e2e 汇总 `1 flaky + 540 passed (44.8m)` = 发现数 541 不变（flaky 为池内已知 nested-sequence-export 第 3 次复发，只记录不修）；desktop 口径 B **73.2941%**（CI artifact lcov 实测，与 #186 基线逐位一致，零回归实锤）≥ 门槛 73.1881%。
 
+### 2.8 M3 扩展·第二梯队：情感高潮 top-K 建议组装接入 + 搭车维护（2026-08-28）
+
+**闸门定调记录**：top-K 内核 `selectTopKMutuallyExclusive` 于 #186 入池待裁，原判定标准为「b+d 真实使用信号」。人类定调放行（2026-08-28）：单一用户项目，用户本人已实际采纳 b+d 建议（采纳计数器入账），原判定标准以定调记录方式关闭——闸门销项，组装接入放行；2.5 闸门原文保留不动。
+
+**设计答案**（勘察结论，已落地）：
+
+- **数据源**：`clip.contentAnalysis.emotionCurve`（源域）→ 过滤至 clip 源窗口 → top-K（K=2，window 5s，minScore 0）→ clamp 至窗口 → 换算时间线绝对时间；clamp 后短于 1s（`TIGHTEN_MIN_KEEP_SECONDS` 同口径）不产出
+- **互斥语义**：top-K 组内互斥（内核保证）；与 head/tail-trim 不跨组互斥（局部高光区间 vs 整 clip keep-range，语义不同），区间完全相等时走既有 1e-6 去重
+- **双入口分工**：Compare 方案卡 = 整段粗剪重构（多区间策略提案）；建议列表 top-K = 局部高光保留（单区间），同一 `ApplyRoughCutProposalCommand` 命令通道
+- **UI 文案**：UI 零改动——SemanticSuggestionList 已按 `markerType==='climax'` 琥珀高亮、`source!=='narrative'` 挂「启发式」标签，新源天然适配
+
+**实现**（PR #192 / merge `0706cf38`，12 文件 +539/-15）：
+
+- editor-core：`selectEmotionalClimaxIntervals` 组装层（窗口过滤 + 内核互斥选取 + 边界 clamp + 极短保护），内核零改动；单测 +6 例
+- desktop：`semantic-climax-suggestion.ts` 派生层（emotionCurve → 时间线绝对域换算）+ `mergeSemanticSuggestions` 第三源（climax 组 confidence 降序）+ `SemanticSuggestionSource` 新增 `emotional-climax` 枚举 + 采纳计数器 `VALID_SOURCES` 同步；单测 +12 例
+- e2e：+2 例（单源形态呈现 / 审阅采纳 + 计数入账 + undo 恢复），发现数 541 → 543
+- 门禁：PR CI 六项全绿；全量单测 12513 passed（基线 12494 + 19）；desktop 口径 B 73.35%（基线 73.2941%，+0.06pp）；typecheck / build exit 0；本地 prod-smoke passed 零 pageerror；main 终位 run 33165898507 实测 `542 passed + 1 flaky (42.7m)`（flaky 为池内已知 ai-multicam-cut 复发）
+- 红线遵守：无多选/批量/自动应用（A2 维持挂起零涉及）；无新增 store/持久化；撤销只走既有 undo 栈；纯本地零上报
+
+**搭车维护**（PR #193 / merge `c6bf6365`，3 文件 +17/-6）：
+
+- roadmap.md：补勾两项 v4.75.0 已交付项（后台媒体作业优先级调度与显式限流 / 批量波形预生成与 codec 感知音频解码回退），Last updated 刷新至 2026-08-28
+- ltx-video：`downloadModel`/`deleteModel` 补 `isTauriRuntime` 检查——浏览器环境以明确错误拒绝（写操作不可静默成功），对齐同文件 detectGpu/listLocalModels 回退惯例；单测同步（4.1 补漏清单该项销账）
+- PR #104 关闭：人类定调 wontfix（2026-08-28）——hooks 拆分思路不废弃，并入 #108（editorUIStore 冻结约束系统性执行漏洞）治理范围统一处置，避免两次大改同一文件；分支保留远端作拆分参考（观察池销账）
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `d74769b7`（PR #190 merge，v4.78.2 修复合入），本分支为 v4.78.2 发版（主题「隐藏控制台窗口」，bump 见本 PR），工作区干净。v4.78.1「修复生产包启动黑屏 + 生产冒烟入 CI」已发布（2026-08-28）。M3 主线全部合入，M3-3 A2 为下一个小版本设计候选；情感高潮 top-K 内核已入池（闸门见 2.5）。
+**位置**：main = `c6bf6365`（PR #193 merge，v4.79.0 搭车维护合入；此前 PR #192 merge `0706cf38` 功能已合入），本分支为 v4.79.0 发版前 HANDOFF 独立同步，工作区干净。v4.78.2「隐藏控制台窗口」已发布（2026-08-28）。M3 扩展·第二梯队（情感高潮 top-K 组装接入）已合入，top-K 闸门已定调销项（见 2.8）；M3-3 A2 为下一个小版本设计候选。v4.79.0 发版随后（主题「情感高潮 top-K 建议」）。
 
 **基线数据**：
 
-- desktop 覆盖（口径 B）= **73.2941%（CI artifact lcov 实测，#188 run 33133132292 逐位复现 #186 基线）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%（a609d8f5 → 20e93ba5 持平）；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
+- desktop 覆盖（口径 B）= **73.35%（CI artifact lcov 实测，#192 run 33158276571）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%（a609d8f5 → 20e93ba5 持平）→ 73.35%（0706cf38）；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
 - editor-core 行覆盖 = **91.7356%**（CI artifact lcov 实测，#186 run；阈值 80%）
-- 全量单测：675 文件全过 exit 0（**12494 passed + 3 skipped**，#188 本地实测同 #186），无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 541**（#190 run 33141956888 实测 `541 passed (34.1m)` 零 flaky；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；#186 终局 run 33083102729 曾 `541 passed (34.1m)` 零 flaky；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
+- 全量单测：675 文件全过 exit 0（**12513 passed + 3 skipped**，#192 实测 = 基线 12494 + 19），无 unhandled rejection
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 543**（main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 复发；#190 run 33141956888 曾 `541 passed (34.1m)` 零 flaky；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -206,14 +232,14 @@
 - store 三件：editorStore 25.07% / performanceMonitorStore 24.68% / editorFeatureStore 58.88%
 - 深水区：color-grading / scripting / plugins / media
 - renderer.ts 剩余 144 行 WebGL 深交互路径
-- ltx-video downloadModel/deleteModel 浏览器回退缺失（缺 isTauriRuntime 检查，小缺陷候选）
+- ~~ltx-video downloadModel/deleteModel 浏览器回退缺失（缺 isTauriRuntime 检查，小缺陷候选）~~——**已销账（2026-08-28）**：PR #193 补齐 isTauriRuntime 检查（见 2.8）
 
 ### 4.2 观察池（全量刷新，含来源期次）
 
 | 观察项 | 来源期次 | 说明 |
 |---|---|---|
 | e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 3 次复发（#175 首见 / #184 复发 / #188 再现），重试均通过 |
-| e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 单次环境归因，低优先（第 7 轮已一次通过） |
+| e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 低优先；ai-multicam-cut 累计 2 次（第 6 轮首见 / v4.79.0 前 main run 33165898507 复发，重试通过），credits-roll-drawtext 维持 1 次 |
 | e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
 | **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
 | **生产构建分块顺序监控规则** | v4.78.1 热修（2026-08-28） | 事故根因为 manualChunks 循环分块 + 模块级求值访问跨块绑定（v4.73.0 起潜伏）。监控规则：任何 manualChunks 规则改动后本地必跑 `node scripts/prod-smoke.mjs`；CI prod-smoke job 持续把关。新增 vendor 依赖或调整路由时检查 vendor-react 闭包完整性与 chunk 依赖方向单向性（vite build 输出出现 Circular chunk 警告即红灯） |
@@ -233,13 +259,15 @@
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
 | ASRStage worker 请求参数空占位未接线 | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：定性死链路退役，见下方销账记录 |
 | VAD 纯音乐误报 30s"对话轮" | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：detectDialogueTurns 治理，见下方销账记录 |
-| issue #104 SettingsDialog hooks rewrite | 悬置（2026-08-27 收官归档） | 去留待人类定调：关闭 wontfix 或救活重实现 |
+| issue #104 SettingsDialog hooks rewrite | ~~悬置（2026-08-27 收官归档）~~ | **已销账（2026-08-28）**：人类定调关闭 wontfix——hooks 拆分思路并入 #108 治理范围统一处置，分支保留远端作拆分参考（关评原文见 PR #104） |
 
 **观察池销账记录（ASRStage 死链路退役，2026-08-27）**：四断点实证定性 b) 死链路而非接线——①请求参数空占位（原 ASRStage.tsx L113-115）②worker `tauri-request` 消息无主线程应答器，调用必挂起至内置超时 ③audioPath 结构性缺失（selectedClip 仅 `{id,name}` 无媒体路径）④`whisperReady` 全仓无写入 true 路径恒 false。执行「保下游、去上游」：删除 ASRStage.tsx 与 ai-transcription.worker.ts（后者经穷举核实全仓唯一消费方为 ASRStage），面板流程改为润色→样式→导出三阶段直入，Polish/Style/Export 组件渲染契约零变更；转写生成字幕由分步面板 whisper 步与 Timeline 右键「生成字幕」承接（均 `buildWhisperSubtitleTrackForClip` 命令化入轨、e2e 覆盖）。e2e smart-subtitles.spec 由 9 例重写为 7 例壳层用例，`setupAISubtitleWorkflowFixtureWithClip` action 同步移除。附带发现未处理（仅记录）：`lib/asr.ts` 为独立空壳桩且全仓无消费者，属另一既有死代码候选。
 
 **观察池销账记录（VAD 纯音乐误报治理，2026-08-27）**：`detectDialogueTurns` 新增结构化判据——超过 maxTurnDuration（默认 15s，可配）的完全无切分连续高能量块判定为非对话性能量流（纯音乐/环境声典型形态：能量 VAD 无法区分语音与音乐，真实对话必有换气停顿被 mergeGap 切分）而剔除。六形态回归矩阵固化入 content-analysis.test.ts（2Hz 合成口径）：纯音乐 1×30.5s 假 turn → **0**；近静音/无音频轨/访谈 7 轮/vlog 3 轮/电影对白 14 轮全部零变化（前后对照实测）。消费方零外溢：ai-scene-tagger 对话占比与轮次数、Compare onsets 假触发点、sceneTypes dialogue 虚标均自动正向修正或不变。附带预授权项同步完成：`lib/asr.ts` 空壳桩及其桩测试删除（修正上轮记录：桩存在唯一消费方为其自身 8 行测试文件，属死代码自证闭环）。
 
 **观察池收尾（2026-08-27）**：本轮观察池治理完毕，进入准稳态，主线开放项收敛为上述两项待调决策（M3-3 方向 A1/A2/A3 择一、issue #104 去留）。
+
+**观察池更新（2026-08-28）**：top-K 闸门销项（人类定调放行，2.5 闸门原文保留，定调见 2.8）+ issue #104 销账（wontfix 关闭，hooks 拆分思路并入 #108）；主线待调决策收敛至 M3-3 方向一项（A2 批量整合启动前置评估：①Compare 单条应用真实使用信号证明批量入口必要 ②应用整合设计文档过审，见 2.5 定调记录）。
 
 ---
 
