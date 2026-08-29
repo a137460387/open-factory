@@ -1,7 +1,7 @@
 import {useEditorStore} from '../store/editorStore';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useEditorFeatureStore} from '../store/editorFeatureStore';
+import {useMediaFeatureStore} from '../store/mediaFeatureStore';
 import {useCollaborationStore} from '../store/collaborationStore';
 import {useProxySettingsStore} from '../store/proxySettingsStore';
 import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
@@ -40,7 +40,7 @@ export function useEditorShellStoreSubscriptions() {
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
 
   // --- EditorUIStore: Dialog open states (merged with useShallow) ---
-  const dialogStates = useEditorUIStore(useShallow((s) => ({
+  const dialogStates = useDialogStore(useShallow((s) => ({
     professionalNleExportOpen: s.professionalNleExportOpen,
     mediaPrecheckOpen: s.mediaPrecheckOpen,
     syncCompareOpen: s.syncCompareOpen,
@@ -81,7 +81,7 @@ export function useEditorShellStoreSubscriptions() {
   })));
 
   // --- EditorUIStore: Setters (stable references, grouped with useShallow) ---
-  const uiSetters = useEditorUIStore(useShallow((s) => ({
+  const uiSetters = useDialogStore(useShallow((s) => ({
     setBatchTranscodeOpen: s.setBatchTranscodeOpen,
     setBatchWatermarkOpen: s.setBatchWatermarkOpen,
     setBatchProjectProcessingOpen: s.setBatchProjectProcessingOpen,
@@ -96,6 +96,8 @@ export function useEditorShellStoreSubscriptions() {
     setSceneReorderOpen: s.setSceneReorderOpen,
     setStyleTransferOpen: s.setStyleTransferOpen,
     setCollaborationNotesOpen: s.setCollaborationNotesOpen,
+    setCollaborationPanelOpen: s.setCollaborationPanelOpen,
+    setColorGradingWorkspaceOpen: s.setColorGradingWorkspaceOpen,
     setOperationRecordingOpen: s.setOperationRecordingOpen,
     setComplexityScoreOpen: s.setComplexityScoreOpen,
     setSmartRecommendationsOpen: s.setSmartRecommendationsOpen,
@@ -150,6 +152,9 @@ export function useEditorShellStoreSubscriptions() {
     setLayoutSettings: s.setLayoutSettings,
     viewportSize: s.viewportSize,
     setViewportSize: s.setViewportSize,
+    // 语言变更计数：订阅它使语言切换时 EditorShell（含 Toolbar 等子树）重渲染。
+    // 与 viewportSize 同一可靠通道（冷启动下 App 级订阅偶发不触发重渲染，e2e i18n:6）。
+    languageVersion: s.languageVersion,
     persistLayoutPatch: s.persistLayoutPatch,
     persistPanelVisibilityPatch: s.persistPanelVisibilityPatch,
   })));
@@ -205,7 +210,7 @@ export function useEditorShellStoreSubscriptions() {
   })));
 
   // --- EditorFeatureStore (merged with useShallow) ---
-  const features = useEditorFeatureStore(useShallow((s) => ({
+  const features = useMediaFeatureStore(useShallow((s) => ({
     batchTranscodeInitialPaths: s.batchTranscodeInitialPaths,
     setBatchTranscodeInitialPaths: s.setBatchTranscodeInitialPaths,
     thumbnailGeneratorAssetIds: s.thumbnailGeneratorAssetIds,

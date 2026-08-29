@@ -1,14 +1,49 @@
-import {memo} from 'react';
-import {CLIP_GROUP_COLOR_HEX, DEFAULT_TIMELINE_LABEL_COLOR_HEX, getEffectiveClipColorLabel, getTimelineLabelColorHex, getVolumeEnvelopePoints, isFrameRateMismatch, pitchNoteColor, buildTrimDurationBubble, snapTime, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type ClipPitchDataPoint, type KeyframeProperty, type MediaAsset, type TimelineLabelColor, type TimelineLargeProjectMode, type VolumeEnvelopePoint, type Track, type Transition, type TransitionType, shouldShowWaveform, DEFAULT_TRACK_HEIGHT} from '@open-factory/editor-core';
-import {EMOTION_COLORS} from '@open-factory/editor-core';
-import {AlertTriangle} from 'lucide-react';
-import {clsx} from 'clsx';
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {zhCN} from '../../i18n/strings';
-import {getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineThumbnailFrame} from '../../media/timeline-thumbnails';
-import {getWaveform, type WaveformResult} from '../../media/waveform';
-import type {SelectedKeyframeRef} from '../../store/editorStore';
-import type {DragState, VolumeEnvelopePointRequest, VolumeEnvelopeMenuRequest, TransitionMenuRequest, ClipMenuRequest} from './timeline-parts-types';
+import { memo } from 'react';
+import {
+  CLIP_GROUP_COLOR_HEX,
+  DEFAULT_TIMELINE_LABEL_COLOR_HEX,
+  getEffectiveClipColorLabel,
+  getTimelineLabelColorHex,
+  getVolumeEnvelopePoints,
+  isFrameRateMismatch,
+  pitchNoteColor,
+  buildTrimDurationBubble,
+  snapTime,
+  type Clip,
+  type CollaborationClipLock,
+  type AnomalyInterval,
+  type ClipGroup,
+  type ClipPitchDataPoint,
+  type KeyframeProperty,
+  type MediaAsset,
+  type TimelineLabelColor,
+  type TimelineLargeProjectMode,
+  type VolumeEnvelopePoint,
+  type Track,
+  type Transition,
+  type TransitionType,
+  shouldShowWaveform,
+  DEFAULT_TRACK_HEIGHT,
+} from '@open-factory/editor-core';
+import { EMOTION_COLORS } from '@open-factory/editor-core';
+import { AlertTriangle } from 'lucide-react';
+import { clsx } from 'clsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { zhCN } from '../../i18n/strings';
+import {
+  getTimelineThumbnailPlaceholders,
+  getTimelineThumbnails,
+  type TimelineThumbnailFrame,
+} from '../../media/timeline-thumbnails';
+import { getWaveform, type WaveformResult } from '../../media/waveform';
+import type { SelectedKeyframeRef } from '../../store/editorStore';
+import type {
+  DragState,
+  VolumeEnvelopePointRequest,
+  VolumeEnvelopeMenuRequest,
+  TransitionMenuRequest,
+  ClipMenuRequest,
+} from './timeline-parts-types';
 
 export function formatTransitionBadge(type: TransitionType): string {
   if (type === 'dissolve') {
@@ -24,15 +59,15 @@ export function formatTransitionBadge(type: TransitionType): string {
     .slice(0, 3);
 }
 
-export function envelopePointX(point: Pick<VolumeEnvelopePoint, 'time'>, duration: number): number {
+function envelopePointX(point: Pick<VolumeEnvelopePoint, 'time'>, duration: number): number {
   return Math.min(100, Math.max(0, (point.time / Math.max(0.001, duration)) * 100));
 }
 
-export function envelopePointY(point: Pick<VolumeEnvelopePoint, 'value'>): number {
+function envelopePointY(point: Pick<VolumeEnvelopePoint, 'value'>): number {
   return Math.min(100, Math.max(0, 100 - (point.value / 2) * 100));
 }
 
-export function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property: KeyframeProperty; time: number }> {
+function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property: KeyframeProperty; time: number }> {
   return (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).flatMap((property) =>
     (clip.keyframes?.[property] ?? []).map((frame) => ({
       id: frame.id,
@@ -42,22 +77,22 @@ export function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property
   );
 }
 
-export function getKeyframeMarkerTime(clip: Clip, ref: SelectedKeyframeRef): number | undefined {
+function getKeyframeMarkerTime(clip: Clip, ref: SelectedKeyframeRef): number | undefined {
   if (clip.id !== ref.clipId) {
     return undefined;
   }
   return clip.keyframes?.[ref.property]?.find((frame) => frame.id === ref.keyframeId)?.time;
 }
 
-export function sameSelectedKeyframe(left: SelectedKeyframeRef, right: SelectedKeyframeRef): boolean {
+function sameSelectedKeyframe(left: SelectedKeyframeRef, right: SelectedKeyframeRef): boolean {
   return left.clipId === right.clipId && left.property === right.property && left.keyframeId === right.keyframeId;
 }
 
-export function selectedKeyframeKey(keyframe: SelectedKeyframeRef): string {
+function selectedKeyframeKey(keyframe: SelectedKeyframeRef): string {
   return `${keyframe.clipId}\0${keyframe.property}\0${keyframe.keyframeId}`;
 }
 
-export function getClipToneClass(type: Clip['type']): string {
+function getClipToneClass(type: Clip['type']): string {
   if (type === 'audio') {
     return 'bg-emerald-900/40 text-emerald-200';
   }
@@ -88,11 +123,11 @@ export function formatFrameRateLabel(frameRate: number): string {
   return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
 }
 
-export function formatTimelineKeyframeProperty(property: KeyframeProperty): string {
+function formatTimelineKeyframeProperty(property: KeyframeProperty): string {
   return zhCN.inspector.keyframeProperty[property] ?? property;
 }
 
-export function drawWaveform(
+function drawWaveform(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -266,12 +301,7 @@ interface VideoThumbnailStripProps {
   frameStep?: number;
 }
 
-export function VideoThumbnailStrip({
-  clip,
-  asset,
-  pixelWidth,
-  frameStep = 1,
-}: VideoThumbnailStripProps) {
+function VideoThumbnailStrip({ clip, asset, pixelWidth, frameStep = 1 }: VideoThumbnailStripProps) {
   const requestPixelWidth = Math.max(1, pixelWidth / Math.max(1, frameStep));
   const [frames, setFrames] = useState<TimelineThumbnailFrame[]>(() =>
     getTimelineThumbnailPlaceholders(asset, clip, requestPixelWidth),
@@ -317,7 +347,7 @@ export function VideoThumbnailStrip({
   );
 }
 
-export interface WaveformStripProps {
+interface WaveformStripProps {
   clipId: string;
   asset: MediaAsset;
   pixelWidth: number;
@@ -329,7 +359,7 @@ export interface WaveformStripProps {
   resolutionScale?: number;
 }
 
-export function WaveformStrip({
+function WaveformStrip({
   clipId,
   asset,
   pixelWidth,
@@ -492,7 +522,7 @@ interface ClipAssetStripsProps {
   trackHeight?: number;
 }
 
-export function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
+function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -503,7 +533,7 @@ export function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
   return ready ? <ClipAssetStrips {...props} /> : null;
 }
 
-export function DeferredWaveformStrip(props: WaveformStripProps) {
+function DeferredWaveformStrip(props: WaveformStripProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -514,7 +544,7 @@ export function DeferredWaveformStrip(props: WaveformStripProps) {
   return ready ? <WaveformStrip {...props} /> : null;
 }
 
-export function scheduleLargeProjectAssetHydration(onReady: () => void): () => void {
+function scheduleLargeProjectAssetHydration(onReady: () => void): () => void {
   let idleId: number | undefined;
   let completed = false;
   const run = () => {
@@ -747,6 +777,11 @@ export function ClipBlock({
           });
           return;
         }
+        // 菜单的删除/波纹删除等操作作用于当前选区；右键未选中的 clip 时
+        // 先选中它（标准 NLE 行为），否则菜单删除会静默无效。
+        if (!selectedClipIds.includes(clip.id)) {
+          onSelect(clip.id, false);
+        }
         onClipMenu({ x: event.clientX, y: event.clientY, clipId: clip.id, clipType: clip.type });
       }}
       onDoubleClick={(event) => {
@@ -766,10 +801,10 @@ export function ClipBlock({
           event.preventDefault();
           onSelect(clip.id, event.shiftKey);
         }
-        if (event.key === 'Delete' || event.key === 'Backspace') {
-          event.preventDefault();
-          onSelect(clip.id, false, true);
-        }
+        // Delete/Backspace 不在此拦截：事件冒泡到全局快捷键处理器执行
+        // delete-selected（useShortcuts 在 defaultPrevented 时直接 return）。
+        // 此前版本在此 preventDefault 却只做选择不删除，导致聚焦 clip 时
+        // Delete 键完全失效（真回归，2026-07-28 引入）。
       }}
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}

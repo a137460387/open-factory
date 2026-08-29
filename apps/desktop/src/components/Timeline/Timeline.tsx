@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   DEFAULT_TIMELINE_GRID_SETTINGS,
+  zoomTimelineByGesture,
   type TimelineColorHeatmapPoint,
   type SceneColorDifference,
   type TimelineGridSettings,
@@ -522,6 +523,48 @@ export function Timeline({
 
     // Misc
     useEditorStoreRef: useEditorStore,
+  });
+
+  // Safari/触控板手势缩放（gesturestart/gesturechange）。v4.26.0 拆分重构
+  // （732261f0）时该 effect 从 Timeline 丢失，手势缩放随之失效；此处按重构前
+  // 实现恢复。
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    let gestureBaseZoom = zoom;
+
+    function onGestureStart(event: Event): void {
+      event.preventDefault();
+      gestureBaseZoom = zoom;
+      gestureScaleRef.current = 1;
+    }
+
+    function onGestureChange(event: Event): void {
+      event.preventDefault();
+      const raw = event as unknown as { scale?: number; detail?: number };
+      const scale = raw.scale ?? (typeof raw.detail === 'number' && raw.detail > 0 ? raw.detail : 1);
+      gestureScaleRef.current = scale;
+      const nextZoom = zoomTimelineByGesture(gestureBaseZoom, scale);
+      const rect = scroll!.getBoundingClientRect();
+      const anchorX = (event as unknown as { clientX?: number }).clientX ?? rect.left + rect.width / 2;
+      applyZoom(nextZoom, anchorX - rect.left);
+    }
+
+    function onGestureEnd(event: Event): void {
+      event.preventDefault();
+      gestureScaleRef.current = 1;
+    }
+
+    scroll.addEventListener('gesturestart', onGestureStart, { passive: false });
+    scroll.addEventListener('gesturechange', onGestureChange, { passive: false });
+    scroll.addEventListener('gestureend', onGestureEnd, { passive: false });
+    return () => {
+      scroll.removeEventListener('gesturestart', onGestureStart);
+      scroll.removeEventListener('gesturechange', onGestureChange);
+      scroll.removeEventListener('gestureend', onGestureEnd);
+    };
   });
 
   return (

@@ -1,17 +1,29 @@
-import {type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode} from 'react';
-import type {Clip, Project} from '@open-factory/editor-core';
-import {normalizePrivacyBlurEffect, type ClipSlowMotionMode, type EffectType, type FrameInterpolationCompareMode, type InputColorSpace, type Keyframe, type KeyframeProperty, type PrivacyBlurEffect} from '@open-factory/editor-core';
-import {t, zhCN} from '../../i18n/strings';
-import {type SelectedKeyframeRef} from '../../store/editorStore';
-import {NumberField as EffectNumberField} from './EffectEditors';
+import { type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import type { Clip, Project } from '@open-factory/editor-core';
+import {
+  normalizePrivacyBlurEffect,
+  type ClipSlowMotionMode,
+  type EffectType,
+  type FrameInterpolationCompareMode,
+  type InputColorSpace,
+  type Keyframe,
+  type KeyframeProperty,
+  type PrivacyBlurEffect,
+} from '@open-factory/editor-core';
+import { t, zhCN } from '../../i18n/strings';
+import { type SelectedKeyframeRef } from '../../store/editorStore';
+import { NumberField as EffectNumberField } from './EffectEditors';
 // Re-export extracted components for backward compatibility
-export { SubtitleStyleTemplatesPanel, SubtitleProofreadingPanel, SubtitleRetimingPanel, getSubtitleStyleTemplateLabel, mergeSubtitleStyleTemplateViews, makeSvgDataUri, getSubtitleProofreadingIssueLabel } from './SubtitleEditors';
-export { SpeedCurveEditor, EasingPresetSelector, KeyframeCurveEditor, CurveEditor, CURVE_CHANNELS, getCurveEditorFrames, normalizeCurveEditorFrames, drawKeyframeCurveCanvas, drawKeyframeVelocityCanvas, getInterpolatedCurveEditorValue, findNearestCurveHandle, findNearestCurveFrameIdByPoint, nextHandleMode, getKeyframeFallbackForCurve, eventToCurveEditorFrame, eventToCanvasPoint, curveFrameToPoint, findNearestCurveFrame, getCurveFrameIdsInBox, getSpeedCurveFrames, normalizeSpeedCurveFrames, eventToSpeedFrame, drawSpeedCurveCanvas, speedFrameToPoint, findNearestSpeedFrame, roundFinite, drawCurveCanvas, eventToCurvePoint, findNearestCurvePoint, drawColorWheel, eventToUnitPoint, wheelPointToOffsets, wheelOffsetsToPoint, hsvToRgb, clampUnit, clampSigned } from './CurveEditors';
-export { EffectsEditor, TextField, TextAreaField, CustomShaderEffectFields, AudioSpectrumEffectFields, MotionBlurEffectFields, formatMotionGraphicNumberValue, NumberField as EffectNumberField, RangeField, RangeNumberField, ExpressionNumberField, ColorField, ToggleField, formatNumberInputValue } from './EffectEditors';
-export { ThreeWayColorEditor, ColorWheelControl, THREE_WAY_CHANNELS } from './ColorEditors';
-export { RichTextEditor, parseRichTextFromElement, collectRichTextRuns, richTextToHtml, richTextRunToHtml, isParagraphNode, normalizeCssColorForModel, escapeHtml, escapeHtmlAttribute } from './RichTextEditor';
-export { MotionGraphicPanel } from './MotionGraphicPanel';
-export { MasksEditor } from './MasksEditor';
+export {
+  SubtitleStyleTemplatesPanel,
+  SubtitleProofreadingPanel,
+  SubtitleRetimingPanel,
+  getSubtitleStyleTemplateLabel,
+  mergeSubtitleStyleTemplateViews,
+} from './SubtitleEditors';
+export { SpeedCurveEditor, CurveEditor } from './CurveEditors';
+export { EffectsEditor } from './EffectEditors';
+export { ThreeWayColorEditor } from './ColorEditors';
 
 export interface FrameInterpolationComparePreviewViewItem {
   mode: FrameInterpolationCompareMode;
@@ -245,28 +257,7 @@ export function getKenBurnsEndScale(clip: Extract<Clip, { type: 'image' }>): num
   return clip.keyframes?.scaleX?.at(-1)?.value ?? clip.transform.scale;
 }
 
-export function formatKeyframeProperty(property: KeyframeProperty): string {
-  return zhCN.inspector.keyframeProperty[property] ?? property;
-}
 
-export function formatKeyframeValue(property: KeyframeProperty, value: number): string {
-  if (property === 'speed') {
-    return `${value.toFixed(2)}x`;
-  }
-  if (
-    property === 'opacity' ||
-    property === 'volume' ||
-    property === 'scaleX' ||
-    property === 'scaleY' ||
-    property === 'pathStartOffset'
-  ) {
-    return `${Math.round(value * 100)}%`;
-  }
-  if (property === 'yaw' || property === 'pitch' || property === 'roll') {
-    return `${Math.round(value)}°`;
-  }
-  return value.toFixed(2);
-}
 
 export function resolveSelectedKeyframeEntries(
   project: Project,

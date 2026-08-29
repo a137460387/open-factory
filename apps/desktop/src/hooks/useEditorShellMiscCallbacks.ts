@@ -5,8 +5,8 @@ import { clearMediaCache } from '../cache/cache-service';
 import { showToast } from '../lib/toast';
 import { zhCN, t } from '../i18n/strings';
 import { useEditorStore } from '../store/editorStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useEditorMiscStore } from '../store/editorMiscStore';
 import { saveOfflineMediaReport, saveClipReport } from '../lib/mediaReport';
 
@@ -17,8 +17,8 @@ import { saveOfflineMediaReport, saveClipReport } from '../lib/mediaReport';
 export function useEditorShellMiscCallbacks() {
   const setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
   const setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
-  const setMediaVersionCompare = useEditorFeatureStore((s) => s.setMediaVersionCompare);
-  const setSyncCompareOpen = useEditorUIStore((s) => s.setSyncCompareOpen);
+  const setMediaVersionCompare = useMediaFeatureStore((s) => s.setMediaVersionCompare);
+  const setSyncCompareOpen = useDialogStore((s) => s.setSyncCompareOpen);
 
   // -----------------------------------------------------------------------
   // Media/Clip Report

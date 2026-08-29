@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import type { EmotionPoint } from '@open-factory/editor-core';
 import { formatTimeShort } from '@open-factory/editor-core/utils/time';
 import { featureStrings } from '../../i18n/featureStrings';
-export type { EmotionPoint } from '@open-factory/editor-core';
 
 interface EmotionCurveChartProps {
   curve: EmotionPoint[];

@@ -14,14 +14,14 @@ test('AI quality assessment: panel opens with profile selection', async ({ page 
   await expect(panel).toContainText('AI 质量评估');
 
   // Profile cards should be visible
-  await expect(page.getByTestId('qa-profile-broadcast')).toBeVisible();
-  await expect(page.getByTestId('qa-profile-web')).toBeVisible();
-  await expect(page.getByTestId('qa-profile-social')).toBeVisible();
-  await expect(page.getByTestId('qa-profile-cinema')).toBeVisible();
+  await expect(page.getByTestId('quality-profile-broadcast')).toBeVisible();
+  await expect(page.getByTestId('quality-profile-web')).toBeVisible();
+  await expect(page.getByTestId('quality-profile-social')).toBeVisible();
+  await expect(page.getByTestId('quality-profile-cinema')).toBeVisible();
 
   // Click a profile
-  await page.getByTestId('qa-profile-web').click();
+  await page.getByTestId('quality-profile-web').click();
 
   // Assess button should be visible
-  await expect(page.getByTestId('qa-assess-btn')).toBeVisible();
+  await expect(page.getByTestId('quality-assess')).toBeVisible();
 });

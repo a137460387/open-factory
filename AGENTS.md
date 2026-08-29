@@ -24,7 +24,7 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 
 - `packages/editor-core` 必须保持纯 TypeScript，不依赖 Tauri 或浏览器 API
 - Timeline 变更必须通过命令对象执行（详见「核心架构约束→Timeline 命令对象约束」）
-- 所有 Tauri 调用必须通过 `tauri-bridge.ts`（详见「核心架构约束→Tauri Bridge 约束」）
+- 所有 Tauri 调用必须通过 `tauri-bridge`（barrel：`tauri-bridge.ts` + 子模块目录 `tauri-bridge/`，详见「核心架构约束→Tauri Bridge 约束」）
 - 本地媒体预览必须使用 `convertFileSrc`（详见「特定模块约束→媒体处理」）
 
 ## 核心架构约束
@@ -46,7 +46,7 @@ open-factory 是一个本地优先的桌面视频编辑器，支持 AI 辅助编
 
 ### Tauri Bridge 约束
 
-- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 `apps/desktop/src/lib/tauri-bridge.ts`
+- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 tauri-bridge 层：barrel 入口 `apps/desktop/src/lib/tauri-bridge.ts` 及按域拆分的子模块目录 `apps/desktop/src/lib/tauri-bridge/`（types/mock-types/fs/media/export/window/ai-db/video-gen/ltx-video/audio-visual-analysis/ipc-optimizer 等）。子模块默认经 barrel `export *` 导出；audio-visual-analysis、ipc-optimizer 为按子模块路径直接引用的例外。新增 bridge 封装应加入对应子模块，不得在业务代码中直接 import `@tauri-apps/*` 运行时 API
 - `import type` 形式的 `@tauri-apps/*` 类型导入豁免；仅运行时 invoke/listen/dialog/shell 调用必须走 bridge
 - 新增 Tauri 命令必须在 `apps/desktop/src-tauri/src/lib.rs` 注册
 - FFmpeg 执行必须使用 `Command::new("ffmpeg").args(&plan.full_args)` 参数数组

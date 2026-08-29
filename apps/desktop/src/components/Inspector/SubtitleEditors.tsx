@@ -30,11 +30,11 @@ import { useEditorStore } from '../../store/editorStore';
 // Shared utilities
 // ---------------------------------------------------------------------------
 
-export function formatNumberInputValue(value: number): string {
+function formatNumberInputValue(value: number): string {
   return String(Number(value.toFixed(3)));
 }
 
-export function NumberField({
+function NumberField({
   label,
   value,
   min,
@@ -121,7 +121,7 @@ export function mergeSubtitleStyleTemplateViews(
   return merged;
 }
 
-export function makeSvgDataUri(svg: string): string {
+function makeSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
@@ -217,7 +217,7 @@ export function SubtitleStyleTemplatesPanel({
 // Subtitle Proofreading
 // ---------------------------------------------------------------------------
 
-export function getSubtitleProofreadingIssueLabel(issue: SubtitleProofreadingIssue): string {
+function getSubtitleProofreadingIssueLabel(issue: SubtitleProofreadingIssue): string {
   const labels: Record<SubtitleProofreadingIssueType, string> = zhCN.inspector.subtitleProofreading.issueLabels;
   const label = labels[issue.type];
   if (issue.type === 'reading-speed' && issue.value !== undefined && issue.limit !== undefined) {

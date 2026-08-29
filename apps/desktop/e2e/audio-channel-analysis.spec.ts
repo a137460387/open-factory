@@ -11,9 +11,9 @@ test('opens channel analysis and shows frequency and phase curves', async ({ pag
 
   await page.getByTestId('audio-mixer-tab-channel-analysis').click();
 
-  await expect(page.getByTestId('audio-channel-analysis-panel')).toBeVisible();
-  await expect(page.getByTestId('audio-channel-analysis-curve')).toBeVisible();
-  await expect(page.getByTestId('audio-channel-analysis-phase')).toBeVisible();
-  await expect(page.getByTestId('audio-channel-analysis-correlation')).toContainText('左右相关性');
-  await expect(page.getByTestId('audio-channel-analysis-peak-0')).toBeVisible();
+  // 面板于 50f336e7 重构：audio-channel-analysis-* testid 更名为 channel-analysis-*，
+  // 频率曲线/相位示波器为独立 SVG 图表；统计区（相关性/峰值）仅在有采样快照时渲染。
+  await expect(page.getByTestId('channel-analysis-record-button')).toBeVisible();
+  await expect(page.getByTestId('channel-analysis-frequency-chart')).toBeVisible();
+  await expect(page.getByTestId('channel-analysis-phase-scope')).toBeVisible();
 });

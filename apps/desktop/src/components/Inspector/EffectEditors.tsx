@@ -220,34 +220,8 @@ export function TextField({
   );
 }
 
-export function TextAreaField({
-  label,
-  value,
-  onCommit,
-  disabled,
-  testId,
-}: {
-  label: string;
-  value: string;
-  onCommit(value: string): void;
-  disabled?: boolean;
-  testId?: string;
-}) {
-  return (
-    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
-      {label}
-      <textarea
-        className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
-        defaultValue={value}
-        disabled={disabled}
-        onBlur={(event) => onCommit(event.target.value)}
-        data-testid={testId}
-      />
-    </label>
-  );
-}
 
-export function CustomShaderEffectFields({
+function CustomShaderEffectFields({
   effect,
   onUpdate,
 }: {
@@ -398,7 +372,7 @@ export function NumberField({
   );
 }
 
-export function AudioSpectrumEffectFields({
+function AudioSpectrumEffectFields({
   effect,
   onUpdate,
 }: {
@@ -498,7 +472,7 @@ export function AudioSpectrumEffectFields({
   );
 }
 
-export function MotionBlurEffectFields({
+function MotionBlurEffectFields({
   effect,
   onUpdate,
 }: {
@@ -557,58 +531,10 @@ export function MotionBlurEffectFields({
   );
 }
 
-export function formatNumberInputValue(value: number): string {
+function formatNumberInputValue(value: number): string {
   return String(Number(value.toFixed(3)));
 }
 
-export function RangeField({
-  label,
-  value,
-  min,
-  max,
-  step,
-  format,
-  onCommit,
-  hideLabel = false,
-  testId,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  format(value: number): string;
-  onCommit(value: number): void;
-  hideLabel?: boolean;
-  testId?: string;
-}) {
-  return (
-    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
-      <span className="flex justify-between">
-        <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
-        <span className="tabular-nums">{format(value)}</span>
-      </span>
-      <input
-        className="mt-1 w-full accent-brand"
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onCommit(Number(event.target.value))}
-        onKeyDown={(event) => {
-          const next = resolveSliderKeyboardValue({ key: event.key, value, min, max, step, shiftKey: event.shiftKey });
-          if (next === undefined) {
-            return;
-          }
-          event.preventDefault();
-          onCommit(next);
-        }}
-        data-testid={testId}
-      />
-    </label>
-  );
-}
 
 export function RangeNumberField({
   label,
@@ -686,54 +612,6 @@ export function RangeNumberField({
   );
 }
 
-export function ExpressionNumberField({
-  label,
-  value,
-  format,
-  onCommit,
-  testId,
-}: {
-  label: string;
-  value: number;
-  format(value: number): string;
-  onCommit(expression: string): void;
-  testId?: string;
-}) {
-  const [draft, setDraft] = useState(formatNumberInputValue(value));
-  useEffect(() => {
-    setDraft(formatNumberInputValue(value));
-  }, [value]);
-  const commitDraft = () => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setDraft(formatNumberInputValue(value));
-      return;
-    }
-    onCommit(trimmed);
-    setDraft(formatNumberInputValue(value));
-  };
-  return (
-    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
-      <span className="flex items-center justify-between gap-2">
-        <span>{label}</span>
-        <span className="text-[11px] font-normal tabular-nums text-[var(--color-text-muted)]">{format(value)}</span>
-      </span>
-      <input
-        className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs tabular-nums text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
-        type="text"
-        value={draft}
-        data-testid={testId}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commitDraft}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.currentTarget.blur();
-          }
-        }}
-      />
-    </label>
-  );
-}
 
 export function ColorField({
   label,

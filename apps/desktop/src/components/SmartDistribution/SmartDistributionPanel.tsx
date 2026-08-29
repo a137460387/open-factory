@@ -1,6 +1,6 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {DISTRIBUTION_PLATFORMS, buildDistributionRecommendations, formatMaxDuration, type DistributionPlatformId, type DistributionPlatformSpec} from '@open-factory/editor-core';
-import {generateMultiFormats, getPlatformAdaptation, analyzeAdaptationNeeds, DEFAULT_MULTI_FORMAT_CONFIG, type FormatVariant, type PlatformAdaptation, type AdaptationSuggestion} from '@open-factory/editor-core';
+import {generateMultiFormats, getPlatformAdaptation, analyzeAdaptationNeeds, DEFAULT_MULTI_FORMAT_CONFIG, createProject, type FormatVariant, type PlatformAdaptation, type AdaptationSuggestion} from '@open-factory/editor-core';
 import {useDistributionStore} from '../../store/distributionStore';
 
 // ─── 平台卡片组件 ────────────────────────────────────────────
@@ -326,11 +326,10 @@ export function SmartDistributionPanel({
 
     // 模拟多格式生成（实际应调用 Worker）
     setTimeout(() => {
-      const mockProject = {
-        name: 'project',
-        settings: { width: projectWidth, height: projectHeight, fps: 30, timecodeFormat: 'hh:mm:ss:ff' },
-        timeline: { tracks: [] },
-      } as any;
+      const mockProject = createProject('project');
+      mockProject.settings.width = projectWidth;
+      mockProject.settings.height = projectHeight;
+      mockProject.settings.fps = 30;
 
       try {
         const result = generateMultiFormats(mockProject, {

@@ -17,6 +17,8 @@ test('recovers unsupported codec exports with libx264 and records the recovery h
   await page.getByTestId('export-hardware-encoding-toggle').check();
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
+  // 向导拆分（bd315fd6）后恢复报告在 complete 步，需先切步
+  await page.getByTestId('export-step-complete').click();
 
   const calls = await page.evaluate(() => window.__E2E_ACTIONS__!.getExportRunCalls!() as Array<{ fullArgs: string[] }>);
   expect(calls.length).toBeGreaterThanOrEqual(2);

@@ -329,6 +329,10 @@ export function useTimelineState(params: TimelineStateParams): TimelineState {
   const [rulerMenu, setRulerMenu] = useState<RulerMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
+  // 幂等守卫：记录已处理过的场景检测请求 id，避免下方 effect 因选择状态
+  // （selectedClipId/selectedClipIds）变化被反复重触发，导致 openSceneDetection
+  // 无限循环、对话框无法稳定渲染（issue #114 场景检测接线回归）。
+  const lastSceneDetectionRequestIdRef = useRef(0);
   const [coverFrameDialog, setCoverFrameDialog] = useState<CoverFrameDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
   const [subtitleAlignReport, setSubtitleAlignReport] = useState<
@@ -846,6 +850,12 @@ export function useTimelineState(params: TimelineStateParams): TimelineState {
     if (sceneDetectionRequestId <= 0) {
       return;
     }
+    // 同一请求 id 只处理一次，阻断 openSceneDetection → setSelectedClipId →
+    // 选择状态变化 → effect 重触发 的无限循环。
+    if (lastSceneDetectionRequestIdRef.current === sceneDetectionRequestId) {
+      return;
+    }
+    lastSceneDetectionRequestIdRef.current = sceneDetectionRequestId;
     const targetClipId = selectedClipId ?? selectedClipIds[0];
     if (!targetClipId) {
       showToast({

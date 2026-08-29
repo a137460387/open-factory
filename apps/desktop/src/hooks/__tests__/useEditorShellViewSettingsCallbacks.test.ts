@@ -26,8 +26,8 @@ vi.mock('../../store/editorSettingsStore', () => ({
   },
 }));
 
-vi.mock('../../store/editorUIStore', () => ({
-  useEditorUIStore: {
+vi.mock('../../store/panelStore', () => ({
+  usePanelStore: {
     getState: () => mockEditorUIState,
   },
 }));

@@ -25,6 +25,7 @@ import {
   type LutCreatorState,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
+import { drawColorWheel, eventToUnitPoint, wheelPointToOffsets } from '../lib/color-wheel';
 import { clamp, clamp01 } from '@open-factory/editor-core/utils/math';
 import { zhCN } from '../i18n/strings';
 import {
@@ -718,91 +719,6 @@ function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDista
   return nearestIndex;
 }
 
-function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-  const size = canvas.width;
-  const radius = size / 2;
-  const image = context.createImageData(size, size);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const dx = (x + 0.5 - radius) / radius;
-      const dy = (y + 0.5 - radius) / radius;
-      const distance = Math.hypot(dx, dy);
-      const offset = (y * size + x) * 4;
-      if (distance > 1) {
-        image.data[offset + 3] = 0;
-        continue;
-      }
-      const hue = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
-      const rgb = hsvToRgb(hue, distance, 1);
-      image.data[offset] = Math.round(rgb.r * 255);
-      image.data[offset + 1] = Math.round(rgb.g * 255);
-      image.data[offset + 2] = Math.round(rgb.b * 255);
-      image.data[offset + 3] = 255;
-    }
-  }
-  context.putImageData(image, 0, 0);
-  const marker = wheelOffsetsToPoint(value);
-  context.beginPath();
-  context.arc(radius + marker.x * radius, radius + marker.y * radius, 5, 0, Math.PI * 2);
-  context.fillStyle = '#ffffff';
-  context.fill();
-  context.strokeStyle = '#0f172a';
-  context.lineWidth = 2;
-  context.stroke();
-}
-
-function eventToUnitPoint(
-  event: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
-  const length = Math.hypot(x, y);
-  return length <= 1 ? { x, y } : { x: x / length, y: y / length };
-}
-
-function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelValue, 'r' | 'g' | 'b'> {
-  return {
-    r: clampSigned(point.x),
-    g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
-    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y),
-  };
-}
-
-function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
-  const x = value.r;
-  const y = (value.b - value.g) / 1.7320508;
-  const length = Math.hypot(x, y);
-  return length <= 1 ? { x, y } : { x: x / length, y: y / length };
-}
-
-function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
-  const sector = Math.floor(hue * 6);
-  const fraction = hue * 6 - sector;
-  const p = value * (1 - saturation);
-  const q = value * (1 - fraction * saturation);
-  const tt = value * (1 - (1 - fraction) * saturation);
-  switch (sector % 6) {
-    case 0:
-      return { r: value, g: tt, b: p };
-    case 1:
-      return { r: q, g: value, b: p };
-    case 2:
-      return { r: p, g: value, b: tt };
-    case 3:
-      return { r: p, g: q, b: value };
-    case 4:
-      return { r: tt, g: p, b: value };
-    default:
-      return { r: value, g: p, b: q };
-  }
-}
-
 function fileNameFromPath(path: string): string {
   return path.replace(/\\/g, '/').split('/').pop() ?? path;
 }
@@ -816,8 +732,4 @@ function sanitizeFileBaseName(name: string): string {
       .replace(/\s+/g, ' ')
       .trim() || 'open-factory-lut'
   );
-}
-
-function clampSigned(value: number): number {
-  return clamp(Number.isFinite(value) ? value : 0, -1, 1);
 }

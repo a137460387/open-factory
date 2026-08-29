@@ -5,11 +5,17 @@
  * as non-blocking, dismissable bubbles.
  */
 
-import {useState, useEffect, useCallback, useMemo} from 'react';
-import {Zap, Star, Volume2, Palette, X, ChevronRight, ChevronDown, Check, Lightbulb} from 'lucide-react';
-import {generateContextualSuggestions, type ContextualSuggestion, type SuggestionCategory, type TimelineContext, type SuggestionConfig} from '@open-factory/editor-core/contextual-suggestions';
-import type {Timeline, MediaAsset} from '@open-factory/editor-core/model-types';
-import {clsx} from 'clsx';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Zap, Star, Volume2, Palette, X, ChevronRight, ChevronDown, Check, Lightbulb } from 'lucide-react';
+import {
+  generateContextualSuggestions,
+  type ContextualSuggestion,
+  type SuggestionCategory,
+  type TimelineContext,
+  type SuggestionConfig,
+} from '@open-factory/editor-core/contextual-suggestions';
+import type { Timeline, MediaAsset } from '@open-factory/editor-core/model-types';
+import { clsx } from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -93,9 +99,7 @@ function SuggestionCard({
       <Icon size={16} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">
-            {suggestion.title}
-          </span>
+          <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{suggestion.title}</span>
           <span
             className={clsx(
               'rounded-full px-1.5 py-0.5 text-[9px] font-semibold',
@@ -105,9 +109,7 @@ function SuggestionCard({
             {suggestion.priority === 'high' ? '高' : suggestion.priority === 'medium' ? '中' : '低'}
           </span>
         </div>
-        <p className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-muted)]">
-          {suggestion.description}
-        </p>
+        <p className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-muted)]">{suggestion.description}</p>
         <div className="mt-1.5 flex items-center gap-1.5">
           <button
             className="inline-flex items-center gap-1 rounded bg-[var(--color-accent)] px-2 py-1 text-[10px] font-medium text-white hover:opacity-90"
@@ -159,10 +161,7 @@ export function ContextualSuggestionBubble({
   }, [timeline, media, context, config, enabled]);
 
   // Filter dismissed
-  const visibleSuggestions = useMemo(
-    () => suggestions.filter((s) => !dismissed.has(s.id)),
-    [suggestions, dismissed],
-  );
+  const visibleSuggestions = useMemo(() => suggestions.filter((s) => !dismissed.has(s.id)), [suggestions, dismissed]);
 
   // Reset dismissed when context changes significantly
   useEffect(() => {
@@ -180,10 +179,7 @@ export function ContextualSuggestionBubble({
   if (visibleSuggestions.length === 0) return null;
 
   return (
-    <div
-      className="w-72 space-y-2"
-      data-testid="contextual-suggestions"
-    >
+    <div className="w-72 space-y-2" data-testid="contextual-suggestions">
       {/* Header */}
       <button
         className="flex w-full items-center justify-between rounded-md bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] shadow-sm"
@@ -213,28 +209,4 @@ export function ContextualSuggestionBubble({
       ) : null}
     </div>
   );
-}
-
-/**
- * Hook to manage contextual suggestions with debouncing.
- */
-export function useContextualSuggestions(
-  timeline: Timeline,
-  media: MediaAsset[],
-  context: TimelineContext,
-  config?: Partial<SuggestionConfig>,
-) {
-  const [enabled, setEnabled] = useState(true);
-
-  const suggestions = useMemo(() => {
-    if (!enabled) return [];
-    return generateContextualSuggestions(timeline, media, context, config);
-  }, [timeline, media, context, config, enabled]);
-
-  return {
-    suggestions,
-    enabled,
-    setEnabled,
-    toggle: () => setEnabled((prev) => !prev),
-  };
 }

@@ -1,11 +1,28 @@
-import {CLIP_GROUP_COLORS, CLIP_GROUP_COLOR_HEX, TIMELINE_LABEL_COLORS, TRANSITION_TYPES, getTimelineLabelColorHex, isFrameRateMismatch, type Clip, type ClipGroup, type ClipGroupColor, type GapFillStrategy, type MediaAsset, type MediaVersionEntry, type TimelineLabelColor, type Track, type TrackPatch, type TransitionType} from '@open-factory/editor-core';
-import {clsx} from 'clsx';
-import {Star} from 'lucide-react';
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {zhCN} from '../../i18n/strings';
-import {canGenerateSubtitlesForClip} from '../../lib/whisper';
-import {readTransitionFavorites, toggleTransitionFavorite} from '../../timeline/transition-favorites';
-import {buildRulerContextMenuItems, type RulerContextMenuAction} from './timeline-ruler-menu';
+import {
+  CLIP_GROUP_COLORS,
+  CLIP_GROUP_COLOR_HEX,
+  TIMELINE_LABEL_COLORS,
+  TRANSITION_TYPES,
+  getTimelineLabelColorHex,
+  isFrameRateMismatch,
+  type Clip,
+  type ClipGroup,
+  type ClipGroupColor,
+  type GapFillStrategy,
+  type MediaAsset,
+  type MediaVersionEntry,
+  type TimelineLabelColor,
+  type Track,
+  type TrackPatch,
+  type TransitionType,
+} from '@open-factory/editor-core';
+import { clsx } from 'clsx';
+import { Star } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { zhCN } from '../../i18n/strings';
+import { canGenerateSubtitlesForClip } from '../../lib/whisper';
+import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
+import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
 export interface TransitionMenuState {
   x: number;
@@ -333,7 +350,7 @@ export function TransitionMenu({
   );
 }
 
-export function TransitionPreviewCanvas({ type, active }: { type: TransitionType; active: boolean }) {
+function TransitionPreviewCanvas({ type, active }: { type: TransitionType; active: boolean }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -418,12 +435,7 @@ export function TransitionPreviewCanvas({ type, active }: { type: TransitionType
   );
 }
 
-export function drawPreviewShape(
-  context: CanvasRenderingContext2D,
-  type: TransitionType,
-  width: number,
-  height: number,
-) {
+function drawPreviewShape(context: CanvasRenderingContext2D, type: TransitionType, width: number, height: number) {
   context.save();
   context.translate(width / 2, height / 2);
   context.fillStyle = '#f8fafc';
@@ -721,6 +733,25 @@ export function ClipActionMenu({
   onRoughCutCompare?(): void;
   onClose(): void;
 }) {
+  // 菜单项很多（max-h 80vh），在靠近视口下/右缘的 clip 上右键时原始坐标会
+  // 把菜单推出视口，底部的操作（波纹删除等）无法触达。按实测尺寸钳制到视口内，
+  // 与转场菜单打开时的坐标钳制（TimelineTracksContainer）同一意图。
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [clampedPosition, setClampedPosition] = useState<{ x: number; y: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = menuRef.current;
+    if (!element) {
+      return;
+    }
+    const rect = element.getBoundingClientRect();
+    const x = Math.min(menu.x, Math.max(0, window.innerWidth - rect.width - 8));
+    const y = Math.min(menu.y, Math.max(0, window.innerHeight - rect.height - 8));
+    if (x !== menu.x || y !== menu.y) {
+      setClampedPosition({ x, y });
+    }
+  }, [menu.x, menu.y]);
+  const position = clampedPosition ?? { x: menu.x, y: menu.y };
+
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
   const canDetectScene = clip?.type === 'video';
   const canGenerateCover = clip?.type === 'video' && asset?.type === 'video';
@@ -734,8 +765,9 @@ export function ClipActionMenu({
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
   return (
     <div
+      ref={menuRef}
       className="fixed z-50 max-h-[80vh] w-[230px] overflow-y-auto rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
-      style={{ left: menu.x, top: menu.y }}
+      style={{ left: position.x, top: position.y }}
       data-testid="clip-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
@@ -825,7 +857,8 @@ export function ClipActionMenu({
         <button
           className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
           type="button"
-          disabled={clip?.type !== 'video'}
+          disabled={clip?.type !== 'video' || !clip?.contentAnalysis}
+          title={clip && clip.type === 'video' && !clip.contentAnalysis ? '请先在内容分析中分析此素材' : undefined}
           data-testid="clip-action-rough-cut-compare"
           onClick={onRoughCutCompare}
         >

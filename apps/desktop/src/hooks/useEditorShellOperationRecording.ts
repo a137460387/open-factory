@@ -15,7 +15,7 @@ import { zhCN } from '../i18n/strings';
 import { showToast } from '../lib/toast';
 import { commandManager, projectAccessor, timelineAccessor, addOnExecuteListener } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useTimelineFeatureStore } from '../store/timelineFeatureStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import {
   saveFileDialog as bridgeSaveFileDialog,
@@ -72,21 +72,21 @@ export function useEditorShellOperationRecording(): {
         const snapshot = snapshotCommand(command);
         if (snapshot) {
           macroRecorder.steps.push(snapshot);
-          useEditorFeatureStore.getState().setMacroRecordingStepCount(macroRecorder.steps.length);
+          useTimelineFeatureStore.getState().setMacroRecordingStepCount(macroRecorder.steps.length);
         }
       }
       // 操作录制
       const opRecorder = operationRecorderRef.current;
       if (opRecorder.active && !opRecorder.replaying && opRecorder.recording) {
         opRecorder.recording = recordOperationCommand(opRecorder.recording, command, useEditorStore.getState().project);
-        useEditorFeatureStore.getState().setOperationRecording(opRecorder.recording);
+        useTimelineFeatureStore.getState().setOperationRecording(opRecorder.recording);
       }
     });
   }, []);
 
   // ===== 宏录制 =====
   const recordMacroHistory = useCallback(async (entry: MacroHistoryEntry) => {
-    const setMacroHistory = useEditorFeatureStore.getState().setMacroHistory;
+    const setMacroHistory = useTimelineFeatureStore.getState().setMacroHistory;
     try {
       setMacroHistory(await appendMacroHistoryEntry(entry));
     } catch (error) {
@@ -96,8 +96,8 @@ export function useEditorShellOperationRecording(): {
 
   const startMacroRecording = useCallback(() => {
     macroRecorderRef.current = { active: true, replaying: false, steps: [] };
-    useEditorFeatureStore.getState().setMacroRecordingActive(true);
-    useEditorFeatureStore.getState().setMacroRecordingStepCount(0);
+    useTimelineFeatureStore.getState().setMacroRecordingActive(true);
+    useTimelineFeatureStore.getState().setMacroRecordingStepCount(0);
     showToast({
       kind: 'info',
       title: zhCN.settings.macros.recordingStarted,
@@ -111,8 +111,8 @@ export function useEditorShellOperationRecording(): {
       return;
     }
     recorder.active = false;
-    useEditorFeatureStore.getState().setMacroRecordingActive(false);
-    useEditorFeatureStore.getState().setMacroRecordingStepCount(recorder.steps.length);
+    useTimelineFeatureStore.getState().setMacroRecordingActive(false);
+    useTimelineFeatureStore.getState().setMacroRecordingStepCount(recorder.steps.length);
     const steps = recorder.steps;
     if (steps.length === 0) {
       showToast({
@@ -224,7 +224,7 @@ export function useEditorShellOperationRecording(): {
     } finally {
       operationRecorderRef.current.replaying = false;
     }
-    useEditorFeatureStore.getState().setOperationRecordingStep(stepIndex);
+    useTimelineFeatureStore.getState().setOperationRecordingStep(stepIndex);
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setSelectedClipId(undefined);
   }, []);
@@ -233,10 +233,10 @@ export function useEditorShellOperationRecording(): {
     clearOperationReplayTimers();
     const nextRecording = createOperationRecording(useEditorStore.getState().project);
     operationRecorderRef.current = { active: true, replaying: false, recording: nextRecording };
-    useEditorFeatureStore.getState().setOperationRecording(nextRecording);
-    useEditorFeatureStore.getState().setOperationRecordingActive(true);
-    useEditorFeatureStore.getState().setOperationRecordingStep(-1);
-    useEditorFeatureStore.getState().setOperationReplayRunning(false);
+    useTimelineFeatureStore.getState().setOperationRecording(nextRecording);
+    useTimelineFeatureStore.getState().setOperationRecordingActive(true);
+    useTimelineFeatureStore.getState().setOperationRecordingStep(-1);
+    useTimelineFeatureStore.getState().setOperationReplayRunning(false);
     showToast({
       kind: 'info',
       title: zhCN.operationRecording.recordingStarted,
@@ -246,7 +246,7 @@ export function useEditorShellOperationRecording(): {
 
   const stopOperationRecording = useCallback(() => {
     operationRecorderRef.current.active = false;
-    useEditorFeatureStore.getState().setOperationRecordingActive(false);
+    useTimelineFeatureStore.getState().setOperationRecordingActive(false);
     showToast({
       kind: operationRecorderRef.current.recording?.commands.length ? 'success' : 'warning',
       title: zhCN.operationRecording.recordingStopped,
@@ -255,7 +255,7 @@ export function useEditorShellOperationRecording(): {
   }, []);
 
   const saveOperationRecording = useCallback(async () => {
-    const operationRecording = useEditorFeatureStore.getState().operationRecording;
+    const operationRecording = useTimelineFeatureStore.getState().operationRecording;
     const recording = operationRecorderRef.current.recording ?? operationRecording;
     if (!recording || recording.commands.length === 0) {
       return;
@@ -296,10 +296,10 @@ export function useEditorShellOperationRecording(): {
       }
       clearOperationReplayTimers();
       operationRecorderRef.current = { active: false, replaying: false, recording: parsed };
-      useEditorFeatureStore.getState().setOperationRecording(parsed);
-      useEditorFeatureStore.getState().setOperationRecordingActive(false);
-      useEditorFeatureStore.getState().setOperationReplayRunning(false);
-      useEditorFeatureStore.getState().setOperationRecordingStep(-1);
+      useTimelineFeatureStore.getState().setOperationRecording(parsed);
+      useTimelineFeatureStore.getState().setOperationRecordingActive(false);
+      useTimelineFeatureStore.getState().setOperationReplayRunning(false);
+      useTimelineFeatureStore.getState().setOperationRecordingStep(-1);
       applyOperationRecordingStep(parsed, -1);
       showToast({
         kind: 'success',
@@ -317,18 +317,18 @@ export function useEditorShellOperationRecording(): {
 
   const pauseOperationReplay = useCallback(() => {
     clearOperationReplayTimers();
-    useEditorFeatureStore.getState().setOperationReplayRunning(false);
+    useTimelineFeatureStore.getState().setOperationReplayRunning(false);
   }, [clearOperationReplayTimers]);
 
   const replayOperationRecording = useCallback(() => {
-    const operationRecording = useEditorFeatureStore.getState().operationRecording;
-    const operationReplaySpeed = useEditorFeatureStore.getState().operationReplaySpeed;
+    const operationRecording = useTimelineFeatureStore.getState().operationRecording;
+    const operationReplaySpeed = useTimelineFeatureStore.getState().operationReplaySpeed;
     const recording = operationRecorderRef.current.recording ?? operationRecording;
     if (!recording || recording.commands.length === 0) {
       return;
     }
     clearOperationReplayTimers();
-    useEditorFeatureStore.getState().setOperationReplayRunning(true);
+    useTimelineFeatureStore.getState().setOperationReplayRunning(true);
     applyOperationRecordingStep(recording, -1);
     let elapsedMs = 0;
     for (const step of buildOperationReplaySchedule(recording, operationReplaySpeed)) {
@@ -337,7 +337,7 @@ export function useEditorShellOperationRecording(): {
         applyOperationRecordingStep(recording, step.index);
         if (step.index === recording.commands.length - 1) {
           operationReplayTimersRef.current = [];
-          useEditorFeatureStore.getState().setOperationReplayRunning(false);
+          useTimelineFeatureStore.getState().setOperationReplayRunning(false);
           showToast({ kind: 'success', title: zhCN.operationRecording.replayFinished });
         }
       }, elapsedMs);
@@ -347,20 +347,20 @@ export function useEditorShellOperationRecording(): {
 
   const jumpOperationRecording = useCallback(
     (stepIndex: number) => {
-      const operationRecording = useEditorFeatureStore.getState().operationRecording;
+      const operationRecording = useTimelineFeatureStore.getState().operationRecording;
       const recording = operationRecorderRef.current.recording ?? operationRecording;
       if (!recording) {
         return;
       }
       clearOperationReplayTimers();
-      useEditorFeatureStore.getState().setOperationReplayRunning(false);
+      useTimelineFeatureStore.getState().setOperationReplayRunning(false);
       applyOperationRecordingStep(recording, stepIndex);
     },
     [applyOperationRecordingStep, clearOperationReplayTimers],
   );
 
   const exportOperationRecordingSlides = useCallback(async () => {
-    const operationRecording = useEditorFeatureStore.getState().operationRecording;
+    const operationRecording = useTimelineFeatureStore.getState().operationRecording;
     const recording = operationRecorderRef.current.recording ?? operationRecording;
     if (!recording || recording.commands.length === 0) {
       return;

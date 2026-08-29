@@ -14,7 +14,7 @@ export interface PreviewOverlayProps {
   frameInspectMode: boolean;
   selectedEditableClip: EditableCanvasClip | undefined;
   selectedPathMask: ClipMask | undefined;
-  selectedMulticamClip: import('@open-factory/editor-core').Clip | undefined;
+  selectedMulticamClip: Extract<import('@open-factory/editor-core').Clip, { type: 'nested-sequence' }> | undefined;
   selectedMulticamSequence: import('@open-factory/editor-core').Sequence | undefined;
   selectedPanoramaClip: import('@open-factory/editor-core').Clip | undefined;
   chromaKeyPickTarget: EditableCanvasClip | undefined;
@@ -27,11 +27,12 @@ export interface PreviewOverlayProps {
   selectedInspectorClip: import('@open-factory/editor-core').Clip | undefined;
   compareEnabled: boolean;
   compareShowsDifference: boolean;
-  compareMode: string;
+  compareMode: PreviewCompareMode | 'off';
   compareSplitRatio: number;
   compareDividerDragging: boolean;
   onCompareDividerDraggingChange: (dragging: boolean) => void;
   previewRenderSize: { width: number; height: number };
+  previewQualityMode: string;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   originalCanvasRef: React.RefObject<HTMLCanvasElement | null>;
   differenceCanvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -72,7 +73,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
     selectedPanoramaClip, chromaKeyPickTarget, project, playheadTime, fps,
     multicamLiveMode, isPlaying, frameInspectorSample, selectedInspectorClip,
     compareEnabled, compareShowsDifference, compareMode, compareSplitRatio,
-    compareDividerDragging, previewRenderSize, canvasRef, originalCanvasRef,
+    compareDividerDragging, previewRenderSize, previewQualityMode, canvasRef, originalCanvasRef,
     differenceCanvasRef, previewSurfaceRef, previewSurfaceStyle, previewZoom,
   } = props;
 
@@ -92,6 +93,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
           height={previewRenderSize.height}
           className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
           data-testid="preview-canvas"
+          data-preview-quality={previewQualityMode}
         />
         {compareEnabled ? (
           <canvas
@@ -99,7 +101,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
             width={previewRenderSize.width}
             height={previewRenderSize.height}
             className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
-            style={buildPreviewCompareOverlayStyle2(compareMode as any, compareSplitRatio)}
+            style={buildPreviewCompareOverlayStyle2(compareMode, compareSplitRatio)}
             data-testid="preview-compare-original-canvas"
           />
         ) : null}
@@ -120,7 +122,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
             data-testid="preview-compare-divider"
             data-orientation={compareMode === 'top-bottom' ? 'horizontal' : 'vertical'}
             className={`absolute z-10 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)] ${compareMode === 'top-bottom' ? 'cursor-row-resize' : 'cursor-col-resize'} ${compareDividerDragging ? 'opacity-100' : 'opacity-80'}`}
-            style={buildPreviewCompareDividerStyle2(compareMode as any, compareSplitRatio)}
+            style={buildPreviewCompareDividerStyle2(compareMode, compareSplitRatio)}
             onPointerDown={(event) => {
               event.currentTarget.setPointerCapture(event.pointerId);
               props.onUpdateCompareSplit(event);
@@ -194,7 +196,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
         ) : null}
         {!reviewMode && selectedMulticamClip && selectedMulticamSequence ? (
           <MulticamPreviewGrid
-            clip={selectedMulticamClip as any}
+            clip={selectedMulticamClip}
             sequence={selectedMulticamSequence}
             media={project.media}
             sequences={project.sequences}
@@ -509,14 +511,14 @@ function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: stri
 }
 
 // Helper imports for compare styles
-import {buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle} from '../../lib/preview/compare';
+import {buildPreviewCompareOverlayStyle, buildPreviewCompareDividerStyle, type PreviewCompareMode} from '../../lib/preview/compare';
 
-function buildPreviewCompareOverlayStyle2(mode: string, ratio: number) {
-  return buildPreviewCompareOverlayStyle(mode as any, ratio);
+function buildPreviewCompareOverlayStyle2(mode: PreviewCompareMode | 'off', ratio: number) {
+  return buildPreviewCompareOverlayStyle(mode === 'off' ? 'left-right' : mode, ratio);
 }
 
-function buildPreviewCompareDividerStyle2(mode: string, ratio: number) {
-  return buildPreviewCompareDividerStyle(mode as any, ratio);
+function buildPreviewCompareDividerStyle2(mode: PreviewCompareMode | 'off', ratio: number) {
+  return buildPreviewCompareDividerStyle(mode === 'off' ? 'left-right' : mode, ratio);
 }
 
 // Additional imports needed by inline components

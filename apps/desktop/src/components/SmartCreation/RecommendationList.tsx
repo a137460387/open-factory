@@ -4,7 +4,7 @@ import { Sparkles, Check } from 'lucide-react';
 import { featureStrings } from '../../i18n/featureStrings';
 
 /** Recommended clip from smart recommender. */
-export interface RecommendedClip {
+interface RecommendedClip {
   clipId: string;
   score: number;
   similarityScore: number;

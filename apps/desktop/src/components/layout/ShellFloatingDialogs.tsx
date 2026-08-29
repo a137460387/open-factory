@@ -21,8 +21,8 @@ import type {
 } from '@open-factory/editor-core';
 import { UpdateClipCommand } from '@open-factory/editor-core';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
-import { useEditorUIStore } from '../../store/editorUIStore';
-import { useEditorFeatureStore } from '../../store/editorFeatureStore';
+import { useDialogStore } from '../../store/dialogStore';
+import { useTimelineFeatureStore } from '../../store/timelineFeatureStore';
 import { useEditorSettingsStore } from '../../store/editorSettingsStore';
 import { usePerformanceMonitorStore } from '../../store/performanceMonitorStore';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
@@ -41,6 +41,7 @@ import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
 import type { BeatSensitivity } from '@open-factory/editor-core';
 import { shouldShowTutorial } from '../../tutorial/tutorialState';
 import type { TutorialSignals } from '../../tutorial/tutorialState';
+import { PreflightChecklistPanel } from '../Export/PreflightChecklistPanel';
 
 // 延迟加载重型对话框组件，减少首屏加载体积
 const ExportDialogs = lazy(() => import('../dialogs/ExportDialogs').then((m) => ({ default: m.ExportDialogs })));
@@ -59,9 +60,6 @@ const RecoveryDialogs = lazy(() => import('../dialogs/RecoveryDialogs').then((m)
 
 const CharacterTimelinePanel = lazy(() =>
   import('../Timeline/CharacterTimelinePanel').then((m) => ({ default: m.CharacterTimelinePanel })),
-);
-const PreflightChecklistPanel = lazy(() =>
-  import('../Export/PreflightChecklistPanel').then((m) => ({ default: m.PreflightChecklistPanel })),
 );
 const DubbingAdaptationPanel = lazy(() =>
   import('../Export/DubbingAdaptationPanel').then((m) => ({ default: m.DubbingAdaptationPanel })),
@@ -218,17 +216,17 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
   const outPoint = useEditorStore((s) => s.outPoint);
   const projectPath = useEditorStore((s) => s.projectPath);
 
-  const projectTemplateOpen = useEditorUIStore((s) => s.projectTemplateOpen);
-  const setProjectTemplateOpen = useEditorUIStore((s) => s.setProjectTemplateOpen);
-  const timelineSearchOpen = useEditorUIStore((s) => s.timelineSearchOpen);
-  const setTimelineSearchOpen = useEditorUIStore((s) => s.setTimelineSearchOpen);
-  const shortcutCheatsheetOpen = useEditorUIStore((s) => s.shortcutCheatsheetOpen);
-  const setShortcutCheatsheetOpen = useEditorUIStore((s) => s.setShortcutCheatsheetOpen);
-  const pasteKeyframeDialogOpen = useEditorUIStore((s) => s.pasteKeyframeDialogOpen);
-  const setPasteKeyframeDialogOpen = useEditorUIStore((s) => s.setPasteKeyframeDialogOpen);
+  const projectTemplateOpen = useDialogStore((s) => s.projectTemplateOpen);
+  const setProjectTemplateOpen = useDialogStore((s) => s.setProjectTemplateOpen);
+  const timelineSearchOpen = useDialogStore((s) => s.timelineSearchOpen);
+  const setTimelineSearchOpen = useDialogStore((s) => s.setTimelineSearchOpen);
+  const shortcutCheatsheetOpen = useDialogStore((s) => s.shortcutCheatsheetOpen);
+  const setShortcutCheatsheetOpen = useDialogStore((s) => s.setShortcutCheatsheetOpen);
+  const pasteKeyframeDialogOpen = useDialogStore((s) => s.pasteKeyframeDialogOpen);
+  const setPasteKeyframeDialogOpen = useDialogStore((s) => s.setPasteKeyframeDialogOpen);
 
-  const timelineTemplateMode = useEditorFeatureStore((s) => s.timelineTemplateMode);
-  const setTimelineTemplateMode = useEditorFeatureStore((s) => s.setTimelineTemplateMode);
+  const timelineTemplateMode = useTimelineFeatureStore((s) => s.timelineTemplateMode);
+  const setTimelineTemplateMode = useTimelineFeatureStore((s) => s.setTimelineTemplateMode);
 
   const shortcutBindings = useEditorSettingsStore((s) => s.shortcutBindings);
   const macros = useEditorSettingsStore((s) => s.macros);
@@ -241,9 +239,13 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
 
   return (
     <>
+      {/* PreflightChecklistPanel 始终渲染（底部栏是首屏布局的一部分），不能 lazy：
+          异步 chunk 约 1.2s 后到达才挂载，会使整个主布局首屏后跳变 52px
+          （issue #114 收尾根因修复，见审计 2026-08-08-sweep-*）。
+          其余两个面板为条件渲染，保持 lazy。 */}
+      <PreflightChecklistPanel />
       <Suspense fallback={null}>
         <CharacterTimelinePanel />
-        <PreflightChecklistPanel />
         <DubbingAdaptationPanel />
       </Suspense>
       <Suspense fallback={null}>

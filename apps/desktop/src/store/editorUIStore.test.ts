@@ -165,4 +165,57 @@ describe('editorUIStore — H4 God Store 拆分验证', () => {
       expect(validSetters.length).toBeGreaterThanOrEqual(30);
     });
   });
+
+  describe('layoutSettings 程序化设置 vs 异步持久化加载竞态（auto-generate:68 根因）', () => {
+    const persistedLayout = {
+      panels: { mediaLibrary: false, inspector: false, audioMixer: true, colorScopes: false, history: false, bookmarks: false },
+    } as unknown as ReturnType<typeof useEditorUIStore.getState>['layoutSettings'];
+
+    beforeEach(() => {
+      useEditorUIStore.setState({
+        layoutSettings: {
+          panels: { mediaLibrary: true, inspector: true, audioMixer: true, colorScopes: false, history: false, bookmarks: false },
+        } as never,
+        layoutSettingsTouched: false,
+      });
+    });
+
+    it('初始 layoutSettingsTouched 为 false（未被显式设置）', () => {
+      expect(useEditorUIStore.getState().layoutSettingsTouched).toBe(false);
+    });
+
+    it('setLayoutSettings（程序化设置）置 touched=true', () => {
+      useEditorUIStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+      expect(useEditorUIStore.getState().layoutSettingsTouched).toBe(true);
+    });
+
+    it('applyLoadedLayoutSettings（加载结果）不置 touched', () => {
+      useEditorUIStore.getState().applyLoadedLayoutSettings(persistedLayout);
+      expect(useEditorUIStore.getState().layoutSettingsTouched).toBe(false);
+    });
+
+    it('竞态防护：程序化设置先到，则加载结果不覆盖（复刻 useEditorShellSettings 加载守卫）', () => {
+      // 模拟 fixture/用户先程序化设置（touched=true）
+      useEditorUIStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+      expect(useEditorUIStore.getState().layoutSettings.panels.audioMixer).toBe(false);
+
+      // 模拟 readLayoutSettings 异步加载到达，复刻 useEditorShellSettings 的守卫：
+      // 仅当未被显式设置时才应用加载结果
+      if (!useEditorUIStore.getState().layoutSettingsTouched) {
+        useEditorUIStore.getState().applyLoadedLayoutSettings(persistedLayout);
+      }
+
+      // 程序化设置不被覆盖
+      expect(useEditorUIStore.getState().layoutSettings.panels.audioMixer).toBe(false);
+    });
+
+    it('无程序化设置时，加载结果正常生效', () => {
+      expect(useEditorUIStore.getState().layoutSettingsTouched).toBe(false);
+      if (!useEditorUIStore.getState().layoutSettingsTouched) {
+        useEditorUIStore.getState().applyLoadedLayoutSettings(persistedLayout);
+      }
+      expect(useEditorUIStore.getState().layoutSettings.panels.mediaLibrary).toBe(false);
+      expect(useEditorUIStore.getState().layoutSettings.panels.inspector).toBe(false);
+    });
+  });
 });

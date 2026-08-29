@@ -7,6 +7,7 @@ import {
   type EffectPresetFilters,
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, scanDirectory, writeFile } from '../lib/tauri-bridge';
+import { zhCN } from '../i18n/strings';
 
 export interface EffectPresetLibraryStorage {
   getAppDataDir(): Promise<string> | string;
@@ -41,6 +42,11 @@ export interface EffectPresetCommunityLoadOptions {
   storage?: EffectPresetLibraryStorage;
   fetcher?: typeof fetch;
   url?: string;
+  /**
+   * 本地优先约束（AGENTS.md）：远程社区内容必须由用户显式开启。
+   * 设为 false 时跳过远程请求，仅读取本地缓存。
+   */
+  remoteEnabled?: boolean;
 }
 
 const EFFECT_PRESET_DIR = 'effect-presets';
@@ -117,6 +123,12 @@ export async function loadEffectPresetCommunityLibrary(
 ): Promise<EffectPresetCommunityLoadResult> {
   const storage = options.storage ?? bridgeEffectPresetStorage;
   const cachePath = getEffectPresetCommunityCachePath(await storage.getAppDataDir());
+  if (options.remoteEnabled === false) {
+    if (await storage.fsExists(cachePath)) {
+      return { cards: parseEffectPresetCommunityJson(await storage.readFile(cachePath)), source: 'cache' };
+    }
+    return { cards: [], source: 'empty', warning: zhCN.effectPresetLibrary.onlineContentDisabled };
+  }
   try {
     const response = await (options.fetcher ?? fetch)(options.url ?? EFFECT_PRESET_COMMUNITY_URL, {
       cache: 'no-store',

@@ -135,6 +135,16 @@ describe('timeline gap fill', () => {
     expect(accessor.current().tracks[0].clips.map((item) => item.id)).toEqual(['clip-a']);
   });
 
+  it('rejects fill commands on locked tracks', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 4, duration: 2 })]);
+    timeline.tracks[0] = { ...timeline.tracks[0], locked: true };
+    const accessor = makeAccessor(timeline);
+    const clip = createGapFillImageClip({ id: 'clip-gap', name: 'Freeze', mediaId: 'media-gap', trackId: 'track-video', start: 0, duration: 1 });
+
+    expect(() => new FillGapCommand(accessor, 'track-video', 3, { type: 'insert-clip', clip }).execute()).toThrow('Cannot modify clips on locked track');
+    expect(accessor.current().tracks[0].clips.map((item) => item.id)).toEqual(['clip-a', 'clip-b']);
+  });
+
   it('generates repeat and crossfade gap fill commands', () => {
     const repeatAccessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 5, trimStart: 1 }), makeVideoClip({ id: 'clip-b', start: 7, duration: 2 })]));
     new FillGapCommand(repeatAccessor, 'track-video', 6, { type: 'repeat-previous', clipId: 'clip-repeat' }).execute();

@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { waitForE2eActions } from './e2e-actions';
 
+// ASR 阶段已退役（断链死代码），工作流为润色 → 样式 → 导出三阶段，
+// 本 spec 仅覆盖面板壳层；转写生成字幕由 smart-rough-cut.spec 的 whisper 步覆盖。
 test.describe('智能字幕工作流', () => {
-  test('should display the workflow panel with 4 stage tabs', async ({ page }) => {
+  test('should display the workflow panel with 3 stage tabs', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
@@ -10,42 +12,30 @@ test.describe('智能字幕工作流', () => {
     const panel = page.getByTestId('ai-subtitle-workflow-panel');
     await expect(panel).toBeVisible();
 
-    await expect(page.getByTestId('subtitle-workflow-tab-asr')).toBeVisible();
     await expect(page.getByTestId('subtitle-workflow-tab-polish')).toBeVisible();
     await expect(page.getByTestId('subtitle-workflow-tab-style')).toBeVisible();
     await expect(page.getByTestId('subtitle-workflow-tab-export')).toBeVisible();
   });
 
-  test('should show ASR stage by default', async ({ page }) => {
+  test('should show polish stage by default', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
 
-    const asrStage = page.getByTestId('subtitle-workflow-asr-stage');
-    await expect(asrStage).toBeVisible();
+    const polishStage = page.getByTestId('subtitle-workflow-polish-stage');
+    await expect(polishStage).toBeVisible();
   });
 
-  test('should show no clip selected message when no clip is selected', async ({ page }) => {
+  test('should disable later stages initially', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
 
-    await expect(page.getByText('请在时间线上选择一个音频或视频片段')).toBeVisible();
-  });
-
-  test('should disable next stages initially when no clip is selected', async ({ page }) => {
-    await page.goto('/');
-    await waitForE2eActions(page);
-    await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
-
-    // ASR tab should be active/enabled
-    const asrTab = page.getByTestId('subtitle-workflow-tab-asr');
-    await expect(asrTab).toBeEnabled();
-
-    // Polish, style, and export tabs should be disabled (not navigable yet)
+    // Polish tab should be active/enabled (first stage)
     const polishTab = page.getByTestId('subtitle-workflow-tab-polish');
-    await expect(polishTab).toBeDisabled();
+    await expect(polishTab).toBeEnabled();
 
+    // Style and export tabs should be disabled (not navigable yet)
     const styleTab = page.getByTestId('subtitle-workflow-tab-style');
     await expect(styleTab).toBeDisabled();
 
@@ -78,19 +68,8 @@ test.describe('智能字幕工作流', () => {
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
 
-    // Prev button should be disabled on the first stage (ASR)
+    // Prev button should be disabled on the first stage (polish)
     await expect(page.getByTestId('subtitle-workflow-prev')).toBeDisabled();
-  });
-
-  test('should display selected clip info when a clip is selected', async ({ page }) => {
-    await page.goto('/');
-    await waitForE2eActions(page);
-    await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixtureWithClip!());
-
-    // Should show clip name/info instead of "no clip selected"
-    await expect(page.getByTestId('subtitle-workflow-asr-stage').getByText('subtitle-workflow-video.mp4')).toBeVisible();
-    // Should NOT show the "no clip selected" message
-    await expect(page.getByText('请在时间线上选择一个音频或视频片段')).not.toBeVisible();
   });
 
   test('should reset workflow when clicking reset button', async ({ page }) => {
@@ -104,12 +83,11 @@ test.describe('智能字幕工作流', () => {
     // Click reset
     await page.getByTestId('subtitle-workflow-reset').click({ force: true });
 
-    // Should still be on ASR stage after reset
-    const asrStage = page.getByTestId('subtitle-workflow-asr-stage');
-    await expect(asrStage).toBeVisible();
+    // Should still be on polish stage after reset
+    const polishStage = page.getByTestId('subtitle-workflow-polish-stage');
+    await expect(polishStage).toBeVisible();
 
-    // Future stages should still be disabled after reset
-    await expect(page.getByTestId('subtitle-workflow-tab-polish')).toBeDisabled();
+    // Later stages should still be disabled after reset
     await expect(page.getByTestId('subtitle-workflow-tab-style')).toBeDisabled();
     await expect(page.getByTestId('subtitle-workflow-tab-export')).toBeDisabled();
   });

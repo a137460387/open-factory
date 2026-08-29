@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { calculateMediaJobEtaSeconds, moveMediaJobBefore, sortMediaJobsForMonitor } from './media-job-monitor';
 import { useMediaJobStore, type MediaJob, type MediaJobStatus } from './media-job-store';
+import type { MediaAsset } from '@open-factory/editor-core';
 
 describe('media job monitor', () => {
   beforeEach(() => {
@@ -65,6 +66,32 @@ describe('media job monitor', () => {
     expect(useMediaJobStore.getState().startNextJob()?.id).toBe('high');
   });
 
+  it('setJobPriority updates a pending job priority and re-sorts the queue', () => {
+    useMediaJobStore.setState({
+      jobs: [
+        makeJob('a', 'pending', '2026-06-15T10:00:00.000Z'),
+        makeJob('b', 'pending', '2026-06-15T10:00:01.000Z'),
+      ],
+    });
+
+    useMediaJobStore.getState().setJobPriority('b', 'high');
+
+    expect(useMediaJobStore.getState().jobs.find((job) => job.id === 'b')?.priority).toBe('high');
+    expect(useMediaJobStore.getState().startNextJob()?.id).toBe('b');
+  });
+
+  it('enqueueWaveformJobsForMedia enqueues waveform jobs only for audio-bearing assets', () => {
+    useMediaJobStore.getState().enqueueWaveformJobsForMedia([
+      makeAsset('audio-1', 'audio'),
+      makeAsset('video-audio', 'video', true),
+      makeAsset('video-silent', 'video', false),
+      makeAsset('missing', 'audio', true, true),
+    ]);
+
+    const waveform = useMediaJobStore.getState().jobs.filter((job) => job.type === 'waveform');
+    expect(waveform.map((job) => job.assetId)).toEqual(['audio-1', 'video-audio']);
+  });
+
   it('calculates remaining time from progress speed', () => {
     const eta = calculateMediaJobEtaSeconds(
       makeJob('running', 'running', '2026-06-15T10:00:00.000Z', 0.25, '2026-06-15T10:00:00.000Z'),
@@ -89,6 +116,17 @@ describe('media job monitor', () => {
     ]);
   });
 });
+
+function makeAsset(id: string, type: 'audio' | 'video', hasAudio = false, missing = false): MediaAsset {
+  return {
+    id,
+    name: id,
+    type,
+    hasAudio,
+    missing,
+    path: 'C:/media/' + id,
+  } as MediaAsset;
+}
 
 function makeJob(
   id: string,

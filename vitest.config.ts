@@ -51,6 +51,7 @@ export default defineConfig({
         'packages/api-gateway/src/**/*.test.ts',
         'apps/desktop/src/**/*.test.ts',
         'apps/desktop/src/**/*.test.tsx',
+        'apps/desktop/src/e2e/**',
         '**/node_modules/**',
         '**/dist/**',
       ],

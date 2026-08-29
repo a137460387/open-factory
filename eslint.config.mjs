@@ -32,7 +32,11 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/',
-      'dist/',
+      // flat config 下裸 'dist/' 只匹配根级目录，需用 ** 通配才能盖住
+      // packages/*/dist 等构建产物（此前 plugin-market/dist、plugin-sdk/dist 被误扫）
+      '**/dist/**',
+      '**/build/**',
+      'coverage/',
       'apps/desktop/src-tauri/',
       '**/*.test.ts',
       '**/*.spec.ts',

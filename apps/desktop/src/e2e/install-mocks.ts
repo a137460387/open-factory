@@ -1,6 +1,6 @@
 import {AddKeyframeCommand, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TRANSFORM, DEFAULT_PRIMARY_SEQUENCE_NAME, PRIMARY_SEQUENCE_ID, createProject, createTrack, createVideoFingerprint, type FfmpegExportPlan, type KeyframeProperty, type Clip, type DenoiseFilterRecommendation, type MediaAsset, type Project, type ProjectFileV2, createMulticamClip} from '@open-factory/editor-core';
 import {commandManager, timelineAccessor} from '../store/commandManager';
-import {useEditorUIStore} from '../store/editorUIStore';
+import {useDialogStore} from '../store/dialogStore';
 import {collaborationController} from '../collaboration/local-network';
 import {useCollaborationStore} from '../store/collaborationStore';
 import {useEditorStore} from '../store/editorStore';
@@ -46,6 +46,18 @@ let proxyGenerationDelayMs = 10;
 let nextExportError: string | undefined;
 let effectPresetCommunityResponse: string | undefined;
 let mockSceneTimes = [1];
+// 可注入的 Whisper SRT 内容（默认英文两段，保持既有用例零回归；
+// setWhisperSrtContents 可注入含叙事标记的中文转写供语义建议 e2e 消费）
+let mockWhisperSrtContents = [
+  '1',
+  '00:00:00,000 --> 00:00:01,200',
+  'First generated caption',
+  '',
+  '2',
+  '00:00:01,400 --> 00:00:02,400',
+  'Second generated caption',
+  '',
+].join('\n');
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
@@ -76,6 +88,48 @@ const damagedMediaPaths = new Set<string>();
 let collaborationHostActive = false;
 let collaborationHostPort = 37822;
 let collaborationBroadcastMessages: string[] = [];
+
+// 启动期 useEditorShellSettings 会异步执行 applyLocalCoeditingSettings（默认设置
+// enabled=false → collaborationController.disable()），它会异步清空协作 store。
+// 若 simulateCollab* 钩子在其落地前模拟会话，会被这次 disable 抹掉（竞态）。
+// 这里包装 disable/enableHost/enableClient，在启动期首次落地时解析一个 Promise，
+// 供 simulateCollab* 钩子先等待启动设置应用完成、再模拟会话，从根上避开竞态。
+let resolveCollabStartupSettled: (() => void) | undefined;
+const collabStartupSettledPromise = new Promise<void>((resolve) => {
+  resolveCollabStartupSettled = resolve;
+});
+const COLLAB_STARTUP_SETTLE_TIMEOUT_MS = 3000;
+let collabStartupSettled = false;
+const markCollabStartupSettled = (): void => {
+  if (!collabStartupSettled) {
+    collabStartupSettled = true;
+    resolveCollabStartupSettled?.();
+  }
+};
+const originalCollabDisable = collaborationController.disable.bind(collaborationController);
+const originalCollabEnableHost = collaborationController.enableHost.bind(collaborationController);
+const originalCollabEnableClient = collaborationController.enableClient.bind(collaborationController);
+collaborationController.disable = async (...args: Parameters<typeof originalCollabDisable>) => {
+  const result = await originalCollabDisable(...args);
+  markCollabStartupSettled();
+  return result;
+};
+collaborationController.enableHost = async (...args: Parameters<typeof originalCollabEnableHost>) => {
+  const result = await originalCollabEnableHost(...args);
+  markCollabStartupSettled();
+  return result;
+};
+collaborationController.enableClient = async (...args: Parameters<typeof originalCollabEnableClient>) => {
+  const result = await originalCollabEnableClient(...args);
+  markCollabStartupSettled();
+  return result;
+};
+async function waitForCollabStartupSettled(): Promise<void> {
+  await Promise.race([
+    collabStartupSettledPromise,
+    new Promise<void>((resolve) => setTimeout(resolve, COLLAB_STARTUP_SETTLE_TIMEOUT_MS)),
+  ]);
+}
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -241,6 +295,10 @@ exists.set('C:/Missing/tiny-audio.wav', false);
 exists.set('C:/Missing/test-image.png', false);
 restorePersistedFiles();
 ensureTutorialSkippedByDefault(false);
+// 手势教程会在首启 2s 后自动弹出（useEditorShellEffects），全屏遮罩拦截所有点击。
+// e2e 每个用例都是全新 context（localStorage 为空），不跳过会导致全部 spec 被遮罩卡死
+// （issue #114 验证阶段发现的第二个系统性卡点），与上方主教程跳过同属确定性环境预置。
+localStorage.setItem('open-factory:gesture-tutorial-seen', '1');
 
 const mocks: TauriMocks = {
   confirm: (message) => {
@@ -1096,7 +1154,12 @@ const mocks: TauriMocks = {
     });
     await wait(10);
     emit('scene-detect-progress', { progress: 1, ptsTime: request.duration, analyzedFrames: totalFrames, totalFrames });
-    return { sceneTimes: mockSceneTimes, limited: false, analyzedDuration: request.duration ?? 0 };
+    // 低阈值（更敏感）时返回更多切点，供参数可调 e2e 断言 threshold 传参生效
+    const sceneTimes =
+      typeof request.threshold === 'number' && request.threshold <= 0.2
+        ? Array.from(new Set([...mockSceneTimes, 2]))
+        : mockSceneTimes;
+    return { sceneTimes, limited: false, analyzedDuration: request.duration ?? 0 };
   },
   cancelSceneDetection: () => undefined,
   runWhisper: async ({ clipId }) => {
@@ -1104,16 +1167,7 @@ const mocks: TauriMocks = {
     await wait(10);
     emit('whisper-progress', { clipId, progress: 1, progressPct: 100 });
     const srtPath = `C:/Users/E2E/AppData/Roaming/open-factory/whisper/${clipId}.srt`;
-    const contents = [
-      '1',
-      '00:00:00,000 --> 00:00:01,200',
-      'First generated caption',
-      '',
-      '2',
-      '00:00:01,400 --> 00:00:02,400',
-      'Second generated caption',
-      '',
-    ].join('\n');
+    const contents = mockWhisperSrtContents;
     files.set(srtPath, contents);
     exists.set(srtPath, true);
     mtimes.set(srtPath, Date.now());
@@ -1138,10 +1192,13 @@ const mocks: TauriMocks = {
   },
   cancelDemucs: () => undefined,
   processAudioNoiseReduction: async ({ mediaPath, clipId }) => {
+    // 每段 400ms：慢 runner 上 React 渲染调度积压时，瞬时态（processing
+    // 分支）与完成态会合并进同一次渲染导致 ai-local-denoise-progress
+    // 元素从未出现（run 32625097893 12/12 稳定失败根因）
     emit('noise-reduction-progress', { clipId, progress: 0.1, stage: 'decoding' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 0.5, stage: 'processing' });
-    await wait(50);
+    await wait(400);
     emit('noise-reduction-progress', { clipId, progress: 1.0, stage: 'complete' });
     const outputPath = mediaPath.replace(/(\.[^.]+)$/, '-denoised$1');
     return { outputPath, originalPath: mediaPath, durationMs: 15, noiseReductionDb: 6.5 };
@@ -1175,10 +1232,15 @@ const mocks: TauriMocks = {
     persistFiles();
     return { taskId, outputPath: task.outputPath, durationMs: Date.now() - task.startedAt };
   },
-  startCollaborationHost: ({ port }) => {
+  startCollaborationHost: ({ port, authToken }) => {
     collaborationHostActive = true;
     collaborationHostPort = port || 37822;
-    return { active: true, port: collaborationHostPort };
+    // 模拟真实后端：请求未携带 token 时自动生成，确保客户端必须认证。
+    return {
+      active: true,
+      port: collaborationHostPort,
+      authToken: authToken ?? 'mock-session-token',
+    };
   },
   stopCollaborationHost: () => {
     collaborationHostActive = false;
@@ -1203,7 +1265,10 @@ const mocks: TauriMocks = {
     return () => set.delete(handler as (payload: unknown) => void);
   },
   callAiApi: async (request) => {
-    await new Promise((r) => setTimeout(r, 100));
+    // 400ms：慢 runner 上 loading 瞬时态（quality-badge-loading 等）与完成态
+    // 会合并进同一次 React 渲染导致 loading 元素从未出现（run 32625097893
+    // ai-quality-assessment 稳定失败根因，与 processAudioNoiseReduction 同模式）
+    await new Promise((r) => setTimeout(r, 400));
     const systemContent = typeof request.messages[0]?.content === 'string' ? request.messages[0].content : '';
     if (systemContent.includes('字幕编辑助手')) {
       return {
@@ -1831,6 +1896,100 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupTimelineAdvancedFixture: () => {
+    const project = createProject('Timeline Advanced E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-adv-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-b', 2, 2, 0, 6),
+            makeEditingVideoClip('clip-adv-c', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-adv-1', name: 'Advanced Group', clipIds: ['clip-adv-a', 'clip-adv-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupTimelineAdvancedGuardFixture: () => {
+    // 组 [a,b] 横跨 gap (2,4)：playhead=3 命中 gap，闭合会被组撕裂守卫拒绝
+    const project = createProject('Timeline Advanced Guard E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-guard-a', 0, 2, 0, 6),
+            makeEditingVideoClip('clip-guard-b', 4, 2, 0, 6),
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+      clipGroups: [{ id: 'group-guard-1', name: 'Guard Group', clipIds: ['clip-guard-a', 'clip-guard-b'], color: 'blue' }],
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(3);
     commandManager.clear();
   },
   setupGapFillFixture: () => {
@@ -2475,6 +2634,204 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
     useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupSemanticTightenFixture: () => {
+    const project = createProject('Semantic Tighten E2E');
+    const asset: MediaAsset = {
+      id: 'media-smart-video',
+      type: 'video',
+      name: 'smart-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // 收紧形态：首内容点 0.6（head keep [0.3, 2.5]）+ 尾部低能量段 1.8 起
+    // （tail keep [0, 2.0]）；无 whisper 转写 → 仅收紧类建议（混合门控用例）
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-27T00:00:00.000Z',
+                sceneTypes: ['dialogue'],
+                primarySceneType: 'dialogue',
+                segments: [
+                  { start: 0, end: 0.6, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.05 },
+                  { start: 0.6, end: 1.2, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.6 },
+                  { start: 1.2, end: 1.8, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.55 },
+                  { start: 1.8, end: 2.5, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.04 },
+                ],
+                emotionCurve: [],
+                dialogueTurns: [
+                  { start: 0.6, end: 1.2, loudness: 0.6 },
+                  { start: 1.2, end: 1.8, loudness: 0.55 },
+                ],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
+    useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupEmotionalClimaxFixture: () => {
+    const project = createProject('Emotional Climax E2E');
+    const asset: MediaAsset = {
+      id: 'media-smart-video',
+      type: 'video',
+      name: 'smart-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // 情感高潮形态：高潮点 0.5（0.85）→ 延伸 [0.5, 5.5] → clamp [0.5, 2.5]
+    // （2.0s ≥ 1s 极短保护）；无 dialogueTurns/segments → 无 head/tail-trim；
+    // 无 whisper 转写 → 无 narrative（仅 emotional-climax 单源形态）
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-28T00:00:00.000Z',
+                sceneTypes: ['dialogue'],
+                primarySceneType: 'dialogue',
+                segments: [],
+                emotionCurve: [{ time: 0.5, value: 0.85, brightness: 0.85 }],
+                dialogueTurns: [],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
+    useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupRoughCutCompareFixture: () => {
+    const project = createProject('Rough Cut Compare E2E');
+    const asset: MediaAsset = {
+      id: 'media-roughcut-video',
+      type: 'video',
+      name: 'roughcut-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264',
+    };
+    // contentAnalysis 派生 cutPoints = [0.3, 1.0, 1.8, 2.4]（onset 2.4 距最近
+    // highlight 1.8 为 0.6 > minGap 0.5，不被 nearVisual 吸收），
+    // 提案段 [0,0.3] 与 [2.4,2.5] 因 < minClipDuration(0.5) 被跳过 → apply 后
+    // 保留 [0.3,2.4] 并波纹删除首尾间隙。
+    const clip = makeSmartRoughCutVideoClip();
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              ...clip,
+              id: 'clip-roughcut-video',
+              name: 'roughcut-video.mp4',
+              mediaId: 'media-roughcut-video',
+              contentAnalysis: {
+                version: 1,
+                analyzedAt: '2026-08-25T00:00:00.000Z',
+                sceneTypes: ['indoor'],
+                primarySceneType: 'indoor',
+                segments: [
+                  { start: 0.3, end: 1, sceneTypes: ['action'], brightness: 0.5, motion: 0.9, loudness: 0.2 },
+                  { start: 1, end: 1.8, sceneTypes: ['action'], brightness: 0.5, motion: 0.85, loudness: 0.2 },
+                  { start: 1.8, end: 2.5, sceneTypes: ['action'], brightness: 0.5, motion: 0.8, loudness: 0.2 },
+                ],
+                emotionCurve: [],
+                dialogueTurns: [{ start: 2.4, end: 2.45, loudness: 0.7 }],
+              },
+            },
+          ],
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-roughcut-video']);
+    useEditorStore.getState().setSelectedClipId('clip-roughcut-video');
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
@@ -3161,7 +3518,7 @@ window.__E2E_ACTIONS__ = {
   closePreviewWindow: () => {
     previewWindowState = { ...previewWindowState, open: false };
     emit('preview-window-closed', previewWindowState);
-    useEditorUIStore.getState().setPreviewWindowOpen(false);
+    useDialogStore.getState().setPreviewWindowOpen(false);
   },
   getPreviewWindowState: () => previewWindowState,
   setPlayheadTime: (time: unknown) => {
@@ -3203,6 +3560,48 @@ window.__E2E_ACTIONS__ = {
   getCollaborationState: () => collaborationController.getState(),
   getCollaborationBroadcastMessages: () => [...collaborationBroadcastMessages],
   getCollaborationHostState: () => ({ active: collaborationHostActive, port: collaborationHostPort }),
+  // collaboration.spec.ts 的 simulateCollab* 钩子：本机模拟协同（方案 A：app.emit 扇出）。
+  simulateCollabSessionActive: async () => {
+    // 先等启动期 applyLocalCoeditingSettings 落地，避免其异步 disable 抹掉模拟会话。
+    await waitForCollabStartupSettled();
+    const state = collaborationController.getState();
+    if (!state.enabled || !state.sessionId) {
+      await collaborationController.createSession({ port: 37822, userId: 'local-e2e' });
+      collaborationController.updatePresence(useEditorStore.getState().playheadTime, 'E2E Local', '#38bdf8');
+    }
+    return collaborationController.getState();
+  },
+  simulateCollabUserJoin: async (input: unknown) => {
+    const user = (input && typeof input === 'object' ? input : {}) as {
+      userId?: string;
+      userName?: string;
+      role?: string;
+      color?: string;
+    };
+    // 先等启动期 applyLocalCoeditingSettings 落地，避免其异步 disable 抹掉模拟会话。
+    await waitForCollabStartupSettled();
+    const state = collaborationController.getState();
+    if (!state.enabled) {
+      await collaborationController.createSession({ port: 37822, userId: 'local-e2e' });
+      collaborationController.updatePresence(useEditorStore.getState().playheadTime, 'E2E Local', '#38bdf8');
+    }
+    collaborationController.addRemoteUser({
+      userId: user.userId ?? 'remote-user',
+      name: user.userName ?? 'Remote User',
+      playheadTime: useEditorStore.getState().playheadTime,
+      ...(user.color ? { color: user.color } : {}),
+    });
+    return collaborationController.getState();
+  },
+  simulateCollabRole: (role: unknown) => {
+    collaborationController.setLocalRole(role === 'viewer' ? 'viewer' : 'editor');
+    return collaborationController.getState();
+  },
+  simulateCollabLock: (userId: unknown) => {
+    collaborationController.lockSession(typeof userId === 'string' ? userId : 'other-user');
+    return collaborationController.getState();
+  },
+  getCollabOperationsSent: () => collaborationController.getSentOperations(),
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
   selectClip: (clipId: unknown) => {
     if (typeof clipId === 'string') {
@@ -3272,6 +3671,11 @@ window.__E2E_ACTIONS__ = {
     mockSceneTimes = Array.isArray(times)
       ? times.filter((time): time is number => typeof time === 'number' && Number.isFinite(time))
       : [1];
+  },
+  setWhisperSrtContents: (contents: unknown) => {
+    if (typeof contents === 'string' && contents.trim().length > 0) {
+      mockWhisperSrtContents = contents;
+    }
   },
   setAvailableMemoryBytes: (bytes: unknown) => {
     if (typeof bytes === 'number' && Number.isFinite(bytes)) {
@@ -5009,25 +5413,24 @@ window.__E2E_ACTIONS__ = {
     if (!clip) return undefined;
     // Handle independent MulticamClip (type: 'multicam')
     if (clip.type === 'multicam') {
-      const mc = clip as any;
       return {
-        angleCount: mc.angles?.length ?? 0,
-        switchCount: mc.switchPoints?.length ?? 0,
+        angleCount: clip.angles.length,
+        switchCount: clip.switchPoints.length,
         switches:
-          mc.switchPoints?.map((sp: any) => ({ time: sp.time, angleId: mc.angles?.[sp.targetAngle]?.id ?? '' })) ?? [],
-        activeAngle: mc.angles?.[mc.activeAngle]?.id,
-        angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+          clip.switchPoints.map((sp) => ({ time: sp.time, angleId: clip.angles[sp.targetAngle]?.id ?? '' })),
+        activeAngle: clip.angles[clip.activeAngle]?.id,
+        angles: clip.angles.map((a) => ({ id: a.id, name: a.name, offset: a.offset })),
       };
     }
     // Handle NestedSequenceClip with multicam property (legacy)
-    if (!(clip as any).multicam) return undefined;
-    const mc = (clip as any).multicam;
+    if (!('multicam' in clip) || !clip.multicam) return undefined;
+    const mc = clip.multicam;
     return {
-      angleCount: mc.angles?.length ?? 0,
-      switchCount: mc.switches?.length ?? 0,
-      switches: mc.switches ?? [],
-      activeAngle: mc.activeAngle,
-      angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+      angleCount: mc.angles.length,
+      switchCount: mc.switches.length,
+      switches: mc.switches,
+      activeAngle: undefined,
+      angles: mc.angles.map((a) => ({ id: a.id, name: a.name, offset: a.offset })),
     };
   },
   setupShakeAnalysisFixture: () => {
@@ -5155,7 +5558,7 @@ window.__E2E_ACTIONS__ = {
   },
   setupPlatformFitFixture: () => {
     const project = createProject('Platform Fit E2E');
-    const clips = [];
+    const clips: Clip[] = [];
     for (let i = 0; i < 5; i++) {
       clips.push({
         id: `clip-pf-${i}`,
@@ -5172,7 +5575,7 @@ window.__E2E_ACTIONS__ = {
         transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
         volume: 1,
         platformFitRemoved: i >= 3 ? true : undefined,
-      } as any);
+      });
     }
     const assets: MediaAsset[] = [];
     for (let i = 0; i < 5; i++) {
@@ -6079,7 +6482,6 @@ window.__E2E_ACTIONS__ = {
       activeSequenceId: PRIMARY_SEQUENCE_ID,
     });
   },
-  commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
   setupMotionTypeFixture: () => {
     const project = createProject('Motion Type E2E');
     const assetPan = {
@@ -7019,65 +7421,7 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
-    commandManager.clear();
-  },
-  setupAISubtitleWorkflowFixtureWithClip: () => {
-    const project = createProject('AISubtitleWorkflow E2E');
-    const asset: MediaAsset = {
-      id: 'media-subtitle-workflow-video',
-      type: 'video',
-      name: 'subtitle-workflow-video.mp4',
-      path: tinyVideo,
-      duration: 8,
-      width: 1920,
-      height: 1080,
-      size: 8192,
-      mtimeMs: 1_000,
-      hasAudio: true,
-      audioChannels: 2,
-      audioSampleRate: 44_100,
-      audioCodec: 'aac',
-    };
-    const timeline = {
-      transitions: [],
-      markers: [],
-      tracks: [
-        createTrack({
-          id: 'track-subtitle-workflow-video',
-          type: 'video',
-          name: 'Video 1',
-          clips: [
-            {
-              id: 'clip-subtitle-workflow-video',
-              type: 'video',
-              name: 'subtitle-workflow-video.mp4',
-              mediaId: 'media-subtitle-workflow-video',
-              trackId: 'track-subtitle-workflow-video',
-              start: 0,
-              duration: 8,
-              trimStart: 0,
-              trimEnd: 0,
-              speed: DEFAULT_CLIP_SPEED,
-              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-              transform: { ...DEFAULT_TRANSFORM },
-              volume: 1,
-            },
-          ],
-        }),
-      ],
-    };
-    useEditorStore.getState().setProject({
-      ...project,
-      media: [asset],
-      timeline,
-      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-      activeSequenceId: PRIMARY_SEQUENCE_ID,
-    });
-    useEditorStore.getState().setSelectedClipIds(['clip-subtitle-workflow-video']);
-    useEditorStore.getState().setSelectedClipId('clip-subtitle-workflow-video');
-    useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
+    useDialogStore.getState().setAiSubtitleWorkflowOpen(true);
     commandManager.clear();
   },
   setupSmartCreationDeepFixture: () => {
@@ -7221,6 +7565,9 @@ window.__E2E_ACTIONS__ = {
           root.unmount();
           container?.remove();
         },
+        // 组件仅在提供 onApply 时渲染"应用"按钮（sr-apply-btn），
+        // fixture 必须传入，否则 spec 对 apply 按钮的断言永远失败
+        onApply: () => {},
       }),
     );
   },
@@ -7269,7 +7616,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setAssistEditingOpen(true);
+    useDialogStore.getState().setAssistEditingOpen(true);
     commandManager.clear();
   },
   setupContentGenerationFixture: () => {
@@ -7313,7 +7660,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setContentGenerationOpen(true);
+    useDialogStore.getState().setContentGenerationOpen(true);
     commandManager.clear();
   },
   setupQualityAssessmentFixture: () => {
@@ -7354,7 +7701,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setQualityAssessmentOpen(true);
+    useDialogStore.getState().setQualityAssessmentOpen(true);
     commandManager.clear();
   },
   openAutomationPanel: () => {
@@ -7396,13 +7743,13 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
     // 关闭其他可能遮挡的面板
-    useEditorUIStore.getState().setQualityAssessmentOpen(false);
-    useEditorUIStore.getState().setContentGenerationOpen(false);
-    useEditorUIStore.getState().setAssistEditingOpen(false);
-    useEditorUIStore.getState().setAiRoughCutOpen(false);
+    useDialogStore.getState().setQualityAssessmentOpen(false);
+    useDialogStore.getState().setContentGenerationOpen(false);
+    useDialogStore.getState().setAssistEditingOpen(false);
+    useDialogStore.getState().setAiRoughCutOpen(false);
     // 确保 audio-mixer 不遮挡右侧面板
-    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
-    useEditorUIStore.getState().setAutomationOpen(true);
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
   openSceneAnalysisView: () => {
@@ -7443,12 +7790,12 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
-    useEditorUIStore.getState().setQualityAssessmentOpen(false);
-    useEditorUIStore.getState().setContentGenerationOpen(false);
-    useEditorUIStore.getState().setAssistEditingOpen(false);
-    useEditorUIStore.getState().setAiRoughCutOpen(false);
-    useEditorUIStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
-    useEditorUIStore.getState().setAutomationOpen(true);
+    useDialogStore.getState().setQualityAssessmentOpen(false);
+    useDialogStore.getState().setContentGenerationOpen(false);
+    useDialogStore.getState().setAssistEditingOpen(false);
+    useDialogStore.getState().setAiRoughCutOpen(false);
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
 
@@ -7479,7 +7826,11 @@ window.__E2E_ACTIONS__ = {
       ],
       activeSequenceId: PRIMARY_SEQUENCE_ID,
     });
-    useEditorUIStore.getState().setAutomationOpen(true);
+    // 隐藏音频混音器，避免其遮挡自动化面板（与相邻自动化 fixture 一致的写法）。
+    // 依赖 layoutSettingsTouched 竞态修复：该程序化设置不再被挂载时的
+    // readLayoutSettings 异步加载覆盖（auto-generate:68 根因修复后稳定生效）。
+    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
 };
@@ -8235,7 +8586,7 @@ function setupMulticamAiCutFixtureInner() {
                 { time: 7, angleId: 'angle-a', confidence: 0.78, reason: 'close-up' },
               ],
             },
-          } as any,
+          },
         ],
       }),
     ],

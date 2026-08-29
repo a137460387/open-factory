@@ -18,7 +18,9 @@ test.describe('自动剪辑生成器 - 一键生成流程', () => {
     await page.getByTestId('tab-generate').click();
     const autoPanel = page.getByTestId('auto-generate-panel');
     await expect(autoPanel).toBeVisible();
-    await expect(page.getByText('一键生成')).toBeVisible();
+    // 面板标题 h3 与底部"一键生成"按钮同文本，getByText 会命中两者触发
+    // strict mode violation；按角色精确定位标题。
+    await expect(page.getByRole('heading', { name: '一键生成' })).toBeVisible();
   });
 
   test('模板选择器显示内置模板', async ({ page }) => {
@@ -36,9 +38,11 @@ test.describe('自动剪辑生成器 - 一键生成流程', () => {
   test('选择模板后显示模板预览', async ({ page }) => {
     await page.getByText('生成', { exact: true }).click();
 
-    // 选择短视频模板
+    // 选择短视频模板。Playwright 对 selectOption 的正则 label 匹配存在已知缺陷
+    // （options[0].label: expected string, got object），value/index/精确字符串均正常；
+    // 模板 value 稳定，按 value 选择最稳健。
     const templateSelect = page.getByTestId('template-select');
-    await templateSelect.selectOption({ label: /短视频/ });
+    await templateSelect.selectOption('builtin-short-video');
 
     // 模板预览应该显示
     const preview = page.getByTestId('template-preview');

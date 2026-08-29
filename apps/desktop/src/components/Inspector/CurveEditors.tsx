@@ -1,9 +1,43 @@
-import {getEasingPresetsByCategory, getPresetHandles, clamp01, clamp, type EasingPreset, type EasingPresetCategory} from '@open-factory/editor-core';
-import {useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent} from 'react';
-import type {Clip} from '@open-factory/editor-core';
-import {KEYFRAME_PROPERTY_LIMITS, MAX_CLIP_SPEED, MIN_CLIP_SPEED, applyKeyframeHandlePatch, calculateBezierHandleCoordinates, calculateKeyframeSpeedSamples, createDefaultColorCurves, createId, getClipSpeed, interpolateKeyframes, normalizeColorCurves, normalizeCurvePoints, sampleCurve, type ColorCurves, type ColorWheelValue, type CurvePoint, type Keyframe, type KeyframeEasing, type KeyframeHandleMode, type KeyframeProperty} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {type SelectedKeyframeRef} from '../../store/editorStore';
+import {
+  getEasingPresetsByCategory,
+  getPresetHandles,
+  clamp01,
+  clamp,
+  type EasingPreset,
+  type EasingPresetCategory,
+} from '@open-factory/editor-core';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import type { Clip } from '@open-factory/editor-core';
+import {
+  KEYFRAME_PROPERTY_LIMITS,
+  MAX_CLIP_SPEED,
+  MIN_CLIP_SPEED,
+  applyKeyframeHandlePatch,
+  calculateBezierHandleCoordinates,
+  calculateKeyframeSpeedSamples,
+  createDefaultColorCurves,
+  createId,
+  getClipSpeed,
+  interpolateKeyframes,
+  normalizeColorCurves,
+  normalizeCurvePoints,
+  sampleCurve,
+  type ColorCurves,
+  type ColorWheelValue,
+  type CurvePoint,
+  type Keyframe,
+  type KeyframeEasing,
+  type KeyframeHandleMode,
+  type KeyframeProperty,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { type SelectedKeyframeRef } from '../../store/editorStore';
 
 // ---------------------------------------------------------------------------
 // Speed curve helpers
@@ -252,13 +286,13 @@ export function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(fram
 // Keyframe curve editor types & helpers
 // ---------------------------------------------------------------------------
 
-export type CurveEditorDrag =
+type CurveEditorDrag =
   | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }
   | { mode: 'points'; start: CurveEditorFrame; base: CurveEditorFrame[]; selectedIds: string[] }
   | { mode: 'handle'; keyframeId: string; handle: 'in' | 'out'; base: CurveEditorFrame[] };
 
-export type CanvasPoint = { x: number; y: number };
-export type CurveEditorFrame = Keyframe<number>;
+type CanvasPoint = { x: number; y: number };
+type CurveEditorFrame = Keyframe<number>;
 
 export function getCurveEditorFrames(clip: Clip, property: KeyframeProperty): CurveEditorFrame[] {
   return normalizeCurveEditorFrames(
@@ -714,7 +748,7 @@ export function EasingPresetSelector({
 // KeyframeCurveEditor component
 // ---------------------------------------------------------------------------
 
-export function KeyframeCurveEditor({
+function KeyframeCurveEditor({
   clip,
   property,
   selectedKeyframes,
@@ -948,7 +982,7 @@ export function KeyframeCurveEditor({
 // Color curve helpers
 // ---------------------------------------------------------------------------
 
-export function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], strokeColor: string): void {
+function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[], strokeColor: string): void {
   const context = canvas.getContext('2d');
   if (!context) {
     return;
@@ -1003,7 +1037,7 @@ export function drawCurveCanvas(canvas: HTMLCanvasElement, points: CurvePoint[],
   }
 }
 
-export function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
+function eventToCurvePoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CurvePoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: clampUnit((event.clientX - rect.left) / rect.width),
@@ -1011,7 +1045,7 @@ export function eventToCurvePoint(event: { clientX: number; clientY: number }, c
   };
 }
 
-export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDistance: number): number | null {
+function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, maxDistance: number): number | null {
   let nearestIndex: number | null = null;
   let nearestDistance = maxDistance;
   points.forEach((candidate, index) => {
@@ -1030,7 +1064,7 @@ export function findNearestCurvePoint(points: CurvePoint[], point: CurvePoint, m
 
 export type CurveChannel = keyof ColorCurves;
 
-export const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }> = [
+const CURVE_CHANNELS: Array<{ key: CurveChannel; label: string; color: string }> = [
   { key: 'master', label: zhCN.inspector.fields.masterCurve, color: '#f8fafc' },
   { key: 'r', label: zhCN.inspector.fields.redCurve, color: '#ef4444' },
   { key: 'g', label: zhCN.inspector.fields.greenCurve, color: '#22c55e' },
@@ -1180,70 +1214,7 @@ export function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommi
   );
 }
 
-// ---------------------------------------------------------------------------
-// Color wheel helpers
-// ---------------------------------------------------------------------------
-
-export function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue): void {
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-  const size = canvas.width;
-  const radius = size / 2;
-  const image = context.createImageData(size, size);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const dx = (x + 0.5 - radius) / radius;
-      const dy = (y + 0.5 - radius) / radius;
-      const distance = Math.hypot(dx, dy);
-      const offset = (y * size + x) * 4;
-      if (distance > 1) {
-        image.data[offset + 3] = 0;
-        continue;
-      }
-      const hue = (Math.atan2(dy, dx) / (Math.PI * 2) + 1) % 1;
-      const rgb = hsvToRgb(hue, distance, 1);
-      image.data[offset] = Math.round(rgb.r * 255);
-      image.data[offset + 1] = Math.round(rgb.g * 255);
-      image.data[offset + 2] = Math.round(rgb.b * 255);
-      image.data[offset + 3] = 255;
-    }
-  }
-  context.putImageData(image, 0, 0);
-  const marker = wheelOffsetsToPoint(value);
-  context.beginPath();
-  context.arc(radius + marker.x * radius, radius + marker.y * radius, 5, 0, Math.PI * 2);
-  context.fillStyle = '#ffffff';
-  context.fill();
-  context.strokeStyle = '#0f172a';
-  context.lineWidth = 2;
-  context.stroke();
-}
-
-export function eventToUnitPoint(
-  event: { clientX: number; clientY: number },
-  canvas: HTMLCanvasElement,
-): { x: number; y: number } {
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
-  const length = Math.hypot(x, y);
-  if (length <= 1) {
-    return { x, y };
-  }
-  return { x: x / length, y: y / length };
-}
-
-export function wheelPointToOffsets(point: { x: number; y: number }): Pick<ColorWheelValue, 'r' | 'g' | 'b'> {
-  return {
-    r: clampSigned(point.x),
-    g: clampSigned(-0.5 * point.x - 0.8660254 * point.y),
-    b: clampSigned(-0.5 * point.x + 0.8660254 * point.y),
-  };
-}
-
-export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
+function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
   const x = value.r;
   const y = (value.b - value.g) / 1.7320508;
   const length = Math.hypot(x, y);
@@ -1253,7 +1224,7 @@ export function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: num
   return { x: x / length, y: y / length };
 }
 
-export function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
+function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
   const sector = Math.floor(hue * 6);
   const fraction = hue * 6 - sector;
   const p = value * (1 - saturation);
@@ -1287,4 +1258,4 @@ export function roundFinite(value: number): number {
 export const clampUnit = clamp01;
 
 /** @deprecated 使用 clamp(value, -1, 1) 代替 */
-export const clampSigned = (value: number): number => clamp(value, -1, 1);
+const clampSigned = (value: number): number => clamp(value, -1, 1);

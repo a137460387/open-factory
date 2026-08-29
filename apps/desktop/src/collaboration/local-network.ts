@@ -3,6 +3,7 @@ import {
   assignCollaborationUserColors,
   buildCollaborationClipLocks,
   canApplyCollaborationOperation,
+  isCollaborationProjectPayload,
   parseCollaborationOperation,
   serializeCollaborationOperation,
   type CollaborationClipLock,
@@ -26,13 +27,18 @@ import { useEditorStore } from '../store/editorStore';
 type CollaborationMessage =
   | { type: 'operation'; operation: CollaborationOperation }
   | { type: 'project-sync'; project: Project; timestamp: number }
-  | { type: 'presence'; user: CollaborationUserPresence };
+  | { type: 'presence'; user: CollaborationUserPresence }
+  | { type: 'session-lock'; userId: string };
 
 interface CollaborationControllerState {
   enabled: boolean;
   role: CollaborationRole;
   permission: CollaborationPermission;
   userId: string;
+  sessionId?: string;
+  /** host 会话认证 token（后端自动生成或用户配置），客户端入会时需提供 */
+  authToken?: string;
+  sessionLockedBy?: string;
   users: CollaborationUserPresence[];
   locks: CollaborationClipLock[];
   operations: CollaborationOperation[];
@@ -62,13 +68,17 @@ class LocalNetworkCollaborationController {
   }
 
   async enableHost(request: CollaborationHostRequest & { userId?: string } = { port: 37822 }): Promise<void> {
-    await startCollaborationHost(request);
+    const hostState = await startCollaborationHost(request);
     this.state = {
       ...this.state,
       enabled: true,
       role: 'host',
       permission: 'edit',
       userId: request.userId ?? this.state.userId,
+      // 会话 ID 仅内存态：host 会话建立即视为"已创建会话"（对应面板 collab-session-id）。
+      sessionId: this.state.sessionId ?? `collab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      // 记录后端生效的认证 token（用户配置或自动生成），供面板展示与客户端入会使用。
+      authToken: hostState.authToken ?? this.state.authToken,
     };
     this.publishState();
     await this.ensureListening();
@@ -88,11 +98,90 @@ class LocalNetworkCollaborationController {
   }
 
   async disable(): Promise<void> {
-    this.state = { ...this.state, enabled: false, users: [], locks: [], operations: [] };
+    this.state = {
+      ...this.state,
+      enabled: false,
+      sessionId: undefined,
+      authToken: undefined,
+      sessionLockedBy: undefined,
+      users: [],
+      locks: [],
+      operations: [],
+    };
     this.publishState();
     this.unlisten?.();
     this.unlisten = undefined;
     await stopCollaborationHost();
+  }
+
+  /** 面板"创建会话"入口：确保 host 会话已建立（含 sessionId 生成）。 */
+  async createSession(request: CollaborationHostRequest & { userId?: string } = { port: 37822 }): Promise<void> {
+    if (this.state.enabled && this.state.sessionId) {
+      return;
+    }
+    await this.enableHost(request);
+  }
+
+  /** 注入远端用户 presence（e2e 模拟"新用户加入"；真实场景由 presence 消息驱动 receiveMessage）。 */
+  addRemoteUser(user: CollaborationUserPresence): void {
+    if (!this.state.enabled) {
+      return;
+    }
+    const users = assignCollaborationUserColors([
+      ...this.state.users.filter((item) => item.userId !== user.userId),
+      user,
+    ]);
+    this.state = {
+      ...this.state,
+      users,
+      locks: buildCollaborationClipLocks(this.state.operations, users, 10_000, Date.now()),
+    };
+    this.publishState();
+  }
+
+  /** 设置本机角色：viewer → permission 'read-only'（调色面板据此进入只读态）。 */
+  setLocalRole(role: 'editor' | 'viewer'): void {
+    this.state = {
+      ...this.state,
+      permission: role === 'viewer' ? 'read-only' : 'edit',
+    };
+    this.publishState();
+  }
+
+  /** 会话锁定：记录锁定者 userId（仅面板展示，不拦截编辑命令广播）。 */
+  lockSession(userId: string): void {
+    this.state = { ...this.state, sessionLockedBy: userId };
+    this.publishState();
+    if (this.state.enabled) {
+      void broadcastCollaborationMessage(serializeCollaborationMessage({ type: 'session-lock', userId }));
+    }
+  }
+
+  /** 发布评论：kind='comment' 的 operation，本地记入 operations 并广播。 */
+  async broadcastComment(text: string): Promise<void> {
+    if (!this.state.enabled) {
+      return;
+    }
+    const trimmed = text.trim();
+    if (!trimmed) {
+      return;
+    }
+    const timestamp = Date.now();
+    const operation: CollaborationOperation = {
+      id: `operation-${timestamp}-${Math.random().toString(36).slice(2, 8)}`,
+      userId: this.state.userId,
+      commandName: 'collaboration-comment',
+      params: { text: trimmed },
+      timestamp,
+      kind: 'comment',
+    };
+    this.rememberOperation(operation);
+    await broadcastCollaborationMessage(serializeCollaborationMessage({ type: 'operation', operation }));
+  }
+
+  /** 本机已发送的 operations（userId === 本机），供 e2e 断言同步发送情况。 */
+  getSentOperations(): CollaborationOperation[] {
+    return this.state.operations.filter((operation) => operation.userId === this.state.userId);
   }
 
   async broadcastCommand(command: Command): Promise<void> {
@@ -142,7 +231,17 @@ class LocalNetworkCollaborationController {
       this.publishState();
       return;
     }
+    if (message.type === 'session-lock') {
+      // 会话锁仅面板展示（collab-lock-status），不拦截编辑命令广播。
+      this.state = { ...this.state, sessionLockedBy: message.userId };
+      this.publishState();
+      return;
+    }
     if (message.type === 'project-sync' && this.state.role === 'client') {
+      // 远端载荷结构守卫：拒绝缺少 Project 必要字段的 project-sync 消息。
+      if (!isCollaborationProjectPayload(message.project)) {
+        return;
+      }
       this.applyingRemote = true;
       try {
         const result = applyCollaborationReconnectState(useEditorStore.getState().project, message.project);
@@ -162,10 +261,11 @@ class LocalNetworkCollaborationController {
     }
     this.rememberOperation(message.operation);
     const project = message.operation.params.project;
-    if (project && typeof project === 'object') {
+    // 远端载荷结构守卫：operation 携带的 project 必须通过校验才能替换本地状态。
+    if (isCollaborationProjectPayload(project)) {
       this.applyingRemote = true;
       try {
-        useEditorStore.getState().setProject(project as Project, useEditorStore.getState().projectPath);
+        useEditorStore.getState().setProject(project, useEditorStore.getState().projectPath);
       } finally {
         this.applyingRemote = false;
       }
@@ -286,6 +386,9 @@ function parseCollaborationMessage(value: string): CollaborationMessage | undefi
     }
     if (parsed.type === 'presence' && parsed.user) {
       return { type: 'presence', user: parsed.user };
+    }
+    if (parsed.type === 'session-lock' && typeof parsed.userId === 'string') {
+      return { type: 'session-lock', userId: parsed.userId };
     }
     return undefined;
   } catch {

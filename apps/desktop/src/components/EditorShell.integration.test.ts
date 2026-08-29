@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEditorStore } from '../store/editorStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useDialogStore } from '../store/dialogStore';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 
 // Mock tauri-bridge to avoid IPC calls
@@ -70,13 +70,13 @@ describe('EditorShell integration: store subscriptions', () => {
   });
 
   it('editorUIStore dialog setter 更新正确', () => {
-    const { result } = renderHook(() => useEditorUIStore((s) => s.setBatchTranscodeOpen));
+    const { result } = renderHook(() => useDialogStore((s) => s.setBatchTranscodeOpen));
 
     act(() => {
       result.current(true);
     });
 
-    expect(useEditorUIStore.getState().batchTranscodeOpen).toBe(true);
+    expect(useDialogStore.getState().batchTranscodeOpen).toBe(true);
   });
 
   it('performanceMonitorStore alert 联动', () => {

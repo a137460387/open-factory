@@ -5,12 +5,14 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   BatchImportSubtitleCommand,
+  CloseGapCommand,
   SmartMontageCommand,
   UpdateProjectSpeakersCommand,
   buildVideoStitchSequence,
   createTrack,
   createId,
   detectSubtitleDataOverlaps,
+  findTrackGapAtTime,
   mergeOverlappingSubtitleDataCues,
   mergeProjectSpeakers,
   type BeatSensitivity,
@@ -19,7 +21,7 @@ import {
   type SubtitleDataImportMode,
 } from '@open-factory/editor-core';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useDialogStore } from '../store/dialogStore';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { indexAndTagImportedMedia } from '../media/media-index-integration';
 import {
@@ -92,6 +94,7 @@ interface InlineCallbacksDeps {
   navigatePrevGap: () => void;
   navigateNextGap: () => void;
   renderInOutRegion: () => Promise<void>;
+  closeGapAtPlayhead: () => void;
 }
 
 /**
@@ -151,6 +154,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
     navigatePrevGap,
     navigateNextGap,
     renderInOutRegion,
+    closeGapAtPlayhead,
   } = deps;
 
   const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
@@ -222,7 +226,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
         commandManager.execute(montageCmd);
         const result = montageCmd.montageResult;
         setPlayheadTime(0);
-        useEditorUIStore.getState().setSmartMontageOpen(false);
+        useDialogStore.getState().setSmartMontageOpen(false);
         showToast({ kind: 'success', title: 'AI 智能混剪完成', message: `已生成 ${result.clipCount} 个片段，BPM ≈ ${result.estimatedBpm}` });
       } catch (error) {
         showToast({ kind: 'error', title: '混剪生成失败', message: error instanceof Error ? error.message : '时间线操作被拒绝' });
@@ -389,6 +393,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       navigatePrevGap,
       navigateNextGap,
       renderInOut: () => void renderInOutRegion(),
+      closeGapAtPlayhead,
     }),
     [
       togglePlayback, reversePlayback, pausePlayback, forwardPlayback, stepFrame,
@@ -398,7 +403,7 @@ export function useEditorShellInlineCallbacks(deps: InlineCallbacksDeps) {
       toggleTimelineGridSnap, jumpTimelineNavigationPoint, undo,
       switchToPreviousHistoryBranch, redo, saveProject, exportCurrentFrame,
       matchFrameToSource, revealMediaInTimeline, navigateToNextInstance,
-      navigatePrevGap, navigateNextGap, renderInOutRegion,
+      navigatePrevGap, navigateNextGap, renderInOutRegion, closeGapAtPlayhead,
     ],
   );
 

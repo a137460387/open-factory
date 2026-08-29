@@ -219,7 +219,7 @@ const WheelsGradingTab: React.FC<WheelsGradingTabProps> = ({ threeWayColor, onCo
   );
 };
 
-function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue) {
+function drawHslWheel(canvas: HTMLCanvasElement, value: ColorWheelValue) {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const size = canvas.width;
@@ -258,13 +258,13 @@ function drawColorWheel(canvas: HTMLCanvasElement, value: ColorWheelValue) {
   ctx.stroke();
 }
 
-function wheelPointToOffsets(point: { x: number; y: number }): Partial<ColorWheelValue> {
+function biaxialPointToOffsets(point: { x: number; y: number }): Partial<ColorWheelValue> {
   const clampedX = Math.max(-1, Math.min(1, point.x));
   const clampedY = Math.max(-1, Math.min(1, point.y));
   return { r: clampedX, b: -clampedY };
 }
 
-function eventToUnitPoint(
+function eventToBiaxialPoint(
   event: React.PointerEvent<HTMLCanvasElement>,
   canvas: HTMLCanvasElement,
 ): { x: number; y: number } {
@@ -286,7 +286,7 @@ const ColorWheelControl: React.FC<{
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      drawColorWheel(canvas, value);
+      drawHslWheel(canvas, value);
     }
   }, [value]);
 
@@ -294,7 +294,7 @@ const ColorWheelControl: React.FC<{
     (event: React.PointerEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      onCommit(wheelPointToOffsets(eventToUnitPoint(event, canvas)));
+      onCommit(biaxialPointToOffsets(eventToBiaxialPoint(event, canvas)));
     },
     [onCommit],
   );

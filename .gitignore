@@ -43,6 +43,7 @@ apps/desktop/.adj_*.txt
 # Logs and error output
 *.log
 *.err
+.logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -93,6 +94,8 @@ tauri.key
 /cache/
 **/.cache/
 .turbo/
+__pycache__/
+*.pyc
 *.tsbuildinfo
 *.bak
 *.tmp
@@ -107,6 +110,8 @@ goal-open-factory.md
 docs/internal/
 docs/plugin-api/
 package-lock.json
+.pending-patches/
+.zcode/
 
 *-report.json
 apps/desktop/ffprobe.exe

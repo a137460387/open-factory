@@ -139,15 +139,4 @@ export function formatDuration(value: number | undefined): string {
   return `${Math.round(value * 10) / 10}s`;
 }
 
-export function formatExportRangeSummary(
-  mode: ExportRangeMode,
-  ranges: NormalizedExportRenderRange[],
-  selectedClipRange: NormalizedExportRenderRange | null,
-): string {
-  if (mode === 'all') return zhCN.exportDialog.range.allSummary;
-  if (mode === 'selected-clips' && !selectedClipRange) return zhCN.exportDialog.range.unavailable;
-  if (ranges.length === 0) return zhCN.exportDialog.range.unavailable;
-  if (ranges.length === 1)
-    return zhCN.exportDialog.range.singleSummary(formatDuration(ranges[0].start), formatDuration(ranges[0].duration));
-  return zhCN.exportDialog.range.multiSummary(ranges.length);
-}
+

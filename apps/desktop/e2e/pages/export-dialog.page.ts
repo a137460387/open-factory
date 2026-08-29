@@ -18,7 +18,10 @@ export class ExportDialogPage extends BasePage {
   }
 
   /** 等待导出对话框可见 */
-  async waitForOpen(timeout = 10_000): Promise<void> {
+  async waitForOpen(timeout = 15_000): Promise<void> {
+    // 15s：ExportDialog 为双层 lazy chunk（ShellFloatingDialogs →
+    // ExportDialogs → ExportDialog），慢 runner 上加载+渲染链实测可超
+    // 10s（run 32625097893 nested-sequence-export 两用例稳定失败根因）
     await expect(this.dialog).toBeVisible({ timeout });
   }
 
@@ -53,7 +56,11 @@ export class ExportDialogPage extends BasePage {
     await this.safeSelect('export-range-select', range);
   }
 
-  /** 填写批量输出路径（换行分隔） */
+  /** 填写导出路径（支持多行批量：每行一个输出路径，入队时每行一个任务）。
+   * 对应 single 模式的 export-batch-paths 多行 textarea（绑定 batchOutputPaths，
+   * useExportActions 入队时按换行拆分；为空才回退单路径 export-output-path）。
+   * 注：该 textarea 曾在向导拆分（bd315fd6）中丢失、helper 一度被误导向单路径
+   * export-output-path（f8355019），现已随 UI 恢复回填原控件。 */
   async fillBatchPaths(paths: string): Promise<void> {
     await this.safeFill('export-batch-paths', paths);
   }

@@ -38,9 +38,3 @@ export function formatRecordingElapsed(seconds: number): string {
   const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${remainingSeconds}`;
 }
-
-export function closeAll(
-  setters: Array<(open: boolean) => void>,
-): void {
-  for (const set of setters) set(false);
-}

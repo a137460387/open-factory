@@ -491,6 +491,36 @@ export function scheduleExport(
   };
 }
 
+/** 判断参数列表中 -c:v 指定的视频编码器是否为硬件编码器。 */
+function isHardwareEncoderArgs(args: string[]): boolean {
+  const idx = args.indexOf('-c:v');
+  if (idx < 0 || idx + 1 >= args.length) {
+    return false;
+  }
+  const encoder = args[idx + 1];
+  return /_(nvenc|amf|qsv|vaapi)$/.test(encoder) || encoder.endsWith('_videotoolbox');
+}
+
+/** 读取参数列表中 -c:v 指定的视频编码器值，不存在时返回 undefined。 */
+function getVideoEncoderArg(args: string[]): string | undefined {
+  const idx = args.indexOf('-c:v');
+  return idx >= 0 && idx + 1 < args.length ? args[idx + 1] : undefined;
+}
+
+/**
+ * 判断计划是否使用接受 x264 风格 -preset/-crf 调优的软件视频编码器。
+ *
+ * -preset（速度档）/-crf 是 x264/x265 系编码器的私有选项：没有 -c:v 的目标
+ * （image2/PNG 序列、单帧图像、apng、gif 双 pass、纯音频）以及其他软件编码器
+ * （如 libwebp_anim）都不接受这两个参数，注入会让 ffmpeg 报非法选项/非法值。
+ * 调度调优是纯增益性质，对不接受的目标跳过注入不会使既有计划变差，因此注入
+ * 条件用"编码器是 x264 系软件编码"的正面判断，而不是"非硬件编码"的反面判断。
+ */
+function acceptsX264StyleTuning(args: string[]): boolean {
+  const encoder = getVideoEncoderArg(args);
+  return encoder !== undefined && /^libx26/.test(encoder);
+}
+
 /**
  * 将调度决策应用到导出计划
  */
@@ -498,20 +528,36 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
   const outputArgs = [...(plan.outputArgs ?? [])];
   const fullArgs = [...(plan.fullArgs ?? [])];
 
-  // 应用 preset
-  replaceOrAddArg(outputArgs, '-preset', decision.preset);
-  replaceOrAddArg(fullArgs, '-preset', decision.preset);
+  // 硬件加速与否：既看调度决策，也看计划里实际使用的编码器。调度配置可能未
+  // 感知到用户在导出设置里开启的硬件编码（getRecommendedExportConfig 默认
+  // hardwareAccelerationEnabled=false），此时若仅凭 decision 判断，会把 x264
+  // 速度档 preset（veryslow 等，对 NVENC 非法）和 CRF 覆盖到硬件编码器参数上。
+  const hardwareActive = decision.useHardwareAcceleration || isHardwareEncoderArgs(fullArgs);
 
-  // 应用线程数
-  replaceOrAddArg(outputArgs, '-threads', String(decision.threads));
-  replaceOrAddArg(fullArgs, '-threads', String(decision.threads));
+  // 应用 preset（仅 x264 系软件编码）。硬件编码器有自己的 preset 档位（如
+  // NVENC 的 p1-p7），decision.preset 是 x264 速度档名称（veryslow/slow/...），
+  // 对硬件编码器是非法值；硬件编码时保留计划自身的 preset。无视频编码器的
+  // 目标（image2/PNG 序列、单帧、apng、gif、纯音频）与非 x264 系软件编码器
+  // 同样不接受 -preset，见 acceptsX264StyleTuning。
+  const softwareTuningActive = !hardwareActive && acceptsX264StyleTuning(fullArgs);
+  if (softwareTuningActive) {
+    replaceOrAddArg(outputArgs, '-preset', decision.preset);
+    replaceOrAddArg(fullArgs, '-preset', decision.preset);
+  }
 
-  // 应用 CRF（仅软件编码）
-  if (decision.useHardwareAcceleration) {
+  // 应用线程数（-threads 是各视频编码器通用选项，只要有视频编码器就应用；
+  // 无编码器目标不注入，保持构建层输出原样）
+  if (getVideoEncoderArg(fullArgs) !== undefined) {
+    replaceOrAddArg(outputArgs, '-threads', String(decision.threads));
+    replaceOrAddArg(fullArgs, '-threads', String(decision.threads));
+  }
+
+  // 应用 CRF（仅 x264 系软件编码）
+  if (hardwareActive) {
     // 硬件加速时移除 CRF 参数
     removeArg(outputArgs, '-crf');
     removeArg(fullArgs, '-crf');
-  } else {
+  } else if (softwareTuningActive) {
     replaceOrAddArg(outputArgs, '-crf', String(decision.crf));
     replaceOrAddArg(fullArgs, '-crf', String(decision.crf));
   }
@@ -525,11 +571,17 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
   // 处理多 pass
   const passes = plan.passes?.map((pass) => {
     const passArgs = [...pass.fullArgs];
-    replaceOrAddArg(passArgs, '-preset', decision.preset);
-    replaceOrAddArg(passArgs, '-threads', String(decision.threads));
-    if (decision.useHardwareAcceleration) {
+    const passHardwareActive = decision.useHardwareAcceleration || isHardwareEncoderArgs(passArgs);
+    const passSoftwareTuningActive = !passHardwareActive && acceptsX264StyleTuning(passArgs);
+    if (passSoftwareTuningActive) {
+      replaceOrAddArg(passArgs, '-preset', decision.preset);
+    }
+    if (getVideoEncoderArg(passArgs) !== undefined) {
+      replaceOrAddArg(passArgs, '-threads', String(decision.threads));
+    }
+    if (passHardwareActive) {
       removeArg(passArgs, '-crf');
-    } else {
+    } else if (passSoftwareTuningActive) {
       replaceOrAddArg(passArgs, '-crf', String(decision.crf));
     }
     return { ...pass, fullArgs: passArgs };
@@ -545,15 +597,26 @@ export function applySchedulerDecision(plan: FfmpegExportPlan, decision: ExportS
 }
 
 /**
- * 替换或添加命令行参数
+ * 替换或添加输出选项。
+ *
+ * 顺序约束：buildFfmpegFullArgs 与各 outputArgs 构造器约定"输出路径（或
+ * `-f null -` 的输出终结符 `-`）始终是参数数组的最后一个元素"，Rust 侧
+ * run_export 与 e2e mock 都按 fullArgs.at(-1) 读取输出路径；ffmpeg 本身也
+ * 要求所有输出选项出现在输出文件之前。因此当 key 不存在、需要插入新选项
+ * 时，只能插在最后一个元素（输出终结符）之前，绝不能追加到其后——否则
+ * ffmpeg 会把这些选项误解为属于"下一个输出文件"，且所有按末位读取输出
+ * 路径的下游逻辑都会读到错误值（1ff08c92 引入的真实回归）。
  */
 function replaceOrAddArg(args: string[], key: string, value: string): void {
   const index = args.indexOf(key);
-  if (index >= 0 && index + 1 < args.length) {
+  if (index >= 0) {
+    // key 已存在：原位替换其值（构造约定下 key 不会出现在末位之后，
+    // 原位替换不改变顺序约束）。
     args[index + 1] = value;
-  } else {
-    args.push(key, value);
+    return;
   }
+  const insertAt = Math.max(0, args.length - 1);
+  args.splice(insertAt, 0, key, value);
 }
 
 /**

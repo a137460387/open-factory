@@ -442,5 +442,3 @@ export const TimelineHeader = React.memo<TimelineHeaderProps>(function TimelineH
     </div>
   );
 });
-
-export default TimelineHeader;

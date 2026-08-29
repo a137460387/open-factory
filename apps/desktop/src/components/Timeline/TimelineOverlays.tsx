@@ -566,7 +566,7 @@ export function TimelineHeatmapCanvas({
   );
 }
 
-export function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['colorScheme']): string {
+function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['colorScheme']): string {
   const normalized = Math.min(1, Math.max(0, value));
   if (colorScheme === 'cool') {
     const red = Math.round(37 + normalized * 20);

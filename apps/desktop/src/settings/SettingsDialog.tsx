@@ -48,7 +48,7 @@ import {useWhisperSettingsStore} from '../store/whisperSettingsStore';
 import {applyLocalCoeditingSettings} from '../collaboration/settings';
 import {runTimelineScriptInWorker} from '../scripting/timeline-script-runtime';
 import {deleteTimelineScript, exportTimelineScriptToDialog, importTimelineScriptFromDialog, loadTimelineScripts, saveTimelineScript, type TimelineScriptFile} from '../scripting/timeline-scripts';
-import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, readLocalAiModelsSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, saveLocalAiModelsSettings, readUpdateSettings, saveUpdateSettings, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
+import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, readLocalAiModelsSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, saveLocalAiModelsSettings, readUpdateSettings, saveUpdateSettings, readOnlineContentEnabled, saveOnlineContentEnabled, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
 import type {TouchOptimizationSettings} from '@open-factory/editor-core';
 import {LOCAL_AI_MODEL_DEFINITIONS, LOCAL_AI_MODEL_IDS, isLocalModelFileSizeValid, resolveLocalModelStatus, type LocalAiModelId, type LocalAiModelResolvedStatus, type LocalAiModelsSettings} from './localModels';
 import {DEFAULT_CUSTOM_THEME_COLORS, deleteCustomTheme, extractCustomThemeColors, isBuiltinThemeId, resolveTheme, upsertCustomTheme, type CustomThemeColors, type ThemeSettings} from '../theme/theme';
@@ -187,6 +187,8 @@ export function SettingsDialog({
   const [effectPresetSource, setEffectPresetSource] = useState<EffectPresetCommunityLoadResult['source']>('empty');
   const [effectPresetWarning, setEffectPresetWarning] = useState<string>();
   const [installingEffectPresetCardId, setInstallingEffectPresetCardId] = useState<string>();
+  // 本地优先（AGENTS.md）：在线内容默认关闭，进入对应标签页才按需加载
+  const [onlineContentEnabled, setOnlineContentEnabled] = useState(false);
   const firstBuiltinScript = BUILTIN_TIMELINE_SCRIPTS[0];
   const [timelineScripts, setTimelineScripts] = useState<TimelineScriptFile[]>([]);
   const [selectedTimelineScriptId, setSelectedTimelineScriptId] = useState(firstBuiltinScript?.id ?? 'bulk-speed');
@@ -243,8 +245,6 @@ export function SettingsDialog({
     }
     void loadBackupSettings();
     void loadExportPresetSyncSettings();
-    void loadPresetMarketPanel();
-    void loadEffectPresetLibraryPanel();
     void loadTimelineScriptsPanel();
     void loadExportBackgroundSettings();
     void loadExportQualityAssuranceSettings();
@@ -260,11 +260,30 @@ export function SettingsDialog({
       .catch((error) => logger.warn('[Settings] Unable to load touch optimization', error));
     void loadTranslationApiKey();
     void loadCurrentVersion();
+    void readOnlineContentEnabled()
+      .then(setOnlineContentEnabled)
+      .catch((error) => logger.warn('[Settings] Unable to load online content setting', error));
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     void refreshPluginCatalog();
     return () => setPreviewTimeline(undefined);
   }, [loadTranslationApiKey, open, setPreviewTimeline]);
+
+  // 本地优先（AGENTS.md，审计 C3/L2-L3）：预设市场与社区特效库仅在进入对应标签页时按需加载，
+  // 是否访问远程由 onlineContentEnabled 开关控制（默认关闭）。
+  useEffect(() => {
+    if (!open || tab !== 'export-presets') {
+      return;
+    }
+    void loadPresetMarketPanel();
+  }, [open, tab, onlineContentEnabled]);
+
+  useEffect(() => {
+    if (!open || tab !== 'effect-presets') {
+      return;
+    }
+    void loadEffectPresetLibraryPanel();
+  }, [open, tab, onlineContentEnabled]);
 
   const loadCurrentVersion = useCallback(async () => {
     try {
@@ -436,11 +455,21 @@ export function SettingsDialog({
     }
   }
 
+  function handleOnlineContentToggle(enabled: boolean) {
+    setOnlineContentEnabled(enabled);
+    void saveOnlineContentEnabled(enabled).catch((error) =>
+      logger.warn('[Settings] Unable to save online content setting', error),
+    );
+  }
+
   async function loadPresetMarketPanel() {
     try {
       setPresetMarketLoading(true);
       setPresetMarketWarning(undefined);
-      const [market, ratings] = await Promise.all([loadPresetMarket(), readPresetMarketRatings()]);
+      const [market, ratings] = await Promise.all([
+        loadPresetMarket({ remoteEnabled: onlineContentEnabled }),
+        readPresetMarketRatings(),
+      ]);
       setPresetMarketCards(market.cards);
       setPresetMarketRatings(ratings);
       setPresetMarketSource(market.source);
@@ -463,7 +492,7 @@ export function SettingsDialog({
     try {
       setEffectPresetLoading(true);
       setEffectPresetWarning(undefined);
-      const library = await loadEffectPresetCommunityLibrary();
+      const library = await loadEffectPresetCommunityLibrary({ remoteEnabled: onlineContentEnabled });
       setEffectPresetCards(library.cards);
       setEffectPresetSource(library.source);
       setEffectPresetWarning(library.warning);
@@ -1580,19 +1609,31 @@ export function SettingsDialog({
               />
             ) : null}
             {tab === 'effect-presets' ? (
-              <EffectPresetCommunityPanel
-                cards={filteredEffectPresetCards}
-                filters={effectPresetFilters}
-                loading={effectPresetLoading}
-                source={effectPresetSource}
-                warning={effectPresetWarning}
-                installingCardId={installingEffectPresetCardId}
-                canShare={Boolean(selectedClip)}
-                onFiltersChange={setEffectPresetFilters}
-                onRefresh={() => void loadEffectPresetLibraryPanel()}
-                onInstall={(card) => void installEffectPreset(card)}
-                onShare={() => void shareSelectedEffectPreset()}
-              />
+              <div className="space-y-3">
+                <label className="flex items-start gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={onlineContentEnabled}
+                    data-testid="effect-preset-online-toggle"
+                    onChange={(event) => handleOnlineContentToggle(event.target.checked)}
+                  />
+                  <span>{zhCN.effectPresetLibrary.onlineContentToggle}</span>
+                </label>
+                <EffectPresetCommunityPanel
+                  cards={filteredEffectPresetCards}
+                  filters={effectPresetFilters}
+                  loading={effectPresetLoading}
+                  source={effectPresetSource}
+                  warning={effectPresetWarning}
+                  installingCardId={installingEffectPresetCardId}
+                  canShare={Boolean(selectedClip)}
+                  onFiltersChange={setEffectPresetFilters}
+                  onRefresh={() => void loadEffectPresetLibraryPanel()}
+                  onInstall={(card) => void installEffectPreset(card)}
+                  onShare={() => void shareSelectedEffectPreset()}
+                />
+              </div>
             ) : null}
             {tab === 'shortcuts' || tab === 'macros' ? (
               <ShortcutMacrosPanel
@@ -1676,6 +1717,16 @@ export function SettingsDialog({
             {tab === 'task-monitor' ? <TaskMonitorSettingsPanel /> : null}
             {tab === 'export-presets' ? (
               <div className="space-y-4">
+                <label className="flex items-start gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={onlineContentEnabled}
+                    data-testid="preset-market-online-toggle"
+                    onChange={(event) => handleOnlineContentToggle(event.target.checked)}
+                  />
+                  <span>{zhCN.presetMarket.onlineContentToggle}</span>
+                </label>
                 <PresetMarketPanel
                   cards={filteredPresetMarketCards}
                   ratings={presetMarketRatings}

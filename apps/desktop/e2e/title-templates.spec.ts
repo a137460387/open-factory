@@ -16,7 +16,7 @@ test('drags a title template, edits text, and exports drawtext', async ({ page }
   const textClip = page.locator('[data-clip-type="text"]').first();
   await expect(textClip).toBeVisible();
   await textClip.click();
-  await page.getByTestId('clip-text-input').fill('Launch Day');
+  await page.getByTestId('rich-text-editor-content').fill('Launch Day');
   await page.getByTestId('timeline-scroll-container').click({ position: { x: 10, y: 10 } });
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/title-template.mp4'));

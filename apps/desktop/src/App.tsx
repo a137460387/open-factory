@@ -1,13 +1,13 @@
 import { logError } from './lib/error-handlers';
 import { logger } from '@open-factory/editor-core/utils';
-import { Suspense, useEffect, useSyncExternalStore } from 'react';
+import { Suspense, useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18n/i18next-config';
 import { EditorShell } from './components/EditorShell';
 import { PreviewWindowShell } from './components/PreviewWindow/PreviewWindowShell';
 import { ToastViewport } from './components/common/Toast';
 import { syncExportPresetsWithWebdav } from './export/export-presets';
-import { getLanguage, subscribeLanguage } from './i18n/strings';
+import { prefetchEnglishLocale, subscribeLanguage } from './i18n/strings';
 import { getWebdavText, putWebdavText, readExportPresetSyncWebdavPassword } from './lib/tauri-bridge';
 import {
   initializeLanguageFromSettings,
@@ -17,6 +17,7 @@ import {
 } from './settings/appSettings';
 import { NativeCancelSmokeRunner } from './smoke/NativeCancelSmokeRunner';
 import { NativePreviewSmokeRunner } from './smoke/NativePreviewSmokeRunner';
+import { usePanelStore } from './store/panelStore';
 import { useDemucsSettingsStore } from './store/demucsSettingsStore';
 import { usePrivacyDetectionSettingsStore } from './store/privacyDetectionSettingsStore';
 import { useWhisperSettingsStore } from './store/whisperSettingsStore';
@@ -25,13 +26,22 @@ import { DevPerfOverlay } from './components/DevPerfOverlay';
 import { StartupUpdateChecker } from './updater/StartupUpdateChecker';
 
 export function App() {
-  useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
+  // 语言切换触发整树重渲染：strings.ts 的 notifyListeners 经 bumpLanguageVersion
+  // 广播到 editorUIStore（Zustand），App 订阅 languageVersion 重渲染整棵树。
+  // 此前用 useSyncExternalStore(subscribeLanguage, getLanguage)：冷启动时序下其
+  // 订阅回调被调用后 React 偶发不重渲染（语言状态已切、UI 停在旧语言，
+  // e2e i18n:6 根因）。改用 Zustand 通道——与 viewportSize/resize 同一机制，
+  // 该通道的订阅者重渲染在本应用被证明可靠。
+  usePanelStore((state) => state.languageVersion);
+  useEffect(() => subscribeLanguage(() => usePanelStore.getState().bumpLanguageVersion()), []);
   const previewWindowMode =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('previewWindow') === '1';
   useEffect(() => {
     void initializeLanguageFromSettings().catch((error) => {
       logError('App')(error);
     });
+    // 预热英文 locale：避免首次 zh→en 切换等待懒加载（加载失败/慢时 UI 不切换）
+    void prefetchEnglishLocale();
     void initializeThemeFromSettings().catch((error) => {
       logError('App')(error);
     });

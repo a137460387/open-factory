@@ -29,7 +29,7 @@ export type { ExportJob, ExportRangeMode } from '../lib/pipelineHelpers';
 export type { ExportPreset, ExportPresetSettings } from '../export-presets';
 export type { ExportWarmupUiStatus } from '../components/ExportOptimizationPanel';
 export type { SequenceBatchPresetMode } from '../components/SequenceBatchSection';
-export type { VersionWatermarkMode, VersionRangeMode, VersionedExportRowState } from '../components/ExportVersionBatchSection';
+export type { VersionedExportRowState } from '../components/ExportVersionBatchSection';
 
 export type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';
 

@@ -540,6 +540,8 @@ const zh = {
     sceneDetection: '场景检测',
     styleTransfer: '风格迁移',
     collaborationNotes: '协同标注',
+    collaborationPanel: '协作会话',
+    colorGradingWorkspace: '调色工作台',
     operationRecording: '操作回放',
     complexityScore: '复杂度评分',
     smartRecommendations: '智能推荐',
@@ -1258,6 +1260,7 @@ const zh = {
         'add-annotation': '添加批注',
         'add-bookmark': '添加书签',
         'toggle-grid-snap': '切换网格吸附',
+        'close-gap': '闭合间隙',
         'jump-prev-navigation-point': '上一书签/标记',
         'jump-next-navigation-point': '下一书签/标记',
         undo: '撤销',
@@ -1387,6 +1390,17 @@ const zh = {
         error: '失败',
         canceled: '已取消',
       },
+      backgroundConcurrency: '后台并发数',
+      backgroundConcurrencyAuto: '自动',
+      uiFeedbackConcurrency: '预览反馈并发数',
+      pause: '暂停队列',
+      resume: '恢复队列',
+      priority: '优先级',
+      priorityHigh: '高',
+      priorityNormal: '中',
+      priorityLow: '低',
+      raisePriority: '提升优先级',
+      lowerPriority: '降低优先级',
     },
     backup: {
       title: '备份',
@@ -1695,6 +1709,7 @@ const zh = {
     batchRenameFailedMessage: '项目内引用已回退，磁盘文件未继续重命名。',
     batchGenerateCovers: '批量生成封面',
     batchGenerateThumbnails: (count: number) => (count > 0 ? `生成缩略图 (${count})` : '生成缩略图'),
+    batchGenerateWaveforms: '批量生成波形',
     selectForThumbnail: '选择用于批量生成缩略图',
     exportGif: '导出为 GIF',
     spectrumAnalysis: '频谱分析',
@@ -2924,6 +2939,27 @@ const zh = {
     exportFailedTitle: '导出标注报告失败',
     exportFailedMessage: '无法写入 HTML 报告。',
   },
+  collabPanel: {
+    title: '协作会话',
+    statusDisconnected: '未连接',
+    statusCreated: '已创建',
+    createSession: '创建会话',
+    sessionIdLabel: '会话 ID',
+    inviteTitle: '邀请成员',
+    inviteDescription: '本机模拟协同：在同一台机器上新开一个应用窗口即视为新用户加入。',
+    inviteJoinHint: (sessionId: string, port: number) => `加入方式：打开新窗口并加入会话 ${sessionId}（端口 ${port}）`,
+    onlineUsers: '在线成员',
+    online: '在线',
+    noUsers: '暂无其他成员。',
+    commentsTitle: '评论',
+    commentPlaceholder: '输入评论…',
+    commentSubmit: '发送',
+    noComments: '暂无评论。',
+    locked: '已锁定',
+    lockedBy: (userName: string) => `已锁定（${userName}）`,
+    notLocked: '未锁定',
+    readonlyNotice: '当前为查看者角色，调色参数只读，无法修改。',
+  },
   complexity: {
     title: '复杂度评分',
     subtitle: '按时间线密度、特效、调色、音频和关键帧量化项目复杂度。',
@@ -3041,6 +3077,20 @@ const zh = {
       `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕 / ${dialogueClips} 个对话 clip / ${brollClips} 个 B-roll / ${rhythmClips} 个节奏 clip。`,
     stepComplete: (step: string) => `${step}完成`,
     stepFailed: (step: string) => `${step}失败`,
+    semanticTitle: '语义建议',
+    semanticNotReady: '请先运行 Whisper 字幕生成转写文本，或完成素材内容分析，再查看语义粗剪建议。',
+    semanticEmpty: '暂无语义粗剪建议（未检测到叙事标记或可收紧区间）。',
+    semanticHeuristicTag: '启发式',
+    semanticRange: (start: string, end: string) => `${start} - ${end}`,
+    semanticConfidence: (value: number) => `置信度 ${Math.round(value * 100)}%`,
+    semanticReviewButton: '对比审阅',
+    semanticReviewTitle: '语义建议审阅',
+    semanticReviewBefore: '采纳前（原片段）',
+    semanticReviewAfter: '采纳后（保留建议区间）',
+    semanticReviewApply: '采纳此建议',
+    semanticReviewApplied: (duration: string) => `已应用，保留 ${duration}（可 Ctrl+Z 撤销）`,
+    semanticReviewWholeClip: '该建议覆盖整个片段，无需采纳',
+    semanticReviewFailed: (reason: string) => `采纳失败：${reason}`,
   },
   aiRoughCut: {
     title: 'AI粗剪助手',
@@ -3258,22 +3308,9 @@ const zh = {
   aiSubtitleWorkflow: {
     title: '智能字幕工作流',
     stages: {
-      asr: '语音识别',
       polish: 'AI润色',
       style: '样式推荐',
       export: '导出',
-    },
-    asr: {
-      selectClip: '选择目标片段',
-      noClipSelected: '请在时间线上选择一个音频或视频片段',
-      whisperNotConfigured: 'Whisper 未配置',
-      whisperReady: 'Whisper 就绪',
-      startRecognition: '开始识别',
-      recognizing: '正在识别...',
-      recognitionComplete: '识别完成',
-      recognitionFailed: '识别失败',
-      previewTitle: '识别结果预览',
-      noResults: '未识别到字幕',
     },
     polish: {
       selectTrack: '选择字幕轨道',
@@ -5078,6 +5115,8 @@ const zh = {
   presetMarket: {
     title: '预设市场',
     description: '浏览静态社区导出预设；离线时显示本地缓存，安装后写入本机预设列表。',
+    onlineContentToggle: '启用在线预设市场（联网获取最新社区预设）',
+    onlineContentDisabled: '在线内容已关闭，仅显示本地缓存。',
     refresh: '刷新市场',
     loading: '正在加载预设市场...',
     empty: '没有匹配的市场预设。',
@@ -5137,6 +5176,8 @@ const zh = {
   effectPresetLibrary: {
     title: '特效预设库',
     description: '浏览静态社区特效参数组合；离线时读取本地缓存，安装后写入本机特效预设目录。',
+    onlineContentToggle: '启用在线特效预设库（联网获取最新社区预设）',
+    onlineContentDisabled: '在线内容已关闭，仅显示本地缓存。',
     refresh: '刷新预设库',
     loading: '正在加载特效预设库...',
     empty: '没有匹配的特效预设。',
@@ -6271,13 +6312,37 @@ let enLoadPromise: Promise<LocaleStrings> | null = null;
 async function ensureEnglishLocale(): Promise<LocaleStrings> {
   if (locales.en) return locales.en;
   if (!enLoadPromise) {
-    enLoadPromise = import('./en-overrides.js').then((mod) => {
-      const merged = mergeLocale<LocaleStrings>(zh, mod.enOverrides);
-      locales.en = merged;
-      return merged;
-    });
+    enLoadPromise = import('./en-overrides.js')
+      .then((mod) => {
+        const merged = mergeLocale<LocaleStrings>(zh, mod.enOverrides);
+        locales.en = merged;
+        return merged;
+      })
+      .catch((error: unknown) => {
+        // 加载失败不得永久缓存：否则一次瞬时失败（如 dev server 重启、
+        // 模块图失效期间的动态 import 失败）会让本页面会话之内切换到英文
+        // 永久不可用且无法重试。重置 Promise，后续调用自然重试。
+        enLoadPromise = null;
+        throw error;
+      });
   }
   return enLoadPromise;
+}
+
+/**
+ * 后台预热英文 locale（fire-and-forget）。
+ *
+ * 英文 locale 按需懒加载；若不预热，首次 zh→en 切换要等待动态 import +
+ * 深度合并完成才触发 notifyListeners，该窗口内 UI 保持旧语言。窗口遇上
+ * 慢加载或 import 失败时，语言切换表现为"不生效"（e2e i18n:6 的根因）。
+ * 启动后预热使实际切换几乎总是命中同步路径；预热失败静默忽略——失败缓存
+ * 已在 ensureEnglishLocale 中重置，真正切换时会再次加载并重试。
+ */
+export function prefetchEnglishLocale(): Promise<void> {
+  return ensureEnglishLocale().then(
+    () => undefined,
+    () => undefined, // 预热失败不阻塞启动；真正切换时会再次加载（失败不缓存）
+  );
 }
 
 // 初始化 i18next（副作用导入，确保在模块加载时执行）
@@ -6335,11 +6400,15 @@ export function setLanguage(language: string): Language {
  */
 export async function setLanguageAsync(language: string): Promise<Language> {
   const next = normalizeLanguage(language);
+  // 目标语言为 en 时必须确保 en locale 已加载，即使当前已是 en：
+  // 初始语言来自 navigator（英文系统默认 en），此时 en-overrides 尚未加载，
+  // 若直接 early-return 会让 t() 持续回退 zh（本函数的契约是返回即保证翻译可用，
+  // 亦是启动 prefetch 瞬时失败后显式切换英文的唯一自愈路径）。
+  if (next === 'en' && !locales.en) {
+    await ensureEnglishLocale();
+  }
   if (next === currentLanguage) {
     return currentLanguage;
-  }
-  if (next === 'en') {
-    await ensureEnglishLocale();
   }
   currentLanguage = next;
   persistLanguage(next);

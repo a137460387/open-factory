@@ -10,7 +10,7 @@ test('adds colorspace args when exporting with DCI-P3 color management', async (
   await openExportDialog(page);
   await page.getByTestId('export-color-management-summary').click();
   await page.getByTestId('export-output-color-space-select').selectOption('dci-p3');
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/dci-p3-output.mp4');
+  await page.getByTestId('export-output-path').fill('C:/Exports/dci-p3-output.mp4');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
@@ -33,7 +33,7 @@ test('adds ACES zscale and colorspace args when project color pipeline is ACES',
   await page.getByTestId('settings-close-button').click();
 
   await openExportDialog(page);
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/aces-output.mp4');
+  await page.getByTestId('export-output-path').fill('C:/Exports/aces-output.mp4');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
@@ -58,7 +58,7 @@ test('adds source zscale conversion for Display P3 media in a Rec.709 working pr
   expect(confirmMessage).toContain('Rec.709');
 
   await openExportDialog(page);
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/p3-to-rec709.mp4');
+  await page.getByTestId('export-output-path').fill('C:/Exports/p3-to-rec709.mp4');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 

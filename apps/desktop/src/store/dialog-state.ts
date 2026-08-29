@@ -28,6 +28,8 @@ export const DIALOG_KEYS = [
   'sceneReorderOpen',
   'styleTransferOpen',
   'collaborationNotesOpen',
+  'collaborationPanelOpen',
+  'colorGradingWorkspaceOpen',
   'operationRecordingOpen',
   'complexityScoreOpen',
   'smartRecommendationsOpen',

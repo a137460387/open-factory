@@ -12,6 +12,8 @@ test('shows mocked SSIM PSNR and VMAF quality results from export history', asyn
   await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
+  // 向导拆分（bd315fd6）后导出历史在 complete 步，需先切步
+  await page.getByTestId('export-step-complete').click();
   await expect(page.getByTestId('export-history-entry')).toHaveCount(1);
 
   await page.getByTestId('export-quality-button').click();
@@ -40,6 +42,8 @@ test('shows automatic post-export quality assurance results in export history', 
   await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
+  // 向导拆分（bd315fd6）后质检结果在 complete 步，需先切步
+  await page.getByTestId('export-step-complete').click();
   await expect(page.getByTestId('post-export-quality-result')).toBeVisible();
   await expect(page.getByTestId('post-export-quality-status')).toContainText('通过');
   await expect(page.getByTestId('post-export-quality-check-duration')).toHaveAttribute('data-status', 'pass');

@@ -122,13 +122,26 @@ export function sampleEmotionCurve(
   });
 }
 
+/**
+ * 能量 VAD 派生对话轮。
+ *
+ * 结构化限制：能量启发式无法区分语音与音乐/环境声（连续高能量均表现为单一长块），
+ * 真实对话必然存在呼吸换气等静默停顿被 mergeGap 切分；超过 maxTurnDuration 的
+ * 完全无切分连续块判定为非对话性能量流（纯音乐典型形态）而剔除。
+ */
 export function detectDialogueTurns(
   samples: ContentAnalysisAudioSample[],
-  options: { silenceThreshold?: number; minTurnDuration?: number; mergeGap?: number } = {},
+  options: {
+    silenceThreshold?: number;
+    minTurnDuration?: number;
+    mergeGap?: number;
+    maxTurnDuration?: number;
+  } = {},
 ): ContentDialogueTurn[] {
   const silenceThreshold = options.silenceThreshold ?? 0.08;
   const minTurnDuration = options.minTurnDuration ?? 0.35;
   const mergeGap = options.mergeGap ?? 0.28;
+  const maxTurnDuration = options.maxTurnDuration ?? 15;
   const sorted = [...samples]
     .filter((sample) => Number.isFinite(sample.time) && Number.isFinite(sample.loudness))
     .sort((left, right) => left.time - right.time);
@@ -150,12 +163,12 @@ export function detectDialogueTurns(
       continue;
     }
     if (active && sample.time - active.end > mergeGap) {
-      pushDialogueTurn(turns, active, minTurnDuration);
+      pushDialogueTurn(turns, active, minTurnDuration, maxTurnDuration);
       active = undefined;
     }
   }
   if (active) {
-    pushDialogueTurn(turns, active, minTurnDuration);
+    pushDialogueTurn(turns, active, minTurnDuration, maxTurnDuration);
   }
   return turns;
 }
@@ -363,8 +376,14 @@ function pushDialogueTurn(
   turns: ContentDialogueTurn[],
   active: { start: number; end: number; values: number[] },
   minTurnDuration: number,
+  maxTurnDuration: number,
 ): void {
-  if (active.end - active.start < minTurnDuration) {
+  const duration = active.end - active.start;
+  if (duration < minTurnDuration) {
+    return;
+  }
+  if (duration > maxTurnDuration) {
+    // 超长无切分连续块：非对话性连续能量（纯音乐/环境声），剔除而非标为对话轮
     return;
   }
   turns.push({ start: round(active.start), end: round(active.end), loudness: round(average(active.values)) });
@@ -381,6 +400,208 @@ function inferSampleStep(samples: ContentAnalysisAudioSample[], index: number): 
 
 function buildContentAnalysisSummary(primary: ContentSceneType, segmentCount: number, dialogueCount: number): string {
   return `${primary}:${segmentCount}:${dialogueCount}`;
+}
+
+// ─── 语义收紧建议派生纯函数（M3 扩展·首实施） ───────────────
+//
+// 以下三个函数为只增导出：消费 contentAnalysis 既有产出
+// （dialogueTurns / segments.loudness / emotionCurve），不改变
+// detectDialogueTurns 与 maxTurnDuration 的任何现有行为。
+
+/** 掐头收紧：首个内容点前保留余量（秒）。定性：宁可少剪，避免切掉起音/换气起势 */
+export const HEAD_TRIM_MARGIN_SECONDS = 0.3;
+
+/** 收紧建议：采纳后至少保留的内容时长（秒）。定性：极短 clip 保护——剩余不足此值不建议剪 */
+export const TIGHTEN_MIN_KEEP_SECONDS = 1;
+
+export interface DetectHeadTrimStartOptions {
+  /** 源窗口时长（秒）；提供时启用极短 clip 保护（剩余 < minKeepDuration 返回 null） */
+  clipDuration?: number;
+  /** 首个内容点前保留余量（秒），默认 HEAD_TRIM_MARGIN_SECONDS */
+  margin?: number;
+  /** 采纳后至少保留时长（秒），默认 TIGHTEN_MIN_KEEP_SECONDS */
+  minKeepDuration?: number;
+}
+
+/**
+ * 掐头收紧起点判定：返回建议保留区间的起点（与 turns/onsets 同时间域）。
+ *
+ * 首个内容起点 = 首个 turn.start（无 turn 时以 onset 时间兜底，覆盖纯音乐等
+ * VAD 无产出形态）；余量 margin 后即为可剪的片头区间。以下情形一律返回
+ * null（无可建议）：无任何活跃点 / 首内容点贴近起点（trimStart ≤ 0，无可
+ * 掐余量）/ 极短 clip（提供 clipDuration 且剩余内容 < minKeepDuration）。
+ */
+export function detectHeadTrimStart(
+  turns: ContentDialogueTurn[],
+  onsets: Array<{ time: number }> = [],
+  options: DetectHeadTrimStartOptions = {},
+): number | null {
+  const margin = options.margin ?? HEAD_TRIM_MARGIN_SECONDS;
+  const minKeepDuration = options.minKeepDuration ?? TIGHTEN_MIN_KEEP_SECONDS;
+  const firstTurnStart = turns
+    .map((turn) => turn.start)
+    .filter((start) => Number.isFinite(start))
+    .sort((left, right) => left - right)[0];
+  const firstOnsetTime = onsets
+    .map((onset) => onset.time)
+    .filter((time) => Number.isFinite(time))
+    .sort((left, right) => left - right)[0];
+  const firstActive = firstTurnStart ?? firstOnsetTime;
+  if (firstActive === undefined) {
+    return null;
+  }
+  const trimStart = firstActive - margin;
+  if (trimStart <= 0) {
+    return null;
+  }
+  if (options.clipDuration !== undefined && options.clipDuration - trimStart < minKeepDuration) {
+    return null;
+  }
+  return round(trimStart);
+}
+
+export interface DetectTailTrimEndOptions {
+  /**
+   * 低能量判定阈值（0-1），默认 0.08（与 detectDialogueTurns silenceThreshold
+   * 同口径）。定性：调高会把片尾淡出的安静音乐/环境声收尾误判为可剪区间，
+   * 防误伤片尾淡出由此参数显式控制（参照 maxTurnDuration 先例）。
+   */
+  silenceThreshold?: number;
+  /** 尾部低能量段最短可剪时长（秒），默认 0.5：短于此不值得建议 */
+  minTrimDuration?: number;
+  /** 剪切点回退余量（秒）：低能量段起点后保留少量缓冲，默认 0.2 */
+  margin?: number;
+}
+
+/**
+ * 收尾收紧终点判定：返回建议保留区间的终点（与 segments 同时间域）。
+ *
+ * 从尾部回溯连续低于 silenceThreshold 的 loudness 段：全部段低能量（整段
+ * 无内容，不属"尾部"收紧）或尾段即高能量或回溯段时长 < minTrimDuration
+ * 时返回 null；否则返回 runStart + margin。
+ */
+export function detectTailTrimEnd(
+  segments: Array<{ start: number; end: number; loudness?: number }>,
+  options: DetectTailTrimEndOptions = {},
+): number | null {
+  const silenceThreshold = options.silenceThreshold ?? 0.08;
+  const minTrimDuration = options.minTrimDuration ?? 0.5;
+  const margin = options.margin ?? 0.2;
+  const measured = segments
+    .filter(
+      (segment) =>
+        Number.isFinite(segment.start) && Number.isFinite(segment.end) && Number.isFinite(segment.loudness),
+    )
+    .sort((left, right) => left.start - right.start);
+  if (measured.length === 0) {
+    return null;
+  }
+  let index = measured.length - 1;
+  while (index >= 0 && clamp01(measured[index].loudness!) < silenceThreshold) {
+    index -= 1;
+  }
+  const runStartIndex = index + 1;
+  if (runStartIndex === 0 || runStartIndex === measured.length) {
+    return null;
+  }
+  const runStart = measured[runStartIndex].start;
+  const lastEnd = measured[measured.length - 1].end;
+  if (lastEnd - runStart < minTrimDuration) {
+    return null;
+  }
+  return round(runStart + margin);
+}
+
+/** 曲线区间选取结果（高潮点向后延伸 windowDuration 构成区间，score = 该点采样值） */
+export interface CurveInterval {
+  start: number;
+  end: number;
+  score: number;
+}
+
+/**
+ * 情感曲线重叠互斥 top-K 区间选取（通用算法内核）。
+ *
+ * 每个曲线点为候选高潮点，区间 = [t, t + windowDuration]（默认 5s，向
+ * 后延伸与 narrative marker 区间 [marker.time, next) 形态一致）；
+ * score = 采样值（须严格大于 minScore，默认 0——全零能量曲线无入选项）。
+ * 按 score 降序贪心选取、与已选区间重叠（端点相接不算重叠）者跳过，
+ * 并列 score 以时间升序决断；返回保持 score 降序。
+ */
+export function selectTopKMutuallyExclusive(
+  curve: ContentEmotionPoint[],
+  k: number,
+  options: { windowDuration?: number; minScore?: number } = {},
+): CurveInterval[] {
+  const windowDuration = options.windowDuration ?? 5;
+  const minScore = options.minScore ?? 0;
+  if (!Number.isFinite(k) || k <= 0) {
+    return [];
+  }
+  const candidates = curve
+    .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
+    .map((point) => ({ start: point.time, end: point.time + windowDuration, score: clamp01(point.value) }))
+    .filter((candidate) => candidate.score > minScore)
+    .sort((left, right) => right.score - left.score || left.start - right.start);
+  const picked: CurveInterval[] = [];
+  for (const candidate of candidates) {
+    if (picked.length >= k) {
+      break;
+    }
+    const overlaps = picked.some((item) => candidate.start < item.end && item.start < candidate.end);
+    if (!overlaps) {
+      picked.push(candidate);
+    }
+  }
+  return picked;
+}
+
+export interface SelectEmotionalClimaxOptions {
+  /** 选取区间数量上限（默认 2） */
+  k?: number;
+  /** 高潮点向后延伸的区间时长秒（默认 5，透传内核） */
+  windowDuration?: number;
+  /** 入选最低分值（默认 0，透传内核：须严格大于） */
+  minScore?: number;
+  /**
+   * clamp 后区间最短保留时长（秒），默认 TIGHTEN_MIN_KEEP_SECONDS：
+   * 高潮点贴近窗口末端时区间被压缩过短，不值得建议（与掐头收紧的
+   * 极短保护同口径）。
+   */
+  minIntervalDuration?: number;
+}
+
+/**
+ * 情感高潮 top-K 区间选取（组装层入口：窗口过滤 + 内核选取 + 边界 clamp）。
+ *
+ * 在 selectTopKMutuallyExclusive 内核（零改动）之上完成组装：
+ * 1. 高潮点候选过滤至 [windowStart, windowEnd]（窗口外点不参与选取）；
+ * 2. 内核贪心互斥选取（组内互斥，score 降序返回）；
+ * 3. 区间端点 clamp 至窗口（高潮点向后延伸的 windowDuration 可能越窗）；
+ * 4. clamp 后短于 minIntervalDuration 的区间剔除。
+ */
+export function selectEmotionalClimaxIntervals(
+  curve: ContentEmotionPoint[],
+  windowStart: number,
+  windowEnd: number,
+  options: SelectEmotionalClimaxOptions = {},
+): CurveInterval[] {
+  const { k = 2, windowDuration, minScore, minIntervalDuration = TIGHTEN_MIN_KEEP_SECONDS } = options;
+  if (!Number.isFinite(windowStart) || !Number.isFinite(windowEnd) || windowEnd <= windowStart) {
+    return [];
+  }
+  const inWindow = curve.filter(
+    (point) =>
+      Number.isFinite(point.time) && point.time >= windowStart - 0.000001 && point.time <= windowEnd + 0.000001,
+  );
+  const picked = selectTopKMutuallyExclusive(inWindow, k, { windowDuration, minScore });
+  return picked
+    .map((interval) => ({
+      start: round(Math.max(interval.start, windowStart)),
+      end: round(Math.min(interval.end, windowEnd)),
+      score: interval.score,
+    }))
+    .filter((interval) => interval.end - interval.start >= minIntervalDuration);
 }
 
 function average(values: number[]): number {

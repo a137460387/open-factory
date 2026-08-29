@@ -1,31 +1,28 @@
-import type { Clip, MediaAsset } from '@open-factory/editor-core';
+import type { MediaAsset } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useSubtitleWorkflow, type WorkflowStage } from './useSubtitleWorkflow';
-import { ASRStage } from './ASRStage';
 import { PolishStage } from './PolishStage';
 import { StyleStage } from './StyleStage';
 import { ExportStage } from './ExportStage';
 
 const t = zhCN.aiSubtitleWorkflow;
 
-const STAGES: WorkflowStage[] = ['asr', 'polish', 'style', 'export'];
+// ASR 阶段已退役（断链死代码），流程为润色 → 样式 → 导出，面向既有字幕轨。
+const STAGES: WorkflowStage[] = ['polish', 'style', 'export'];
 
 interface AISubtitleWorkflowPanelProps {
-  selectedClip?: Clip;
   media: MediaAsset[];
   onClose: () => void;
 }
 
-export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubtitleWorkflowPanelProps) {
+export function AISubtitleWorkflowPanel({ media, onClose }: AISubtitleWorkflowPanelProps) {
   const {
     state,
-    updateASR,
     updatePolish,
     updateStyle,
     updateExport,
     goToStage,
     reset,
-    completeASR,
     completePolish,
     completeStyle,
     completeExport,
@@ -77,16 +74,6 @@ export function AISubtitleWorkflowPanel({ selectedClip, media, onClose }: AISubt
 
       {/* Stage Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        {state.currentStage === 'asr' && (
-          <ASRStage
-            asrState={state.asr}
-            onUpdate={updateASR}
-            onComplete={completeASR}
-            onCancel={() => {}}
-            media={media}
-            selectedClip={selectedClip ? { id: selectedClip.id, name: selectedClip.name } : undefined}
-          />
-        )}
         {state.currentStage === 'polish' && (
           <PolishStage polishState={state.polish} onUpdate={updatePolish} onComplete={completePolish} />
         )}

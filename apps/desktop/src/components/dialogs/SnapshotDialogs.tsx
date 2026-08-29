@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import type { Project } from '@open-factory/editor-core';
-import { useEditorUIStore } from '../../store/editorUIStore';
+import { useDialogStore } from '../../store/dialogStore';
 import { PanelLoading } from '../PanelLoading';
 
 const SnapshotNameDialog = lazy(() =>
@@ -40,16 +40,16 @@ export function SnapshotDialogs({
   applySnapshotDiffSelection,
   updateProjectReleaseVersion,
 }: SnapshotDialogsProps) {
-  const snapshotNameOpen = useEditorUIStore((s) => s.snapshotNameOpen);
-  const setSnapshotNameOpen = useEditorUIStore((s) => s.setSnapshotNameOpen);
-  const snapshotHistoryOpen = useEditorUIStore((s) => s.snapshotHistoryOpen);
-  const setSnapshotHistoryOpen = useEditorUIStore((s) => s.setSnapshotHistoryOpen);
-  const snapshotCompareOpen = useEditorUIStore((s) => s.snapshotCompareOpen);
-  const setSnapshotCompareOpen = useEditorUIStore((s) => s.setSnapshotCompareOpen);
-  const timelineCompareOpen = useEditorUIStore((s) => s.timelineCompareOpen);
-  const setTimelineCompareOpen = useEditorUIStore((s) => s.setTimelineCompareOpen);
-  const releaseWorkflowOpen = useEditorUIStore((s) => s.releaseWorkflowOpen);
-  const setReleaseWorkflowOpen = useEditorUIStore((s) => s.setReleaseWorkflowOpen);
+  const snapshotNameOpen = useDialogStore((s) => s.snapshotNameOpen);
+  const setSnapshotNameOpen = useDialogStore((s) => s.setSnapshotNameOpen);
+  const snapshotHistoryOpen = useDialogStore((s) => s.snapshotHistoryOpen);
+  const setSnapshotHistoryOpen = useDialogStore((s) => s.setSnapshotHistoryOpen);
+  const snapshotCompareOpen = useDialogStore((s) => s.snapshotCompareOpen);
+  const setSnapshotCompareOpen = useDialogStore((s) => s.setSnapshotCompareOpen);
+  const timelineCompareOpen = useDialogStore((s) => s.timelineCompareOpen);
+  const setTimelineCompareOpen = useDialogStore((s) => s.setTimelineCompareOpen);
+  const releaseWorkflowOpen = useDialogStore((s) => s.releaseWorkflowOpen);
+  const setReleaseWorkflowOpen = useDialogStore((s) => s.setReleaseWorkflowOpen);
 
   return (
     <Suspense fallback={<PanelLoading label="快照" />}>

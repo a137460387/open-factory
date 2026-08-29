@@ -14,6 +14,7 @@ import {
   searchTransitions,
   type TransitionDefinition,
   type TransitionCategory,
+  type TransitionType,
 } from '@open-factory/editor-core';
 import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
 
@@ -41,11 +42,11 @@ export function TransitionLibrary({ onClose, onSelectTransition, onApplyToTimeli
 
   const [favorites, setFavorites] = useState<string[]>(() => readTransitionFavorites().map(String));
 
-  const toggleFav = useCallback((type: string) => {
+  const toggleFav = useCallback((type: TransitionType) => {
     setFavorites((prev) => {
       const next = prev.includes(type) ? prev.filter((t) => t !== type) : [type, ...prev];
       // 同步到 localStorage
-      toggleTransitionFavorite(type as any);
+      toggleTransitionFavorite(type);
       return next;
     });
   }, []);

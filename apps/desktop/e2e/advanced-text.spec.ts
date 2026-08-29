@@ -10,7 +10,10 @@ test('bolds part of a rich text clip and exports multiple drawtext filters', asy
   await expect(textClip).toBeVisible();
   await textClip.click();
 
-  const editor = page.getByTestId('clip-text-input');
+  // 07-24 bd315fd6 将富文本编辑面抽成 RichTextEditor 组件，testid 由
+  // clip-text-input 重命名为 rich-text-editor-content（同一 contentEditable），
+  // 其余 fill/选区/加粗/导出断言流程等价。
+  const editor = page.getByTestId('rich-text-editor-content');
   await editor.fill('Bold Normal');
   await editor.evaluate((element) => {
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);

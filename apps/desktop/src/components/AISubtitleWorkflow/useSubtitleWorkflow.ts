@@ -1,17 +1,12 @@
 import { useState, useCallback } from 'react';
 import type { SubtitleClip } from '@open-factory/editor-core';
 
-export type WorkflowStage = 'asr' | 'polish' | 'style' | 'export';
-export type StageStatus = 'idle' | 'running' | 'done' | 'error';
-
-export interface ASRState {
-  status: StageStatus;
-  selectedClipId: string | null;
-  whisperReady: boolean;
-  generatedTrackId: string | null;
-  progress: number;
-  error: string | null;
-}
+// ASR（语音识别）阶段已退役：原 worker 转写链路为断链死代码（请求参数空占位、
+// tauri-request 无主线程应答器、audioPath 结构缺失），转写生成字幕由分步面板
+// whisper 步与 Timeline 右键「生成字幕」承接（均经 buildWhisperSubtitleTrackForClip
+// 命令化入轨）。工作流现从既有字幕轨的润色开始。
+export type WorkflowStage = 'polish' | 'style' | 'export';
+type StageStatus = 'idle' | 'running' | 'done' | 'error';
 
 export interface PolishState {
   status: StageStatus;
@@ -40,22 +35,13 @@ export interface ExportState {
 
 export interface SubtitleWorkflowState {
   currentStage: WorkflowStage;
-  asr: ASRState;
   polish: PolishState;
   style: StyleState;
   export: ExportState;
 }
 
 const INITIAL_STATE: SubtitleWorkflowState = {
-  currentStage: 'asr',
-  asr: {
-    status: 'idle',
-    selectedClipId: null,
-    whisperReady: false,
-    generatedTrackId: null,
-    progress: 0,
-    error: null,
-  },
+  currentStage: 'polish',
   polish: {
     status: 'idle',
     selectedTrackId: null,
@@ -83,10 +69,6 @@ const INITIAL_STATE: SubtitleWorkflowState = {
 export function useSubtitleWorkflow() {
   const [state, setState] = useState<SubtitleWorkflowState>(INITIAL_STATE);
 
-  const updateASR = useCallback((patch: Partial<ASRState>) => {
-    setState((prev) => ({ ...prev, asr: { ...prev.asr, ...patch } }));
-  }, []);
-
   const updatePolish = useCallback((patch: Partial<PolishState>) => {
     setState((prev) => ({ ...prev, polish: { ...prev.polish, ...patch } }));
   }, []);
@@ -105,15 +87,6 @@ export function useSubtitleWorkflow() {
 
   const reset = useCallback(() => {
     setState(INITIAL_STATE);
-  }, []);
-
-  const completeASR = useCallback((trackId: string) => {
-    setState((prev) => ({
-      ...prev,
-      asr: { ...prev.asr, status: 'done', generatedTrackId: trackId, progress: 100 },
-      currentStage: 'polish',
-      polish: { ...prev.polish, selectedTrackId: trackId },
-    }));
   }, []);
 
   const completePolish = useCallback(() => {
@@ -141,13 +114,11 @@ export function useSubtitleWorkflow() {
 
   return {
     state,
-    updateASR,
     updatePolish,
     updateStyle,
     updateExport,
     goToStage,
     reset,
-    completeASR,
     completePolish,
     completeStyle,
     completeExport,

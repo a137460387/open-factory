@@ -27,6 +27,8 @@ test('runs mocked WebDAV upload after export and shows upload status in history'
 
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
+  // 向导拆分（bd315fd6）后上传状态在 complete 步的历史条目内，需先切步
+  await page.getByTestId('export-step-complete').click();
   await expect(page.getByTestId('export-upload-status')).toHaveAttribute('data-status', 'success');
 
   const uploadRequest = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastWebdavExportUploadRequest!() as { url: string; username?: string; password?: string; sourcePath: string });

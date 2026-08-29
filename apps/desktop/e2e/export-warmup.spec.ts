@@ -14,6 +14,7 @@ test('shows export warmup status before queueing export', async ({ page }) => {
 
   await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
+  // warmup 启动时对话框自动切到 export 步（状态面板所在步骤），无需手动切步
   await expect(page.getByTestId('export-warmup-status')).toBeVisible();
   await expect(page.getByTestId('export-warmup-status')).toContainText('正在准备导出');
   await expect(page.getByTestId('export-warmup-status')).toHaveAttribute('data-status', 'running');

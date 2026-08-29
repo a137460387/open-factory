@@ -1,5 +1,5 @@
 /**
- * Editor UI state — barrel re-export entry point (H4 refactor).
+ * Editor UI state — combined store (H4 refactor).
  *
  * This file has been refactored into domain-specific sub-stores:
  * - panelStore.ts   — layout settings, panel visibility, viewport, review mode
@@ -7,7 +7,8 @@
  * - toolbarStore.ts — toolbar/menu state (re-exports from dialogStore)
  * - modalStore.ts   — modal dialog state (re-exports from dialogStore)
  *
- * The combined `useEditorUIStore` is preserved for backward compatibility.
+ * The combined `useEditorUIStore` is preserved for backward compatibility
+ * （phase5 1c 起不再重导出子 store selector hooks，全部消费者已直连子 store）.
  * New code should import from the specific sub-store directly.
  *
  * @deprecated Prefer `usePanelStore` or `useDialogStore` for new code.
@@ -30,25 +31,8 @@ import {
   type DialogState,
 } from './dialog-state';
 
-// Re-export sub-store hooks and selector utilities for convenience
-export {
-  usePanelStore,
-  useLayoutSettings,
-  useReviewMode,
-  useViewportSize,
-  useSetLayoutSettings,
-  useSetReviewMode,
-  useSetViewportSize,
-  usePersistLayoutPatch,
-  usePersistPanelVisibilityPatch,
-} from './panelStore';
-export { useDialogStore, useDialogState, dialogBooleanSelector, dialogSetterSelector } from './dialogStore';
-export { useToolbarStore } from './toolbarStore';
-export { useModalStore } from './modalStore';
-
-// Re-export dialog-state utilities
-export type { DialogKey, DialogState } from './dialog-state';
-export { DIALOG_KEYS, createInitialDialogState, applyDialogUpdate } from './dialog-state';
+// Re-export dialog-state utilities（兼容重导出层已于 phase5 1c 移除，仅保留仍有消费的 DialogKey）
+export type { DialogKey } from './dialog-state';
 
 type Updater<T> = T | ((current: T) => T);
 
@@ -63,8 +47,16 @@ function dialogSetterName(key: DialogKey): string {
 
 export interface EditorUIState {
   layoutSettings: EditorLayoutSettings;
+  /**
+   * layoutSettings 是否已被显式（程序化/用户）设置过。
+   * 挂载时 readLayoutSettings 的异步加载结果只在该标记为 false 时才生效，
+   * 避免覆盖先于加载到达的程序化设置（时序竞态，auto-generate:68 根因）。
+   */
+  layoutSettingsTouched: boolean;
   reviewMode: boolean;
   viewportSize: { width: number; height: number };
+  /** 语言变更计数：strings.ts 的语言切换经此 store 广播，驱动组件树重渲染 */
+  languageVersion: number;
 
   // Dialog / panel open states (from dialog-state module)
   dialogState: DialogState;
@@ -83,6 +75,8 @@ export interface EditorUIState {
   sceneReorderOpen: boolean;
   styleTransferOpen: boolean;
   collaborationNotesOpen: boolean;
+  collaborationPanelOpen: boolean;
+  colorGradingWorkspaceOpen: boolean;
   operationRecordingOpen: boolean;
   complexityScoreOpen: boolean;
   smartRecommendationsOpen: boolean;
@@ -145,8 +139,11 @@ export interface EditorUIState {
 
   // Layout setters
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
+  /** 仅供挂载时 readLayoutSettings 加载结果使用；不置 touched。 */
+  applyLoadedLayoutSettings: (settings: EditorLayoutSettings) => void;
   setReviewMode: (updater: Updater<boolean>) => void;
   setViewportSize: (size: { width: number; height: number }) => void;
+  bumpLanguageVersion: () => void;
   persistLayoutPatch: (patch: Partial<EditorLayoutSettings>) => void;
   persistPanelVisibilityPatch: (patch: Partial<EditorLayoutSettings['panels']>) => void;
 
@@ -164,6 +161,8 @@ export interface EditorUIState {
   setSceneReorderOpen: (updater: Updater<boolean>) => void;
   setStyleTransferOpen: (updater: Updater<boolean>) => void;
   setCollaborationNotesOpen: (updater: Updater<boolean>) => void;
+  setCollaborationPanelOpen: (updater: Updater<boolean>) => void;
+  setColorGradingWorkspaceOpen: (updater: Updater<boolean>) => void;
   setOperationRecordingOpen: (updater: Updater<boolean>) => void;
   setComplexityScoreOpen: (updater: Updater<boolean>) => void;
   setSmartRecommendationsOpen: (updater: Updater<boolean>) => void;
@@ -247,8 +246,10 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
 
   return {
     layoutSettings: DEFAULT_EDITOR_LAYOUT_SETTINGS,
+    layoutSettingsTouched: false,
     reviewMode: typeof window === 'undefined' ? false : window.location.hash === '#review',
     viewportSize: readViewportSize(),
+    languageVersion: 0,
 
     // Dialog state (single source of truth)
     dialogState: initialDialogs,
@@ -260,7 +261,16 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
     ...dialogSetters,
 
     setLayoutSettings(updater) {
-      set((state) => ({ layoutSettings: applyUpdater(state.layoutSettings, updater) }));
+      set((state) => ({
+        layoutSettings: applyUpdater(state.layoutSettings, updater),
+        layoutSettingsTouched: true,
+      }));
+    },
+
+    applyLoadedLayoutSettings(settings) {
+      // 仅由挂载时 readLayoutSettings 的加载结果调用：不置 touched，
+      // 使加载结果不覆盖先到的程序化设置，也不阻断后续程序化设置。
+      set({ layoutSettings: settings });
     },
 
     setReviewMode(updater) {
@@ -281,12 +291,16 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => {
       set({ viewportSize: size });
     },
 
+    bumpLanguageVersion() {
+      set((state) => ({ languageVersion: state.languageVersion + 1 }));
+    },
+
     persistLayoutPatch(patch) {
       const { layoutSettings } = get();
       const next = normalizeStoredLayoutSettings({ ...layoutSettings, ...patch }) ?? {
         ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
       };
-      set({ layoutSettings: next });
+      set({ layoutSettings: next, layoutSettingsTouched: true });
       void saveLayoutSettings(next).catch((error: unknown) => {
         logger.warn('Unable to save layout settings', error);
       });

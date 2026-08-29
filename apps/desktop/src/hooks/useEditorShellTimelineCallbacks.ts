@@ -6,6 +6,7 @@ import {
   ApplyEffectPresetCommand,
   ApplySplitLayoutCommand,
   BatchUpdateClipCommand,
+  CloseGapCommand,
   CreateMulticamSequenceCommand,
   DeleteClipsCommand,
   DeleteGroupCommand,
@@ -22,6 +23,8 @@ import {
   createTrack,
   detectSceneColorJumps,
   findCompleteClipGroup,
+  findGroupSplitByGap,
+  findTrackGapAtTime,
   getClipSourceVisibleDuration,
   getSplitLayoutDefinition,
   getTimelineDuration,
@@ -48,8 +51,8 @@ import { showToast } from '../lib/toast';
 import { zhCN, t } from '../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useEditorStore, selectClipById } from '../store/editorStore';
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useEditorUIStore } from '../store/editorUIStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -110,6 +113,19 @@ interface TimelineCallbacksDeps {
   setCustomSplitLayouts: (layouts: SplitLayoutDefinition[]) => void;
 }
 
+/**
+ * 键盘删除聚焦中的 clip 后，被聚焦的 DOM 节点随渲染移除，焦点落回 body，
+ * useShortcuts 的时间线 scope 判定（data-timeline-shortcuts-root）随之失效，
+ * 导致紧接着的 Ctrl+Z 撤销等快捷键无法触发。删除成功后把焦点收回时间线
+ * 容器，保持键盘工作流连续。
+ */
+function refocusTimelineRoot(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  document.querySelector<HTMLElement>('[data-timeline-shortcuts-root="true"]')?.focus();
+}
+
 /** 时间线/Clip 编辑操作相关的回调组（约 28 个回调） */
 export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   const {
@@ -130,13 +146,13 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   const setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
   const setSelectedKeyframes = useEditorStore((s) => s.setSelectedKeyframes);
-  const setColorAnalysisBusy = useEditorFeatureStore((s) => s.setColorAnalysisBusy);
-  const setColorAnalysisResults = useEditorFeatureStore((s) => s.setColorAnalysisResults);
-  const setColorAnalysisJumps = useEditorFeatureStore((s) => s.setColorAnalysisJumps);
-  const setColorAnalysisSamples = useEditorFeatureStore((s) => s.setColorAnalysisSamples);
-  const setColorHeatmapPoints = useEditorFeatureStore((s) => s.setColorHeatmapPoints);
-  const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
-  const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
+  const setColorAnalysisBusy = useMediaFeatureStore((s) => s.setColorAnalysisBusy);
+  const setColorAnalysisResults = useMediaFeatureStore((s) => s.setColorAnalysisResults);
+  const setColorAnalysisJumps = useMediaFeatureStore((s) => s.setColorAnalysisJumps);
+  const setColorAnalysisSamples = useMediaFeatureStore((s) => s.setColorAnalysisSamples);
+  const setColorHeatmapPoints = useMediaFeatureStore((s) => s.setColorHeatmapPoints);
+  const setColorAnalysisOpen = useDialogStore((s) => s.setColorAnalysisOpen);
+  const setColorNodeEditorOpen = useDialogStore((s) => s.setColorNodeEditorOpen);
 
   // -----------------------------------------------------------------------
   // Clip 添加到时间线
@@ -364,10 +380,12 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     if (group) {
       commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
       state.clearSelectedClipIds();
+      refocusTimelineRoot();
       return;
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, ids));
     state.clearSelectedClipIds();
+    refocusTimelineRoot();
   }, []);
 
   const rippleDeleteSelected = useCallback(() => {
@@ -378,6 +396,7 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     }
     commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids, state.project.protectedRanges));
     state.clearSelectedClipIds();
+    refocusTimelineRoot();
   }, []);
 
   const selectAllTimelineItems = useCallback(() => {
@@ -833,6 +852,38 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     if (target) state.setPlayheadTime(target.start);
   }, []);
 
+  const closeGapAtPlayhead = useCallback(() => {
+    const state = useEditorStore.getState();
+    const timeline = state.project.timeline;
+    // 仅闭合 playhead 命中的 gap（首轨优先）；锁轨有可见标识，静默跳过
+    for (const track of timeline.tracks) {
+      if (track.locked) {
+        continue;
+      }
+      const gap = findTrackGapAtTime(track, state.playheadTime);
+      if (!gap) {
+        continue;
+      }
+      // 组撕裂守卫预检：用户明确想闭合此 gap，被拒时告知原因并停止，
+      // 不再静默跳到别轨改其他间隙
+      const splitGroup = findGroupSplitByGap(state.project.clipGroups, timeline, track.id, gap.start, gap.end);
+      if (splitGroup) {
+        showToast({
+          kind: 'warning',
+          title: zhCN.timeline.closeGapFailedTitle,
+          message: `Closing this gap would split clip group "${splitGroup.name}"`,
+        });
+        return;
+      }
+      try {
+        commandManager.execute(new CloseGapCommand(timelineAccessor, track.id, gap.start, state.project.clipGroups));
+        return;
+      } catch {
+        // 其余守卫拒绝（命令层兜底）→ 静默跳下一轨
+      }
+    }
+  }, []);
+
   return {
     addAssetToTimeline,
     handleAddSubclipToTimeline,
@@ -863,5 +914,6 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     renderInOutRegion,
     navigatePrevGap,
     navigateNextGap,
+    closeGapAtPlayhead,
   };
 }

@@ -10,20 +10,15 @@ import {featureStrings} from '../../i18n/featureStrings';
 import {selectClipById, useEditorStore} from '../../store/editorStore';
 import {commandManager, timelineAccessor} from '../../store/commandManager';
 import {useLayoutSettings, useSetLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch, usePersistPanelVisibilityPatch} from '../../store/panelStore';
-import {useEditorUIStore} from '../../store/editorUIStore';
+import {useDialogStore} from '../../store/dialogStore';
 import {useTransitionStore} from '../../store/transitionStore';
 import {getEffectivePanelState} from '../../layout/layoutSettings';
 import {getReviewModeShellVisibility} from '../../review/reviewMode';
 
 const AudioMixer = lazy(() => import('../AudioMixer/AudioMixer').then((m) => ({ default: m.AudioMixer })));
 const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ default: m.Inspector })));
-const SmartRoughCutPanel = lazy(() =>
-  import('../SmartRoughCut/SmartRoughCutPanel').then((m) => ({ default: m.SmartRoughCutPanel })),
-);
-const SmartRoughCutOrchestratorPanel = lazy(() =>
-  import('../SmartRoughCut/SmartRoughCutOrchestratorPanel').then((m) => ({
-    default: m.SmartRoughCutOrchestratorPanel,
-  })),
+const SmartRoughCutStepPanel = lazy(() =>
+  import('../SmartRoughCut/SmartRoughCutStepPanel').then((m) => ({ default: m.SmartRoughCutStepPanel })),
 );
 const AIRoughCutPanel = lazy(() =>
   import('../AIRoughCut/AIRoughCutPanel').then((m) => ({ default: m.AIRoughCutPanel })),
@@ -97,43 +92,43 @@ export function ShellRightPanel() {
   const reviewMode = useReviewMode();
   const persistLayoutPatch = usePersistLayoutPatch();
   const persistPanelVisibilityPatch = usePersistPanelVisibilityPatch();
-  const projectDocumentationOpen = useEditorUIStore((s) => s.projectDocumentationOpen);
-  const historyPanelOpen = useEditorUIStore((s) => s.historyPanelOpen);
-  const setHistoryPanelOpen = useEditorUIStore((s) => s.setHistoryPanelOpen);
-  const aiRoughCutOpen = useEditorUIStore((s) => s.aiRoughCutOpen);
-  const setAiRoughCutOpen = useEditorUIStore((s) => s.setAiRoughCutOpen);
-  const directorModeOpen = useEditorUIStore((s) => s.directorModeOpen);
-  const setDirectorModeOpen = useEditorUIStore((s) => s.setDirectorModeOpen);
-  const musicMatchOpen = useEditorUIStore((s) => s.musicMatchOpen);
-  const setMusicMatchOpen = useEditorUIStore((s) => s.setMusicMatchOpen);
-  const highlightReelOpen = useEditorUIStore((s) => s.highlightReelOpen);
-  const setHighlightReelOpen = useEditorUIStore((s) => s.setHighlightReelOpen);
-  const contextualTranslationOpen = useEditorUIStore((s) => s.contextualTranslationOpen);
-  const setContextualTranslationOpen = useEditorUIStore((s) => s.setContextualTranslationOpen);
-  const aiChatEditorOpen = useEditorUIStore((s) => s.aiChatEditorOpen);
-  const setAiChatEditorOpen = useEditorUIStore((s) => s.setAiChatEditorOpen);
-  const videoSummaryOpen = useEditorUIStore((s) => s.videoSummaryOpen);
-  const setVideoSummaryOpen = useEditorUIStore((s) => s.setVideoSummaryOpen);
-  const videoGenerationOpen = useEditorUIStore((s) => s.videoGenerationOpen);
-  const setVideoGenerationOpen = useEditorUIStore((s) => s.setVideoGenerationOpen);
-  const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
-  const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
-  const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
-  const setSmartCreationOpen = useEditorUIStore((s) => s.setSmartCreationOpen);
-  const smartDistributionOpen = useEditorUIStore((s) => s.smartDistributionOpen);
-  const setSmartDistributionOpen = useEditorUIStore((s) => s.setSmartDistributionOpen);
-  const smartRoughCutOpen = useEditorUIStore((s) => s.smartRoughCutOpen);
-  const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
-  const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
-  const storyboardOpen = useEditorUIStore((s) => s.storyboardOpen);
-  const assistEditingOpen = useEditorUIStore((s) => s.assistEditingOpen);
-  const setAssistEditingOpen = useEditorUIStore((s) => s.setAssistEditingOpen);
-  const contentGenerationOpen = useEditorUIStore((s) => s.contentGenerationOpen);
-  const setContentGenerationOpen = useEditorUIStore((s) => s.setContentGenerationOpen);
-  const qualityAssessmentOpen = useEditorUIStore((s) => s.qualityAssessmentOpen);
-  const setQualityAssessmentOpen = useEditorUIStore((s) => s.setQualityAssessmentOpen);
-  const automationOpen = useEditorUIStore((s) => s.automationOpen);
-  const setAutomationOpen = useEditorUIStore((s) => s.setAutomationOpen);
+  const projectDocumentationOpen = useDialogStore((s) => s.projectDocumentationOpen);
+  const historyPanelOpen = useDialogStore((s) => s.historyPanelOpen);
+  const setHistoryPanelOpen = useDialogStore((s) => s.setHistoryPanelOpen);
+  const aiRoughCutOpen = useDialogStore((s) => s.aiRoughCutOpen);
+  const setAiRoughCutOpen = useDialogStore((s) => s.setAiRoughCutOpen);
+  const directorModeOpen = useDialogStore((s) => s.directorModeOpen);
+  const setDirectorModeOpen = useDialogStore((s) => s.setDirectorModeOpen);
+  const musicMatchOpen = useDialogStore((s) => s.musicMatchOpen);
+  const setMusicMatchOpen = useDialogStore((s) => s.setMusicMatchOpen);
+  const highlightReelOpen = useDialogStore((s) => s.highlightReelOpen);
+  const setHighlightReelOpen = useDialogStore((s) => s.setHighlightReelOpen);
+  const contextualTranslationOpen = useDialogStore((s) => s.contextualTranslationOpen);
+  const setContextualTranslationOpen = useDialogStore((s) => s.setContextualTranslationOpen);
+  const aiChatEditorOpen = useDialogStore((s) => s.aiChatEditorOpen);
+  const setAiChatEditorOpen = useDialogStore((s) => s.setAiChatEditorOpen);
+  const videoSummaryOpen = useDialogStore((s) => s.videoSummaryOpen);
+  const setVideoSummaryOpen = useDialogStore((s) => s.setVideoSummaryOpen);
+  const videoGenerationOpen = useDialogStore((s) => s.videoGenerationOpen);
+  const setVideoGenerationOpen = useDialogStore((s) => s.setVideoGenerationOpen);
+  const narrationOpen = useDialogStore((s) => s.narrationOpen);
+  const setNarrationOpen = useDialogStore((s) => s.setNarrationOpen);
+  const smartCreationOpen = useDialogStore((s) => s.smartCreationOpen);
+  const setSmartCreationOpen = useDialogStore((s) => s.setSmartCreationOpen);
+  const smartDistributionOpen = useDialogStore((s) => s.smartDistributionOpen);
+  const setSmartDistributionOpen = useDialogStore((s) => s.setSmartDistributionOpen);
+  const smartRoughCutOpen = useDialogStore((s) => s.smartRoughCutOpen);
+  const aiSubtitleWorkflowOpen = useDialogStore((s) => s.aiSubtitleWorkflowOpen);
+  const setAiSubtitleWorkflowOpen = useDialogStore((s) => s.setAiSubtitleWorkflowOpen);
+  const storyboardOpen = useDialogStore((s) => s.storyboardOpen);
+  const assistEditingOpen = useDialogStore((s) => s.assistEditingOpen);
+  const setAssistEditingOpen = useDialogStore((s) => s.setAssistEditingOpen);
+  const contentGenerationOpen = useDialogStore((s) => s.contentGenerationOpen);
+  const setContentGenerationOpen = useDialogStore((s) => s.setContentGenerationOpen);
+  const qualityAssessmentOpen = useDialogStore((s) => s.qualityAssessmentOpen);
+  const setQualityAssessmentOpen = useDialogStore((s) => s.setQualityAssessmentOpen);
+  const automationOpen = useDialogStore((s) => s.automationOpen);
+  const setAutomationOpen = useDialogStore((s) => s.setAutomationOpen);
 
   const transitionLibraryOpen = useTransitionStore((s) => s.libraryOpen);
   const setTransitionLibraryOpen = useTransitionStore((s) => s.setLibraryOpen);
@@ -282,13 +277,9 @@ export function ShellRightPanel() {
             ) : narrationOpen ? (
               <AINarrationPanel project={project} onClose={() => setNarrationOpen(false)} />
             ) : aiSubtitleWorkflowOpen ? (
-              <AISubtitleWorkflowPanel
-                selectedClip={selectedClip}
-                media={project.media}
-                onClose={() => setAiSubtitleWorkflowOpen(false)}
-              />
+              <AISubtitleWorkflowPanel media={project.media} onClose={() => setAiSubtitleWorkflowOpen(false)} />
             ) : smartRoughCutOpen ? (
-              <SmartRoughCutOrchestratorPanel selectedClip={selectedClip} media={project.media} />
+              <SmartRoughCutStepPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (
               <SmartCreationPanel
                 open={smartCreationOpen}

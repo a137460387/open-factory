@@ -744,6 +744,9 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs });
+          // preflight 面板只渲染在 export 步（ExportProgress），
+          // 拦截/警告发生时必须切过去，否则用户点入队后看不到任何反馈。
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -756,6 +759,8 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs });
+          // 同 version-batch：preflight 面板在 export 步，必须切步才可见。
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -786,6 +791,7 @@ export function useExportActions(state: ExportState) {
         const issues = await collectPreflightIssuesForJobs(selectedJobs);
         if (issues.length > 0) {
           setPreflight({ issues, selectedJobs, codecCompareJobs: compareJobs });
+          setCurrentStep('export');
           return;
         }
         await warmupSelectedJobs(selectedJobs);
@@ -835,10 +841,20 @@ export function useExportActions(state: ExportState) {
       const issues = await collectPreflightIssues(project, exportSettings);
       if (issues.length > 0) {
         setPreflight({ issues, selectedJobs });
+        // preflight 面板（blocking 拦截与 warning 确认）只渲染在 export 步，
+        // 不切步的话用户点"加入队列"后界面毫无反馈（静默拦截）。
+        setCurrentStep('export');
         return;
       }
       await warmupSelectedJobs(selectedJobs);
-      await enqueueSelectedJobs(selectedJobs);
+      const queuedTasks = await enqueueSelectedJobs(selectedJobs);
+      // 入队成功后自动切到 export 步骤，让用户立即看到队列/进度，
+      // 对齐 07-14 拆分向导（bd315fd6）前"队列始终可见"的旧体验。
+      // 校验不通过/未确认时 enqueueSelectedJobs 返回 []，不跳转；
+      // 抛错则进入 catch，同样不会执行到此处。
+      if (queuedTasks.length > 0) {
+        setCurrentStep('export');
+      }
     } catch (reason) {
       setError(
         reason instanceof SequenceDependencyCycleError
@@ -1069,6 +1085,16 @@ export function useExportActions(state: ExportState) {
 
   // Warmup
   async function warmupSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
+    // warmup 状态面板（export-warmup-status）只渲染在 export 步，
+    // warmup 启动即切步，让用户看到"正在准备导出"进度；
+    // continueAfterWarnings 场景用户本就在 export 步，此调用为幂等。
+    // 例外：pipeline / codec-compare / version-batch 三个模式的执行状态 UI
+    //（流水线节点状态、发布日志、对比结果表、版本批次区 + 队列区）渲染在
+    // config 步的 mode 分支内，切步会将其卸载，拆分前单视图下这些内容与队列
+    // 本就同屏可见，故这三个模式停留 config 步。
+    if (exportMode !== 'pipeline' && exportMode !== 'codec-compare' && exportMode !== 'version-batch') {
+      setCurrentStep('export');
+    }
     let sawColdWarmup = false;
     for (const job of selectedJobs) {
       const warmupProject = job.project ?? project;

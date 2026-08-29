@@ -5,6 +5,7 @@ import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { createProxyForAsset } from './proxy';
 import { getWaveform } from './waveform';
 import { useMediaJobStore, type MediaJob } from './media-job-store';
+import { useMediaJobSettingsStore } from '../store/mediaJobSettingsStore';
 import { shouldIgnoreMediaJobCompletion } from './media-job-monitor';
 import { backgroundMediaPool } from './media-concurrency';
 
@@ -32,7 +33,7 @@ async function runJobs(): Promise<void> {
   while (true) {
     // 共享全局后台池:proxy / 导入 waveform 等批量任务共用槽位,
     // 避免一次导入大量素材时瞬间撑满系统资源(审计 H2)。
-    while (running.size < backgroundMediaPool.limit) {
+    while (running.size < backgroundMediaPool.limit && !useMediaJobSettingsStore.getState().paused) {
       const job = useMediaJobStore.getState().startNextJob();
       if (!job) {
         break;

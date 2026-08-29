@@ -101,6 +101,7 @@ import {
   calculateReplaceMediaPatch,
   calculateBeatSplitTimesForClip,
   calculateClipGroupMoveStarts,
+  normalizeClipGroups,
   createTrack,
   calculateStyleSummary,
   findCompleteClipGroup,
@@ -2636,6 +2637,318 @@ describe('timeline commands', () => {
       ])
     );
     expect(() => new RollingTrimCommand(bounded, 'left', 'right', 0.5).execute()).toThrow('no available media');
+  });
+
+  it('ripple delete leaves empty tracks untouched and rejects unknown clip ids', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 3, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RippleDeleteCommand(accessor, ['a', 'b']));
+    expect(accessor.current().tracks[0].clips).toHaveLength(0);
+    expect(accessor.current().tracks[1].clips).toHaveLength(0);
+
+    manager.undo();
+    expect(accessor.current().tracks[1].clips).toHaveLength(0);
+
+    expect(() => new RippleDeleteCommand(accessor, ['ghost']).execute()).toThrow('Clip ghost not found');
+  });
+
+  it('ripple delete rejects clips on locked tracks', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'a', start: 0, duration: 2 })]);
+    timeline.tracks[0] = { ...timeline.tracks[0], locked: true };
+    const accessor = makeAccessor(timeline);
+
+    expect(() => new RippleDeleteCommand(accessor, ['a']).execute()).toThrow('Cannot modify clips on locked track');
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['a']);
+  });
+
+  it('ripple delete still applies on muted and solo tracks', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'b', start: 2, duration: 2 })
+    ]);
+    timeline.tracks[0] = { ...timeline.tracks[0], muted: true, solo: true };
+    const accessor = makeAccessor(timeline);
+
+    new RippleDeleteCommand(accessor, ['a']).execute();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['b', 0]]);
+  });
+
+  it('ripple delete on the leftmost clip shifts later clips by the removed duration and keeps existing gaps', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 3, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RippleDeleteCommand(accessor, ['a']));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['b', 1]]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 3]]);
+  });
+
+  it('ripple delete on the rightmost clip leaves earlier clips untouched', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 3, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RippleDeleteCommand(accessor, ['b']));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0]]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 3]]);
+  });
+
+  it('rolling trim rejects boundaries without an existing right neighbor', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'left', start: 0, duration: 2 })]));
+
+    expect(() => new RollingTrimCommand(accessor, 'left', 'right', 0.5).execute()).toThrow('adjacent');
+    expect(() => new RollingTrimCommand(accessor, 'left', 'ghost', 0.5).execute()).toThrow('adjacent');
+  });
+
+  it('rolling trim clamps the requested delta to the available media', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 1 }),
+        makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RollingTrimCommand(accessor, 'left', 'right', 5, 1 / 30));
+    const [left, right] = accessor.current().tracks[0].clips;
+    expect(left.duration + right.duration).toBeCloseTo(6, 6);
+    expect(left).toMatchObject({ id: 'left', start: 0, duration: 4, trimEnd: 0 });
+    expect(right).toMatchObject({ id: 'right', start: 4, duration: 2, trimStart: 2 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration, clip.trimStart, clip.trimEnd])).toEqual([
+      ['left', 0, 3, 0, 1],
+      ['right', 3, 3, 1, 0]
+    ]);
+  });
+
+  it('rolling trim rejects boundaries on locked tracks', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 1 }),
+      makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+    ]);
+    timeline.tracks[0] = { ...timeline.tracks[0], locked: true };
+    const accessor = makeAccessor(timeline);
+
+    expect(() => new RollingTrimCommand(accessor, 'left', 'right', 0.5).execute()).toThrow('Cannot modify clips on locked track');
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['left', 0, 3],
+      ['right', 3, 3]
+    ]);
+  });
+
+  it('close gap rejects empty tracks with no closeable gap', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'a', start: 0, duration: 2 })]));
+
+    expect(() => new CloseGapCommand(accessor, 'track-audio', 1).execute()).toThrow('No closeable gap');
+  });
+
+  it('close gap closes a single-frame gap', () => {
+    // DEFAULT_PROJECT_SETTINGS.fps 与 DEFAULT_FPS 均为 30，单帧 = 1/30 秒
+    const frame = 1 / 30;
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 2 + frame, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new CloseGapCommand(accessor, 'track-video', 2));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['a', 0, 2],
+      ['b', 2, 2]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['a', 0],
+      ['b', 2 + frame]
+    ]);
+  });
+
+  it('close gap rejects gaps on locked tracks', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'b', start: 4, duration: 2 })
+    ]);
+    timeline.tracks[0] = { ...timeline.tracks[0], locked: true };
+    const accessor = makeAccessor(timeline);
+
+    expect(() => new CloseGapCommand(accessor, 'track-video', 3).execute()).toThrow('Cannot modify clips on locked track');
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 4]]);
+  });
+
+  it('ripple delete of a group member leaves clipGroups untouched until normalize and undo restores the group', () => {
+    // 形态 A 行为锁定：删除命令不修改 clipGroups（渲染/保存路径各自 normalize 过滤失效 id）
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'b', start: 2, duration: 2 }),
+      makeVideoClip({ id: 'c', start: 4, duration: 2 })
+    ]);
+    const accessor = makeAccessor(timeline);
+    const groups = [{ id: 'g1', name: 'G1', clipIds: ['a', 'b', 'c'], color: 'blue' as const }];
+    const manager = new CommandManager();
+
+    manager.execute(new RippleDeleteCommand(accessor, ['a']));
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['b', 'c']);
+    // 运行时残留失效 id（现状锁定）：由 useTimelineState/serialize 的 normalize 过滤兜底
+    expect(accessor.current().tracks[0].clips.some((clip) => clip.id === 'a')).toBe(false);
+    // 三成员组删一 → normalize 后收缩为两成员；两成员组删一 → 解散（normalizeClipGroups 内置规则）
+    expect(normalizeClipGroups(groups, ['b', 'c'])).toEqual([{ ...groups[0], clipIds: ['b', 'c'] }]);
+    expect(normalizeClipGroups([{ ...groups[0], clipIds: ['a', 'b'] }], ['b'])).toEqual([]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['a', 'b', 'c']);
+    // undo 后组 id 全部重新有效（快照为原引用）
+    expect(normalizeClipGroups(groups, ['a', 'b', 'c'])).toEqual(groups);
+  });
+
+  it('delete clips command leaves clipGroups untouched the same way as ripple delete', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 2, duration: 2 })
+      ])
+    );
+    const groups = [{ id: 'g1', name: 'G1', clipIds: ['a', 'b'], color: 'blue' as const }];
+    const manager = new CommandManager();
+
+    manager.execute(new DeleteClipsCommand(accessor, ['a']));
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['b']);
+    expect(normalizeClipGroups(groups, ['b'])).toEqual([]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['a', 'b']);
+    expect(normalizeClipGroups(groups, ['a', 'b'])).toEqual(groups);
+  });
+
+  it('rolling trim allows boundaries between clips of the same group', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 1 }),
+        makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+      ])
+    );
+    const groups = [{ id: 'g1', name: 'G1', clipIds: ['left', 'right'], color: 'blue' as const }];
+    const manager = new CommandManager();
+
+    manager.execute(new RollingTrimCommand(accessor, 'left', 'right', 1, 1 / 30, groups));
+    const [left, right] = accessor.current().tracks[0].clips;
+    expect(left.duration + right.duration).toBeCloseTo(6, 6);
+    expect(left).toMatchObject({ id: 'left', start: 0, duration: 4, trimEnd: 0 });
+    expect(right).toMatchObject({ id: 'right', start: 4, duration: 2, trimStart: 2 });
+  });
+
+  it('rolling trim rejects boundaries between different groups or grouped and ungrouped clips', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 1 }),
+        makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+      ])
+    );
+    const diffGroups = [
+      { id: 'g1', name: 'G1', clipIds: ['left', 'x'], color: 'blue' as const },
+      { id: 'g2', name: 'G2', clipIds: ['right', 'y'], color: 'green' as const },
+    ];
+    const oneGrouped = [{ id: 'g1', name: 'G1', clipIds: ['left', 'x'], color: 'blue' as const }];
+
+    expect(() => new RollingTrimCommand(accessor, 'left', 'right', 1, 1 / 30, diffGroups).execute()).toThrow(
+      'Rolling trim boundary is locked by a clip group',
+    );
+    expect(() => new RollingTrimCommand(accessor, 'left', 'right', 1, 1 / 30, oneGrouped).execute()).toThrow(
+      'Rolling trim boundary is locked by a clip group',
+    );
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['left', 0, 3],
+      ['right', 3, 3],
+    ]);
+  });
+
+  it('rolling trim checks the lock assertion before the group guard', () => {
+    // 顺序锁定：锁轨 + 组锁定同时存在时，锁轨错误优先抛出
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 1 }),
+      makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+    ]);
+    timeline.tracks[0] = { ...timeline.tracks[0], locked: true };
+    const accessor = makeAccessor(timeline);
+    const diffGroups = [
+      { id: 'g1', name: 'G1', clipIds: ['left', 'x'], color: 'blue' as const },
+      { id: 'g2', name: 'G2', clipIds: ['right', 'y'], color: 'green' as const },
+    ];
+
+    expect(() => new RollingTrimCommand(accessor, 'left', 'right', 1, 1 / 30, diffGroups).execute()).toThrow(
+      'Cannot modify clips on locked track',
+    );
+  });
+
+  it('close gap rejects gaps that would split a clip group', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'b', start: 6, duration: 2 })
+    ]);
+    const accessor = makeAccessor(timeline);
+    const groups = [{ id: 'g1', name: 'Interview', clipIds: ['a', 'b'], color: 'blue' as const }];
+
+    expect(() => new CloseGapCommand(accessor, 'track-video', 4, groups).execute()).toThrow(
+      'Closing this gap would split clip group "Interview"',
+    );
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 6]]);
+  });
+
+  it('close gap shifts groups entirely located after the gap and preserves relative starts', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'b', start: 6, duration: 2 }),
+      makeVideoClip({ id: 'c', start: 9, duration: 2 })
+    ]);
+    const accessor = makeAccessor(timeline);
+    const groups = [{ id: 'g1', name: 'G1', clipIds: ['b', 'c'], color: 'blue' as const }];
+    const manager = new CommandManager();
+
+    manager.execute(new CloseGapCommand(accessor, 'track-video', 4, groups));
+    // gap (2,6) 时长 4s：b/c 各左移 4（6→2, 9→5）
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 2], ['c', 5]]);
+    // 组内相对 start 差不变（9-6 === 5-2）
+    expect((accessor.current().tracks[0].clips[2].start) - (accessor.current().tracks[0].clips[1].start)).toBe(3);
+  });
+
+  it('close gap shifts only the clips located after the gap', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 4, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new CloseGapCommand(accessor, 'track-video', 3));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['a', 0, 2],
+      ['b', 2, 2]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['a', 0], ['b', 4]]);
   });
 
   it('slips clip source trims without changing timeline position or duration', () => {

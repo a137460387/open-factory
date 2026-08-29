@@ -85,7 +85,14 @@ describe('Accessibility baseline', () => {
         'utf-8',
       );
       expect(source).toContain("event.key === 'Enter'");
-      expect(source).toContain("event.key === 'Delete'");
+      // Delete/Backspace 删除由全局快捷键 delete-selected 承接（clip 聚焦时
+      // 事件冒泡触发），定义在 shortcuts/timeline-shortcuts.ts；clip 组件不得
+      // 再 preventDefault 拦截，否则删除失效（2026-08-10 真回归修复）。
+      const shortcuts = require('fs').readFileSync(
+        require('path').resolve(__dirname, '../../shortcuts/timeline-shortcuts.ts'),
+        'utf-8',
+      );
+      expect(shortcuts).toContain("{ action: 'delete-selected', defaultBindings: ['Delete', 'Backspace'] }");
     });
   });
 

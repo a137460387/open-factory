@@ -308,6 +308,7 @@ test.describe('AI音频处理性能', () => {
     // 验证性能：文本分段应在50ms内完成
     expect(perfResult.durationMs).toBeLessThan(50);
     expect(perfResult.segmentCount).toBeGreaterThan(0);
-    expect(perfResult.totalChars).toBe(2500);
+    // 输入为 12 字符 × 100 = 1200；原断言 2500 系 spec 创建时（5985ecd4）的算术错误
+    expect(perfResult.totalChars).toBe(1200);
   });
 });

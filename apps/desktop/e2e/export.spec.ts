@@ -10,9 +10,11 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   await toolbar.openExport();
   await exportDialog.waitForOpen();
   await exportDialog.selectPreset('web-1080p');
-  await exportDialog.setMaxConcurrent('1');
   await exportDialog.selectFps('60');
   await exportDialog.fillBatchPaths('C:/Exports/e2e-output.mp4\nC:/Exports/e2e-output-2.mp4');
+  // 向导拆分（bd315fd6）后 export-max-concurrent-select 在 export 步，需先切步
+  await page.getByTestId('export-step-export').click();
+  await exportDialog.setMaxConcurrent('1');
   await exportDialog.enqueue();
   await exportDialog.expectTaskStatus(0, 'running');
   await exportDialog.expectTaskStatus(1, 'pending');
@@ -84,8 +86,10 @@ test('runs export queue with two concurrent tasks and starts the third after a s
 
   await toolbar.openExport();
   await exportDialog.selectPreset('web-1080p');
-  await exportDialog.setMaxConcurrent('2');
   await exportDialog.fillBatchPaths('C:/Exports/queue-a.mp4\nC:/Exports/queue-b.mp4\nC:/Exports/queue-c.mp4');
+  // 向导拆分（bd315fd6）后 export-max-concurrent-select 在 export 步，需先切步
+  await page.getByTestId('export-step-export').click();
+  await exportDialog.setMaxConcurrent('2');
   await exportDialog.enqueue();
 
   await exportDialog.expectTaskStatus(0, 'running');
@@ -140,17 +144,21 @@ test('starts high priority export before queued low priority work and writes log
   await mediaBin.addToTimeline(0);
 
   await toolbar.openExport();
-  await exportDialog.setMaxConcurrent('1');
+  // 向导拆分（bd315fd6）后 priority 与 output path 在 config 步，max-concurrent 在 export 步
   await exportDialog.setPriority('low');
   await exportDialog.fillBatchPaths('C:/Exports/priority-low.mp4');
+  await page.getByTestId('export-step-export').click();
+  await exportDialog.setMaxConcurrent('1');
   await exportDialog.enqueue();
   await expect(exportDialog.queueList).toContainText('可用内存低于 2GB');
   await exportDialog.expectTaskStatus(0, 'pending');
 
+  await page.getByTestId('export-step-config').click();
   await exportDialog.setPriority('high');
   await exportDialog.fillBatchPaths('C:/Exports/priority-high.mp4');
   await exportDialog.enqueue();
 
+  await page.getByTestId('export-step-export').click();
   await expect(exportDialog.getTaskPriority(0)).toHaveText('高');
   await exportDialog.expectTaskStatus(0, 'pending');
   await page.evaluate(() => window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(8 * 1024 * 1024 * 1024));
@@ -166,9 +174,13 @@ test('starts high priority export before queued low priority work and writes log
   const high = history.find((entry) => entry.outputPath === 'C:/Exports/priority-high.mp4');
   expect(high?.logPath).toBeTruthy();
   await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFileSize!(path) as number, high!.logPath!)).toBeGreaterThan(0);
+  // export-history-list 在 complete 步，需先切步
+  await page.getByTestId('export-step-complete').click();
   await expect(exportDialog.historyList).toContainText('priority-high.mp4');
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
+  // export-queue-list 在 export 步，切回 export 步检查任务状态
+  await page.getByTestId('export-step-export').click();
   await exportDialog.expectTaskStatus(1, 'success');
 });
 
@@ -220,6 +232,7 @@ test('blocks export when preflight finds missing media and allows export after r
 
   await toolbar.openExport();
   await exportDialog.enqueue();
+  // preflight 拦截时对话框自动切到 export 步（面板所在步骤），无需手动切步
   await expect(exportDialog.preflightPanel).toBeVisible();
   await expect(exportDialog.preflightIssue).toHaveAttribute('data-type', 'missing-media');
   await expect(exportDialog.preflightPanel).toContainText('tiny-video.mp4');

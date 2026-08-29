@@ -31,7 +31,7 @@ declare global {
     __OPEN_FACTORY_PROFILER_DEBUG__?: ProfilerDebugInfo;
   }
 }
-import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useAIFeatureStore } from '../store/aiFeatureStore';
 import {
   saveFileDialog as bridgeSaveFileDialog,
   writeFile as bridgeWriteFile,
@@ -48,11 +48,11 @@ export function useEditorShellProfiler(): {
   stopProfilerRecording: () => void;
   exportProfilerReportJson: () => Promise<void>;
 } {
-  const profilerRecording = useEditorFeatureStore((s) => s.profilerRecording);
-  const setProfilerRecording = useEditorFeatureStore((s) => s.setProfilerRecording);
-  const setProfilerElapsedMs = useEditorFeatureStore((s) => s.setProfilerElapsedMs);
-  const profilerReport = useEditorFeatureStore((s) => s.profilerReport);
-  const setProfilerReport = useEditorFeatureStore((s) => s.setProfilerReport);
+  const profilerRecording = useAIFeatureStore((s) => s.profilerRecording);
+  const setProfilerRecording = useAIFeatureStore((s) => s.setProfilerRecording);
+  const setProfilerElapsedMs = useAIFeatureStore((s) => s.setProfilerElapsedMs);
+  const profilerReport = useAIFeatureStore((s) => s.profilerReport);
+  const setProfilerReport = useAIFeatureStore((s) => s.setProfilerReport);
 
   const profilerRecordingRef = useRef<ProfilerRecordingBuffer | null>(null);
   const latestProfilerTextureBytesRef = useRef(0);

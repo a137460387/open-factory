@@ -107,6 +107,8 @@ interface ToolbarProps {
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
+  onOpenCollaborationPanel(): void;
+  onOpenColorGradingWorkspace(): void;
   onOpenOperationRecording(): void;
   onOpenComplexityScore(): void;
   onOpenSmartRecommendations(): void;
@@ -295,7 +297,7 @@ export function Toolbar(props: ToolbarProps) {
   if (props.reviewMode) {
     return (
       <header
-        className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3"
+        className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3 [&>*]:shrink-0"
         data-testid="review-toolbar"
       >
         <div className="mr-2 text-sm font-semibold text-ink">{t.reviewMode}</div>
@@ -330,7 +332,7 @@ export function Toolbar(props: ToolbarProps) {
   }
 
   return (
-    <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3">
+    <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3 [&>*]:shrink-0">
       <FileMenu
         open={openMenu === 'file'}
         onToggle={toggle('file')}
@@ -420,6 +422,8 @@ export function Toolbar(props: ToolbarProps) {
         onOpenSceneDetection={props.onOpenSceneDetection}
         onOpenStyleTransfer={props.onOpenStyleTransfer}
         onOpenCollaborationNotes={props.onOpenCollaborationNotes}
+        onOpenCollaborationPanel={props.onOpenCollaborationPanel}
+        onOpenColorGradingWorkspace={props.onOpenColorGradingWorkspace}
         onOpenOperationRecording={props.onOpenOperationRecording}
         onOpenComplexityScore={props.onOpenComplexityScore}
         onOpenSmartRecommendations={props.onOpenSmartRecommendations}
@@ -448,7 +452,7 @@ export function Toolbar(props: ToolbarProps) {
         onToggle={toggle('help')}
         onStartTutorial={props.onStartTutorial}
       />
-      <div className="mr-2 min-w-0">
+      <div className="mr-2 min-w-0 max-w-[180px]">
         <div className="truncate text-sm font-semibold text-ink" data-testid="toolbar-project-name">
           {project.name}
         </div>
