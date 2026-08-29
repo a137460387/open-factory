@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [v4.79.0] - 2026-08-29
+
+功能版本：情感高潮 top-K 建议。
+
+### Added
+- 情感高潮 top-K 建议组装接入（M3 扩展·第二梯队）：由内容分析情感曲线派生局部高光保留建议——editor-core 新增 `selectEmotionalClimaxIntervals` 组装层（源窗口过滤 + top-K 互斥选取 + 边界 clamp + 极短保护，top-K 内核零改动），desktop 新增第三源派生与多源合并（climax 组置信度降序），接入既有对比审阅与单条显式采纳链路，支持撤销恢复；采纳计数器新增 `emotional-climax` 来源枚举；e2e +2 例，发现数 541 → 543
+
+### Maintenance
+- roadmap 补勾两项 v4.75.0 已交付项（后台媒体作业优先级调度与显式限流 / 批量波形预生成与 codec 感知音频解码回退）
+- ltx-video `downloadModel`/`deleteModel` 补 `isTauriRuntime` 检查——浏览器环境以明确错误拒绝（写操作不可静默成功），对齐同文件既有浏览器回退惯例
+- 关闭 PR #104（wontfix，思路并入 #108 治理范围）
+
 ## [v4.78.2] - 2026-08-28
 
 维护版本：Windows 正式包隐藏控制台窗口。
