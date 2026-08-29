@@ -209,7 +209,7 @@
 
 - roadmap.md：补勾两项 v4.75.0 已交付项（后台媒体作业优先级调度与显式限流 / 批量波形预生成与 codec 感知音频解码回退），Last updated 刷新至 2026-08-28
 - ltx-video：`downloadModel`/`deleteModel` 补 `isTauriRuntime` 检查——浏览器环境以明确错误拒绝（写操作不可静默成功），对齐同文件 detectGpu/listLocalModels 回退惯例；单测同步（4.1 补漏清单该项销账）
-- PR #104 关闭：人类定调 wontfix（2026-08-28）——hooks 拆分思路不废弃，并入 #108（editorUIStore 冻结约束系统性执行漏洞）治理范围统一处置，避免两次大改同一文件；分支保留远端作拆分参考（观察池销账）
+- PR #104 关闭：人类定调 wontfix（2026-08-28）——hooks 拆分思路不废弃，并入 #108（editorUIStore 冻结约束系统性执行漏洞）治理范围统一处置，避免两次大改同一文件；拆分参考已备份至 `.pending-patches/backup/fix/settingsdialog-hooks-rewrite/`（分支随远程收敛删除，2026-08-29，见 2.9 收敛记录；观察池销账）
 
 ### 2.9 仓库分支治理两轮 + drawtext 导出族 flaky 勘察启动（2026-08-29）
 
@@ -278,7 +278,7 @@
 | fast-uri override / release.yml 标题 / audit.toml 豁免复核 | CI 基建专项 | 上游更新后逐项清理 |
 | ASRStage worker 请求参数空占位未接线 | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：定性死链路退役，见下方销账记录 |
 | VAD 纯音乐误报 30s"对话轮" | ~~P2 勘察（2026-08-26）~~ | **已销账（2026-08-27）**：detectDialogueTurns 治理，见下方销账记录 |
-| issue #104 SettingsDialog hooks rewrite | ~~悬置（2026-08-27 收官归档）~~ | **已销账（2026-08-28）**：人类定调关闭 wontfix——hooks 拆分思路并入 #108 治理范围统一处置，分支保留远端作拆分参考（关评原文见 PR #104） |
+| issue #104 SettingsDialog hooks rewrite | ~~悬置（2026-08-27 收官归档）~~ | **已销账（2026-08-28）**：人类定调关闭 wontfix——hooks 拆分思路并入 #108 治理范围统一处置，拆分参考已备份至 `.pending-patches/backup/fix/settingsdialog-hooks-rewrite/`（分支随远程收敛删除，见 2.9；关评原文见 PR #104） |
 
 **观察池销账记录（ASRStage 死链路退役，2026-08-27）**：四断点实证定性 b) 死链路而非接线——①请求参数空占位（原 ASRStage.tsx L113-115）②worker `tauri-request` 消息无主线程应答器，调用必挂起至内置超时 ③audioPath 结构性缺失（selectedClip 仅 `{id,name}` 无媒体路径）④`whisperReady` 全仓无写入 true 路径恒 false。执行「保下游、去上游」：删除 ASRStage.tsx 与 ai-transcription.worker.ts（后者经穷举核实全仓唯一消费方为 ASRStage），面板流程改为润色→样式→导出三阶段直入，Polish/Style/Export 组件渲染契约零变更；转写生成字幕由分步面板 whisper 步与 Timeline 右键「生成字幕」承接（均 `buildWhisperSubtitleTrackForClip` 命令化入轨、e2e 覆盖）。e2e smart-subtitles.spec 由 9 例重写为 7 例壳层用例，`setupAISubtitleWorkflowFixtureWithClip` action 同步移除。附带发现未处理（仅记录）：`lib/asr.ts` 为独立空壳桩且全仓无消费者，属另一既有死代码候选。
 
@@ -291,6 +291,8 @@
 **观察池更新（2026-08-29）**：分支治理两轮完成（远程 50 → 4，详见 2.9）——第一轮 24 远程 + 28 本地已合并分支清理，第二轮未合并旧支 17 销（9 备份 151 补丁 + 8 直接删）、B 组保留，收尾 3 支经逐字节证据销账 + fix/p0-2-async-file-read 剩余内容经 PR #197 合入；advanced-text 第 3 次复发触达 drawtext 族第三例线，勘察已启动（结论待确认后补录修复方案）；GitHub 已开启 Automatically delete head branches。
 
 **观察池更新（2026-08-29，其二）**：drawtext 族勘察结论经人类确认——根因 = 导出对话框挂载延迟（双层 lazy 内层 chunk 点击时首次加载的 dev ESM 瀑布 + CI 负载波动），与 drawtext 渲染链路无关；A+C 修复合入（PR #199 / merge `c958143c`，e2e `543 passed (32.0m)` 零 flaky），advanced-text / nested-sequence-export 观察项标「待下轮 CI 验证」。
+
+**观察池更新（2026-08-29，其三）——远程分支收敛至单分支**：剩余 3 支非 main 分支经逐支评估后处置——① `114-pr2-core`：114 任务实质工作已全数经既有 PR 进 main（ahead=1），尾部 backup commit `b8920835` 仅含 2 个 Trae agent `.trae-html-share-packages/*.zip` 工具缓存，**无代码价值，已 `format-patch --binary` 备份**（含 GIT binary patch 段，zip 可完整还原）后删除；② `fix/manual-conflict-resolution-lost`：顶端 6 行修复（manual 冲突存储）经评估**不适用 main 架构**——宿主 `sync-manager.ts` 从未进 main（演进为 `multi-device-sync.ts`），且 main 在检测阶段已将冲突入 `state.conflicts`（`multi-device-sync.ts:540-541`），原缺陷不存在，原样移植反而重复存储，故不 cherry-pick，整支 42 补丁备份后删远程+本地；③ `fix/settingsdialog-hooks-rewrite`：1 补丁备份（11 文件 +1810/-1590 拆分参考）后删远程+本地，HANDOFF 两处参考位置已改为备份目录。**终态：远程分支仅剩 main**；备份区累计 242 补丁（`.pending-patches/backup/`，gitignore 忽略）。
 
 ---
 
