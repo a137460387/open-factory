@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-28 | 基线：main = `c6bf6365`（PR #193 merge，v4.79.0 功能 + 搭车维护合入）| 版本：v4.78.2 已发布（主题「隐藏控制台窗口」/ bump `89fb5d12`）；v4.79.0 待发（主题「情感高潮 top-K 建议」，收录 PR #192 + #193，发版分支随后）
+> 更新时间：2026-08-29 | 基线：main = `e5266a6b`（PR #194 merge，HANDOFF 发版前同步合入）| 版本：v4.79.0（本 PR 发布，主题「情感高潮 top-K 建议」；上版 v4.78.2「隐藏控制台窗口」/ bump `89fb5d12`）
 >
 > e2e 基线（双口径）：**发现数 543 / passed 542 + 1 flaky**（main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 第 2 次；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，nested-sequence-export 第 3 次）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27），M3 扩展·第二梯队 +2 例至 543（2026-08-28）——逐 run 实测见 2.5 口径修正记录。
 
@@ -26,6 +26,7 @@
 12. **v4.78.1 热修：生产包启动黑屏（vendor 分块循环求值）+ 生产冒烟入 CI**（PR #188 / merge `20e93ba5`，2026-08-28）：v4.78.0 真机冒烟发现安装包启动黑屏，CDP 取证定位 manualChunks 循环分块致 React 初始化前入口崩溃；两层塌缩修复 + prod-smoke CI 门禁基建——详见 2.7；本条目随本发版 PR（release/v4.78.1）收录
 13. **v4.78.2 维护发版：Windows 正式包隐藏控制台窗口**（PR #190 / merge `d74769b7`，2026-08-28）：v4.78.1 真机冒烟发现正式包启动伴随黑色控制台窗口，根因为 `src-tauri/src/main.rs` 缺失 `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`（Windows 正式构建按 console 子系统编译）；单行属性补齐（release 隐控制台 / dev 保留日志），零功能变更；本条目随本发版 PR（release/v4.78.2）收录
 14. **M3 扩展·第二梯队：情感高潮 top-K 建议组装接入**（PR #192 / merge `0706cf38` + 搭车维护 PR #193 / merge `c6bf6365`，2026-08-28）：top-K 闸门经人类定调放行（单一用户项目，用户本人已实际采纳 b+d 建议，原判定标准「b+d 真实使用信号」以定调记录方式关闭）；`selectEmotionalClimaxIntervals` 组装层（窗口过滤 + 内核互斥选取 + 边界 clamp + 极短保护，内核零改动）+ `semantic-climax-suggestion` 派生层 + 多源合并第三源（climax 组 confidence 降序）+ 采纳计数器 `emotional-climax` 枚举；搭车维护 = roadmap 补勾两项 + ltx-video downloadModel/deleteModel 浏览器回退补齐 + PR #104 wontfix 关闭（hooks 拆分思路并入 #108）——详见 2.8
+15. **v4.79.0 发版**（2026-08-29）：主题「情感高潮 top-K 建议」，正式收录 PR #192（情感高潮 top-K 建议组装接入，merge `0706cf38`）+ PR #193（搭车维护：roadmap 补勾两项 + ltx-video 浏览器回退补齐 + PR #104 wontfix 关闭，merge `c6bf6365`）+ PR #194（HANDOFF 发版前同步，merge `e5266a6b`），bump 见本 PR
 
 ---
 
@@ -213,7 +214,7 @@
 
 ## 3. 当前状态
 
-**位置**：main = `c6bf6365`（PR #193 merge，v4.79.0 搭车维护合入；此前 PR #192 merge `0706cf38` 功能已合入），本分支为 v4.79.0 发版前 HANDOFF 独立同步，工作区干净。v4.78.2「隐藏控制台窗口」已发布（2026-08-28）。M3 扩展·第二梯队（情感高潮 top-K 组装接入）已合入，top-K 闸门已定调销项（见 2.8）；M3-3 A2 为下一个小版本设计候选。v4.79.0 发版随后（主题「情感高潮 top-K 建议」）。
+**位置**：main = `e5266a6b`（PR #194 merge），本分支为 v4.79.0 发版（主题「情感高潮 top-K 建议」，bump 见本 PR），工作区干净。v4.78.2「隐藏控制台窗口」已发布（2026-08-28）。M3 扩展·第二梯队（情感高潮 top-K 组装接入）已合入，top-K 闸门已定调销项（见 2.8）；M3-3 A2 为下一个小版本设计候选。
 
 **基线数据**：
 
