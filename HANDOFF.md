@@ -1,6 +1,6 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-29 | 基线：main = `d9afd329`（PR #197 merge，fix/p0-2-async-file-read 剩余内容合入 + 分支治理两轮）| 版本：v4.79.0 已发布（主题「情感高潮 top-K 建议」/ bump `01de71b4` / release merge `a09dee2b`）
+> 更新时间：2026-08-29 | 基线：main = `c958143c`（PR #199 merge，drawtext 族 flaky 根因 A+C 修复合入）| 版本：v4.79.0 已发布（主题「情感高潮 top-K 建议」/ bump `01de71b4` / release merge `a09dee2b`）
 >
 > e2e 基线（双口径）：**发现数 543 / passed 542 + 1 flaky**（PR #197 第二轮 run 33241427547 实测 `541 passed + 2 flaky (42.8m)`，发现数 543 保持，flaky 均池内已知：nested-sequence-export / advanced-text 第 3 次；此前 main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，ai-multicam-cut 第 2 次）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27），M3 扩展·第二梯队 +2 例至 543（2026-08-28）——逐 run 实测见 2.5 口径修正记录。
 
@@ -225,12 +225,14 @@
 - **触发**：advanced-text 第 3 次复发（PR #197 第二轮 run 33241427547），触达 4.2 监控规则第三例线
 - **已取证**（CI job log 实抓，5 个带日志样本形态收敛）：advanced-text ×2（#184 run 33052967308 / #197 第二轮）均为 `export-enqueue-button` click 10s 超时（advanced-text.spec.ts:39）；nested-sequence-export ×2（#184 spec.ts:89 / #197 合入后 main run 33232613754 spec.ts:49）均为 `export-dialog` toBeVisible 15s 超时（`Error: element(s) not found`）；credits-roll-drawtext 首见（四期-B 时代）日志已超保留期，以观察池记录为准。另 #193 main run 33165898507 的 1 flaky 实为 ai-multicam-cut（本节勘察前已归档正确）
 - **初步定性**：全部失败发生在「点击 toolbar-export-button 后导出对话框挂载」阶段，无一到达 drawtext 断言/导出链路——与 drawtext 渲染本身无关，「drawtext 族」系表象命名。机制指向**双层 lazy 的内层**：`ExportDialogs.tsx` 内 `ExportDialog = lazy(() => import('../../export/ExportDialog'))` 在点击时才首次 import，vite dev 模式未打包 ESM 的模块瀑布（export/ 域 71 文件约 1.86 万行；ExportConfig 单组件 30 import）在 CI（4 vCPU runner、2 workers、vite transform 同机竞争）上耗时波动，峰值超过 click 默认 10s 与 POM waitForOpen 15s；重试通过 = server transform 已热 + 负载窗口变化。旁证：ai-loudness-suggestion.spec.ts:13 已有「openExportDialog 只点击不等待，首个断言需显式覆盖」的注释，而 advanced-text 是唯一直接 click 不等 dialog 挂载的 spec
+- **结论（人类已确认，2026-08-29）**：根因 = 导出对话框挂载延迟（内层 lazy chunk 点击时首次加载的 dev ESM 瀑布 + CI 负载波动），与 drawtext 渲染链路、字体加载、warmup 门控均无关（`warmupStatus` 打开时恒 undefined，enqueue 按钮常驻 footer 不受向导步骤影响）
+- **修复（A+C 组合，PR #199 / merge `c958143c`，两提交 +20/-1，typecheck exit 0）**：方案 A = e2e-actions.ts `openExportDialog` click 后统一等待 `export-dialog` 挂载（30s），advanced-text.spec.ts:39 直连 click 位于等待之后，「无等待」特例消灭（`4951e98f`）；方案 C = ExportDialogs.tsx 启动后 `requestIdleCallback` 空闲预热 `import('../../export/ExportDialog')`（不阻塞首屏，不可用回退 setTimeout），点击命中模块缓存（`3e56f42e`）。PR CI 全绿：e2e **`543 passed (32.0m)` 零 flaky**（run 33244667288，advanced-text / nested 本轮零复发）；**效果待下轮 CI 继续验证**
 
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `d9afd329`（PR #197 merge，fix/p0-2-async-file-read 剩余内容合入），本分支为 HANDOFF 分支治理同步，工作区干净。v4.79.0「情感高潮 top-K 建议」已发布（2026-08-29，release merge `a09dee2b`）。分支治理两轮完成（远程 50 → 4，见 2.9）；drawtext 导出族 flaky 勘察进行中（结论待确认，见 2.9）；M3-3 A2 为下一个小版本设计候选。
+**位置**：main = `c958143c`（PR #199 merge，drawtext 族 flaky 根因 A+C 修复），本分支为 HANDOFF 勘察结论同步，工作区干净。v4.79.0「情感高潮 top-K 建议」已发布（2026-08-29，release merge `a09dee2b`）。分支治理两轮完成（远程 50 → 4，见 2.9）；drawtext 导出族 flaky 根因已确认并修复合入（见 2.9），效果待下轮 CI 验证；M3-3 A2 为下一个小版本设计候选。
 
 **基线数据**：
 
@@ -255,10 +257,10 @@
 
 | 观察项 | 来源期次 | 说明 |
 |---|---|---|
-| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 4 次复发（#175 首见 / #184 复发 / #188 再现 / #197 合入后 main run 33232613754 复发），重试均通过；与 advanced-text 同根因族——导出对话框挂载延迟（见 2.9 勘察） |
+| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 4 次复发（#175 首见 / #184 复发 / #188 再现 / #197 合入后 main run 33232613754 复发），重试均通过；与 advanced-text 同根因族——导出对话框挂载延迟（见 2.9）；A+C 修复已合入（PR #199），**待下轮 CI 验证** |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 低优先；ai-multicam-cut 累计 2 次（第 6 轮首见 / v4.79.0 前 main run 33165898507 复发，重试通过），credits-roll-drawtext 维持 1 次 |
-| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 累计 3 次（#182 首见 / #184 复发 / PR #197 第二轮 run 33241427547 复发），均 rich text drawtext 导出用例重试通过；触达 drawtext 族第三例线，只读勘察已启动（见 2.9），只记录不修待勘察结论 |
-| **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 第三例已现（advanced-text 第 3 次，PR #197 第二轮），按规则只读勘察已启动（2026-08-29，见 2.9）：初步定性为导出对话框挂载延迟（双层 lazy 内层 chunk 点击时首次加载的 dev ESM 瀑布），与 drawtext 渲染链路无关；修复方案待人类确认勘察报告后补录 |
+| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 累计 3 次（#182 首见 / #184 复发 / PR #197 第二轮 run 33241427547 复发），均 rich text drawtext 导出用例重试通过；触达 drawtext 族第三例线，勘察结论已确认（见 2.9），A+C 修复已合入（PR #199），**待下轮 CI 验证** |
+| **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 第三例已现（advanced-text 第 3 次，PR #197 第二轮），勘察完成并经人类确认（2026-08-29，见 2.9）：根因 = 导出对话框挂载延迟（双层 lazy 内层 chunk 点击时首次加载的 dev ESM 瀑布 + CI 负载波动），与 drawtext 渲染链路无关；A+C 修复已合入（PR #199），下轮 CI 起观察复发是否归零 |
 | **生产构建分块顺序监控规则** | v4.78.1 热修（2026-08-28） | 事故根因为 manualChunks 循环分块 + 模块级求值访问跨块绑定（v4.73.0 起潜伏）。监控规则：任何 manualChunks 规则改动后本地必跑 `node scripts/prod-smoke.mjs`；CI prod-smoke job 持续把关。新增 vendor 依赖或调整路由时检查 vendor-react 闭包完整性与 chunk 依赖方向单向性（vite build 输出出现 Circular chunk 警告即红灯） |
 | **正式包 Rust stdout 不可见** | v4.78.2（2026-08-28） | 正式包 Rust stdout（tracing JSON）自 v4.78.2 起 windows_subsystem=windows 后不再可见，属预期行为；后端诊断以 CDP 前端取证为主通道（v4.78.0 事故中已验证有效） |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
@@ -287,6 +289,8 @@
 **观察池更新（2026-08-28）**：top-K 闸门销项（人类定调放行，2.5 闸门原文保留，定调见 2.8）+ issue #104 销账（wontfix 关闭，hooks 拆分思路并入 #108）；主线待调决策收敛至 M3-3 方向一项（A2 批量整合启动前置评估：①Compare 单条应用真实使用信号证明批量入口必要 ②应用整合设计文档过审，见 2.5 定调记录）。
 
 **观察池更新（2026-08-29）**：分支治理两轮完成（远程 50 → 4，详见 2.9）——第一轮 24 远程 + 28 本地已合并分支清理，第二轮未合并旧支 17 销（9 备份 151 补丁 + 8 直接删）、B 组保留，收尾 3 支经逐字节证据销账 + fix/p0-2-async-file-read 剩余内容经 PR #197 合入；advanced-text 第 3 次复发触达 drawtext 族第三例线，勘察已启动（结论待确认后补录修复方案）；GitHub 已开启 Automatically delete head branches。
+
+**观察池更新（2026-08-29，其二）**：drawtext 族勘察结论经人类确认——根因 = 导出对话框挂载延迟（双层 lazy 内层 chunk 点击时首次加载的 dev ESM 瀑布 + CI 负载波动），与 drawtext 渲染链路无关；A+C 修复合入（PR #199 / merge `c958143c`，e2e `543 passed (32.0m)` 零 flaky），advanced-text / nested-sequence-export 观察项标「待下轮 CI 验证」。
 
 ---
 
