@@ -1,8 +1,8 @@
 # HANDOFF.md — 工作交接文档
 
-> 更新时间：2026-08-29 | 基线：main = `e5266a6b`（PR #194 merge，HANDOFF 发版前同步合入）| 版本：v4.79.0（本 PR 发布，主题「情感高潮 top-K 建议」；上版 v4.78.2「隐藏控制台窗口」/ bump `89fb5d12`）
+> 更新时间：2026-08-29 | 基线：main = `d9afd329`（PR #197 merge，fix/p0-2-async-file-read 剩余内容合入 + 分支治理两轮）| 版本：v4.79.0 已发布（主题「情感高潮 top-K 建议」/ bump `01de71b4` / release merge `a09dee2b`）
 >
-> e2e 基线（双口径）：**发现数 543 / passed 542 + 1 flaky**（main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 第 2 次；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，nested-sequence-export 第 3 次）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27），M3 扩展·第二梯队 +2 例至 543（2026-08-28）——逐 run 实测见 2.5 口径修正记录。
+> e2e 基线（双口径）：**发现数 543 / passed 542 + 1 flaky**（PR #197 第二轮 run 33241427547 实测 `541 passed + 2 flaky (42.8m)`，发现数 543 保持，flaky 均池内已知：nested-sequence-export / advanced-text 第 3 次；此前 main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，ai-multicam-cut 第 2 次）。注：#175/#176/#177 时期记录的 534 为 passed 数，实际发现数为 535（1 例 flaky 重试通过不计入 passed）；自 #178 起以发现数为准，避免口径混淆；#178 时点基线 537 经 #181 smart-subtitles.spec 9→7 例重写净减 2 例至 535，M3-3 A1 +3 例至 538（2026-08-27），M3 扩展·首实施 +3 例至 541（2026-08-27），M3 扩展·第二梯队 +2 例至 543（2026-08-28）——逐 run 实测见 2.5 口径修正记录。
 
 ---
 
@@ -27,6 +27,7 @@
 13. **v4.78.2 维护发版：Windows 正式包隐藏控制台窗口**（PR #190 / merge `d74769b7`，2026-08-28）：v4.78.1 真机冒烟发现正式包启动伴随黑色控制台窗口，根因为 `src-tauri/src/main.rs` 缺失 `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]`（Windows 正式构建按 console 子系统编译）；单行属性补齐（release 隐控制台 / dev 保留日志），零功能变更；本条目随本发版 PR（release/v4.78.2）收录
 14. **M3 扩展·第二梯队：情感高潮 top-K 建议组装接入**（PR #192 / merge `0706cf38` + 搭车维护 PR #193 / merge `c6bf6365`，2026-08-28）：top-K 闸门经人类定调放行（单一用户项目，用户本人已实际采纳 b+d 建议，原判定标准「b+d 真实使用信号」以定调记录方式关闭）；`selectEmotionalClimaxIntervals` 组装层（窗口过滤 + 内核互斥选取 + 边界 clamp + 极短保护，内核零改动）+ `semantic-climax-suggestion` 派生层 + 多源合并第三源（climax 组 confidence 降序）+ 采纳计数器 `emotional-climax` 枚举；搭车维护 = roadmap 补勾两项 + ltx-video downloadModel/deleteModel 浏览器回退补齐 + PR #104 wontfix 关闭（hooks 拆分思路并入 #108）——详见 2.8
 15. **v4.79.0 发版**（2026-08-29）：主题「情感高潮 top-K 建议」，正式收录 PR #192（情感高潮 top-K 建议组装接入，merge `0706cf38`）+ PR #193（搭车维护：roadmap 补勾两项 + ltx-video 浏览器回退补齐 + PR #104 wontfix 关闭，merge `c6bf6365`）+ PR #194（HANDOFF 发版前同步，merge `e5266a6b`），bump 见本 PR
+16. **仓库分支治理两轮 + drawtext 导出族 flaky 勘察启动**（2026-08-29）：已合并分支清理（远程 24 + 本地 28）与未合并旧分支摸底处置（备份 9 支 151 补丁后删 + 直接删 8 支，B 组保留），3 支小修分支逐支判定销账；远程分支 50 → 4，GitHub 开启 Automatically delete head branches；advanced-text 第 3 次复发触达 drawtext 族监控规则第三例线，只读勘察启动——详见 2.9
 
 ---
 
@@ -210,18 +211,33 @@
 - ltx-video：`downloadModel`/`deleteModel` 补 `isTauriRuntime` 检查——浏览器环境以明确错误拒绝（写操作不可静默成功），对齐同文件 detectGpu/listLocalModels 回退惯例；单测同步（4.1 补漏清单该项销账）
 - PR #104 关闭：人类定调 wontfix（2026-08-28）——hooks 拆分思路不废弃，并入 #108（editorUIStore 冻结约束系统性执行漏洞）治理范围统一处置，避免两次大改同一文件；分支保留远端作拆分参考（观察池销账）
 
+### 2.9 仓库分支治理两轮 + drawtext 导出族 flaky 勘察启动（2026-08-29）
+
+**两轮清理**（全程 `-d`/普通 delete，零 force 零历史改写；main 与 114-pr2-core 全程未碰）：
+
+- **第一轮（已合并分支）**：`git branch -r --merged origin/main` 现场实证 24 支（外部参考清单 23 支吻合 + `docs/macos-linux-dialog-automation-design` 经 --merged 证实补入；`114-pr2-core` 因 fetch 显示新提交 `b8920835` 未合并而保留），远程单次批量 `push --delete`；本地 `--merged main` 28 支 `-d` 清理。直推 main 的 .gitignore 变更（`.pending-patches/`、`.zcode/` 两条忽略规则）被分支保护 GH006 拒绝后改走 PR #196（merge `8e62afbb`，CI 全绿 e2e `543 passed (42.4m)` 零 flaky）
+- **第二轮（未合并旧分支）**：23 支只读摸底（最后提交日期 / 领先 origin/main 数 / 提交标题 / `diff --stat` 规模），按「最后活跃早于 2026-08-01」分组，人类点名后执行——A 组 17 支全删：9 支先 `git format-patch` 备份（151 补丁落 `.pending-patches/backup/`，已被 gitignore 忽略，补丁数与领先数逐一校验）再删远程+本地 `-D`，8 支直接删；B 组 6 支保留（fix/114-export-spec-navigation / fix/114-plugin-marketplace-rename-drift / fix/114-preflight-panel-eager / fix/p0-2-async-file-read / fix/manual-conflict-resolution-lost / fix/settingsdialog-hooks-rewrite）
+- **收尾（4 支小修分支逐支判定）**：`fix/p0-2-async-file-read` 判定仍有效——原主题 read_file async 化已经 `7d92b272` 进 main，净剩余仅 .gitignore 本地 CI/测试日志 6 条规则（`.audit_log.txt` / `.ci_*.txt` / `.e2e_*.txt` / `.m1_*.txt` / `.rust_*.txt` / `apps/desktop/.adj_*.txt`），merge-tree 零冲突，经 PR #197 合入（merge `d9afd329`；首轮 e2e `1 flaky + 542 passed` 过后因分支保护要求 head 含最新 main 而经 `gh pr update-branch` 合入 `8e62afbb` 重跑，第二轮 `2 flaky + 541 passed (42.8m)` 全绿，发现数 543 保持）；`fix/114-export-spec-navigation` / `fix/114-plugin-marketplace-rename-drift` / `fix/114-preflight-panel-eager` 经逐字节证据确认被 main 覆盖（前两支分支 tip 与 main 目标 spec 文件 diff 为空；第三支修复点——PreflightChecklistPanel 取消 lazy——已在 main 以静态 import + Suspense 外渲染存在，连注释逐字一致），经人类确认销账删除
+- **终态**：远程分支 50 → 4（main / 114-pr2-core / fix/manual-conflict-resolution-lost / fix/settingsdialog-hooks-rewrite）；GitHub Settings 已开启 Automatically delete head branches
+
+**drawtext 导出族 flaky 勘察（只读，进行中，结论待人类确认后补录）**：
+
+- **触发**：advanced-text 第 3 次复发（PR #197 第二轮 run 33241427547），触达 4.2 监控规则第三例线
+- **已取证**（CI job log 实抓，5 个带日志样本形态收敛）：advanced-text ×2（#184 run 33052967308 / #197 第二轮）均为 `export-enqueue-button` click 10s 超时（advanced-text.spec.ts:39）；nested-sequence-export ×2（#184 spec.ts:89 / #197 合入后 main run 33232613754 spec.ts:49）均为 `export-dialog` toBeVisible 15s 超时（`Error: element(s) not found`）；credits-roll-drawtext 首见（四期-B 时代）日志已超保留期，以观察池记录为准。另 #193 main run 33165898507 的 1 flaky 实为 ai-multicam-cut（本节勘察前已归档正确）
+- **初步定性**：全部失败发生在「点击 toolbar-export-button 后导出对话框挂载」阶段，无一到达 drawtext 断言/导出链路——与 drawtext 渲染本身无关，「drawtext 族」系表象命名。机制指向**双层 lazy 的内层**：`ExportDialogs.tsx` 内 `ExportDialog = lazy(() => import('../../export/ExportDialog'))` 在点击时才首次 import，vite dev 模式未打包 ESM 的模块瀑布（export/ 域 71 文件约 1.86 万行；ExportConfig 单组件 30 import）在 CI（4 vCPU runner、2 workers、vite transform 同机竞争）上耗时波动，峰值超过 click 默认 10s 与 POM waitForOpen 15s；重试通过 = server transform 已热 + 负载窗口变化。旁证：ai-loudness-suggestion.spec.ts:13 已有「openExportDialog 只点击不等待，首个断言需显式覆盖」的注释，而 advanced-text 是唯一直接 click 不等 dialog 挂载的 spec
+
 ---
 
 ## 3. 当前状态
 
-**位置**：main = `e5266a6b`（PR #194 merge），本分支为 v4.79.0 发版（主题「情感高潮 top-K 建议」，bump 见本 PR），工作区干净。v4.78.2「隐藏控制台窗口」已发布（2026-08-28）。M3 扩展·第二梯队（情感高潮 top-K 组装接入）已合入，top-K 闸门已定调销项（见 2.8）；M3-3 A2 为下一个小版本设计候选。
+**位置**：main = `d9afd329`（PR #197 merge，fix/p0-2-async-file-read 剩余内容合入），本分支为 HANDOFF 分支治理同步，工作区干净。v4.79.0「情感高潮 top-K 建议」已发布（2026-08-29，release merge `a09dee2b`）。分支治理两轮完成（远程 50 → 4，见 2.9）；drawtext 导出族 flaky 勘察进行中（结论待确认，见 2.9）；M3-3 A2 为下一个小版本设计候选。
 
 **基线数据**：
 
 - desktop 覆盖（口径 B）= **73.35%（CI artifact lcov 实测，#192 run 33158276571）**；基线演进：73.04%（4367f9d9）→ 73.1881%（74da84a4）→ 73.2213%（e8f94590）→ 73.2941%（a609d8f5 → 20e93ba5 持平）→ 73.35%（0706cf38）；历史本地-CI 偏差 ≤0.04pp 稳定规律（CI artifact lcov 可下载复核）
 - editor-core 行覆盖 = **91.7356%**（CI artifact lcov 实测，#186 run；阈值 80%）
 - 全量单测：675 文件全过 exit 0（**12513 passed + 3 skipped**，#192 实测 = 基线 12494 + 19），无 unhandled rejection
-- e2e（双口径，自 2.5 起以发现数为准）：**发现数 543**（main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 复发；#190 run 33141956888 曾 `541 passed (34.1m)` 零 flaky；#188 run 33133132292 曾 `540 passed + 1 flaky (44.8m)`，flaky 为池内已知 nested-sequence-export 第 3 次复发；drawtext 族监控规则继续有效，本 run 无 drawtext 族新面孔）
+- e2e（双口径，自 2.5 起以发现数为准）：**发现数 543**（PR #197 第二轮 run 33241427547 实测 `541 passed + 2 flaky (42.8m)`，flaky 均池内：nested-sequence-export / advanced-text 第 3 次，重试通过；此前 main run 33165898507 实测 `542 passed + 1 flaky (42.7m)`，flaky 为池内已知 ai-multicam-cut 复发；#190 run 33141956888 曾 `541 passed (34.1m)` 零 flaky；drawtext 族监控规则继续有效）
 - typecheck 0 错误；coverage 稳定生成
 
 ---
@@ -239,10 +255,10 @@
 
 | 观察项 | 来源期次 | 说明 |
 |---|---|---|
-| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 3 次复发（#175 首见 / #184 复发 / #188 再现），重试均通过 |
+| e2e flaky：nested-sequence-export | e2e 多轮观察 | 间歇性，常规监控；累计 4 次复发（#175 首见 / #184 复发 / #188 再现 / #197 合入后 main run 33232613754 复发），重试均通过；与 advanced-text 同根因族——导出对话框挂载延迟（见 2.9 勘察） |
 | e2e flaky：ai-multicam-cut / credits-roll-drawtext | 四期-B 后第 6 轮 | 低优先；ai-multicam-cut 累计 2 次（第 6 轮首见 / v4.79.0 前 main run 33165898507 复发，重试通过），credits-roll-drawtext 维持 1 次 |
-| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 首见；累计 2 次（#182 首见 / #184 复发），持续监控；rich text drawtext 导出用例重试通过，只记录不修 |
-| **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 已两例同风味（advanced-text:4 / credits-roll-drawtext）；出现第三例同类时启动只读勘察定位共性根因 |
+| e2e flaky：advanced-text | PR #182 CI（2026-08-27） | 累计 3 次（#182 首见 / #184 复发 / PR #197 第二轮 run 33241427547 复发），均 rich text drawtext 导出用例重试通过；触达 drawtext 族第三例线，只读勘察已启动（见 2.9），只记录不修待勘察结论 |
+| **drawtext 导出族监控规则** | 2026-08-27 收官归档 | 第三例已现（advanced-text 第 3 次，PR #197 第二轮），按规则只读勘察已启动（2026-08-29，见 2.9）：初步定性为导出对话框挂载延迟（双层 lazy 内层 chunk 点击时首次加载的 dev ESM 瀑布），与 drawtext 渲染链路无关；修复方案待人类确认勘察报告后补录 |
 | **生产构建分块顺序监控规则** | v4.78.1 热修（2026-08-28） | 事故根因为 manualChunks 循环分块 + 模块级求值访问跨块绑定（v4.73.0 起潜伏）。监控规则：任何 manualChunks 规则改动后本地必跑 `node scripts/prod-smoke.mjs`；CI prod-smoke job 持续把关。新增 vendor 依赖或调整路由时检查 vendor-react 闭包完整性与 chunk 依赖方向单向性（vite build 输出出现 Circular chunk 警告即红灯） |
 | **正式包 Rust stdout 不可见** | v4.78.2（2026-08-28） | 正式包 Rust stdout（tracing JSON）自 v4.78.2 起 windows_subsystem=windows 后不再可见，属预期行为；后端诊断以 CDP 前端取证为主通道（v4.78.0 事故中已验证有效） |
 | 慢 runner noisy-neighbor | e2e 稳定性专项 | 定性不变，timeout 余量约 49% |
@@ -269,6 +285,8 @@
 **观察池收尾（2026-08-27）**：本轮观察池治理完毕，进入准稳态，主线开放项收敛为上述两项待调决策（M3-3 方向 A1/A2/A3 择一、issue #104 去留）。
 
 **观察池更新（2026-08-28）**：top-K 闸门销项（人类定调放行，2.5 闸门原文保留，定调见 2.8）+ issue #104 销账（wontfix 关闭，hooks 拆分思路并入 #108）；主线待调决策收敛至 M3-3 方向一项（A2 批量整合启动前置评估：①Compare 单条应用真实使用信号证明批量入口必要 ②应用整合设计文档过审，见 2.5 定调记录）。
+
+**观察池更新（2026-08-29）**：分支治理两轮完成（远程 50 → 4，详见 2.9）——第一轮 24 远程 + 28 本地已合并分支清理，第二轮未合并旧支 17 销（9 备份 151 补丁 + 8 直接删）、B 组保留，收尾 3 支经逐字节证据销账 + fix/p0-2-async-file-read 剩余内容经 PR #197 合入；advanced-text 第 3 次复发触达 drawtext 族第三例线，勘察已启动（结论待确认后补录修复方案）；GitHub 已开启 Automatically delete head branches。
 
 ---
 
