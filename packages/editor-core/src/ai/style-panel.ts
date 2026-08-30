@@ -7,20 +7,13 @@
  * Designed to be consumed by any frontend framework (React, Vue, Svelte, etc.)
  */
 
-import type {StyleFingerprint} from './style-analyzer';
-import {mergeStyleFingerprints, computeStyleSimilarity} from './style-analyzer';
-import type {Project} from '../model-types';
+import type { StyleFingerprint } from './style-analyzer';
+import { mergeStyleFingerprints, computeStyleSimilarity } from './style-analyzer';
+import type { Project } from '../model-types';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type StylePanelPhase =
-  | 'idle'
-  | 'loading'
-  | 'browsing'
-  | 'editing'
-  | 'extracting'
-  | 'comparing'
-  | 'error';
+export type StylePanelPhase = 'idle' | 'loading' | 'browsing' | 'editing' | 'extracting' | 'comparing' | 'error';
 
 export interface StylePanelState {
   /** Current phase */
@@ -83,10 +76,7 @@ export type StylePanelAction =
 /**
  * Pure state reducer for the style management panel.
  */
-export function stylePanelReducer(
-  state: StylePanelState,
-  action: StylePanelAction,
-): StylePanelState {
+export function stylePanelReducer(state: StylePanelState, action: StylePanelAction): StylePanelState {
   switch (action.type) {
     case 'LOAD_STYLES':
       return { ...state, styles: action.styles, phase: 'browsing' };
@@ -110,9 +100,7 @@ export function stylePanelReducer(
 
     case 'SAVE_EDIT': {
       if (!state.editingStyle) return state;
-      const updated = state.styles.map((s) =>
-        s.id === state.editingStyle!.id ? state.editingStyle! : s,
-      );
+      const updated = state.styles.map((s) => (s.id === state.editingStyle!.id ? state.editingStyle! : s));
       const exists = updated.some((s) => s.id === state.editingStyle!.id);
       const styles = exists ? updated : [...updated, state.editingStyle!];
       return { ...state, phase: 'browsing', styles, editingStyle: undefined };
@@ -201,11 +189,7 @@ export function stylePanelReducer(
 // ─── Derived Data Helpers ───────────────────────────────────────
 
 /** Filter styles by search query and tag filter */
-export function filterStyles(
-  styles: StyleFingerprint[],
-  searchQuery: string,
-  tagFilter: string[],
-): StyleFingerprint[] {
+export function filterStyles(styles: StyleFingerprint[], searchQuery: string, tagFilter: string[]): StyleFingerprint[] {
   return styles.filter((s) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();

@@ -1,5 +1,5 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {BarChart3, Pause, Play} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BarChart3, Pause, Play } from 'lucide-react';
 
 interface SpectrumAnalyzerProps {
   /** 频率数据数组 (0-1 范围，长度通常为 128 或 256) */

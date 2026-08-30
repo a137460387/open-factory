@@ -67,11 +67,7 @@ describe('ErrorBoundary', () => {
         <ThrowingComponent shouldThrow={true} />
       </ErrorBoundary>,
     );
-    expect(spy).toHaveBeenCalledWith(
-      '[ErrorBoundary:Properties]',
-      expect.any(Error),
-      expect.any(String),
-    );
+    expect(spy).toHaveBeenCalledWith('[ErrorBoundary:Properties]', expect.any(Error), expect.any(String));
   });
 
   it('calls showToast on error', async () => {
@@ -103,7 +99,9 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('Could not render Plugins')).toBeDefined();
 
     shouldThrow = false;
-    act(() => { screen.getByText('Reload Panel').click(); });
+    act(() => {
+      screen.getByText('Reload Panel').click();
+    });
     expect(screen.getByText('Recovered')).toBeDefined();
   });
 });

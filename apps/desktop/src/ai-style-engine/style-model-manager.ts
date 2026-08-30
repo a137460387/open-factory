@@ -9,9 +9,23 @@
  * - Node editor "Personal Style" input node
  */
 
-import {analyzeEditingStyle, compareEditingStyles, type EditingRhythmProfile, type EditingStyleVector, type EDLAnalysisResult, type TimelineLike} from './edit-rhythm-analyzer';
+import {
+  analyzeEditingStyle,
+  compareEditingStyles,
+  type EditingRhythmProfile,
+  type EditingStyleVector,
+  type EDLAnalysisResult,
+  type TimelineLike,
+} from './edit-rhythm-analyzer';
 
-import {analyzeColorPreferences, compareColorProfiles, type ColorPreferenceProfile, type ColorGradingParams, type ColorAnalysisResult, type ProjectLike} from './color-preference-learner';
+import {
+  analyzeColorPreferences,
+  compareColorProfiles,
+  type ColorPreferenceProfile,
+  type ColorGradingParams,
+  type ColorAnalysisResult,
+  type ProjectLike,
+} from './color-preference-learner';
 
 // ==================== Types ====================
 
@@ -250,10 +264,11 @@ function mergeColorProfiles(results: ColorAnalysisResult[]): ColorPreferenceProf
   };
 
   // Use the dominant style cluster from the largest project
-  const dominantStyle = profiles
-    .filter((p) => p.dominantStyle)
-    .sort((a, b) => (b.dominantStyle?.sampleCount ?? 0) - (a.dominantStyle?.sampleCount ?? 0))[0]
-    ?.dominantStyle ?? null;
+  const dominantStyle =
+    profiles
+      .filter((p) => p.dominantStyle)
+      .sort((a, b) => (b.dominantStyle?.sampleCount ?? 0) - (a.dominantStyle?.sampleCount ?? 0))[0]?.dominantStyle ??
+    null;
 
   // Average preference vectors
   const vectors = profiles.map((p) => p.preferenceVector);
@@ -321,7 +336,8 @@ function recommendEditPoints(
   // Get preferred shot duration from style vector
   const preferredAvgDuration = denormalizeValue(
     profile.vector[0], // avgShotDuration
-    0, 30,
+    0,
+    30,
   );
 
   // Generate rhythm-based recommendations
@@ -549,10 +565,7 @@ function generateStyleSummary(
 /**
  * Generate combined 256-dim style vector from editing and color profiles
  */
-function generateCombinedVector(
-  editingStyle: EditingStyleVector,
-  colorProfile: ColorPreferenceProfile,
-): number[] {
+function generateCombinedVector(editingStyle: EditingStyleVector, colorProfile: ColorPreferenceProfile): number[] {
   const combined: number[] = [];
 
   // First 128 dims: editing style
@@ -660,5 +673,3 @@ export class LocalStyleModelStorage implements StyleModelStorage {
     }
   }
 }
-
-

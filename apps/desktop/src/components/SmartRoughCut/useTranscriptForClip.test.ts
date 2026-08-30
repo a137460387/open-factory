@@ -13,9 +13,8 @@ import { makeClip, makeProject, makeTrack } from '../Timeline/hooks/timeline/__t
 const understandSpeechSpy = vi.hoisted(() => vi.fn());
 vi.mock('@open-factory/editor-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@open-factory/editor-core')>();
-  understandSpeechSpy.mockImplementation(
-    (transcript: string, timeAlignment?: { start: number; end: number }[]) =>
-      actual.understandSpeech(transcript, timeAlignment),
+  understandSpeechSpy.mockImplementation((transcript: string, timeAlignment?: { start: number; end: number }[]) =>
+    actual.understandSpeech(transcript, timeAlignment),
   );
   return { ...actual, understandSpeech: understandSpeechSpy };
 });
@@ -98,7 +97,10 @@ describe('collectSubtitleTranscriptForClip', () => {
     const misplaced = makeSubtitleClip({ id: 'sub-video', start: 6, duration: 1, text: '视频轨里的伪字幕' });
     const timeline = makeProject({
       tracks: [
-        makeTrack({ id: 'track-video', clips: [makeClip({ id: 'clip-video', type: 'video', start: 5, duration: 10 }), misplaced] }),
+        makeTrack({
+          id: 'track-video',
+          clips: [makeClip({ id: 'clip-video', type: 'video', start: 5, duration: 10 }), misplaced],
+        }),
         makeTrack({ id: 'track-subtitle', type: 'subtitle', clips: [] }),
       ],
     }).timeline;
@@ -141,7 +143,10 @@ describe('useTranscriptForClip', () => {
   it('produces keywords, topics, narrativeMarkers (incl. climax) and summary from the real engine', () => {
     const timeline = makeProject({
       tracks: [
-        makeTrack({ id: 'track-video', clips: [makeClip({ id: 'clip-video', type: 'video', start: 0, duration: 10 })] }),
+        makeTrack({
+          id: 'track-video',
+          clips: [makeClip({ id: 'clip-video', type: 'video', start: 0, duration: 10 })],
+        }),
         makeTrack({
           id: 'track-subtitle',
           type: 'subtitle',

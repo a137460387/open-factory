@@ -3,9 +3,9 @@
  * generates a project file, and optionally renders output.
  */
 
-import type {HeadlessProgress} from './headless-editor-core';
-import type {ProjectFileV2} from '../project/project-types';
-import type {Timeline, Track, Clip, MediaAsset} from '../model';
+import type { HeadlessProgress } from './headless-editor-core';
+import type { ProjectFileV2 } from '../project/project-types';
+import type { Timeline, Track, Clip, MediaAsset } from '../model';
 
 export interface TemplateApplyRequest {
   /** Path to template file (.json) */
@@ -118,13 +118,11 @@ export async function applyTemplate(request: TemplateApplyRequest): Promise<Temp
     request.onProgress?.({ phase: 'rendering', percent: 0, message: 'Starting render' });
 
     const { headlessRender } = await import('./headless-renderer');
-    const renderResult = await headlessRender(
-      {
-        projectPath: request.outputProjectPath,
-        outputPath: request.renderOutputPath,
-        onProgress: request.onProgress,
-      },
-    );
+    const renderResult = await headlessRender({
+      projectPath: request.outputProjectPath,
+      outputPath: request.renderOutputPath,
+      onProgress: request.onProgress,
+    });
 
     result.renderResult = {
       success: renderResult.success,
@@ -139,10 +137,7 @@ export async function applyTemplate(request: TemplateApplyRequest): Promise<Temp
 /**
  * Build a project file from a template and media files.
  */
-function buildProjectFromTemplate(
-  template: TemplateDefinition,
-  mediaFiles: string[],
-): ProjectFileV2 {
+function buildProjectFromTemplate(template: TemplateDefinition, mediaFiles: string[]): ProjectFileV2 {
   const now = new Date().toISOString();
   const projectId = `template-${Date.now()}`;
 

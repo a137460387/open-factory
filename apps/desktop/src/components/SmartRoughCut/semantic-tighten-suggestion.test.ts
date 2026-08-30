@@ -6,10 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Clip, ClipContentAnalysis, ContentAnalysisSegment, ContentDialogueTurn } from '@open-factory/editor-core';
 import { makeClip } from '../Timeline/hooks/timeline/__tests__/test-fixtures';
-import {
-  deriveTightenSuggestions,
-  mergeSemanticSuggestions,
-} from './semantic-tighten-suggestion';
+import { deriveTightenSuggestions, mergeSemanticSuggestions } from './semantic-tighten-suggestion';
 import type { SemanticRoughCutSuggestion } from './semantic-suggestion';
 
 // ── Fixture ─────────────────────────────────────────────────
@@ -76,11 +73,7 @@ describe('deriveTightenSuggestions derivation', () => {
     // 时间线 [5, 9)，trimStart=1，speed=2 → 源域窗口 [1, 9)
     const clip = makeClip({ id: 'clip-1', start: 5, duration: 4, trimStart: 1, speed: 2 });
     const analysis = makeAnalysis({
-      segments: [
-        makeSegment(1, 2, 0.05),
-        makeSegment(2, 7, 0.6),
-        makeSegment(7, 9, 0.04),
-      ],
+      segments: [makeSegment(1, 2, 0.05), makeSegment(2, 7, 0.6), makeSegment(7, 9, 0.04)],
       dialogueTurns: [makeTurn(2, 7)],
     });
 

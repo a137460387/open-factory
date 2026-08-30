@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  generateTemplateFromStyle,
-  saveProjectAsTemplate,
-  resolveTemplateVariables,
-} from './style-template-engine';
+import { generateTemplateFromStyle, saveProjectAsTemplate, resolveTemplateVariables } from './style-template-engine';
 import type { StyleFingerprint } from './style-analyzer';
 
 function makeFingerprint(overrides: Partial<StyleFingerprint> = {}): StyleFingerprint {
@@ -16,9 +12,7 @@ function makeFingerprint(overrides: Partial<StyleFingerprint> = {}): StyleFinger
     analyzedProjectCount: 1,
     totalClipCount: 10,
     totalDurationSec: 60,
-    transitions: [
-      { type: 'dissolve', count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 },
-    ],
+    transitions: [{ type: 'dissolve', count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 }],
     rhythm: {
       avgClipDurationSec: 6,
       clipDurationStddev: 2,
@@ -45,9 +39,7 @@ function makeFingerprint(overrides: Partial<StyleFingerprint> = {}): StyleFinger
       musicSpeechRatio: 0.5,
       crossfadeRatio: 0.3,
     },
-    effects: [
-      { type: 'vignette', totalCount: 5, ratio: 0.5, avgParams: { intensity: 0.3 }, typicallyEnabled: true },
-    ],
+    effects: [{ type: 'vignette', totalCount: 5, ratio: 0.5, avgParams: { intensity: 0.3 }, typicallyEnabled: true }],
     tags: ['fast-paced', 'warm-tones'],
     ...overrides,
   };

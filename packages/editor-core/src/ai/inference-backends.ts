@@ -64,10 +64,7 @@ export class WebGPUBackend {
     return buffer;
   }
 
-  async createComputePipeline(
-    shaderCode: string,
-    entryPoint: string,
-  ): Promise<GPUComputePipeline> {
+  async createComputePipeline(shaderCode: string, entryPoint: string): Promise<GPUComputePipeline> {
     if (!this.device) throw new Error('WebGPU not initialized');
 
     const shaderModule = this.device.createShaderModule({
@@ -129,7 +126,7 @@ export class WebGPUBackend {
   }
 
   destroy(): void {
-    this.buffers.forEach(buffer => buffer.destroy());
+    this.buffers.forEach((buffer) => buffer.destroy());
     this.buffers.clear();
     this.pipelines.clear();
     this.device?.destroy();
@@ -177,12 +174,15 @@ export class WebGL2Backend {
     if (!this.gl) return null;
 
     const vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER)!;
-    this.gl.shaderSource(vertexShader, `
+    this.gl.shaderSource(
+      vertexShader,
+      `
       attribute vec2 position;
       void main() {
         gl_Position = vec4(position, 0.0, 1.0);
       }
-    `);
+    `,
+    );
     this.gl.compileShader(vertexShader);
 
     const fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER)!;
@@ -201,7 +201,7 @@ export class WebGL2Backend {
   }
 
   destroy(): void {
-    this.programs.forEach(program => this.gl?.deleteProgram(program));
+    this.programs.forEach((program) => this.gl?.deleteProgram(program));
     this.programs.clear();
     this.gl = null;
   }

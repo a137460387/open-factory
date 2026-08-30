@@ -37,11 +37,7 @@ export function PresetSelector({
   const selectedPreset = presets.find((p) => p.id === selectedPresetId);
 
   // Warn if HQ preset selected on low-end GPU (<8GB VRAM)
-  const showGpuWarning =
-    selectedPresetId === 'builtin-hq' &&
-    vramMb !== null &&
-    vramMb !== undefined &&
-    vramMb < 8000;
+  const showGpuWarning = selectedPresetId === 'builtin-hq' && vramMb !== null && vramMb !== undefined && vramMb < 8000;
 
   const handleSelect = useCallback(
     (preset: VideoPreset) => {
@@ -97,9 +93,7 @@ export function PresetSelector({
               key={preset.id}
               onClick={() => handleSelect(preset)}
               className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors ${
-                preset.id === selectedPresetId
-                  ? 'bg-purple-600/20 text-purple-300'
-                  : 'text-gray-300 hover:bg-gray-700'
+                preset.id === selectedPresetId ? 'bg-purple-600/20 text-purple-300' : 'text-gray-300 hover:bg-gray-700'
               }`}
             >
               <div className="min-w-0">
@@ -164,8 +158,8 @@ export function PresetSelector({
         <div className="mt-2 flex items-start gap-2 p-2 bg-amber-900/20 border border-amber-700/50 rounded-lg">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-300">
-            High Quality 1080p requires at least 8 GB VRAM. Your GPU has {vramMb} MB.
-            Consider using Standard 720p for better stability.
+            High Quality 1080p requires at least 8 GB VRAM. Your GPU has {vramMb} MB. Consider using Standard 720p for
+            better stability.
           </p>
         </div>
       )}

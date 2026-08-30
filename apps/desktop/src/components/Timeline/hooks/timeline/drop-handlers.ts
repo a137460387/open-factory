@@ -1,15 +1,11 @@
-import type {Clip} from '@open-factory/editor-core';
-import {
-  AddTransitionCommand,
-  DEFAULT_TRANSITION_DURATION,
-  type TransitionType,
-} from '@open-factory/editor-core';
-import {TITLE_TEMPLATE_DRAG_MIME} from '../../../../lib/titleTemplates';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
-import {TRANSITION_DRAG_MIME, isCreditsTextFile, getTimelineDropStart} from './utils';
+import type { Clip } from '@open-factory/editor-core';
+import { AddTransitionCommand, DEFAULT_TRANSITION_DURATION, type TransitionType } from '@open-factory/editor-core';
+import { TITLE_TEMPLATE_DRAG_MIME } from '../../../../lib/titleTemplates';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
+import { TRANSITION_DRAG_MIME, isCreditsTextFile, getTimelineDropStart } from './utils';
 
 export function createDropHandlers(
   params: TimelineHandlerParams,
@@ -18,13 +14,9 @@ export function createDropHandlers(
     addTitleTemplate: (templateId: string, start?: number) => void;
   },
 ) {
-  const {
-    project,
-    zoom,
-    scrollRef,
-  } = params;
+  const { project, zoom, scrollRef } = params;
 
-  const {addCredits, addTitleTemplate} = helpers;
+  const { addCredits, addTitleTemplate } = helpers;
 
   function onTimelineDragOver(event: React.DragEvent<HTMLDivElement>): void {
     const types = Array.from(event.dataTransfer.types);

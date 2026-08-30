@@ -716,7 +716,8 @@ describe('generateDubbing - text splitting branches', () => {
   });
 
   it('handles text with comma splitting', () => {
-    const text = 'this is a long text without sentence ending punctuation but with commas, semicolons; and more content here';
+    const text =
+      'this is a long text without sentence ending punctuation but with commas, semicolons; and more content here';
     const result = generateDubbing(text);
     expect(result.metadata.sentenceCount).toBeGreaterThan(0);
   });
@@ -811,11 +812,7 @@ describe('generateEffect - intensity boundaries', () => {
 
 describe('generateSubtitle - speaker diarization', () => {
   it('handles speakerDiarization enabled', () => {
-    const result = generateSubtitle(
-      makeSineWave(440, 44100, 2.0, 0.5),
-      44100,
-      { speakerDiarization: true },
-    );
+    const result = generateSubtitle(makeSineWave(440, 44100, 2.0, 0.5), 44100, { speakerDiarization: true });
     expect(result.type).toBe('subtitle');
   });
 });
@@ -844,18 +841,24 @@ describe('parseContentGenerationResponse - error branches', () => {
   });
 
   it('parses dubbing response', () => {
-    const result = parseContentGenerationResponse({
-      type: 'dubbing',
-      timeline: [],
-    }, 'dubbing');
+    const result = parseContentGenerationResponse(
+      {
+        type: 'dubbing',
+        timeline: [],
+      },
+      'dubbing',
+    );
     expect(result.contents.length).toBe(1);
   });
 
   it('parses effect response', () => {
-    const result = parseContentGenerationResponse({
-      type: 'effect',
-      effectType: 'particle',
-    }, 'effect');
+    const result = parseContentGenerationResponse(
+      {
+        type: 'effect',
+        effectType: 'particle',
+      },
+      'effect',
+    );
     expect(result.contents.length).toBe(1);
   });
 });

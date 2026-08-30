@@ -1,9 +1,22 @@
-import type {ProjectAccessor} from './index';
-import {CollaborationNote, ProjectAnnotation, ReviewAnnotation, TimelineNote, createCollaborationNote, createProjectAnnotation, createReviewAnnotation, createTimelineNote, normalizeCollaborationNote, normalizeProjectAnnotation, normalizeReviewAnnotation, normalizeTimelineNote} from '../../model';
-import {getTimelineDuration} from '../../timeline';
-import {Command} from '../command';
-import {touchProject} from './utils';
-import {sortAnnotations, sortCollaborationNotes, sortReviewAnnotations, sortTimelineNotes} from './utils-nested';
+import type { ProjectAccessor } from './index';
+import {
+  CollaborationNote,
+  ProjectAnnotation,
+  ReviewAnnotation,
+  TimelineNote,
+  createCollaborationNote,
+  createProjectAnnotation,
+  createReviewAnnotation,
+  createTimelineNote,
+  normalizeCollaborationNote,
+  normalizeProjectAnnotation,
+  normalizeReviewAnnotation,
+  normalizeTimelineNote,
+} from '../../model';
+import { getTimelineDuration } from '../../timeline';
+import { Command } from '../command';
+import { touchProject } from './utils';
+import { sortAnnotations, sortCollaborationNotes, sortReviewAnnotations, sortTimelineNotes } from './utils-nested';
 
 export class AddProjectAnnotationCommand implements Command {
   readonly description = 'Add project annotation';

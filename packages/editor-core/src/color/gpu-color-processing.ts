@@ -1184,7 +1184,10 @@ export class GPUColorProcessor {
     const entryBytes = data.byteLength;
 
     // Byte-level LRU eviction
-    while (this.cache.size > 0 && (this.cacheUsedBytes + entryBytes > this.config.maxCacheBytes || this.cache.size >= this.config.maxCacheSize)) {
+    while (
+      this.cache.size > 0 &&
+      (this.cacheUsedBytes + entryBytes > this.config.maxCacheBytes || this.cache.size >= this.config.maxCacheSize)
+    ) {
       let oldestKey = '';
       let oldestTime = Infinity;
       for (const [k, v] of this.cache) {

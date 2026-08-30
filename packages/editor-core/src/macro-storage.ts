@@ -5,11 +5,7 @@
  * Supports file-based storage with JSON serialization.
  */
 
-import type {
-  MacroDefinition,
-  MacroLibrary,
-  MacroCategory,
-} from './macro-types';
+import type { MacroDefinition, MacroLibrary, MacroCategory } from './macro-types';
 
 const STORAGE_KEY = 'open-factory-macros';
 const MACRO_VERSION = '1.0.0';
@@ -33,12 +29,12 @@ export class MacroStorage {
 
   /** Get macro by ID */
   getMacro(id: string): MacroDefinition | undefined {
-    return this.library.macros.find(m => m.id === id);
+    return this.library.macros.find((m) => m.id === id);
   }
 
   /** Save a macro */
   saveMacro(macro: MacroDefinition): void {
-    const existingIndex = this.library.macros.findIndex(m => m.id === macro.id);
+    const existingIndex = this.library.macros.findIndex((m) => m.id === macro.id);
     const updatedMacro = {
       ...macro,
       updatedAt: new Date().toISOString(),
@@ -57,12 +53,12 @@ export class MacroStorage {
   /** Delete a macro */
   deleteMacro(id: string): boolean {
     const initialLength = this.library.macros.length;
-    this.library.macros = this.library.macros.filter(m => m.id !== id);
+    this.library.macros = this.library.macros.filter((m) => m.id !== id);
 
     if (this.library.macros.length < initialLength) {
       // Remove from categories
       for (const category of this.library.categories) {
-        category.macroIds = category.macroIds.filter(mId => mId !== id);
+        category.macroIds = category.macroIds.filter((mId) => mId !== id);
       }
       this.persistLibrary();
       return true;
@@ -71,10 +67,7 @@ export class MacroStorage {
   }
 
   /** Update macro metadata */
-  updateMacroMetadata(
-    id: string,
-    updates: Partial<Pick<MacroDefinition, 'name' | 'description' | 'tags'>>,
-  ): boolean {
+  updateMacroMetadata(id: string, updates: Partial<Pick<MacroDefinition, 'name' | 'description' | 'tags'>>): boolean {
     const macro = this.getMacro(id);
     if (!macro) return false;
 
@@ -105,7 +98,7 @@ export class MacroStorage {
 
   /** Add macro to category */
   addToCategory(macroId: string, categoryId: string): boolean {
-    const category = this.library.categories.find(c => c.id === categoryId);
+    const category = this.library.categories.find((c) => c.id === categoryId);
     const macro = this.getMacro(macroId);
     if (!category || !macro) return false;
 
@@ -118,11 +111,11 @@ export class MacroStorage {
 
   /** Remove macro from category */
   removeFromCategory(macroId: string, categoryId: string): boolean {
-    const category = this.library.categories.find(c => c.id === categoryId);
+    const category = this.library.categories.find((c) => c.id === categoryId);
     if (!category) return false;
 
     const initialLength = category.macroIds.length;
-    category.macroIds = category.macroIds.filter(id => id !== macroId);
+    category.macroIds = category.macroIds.filter((id) => id !== macroId);
 
     if (category.macroIds.length < initialLength) {
       this.persistLibrary();
@@ -133,12 +126,10 @@ export class MacroStorage {
 
   /** Get macros in a category */
   getMacrosByCategory(categoryId: string): MacroDefinition[] {
-    const category = this.library.categories.find(c => c.id === categoryId);
+    const category = this.library.categories.find((c) => c.id === categoryId);
     if (!category) return [];
 
-    return category.macroIds
-      .map(id => this.getMacro(id))
-      .filter((m): m is MacroDefinition => m !== undefined);
+    return category.macroIds.map((id) => this.getMacro(id)).filter((m): m is MacroDefinition => m !== undefined);
   }
 
   // ─── Import/Export ───────────────────────────────────────────────────────
@@ -199,7 +190,7 @@ export class MacroStorage {
       }
 
       for (const category of parsed.categories) {
-        if (!this.library.categories.find(c => c.id === category.id)) {
+        if (!this.library.categories.find((c) => c.id === category.id)) {
           this.library.categories.push(category);
         }
       }
@@ -217,10 +208,10 @@ export class MacroStorage {
   searchMacros(query: string): MacroDefinition[] {
     const lowerQuery = query.toLowerCase();
     return this.library.macros.filter(
-      m =>
+      (m) =>
         m.name.toLowerCase().includes(lowerQuery) ||
         m.description.toLowerCase().includes(lowerQuery) ||
-        m.tags.some(t => t.toLowerCase().includes(lowerQuery)),
+        m.tags.some((t) => t.toLowerCase().includes(lowerQuery)),
     );
   }
 
@@ -311,5 +302,3 @@ export class MacroStorage {
     };
   }
 }
-
-

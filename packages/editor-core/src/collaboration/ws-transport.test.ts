@@ -158,7 +158,9 @@ describe('ws-transport', () => {
     it('connect 后状态变为 OPEN', async () => {
       const adapter = new MockWSAdapter();
       let opened = false;
-      adapter.onOpen(() => { opened = true; });
+      adapter.onOpen(() => {
+        opened = true;
+      });
       adapter.connect('ws://test');
       expect(adapter.readyState).toBe(0); // CONNECTING
       await new Promise((r) => setTimeout(r, 20));
@@ -184,7 +186,9 @@ describe('ws-transport', () => {
     it('simulateClose 触发 close 回调', async () => {
       const adapter = new MockWSAdapter();
       let closed = false;
-      adapter.onClose(() => { closed = true; });
+      adapter.onClose(() => {
+        closed = true;
+      });
       adapter.connect('ws://test');
       await new Promise((r) => setTimeout(r, 20));
       adapter.simulateClose(1000, 'normal');
@@ -220,7 +224,9 @@ describe('ws-transport', () => {
     it('close 触发 close 回调', async () => {
       const adapter = new MockWSAdapter();
       let closed = false;
-      adapter.onClose(() => { closed = true; });
+      adapter.onClose(() => {
+        closed = true;
+      });
       adapter.connect('ws://test');
       await new Promise((r) => setTimeout(r, 20));
       adapter.close();
@@ -230,7 +236,9 @@ describe('ws-transport', () => {
     it('simulateError 触发 error 回调', () => {
       const adapter = new MockWSAdapter();
       let errorReceived: unknown = null;
-      adapter.onError((e) => { errorReceived = e; });
+      adapter.onError((e) => {
+        errorReceived = e;
+      });
       adapter.simulateError(new Error('test error'));
       expect(errorReceived).toBeInstanceOf(Error);
     });
@@ -253,7 +261,9 @@ describe('ws-transport', () => {
     it('connect 后状态变为 connecting 然后 connected', async () => {
       const { transport, adapter } = makeTransport();
       const states: string[] = [];
-      transport.onEvent((e) => { if (e.type === 'state-change') states.push(e.state); });
+      transport.onEvent((e) => {
+        if (e.type === 'state-change') states.push(e.state);
+      });
       transport.connect();
       expect(transport.getState()).toBe('connecting');
       await new Promise((r) => setTimeout(r, 20));

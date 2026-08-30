@@ -1,33 +1,61 @@
-import type {ExportState} from '../hooks/useExportState';
-import type {ExportActions} from '../hooks/useExportActions';
-import {Cloud, CloudDownload, Download, FolderOpen, Loader2, Save, Trash2, Upload} from 'lucide-react';
-import {zhCN} from '../../i18n/strings';
-import {TARGET_ASPECT_RATIOS, PLATFORM_LIMITS, BUILTIN_BROADCAST_SPECS, type ExportTaskStatus} from '@open-factory/editor-core';
-import {EXPORT_COMPLETION_ACTIONS, normalizeExportCompletionAction} from '../export-background';
-import {MAX_CODEC_COMPARE_PRESETS, type CodecCompareRecommendationMode, type CodecCompareSortKey} from '../codec-compare';
-import {formatBytes, formatMilliseconds, formatOptionalNumber} from '../lib/exportFormatHelpers';
-import {showToast} from '../../lib/toast';
-import {PipelineSection} from './PipelineSection';
-import {SequenceBatchSection} from './SequenceBatchSection';
-import {ExportVersionBatchSection} from './ExportVersionBatchSection';
-import {ExportProgress} from './ExportProgress';
-import {SUBTITLE_FORMATS, DEFAULT_AUDIO_VISUALIZATION, updateNumberSetting, updateStringSetting, updateOutputMode, updateFormat, updateSubtitleMode, updateSubtitleFormat, updateExportSidecarSubtitle, updateScaleMode, updateTargetAspectRatio, updateHardwareEncoding} from '../lib/exportSettingsHelpers';
-import {ExportCostEstimatePanel} from './ExportCostEstimatePanel';
-import {ExportOptimizationPanel} from './ExportOptimizationPanel';
-import {PresetNumberField, PresetFpsField, PresetTextField, PresetSelectField, PresetCheckboxField} from './PresetFields';
-import {HardwareEncoderSettingsPanel} from './HardwareEncoderSettingsPanel';
-import {MasterProcessingSection} from './MasterProcessingSection';
-import {SubtitleLanguageSection} from './SubtitleLanguageSection';
-import {ColorManagementSection} from './ColorManagementSection';
-import {AudioVisualizationSection} from './AudioVisualizationSection';
-import {MonitoringSection, PostExportScriptSection} from './MonitoringAndPostScript';
-import {WatermarkSection} from './WatermarkSection';
-import {AIExportSuggestionPanel} from './AIExportSuggestionPanel';
-import {ReframeOffsetField, ReframePreviewBox} from './ReframePreview';
-import {ExportUploadSection} from './ExportUploadSection';
-import {AILoudnessSuggestionSection} from '../AILoudnessSuggestionSection';
-import {InfoRow} from '../export-utils';
-import {formatExportWarning} from '../export-utils';
+import type { ExportState } from '../hooks/useExportState';
+import type { ExportActions } from '../hooks/useExportActions';
+import { Cloud, CloudDownload, Download, FolderOpen, Loader2, Save, Trash2, Upload } from 'lucide-react';
+import { zhCN } from '../../i18n/strings';
+import {
+  TARGET_ASPECT_RATIOS,
+  PLATFORM_LIMITS,
+  BUILTIN_BROADCAST_SPECS,
+  type ExportTaskStatus,
+} from '@open-factory/editor-core';
+import { EXPORT_COMPLETION_ACTIONS, normalizeExportCompletionAction } from '../export-background';
+import {
+  MAX_CODEC_COMPARE_PRESETS,
+  type CodecCompareRecommendationMode,
+  type CodecCompareSortKey,
+} from '../codec-compare';
+import { formatBytes, formatMilliseconds, formatOptionalNumber } from '../lib/exportFormatHelpers';
+import { showToast } from '../../lib/toast';
+import { PipelineSection } from './PipelineSection';
+import { SequenceBatchSection } from './SequenceBatchSection';
+import { ExportVersionBatchSection } from './ExportVersionBatchSection';
+import { ExportProgress } from './ExportProgress';
+import {
+  SUBTITLE_FORMATS,
+  DEFAULT_AUDIO_VISUALIZATION,
+  updateNumberSetting,
+  updateStringSetting,
+  updateOutputMode,
+  updateFormat,
+  updateSubtitleMode,
+  updateSubtitleFormat,
+  updateExportSidecarSubtitle,
+  updateScaleMode,
+  updateTargetAspectRatio,
+  updateHardwareEncoding,
+} from '../lib/exportSettingsHelpers';
+import { ExportCostEstimatePanel } from './ExportCostEstimatePanel';
+import { ExportOptimizationPanel } from './ExportOptimizationPanel';
+import {
+  PresetNumberField,
+  PresetFpsField,
+  PresetTextField,
+  PresetSelectField,
+  PresetCheckboxField,
+} from './PresetFields';
+import { HardwareEncoderSettingsPanel } from './HardwareEncoderSettingsPanel';
+import { MasterProcessingSection } from './MasterProcessingSection';
+import { SubtitleLanguageSection } from './SubtitleLanguageSection';
+import { ColorManagementSection } from './ColorManagementSection';
+import { AudioVisualizationSection } from './AudioVisualizationSection';
+import { MonitoringSection, PostExportScriptSection } from './MonitoringAndPostScript';
+import { WatermarkSection } from './WatermarkSection';
+import { AIExportSuggestionPanel } from './AIExportSuggestionPanel';
+import { ReframeOffsetField, ReframePreviewBox } from './ReframePreview';
+import { ExportUploadSection } from './ExportUploadSection';
+import { AILoudnessSuggestionSection } from '../AILoudnessSuggestionSection';
+import { InfoRow } from '../export-utils';
+import { formatExportWarning } from '../export-utils';
 
 interface ExportConfigProps {
   state: ExportState;
@@ -253,10 +281,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
         {/* Export mode tabs */}
         <div className="grid grid-cols-[110px_1fr] items-center gap-2">
           <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
-          <div
-            className="inline-flex w-fit rounded-md border border-line bg-panel p-1"
-            data-testid="export-mode-tabs"
-          >
+          <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
             {(['single', 'version-batch', 'sequence-batch', 'codec-compare', 'pipeline', 'stem'] as const).map(
               (mode) => (
                 <button
@@ -733,9 +758,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
           <InfoRow
             label={t.info.drawtext}
             value={
-              capabilities?.hasDrawtext && capabilities.hasLibfreetype
-                ? zhCN.common.available
-                : zhCN.common.unavailable
+              capabilities?.hasDrawtext && capabilities.hasLibfreetype ? zhCN.common.available : zhCN.common.unavailable
             }
             tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'}
           />
@@ -765,11 +788,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
         />
 
         {/* AI export suggestion */}
-        <AIExportSuggestionPanel
-          project={project}
-          draftSettings={draftSettings}
-          setDraftSettings={setDraftSettings}
-        />
+        <AIExportSuggestionPanel project={project} draftSettings={draftSettings} setDraftSettings={setDraftSettings} />
 
         {/* Mode 区设置分支。
             拆分前（bd315fd6^）mode 区是三目链：pipeline/codec-compare/version-batch/
@@ -903,29 +922,19 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
                       {sortedCodecCompareResults.map((result) => (
                         <tr
                           key={`${result.presetId}-${result.outputPath}`}
-                          className={
-                            codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined
-                          }
+                          className={codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined}
                           data-testid="export-codec-compare-result-row"
                           data-preset-id={result.presetId}
                         >
                           <td className="px-2 py-2 font-medium text-slate-800">{result.presetName}</td>
-                          <td className="px-2 py-2 tabular-nums text-slate-600">
-                            {formatBytes(result.fileSizeBytes)}
-                          </td>
+                          <td className="px-2 py-2 tabular-nums text-slate-600">{formatBytes(result.fileSizeBytes)}</td>
                           <td className="px-2 py-2 tabular-nums text-slate-600">
                             {formatMilliseconds(result.durationMs)}
                           </td>
-                          <td
-                            className="px-2 py-2 tabular-nums text-slate-600"
-                            data-testid="export-codec-compare-ssim"
-                          >
+                          <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-ssim">
                             {formatOptionalNumber(result.ssim, 3)}
                           </td>
-                          <td
-                            className="px-2 py-2 tabular-nums text-slate-600"
-                            data-testid="export-codec-compare-psnr"
-                          >
+                          <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-psnr">
                             {formatOptionalNumber(result.psnr, 1)}
                           </td>
                           <td className="px-2 py-2 text-slate-600">

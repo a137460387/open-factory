@@ -56,19 +56,64 @@ afterEach(() => {
 });
 
 const invokeCases: Array<{ name: string; run: () => Promise<unknown>; cmd: string; args: Record<string, unknown> }> = [
-  { name: 'startCollaborationHost', run: () => startCollaborationHost({ port: 8080 } as never), cmd: 'start_collaboration_host', args: { request: { port: 8080 } } },
+  {
+    name: 'startCollaborationHost',
+    run: () => startCollaborationHost({ port: 8080 } as never),
+    cmd: 'start_collaboration_host',
+    args: { request: { port: 8080 } },
+  },
   { name: 'stopCollaborationHost', run: () => stopCollaborationHost(), cmd: 'stop_collaboration_host', args: {} },
-  { name: 'broadcastCollaborationMessage', run: () => broadcastCollaborationMessage('hello'), cmd: 'broadcast_collaboration_message', args: { message: 'hello' } },
-  { name: 'openPreviewWindow', run: () => openPreviewWindow({ bounds: { width: 960 } } as never), cmd: 'open_preview_window', args: { request: { bounds: { width: 960 } } } },
+  {
+    name: 'broadcastCollaborationMessage',
+    run: () => broadcastCollaborationMessage('hello'),
+    cmd: 'broadcast_collaboration_message',
+    args: { message: 'hello' },
+  },
+  {
+    name: 'openPreviewWindow',
+    run: () => openPreviewWindow({ bounds: { width: 960 } } as never),
+    cmd: 'open_preview_window',
+    args: { request: { bounds: { width: 960 } } },
+  },
   { name: 'closePreviewWindow', run: () => closePreviewWindow(), cmd: 'close_preview_window', args: {} },
   { name: 'getPreviewWindowState', run: () => getPreviewWindowState(), cmd: 'get_preview_window_state', args: {} },
-  { name: 'setPreviewWindowAlwaysOnTop', run: () => setPreviewWindowAlwaysOnTop(true), cmd: 'set_preview_window_always_on_top', args: { alwaysOnTop: true } },
-  { name: 'setPreviewWindowFullscreen', run: () => setPreviewWindowFullscreen(false), cmd: 'set_preview_window_fullscreen', args: { fullscreen: false } },
-  { name: 'setPreviewWindowResolutionScale', run: () => setPreviewWindowResolutionScale(0.5), cmd: 'set_preview_window_resolution_scale', args: { resolutionScale: 0.5 } },
-  { name: 'minimizeToTray', run: () => minimizeToTray(), cmd: 'minimize_to_tray', args: { labels: expect.any(Object) } },
+  {
+    name: 'setPreviewWindowAlwaysOnTop',
+    run: () => setPreviewWindowAlwaysOnTop(true),
+    cmd: 'set_preview_window_always_on_top',
+    args: { alwaysOnTop: true },
+  },
+  {
+    name: 'setPreviewWindowFullscreen',
+    run: () => setPreviewWindowFullscreen(false),
+    cmd: 'set_preview_window_fullscreen',
+    args: { fullscreen: false },
+  },
+  {
+    name: 'setPreviewWindowResolutionScale',
+    run: () => setPreviewWindowResolutionScale(0.5),
+    cmd: 'set_preview_window_resolution_scale',
+    args: { resolutionScale: 0.5 },
+  },
+  {
+    name: 'minimizeToTray',
+    run: () => minimizeToTray(),
+    cmd: 'minimize_to_tray',
+    args: { labels: expect.any(Object) },
+  },
   { name: 'showMainWindow', run: () => showMainWindow(), cmd: 'show_main_window', args: {} },
-  { name: 'updateExportTrayProgress', run: () => updateExportTrayProgress(0.5, 2), cmd: 'update_export_tray_progress', args: { progress: 0.5, runningCount: 2 } },
-  { name: 'runExportPowerAction', run: () => runExportPowerAction('shutdown', true), cmd: 'run_export_power_action', args: { action: 'shutdown', allowPowerActions: true } },
+  {
+    name: 'updateExportTrayProgress',
+    run: () => updateExportTrayProgress(0.5, 2),
+    cmd: 'update_export_tray_progress',
+    args: { progress: 0.5, runningCount: 2 },
+  },
+  {
+    name: 'runExportPowerAction',
+    run: () => runExportPowerAction('shutdown', true),
+    cmd: 'run_export_power_action',
+    args: { action: 'shutdown', allowPowerActions: true },
+  },
 ];
 
 describe('window bridge：Tauri invoke 路径（数据驱动）', () => {
@@ -76,7 +121,9 @@ describe('window bridge：Tauri invoke 路径（数据驱动）', () => {
     const handler = vi.fn(async () => 'ok');
     mockIPC(handler);
     await run();
-    const expected = Object.fromEntries(Object.entries(args).map(([k, v]) => [k, v === expect.any(Object) ? expect.any(Object) : v]));
+    const expected = Object.fromEntries(
+      Object.entries(args).map(([k, v]) => [k, v === expect.any(Object) ? expect.any(Object) : v]),
+    );
     expect(handler).toHaveBeenCalledWith(cmd, expected);
   });
 
@@ -189,9 +236,7 @@ describe('window bridge：Tauri invoke 路径（数据驱动）', () => {
     });
     // 授权成功后 handler 收到原始 payload（含包装后的 position）
     await vi.waitFor(() =>
-      expect(dropHandler).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'drop', paths: ['C:/media/a.mp4'] }),
-      ),
+      expect(dropHandler).toHaveBeenCalledWith(expect.objectContaining({ type: 'drop', paths: ['C:/media/a.mp4'] })),
     );
     // 非 drop 事件（over 走 drag-over 事件名）直接转发
     await emit('tauri://drag-over', { type: 'over', position: { Physical: { x: 1, y: 2 } } });
@@ -213,13 +258,21 @@ describe('window bridge：Tauri invoke 路径（数据驱动）', () => {
       paths: ['C:/secret/x.mp4'],
       position: { Physical: { x: 0, y: 0 } },
     });
-    await vi.waitFor(() => expect(dropHandler).toHaveBeenCalledWith(expect.objectContaining({ type: 'drop', paths: [] })));
+    await vi.waitFor(() =>
+      expect(dropHandler).toHaveBeenCalledWith(expect.objectContaining({ type: 'drop', paths: [] })),
+    );
   });
 });
 
 describe('window bridge：__TAURI_MOCKS__ 路径', () => {
   it('mock 存在时短路 invoke 并透传参数', async () => {
-    const previewState = { open: true, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 1 as const };
+    const previewState = {
+      open: true,
+      label: 'preview',
+      alwaysOnTop: false,
+      fullscreen: false,
+      resolutionScale: 1 as const,
+    };
     const openPreviewWindowMock = vi.fn(async () => previewState);
     const getAppVersionMock = vi.fn(async () => '0.0.0-mock');
     const emitMock = vi.fn(async () => undefined);
@@ -245,7 +298,9 @@ describe('window bridge：__TAURI_MOCKS__ 路径', () => {
 
 describe('window bridge：浏览器回退路径', () => {
   it('preview window 系列返回本地默认状态（open/close/alwaysOnTop/fullscreen/scale）', async () => {
-    await expect(openPreviewWindow({ bounds: { width: 960 }, alwaysOnTop: true, resolutionScale: 2 } as never)).resolves.toEqual({
+    await expect(
+      openPreviewWindow({ bounds: { width: 960 }, alwaysOnTop: true, resolutionScale: 2 } as never),
+    ).resolves.toEqual({
       open: true,
       label: 'preview',
       bounds: { width: 960 },

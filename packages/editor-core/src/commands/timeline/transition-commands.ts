@@ -1,7 +1,7 @@
-import type {TimelineAccessor} from './index';
-import {Transition, TransitionType, createTransition} from '../../model';
-import {clampTransitionDuration, findAdjacentTransitionClips} from '../../timeline';
-import {Command} from '../command';
+import type { TimelineAccessor } from './index';
+import { Transition, TransitionType, createTransition } from '../../model';
+import { clampTransitionDuration, findAdjacentTransitionClips } from '../../timeline';
+import { Command } from '../command';
 
 export interface TransitionInput {
   id?: string;

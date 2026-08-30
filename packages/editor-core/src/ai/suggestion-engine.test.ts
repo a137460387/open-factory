@@ -11,10 +11,7 @@ import {
   type SuggestionCategory,
   type SuggestionRequest,
 } from './suggestion-engine';
-import {
-  STYLE_FINGERPRINT_VERSION,
-  type StyleFingerprint,
-} from './style-analyzer';
+import { STYLE_FINGERPRINT_VERSION, type StyleFingerprint } from './style-analyzer';
 import type { MaterialMetadata } from './semantic-extractor';
 import type { TransitionType } from '../model-types';
 
@@ -24,21 +21,33 @@ function makeMetadata(overrides: Partial<MaterialMetadata> = {}): MaterialMetada
   return {
     version: '1.0',
     source: {
-      fileName: 'test.mp4', durationSec: 60, width: 1920,
-      height: 1080, fps: 30, codec: 'h264', fileSizeBytes: 10_000_000,
+      fileName: 'test.mp4',
+      durationSec: 60,
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      codec: 'h264',
+      fileSizeBytes: 10_000_000,
     },
     extractedAt: new Date().toISOString(),
     keyFrames: [],
     asrSegments: [],
     transcriptText: 'Hello world this is a test video about nature',
     audioProfile: {
-      avgLoudness: -14, peakDb: -1, silenceRatio: 0.1,
-      hasMusic: false, speechRatio: 0.8, noiseLevel: 'quiet',
+      avgLoudness: -14,
+      peakDb: -1,
+      silenceRatio: 0.1,
+      hasMusic: false,
+      speechRatio: 0.8,
+      noiseLevel: 'quiet',
     },
     visualProfile: {
-      motionIntensity: 0.5, colorPalette: ['#ff0000'],
-      avgBrightness: 0.5, sceneDistribution: { outdoor: 0.7 },
-      faceCount: 1, hasOverlay: false,
+      motionIntensity: 0.5,
+      colorPalette: ['#ff0000'],
+      avgBrightness: 0.5,
+      sceneDistribution: { outdoor: 0.7 },
+      faceCount: 1,
+      hasOverlay: false,
     },
     tags: ['nature', 'outdoor'],
     ...overrides,
@@ -55,10 +64,35 @@ function makeStyle(overrides: Partial<StyleFingerprint> = {}): StyleFingerprint 
     analyzedProjectCount: 1,
     totalClipCount: 10,
     totalDurationSec: 60,
-    transitions: [{ type: 'dissolve' as TransitionType, count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 }],
-    rhythm: { avgClipDurationSec: 3, clipDurationStddev: 1, cutsPerMinute: 20, regularity: 0.7, durationHistogram: [], shortClipRatio: 0.2, longClipRatio: 0.1 },
-    colorGrading: { brightness: { mean: 0, stddev: 0, count: 0 }, contrast: { mean: 0, stddev: 0, count: 0 }, saturation: { mean: 0, stddev: 0, count: 0 }, hue: { mean: 0, stddev: 0, count: 0 }, preferredLutPath: null, lutUsageRatio: 0, temperatureTendency: 'neutral' },
-    audioProcessing: { avgTargetLoudness: -14, loudnessStddev: 0, avgFadeInSec: 0.3, avgFadeOutSec: 0.5, musicSpeechRatio: 0.5, crossfadeRatio: 0.3 },
+    transitions: [
+      { type: 'dissolve' as TransitionType, count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 },
+    ],
+    rhythm: {
+      avgClipDurationSec: 3,
+      clipDurationStddev: 1,
+      cutsPerMinute: 20,
+      regularity: 0.7,
+      durationHistogram: [],
+      shortClipRatio: 0.2,
+      longClipRatio: 0.1,
+    },
+    colorGrading: {
+      brightness: { mean: 0, stddev: 0, count: 0 },
+      contrast: { mean: 0, stddev: 0, count: 0 },
+      saturation: { mean: 0, stddev: 0, count: 0 },
+      hue: { mean: 0, stddev: 0, count: 0 },
+      preferredLutPath: null,
+      lutUsageRatio: 0,
+      temperatureTendency: 'neutral',
+    },
+    audioProcessing: {
+      avgTargetLoudness: -14,
+      loudnessStddev: 0,
+      avgFadeInSec: 0.3,
+      avgFadeOutSec: 0.5,
+      musicSpeechRatio: 0.5,
+      crossfadeRatio: 0.3,
+    },
     effects: [],
     tags: ['medium-paced', 'neutral-tones'],
     ...overrides,
@@ -123,7 +157,18 @@ describe('suggestion-engine', () => {
 
     it('normalizes invalid category to creative', () => {
       const json = JSON.stringify({
-        suggestions: [{ id: 's1', category: 'invalid', title: 'Test', description: '', confidence: 0.5, rationale: '', previewInstructions: [], tags: [] }],
+        suggestions: [
+          {
+            id: 's1',
+            category: 'invalid',
+            title: 'Test',
+            description: '',
+            confidence: 0.5,
+            rationale: '',
+            previewInstructions: [],
+            tags: [],
+          },
+        ],
       });
       const result = parseSuggestionResponse(json);
       expect(result!.suggestions[0].category).toBe('creative');
@@ -132,8 +177,26 @@ describe('suggestion-engine', () => {
     it('clamps confidence to 0-1', () => {
       const json = JSON.stringify({
         suggestions: [
-          { id: 's1', category: 'creative', title: 'Test', description: '', confidence: 1.5, rationale: '', previewInstructions: [], tags: [] },
-          { id: 's2', category: 'creative', title: 'Test2', description: '', confidence: -0.5, rationale: '', previewInstructions: [], tags: [] },
+          {
+            id: 's1',
+            category: 'creative',
+            title: 'Test',
+            description: '',
+            confidence: 1.5,
+            rationale: '',
+            previewInstructions: [],
+            tags: [],
+          },
+          {
+            id: 's2',
+            category: 'creative',
+            title: 'Test2',
+            description: '',
+            confidence: -0.5,
+            rationale: '',
+            previewInstructions: [],
+            tags: [],
+          },
         ],
       });
       const result = parseSuggestionResponse(json);
@@ -172,12 +235,12 @@ describe('suggestion-engine', () => {
   describe('enrichSuggestionWithStyle', () => {
     it('enriches transition instructions with style preferences', () => {
       const suggestion = makeSuggestion({
-        previewInstructions: [
-          { action: 'add_transition', target: {}, params: {}, reason: 'Smooth transition' },
-        ],
+        previewInstructions: [{ action: 'add_transition', target: {}, params: {}, reason: 'Smooth transition' }],
       });
       const style = makeStyle({
-        transitions: [{ type: 'dissolve' as TransitionType, count: 3, avgDurationSec: 0.7, durationStddev: 0.1, ratio: 0.6 }],
+        transitions: [
+          { type: 'dissolve' as TransitionType, count: 3, avgDurationSec: 0.7, durationStddev: 0.1, ratio: 0.6 },
+        ],
       });
 
       const enriched = enrichSuggestionWithStyle(suggestion, style, 1.0);
@@ -188,9 +251,7 @@ describe('suggestion-engine', () => {
 
     it('enriches audio instructions with fade preferences', () => {
       const suggestion = makeSuggestion({
-        previewInstructions: [
-          { action: 'adjust_audio', target: {}, params: {}, reason: 'Add fades' },
-        ],
+        previewInstructions: [{ action: 'adjust_audio', target: {}, params: {}, reason: 'Add fades' }],
       });
       const style = makeStyle();
 

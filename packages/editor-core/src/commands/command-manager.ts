@@ -45,7 +45,10 @@ export class CommandManager {
   private readonly mergeWindowMs: number;
   private lastExecuteTime = 0;
 
-  constructor(private readonly maxHistory = 100, options: CommandManagerOptions = {}) {
+  constructor(
+    private readonly maxHistory = 100,
+    options: CommandManagerOptions = {},
+  ) {
     this.maxHistory = options.maxHistory ?? maxHistory;
     this.mergeWindowMs = options.mergeWindowMs ?? 200;
   }

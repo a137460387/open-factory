@@ -1,26 +1,46 @@
-import {useCallback} from 'react';
-import {logger} from '@open-factory/editor-core/utils';
-import {LoadProjectCommand, NewProjectCommand, createProject, instantiateProjectTemplate, type Project} from '@open-factory/editor-core';
-import {chooseProjectSavePath, chooseProjectToOpen, confirmDiscardChanges, deleteAutosaveAfterSave, isEncryptedProjectPath, readProjectFile, setActiveProjectEncryptionPassword, writeProjectFile, type ProjectFileEncryptionOptions} from '../lib/projectFiles';
-import {bridgeConfirm} from '../lib/tauri-bridge';
-import {showToast} from '../lib/toast';
-import {zhCN} from '../i18n/strings';
-import {dirname} from '@open-factory/editor-core';
-import {readBackupSettings} from '../settings/appSettings';
-import {createProjectArchivePlan, writeProjectArchive} from '../lib/projectArchive';
-import {collectProjectArchivePreflight} from '../lib/mediaReport';
-import {saveProjectSnapshot} from '../lib/projectSnapshots';
-import {applyTimelineVersionDiffSelection, replaceProjectActiveTimeline} from '@open-factory/editor-core';
-import {commandManager, projectAccessor} from '../store/commandManager';
-import {useEditorStore} from '../store/editorStore';
-import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useTimelineFeatureStore} from '../store/timelineFeatureStore';
-import {useDialogStore} from '../store/dialogStore';
-import {copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile} from '../lib/tauri-bridge';
-import {normalizeTutorialProgressSettings, skipTutorialProgress, DEFAULT_TUTORIAL_SIGNALS} from '../tutorial/tutorialState';
-import {saveTutorialProgressSettings} from '../settings/appSettings';
-import type {ExportPreset} from '../export/export-presets';
-import type {ProjectTemplateId} from '@open-factory/editor-core';
+import { useCallback } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
+import {
+  LoadProjectCommand,
+  NewProjectCommand,
+  createProject,
+  instantiateProjectTemplate,
+  type Project,
+} from '@open-factory/editor-core';
+import {
+  chooseProjectSavePath,
+  chooseProjectToOpen,
+  confirmDiscardChanges,
+  deleteAutosaveAfterSave,
+  isEncryptedProjectPath,
+  readProjectFile,
+  setActiveProjectEncryptionPassword,
+  writeProjectFile,
+  type ProjectFileEncryptionOptions,
+} from '../lib/projectFiles';
+import { bridgeConfirm } from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
+import { zhCN } from '../i18n/strings';
+import { dirname } from '@open-factory/editor-core';
+import { readBackupSettings } from '../settings/appSettings';
+import { createProjectArchivePlan, writeProjectArchive } from '../lib/projectArchive';
+import { collectProjectArchivePreflight } from '../lib/mediaReport';
+import { saveProjectSnapshot } from '../lib/projectSnapshots';
+import { applyTimelineVersionDiffSelection, replaceProjectActiveTimeline } from '@open-factory/editor-core';
+import { commandManager, projectAccessor } from '../store/commandManager';
+import { useEditorStore } from '../store/editorStore';
+import { useEditorSettingsStore } from '../store/editorSettingsStore';
+import { useTimelineFeatureStore } from '../store/timelineFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
+import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
+import {
+  normalizeTutorialProgressSettings,
+  skipTutorialProgress,
+  DEFAULT_TUTORIAL_SIGNALS,
+} from '../tutorial/tutorialState';
+import { saveTutorialProgressSettings } from '../settings/appSettings';
+import type { ExportPreset } from '../export/export-presets';
+import type { ProjectTemplateId } from '@open-factory/editor-core';
 
 function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; description: string } {
   const templates = zhCN.projectTemplates.templates;

@@ -262,11 +262,7 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
     const updatedAt = new Date().toISOString();
     set((state) => ({
       jobs: sortQueueJobs(
-        state.jobs.map((job) =>
-          job.id === jobId && job.status === 'pending'
-            ? { ...job, priority, updatedAt }
-            : job,
-        ),
+        state.jobs.map((job) => (job.id === jobId && job.status === 'pending' ? { ...job, priority, updatedAt } : job)),
       ),
     }));
   },

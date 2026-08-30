@@ -8,7 +8,7 @@
  * 4. 减少无效重绘 - 脏区域检测与批量更新
  */
 
-import type {Timeline, MediaAsset, Clip} from '../model';
+import type { Timeline, MediaAsset, Clip } from '../model';
 
 // ==================== 类型定义 ====================
 
@@ -119,7 +119,7 @@ export class FrameCacheManager {
     if (!result) return;
 
     this.cache.delete(frame);
-    this.accessOrder = this.accessOrder.filter(f => f !== frame);
+    this.accessOrder = this.accessOrder.filter((f) => f !== frame);
 
     if (result.bitmap) {
       try {
@@ -243,11 +243,7 @@ export class ViewportCuller {
   private lastViewport: RenderViewport | null = null;
   private visibleClipsCache: Set<string> = new Set();
 
-  getVisibleClips(
-    timeline: Timeline,
-    viewport: RenderViewport,
-    pixelsPerSecond: number,
-  ): Clip[] {
+  getVisibleClips(timeline: Timeline, viewport: RenderViewport, pixelsPerSecond: number): Clip[] {
     const viewStartTime = viewport.scrollLeft / pixelsPerSecond;
     const viewEndTime = (viewport.scrollLeft + viewport.width) / pixelsPerSecond;
 
@@ -274,24 +270,25 @@ export class ViewportCuller {
     return clipEnd > viewStartTime && clip.start < viewEndTime;
   }
 
-  getDirtyRegions(
-    previousViewport: RenderViewport | null,
-    currentViewport: RenderViewport,
-  ): DirtyRegion[] {
+  getDirtyRegions(previousViewport: RenderViewport | null, currentViewport: RenderViewport): DirtyRegion[] {
     if (!previousViewport) {
-      return [{
-        x: 0,
-        y: 0,
-        width: currentViewport.width,
-        height: currentViewport.height,
-        reason: 'resize',
-      }];
+      return [
+        {
+          x: 0,
+          y: 0,
+          width: currentViewport.width,
+          height: currentViewport.height,
+          reason: 'resize',
+        },
+      ];
     }
 
     const regions: DirtyRegion[] = [];
 
-    if (previousViewport.scrollLeft !== currentViewport.scrollLeft ||
-        previousViewport.scrollTop !== currentViewport.scrollTop) {
+    if (
+      previousViewport.scrollLeft !== currentViewport.scrollLeft ||
+      previousViewport.scrollTop !== currentViewport.scrollTop
+    ) {
       regions.push({
         x: 0,
         y: 0,
@@ -301,8 +298,7 @@ export class ViewportCuller {
       });
     }
 
-    if (previousViewport.width !== currentViewport.width ||
-        previousViewport.height !== currentViewport.height) {
+    if (previousViewport.width !== currentViewport.width || previousViewport.height !== currentViewport.height) {
       regions.push({
         x: 0,
         y: 0,
@@ -435,8 +431,10 @@ export class DirtyRegionBatcher {
     if (regions.length <= 1) return regions;
 
     // Simple merge: combine all regions into one bounding box
-    let minX = Infinity, minY = Infinity;
-    let maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity;
+    let maxX = -Infinity,
+      maxY = -Infinity;
 
     for (const r of regions) {
       minX = Math.min(minX, r.x);
@@ -445,13 +443,15 @@ export class DirtyRegionBatcher {
       maxY = Math.max(maxY, r.y + r.height);
     }
 
-    return [{
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-      reason: regions[0].reason,
-    }];
+    return [
+      {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+        reason: regions[0].reason,
+      },
+    ];
   }
 }
 
@@ -513,10 +513,7 @@ export class RenderPipeline {
 
     // Determine quality based on performance
     const quality = this.determineQuality();
-    const useProxy = this.proxySwitcher.shouldUseProxy(
-      this.getAverageFrameTime(),
-      this.config.proxySwitchThresholdMs,
-    );
+    const useProxy = this.proxySwitcher.shouldUseProxy(this.getAverageFrameTime(), this.config.proxySwitchThresholdMs);
 
     // Queue decode request
     const request: FrameDecodeRequest = {
@@ -547,7 +544,7 @@ export class RenderPipeline {
 
   getVisibleClips(timeline: Timeline, pixelsPerSecond: number): Clip[] {
     if (!this.currentViewport || !this.config.enableViewportCulling) {
-      return timeline.tracks.flatMap(t => t.clips);
+      return timeline.tracks.flatMap((t) => t.clips);
     }
     return this.culler.getVisibleClips(timeline, this.currentViewport, pixelsPerSecond);
   }
@@ -595,7 +592,7 @@ export class RenderPipeline {
 
     // Wait for available decode slot
     while (this.activeDecodes >= this.config.maxConcurrentDecodes) {
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await new Promise((resolve) => setTimeout(resolve, 1));
     }
 
     this.activeDecodes++;
@@ -625,23 +622,14 @@ export class RenderPipeline {
       eighth: 1,
     };
 
-    await new Promise(resolve => setTimeout(resolve, delays[request.quality]));
+    await new Promise((resolve) => setTimeout(resolve, delays[request.quality]));
 
     // In real implementation, return actual ImageBitmap
     return null;
   }
 
-  private prefetchNextFrames(
-    currentFrame: number,
-    fps: number,
-    media: MediaAsset[],
-    timeline: Timeline,
-  ): void {
-    const frames = this.prefetcher.getPredictedFrames(
-      currentFrame,
-      fps,
-      this.config.prefetchFrames,
-    );
+  private prefetchNextFrames(currentFrame: number, fps: number, media: MediaAsset[], timeline: Timeline): void {
+    const frames = this.prefetcher.getPredictedFrames(currentFrame, fps, this.config.prefetchFrames);
 
     for (const frame of frames) {
       if (!this.frameCache.has(frame)) {

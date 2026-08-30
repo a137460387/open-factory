@@ -1,8 +1,8 @@
-import {lazy, Suspense} from 'react';
-import type {ProjectFileEncryptionOptions} from '../../lib/projectFiles';
-import {useDialogStore} from '../../store/dialogStore';
-import {useTimelineFeatureStore} from '../../store/timelineFeatureStore';
-import {PanelLoading} from '../PanelLoading';
+import { lazy, Suspense } from 'react';
+import type { ProjectFileEncryptionOptions } from '../../lib/projectFiles';
+import { useDialogStore } from '../../store/dialogStore';
+import { useTimelineFeatureStore } from '../../store/timelineFeatureStore';
+import { PanelLoading } from '../PanelLoading';
 
 const ProjectEncryptionSaveDialog = lazy(() =>
   import('./ProjectEncryptionSaveDialog').then((m) => ({ default: m.ProjectEncryptionSaveDialog })),

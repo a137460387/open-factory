@@ -1,15 +1,20 @@
-import {useEffect} from 'react';
-import {logger} from '@open-factory/editor-core/utils';
-import {useDialogStore} from '../store/dialogStore';
-import {usePerformanceMonitorStore} from '../store/performanceMonitorStore';
-import {initMediaIndexDb, listenBridge, type DemucsProgressEvent} from '../lib/tauri-bridge';
-import {getDemucsAvailability, type DemucsAvailability} from '../lib/demucs';
-import {normalizeTutorialProgressSettings, advanceTutorialProgress, type TutorialProgressSettings, type TutorialSignals} from '../tutorial/tutorialState';
-import {saveTutorialProgressSettings} from '../settings/appSettings';
+import { useEffect } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
+import { useDialogStore } from '../store/dialogStore';
+import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
+import { initMediaIndexDb, listenBridge, type DemucsProgressEvent } from '../lib/tauri-bridge';
+import { getDemucsAvailability, type DemucsAvailability } from '../lib/demucs';
+import {
+  normalizeTutorialProgressSettings,
+  advanceTutorialProgress,
+  type TutorialProgressSettings,
+  type TutorialSignals,
+} from '../tutorial/tutorialState';
+import { saveTutorialProgressSettings } from '../settings/appSettings';
 
-import type {DroppedFile} from '../components/FormatConverterDialog';
-import type {ExportTaskHistoryEntry} from '@open-factory/editor-core';
-import type {ArchiveProgress} from '../lib/projectArchive';
+import type { DroppedFile } from '../components/FormatConverterDialog';
+import type { ExportTaskHistoryEntry } from '@open-factory/editor-core';
+import type { ArchiveProgress } from '../lib/projectArchive';
 type SubtitleClip = import('@open-factory/editor-core').Clip & { type: 'subtitle' };
 interface EffectsDeps {
   projectPath: string | null;

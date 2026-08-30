@@ -12,16 +12,7 @@ export type NodeCategory = 'input' | 'ai-engine' | 'transform' | 'output' | 'con
 // ─── Port Types ────────────────────────────────────────────────────────────
 
 /** Data types that can flow through ports */
-export type PortDataType =
-  | 'video'
-  | 'audio'
-  | 'image'
-  | 'text'
-  | 'subtitle'
-  | 'metadata'
-  | 'timeline'
-  | 'clip'
-  | 'any';
+export type PortDataType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'metadata' | 'timeline' | 'clip' | 'any';
 
 /** Port direction */
 export type PortDirection = 'input' | 'output';

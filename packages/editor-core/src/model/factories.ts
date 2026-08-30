@@ -1,19 +1,109 @@
-import {normalizeClipBlendMode} from '../blend-modes';
-import {normalizeColorNodeGraph} from '../color-node-graph';
-import {normalizeClipContentAnalysis} from '../content-analysis';
-import {normalizeColorGradingGraph} from '../color-grading';
-import {normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle} from '../credits-roll';
-import {cloneEffects} from '../effects';
-import {normalizeMotionGraphic} from '../motion-graphics';
-import {normalizeClipPitchData} from '../audio-pitch';
-import {normalizeAudioRestoration} from '../audio-restoration';
-import {normalizeSpatialAudio} from '../spatial-audio';
-import {normalizeTimelineLabelColor} from '../timeline-color-labels';
-import {round} from '../time';
-import {finiteOrDefault} from '../math-utils';
-import {clampClipSpeed, cloneClipKeyframesLocal, createId, normalizeAILocalDenoise, normalizeAILookMatch, normalizeAiPipSuggestion, normalizeAudioChannelRouting, normalizeAudioDenoise, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioPitchSemitones, normalizeChromaKey, normalizeClipBorder, normalizeClipBeatMarkers, normalizeClipPanoramaView, normalizeClipProjection, normalizeClipSceneCuts, normalizeColorCorrection, normalizeDetectedBpm, normalizeFlashWarnings, normalizeFrameInterpolation, normalizeHexColor, normalizeMasks, normalizeMotionTrack, normalizeMulticamSequence, normalizePrivacyRedactions, normalizeQualityEnhancement, normalizeSequenceFrameRate, normalizeSlowMotionMode, normalizeStabilization, normalizeVideoRestoration} from './clip-normalize';
-import {DEFAULT_COLLABORATION_NOTE_COLOR, DEFAULT_MASTER_VOLUME, DEFAULT_NESTED_SEQUENCE_NAME, DEFAULT_PRIMARY_SEQUENCE_NAME, DEFAULT_PROJECT_ANNOTATION_COLOR, DEFAULT_PROJECT_SETTINGS, DEFAULT_REVIEW_ANNOTATION_COLOR, DEFAULT_TIMELINE_MARKER_COLOR, DEFAULT_TIMELINE_NOTE_COLOR, DEFAULT_TRACK_COMPRESSOR, DEFAULT_TRACK_EQ, DEFAULT_TRACK_PAN, DEFAULT_TRACK_VOLUME, DEFAULT_TRANSFORM, PRIMARY_SEQUENCE_ID, TIMELINE_NOTE_COLORS, TRANSITION_TYPES, DEFAULT_TRANSITION_TYPE, DEFAULT_TRANSITION_DURATION, MIN_TRANSITION_DURATION, MAX_TRANSITION_DURATION, DEFAULT_COLLABORATION_NOTE_AUTHOR, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_TRACK_TYPE} from './defaults';
-import type {AdjustmentClip, BaseClip, CollaborationNote, CollaborationNoteType, CreditsClip, ExportRange, MotionGraphicClip, MulticamClip, MulticamClipAngle, MulticamSyncMode, NestedSequenceClip, Project, ProjectAnnotation, ProtectedRange, ReviewAnnotation, ReviewAnnotationType, Sequence, Subclip, SubtitleLanguage, SubtitleTrackType, Timeline, TimelineBookmark, TimelineMarker, TimelineNote, Track, TrackCompressor, TrackEQ, TrackEQBand, TrackEQBandType, Transform, Transition, TransitionType} from '../model-types';
+import { normalizeClipBlendMode } from '../blend-modes';
+import { normalizeColorNodeGraph } from '../color-node-graph';
+import { normalizeClipContentAnalysis } from '../content-analysis';
+import { normalizeColorGradingGraph } from '../color-grading';
+import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
+import { cloneEffects } from '../effects';
+import { normalizeMotionGraphic } from '../motion-graphics';
+import { normalizeClipPitchData } from '../audio-pitch';
+import { normalizeAudioRestoration } from '../audio-restoration';
+import { normalizeSpatialAudio } from '../spatial-audio';
+import { normalizeTimelineLabelColor } from '../timeline-color-labels';
+import { round } from '../time';
+import { finiteOrDefault } from '../math-utils';
+import {
+  clampClipSpeed,
+  cloneClipKeyframesLocal,
+  createId,
+  normalizeAILocalDenoise,
+  normalizeAILookMatch,
+  normalizeAiPipSuggestion,
+  normalizeAudioChannelRouting,
+  normalizeAudioDenoise,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
+  normalizeAudioPitchSemitones,
+  normalizeChromaKey,
+  normalizeClipBorder,
+  normalizeClipBeatMarkers,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
+  normalizeClipSceneCuts,
+  normalizeColorCorrection,
+  normalizeDetectedBpm,
+  normalizeFlashWarnings,
+  normalizeFrameInterpolation,
+  normalizeHexColor,
+  normalizeMasks,
+  normalizeMotionTrack,
+  normalizeMulticamSequence,
+  normalizePrivacyRedactions,
+  normalizeQualityEnhancement,
+  normalizeSequenceFrameRate,
+  normalizeSlowMotionMode,
+  normalizeStabilization,
+  normalizeVideoRestoration,
+} from './clip-normalize';
+import {
+  DEFAULT_COLLABORATION_NOTE_COLOR,
+  DEFAULT_MASTER_VOLUME,
+  DEFAULT_NESTED_SEQUENCE_NAME,
+  DEFAULT_PRIMARY_SEQUENCE_NAME,
+  DEFAULT_PROJECT_ANNOTATION_COLOR,
+  DEFAULT_PROJECT_SETTINGS,
+  DEFAULT_REVIEW_ANNOTATION_COLOR,
+  DEFAULT_TIMELINE_MARKER_COLOR,
+  DEFAULT_TIMELINE_NOTE_COLOR,
+  DEFAULT_TRACK_COMPRESSOR,
+  DEFAULT_TRACK_EQ,
+  DEFAULT_TRACK_PAN,
+  DEFAULT_TRACK_VOLUME,
+  DEFAULT_TRANSFORM,
+  PRIMARY_SEQUENCE_ID,
+  TIMELINE_NOTE_COLORS,
+  TRANSITION_TYPES,
+  DEFAULT_TRANSITION_TYPE,
+  DEFAULT_TRANSITION_DURATION,
+  MIN_TRANSITION_DURATION,
+  MAX_TRANSITION_DURATION,
+  DEFAULT_COLLABORATION_NOTE_AUTHOR,
+  DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_SUBTITLE_TRACK_TYPE,
+} from './defaults';
+import type {
+  AdjustmentClip,
+  BaseClip,
+  CollaborationNote,
+  CollaborationNoteType,
+  CreditsClip,
+  ExportRange,
+  MotionGraphicClip,
+  MulticamClip,
+  MulticamClipAngle,
+  MulticamSyncMode,
+  NestedSequenceClip,
+  Project,
+  ProjectAnnotation,
+  ProtectedRange,
+  ReviewAnnotation,
+  ReviewAnnotationType,
+  Sequence,
+  Subclip,
+  SubtitleLanguage,
+  SubtitleTrackType,
+  Timeline,
+  TimelineBookmark,
+  TimelineMarker,
+  TimelineNote,
+  Track,
+  TrackCompressor,
+  TrackEQ,
+  TrackEQBand,
+  TrackEQBandType,
+  Transform,
+  Transition,
+  TransitionType,
+} from '../model-types';
 
 // ---------------------------------------------------------------------------
 // Transition / marker / bookmark helpers

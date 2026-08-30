@@ -130,17 +130,13 @@ describe('Template Schema', () => {
     });
 
     it('rejects invalid clip opacity', () => {
-      const result = validateTemplate(
-        makeTemplate({ tracks: [makeTrack({ clips: [makeClip({ opacity: 1.5 })] })] }),
-      );
+      const result = validateTemplate(makeTemplate({ tracks: [makeTrack({ clips: [makeClip({ opacity: 1.5 })] })] }));
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes('opacity must be 0-1'))).toBe(true);
     });
 
     it('rejects invalid clip speed', () => {
-      const result = validateTemplate(
-        makeTemplate({ tracks: [makeTrack({ clips: [makeClip({ speed: -1 })] })] }),
-      );
+      const result = validateTemplate(makeTemplate({ tracks: [makeTrack({ clips: [makeClip({ speed: -1 })] })] }));
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.includes('speed must be positive'))).toBe(true);
     });

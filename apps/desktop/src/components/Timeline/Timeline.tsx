@@ -803,13 +803,17 @@ export function Timeline({
         scrollTimelineFromMinimap={scrollTimelineFromMinimap}
         suggestionTimeline={project?.timeline}
         suggestionMedia={project?.media}
-        suggestionContext={project ? {
-          currentTime: playheadTime,
-          selectedClipIds,
-          zoomLevel: zoom,
-          isPlaying,
-          recentActions: [],
-        } : undefined}
+        suggestionContext={
+          project
+            ? {
+                currentTime: playheadTime,
+                selectedClipIds,
+                zoomLevel: zoom,
+                isPlaying,
+                recentActions: [],
+              }
+            : undefined
+        }
       />
       <TimelineDialogsLayer
         silenceDialog={silenceDialog}

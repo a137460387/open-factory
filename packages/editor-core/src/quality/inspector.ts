@@ -3,11 +3,23 @@
  * Combines traditional CV algorithms with AI-based content analysis
  */
 
-import type {InspectorConfig, QualityReport, InspectorQualityIssue, QualitySummary, FrameAnalysis, AudioAnalysis, PacingSegment, SceneTransition, ComplianceResult, ComplianceViolation, QualityPlatformTarget} from './types';
-import {formatTime} from '../utils/time';
+import type {
+  InspectorConfig,
+  QualityReport,
+  InspectorQualityIssue,
+  QualitySummary,
+  FrameAnalysis,
+  AudioAnalysis,
+  PacingSegment,
+  SceneTransition,
+  ComplianceResult,
+  ComplianceViolation,
+  QualityPlatformTarget,
+} from './types';
+import { formatTime } from '../utils/time';
 export { formatTime } from '../utils/time';
 
-import {DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS} from './types';
+import { DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS } from './types';
 
 let issueCounter = 0;
 
@@ -37,7 +49,7 @@ export function detectBlackFrame(
     totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114) / 255;
   }
 
-  const avgBrightness = totalBrightness / (sampleSize);
+  const avgBrightness = totalBrightness / sampleSize;
   return avgBrightness < threshold;
 }
 
@@ -83,10 +95,7 @@ export function detectColorBars(pixels: Uint8ClampedArray, width: number, height
  * Detect static frames (no motion between frames)
  * Returns motion score (0 = static, 1 = high motion)
  */
-export function calculateMotionScore(
-  prevFrame: Uint8ClampedArray,
-  currFrame: Uint8ClampedArray,
-): number {
+export function calculateMotionScore(prevFrame: Uint8ClampedArray, currFrame: Uint8ClampedArray): number {
   if (prevFrame.length === 0 || currFrame.length === 0) return 0;
   if (prevFrame.length !== currFrame.length) return 0;
 
@@ -283,9 +292,7 @@ export function analyzeQualityPacing(
 
   for (let t = 0; t < totalDuration; t += windowSeconds / 2) {
     const windowEnd = t + windowSeconds;
-    const cutsInWindow = transitions.filter(
-      (tr) => tr.time >= t && tr.time < windowEnd,
-    ).length;
+    const cutsInWindow = transitions.filter((tr) => tr.time >= t && tr.time < windowEnd).length;
     const cpm = (cutsInWindow / windowSeconds) * 60;
 
     let classification: PacingSegment['classification'] = 'normal';
@@ -629,9 +636,7 @@ export async function runQualityInspection(
   const startTime = performance.now();
 
   // Step 1: Analyze frames for technical defects
-  const frameAnalyses = config.enableTechnicalDetection
-    ? analyzeFrames(mediaData.frames, config)
-    : [];
+  const frameAnalyses = config.enableTechnicalDetection ? analyzeFrames(mediaData.frames, config) : [];
 
   // Step 2: Analyze audio segments
   const audioAnalyses: AudioAnalysis[] = [];
@@ -644,9 +649,7 @@ export async function runQualityInspection(
   }
 
   // Step 3: Detect scene transitions
-  const sceneTransitions = config.enableContentAnalysis
-    ? detectQualitySceneTransitions(frameAnalyses)
-    : [];
+  const sceneTransitions = config.enableContentAnalysis ? detectQualitySceneTransitions(frameAnalyses) : [];
 
   // Step 4: Analyze pacing
   const pacingSegments = config.enableContentAnalysis
@@ -670,8 +673,12 @@ export async function runQualityInspection(
 
   // Step 7: Calculate score
   const summary = calculateQualityScore(issues);
-  const grade = scoreToGrade(summary.technicalScore * 0.4 + summary.contentScore * 0.35 + summary.complianceScore * 0.25);
-  const overallScore = Math.round(summary.technicalScore * 0.4 + summary.contentScore * 0.35 + summary.complianceScore * 0.25);
+  const grade = scoreToGrade(
+    summary.technicalScore * 0.4 + summary.contentScore * 0.35 + summary.complianceScore * 0.25,
+  );
+  const overallScore = Math.round(
+    summary.technicalScore * 0.4 + summary.contentScore * 0.35 + summary.complianceScore * 0.25,
+  );
 
   const duration = performance.now() - startTime;
 

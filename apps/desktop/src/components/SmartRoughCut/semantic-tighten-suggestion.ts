@@ -120,10 +120,9 @@ export function mergeSemanticSuggestions(
   tighten: SemanticRoughCutSuggestion[],
   climax: SemanticRoughCutSuggestion[] = [],
 ): SemanticRoughCutSuggestion[] {
-  const orderedClimax = [
-    ...narrative.filter((item) => item.markerType === 'climax'),
-    ...climax,
-  ].sort((left, right) => right.confidence - left.confidence);
+  const orderedClimax = [...narrative.filter((item) => item.markerType === 'climax'), ...climax].sort(
+    (left, right) => right.confidence - left.confidence,
+  );
   const orderedNarrative = [
     ...orderedClimax,
     ...narrative

@@ -34,24 +34,21 @@ export function usePresets() {
     void loadPresets();
   }, [loadPresets]);
 
-  const createPreset = useCallback(
-    async (name: string, params: VideoPreset['params']): Promise<VideoPreset> => {
-      const preset: VideoPreset = {
-        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name,
-        params,
-        isBuiltIn: false,
-        createdAt: Date.now(),
-      };
-      await savePreset(preset);
-      setState((prev) => ({
-        ...prev,
-        presets: [...prev.presets, preset],
-      }));
-      return preset;
-    },
-    [],
-  );
+  const createPreset = useCallback(async (name: string, params: VideoPreset['params']): Promise<VideoPreset> => {
+    const preset: VideoPreset = {
+      id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      params,
+      isBuiltIn: false,
+      createdAt: Date.now(),
+    };
+    await savePreset(preset);
+    setState((prev) => ({
+      ...prev,
+      presets: [...prev.presets, preset],
+    }));
+    return preset;
+  }, []);
 
   const removePreset = useCallback(async (id: string) => {
     await deletePreset(id);

@@ -1,6 +1,6 @@
-import type {ClipGroup} from './model-types';
-import type {Timeline} from './model-types';
-import {findClipGroupForClip} from './clip-groups';
+import type { ClipGroup } from './model-types';
+import type { Timeline } from './model-types';
+import { findClipGroupForClip } from './clip-groups';
 
 /**
  * Tolerance used for clip boundary comparisons, matching the gap detection

@@ -193,18 +193,7 @@ export interface ClipGroup {
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle' | 'multicam';
 
 export type TimelineLabelColor =
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'yellow'
-  | 'lime'
-  | 'green'
-  | 'teal'
-  | 'cyan'
-  | 'blue'
-  | 'indigo'
-  | 'purple'
-  | 'pink';
+  'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink';
 
 // ─── Chroma Key ──────────────────────────────────────────────────────────────
 

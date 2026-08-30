@@ -7,10 +7,40 @@
  * - Command history and preview
  */
 
-import {useState, useEffect, useRef, useMemo, useCallback} from 'react';
-import {Command, Mic, MicOff, CornerDownLeft, Clock, Search, X, Zap, Scissors, Play, Pause, SkipForward, SkipBack, Undo2, Redo2, Volume2, VolumeX, ZoomIn, ZoomOut, Download, Copy, Trash2, SplitSquareHorizontal, Palette, Wand2} from 'lucide-react';
-import {parseCommand, type ParsedCommand, type CommandType} from '@open-factory/editor-core/natural-language-commands';
-import {clsx} from 'clsx';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  Command,
+  Mic,
+  MicOff,
+  CornerDownLeft,
+  Clock,
+  Search,
+  X,
+  Zap,
+  Scissors,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Undo2,
+  Redo2,
+  Volume2,
+  VolumeX,
+  ZoomIn,
+  ZoomOut,
+  Download,
+  Copy,
+  Trash2,
+  SplitSquareHorizontal,
+  Palette,
+  Wand2,
+} from 'lucide-react';
+import {
+  parseCommand,
+  type ParsedCommand,
+  type CommandType,
+} from '@open-factory/editor-core/natural-language-commands';
+import { clsx } from 'clsx';
 
 // Web Speech API type (not in standard DOM lib)
 interface SpeechRecognition extends EventTarget {
@@ -50,63 +80,63 @@ interface CommandHistoryEntry {
 // ---------------------------------------------------------------------------
 
 const COMMAND_ICONS: Record<CommandType, typeof Scissors> = {
-  'cut': Scissors,
-  'delete': Trash2,
-  'duplicate': Copy,
-  'split': SplitSquareHorizontal,
-  'trim': Scissors,
-  'speed': Zap,
+  cut: Scissors,
+  delete: Trash2,
+  duplicate: Copy,
+  split: SplitSquareHorizontal,
+  trim: Scissors,
+  speed: Zap,
   'go-to': SkipForward,
   'skip-forward': SkipForward,
   'skip-backward': SkipBack,
-  'play': Play,
-  'pause': Pause,
-  'seek': Search,
+  play: Play,
+  pause: Pause,
+  seek: Search,
   'add-effect': Wand2,
   'remove-effect': Trash2,
   'color-grade': Palette,
   'add-transition': Wand2,
-  'volume': Volume2,
-  'mute': VolumeX,
-  'unmute': Volume2,
-  'export': Download,
-  'undo': Undo2,
-  'redo': Redo2,
-  'select': Search,
-  'deselect': X,
+  volume: Volume2,
+  mute: VolumeX,
+  unmute: Volume2,
+  export: Download,
+  undo: Undo2,
+  redo: Redo2,
+  select: Search,
+  deselect: X,
   'zoom-in': ZoomIn,
   'zoom-out': ZoomOut,
-  'unknown': Command,
+  unknown: Command,
 };
 
 const COMMAND_LABELS: Record<CommandType, string> = {
-  'cut': '剪切',
-  'delete': '删除',
-  'duplicate': '复制',
-  'split': '分割',
-  'trim': '裁剪',
-  'speed': '变速',
+  cut: '剪切',
+  delete: '删除',
+  duplicate: '复制',
+  split: '分割',
+  trim: '裁剪',
+  speed: '变速',
   'go-to': '跳转到',
   'skip-forward': '前进',
   'skip-backward': '后退',
-  'play': '播放',
-  'pause': '暂停',
-  'seek': '定位',
+  play: '播放',
+  pause: '暂停',
+  seek: '定位',
   'add-effect': '添加效果',
   'remove-effect': '移除效果',
   'color-grade': '调色',
   'add-transition': '添加转场',
-  'volume': '音量',
-  'mute': '静音',
-  'unmute': '取消静音',
-  'export': '导出',
-  'undo': '撤销',
-  'redo': '重做',
-  'select': '选中',
-  'deselect': '取消选中',
+  volume: '音量',
+  mute: '静音',
+  unmute: '取消静音',
+  export: '导出',
+  undo: '撤销',
+  redo: '重做',
+  select: '选中',
+  deselect: '取消选中',
   'zoom-in': '放大',
   'zoom-out': '缩小',
-  'unknown': '未知指令',
+  unknown: '未知指令',
 };
 
 const QUICK_COMMANDS: Array<{ text: string; label: string }> = [
@@ -134,9 +164,7 @@ function useSpeechRecognition(language: 'zh' | 'en') {
   const startListening = useCallback(() => {
     // Web Speech API - not in standard TypeScript DOM types
     const w = window as unknown as Record<string, unknown>;
-    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
-      | (new () => SpeechRecognition)
-      | undefined;
+    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => SpeechRecognition) | undefined;
 
     if (!SR) return;
 
@@ -181,8 +209,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
   const [history, setHistory] = useState<CommandHistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { isListening, transcript, startListening, stopListening, setTranscript } =
-    useSpeechRecognition(language);
+  const { isListening, transcript, startListening, stopListening, setTranscript } = useSpeechRecognition(language);
 
   // Parse current input
   const parsed = useMemo(() => {
@@ -225,10 +252,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
 
   const handleExecute = useCallback(() => {
     if (!parsed || parsed.type === 'unknown') return;
-    setHistory((prev) => [
-      { text: input, timestamp: Date.now(), command: parsed },
-      ...prev.slice(0, 19),
-    ]);
+    setHistory((prev) => [{ text: input, timestamp: Date.now(), command: parsed }, ...prev.slice(0, 19)]);
     onExecute(parsed);
     onClose();
   }, [parsed, input, onExecute, onClose]);
@@ -237,10 +261,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
     (text: string) => {
       const cmd = parseCommand(text, { language });
       if (cmd.type !== 'unknown') {
-        setHistory((prev) => [
-          { text, timestamp: Date.now(), command: cmd },
-          ...prev.slice(0, 19),
-        ]);
+        setHistory((prev) => [{ text, timestamp: Date.now(), command: cmd }, ...prev.slice(0, 19)]);
         onExecute(cmd);
         onClose();
       }
@@ -251,16 +272,9 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
-      data-testid="command-palette-overlay"
-    >
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]" data-testid="command-palette-overlay">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
 
       {/* Palette panel */}
       <div
@@ -286,9 +300,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
           <button
             className={clsx(
               'shrink-0 rounded-md p-1.5 transition-colors',
-              isListening
-                ? 'bg-rose-100 text-rose-600'
-                : 'text-[var(--color-text-muted)] hover:bg-panel',
+              isListening ? 'bg-rose-100 text-rose-600' : 'text-[var(--color-text-muted)] hover:bg-panel',
             )}
             type="button"
             title={isListening ? '停止语音输入' : '语音输入'}
@@ -322,9 +334,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
                 {COMMAND_LABELS[parsed.type]}
               </span>
               {parsed.timeRef !== undefined ? (
-                <span className="ml-2 text-xs text-[var(--color-text-muted)]">
-                  @ {parsed.timeRef.toFixed(1)}s
-                </span>
+                <span className="ml-2 text-xs text-[var(--color-text-muted)]">@ {parsed.timeRef.toFixed(1)}s</span>
               ) : null}
               {Object.entries(parsed.params).map(([key, val]) =>
                 key !== 'time' && val !== undefined ? (
@@ -371,9 +381,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
                     onClick={() => handleQuickCommand(entry.text)}
                   >
                     <Icon size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-                    <span className="flex-1 truncate text-[var(--color-text-secondary)]">
-                      {entry.text}
-                    </span>
+                    <span className="flex-1 truncate text-[var(--color-text-secondary)]">{entry.text}</span>
                     <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
                       {COMMAND_LABELS[entry.command.type]}
                     </span>
@@ -399,9 +407,7 @@ export function CommandPalette({ open, onClose, onExecute, language = 'zh' }: Co
                   >
                     <Icon size={14} className="shrink-0 text-[var(--color-text-muted)]" />
                     <span className="flex-1 text-[var(--color-text-secondary)]">{cmd.label}</span>
-                    <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">
-                      {cmd.text}
-                    </span>
+                    <span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">{cmd.text}</span>
                   </button>
                 );
               })}

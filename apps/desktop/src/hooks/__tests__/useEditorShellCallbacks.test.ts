@@ -50,8 +50,11 @@ vi.mock('../../media/media-job-runner', () => ({
 
 vi.mock('../../lib/toast', () => ({ showToast: vi.fn() }));
 vi.mock('../../lib/tauri-bridge', () => ({
-  bridgeConfirm: vi.fn(), cancelDemucs: vi.fn(), detectBeats: vi.fn(),
-  startRecording: vi.fn(), stopRecording: vi.fn(),
+  bridgeConfirm: vi.fn(),
+  cancelDemucs: vi.fn(),
+  detectBeats: vi.fn(),
+  startRecording: vi.fn(),
+  stopRecording: vi.fn(),
 }));
 vi.mock('../../lib/projectHealth', () => ({
   scanProjectHealth: vi.fn(() => Promise.resolve({ issues: [] })),
@@ -96,9 +99,7 @@ describe('useProjectHealthCallbacks', () => {
   });
 
   it('returns expected callback functions', () => {
-    const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: undefined }),
-    );
+    const { result } = renderHook(() => useProjectHealthCallbacks({ projectHealthReport: undefined }));
 
     expect(typeof result.current.refreshProjectHealth).toBe('function');
     expect(typeof result.current.openProjectHealth).toBe('function');
@@ -107,9 +108,7 @@ describe('useProjectHealthCallbacks', () => {
   });
 
   it('setMediaHealthAutoShow calls store setter', () => {
-    const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: undefined }),
-    );
+    const { result } = renderHook(() => useProjectHealthCallbacks({ projectHealthReport: undefined }));
 
     act(() => {
       result.current.setMediaHealthAutoShow(true);
@@ -119,9 +118,7 @@ describe('useProjectHealthCallbacks', () => {
   });
 
   it('openProjectHealth triggers UI state', () => {
-    const { result } = renderHook(() =>
-      useProjectHealthCallbacks({ projectHealthReport: undefined }),
-    );
+    const { result } = renderHook(() => useProjectHealthCallbacks({ projectHealthReport: undefined }));
 
     act(() => {
       result.current.openProjectHealth();

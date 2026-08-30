@@ -4,7 +4,12 @@ import { zhCN } from '../i18n/strings';
 import { getSystemResourceSnapshot, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { calculateMediaJobEtaSeconds, sortMediaJobsForMonitor } from '../media/media-job-monitor';
-import { useMediaJobStore, type MediaJobPriority, type MediaJobStatus, type MediaJobType } from '../media/media-job-store';
+import {
+  useMediaJobStore,
+  type MediaJobPriority,
+  type MediaJobStatus,
+  type MediaJobType,
+} from '../media/media-job-store';
 import { useMediaJobSettingsStore, type BackgroundConcurrency } from '../store/mediaJobSettingsStore';
 import { formatBytes } from './formatHelpers';
 
@@ -202,7 +207,10 @@ export function TaskMonitorSettingsPanel() {
                   <span>{taskTypeLabel(job.type)}</span>
                   {job.status === 'pending' ? (
                     <span
-                      className={'inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ' + priorityTone(job.priority)}
+                      className={
+                        'inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-medium ' +
+                        priorityTone(job.priority)
+                      }
                       data-testid={'task-monitor-priority-' + job.id}
                       data-priority={job.priority}
                     >

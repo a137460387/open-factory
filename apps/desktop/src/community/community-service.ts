@@ -341,9 +341,7 @@ export class CommunityService {
 
   // ─── Notifications ────────────────────────────────────────────
 
-  private addNotification(
-    data: Omit<CommunityNotification, 'id' | 'read' | 'createdAt'>,
-  ): void {
+  private addNotification(data: Omit<CommunityNotification, 'id' | 'read' | 'createdAt'>): void {
     this.notifications.push({
       ...data,
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

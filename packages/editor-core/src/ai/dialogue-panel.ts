@@ -7,19 +7,13 @@
  * Users interact with LLM through natural language to generate editing plans.
  */
 
-import type {EditPlan, EditInstruction, LLMMessage, PlanExecutionResult} from '../ai/llm-orchestrator';
-import {sortInstructionsByPriority} from '../ai/llm-orchestrator';
-import {formatTimeShort} from '../utils/time';
+import type { EditPlan, EditInstruction, LLMMessage, PlanExecutionResult } from '../ai/llm-orchestrator';
+import { sortInstructionsByPriority } from '../ai/llm-orchestrator';
+import { formatTimeShort } from '../utils/time';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type DialoguePanelPhase =
-  | 'idle'
-  | 'thinking'
-  | 'reviewing_plan'
-  | 'executing'
-  | 'complete'
-  | 'error';
+export type DialoguePanelPhase = 'idle' | 'thinking' | 'reviewing_plan' | 'executing' | 'complete' | 'error';
 
 export interface ConversationTurn {
   id: string;
@@ -85,10 +79,7 @@ function nextTurnId(): string {
 /**
  * Pure state reducer for the dialogue editing panel.
  */
-export function dialoguePanelReducer(
-  state: DialoguePanelState,
-  action: DialoguePanelAction
-): DialoguePanelState {
+export function dialoguePanelReducer(state: DialoguePanelState, action: DialoguePanelAction): DialoguePanelState {
   switch (action.type) {
     case 'LOAD_MATERIALS':
       return { ...state, hasMaterials: true, materialCount: action.count };
@@ -143,8 +134,8 @@ export function dialoguePanelReducer(
 
     case 'MODIFY_INSTRUCTION': {
       if (!state.activePlan) return state;
-      const updatedInstructions = state.activePlan.instructions.map(inst =>
-        inst.id === action.instructionId ? { ...inst, ...action.updates } : inst
+      const updatedInstructions = state.activePlan.instructions.map((inst) =>
+        inst.id === action.instructionId ? { ...inst, ...action.updates } : inst,
       );
       return {
         ...state,
@@ -158,7 +149,7 @@ export function dialoguePanelReducer(
         ...state,
         activePlan: {
           ...state.activePlan,
-          instructions: state.activePlan.instructions.filter(i => i.id !== action.instructionId),
+          instructions: state.activePlan.instructions.filter((i) => i.id !== action.instructionId),
         },
       };
     }
@@ -192,7 +183,7 @@ export function dialoguePanelReducer(
 
 /** Convert conversation turns to LLM messages for the API */
 export function turnsToLLMMessages(turns: ConversationTurn[]): LLMMessage[] {
-  return turns.map(turn => ({
+  return turns.map((turn) => ({
     role: turn.role,
     content: turn.content,
   }));
@@ -214,9 +205,7 @@ export function getSortedInstructions(state: DialoguePanelState): EditInstructio
 
 /** Get execution summary text */
 export function getExecutionSummary(result: PlanExecutionResult): string {
-  const parts = [
-    `${result.succeeded}/${result.totalInstructions} instructions executed successfully`,
-  ];
+  const parts = [`${result.succeeded}/${result.totalInstructions} instructions executed successfully`];
   if (result.failed > 0) {
     parts.push(`${result.failed} failed`);
   }

@@ -1,9 +1,5 @@
 import { create } from 'zustand';
-import {
-  backgroundMediaPool,
-  defaultBackgroundPoolLimit,
-  uiFeedbackPool,
-} from '../media/media-concurrency';
+import { backgroundMediaPool, defaultBackgroundPoolLimit, uiFeedbackPool } from '../media/media-concurrency';
 
 export type BackgroundConcurrency = 'auto' | 1 | 2 | 3 | 4;
 export type UiFeedbackConcurrency = 1 | 2 | 3;
@@ -108,9 +104,7 @@ function readMediaJobSettings(): PersistedMediaJobSettings {
       uiFeedbackConcurrency: normalizeUiFeedbackConcurrency(parsed.uiFeedbackConcurrency),
       paused: typeof parsed.paused === 'boolean' ? parsed.paused : false,
       autoGenerateWaveform:
-        typeof parsed.autoGenerateWaveform === 'boolean'
-          ? parsed.autoGenerateWaveform
-          : DEFAULT_AUTO_GENERATE_WAVEFORM,
+        typeof parsed.autoGenerateWaveform === 'boolean' ? parsed.autoGenerateWaveform : DEFAULT_AUTO_GENERATE_WAVEFORM,
     };
   } catch {
     return {

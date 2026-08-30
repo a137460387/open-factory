@@ -1,18 +1,66 @@
-import {buildTimelineMinimapLayout, buildTimelineRulerTicks, buildTimelineGridLines, buildTimelineThumbnailTrackSamples, buildTimelineNoteLayout, calculateTimelineHeatmap, calculateTimelineMinimapViewportRect, filterTimelineVirtualTracks, getTimelineDuration, getTimelineLargeProjectMode, getTimelineVirtualRenderWindow, getTimelineVirtualTrackWindow, normalizeClipGroups, normalizeExportRanges, normalizeProtectedRanges, round, secondsToTimecode, sortTimelineThumbnailSamplesByPriority, findCompleteClipGroup, DEFAULT_TIMELINE_GRID_SETTINGS, type ClipGroup, type TimelineColorHeatmapPoint, type TimelineGridSettings, type TimelineHeatmapSegment, type TimelineLabelColor, type TimelineMinimapLayout, type TimelineMinimapViewportRect, type TimelineSnapHighlight, type SelectionRect, type SceneColorDifference, type DialogueInterval, type DialogueWhisperMiss} from '@open-factory/editor-core';
-import {logger} from '@open-factory/editor-core/utils';
-import {useDeferredValue, useEffect, useMemo, useRef, useState, useTransition} from 'react';
-import {zhCN} from '../../i18n/strings';
-import {getWhisperAvailability, type WhisperAvailability} from '../../lib/whisper';
-import {type CollaborationUiState, useCollaborationStore} from '../../store/collaborationStore';
-import {type EditorState, useEditorStore} from '../../store/editorStore';
-import {type RenderCacheState, useRenderCacheStore} from '../../store/renderCacheStore';
-import {useWhisperSettingsStore} from '../../store/whisperSettingsStore';
-import {readTimelineInteractionSettings, type TimelineHeatmapViewSettings} from '../../settings/appSettings';
-import {LABEL_WIDTH, TRACK_HEIGHT, type DragState} from './TimelineParts';
-import type {TransitionMenuState, ClipMenuState, VolumeEnvelopeMenuState, GapMenuState, RulerMenuState, TrackBatchMenuState} from './TimelineMenus';
-import type {ReplaceMediaDialogState, SilenceDialogState, SceneDialogState, WhisperDialogState, CoverFrameDialogState, AnnotationEditorState, TimelineNoteEditorState} from './TimelineDialogs';
-import type {TimelineNoteDraftState, BookmarkRenameState} from './TimelineOverlays';
-import {showToast} from '../../lib/toast';
+import {
+  buildTimelineMinimapLayout,
+  buildTimelineRulerTicks,
+  buildTimelineGridLines,
+  buildTimelineThumbnailTrackSamples,
+  buildTimelineNoteLayout,
+  calculateTimelineHeatmap,
+  calculateTimelineMinimapViewportRect,
+  filterTimelineVirtualTracks,
+  getTimelineDuration,
+  getTimelineLargeProjectMode,
+  getTimelineVirtualRenderWindow,
+  getTimelineVirtualTrackWindow,
+  normalizeClipGroups,
+  normalizeExportRanges,
+  normalizeProtectedRanges,
+  round,
+  secondsToTimecode,
+  sortTimelineThumbnailSamplesByPriority,
+  findCompleteClipGroup,
+  DEFAULT_TIMELINE_GRID_SETTINGS,
+  type ClipGroup,
+  type TimelineColorHeatmapPoint,
+  type TimelineGridSettings,
+  type TimelineHeatmapSegment,
+  type TimelineLabelColor,
+  type TimelineMinimapLayout,
+  type TimelineMinimapViewportRect,
+  type TimelineSnapHighlight,
+  type SelectionRect,
+  type SceneColorDifference,
+  type DialogueInterval,
+  type DialogueWhisperMiss,
+} from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { zhCN } from '../../i18n/strings';
+import { getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
+import { type CollaborationUiState, useCollaborationStore } from '../../store/collaborationStore';
+import { type EditorState, useEditorStore } from '../../store/editorStore';
+import { type RenderCacheState, useRenderCacheStore } from '../../store/renderCacheStore';
+import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
+import { readTimelineInteractionSettings, type TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import { LABEL_WIDTH, TRACK_HEIGHT, type DragState } from './TimelineParts';
+import type {
+  TransitionMenuState,
+  ClipMenuState,
+  VolumeEnvelopeMenuState,
+  GapMenuState,
+  RulerMenuState,
+  TrackBatchMenuState,
+} from './TimelineMenus';
+import type {
+  ReplaceMediaDialogState,
+  SilenceDialogState,
+  SceneDialogState,
+  WhisperDialogState,
+  CoverFrameDialogState,
+  AnnotationEditorState,
+  TimelineNoteEditorState,
+} from './TimelineDialogs';
+import type { TimelineNoteDraftState, BookmarkRenameState } from './TimelineOverlays';
+import { showToast } from '../../lib/toast';
 interface HeatmapWorkerResponse {
   id: number;
   segments: TimelineHeatmapSegment[];

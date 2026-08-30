@@ -1,22 +1,154 @@
-import {useEffect, useMemo, useState} from 'react';
-import {logger} from '@open-factory/editor-core/utils';
-import type {Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker} from '@open-factory/editor-core';
-import {AddSubtitleClipCommand, AddTrackCommand, AddKeyframeCommand, AddMaskCommand, BatchKeyframeEditCommand, BatchUpdateKeyframeCommand, ApplyTextAnimationCommand, UpdateSubtitleStyleCommand, UpdateProjectSpeakersCommand, UpdateTrackCommand, BUILTIN_SUBTITLE_STYLE_TEMPLATES, DEFAULT_SPATIAL_AUDIO, SPATIAL_AUDIO_ROOM_MODELS, KEYFRAME_PROPERTY_LIMITS, MAX_CHROMA_KEY_COLORS, RemoveMaskCommand, RemoveKeyframeCommand, UpdateKeyframeCommand, UpdateClipCommand, UpdateMaskCommand, bindMotionTrackToPositionKeyframes, createId, createKenBurnsKeyframes, getClipSpeed, getClipKeyframeValue, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioDenoise, normalizeAudioRestoration, normalizeAudioPitchSemitones, normalizeSpatialAudio, normalizeChromaKey, normalizeClipBlendMode, normalizeClipPanoramaView, normalizeClipProjection, normalizeColorCurves, normalizeColorCorrection, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizePrivacyRedactions, normalizeSlowMotionMode, normalizeStabilization, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures, normalizeTextPath, normalizeThreeWayColor, normalizeVideoRestoration, normalizeProjectSpeakers, normalizeQualityEnhancement, parseDataSubtitleRows, secondsToTimecode, setKenBurnsEndScaleKeyframes, summarizePitchData, suggestDeinterlaceMode, buildPrivacyMasksFromDetections, buildAudioRestorationWaveformComparison, frameInterpolationCachePath, createTrack, mapSsimToFrameInterpolationQualityGrade, parseKeyframeExpression, type AudioFadeCurve, type AudioChannelRoutingMode, type BatchKeyframeEditOperation, type ChromaKeyMode, type ChromaKeyColor, type ClipPatch, type ColorCurves, type DataSubtitleSource, type DataSubtitleSourceType, type Keyframe, type KeyframeEasing, type KeyframeProperty, type MaskPatch, type PrivacyBlurEffect, type SpatialAudioDistance, type SpatialAudioRenderMode, type SpatialAudioRoomModel, type TextAnimationDirection, type TextAnimationPreset, type ThreeWayColor, type VideoDeinterlaceMode, type SubtitleStyleTemplate, type TextArcOptions, type FrameInterpolationCompareMode, type TextLayoutOptions, type TextOpenTypeFeatures} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
-import {analyzeClip, analyzeMotionTrack, bridgeConfirm, cancelMotionTracking, detectPrivacyRegions, evaluateExportQuality, convertLocalFileSrc, getAppDataDir, getFfmpegCapabilities, listenBridge, openFileDialog, readFile, runExportPreviewSamples, type ClipAnalysisProgressEvent, type MotionTrackProgressEvent, type NoiseReductionProgressEvent} from '../../lib/tauri-bridge';
-import {buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS} from '../../lib/frameInterpolationComparePreview';
-import {buildClipColorMatchCurves} from '../../lib/colorMatch';
-import {acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems} from '../../lib/subtitleTranslation';
-import {deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate} from '../../lib/subtitleStyleTemplates';
-import {addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource} from '../../shared-library/sharedLibrary';
-import {showToast} from '../../lib/toast';
-import {markLocalAiModelUsed} from '../../settings/appSettings';
-import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore';
-import {usePrivacyDetectionSettingsStore} from '../../store/privacyDetectionSettingsStore';
-import {isTranslationConfigured, useTranslationSettingsStore, type TranslationProvider} from '../../store/translationSettingsStore';
-import {analyzeClipPitch, exportClipPitchCsv} from '../../media/pitchAnalysis';
-import {buildAudioRestorationPreviewPeaks, mergeSubtitleStyleTemplateViews, getSubtitleStyleTemplateLabel, resolveSelectedKeyframeEntries, joinLocalPath, type FrameInterpolationComparePreviewViewItem} from './InspectorEditors';
+import { useEffect, useMemo, useState } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
+import type { Clip, MediaAsset, Project, ProjectSettings, ProjectSpeaker } from '@open-factory/editor-core';
+import {
+  AddSubtitleClipCommand,
+  AddTrackCommand,
+  AddKeyframeCommand,
+  AddMaskCommand,
+  BatchKeyframeEditCommand,
+  BatchUpdateKeyframeCommand,
+  ApplyTextAnimationCommand,
+  UpdateSubtitleStyleCommand,
+  UpdateProjectSpeakersCommand,
+  UpdateTrackCommand,
+  BUILTIN_SUBTITLE_STYLE_TEMPLATES,
+  DEFAULT_SPATIAL_AUDIO,
+  SPATIAL_AUDIO_ROOM_MODELS,
+  KEYFRAME_PROPERTY_LIMITS,
+  MAX_CHROMA_KEY_COLORS,
+  RemoveMaskCommand,
+  RemoveKeyframeCommand,
+  UpdateKeyframeCommand,
+  UpdateClipCommand,
+  UpdateMaskCommand,
+  bindMotionTrackToPositionKeyframes,
+  createId,
+  createKenBurnsKeyframes,
+  getClipSpeed,
+  getClipKeyframeValue,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
+  normalizeAudioDenoise,
+  normalizeAudioRestoration,
+  normalizeAudioPitchSemitones,
+  normalizeSpatialAudio,
+  normalizeChromaKey,
+  normalizeClipBlendMode,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
+  normalizeColorCurves,
+  normalizeColorCorrection,
+  normalizeFrameInterpolation,
+  normalizeMasks,
+  normalizeMotionTrack,
+  normalizePrivacyRedactions,
+  normalizeSlowMotionMode,
+  normalizeStabilization,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
+  normalizeTextPath,
+  normalizeThreeWayColor,
+  normalizeVideoRestoration,
+  normalizeProjectSpeakers,
+  normalizeQualityEnhancement,
+  parseDataSubtitleRows,
+  secondsToTimecode,
+  setKenBurnsEndScaleKeyframes,
+  summarizePitchData,
+  suggestDeinterlaceMode,
+  buildPrivacyMasksFromDetections,
+  buildAudioRestorationWaveformComparison,
+  frameInterpolationCachePath,
+  createTrack,
+  mapSsimToFrameInterpolationQualityGrade,
+  parseKeyframeExpression,
+  type AudioFadeCurve,
+  type AudioChannelRoutingMode,
+  type BatchKeyframeEditOperation,
+  type ChromaKeyMode,
+  type ChromaKeyColor,
+  type ClipPatch,
+  type ColorCurves,
+  type DataSubtitleSource,
+  type DataSubtitleSourceType,
+  type Keyframe,
+  type KeyframeEasing,
+  type KeyframeProperty,
+  type MaskPatch,
+  type PrivacyBlurEffect,
+  type SpatialAudioDistance,
+  type SpatialAudioRenderMode,
+  type SpatialAudioRoomModel,
+  type TextAnimationDirection,
+  type TextAnimationPreset,
+  type ThreeWayColor,
+  type VideoDeinterlaceMode,
+  type SubtitleStyleTemplate,
+  type TextArcOptions,
+  type FrameInterpolationCompareMode,
+  type TextLayoutOptions,
+  type TextOpenTypeFeatures,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
+import {
+  analyzeClip,
+  analyzeMotionTrack,
+  bridgeConfirm,
+  cancelMotionTracking,
+  detectPrivacyRegions,
+  evaluateExportQuality,
+  convertLocalFileSrc,
+  getAppDataDir,
+  getFfmpegCapabilities,
+  listenBridge,
+  openFileDialog,
+  readFile,
+  runExportPreviewSamples,
+  type ClipAnalysisProgressEvent,
+  type MotionTrackProgressEvent,
+  type NoiseReductionProgressEvent,
+} from '../../lib/tauri-bridge';
+import {
+  buildFrameInterpolationComparePreviewPlan,
+  FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS,
+} from '../../lib/frameInterpolationComparePreview';
+import { buildClipColorMatchCurves } from '../../lib/colorMatch';
+import {
+  acceptTranslationTOS,
+  subtitleClipsToTranslationItems,
+  translateSubtitleItems,
+} from '../../lib/subtitleTranslation';
+import {
+  deleteCustomSubtitleStyleTemplate,
+  loadSubtitleStyleTemplates,
+  saveCustomSubtitleStyleTemplate,
+} from '../../lib/subtitleStyleTemplates';
+import {
+  addSharedLibraryResource,
+  loadSharedSubtitleStyleTemplates,
+  subtitleStyleTemplateToSharedResource,
+} from '../../shared-library/sharedLibrary';
+import { showToast } from '../../lib/toast';
+import { markLocalAiModelUsed } from '../../settings/appSettings';
+import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
+import {
+  isTranslationConfigured,
+  useTranslationSettingsStore,
+  type TranslationProvider,
+} from '../../store/translationSettingsStore';
+import { analyzeClipPitch, exportClipPitchCsv } from '../../media/pitchAnalysis';
+import {
+  buildAudioRestorationPreviewPeaks,
+  mergeSubtitleStyleTemplateViews,
+  getSubtitleStyleTemplateLabel,
+  resolveSelectedKeyframeEntries,
+  joinLocalPath,
+  type FrameInterpolationComparePreviewViewItem,
+} from './InspectorEditors';
 
 // ---------------------------------------------------------------------------
 // Params

@@ -34,10 +34,7 @@ describe('Collaboration UI', () => {
     });
 
     it('filters offline users', () => {
-      const awareness = [
-        makeAwareness({ userId: 'online' }),
-        makeAwareness({ userId: 'offline', isOnline: false }),
-      ];
+      const awareness = [makeAwareness({ userId: 'online' }), makeAwareness({ userId: 'offline', isOnline: false })];
       const cursors = transformCursorsToDisplay(awareness, 60, 3);
       expect(cursors).toHaveLength(1);
     });

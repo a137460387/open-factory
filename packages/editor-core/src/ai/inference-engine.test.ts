@@ -288,51 +288,61 @@ describe('InferenceEngine advanced', () => {
   it('infer throws for custom model type when no GPU', async () => {
     const engine = new InferenceEngine({ backend: 'cpu' });
     await engine.initialize();
-    await expect(engine.infer('custom', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow();
+    await expect(
+      engine.infer('custom', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow();
   });
 
   it('infer throws for asr when no GPU', async () => {
     const engine = new InferenceEngine({ backend: 'cpu' });
     await engine.initialize();
-    await expect(engine.infer('asr', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow();
+    await expect(
+      engine.infer('asr', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow();
   });
 
   it('infer throws for semantic when no GPU', async () => {
     const engine = new InferenceEngine({ backend: 'cpu' });
     await engine.initialize();
-    await expect(engine.infer('semantic', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow();
+    await expect(
+      engine.infer('semantic', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow();
   });
 
   it('infer throws for vision when no GPU', async () => {
     const engine = new InferenceEngine({ backend: 'cpu' });
     await engine.initialize();
-    await expect(engine.infer('vision', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow();
+    await expect(
+      engine.infer('vision', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow();
   });
 
   it('infer throws for llm when no GPU', async () => {
     const engine = new InferenceEngine({ backend: 'cpu' });
     await engine.initialize();
-    await expect(engine.infer('llm', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow();
+    await expect(
+      engine.infer('llm', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow();
   });
 
   it('isGPUAccelerated returns false without GPU', () => {

@@ -1,4 +1,9 @@
-import { useRef, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import type {
   CanvasPoint,
   CanvasTransformHandle,
@@ -69,7 +74,10 @@ export interface CanvasInteractionParams {
   setCompareSplitRatio: (ratio: number) => void;
   setCompareDividerDragging: (dragging: boolean) => void;
   setReviewDragRef?: never;
-  onAddReviewAnnotation?: (annotation: Omit<import('@open-factory/editor-core').ReviewAnnotation, 'id'> & Partial<Pick<import('@open-factory/editor-core').ReviewAnnotation, 'id'>>) => void;
+  onAddReviewAnnotation?: (
+    annotation: Omit<import('@open-factory/editor-core').ReviewAnnotation, 'id'> &
+      Partial<Pick<import('@open-factory/editor-core').ReviewAnnotation, 'id'>>,
+  ) => void;
   reviewText: string;
   reviewTool: import('@open-factory/editor-core').ReviewAnnotationType;
   playheadTime: number;

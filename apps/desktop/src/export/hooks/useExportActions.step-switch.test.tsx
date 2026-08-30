@@ -250,7 +250,9 @@ describe('useExportActions addToQueue 步骤切换（preflight/warmup 可见性�
     const setCurrentStep = (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setCurrentStep;
     expect(setPreflight).toHaveBeenCalledTimes(1);
     const preflightArg = setPreflight.mock.calls[0]![0] as { issues: Array<{ type: string; severity: string }> };
-    expect(preflightArg.issues.some((issue) => issue.type === 'missing-media' && issue.severity === 'blocking')).toBe(true);
+    expect(preflightArg.issues.some((issue) => issue.type === 'missing-media' && issue.severity === 'blocking')).toBe(
+      true,
+    );
     expect(setCurrentStep).toHaveBeenCalledWith('export');
     // 拦截后不应进入 warmup/入队
     expect(runExportWarmup).not.toHaveBeenCalled();
@@ -270,7 +272,9 @@ describe('useExportActions addToQueue 步骤切换（preflight/warmup 可见性�
     const setCurrentStep = (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setCurrentStep;
     expect(setPreflight).toHaveBeenCalledTimes(1);
     const preflightArg = setPreflight.mock.calls[0]![0] as { issues: Array<{ type: string; severity: string }> };
-    expect(preflightArg.issues.some((issue) => issue.type === 'missing-font' && issue.severity === 'warning')).toBe(true);
+    expect(preflightArg.issues.some((issue) => issue.type === 'missing-font' && issue.severity === 'warning')).toBe(
+      true,
+    );
     expect(setCurrentStep).toHaveBeenCalledWith('export');
     expect(enqueueExport).not.toHaveBeenCalled();
   });
@@ -291,9 +295,7 @@ describe('useExportActions addToQueue 步骤切换（preflight/warmup 可见性�
     expect(setCurrentStep).toHaveBeenCalledWith('export');
     // 切步应不晚于 warmup：首次 setCurrentStep('export') 在入队之前
     expect(enqueueExport).toHaveBeenCalledTimes(1);
-    const firstSwitchCall = setCurrentStep.mock.calls.findIndex(
-      (call) => call[0] === 'export',
-    );
+    const firstSwitchCall = setCurrentStep.mock.calls.findIndex((call) => call[0] === 'export');
     expect(firstSwitchCall).toBeGreaterThanOrEqual(0);
   });
 });

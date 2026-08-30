@@ -272,13 +272,16 @@ export class AIWorkerPool {
     if (request.inputData instanceof Float32Array) {
       transferables.push(request.inputData.buffer);
     }
-    slot.worker.postMessage({
-      id: request.id,
-      type: request.type,
-      modelType: request.modelType,
-      inputData: request.inputData,
-      config: request.config,
-    } as AIWorkerRequest, transferables);
+    slot.worker.postMessage(
+      {
+        id: request.id,
+        type: request.type,
+        modelType: request.modelType,
+        inputData: request.inputData,
+        config: request.config,
+      } as AIWorkerRequest,
+      transferables,
+    );
   }
 
   /**

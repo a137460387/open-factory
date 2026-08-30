@@ -1,21 +1,49 @@
-import {logger} from '@open-factory/editor-core/utils';
-import {collectSmartAlbums, collectFingerprintReferences, filterMediaAssets, listFingerprintSourcePaths, parseFavoritesSearchFilter, type MediaAsset, type ContentSceneType, type MediaMetadata, type MediaMetadataFilter, type SmartAlbumId, type EffectPreset, hasAvailableTextProvider, buildQualityAssessmentSystemPrompt, buildQualityAssessmentUserPrompt, parseQualityAssessmentResponse, type QualityAssessmentResult} from '@open-factory/editor-core';
-import {useMemo, useState, useEffect} from 'react';
-import type {MediaInfoState} from './MediaInfoDialog';
-import {isTauriRuntime} from '../../lib/tauri';
-import {analyzeMedia, callAiApi, listenDragDrop, readAiApiKey} from '../../lib/tauri-bridge';
-import {useMediaJobStore} from '../../media/media-job-store';
-import {useEditorStore} from '../../store/editorStore';
-import {useMediaIndexStore, hasActiveIndexFilters} from '../../store/mediaIndexStore';
-import {DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryViewSettings} from '../../media/mediaLibraryView';
-import {readViewSettings, saveViewSettings} from '../../settings/appSettings';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {loadLocalEffectPresets} from '../../effects/effect-preset-library';
-import type {MediaCollection, ClipContentAnalysis, MediaFolder, MediaLabelColor, MediaFlag} from '@open-factory/editor-core';
-import type {Subclip} from '@open-factory/editor-core';
-import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
-import type {SharedLibraryResource} from '../../shared-library/sharedLibrary';
-import {zhCN} from '../../i18n/strings';
+import { logger } from '@open-factory/editor-core/utils';
+import {
+  collectSmartAlbums,
+  collectFingerprintReferences,
+  filterMediaAssets,
+  listFingerprintSourcePaths,
+  parseFavoritesSearchFilter,
+  type MediaAsset,
+  type ContentSceneType,
+  type MediaMetadata,
+  type MediaMetadataFilter,
+  type SmartAlbumId,
+  type EffectPreset,
+  hasAvailableTextProvider,
+  buildQualityAssessmentSystemPrompt,
+  buildQualityAssessmentUserPrompt,
+  parseQualityAssessmentResponse,
+  type QualityAssessmentResult,
+} from '@open-factory/editor-core';
+import { useMemo, useState, useEffect } from 'react';
+import type { MediaInfoState } from './MediaInfoDialog';
+import { isTauriRuntime } from '../../lib/tauri';
+import { analyzeMedia, callAiApi, listenDragDrop, readAiApiKey } from '../../lib/tauri-bridge';
+import { useMediaJobStore } from '../../media/media-job-store';
+import { useEditorStore } from '../../store/editorStore';
+import { useMediaIndexStore, hasActiveIndexFilters } from '../../store/mediaIndexStore';
+import {
+  DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS,
+  normalizeMediaLibraryViewSettings,
+  sortMediaLibraryAssets,
+  type MediaLibraryViewSettings,
+} from '../../media/mediaLibraryView';
+import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
+import type {
+  MediaCollection,
+  ClipContentAnalysis,
+  MediaFolder,
+  MediaLabelColor,
+  MediaFlag,
+} from '@open-factory/editor-core';
+import type { Subclip } from '@open-factory/editor-core';
+import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
+import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
+import { zhCN } from '../../i18n/strings';
 
 export type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
 export type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
@@ -53,7 +81,9 @@ export function useMediaBinState(props: {
   const [quickFilter, setQuickFilter] = useState<QuickMediaFilter>('all');
   const [sceneFilter, setSceneFilter] = useState<ContentSceneType | 'all'>('all');
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
-  const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
+  const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(
+    DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS,
+  );
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const [sourcePaths, setSourcePaths] = useState<{ asset: MediaAsset; paths: string[] }>();
   const [effectPresets, setEffectPresets] = useState<EffectPreset[]>([]);
@@ -83,30 +113,35 @@ export function useMediaBinState(props: {
     favoriteIds: props.favoriteIds,
     recentUseIds: props.recentMediaIds,
   });
-  const smartAlbumIds = smartAlbumId === 'none'
-    ? undefined
-    : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
+  const smartAlbumIds =
+    smartAlbumId === 'none'
+      ? undefined
+      : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
   const metadataFilter: MediaMetadataFilter = filter === 'tagged' ? 'tagged' : quickFilter;
   const _parsedSearch = parseFavoritesSearchFilter(search);
   const _searchQuery = _parsedSearch.cleanQuery;
-  const _searchFilterSet = _parsedSearch.filter === 'favorites'
-    ? new Set(props.favoriteIds)
-    : _parsedSearch.filter === 'recent'
-      ? new Set(props.recentMediaIds)
-      : undefined;
+  const _searchFilterSet =
+    _parsedSearch.filter === 'favorites'
+      ? new Set(props.favoriteIds)
+      : _parsedSearch.filter === 'recent'
+        ? new Set(props.recentMediaIds)
+        : undefined;
 
-  const visibleMedia = filter === 'titles' || filter === 'shared' || filter === 'effects'
-    ? []
-    : filterMediaAssets(props.media, {
-        query: _searchQuery,
-        filter: filter === 'tagged' ? 'all' : filter,
-        metadataFilter,
-        metadata: props.mediaMetadata,
-      })
-        .filter((asset) => sceneFilter === 'all' || props.mediaContentAnalysis[asset.id]?.sceneTypes.includes(sceneFilter))
-        .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id))
-        .filter((asset) => !_searchFilterSet || _searchFilterSet.has(asset.id))
-        .filter((asset) => !indexResultIds || indexResultIds.has(asset.id));
+  const visibleMedia =
+    filter === 'titles' || filter === 'shared' || filter === 'effects'
+      ? []
+      : filterMediaAssets(props.media, {
+          query: _searchQuery,
+          filter: filter === 'tagged' ? 'all' : filter,
+          metadataFilter,
+          metadata: props.mediaMetadata,
+        })
+          .filter(
+            (asset) => sceneFilter === 'all' || props.mediaContentAnalysis[asset.id]?.sceneTypes.includes(sceneFilter),
+          )
+          .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id))
+          .filter((asset) => !_searchFilterSet || _searchFilterSet.has(asset.id))
+          .filter((asset) => !indexResultIds || indexResultIds.has(asset.id));
 
   const sortedVisibleMedia = useMemo(() => {
     const sorted = sortMediaLibraryAssets(visibleMedia, mediaLibraryView);
@@ -124,7 +159,13 @@ export function useMediaBinState(props: {
       const markers: VisualHighlightMarker[] = [];
       for (const seg of analysis.segments) {
         if (seg.motion > 0.6) {
-          markers.push({ time: seg.start, frameIndex: 0, score: seg.motion, type: 'motion-peak', duration: seg.end - seg.start });
+          markers.push({
+            time: seg.start,
+            frameIndex: 0,
+            score: seg.motion,
+            type: 'motion-peak',
+            duration: seg.end - seg.start,
+          });
         }
       }
       for (const pt of analysis.emotionCurve) {
@@ -153,11 +194,18 @@ export function useMediaBinState(props: {
   const failedCount = jobs.filter((job) => job.status === 'error').length;
 
   const selectedVideoIds = useMemo(
-    () => props.media.filter((asset) => asset.type === 'video' && selectedMediaIds.has(asset.id)).map((asset) => asset.id),
+    () =>
+      props.media.filter((asset) => asset.type === 'video' && selectedMediaIds.has(asset.id)).map((asset) => asset.id),
     [props.media, selectedMediaIds],
   );
-  const batchMetadataAssets = useMemo(() => getMediaAssetsByIdOrder(props.media, batchMetadataAssetIds), [props.media, batchMetadataAssetIds]);
-  const batchRenameAssets = useMemo(() => getMediaAssetsByIdOrder(props.media, batchRenameAssetIds), [props.media, batchRenameAssetIds]);
+  const batchMetadataAssets = useMemo(
+    () => getMediaAssetsByIdOrder(props.media, batchMetadataAssetIds),
+    [props.media, batchMetadataAssetIds],
+  );
+  const batchRenameAssets = useMemo(
+    () => getMediaAssetsByIdOrder(props.media, batchRenameAssetIds),
+    [props.media, batchRenameAssetIds],
+  );
 
   const toggleSelectedMedia = (assetId: string) => {
     setSelectedMediaIds((current) => {
@@ -212,7 +260,11 @@ export function useMediaBinState(props: {
       const analysis = await analyzeMedia(asset.path);
       setMediaInfo({ asset, loading: false, analysis });
     } catch (error) {
-      setMediaInfo({ asset, loading: false, error: error instanceof Error ? error.message : t.mediaInfo.failedMessage });
+      setMediaInfo({
+        asset,
+        loading: false,
+        error: error instanceof Error ? error.message : t.mediaInfo.failedMessage,
+      });
     }
   };
 
@@ -242,7 +294,11 @@ export function useMediaBinState(props: {
     const providers = useAISettingsStore.getState().providers;
     if (!hasAvailableTextProvider(providers)) return;
     setQualityLoading((prev) => new Set(prev).add(assetId));
-    setQualityErrors((prev) => { const next = new Map(prev); next.delete(assetId); return next; });
+    setQualityErrors((prev) => {
+      const next = new Map(prev);
+      next.delete(assetId);
+      return next;
+    });
     try {
       const selectedProvider = providers.find((p) => p.enabled && hasAvailableTextProvider([p])) ?? providers[0];
       const apiKey = await readAiApiKey(selectedProvider.id);
@@ -256,7 +312,12 @@ export function useMediaBinState(props: {
             {
               role: 'user',
               content: buildQualityAssessmentUserPrompt({
-                name: asset.name, type: asset.type, width: asset.width, height: asset.height, duration: asset.duration, hasAudio: asset.hasAudio,
+                name: asset.name,
+                type: asset.type,
+                width: asset.width,
+                height: asset.height,
+                duration: asset.duration,
+                hasAudio: asset.hasAudio,
               }),
             },
           ],
@@ -270,7 +331,11 @@ export function useMediaBinState(props: {
     } catch {
       setQualityErrors((prev) => new Map(prev).set(assetId, zhCN.mediaBin.aiQualityAssessment.failedMessage));
     } finally {
-      setQualityLoading((prev) => { const next = new Set(prev); next.delete(assetId); return next; });
+      setQualityLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(assetId);
+        return next;
+      });
     }
   };
 
@@ -294,15 +359,24 @@ export function useMediaBinState(props: {
       if (disposed) dispose();
       else unlisten = dispose;
     });
-    return () => { disposed = true; unlisten?.(); };
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
   }, [props.onImportPaths]);
 
   useEffect(() => {
     let canceled = false;
     void readViewSettings()
-      .then((view) => { if (!canceled) setMediaLibraryView(view.mediaLibrary); })
-      .catch((error) => { logger.warn('[MediaBin] Unable to load view settings', error); });
-    return () => { canceled = true; };
+      .then((view) => {
+        if (!canceled) setMediaLibraryView(view.mediaLibrary);
+      })
+      .catch((error) => {
+        logger.warn('[MediaBin] Unable to load view settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -319,7 +393,8 @@ export function useMediaBinState(props: {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || isEditableKeyboardTarget(event.target)) return;
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || isEditableKeyboardTarget(event.target))
+        return;
       const mode = event.key === '1' ? 'grid' : event.key === '2' ? 'list' : event.key === '3' ? 'timeline' : undefined;
       if (!mode) return;
       event.preventDefault();
@@ -331,28 +406,50 @@ export function useMediaBinState(props: {
 
   return {
     // State
-    dragOver, setDragOver,
-    search, setSearch,
-    filter, setFilter,
-    quickFilter, setQuickFilter,
-    sceneFilter, setSceneFilter,
-    smartAlbumId, setSmartAlbumId,
-    mediaLibraryView, updateMediaLibraryView,
-    mediaInfo, setMediaInfo,
-    sourcePaths, setSourcePaths,
-    effectPresets, effectPresetsLoading, effectPresetsError,
-    selectedMediaIds, setSelectedMediaIds,
-    batchMetadataAssetIds, setBatchMetadataAssetIds,
-    batchRenameAssetIds, setBatchRenameAssetIds,
-    detailsAssetId, setDetailsAssetId,
+    dragOver,
+    setDragOver,
+    search,
+    setSearch,
+    filter,
+    setFilter,
+    quickFilter,
+    setQuickFilter,
+    sceneFilter,
+    setSceneFilter,
+    smartAlbumId,
+    setSmartAlbumId,
+    mediaLibraryView,
+    updateMediaLibraryView,
+    mediaInfo,
+    setMediaInfo,
+    sourcePaths,
+    setSourcePaths,
+    effectPresets,
+    effectPresetsLoading,
+    effectPresetsError,
+    selectedMediaIds,
+    setSelectedMediaIds,
+    batchMetadataAssetIds,
+    setBatchMetadataAssetIds,
+    batchRenameAssetIds,
+    setBatchRenameAssetIds,
+    detailsAssetId,
+    setDetailsAssetId,
     detailsAsset,
-    subclipDialogAssetId, setSubclipDialogAssetId,
-    editingSubclipId, setEditingSubclipId,
+    subclipDialogAssetId,
+    setSubclipDialogAssetId,
+    editingSubclipId,
+    setEditingSubclipId,
     expandedSubclipAssetIds,
-    aiAnalysisAsset, setAiAnalysisAsset,
-    qualityResults, qualityErrors, qualityLoading,
-    aiSearchMode, setAiSearchMode,
-    organizePanelOpen, setOrganizePanelOpen,
+    aiAnalysisAsset,
+    setAiAnalysisAsset,
+    qualityResults,
+    qualityErrors,
+    qualityLoading,
+    aiSearchMode,
+    setAiSearchMode,
+    organizePanelOpen,
+    setOrganizePanelOpen,
     // Computed
     projectPath,
     _effectivePinnedIds,
@@ -361,10 +458,15 @@ export function useMediaBinState(props: {
     sortedVisibleMedia,
     mediaHighlights,
     importedTimelineMedia,
-    jobs, runnerActive, clearFinishedJobs,
-    runningJob, pendingCount, failedCount,
+    jobs,
+    runnerActive,
+    clearFinishedJobs,
+    runningJob,
+    pendingCount,
+    failedCount,
     selectedVideoIds,
-    batchMetadataAssets, batchRenameAssets,
+    batchMetadataAssets,
+    batchRenameAssets,
     // Handlers
     toggleSelectedMedia,
     openBatchMetadataEditor,

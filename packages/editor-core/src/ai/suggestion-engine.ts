@@ -11,19 +11,19 @@
  * for the user to browse, compare, and selectively apply.
  */
 
-import type {MaterialMetadata} from './semantic-extractor';
-import type {StyleFingerprint} from './style-analyzer';
-import type {LLMMessage} from './llm-orchestrator';
-import {clamp01} from '../utils/math';
+import type { MaterialMetadata } from './semantic-extractor';
+import type { StyleFingerprint } from './style-analyzer';
+import type { LLMMessage } from './llm-orchestrator';
+import { clamp01 } from '../utils/math';
 
 // ─── Suggestion Types ───────────────────────────────────────────
 
 /** Suggestion category */
 export type SuggestionCategory =
-  | 'creative'      // Creative editing proposals
-  | 'style-match'   // Style-conformant proposals
-  | 'platform'      // Platform-optimized proposals
-  | 'efficiency'    // Time-saving shortcuts
+  | 'creative' // Creative editing proposals
+  | 'style-match' // Style-conformant proposals
+  | 'platform' // Platform-optimized proposals
+  | 'efficiency' // Time-saving shortcuts
   | 'experimentation'; // Experimental/unconventional ideas
 
 /** A single editing suggestion */
@@ -181,9 +181,7 @@ function buildSuggestionPrompt(request: SuggestionRequest): LLMMessage[] {
     tags: s.tags,
   }));
 
-  const parts: string[] = [
-    `## Materials\n\n${JSON.stringify(materialSummaries, null, 2)}`,
-  ];
+  const parts: string[] = [`## Materials\n\n${JSON.stringify(materialSummaries, null, 2)}`];
 
   if (styleSummaries.length > 0) {
     parts.push(`## User Style Profiles\n\n${JSON.stringify(styleSummaries, null, 2)}`);
@@ -218,9 +216,7 @@ function generateSuggestionId(): string {
   return `sug-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-const VALID_CATEGORIES: SuggestionCategory[] = [
-  'creative', 'style-match', 'platform', 'efficiency', 'experimentation',
-];
+const VALID_CATEGORIES: SuggestionCategory[] = ['creative', 'style-match', 'platform', 'efficiency', 'experimentation'];
 
 /**
  * Parse suggestion response from LLM JSON output.
@@ -243,21 +239,19 @@ export function parseSuggestionResponse(jsonStr: string): SuggestionResponse | n
     if (!raw || typeof raw !== 'object') continue;
     const s = raw as Record<string, unknown>;
 
-    const category = typeof s.category === 'string' && VALID_CATEGORIES.includes(s.category as SuggestionCategory)
-      ? s.category as SuggestionCategory
-      : 'creative';
+    const category =
+      typeof s.category === 'string' && VALID_CATEGORIES.includes(s.category as SuggestionCategory)
+        ? (s.category as SuggestionCategory)
+        : 'creative';
 
     const previewInstructions: SuggestionInstruction[] = Array.isArray(s.previewInstructions)
       ? (s.previewInstructions as unknown[])
           .filter((i): i is Record<string, unknown> => i != null && typeof i === 'object')
           .map((i) => ({
             action: typeof i.action === 'string' ? i.action : 'unknown',
-            target: typeof i.target === 'object' && i.target !== null
-              ? i.target as SuggestionInstruction['target']
-              : {},
-            params: typeof i.params === 'object' && i.params !== null
-              ? i.params as Record<string, unknown>
-              : {},
+            target:
+              typeof i.target === 'object' && i.target !== null ? (i.target as SuggestionInstruction['target']) : {},
+            params: typeof i.params === 'object' && i.params !== null ? (i.params as Record<string, unknown>) : {},
             reason: typeof i.reason === 'string' ? i.reason : '',
           }))
       : [];
@@ -337,20 +331,25 @@ export function enrichSuggestionWithStyle(
 /**
  * Generate a comparison matrix for a set of suggestions.
  */
-export function generateComparison(
-  suggestions: EditingSuggestion[],
-): SuggestionComparison {
+export function generateComparison(suggestions: EditingSuggestion[]): SuggestionComparison {
   const dimensions = [
     {
       name: 'creativity',
       description: 'How creative and unconventional the approach is',
-      scores: Object.fromEntries(suggestions.map((s) => [
-        s.id,
-        s.category === 'experimentation' ? 0.9 :
-        s.category === 'creative' ? 0.7 :
-        s.category === 'style-match' ? 0.5 :
-        s.category === 'platform' ? 0.4 : 0.3,
-      ])),
+      scores: Object.fromEntries(
+        suggestions.map((s) => [
+          s.id,
+          s.category === 'experimentation'
+            ? 0.9
+            : s.category === 'creative'
+              ? 0.7
+              : s.category === 'style-match'
+                ? 0.5
+                : s.category === 'platform'
+                  ? 0.4
+                  : 0.3,
+        ]),
+      ),
     },
     {
       name: 'confidence',
@@ -360,10 +359,7 @@ export function generateComparison(
     {
       name: 'complexity',
       description: 'How many edits are involved',
-      scores: Object.fromEntries(suggestions.map((s) => [
-        s.id,
-        Math.min(1, s.previewInstructions.length / 10),
-      ])),
+      scores: Object.fromEntries(suggestions.map((s) => [s.id, Math.min(1, s.previewInstructions.length / 10)])),
     },
   ];
 
@@ -373,11 +369,7 @@ export function generateComparison(
 /**
  * Record user feedback on a suggestion.
  */
-export function recordFeedback(
-  suggestion: EditingSuggestion,
-  score: number,
-  notes?: string,
-): EditingSuggestion {
+export function recordFeedback(suggestion: EditingSuggestion, score: number, notes?: string): EditingSuggestion {
   return {
     ...suggestion,
     feedbackScore: Math.max(-1, Math.min(1, score)),

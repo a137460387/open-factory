@@ -85,9 +85,7 @@ describe('video-gen-store seq guard', () => {
 
     // Reset to queued and start again
     useVideoGenQueueStore.setState((s) => ({
-      tasks: s.tasks.map((t) =>
-        t.id === task.id ? { ...t, status: 'queued' as const } : t,
-      ),
+      tasks: s.tasks.map((t) => (t.id === task.id ? { ...t, status: 'queued' as const } : t)),
       activeTaskId: null,
     }));
     store.startNextTask();
@@ -132,11 +130,11 @@ describe('video-gen-store seq guard', () => {
     store.startNextTask(); // seq=1
 
     // Simulate rapid progress updates
-    store.updateTaskProgress(task.id, 0.1, 'step1');  // seq=2
-    store.updateTaskProgress(task.id, 0.3, 'step2');  // seq=3
-    store.updateTaskProgress(task.id, 0.5, 'step3');  // seq=4
-    store.updateTaskProgress(task.id, 0.7, 'step4');  // seq=5
-    store.updateTaskProgress(task.id, 0.9, 'step5');  // seq=6
+    store.updateTaskProgress(task.id, 0.1, 'step1'); // seq=2
+    store.updateTaskProgress(task.id, 0.3, 'step2'); // seq=3
+    store.updateTaskProgress(task.id, 0.5, 'step3'); // seq=4
+    store.updateTaskProgress(task.id, 0.7, 'step4'); // seq=5
+    store.updateTaskProgress(task.id, 0.9, 'step5'); // seq=6
     store.completeTask(task.id, '/path/to/video.mp4'); // seq=7
 
     // All calls should have strictly increasing seq
@@ -163,10 +161,10 @@ describe('video-gen-store seq guard', () => {
     store.completeTask(task.id, '/output.mp4');
 
     const lastCall = mockUpdateStatus.mock.calls[mockUpdateStatus.mock.calls.length - 1];
-    expect(lastCall[0]).toBe(task.id);        // id
-    expect(lastCall[1]).toBe('completed');     // status
-    expect(lastCall[2]).toBe(1);              // progress
-    expect(lastCall[9]).toBe(3);              // seq (start=1, progress=2, complete=3)
+    expect(lastCall[0]).toBe(task.id); // id
+    expect(lastCall[1]).toBe('completed'); // status
+    expect(lastCall[2]).toBe(1); // progress
+    expect(lastCall[9]).toBe(3); // seq (start=1, progress=2, complete=3)
   });
 
   it('failTask also produces correct seq', () => {
@@ -187,9 +185,9 @@ describe('video-gen-store seq guard', () => {
     const failCall = mockUpdateStatus.mock.calls[2];
     expect(failCall[0]).toBe(task.id);
     expect(failCall[1]).toBe('failed');
-    expect(failCall[5]).toBe('GPU OOM');        // errorMessage
+    expect(failCall[5]).toBe('GPU OOM'); // errorMessage
     expect(failCall[6]).toBe('gpu_unavailable'); // errorType
-    expect(failCall[9]).toBe(3);                 // seq
+    expect(failCall[9]).toBe(3); // seq
   });
 
   it('cancelTask produces correct seq', () => {

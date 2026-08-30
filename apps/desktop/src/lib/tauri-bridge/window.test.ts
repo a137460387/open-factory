@@ -174,7 +174,13 @@ describe('closePreviewWindow', () => {
 
 describe('getPreviewWindowState', () => {
   it('returns state from mock', async () => {
-    const state = { open: true, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 0.5 as const };
+    const state = {
+      open: true,
+      label: 'preview',
+      alwaysOnTop: false,
+      fullscreen: false,
+      resolutionScale: 0.5 as const,
+    };
     mockGetPreviewWindowState.mockResolvedValueOnce(state);
     const result = await getPreviewWindowState();
     expect(result.resolutionScale).toBe(0.5);
@@ -202,7 +208,13 @@ describe('setPreviewWindowFullscreen', () => {
 
 describe('setPreviewWindowResolutionScale', () => {
   it('delegates to mock with scale value', async () => {
-    const state = { open: true, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 0.25 as const };
+    const state = {
+      open: true,
+      label: 'preview',
+      alwaysOnTop: false,
+      fullscreen: false,
+      resolutionScale: 0.25 as const,
+    };
     mockSetPreviewWindowResolutionScale.mockResolvedValueOnce(state);
     const result = await setPreviewWindowResolutionScale(0.25);
     expect(result.resolutionScale).toBe(0.25);

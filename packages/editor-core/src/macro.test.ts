@@ -312,10 +312,7 @@ describe('MacroPlaybackEngine', () => {
         targetClipIds: ['new-clip-1', 'new-clip-2'],
       });
 
-      expect(mockExecutor).toHaveBeenCalledWith(
-        expect.objectContaining({ targetId: 'new-clip-1' }),
-        expect.anything(),
-      );
+      expect(mockExecutor).toHaveBeenCalledWith(expect.objectContaining({ targetId: 'new-clip-1' }), expect.anything());
     });
   });
 
@@ -335,7 +332,7 @@ describe('MacroPlaybackEngine', () => {
 
     it('should report running status', async () => {
       let status = 'idle';
-      engine.onProgress(progress => {
+      engine.onProgress((progress) => {
         status = progress.status;
       });
 
@@ -355,11 +352,12 @@ describe('MacroPlaybackEngine', () => {
   describe('Abort', () => {
     it('should abort execution', async () => {
       let resolveFirst: (value: boolean) => void;
-      const firstPromise = new Promise<boolean>(resolve => {
+      const firstPromise = new Promise<boolean>((resolve) => {
         resolveFirst = resolve;
       });
 
-      const slowExecutor = vi.fn()
+      const slowExecutor = vi
+        .fn()
         .mockImplementationOnce(() => firstPromise)
         .mockResolvedValue(true);
 

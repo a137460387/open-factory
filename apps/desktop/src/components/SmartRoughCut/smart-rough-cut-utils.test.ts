@@ -5,12 +5,7 @@
 // getRhythmBeatTimes project.beatMarkers≥2 短路 vs clip 级偏移排序。
 import { describe, expect, it } from 'vitest';
 import type { SmartRoughCutVisualClip } from '@open-factory/editor-core';
-import {
-  makeAsset,
-  makeClip,
-  makeProject,
-  makeTrack,
-} from '../Timeline/hooks/timeline/__tests__/test-fixtures';
+import { makeAsset, makeClip, makeProject, makeTrack } from '../Timeline/hooks/timeline/__tests__/test-fixtures';
 import {
   buildBrollCandidates,
   buildSceneCandidates,
@@ -95,10 +90,7 @@ describe('buildBrollCandidates', () => {
 
   it('keeps filtering missing assets in the fallback set', () => {
     const selected = makeClip({ id: 'c1', mediaId: 'media-a' });
-    const media = [
-      makeAsset({ id: 'media-a', missing: true }),
-      makeAsset({ id: 'media-b', missing: true }),
-    ];
+    const media = [makeAsset({ id: 'media-a', missing: true }), makeAsset({ id: 'media-b', missing: true })];
     expect(buildBrollCandidates(media, [selected])).toEqual([]);
   });
 
@@ -125,7 +117,14 @@ describe('getRhythmBeatTimes', () => {
   it('derives clip-level beats with clip.start offset when project markers are insufficient', () => {
     const project = makeProject();
     const clips = [
-      makeClip({ id: 'c1', start: 10, beatMarkers: [{ id: 'cb1', time: 1 }, { id: 'cb2', time: 2 }] }),
+      makeClip({
+        id: 'c1',
+        start: 10,
+        beatMarkers: [
+          { id: 'cb1', time: 1 },
+          { id: 'cb2', time: 2 },
+        ],
+      }),
       makeClip({ id: 'c2', start: 0, beatMarkers: [{ id: 'cb3', time: 0.5 }] }),
     ];
     expect(getRhythmBeatTimes(project, clips)).toEqual([0.5, 11, 12]);

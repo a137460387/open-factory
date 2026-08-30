@@ -1,4 +1,9 @@
-import type {Project, ProjectColorPipeline, PostExportQualityAssuranceSettings, StressScenarioId} from '@open-factory/editor-core';
+import type {
+  Project,
+  ProjectColorPipeline,
+  PostExportQualityAssuranceSettings,
+  StressScenarioId,
+} from '@open-factory/editor-core';
 import {
   EXPORT_COLOR_SPACES,
   PROJECT_COLOR_PIPELINES,
@@ -15,17 +20,29 @@ import {
   supportsDropFrameTimecode,
   getColorSpaceDisplayName,
 } from '@open-factory/editor-core';
-import type {TouchOptimizationSettings} from '@open-factory/editor-core';
-import {FolderOpen, RefreshCw, CheckCircle, AlertCircle, Loader2} from 'lucide-react';
-import {useState, useCallback} from 'react';
-import {zhCN} from '../i18n/strings';
-import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
-import type {TimelineInteractionSettings, ExportBackgroundSettings, CollaborationIdentitySettings, LocalCoeditingSettings, ExportConditionRule} from './appSettings';
-import type {VfrHandlingStrategy} from '@open-factory/editor-core';
-import type {UpdateSettings} from '../updater/update-settings';
-import {getEffectiveUpdaterEndpoint, DEFAULT_UPDATE_SETTINGS} from '../updater/update-settings';
-import {ExportQualityAssuranceSettingsPanel} from './ExportQualityAssurancePanel';
-import {ExportRulesSettingsPanel} from './ExportRulesPanel';
+import type { TouchOptimizationSettings } from '@open-factory/editor-core';
+import { FolderOpen, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { zhCN } from '../i18n/strings';
+import {
+  PREVIEW_QUALITY_MODES,
+  PREVIEW_SKIP_FRAME_OPTIONS,
+  type PreviewPerformanceSettings,
+  type PreviewQualityMode,
+  type PreviewSkipFrames,
+} from '../lib/preview/preview-performance';
+import type {
+  TimelineInteractionSettings,
+  ExportBackgroundSettings,
+  CollaborationIdentitySettings,
+  LocalCoeditingSettings,
+  ExportConditionRule,
+} from './appSettings';
+import type { VfrHandlingStrategy } from '@open-factory/editor-core';
+import type { UpdateSettings } from '../updater/update-settings';
+import { getEffectiveUpdaterEndpoint, DEFAULT_UPDATE_SETTINGS } from '../updater/update-settings';
+import { ExportQualityAssuranceSettingsPanel } from './ExportQualityAssurancePanel';
+import { ExportRulesSettingsPanel } from './ExportRulesPanel';
 
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 
@@ -33,7 +50,8 @@ function formatProjectFps(fps: number): string {
   return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
 }
 
-type UpdateCheckStatus = 'idle' | 'checking' | 'no-update' | 'update-available' | 'downloading' | 'downloaded' | 'error';
+type UpdateCheckStatus =
+  'idle' | 'checking' | 'no-update' | 'update-available' | 'downloading' | 'downloaded' | 'error';
 
 interface GeneralSettingsPanelProps {
   language: string;
@@ -55,8 +73,8 @@ interface GeneralSettingsPanelProps {
   privacyDetectionModelPath: string;
   setPrivacyDetectionModelPath: (path: string) => void;
   choosePrivacyDetectionModel: () => void;
-  recordingSettings: {width: number; height: number; frameRate: number};
-  setRecordingSettings: (patch: Partial<{width: number; height: number; frameRate: number}>) => void;
+  recordingSettings: { width: number; height: number; frameRate: number };
+  setRecordingSettings: (patch: Partial<{ width: number; height: number; frameRate: number }>) => void;
   project: Project;
   updateProjectFrameRate: (value: string) => void;
   updateProjectTimecodeFormat: (value: string) => void;
@@ -77,7 +95,7 @@ interface GeneralSettingsPanelProps {
   stressTestResult: string | null;
   setStressTestResult: (value: string | null) => void;
   currentVersion?: string;
-  onCheckForUpdates?: () => Promise<{version: string} | null>;
+  onCheckForUpdates?: () => Promise<{ version: string } | null>;
   isTauri?: boolean;
 }
 
@@ -255,9 +273,7 @@ export function GeneralSettingsPanel({
             />
           </label>
           <p className="mt-1 text-[11px] text-slate-500">
-            {updateSettings.customEndpoint
-              ? t.general.updateEndpointDescription
-              : t.general.defaultUpdateEndpoint}
+            {updateSettings.customEndpoint ? t.general.updateEndpointDescription : t.general.defaultUpdateEndpoint}
           </p>
         </div>
       )}
@@ -356,10 +372,7 @@ export function GeneralSettingsPanel({
           </label>
         </div>
       </div>
-      <div
-        className="rounded-md border border-line bg-panel p-3"
-        data-testid="settings-local-coediting-section"
-      >
+      <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-local-coediting-section">
         <label className="flex items-start gap-2 text-xs text-slate-600">
           <input
             className="mt-0.5 h-4 w-4 accent-brand"
@@ -451,9 +464,7 @@ export function GeneralSettingsPanel({
                   value={localCoediting.authToken ?? ''}
                   placeholder={t.general.localCoeditingAuthTokenPlaceholder}
                   data-testid="settings-local-coediting-auth-token"
-                  onChange={(event) =>
-                    void updateLocalCoediting({ authToken: event.target.value || undefined })
-                  }
+                  onChange={(event) => void updateLocalCoediting({ authToken: event.target.value || undefined })}
                 />
               </label>
             </>
@@ -744,33 +755,31 @@ export function GeneralSettingsPanel({
             <h4 className="text-xs font-semibold text-slate-700">项目压力测试</h4>
             <p className="text-[11px] text-slate-500">在独立临时项目中模拟极端场景，不影响当前工作。</p>
             <div className="flex flex-wrap gap-2">
-              {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map(
-                (sid) => (
-                  <button
-                    key={sid}
-                    className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-                    data-testid={`stress-run-${sid}`}
-                    onClick={() => {
-                      const { project: stressProject, metrics: baseMetrics } = generateStressScenario(sid);
-                      const start = Date.now();
-                      const renderStart = performance.now();
-                      const _clone = JSON.parse(JSON.stringify(stressProject));
-                      const renderTimeMs = performance.now() - renderStart;
-                      const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
-                      const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
-                      setStressTestResult(serializeStressReport(report));
-                    }}
-                  >
-                    {sid === 'mega-clips'
-                      ? '超大项目'
-                      : sid === 'long-timeline'
-                        ? '超长TL'
-                        : sid === 'mass-keyframes'
-                          ? '大量KF'
-                          : '深度嵌套'}
-                  </button>
-                ),
-              )}
+              {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map((sid) => (
+                <button
+                  key={sid}
+                  className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                  data-testid={`stress-run-${sid}`}
+                  onClick={() => {
+                    const { project: stressProject, metrics: baseMetrics } = generateStressScenario(sid);
+                    const start = Date.now();
+                    const renderStart = performance.now();
+                    const _clone = JSON.parse(JSON.stringify(stressProject));
+                    const renderTimeMs = performance.now() - renderStart;
+                    const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
+                    const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
+                    setStressTestResult(serializeStressReport(report));
+                  }}
+                >
+                  {sid === 'mega-clips'
+                    ? '超大项目'
+                    : sid === 'long-timeline'
+                      ? '超长TL'
+                      : sid === 'mass-keyframes'
+                        ? '大量KF'
+                        : '深度嵌套'}
+                </button>
+              ))}
             </div>
             {stressTestResult ? (
               <pre

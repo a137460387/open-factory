@@ -1,17 +1,43 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {logger} from '@open-factory/editor-core/utils';
-import type {Timeline} from '@open-factory/editor-core';
-import {buildTimelineRenderFrameKey, buildTimelineRenderFrameRequests, estimateRenderPassBreakdown, getTimelineRenderInvalidationRanges, getTimelinePlaybackDuration} from '@open-factory/editor-core';
-import type {Project} from '@open-factory/editor-core';
-import {drawAudioOnlyPreview, countActivePreviewEffects, hasActiveCustomShader, waitForIdleFrame} from '../utils';
-import {zhCN} from '../../../i18n/strings';
-import {drawPreviewDifferenceFrame} from '../../../lib/preview/compare';
-import {PreviewRenderer, type PreviewFrameReadback} from '../../../lib/preview/renderer';
-import {DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE, appendPreviewFpsSample, calculatePreviewRenderSize, calculatePreviewFpsAverage, getDisabledPreviewEffectTypes, isPreviewAudioOnly, isPreviewLowQuality, resolveAdaptivePreviewPerformance, resolveEffectivePreviewPerformance, shouldRenderPreviewFrame, type PreviewFpsSample, type PreviewPerformanceSettings} from '../../../lib/preview/preview-performance';
-import {DEFAULT_GPU_PREVIEW_METRICS, GPU_TEXTURE_POOL_MAX_BYTES, buildGpuPrefetchFrameRequests, detectGpuPreviewCapabilities, formatTextureMemoryMiB, type GpuPreviewMetrics} from '../../../lib/preview/gpu-acceleration';
-import {getTimelineRenderCacheController} from '../../../lib/preview/render-cache-controller';
-import {showToast} from '../../../lib/toast';
-import {useAudioMeterStore} from '../../../store/audioMeterStore';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
+import type { Timeline } from '@open-factory/editor-core';
+import {
+  buildTimelineRenderFrameKey,
+  buildTimelineRenderFrameRequests,
+  estimateRenderPassBreakdown,
+  getTimelineRenderInvalidationRanges,
+  getTimelinePlaybackDuration,
+} from '@open-factory/editor-core';
+import type { Project } from '@open-factory/editor-core';
+import { drawAudioOnlyPreview, countActivePreviewEffects, hasActiveCustomShader, waitForIdleFrame } from '../utils';
+import { zhCN } from '../../../i18n/strings';
+import { drawPreviewDifferenceFrame } from '../../../lib/preview/compare';
+import { PreviewRenderer, type PreviewFrameReadback } from '../../../lib/preview/renderer';
+import {
+  DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE,
+  appendPreviewFpsSample,
+  calculatePreviewRenderSize,
+  calculatePreviewFpsAverage,
+  getDisabledPreviewEffectTypes,
+  isPreviewAudioOnly,
+  isPreviewLowQuality,
+  resolveAdaptivePreviewPerformance,
+  resolveEffectivePreviewPerformance,
+  shouldRenderPreviewFrame,
+  type PreviewFpsSample,
+  type PreviewPerformanceSettings,
+} from '../../../lib/preview/preview-performance';
+import {
+  DEFAULT_GPU_PREVIEW_METRICS,
+  GPU_TEXTURE_POOL_MAX_BYTES,
+  buildGpuPrefetchFrameRequests,
+  detectGpuPreviewCapabilities,
+  formatTextureMemoryMiB,
+  type GpuPreviewMetrics,
+} from '../../../lib/preview/gpu-acceleration';
+import { getTimelineRenderCacheController } from '../../../lib/preview/render-cache-controller';
+import { showToast } from '../../../lib/toast';
+import { useAudioMeterStore } from '../../../store/audioMeterStore';
 
 export interface CanvasRendererParams {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -303,16 +329,33 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
       project.mixerState,
     );
     const levels = rendererRef.current.getAudioLevels();
-    useAudioMeterStore.getState().setLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands, levels.trackAnalysisFrames);
+    useAudioMeterStore
+      .getState()
+      .setLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands, levels.trackAnalysisFrames);
     return () => {
       canceled = true;
     };
   }, [
-    fps, isPlaying, playbackRate, playheadTime, compareEnabled, compareShowsDifference, previewTimeline,
-    project.activeSequenceId, project.masterVolume, project.media, project.sequences,
-    project.settings.colorPipeline, project.timeline, onProfilerFrame, scopesOpen,
-    snapshotCompareProject, audioOnlyPreview, previewDisabledEffectTypes,
-    effectivePreviewPerformance.skipFrames, t,
+    fps,
+    isPlaying,
+    playbackRate,
+    playheadTime,
+    compareEnabled,
+    compareShowsDifference,
+    previewTimeline,
+    project.activeSequenceId,
+    project.masterVolume,
+    project.media,
+    project.sequences,
+    project.settings.colorPipeline,
+    project.timeline,
+    onProfilerFrame,
+    scopesOpen,
+    snapshotCompareProject,
+    audioOnlyPreview,
+    previewDisabledEffectTypes,
+    effectivePreviewPerformance.skipFrames,
+    t,
   ]);
 
   // Timeline cache invalidation
@@ -346,7 +389,9 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
     })().catch((error) => {
       logger.error('PreviewCanvas', error);
     });
-    return () => { canceled = true; };
+    return () => {
+      canceled = true;
+    };
   }, [audioOnlyPreview, project.media, previewRenderSize.height, previewRenderSize.width]);
 
   // Prerender cache
@@ -366,7 +411,8 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
         activeSequenceId: project.activeSequenceId,
         colorPipeline: project.settings.colorPipeline,
         playheadTime: prerenderCenter,
-        duration, fps,
+        duration,
+        fps,
         width: canvas.width,
         height: canvas.height,
       };
@@ -377,7 +423,10 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
         for (const request of requests) {
           if (canceled) break;
           const cached = await getTimelineRenderCacheController().getFrame(request.key);
-          if (cached) { cached.close(); continue; }
+          if (cached) {
+            cached.close();
+            continue;
+          }
           await renderer.render(canvas, project.timeline, project.media, request.time, {
             sequences: project.sequences,
             colorPipeline: project.settings.colorPipeline,
@@ -385,16 +434,34 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
           if (canceled) break;
           const bitmap = await createImageBitmap(canvas);
           getTimelineRenderCacheController().putFrame({
-            key: request.key, bitmap, time: request.time,
-            duration: 1 / fps, bytes: canvas.width * canvas.height * 4,
+            key: request.key,
+            bitmap,
+            time: request.time,
+            duration: 1 / fps,
+            bytes: canvas.width * canvas.height * 4,
             playheadTime: prerenderCenter,
           });
           await waitForIdleFrame();
         }
-      })().catch((error) => { logger.error('PreviewCanvas', error); });
+      })().catch((error) => {
+        logger.error('PreviewCanvas', error);
+      });
     }, 80);
-    return () => { canceled = true; window.clearTimeout(timer); };
-  }, [fps, isPlaying, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);
+    return () => {
+      canceled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    fps,
+    isPlaying,
+    prerenderCenter,
+    previewTimeline,
+    project.activeSequenceId,
+    project.media,
+    project.sequences,
+    project.settings.colorPipeline,
+    project.timeline,
+  ]);
 
   // Render cache retain
   useEffect(() => {
@@ -449,4 +516,4 @@ export function useCanvasRenderer(params: CanvasRendererParams) {
   };
 }
 
-import {useEditorStore} from '../../../store/editorStore';
+import { useEditorStore } from '../../../store/editorStore';

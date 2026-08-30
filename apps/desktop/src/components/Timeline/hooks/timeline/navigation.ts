@@ -1,4 +1,11 @@
-import type {Clip, ProjectAnnotation, TimelineGridSettings, TimelineSnapCandidate, SnapEdge, SelectionRect} from '@open-factory/editor-core';
+import type {
+  Clip,
+  ProjectAnnotation,
+  TimelineGridSettings,
+  TimelineSnapCandidate,
+  SnapEdge,
+  SelectionRect,
+} from '@open-factory/editor-core';
 import {
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   buildSelectionMarqueeRect,
@@ -16,10 +23,10 @@ import {
   snapTimelineTimeToGrid,
   snapTime,
 } from '@open-factory/editor-core';
-import {LONG_PRESS_PAN_THRESHOLD_MS} from '@open-factory/editor-core';
-import {LABEL_WIDTH} from '../../TimelineParts';
-import {zhCN} from '../../../../i18n/strings';
-import type {TimelineHandlerParams} from './types';
+import { LONG_PRESS_PAN_THRESHOLD_MS } from '@open-factory/editor-core';
+import { LABEL_WIDTH } from '../../TimelineParts';
+import { zhCN } from '../../../../i18n/strings';
+import type { TimelineHandlerParams } from './types';
 
 export function createNavigationHandlers(
   params: TimelineHandlerParams,
@@ -60,7 +67,7 @@ export function createNavigationHandlers(
     setAnnotationEditor,
   } = params;
 
-  const {findClip, minFrameDuration} = helpers;
+  const { findClip, minFrameDuration } = helpers;
 
   function openAnnotationEditorAt(time: number, annotation?: ProjectAnnotation): void {
     setAnnotationEditor({

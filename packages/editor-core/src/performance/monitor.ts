@@ -62,10 +62,7 @@ export function collectSystemMetrics(): SystemMetrics {
 /**
  * Calculate trend from data points
  */
-export function calculateTrend(
-  points: TrendPoint[],
-  windowSize: number = 10,
-): PerformanceTrend {
+export function calculateTrend(points: TrendPoint[], windowSize: number = 10): PerformanceTrend {
   if (points.length === 0) {
     return {
       metric: '',
@@ -248,9 +245,7 @@ export function analyzeTaskPerformance(tasks: TaskMetrics[]): {
 
   const completed = tasks.filter((t) => t.status === 'completed' && t.duration);
   const avgDuration =
-    completed.length > 0
-      ? completed.reduce((s, t) => s + (t.duration || 0), 0) / completed.length
-      : 0;
+    completed.length > 0 ? completed.reduce((s, t) => s + (t.duration || 0), 0) / completed.length : 0;
 
   // Group by type
   const byType: Record<string, { count: number; totalDuration: number; success: number }> = {};
@@ -406,22 +401,16 @@ export function generateDashboard(
   const recommendations = generateOptimizations(metricsHistory, tasks, bottlenecks, config);
 
   // Calculate trends
-  const cpuTrend = calculateTrend(
-    metricsHistory.map((m) => ({ timestamp: m.timestamp, value: m.cpu.usage })),
-  );
+  const cpuTrend = calculateTrend(metricsHistory.map((m) => ({ timestamp: m.timestamp, value: m.cpu.usage })));
   cpuTrend.metric = 'CPU 使用率';
   cpuTrend.unit = '%';
 
-  const memoryTrend = calculateTrend(
-    metricsHistory.map((m) => ({ timestamp: m.timestamp, value: m.memory.usage })),
-  );
+  const memoryTrend = calculateTrend(metricsHistory.map((m) => ({ timestamp: m.timestamp, value: m.memory.usage })));
   memoryTrend.metric = '内存使用率';
   memoryTrend.unit = '%';
 
   const gpuTrend = metricsHistory[0]?.gpu
-    ? calculateTrend(
-        metricsHistory.filter((m) => m.gpu).map((m) => ({ timestamp: m.timestamp, value: m.gpu!.usage })),
-      )
+    ? calculateTrend(metricsHistory.filter((m) => m.gpu).map((m) => ({ timestamp: m.timestamp, value: m.gpu!.usage })))
     : undefined;
   if (gpuTrend) {
     gpuTrend.metric = 'GPU 使用率';
@@ -453,11 +442,7 @@ export function generateDashboard(
 /**
  * Check if a metric exceeds threshold
  */
-export function checkThreshold(
-  value: number,
-  warning: number,
-  critical: number,
-): 'normal' | 'warning' | 'critical' {
+export function checkThreshold(value: number, warning: number, critical: number): 'normal' | 'warning' | 'critical' {
   if (value >= critical) return 'critical';
   if (value >= warning) return 'warning';
   return 'normal';

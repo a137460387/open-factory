@@ -124,13 +124,8 @@ describe('timeline-clip-helpers', () => {
     it('returns refs for keyframes', () => {
       const clip = makeVideoClip({
         keyframes: {
-          opacity: [
-            { id: 'kf-1', time: 0, value: 1 } as any,
-            { id: 'kf-2', time: 1, value: 0.5 } as any,
-          ],
-          scaleX: [
-            { id: 'kf-3', time: 0, value: 1 } as any,
-          ],
+          opacity: [{ id: 'kf-1', time: 0, value: 1 } as any, { id: 'kf-2', time: 1, value: 0.5 } as any],
+          scaleX: [{ id: 'kf-3', time: 0, value: 1 } as any],
         },
       });
       const refs = collectClipKeyframeRefs(clip);
@@ -174,9 +169,7 @@ describe('timeline-clip-helpers', () => {
 
     it('returns undefined when no subtitle tracks exist', () => {
       const timeline = {
-        tracks: [
-          { id: 'track-video', type: 'video', clips: [] },
-        ],
+        tracks: [{ id: 'track-video', type: 'video', clips: [] }],
       } as unknown as Timeline;
       expect(getSubtitleDataImportTargetTrackId(timeline, 'replace-current-track', [])).toBeUndefined();
     });

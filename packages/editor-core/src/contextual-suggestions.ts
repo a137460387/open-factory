@@ -125,28 +125,21 @@ export function suggestTransition(
 /**
  * Detect pacing issues (too fast or too slow).
  */
-export function suggestPacingFix(
-  timeline: Timeline,
-  currentTime: number,
-): ContextualSuggestion | null {
+export function suggestPacingFix(timeline: Timeline, currentTime: number): ContextualSuggestion | null {
   if (timeline.tracks.length === 0) return null;
 
   const allClips = timeline.tracks.flatMap((t) => t.clips).sort((a, b) => a.start - b.start);
   if (allClips.length < 3) return null;
 
   // Find clips near current time
-  const nearbyClips = allClips.filter(
-    (c) => c.start >= currentTime - 15 && c.start <= currentTime + 15,
-  );
+  const nearbyClips = allClips.filter((c) => c.start >= currentTime - 15 && c.start <= currentTime + 15);
 
   if (nearbyClips.length < 2) return null;
 
   // Calculate local CPM
   const windowStart = Math.max(0, currentTime - 15);
   const windowEnd = currentTime + 15;
-  const cutsInRange = nearbyClips.filter(
-    (c) => c.start >= windowStart && c.start < windowEnd,
-  ).length;
+  const cutsInRange = nearbyClips.filter((c) => c.start >= windowStart && c.start < windowEnd).length;
   const localCpm = (cutsInRange / 30) * 60;
 
   if (localCpm > 40) {
@@ -187,23 +180,16 @@ export function suggestPacingFix(
 /**
  * Suggest audio level adjustments based on analysis.
  */
-export function suggestAudioFix(
-  timeline: Timeline,
-  currentTime: number,
-): ContextualSuggestion | null {
+export function suggestAudioFix(timeline: Timeline, currentTime: number): ContextualSuggestion | null {
   const audioClips = timeline.tracks
     .filter((t) => t.type === 'audio' || t.type === 'video')
     .flatMap((t) => t.clips)
-    .filter((c): c is Extract<Clip, { type: 'audio' | 'video' }> =>
-      c.type === 'audio' || c.type === 'video',
-    );
+    .filter((c): c is Extract<Clip, { type: 'audio' | 'video' }> => c.type === 'audio' || c.type === 'video');
 
   if (audioClips.length === 0) return null;
 
   // Find clip at current time
-  const currentClip = audioClips.find(
-    (c) => currentTime >= c.start && currentTime < c.start + c.duration,
-  );
+  const currentClip = audioClips.find((c) => currentTime >= c.start && currentTime < c.start + c.duration);
 
   if (!currentClip) return null;
 
@@ -241,8 +227,8 @@ export function suggestContentImprovement(
   if (!mediaAsset) return null;
 
   // Suggest color grading if no color correction applied
-  const hasColorCorrection = clip.colorCorrection &&
-    (clip.colorCorrection.brightness !== 0 || clip.colorCorrection.contrast !== 0);
+  const hasColorCorrection =
+    clip.colorCorrection && (clip.colorCorrection.brightness !== 0 || clip.colorCorrection.contrast !== 0);
 
   if (!hasColorCorrection) {
     return {
@@ -266,13 +252,13 @@ export function suggestContentImprovement(
 /**
  * Suggest highlight marking for high-energy moments.
  */
-export function suggestHighlightMark(
-  clip: Clip,
-  currentTime: number,
-): ContextualSuggestion | null {
+export function suggestHighlightMark(clip: Clip, currentTime: number): ContextualSuggestion | null {
   // Check if clip has high motion type
-  if (clip.motionType && clip.motionType.confidence > 0.7 &&
-    (clip.motionType.type === 'handheld' || clip.motionType.type === 'zoom_in')) {
+  if (
+    clip.motionType &&
+    clip.motionType.confidence > 0.7 &&
+    (clip.motionType.type === 'handheld' || clip.motionType.type === 'zoom_in')
+  ) {
     return {
       id: `highlight-${clip.id}`,
       category: 'content',
@@ -307,16 +293,12 @@ export function generateContextualSuggestions(
   const { currentTime, selectedClipIds } = context;
 
   // Get all clips sorted by time
-  const allClips = timeline.tracks
-    .flatMap((t) => t.clips)
-    .sort((a, b) => a.start - b.start);
+  const allClips = timeline.tracks.flatMap((t) => t.clips).sort((a, b) => a.start - b.start);
 
   if (allClips.length === 0) return [];
 
   // Find clips at current time
-  const clipAtPlayhead = allClips.find(
-    (c) => currentTime >= c.start && currentTime < c.start + c.duration,
-  );
+  const clipAtPlayhead = allClips.find((c) => currentTime >= c.start && currentTime < c.start + c.duration);
 
   // Find adjacent clips
   const currentIdx = clipAtPlayhead ? allClips.indexOf(clipAtPlayhead) : -1;
@@ -363,8 +345,10 @@ export function getSuggestionIcon(category: SuggestionCategory): string {
   const icons: Record<SuggestionCategory, string> = {
     editing: 'M13 10V3L4 14h7v7l9-11h-7z', // lightning
     content: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z', // star
-    technical: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z', // check
-    creative: 'M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z', // palette
+    technical:
+      'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z', // check
+    creative:
+      'M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z', // palette
   };
   return icons[category];
 }

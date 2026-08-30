@@ -1,10 +1,18 @@
-import {useState, useCallback, useRef, useEffect} from 'react';
-import {FolderPlus, Loader2, Sparkles, X} from 'lucide-react';
-import {clsx} from 'clsx';
-import {buildMediaTagPrompt, parseAIMediaOrganizeResponse, buildMediaCollectionsFromAI, mergeCollectionsWithExisting, filterAlreadyCategorizedMedia, hasAvailableTextProvider, type MediaCollection} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { FolderPlus, Loader2, Sparkles, X } from 'lucide-react';
+import { clsx } from 'clsx';
+import {
+  buildMediaTagPrompt,
+  parseAIMediaOrganizeResponse,
+  buildMediaCollectionsFromAI,
+  mergeCollectionsWithExisting,
+  filterAlreadyCategorizedMedia,
+  hasAvailableTextProvider,
+  type MediaCollection,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 
 const t = zhCN.aiOrganize;
 

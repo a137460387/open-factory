@@ -392,7 +392,19 @@ describe('normalizeDraftSettings', () => {
   });
 
   it('normalizes watermark to null for audio mode', () => {
-    const result = normalizeDraftSettings({ ...minimalSettings, format: 'm4a', watermark: { enabled: true, type: 'text' as const, text: 'test', fontFamily: 'sans-serif', position: 'center' as const, color: '#fff', fontSize: 24 } });
+    const result = normalizeDraftSettings({
+      ...minimalSettings,
+      format: 'm4a',
+      watermark: {
+        enabled: true,
+        type: 'text' as const,
+        text: 'test',
+        fontFamily: 'sans-serif',
+        position: 'center' as const,
+        color: '#fff',
+        fontSize: 24,
+      },
+    });
     expect(result.watermark).toBeNull();
   });
 
@@ -541,7 +553,11 @@ describe('updateAudioVisualizationBackgroundColor', () => {
   it('sets color on gradient background', () => {
     const current = {
       ...MINIMAL,
-      audioVisualization: { style: 'waveform-line' as const, color: '#fff', background: { type: 'gradient' as const, color: '#111', color2: '#222' } },
+      audioVisualization: {
+        style: 'waveform-line' as const,
+        color: '#fff',
+        background: { type: 'gradient' as const, color: '#111', color2: '#222' },
+      },
     };
     const result = applyUpdate(updateAudioVisualizationBackgroundColor as any, current, 'color2', '#333');
     expect(result.audioVisualization?.background.type).toBe('gradient');
@@ -593,25 +609,19 @@ describe('updateExportSidecarSubtitle', () => {
 
 describe('updateSubtitleLanguageSelection', () => {
   it('adds language when checked', () => {
-    const result = applyUpdate(
-      updateSubtitleLanguageSelection as any,
-      MINIMAL,
-      'en',
-      true,
-      [{ language: 'en', label: 'English' }, { language: 'zh', label: 'Chinese' }],
-    );
+    const result = applyUpdate(updateSubtitleLanguageSelection as any, MINIMAL, 'en', true, [
+      { language: 'en', label: 'English' },
+      { language: 'zh', label: 'Chinese' },
+    ]);
     expect(result.subtitleLanguages).toContain('en');
   });
 
   it('removes language when unchecked', () => {
     const current = { ...MINIMAL, subtitleLanguages: ['en', 'zh'] };
-    const result = applyUpdate(
-      updateSubtitleLanguageSelection as any,
-      current,
-      'en',
-      false,
-      [{ language: 'en', label: 'English' }, { language: 'zh', label: 'Chinese' }],
-    );
+    const result = applyUpdate(updateSubtitleLanguageSelection as any, current, 'en', false, [
+      { language: 'en', label: 'English' },
+      { language: 'zh', label: 'Chinese' },
+    ]);
     expect(result.subtitleLanguages).not.toContain('en');
     expect(result.subtitleLanguages).toContain('zh');
   });

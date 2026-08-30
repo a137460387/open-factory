@@ -5,9 +5,7 @@ export async function saveVideoGenTask(task: VideoGenTaskDb): Promise<void> {
   await invoke('save_video_gen_task', { task });
 }
 
-export async function listVideoGenTasks(
-  statusFilter?: string,
-): Promise<VideoGenTaskDb[]> {
+export async function listVideoGenTasks(statusFilter?: string): Promise<VideoGenTaskDb[]> {
   return invoke('list_video_gen_tasks', {
     statusFilter: statusFilter ?? null,
   });
@@ -43,9 +41,7 @@ export async function deleteVideoGenTask(id: string): Promise<void> {
   await invoke('delete_video_gen_task', { id });
 }
 
-export async function cleanupVideoGenTasks(
-  keepCompleted?: number,
-): Promise<void> {
+export async function cleanupVideoGenTasks(keepCompleted?: number): Promise<void> {
   await invoke('cleanup_video_gen_tasks', {
     keepCompleted: keepCompleted ?? null,
   });

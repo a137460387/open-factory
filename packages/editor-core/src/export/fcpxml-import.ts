@@ -1,7 +1,36 @@
-import {DEFAULT_AUDIO_DENOISE, DEFAULT_AUDIO_FADE_CURVE, DEFAULT_AUDIO_FADE_DURATION, DEFAULT_AUDIO_PITCH_SEMITONES, DEFAULT_AUDIO_REVERSE, DEFAULT_CHROMA_KEY, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_FRAME_INTERPOLATION, DEFAULT_SLOW_MOTION_MODE, DEFAULT_STABILIZATION, DEFAULT_TRANSFORM, createSequence, createTrack, getProjectSequences, normalizeChromaKey, replaceProjectActiveTimeline, type AudioClip, type Clip, type ImageClip, type MediaAsset, type Project, type Sequence, type Timeline, type Track, type TrackType, type Transition, type VideoClip} from '../model';
-import {normalizePath} from '../project/relative-paths';
-import {round} from '../time';
-import {matchEdlEventsToMedia, type Cmx3600EdlEvent, type EdlMediaMatch} from './timeline-import';
+import {
+  DEFAULT_AUDIO_DENOISE,
+  DEFAULT_AUDIO_FADE_CURVE,
+  DEFAULT_AUDIO_FADE_DURATION,
+  DEFAULT_AUDIO_PITCH_SEMITONES,
+  DEFAULT_AUDIO_REVERSE,
+  DEFAULT_CHROMA_KEY,
+  DEFAULT_CLIP_SPEED,
+  DEFAULT_COLOR_CORRECTION,
+  DEFAULT_FRAME_INTERPOLATION,
+  DEFAULT_SLOW_MOTION_MODE,
+  DEFAULT_STABILIZATION,
+  DEFAULT_TRANSFORM,
+  createSequence,
+  createTrack,
+  getProjectSequences,
+  normalizeChromaKey,
+  replaceProjectActiveTimeline,
+  type AudioClip,
+  type Clip,
+  type ImageClip,
+  type MediaAsset,
+  type Project,
+  type Sequence,
+  type Timeline,
+  type Track,
+  type TrackType,
+  type Transition,
+  type VideoClip,
+} from '../model';
+import { normalizePath } from '../project/relative-paths';
+import { round } from '../time';
+import { matchEdlEventsToMedia, type Cmx3600EdlEvent, type EdlMediaMatch } from './timeline-import';
 
 // ─── Public types ────────────────────────────────────────────
 

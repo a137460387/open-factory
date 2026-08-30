@@ -351,7 +351,11 @@ export function useSmartRoughCut(selectedClip: Clip | undefined, media: MediaAss
     }
     try {
       commandManager.execute(
-        new ApplyRoughCutProposalCommand(timelineAccessor, selectedClip.id, suggestionToSegments(suggestion, selectedClip)),
+        new ApplyRoughCutProposalCommand(
+          timelineAccessor,
+          selectedClip.id,
+          suggestionToSegments(suggestion, selectedClip),
+        ),
       );
       // 采纳成功入账（纯本地零上报；失败分支不入账）
       recordSuggestionAdoption(suggestion.source);

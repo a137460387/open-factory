@@ -7,11 +7,7 @@
  * - onsets：segments.loudness 上升沿 + dialogueTurns 起点派生（零 bridge 调用）
  * 未分析 clip（无 contentAnalysis）返回空输入，入口侧负责禁用。
  */
-import {
-  getClipSpeed,
-  round,
-  type Clip,
-} from '@open-factory/editor-core';
+import { getClipSpeed, round, type Clip } from '@open-factory/editor-core';
 import type { OnsetEvent } from '@open-factory/editor-core/audio-rhythm-analysis';
 import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
 import { useMemo } from 'react';
@@ -45,8 +41,7 @@ export function deriveRoughCutAnalysis(selectedClip: Clip | undefined): UseRough
   const sourceStart = selectedClip.trimStart;
   const sourceEnd = sourceStart + selectedClip.duration * speed;
   const toLocal = (time: number): number => round((time - sourceStart) / speed);
-  const inWindow = (time: number): boolean =>
-    time >= sourceStart - 0.000001 && time <= sourceEnd + 0.000001;
+  const inWindow = (time: number): boolean => time >= sourceStart - 0.000001 && time <= sourceEnd + 0.000001;
 
   const highlights: VisualHighlightMarker[] = [];
   for (const segment of analysis.segments) {

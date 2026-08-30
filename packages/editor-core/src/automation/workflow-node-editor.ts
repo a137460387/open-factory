@@ -11,19 +11,18 @@
  * Converts node graphs to Workflow steps for execution by WorkflowEngine.
  */
 
-import type {Workflow, AutomationWorkflowStep, WorkflowCondition, WorkflowAction, ActionType, ConditionOperator} from './workflow-engine';
+import type {
+  Workflow,
+  AutomationWorkflowStep,
+  WorkflowCondition,
+  WorkflowAction,
+  ActionType,
+  ConditionOperator,
+} from './workflow-engine';
 // ─── Node Types ─────────────────────────────────────────────────
 
 /** Node port data type */
-export type PortDataType =
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'json'
-  | 'media'
-  | 'subtitle'
-  | 'color'
-  | 'audio';
+export type PortDataType = 'string' | 'number' | 'boolean' | 'json' | 'media' | 'subtitle' | 'color' | 'audio';
 
 /** Node port definition */
 export interface NodePort {
@@ -40,13 +39,13 @@ export interface NodePort {
 
 /** Node category for palette grouping */
 export type NodeCategory =
-  | 'input'       // Media import, file input
-  | 'ai'          // AI processing (ASR, scene detect, etc.)
-  | 'transform'   // Cut, trim, reorder
-  | 'output'      // Export, subtitle output
-  | 'condition'   // Branch, filter
-  | 'variable'    // Set/get variables
-  | 'custom';     // Plugin-provided
+  | 'input' // Media import, file input
+  | 'ai' // AI processing (ASR, scene detect, etc.)
+  | 'transform' // Cut, trim, reorder
+  | 'output' // Export, subtitle output
+  | 'condition' // Branch, filter
+  | 'variable' // Set/get variables
+  | 'custom'; // Plugin-provided
 
 /** Visual position on canvas */
 export interface NodePosition {
@@ -346,9 +345,7 @@ export function validateNodeWorkflow(workflow: NodeWorkflow): NodeGraphValidatio
   // Check required inputs
   for (const node of workflow.nodes) {
     const connectedInputPorts = new Set(
-      workflow.connections
-        .filter((c) => c.targetNodeId === node.id)
-        .map((c) => c.targetPortId),
+      workflow.connections.filter((c) => c.targetNodeId === node.id).map((c) => c.targetPortId),
     );
     for (const port of node.inputs) {
       if (port.required && !connectedInputPorts.has(port.id) && port.defaultValue === undefined) {
@@ -497,10 +494,7 @@ export function resolveParameters(
 /**
  * Validate that all required parameters are provided.
  */
-export function validateParameters(
-  parameters: WorkflowParameter[],
-  providedValues: Record<string, unknown>,
-): string[] {
+export function validateParameters(parameters: WorkflowParameter[], providedValues: Record<string, unknown>): string[] {
   const errors: string[] = [];
   for (const param of parameters) {
     if (param.required && !(param.name in providedValues) && param.defaultValue === undefined) {
@@ -535,10 +529,7 @@ export function createNodeWorkflow(name: string = 'New Workflow'): NodeWorkflow 
 }
 
 /** Create a node from a built-in definition */
-export function createNodeFromDefinition(
-  def: NodeDefinition,
-  position: NodePosition,
-): WorkflowNode {
+export function createNodeFromDefinition(def: NodeDefinition, position: NodePosition): WorkflowNode {
   const nodeId = nodeGenId('node');
   const inputs = def.inputs.map((p) => ({ ...p, id: portId() }));
   const outputs = def.outputs.map((p) => ({ ...p, id: portId() }));
@@ -566,9 +557,7 @@ export function addNode(workflow: NodeWorkflow, node: WorkflowNode): NodeWorkflo
 /** Remove a node and its connections from a workflow */
 export function removeNode(workflow: NodeWorkflow, nodeId: string): NodeWorkflow {
   const nodes = workflow.nodes.filter((n) => n.id !== nodeId);
-  const connections = workflow.connections.filter(
-    (c) => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId,
-  );
+  const connections = workflow.connections.filter((c) => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId);
   const entryNodeIds = findEntryNodes(nodes, connections);
   return { ...workflow, nodes, connections, entryNodeIds, updatedAt: Date.now() };
 }
@@ -606,21 +595,13 @@ export function updateNodeParams(
   nodeId: string,
   params: Record<string, unknown>,
 ): NodeWorkflow {
-  const nodes = workflow.nodes.map((n) =>
-    n.id === nodeId ? { ...n, params: { ...n.params, ...params } } : n,
-  );
+  const nodes = workflow.nodes.map((n) => (n.id === nodeId ? { ...n, params: { ...n.params, ...params } } : n));
   return { ...workflow, nodes, updatedAt: Date.now() };
 }
 
 /** Move a node on the canvas */
-export function moveNode(
-  workflow: NodeWorkflow,
-  nodeId: string,
-  position: NodePosition,
-): NodeWorkflow {
-  const nodes = workflow.nodes.map((n) =>
-    n.id === nodeId ? { ...n, position } : n,
-  );
+export function moveNode(workflow: NodeWorkflow, nodeId: string, position: NodePosition): NodeWorkflow {
+  const nodes = workflow.nodes.map((n) => (n.id === nodeId ? { ...n, position } : n));
   return { ...workflow, nodes };
 }
 
@@ -631,66 +612,121 @@ function findEntryNodes(nodes: WorkflowNode[], connections: NodeConnection[]): s
 
 // ─── Built-in Templates ─────────────────────────────────────────
 
-export const BUILTIN_NODE_TEMPLATES: Array<{ id: string; name: string; description: string; workflow: NodeWorkflow }> = [
-  {
-    id: 'ntpl-auto-subtitle',
-    name: 'Auto Subtitle Pipeline',
-    description: 'Import media → ASR → Add subtitles → Export',
-    workflow: (() => {
-      const wf = createNodeWorkflow('Auto Subtitle Pipeline');
-      const importDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'media-import')!;
-      const asrDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'asr-transcribe')!;
-      const subDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'add-subtitle')!;
-      const exportDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'export-media')!;
+export const BUILTIN_NODE_TEMPLATES: Array<{ id: string; name: string; description: string; workflow: NodeWorkflow }> =
+  [
+    {
+      id: 'ntpl-auto-subtitle',
+      name: 'Auto Subtitle Pipeline',
+      description: 'Import media → ASR → Add subtitles → Export',
+      workflow: (() => {
+        const wf = createNodeWorkflow('Auto Subtitle Pipeline');
+        const importDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'media-import')!;
+        const asrDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'asr-transcribe')!;
+        const subDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'add-subtitle')!;
+        const exportDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'export-media')!;
 
-      const n1 = createNodeFromDefinition(importDef, { x: 100, y: 200 });
-      const n2 = createNodeFromDefinition(asrDef, { x: 350, y: 200 });
-      const n3 = createNodeFromDefinition(subDef, { x: 600, y: 200 });
-      const n4 = createNodeFromDefinition(exportDef, { x: 850, y: 200 });
+        const n1 = createNodeFromDefinition(importDef, { x: 100, y: 200 });
+        const n2 = createNodeFromDefinition(asrDef, { x: 350, y: 200 });
+        const n3 = createNodeFromDefinition(subDef, { x: 600, y: 200 });
+        const n4 = createNodeFromDefinition(exportDef, { x: 850, y: 200 });
 
-      return {
-        ...wf,
-        nodes: [n1, n2, n3, n4],
-        connections: [
-          { id: 'c1', sourceNodeId: n1.id, sourcePortId: n1.outputs[0].id, targetNodeId: n2.id, targetPortId: n2.inputs[0].id },
-          { id: 'c2', sourceNodeId: n2.id, sourcePortId: n2.outputs[0].id, targetNodeId: n3.id, targetPortId: n3.inputs[1].id },
-          { id: 'c3', sourceNodeId: n1.id, sourcePortId: n1.outputs[0].id, targetNodeId: n3.id, targetPortId: n3.inputs[0].id },
-          { id: 'c4', sourceNodeId: n3.id, sourcePortId: n3.outputs[0].id, targetNodeId: n4.id, targetPortId: n4.inputs[0].id },
-        ],
-        entryNodeIds: [n1.id],
-      };
-    })(),
-  },
-  {
-    id: 'ntpl-smart-highlight',
-    name: 'Smart Highlight Reel',
-    description: 'Import → Scene detect → Smart cut → Color grade → Export',
-    workflow: (() => {
-      const wf = createNodeWorkflow('Smart Highlight Reel');
-      const importDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'media-import')!;
-      const sceneDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'scene-detect')!;
-      const cutDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'smart-cut')!;
-      const gradeDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'apply-color-grade')!;
-      const exportDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'export-media')!;
+        return {
+          ...wf,
+          nodes: [n1, n2, n3, n4],
+          connections: [
+            {
+              id: 'c1',
+              sourceNodeId: n1.id,
+              sourcePortId: n1.outputs[0].id,
+              targetNodeId: n2.id,
+              targetPortId: n2.inputs[0].id,
+            },
+            {
+              id: 'c2',
+              sourceNodeId: n2.id,
+              sourcePortId: n2.outputs[0].id,
+              targetNodeId: n3.id,
+              targetPortId: n3.inputs[1].id,
+            },
+            {
+              id: 'c3',
+              sourceNodeId: n1.id,
+              sourcePortId: n1.outputs[0].id,
+              targetNodeId: n3.id,
+              targetPortId: n3.inputs[0].id,
+            },
+            {
+              id: 'c4',
+              sourceNodeId: n3.id,
+              sourcePortId: n3.outputs[0].id,
+              targetNodeId: n4.id,
+              targetPortId: n4.inputs[0].id,
+            },
+          ],
+          entryNodeIds: [n1.id],
+        };
+      })(),
+    },
+    {
+      id: 'ntpl-smart-highlight',
+      name: 'Smart Highlight Reel',
+      description: 'Import → Scene detect → Smart cut → Color grade → Export',
+      workflow: (() => {
+        const wf = createNodeWorkflow('Smart Highlight Reel');
+        const importDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'media-import')!;
+        const sceneDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'scene-detect')!;
+        const cutDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'smart-cut')!;
+        const gradeDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'apply-color-grade')!;
+        const exportDef = BUILTIN_NODE_DEFINITIONS.find((d) => d.type === 'export-media')!;
 
-      const n1 = createNodeFromDefinition(importDef, { x: 100, y: 200 });
-      const n2 = createNodeFromDefinition(sceneDef, { x: 350, y: 200 });
-      const n3 = createNodeFromDefinition(cutDef, { x: 600, y: 200 });
-      const n4 = createNodeFromDefinition(gradeDef, { x: 850, y: 200 });
-      const n5 = createNodeFromDefinition(exportDef, { x: 1100, y: 200 });
+        const n1 = createNodeFromDefinition(importDef, { x: 100, y: 200 });
+        const n2 = createNodeFromDefinition(sceneDef, { x: 350, y: 200 });
+        const n3 = createNodeFromDefinition(cutDef, { x: 600, y: 200 });
+        const n4 = createNodeFromDefinition(gradeDef, { x: 850, y: 200 });
+        const n5 = createNodeFromDefinition(exportDef, { x: 1100, y: 200 });
 
-      return {
-        ...wf,
-        nodes: [n1, n2, n3, n4, n5],
-        connections: [
-          { id: 'c1', sourceNodeId: n1.id, sourcePortId: n1.outputs[0].id, targetNodeId: n2.id, targetPortId: n2.inputs[0].id },
-          { id: 'c2', sourceNodeId: n2.id, sourcePortId: n2.outputs[0].id, targetNodeId: n3.id, targetPortId: n3.inputs[1].id },
-          { id: 'c3', sourceNodeId: n1.id, sourcePortId: n1.outputs[0].id, targetNodeId: n3.id, targetPortId: n3.inputs[0].id },
-          { id: 'c4', sourceNodeId: n3.id, sourcePortId: n3.outputs[0].id, targetNodeId: n4.id, targetPortId: n4.inputs[0].id },
-          { id: 'c5', sourceNodeId: n4.id, sourcePortId: n4.outputs[0].id, targetNodeId: n5.id, targetPortId: n5.inputs[0].id },
-        ],
-        entryNodeIds: [n1.id],
-      };
-    })(),
-  },
-];
+        return {
+          ...wf,
+          nodes: [n1, n2, n3, n4, n5],
+          connections: [
+            {
+              id: 'c1',
+              sourceNodeId: n1.id,
+              sourcePortId: n1.outputs[0].id,
+              targetNodeId: n2.id,
+              targetPortId: n2.inputs[0].id,
+            },
+            {
+              id: 'c2',
+              sourceNodeId: n2.id,
+              sourcePortId: n2.outputs[0].id,
+              targetNodeId: n3.id,
+              targetPortId: n3.inputs[1].id,
+            },
+            {
+              id: 'c3',
+              sourceNodeId: n1.id,
+              sourcePortId: n1.outputs[0].id,
+              targetNodeId: n3.id,
+              targetPortId: n3.inputs[0].id,
+            },
+            {
+              id: 'c4',
+              sourceNodeId: n3.id,
+              sourcePortId: n3.outputs[0].id,
+              targetNodeId: n4.id,
+              targetPortId: n4.inputs[0].id,
+            },
+            {
+              id: 'c5',
+              sourceNodeId: n4.id,
+              sourcePortId: n4.outputs[0].id,
+              targetNodeId: n5.id,
+              targetPortId: n5.inputs[0].id,
+            },
+          ],
+          entryNodeIds: [n1.id],
+        };
+      })(),
+    },
+  ];

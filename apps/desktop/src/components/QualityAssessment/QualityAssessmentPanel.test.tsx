@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {render} from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render } from '@testing-library/react';
 import React from 'react';
 
 // Mock Tauri bridge
 vi.mock('../../lib/tauri-bridge', () => ({
-  callAiApi: vi.fn().mockResolvedValue(JSON.stringify({ grade: 'A', score: 85, dimensions: [], issues: [], suggestions: [] })),
+  callAiApi: vi
+    .fn()
+    .mockResolvedValue(JSON.stringify({ grade: 'A', score: 85, dimensions: [], issues: [], suggestions: [] })),
   readAiApiKey: vi.fn().mockResolvedValue('test-key'),
 }));
 
@@ -36,17 +38,13 @@ vi.mock('@open-factory/editor-core', () => ({
       { key: 'sharpness', score: 90, grade: 'A', notes: '清晰度良好' },
       { key: 'noise', score: 80, grade: 'B', notes: '噪点可控' },
     ],
-    issues: [
-      { severity: 'medium', description: '部分画面偏暗', location: '00:30-01:00', fix: '调整曝光' },
-    ],
-    suggestions: [
-      { priority: 'high', action: '增加对比度', expectedImprovement: 5 },
-    ],
+    issues: [{ severity: 'medium', description: '部分画面偏暗', location: '00:30-01:00', fix: '调整曝光' }],
+    suggestions: [{ priority: 'high', action: '增加对比度', expectedImprovement: 5 }],
   })),
   mapScoreToEnhancedGrade: vi.fn(() => 'A'),
 }));
 
-import {QualityAssessmentPanel} from './QualityAssessmentPanel';
+import { QualityAssessmentPanel } from './QualityAssessmentPanel';
 
 const mockProject = {
   id: 'proj-1',
@@ -56,9 +54,7 @@ const mockProject = {
       {
         id: 'track-1',
         type: 'video',
-        clips: [
-          { id: 'clip-1', start: 0, duration: 10, mediaFile: 'test.mp4' },
-        ],
+        clips: [{ id: 'clip-1', start: 0, duration: 10, mediaFile: 'test.mp4' }],
       },
     ],
   },
@@ -70,9 +66,7 @@ describe('QualityAssessmentPanel', () => {
   });
 
   it('renders idle state with profile selector', () => {
-    const { container } = render(
-      <QualityAssessmentPanel project={mockProject} onClose={() => {}} />,
-    );
+    const { container } = render(<QualityAssessmentPanel project={mockProject} onClose={() => {}} />);
     expect(container.textContent).toContain('质量评估');
     expect(container.textContent).toContain('广播级');
     expect(container.textContent).toContain('网络发布');
@@ -80,17 +74,13 @@ describe('QualityAssessmentPanel', () => {
 
   it('renders close button', () => {
     const onClose = vi.fn();
-    const { container } = render(
-      <QualityAssessmentPanel project={mockProject} onClose={onClose} />,
-    );
+    const { container } = render(<QualityAssessmentPanel project={mockProject} onClose={onClose} />);
     const closeBtn = container.querySelector('button');
     expect(closeBtn).toBeTruthy();
   });
 
   it('displays assessment button text', () => {
-    const { container } = render(
-      <QualityAssessmentPanel project={mockProject} onClose={() => {}} />,
-    );
+    const { container } = render(<QualityAssessmentPanel project={mockProject} onClose={() => {}} />);
     expect(container.textContent).toContain('开始评估');
   });
 });

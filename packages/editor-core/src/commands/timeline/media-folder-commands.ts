@@ -1,7 +1,14 @@
-import type {ProjectAccessor} from './index';
-import {MediaFolderInput, addMediaFolderToProject, deleteMediaFolder, moveMediaAssetsToFolder, renameMediaFolder, setMediaFolderCollapsed} from '../../media-folders';
-import {MediaFolder, Project} from '../../model';
-import {Command} from '../command';
+import type { ProjectAccessor } from './index';
+import {
+  MediaFolderInput,
+  addMediaFolderToProject,
+  deleteMediaFolder,
+  moveMediaAssetsToFolder,
+  renameMediaFolder,
+  setMediaFolderCollapsed,
+} from '../../media-folders';
+import { MediaFolder, Project } from '../../model';
+import { Command } from '../command';
 
 export class AddMediaFolderCommand implements Command {
   readonly description = 'Add media folder';

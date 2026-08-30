@@ -1,12 +1,29 @@
-import type {TimelineAccessor} from './index';
-import {ProtectedRange, Timeline, Transition} from '../../model';
-import type {Clip, ClipGroup} from '../../model';
-import {detectOverlap, findAdjacentTransitionClips, replaceClip, trimClip} from '../../timeline';
-import {FillGapOperation, buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime} from '../../timeline-gap-fill';
-import {findGroupSplitByGap, isRollingTrimBoundaryLocked} from '../../clip-group-relations';
-import {Command} from '../command';
-import {assertClipsNotOnLockedTrack, buildSlipClip, clampTrimValues, closeTrackGap, findClip, findClipLocation, findTrack, findTrackGapAtTime, insertClip, rippleDeleteTrackClips, timelineHasOverlaps} from './utils';
-import {buildRollingTrimClips, buildSlideClipEdit} from './utils-nested';
+import type { TimelineAccessor } from './index';
+import { ProtectedRange, Timeline, Transition } from '../../model';
+import type { Clip, ClipGroup } from '../../model';
+import { detectOverlap, findAdjacentTransitionClips, replaceClip, trimClip } from '../../timeline';
+import {
+  FillGapOperation,
+  buildCrossfadeGapFillTransition,
+  buildRepeatedGapFillClip,
+  findTimelineGapAtTime,
+} from '../../timeline-gap-fill';
+import { findGroupSplitByGap, isRollingTrimBoundaryLocked } from '../../clip-group-relations';
+import { Command } from '../command';
+import {
+  assertClipsNotOnLockedTrack,
+  buildSlipClip,
+  clampTrimValues,
+  closeTrackGap,
+  findClip,
+  findClipLocation,
+  findTrack,
+  findTrackGapAtTime,
+  insertClip,
+  rippleDeleteTrackClips,
+  timelineHasOverlaps,
+} from './utils';
+import { buildRollingTrimClips, buildSlideClipEdit } from './utils-nested';
 
 export class SlipClipCommand implements Command {
   readonly description = 'Slip clip';

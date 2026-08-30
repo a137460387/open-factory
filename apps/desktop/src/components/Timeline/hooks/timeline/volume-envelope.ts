@@ -1,4 +1,4 @@
-import type {Clip} from '@open-factory/editor-core';
+import type { Clip } from '@open-factory/editor-core';
 import {
   AddKeyframeCommand,
   BatchUpdateKeyframeCommand,
@@ -7,11 +7,11 @@ import {
   buildVolumeFadeKeyframes,
   volumeEnvelopeControlPointToKeyframe,
 } from '@open-factory/editor-core';
-import type {VolumeEnvelopeMenuRequest, VolumeEnvelopePointRequest} from '../../TimelineParts';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
+import type { VolumeEnvelopeMenuRequest, VolumeEnvelopePointRequest } from '../../TimelineParts';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
 
 export function createVolumeEnvelopeHandlers(
   params: TimelineHandlerParams,
@@ -31,7 +31,7 @@ export function createVolumeEnvelopeHandlers(
     setRulerMenu,
   } = params;
 
-  const {findClip} = helpers;
+  const { findClip } = helpers;
 
   function addVolumeEnvelopePoint(request: VolumeEnvelopePointRequest): void {
     const clip = findClip(request.clipId);

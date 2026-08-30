@@ -33,12 +33,7 @@ import {
   calculateChunks,
 } from '../distribution/platform-publisher';
 import type { PlatformVideoMetadata } from '../distribution/platform-publisher';
-import {
-  createInitialPanelState,
-  semanticPanelReducer,
-  getMetadataStats,
-  getProgressLabel,
-} from './semantic-panel';
+import { createInitialPanelState, semanticPanelReducer, getMetadataStats, getProgressLabel } from './semantic-panel';
 import {
   createInitialDialogueState,
   dialoguePanelReducer,
@@ -75,7 +70,13 @@ function makeTestMetadata(): MaterialMetadata {
     [
       { startSec: 0, endSec: 5, text: 'Welcome to our channel', confidence: 0.95, speakerId: 0 },
       { startSec: 6, endSec: 15, text: 'Today we are discussing AI video editing', confidence: 0.9, speakerId: 0 },
-      { startSec: 16, endSec: 25, text: 'This technology allows automated editing workflows', confidence: 0.88, speakerId: 0 },
+      {
+        startSec: 16,
+        endSec: 25,
+        text: 'This technology allows automated editing workflows',
+        confidence: 0.88,
+        speakerId: 0,
+      },
       { startSec: 30, endSec: 45, text: 'Let me show you how it works in practice', confidence: 0.92, speakerId: 1 },
       { startSec: 90, endSec: 100, text: 'The key advantage is privacy preservation', confidence: 0.85, speakerId: 0 },
       { startSec: 150, endSec: 160, text: 'Thanks for watching, subscribe for more', confidence: 0.93, speakerId: 0 },
@@ -96,7 +97,7 @@ function makeTestMetadata(): MaterialMetadata {
       faceCount: 2,
       hasOverlay: false,
     },
-    createDefaultExtractionConfig()
+    createDefaultExtractionConfig(),
   ).metadata;
 }
 
@@ -131,8 +132,13 @@ describe('Sprint X Full Pipeline Integration', () => {
     // Step 5: Build OpenAI request body
     const body = buildOpenAIRequestBody(messages, {
       provider: {
-        id: 'openai', name: 'OpenAI', protocol: 'openai-compatible',
-        baseUrl: 'https://api.openai.com', defaultModel: 'gpt-4', enabled: true, isBuiltIn: false,
+        id: 'openai',
+        name: 'OpenAI',
+        protocol: 'openai-compatible',
+        baseUrl: 'https://api.openai.com',
+        defaultModel: 'gpt-4',
+        enabled: true,
+        isBuiltIn: false,
       },
       responseFormat: 'json',
     });
@@ -316,8 +322,22 @@ describe('Sprint X Panel State Integration', () => {
       title: 'Highlight Reel',
       description: '60-second highlight',
       instructions: [
-        { id: 'i1', action: 'cut', target: { startSec: 25, endSec: 30 }, params: {}, confidence: 0.9, reason: 'trim gap' },
-        { id: 'i2', action: 'add_subtitle', target: { startSec: 0, endSec: 5 }, params: { text: 'Hi' }, confidence: 0.8, reason: 'intro' },
+        {
+          id: 'i1',
+          action: 'cut',
+          target: { startSec: 25, endSec: 30 },
+          params: {},
+          confidence: 0.9,
+          reason: 'trim gap',
+        },
+        {
+          id: 'i2',
+          action: 'add_subtitle',
+          target: { startSec: 0, endSec: 5 },
+          params: { text: 'Hi' },
+          confidence: 0.8,
+          reason: 'intro',
+        },
       ],
       estimatedDurationSec: 60,
     };
@@ -326,7 +346,11 @@ describe('Sprint X Panel State Integration', () => {
     expect(state.activePlan).toBeDefined();
 
     // Modify instruction
-    state = dialoguePanelReducer(state, { type: 'MODIFY_INSTRUCTION', instructionId: 'i1', updates: { confidence: 0.95 } });
+    state = dialoguePanelReducer(state, {
+      type: 'MODIFY_INSTRUCTION',
+      instructionId: 'i1',
+      updates: { confidence: 0.95 },
+    });
     expect(state.activePlan!.instructions[0].confidence).toBe(0.95);
 
     // Approve and execute
@@ -408,7 +432,13 @@ describe('Sprint X Panel State Integration', () => {
     state = publishPanelReducer(state, {
       type: 'UPLOAD_COMPLETE',
       platform: 'youtube',
-      result: { platform: 'youtube', success: true, videoId: 'vid-123', videoUrl: 'https://youtube.com/watch?v=vid-123', durationMs: 5000 },
+      result: {
+        platform: 'youtube',
+        success: true,
+        videoId: 'vid-123',
+        videoUrl: 'https://youtube.com/watch?v=vid-123',
+        durationMs: 5000,
+      },
     });
 
     state = publishPanelReducer(state, {
@@ -480,12 +510,14 @@ describe('Sprint X Cross-module Data Flow', () => {
 
   it('LLM orchestrator output flows into platform publisher', () => {
     const simulatedResponse = JSON.stringify({
-      platforms: [{
-        platform: 'youtube',
-        title: 'Test Title',
-        description: 'Test Description',
-        tags: ['test'],
-      }],
+      platforms: [
+        {
+          platform: 'youtube',
+          title: 'Test Title',
+          description: 'Test Description',
+          tags: ['test'],
+        },
+      ],
     });
 
     const parsed = parsePlatformContent(simulatedResponse);
@@ -496,7 +528,12 @@ describe('Sprint X Cross-module Data Flow', () => {
       // Platform content can be used to validate against platform specs
       const config = {
         videoPath: '/test.mp4',
-        metadata: { title: content.title, description: content.description, tags: content.tags, visibility: 'public' as const },
+        metadata: {
+          title: content.title,
+          description: content.description,
+          tags: content.tags,
+          visibility: 'public' as const,
+        },
       };
       const errors = validateUploadConfig(config, 'youtube');
       expect(errors).toEqual([]);

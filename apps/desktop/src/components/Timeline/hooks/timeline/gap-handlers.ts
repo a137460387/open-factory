@@ -1,4 +1,4 @@
-import type {Clip, GapFillStrategy, MediaAsset} from '@open-factory/editor-core';
+import type { Clip, GapFillStrategy, MediaAsset } from '@open-factory/editor-core';
 import {
   CloseGapCommand,
   FillGapCommand,
@@ -7,12 +7,12 @@ import {
   findTimelineGapAtTime,
   getClipSourceVisibleDuration,
 } from '@open-factory/editor-core';
-import type {GapMenuState} from '../../TimelineMenus';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {generateGapFillMedia} from '../../../../lib/tauri-bridge';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
+import type { GapMenuState } from '../../TimelineMenus';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { generateGapFillMedia } from '../../../../lib/tauri-bridge';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
 
 export function createGapHandlers(
   params: TimelineHandlerParams,
@@ -33,7 +33,7 @@ export function createGapHandlers(
     setRulerMenu,
   } = params;
 
-  const {findClip, getClipMediaAsset} = helpers;
+  const { findClip, getClipMediaAsset } = helpers;
 
   function openGapMenu(request: import('../../TimelineParts').GapMenuRequest): void {
     setTransitionMenu(undefined);

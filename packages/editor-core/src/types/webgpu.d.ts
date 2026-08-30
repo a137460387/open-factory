@@ -91,7 +91,13 @@ interface GPUCommandBuffer {}
 interface GPUCommandEncoder {
   beginComputePass(): GPUComputePassEncoder;
   beginRenderPass(descriptor: GPURenderPassDescriptor): GPURenderPassEncoder;
-  copyBufferToBuffer(source: GPUBuffer, sourceOffset: number, destination: GPUBuffer, destinationOffset: number, size: number): void;
+  copyBufferToBuffer(
+    source: GPUBuffer,
+    sourceOffset: number,
+    destination: GPUBuffer,
+    destinationOffset: number,
+    size: number,
+  ): void;
   finish(): GPUCommandBuffer;
 }
 
@@ -113,8 +119,17 @@ interface GPUQueue {
   submit(commandBuffers: GPUCommandBuffer[]): void;
   onSubmittedWorkDone(): Promise<void>;
   writeBuffer(buffer: GPUBuffer, bufferOffset: number, data: BufferSource, dataOffset?: number, size?: number): void;
-  writeTexture(destination: GPUImageCopyTexture, data: BufferSource, dataLayout: GPUImageDataLayout, size: GPUExtent3D): void;
-  copyExternalImageToTexture(source: GPUCopyExternalImageSource, destination: GPUCopyExternalImageDest, copySize: GPUExtent3D): void;
+  writeTexture(
+    destination: GPUImageCopyTexture,
+    data: BufferSource,
+    dataLayout: GPUImageDataLayout,
+    size: GPUExtent3D,
+  ): void;
+  copyExternalImageToTexture(
+    source: GPUCopyExternalImageSource,
+    destination: GPUCopyExternalImageDest,
+    copySize: GPUExtent3D,
+  ): void;
 }
 
 interface GPUDeviceLostInfo {

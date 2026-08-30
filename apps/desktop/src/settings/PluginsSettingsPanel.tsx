@@ -1,9 +1,6 @@
 import { Download, FilePlus } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
-import {
-  type LoadedPlugin,
-  type PluginRegistry,
-} from '../plugins/plugin-manager';
+import { type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
 import {
   getCatalogEntryInstallState,
   type PluginCatalogEntry,

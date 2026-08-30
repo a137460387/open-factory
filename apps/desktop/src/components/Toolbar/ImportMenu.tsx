@@ -27,7 +27,10 @@ export function ImportMenu({
           className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-slate-700 hover:bg-panel"
           type="button"
           data-testid="toolbar-import-media-menu-item"
-          onClick={() => { close(); onImportMedia(); }}
+          onClick={() => {
+            close();
+            onImportMedia();
+          }}
         >
           <FileDown size={14} />
           <span>{t.importMedia}</span>
@@ -36,7 +39,10 @@ export function ImportMenu({
           className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-slate-700 hover:bg-panel"
           type="button"
           data-testid="toolbar-import-subtitles-menu-item"
-          onClick={() => { close(); onImportSubtitles(); }}
+          onClick={() => {
+            close();
+            onImportSubtitles();
+          }}
         >
           <Captions size={14} />
           <span>{t.importSubtitles}</span>
@@ -63,7 +69,10 @@ export function ImportMenu({
           className="flex w-full items-center gap-2 rounded bg-brand px-2 py-2 text-left text-sm font-medium text-white"
           type="button"
           data-testid="import-data-subtitles-button"
-          onClick={() => { close(); onImportDataSubtitles(subtitleDataImportMode); }}
+          onClick={() => {
+            close();
+            onImportDataSubtitles(subtitleDataImportMode);
+          }}
         >
           <Captions size={14} />
           <span>{t.importDataSubtitles}</span>

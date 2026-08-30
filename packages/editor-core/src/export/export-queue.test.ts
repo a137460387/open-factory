@@ -95,19 +95,30 @@ describe('normalizeProgressiveExportState', () => {
   });
 
   it('returns undefined for disabled', () => {
-    expect(normalizeProgressiveExportState({ enabled: false, supported: true, partialPath: '/p', completedDuration: 0 })).toBeUndefined();
+    expect(
+      normalizeProgressiveExportState({ enabled: false, supported: true, partialPath: '/p', completedDuration: 0 }),
+    ).toBeUndefined();
   });
 
   it('returns undefined for unsupported', () => {
-    expect(normalizeProgressiveExportState({ enabled: true, supported: false, partialPath: '/p', completedDuration: 0 })).toBeUndefined();
+    expect(
+      normalizeProgressiveExportState({ enabled: true, supported: false, partialPath: '/p', completedDuration: 0 }),
+    ).toBeUndefined();
   });
 
   it('returns undefined for empty partialPath', () => {
-    expect(normalizeProgressiveExportState({ enabled: true, supported: true, partialPath: '  ', completedDuration: 0 })).toBeUndefined();
+    expect(
+      normalizeProgressiveExportState({ enabled: true, supported: true, partialPath: '  ', completedDuration: 0 }),
+    ).toBeUndefined();
   });
 
   it('normalizes valid state', () => {
-    const result = normalizeProgressiveExportState({ enabled: true, supported: true, partialPath: '/p', completedDuration: 1.5 });
+    const result = normalizeProgressiveExportState({
+      enabled: true,
+      supported: true,
+      partialPath: '/p',
+      completedDuration: 1.5,
+    });
     expect(result?.enabled).toBe(true);
     expect(result?.partialPath).toBe('/p');
   });
@@ -193,10 +204,7 @@ describe('sortExportQueueByPriority', () => {
   });
 
   it('preserves order for non-pending tasks', () => {
-    const tasks = [
-      makeTask({ id: 'a', status: 'running' }),
-      makeTask({ id: 'b', status: 'pending' }),
-    ];
+    const tasks = [makeTask({ id: 'a', status: 'running' }), makeTask({ id: 'b', status: 'pending' })];
     const result = sortExportQueueByPriority(tasks);
     expect(result[0].id).toBe('a');
   });

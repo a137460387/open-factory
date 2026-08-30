@@ -886,7 +886,7 @@ export class ThemeManager {
    * 应用预设
    */
   applyPreset(presetId: string): boolean {
-    const preset = THEME_PRESETS.find(p => p.id === presetId);
+    const preset = THEME_PRESETS.find((p) => p.id === presetId);
     if (!preset) {
       return false;
     }
@@ -1150,7 +1150,7 @@ export class ThemeManager {
    */
   private saveCustomThemes(): void {
     try {
-      const customThemes = Array.from(this.themes.values()).filter(t => !t.isDefault);
+      const customThemes = Array.from(this.themes.values()).filter((t) => !t.isDefault);
       localStorage.setItem(this.storageKey, JSON.stringify(customThemes));
     } catch {
       // Storage not available
@@ -1207,7 +1207,7 @@ export class ThemeManager {
 
     return {
       totalThemes: themes.length,
-      customThemes: themes.filter(t => !t.isDefault).length,
+      customThemes: themes.filter((t) => !t.isDefault).length,
       activeTheme: this.activeTheme.id,
       lastModified: this.activeTheme.updatedAt,
     };

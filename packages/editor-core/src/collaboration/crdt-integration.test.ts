@@ -84,11 +84,7 @@ describe('CRDT Integration', () => {
       doc.updateTrack('track-1', { name: 'Updated' });
       doc.removeTrack('track-1');
 
-      expect(events.map((e) => e.type)).toEqual([
-        'track-added',
-        'track-updated',
-        'track-removed',
-      ]);
+      expect(events.map((e) => e.type)).toEqual(['track-added', 'track-updated', 'track-removed']);
     });
 
     // ─── Clip Operations ───────────────────────────────────────
@@ -159,7 +155,10 @@ describe('CRDT Integration', () => {
     });
 
     it('gets collaborator cursors for online users', () => {
-      doc.updateAwareness({ ...makeAwareness('user-1'), cursor: { time: Date.now(), trackId: 'track-1', clipId: null } });
+      doc.updateAwareness({
+        ...makeAwareness('user-1'),
+        cursor: { time: Date.now(), trackId: 'track-1', clipId: null },
+      });
       doc.updateAwareness({ ...makeAwareness('user-2'), isOnline: false });
 
       const cursors = doc.getCollaboratorCursors();

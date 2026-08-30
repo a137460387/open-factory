@@ -1,32 +1,65 @@
 import { describe, it, expect } from 'vitest';
-import { detectAudioBeats, analyzeVideoMotion, matchRhythmToTemplate, createRhythmAlignedTemplate } from './rhythm-matcher';
+import {
+  detectAudioBeats,
+  analyzeVideoMotion,
+  matchRhythmToTemplate,
+  createRhythmAlignedTemplate,
+} from './rhythm-matcher';
 import type { EditingTemplate } from '../models/template-schema';
 import type { AudioRhythmProfile } from './rhythm-matcher';
 
 function makeTemplate(overrides: Partial<EditingTemplate> = {}): EditingTemplate {
   return {
     metadata: {
-      id: 'tpl-rhythm', version: '1.0', name: 'Rhythm Template', description: '',
-      category: 'music-video', tags: [], author: 'test',
-      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      aspectRatio: '16:9', resolutionWidth: 1920, resolutionHeight: 1080,
-      frameRate: 30, estimatedDurationSec: 10, difficulty: 'beginner',
+      id: 'tpl-rhythm',
+      version: '1.0',
+      name: 'Rhythm Template',
+      description: '',
+      category: 'music-video',
+      tags: [],
+      author: 'test',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      aspectRatio: '16:9',
+      resolutionWidth: 1920,
+      resolutionHeight: 1080,
+      frameRate: 30,
+      estimatedDurationSec: 10,
+      difficulty: 'beginner',
     },
-    tracks: [{
-      type: 'video', name: 'main',
-      clips: [{
-        type: 'video', durationSec: 10, flexibleDuration: false,
-        placeholder: 'user-video', placeholderParams: {},
-        effects: [], keyframes: [], colorNodes: [],
-        opacity: 1, speed: 1, volume: 1,
-      }],
-      transitions: [], trackEffects: [], muted: false, locked: false,
-    }],
+    tracks: [
+      {
+        type: 'video',
+        name: 'main',
+        clips: [
+          {
+            type: 'video',
+            durationSec: 10,
+            flexibleDuration: false,
+            placeholder: 'user-video',
+            placeholderParams: {},
+            effects: [],
+            keyframes: [],
+            colorNodes: [],
+            opacity: 1,
+            speed: 1,
+            volume: 1,
+          },
+        ],
+        transitions: [],
+        trackEffects: [],
+        muted: false,
+        locked: false,
+      },
+    ],
     audioLayout: {
       tracks: [{ role: 'music', volumeDb: -18, pan: 0, fadeInSec: 0.5, fadeOutSec: 0.5 }],
-      masterLoudnessTarget: -14, masterLimiter: true,
+      masterLoudnessTarget: -14,
+      masterLimiter: true,
     },
-    globalColorNodes: [], variables: [], ...overrides,
+    globalColorNodes: [],
+    variables: [],
+    ...overrides,
   };
 }
 
@@ -131,14 +164,19 @@ describe('Rhythm Matcher', () => {
       const samples = generateSineWave(2, 440, sr);
       for (let i = 11000; i < 11500; i++) samples[i] = 0.95;
       for (let i = 33000; i < 33500; i++) samples[i] = 0.95;
-      const frames = [{ time: 0.5, motionMagnitude: 0.8 }, { time: 1.0, motionMagnitude: 0.9 }];
+      const frames = [
+        { time: 0.5, motionMagnitude: 0.8 },
+        { time: 1.0, motionMagnitude: 0.9 },
+      ];
       const result = createRhythmAlignedTemplate(makeTemplate(), samples, frames, { sampleRate: sr });
       expect(result.metadata.id).toBe('tpl-rhythm');
     });
 
     it('accepts custom options', () => {
       const result = createRhythmAlignedTemplate(makeTemplate(), [], [], {
-        sampleRate: 22050, fps: 24, audioWeight: 0.5,
+        sampleRate: 22050,
+        fps: 24,
+        audioWeight: 0.5,
       });
       expect(result.metadata.id).toBe('tpl-rhythm');
     });

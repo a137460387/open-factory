@@ -49,12 +49,56 @@ export const PrimarySlidersPanel: React.FC<PrimarySlidersPanelProps> = ({ params
   return (
     <div className="p-3 space-y-3" data-testid="primary-sliders-panel">
       <h3 className="text-sm font-medium text-gray-200">一级滑块</h3>
-      <Slider label="色温" value={params.temperature} min={-100} max={100} onChange={(v) => update('temperature', v)} disabled={disabled} />
-      <Slider label="色调" value={params.tint} min={-100} max={100} onChange={(v) => update('tint', v)} disabled={disabled} />
-      <Slider label="对比度" value={params.contrast} min={-100} max={100} onChange={(v) => update('contrast', v)} disabled={disabled} />
-      <Slider label="轴心" value={params.pivot} min={0} max={1} step={0.01} onChange={(v) => update('pivot', v)} disabled={disabled} />
-      <Slider label="饱和度" value={params.saturation} min={0} max={200} onChange={(v) => update('saturation', v)} disabled={disabled} />
-      <Slider label="色相" value={params.hue} min={-180} max={180} onChange={(v) => update('hue', v)} unit="°" disabled={disabled} />
+      <Slider
+        label="色温"
+        value={params.temperature}
+        min={-100}
+        max={100}
+        onChange={(v) => update('temperature', v)}
+        disabled={disabled}
+      />
+      <Slider
+        label="色调"
+        value={params.tint}
+        min={-100}
+        max={100}
+        onChange={(v) => update('tint', v)}
+        disabled={disabled}
+      />
+      <Slider
+        label="对比度"
+        value={params.contrast}
+        min={-100}
+        max={100}
+        onChange={(v) => update('contrast', v)}
+        disabled={disabled}
+      />
+      <Slider
+        label="轴心"
+        value={params.pivot}
+        min={0}
+        max={1}
+        step={0.01}
+        onChange={(v) => update('pivot', v)}
+        disabled={disabled}
+      />
+      <Slider
+        label="饱和度"
+        value={params.saturation}
+        min={0}
+        max={200}
+        onChange={(v) => update('saturation', v)}
+        disabled={disabled}
+      />
+      <Slider
+        label="色相"
+        value={params.hue}
+        min={-180}
+        max={180}
+        onChange={(v) => update('hue', v)}
+        unit="°"
+        disabled={disabled}
+      />
     </div>
   );
 };

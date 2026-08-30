@@ -1,7 +1,15 @@
-import type {TimelineAccessor} from './index';
-import {Timeline, Track, createTrack, normalizeTrackCompressor, normalizeTrackEQ, normalizeTrackPan, normalizeTrackVolume} from '../../model';
-import {Command} from '../command';
-import {findTrack} from './utils';
+import type { TimelineAccessor } from './index';
+import {
+  Timeline,
+  Track,
+  createTrack,
+  normalizeTrackCompressor,
+  normalizeTrackEQ,
+  normalizeTrackPan,
+  normalizeTrackVolume,
+} from '../../model';
+import { Command } from '../command';
+import { findTrack } from './utils';
 
 export class AddTrackCommand implements Command {
   readonly description: string;

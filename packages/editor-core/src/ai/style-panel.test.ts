@@ -25,9 +25,32 @@ function makeStyle(overrides: Partial<StyleFingerprint> = {}): StyleFingerprint 
     totalClipCount: 10,
     totalDurationSec: 60,
     transitions: [],
-    rhythm: { avgClipDurationSec: 3, clipDurationStddev: 1, cutsPerMinute: 20, regularity: 0.7, durationHistogram: [], shortClipRatio: 0.2, longClipRatio: 0.1 },
-    colorGrading: { brightness: { mean: 0, stddev: 0, count: 0 }, contrast: { mean: 0, stddev: 0, count: 0 }, saturation: { mean: 0, stddev: 0, count: 0 }, hue: { mean: 0, stddev: 0, count: 0 }, preferredLutPath: null, lutUsageRatio: 0, temperatureTendency: 'neutral' },
-    audioProcessing: { avgTargetLoudness: -14, loudnessStddev: 0, avgFadeInSec: 0.3, avgFadeOutSec: 0.5, musicSpeechRatio: 0.5, crossfadeRatio: 0.3 },
+    rhythm: {
+      avgClipDurationSec: 3,
+      clipDurationStddev: 1,
+      cutsPerMinute: 20,
+      regularity: 0.7,
+      durationHistogram: [],
+      shortClipRatio: 0.2,
+      longClipRatio: 0.1,
+    },
+    colorGrading: {
+      brightness: { mean: 0, stddev: 0, count: 0 },
+      contrast: { mean: 0, stddev: 0, count: 0 },
+      saturation: { mean: 0, stddev: 0, count: 0 },
+      hue: { mean: 0, stddev: 0, count: 0 },
+      preferredLutPath: null,
+      lutUsageRatio: 0,
+      temperatureTendency: 'neutral',
+    },
+    audioProcessing: {
+      avgTargetLoudness: -14,
+      loudnessStddev: 0,
+      avgFadeInSec: 0.3,
+      avgFadeOutSec: 0.5,
+      musicSpeechRatio: 0.5,
+      crossfadeRatio: 0.3,
+    },
     effects: [],
     tags: ['test'],
     ...overrides,
@@ -96,8 +119,32 @@ describe('style-panel', () => {
     });
 
     it('starts comparison and computes similarity', () => {
-      const s1 = makeStyle({ id: 'a', name: 'A', rhythm: { avgClipDurationSec: 3, clipDurationStddev: 1, cutsPerMinute: 20, regularity: 0.7, durationHistogram: [], shortClipRatio: 0.2, longClipRatio: 0.1 } });
-      const s2 = makeStyle({ id: 'b', name: 'B', rhythm: { avgClipDurationSec: 6, clipDurationStddev: 2, cutsPerMinute: 10, regularity: 0.5, durationHistogram: [], shortClipRatio: 0.1, longClipRatio: 0.3 } });
+      const s1 = makeStyle({
+        id: 'a',
+        name: 'A',
+        rhythm: {
+          avgClipDurationSec: 3,
+          clipDurationStddev: 1,
+          cutsPerMinute: 20,
+          regularity: 0.7,
+          durationHistogram: [],
+          shortClipRatio: 0.2,
+          longClipRatio: 0.1,
+        },
+      });
+      const s2 = makeStyle({
+        id: 'b',
+        name: 'B',
+        rhythm: {
+          avgClipDurationSec: 6,
+          clipDurationStddev: 2,
+          cutsPerMinute: 10,
+          regularity: 0.5,
+          durationHistogram: [],
+          shortClipRatio: 0.1,
+          longClipRatio: 0.3,
+        },
+      });
       let state = stylePanelReducer(createInitialStylePanelState(), { type: 'LOAD_STYLES', styles: [s1, s2] });
       state = stylePanelReducer(state, { type: 'START_COMPARE', styleIds: ['a', 'b'] });
       expect(state.phase).toBe('comparing');

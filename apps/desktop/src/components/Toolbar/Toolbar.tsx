@@ -447,11 +447,7 @@ export function Toolbar(props: ToolbarProps) {
         onStartMacroRecording={props.onStartMacroRecording}
         onStopMacroRecording={props.onStopMacroRecording}
       />
-      <HelpMenu
-        open={openMenu === 'help'}
-        onToggle={toggle('help')}
-        onStartTutorial={props.onStartTutorial}
-      />
+      <HelpMenu open={openMenu === 'help'} onToggle={toggle('help')} onStartTutorial={props.onStartTutorial} />
       <div className="mr-2 min-w-0 max-w-[180px]">
         <div className="truncate text-sm font-semibold text-ink" data-testid="toolbar-project-name">
           {project.name}
@@ -463,11 +459,36 @@ export function Toolbar(props: ToolbarProps) {
           ) : null}
         </div>
       </div>
-      <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
-      <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />
-      <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
-      <ToolButton title={t.saveEncryptedProject} onClick={props.onSaveEncryptedProject} icon={<LockKeyhole size={17} />} testId="toolbar-save-encrypted-project-button" />
-      <ToolButton title={t.archiveProject} onClick={props.onArchiveProject} icon={<Archive size={17} />} testId="toolbar-archive-project-button" />
+      <ToolButton
+        title={t.newProject}
+        onClick={props.onNewProject}
+        icon={<FilePlus2 size={17} />}
+        testId="toolbar-new-project-button"
+      />
+      <ToolButton
+        title={t.openProject}
+        onClick={props.onOpenProject}
+        icon={<FolderOpen size={17} />}
+        testId="toolbar-open-project-button"
+      />
+      <ToolButton
+        title={t.saveProject}
+        onClick={props.onSaveProject}
+        icon={<Save size={17} />}
+        testId="toolbar-save-project-button"
+      />
+      <ToolButton
+        title={t.saveEncryptedProject}
+        onClick={props.onSaveEncryptedProject}
+        icon={<LockKeyhole size={17} />}
+        testId="toolbar-save-encrypted-project-button"
+      />
+      <ToolButton
+        title={t.archiveProject}
+        onClick={props.onArchiveProject}
+        icon={<Archive size={17} />}
+        testId="toolbar-archive-project-button"
+      />
       <div className="mx-1 h-7 w-px bg-line" />
       <ImportMenu
         open={openMenu === 'import'}
@@ -476,8 +497,18 @@ export function Toolbar(props: ToolbarProps) {
         onImportSubtitles={props.onImportSubtitles}
         onImportDataSubtitles={props.onImportDataSubtitles}
       />
-      <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
-      <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
+      <ToolButton
+        title={t.importMedia}
+        onClick={props.onImportMedia}
+        icon={<FileDown size={17} />}
+        testId="toolbar-import-media-button"
+      />
+      <ToolButton
+        title={t.importSubtitles}
+        onClick={props.onImportSubtitles}
+        icon={<Captions size={17} />}
+        testId="import-subtitles-button"
+      />
       <RecordMenu
         open={openMenu === 'record'}
         onToggle={toggle('record')}
@@ -486,10 +517,31 @@ export function Toolbar(props: ToolbarProps) {
         onStartRecording={props.onStartRecording}
         onStopRecording={props.onStopRecording}
       />
-      <ToolButton title={canExport ? t.exportVideo : t.exportDisabled} disabled={!canExport || isExporting} onClick={props.onExportVideo} icon={<Download size={17} />} testId="toolbar-export-button" />
-      <ToolButton title={t.exportTimeline} disabled={isExporting} onClick={props.onExportTimeline} icon={<FileDown size={17} />} testId="toolbar-export-timeline-button" />
-      <ToolButton title={canExport ? t.exportCurrentFrame : t.exportDisabled} disabled={!canExport || isExporting} onClick={props.onExportCurrentFrame} icon={<ImageDown size={17} />} testId="toolbar-export-frame-button" />
-      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.previewQuality}>
+      <ToolButton
+        title={canExport ? t.exportVideo : t.exportDisabled}
+        disabled={!canExport || isExporting}
+        onClick={props.onExportVideo}
+        icon={<Download size={17} />}
+        testId="toolbar-export-button"
+      />
+      <ToolButton
+        title={t.exportTimeline}
+        disabled={isExporting}
+        onClick={props.onExportTimeline}
+        icon={<FileDown size={17} />}
+        testId="toolbar-export-timeline-button"
+      />
+      <ToolButton
+        title={canExport ? t.exportCurrentFrame : t.exportDisabled}
+        disabled={!canExport || isExporting}
+        onClick={props.onExportCurrentFrame}
+        icon={<ImageDown size={17} />}
+        testId="toolbar-export-frame-button"
+      />
+      <label
+        className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.previewQuality}
+      >
         <span>{t.previewQuality}</span>
         <select
           className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
@@ -498,13 +550,30 @@ export function Toolbar(props: ToolbarProps) {
           onChange={(event) => props.onPreviewQualityModeChange(event.target.value as PreviewQualityMode)}
         >
           {PREVIEW_QUALITY_MODES.map((mode) => (
-            <option key={mode} value={mode}>{t.previewQualityOptions[mode]}</option>
+            <option key={mode} value={mode}>
+              {t.previewQualityOptions[mode]}
+            </option>
           ))}
         </select>
       </label>
-      <ToolButton title={props.previewWindowOpen ? t.previewWindowOpen : t.popoutPreview} onClick={props.onPopoutPreview} icon={<Monitor size={17} />} testId="toolbar-popout-preview-button" active={props.previewWindowOpen} />
-      <ToolButton title={t.gridSnap} onClick={props.onToggleTimelineGridSnap} icon={<Grid2X2 size={17} />} testId="toolbar-grid-snap-button" active={props.timelineGridSettings.enabled} />
-      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.gridSnapUnit}>
+      <ToolButton
+        title={props.previewWindowOpen ? t.previewWindowOpen : t.popoutPreview}
+        onClick={props.onPopoutPreview}
+        icon={<Monitor size={17} />}
+        testId="toolbar-popout-preview-button"
+        active={props.previewWindowOpen}
+      />
+      <ToolButton
+        title={t.gridSnap}
+        onClick={props.onToggleTimelineGridSnap}
+        icon={<Grid2X2 size={17} />}
+        testId="toolbar-grid-snap-button"
+        active={props.timelineGridSettings.enabled}
+      />
+      <label
+        className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.gridSnapUnit}
+      >
         <span>{t.gridSnapUnit}</span>
         <select
           className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
@@ -513,7 +582,9 @@ export function Toolbar(props: ToolbarProps) {
           onChange={(event) => props.onTimelineGridUnitChange(event.target.value as TimelineGridUnit)}
         >
           {TIMELINE_GRID_UNITS.map((unit) => (
-            <option key={unit} value={unit}>{t.gridSnapUnits[unit]}</option>
+            <option key={unit} value={unit}>
+              {t.gridSnapUnits[unit]}
+            </option>
           ))}
         </select>
       </label>
@@ -532,17 +603,41 @@ export function Toolbar(props: ToolbarProps) {
           <WorkspaceLayoutPicker
             layouts={props.workspaceLayouts}
             activeLayoutId={props.activeWorkspaceLayoutId}
-            onApply={(layoutId) => { setOpenMenu(null); props.onApplyWorkspaceLayout(layoutId); }}
-            onSave={() => { setOpenMenu(null); props.onSaveWorkspaceLayout(); }}
+            onApply={(layoutId) => {
+              setOpenMenu(null);
+              props.onApplyWorkspaceLayout(layoutId);
+            }}
+            onSave={() => {
+              setOpenMenu(null);
+              props.onSaveWorkspaceLayout();
+            }}
           />
         ) : null}
       </div>
       {checkCostAlert(usageRecords, costAlertThreshold) ? (
-        <ToolButton title={zhCN.settings.aiServices.costAlertTitle} onClick={props.onOpenSettings} icon={<AlertTriangle size={17} className="text-amber-500" />} testId="toolbar-cost-alert" />
+        <ToolButton
+          title={zhCN.settings.aiServices.costAlertTitle}
+          onClick={props.onOpenSettings}
+          icon={<AlertTriangle size={17} className="text-amber-500" />}
+          testId="toolbar-cost-alert"
+        />
       ) : null}
-      <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
-      <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
-      <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
+      <ToolButton
+        title={t.settings}
+        onClick={props.onOpenSettings}
+        icon={<Settings size={17} />}
+        testId="toolbar-settings-button"
+      />
+      <ToolButton
+        title={t.clearMediaCache}
+        onClick={props.onClearCache}
+        icon={<Trash2 size={17} />}
+        testId="settings-clear-cache-button"
+      />
+      <label
+        className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.autosaveInterval}
+      >
         <span>{t.autosave}</span>
         <input
           className="h-6 w-12 rounded border border-line bg-white px-1 text-right tabular-nums text-slate-700"
@@ -556,7 +651,10 @@ export function Toolbar(props: ToolbarProps) {
         />
         <span>{zhCN.common.secondsShort}</span>
       </label>
-      <div className="flex h-9 min-w-[380px] items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.whisperExecutable}>
+      <div
+        className="flex h-9 min-w-[380px] items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600"
+        title={t.whisperExecutable}
+      >
         <Mic2 size={14} />
         <input
           className="h-6 min-w-0 flex-1 rounded border border-line bg-white px-1 text-slate-700"
@@ -594,21 +692,110 @@ export function Toolbar(props: ToolbarProps) {
         </button>
       </div>
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
-      <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
-      <ToolButton title={t.history} onClick={props.onToggleHistoryPanel} icon={<History size={17} />} testId="toolbar-history-button" active={props.historyPanelOpen} />
-      <ToolButton title={t.projectDocumentation} onClick={props.onToggleProjectDocumentation} icon={<FileText size={17} />} testId="toolbar-project-documentation-button" active={props.projectDocumentationOpen} />
-      <ToolButton title={t.storyboard} onClick={props.onToggleStoryboard} icon={<LayoutGrid size={17} />} testId="storyboard-toggle-button" active={props.storyboardOpen} />
-      <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
-      <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
-      <ToolButton title={zhCN.aiRoughCut.title} onClick={props.onToggleAIRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-ai-rough-cut-button" active={props.aiRoughCutOpen} />
-      <ToolButton title={zhCN.directorMode.title} onClick={props.onToggleDirectorMode} icon={<WandSparkles size={17} />} testId="toolbar-director-mode-button" active={props.directorModeOpen} />
-      <ToolButton title={zhCN.musicMatch.title} onClick={props.onToggleMusicMatch} icon={<WandSparkles size={17} />} testId="toolbar-music-match-button" active={props.musicMatchOpen} />
-      <ToolButton title={zhCN.highlightReel.title} onClick={props.onToggleHighlightReel} icon={<WandSparkles size={17} />} testId="toolbar-highlight-reel-button" active={props.highlightReelOpen} />
-      <ToolButton title={zhCN.contextualTranslation.title} onClick={props.onToggleContextualTranslation} icon={<WandSparkles size={17} />} testId="toolbar-contextual-translation-button" active={props.contextualTranslationOpen} />
-      <ToolButton title={zhCN.aiChatEditor.title} onClick={props.onToggleAIChatEditor} icon={<WandSparkles size={17} />} testId="toolbar-ai-chat-editor-button" active={props.aiChatEditorOpen} />
-      <ToolButton title={featureStrings.smartCreation.title} onClick={props.onToggleSmartCreation} icon={<WandSparkles size={17} />} testId="toolbar-smart-creation-button" active={props.smartCreationOpen} />
-      <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
+      <ToolButton
+        title={t.undo}
+        disabled={!historyMeta.canUndo}
+        onClick={props.onUndo}
+        icon={<Undo2 size={17} />}
+        testId="toolbar-undo-button"
+      />
+      <ToolButton
+        title={t.redo}
+        disabled={!historyMeta.canRedo}
+        onClick={props.onRedo}
+        icon={<Redo2 size={17} />}
+        testId="toolbar-redo-button"
+      />
+      <ToolButton
+        title={t.history}
+        onClick={props.onToggleHistoryPanel}
+        icon={<History size={17} />}
+        testId="toolbar-history-button"
+        active={props.historyPanelOpen}
+      />
+      <ToolButton
+        title={t.projectDocumentation}
+        onClick={props.onToggleProjectDocumentation}
+        icon={<FileText size={17} />}
+        testId="toolbar-project-documentation-button"
+        active={props.projectDocumentationOpen}
+      />
+      <ToolButton
+        title={t.storyboard}
+        onClick={props.onToggleStoryboard}
+        icon={<LayoutGrid size={17} />}
+        testId="storyboard-toggle-button"
+        active={props.storyboardOpen}
+      />
+      <ToolButton
+        title={t.splitSelectedClip}
+        onClick={props.onSplitSelected}
+        icon={<Scissors size={17} />}
+        testId="toolbar-split-button"
+      />
+      <ToolButton
+        title={t.smartRoughCut}
+        onClick={props.onToggleSmartRoughCut}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-smart-rough-cut-button"
+        active={props.smartRoughCutOpen}
+      />
+      <ToolButton
+        title={zhCN.aiRoughCut.title}
+        onClick={props.onToggleAIRoughCut}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-ai-rough-cut-button"
+        active={props.aiRoughCutOpen}
+      />
+      <ToolButton
+        title={zhCN.directorMode.title}
+        onClick={props.onToggleDirectorMode}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-director-mode-button"
+        active={props.directorModeOpen}
+      />
+      <ToolButton
+        title={zhCN.musicMatch.title}
+        onClick={props.onToggleMusicMatch}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-music-match-button"
+        active={props.musicMatchOpen}
+      />
+      <ToolButton
+        title={zhCN.highlightReel.title}
+        onClick={props.onToggleHighlightReel}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-highlight-reel-button"
+        active={props.highlightReelOpen}
+      />
+      <ToolButton
+        title={zhCN.contextualTranslation.title}
+        onClick={props.onToggleContextualTranslation}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-contextual-translation-button"
+        active={props.contextualTranslationOpen}
+      />
+      <ToolButton
+        title={zhCN.aiChatEditor.title}
+        onClick={props.onToggleAIChatEditor}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-ai-chat-editor-button"
+        active={props.aiChatEditorOpen}
+      />
+      <ToolButton
+        title={featureStrings.smartCreation.title}
+        onClick={props.onToggleSmartCreation}
+        icon={<WandSparkles size={17} />}
+        testId="toolbar-smart-creation-button"
+        active={props.smartCreationOpen}
+      />
+      <ToolButton
+        title={t.createMulticamSequence}
+        disabled={!props.canCreateMulticamSequence}
+        onClick={props.onCreateMulticamSequence}
+        icon={<PanelsTopLeft size={17} />}
+        testId="toolbar-create-multicam-button"
+      />
       <div className="relative">
         <button
           className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition${openMenu === 'splitLayout' ? ' border-brand bg-brand text-white' : ''}${props.canApplySplitLayout ? ' hover:border-line hover:bg-panel hover:text-ink' : ' opacity-40'}`}
@@ -626,7 +813,10 @@ export function Toolbar(props: ToolbarProps) {
             customLayouts={props.customSplitLayouts}
             customRatio={customSplitRatio}
             onCustomRatioChange={setCustomSplitRatio}
-            onApply={(layoutId) => { setOpenMenu(null); props.onApplySplitLayout(layoutId); }}
+            onApply={(layoutId) => {
+              setOpenMenu(null);
+              props.onApplySplitLayout(layoutId);
+            }}
             onSaveCustom={async () => {
               const layoutId = await props.onSaveCustomSplitLayout(customSplitRatio);
               setOpenMenu(null);
@@ -635,7 +825,13 @@ export function Toolbar(props: ToolbarProps) {
           />
         ) : null}
       </div>
-      <ToolButton title={t.applyPiPLayout} disabled={!props.canApplyPiPLayout} onClick={props.onApplyPiPLayout} icon={<PictureInPicture2 size={17} />} testId="toolbar-pip-button" />
+      <ToolButton
+        title={t.applyPiPLayout}
+        disabled={!props.canApplyPiPLayout}
+        onClick={props.onApplyPiPLayout}
+        icon={<PictureInPicture2 size={17} />}
+        testId="toolbar-pip-button"
+      />
       <select
         className="h-9 rounded-md border border-line bg-panel px-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
         title={t.pipPosition}
@@ -678,7 +874,12 @@ export function Toolbar(props: ToolbarProps) {
           </div>
           <div className="w-10 text-right text-xs tabular-nums text-slate-600">{Math.round(exportProgress * 100)}%</div>
           {isExporting ? (
-            <ToolButton title={t.cancelExport} onClick={props.onCancelExport} icon={<XCircle size={16} />} testId="toolbar-cancel-export-button" />
+            <ToolButton
+              title={t.cancelExport}
+              onClick={props.onCancelExport}
+              icon={<XCircle size={16} />}
+              testId="toolbar-cancel-export-button"
+            />
           ) : null}
           {props.lastExportPath && props.onRevealExport ? (
             <button

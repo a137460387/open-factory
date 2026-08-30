@@ -18,19 +18,21 @@ const SERVICE_TYPES: AIServiceType[] = [
 
 export function AIServicesSettingsPanel() {
   const t = zhCN.settings.aiServices;
-  const store = useAISettingsStore(useShallow((s) => ({
-    providers: s.providers,
-    ollamaReachable: s.ollamaReachable,
-    ollamaModels: s.ollamaModels,
-    serviceMapping: s.serviceMapping,
-    toggleProvider: s.toggleProvider,
-    testConnection: s.testConnection,
-    addCustomProvider: s.addCustomProvider,
-    removeCustomProvider: s.removeCustomProvider,
-    updateProvider: s.updateProvider,
-    setProviderApiKey: s.setProviderApiKey,
-    setServiceMapping: s.setServiceMapping,
-  })));
+  const store = useAISettingsStore(
+    useShallow((s) => ({
+      providers: s.providers,
+      ollamaReachable: s.ollamaReachable,
+      ollamaModels: s.ollamaModels,
+      serviceMapping: s.serviceMapping,
+      toggleProvider: s.toggleProvider,
+      testConnection: s.testConnection,
+      addCustomProvider: s.addCustomProvider,
+      removeCustomProvider: s.removeCustomProvider,
+      updateProvider: s.updateProvider,
+      setProviderApiKey: s.setProviderApiKey,
+      setServiceMapping: s.setServiceMapping,
+    })),
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; error?: string } | null>>({});

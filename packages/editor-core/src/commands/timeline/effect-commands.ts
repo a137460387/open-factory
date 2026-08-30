@@ -1,12 +1,12 @@
-import type {TimelineAccessor} from './index';
-import {EffectPreset, buildEffectPresetClipPatch} from '../../effect-presets';
-import {Effect, EffectParams, EffectType, cloneEffects, normalizeEffect, normalizeEffects} from '../../effects';
-import {Timeline, createId} from '../../model';
-import type {Clip} from '../../model';
-import {replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {UpdateClipCommand} from './clip-update-commands';
-import {findClip} from './utils';
+import type { TimelineAccessor } from './index';
+import { EffectPreset, buildEffectPresetClipPatch } from '../../effect-presets';
+import { Effect, EffectParams, EffectType, cloneEffects, normalizeEffect, normalizeEffects } from '../../effects';
+import { Timeline, createId } from '../../model';
+import type { Clip } from '../../model';
+import { replaceClip } from '../../timeline';
+import { Command } from '../command';
+import { UpdateClipCommand } from './clip-update-commands';
+import { findClip } from './utils';
 
 export class ApplyEffectPresetCommand implements Command {
   readonly description = 'Apply effect preset';

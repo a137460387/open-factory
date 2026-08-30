@@ -8,15 +8,31 @@
  * 4. 快捷键冲突检测
  */
 
-import {logger} from '../utils/logger.js';
-import type {ModifierKey, ShortcutActionType, ShortcutDefinition, ShortcutScheme, ShortcutConflict, ShortcutStats, ShortcutConfig} from './shortcut-types.js';
-import {DEFAULT_SHORTCUT_CONFIG} from './shortcut-types.js';
-import {ALL_SHORTCUT_SCHEMES, PREMIERE_SCHEME} from './shortcut-schemes.js';
+import { logger } from '../utils/logger.js';
+import type {
+  ModifierKey,
+  ShortcutActionType,
+  ShortcutDefinition,
+  ShortcutScheme,
+  ShortcutConflict,
+  ShortcutStats,
+  ShortcutConfig,
+} from './shortcut-types.js';
+import { DEFAULT_SHORTCUT_CONFIG } from './shortcut-types.js';
+import { ALL_SHORTCUT_SCHEMES, PREMIERE_SCHEME } from './shortcut-schemes.js';
 
 // Re-export types and schemes for backward compatibility
-export type {ModifierKey, ShortcutActionType, ShortcutDefinition, ShortcutScheme, ShortcutConflict, ShortcutStats, ShortcutConfig} from './shortcut-types.js';
-export {DEFAULT_SHORTCUT_CONFIG} from './shortcut-types.js';
-export {PREMIERE_SCHEME, FINAL_CUT_SCHEME, DAVINCI_RESOLVE_SCHEME, ALL_SHORTCUT_SCHEMES} from './shortcut-schemes.js';
+export type {
+  ModifierKey,
+  ShortcutActionType,
+  ShortcutDefinition,
+  ShortcutScheme,
+  ShortcutConflict,
+  ShortcutStats,
+  ShortcutConfig,
+} from './shortcut-types.js';
+export { DEFAULT_SHORTCUT_CONFIG } from './shortcut-types.js';
+export { PREMIERE_SCHEME, FINAL_CUT_SCHEME, DAVINCI_RESOLVE_SCHEME, ALL_SHORTCUT_SCHEMES } from './shortcut-schemes.js';
 
 // ==================== 快捷键管理器 ====================
 
@@ -93,7 +109,7 @@ export class ShortcutManager {
   }
 
   private findShortcut(key: string, modifiers: ModifierKey[]): ShortcutDefinition | undefined {
-    return this.activeScheme.shortcuts.find(shortcut => {
+    return this.activeScheme.shortcuts.find((shortcut) => {
       if (!shortcut.enabled) return false;
       if (!shortcut.keys.includes(key)) return false;
 
@@ -118,20 +134,20 @@ export class ShortcutManager {
   private normalizeKey(key: string): string {
     const keyMap: Record<string, string> = {
       ' ': 'Space',
-      'ArrowUp': 'ArrowUp',
-      'ArrowDown': 'ArrowDown',
-      'ArrowLeft': 'ArrowLeft',
-      'ArrowRight': 'ArrowRight',
-      'Escape': 'Escape',
-      'Delete': 'Delete',
-      'Backspace': 'Backspace',
-      'Tab': 'Tab',
-      'Enter': 'Enter',
-      'Home': 'Home',
-      'End': 'End',
-      'PageUp': 'PageUp',
-      'PageDown': 'PageDown',
-      'Insert': 'Insert',
+      ArrowUp: 'ArrowUp',
+      ArrowDown: 'ArrowDown',
+      ArrowLeft: 'ArrowLeft',
+      ArrowRight: 'ArrowRight',
+      Escape: 'Escape',
+      Delete: 'Delete',
+      Backspace: 'Backspace',
+      Tab: 'Tab',
+      Enter: 'Enter',
+      Home: 'Home',
+      End: 'End',
+      PageUp: 'PageUp',
+      PageDown: 'PageDown',
+      Insert: 'Insert',
     };
     return keyMap[key] || key.toUpperCase();
   }
@@ -190,7 +206,7 @@ export class ShortcutManager {
   }
 
   updateShortcut(shortcutId: string, updates: Partial<ShortcutDefinition>): boolean {
-    const shortcut = this.activeScheme.shortcuts.find(s => s.id === shortcutId);
+    const shortcut = this.activeScheme.shortcuts.find((s) => s.id === shortcutId);
     if (!shortcut || !shortcut.customizable) {
       return false;
     }
@@ -211,19 +227,15 @@ export class ShortcutManager {
     return true;
   }
 
-  checkConflict(
-    shortcutId: string,
-    keys: string[],
-    modifiers: ModifierKey[]
-  ): ShortcutConflict | null {
+  checkConflict(shortcutId: string, keys: string[], modifiers: ModifierKey[]): ShortcutConflict | null {
     for (const shortcut of this.activeScheme.shortcuts) {
       if (shortcut.id === shortcutId || !shortcut.enabled) continue;
 
       if (shortcut.keys.length !== keys.length) continue;
 
       const keysMatch = shortcut.keys.every((k, i) => k === keys[i]);
-      const modifiersMatch = shortcut.modifiers.length === modifiers.length &&
-        shortcut.modifiers.every((m, i) => m === modifiers[i]);
+      const modifiersMatch =
+        shortcut.modifiers.length === modifiers.length && shortcut.modifiers.every((m, i) => m === modifiers[i]);
 
       if (keysMatch && modifiersMatch) {
         return {
@@ -242,10 +254,10 @@ export class ShortcutManager {
 
     return {
       totalShortcuts: shortcuts.length,
-      enabledShortcuts: shortcuts.filter(s => s.enabled).length,
-      disabledShortcuts: shortcuts.filter(s => !s.enabled).length,
+      enabledShortcuts: shortcuts.filter((s) => s.enabled).length,
+      disabledShortcuts: shortcuts.filter((s) => !s.enabled).length,
       conflicts: 0,
-      customShortcuts: shortcuts.filter(s => s.customizable).length,
+      customShortcuts: shortcuts.filter((s) => s.customizable).length,
     };
   }
 
@@ -270,15 +282,16 @@ export class ShortcutManager {
   searchShortcuts(query: string): ShortcutDefinition[] {
     const lowerQuery = query.toLowerCase();
 
-    return this.activeScheme.shortcuts.filter(shortcut =>
-      shortcut.label.toLowerCase().includes(lowerQuery) ||
-      shortcut.description.toLowerCase().includes(lowerQuery) ||
-      shortcut.action.toLowerCase().includes(lowerQuery)
+    return this.activeScheme.shortcuts.filter(
+      (shortcut) =>
+        shortcut.label.toLowerCase().includes(lowerQuery) ||
+        shortcut.description.toLowerCase().includes(lowerQuery) ||
+        shortcut.action.toLowerCase().includes(lowerQuery),
     );
   }
 
   resetToDefault(): void {
-    const defaultScheme = ALL_SHORTCUT_SCHEMES.find(s => s.isDefault);
+    const defaultScheme = ALL_SHORTCUT_SCHEMES.find((s) => s.isDefault);
     if (defaultScheme) {
       this.activeScheme = { ...defaultScheme };
       this.config.activeSchemeId = defaultScheme.id;
@@ -288,10 +301,14 @@ export class ShortcutManager {
   }
 
   exportConfig(): string {
-    return JSON.stringify({
-      schemeId: this.activeScheme.id,
-      shortcuts: this.activeScheme.shortcuts,
-    }, null, 2);
+    return JSON.stringify(
+      {
+        schemeId: this.activeScheme.id,
+        shortcuts: this.activeScheme.shortcuts,
+      },
+      null,
+      2,
+    );
   }
 
   importConfig(configJson: string): boolean {
@@ -304,7 +321,7 @@ export class ShortcutManager {
 
       if (config.shortcuts && Array.isArray(config.shortcuts)) {
         for (const importedShortcut of config.shortcuts) {
-          const existing = this.activeScheme.shortcuts.find(s => s.id === importedShortcut.id);
+          const existing = this.activeScheme.shortcuts.find((s) => s.id === importedShortcut.id);
           if (existing && existing.customizable) {
             Object.assign(existing, importedShortcut);
           }
@@ -391,7 +408,7 @@ export function createShortcutManager(config?: Partial<ShortcutConfig>): Shortcu
 }
 
 export function getShortcutScheme(schemeId: string): ShortcutScheme | undefined {
-  return ALL_SHORTCUT_SCHEMES.find(s => s.id === schemeId);
+  return ALL_SHORTCUT_SCHEMES.find((s) => s.id === schemeId);
 }
 
 export function getAllShortcutSchemes(): ShortcutScheme[] {

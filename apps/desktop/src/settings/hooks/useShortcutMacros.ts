@@ -1,8 +1,6 @@
-import {useState, useEffect, useMemo, useCallback} from 'react';
-import {showToast} from '../../lib/toast';
-import {
-  writeCustomKeybindings,
-} from '../../shortcuts/keybindings';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { showToast } from '../../lib/toast';
+import { writeCustomKeybindings } from '../../shortcuts/keybindings';
 import {
   eventToAccelerator,
   getEffectiveTimelineShortcutBindings,
@@ -20,7 +18,7 @@ import {
   type CommandSnapshot,
   type MacroShortcutConflict,
 } from '../../macros/clip-macros';
-import {zhCN} from '../../i18n/strings';
+import { zhCN } from '../../i18n/strings';
 
 export function useShortcutMacros(
   shortcutBindings: TimelineShortcutBindings,
@@ -32,14 +30,8 @@ export function useShortcutMacros(
   const [capturingAction, setCapturingAction] = useState<TimelineShortcutAction>();
   const [capturingMacroId, setCapturingMacroId] = useState<string>();
 
-  const effectiveBindings = useMemo(
-    () => getEffectiveTimelineShortcutBindings(shortcutBindings),
-    [shortcutBindings],
-  );
-  const conflicts = useMemo(
-    () => detectTimelineShortcutConflicts(shortcutBindings),
-    [shortcutBindings],
-  );
+  const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
+  const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
   const macroConflicts = useMemo(
     () => detectMacroShortcutConflicts(macros, shortcutBindings),
     [macros, shortcutBindings],
@@ -79,14 +71,14 @@ export function useShortcutMacros(
 
   const updateMacroShortcut = useCallback(
     async (macroId: string, accelerator: string) => {
-      await updateMacros(macros.map((macro) => (macro.id === macroId ? {...macro, shortcut: accelerator} : macro)));
+      await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: accelerator } : macro)));
     },
     [macros, updateMacros],
   );
 
   const resetMacroShortcut = useCallback(
     (macroId: string) => {
-      void updateMacros(macros.map((macro) => (macro.id === macroId ? {...macro, shortcut: undefined} : macro)));
+      void updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: undefined } : macro)));
     },
     [macros, updateMacros],
   );
@@ -94,10 +86,10 @@ export function useShortcutMacros(
   const updateMacroSteps = useCallback(
     async (macroId: string, steps: CommandSnapshot[]) => {
       if (steps.length === 0) {
-        showToast({kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps});
+        showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
         return;
       }
-      await updateMacros(macros.map((macro) => (macro.id === macroId ? {...macro, patch: undefined, steps} : macro)));
+      await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, patch: undefined, steps } : macro)));
     },
     [macros, updateMacros, t],
   );
@@ -106,7 +98,7 @@ export function useShortcutMacros(
     async (macroId: string, raw: string) => {
       const steps = parseCommandSnapshotsJson(raw);
       if (steps.length === 0) {
-        showToast({kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps});
+        showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
         return;
       }
       await updateMacroSteps(macroId, steps);
@@ -119,7 +111,7 @@ export function useShortcutMacros(
       const imported = await importClipMacrosFromDialog();
       if (imported) {
         onMacrosChange(imported);
-        showToast({kind: 'success', title: t.macros.imported, message: t.macros.importedMessage(imported.length)});
+        showToast({ kind: 'success', title: t.macros.imported, message: t.macros.importedMessage(imported.length) });
       }
     } catch (macroError) {
       showToast({
@@ -134,7 +126,7 @@ export function useShortcutMacros(
     try {
       const path = await exportClipMacrosToDialog(macros);
       if (path) {
-        showToast({kind: 'success', title: t.macros.exported, message: path});
+        showToast({ kind: 'success', title: t.macros.exported, message: path });
       }
     } catch (macroError) {
       showToast({
@@ -157,7 +149,7 @@ export function useShortcutMacros(
 
   const resetShortcut = useCallback(
     (action: TimelineShortcutAction) => {
-      const next = {...shortcutBindings};
+      const next = { ...shortcutBindings };
       delete next[action];
       void updateShortcutBinding(next);
     },
@@ -186,7 +178,7 @@ export function useShortcutMacros(
       if (!accelerator) {
         return;
       }
-      void updateShortcutBinding({...shortcutBindings, [capturingAction]: [accelerator]});
+      void updateShortcutBinding({ ...shortcutBindings, [capturingAction]: [accelerator] });
       setCapturingAction(undefined);
     };
     window.addEventListener('keydown', onKeyDown, true);

@@ -1,27 +1,72 @@
-import {useCallback} from 'react';
-import {logger} from '@open-factory/editor-core/utils';
-import {AddMediaFolderCommand, AddSubclipCommand, BatchRenameMediaCommand, BatchUpdateMetadataCommand, ConformMediaCommand, DeleteMediaFolderCommand, DeleteSubclipCommand, LoadProjectCommand, MergeMediaCommand, MoveMediaToFolderCommand, RemoveMediaCommand, RenameMediaFolderCommand, SetMediaFolderCollapsedCommand, UpdateProjectReleaseVersionCommand, UpdateSubclipCommand, applyArchiveRelinkPlan, buildConformMediaReplacements, buildConformPreflight, buildConformReport, buildCoverFrameBatchTasks, dirname, getColorSpaceDisplayName, getProjectFrameRateConversionTarget, isFrameRateMismatch, matchConformByFilename, normalizeProjectWorkingColorSpace, replaceMediaPathBasename, type BatchEditableMediaMetadata, type MediaAsset, type MediaRenamePreviewItem, type Subclip} from '@open-factory/editor-core';
-import {batchExtractCoverFrames, bridgeConfirm, moveFile as bridgeMoveFile, trashFile as bridgeTrashFile, getAppDataDir, openDirectoryDialog, scanDirectory} from '../lib/tauri-bridge';
-import {showToast} from '../lib/toast';
-import {zhCN} from '../i18n/strings';
-import {commandManager, projectAccessor} from '../store/commandManager';
-import {useEditorStore} from '../store/editorStore';
-import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useMediaFeatureStore} from '../store/mediaFeatureStore';
-import {useDialogStore} from '../store/dialogStore';
-import {useProxySettingsStore} from '../store/proxySettingsStore';
-import {useMediaJobStore} from '../media/media-job-store';
-import {ensureMediaJobRunner} from '../media/media-job-runner';
-import {runBackgroundMediaTask} from '../media/background-media-task-queue';
-import {probeMediaPaths, pickMediaPaths} from '../lib/media';
-import {indexAndTagImportedMedia} from '../media/media-index-integration';
-import {generateMediaFingerprint, scanDuplicateMediaGroups} from '../lib/duplicateMedia';
-import {buildArchiveDestinationPath, buildRenameDestinationPath, scanMediaCleanupReport, scanSmartDuplicateMediaGroups} from '../lib/mediaOrganizer';
-import type {DuplicateMediaMergeSelection} from '../media/DuplicateMediaDialog';
-import type {MediaOrganizerDuplicateSelection} from '../media/MediaOrganizerDialog';
-import {joinLocalPath} from '../lib/ui-helpers';
-import {relinkMissingMediaInDirectory, relinkSingleMedia} from '../media/relink';
-import {loadSharedLibrary} from '../shared-library/sharedLibrary';
+import { useCallback } from 'react';
+import { logger } from '@open-factory/editor-core/utils';
+import {
+  AddMediaFolderCommand,
+  AddSubclipCommand,
+  BatchRenameMediaCommand,
+  BatchUpdateMetadataCommand,
+  ConformMediaCommand,
+  DeleteMediaFolderCommand,
+  DeleteSubclipCommand,
+  LoadProjectCommand,
+  MergeMediaCommand,
+  MoveMediaToFolderCommand,
+  RemoveMediaCommand,
+  RenameMediaFolderCommand,
+  SetMediaFolderCollapsedCommand,
+  UpdateProjectReleaseVersionCommand,
+  UpdateSubclipCommand,
+  applyArchiveRelinkPlan,
+  buildConformMediaReplacements,
+  buildConformPreflight,
+  buildConformReport,
+  buildCoverFrameBatchTasks,
+  dirname,
+  getColorSpaceDisplayName,
+  getProjectFrameRateConversionTarget,
+  isFrameRateMismatch,
+  matchConformByFilename,
+  normalizeProjectWorkingColorSpace,
+  replaceMediaPathBasename,
+  type BatchEditableMediaMetadata,
+  type MediaAsset,
+  type MediaRenamePreviewItem,
+  type Subclip,
+} from '@open-factory/editor-core';
+import {
+  batchExtractCoverFrames,
+  bridgeConfirm,
+  moveFile as bridgeMoveFile,
+  trashFile as bridgeTrashFile,
+  getAppDataDir,
+  openDirectoryDialog,
+  scanDirectory,
+} from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
+import { zhCN } from '../i18n/strings';
+import { commandManager, projectAccessor } from '../store/commandManager';
+import { useEditorStore } from '../store/editorStore';
+import { useEditorSettingsStore } from '../store/editorSettingsStore';
+import { useMediaFeatureStore } from '../store/mediaFeatureStore';
+import { useDialogStore } from '../store/dialogStore';
+import { useProxySettingsStore } from '../store/proxySettingsStore';
+import { useMediaJobStore } from '../media/media-job-store';
+import { ensureMediaJobRunner } from '../media/media-job-runner';
+import { runBackgroundMediaTask } from '../media/background-media-task-queue';
+import { probeMediaPaths, pickMediaPaths } from '../lib/media';
+import { indexAndTagImportedMedia } from '../media/media-index-integration';
+import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
+import {
+  buildArchiveDestinationPath,
+  buildRenameDestinationPath,
+  scanMediaCleanupReport,
+  scanSmartDuplicateMediaGroups,
+} from '../lib/mediaOrganizer';
+import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
+import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
+import { joinLocalPath } from '../lib/ui-helpers';
+import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
+import { loadSharedLibrary } from '../shared-library/sharedLibrary';
 
 // ---------------------------------------------------------------------------
 // 参数接口

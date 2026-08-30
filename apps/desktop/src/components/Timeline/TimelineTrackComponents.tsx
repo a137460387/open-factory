@@ -1,17 +1,63 @@
-import {memo} from 'react';
-import {areClipsAdjacent, filterTimelineVirtualClips, getEffectiveClipColorLabel, getTimelineLabelColorHex, DEFAULT_TIMELINE_LABEL_COLOR_HEX, isFrameRateMismatch, TIMELINE_THUMBNAIL_TRACK_HEIGHT, TIMELINE_LABEL_COLORS, type Clip, type CollaborationClipLock, type AnomalyInterval, type ClipGroup, type DialogueInterval, type MediaAsset, snapTime, type TimelineLabelColor, type TimelineRulerTick, type TimelineThumbnailTrackSample, type TimelineLargeProjectMode, type TimelineVirtualRenderWindow, type VolumeEnvelopePoint, shouldLoadTimelineClipAssets, type Track, type Transition, detectTrackGaps, getEffectiveTrackHeight, clampTrackHeight, DEFAULT_TRACK_HEIGHT, shouldShowWaveform} from '@open-factory/editor-core';
-import {AlertTriangle, MoreHorizontal} from 'lucide-react';
-import type {TimelineRenderRange} from '@open-factory/editor-core';
-import type {TimelineDiffRange} from '@open-factory/editor-core';
-import {clsx} from 'clsx';
-import {useEffect, useMemo, useState} from 'react';
-import {formatTrackType, zhCN} from '../../i18n/strings';
-import {getTimelineThumbnailFrame, getTimelineThumbnailPlaceholder, type TimelineThumbnailFrame} from '../../media/timeline-thumbnails';
-import {getSilentFrequencyBands, useAudioMeterStore} from '../../store/audioMeterStore';
-import type {SelectedKeyframeRef} from '../../store/editorStore';
-import type {DragState, VolumeEnvelopePointRequest, VolumeEnvelopeMenuRequest, TransitionMenuRequest, ClipMenuRequest, GapMenuRequest} from './timeline-parts-types';
-import {LABEL_WIDTH, TRACK_DRAG_MIME} from './timeline-parts-types';
-import {MemoizedClipBlock, formatTransitionBadge, getTrackWaveformColor, formatFrameRateLabel} from './TimelineClipComponents';
+import { memo } from 'react';
+import {
+  areClipsAdjacent,
+  filterTimelineVirtualClips,
+  getEffectiveClipColorLabel,
+  getTimelineLabelColorHex,
+  DEFAULT_TIMELINE_LABEL_COLOR_HEX,
+  isFrameRateMismatch,
+  TIMELINE_THUMBNAIL_TRACK_HEIGHT,
+  TIMELINE_LABEL_COLORS,
+  type Clip,
+  type CollaborationClipLock,
+  type AnomalyInterval,
+  type ClipGroup,
+  type DialogueInterval,
+  type MediaAsset,
+  snapTime,
+  type TimelineLabelColor,
+  type TimelineRulerTick,
+  type TimelineThumbnailTrackSample,
+  type TimelineLargeProjectMode,
+  type TimelineVirtualRenderWindow,
+  type VolumeEnvelopePoint,
+  shouldLoadTimelineClipAssets,
+  type Track,
+  type Transition,
+  detectTrackGaps,
+  getEffectiveTrackHeight,
+  clampTrackHeight,
+  DEFAULT_TRACK_HEIGHT,
+  shouldShowWaveform,
+} from '@open-factory/editor-core';
+import { AlertTriangle, MoreHorizontal } from 'lucide-react';
+import type { TimelineRenderRange } from '@open-factory/editor-core';
+import type { TimelineDiffRange } from '@open-factory/editor-core';
+import { clsx } from 'clsx';
+import { useEffect, useMemo, useState } from 'react';
+import { formatTrackType, zhCN } from '../../i18n/strings';
+import {
+  getTimelineThumbnailFrame,
+  getTimelineThumbnailPlaceholder,
+  type TimelineThumbnailFrame,
+} from '../../media/timeline-thumbnails';
+import { getSilentFrequencyBands, useAudioMeterStore } from '../../store/audioMeterStore';
+import type { SelectedKeyframeRef } from '../../store/editorStore';
+import type {
+  DragState,
+  VolumeEnvelopePointRequest,
+  VolumeEnvelopeMenuRequest,
+  TransitionMenuRequest,
+  ClipMenuRequest,
+  GapMenuRequest,
+} from './timeline-parts-types';
+import { LABEL_WIDTH, TRACK_DRAG_MIME } from './timeline-parts-types';
+import {
+  MemoizedClipBlock,
+  formatTransitionBadge,
+  getTrackWaveformColor,
+  formatFrameRateLabel,
+} from './TimelineClipComponents';
 
 function ThumbnailTrack({
   samples,
@@ -930,7 +976,13 @@ const TrackToggle = memo(function TrackToggle({
   );
 });
 
-const AudioTrackFrequencyBands = memo(function AudioTrackFrequencyBands({ trackId, bands }: { trackId: string; bands: number[] }) {
+const AudioTrackFrequencyBands = memo(function AudioTrackFrequencyBands({
+  trackId,
+  bands,
+}: {
+  trackId: string;
+  bands: number[];
+}) {
   return (
     <div
       className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-[var(--color-bg-elevated)] px-px"

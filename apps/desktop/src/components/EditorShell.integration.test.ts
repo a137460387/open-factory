@@ -91,7 +91,17 @@ describe('EditorShell integration: store subscriptions', () => {
     act(() => {
       usePerformanceMonitorStore.setState({
         alerts: [
-          { id: 'test-alert', type: 'memory', severity: 'warning', message: 'Test', suggestion: 'Fix it', action: 'clear-undo-history', triggeredAt: new Date().toISOString(), currentValue: 80, thresholdValue: 70 },
+          {
+            id: 'test-alert',
+            type: 'memory',
+            severity: 'warning',
+            message: 'Test',
+            suggestion: 'Fix it',
+            action: 'clear-undo-history',
+            triggeredAt: new Date().toISOString(),
+            currentValue: 80,
+            thresholdValue: 70,
+          },
         ],
       });
     });

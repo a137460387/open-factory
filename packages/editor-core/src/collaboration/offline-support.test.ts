@@ -16,7 +16,19 @@ import type { CrdtOperation } from './crdt-integration';
 function makeCrdtOp(overrides: Partial<CrdtOperation> = {}): CrdtOperation {
   return {
     type: 'set-clip',
-    clip: { id: 'clip-1', type: 'video', trackId: 'track-1', startTime: 0, duration: 5, volume: 1, speed: 1, opacity: 1, sourceId: 'src-1', inPoint: 0, outPoint: 5 },
+    clip: {
+      id: 'clip-1',
+      type: 'video',
+      trackId: 'track-1',
+      startTime: 0,
+      duration: 5,
+      volume: 1,
+      speed: 1,
+      opacity: 1,
+      sourceId: 'src-1',
+      inPoint: 0,
+      outPoint: 5,
+    },
     ...overrides,
   } as CrdtOperation;
 }
@@ -28,7 +40,9 @@ function makeTransport(): CollabWSTransportLike {
 function makeNetwork(online = true): NetworkStatusProvider {
   const handlers = { online: [] as Function[], offline: [] as Function[] };
   return {
-    get isOnline() { return online; },
+    get isOnline() {
+      return online;
+    },
     onOnline: (h: Function) => handlers.online.push(h),
     onOffline: (h: Function) => handlers.offline.push(h),
     dispose: vi.fn(),
@@ -40,9 +54,7 @@ function makeNetwork(online = true): NetworkStatusProvider {
 describe('MemoryStorageAdapter', () => {
   it('saves and loads operations', async () => {
     const adapter = new MemoryStorageAdapter();
-    const ops: OfflineOperation[] = [
-      { id: 'op-1', operation: makeCrdtOp(), timestamp: 100, synced: false },
-    ];
+    const ops: OfflineOperation[] = [{ id: 'op-1', operation: makeCrdtOp(), timestamp: 100, synced: false }];
     await adapter.save(ops);
     const loaded = await adapter.load();
     expect(loaded).toHaveLength(1);
@@ -172,7 +184,9 @@ describe('OfflineSyncManager', () => {
 
     const manager = new OfflineSyncManager(transport, queue, makeNetwork(true));
     let received: SyncBatchResult | null = null;
-    manager.onSyncComplete((r) => { received = r; });
+    manager.onSyncComplete((r) => {
+      received = r;
+    });
     await manager.sync();
     expect(received).not.toBeNull();
     expect(received!.syncedIds).toHaveLength(1);

@@ -13,8 +13,8 @@
  * - 文字安全区（避免关键区域与字幕重叠）
  */
 
-import type {DistributionPlatformId} from './platform-presets';
-import {getDistributionPlatform} from './platform-presets';
+import type { DistributionPlatformId } from './platform-presets';
+import { getDistributionPlatform } from './platform-presets';
 // ─── 封面帧候选 ────────────────────────────────────────────
 
 /** 视频帧信息 */

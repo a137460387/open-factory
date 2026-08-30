@@ -123,7 +123,9 @@ describe('ltx-video bridge：__TAURI_MOCKS__ 路径', () => {
       cancelVideoGeneration: cancelMock,
     };
     await expect(detectGpu()).resolves.toBe(gpuInfo);
-    await expect(generateVideo({ prompt: 'x', numFrames: 1, resolution: 64, fps: 8, steps: 1, cfgScale: 1 })).resolves.toEqual({
+    await expect(
+      generateVideo({ prompt: 'x', numFrames: 1, resolution: 64, fps: 8, steps: 1, cfgScale: 1 }),
+    ).resolves.toEqual({
       taskId: 't',
       status: 'queued',
     });
@@ -183,7 +185,18 @@ describe('video-gen bridge：invoke 参数构造', () => {
     const handler = vi.fn(async () => undefined);
     mockIPC(handler);
     await updateVideoGenTaskStatus('t1');
-    await updateVideoGenTaskStatus('t1', 'success', 1, 'render', '/out.mp4', undefined, undefined, '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z', 3);
+    await updateVideoGenTaskStatus(
+      't1',
+      'success',
+      1,
+      'render',
+      '/out.mp4',
+      undefined,
+      undefined,
+      '2026-01-01T00:00:00Z',
+      '2026-01-01T00:01:00Z',
+      3,
+    );
     expect(handler).toHaveBeenNthCalledWith(1, 'update_video_gen_task_status', {
       id: 't1',
       status: null,

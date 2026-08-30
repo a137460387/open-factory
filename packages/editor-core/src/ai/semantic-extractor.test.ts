@@ -12,13 +12,7 @@ import {
   aggregateMetadata,
   validateMetadataPrivacy,
 } from './semantic-extractor';
-import type {
-  KeyFrame,
-  ASRSegment,
-  AudioProfile,
-  VisualProfile,
-  MaterialMetadata,
-} from './semantic-extractor';
+import type { KeyFrame, ASRSegment, AudioProfile, VisualProfile, MaterialMetadata } from './semantic-extractor';
 
 // ─── Test Helpers ───────────────────────────────────────────────
 
@@ -314,11 +308,7 @@ describe('generateAutoTags', () => {
   });
 
   it('tags dominant scenes', () => {
-    const tags = generateAutoTags(
-      makeVisual({ sceneDistribution: { outdoor: 0.5, indoor: 0.5 } }),
-      makeAudio(),
-      []
-    );
+    const tags = generateAutoTags(makeVisual({ sceneDistribution: { outdoor: 0.5, indoor: 0.5 } }), makeAudio(), []);
     expect(tags).toContain('outdoor');
     expect(tags).toContain('indoor');
   });
@@ -328,10 +318,7 @@ describe('generateAutoTags', () => {
 
 describe('buildTranscriptText', () => {
   it('joins segment texts', () => {
-    const segs = [
-      makeASR({ text: 'hello' }),
-      makeASR({ text: 'world' }),
-    ];
+    const segs = [makeASR({ text: 'hello' }), makeASR({ text: 'world' })];
     expect(buildTranscriptText(segs)).toBe('hello world');
   });
 
@@ -355,7 +342,7 @@ describe('aggregateMetadata', () => {
       [makeASR()],
       makeAudio(),
       makeVisual(),
-      createDefaultExtractionConfig()
+      createDefaultExtractionConfig(),
     );
 
     expect(result.metadata.version).toBe('1.0');
@@ -372,9 +359,9 @@ describe('aggregateMetadata', () => {
       [],
       makeAudio(),
       makeVisual(),
-      createDefaultExtractionConfig()
+      createDefaultExtractionConfig(),
     );
-    expect(result.warnings.some(w => w.includes('duration'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('duration'))).toBe(true);
   });
 
   it('warns on invalid dimensions', () => {
@@ -384,22 +371,15 @@ describe('aggregateMetadata', () => {
       [],
       makeAudio(),
       makeVisual(),
-      createDefaultExtractionConfig()
+      createDefaultExtractionConfig(),
     );
-    expect(result.warnings.some(w => w.includes('dimensions'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('dimensions'))).toBe(true);
   });
 
   it('skips ASR when disabled', () => {
     const config = createDefaultExtractionConfig();
     config.enableASR = false;
-    const result = aggregateMetadata(
-      makeSource(),
-      [],
-      [makeASR()],
-      makeAudio(),
-      makeVisual(),
-      config
-    );
+    const result = aggregateMetadata(makeSource(), [], [makeASR()], makeAudio(), makeVisual(), config);
     expect(result.metadata.asrSegments).toEqual([]);
     expect(result.metadata.transcriptText).toBe('');
   });

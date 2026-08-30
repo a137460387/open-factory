@@ -12,9 +12,7 @@ import {
   FolderOpen,
   Import,
 } from 'lucide-react';
-import {
-  useVideoGenQueue,
-} from '../../video-gen';
+import { useVideoGenQueue } from '../../video-gen';
 import { getErrorHint } from '../../hooks/useVideoGeneration';
 import type { VideoGenerationParams } from '../../hooks/useVideoGeneration';
 import { useGpuDetect } from '../../hooks/useGpuDetect';
@@ -59,13 +57,7 @@ export function VideoGenerationPanel({
   initialPrompt = '',
   onOpenModelManager,
 }: VideoGenerationPanelProps) {
-  const {
-    activeTask,
-    submit,
-    cancel,
-    clearCompleted,
-    isRunning: queueRunning,
-  } = useVideoGenQueue();
+  const { activeTask, submit, cancel, clearCompleted, isRunning: queueRunning } = useVideoGenQueue();
 
   const { state: gpuState, isGpuAvailable, isPytorchCompatible } = useGpuDetect();
   const { state: modelState, loadLocalModels } = useModelManager();
@@ -175,11 +167,7 @@ export function VideoGenerationPanel({
           <h2 className="text-sm font-semibold">AI Video Generation</h2>
         </div>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-700 rounded transition-colors"
-            aria-label="Close"
-          >
+          <button onClick={onClose} className="p-1 hover:bg-gray-700 rounded transition-colors" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -196,9 +184,7 @@ export function VideoGenerationPanel({
                   <Download className="w-4 h-4 text-yellow-400" />
                   <div>
                     <p className="text-sm text-yellow-300">No model installed</p>
-                    <p className="text-xs text-yellow-400/70">
-                      Download the LTX-Video model to start generating.
-                    </p>
+                    <p className="text-xs text-yellow-400/70">Download the LTX-Video model to start generating.</p>
                   </div>
                 </div>
                 {onOpenModelManager && (
@@ -218,9 +204,7 @@ export function VideoGenerationPanel({
                 <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                 <div>
                   <p className="text-sm text-red-300">No compatible GPU</p>
-                  <p className="text-xs text-red-400/70">
-                    A CUDA-compatible GPU with at least 4 GB VRAM is required.
-                  </p>
+                  <p className="text-xs text-red-400/70">A CUDA-compatible GPU with at least 4 GB VRAM is required.</p>
                 </div>
               </div>
             )}
@@ -240,9 +224,7 @@ export function VideoGenerationPanel({
 
         {/* Prompt */}
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
-            Prompt
-          </label>
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Prompt</label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -257,9 +239,7 @@ export function VideoGenerationPanel({
 
         {/* Negative Prompt */}
         <div>
-          <label className="block text-xs font-medium text-gray-400 mb-1.5">
-            Negative Prompt
-          </label>
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Negative Prompt</label>
           <textarea
             value={negativePrompt}
             onChange={(e) => setNegativePrompt(e.target.value)}
@@ -275,9 +255,7 @@ export function VideoGenerationPanel({
         {/* Resolution & Duration */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">
-              Resolution
-            </label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Resolution</label>
             <div className="flex gap-1.5">
               {RESOLUTION_PRESETS.map((preset) => (
                 <button
@@ -296,9 +274,7 @@ export function VideoGenerationPanel({
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">
-              Duration
-            </label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Duration</label>
             <div className="flex gap-1.5">
               {FRAME_PRESETS.map((preset) => (
                 <button
@@ -333,9 +309,7 @@ export function VideoGenerationPanel({
             {/* Steps */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-400">
-                  Inference Steps
-                </label>
+                <label className="text-xs font-medium text-gray-400">Inference Steps</label>
                 <span className="text-xs text-gray-500">{steps}</span>
               </div>
               <input
@@ -352,9 +326,7 @@ export function VideoGenerationPanel({
             {/* CFG Scale */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-gray-400">
-                  CFG Scale
-                </label>
+                <label className="text-xs font-medium text-gray-400">CFG Scale</label>
                 <span className="text-xs text-gray-500">{cfgScale.toFixed(1)}</span>
               </div>
               <input
@@ -371,9 +343,7 @@ export function VideoGenerationPanel({
 
             {/* Seed */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">
-                Seed (optional)
-              </label>
+              <label className="block text-xs font-medium text-gray-400 mb-1">Seed (optional)</label>
               <input
                 type="text"
                 value={seed}
@@ -411,9 +381,7 @@ export function VideoGenerationPanel({
             <div className="text-sm">
               <p className="text-green-300">Generation complete!</p>
               {lastDurationMs && (
-                <p className="text-xs text-green-400/70 mt-0.5">
-                  Took {(lastDurationMs / 1000).toFixed(1)}s
-                </p>
+                <p className="text-xs text-green-400/70 mt-0.5">Took {(lastDurationMs / 1000).toFixed(1)}s</p>
               )}
             </div>
           </div>
@@ -443,16 +411,9 @@ export function VideoGenerationPanel({
         {/* Video Preview */}
         {videoPath && (
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-400">
-              Generated Video
-            </label>
+            <label className="block text-xs font-medium text-gray-400">Generated Video</label>
             <div className="relative bg-black rounded-lg overflow-hidden">
-              <video
-                src={`asset://localhost/${videoPath}`}
-                controls
-                loop
-                className="w-full max-h-64 object-contain"
-              />
+              <video src={`asset://localhost/${videoPath}`} controls loop className="w-full max-h-64 object-contain" />
             </div>
           </div>
         )}
@@ -479,11 +440,7 @@ export function VideoGenerationPanel({
                            bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500
                            rounded-lg text-sm font-medium transition-colors"
               >
-                {importing ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Import className="w-4 h-4" />
-                )}
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Import className="w-4 h-4" />}
                 Import to Timeline
               </button>
               {onComplete && (

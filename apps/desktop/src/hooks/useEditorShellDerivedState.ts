@@ -1,14 +1,33 @@
-import {useMemo} from 'react';
-import {type Clip, type MediaAsset, type Project, type BeatMarker, findSyncCompareClipRefs, round, estimateBpmFromBeatMarkers} from '@open-factory/editor-core';
-import {selectClipById} from '../store/editorStore';
-import {isPiPVisualClip, isSceneReorderClip} from '../lib/timeline-clip-helpers';
-import {canSeparateAudioForClip} from '../lib/demucs';
-import {collectContentAnalysisTargets, findSpeakerDiarizationTarget, collectAutoAudioSyncTargets, summarizeContentAnalysisByMedia} from '../lib/content-analysis-helpers';
-import type {DemucsAvailability} from '../lib/demucs';
-import {BUILT_IN_WORKSPACE_LAYOUT_IDS, clampTimelineHeight, getEffectivePanelState, getWorkspaceLayoutById, type WorkspaceLayoutDefinition} from '../layout/layoutSettings';
-import {getReviewModeShellVisibility} from '../review/reviewMode';
-import type {EditorLayoutSettings} from '../layout/layoutSettings';
-import type {Track} from '@open-factory/editor-core';
+import { useMemo } from 'react';
+import {
+  type Clip,
+  type MediaAsset,
+  type Project,
+  type BeatMarker,
+  findSyncCompareClipRefs,
+  round,
+  estimateBpmFromBeatMarkers,
+} from '@open-factory/editor-core';
+import { selectClipById } from '../store/editorStore';
+import { isPiPVisualClip, isSceneReorderClip } from '../lib/timeline-clip-helpers';
+import { canSeparateAudioForClip } from '../lib/demucs';
+import {
+  collectContentAnalysisTargets,
+  findSpeakerDiarizationTarget,
+  collectAutoAudioSyncTargets,
+  summarizeContentAnalysisByMedia,
+} from '../lib/content-analysis-helpers';
+import type { DemucsAvailability } from '../lib/demucs';
+import {
+  BUILT_IN_WORKSPACE_LAYOUT_IDS,
+  clampTimelineHeight,
+  getEffectivePanelState,
+  getWorkspaceLayoutById,
+  type WorkspaceLayoutDefinition,
+} from '../layout/layoutSettings';
+import { getReviewModeShellVisibility } from '../review/reviewMode';
+import type { EditorLayoutSettings } from '../layout/layoutSettings';
+import type { Track } from '@open-factory/editor-core';
 
 interface DerivedStateDeps {
   project: Project;
@@ -43,16 +62,10 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     reviewMode,
   } = deps;
 
-  const selectedClip = useMemo(
-    () => selectClipById(project, selectedClipId ?? undefined),
-    [project, selectedClipId],
-  );
+  const selectedClip = useMemo(() => selectClipById(project, selectedClipId ?? undefined), [project, selectedClipId]);
 
   const selectedClips = useMemo(
-    () =>
-      selectedClipIds
-        .map((id) => selectClipById(project, id))
-        .filter((clip): clip is Clip => Boolean(clip)),
+    () => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)),
     [project, selectedClipIds],
   );
 
@@ -109,15 +122,9 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     [selectedClip, selectedClipMedia],
   );
 
-  const canOpenSceneReorder = useMemo(
-    () => selectedClips.filter(isSceneReorderClip).length >= 2,
-    [selectedClips],
-  );
+  const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
 
-  const contentAnalysisTargets = useMemo(
-    () => collectContentAnalysisTargets(project),
-    [project],
-  );
+  const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
 
   const mediaContentAnalysis = useMemo(
     () => summarizeContentAnalysisByMedia(contentAnalysisTargets),
@@ -163,8 +170,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   );
 
   const canSeparateSelectedAudio = useMemo(
-    () =>
-      canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId,
+    () => canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId,
     [selectedClip, selectedClipMedia, demucsAvailability.ready, audioSeparationClipId],
   );
 
@@ -174,8 +180,7 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
   );
 
   const canOpenAutoAudioSync = useMemo(
-    () =>
-      autoAudioSyncTargets.length >= 2 && autoAudioSyncTargets.length <= 5 && !autoAudioSyncRunning,
+    () => autoAudioSyncTargets.length >= 2 && autoAudioSyncTargets.length <= 5 && !autoAudioSyncRunning,
     [autoAudioSyncTargets, autoAudioSyncRunning],
   );
 
@@ -183,9 +188,9 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     () =>
       Boolean(
         selectedClip &&
-          selectedClipMedia &&
-          (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
-          (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio),
+        selectedClipMedia &&
+        (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
+        (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio),
       ),
     [selectedClip, selectedClipMedia],
   );
@@ -215,7 +220,9 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
-        const item = allClips.find((candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id);
+        const item = allClips.find(
+          (candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id,
+        );
         return item ? { ...item, selectedIndex } : undefined;
       })
       .filter((item): item is ClipWithTrack => item !== undefined)
@@ -233,7 +240,9 @@ export function useEditorShellDerivedState(deps: DerivedStateDeps) {
     );
     return selectedClipIds
       .map((id, selectedIndex) => {
-        const item = allClips.find((candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id);
+        const item = allClips.find(
+          (candidate: { clip: Clip; track: Track; trackIndex: number }) => candidate.clip.id === id,
+        );
         return item ? { ...item, selectedIndex } : undefined;
       })
       .filter((item): item is ClipWithTrack => item !== undefined)

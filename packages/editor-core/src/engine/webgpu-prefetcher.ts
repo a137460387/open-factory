@@ -29,7 +29,7 @@ export class WebGPUPredictivePrefetcher {
     const direction = this.predictedDirection === 'forward' ? 1 : -1;
 
     for (let i = 1; i <= prefetchCount; i++) {
-      const predictedFrame = currentFrame + (i * direction * this.predictedSpeed);
+      const predictedFrame = currentFrame + i * direction * this.predictedSpeed;
       frames.push(Math.round(predictedFrame));
     }
 

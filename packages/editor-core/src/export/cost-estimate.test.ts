@@ -90,9 +90,7 @@ describe('buildEstimateHistoryComparison', () => {
   });
 
   it('computes error percent', () => {
-    const result = buildEstimateHistoryComparison([
-      { exportDurationSeconds: 11, estimatedDurationSeconds: 10 },
-    ]);
+    const result = buildEstimateHistoryComparison([{ exportDurationSeconds: 11, estimatedDurationSeconds: 10 }]);
     expect(result.length).toBe(1);
     expect(result[0].errorPercent).toBeCloseTo(10, 0);
   });
@@ -215,9 +213,7 @@ describe('calculateHistoricalExportSpeed', () => {
   });
 
   it('computes average ratio', () => {
-    const result = calculateHistoricalExportSpeed([
-      { timelineDurationSeconds: 10, exportDurationSeconds: 20 },
-    ]);
+    const result = calculateHistoricalExportSpeed([{ timelineDurationSeconds: 10, exportDurationSeconds: 20 }]);
     expect(result).toBeCloseTo(2, 1);
   });
 

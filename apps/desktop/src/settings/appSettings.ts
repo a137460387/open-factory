@@ -1,14 +1,53 @@
-import {logError} from '../lib/error-handlers';
-import {getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language} from '../i18n/strings';
-import {DEFAULT_TIMELINE_GRID_SETTINGS, DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, DEFAULT_EXPORT_OPTIMIZATION_SETTINGS, normalizeSplitLayoutDefinition, normalizePostExportQualityAssuranceSettings, normalizeExportOptimizationSettings, normalizeTimelineGridSettings, hasEnabledPostExportQualityChecks, normalizeCustomAudioVisualizationThemes, type SplitLayoutDefinition, type CustomAudioVisualizationTheme, type ExportOptimizationSettings, type PostExportQualityAssuranceSettings, type TimelineGridSettings, type TimelineHeatmapColorScheme, type TimelineHeatmapType, type TouchOptimizationSettings, normalizeTouchOptimizationSettings, type MediaGroupingSettings, normalizeMediaGroupingSettings} from '@open-factory/editor-core';
-import {fsExists, getAppDataDir, readFile, writeFile} from '../lib/tauri-bridge';
-import {DEFAULT_EDITOR_LAYOUT_SETTINGS, normalizeStoredLayoutSettings, type EditorLayoutSettings} from '../layout/layoutSettings';
-import {DEFAULT_THEME_SETTINGS, normalizeThemeSettings, type ThemeSettings} from '../theme/theme';
-import {DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, normalizePreviewPerformanceSettings, type PreviewPerformanceSettings} from '../lib/preview/preview-performance';
-import {DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, type MediaLibraryViewSettings} from '../media/mediaLibraryView';
-import {LOCAL_AI_MODEL_DEFINITIONS, hasLocalAiModelsSettings, normalizeLocalAiModelsSettings, type LocalAiModelId, type LocalAiModelsSettings} from './localModels';
-import {normalizeTutorialProgressSettings, type TutorialProgressSettings} from '../tutorial/tutorialState';
-import {normalizeUpdateSettings, shouldPersistUpdateSettings, type UpdateSettings} from '../updater/update-settings';
+import { logError } from '../lib/error-handlers';
+import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
+import {
+  DEFAULT_TIMELINE_GRID_SETTINGS,
+  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+  DEFAULT_EXPORT_OPTIMIZATION_SETTINGS,
+  normalizeSplitLayoutDefinition,
+  normalizePostExportQualityAssuranceSettings,
+  normalizeExportOptimizationSettings,
+  normalizeTimelineGridSettings,
+  hasEnabledPostExportQualityChecks,
+  normalizeCustomAudioVisualizationThemes,
+  type SplitLayoutDefinition,
+  type CustomAudioVisualizationTheme,
+  type ExportOptimizationSettings,
+  type PostExportQualityAssuranceSettings,
+  type TimelineGridSettings,
+  type TimelineHeatmapColorScheme,
+  type TimelineHeatmapType,
+  type TouchOptimizationSettings,
+  normalizeTouchOptimizationSettings,
+  type MediaGroupingSettings,
+  normalizeMediaGroupingSettings,
+} from '@open-factory/editor-core';
+import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
+import {
+  DEFAULT_EDITOR_LAYOUT_SETTINGS,
+  normalizeStoredLayoutSettings,
+  type EditorLayoutSettings,
+} from '../layout/layoutSettings';
+import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings, type ThemeSettings } from '../theme/theme';
+import {
+  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  normalizePreviewPerformanceSettings,
+  type PreviewPerformanceSettings,
+} from '../lib/preview/preview-performance';
+import {
+  DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS,
+  normalizeMediaLibraryViewSettings,
+  type MediaLibraryViewSettings,
+} from '../media/mediaLibraryView';
+import {
+  LOCAL_AI_MODEL_DEFINITIONS,
+  hasLocalAiModelsSettings,
+  normalizeLocalAiModelsSettings,
+  type LocalAiModelId,
+  type LocalAiModelsSettings,
+} from './localModels';
+import { normalizeTutorialProgressSettings, type TutorialProgressSettings } from '../tutorial/tutorialState';
+import { normalizeUpdateSettings, shouldPersistUpdateSettings, type UpdateSettings } from '../updater/update-settings';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 

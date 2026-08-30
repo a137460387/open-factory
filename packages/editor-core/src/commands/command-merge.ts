@@ -26,8 +26,7 @@ export class PropertyChangeCommand implements Command {
     private readonly applyFn: (entityId: string, value: unknown) => void,
     descriptionTemplate?: string,
   ) {
-    this.description = descriptionTemplate
-      ?? `修改 ${entityId}.${propertyName}`;
+    this.description = descriptionTemplate ?? `修改 ${entityId}.${propertyName}`;
   }
 
   execute(): void {
@@ -84,12 +83,7 @@ export class PositionChangeCommand implements Command {
     if (other.clipId !== this.clipId) return null;
 
     // Merge: keep original start position, use latest end position
-    return new PositionChangeCommand(
-      this.clipId,
-      this.oldPosition,
-      other.newPosition,
-      this.applyFn,
-    );
+    return new PositionChangeCommand(this.clipId, this.oldPosition, other.newPosition, this.applyFn);
   }
 }
 
@@ -120,12 +114,7 @@ export class ScaleChangeCommand implements Command {
     if (!(other instanceof ScaleChangeCommand)) return null;
     if (other.clipId !== this.clipId) return null;
 
-    return new ScaleChangeCommand(
-      this.clipId,
-      this.oldScale,
-      other.newScale,
-      this.applyFn,
-    );
+    return new ScaleChangeCommand(this.clipId, this.oldScale, other.newScale, this.applyFn);
   }
 }
 
@@ -156,12 +145,7 @@ export class VolumeChangeCommand implements Command {
     if (!(other instanceof VolumeChangeCommand)) return null;
     if (other.clipId !== this.clipId) return null;
 
-    return new VolumeChangeCommand(
-      this.clipId,
-      this.oldVolume,
-      other.newVolume,
-      this.applyFn,
-    );
+    return new VolumeChangeCommand(this.clipId, this.oldVolume, other.newVolume, this.applyFn);
   }
 }
 
@@ -192,12 +176,7 @@ export class OpacityChangeCommand implements Command {
     if (!(other instanceof OpacityChangeCommand)) return null;
     if (other.clipId !== this.clipId) return null;
 
-    return new OpacityChangeCommand(
-      this.clipId,
-      this.oldOpacity,
-      other.newOpacity,
-      this.applyFn,
-    );
+    return new OpacityChangeCommand(this.clipId, this.oldOpacity, other.newOpacity, this.applyFn);
   }
 }
 
@@ -228,11 +207,6 @@ export class PlaybackRateChangeCommand implements Command {
     if (!(other instanceof PlaybackRateChangeCommand)) return null;
     if (other.clipId !== this.clipId) return null;
 
-    return new PlaybackRateChangeCommand(
-      this.clipId,
-      this.oldRate,
-      other.newRate,
-      this.applyFn,
-    );
+    return new PlaybackRateChangeCommand(this.clipId, this.oldRate, other.newRate, this.applyFn);
   }
 }

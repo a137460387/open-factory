@@ -1,8 +1,14 @@
-import {useState} from 'react';
-import {X, ThumbsUp, ThumbsDown, RefreshCw} from 'lucide-react';
-import {zhCN} from '../i18n/strings';
-import type {ErrorKnowledgeMatch, ErrorKnowledgeStore} from '@open-factory/editor-core';
-import {getTopMatches, buildFeedbackMap, addFeedback, createDefaultKnowledgeStore, mergeKnowledgeUpdate} from '@open-factory/editor-core';
+import { useState } from 'react';
+import { X, ThumbsUp, ThumbsDown, RefreshCw } from 'lucide-react';
+import { zhCN } from '../i18n/strings';
+import type { ErrorKnowledgeMatch, ErrorKnowledgeStore } from '@open-factory/editor-core';
+import {
+  getTopMatches,
+  buildFeedbackMap,
+  addFeedback,
+  createDefaultKnowledgeStore,
+  mergeKnowledgeUpdate,
+} from '@open-factory/editor-core';
 
 interface ErrorKnowledgeDialogProps {
   stderr: string;

@@ -32,11 +32,13 @@ function makeClip10s(): Clip {
   return makeClip({ id: 'clip-1', start: 0, duration: 10 });
 }
 
-function renderDialog(overrides: {
-  suggestion?: SemanticRoughCutSuggestion;
-  clip?: Clip;
-  onApply?: (suggestion: SemanticRoughCutSuggestion) => ApplySuggestionResult;
-} = {}) {
+function renderDialog(
+  overrides: {
+    suggestion?: SemanticRoughCutSuggestion;
+    clip?: Clip;
+    onApply?: (suggestion: SemanticRoughCutSuggestion) => ApplySuggestionResult;
+  } = {},
+) {
   const suggestion = overrides.suggestion ?? makeSuggestion({ timeRange: { start: 2, end: 6 } });
   const clip = overrides.clip ?? makeClip10s();
   const onApply = overrides.onApply ?? vi.fn(() => ({ ok: true }));

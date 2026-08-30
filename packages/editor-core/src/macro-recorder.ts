@@ -50,7 +50,7 @@ export class MacroRecorder {
   onStateChange(listener: (state: MacroRecordingState) => void): () => void {
     this.listeners.push(listener);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((l) => l !== listener);
     };
   }
 
@@ -58,13 +58,13 @@ export class MacroRecorder {
   onOperation(listener: (op: MacroOperation) => void): () => void {
     this.operationListeners.push(listener);
     return () => {
-      this.operationListeners = this.operationListeners.filter(l => l !== listener);
+      this.operationListeners = this.operationListeners.filter((l) => l !== listener);
     };
   }
 
   private setState(newState: MacroRecordingState): void {
     this.state = newState;
-    this.listeners.forEach(l => l(newState));
+    this.listeners.forEach((l) => l(newState));
   }
 
   // ─── Recording Control ───────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export class MacroRecorder {
 
   private addOperation(operation: MacroOperation): void {
     this.operations.push(operation);
-    this.operationListeners.forEach(l => l(operation));
+    this.operationListeners.forEach((l) => l(operation));
   }
 
   // ─── Macro Building ──────────────────────────────────────────────────────

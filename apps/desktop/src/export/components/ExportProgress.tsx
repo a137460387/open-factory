@@ -1,12 +1,12 @@
-import type {ExportState} from '../hooks/useExportState';
-import type {ExportActions} from '../hooks/useExportActions';
-import {Clock3, Minimize2, Trash2} from 'lucide-react';
-import {zhCN} from '../../i18n/strings';
-import {ExportTaskRow} from './ExportTaskRow';
-import {PreflightPanel} from './PreflightPanel';
-import {ExportWarmupStatusPanel} from './ExportOptimizationPanel';
-import {minimizeToTray} from '../../lib/tauri-bridge';
-import {setExportQueuePaused, setExportQueueMaxConcurrent} from '../export-queue-runner';
+import type { ExportState } from '../hooks/useExportState';
+import type { ExportActions } from '../hooks/useExportActions';
+import { Clock3, Minimize2, Trash2 } from 'lucide-react';
+import { zhCN } from '../../i18n/strings';
+import { ExportTaskRow } from './ExportTaskRow';
+import { PreflightPanel } from './PreflightPanel';
+import { ExportWarmupStatusPanel } from './ExportOptimizationPanel';
+import { minimizeToTray } from '../../lib/tauri-bridge';
+import { setExportQueuePaused, setExportQueueMaxConcurrent } from '../export-queue-runner';
 
 interface ExportProgressProps {
   state: ExportState;

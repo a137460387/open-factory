@@ -1,4 +1,4 @@
-import type {Clip} from '@open-factory/editor-core';
+import type { Clip } from '@open-factory/editor-core';
 import {
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
@@ -7,7 +7,7 @@ import {
   moveClip,
   round,
 } from '@open-factory/editor-core';
-import type {TimelineHandlerParams} from './types';
+import type { TimelineHandlerParams } from './types';
 
 export function createSnapUtils(
   params: TimelineHandlerParams,
@@ -17,8 +17,8 @@ export function createSnapUtils(
     minFrameDuration: () => number;
   },
 ) {
-  const {project, allClips, zoom} = params;
-  const {findClip, snapClipEnd, minFrameDuration} = helpers;
+  const { project, allClips, zoom } = params;
+  const { findClip, snapClipEnd, minFrameDuration } = helpers;
 
   function buildMovedPreviewTimeline(previewStartsByClipId: Record<string, number>) {
     const movedById = new Map(
@@ -52,7 +52,11 @@ export function createSnapUtils(
         transform: { ...clip.transform },
       } as Clip;
     }
-    const proposedEnd = snapClipEnd(clip.start + Math.max(minDurationVal, clip.duration + delta), clip, snappingDisabled);
+    const proposedEnd = snapClipEnd(
+      clip.start + Math.max(minDurationVal, clip.duration + delta),
+      clip,
+      snappingDisabled,
+    );
     const maxDuration = Math.max(
       minDurationVal,
       calculateSpeedCurveDisplayDuration(sourceDuration - clip.trimStart, clip.keyframes, speed),

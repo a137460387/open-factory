@@ -3,7 +3,7 @@
  * Integration tests for Sprint AY/AZ refactored modules.
  * Tests facade completeness, store isolation, and sub-module composition.
  */
-import {describe, it, expect, vi, beforeEach} from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ==================== TimelineParts facade re-exports ====================
 
@@ -73,7 +73,7 @@ describe('shortcut-manager facade re-exports', () => {
   });
 
   it('ShortcutManager can be instantiated and switches schemes', async () => {
-    const {ShortcutManager} = await import('@open-factory/editor-core/ui/shortcut-manager');
+    const { ShortcutManager } = await import('@open-factory/editor-core/ui/shortcut-manager');
     const manager = new ShortcutManager();
     expect(manager.getActiveScheme().id).toBe('premiere');
     expect(manager.switchScheme('final-cut')).toBe(true);
@@ -108,7 +108,7 @@ describe('quality-assessment facade re-exports', () => {
 
 describe('Store subscription isolation', () => {
   beforeEach(async () => {
-    const {useEditorStore} = await import('../../store/editorStore');
+    const { useEditorStore } = await import('../../store/editorStore');
     useEditorStore.setState({
       selectedClipId: undefined,
       selectedClipIds: [],
@@ -119,11 +119,11 @@ describe('Store subscription isolation', () => {
   });
 
   it('editorStore selector only triggers on selected field change', async () => {
-    const {useEditorStore} = await import('../../store/editorStore');
-    const {renderHook, act} = await import('@testing-library/react');
+    const { useEditorStore } = await import('../../store/editorStore');
+    const { renderHook, act } = await import('@testing-library/react');
 
     let renderCount = 0;
-    const {result} = renderHook(() => {
+    const { result } = renderHook(() => {
       renderCount++;
       return useEditorStore((s) => s.selectedClipId);
     });
@@ -132,12 +132,12 @@ describe('Store subscription isolation', () => {
 
     // Changing a different field should NOT re-render
     act(() => {
-      useEditorStore.setState({dirty: true} as never);
+      useEditorStore.setState({ dirty: true } as never);
     });
 
     // Changing the selected field SHOULD re-render
     act(() => {
-      useEditorStore.setState({selectedClipId: 'clip-1'} as never);
+      useEditorStore.setState({ selectedClipId: 'clip-1' } as never);
     });
 
     expect(result.current).toBe('clip-1');
@@ -145,12 +145,12 @@ describe('Store subscription isolation', () => {
   });
 
   it('editorUIStore changes do not trigger editorStore selectors', async () => {
-    const {useEditorStore} = await import('../../store/editorStore');
-    const {useEditorUIStore} = await import('../../store/editorUIStore');
-    const {renderHook, act} = await import('@testing-library/react');
+    const { useEditorStore } = await import('../../store/editorStore');
+    const { useEditorUIStore } = await import('../../store/editorUIStore');
+    const { renderHook, act } = await import('@testing-library/react');
 
     let renderCount = 0;
-    const {result} = renderHook(() => {
+    const { result } = renderHook(() => {
       renderCount++;
       return useEditorStore((s) => s.isPlaying);
     });
@@ -159,7 +159,7 @@ describe('Store subscription isolation', () => {
 
     // Changing UI store should not trigger editorStore selector
     act(() => {
-      useEditorUIStore.setState({showTimeline: false} as never);
+      useEditorUIStore.setState({ showTimeline: false } as never);
     });
 
     expect(renderCount).toBe(initialRenderCount);

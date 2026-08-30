@@ -110,49 +110,59 @@ const ZH_PATTERNS: CommandPattern[] = [
   {
     type: 'trim',
     patterns: [/裁剪|修剪|缩短|截取|掐头去尾/i],
-    extractors: [(_m, text) => {
-      const dur = extractDuration(text);
-      return dur !== undefined ? { duration: dur } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const dur = extractDuration(text);
+        return dur !== undefined ? { duration: dur } : {};
+      },
+    ],
     confidence: 0.85,
   },
   {
     type: 'speed',
     patterns: [/加速|减速|倍速|速度|快进|慢放|(\d+(?:\.\d+)?)\s*倍/i],
-    extractors: [(m, text) => {
-      const speedMatch = text.match(/(\d+(?:\.\d+)?)\s*倍/);
-      if (speedMatch) return { speed: parseFloat(speedMatch[1]) };
-      if (/加速|快进/.test(text)) return { speed: 2 };
-      if (/减速|慢放/.test(text)) return { speed: 0.5 };
-      return {};
-    }],
+    extractors: [
+      (m, text) => {
+        const speedMatch = text.match(/(\d+(?:\.\d+)?)\s*倍/);
+        if (speedMatch) return { speed: parseFloat(speedMatch[1]) };
+        if (/加速|快进/.test(text)) return { speed: 2 };
+        if (/减速|慢放/.test(text)) return { speed: 0.5 };
+        return {};
+      },
+    ],
     confidence: 0.85,
   },
   {
     type: 'go-to',
     patterns: [/跳到|跳转|定位到|转到|去到|前往/i],
-    extractors: [(_m, text) => {
-      const time = extractTimeFromText(text);
-      return time !== undefined ? { time } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const time = extractTimeFromText(text);
+        return time !== undefined ? { time } : {};
+      },
+    ],
     confidence: 0.9,
   },
   {
     type: 'skip-forward',
     patterns: [/前进|往后跳|快进\s*(\d+)/i, /下一[个段秒]/i],
-    extractors: [(_m, text) => {
-      const dur = extractDuration(text);
-      return dur !== undefined ? { seconds: dur } : { seconds: 5 };
-    }],
+    extractors: [
+      (_m, text) => {
+        const dur = extractDuration(text);
+        return dur !== undefined ? { seconds: dur } : { seconds: 5 };
+      },
+    ],
     confidence: 0.8,
   },
   {
     type: 'skip-backward',
     patterns: [/后退|往前跳|倒退\s*(\d+)/i, /上一[个段秒]/i],
-    extractors: [(_m, text) => {
-      const dur = extractDuration(text);
-      return dur !== undefined ? { seconds: dur } : { seconds: 5 };
-    }],
+    extractors: [
+      (_m, text) => {
+        const dur = extractDuration(text);
+        return dur !== undefined ? { seconds: dur } : { seconds: 5 };
+      },
+    ],
     confidence: 0.8,
   },
   {
@@ -168,19 +178,23 @@ const ZH_PATTERNS: CommandPattern[] = [
   {
     type: 'seek',
     patterns: [/拖到|seek\s*到|定位/i],
-    extractors: [(_m, text) => {
-      const time = extractTimeFromText(text);
-      return time !== undefined ? { time } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const time = extractTimeFromText(text);
+        return time !== undefined ? { time } : {};
+      },
+    ],
     confidence: 0.8,
   },
   {
     type: 'add-effect',
     patterns: [/加[个一]效果|添加效果|加滤镜|加特效|应用效果/i],
-    extractors: [(_m, text) => {
-      const effectMatch = text.match(/(?:效果|滤镜|特效)[是为：:]?\s*(.+)/);
-      return effectMatch ? { effect: effectMatch[1].trim() } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const effectMatch = text.match(/(?:效果|滤镜|特效)[是为：:]?\s*(.+)/);
+        return effectMatch ? { effect: effectMatch[1].trim() } : {};
+      },
+    ],
     confidence: 0.8,
   },
   {
@@ -191,31 +205,37 @@ const ZH_PATTERNS: CommandPattern[] = [
   {
     type: 'color-grade',
     patterns: [/调色|校色|色彩调整|颜色/i],
-    extractors: [(_m, text) => {
-      const styleMatch = text.match(/(?:调|校|调整)[成到]?\s*(.+)/);
-      return styleMatch ? { style: styleMatch[1].trim() } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const styleMatch = text.match(/(?:调|校|调整)[成到]?\s*(.+)/);
+        return styleMatch ? { style: styleMatch[1].trim() } : {};
+      },
+    ],
     confidence: 0.75,
   },
   {
     type: 'add-transition',
     patterns: [/加转场|添加过渡|加个过渡|转场效果/i],
-    extractors: [(_m, text) => {
-      const transMatch = text.match(/(?:转场|过渡)[是为：:]?\s*(.+)/);
-      return transMatch ? { transition: transMatch[1].trim() } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const transMatch = text.match(/(?:转场|过渡)[是为：:]?\s*(.+)/);
+        return transMatch ? { transition: transMatch[1].trim() } : {};
+      },
+    ],
     confidence: 0.8,
   },
   {
     type: 'volume',
     patterns: [/音量|声音大[一]?点|声音小[一]?点|调高音量|调低音量|(\d+)\s*%?\s*音量/i],
-    extractors: [(_m, text) => {
-      const volMatch = text.match(/(\d+)\s*%?/);
-      if (volMatch) return { volume: parseInt(volMatch[1], 10) };
-      if (/大|高/.test(text)) return { volume: 80 };
-      if (/小|低/.test(text)) return { volume: 30 };
-      return {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const volMatch = text.match(/(\d+)\s*%?/);
+        if (volMatch) return { volume: parseInt(volMatch[1], 10) };
+        if (/大|高/.test(text)) return { volume: 80 };
+        if (/小|低/.test(text)) return { volume: 30 };
+        return {};
+      },
+    ],
     confidence: 0.85,
   },
   {
@@ -289,40 +309,48 @@ const EN_PATTERNS: CommandPattern[] = [
   {
     type: 'speed',
     patterns: [/\bspeed\s*(?:up|down)?\s*(\d+(?:\.\d+)?)x?/i, /(\d+(?:\.\d+)?)\s*x\s*speed/i],
-    extractors: [(m, text) => {
-      const speedMatch = text.match(/(\d+(?:\.\d+)?)\s*x?/i);
-      if (speedMatch) return { speed: parseFloat(speedMatch[1]) };
-      if (/up/i.test(text)) return { speed: 2 };
-      if (/down/i.test(text)) return { speed: 0.5 };
-      return {};
-    }],
+    extractors: [
+      (m, text) => {
+        const speedMatch = text.match(/(\d+(?:\.\d+)?)\s*x?/i);
+        if (speedMatch) return { speed: parseFloat(speedMatch[1]) };
+        if (/up/i.test(text)) return { speed: 2 };
+        if (/down/i.test(text)) return { speed: 0.5 };
+        return {};
+      },
+    ],
     confidence: 0.85,
   },
   {
     type: 'go-to',
     patterns: [/\bgo\s+to\b/i, /\bjump\s+to\b/i, /\bseek\s+to\b/i],
-    extractors: [(_m, text) => {
-      const time = extractTimeFromText(text);
-      return time !== undefined ? { time } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const time = extractTimeFromText(text);
+        return time !== undefined ? { time } : {};
+      },
+    ],
     confidence: 0.9,
   },
   {
     type: 'skip-forward',
     patterns: [/\bskip\s+forward\b/i, /\bforward\s+(\d+)/i],
-    extractors: [(_m, text) => {
-      const dur = extractDuration(text);
-      return dur !== undefined ? { seconds: dur } : { seconds: 5 };
-    }],
+    extractors: [
+      (_m, text) => {
+        const dur = extractDuration(text);
+        return dur !== undefined ? { seconds: dur } : { seconds: 5 };
+      },
+    ],
     confidence: 0.8,
   },
   {
     type: 'skip-backward',
     patterns: [/\bskip\s+back\b/i, /\bbackward\s+(\d+)/i],
-    extractors: [(_m, text) => {
-      const dur = extractDuration(text);
-      return dur !== undefined ? { seconds: dur } : { seconds: 5 };
-    }],
+    extractors: [
+      (_m, text) => {
+        const dur = extractDuration(text);
+        return dur !== undefined ? { seconds: dur } : { seconds: 5 };
+      },
+    ],
     confidence: 0.8,
   },
   {
@@ -338,19 +366,23 @@ const EN_PATTERNS: CommandPattern[] = [
   {
     type: 'add-effect',
     patterns: [/\badd\s+effect\b/i, /\bapply\s+effect\b/i],
-    extractors: [(_m, text) => {
-      const effectMatch = text.match(/effect\s+(.+)/i);
-      return effectMatch ? { effect: effectMatch[1].trim() } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const effectMatch = text.match(/effect\s+(.+)/i);
+        return effectMatch ? { effect: effectMatch[1].trim() } : {};
+      },
+    ],
     confidence: 0.8,
   },
   {
     type: 'volume',
     patterns: [/\bvolume\s+(\d+)/i, /\bset\s+volume\b/i],
-    extractors: [(_m, text) => {
-      const volMatch = text.match(/(\d+)/);
-      return volMatch ? { volume: parseInt(volMatch[1], 10) } : {};
-    }],
+    extractors: [
+      (_m, text) => {
+        const volMatch = text.match(/(\d+)/);
+        return volMatch ? { volume: parseInt(volMatch[1], 10) } : {};
+      },
+    ],
     confidence: 0.85,
   },
   {
@@ -401,8 +433,17 @@ function extractDuration(text: string): number | undefined {
   if (numMatch) return parseFloat(numMatch[1]);
 
   const cnNumMap: Record<string, number> = {
-    '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5,
-    '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+    一: 1,
+    二: 2,
+    两: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9,
+    十: 10,
   };
   const cnMatch = text.match(/([一二两三四五六七八九十])\s*秒/);
   if (cnMatch && cnNumMap[cnMatch[1]]) return cnNumMap[cnMatch[1]];
@@ -433,10 +474,7 @@ function extractTimeFromText(text: string): number | undefined {
 /**
  * Parse a natural language command text into structured commands.
  */
-export function parseCommand(
-  text: string,
-  config: Partial<CommandParserConfig> = {},
-): ParsedCommand {
+export function parseCommand(text: string, config: Partial<CommandParserConfig> = {}): ParsedCommand {
   const cfg = { ...DEFAULT_COMMAND_PARSER_CONFIG, ...config };
   const trimmed = text.trim();
   if (!trimmed) {
@@ -484,13 +522,13 @@ export function parseCommand(
 /**
  * Parse multiple commands from a single text (split by common delimiters).
  */
-export function parseMultipleCommands(
-  text: string,
-  config: Partial<CommandParserConfig> = {},
-): ParsedCommand[] {
+export function parseMultipleCommands(text: string, config: Partial<CommandParserConfig> = {}): ParsedCommand[] {
   // Split by common delimiters: 然后, 接着, 再, and, then, also
   const delimiters = /(?:然后|接着|再|并且|，|。|;|;|,\s*then|,\s*also|\bthen\b|\band\b\s+then)/i;
-  const parts = text.split(delimiters).map((p) => p.trim()).filter(Boolean);
+  const parts = text
+    .split(delimiters)
+    .map((p) => p.trim())
+    .filter(Boolean);
   return parts.map((part) => parseCommand(part, config));
 }
 
@@ -499,14 +537,47 @@ export function parseMultipleCommands(
  */
 export function buildSpeechGrammarHints(language: 'zh' | 'en'): string[] {
   const zhHints = [
-    '剪切', '删除', '复制', '分割', '播放', '暂停', '前进', '后退',
-    '撤销', '重做', '导出', '静音', '音量', '放大', '缩小',
-    '加效果', '加转场', '调色', '跳到', '选中',
+    '剪切',
+    '删除',
+    '复制',
+    '分割',
+    '播放',
+    '暂停',
+    '前进',
+    '后退',
+    '撤销',
+    '重做',
+    '导出',
+    '静音',
+    '音量',
+    '放大',
+    '缩小',
+    '加效果',
+    '加转场',
+    '调色',
+    '跳到',
+    '选中',
   ];
   const enHints = [
-    'cut', 'delete', 'copy', 'split', 'play', 'pause', 'forward', 'backward',
-    'undo', 'redo', 'export', 'mute', 'volume', 'zoom in', 'zoom out',
-    'add effect', 'add transition', 'go to', 'select',
+    'cut',
+    'delete',
+    'copy',
+    'split',
+    'play',
+    'pause',
+    'forward',
+    'backward',
+    'undo',
+    'redo',
+    'export',
+    'mute',
+    'volume',
+    'zoom in',
+    'zoom out',
+    'add effect',
+    'add transition',
+    'go to',
+    'select',
   ];
   return language === 'zh' ? zhHints : enHints;
 }
@@ -516,9 +587,20 @@ export function buildSpeechGrammarHints(language: 'zh' | 'en'): string[] {
  */
 export function commandNeedsTarget(type: CommandType): boolean {
   const needsTarget: CommandType[] = [
-    'cut', 'delete', 'duplicate', 'split', 'trim', 'speed',
-    'add-effect', 'remove-effect', 'color-grade', 'add-transition',
-    'volume', 'mute', 'unmute', 'select',
+    'cut',
+    'delete',
+    'duplicate',
+    'split',
+    'trim',
+    'speed',
+    'add-effect',
+    'remove-effect',
+    'color-grade',
+    'add-transition',
+    'volume',
+    'mute',
+    'unmute',
+    'select',
   ];
   return needsTarget.includes(type);
 }

@@ -1,11 +1,15 @@
-import type {ExportState} from '../hooks/useExportState';
-import type {ExportActions} from '../hooks/useExportActions';
-import {StatusPill} from './ExportTaskRow';
-import {PostExportScriptResultPanel, ExportRecoveryPanel, PostExportQualityAssurancePanel} from './PostExportStatusPanels';
-import {QualityResultPanel} from './QualityResultPanel';
-import {ExportUploadStatusPanel} from './ExportUploadSection';
-import {priorityLabel} from '../lib/exportFormatHelpers';
-import {openPath} from '../../lib/tauri-bridge';
+import type { ExportState } from '../hooks/useExportState';
+import type { ExportActions } from '../hooks/useExportActions';
+import { StatusPill } from './ExportTaskRow';
+import {
+  PostExportScriptResultPanel,
+  ExportRecoveryPanel,
+  PostExportQualityAssurancePanel,
+} from './PostExportStatusPanels';
+import { QualityResultPanel } from './QualityResultPanel';
+import { ExportUploadStatusPanel } from './ExportUploadSection';
+import { priorityLabel } from '../lib/exportFormatHelpers';
+import { openPath } from '../../lib/tauri-bridge';
 
 interface ExportHistoryProps {
   state: ExportState;
@@ -13,14 +17,7 @@ interface ExportHistoryProps {
 }
 
 export function ExportHistory({ state, actions }: ExportHistoryProps) {
-  const {
-    t,
-    history,
-    qualityTaskId,
-    qualityProgress,
-    qualityResult,
-    qualityError,
-  } = state;
+  const { t, history, qualityTaskId, qualityProgress, qualityResult, qualityError } = state;
 
   return (
     <div className="rounded-md border border-line" data-testid="export-history-list">

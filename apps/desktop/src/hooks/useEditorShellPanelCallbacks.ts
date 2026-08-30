@@ -1,6 +1,6 @@
-import {useMemo} from 'react';
-import type {MediaAsset, MediaLabelColor, MediaFlag, Subclip, MediaMetadata} from '@open-factory/editor-core';
-import type {EffectPreset, TitleTemplateId, MediaRenamePreviewItem} from '@open-factory/editor-core';
+import { useMemo } from 'react';
+import type { MediaAsset, MediaLabelColor, MediaFlag, Subclip, MediaMetadata } from '@open-factory/editor-core';
+import type { EffectPreset, TitleTemplateId, MediaRenamePreviewItem } from '@open-factory/editor-core';
 
 interface PanelCallbacksDeps {
   importMedia: () => Promise<void>;
@@ -105,8 +105,10 @@ export function useEditorShellPanelCallbacks(deps: PanelCallbacksDeps) {
         setMediaMetadata(assetId, { ...projectMediaMetadata[assetId], rating }),
       onSetFlag: (assetId: string, flag?: MediaFlag) =>
         setMediaMetadata(assetId, { ...projectMediaMetadata[assetId], flag }),
-      onBatchUpdateMetadata: (assetIds: string[], metadata: Partial<MediaMetadata>) => batchUpdateMediaMetadata(assetIds, metadata),
-      onBatchRenameMedia: (assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => batchRenameMedia(assetIds, preview, renameFiles),
+      onBatchUpdateMetadata: (assetIds: string[], metadata: Partial<MediaMetadata>) =>
+        batchUpdateMediaMetadata(assetIds, metadata),
+      onBatchRenameMedia: (assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) =>
+        batchRenameMedia(assetIds, preview, renameFiles),
       onAddTitleTemplate: addTitleTemplate,
       onCreateFolder: (parentId?: string | null) => createMediaFolder(parentId),
       onRenameFolder: renameMediaFolder,

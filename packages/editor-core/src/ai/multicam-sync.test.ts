@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createDefaultIntelligentSyncConfig,
-  validateIntelligentSyncConfig,
-} from './multicam-sync';
+import { createDefaultIntelligentSyncConfig, validateIntelligentSyncConfig } from './multicam-sync';
 
 describe('createDefaultIntelligentSyncConfig', () => {
   it('returns expected defaults', () => {
@@ -30,7 +27,11 @@ describe('validateIntelligentSyncConfig', () => {
   });
 
   it('reports weights not summing to 1', () => {
-    const errors = validateIntelligentSyncConfig({ ...createDefaultIntelligentSyncConfig(), audioWeight: 0.3, visualWeight: 0.3 });
+    const errors = validateIntelligentSyncConfig({
+      ...createDefaultIntelligentSyncConfig(),
+      audioWeight: 0.3,
+      visualWeight: 0.3,
+    });
     expect(errors.some((e) => e.includes('之和'))).toBe(true);
   });
 

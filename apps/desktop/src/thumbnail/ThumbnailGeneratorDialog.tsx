@@ -1,11 +1,37 @@
-import {useMemo, useState} from 'react';
-import {buildExportProjectFromProject, buildFfmpegCurrentFrameExportPlan, buildThumbnailExportSettings, buildThumbnailOutputFileName, buildThumbnailOutputPath, buildThumbnailSampleTimestamps, createId, createProject, createTrack, getThumbnailPlatformSize, rankThumbnailCandidates, scoreThumbnailFrame, type Clip, type MediaAsset, type Project, type ThumbnailCandidate, type ThumbnailFrameSample, type ThumbnailPlatformPreset} from '@open-factory/editor-core';
-import {Check, ImageDown, Loader2, X} from 'lucide-react';
-import {createClipFromAsset, createTextClip} from '../lib/clipFactory';
-import {getFfmpegCapabilities, detectPrivacyRegions, convertLocalFileSrc, openDirectoryDialog, runExport, saveFileDialog} from '../lib/tauri-bridge';
-import {showToast} from '../lib/toast';
-import {zhCN} from '../i18n/strings';
-import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
+import { useMemo, useState } from 'react';
+import {
+  buildExportProjectFromProject,
+  buildFfmpegCurrentFrameExportPlan,
+  buildThumbnailExportSettings,
+  buildThumbnailOutputFileName,
+  buildThumbnailOutputPath,
+  buildThumbnailSampleTimestamps,
+  createId,
+  createProject,
+  createTrack,
+  getThumbnailPlatformSize,
+  rankThumbnailCandidates,
+  scoreThumbnailFrame,
+  type Clip,
+  type MediaAsset,
+  type Project,
+  type ThumbnailCandidate,
+  type ThumbnailFrameSample,
+  type ThumbnailPlatformPreset,
+} from '@open-factory/editor-core';
+import { Check, ImageDown, Loader2, X } from 'lucide-react';
+import { createClipFromAsset, createTextClip } from '../lib/clipFactory';
+import {
+  getFfmpegCapabilities,
+  detectPrivacyRegions,
+  convertLocalFileSrc,
+  openDirectoryDialog,
+  runExport,
+  saveFileDialog,
+} from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
+import { zhCN } from '../i18n/strings';
+import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
 
 interface ThumbnailGeneratorDialogProps {
   project: Project;

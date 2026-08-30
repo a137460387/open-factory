@@ -1,8 +1,15 @@
-import {useState, useMemo, useCallback} from 'react';
-import {Palette, Sparkles, Info} from 'lucide-react';
-import {analyzeSubtitleClipEmotions, suggestEmotionColor, batchApplyEmotionStyles, EMOTION_COLOR_MAP, type SubtitleEmotionScore, type SubtitleEmotionType} from '@open-factory/editor-core';
-import type {SubtitleClip, SubtitleStyle} from '@open-factory/editor-core';
-import {featureStrings} from '../i18n/featureStrings';
+import { useState, useMemo, useCallback } from 'react';
+import { Palette, Sparkles, Info } from 'lucide-react';
+import {
+  analyzeSubtitleClipEmotions,
+  suggestEmotionColor,
+  batchApplyEmotionStyles,
+  EMOTION_COLOR_MAP,
+  type SubtitleEmotionScore,
+  type SubtitleEmotionType,
+} from '@open-factory/editor-core';
+import type { SubtitleClip, SubtitleStyle } from '@open-factory/editor-core';
+import { featureStrings } from '../i18n/featureStrings';
 
 interface EmotionAnalysisPanelProps {
   open: boolean;

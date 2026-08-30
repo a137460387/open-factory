@@ -1,7 +1,7 @@
-import {logger} from '@open-factory/editor-core/utils';
-import {useEffect, useRef, useState} from 'react';
-import {listenBridge, convertLocalFileSrc} from '../../lib/tauri-bridge';
-import {useExportQueueStore} from '../../export/export-queue-store';
+import { logger } from '@open-factory/editor-core/utils';
+import { useEffect, useRef, useState } from 'react';
+import { listenBridge, convertLocalFileSrc } from '../../lib/tauri-bridge';
+import { useExportQueueStore } from '../../export/export-queue-store';
 
 /**
  * 导出进度预览帧事件

@@ -311,11 +311,7 @@ export class ModelManager {
   private cleanup(): void {
     const now = Date.now();
     for (const entry of this.models.values()) {
-      if (
-        entry.status === 'loaded' &&
-        entry.refCount === 0 &&
-        now - entry.lastAccessedAt > this.config.idleTimeoutMs
-      ) {
+      if (entry.status === 'loaded' && entry.refCount === 0 && now - entry.lastAccessedAt > this.config.idleTimeoutMs) {
         this.unload(entry.id);
       }
     }

@@ -1,4 +1,4 @@
-import type {ShortcutScheme} from "./shortcut-types.js";
+import type { ShortcutScheme } from './shortcut-types.js';
 
 // ==================== 预设方案 ====================
 
@@ -1335,8 +1335,4 @@ export const DAVINCI_RESOLVE_SCHEME: ShortcutScheme = {
 };
 
 /** 所有预设方案 */
-export const ALL_SHORTCUT_SCHEMES: ShortcutScheme[] = [
-  PREMIERE_SCHEME,
-  FINAL_CUT_SCHEME,
-  DAVINCI_RESOLVE_SCHEME,
-];
+export const ALL_SHORTCUT_SCHEMES: ShortcutScheme[] = [PREMIERE_SCHEME, FINAL_CUT_SCHEME, DAVINCI_RESOLVE_SCHEME];

@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   isCreditsTextFile,
   timelineRangesOverlap,
@@ -70,19 +70,19 @@ describe('joinLocalPath', () => {
 
 describe('isSubtitleAlignmentMediaClip', () => {
   it('returns true for audio clips', () => {
-    expect(isSubtitleAlignmentMediaClip({type: 'audio'} as any)).toBe(true);
+    expect(isSubtitleAlignmentMediaClip({ type: 'audio' } as any)).toBe(true);
   });
 
   it('returns true for video clips', () => {
-    expect(isSubtitleAlignmentMediaClip({type: 'video'} as any)).toBe(true);
+    expect(isSubtitleAlignmentMediaClip({ type: 'video' } as any)).toBe(true);
   });
 
   it('returns false for subtitle clips', () => {
-    expect(isSubtitleAlignmentMediaClip({type: 'subtitle'} as any)).toBe(false);
+    expect(isSubtitleAlignmentMediaClip({ type: 'subtitle' } as any)).toBe(false);
   });
 
   it('returns false for text clips', () => {
-    expect(isSubtitleAlignmentMediaClip({type: 'text'} as any)).toBe(false);
+    expect(isSubtitleAlignmentMediaClip({ type: 'text' } as any)).toBe(false);
   });
 });
 
@@ -127,7 +127,7 @@ describe('buildSubtitleAlignmentPeaks', () => {
   });
 
   it('skips samples outside trim range', () => {
-    const clip = {...baseClip, trimStart: 1, trimEnd: 1} as any;
+    const clip = { ...baseClip, trimStart: 1, trimEnd: 1 } as any;
     const samples = new Array(100).fill(0);
     samples[10] = 1.0;
     samples[11] = 0.5;

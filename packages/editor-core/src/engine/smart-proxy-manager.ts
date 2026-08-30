@@ -169,7 +169,9 @@ export async function detectDevicePerformance(): Promise<DevicePerformanceInfo> 
     if (gl) {
       info.supportsWebGL2 = true;
       if (!info.supportsWebGPU) {
-        info.gpuRenderer = gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL || gl.RENDERER);
+        info.gpuRenderer = gl.getParameter(
+          gl.getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL || gl.RENDERER,
+        );
         info.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
       }
     }
@@ -331,7 +333,7 @@ export class ProxyFileManager {
     quality: ProxyQuality,
     sourceWidth: number,
     sourceHeight: number,
-    generateFn: (mediaId: string, width: number, height: number) => Promise<string>
+    generateFn: (mediaId: string, width: number, height: number) => Promise<string>,
   ): Promise<ProxyFileInfo> {
     const key = this.buildProxyKey(mediaId, quality);
 
@@ -380,7 +382,7 @@ export class ProxyFileManager {
   private calculateProxyDimensions(
     sourceWidth: number,
     sourceHeight: number,
-    quality: ProxyQuality
+    quality: ProxyQuality,
   ): { width: number; height: number } {
     let scale: number;
 
@@ -488,10 +490,7 @@ export class ProxySwitchManager {
   private lastSwitchTime: number = 0;
   private switchHistory: { time: number; from: ProxyQuality; to: ProxyQuality }[] = [];
 
-  constructor(
-    initialQuality: ProxyQuality = 'half',
-    config?: Partial<ProxySwitchStrategy>
-  ) {
+  constructor(initialQuality: ProxyQuality = 'half', config?: Partial<ProxySwitchStrategy>) {
     this.currentQuality = initialQuality;
     this.config = { ...DEFAULT_PROXY_CONFIG.switchStrategy, ...config };
   }
@@ -725,7 +724,7 @@ export class SmartProxyManager {
     quality: ProxyQuality,
     sourceWidth: number,
     sourceHeight: number,
-    generateFn: (mediaId: string, width: number, height: number) => Promise<string>
+    generateFn: (mediaId: string, width: number, height: number) => Promise<string>,
   ): Promise<ProxyFileInfo> {
     return this.fileManager.generateProxy(mediaId, quality, sourceWidth, sourceHeight, generateFn);
   }
@@ -792,9 +791,7 @@ export class SmartProxyManager {
 /**
  * 创建智能代理管理器实例
  */
-export function createSmartProxyManager(
-  config?: Partial<ProxyManagerConfig>
-): SmartProxyManager {
+export function createSmartProxyManager(config?: Partial<ProxyManagerConfig>): SmartProxyManager {
   return new SmartProxyManager(config);
 }
 

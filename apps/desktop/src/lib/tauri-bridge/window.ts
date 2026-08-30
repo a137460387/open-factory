@@ -1,16 +1,27 @@
-import {invoke} from '@tauri-apps/api/core';
-import {emit, listen} from '@tauri-apps/api/event';
-import {getVersion as getTauriAppVersion} from '@tauri-apps/api/app';
-import {getCurrentWindow} from '@tauri-apps/api/window';
-import {message as dialogMessage} from '@tauri-apps/plugin-dialog';
-import {relaunch as relaunchProcess} from '@tauri-apps/plugin-process';
-import {open as openShellPath} from '@tauri-apps/plugin-shell';
-import {check as checkTauriUpdate} from '@tauri-apps/plugin-updater';
-import type {AppUpdateCheckOptions, AvailableAppUpdate, BatchTranscodeProgressEvent, CollaborationHostRequest, CollaborationHostState, CoverFrameProgressEvent, PreviewWindowRequest, PreviewWindowResolutionScale, PreviewWindowState, RenderPreviewCacheProgressEvent} from './types';
-import {getTauriMocks} from './mock-types';
-import {isTauriRuntime} from '../tauri';
-import {zhCN} from '../../i18n/strings';
-import {logger} from '@open-factory/editor-core/utils';
+import { invoke } from '@tauri-apps/api/core';
+import { emit, listen } from '@tauri-apps/api/event';
+import { getVersion as getTauriAppVersion } from '@tauri-apps/api/app';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { message as dialogMessage } from '@tauri-apps/plugin-dialog';
+import { relaunch as relaunchProcess } from '@tauri-apps/plugin-process';
+import { open as openShellPath } from '@tauri-apps/plugin-shell';
+import { check as checkTauriUpdate } from '@tauri-apps/plugin-updater';
+import type {
+  AppUpdateCheckOptions,
+  AvailableAppUpdate,
+  BatchTranscodeProgressEvent,
+  CollaborationHostRequest,
+  CollaborationHostState,
+  CoverFrameProgressEvent,
+  PreviewWindowRequest,
+  PreviewWindowResolutionScale,
+  PreviewWindowState,
+  RenderPreviewCacheProgressEvent,
+} from './types';
+import { getTauriMocks } from './mock-types';
+import { isTauriRuntime } from '../tauri';
+import { zhCN } from '../../i18n/strings';
+import { logger } from '@open-factory/editor-core/utils';
 import desktopPackage from '../../../package.json';
 
 async function authorizePaths(paths: string[]): Promise<void> {

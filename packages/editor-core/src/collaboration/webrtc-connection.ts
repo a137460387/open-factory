@@ -118,10 +118,18 @@ export class WebRTCPeerConnection {
     this.localPeerId = config.localPeerId;
   }
 
-  getState(): WebRTCConnectionState { return this.connectionState; }
-  getStats(): ConnectionStats | null { return this.lastStats ? { ...this.lastStats } : null; }
-  getReconnectAttempt(): number { return this.reconnectAttempt; }
-  isConnected(): boolean { return this.connectionState === 'connected'; }
+  getState(): WebRTCConnectionState {
+    return this.connectionState;
+  }
+  getStats(): ConnectionStats | null {
+    return this.lastStats ? { ...this.lastStats } : null;
+  }
+  getReconnectAttempt(): number {
+    return this.reconnectAttempt;
+  }
+  isConnected(): boolean {
+    return this.connectionState === 'connected';
+  }
 
   onConnectionStateChange(callback: ConnectionStateCallback): () => void {
     this.stateCallbacks.add(callback);
@@ -170,11 +178,13 @@ export class WebRTCPeerConnection {
   async addICECandidate(candidate: ICECandidate): Promise<void> {
     this.ensureNotDisposed();
     if (!this.peer) throw new Error('Peer connection not initialized');
-    await this.peer.addIceCandidate(new RTCIceCandidate({
-      candidate: candidate.candidate,
-      sdpMid: candidate.sdpMid,
-      sdpMLineIndex: candidate.sdpMLineIndex,
-    }));
+    await this.peer.addIceCandidate(
+      new RTCIceCandidate({
+        candidate: candidate.candidate,
+        sdpMid: candidate.sdpMid,
+        sdpMLineIndex: candidate.sdpMLineIndex,
+      }),
+    );
   }
 
   /** 通过 DataChannel 发送数据 */
@@ -193,7 +203,13 @@ export class WebRTCPeerConnection {
         if (message.sdp) {
           await this.setRemoteDescription(message.sdp);
           const answer = await this.createAnswer();
-          this.emitSignaling({ type: 'answer', senderId: this.localPeerId, receiverId: message.senderId, sdp: answer, timestamp: Date.now() });
+          this.emitSignaling({
+            type: 'answer',
+            senderId: this.localPeerId,
+            receiverId: message.senderId,
+            sdp: answer,
+            timestamp: Date.now(),
+          });
         }
         break;
       case 'answer':
@@ -226,12 +242,20 @@ export class WebRTCPeerConnection {
   private setState(state: WebRTCConnectionState, detail?: string): void {
     this.connectionState = state;
     for (const cb of this.stateCallbacks) {
-      try { cb(state, detail); } catch { /* ignore */ }
+      try {
+        cb(state, detail);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   private emitSignaling(message: SignalingMessage): void {
-    try { this.signalingCallback?.(message); } catch { /* ignore */ }
+    try {
+      this.signalingCallback?.(message);
+    } catch {
+      /* ignore */
+    }
   }
 
   private initPeerConnection(): void {
@@ -245,7 +269,11 @@ export class WebRTCPeerConnection {
           type: 'ice-candidate',
           senderId: this.localPeerId,
           receiverId: '',
-          candidate: { candidate: event.candidate.candidate, sdpMid: event.candidate.sdpMid ?? '', sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0 },
+          candidate: {
+            candidate: event.candidate.candidate,
+            sdpMid: event.candidate.sdpMid ?? '',
+            sdpMLineIndex: event.candidate.sdpMLineIndex ?? 0,
+          },
           timestamp: Date.now(),
         });
       }
@@ -253,10 +281,19 @@ export class WebRTCPeerConnection {
 
     this.peer.onconnectionstatechange = () => {
       const s = this.peer?.connectionState;
-      if (s === 'connected') { this.reconnectAttempt = 0; this.setState('connected'); this.startStatsMonitor(); }
-      else if (s === 'disconnected') { this.setState('disconnected', 'Peer disconnected'); this.tryReconnect(); }
-      else if (s === 'failed') { this.setState('failed', 'Connection failed'); this.tryReconnect(); }
-      else if (s === 'connecting') { this.setState('connecting'); }
+      if (s === 'connected') {
+        this.reconnectAttempt = 0;
+        this.setState('connected');
+        this.startStatsMonitor();
+      } else if (s === 'disconnected') {
+        this.setState('disconnected', 'Peer disconnected');
+        this.tryReconnect();
+      } else if (s === 'failed') {
+        this.setState('failed', 'Connection failed');
+        this.tryReconnect();
+      } else if (s === 'connecting') {
+        this.setState('connecting');
+      }
     };
 
     this.peer.ondatachannel = (event) => this.setupDataChannel(event.channel);
@@ -274,7 +311,11 @@ export class WebRTCPeerConnection {
     channel.onmessage = (event) => {
       if (typeof event.data === 'string') {
         for (const cb of this.dataCallbacks) {
-          try { cb(event.data); } catch { /* ignore */ }
+          try {
+            cb(event.data);
+          } catch {
+            /* ignore */
+          }
         }
       }
     };
@@ -308,7 +349,11 @@ export class WebRTCPeerConnection {
       this.setState('failed', `Reconnect failed after ${this.config.maxReconnectAttempts} attempts`);
       return;
     }
-    const delay = computeBackoffDelay(this.reconnectAttempt, this.config.initialReconnectDelayMs, this.config.maxReconnectDelayMs);
+    const delay = computeBackoffDelay(
+      this.reconnectAttempt,
+      this.config.initialReconnectDelayMs,
+      this.config.maxReconnectDelayMs,
+    );
     this.reconnectAttempt++;
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(() => {
@@ -321,7 +366,10 @@ export class WebRTCPeerConnection {
   }
 
   private clearReconnectTimer(): void {
-    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 
   // === 统计 ===
@@ -332,7 +380,9 @@ export class WebRTCPeerConnection {
       if (!this.peer) return;
       try {
         const stats = await this.peer.getStats();
-        let bytesSent = 0, bytesReceived = 0, roundTripTime = 0;
+        let bytesSent = 0,
+          bytesReceived = 0,
+          roundTripTime = 0;
         stats.forEach((report) => {
           if (report.type === 'candidate-pair' && report.state === 'succeeded') {
             bytesSent = report.bytesSent ?? 0;
@@ -340,13 +390,24 @@ export class WebRTCPeerConnection {
             roundTripTime = report.currentRoundTripTime ?? 0;
           }
         });
-        this.lastStats = { bytesSent, bytesReceived, roundTripTime, connectionState: this.connectionState, timestamp: Date.now() };
-      } catch { /* stats not available */ }
+        this.lastStats = {
+          bytesSent,
+          bytesReceived,
+          roundTripTime,
+          connectionState: this.connectionState,
+          timestamp: Date.now(),
+        };
+      } catch {
+        /* stats not available */
+      }
     }, 5000);
   }
 
   private stopStatsMonitor(): void {
-    if (this.statsInterval) { clearInterval(this.statsInterval); this.statsInterval = null; }
+    if (this.statsInterval) {
+      clearInterval(this.statsInterval);
+      this.statsInterval = null;
+    }
   }
 }
 
@@ -368,8 +429,12 @@ export class WebRTCSignalingChannel {
     this.localPeerId = localPeerId;
   }
 
-  getLocalPeerId(): string { return this.localPeerId; }
-  getPeerCount(): number { return this.peerConnections.size; }
+  getLocalPeerId(): string {
+    return this.localPeerId;
+  }
+  getPeerCount(): number {
+    return this.peerConnections.size;
+  }
 
   /** 注册底层发送回调 */
   onSend(callback: (message: SignalingMessage) => void): void {
@@ -409,9 +474,15 @@ export class WebRTCSignalingChannel {
   /** 分发收到的信令消息 */
   async dispatch(message: SignalingMessage): Promise<void> {
     switch (message.type) {
-      case 'offer': await this.handleOffer(message); break;
-      case 'answer': await this.handleAnswer(message); break;
-      case 'ice-candidate': await this.handleICECandidate(message); break;
+      case 'offer':
+        await this.handleOffer(message);
+        break;
+      case 'answer':
+        await this.handleAnswer(message);
+        break;
+      case 'ice-candidate':
+        await this.handleICECandidate(message);
+        break;
     }
   }
 
@@ -422,12 +493,20 @@ export class WebRTCSignalingChannel {
   }
 
   private send(message: SignalingMessage): void {
-    try { this.sendCallback?.(message); } catch { /* ignore */ }
+    try {
+      this.sendCallback?.(message);
+    } catch {
+      /* ignore */
+    }
   }
 
   private notifyHandlers(message: SignalingMessage): void {
     for (const handler of this.messageHandlers) {
-      try { handler(message); } catch { /* ignore */ }
+      try {
+        handler(message);
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

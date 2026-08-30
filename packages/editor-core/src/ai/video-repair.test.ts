@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createDefaultVideoRepairConfig,
-  validateVideoRepairConfig,
-} from './video-repair';
+import { createDefaultVideoRepairConfig, validateVideoRepairConfig } from './video-repair';
 
 describe('createDefaultVideoRepairConfig', () => {
   it('returns expected defaults', () => {

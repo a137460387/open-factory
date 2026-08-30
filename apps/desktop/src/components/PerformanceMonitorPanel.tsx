@@ -22,17 +22,19 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
     setConfig,
     setPanelOpen,
     sample,
-  } = usePerformanceMonitorStore(useShallow((s) => ({
-    alerts: s.alerts,
-    metrics: s.metrics,
-    optimizationPlan: s.optimizationPlan,
-    config: s.config,
-    executeOptimization: s.executeOptimization,
-    dismissAlert: s.dismissAlert,
-    setConfig: s.setConfig,
-    setPanelOpen: s.setPanelOpen,
-    sample: s.sample,
-  })));
+  } = usePerformanceMonitorStore(
+    useShallow((s) => ({
+      alerts: s.alerts,
+      metrics: s.metrics,
+      optimizationPlan: s.optimizationPlan,
+      config: s.config,
+      executeOptimization: s.executeOptimization,
+      dismissAlert: s.dismissAlert,
+      setConfig: s.setConfig,
+      setPanelOpen: s.setPanelOpen,
+      sample: s.sample,
+    })),
+  );
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {

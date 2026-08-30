@@ -51,9 +51,7 @@ export const COMPLETION_ACTION_LABELS: Record<CompletionActionType, string> = {
   open_folder: '打开输出目录',
 };
 
-export const DEFAULT_COMPLETION_ACTIONS: CompletionAction[] = [
-  { id: 'default-notify', type: 'notify', enabled: true },
-];
+export const DEFAULT_COMPLETION_ACTIONS: CompletionAction[] = [{ id: 'default-notify', type: 'notify', enabled: true }];
 
 // ─── Batch Render Management ────────────────────────────
 
@@ -138,25 +136,16 @@ export function calculateBatchProgress(
 
 // ─── Completion Action Management ──────────────────────
 
-export function addCompletionAction(
-  actions: CompletionAction[],
-  type: CompletionActionType,
-): CompletionAction[] {
+export function addCompletionAction(actions: CompletionAction[], type: CompletionActionType): CompletionAction[] {
   const id = `action-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   return [...actions, { id, type, enabled: true }];
 }
 
-export function removeCompletionAction(
-  actions: CompletionAction[],
-  actionId: string,
-): CompletionAction[] {
+export function removeCompletionAction(actions: CompletionAction[], actionId: string): CompletionAction[] {
   return actions.filter((a) => a.id !== actionId);
 }
 
-export function toggleCompletionAction(
-  actions: CompletionAction[],
-  actionId: string,
-): CompletionAction[] {
+export function toggleCompletionAction(actions: CompletionAction[], actionId: string): CompletionAction[] {
   return actions.map((a) => (a.id === actionId ? { ...a, enabled: !a.enabled } : a));
 }
 

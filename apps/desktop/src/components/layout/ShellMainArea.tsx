@@ -1,17 +1,22 @@
-import {lazy, Suspense, type PointerEvent as ReactPointerEvent} from 'react';
-import {GripHorizontal} from 'lucide-react';
-import {ErrorBoundary} from '../common/ErrorBoundary';
-import {PanelLoading} from '../PanelLoading';
-import {ShellLeftPanel} from './ShellLeftPanel';
-import {ShellRightPanel} from './ShellRightPanel';
-import {zhCN} from '../../i18n/strings';
-import type {WorkspaceLayoutId} from '../../layout/layoutSettings';
-import type {TimelineGridSettings, ProfilerFrameSample, TimelineColorHeatmapPoint, SceneColorDifference} from '@open-factory/editor-core';
-import type {PreviewPerformanceSettings} from '../../lib/preview/preview-performance';
-import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
-import type {ReviewAnnotation} from '@open-factory/editor-core';
-import {AngleSwitcherPanel} from '../AngleSwitcher/AngleSwitcherPanel';
-import {useEditorStore, findMulticamClipInProject} from '../../store/editorStore';
+import { lazy, Suspense, type PointerEvent as ReactPointerEvent } from 'react';
+import { GripHorizontal } from 'lucide-react';
+import { ErrorBoundary } from '../common/ErrorBoundary';
+import { PanelLoading } from '../PanelLoading';
+import { ShellLeftPanel } from './ShellLeftPanel';
+import { ShellRightPanel } from './ShellRightPanel';
+import { zhCN } from '../../i18n/strings';
+import type { WorkspaceLayoutId } from '../../layout/layoutSettings';
+import type {
+  TimelineGridSettings,
+  ProfilerFrameSample,
+  TimelineColorHeatmapPoint,
+  SceneColorDifference,
+} from '@open-factory/editor-core';
+import type { PreviewPerformanceSettings } from '../../lib/preview/preview-performance';
+import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import type { ReviewAnnotation } from '@open-factory/editor-core';
+import { AngleSwitcherPanel } from '../AngleSwitcher/AngleSwitcherPanel';
+import { useEditorStore, findMulticamClipInProject } from '../../store/editorStore';
 
 const PreviewCanvas = lazy(() =>
   import('../PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })),

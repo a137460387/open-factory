@@ -1,10 +1,19 @@
-import type {ProjectAccessor} from './index';
-import {BeatMarker, normalizeBeatMarkers} from '../../beats';
-import {ExportRange, ProtectedRange, TimelineBookmark, createTimelineBookmark, normalizeExportRanges, normalizeProtectedRanges, normalizeTimelineBookmark, normalizeTimelineBookmarks} from '../../model';
-import {getTimelineDuration} from '../../timeline';
-import {Command} from '../command';
-import {touchProject} from './utils';
-import {sortBookmarks} from './utils-nested';
+import type { ProjectAccessor } from './index';
+import { BeatMarker, normalizeBeatMarkers } from '../../beats';
+import {
+  ExportRange,
+  ProtectedRange,
+  TimelineBookmark,
+  createTimelineBookmark,
+  normalizeExportRanges,
+  normalizeProtectedRanges,
+  normalizeTimelineBookmark,
+  normalizeTimelineBookmarks,
+} from '../../model';
+import { getTimelineDuration } from '../../timeline';
+import { Command } from '../command';
+import { touchProject } from './utils';
+import { sortBookmarks } from './utils-nested';
 
 export interface AddProjectBookmarkInput {
   id?: string;

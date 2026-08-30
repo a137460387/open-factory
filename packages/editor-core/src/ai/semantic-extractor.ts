@@ -198,7 +198,10 @@ export function validateExtractionConfig(config: ExtractionConfig): ExtractionVa
   if (config.previewQuality !== undefined && (config.previewQuality < 1 || config.previewQuality > 100)) {
     errors.push({ field: 'previewQuality', message: 'must be between 1 and 100' });
   }
-  if (config.sceneChangeThreshold !== undefined && (config.sceneChangeThreshold < 0 || config.sceneChangeThreshold > 1)) {
+  if (
+    config.sceneChangeThreshold !== undefined &&
+    (config.sceneChangeThreshold < 0 || config.sceneChangeThreshold > 1)
+  ) {
     errors.push({ field: 'sceneChangeThreshold', message: 'must be between 0 and 1' });
   }
 
@@ -213,7 +216,7 @@ export function validateExtractionConfig(config: ExtractionConfig): ExtractionVa
  */
 export function calculateKeyFrameTimestamps(
   durationSec: number,
-  config: Pick<Required<ExtractionConfig>, 'maxKeyFrames' | 'intervalSec'>
+  config: Pick<Required<ExtractionConfig>, 'maxKeyFrames' | 'intervalSec'>,
 ): number[] {
   if (durationSec <= 0) return [];
 
@@ -253,7 +256,7 @@ export function calculatePreviewDimensions(
   srcWidth: number,
   srcHeight: number,
   maxWidth: number,
-  maxHeight: number
+  maxHeight: number,
 ): { width: number; height: number } {
   if (srcWidth <= 0 || srcHeight <= 0) {
     return { width: maxWidth, height: maxHeight };
@@ -284,11 +287,7 @@ export function calculatePreviewDimensions(
  * Merge ASR segments that are close together.
  * Segments within mergeGapSec of each other are combined.
  */
-export function mergeASRSegments(
-  segments: ASRSegment[],
-  mergeGapSec: number,
-  maxDurationSec: number
-): ASRSegment[] {
+export function mergeASRSegments(segments: ASRSegment[], mergeGapSec: number, maxDurationSec: number): ASRSegment[] {
   if (segments.length === 0) return [];
 
   const sorted = [...segments].sort((a, b) => a.startSec - b.startSec);
@@ -348,7 +347,7 @@ export function detectLanguageFromASR(text: string): string {
 export function generateAutoTags(
   visualProfile: VisualProfile,
   audioProfile: AudioProfile,
-  asrSegments: ASRSegment[]
+  asrSegments: ASRSegment[],
 ): string[] {
   const tags = new Set<string>();
 
@@ -389,7 +388,10 @@ export function generateAutoTags(
  * Concatenates all transcript text.
  */
 export function buildTranscriptText(segments: ASRSegment[]): string {
-  return segments.map(s => s.text.trim()).filter(Boolean).join(' ');
+  return segments
+    .map((s) => s.text.trim())
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**
@@ -399,7 +401,7 @@ export function buildTranscriptText(segments: ASRSegment[]): string {
 export function estimateMetadataUploadSize(metadata: MaterialMetadata): number {
   let size = JSON.stringify({
     ...metadata,
-    keyFrames: metadata.keyFrames.map(kf => ({
+    keyFrames: metadata.keyFrames.map((kf) => ({
       ...kf,
       lowResPreview: undefined,
     })),
@@ -432,7 +434,7 @@ export function aggregateMetadata(
   asrSegments: ASRSegment[],
   audioProfile: AudioProfile,
   visualProfile: VisualProfile,
-  config: Required<ExtractionConfig>
+  config: Required<ExtractionConfig>,
 ): ExtractionResult {
   const warnings: string[] = [];
 
@@ -445,16 +447,14 @@ export function aggregateMetadata(
   }
 
   // Merge ASR segments
-  const mergedASR = config.enableASR
-    ? mergeASRSegments(asrSegments, 0.3, 30)
-    : [];
+  const mergedASR = config.enableASR ? mergeASRSegments(asrSegments, 0.3, 30) : [];
 
   // Detect language
   const transcriptText = buildTranscriptText(mergedASR);
   const detectedLang = detectLanguageFromASR(transcriptText);
 
   // Enrich ASR with language
-  const enrichedASR = mergedASR.map(seg => ({
+  const enrichedASR = mergedASR.map((seg) => ({
     ...seg,
     language: seg.language ?? detectedLang,
   }));

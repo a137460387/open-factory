@@ -1,18 +1,20 @@
-import {useEffect} from 'react';
-import {Star} from 'lucide-react';
-import {zhCN} from '../i18n/strings';
-import type {Clip, Project} from '@open-factory/editor-core';
-import {useLutLibrary} from './hooks/useLutLibrary';
+import { useEffect } from 'react';
+import { Star } from 'lucide-react';
+import { zhCN } from '../i18n/strings';
+import type { Clip, Project } from '@open-factory/editor-core';
+import { useLutLibrary } from './hooks/useLutLibrary';
 
 interface LutLibraryPanelProps {
   selectedClip: Clip | undefined;
   project: Project;
 }
 
-export function LutLibraryPanel({selectedClip, project}: LutLibraryPanelProps) {
+export function LutLibraryPanel({ selectedClip, project }: LutLibraryPanelProps) {
   const t = zhCN.settings;
-  const {items, loading, error, selectedClipCanUseLut, refresh, preview, apply, toggleFavorite} =
-    useLutLibrary(selectedClip, project);
+  const { items, loading, error, selectedClipCanUseLut, refresh, preview, apply, toggleFavorite } = useLutLibrary(
+    selectedClip,
+    project,
+  );
 
   useEffect(() => {
     void refresh();
@@ -39,19 +41,13 @@ export function LutLibraryPanel({selectedClip, project}: LutLibraryPanelProps) {
         </button>
       </div>
       {loading ? (
-        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-          {t.lutLibrary.loading}
-        </div>
+        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.loading}</div>
       ) : null}
       {error ? (
-        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          {error}
-        </div>
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div>
       ) : null}
       {!loading && items.length === 0 ? (
-        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-          {t.lutLibrary.empty}
-        </div>
+        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.empty}</div>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         {items.map((item) => (
@@ -63,12 +59,7 @@ export function LutLibraryPanel({selectedClip, project}: LutLibraryPanelProps) {
             <div className="flex items-start gap-3">
               <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
                 {item.previewDataUrl ? (
-                  <img
-                    className="h-full w-full object-cover"
-                    src={item.previewDataUrl}
-                    alt=""
-                    loading="lazy"
-                  />
+                  <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" loading="lazy" />
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">

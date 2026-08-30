@@ -19,10 +19,7 @@ function makeClock(entries: Record<string, number> = {}): VectorClock {
   return new Map(Object.entries(entries));
 }
 
-function makeOp(
-  id: string,
-  overrides: Partial<TimelineOperation> = {},
-): TimelineOperation {
+function makeOp(id: string, overrides: Partial<TimelineOperation> = {}): TimelineOperation {
   return {
     type: 'update',
     target: 'clip',
@@ -198,30 +195,20 @@ describe('batchOperations', () => {
   });
 
   it('groups ops within time window', () => {
-    const ops = [
-      makeOp('a', { timestamp: 100 }),
-      makeOp('b', { timestamp: 200 }),
-      makeOp('c', { timestamp: 300 }),
-    ];
+    const ops = [makeOp('a', { timestamp: 100 }), makeOp('b', { timestamp: 200 }), makeOp('c', { timestamp: 300 })];
     const batches = batchOperations(ops, 500);
     expect(batches).toHaveLength(1);
     expect(batches[0]).toHaveLength(3);
   });
 
   it('splits ops outside time window', () => {
-    const ops = [
-      makeOp('a', { timestamp: 100 }),
-      makeOp('b', { timestamp: 2000 }),
-    ];
+    const ops = [makeOp('a', { timestamp: 100 }), makeOp('b', { timestamp: 2000 })];
     const batches = batchOperations(ops, 500);
     expect(batches).toHaveLength(2);
   });
 
   it('sorts ops by timestamp before batching', () => {
-    const ops = [
-      makeOp('b', { timestamp: 200 }),
-      makeOp('a', { timestamp: 100 }),
-    ];
+    const ops = [makeOp('b', { timestamp: 200 }), makeOp('a', { timestamp: 100 })];
     const batches = batchOperations(ops, 500);
     expect(batches[0][0].data.id).toBe('a');
   });
@@ -248,14 +235,18 @@ describe('ConflictResolver', () => {
 
   it('records conflict history', () => {
     const resolver = new ConflictResolver('last-writer-wins');
-    resolver.track(makeOp('clip-1', {
-      timestamp: 100,
-      vectorClock: makeClock({ u1: 2, u2: 1 }),
-    }));
-    resolver.track(makeOp('clip-1', {
-      timestamp: 200,
-      vectorClock: makeClock({ u1: 1, u2: 2 }),
-    }));
+    resolver.track(
+      makeOp('clip-1', {
+        timestamp: 100,
+        vectorClock: makeClock({ u1: 2, u2: 1 }),
+      }),
+    );
+    resolver.track(
+      makeOp('clip-1', {
+        timestamp: 200,
+        vectorClock: makeClock({ u1: 1, u2: 2 }),
+      }),
+    );
     resolver.resolve();
     expect(resolver.getHistory()).toHaveLength(1);
     expect(resolver.getHistory()[0].resolution).toBe('last-writer-wins');

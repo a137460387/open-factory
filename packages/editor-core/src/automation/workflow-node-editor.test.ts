@@ -87,9 +87,9 @@ describe('workflow-node-editor', () => {
       const nodeToRemove = wf.nodes[1]; // scene-detect
       const result = removeNode(wf, nodeToRemove.id);
       expect(result.nodes.length).toBe(2);
-      expect(result.connections.every(
-        (c) => c.sourceNodeId !== nodeToRemove.id && c.targetNodeId !== nodeToRemove.id,
-      )).toBe(true);
+      expect(
+        result.connections.every((c) => c.sourceNodeId !== nodeToRemove.id && c.targetNodeId !== nodeToRemove.id),
+      ).toBe(true);
     });
   });
 
@@ -215,26 +215,20 @@ describe('workflow-node-editor', () => {
 
   describe('validateParameters', () => {
     it('returns errors for missing required parameters', () => {
-      const params = [
-        { id: 'p1', name: 'format', dataType: 'string' as const, required: true },
-      ];
+      const params = [{ id: 'p1', name: 'format', dataType: 'string' as const, required: true }];
       const errors = validateParameters(params, {});
       expect(errors.length).toBe(1);
       expect(errors[0]).toContain('format');
     });
 
     it('returns no errors when required params are provided', () => {
-      const params = [
-        { id: 'p1', name: 'format', dataType: 'string' as const, required: true },
-      ];
+      const params = [{ id: 'p1', name: 'format', dataType: 'string' as const, required: true }];
       const errors = validateParameters(params, { format: 'mp4' });
       expect(errors.length).toBe(0);
     });
 
     it('accepts default values as satisfying required', () => {
-      const params = [
-        { id: 'p1', name: 'format', dataType: 'string' as const, required: true, defaultValue: 'mp4' },
-      ];
+      const params = [{ id: 'p1', name: 'format', dataType: 'string' as const, required: true, defaultValue: 'mp4' }];
       const errors = validateParameters(params, {});
       expect(errors.length).toBe(0);
     });

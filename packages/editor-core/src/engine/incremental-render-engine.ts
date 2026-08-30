@@ -173,7 +173,7 @@ export class RenderCacheManager {
     if (!result) return;
 
     this.cache.delete(key);
-    this.accessOrder = this.accessOrder.filter(k => k !== key);
+    this.accessOrder = this.accessOrder.filter((k) => k !== key);
 
     if (result.texture) {
       result.texture.destroy();
@@ -243,11 +243,7 @@ export class DiffDetector {
   /**
    * 检测差异
    */
-  detectDiff(
-    currentFrame: number,
-    currentRegions: RenderRegion[],
-    reason: string
-  ): RenderDiff {
+  detectDiff(currentFrame: number, currentRegions: RenderRegion[], reason: string): RenderDiff {
     const diff: RenderDiff = {
       regions: [],
       reason,
@@ -337,7 +333,7 @@ export class RenderTaskScheduler {
     region: RenderRegion,
     frame: number,
     priority: RenderPriority = 'normal',
-    dependencies: string[] = []
+    dependencies: string[] = [],
   ): RenderTask {
     const task: RenderTask = {
       id: this.generateTaskId(),
@@ -373,9 +369,7 @@ export class RenderTaskScheduler {
     for (const task of this.taskQueue) {
       if (task.status !== 'pending') continue;
 
-      const dependenciesSatisfied = task.dependencies.every(
-        depId => this.completedTasks.has(depId)
-      );
+      const dependenciesSatisfied = task.dependencies.every((depId) => this.completedTasks.has(depId));
 
       if (dependenciesSatisfied) {
         task.status = 'queued';
@@ -393,7 +387,7 @@ export class RenderTaskScheduler {
     task.status = 'rendering';
     task.startedAt = Date.now();
     this.activeTasks.set(task.id, task);
-    this.taskQueue = this.taskQueue.filter(t => t.id !== task.id);
+    this.taskQueue = this.taskQueue.filter((t) => t.id !== task.id);
   }
 
   /**
@@ -428,7 +422,7 @@ export class RenderTaskScheduler {
    */
   cancelTask(taskId: string): boolean {
     // Check queue
-    const queuedIndex = this.taskQueue.findIndex(t => t.id === taskId);
+    const queuedIndex = this.taskQueue.findIndex((t) => t.id === taskId);
     if (queuedIndex !== -1) {
       this.taskQueue[queuedIndex].status = 'cancelled';
       this.taskQueue.splice(queuedIndex, 1);
@@ -478,9 +472,7 @@ export class RenderTaskScheduler {
    */
   getTask(taskId: string): RenderTask | undefined {
     return (
-      this.taskQueue.find(t => t.id === taskId) ||
-      this.activeTasks.get(taskId) ||
-      this.completedTasks.get(taskId)
+      this.taskQueue.find((t) => t.id === taskId) || this.activeTasks.get(taskId) || this.completedTasks.get(taskId)
     );
   }
 
@@ -495,19 +487,15 @@ export class RenderTaskScheduler {
     failed: number;
     cancelled: number;
   } {
-    const allTasks = [
-      ...this.taskQueue,
-      ...this.activeTasks.values(),
-      ...this.completedTasks.values(),
-    ];
+    const allTasks = [...this.taskQueue, ...this.activeTasks.values(), ...this.completedTasks.values()];
 
     return {
-      pending: allTasks.filter(t => t.status === 'pending').length,
-      queued: allTasks.filter(t => t.status === 'queued').length,
-      rendering: allTasks.filter(t => t.status === 'rendering').length,
-      completed: allTasks.filter(t => t.status === 'completed').length,
-      failed: allTasks.filter(t => t.status === 'failed').length,
-      cancelled: allTasks.filter(t => t.status === 'cancelled').length,
+      pending: allTasks.filter((t) => t.status === 'pending').length,
+      queued: allTasks.filter((t) => t.status === 'queued').length,
+      rendering: allTasks.filter((t) => t.status === 'rendering').length,
+      completed: allTasks.filter((t) => t.status === 'completed').length,
+      failed: allTasks.filter((t) => t.status === 'failed').length,
+      cancelled: allTasks.filter((t) => t.status === 'cancelled').length,
     };
   }
 
@@ -515,20 +503,13 @@ export class RenderTaskScheduler {
    * 获取统计信息
    */
   getStats(): IncrementalRenderStats {
-    const allTasks = [
-      ...this.taskQueue,
-      ...this.activeTasks.values(),
-      ...this.completedTasks.values(),
-    ];
+    const allTasks = [...this.taskQueue, ...this.activeTasks.values(), ...this.completedTasks.values()];
 
-    const completedTasks = allTasks.filter(t => t.status === 'completed');
-    const failedTasks = allTasks.filter(t => t.status === 'failed');
-    const cancelledTasks = allTasks.filter(t => t.status === 'cancelled');
+    const completedTasks = allTasks.filter((t) => t.status === 'completed');
+    const failedTasks = allTasks.filter((t) => t.status === 'failed');
+    const cancelledTasks = allTasks.filter((t) => t.status === 'cancelled');
 
-    const totalRenderTime = completedTasks.reduce(
-      (sum, t) => sum + t.actualDurationMs,
-      0
-    );
+    const totalRenderTime = completedTasks.reduce((sum, t) => sum + t.actualDurationMs, 0);
 
     return {
       totalTasks: allTasks.length,
@@ -539,7 +520,7 @@ export class RenderTaskScheduler {
       cacheHitRate: 0, // TODO: track cache hits
       queueLength: this.taskQueue.length,
       activeRenderers: this.activeTasks.size,
-      framesRendered: completedTasks.filter(t => t.type === 'frame').length,
+      framesRendered: completedTasks.filter((t) => t.type === 'frame').length,
       regionsRendered: completedTasks.length,
     };
   }
@@ -654,7 +635,7 @@ export class IncrementalRenderEngine {
     region: RenderRegion,
     frame: number,
     priority: RenderPriority = 'normal',
-    dependencies: string[] = []
+    dependencies: string[] = [],
   ): RenderTask {
     return this.taskScheduler.addTask(type, region, frame, priority, dependencies);
   }
@@ -674,11 +655,7 @@ export class IncrementalRenderEngine {
   /**
    * 检测差异并提交渲染请求
    */
-  detectAndRender(
-    currentFrame: number,
-    currentRegions: RenderRegion[],
-    reason: string
-  ): RenderDiff {
+  detectAndRender(currentFrame: number, currentRegions: RenderRegion[], reason: string): RenderDiff {
     const diff = this.diffDetector.detectDiff(currentFrame, currentRegions, reason);
 
     // Create render tasks for changed regions
@@ -947,9 +924,7 @@ export class RenderProgressEstimator {
 /**
  * 创建增量渲染引擎实例
  */
-export function createIncrementalRenderEngine(
-  config?: Partial<IncrementalRenderConfig>
-): IncrementalRenderEngine {
+export function createIncrementalRenderEngine(config?: Partial<IncrementalRenderConfig>): IncrementalRenderEngine {
   return new IncrementalRenderEngine(config);
 }
 

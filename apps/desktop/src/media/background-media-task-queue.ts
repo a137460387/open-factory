@@ -1,8 +1,4 @@
-import {
-  MediaSemaphore,
-  backgroundMediaPool,
-  uiFeedbackPool,
-} from './media-concurrency';
+import { MediaSemaphore, backgroundMediaPool, uiFeedbackPool } from './media-concurrency';
 
 /**
  * 兼容旧 API:BackgroundMediaTaskQueue 即 MediaSemaphore。

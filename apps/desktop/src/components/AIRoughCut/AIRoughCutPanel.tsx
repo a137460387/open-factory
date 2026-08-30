@@ -1,13 +1,22 @@
-import {useState, useCallback, useRef} from 'react';
-import type {MediaAsset, Clip} from '@open-factory/editor-core';
-import {buildMediaInfoForAI, buildRoughCutSystemPrompt, buildRoughCutUserPrompt, parseRoughCutAIResponse, ROUGH_CUT_TEMPLATES, isProviderConfigured, runAlgorithmPipeline, type AlgorithmStep} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
-import {commandManager, timelineAccessor} from '../../store/commandManager';
-import {BatchAddClipsCommand} from '@open-factory/editor-core';
-import {showToast} from '../../lib/toast';
-import {createId, createBaseClip} from '@open-factory/editor-core';
+import { useState, useCallback, useRef } from 'react';
+import type { MediaAsset, Clip } from '@open-factory/editor-core';
+import {
+  buildMediaInfoForAI,
+  buildRoughCutSystemPrompt,
+  buildRoughCutUserPrompt,
+  parseRoughCutAIResponse,
+  ROUGH_CUT_TEMPLATES,
+  isProviderConfigured,
+  runAlgorithmPipeline,
+  type AlgorithmStep,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
+import { commandManager, timelineAccessor } from '../../store/commandManager';
+import { BatchAddClipsCommand } from '@open-factory/editor-core';
+import { showToast } from '../../lib/toast';
+import { createId, createBaseClip } from '@open-factory/editor-core';
 
 const t = zhCN.aiRoughCut;
 

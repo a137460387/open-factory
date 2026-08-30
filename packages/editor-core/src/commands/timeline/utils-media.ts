@@ -58,7 +58,11 @@ export function mergeMediaReferences(project: Project, keepAssetId: string, remo
   });
 }
 
-export function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string, removeIds: Set<string>): Timeline {
+export function replaceTimelineMediaReferences(
+  timeline: Timeline,
+  keepAssetId: string,
+  removeIds: Set<string>,
+): Timeline {
   return {
     ...timeline,
     tracks: timeline.tracks.map((track) => ({

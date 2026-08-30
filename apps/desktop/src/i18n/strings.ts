@@ -1,4 +1,4 @@
-import {formatSignedNumber} from './i18n-utils.js';
+import { formatSignedNumber } from './i18n-utils.js';
 
 const zh = {
   common: {
@@ -6305,7 +6305,6 @@ type WidenLocale<T> = T extends (...args: infer Args) => infer Return
 
 export type Language = 'zh' | 'en';
 export type LocaleStrings = WidenLocale<typeof zh>;
-
 
 const locales: Partial<Record<Language, LocaleStrings>> = {
   zh,

@@ -75,7 +75,10 @@ const loadThumbnail = vi.fn(async () => undefined);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ closed: false, close: vi.fn() })));
+  vi.stubGlobal(
+    'createImageBitmap',
+    vi.fn(async () => ({ closed: false, close: vi.fn() })),
+  );
 });
 
 afterEach(() => {
@@ -85,12 +88,27 @@ afterEach(() => {
 describe('drawVideo2d', () => {
   it('硬件解码可用时经 createImageBitmap 绘制并关闭位图', async () => {
     const bitmap = { closed: false, close: vi.fn() };
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => bitmap));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => bitmap),
+    );
     const clip = makeClip();
     const asset = makeAsset();
     const manager = makeHwManager({ initialized: true });
 
-    await drawVideo2d(context, canvas, clip, asset, video, 3, seekVideo, loadThumbnail, false, [], manager as unknown as HardwareDecodeManager);
+    await drawVideo2d(
+      context,
+      canvas,
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+      false,
+      [],
+      manager as unknown as HardwareDecodeManager,
+    );
 
     expect(manager.decodeFrame).toHaveBeenCalledWith(2.5);
     expect(drawTransformedSource2dMock).toHaveBeenCalledTimes(1);
@@ -104,7 +122,19 @@ describe('drawVideo2d', () => {
     const asset = makeAsset();
     const manager = makeHwManager({ initialized: true, error: new Error('hw boom') });
 
-    await drawVideo2d(context, canvas, clip, asset, video, 3, seekVideo, loadThumbnail, false, [], manager as unknown as HardwareDecodeManager);
+    await drawVideo2d(
+      context,
+      canvas,
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+      false,
+      [],
+      manager as unknown as HardwareDecodeManager,
+    );
 
     expect(recordPreviewErrorMock).toHaveBeenCalledWith('hw boom');
     expect(seekVideo).toHaveBeenCalledWith(video, 2.5);
@@ -160,13 +190,28 @@ describe('drawVideoWebGl', () => {
 
   it('硬件解码成功时绘制位图并使用 :hw 纹理缓存键', async () => {
     const bitmap = { closed: false, close: vi.fn() };
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => bitmap));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => bitmap),
+    );
     const compositor = makeCompositor();
     const clip = makeClip();
     const asset = makeAsset({ path: 'D:/media/A.mp4' });
     const manager = makeHwManager({ initialized: true });
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail, false, [], undefined, manager as unknown as HardwareDecodeManager);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+      false,
+      [],
+      undefined,
+      manager as unknown as HardwareDecodeManager,
+    );
 
     expect(compositor.drawSourceWithColorNodeGraph).toHaveBeenCalledTimes(1);
     const args = compositor.drawSourceWithColorNodeGraph.mock.calls[0];
@@ -177,11 +222,26 @@ describe('drawVideoWebGl', () => {
 
   it('硬件解码 + 全景投影成功时走 drawPanoramaSource', async () => {
     const compositor = makeCompositor();
-    const clip = makeClip({ projection: 'equirectangular', panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' } });
+    const clip = makeClip({
+      projection: 'equirectangular',
+      panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' },
+    });
     const asset = makeAsset();
     const manager = makeHwManager({ initialized: true });
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail, false, [], undefined, manager as unknown as HardwareDecodeManager);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+      false,
+      [],
+      undefined,
+      manager as unknown as HardwareDecodeManager,
+    );
 
     expect(compositor.drawPanoramaSource).toHaveBeenCalledTimes(1);
     expect(compositor.drawSourceWithColorNodeGraph).not.toHaveBeenCalled();
@@ -191,11 +251,26 @@ describe('drawVideoWebGl', () => {
   it('全景投影被拒绝时回退到普通绘制', async () => {
     const compositor = makeCompositor();
     compositor.drawPanoramaSource = vi.fn(() => false);
-    const clip = makeClip({ projection: 'equirectangular', panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' } });
+    const clip = makeClip({
+      projection: 'equirectangular',
+      panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' },
+    });
     const asset = makeAsset();
     const manager = makeHwManager({ initialized: true });
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail, false, [], undefined, manager as unknown as HardwareDecodeManager);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+      false,
+      [],
+      undefined,
+      manager as unknown as HardwareDecodeManager,
+    );
 
     expect(compositor.drawPanoramaSource).toHaveBeenCalledTimes(1);
     expect(compositor.drawSourceWithColorNodeGraph).toHaveBeenCalledTimes(1);
@@ -206,7 +281,15 @@ describe('drawVideoWebGl', () => {
     const clip = makeClip();
     const asset = makeAsset({ path: 'D:/media/B.mp4' });
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+    );
 
     expect(seekVideo).toHaveBeenCalledWith(video, 2.5);
     const args = compositor.drawSourceWithColorNodeGraph.mock.calls[0];
@@ -217,10 +300,21 @@ describe('drawVideoWebGl', () => {
 
   it('标准路径全景投影成功时不走普通绘制', async () => {
     const compositor = makeCompositor();
-    const clip = makeClip({ projection: 'equirectangular', panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' } });
+    const clip = makeClip({
+      projection: 'equirectangular',
+      panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' },
+    });
     const asset = makeAsset();
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+    );
 
     expect(compositor.drawPanoramaSource).toHaveBeenCalledTimes(1);
     expect(compositor.drawSourceWithColorNodeGraph).not.toHaveBeenCalled();
@@ -236,7 +330,15 @@ describe('drawVideoWebGl', () => {
     });
     const withThumb = vi.fn(async () => thumbnail);
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, failingSeek, withThumb);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      failingSeek,
+      withThumb,
+    );
 
     const args = compositor.drawSourceWithColorNodeGraph.mock.calls[0];
     expect(args?.[0]).toBe(thumbnail);
@@ -246,14 +348,25 @@ describe('drawVideoWebGl', () => {
 
   it('seek 失败 + 全景缩略图兜底成功时记录 thumbnail', async () => {
     const compositor = makeCompositor();
-    const clip = makeClip({ projection: 'equirectangular', panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' } });
+    const clip = makeClip({
+      projection: 'equirectangular',
+      panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' },
+    });
     const asset = makeAsset();
     const failingSeek = vi.fn(async () => {
       throw new Error('seek failed');
     });
     const withThumb = vi.fn(async () => thumbnail);
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, failingSeek, withThumb);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      failingSeek,
+      withThumb,
+    );
 
     expect(compositor.drawPanoramaSource).toHaveBeenCalledTimes(1);
     expect(recordPreviewDrawMock).toHaveBeenCalledWith('video', 'thumbnail');
@@ -267,7 +380,15 @@ describe('drawVideoWebGl', () => {
       throw new Error('seek failed');
     });
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, failingSeek, loadThumbnail);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      failingSeek,
+      loadThumbnail,
+    );
 
     expect(compositor.drawSourceWithColorNodeGraph).not.toHaveBeenCalled();
     expect(recordPreviewDrawMock).not.toHaveBeenCalled();
@@ -278,7 +399,15 @@ describe('drawVideoWebGl', () => {
     const clip = makeClip({ speed: 2 });
     const asset = makeAsset();
 
-    await drawVideoWebGl(compositor as unknown as Parameters<typeof drawVideoWebGl>[0], clip, asset, video, 3, seekVideo, loadThumbnail);
+    await drawVideoWebGl(
+      compositor as unknown as Parameters<typeof drawVideoWebGl>[0],
+      clip,
+      asset,
+      video,
+      3,
+      seekVideo,
+      loadThumbnail,
+    );
 
     // localTime = 3 - 1 = 2，2 倍速 → sourceOffset 4，加 trimStart 0.5
     expect(seekVideo).toHaveBeenCalledWith(video, 4.5);

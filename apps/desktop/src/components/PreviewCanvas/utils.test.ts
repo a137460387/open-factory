@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import type { CanvasPoint, ClipTransformBox, PathPoint } from '@open-factory/editor-core';
 
-function makeBox(partial: Pick<ClipTransformBox, 'center' | 'width' | 'height' | 'rotation' | 'corners'>): ClipTransformBox {
+function makeBox(
+  partial: Pick<ClipTransformBox, 'center' | 'width' | 'height' | 'rotation' | 'corners'>,
+): ClipTransformBox {
   const zero = { x: 0, y: 0 } as CanvasPoint;
-  return { ...partial, handles: { nw: zero, n: zero, ne: zero, e: zero, se: zero, s: zero, sw: zero, w: zero }, rotationHandle: zero, anchor: zero };
+  return {
+    ...partial,
+    handles: { nw: zero, n: zero, ne: zero, e: zero, se: zero, s: zero, sw: zero, w: zero },
+    rotationHandle: zero,
+    anchor: zero,
+  };
 }
 import {
   clampPathUnit,

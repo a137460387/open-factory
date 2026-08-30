@@ -1,5 +1,5 @@
-import type {SubtitleClip, SubtitleStyle, Timeline, Track} from '../model';
-import {normalizeSubtitleStyleTemplateStyle, type SubtitleStyleTemplate} from './style-templates';
+import type { SubtitleClip, SubtitleStyle, Timeline, Track } from '../model';
+import { normalizeSubtitleStyleTemplateStyle, type SubtitleStyleTemplate } from './style-templates';
 
 // ---------------------------------------------------------------------------
 // Types

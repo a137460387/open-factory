@@ -1,5 +1,10 @@
-import {buildTimelineThumbnailCacheKey, calculateTimelineThumbnailTimestamps, planTimelineThumbnailCache, TIMELINE_THUMBNAIL_WIDTH} from './timeline-thumbnails';
-import {round} from './time';
+import {
+  buildTimelineThumbnailCacheKey,
+  calculateTimelineThumbnailTimestamps,
+  planTimelineThumbnailCache,
+  TIMELINE_THUMBNAIL_WIDTH,
+} from './timeline-thumbnails';
+import { round } from './time';
 
 export const PRERENDER_LARGE_PROJECT_CLIP_THRESHOLD = 200;
 export const PRERENDER_LOW_RES_WIDTH = 40;

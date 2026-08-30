@@ -10,7 +10,7 @@
  * guaranteeing synchronization with dialogStore consumers.
  */
 
-import {useEditorUIStore} from './editorUIStore';
+import { useEditorUIStore } from './editorUIStore';
 // Re-export the combined store for consumers that need the full hook
 export { useEditorUIStore as usePanelStore };
 

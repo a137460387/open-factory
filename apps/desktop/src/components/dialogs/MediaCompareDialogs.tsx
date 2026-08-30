@@ -1,8 +1,8 @@
-import {lazy, Suspense} from 'react';
-import type {Project, SyncCompareClipRef} from '@open-factory/editor-core';
-import {useDialogStore} from '../../store/dialogStore';
-import {useMediaFeatureStore} from '../../store/mediaFeatureStore';
-import {PanelLoading} from '../PanelLoading';
+import { lazy, Suspense } from 'react';
+import type { Project, SyncCompareClipRef } from '@open-factory/editor-core';
+import { useDialogStore } from '../../store/dialogStore';
+import { useMediaFeatureStore } from '../../store/mediaFeatureStore';
+import { PanelLoading } from '../PanelLoading';
 
 const ThumbnailGeneratorDialog = lazy(() =>
   import('../../thumbnail/ThumbnailGeneratorDialog').then((m) => ({ default: m.ThumbnailGeneratorDialog })),
@@ -82,9 +82,7 @@ export function MediaCompareDialogs({
           onClose={() => setCollaborationNotesOpen(false)}
         />
       ) : null}
-      {collaborationPanelOpen ? (
-        <CollaborationPanel onClose={() => setCollaborationPanelOpen(false)} />
-      ) : null}
+      {collaborationPanelOpen ? <CollaborationPanel onClose={() => setCollaborationPanelOpen(false)} /> : null}
     </Suspense>
   );
 }

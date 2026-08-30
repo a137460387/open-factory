@@ -51,9 +51,9 @@ import {
   type GpuPreviewMetrics,
 } from './gpu-acceleration';
 import { logger } from '@open-factory/editor-core/utils';
-import type {WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass} from './webgl-compositor-types.js';
+import type { WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass } from './webgl-compositor-types.js';
 
-export type {WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass} from './webgl-compositor-types.js';
+export type { WebGlSourceProcessingOptions, ColorNodeGraphPreviewPass } from './webgl-compositor-types.js';
 
 interface ProgramInfo {
   program: WebGLProgram;

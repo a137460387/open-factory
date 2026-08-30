@@ -14,7 +14,15 @@ function FpsBar({ fps }: { fps: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <div style={{ width: 80, height: 8, background: '#333', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ width: `${(width / 60) * 100}%`, height: '100%', background: color, borderRadius: 4, transition: 'width 0.2s' }} />
+        <div
+          style={{
+            width: `${(width / 60) * 100}%`,
+            height: '100%',
+            background: color,
+            borderRadius: 4,
+            transition: 'width 0.2s',
+          }}
+        />
       </div>
       <span style={{ color, fontSize: 11, fontWeight: 600, minWidth: 36 }}>{fps} fps</span>
     </div>
@@ -28,8 +36,14 @@ function RenderCountsPanel({ counts }: { counts: ReadonlyMap<string, number> }) 
     <div style={{ maxHeight: 180, overflowY: 'auto' }}>
       {sorted.map(([name, count]) => (
         <div key={name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '1px 0' }}>
-          <span style={{ color: '#ccc', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-          <span style={{ color: count > 100 ? '#ef4444' : count > 30 ? '#eab308' : '#22c55e', fontWeight: 600 }}>{count}</span>
+          <span
+            style={{ color: '#ccc', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {name}
+          </span>
+          <span style={{ color: count > 100 ? '#ef4444' : count > 30 ? '#eab308' : '#22c55e', fontWeight: 600 }}>
+            {count}
+          </span>
         </div>
       ))}
     </div>
@@ -82,20 +96,25 @@ function DevPerfOverlayInner() {
     trackRender('DevPerfOverlay');
   });
 
-  const tabBtn = useCallback((t: Tab, label: string) => (
-    <button
-      onClick={() => setTab(t)}
-      style={{
-        background: tab === t ? '#3b82f6' : 'transparent',
-        color: tab === t ? '#fff' : '#999',
-        border: 'none',
-        borderRadius: 3,
-        padding: '2px 6px',
-        fontSize: 10,
-        cursor: 'pointer',
-      }}
-    >{label}</button>
-  ), [tab]);
+  const tabBtn = useCallback(
+    (t: Tab, label: string) => (
+      <button
+        onClick={() => setTab(t)}
+        style={{
+          background: tab === t ? '#3b82f6' : 'transparent',
+          color: tab === t ? '#fff' : '#999',
+          border: 'none',
+          borderRadius: 3,
+          padding: '2px 6px',
+          fontSize: 10,
+          cursor: 'pointer',
+        }}
+      >
+        {label}
+      </button>
+    ),
+    [tab],
+  );
 
   if (collapsed) {
     return (
@@ -145,19 +164,41 @@ function DevPerfOverlayInner() {
         <div style={{ display: 'flex', gap: 4 }}>
           <button
             onClick={() => data.resetRenderCounts()}
-            style={{ background: 'transparent', border: '1px solid #444', borderRadius: 3, color: '#999', fontSize: 9, cursor: 'pointer', padding: '1px 4px' }}
-          >Reset</button>
+            style={{
+              background: 'transparent',
+              border: '1px solid #444',
+              borderRadius: 3,
+              color: '#999',
+              fontSize: 9,
+              cursor: 'pointer',
+              padding: '1px 4px',
+            }}
+          >
+            Reset
+          </button>
           <button
             onClick={() => setCollapsed(true)}
-            style={{ background: 'transparent', border: '1px solid #444', borderRadius: 3, color: '#999', fontSize: 9, cursor: 'pointer', padding: '1px 4px' }}
-          >_</button>
+            style={{
+              background: 'transparent',
+              border: '1px solid #444',
+              borderRadius: 3,
+              color: '#999',
+              fontSize: 9,
+              cursor: 'pointer',
+              padding: '1px 4px',
+            }}
+          >
+            _
+          </button>
         </div>
       </div>
 
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
           <span style={{ color: '#888' }}>FPS</span>
-          <span style={{ color: '#666', fontSize: 9 }}>avg {data.fps.avg} / min {data.fps.min}</span>
+          <span style={{ color: '#666', fontSize: 9 }}>
+            avg {data.fps.avg} / min {data.fps.min}
+          </span>
         </div>
         <FpsBar fps={data.fps.current} />
       </div>
@@ -173,8 +214,19 @@ function DevPerfOverlayInner() {
           <SubscriptionsPanel subs={data.subscriptions} />
           <button
             onClick={() => data.clearSubscriptions()}
-            style={{ background: 'transparent', border: '1px solid #444', borderRadius: 3, color: '#999', fontSize: 9, cursor: 'pointer', padding: '1px 4px', marginTop: 4 }}
-          >Clear</button>
+            style={{
+              background: 'transparent',
+              border: '1px solid #444',
+              borderRadius: 3,
+              color: '#999',
+              fontSize: 9,
+              cursor: 'pointer',
+              padding: '1px 4px',
+              marginTop: 4,
+            }}
+          >
+            Clear
+          </button>
         </>
       )}
     </div>

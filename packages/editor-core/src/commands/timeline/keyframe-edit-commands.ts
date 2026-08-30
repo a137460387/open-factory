@@ -1,12 +1,36 @@
-import type {TimelineAccessor} from './index';
-import {alignKeyframeValues, applyBatchKeyframeEasing, cloneClipKeyframes, createKeyframe, normalizeClipKeyframes, removeKeyframeForProperty, setKeyframeForProperty} from '../../keyframes';
-import {Keyframe, KeyframeEasing, KeyframeProperty, Timeline} from '../../model';
-import type {Clip} from '../../model';
-import {TextAnimationDirection, TextAnimationPreset, buildTextAnimationKeyframes, mergeTextAnimationKeyframes, normalizeTextAnimationDirection, normalizeTextAnimationDuration, normalizeTextAnimationPreset} from '../../text-animation';
-import {detectOverlap, replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {applySpeedKeyframeDuration, findClip, findTrack} from './utils';
-import {calculateDistributedKeyframeTimeMap, calculateKeyframeSelectionCenter, getBatchAlignValue, getBatchEditedKeyframeTime, groupKeyframeRefsByClip, keyframeRefKey, uniqueKeyframeRefs} from './utils-keyframe';
+import type { TimelineAccessor } from './index';
+import {
+  alignKeyframeValues,
+  applyBatchKeyframeEasing,
+  cloneClipKeyframes,
+  createKeyframe,
+  normalizeClipKeyframes,
+  removeKeyframeForProperty,
+  setKeyframeForProperty,
+} from '../../keyframes';
+import { Keyframe, KeyframeEasing, KeyframeProperty, Timeline } from '../../model';
+import type { Clip } from '../../model';
+import {
+  TextAnimationDirection,
+  TextAnimationPreset,
+  buildTextAnimationKeyframes,
+  mergeTextAnimationKeyframes,
+  normalizeTextAnimationDirection,
+  normalizeTextAnimationDuration,
+  normalizeTextAnimationPreset,
+} from '../../text-animation';
+import { detectOverlap, replaceClip } from '../../timeline';
+import { Command } from '../command';
+import { applySpeedKeyframeDuration, findClip, findTrack } from './utils';
+import {
+  calculateDistributedKeyframeTimeMap,
+  calculateKeyframeSelectionCenter,
+  getBatchAlignValue,
+  getBatchEditedKeyframeTime,
+  groupKeyframeRefsByClip,
+  keyframeRefKey,
+  uniqueKeyframeRefs,
+} from './utils-keyframe';
 
 export type KeyframePatch = Partial<
   Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>

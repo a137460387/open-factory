@@ -1,12 +1,29 @@
-import type {TimelineAccessor} from './index';
-import {Timeline} from '../../model';
-import type {Clip} from '../../model';
-import {filterShortSceneCuts} from '../../scene-cuts';
-import {SmartDialogueInterval, SmartMontageConfig, SmartRoughCutVisualClip, buildDialogueRoughCutClips, buildRhythmAssembleClips, buildSmartMontageClips} from '../../smart-rough-cut-v2';
-import type {RoughCutSegment} from '../../smart-rough-cut';
-import {getClipSpeed, replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {LocalTimeRange, buildKeptRanges, buildSplitRanges, findClip, insertGeneratedClips, normalizeLocalTimeRanges, removeClipsFromTimeline, replaceClipWithGeneratedClips, replaceClipWithSlices} from './utils';
+import type { TimelineAccessor } from './index';
+import { Timeline } from '../../model';
+import type { Clip } from '../../model';
+import { filterShortSceneCuts } from '../../scene-cuts';
+import {
+  SmartDialogueInterval,
+  SmartMontageConfig,
+  SmartRoughCutVisualClip,
+  buildDialogueRoughCutClips,
+  buildRhythmAssembleClips,
+  buildSmartMontageClips,
+} from '../../smart-rough-cut-v2';
+import type { RoughCutSegment } from '../../smart-rough-cut';
+import { getClipSpeed, replaceClip } from '../../timeline';
+import { Command } from '../command';
+import {
+  LocalTimeRange,
+  buildKeptRanges,
+  buildSplitRanges,
+  findClip,
+  insertGeneratedClips,
+  normalizeLocalTimeRanges,
+  removeClipsFromTimeline,
+  replaceClipWithGeneratedClips,
+  replaceClipWithSlices,
+} from './utils';
 
 export interface BatchSplitAtSceneCutItem {
   clipId: string;

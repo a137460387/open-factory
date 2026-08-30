@@ -1,4 +1,4 @@
-import type {ExportRecoveryErrorKind} from './export-types';
+import type { ExportRecoveryErrorKind } from './export-types';
 
 /** 重试间隔模式 */
 export type RetryBackoffMode = 'fixed' | 'exponential';

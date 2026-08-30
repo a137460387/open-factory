@@ -32,7 +32,9 @@ describe('useDemucsSettingsStore', () => {
     useDemucsSettingsStore.getState().setExecutablePath('  C:/tools/demucs.exe  ');
     expect(useDemucsSettingsStore.getState().executablePath).toBe('  C:/tools/demucs.exe  ');
     expect(window.localStorage.getItem('open-factory:demucs-executable-path')).toBe('C:/tools/demucs.exe');
-    expect(saveLocalAiModelsSettings).toHaveBeenCalledWith({ demucs: { path: '  C:/tools/demucs.exe  ', version: 'demucs' } });
+    expect(saveLocalAiModelsSettings).toHaveBeenCalledWith({
+      demucs: { path: '  C:/tools/demucs.exe  ', version: 'demucs' },
+    });
   });
 
   it('空串清除 localStorage 键', () => {
@@ -53,7 +55,9 @@ describe('usePrivacyDetectionSettingsStore', () => {
     usePrivacyDetectionSettingsStore.getState().setModelPath('C:/models/yunet.onnx');
     expect(usePrivacyDetectionSettingsStore.getState().modelPath).toBe('C:/models/yunet.onnx');
     expect(window.localStorage.getItem('open-factory:privacy-detection-model-path')).toBe('C:/models/yunet.onnx');
-    expect(saveLocalAiModelsSettings).toHaveBeenCalledWith({ yunet: { path: 'C:/models/yunet.onnx', version: 'YuNet ONNX' } });
+    expect(saveLocalAiModelsSettings).toHaveBeenCalledWith({
+      yunet: { path: 'C:/models/yunet.onnx', version: 'YuNet ONNX' },
+    });
   });
 
   it('空串清除键；持久化失败不阻塞', () => {

@@ -1,4 +1,4 @@
-import type {AudioBus, MixerChannel} from './mixer-types';
+import type { AudioBus, MixerChannel } from './mixer-types';
 
 /** 路由图节点 */
 export interface RoutingNode {

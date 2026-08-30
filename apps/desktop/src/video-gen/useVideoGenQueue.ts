@@ -1,11 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useVideoGenQueueStore, type VideoGenTask } from './video-gen-store';
-import {
-  submitVideoGenTask,
-  cancelVideoGenTask,
-  startVideoGenRunner,
-  stopVideoGenRunner,
-} from './video-gen-runner';
+import { submitVideoGenTask, cancelVideoGenTask, startVideoGenRunner, stopVideoGenRunner } from './video-gen-runner';
 import type { VideoGenerationParams } from '../hooks/useVideoGeneration';
 
 /** Hook return type */
@@ -56,20 +51,11 @@ export function useVideoGenQueue(): UseVideoGenQueueReturn {
   const queuedTasks = tasks.filter((t) => t.status === 'queued');
   const isRunning = activeTask != null;
 
-  const submit = useCallback(
-    async (params: VideoGenerationParams) => submitVideoGenTask(params),
-    [],
-  );
+  const submit = useCallback(async (params: VideoGenerationParams) => submitVideoGenTask(params), []);
 
-  const cancel = useCallback(
-    async (taskId: string) => cancelVideoGenTask(taskId),
-    [],
-  );
+  const cancel = useCallback(async (taskId: string) => cancelVideoGenTask(taskId), []);
 
-  const remove = useCallback(
-    (taskId: string) => removeTask(taskId),
-    [removeTask],
-  );
+  const remove = useCallback((taskId: string) => removeTask(taskId), [removeTask]);
 
   return {
     tasks,

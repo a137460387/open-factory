@@ -1,10 +1,21 @@
-import {useState, useCallback, useMemo} from 'react';
-import type {SceneAnalysis, AnalysisReport, AnalysisStats, AutomationSceneType} from '@open-factory/editor-core';
-import {SceneAnalyzer, getQualityGrade, getQualityGradeLabel} from '@open-factory/editor-core';
-import {formatDuration} from '@open-factory/editor-core/utils/time';
-import {BarChart3, Film, AlertTriangle, Eye, Tag, Clock, TrendingUp, TrendingDown, Minus, RefreshCw} from 'lucide-react';
-import {cn} from '../../lib/utils';
-import {Button} from '../ui/button';
+import { useState, useCallback, useMemo } from 'react';
+import type { SceneAnalysis, AnalysisReport, AnalysisStats, AutomationSceneType } from '@open-factory/editor-core';
+import { SceneAnalyzer, getQualityGrade, getQualityGradeLabel } from '@open-factory/editor-core';
+import { formatDuration } from '@open-factory/editor-core/utils/time';
+import {
+  BarChart3,
+  Film,
+  AlertTriangle,
+  Eye,
+  Tag,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  RefreshCw,
+} from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
 
 /* ------------------------------------------------------------------ */
 /*  常量                                                               */

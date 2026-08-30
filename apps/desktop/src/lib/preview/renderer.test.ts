@@ -269,7 +269,9 @@ describe('PreviewRenderer.render 2d 路径', () => {
 
   it('captureFrame 时读取整帧（top-left 原点）', async () => {
     const renderer = new PreviewRenderer();
-    context2d.getImageData = vi.fn(() => ({ data: new Uint8ClampedArray(16).fill(9) })) as unknown as typeof context2d.getImageData;
+    context2d.getImageData = vi.fn(() => ({
+      data: new Uint8ClampedArray(16).fill(9),
+    })) as unknown as typeof context2d.getImageData;
 
     const result = await renderer.render(makeCanvas(), makeTimeline([]), [], 0, { captureFrame: true });
 
@@ -289,9 +291,7 @@ describe('PreviewRenderer.render 2d 路径', () => {
   });
 
   it('2d 上下文不可用（getContext null）时返回空结果', async () => {
-    const nullSpy = vi
-      .spyOn(HTMLCanvasElement.prototype, 'getContext')
-      .mockReturnValue(null);
+    const nullSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
     const renderer = new PreviewRenderer();
 
     const result = await renderer.render(makeCanvas(), makeTimeline([makeClip()]), [], 1);
@@ -407,9 +407,10 @@ describe('PreviewRenderer.render 2d 路径', () => {
     const renderer = new PreviewRenderer();
     const clipA = makeClip({ type: 'text', id: 'clip-a', start: 0, duration: 4, text: 'A' });
     const clipB = makeClip({ type: 'text', id: 'clip-b', start: 4, duration: 4, text: 'B' });
-    const timeline = makeTimeline([clipA, clipB], [
-      { id: 'trans-1', type: 'dissolve', duration: 2, fromClipId: 'clip-a', toClipId: 'clip-b' },
-    ]);
+    const timeline = makeTimeline(
+      [clipA, clipB],
+      [{ id: 'trans-1', type: 'dissolve', duration: 2, fromClipId: 'clip-a', toClipId: 'clip-b' }],
+    );
 
     // 转场窗口 [B.playbackStart=2, 4)：中点 3 处两 clip 透明度各 0.5
     await renderer.render(makeCanvas(), timeline, [], 3);
@@ -427,9 +428,10 @@ describe('PreviewRenderer.render 2d 路径', () => {
     const renderer = new PreviewRenderer();
     const clipA = makeClip({ type: 'text', id: 'clip-a', start: 0, duration: 4, text: 'A' });
     const clipB = makeClip({ type: 'text', id: 'clip-b', start: 4, duration: 4, text: 'B' });
-    const timeline = makeTimeline([clipA, clipB], [
-      { id: 'trans-1', type: 'fade-black', duration: 2, fromClipId: 'clip-a', toClipId: 'clip-b' },
-    ]);
+    const timeline = makeTimeline(
+      [clipA, clipB],
+      [{ id: 'trans-1', type: 'fade-black', duration: 2, fromClipId: 'clip-a', toClipId: 'clip-b' }],
+    );
 
     // 窗口 [2,4)：进度 0.25 → fromClip opacity 0.5；toClip opacity 0 → 低于阈值不绘制
     await renderer.render(makeCanvas(), timeline, [], 2.5);
@@ -499,7 +501,12 @@ describe('PreviewRenderer.render 音频频谱叠加', () => {
   const spectrumClip = () =>
     makeClip({
       effects: [
-        { id: 'fx-spectrum', type: 'audio-spectrum', enabled: true, params: { style: 'bars', height: 20, position: 'bottom' } },
+        {
+          id: 'fx-spectrum',
+          type: 'audio-spectrum',
+          enabled: true,
+          params: { style: 'bars', height: 20, position: 'bottom' },
+        },
       ],
     });
 
@@ -614,7 +621,12 @@ describe('PreviewRenderer.render WebGL 路径', () => {
     const renderer = new PreviewRenderer();
     const clip = makeClip({
       effects: [
-        { id: 'fx-spectrum', type: 'audio-spectrum', enabled: true, params: { style: 'bars', height: 20, position: 'bottom' } },
+        {
+          id: 'fx-spectrum',
+          type: 'audio-spectrum',
+          enabled: true,
+          params: { style: 'bars', height: 20, position: 'bottom' },
+        },
       ],
     });
 
@@ -669,7 +681,10 @@ describe('PreviewRenderer 委托与工具方法', () => {
 
   it('getDuration 返回时间线播放时长', () => {
     const renderer = new PreviewRenderer();
-    const timeline = makeTimeline([makeClip({ start: 0, duration: 5 }), makeClip({ start: 10, duration: 3, id: 'clip-2' })]);
+    const timeline = makeTimeline([
+      makeClip({ start: 0, duration: 5 }),
+      makeClip({ start: 10, duration: 3, id: 'clip-2' }),
+    ]);
 
     expect(renderer.getDuration(timeline)).toBe(13);
   });

@@ -103,9 +103,7 @@ import type {
   TagWithCount,
   VideoInfo,
 } from '../tauri-bridge';
-import type {
-  GpuInfo,
-} from '../../hooks/useGpuDetect';
+import type { GpuInfo } from '../../hooks/useGpuDetect';
 import type {
   LocalModelInfo,
   ModelDownloadCompletedPayload,

@@ -20,14 +20,22 @@ describe('workflow-editor-panel', () => {
 
     it('adds a node', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 100, y: 100 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 100, y: 100 },
+      });
       expect(state.workflow.nodes.length).toBe(1);
       expect(state.selectedNodeIds.length).toBe(1);
     });
 
     it('removes a node', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
       const nodeId = state.workflow.nodes[0].id;
       state = workflowEditorReducer(state, { type: 'REMOVE_NODE', nodeId });
       expect(state.workflow.nodes.length).toBe(0);
@@ -35,7 +43,11 @@ describe('workflow-editor-panel', () => {
 
     it('selects and deselects nodes', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
       const nodeId = state.workflow.nodes[0].id;
 
       state = workflowEditorReducer(state, { type: 'DESELECT_ALL' });
@@ -47,7 +59,11 @@ describe('workflow-editor-panel', () => {
 
     it('moves a node', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
       const nodeId = state.workflow.nodes[0].id;
       state = workflowEditorReducer(state, { type: 'MOVE_NODE', nodeId, position: { x: 300, y: 400 } });
       expect(state.workflow.nodes[0].position).toEqual({ x: 300, y: 400 });
@@ -55,18 +71,38 @@ describe('workflow-editor-panel', () => {
 
     it('connects nodes', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'apply-effect', position: { x: 200, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'apply-effect',
+        position: { x: 200, y: 0 },
+      });
       const n1 = state.workflow.nodes[0];
       const n2 = state.workflow.nodes[1];
-      state = workflowEditorReducer(state, { type: 'START_CONNECTION', sourceNodeId: n1.id, sourcePortId: n1.outputs[0].id });
-      state = workflowEditorReducer(state, { type: 'COMPLETE_CONNECTION', targetNodeId: n2.id, targetPortId: n2.inputs[0].id });
+      state = workflowEditorReducer(state, {
+        type: 'START_CONNECTION',
+        sourceNodeId: n1.id,
+        sourcePortId: n1.outputs[0].id,
+      });
+      state = workflowEditorReducer(state, {
+        type: 'COMPLETE_CONNECTION',
+        targetNodeId: n2.id,
+        targetPortId: n2.inputs[0].id,
+      });
       expect(state.workflow.connections.length).toBe(1);
     });
 
     it('updates node params', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'scene-detect', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'scene-detect',
+        position: { x: 0, y: 0 },
+      });
       const nodeId = state.workflow.nodes[0].id;
       state = workflowEditorReducer(state, { type: 'UPDATE_NODE_PARAMS', nodeId, params: { threshold: 0.5 } });
       expect(state.workflow.nodes[0].params.threshold).toBe(0.5);
@@ -74,7 +110,11 @@ describe('workflow-editor-panel', () => {
 
     it('toggles node enabled state', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
       const nodeId = state.workflow.nodes[0].id;
       expect(state.workflow.nodes[0].enabled).toBe(true);
       state = workflowEditorReducer(state, { type: 'TOGGLE_NODE_ENABLED', nodeId });
@@ -83,7 +123,11 @@ describe('workflow-editor-panel', () => {
 
     it('validates workflow', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
       state = workflowEditorReducer(state, { type: 'VALIDATE' });
       expect(state.validationErrors.length).toBe(0);
     });
@@ -97,14 +141,20 @@ describe('workflow-editor-panel', () => {
 
     it('updates workflow metadata', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'UPDATE_WORKFLOW_META', updates: { name: 'Renamed', description: 'A test' } });
+      state = workflowEditorReducer(state, {
+        type: 'UPDATE_WORKFLOW_META',
+        updates: { name: 'Renamed', description: 'A test' },
+      });
       expect(state.workflow.name).toBe('Renamed');
       expect(state.workflow.description).toBe('A test');
     });
 
     it('adds and removes parameters', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_PARAMETER', param: { id: 'p1', name: 'format', dataType: 'string', required: true } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_PARAMETER',
+        param: { id: 'p1', name: 'format', dataType: 'string', required: true },
+      });
       expect(state.workflow.parameters.length).toBe(1);
       state = workflowEditorReducer(state, { type: 'REMOVE_PARAMETER', paramId: 'p1' });
       expect(state.workflow.parameters.length).toBe(0);
@@ -149,8 +199,16 @@ describe('workflow-editor-panel', () => {
   describe('getLinearWorkflow', () => {
     it('converts node workflow to linear', () => {
       let state = createInitialWorkflowEditorState();
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'media-import', position: { x: 0, y: 0 } });
-      state = workflowEditorReducer(state, { type: 'ADD_NODE', definitionType: 'export-media', position: { x: 200, y: 0 } });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'media-import',
+        position: { x: 0, y: 0 },
+      });
+      state = workflowEditorReducer(state, {
+        type: 'ADD_NODE',
+        definitionType: 'export-media',
+        position: { x: 200, y: 0 },
+      });
       const linear = getLinearWorkflow(state);
       expect(linear.steps.length).toBe(2);
       expect(linear.triggers[0].type).toBe('manual');

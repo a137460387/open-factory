@@ -1,8 +1,13 @@
-import {GalleryHorizontal, Grid2X2, List} from 'lucide-react';
-import type {ReactNode} from 'react';
-import {clsx} from 'clsx';
-import {zhCN} from '../../i18n/strings';
-import type {MediaLibraryGridSize, MediaLibrarySortKey, MediaLibraryViewMode, MediaLibraryViewSettings} from '../../media/mediaLibraryView';
+import { GalleryHorizontal, Grid2X2, List } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { clsx } from 'clsx';
+import { zhCN } from '../../i18n/strings';
+import type {
+  MediaLibraryGridSize,
+  MediaLibrarySortKey,
+  MediaLibraryViewMode,
+  MediaLibraryViewSettings,
+} from '../../media/mediaLibraryView';
 
 export function MediaLibraryViewToolbar({
   settings,
@@ -14,7 +19,12 @@ export function MediaLibraryViewToolbar({
   const viewModes: Array<{ mode: MediaLibraryViewMode; icon: ReactNode; label: string; testId: string }> = [
     { mode: 'grid', icon: <Grid2X2 size={14} />, label: zhCN.mediaBin.viewModes.grid, testId: 'media-view-grid' },
     { mode: 'list', icon: <List size={14} />, label: zhCN.mediaBin.viewModes.list, testId: 'media-view-list' },
-    { mode: 'timeline', icon: <GalleryHorizontal size={14} />, label: zhCN.mediaBin.viewModes.timeline, testId: 'media-view-timeline' },
+    {
+      mode: 'timeline',
+      icon: <GalleryHorizontal size={14} />,
+      label: zhCN.mediaBin.viewModes.timeline,
+      testId: 'media-view-timeline',
+    },
   ];
   return (
     <div className="space-y-2 rounded-md border border-line bg-panel p-2" data-testid="media-view-toolbar">
@@ -50,7 +60,9 @@ export function MediaLibraryViewToolbar({
             onChange={(event) => onChange({ sortKey: event.target.value as MediaLibrarySortKey })}
           >
             {(['importedAt', 'name', 'duration', 'size', 'frameRate', 'codec'] as MediaLibrarySortKey[]).map((key) => (
-              <option key={key} value={key}>{zhCN.mediaBin.sortKeys[key]}</option>
+              <option key={key} value={key}>
+                {zhCN.mediaBin.sortKeys[key]}
+              </option>
             ))}
           </select>
         </label>
@@ -65,7 +77,9 @@ export function MediaLibraryViewToolbar({
               onChange={(event) => onChange({ gridSize: event.target.value as MediaLibraryGridSize })}
             >
               {(['small', 'medium', 'large'] as MediaLibraryGridSize[]).map((size) => (
-                <option key={size} value={size}>{zhCN.mediaBin.gridSizes[size]}</option>
+                <option key={size} value={size}>
+                  {zhCN.mediaBin.gridSizes[size]}
+                </option>
               ))}
             </select>
           </label>

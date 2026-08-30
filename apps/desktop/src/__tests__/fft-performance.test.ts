@@ -43,7 +43,7 @@ function jsFftMagnitudes(samples: number[]): number[] {
   // FFT butterfly
   for (let len = 2; len <= n; len <<= 1) {
     const halfLen = len >> 1;
-    const angle = -2 * Math.PI / len;
+    const angle = (-2 * Math.PI) / len;
     const wReal = Math.cos(angle);
     const wImag = Math.sin(angle);
 
@@ -112,9 +112,9 @@ function generateTestSamples(size: number): number[] {
   for (let i = 0; i < size; i++) {
     // Mix of sine waves at different frequencies
     samples[i] =
-      0.5 * Math.sin(2 * Math.PI * 440 * i / 44100) +
-      0.3 * Math.sin(2 * Math.PI * 880 * i / 44100) +
-      0.2 * Math.sin(2 * Math.PI * 1760 * i / 44100) +
+      0.5 * Math.sin((2 * Math.PI * 440 * i) / 44100) +
+      0.3 * Math.sin((2 * Math.PI * 880 * i) / 44100) +
+      0.2 * Math.sin((2 * Math.PI * 1760 * i) / 44100) +
       (Math.random() - 0.5) * 0.01; // Small noise
   }
   return samples;
@@ -126,8 +126,8 @@ describe('FFT Performance Benchmark', () => {
     const magnitudes = jsFftMagnitudes(samples);
 
     expect(magnitudes.length).toBe(512);
-    expect(magnitudes.every(m => m >= 0)).toBe(true);
-    expect(magnitudes.some(m => m > 0)).toBe(true);
+    expect(magnitudes.every((m) => m >= 0)).toBe(true);
+    expect(magnitudes.some((m) => m > 0)).toBe(true);
   });
 
   it('JS DFT produces valid results for non-power-of-2 sizes', () => {
@@ -135,8 +135,8 @@ describe('FFT Performance Benchmark', () => {
     const magnitudes = jsDftMagnitudes(samples);
 
     expect(magnitudes.length).toBe(500);
-    expect(magnitudes.every(m => m >= 0)).toBe(true);
-    expect(magnitudes.some(m => m > 0)).toBe(true);
+    expect(magnitudes.every((m) => m >= 0)).toBe(true);
+    expect(magnitudes.some((m) => m > 0)).toBe(true);
   });
 
   it('JS FFT performance for 1024 samples', () => {
@@ -215,22 +215,28 @@ describe('Rust FFT Performance (theoretical)', () => {
     // 4. Potential SIMD vectorization
 
     const jsTimes = {
-      fft1024: 0.5,   // ~0.5ms per FFT (estimated)
-      fft4096: 2.5,   // ~2.5ms per FFT
-      fft8192: 5.5,   // ~5.5ms per FFT
+      fft1024: 0.5, // ~0.5ms per FFT (estimated)
+      fft4096: 2.5, // ~2.5ms per FFT
+      fft8192: 5.5, // ~5.5ms per FFT
     };
 
     const expectedRustTimes = {
-      fft1024: 0.05,  // ~0.05ms (10x faster)
-      fft4096: 0.25,  // ~0.25ms (10x faster)
-      fft8192: 0.55,  // ~0.55ms (10x faster)
+      fft1024: 0.05, // ~0.05ms (10x faster)
+      fft4096: 0.25, // ~0.25ms (10x faster)
+      fft8192: 0.55, // ~0.55ms (10x faster)
     };
 
     console.log('Expected Performance Comparison:');
     console.log('================================');
-    console.log(`FFT 1024:  JS=${jsTimes.fft1024}ms, Rust≈${expectedRustTimes.fft1024}ms (${(jsTimes.fft1024 / expectedRustTimes.fft1024).toFixed(1)}x faster)`);
-    console.log(`FFT 4096:  JS=${jsTimes.fft4096}ms, Rust≈${expectedRustTimes.fft4096}ms (${(jsTimes.fft4096 / expectedRustTimes.fft4096).toFixed(1)}x faster)`);
-    console.log(`FFT 8192:  JS=${jsTimes.fft8192}ms, Rust≈${expectedRustTimes.fft8192}ms (${(jsTimes.fft8192 / expectedRustTimes.fft8192).toFixed(1)}x faster)`);
+    console.log(
+      `FFT 1024:  JS=${jsTimes.fft1024}ms, Rust≈${expectedRustTimes.fft1024}ms (${(jsTimes.fft1024 / expectedRustTimes.fft1024).toFixed(1)}x faster)`,
+    );
+    console.log(
+      `FFT 4096:  JS=${jsTimes.fft4096}ms, Rust≈${expectedRustTimes.fft4096}ms (${(jsTimes.fft4096 / expectedRustTimes.fft4096).toFixed(1)}x faster)`,
+    );
+    console.log(
+      `FFT 8192:  JS=${jsTimes.fft8192}ms, Rust≈${expectedRustTimes.fft8192}ms (${(jsTimes.fft8192 / expectedRustTimes.fft8192).toFixed(1)}x faster)`,
+    );
     console.log('================================');
     console.log('Note: Actual Rust performance measured via Tauri invoke benchmarks');
 

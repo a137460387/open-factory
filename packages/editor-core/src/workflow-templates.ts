@@ -5,7 +5,7 @@
  * video editing and AI processing tasks.
  */
 
-import type {WorkflowTemplate, WorkflowGraph} from './node-editor-types';
+import type { WorkflowTemplate, WorkflowGraph } from './node-editor-types';
 
 // ─── Built-in Templates ────────────────────────────────────────────────────
 
@@ -61,12 +61,42 @@ const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
         },
       ],
       connections: [
-        { id: 'conn-1', sourceNodeId: 'input-1', sourcePortId: 'clips', targetNodeId: 'highlight-1', targetPortId: 'video' },
+        {
+          id: 'conn-1',
+          sourceNodeId: 'input-1',
+          sourcePortId: 'clips',
+          targetNodeId: 'highlight-1',
+          targetPortId: 'video',
+        },
         { id: 'conn-2', sourceNodeId: 'input-1', sourcePortId: 'clips', targetNodeId: 'trim-1', targetPortId: 'video' },
-        { id: 'conn-3', sourceNodeId: 'highlight-1', sourcePortId: 'highlights', targetNodeId: 'trim-1', targetPortId: 'highlights' },
-        { id: 'conn-4', sourceNodeId: 'trim-1', sourcePortId: 'trimmed', targetNodeId: 'subtitle-1', targetPortId: 'audio' },
-        { id: 'conn-5', sourceNodeId: 'trim-1', sourcePortId: 'trimmed', targetNodeId: 'output-1', targetPortId: 'video' },
-        { id: 'conn-6', sourceNodeId: 'subtitle-1', sourcePortId: 'subtitles', targetNodeId: 'output-1', targetPortId: 'subtitles' },
+        {
+          id: 'conn-3',
+          sourceNodeId: 'highlight-1',
+          sourcePortId: 'highlights',
+          targetNodeId: 'trim-1',
+          targetPortId: 'highlights',
+        },
+        {
+          id: 'conn-4',
+          sourceNodeId: 'trim-1',
+          sourcePortId: 'trimmed',
+          targetNodeId: 'subtitle-1',
+          targetPortId: 'audio',
+        },
+        {
+          id: 'conn-5',
+          sourceNodeId: 'trim-1',
+          sourcePortId: 'trimmed',
+          targetNodeId: 'output-1',
+          targetPortId: 'video',
+        },
+        {
+          id: 'conn-6',
+          sourceNodeId: 'subtitle-1',
+          sourcePortId: 'subtitles',
+          targetNodeId: 'output-1',
+          targetPortId: 'subtitles',
+        },
       ],
     },
   },
@@ -107,8 +137,20 @@ const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
         },
       ],
       connections: [
-        { id: 'conn-1', sourceNodeId: 'input-1', sourcePortId: 'video', targetNodeId: 'color-1', targetPortId: 'video' },
-        { id: 'conn-2', sourceNodeId: 'color-1', sourcePortId: 'graded', targetNodeId: 'output-1', targetPortId: 'video' },
+        {
+          id: 'conn-1',
+          sourceNodeId: 'input-1',
+          sourcePortId: 'video',
+          targetNodeId: 'color-1',
+          targetPortId: 'video',
+        },
+        {
+          id: 'conn-2',
+          sourceNodeId: 'color-1',
+          sourcePortId: 'graded',
+          targetNodeId: 'output-1',
+          targetPortId: 'video',
+        },
       ],
     },
   },
@@ -149,8 +191,20 @@ const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
         },
       ],
       connections: [
-        { id: 'conn-1', sourceNodeId: 'input-1', sourcePortId: 'audio', targetNodeId: 'enhance-1', targetPortId: 'audio' },
-        { id: 'conn-2', sourceNodeId: 'enhance-1', sourcePortId: 'enhanced', targetNodeId: 'output-1', targetPortId: 'audio' },
+        {
+          id: 'conn-1',
+          sourceNodeId: 'input-1',
+          sourcePortId: 'audio',
+          targetNodeId: 'enhance-1',
+          targetPortId: 'audio',
+        },
+        {
+          id: 'conn-2',
+          sourceNodeId: 'enhance-1',
+          sourcePortId: 'enhanced',
+          targetNodeId: 'output-1',
+          targetPortId: 'audio',
+        },
       ],
     },
   },
@@ -192,7 +246,13 @@ const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
       ],
       connections: [
         { id: 'conn-1', sourceNodeId: 'input-1', sourcePortId: 'clips', targetNodeId: 'trim-1', targetPortId: 'video' },
-        { id: 'conn-2', sourceNodeId: 'trim-1', sourcePortId: 'trimmed', targetNodeId: 'export-1', targetPortId: 'video' },
+        {
+          id: 'conn-2',
+          sourceNodeId: 'trim-1',
+          sourcePortId: 'trimmed',
+          targetNodeId: 'export-1',
+          targetPortId: 'video',
+        },
       ],
     },
   },
@@ -247,11 +307,41 @@ const BUILTIN_TEMPLATES: WorkflowTemplate[] = [
         },
       ],
       connections: [
-        { id: 'conn-1', sourceNodeId: 'input-1', sourcePortId: 'video', targetNodeId: 'scene-1', targetPortId: 'video' },
-        { id: 'conn-2', sourceNodeId: 'input-1', sourcePortId: 'video', targetNodeId: 'highlight-1', targetPortId: 'video' },
-        { id: 'conn-3', sourceNodeId: 'scene-1', sourcePortId: 'scenes', targetNodeId: 'merge-1', targetPortId: 'input1' },
-        { id: 'conn-4', sourceNodeId: 'highlight-1', sourcePortId: 'highlights', targetNodeId: 'merge-1', targetPortId: 'input2' },
-        { id: 'conn-5', sourceNodeId: 'merge-1', sourcePortId: 'output', targetNodeId: 'output-1', targetPortId: 'video' },
+        {
+          id: 'conn-1',
+          sourceNodeId: 'input-1',
+          sourcePortId: 'video',
+          targetNodeId: 'scene-1',
+          targetPortId: 'video',
+        },
+        {
+          id: 'conn-2',
+          sourceNodeId: 'input-1',
+          sourcePortId: 'video',
+          targetNodeId: 'highlight-1',
+          targetPortId: 'video',
+        },
+        {
+          id: 'conn-3',
+          sourceNodeId: 'scene-1',
+          sourcePortId: 'scenes',
+          targetNodeId: 'merge-1',
+          targetPortId: 'input1',
+        },
+        {
+          id: 'conn-4',
+          sourceNodeId: 'highlight-1',
+          sourcePortId: 'highlights',
+          targetNodeId: 'merge-1',
+          targetPortId: 'input2',
+        },
+        {
+          id: 'conn-5',
+          sourceNodeId: 'merge-1',
+          sourcePortId: 'output',
+          targetNodeId: 'output-1',
+          targetPortId: 'video',
+        },
       ],
     },
   },
@@ -338,17 +428,17 @@ export class WorkflowTemplateLibrary {
 
   /** Get template by ID */
   getTemplate(id: string): WorkflowTemplate | undefined {
-    return this.getAllTemplates().find(t => t.id === id);
+    return this.getAllTemplates().find((t) => t.id === id);
   }
 
   /** Get templates by category */
   getTemplatesByCategory(category: string): WorkflowTemplate[] {
-    return this.getAllTemplates().filter(t => t.category === category);
+    return this.getAllTemplates().filter((t) => t.category === category);
   }
 
   /** Get all categories */
   getCategories(): string[] {
-    const categories = new Set(this.getAllTemplates().map(t => t.category));
+    const categories = new Set(this.getAllTemplates().map((t) => t.category));
     return Array.from(categories).sort();
   }
 
@@ -356,18 +446,16 @@ export class WorkflowTemplateLibrary {
   searchTemplates(query: string): WorkflowTemplate[] {
     const lowerQuery = query.toLowerCase();
     return this.getAllTemplates().filter(
-      t =>
+      (t) =>
         t.name.toLowerCase().includes(lowerQuery) ||
         t.description.toLowerCase().includes(lowerQuery) ||
-        t.tags.some(tag => tag.toLowerCase().includes(lowerQuery)),
+        t.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
     );
   }
 
   /** Get popular templates */
   getPopularTemplates(limit: number = 5): WorkflowTemplate[] {
-    return [...this.getAllTemplates()]
-      .sort((a, b) => b.usageCount - a.usageCount)
-      .slice(0, limit);
+    return [...this.getAllTemplates()].sort((a, b) => b.usageCount - a.usageCount).slice(0, limit);
   }
 
   /** Get recent templates */
@@ -413,7 +501,7 @@ export class WorkflowTemplateLibrary {
     id: string,
     updates: Partial<Pick<WorkflowTemplate, 'name' | 'description' | 'category' | 'tags'>>,
   ): boolean {
-    const template = this.customTemplates.find(t => t.id === id);
+    const template = this.customTemplates.find((t) => t.id === id);
     if (!template) return false;
 
     Object.assign(template, updates);
@@ -424,7 +512,7 @@ export class WorkflowTemplateLibrary {
   /** Delete a custom template */
   deleteTemplate(id: string): boolean {
     const initialLength = this.customTemplates.length;
-    this.customTemplates = this.customTemplates.filter(t => t.id !== id);
+    this.customTemplates = this.customTemplates.filter((t) => t.id !== id);
 
     if (this.customTemplates.length < initialLength) {
       this.persistCustomTemplates();
@@ -499,7 +587,7 @@ export class WorkflowTemplateLibrary {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            return parsed.filter(t => this.isValidTemplate(t));
+            return parsed.filter((t) => this.isValidTemplate(t));
           }
         }
       }

@@ -96,20 +96,21 @@ function makeEditorState(project: Project, overrides: Record<string, unknown> = 
   };
 }
 
-function setupHook(overrides: {
-  clip?: ReturnType<typeof makeClip>;
-  media?: ReturnType<typeof makeAsset>[];
-  project?: Project;
-  selectedClipIds?: string[];
-  setPlayheadTime?: ReturnType<typeof vi.fn>;
-} = {}) {
+function setupHook(
+  overrides: {
+    clip?: ReturnType<typeof makeClip>;
+    media?: ReturnType<typeof makeAsset>[];
+    project?: Project;
+    selectedClipIds?: string[];
+    setPlayheadTime?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
   const clip =
     overrides.clip ??
     makeClip({ id: 'clip-1', type: 'video', trackId: 'track-video', mediaId: 'media-1', duration: 4, trimStart: 1 });
   const media = overrides.media ?? [makeAsset({ id: 'media-1', duration: 10, thumbnail: 'thumb.png' })];
   const project =
-    overrides.project ??
-    makeProject({ tracks: [makeTrack({ id: 'track-video', clips: [clip] })], media });
+    overrides.project ?? makeProject({ tracks: [makeTrack({ id: 'track-video', clips: [clip] })], media });
   editorState = makeEditorState(project, {
     selectedClipIds: overrides.selectedClipIds ?? [],
     ...(overrides.setPlayheadTime ? { setPlayheadTime: overrides.setPlayheadTime } : {}),
@@ -128,8 +129,8 @@ beforeEach(() => {
   whisperSettingsState = { executablePath: 'C:/whisper.exe', modelPath: 'C:/model.bin' };
   mockGetWhisperAvailability.mockImplementation(() => Promise.resolve({ ready: true }));
   // 复刻真实语义：whisperReady 与 clip/asset 同时满足才可生成。
-  mockCanGenerateSubtitlesForClip.mockImplementation(
-    (clip: unknown, asset: unknown, ready: boolean) => Boolean(ready && clip && asset),
+  mockCanGenerateSubtitlesForClip.mockImplementation((clip: unknown, asset: unknown, ready: boolean) =>
+    Boolean(ready && clip && asset),
   );
 });
 
@@ -157,9 +158,7 @@ describe('useSmartRoughCut detection params', () => {
       await result.current.runSceneDetection();
     });
 
-    expect(mockDetectSceneChanges).toHaveBeenCalledWith(
-      expect.objectContaining({ threshold: 0.2 }),
-    );
+    expect(mockDetectSceneChanges).toHaveBeenCalledWith(expect.objectContaining({ threshold: 0.2 }));
   });
 
   it('passes the configured silence params to detectClipSilence', async () => {
@@ -175,11 +174,11 @@ describe('useSmartRoughCut detection params', () => {
       await result.current.runSilenceDetection();
     });
 
-    expect(mockDetectClipSilence).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      { thresholdDb: -55, minSilenceDuration: 0.2, marginDuration: 0.25 },
-    );
+    expect(mockDetectClipSilence).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      thresholdDb: -55,
+      minSilenceDuration: 0.2,
+      marginDuration: 0.25,
+    });
   });
 
   it('passes the configured dialogue sensitivity to detectClipDialogue', async () => {
@@ -268,7 +267,10 @@ describe('useSmartRoughCut gating', () => {
         id: 'clip-1',
         type: 'video',
         mediaId: 'media-1',
-        beatMarkers: [{ id: 'b1', time: 1 }, { id: 'b2', time: 2 }],
+        beatMarkers: [
+          { id: 'b1', time: 1 },
+          { id: 'b2', time: 2 },
+        ],
       }),
       selectedClipIds: ['clip-1'],
     });
@@ -377,11 +379,11 @@ describe('useSmartRoughCut silence flow', () => {
     expect(result.current.pendingSilence?.items[0]).toMatchObject({ id: 'silence-0' });
     expect(orchestrator().steps.silence.status).toBe('complete');
     expect(orchestrator().report.removedSilenceSeconds).toBe(0);
-    expect(mockDetectClipSilence).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      { thresholdDb: -40, minSilenceDuration: 0.5, marginDuration: 0.1 },
-    );
+    expect(mockDetectClipSilence).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+      thresholdDb: -40,
+      minSilenceDuration: 0.5,
+      marginDuration: 0.1,
+    });
   });
 
   it('applies removal through RemoveSilenceCommand and reports removed seconds', async () => {
@@ -534,7 +536,10 @@ describe('useSmartRoughCut rhythm flow', () => {
         type: 'video',
         mediaId: 'media-1',
         trackId: 'track-video',
-        beatMarkers: [{ id: 'b1', time: 1 }, { id: 'b2', time: 2 }],
+        beatMarkers: [
+          { id: 'b1', time: 1 },
+          { id: 'b2', time: 2 },
+        ],
       }),
       selectedClipIds: ['clip-1'],
     });
@@ -696,9 +701,7 @@ describe('useSmartRoughCut semanticSuggestions dual source', () => {
           { start: 4.3, end: 5, sceneTypes: ['dialogue'], brightness: 0.5, motion: 0.2, loudness: 0.04 },
         ],
         emotionCurve: [],
-        dialogueTurns: [
-          { start: 1.6, end: 4.3, loudness: 0.6 },
-        ],
+        dialogueTurns: [{ start: 1.6, end: 4.3, loudness: 0.6 }],
       },
     });
   }

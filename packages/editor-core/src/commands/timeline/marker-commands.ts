@@ -1,8 +1,8 @@
-import type {TimelineAccessor} from './index';
-import {Timeline, TimelineMarker, createTimelineMarker, normalizeTimelineMarker} from '../../model';
-import {getTimelineDuration} from '../../timeline';
-import {Command} from '../command';
-import {sortMarkers} from './utils-nested';
+import type { TimelineAccessor } from './index';
+import { Timeline, TimelineMarker, createTimelineMarker, normalizeTimelineMarker } from '../../model';
+import { getTimelineDuration } from '../../timeline';
+import { Command } from '../command';
+import { sortMarkers } from './utils-nested';
 
 export interface AddTimelineMarkerInput {
   id?: string;

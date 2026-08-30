@@ -5,10 +5,15 @@
  * each supported gesture with camera preview and live feedback.
  */
 
-import {useState, useEffect, useCallback, useRef} from 'react';
-import {Hand, ChevronRight, ChevronLeft, X, Camera, CameraOff, Check, SkipForward} from 'lucide-react';
-import {getGestureTutorialSteps, type GestureType, type GestureMapping, DEFAULT_GESTURE_MAPPINGS} from '@open-factory/editor-core/gesture-control';
-import {clsx} from 'clsx';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Hand, ChevronRight, ChevronLeft, X, Camera, CameraOff, Check, SkipForward } from 'lucide-react';
+import {
+  getGestureTutorialSteps,
+  type GestureType,
+  type GestureMapping,
+  DEFAULT_GESTURE_MAPPINGS,
+} from '@open-factory/editor-core/gesture-control';
+import { clsx } from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,16 +39,16 @@ const GESTURE_EMOJI: Record<GestureType, string> = {
   'swipe-down': '👇',
   'pinch-in': '🤏',
   'pinch-out': '🖐️',
-  'fist': '✊',
+  fist: '✊',
   'open-palm': '✋',
-  'point': '☝️',
+  point: '☝️',
   'two-finger-tap': '✌️',
   'thumbs-up': '👍',
   'thumbs-down': '👎',
   'peace-sign': '✌️',
-  'grab': '✊',
-  'release': '🖐️',
-  'none': '❓',
+  grab: '✊',
+  release: '🖐️',
+  none: '❓',
 };
 
 // ---------------------------------------------------------------------------
@@ -61,12 +66,15 @@ export function GestureTutorialOverlay({ open, onClose, onEnableGesture }: Gestu
   useEffect(() => {
     if (!open) return;
 
-    navigator.mediaDevices?.enumerateDevices?.().then((devices) => {
-      const hasCamera = devices.some((d) => d.kind === 'videoinput');
-      setCameraAvailable(hasCamera);
-    }).catch(() => {
-      setCameraAvailable(false);
-    });
+    navigator.mediaDevices
+      ?.enumerateDevices?.()
+      .then((devices) => {
+        const hasCamera = devices.some((d) => d.kind === 'videoinput');
+        setCameraAvailable(hasCamera);
+      })
+      .catch(() => {
+        setCameraAvailable(false);
+      });
   }, [open]);
 
   // Start camera preview
@@ -125,10 +133,7 @@ export function GestureTutorialOverlay({ open, onClose, onEnableGesture }: Gestu
 
         {/* Progress bar */}
         <div className="h-1 w-full bg-[var(--color-bg-secondary)]">
-          <div
-            className="h-full bg-[var(--color-accent)] transition-all"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="h-full bg-[var(--color-accent)] transition-all" style={{ width: `${progress}%` }} />
         </div>
 
         {/* Camera preview area */}
@@ -173,12 +178,8 @@ export function GestureTutorialOverlay({ open, onClose, onEnableGesture }: Gestu
 
         {/* Step content */}
         <div className="px-4 py-4">
-          <div className="mb-1 text-lg font-semibold text-[var(--color-text-secondary)]">
-            {step.instruction}
-          </div>
-          <div className="text-sm text-[var(--color-text-muted)]">
-            {step.tip}
-          </div>
+          <div className="mb-1 text-lg font-semibold text-[var(--color-text-secondary)]">{step.instruction}</div>
+          <div className="text-sm text-[var(--color-text-muted)]">{step.tip}</div>
           <div className="mt-2 text-xs text-[var(--color-text-muted)]">
             步骤 {currentStep + 1} / {steps.length}
           </div>
@@ -297,13 +298,7 @@ export function GesturePracticePanel({
       {/* Camera preview */}
       <div className="aspect-video overflow-hidden rounded-lg bg-black/90">
         {cameraActive ? (
-          <video
-            ref={videoRef}
-            className="h-full w-full object-cover"
-            autoPlay
-            muted
-            playsInline
-          />
+          <video ref={videoRef} className="h-full w-full object-cover" autoPlay muted playsInline />
         ) : (
           <div className="flex h-full items-center justify-center text-white/30">
             <Camera size={48} />
@@ -321,9 +316,7 @@ export function GesturePracticePanel({
 
       {/* Gesture mapping list */}
       <div className="space-y-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-          手势映射
-        </h4>
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">手势映射</h4>
         {mappings.map((m) => (
           <div
             key={m.gesture}

@@ -1,16 +1,16 @@
-import {useState, useCallback, useRef} from 'react';
-import type {Project, ContentType, ContentGenerationConfig, ContentGenerationResult} from '@open-factory/editor-core';
-import {validateContentGenerationConfig, estimateGenerationTime} from '@open-factory/editor-core';
-import {X, Subtitles, Mic, Music, Wand2, Loader2} from 'lucide-react';
-import {Button} from '../ui/button';
-import {Switch} from '../ui/switch';
-import {Input} from '../ui/input';
-import {Label} from '../ui/label';
-import {Tabs, TabsContent, TabsList, TabsTrigger} from '../ui/tabs';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '../ui/select';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
-import {showToast} from '../../lib/toast';
+import { useState, useCallback, useRef } from 'react';
+import type { Project, ContentType, ContentGenerationConfig, ContentGenerationResult } from '@open-factory/editor-core';
+import { validateContentGenerationConfig, estimateGenerationTime } from '@open-factory/editor-core';
+import { X, Subtitles, Mic, Music, Wand2, Loader2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Switch } from '../ui/switch';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
+import { showToast } from '../../lib/toast';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                         */

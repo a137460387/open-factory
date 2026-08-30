@@ -15,12 +15,7 @@ import {
   type SmartRoughCutSelection,
   type SmartRoughCutStepStatus,
 } from './smart-rough-cut-state';
-import {
-  formatSeconds,
-  sumSilentDuration,
-  type SceneCandidate,
-  type SilenceCandidate,
-} from './smart-rough-cut-utils';
+import { formatSeconds, sumSilentDuration, type SceneCandidate, type SilenceCandidate } from './smart-rough-cut-utils';
 import { useSmartRoughCut } from './useSmartRoughCut';
 import { SemanticSuggestionList } from './SemanticSuggestionList';
 import { SemanticSuggestionReviewDialog } from './SemanticSuggestionReviewDialog';

@@ -19,19 +19,9 @@ import { DEFAULT_RESOURCE_CONFIG } from '../resources/types';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type ResourcePanelPhase =
-  | 'idle'
-  | 'scanning'
-  | 'analyzing'
-  | 'complete'
-  | 'error';
+export type ResourcePanelPhase = 'idle' | 'scanning' | 'analyzing' | 'complete' | 'error';
 
-export type ResourcePanelTab =
-  | 'overview'
-  | 'proxies'
-  | 'cache'
-  | 'duplicates'
-  | 'unused';
+export type ResourcePanelTab = 'overview' | 'proxies' | 'cache' | 'duplicates' | 'unused';
 
 export interface ResourcePanelState {
   /** Current phase */
@@ -96,10 +86,7 @@ export type ResourcePanelAction =
 /**
  * Pure state reducer for the resource management panel
  */
-export function resourcePanelReducer(
-  state: ResourcePanelState,
-  action: ResourcePanelAction,
-): ResourcePanelState {
+export function resourcePanelReducer(state: ResourcePanelState, action: ResourcePanelAction): ResourcePanelState {
   switch (action.type) {
     case 'START_SCAN':
       return {
@@ -178,9 +165,7 @@ export function resourcePanelReducer(
     case 'PROXY_GENERATED':
       return {
         ...state,
-        proxies: state.proxies.map((p) =>
-          p.originalId === action.proxy.originalId ? action.proxy : p,
-        ),
+        proxies: state.proxies.map((p) => (p.originalId === action.proxy.originalId ? action.proxy : p)),
       };
 
     case 'CLEANUP_RECOMMENDATION':

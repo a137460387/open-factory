@@ -121,10 +121,7 @@ export interface SubtitleTranscriptSource {
  * understandSpeech(transcript, timeAlignment) 所需入参；
  * 纯函数，零 store / 零 React 依赖。
  */
-export function collectSubtitleTranscriptForClip(
-  timeline: Timeline,
-  clip: Clip | undefined,
-): SubtitleTranscriptSource {
+export function collectSubtitleTranscriptForClip(timeline: Timeline, clip: Clip | undefined): SubtitleTranscriptSource {
   if (!clip) {
     return { transcript: '', timeAlignment: [], segmentCount: 0 };
   }

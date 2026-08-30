@@ -8,11 +8,7 @@
  *           -> createRhythmAlignedTemplate (one-shot)
  */
 
-import type {
-  EditingTemplate,
-  TemplateKeyframe,
-  TemplateClip,
-} from '../models/template-schema';
+import type { EditingTemplate, TemplateKeyframe, TemplateClip } from '../models/template-schema';
 import { clamp01 } from '../utils/math';
 
 /** A single beat point detected from audio data. */
@@ -67,10 +63,7 @@ const MOTION_HIGH_THRESHOLD = 0.5;
  * @param sampleRate - Sample rate in Hz (default 44100)
  * @returns Sorted array of AudioBeat points
  */
-export function detectAudioBeats(
-  audioData: readonly number[],
-  sampleRate: number = 44100,
-): AudioBeat[] {
+export function detectAudioBeats(audioData: readonly number[], sampleRate: number = 44100): AudioBeat[] {
   if (audioData.length === 0) return [];
 
   const hopSize = Math.floor(ENERGY_WINDOW_SIZE / 2);
@@ -130,7 +123,7 @@ function classifyFrequencyBand(audioData: readonly number[], start: number): num
   let crossings = 0;
   const end = Math.min(start + ENERGY_WINDOW_SIZE, audioData.length);
   for (let i = start + 1; i < end; i++) {
-    if ((audioData[i] >= 0) !== (audioData[i - 1] >= 0)) crossings++;
+    if (audioData[i] >= 0 !== audioData[i - 1] >= 0) crossings++;
   }
   const zcr = crossings / ENERGY_WINDOW_SIZE;
   if (zcr < 0.1) return 0;
@@ -215,10 +208,7 @@ export function findMotionPeaks(motionPoints: readonly VideoMotionPoint[]): Vide
  * @param template - Source editing template
  * @returns New template with rhythm-aligned keyframes injected
  */
-export function matchRhythmToTemplate(
-  rhythmProfile: AudioRhythmProfile,
-  template: EditingTemplate,
-): EditingTemplate {
+export function matchRhythmToTemplate(rhythmProfile: AudioRhythmProfile, template: EditingTemplate): EditingTemplate {
   const totalDuration = template.metadata.estimatedDurationSec;
   if (totalDuration <= 0 || rhythmProfile.beats.length === 0) return template;
 
@@ -249,25 +239,48 @@ function injectRhythmKeyframes(
 
     // Scale punch on strong beats
     if (beat.strength > 0.5) {
-      rhythmKeyframes.push({ normalizedTime: t, property: 'scale', value: 1.0 + beat.strength * 0.15, interpolation: 'ease-out' });
-      rhythmKeyframes.push({ normalizedTime: clamp01(t + 0.03), property: 'scale', value: 1.0, interpolation: 'ease-in' });
+      rhythmKeyframes.push({
+        normalizedTime: t,
+        property: 'scale',
+        value: 1.0 + beat.strength * 0.15,
+        interpolation: 'ease-out',
+      });
+      rhythmKeyframes.push({
+        normalizedTime: clamp01(t + 0.03),
+        property: 'scale',
+        value: 1.0,
+        interpolation: 'ease-in',
+      });
     }
 
     // Opacity pulse on medium+ beats
     if (beat.strength > 0.3) {
-      rhythmKeyframes.push({ normalizedTime: t, property: 'opacity', value: Math.min(1, clip.opacity + beat.strength * 0.2), interpolation: 'ease-out' });
+      rhythmKeyframes.push({
+        normalizedTime: t,
+        property: 'opacity',
+        value: Math.min(1, clip.opacity + beat.strength * 0.2),
+        interpolation: 'ease-out',
+      });
     }
 
     // Position micro-shift on very strong beats
     if (beat.strength > 0.6) {
-      rhythmKeyframes.push({ normalizedTime: t, property: 'positionX', value: (beat.strength - 0.5) * 10, interpolation: 'ease-out' });
-      rhythmKeyframes.push({ normalizedTime: clamp01(t + 0.02), property: 'positionX', value: 0, interpolation: 'ease-in-out' });
+      rhythmKeyframes.push({
+        normalizedTime: t,
+        property: 'positionX',
+        value: (beat.strength - 0.5) * 10,
+        interpolation: 'ease-out',
+      });
+      rhythmKeyframes.push({
+        normalizedTime: clamp01(t + 0.02),
+        property: 'positionX',
+        value: 0,
+        interpolation: 'ease-in-out',
+      });
     }
   }
 
-  const merged = [...clip.keyframes, ...rhythmKeyframes].sort(
-    (a, b) => a.normalizedTime - b.normalizedTime,
-  );
+  const merged = [...clip.keyframes, ...rhythmKeyframes].sort((a, b) => a.normalizedTime - b.normalizedTime);
 
   return { ...clip, keyframes: merged };
 }

@@ -6,9 +6,19 @@
  * All side effects are explicitly managed through the PluginContext.
  */
 
-import type {AnyPlugin, PluginCategory, PluginContext, PluginEventEmitter, PluginLifecycle, PluginLogger, PluginManifest, PluginRegistration, PluginStorage} from './plugin-types';
-import {PluginRegistry} from './plugin-registry';
-import {logger} from '../utils/logger';
+import type {
+  AnyPlugin,
+  PluginCategory,
+  PluginContext,
+  PluginEventEmitter,
+  PluginLifecycle,
+  PluginLogger,
+  PluginManifest,
+  PluginRegistration,
+  PluginStorage,
+} from './plugin-types';
+import { PluginRegistry } from './plugin-registry';
+import { logger } from '../utils/logger';
 
 // --- Types ---
 

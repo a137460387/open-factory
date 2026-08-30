@@ -156,7 +156,6 @@ export class WebGPURenderEngine {
       this.status = 'ready';
       this.notifyStatus('ready', 'WebGPU 就绪');
       return this.deviceInfo;
-
     } catch (error) {
       this.status = 'error';
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -260,11 +259,7 @@ export class WebGPURenderEngine {
   /**
    * 上传视频帧到 GPU
    */
-  async uploadFrame(
-    frame: number,
-    bitmap: ImageBitmap,
-    quality: RenderQuality = 'full'
-  ): Promise<FrameDecodeResult> {
+  async uploadFrame(frame: number, bitmap: ImageBitmap, quality: RenderQuality = 'full'): Promise<FrameDecodeResult> {
     if (!this.device) {
       throw new Error('Device not initialized');
     }
@@ -288,7 +283,7 @@ export class WebGPURenderEngine {
     this.device.queue.copyExternalImageToTexture(
       { source: bitmap },
       { texture },
-      { width: bitmap.width, height: bitmap.height }
+      { width: bitmap.width, height: bitmap.height },
     );
 
     const result: FrameDecodeResult = {
@@ -318,7 +313,7 @@ export class WebGPURenderEngine {
     colorCorrection?: ColorCorrectionParams,
     toneMapping?: ToneMappingParams,
     lutData?: LUT3DData,
-    lutIntensity: number = 1.0
+    lutIntensity: number = 1.0,
   ): Promise<void> {
     if (!this.device || !this.context || !this.colorPipeline) {
       throw new Error('Device not initialized');
@@ -374,7 +369,7 @@ export class WebGPURenderEngine {
   private buildColorParams(
     colorCorrection?: ColorCorrectionParams,
     toneMapping?: ToneMappingParams,
-    lutIntensity: number = 1.0
+    lutIntensity: number = 1.0,
   ): Float32Array {
     const params = new Float32Array(64); // 256 bytes / 4
 
@@ -431,20 +426,24 @@ export class WebGPURenderEngine {
 
   private getToneMappingMethodIndex(method: string): number {
     switch (method) {
-      case 'none': return 0;
-      case 'reinhard': return 1;
-      case 'filmic': return 2;
-      case 'aces-hill': return 3;
-      case 'aces-narkowicz': return 4;
-      case 'agx': return 5;
-      default: return 3;
+      case 'none':
+        return 0;
+      case 'reinhard':
+        return 1;
+      case 'filmic':
+        return 2;
+      case 'aces-hill':
+        return 3;
+      case 'aces-narkowicz':
+        return 4;
+      case 'agx':
+        return 5;
+      default:
+        return 3;
     }
   }
 
-  private createBindGroup(
-    inputTexture: GPUTexture | null,
-    lutData?: LUT3DData
-  ): GPUBindGroup {
+  private createBindGroup(inputTexture: GPUTexture | null, lutData?: LUT3DData): GPUBindGroup {
     if (!this.device || !this.colorBindGroupLayout) {
       throw new Error('Device not initialized');
     }
@@ -507,7 +506,7 @@ export class WebGPURenderEngine {
       { texture },
       lutData.data as unknown as BufferSource,
       { bytesPerRow: lutData.size * 16, rowsPerImage: lutData.size },
-      { width: lutData.size, height: lutData.size, depthOrArrayLayers: lutData.size }
+      { width: lutData.size, height: lutData.size, depthOrArrayLayers: lutData.size },
     );
 
     return texture;
@@ -612,9 +611,7 @@ export class WebGPURenderEngine {
 /**
  * 创建 WebGPU 渲染引擎实例
  */
-export function createWebGPURenderEngine(
-  config?: Partial<WebGPURenderPipelineConfig>
-): WebGPURenderEngine {
+export function createWebGPURenderEngine(config?: Partial<WebGPURenderPipelineConfig>): WebGPURenderEngine {
   return new WebGPURenderEngine(config);
 }
 

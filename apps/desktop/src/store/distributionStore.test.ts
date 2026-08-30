@@ -83,10 +83,12 @@ describe('useDistributionStore setter 与函数式更新器', () => {
 
 describe('useDistributionStore 任务操作', () => {
   function seedTasks() {
-    useDistributionStore.getState().setTasks([
-      { id: 't1', status: 'pending', progress: 0 } as never,
-      { id: 't2', status: 'running', progress: 0.4 } as never,
-    ]);
+    useDistributionStore
+      .getState()
+      .setTasks([
+        { id: 't1', status: 'pending', progress: 0 } as never,
+        { id: 't2', status: 'running', progress: 0.4 } as never,
+      ]);
   }
 
   it('updateTaskProgress 钳制到 [0,1] 并只更新目标任务', () => {

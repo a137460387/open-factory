@@ -51,8 +51,12 @@ export class BatchCommand implements Command {
  */
 export class NoOpCommand implements Command {
   readonly description = '(no operation)';
-  execute(): void { /* no-op */ }
-  undo(): void { /* no-op */ }
+  execute(): void {
+    /* no-op */
+  }
+  undo(): void {
+    /* no-op */
+  }
 }
 
 export interface HistoryEntry {

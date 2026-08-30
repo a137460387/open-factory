@@ -5,7 +5,15 @@
  * Provides the foundation for workflow execution.
  */
 
-import type {WorkflowGraph, WorkflowNode, NodeConnection, NodeDefinition, NodePort, NodeCategory, NodeEditorState} from './node-editor-types';
+import type {
+  WorkflowGraph,
+  WorkflowNode,
+  NodeConnection,
+  NodeDefinition,
+  NodePort,
+  NodeCategory,
+  NodeEditorState,
+} from './node-editor-types';
 
 // ─── Built-in Node Definitions ─────────────────────────────────────────────
 
@@ -32,9 +40,7 @@ const BUILTIN_NODES: NodeDefinition[] = [
     icon: '🎵',
     color: '#4CAF50',
     inputs: [],
-    outputs: [
-      { id: 'audio', name: 'Audio', direction: 'output', dataType: 'audio' },
-    ],
+    outputs: [{ id: 'audio', name: 'Audio', direction: 'output', dataType: 'audio' }],
   },
   {
     type: 'input.image',
@@ -44,9 +50,7 @@ const BUILTIN_NODES: NodeDefinition[] = [
     icon: '🖼️',
     color: '#4CAF50',
     inputs: [],
-    outputs: [
-      { id: 'image', name: 'Image', direction: 'output', dataType: 'image' },
-    ],
+    outputs: [{ id: 'image', name: 'Image', direction: 'output', dataType: 'image' }],
   },
   {
     type: 'input.timeline',
@@ -70,9 +74,7 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'ai-engine',
     icon: '⭐',
     color: '#2196F3',
-    inputs: [
-      { id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true },
-    ],
+    inputs: [{ id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true }],
     outputs: [
       { id: 'highlights', name: 'Highlights', direction: 'output', dataType: 'metadata' },
       { id: 'timestamps', name: 'Timestamps', direction: 'output', dataType: 'metadata' },
@@ -109,12 +111,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'ai-engine',
     icon: '💬',
     color: '#2196F3',
-    inputs: [
-      { id: 'audio', name: 'Audio', direction: 'input', dataType: 'audio', required: true },
-    ],
-    outputs: [
-      { id: 'subtitles', name: 'Subtitles', direction: 'output', dataType: 'subtitle' },
-    ],
+    inputs: [{ id: 'audio', name: 'Audio', direction: 'input', dataType: 'audio', required: true }],
+    outputs: [{ id: 'subtitles', name: 'Subtitles', direction: 'output', dataType: 'subtitle' }],
     defaultConfig: {
       language: 'auto',
       maxCharsPerLine: 42,
@@ -128,12 +126,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'ai-engine',
     icon: '🎨',
     color: '#2196F3',
-    inputs: [
-      { id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true },
-    ],
-    outputs: [
-      { id: 'graded', name: 'Graded Video', direction: 'output', dataType: 'video' },
-    ],
+    inputs: [{ id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true }],
+    outputs: [{ id: 'graded', name: 'Graded Video', direction: 'output', dataType: 'video' }],
     defaultConfig: {
       style: 'cinematic',
       intensity: 0.8,
@@ -146,12 +140,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'ai-engine',
     icon: '🔊',
     color: '#2196F3',
-    inputs: [
-      { id: 'audio', name: 'Audio', direction: 'input', dataType: 'audio', required: true },
-    ],
-    outputs: [
-      { id: 'enhanced', name: 'Enhanced Audio', direction: 'output', dataType: 'audio' },
-    ],
+    inputs: [{ id: 'audio', name: 'Audio', direction: 'input', dataType: 'audio', required: true }],
+    outputs: [{ id: 'enhanced', name: 'Enhanced Audio', direction: 'output', dataType: 'audio' }],
     defaultConfig: {
       denoise: true,
       normalize: true,
@@ -165,9 +155,7 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'ai-engine',
     icon: '🎬',
     color: '#2196F3',
-    inputs: [
-      { id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true },
-    ],
+    inputs: [{ id: 'video', name: 'Video', direction: 'input', dataType: 'video', required: true }],
     outputs: [
       { id: 'scenes', name: 'Scenes', direction: 'output', dataType: 'metadata' },
       { id: 'timestamps', name: 'Timestamps', direction: 'output', dataType: 'metadata' },
@@ -186,12 +174,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'transform',
     icon: '🔲',
     color: '#FF9800',
-    inputs: [
-      { id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true },
-    ],
-    outputs: [
-      { id: 'output', name: 'Output', direction: 'output', dataType: 'video' },
-    ],
+    inputs: [{ id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true }],
+    outputs: [{ id: 'output', name: 'Output', direction: 'output', dataType: 'video' }],
     defaultConfig: {
       x: 0,
       y: 0,
@@ -206,12 +190,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'transform',
     icon: '↔️',
     color: '#FF9800',
-    inputs: [
-      { id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true },
-    ],
-    outputs: [
-      { id: 'output', name: 'Output', direction: 'output', dataType: 'video' },
-    ],
+    inputs: [{ id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true }],
+    outputs: [{ id: 'output', name: 'Output', direction: 'output', dataType: 'video' }],
     defaultConfig: {
       width: 1920,
       height: 1080,
@@ -225,12 +205,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'transform',
     icon: '⏩',
     color: '#FF9800',
-    inputs: [
-      { id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true },
-    ],
-    outputs: [
-      { id: 'output', name: 'Output', direction: 'output', dataType: 'video' },
-    ],
+    inputs: [{ id: 'input', name: 'Input', direction: 'input', dataType: 'video', required: true }],
+    outputs: [{ id: 'output', name: 'Output', direction: 'output', dataType: 'video' }],
     defaultConfig: {
       speed: 1.0,
       keepAudio: true,
@@ -303,9 +279,7 @@ const BUILTIN_NODES: NodeDefinition[] = [
       { id: 'input1', name: 'Input 1', direction: 'input', dataType: 'any' },
       { id: 'input2', name: 'Input 2', direction: 'input', dataType: 'any' },
     ],
-    outputs: [
-      { id: 'output', name: 'Output', direction: 'output', dataType: 'any' },
-    ],
+    outputs: [{ id: 'output', name: 'Output', direction: 'output', dataType: 'any' }],
   },
   {
     type: 'control.delay',
@@ -314,12 +288,8 @@ const BUILTIN_NODES: NodeDefinition[] = [
     category: 'control',
     icon: '⏳',
     color: '#607D8B',
-    inputs: [
-      { id: 'input', name: 'Input', direction: 'input', dataType: 'any', required: true },
-    ],
-    outputs: [
-      { id: 'output', name: 'Output', direction: 'output', dataType: 'any' },
-    ],
+    inputs: [{ id: 'input', name: 'Input', direction: 'input', dataType: 'any', required: true }],
+    outputs: [{ id: 'output', name: 'Output', direction: 'output', dataType: 'any' }],
     defaultConfig: {
       duration: 1000,
     },
@@ -360,7 +330,7 @@ export class NodeEditorEngine {
   onGraphChange(listener: (graph: WorkflowGraph) => void): () => void {
     this.listeners.push(listener);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((l) => l !== listener);
     };
   }
 
@@ -368,17 +338,17 @@ export class NodeEditorEngine {
   onStateChange(listener: (state: NodeEditorState) => void): () => void {
     this.stateListeners.push(listener);
     return () => {
-      this.stateListeners = this.stateListeners.filter(l => l !== listener);
+      this.stateListeners = this.stateListeners.filter((l) => l !== listener);
     };
   }
 
   private emitGraphChange(): void {
     this.graph.updatedAt = new Date().toISOString();
-    this.listeners.forEach(l => l(this.getGraph()));
+    this.listeners.forEach((l) => l(this.getGraph()));
   }
 
   private emitStateChange(): void {
-    this.stateListeners.forEach(l => l({ ...this.state }));
+    this.stateListeners.forEach((l) => l({ ...this.state }));
   }
 
   // ─── Node Operations ─────────────────────────────────────────────────────
@@ -390,7 +360,7 @@ export class NodeEditorEngine {
 
   /** Get node definitions by category */
   getNodeDefinitionsByCategory(category: NodeCategory): NodeDefinition[] {
-    return Array.from(this.nodeDefinitions.values()).filter(d => d.category === category);
+    return Array.from(this.nodeDefinitions.values()).filter((d) => d.category === category);
   }
 
   /** Register a custom node definition */
@@ -419,12 +389,12 @@ export class NodeEditorEngine {
   /** Remove a node from the graph */
   removeNode(nodeId: string): boolean {
     const initialLength = this.graph.nodes.length;
-    this.graph.nodes = this.graph.nodes.filter(n => n.id !== nodeId);
+    this.graph.nodes = this.graph.nodes.filter((n) => n.id !== nodeId);
 
     if (this.graph.nodes.length < initialLength) {
       // Remove connections involving this node
       this.graph.connections = this.graph.connections.filter(
-        c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId,
+        (c) => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId,
       );
       this.emitGraphChange();
       return true;
@@ -434,7 +404,7 @@ export class NodeEditorEngine {
 
   /** Update node position */
   updateNodePosition(nodeId: string, position: { x: number; y: number }): void {
-    const node = this.graph.nodes.find(n => n.id === nodeId);
+    const node = this.graph.nodes.find((n) => n.id === nodeId);
     if (node) {
       node.position = position;
       this.emitGraphChange();
@@ -443,7 +413,7 @@ export class NodeEditorEngine {
 
   /** Update node configuration */
   updateNodeConfig(nodeId: string, config: Record<string, unknown>): void {
-    const node = this.graph.nodes.find(n => n.id === nodeId);
+    const node = this.graph.nodes.find((n) => n.id === nodeId);
     if (node) {
       node.config = { ...node.config, ...config };
       this.emitGraphChange();
@@ -452,7 +422,7 @@ export class NodeEditorEngine {
 
   /** Toggle node enabled state */
   toggleNodeEnabled(nodeId: string): void {
-    const node = this.graph.nodes.find(n => n.id === nodeId);
+    const node = this.graph.nodes.find((n) => n.id === nodeId);
     if (node) {
       node.enabled = !node.enabled;
       this.emitGraphChange();
@@ -461,7 +431,7 @@ export class NodeEditorEngine {
 
   /** Get node by ID */
   getNode(nodeId: string): WorkflowNode | undefined {
-    return this.graph.nodes.find(n => n.id === nodeId);
+    return this.graph.nodes.find((n) => n.id === nodeId);
   }
 
   /** Get node definition */
@@ -488,8 +458,8 @@ export class NodeEditorEngine {
     const targetDef = this.getNodeDefinition(targetNode.type);
     if (!sourceDef || !targetDef) return null;
 
-    const sourcePort = sourceDef.outputs.find(p => p.id === sourcePortId);
-    const targetPort = targetDef.inputs.find(p => p.id === targetPortId);
+    const sourcePort = sourceDef.outputs.find((p) => p.id === sourcePortId);
+    const targetPort = targetDef.inputs.find((p) => p.id === targetPortId);
     if (!sourcePort || !targetPort) return null;
 
     // Validate data type compatibility
@@ -497,7 +467,7 @@ export class NodeEditorEngine {
 
     // Check for existing connection to the same input port
     const existingConnection = this.graph.connections.find(
-      c => c.targetNodeId === targetNodeId && c.targetPortId === targetPortId,
+      (c) => c.targetNodeId === targetNodeId && c.targetPortId === targetPortId,
     );
     if (existingConnection && !targetPort.multiple) {
       // Remove existing connection
@@ -523,7 +493,7 @@ export class NodeEditorEngine {
   /** Remove a connection */
   removeConnection(connectionId: string): boolean {
     const initialLength = this.graph.connections.length;
-    this.graph.connections = this.graph.connections.filter(c => c.id !== connectionId);
+    this.graph.connections = this.graph.connections.filter((c) => c.id !== connectionId);
 
     if (this.graph.connections.length < initialLength) {
       this.emitGraphChange();
@@ -534,19 +504,17 @@ export class NodeEditorEngine {
 
   /** Get connections for a node */
   getConnectionsForNode(nodeId: string): NodeConnection[] {
-    return this.graph.connections.filter(
-      c => c.sourceNodeId === nodeId || c.targetNodeId === nodeId,
-    );
+    return this.graph.connections.filter((c) => c.sourceNodeId === nodeId || c.targetNodeId === nodeId);
   }
 
   /** Get incoming connections for a node */
   getIncomingConnections(nodeId: string): NodeConnection[] {
-    return this.graph.connections.filter(c => c.targetNodeId === nodeId);
+    return this.graph.connections.filter((c) => c.targetNodeId === nodeId);
   }
 
   /** Get outgoing connections for a node */
   getOutgoingConnections(nodeId: string): NodeConnection[] {
-    return this.graph.connections.filter(c => c.sourceNodeId === nodeId);
+    return this.graph.connections.filter((c) => c.sourceNodeId === nodeId);
   }
 
   // ─── Validation ──────────────────────────────────────────────────────────
@@ -591,11 +559,11 @@ export class NodeEditorEngine {
       }
 
       // Check required inputs
-      const requiredInputs = def.inputs.filter(p => p.required);
+      const requiredInputs = def.inputs.filter((p) => p.required);
       const connections = this.getIncomingConnections(node.id);
 
       for (const input of requiredInputs) {
-        const hasConnection = connections.some(c => c.targetPortId === input.id);
+        const hasConnection = connections.some((c) => c.targetPortId === input.id);
         if (!hasConnection) {
           warnings.push({
             nodeId: node.id,
@@ -703,7 +671,7 @@ export class NodeEditorEngine {
 
   /** Deselect a node */
   deselectNode(nodeId: string): void {
-    this.state.selectedNodeIds = this.state.selectedNodeIds.filter(id => id !== nodeId);
+    this.state.selectedNodeIds = this.state.selectedNodeIds.filter((id) => id !== nodeId);
     this.emitStateChange();
   }
 
@@ -716,7 +684,7 @@ export class NodeEditorEngine {
 
   /** Select all nodes */
   selectAll(): void {
-    this.state.selectedNodeIds = this.graph.nodes.map(n => n.id);
+    this.state.selectedNodeIds = this.graph.nodes.map((n) => n.id);
     this.emitStateChange();
   }
 
@@ -724,13 +692,9 @@ export class NodeEditorEngine {
 
   /** Copy selected nodes to clipboard */
   copy(): void {
-    const selectedNodes = this.graph.nodes.filter(n =>
-      this.state.selectedNodeIds.includes(n.id),
-    );
+    const selectedNodes = this.graph.nodes.filter((n) => this.state.selectedNodeIds.includes(n.id));
     const selectedConnections = this.graph.connections.filter(
-      c =>
-        this.state.selectedNodeIds.includes(c.sourceNodeId) &&
-        this.state.selectedNodeIds.includes(c.targetNodeId),
+      (c) => this.state.selectedNodeIds.includes(c.sourceNodeId) && this.state.selectedNodeIds.includes(c.targetNodeId),
     );
 
     this.state.clipboard = {
@@ -781,7 +745,7 @@ export class NodeEditorEngine {
     this.graph.connections = [...this.graph.connections, ...newConnections];
 
     // Select pasted nodes
-    this.state.selectedNodeIds = newNodes.map(n => n.id);
+    this.state.selectedNodeIds = newNodes.map((n) => n.id);
     this.emitGraphChange();
     this.emitStateChange();
 
@@ -827,11 +791,11 @@ export class NodeEditorEngine {
   }
 
   private getGraphBounds(): { x: number; y: number; width: number; height: number } {
-    const positions = this.graph.nodes.map(n => n.position);
-    const minX = Math.min(...positions.map(p => p.x));
-    const minY = Math.min(...positions.map(p => p.y));
-    const maxX = Math.max(...positions.map(p => p.x + 200)); // Assume node width ~200
-    const maxY = Math.max(...positions.map(p => p.y + 100)); // Assume node height ~100
+    const positions = this.graph.nodes.map((n) => n.position);
+    const minX = Math.min(...positions.map((p) => p.x));
+    const minY = Math.min(...positions.map((p) => p.y));
+    const maxX = Math.max(...positions.map((p) => p.x + 200)); // Assume node width ~200
+    const maxY = Math.max(...positions.map((p) => p.y + 100)); // Assume node height ~100
 
     return {
       x: minX,

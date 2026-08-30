@@ -1,4 +1,4 @@
-import type {MediaAsset, MediaMetadata} from './model-types';
+import type { MediaAsset, MediaMetadata } from './model-types';
 
 export interface MediaTagFrequency {
   tag: string;

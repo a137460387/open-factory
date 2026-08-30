@@ -18,12 +18,7 @@ import {
   formatDurationMs,
 } from './manager';
 
-import type {
-  ResourceFile,
-  ProxyFile,
-  CacheEntry,
-  ResourceConfig,
-} from './types';
+import type { ResourceFile, ProxyFile, CacheEntry, ResourceConfig } from './types';
 
 import { DEFAULT_RESOURCE_CONFIG } from './types';
 

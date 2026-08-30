@@ -179,7 +179,9 @@ describe('validateSmartEditingConfig', () => {
   });
 
   it('returns false for wrong types', () => {
-    expect(validateSmartEditingConfig({ ...createDefaultSmartEditingConfig(), enableRhythmMatching: 'yes' as any })).toBe(false);
+    expect(
+      validateSmartEditingConfig({ ...createDefaultSmartEditingConfig(), enableRhythmMatching: 'yes' as any }),
+    ).toBe(false);
   });
 });
 

@@ -12,9 +12,11 @@ interface RecordedCall {
 
 function createMockContext(initialFilter = 'none') {
   const calls: RecordedCall[] = [];
-  const record = (method: string) => (...args: unknown[]) => {
-    calls.push({ method, args });
-  };
+  const record =
+    (method: string) =>
+    (...args: unknown[]) => {
+      calls.push({ method, args });
+    };
   const context = {
     filter: initialFilter,
     globalAlpha: 1,
@@ -49,14 +51,7 @@ describe('drawTransformedSource2d', () => {
 
     drawTransformedSource2d(context, canvas, {} as CanvasImageSource, { width: 120, height: 80 }, transform);
 
-    expect(calls.map((call) => call.method)).toEqual([
-      'save',
-      'translate',
-      'rotate',
-      'scale',
-      'drawImage',
-      'restore',
-    ]);
+    expect(calls.map((call) => call.method)).toEqual(['save', 'translate', 'rotate', 'scale', 'drawImage', 'restore']);
     // save/restore 为 mock，不重置属性：globalAlpha 保持 transform.opacity
     expect(context.globalAlpha).toBe(0.7);
     expect(calls.find((call) => call.method === 'translate')?.args).toEqual([210, 144]);
@@ -120,13 +115,12 @@ describe('drawTransformedSource2d', () => {
     const { context, calls } = createMockContext();
     const canvas = { width: 200, height: 200 } as HTMLCanvasElement;
 
-    drawTransformedSource2d(
-      context,
-      canvas,
-      {} as CanvasImageSource,
-      { width: 10, height: 10 },
-      { x: 0, y: 0, rotation: 0, opacity: 1 } as unknown as Transform,
-    );
+    drawTransformedSource2d(context, canvas, {} as CanvasImageSource, { width: 10, height: 10 }, {
+      x: 0,
+      y: 0,
+      rotation: 0,
+      opacity: 1,
+    } as unknown as Transform);
 
     expect(calls.find((call) => call.method === 'scale')?.args).toEqual([1, 1]);
   });

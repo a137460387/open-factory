@@ -5,12 +5,7 @@
  * .oft files are JSON-based with a checksum for integrity verification.
  */
 
-import type {
-  EditingTemplate,
-  OftFile,
-  TemplateLibraryEntry,
-  TemplateFilter,
-} from '../models/template-schema';
+import type { EditingTemplate, OftFile, TemplateLibraryEntry, TemplateFilter } from '../models/template-schema';
 import { TEMPLATE_SCHEMA_VERSION, TEMPLATE_FILE_EXTENSION, validateTemplate } from '../models/template-schema';
 import { BUILTIN_TEMPLATES } from './builtin-templates';
 import { logger } from '../utils/logger';
@@ -57,8 +52,6 @@ export async function exportTemplate(template: EditingTemplate): Promise<string>
 
   return JSON.stringify(oftFile, null, 2);
 }
-
-
 
 // ─── Import ──────────────────────────────────────────────────────
 
@@ -113,14 +106,10 @@ export async function importTemplate(jsonString: string): Promise<EditingTemplat
   return oft.template;
 }
 
-
-
 // ─── Template Library Management ─────────────────────────────────
 
 /** In-memory template library (user templates + built-in) */
 const userTemplates: Map<string, EditingTemplate> = new Map();
-
-
 
 /**
  * Add a user template to the library.
@@ -180,9 +169,7 @@ export function searchTemplates(filter: TemplateFilter): TemplateLibraryEntry[] 
   }
 
   if (filter.tags && filter.tags.length > 0) {
-    results = results.filter((e) =>
-      filter.tags!.some((tag) => e.template.metadata.tags.includes(tag)),
-    );
+    results = results.filter((e) => filter.tags!.some((tag) => e.template.metadata.tags.includes(tag)));
   }
 
   if (filter.aspectRatio) {
@@ -229,5 +216,3 @@ export function searchTemplates(filter: TemplateFilter): TemplateLibraryEntry[] 
 
   return results;
 }
-
-

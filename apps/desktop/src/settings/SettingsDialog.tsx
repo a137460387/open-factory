@@ -1,59 +1,200 @@
-import {logger} from '@open-factory/editor-core/utils';
-import {useEffect, useMemo, useState, useCallback} from 'react';
-import {X} from 'lucide-react';
-import {DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, BUILTIN_TIMELINE_SCRIPTS, RunScriptCommand, UpdateProjectSettingsCommand, createTimelineScriptSnapshot, createEffectPresetFromClip, serializeEffectPresetFile, getTimelineScriptApiFunctionNames, getTimelineScriptExportRequests, normalizeProjectColorPipeline, normalizeProjectFps, normalizeProjectWorkingColorSpace, normalizeTimecodeFormat, normalizeVfrHandlingStrategy, type Clip, type BuiltinTimelineScript, type EffectPresetFilters, type Project, type ProjectColorPipeline, type PostExportQualityAssuranceSettings, type TimecodeFormat, type TimelineScriptOperation} from '@open-factory/editor-core';
-import {getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language} from '../i18n/strings';
-import {switchLanguage} from '../i18n/i18next-config';
-import {parseAutomationRulesJson, serializeAutomationRulesJson} from '../automation/automation-rules';
-import {pickDemucsExecutablePath} from '../lib/demucs';
-import {bridgeConfirm, fsExists, getFileStat, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, getAppVersion, checkAppUpdate} from '../lib/tauri-bridge';
-import {isTauriRuntime} from '../lib/tauri';
-import {showToast} from '../lib/toast';
-import {PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames} from '../lib/preview/preview-performance';
-import {type ClipMacro} from '../macros/clip-macros';
-import {getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry} from '../plugins/plugin-manager';
-import {installCatalogPlugin, installPluginFromFile, loadPluginCatalog, type PluginCatalogEntry, type PluginCatalogResult} from '../plugins/plugin-market';
-import {loadExportPresets, serializeExportPresetPackage} from '../export/export-presets';
-import {filterPresetMarketCards, installPresetMarketCard, loadPresetMarket, presetMarketCardHasCustomConflict, readPresetMarketRatings, writePresetMarketRating, type PresetMarketCard, type PresetMarketFilters, type PresetMarketLoadResult} from '../export/preset-market';
-import {filterEffectPresetCommunityCards, installEffectPresetCommunityCard, loadEffectPresetCommunityLibrary, type EffectPresetCommunityCard, type EffectPresetCommunityLoadResult} from '../effects/effect-preset-library';
-import {type TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
-import {commandManager, projectAccessor, timelineAccessor} from '../store/commandManager';
-import {useDemucsSettingsStore} from '../store/demucsSettingsStore';
-import {useEditorStore} from '../store/editorStore';
-import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
-import {useProxySettingsStore} from '../store/proxySettingsStore';
-import {useRecordingSettingsStore} from '../store/recordingSettingsStore';
-import {useTranslationSettingsStore} from '../store/translationSettingsStore';
-import {AIServicesSettingsPanel} from './AIServicesSettingsPanel';
-import {AppearanceSettingsPanel} from './AppearanceSettingsPanel';
-import {AutomationSettingsPanel} from './AutomationSettingsPanel';
-import {BackupSettingsPanel} from './BackupSettingsPanel';
-import {EffectPresetCommunityPanel} from './EffectPresetPanel';
-import {ExportPresetSyncSettingsPanel} from './ExportPresetSyncPanel';
-import {EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule, getExportRule, upsertExportRule} from './ExportRulesPanel';
-import {formatBytes} from './formatHelpers';
-import {HardwareAccelerationSettingsPanel} from './HardwareAccelerationSettingsPanel';
-import {GeneralSettingsPanel} from './GeneralSettingsPanel';
-import {LutLibraryPanel} from './LutLibraryPanel';
-import {ShortcutMacrosPanel} from './ShortcutMacrosPanel';
-import {GesturePracticePanel} from '../components/GestureControl/GestureTutorial';
-import {LocalModelsSettingsPanel} from './LocalModelsPanel';
-import {PluginsSettingsPanel} from './PluginsSettingsPanel';
-import {PresetMarketPanel} from './PresetMarketPanel';
-import {ProxySettingsPanel} from './ProxySettingsPanel';
-import {TaskMonitorSettingsPanel} from './TaskMonitorSettingsPanel';
-import {TimelineScriptsSettingsPanel} from './TimelineScriptsSettingsPanel';
-import {TranslationSettingsPanel} from './TranslationSettingsPanel';
-import {useWhisperSettingsStore} from '../store/whisperSettingsStore';
-import {applyLocalCoeditingSettings} from '../collaboration/settings';
-import {runTimelineScriptInWorker} from '../scripting/timeline-script-runtime';
-import {deleteTimelineScript, exportTimelineScriptToDialog, importTimelineScriptFromDialog, loadTimelineScripts, saveTimelineScript, type TimelineScriptFile} from '../scripting/timeline-scripts';
-import {DEFAULT_BACKUP_SETTINGS, DEFAULT_COLLABORATION_IDENTITY_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, DEFAULT_LOCAL_COEDITING_SETTINGS, readAutomationRules, readBackupSettings, readCollaborationIdentitySettings, readDisplaySettings, readExportBackgroundSettings, readExportQualityAssuranceSettings, readExportPresetSyncSettings, readExportRules, readLocalCoeditingSettings, readLocalAiModelsSettings, saveAutomationRules, saveBackupSettings, saveCollaborationIdentitySettings, saveDisplaySettings, saveExportBackgroundSettings, saveExportQualityAssuranceSettings, saveExportPresetSyncSettings, saveExportRules, saveLanguageSetting, saveLocalCoeditingSettings, saveLocalAiModelsSettings, readUpdateSettings, saveUpdateSettings, readOnlineContentEnabled, saveOnlineContentEnabled, type AutomationRule, type BackupSettings, type CollaborationIdentitySettings, type DisplaySettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportConditionRule, type LocalCoeditingSettings, type TimelineInteractionSettings, readTouchOptimizationSettings, saveTouchOptimizationSettings} from './appSettings';
-import type {TouchOptimizationSettings} from '@open-factory/editor-core';
-import {LOCAL_AI_MODEL_DEFINITIONS, LOCAL_AI_MODEL_IDS, isLocalModelFileSizeValid, resolveLocalModelStatus, type LocalAiModelId, type LocalAiModelResolvedStatus, type LocalAiModelsSettings} from './localModels';
-import {DEFAULT_CUSTOM_THEME_COLORS, deleteCustomTheme, extractCustomThemeColors, isBuiltinThemeId, resolveTheme, upsertCustomTheme, type CustomThemeColors, type ThemeSettings} from '../theme/theme';
-import {getCurrentThemeSettings, setThemeSettings, useTheme} from '../theme/useTheme';
-import {DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings} from '../updater/update-settings';
+import { logger } from '@open-factory/editor-core/utils';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { X } from 'lucide-react';
+import {
+  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+  BUILTIN_TIMELINE_SCRIPTS,
+  RunScriptCommand,
+  UpdateProjectSettingsCommand,
+  createTimelineScriptSnapshot,
+  createEffectPresetFromClip,
+  serializeEffectPresetFile,
+  getTimelineScriptApiFunctionNames,
+  getTimelineScriptExportRequests,
+  normalizeProjectColorPipeline,
+  normalizeProjectFps,
+  normalizeProjectWorkingColorSpace,
+  normalizeTimecodeFormat,
+  normalizeVfrHandlingStrategy,
+  type Clip,
+  type BuiltinTimelineScript,
+  type EffectPresetFilters,
+  type Project,
+  type ProjectColorPipeline,
+  type PostExportQualityAssuranceSettings,
+  type TimecodeFormat,
+  type TimelineScriptOperation,
+} from '@open-factory/editor-core';
+import { getLanguage, normalizeLanguage, setLanguage as setI18nLanguage, zhCN, type Language } from '../i18n/strings';
+import { switchLanguage } from '../i18n/i18next-config';
+import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
+import { pickDemucsExecutablePath } from '../lib/demucs';
+import {
+  bridgeConfirm,
+  fsExists,
+  getFileStat,
+  openDirectoryDialog,
+  openFileDialog,
+  openPath,
+  readExportPresetSyncWebdavPassword,
+  readWebdavPassword,
+  writeExportPresetSyncWebdavPassword,
+  writeWebdavPassword,
+  getAppVersion,
+  checkAppUpdate,
+} from '../lib/tauri-bridge';
+import { isTauriRuntime } from '../lib/tauri';
+import { showToast } from '../lib/toast';
+import {
+  PREVIEW_QUALITY_MODES,
+  PREVIEW_SKIP_FRAME_OPTIONS,
+  type PreviewPerformanceSettings,
+  type PreviewQualityMode,
+  type PreviewSkipFrames,
+} from '../lib/preview/preview-performance';
+import { type ClipMacro } from '../macros/clip-macros';
+import {
+  getPluginRegistrySnapshot,
+  refreshPluginRegistry,
+  setPluginEnabled,
+  uninstallPlugin,
+  type LoadedPlugin,
+  type PluginRegistry,
+} from '../plugins/plugin-manager';
+import {
+  installCatalogPlugin,
+  installPluginFromFile,
+  loadPluginCatalog,
+  type PluginCatalogEntry,
+  type PluginCatalogResult,
+} from '../plugins/plugin-market';
+import { loadExportPresets, serializeExportPresetPackage } from '../export/export-presets';
+import {
+  filterPresetMarketCards,
+  installPresetMarketCard,
+  loadPresetMarket,
+  presetMarketCardHasCustomConflict,
+  readPresetMarketRatings,
+  writePresetMarketRating,
+  type PresetMarketCard,
+  type PresetMarketFilters,
+  type PresetMarketLoadResult,
+} from '../export/preset-market';
+import {
+  filterEffectPresetCommunityCards,
+  installEffectPresetCommunityCard,
+  loadEffectPresetCommunityLibrary,
+  type EffectPresetCommunityCard,
+  type EffectPresetCommunityLoadResult,
+} from '../effects/effect-preset-library';
+import { type TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
+import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
+import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
+import { useEditorStore } from '../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
+import { useProxySettingsStore } from '../store/proxySettingsStore';
+import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
+import { useTranslationSettingsStore } from '../store/translationSettingsStore';
+import { AIServicesSettingsPanel } from './AIServicesSettingsPanel';
+import { AppearanceSettingsPanel } from './AppearanceSettingsPanel';
+import { AutomationSettingsPanel } from './AutomationSettingsPanel';
+import { BackupSettingsPanel } from './BackupSettingsPanel';
+import { EffectPresetCommunityPanel } from './EffectPresetPanel';
+import { ExportPresetSyncSettingsPanel } from './ExportPresetSyncPanel';
+import {
+  EXPORT_RULE_COPY_SUCCESS_ID,
+  defaultExportCopyRule,
+  getExportRule,
+  upsertExportRule,
+} from './ExportRulesPanel';
+import { formatBytes } from './formatHelpers';
+import { HardwareAccelerationSettingsPanel } from './HardwareAccelerationSettingsPanel';
+import { GeneralSettingsPanel } from './GeneralSettingsPanel';
+import { LutLibraryPanel } from './LutLibraryPanel';
+import { ShortcutMacrosPanel } from './ShortcutMacrosPanel';
+import { GesturePracticePanel } from '../components/GestureControl/GestureTutorial';
+import { LocalModelsSettingsPanel } from './LocalModelsPanel';
+import { PluginsSettingsPanel } from './PluginsSettingsPanel';
+import { PresetMarketPanel } from './PresetMarketPanel';
+import { ProxySettingsPanel } from './ProxySettingsPanel';
+import { TaskMonitorSettingsPanel } from './TaskMonitorSettingsPanel';
+import { TimelineScriptsSettingsPanel } from './TimelineScriptsSettingsPanel';
+import { TranslationSettingsPanel } from './TranslationSettingsPanel';
+import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
+import { applyLocalCoeditingSettings } from '../collaboration/settings';
+import { runTimelineScriptInWorker } from '../scripting/timeline-script-runtime';
+import {
+  deleteTimelineScript,
+  exportTimelineScriptToDialog,
+  importTimelineScriptFromDialog,
+  loadTimelineScripts,
+  saveTimelineScript,
+  type TimelineScriptFile,
+} from '../scripting/timeline-scripts';
+import {
+  DEFAULT_BACKUP_SETTINGS,
+  DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
+  DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  DEFAULT_LOCAL_COEDITING_SETTINGS,
+  readAutomationRules,
+  readBackupSettings,
+  readCollaborationIdentitySettings,
+  readDisplaySettings,
+  readExportBackgroundSettings,
+  readExportQualityAssuranceSettings,
+  readExportPresetSyncSettings,
+  readExportRules,
+  readLocalCoeditingSettings,
+  readLocalAiModelsSettings,
+  saveAutomationRules,
+  saveBackupSettings,
+  saveCollaborationIdentitySettings,
+  saveDisplaySettings,
+  saveExportBackgroundSettings,
+  saveExportQualityAssuranceSettings,
+  saveExportPresetSyncSettings,
+  saveExportRules,
+  saveLanguageSetting,
+  saveLocalCoeditingSettings,
+  saveLocalAiModelsSettings,
+  readUpdateSettings,
+  saveUpdateSettings,
+  readOnlineContentEnabled,
+  saveOnlineContentEnabled,
+  type AutomationRule,
+  type BackupSettings,
+  type CollaborationIdentitySettings,
+  type DisplaySettings,
+  type ExportBackgroundSettings,
+  type ExportPresetSyncSettings,
+  type ExportConditionRule,
+  type LocalCoeditingSettings,
+  type TimelineInteractionSettings,
+  readTouchOptimizationSettings,
+  saveTouchOptimizationSettings,
+} from './appSettings';
+import type { TouchOptimizationSettings } from '@open-factory/editor-core';
+import {
+  LOCAL_AI_MODEL_DEFINITIONS,
+  LOCAL_AI_MODEL_IDS,
+  isLocalModelFileSizeValid,
+  resolveLocalModelStatus,
+  type LocalAiModelId,
+  type LocalAiModelResolvedStatus,
+  type LocalAiModelsSettings,
+} from './localModels';
+import {
+  DEFAULT_CUSTOM_THEME_COLORS,
+  deleteCustomTheme,
+  extractCustomThemeColors,
+  isBuiltinThemeId,
+  resolveTheme,
+  upsertCustomTheme,
+  type CustomThemeColors,
+  type ThemeSettings,
+} from '../theme/theme';
+import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
+import { DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings } from '../updater/update-settings';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -295,7 +436,7 @@ export function SettingsDialog({
     }
   }, []);
 
-  const handleCheckForUpdates = useCallback(async (): Promise<{version: string} | null> => {
+  const handleCheckForUpdates = useCallback(async (): Promise<{ version: string } | null> => {
     const update = await checkAppUpdate({ timeout: 10000 });
     if (update) {
       return { version: update.version };
@@ -1603,12 +1744,7 @@ export function SettingsDialog({
                 onDeleteCustom={() => void removeCustomTheme()}
               />
             ) : null}
-            {tab === 'lut-library' ? (
-              <LutLibraryPanel
-                selectedClip={selectedClip}
-                project={project}
-              />
-            ) : null}
+            {tab === 'lut-library' ? <LutLibraryPanel selectedClip={selectedClip} project={project} /> : null}
             {tab === 'effect-presets' ? (
               <div className="space-y-3">
                 <label className="flex items-start gap-2 rounded-md border border-line bg-white px-3 py-2 text-xs text-slate-600">

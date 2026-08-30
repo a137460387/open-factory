@@ -50,7 +50,7 @@ describe('useEditorSettingsStore 值与函数式更新器', () => {
     const grid = { enabled: true, size: 24 };
     useEditorSettingsStore.getState().setTimelineGridSettings(grid as never);
     expect(useEditorSettingsStore.getState().timelineGridSettings).toEqual(grid);
-    useEditorSettingsStore.getState().setTimelineGridSettings((v) => ({ ...v, size: 48 } as never));
+    useEditorSettingsStore.getState().setTimelineGridSettings((v) => ({ ...v, size: 48 }) as never);
     expect(useEditorSettingsStore.getState().timelineGridSettings).toMatchObject({ enabled: true, size: 48 });
   });
 

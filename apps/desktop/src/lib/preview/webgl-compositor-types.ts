@@ -1,6 +1,22 @@
 // Types and interfaces for WebGL preview compositor
 
-import type {ChromaKey, ClipBlendMode, ClipMask, ColorCorrection, ColorNode, ColorNodeGraph, ColorWheelValue, EffectType, Effect, InputColorSpace, ProjectColorPipeline, SubtitleStyle, TextStyle, Transform, ColorGradingGraph} from '@open-factory/editor-core';
+import type {
+  ChromaKey,
+  ClipBlendMode,
+  ClipMask,
+  ColorCorrection,
+  ColorNode,
+  ColorNodeGraph,
+  ColorWheelValue,
+  EffectType,
+  Effect,
+  InputColorSpace,
+  ProjectColorPipeline,
+  SubtitleStyle,
+  TextStyle,
+  Transform,
+  ColorGradingGraph,
+} from '@open-factory/editor-core';
 
 interface ProgramInfo {
   program: WebGLProgram;
@@ -71,4 +87,3 @@ export interface ColorNodeGraphPreviewPass {
   nodeType: ColorNode['type'];
   correction: ColorCorrection;
 }
-

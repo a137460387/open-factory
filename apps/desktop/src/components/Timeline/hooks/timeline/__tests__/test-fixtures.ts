@@ -1,11 +1,11 @@
 // Timeline hooks 测试共享 fixture：构造最小可用的 project / clip / asset / params
 // 覆盖目标：apps/desktop/src/components/Timeline/hooks/timeline/* 的工厂直调测试
-import {vi} from 'vitest';
-import type {Clip, ClipGroup, MediaAsset, Project, Track} from '@open-factory/editor-core';
-import {createId} from '@open-factory/editor-core';
-import type {TimelineHandlerParams} from '../types';
+import { vi } from 'vitest';
+import type { Clip, ClipGroup, MediaAsset, Project, Track } from '@open-factory/editor-core';
+import { createId } from '@open-factory/editor-core';
+import type { TimelineHandlerParams } from '../types';
 
-export function makeClip(overrides: Partial<Clip> & {id?: string; trackId?: string} = {}): Clip {
+export function makeClip(overrides: Partial<Clip> & { id?: string; trackId?: string } = {}): Clip {
   const id = overrides.id ?? createId('clip');
   const trackId = overrides.trackId ?? 'track-video-1';
   const base = {
@@ -17,7 +17,7 @@ export function makeClip(overrides: Partial<Clip> & {id?: string; trackId?: stri
     duration: 5,
     trimStart: 0,
     trimEnd: 0,
-    transform: {x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0},
+    transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     opacity: 1,
     volume: 1,
     speed: 1,
@@ -25,10 +25,10 @@ export function makeClip(overrides: Partial<Clip> & {id?: string; trackId?: stri
     colorLabel: null,
     locked: false,
   };
-  return {...base, ...overrides} as unknown as Clip;
+  return { ...base, ...overrides } as unknown as Clip;
 }
 
-export function makeTrack(overrides: Partial<Track> & {id?: string; clips?: Clip[]} = {}): Track {
+export function makeTrack(overrides: Partial<Track> & { id?: string; clips?: Clip[] } = {}): Track {
   const id = overrides.id ?? 'track-video-1';
   return {
     id,
@@ -44,7 +44,7 @@ export function makeTrack(overrides: Partial<Track> & {id?: string; clips?: Clip
   } as unknown as Track;
 }
 
-export function makeAsset(overrides: Partial<MediaAsset> & {id?: string} = {}): MediaAsset {
+export function makeAsset(overrides: Partial<MediaAsset> & { id?: string } = {}): MediaAsset {
   const id = overrides.id ?? createId('media');
   return {
     id,
@@ -61,13 +61,15 @@ export function makeAsset(overrides: Partial<MediaAsset> & {id?: string} = {}): 
   } as MediaAsset;
 }
 
-export function makeProject(overrides: {
-  tracks?: Track[];
-  media?: MediaAsset[];
-  clipGroups?: ClipGroup[];
-  protectedRanges?: Project['protectedRanges'];
-  settings?: Partial<Project['settings']>;
-} = {}): Project {
+export function makeProject(
+  overrides: {
+    tracks?: Track[];
+    media?: MediaAsset[];
+    clipGroups?: ClipGroup[];
+    protectedRanges?: Project['protectedRanges'];
+    settings?: Partial<Project['settings']>;
+  } = {},
+): Project {
   return {
     id: createId('project'),
     name: 'Test Project',
@@ -183,7 +185,7 @@ export function makeParams(
     setDialogueMarkers: setters.setDialogueMarkers,
     dialogueMisses: [],
     setDialogueMisses: setters.setDialogueMisses,
-    whisperAvailability: {ready: false, error: 'not configured'},
+    whisperAvailability: { ready: false, error: 'not configured' },
     rollingTrimActive: false,
     setRollingTrimActive: vi.fn(),
     slipEditActive: false,
@@ -224,7 +226,7 @@ export function makeParams(
     setEqualHeightPrompt: vi.fn(),
     equalHeightValue: '',
     setEqualHeightValue: vi.fn(),
-    scrollViewport: {scrollLeft: 0, scrollTop: 0, viewportWidth: 1920},
+    scrollViewport: { scrollLeft: 0, scrollTop: 0, viewportWidth: 1920 },
     setScrollViewport: vi.fn(),
     setTimelineViewportHeight: vi.fn(),
     isPanning: false,
@@ -265,16 +267,16 @@ export function makeParams(
     timelineNotes: overrides.timelineNotes ?? [],
     timelineDuration: 30,
     // useRef
-    rootRef: {current: null},
-    scrollRef: {current: null},
-    longPressTimerRef: {current: null},
-    longPressActiveRef: {current: false},
-    scrollRafRef: {current: 0},
+    rootRef: { current: null },
+    scrollRef: { current: null },
+    longPressTimerRef: { current: null },
+    longPressActiveRef: { current: false },
+    scrollRafRef: { current: 0 },
     // Props
     onConvertMediaFrameRate: undefined,
     onBookmarkPanelOpenChange: undefined,
     reduceMotion: false,
-    timelineGridSettings: {enabled: false, unit: 'second' as const},
+    timelineGridSettings: { enabled: false, unit: 'second' as const },
     collaborationEnabled: false,
     collaborationUserId: 'user-1',
     // computed
@@ -287,5 +289,5 @@ export function makeParams(
     handlerRefs: undefined,
     useEditorStoreRef: undefined as never,
   } as unknown as TimelineHandlerParams;
-  return Object.assign(params, {setters});
+  return Object.assign(params, { setters });
 }

@@ -18,7 +18,10 @@ export function HelpMenu({
         label={zhCN.tutorial.start}
         testId="toolbar-help-tutorial-menu-item"
         icon={<CircleHelp size={14} />}
-        onClick={() => { onToggle(); onStartTutorial(); }}
+        onClick={() => {
+          onToggle();
+          onStartTutorial();
+        }}
       />
     </MenuDropdown>
   );

@@ -54,7 +54,7 @@ export class WebGPUFrameCacheManager {
     if (!result) return;
 
     this.cache.delete(frame);
-    this.accessOrder = this.accessOrder.filter(f => f !== frame);
+    this.accessOrder = this.accessOrder.filter((f) => f !== frame);
 
     if (result.texture) {
       result.texture.destroy();

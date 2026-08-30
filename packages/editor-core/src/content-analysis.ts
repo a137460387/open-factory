@@ -489,8 +489,7 @@ export function detectTailTrimEnd(
   const margin = options.margin ?? 0.2;
   const measured = segments
     .filter(
-      (segment) =>
-        Number.isFinite(segment.start) && Number.isFinite(segment.end) && Number.isFinite(segment.loudness),
+      (segment) => Number.isFinite(segment.start) && Number.isFinite(segment.end) && Number.isFinite(segment.loudness),
     )
     .sort((left, right) => left.start - right.start);
   if (measured.length === 0) {

@@ -15,11 +15,7 @@ import {
   calculatePerformanceScore,
 } from './monitor';
 
-import type {
-  SystemMetrics,
-  TaskMetrics,
-  MonitorConfig,
-} from './types';
+import type { SystemMetrics, TaskMetrics, MonitorConfig } from './types';
 
 import { DEFAULT_MONITOR_CONFIG } from './types';
 
