@@ -930,6 +930,10 @@ export const enOverrides = {
         'Disabled by default. When enabled, export completion actions may call system power commands.',
       lowPowerExportMode: 'Low-power background export',
       lowPowerExportModeDescription: 'Limits FFmpeg thread count during export to reduce background CPU usage.',
+      postExportScriptAllowlist: 'Allowed programs for post-export scripts (allowlist)',
+      postExportScriptAllowlistDescription:
+        'Only program names listed here may run as post-export scripts, separated by commas. Leaving this empty disables the feature entirely (fail-closed). Shells, interpreters and network tools are always rejected, even if listed.',
+      postExportScriptAllowlistPlaceholder: 'Example: echo, ffprobe, mediainfo',
       postExportQuality: {
         title: 'Post-export QA',
         description: 'Run local FFmpeg/FFprobe checks after export completes. Disabled by default.',

@@ -679,6 +679,28 @@ export function GeneralSettingsPanel({
           <span className="mt-1 block">{t.general.lowPowerExportModeDescription}</span>
         </span>
       </label>
+      <div className="space-y-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+        <label className="block font-semibold text-slate-700" htmlFor="settings-post-export-allowlist-input">
+          {t.general.postExportScriptAllowlist}
+        </label>
+        <p>{t.general.postExportScriptAllowlistDescription}</p>
+        <input
+          id="settings-post-export-allowlist-input"
+          className="w-full rounded-md border border-line bg-white px-2 py-1.5 font-mono text-xs text-ink"
+          placeholder={t.general.postExportScriptAllowlistPlaceholder}
+          value={(exportBackgroundSettings.postExportScriptAllowedPrograms ?? []).join(', ')}
+          data-testid="settings-post-export-allowlist-input"
+          onChange={(event) =>
+            void updateExportBackgroundSettings({
+              ...exportBackgroundSettings,
+              postExportScriptAllowedPrograms: event.target.value
+                .split(',')
+                .map((entry) => entry.trim())
+                .filter((entry) => entry.length > 0),
+            })
+          }
+        />
+      </div>
       <ExportQualityAssuranceSettingsPanel
         settings={exportQualityAssuranceSettings}
         onChange={(patch) => void updateExportQualityAssuranceSettings(patch)}

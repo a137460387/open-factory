@@ -34,6 +34,12 @@ export interface ExportBackgroundSettings {
   allowPowerActions: boolean;
   postExportScriptAcknowledged: boolean;
   lowPowerMode: boolean;
+  /**
+   * Explicit allowlist of program names permitted to run as post-export
+   * scripts. Absent or empty means the feature is disabled (fail-closed),
+   * enforced by the Rust side when reading settings.json.
+   */
+  postExportScriptAllowedPrograms?: string[];
 }
 
 interface PreviewWindowBounds {
@@ -1030,11 +1036,33 @@ function normalizeExportBackgroundSettings(
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
-  return {
+  const normalized: ExportBackgroundSettings = {
     allowPowerActions: Boolean(settings.allowPowerActions),
     postExportScriptAcknowledged: Boolean(settings.postExportScriptAcknowledged),
     lowPowerMode: Boolean(settings.lowPowerMode),
   };
+  const programs = normalizePostExportAllowedPrograms(settings.postExportScriptAllowedPrograms);
+  if (programs.length > 0) {
+    normalized.postExportScriptAllowedPrograms = programs;
+  }
+  return normalized;
+}
+
+function normalizePostExportAllowedPrograms(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const programs: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') {
+      continue;
+    }
+    const name = entry.trim();
+    if (name.length > 0 && !programs.includes(name)) {
+      programs.push(name);
+    }
+  }
+  return programs;
 }
 
 function normalizePreviewWindowSettings(

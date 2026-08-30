@@ -990,6 +990,10 @@ const zh = {
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
       lowPowerExportMode: '后台低功耗导出',
       lowPowerExportModeDescription: '开启后导出任务会限制 FFmpeg 线程数，降低后台 CPU 占用。',
+      postExportScriptAllowlist: '导出后脚本允许的程序（白名单）',
+      postExportScriptAllowlistDescription:
+        '仅允许此处列出的程序名作为导出后脚本执行，用英文逗号分隔。留空则完全禁用导出后脚本（失败关闭）。shell、解释器与网络工具即使列入也会被拒绝。',
+      postExportScriptAllowlistPlaceholder: '例如：echo, ffprobe, mediainfo',
       postExportQuality: {
         title: '导出后质检',
         description: '导出完成后按本机 FFmpeg/FFprobe 自动检查输出文件。默认关闭。',
