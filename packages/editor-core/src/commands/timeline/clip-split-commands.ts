@@ -1,4 +1,4 @@
-import type { TimelineAccessor, ProjectAccessor } from './index';
+import type { TimelineAccessor, ProjectAccessor } from './types';
 import {
   Clip,
   ClipStabilization,

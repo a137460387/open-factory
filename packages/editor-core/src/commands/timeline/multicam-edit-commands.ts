@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import { Project, replaceProjectActiveTimeline } from '../../model';
 import type { Clip } from '../../model';
 import { MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint } from '../../model-types';

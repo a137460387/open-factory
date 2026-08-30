@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import { Project, Subclip } from '../../model';
 import { BeatSnapSuggestion, MediaCollection } from '../../model-types';
 import { TimelineLabelColor } from '../../timeline-color-labels';

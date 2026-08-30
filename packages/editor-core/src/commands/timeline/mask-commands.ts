@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { ClipMask, createMask, normalizeMask, normalizeMasks } from '../../model';
 import type { Clip } from '../../model';
 import { replaceClip } from '../../timeline';

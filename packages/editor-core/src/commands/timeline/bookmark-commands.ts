@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import { BeatMarker, normalizeBeatMarkers } from '../../beats';
 import {
   ExportRange,

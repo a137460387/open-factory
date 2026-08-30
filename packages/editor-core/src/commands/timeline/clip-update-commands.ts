@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { normalizeClipPitchData } from '../../audio-pitch';
 import { normalizeClipBlendMode } from '../../blend-modes';
 import { normalizeClipContentAnalysis } from '../../content-analysis';

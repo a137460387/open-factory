@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import { ColorGradingConnection, ColorGradingNode } from '../../color-grading/types';
 import { Project } from '../../model';
 import { Command } from '../command';

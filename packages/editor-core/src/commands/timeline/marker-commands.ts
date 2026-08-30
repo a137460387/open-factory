@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { Timeline, TimelineMarker, createTimelineMarker, normalizeTimelineMarker } from '../../model';
 import { getTimelineDuration } from '../../timeline';
 import { Command } from '../command';

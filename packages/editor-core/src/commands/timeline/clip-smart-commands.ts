@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { Timeline } from '../../model';
 import type { Clip } from '../../model';
 import { filterShortSceneCuts } from '../../scene-cuts';

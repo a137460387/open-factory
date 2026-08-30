@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { EffectPreset, buildEffectPresetClipPatch } from '../../effect-presets';
 import { Effect, EffectParams, EffectType, cloneEffects, normalizeEffect, normalizeEffects } from '../../effects';
 import { Timeline, createId } from '../../model';

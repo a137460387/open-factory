@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { Clip, DEFAULT_SUBTITLE_STYLE, SubtitleStyle, Timeline, Track, createTrack } from '../../model';
 import { SubtitleDataImportMode } from '../../subtitles/data-import';
 import { SubtitleProofreadingFix } from '../../subtitles/proofreading';

@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { Transition, TransitionType, createTransition } from '../../model';
 import { clampTransitionDuration, findAdjacentTransitionClips } from '../../timeline';
 import { Command } from '../command';

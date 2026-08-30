@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import {
   DEFAULT_NESTED_SEQUENCE_NAME,
   Project,

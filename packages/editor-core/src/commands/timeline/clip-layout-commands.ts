@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { ClipBorder, Timeline, normalizeClipBorder, normalizeTransform } from '../../model';
 import type { Clip } from '../../model';
 import { PiPLayoutPosition, calculatePiPTransform, createFullFrameTransform } from '../../pip-layout';

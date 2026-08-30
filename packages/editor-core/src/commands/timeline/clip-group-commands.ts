@@ -1,4 +1,4 @@
-import type { TimelineAccessor, ProjectAccessor } from './index';
+import type { TimelineAccessor, ProjectAccessor } from './types';
 import { ClipGroupBatchPatch, createClipGroup, normalizeClipGroups, removeClipIdsFromGroups } from '../../clip-groups';
 import { ClipGroup, ClipGroupColor, Project, Timeline, replaceProjectActiveTimeline } from '../../model';
 import { ApplyStyleTransferOptions, StyleSummary, applyStyleToClip } from '../../style-transfer';

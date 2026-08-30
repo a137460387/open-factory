@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import {
   ClipboardKeyframeGroup,
   PasteMode,

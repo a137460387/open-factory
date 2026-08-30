@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './index';
+import type { TimelineAccessor } from './types';
 import { ProtectedRange, Timeline, Transition } from '../../model';
 import type { Clip, ClipGroup } from '../../model';
 import { detectOverlap, findAdjacentTransitionClips, replaceClip, trimClip } from '../../timeline';

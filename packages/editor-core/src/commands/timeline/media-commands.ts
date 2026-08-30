@@ -1,4 +1,4 @@
-import type { ProjectAccessor } from './index';
+import type { ProjectAccessor } from './types';
 import { BatchEditableMediaMetadata } from '../../media-batch';
 import { Project, normalizeMediaMetadataEntry } from '../../model';
 import {
