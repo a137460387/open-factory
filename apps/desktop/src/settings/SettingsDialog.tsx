@@ -138,6 +138,7 @@ export function SettingsDialog({
     allowPowerActions: false,
     postExportScriptAcknowledged: false,
     lowPowerMode: false,
+    postExportScriptAllowedPrograms: [],
   }));
   const [exportQualityAssuranceSettings, setExportQualityAssuranceSettings] =
     useState<PostExportQualityAssuranceSettings>(() => ({ ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS }));

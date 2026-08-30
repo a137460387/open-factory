@@ -875,6 +875,7 @@ pub async fn run_export(
                     )
                 })?;
             }
+            let allowed_post_export_programs = read_post_export_allowed_programs(&app);
             if let Some(script_result) = run_post_export_script(
                 plan.post_export_script.as_ref(),
                 PostExportScriptContext {
@@ -883,6 +884,7 @@ pub async fn run_export(
                     duration_seconds: plan.duration,
                     now: SystemTime::now(),
                 },
+                &allowed_post_export_programs,
             ) {
                 let _ = append_post_export_script_log(&log_path, &script_result);
                 report.post_export_script = Some(script_result);
@@ -1713,7 +1715,93 @@ fn validate_post_export_script_context(
     Ok(())
 }
 
-fn validate_post_export_program(program: &str) -> Result<(), String> {
+/// Shell, interpreter, network and privilege-escalation program names that can
+/// execute arbitrary code or exfiltrate data. Always rejected, even when a
+/// name is present in the user-configured allowlist (denylist wins). Matching
+/// is case-insensitive, ignores a trailing `.exe`, and operates on the bare
+/// program name (paths are rejected before matching).
+const DENIED_POST_EXPORT_PROGRAMS: &[&str] = &[
+    // Unix shells
+    "sh", "bash", "dash", "zsh", "ksh", "ash", "csh", "tcsh", "fish", "xonsh", "mksh", "rc",
+    "busybox",
+    // Windows shells, script hosts and LOLBins
+    "cmd", "powershell", "powershell_ise", "pwsh", "wsl", "mshta", "rundll32", "regsvr32",
+    "certutil", "cmstp", "msiexec", "schtasks", "at",
+    // Interpreters, runtimes and package managers
+    "python", "python2", "python3", "py", "pip", "pip3", "node", "npm", "npx", "bun", "deno",
+    "yarn", "perl", "ruby", "irb", "gem", "rake", "php", "composer", "lua", "luajit", "tclsh",
+    "wish", "osascript", "groovy",
+    // Network clients that can exfiltrate data
+    "curl", "wget", "nc", "ncat", "netcat", "socat", "telnet", "ssh", "sshd", "scp", "sftp",
+    "ftp", "lftp", "tftp", "aria2c", "axel",
+    // Privilege escalation and command wrappers
+    "env", "eval", "exec", "xargs", "nohup", "sudo", "su", "doas", "runas",
+];
+
+/// Normalizes a program name for deny/allow matching: keeps only the bare name
+/// after the last path separator, lowercases ASCII and strips a trailing
+/// `.exe` (Windows program resolution is case-insensitive).
+fn normalize_post_export_program(program: &str) -> String {
+    let trimmed = program.trim();
+    let basename = trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed);
+    let lower = basename.to_ascii_lowercase();
+    lower.strip_suffix(".exe").unwrap_or(&lower).to_string()
+}
+
+/// Reads the user-configured post-export program allowlist from settings.json
+/// (`exportBackground.postExportScriptAllowedPrograms`). A missing file,
+/// invalid JSON or a missing key all yield an empty list, which disables the
+/// post-export script feature entirely (fail-closed).
+fn read_post_export_allowed_programs(app: &AppHandle) -> Vec<String> {
+    let settings_path = match app.path().app_data_dir() {
+        Ok(dir) => dir.join("settings.json"),
+        Err(_) => return Vec::new(),
+    };
+    let contents = match fs::read_to_string(&settings_path) {
+        Ok(contents) => contents,
+        Err(_) => return Vec::new(),
+    };
+    parse_post_export_allowed_programs(&contents)
+}
+
+fn parse_post_export_allowed_programs(settings_json: &str) -> Vec<String> {
+    let parsed: Value = match serde_json::from_str(settings_json) {
+        Ok(parsed) => parsed,
+        Err(_) => return Vec::new(),
+    };
+    parsed
+        .get("exportBackground")
+        .and_then(|section| section.get("postExportScriptAllowedPrograms"))
+        .and_then(Value::as_array)
+        .map(|items| {
+            let mut programs: Vec<String> = Vec::new();
+            for item in items {
+                let Some(name) = item.as_str() else {
+                    continue;
+                };
+                let name = name.trim();
+                if name.is_empty() || programs.iter().any(|existing| existing.as_str() == name) {
+                    continue;
+                }
+                programs.push(name.to_string());
+            }
+            programs
+        })
+        .unwrap_or_default()
+}
+
+/// Validates the program of a post-export script against the explicit
+/// allowlist. Fail-closed: an empty allowlist disables the whole feature; the
+/// denylist always wins over the allowlist. This replaces the previous
+/// shell-metacharacter blacklist, which could be bypassed with quoted
+/// `sh -c "<payload>"` style commands.
+fn validate_post_export_program(program: &str, allowed_programs: &[String]) -> Result<(), String> {
+    if allowed_programs.is_empty() {
+        return Err(
+            "Post-export script blocked: feature disabled because no allowed programs are configured (exportBackground.postExportScriptAllowedPrograms in settings.json)."
+                .to_string(),
+        );
+    }
     if contains_shell_metacharacters(program) {
         return Err(format!(
             "Post-export script blocked: program contains unsafe characters: {}",
@@ -1726,12 +1814,29 @@ fn validate_post_export_program(program: &str) -> Result<(), String> {
             program
         ));
     }
+    let normalized = normalize_post_export_program(program);
+    if DENIED_POST_EXPORT_PROGRAMS.contains(&normalized.as_str()) {
+        return Err(format!(
+            "Post-export script blocked: program '{}' is a shell, interpreter, or network tool and is never allowed.",
+            program
+        ));
+    }
+    let allowed = allowed_programs
+        .iter()
+        .any(|allowed_program| normalize_post_export_program(allowed_program) == normalized);
+    if !allowed {
+        return Err(format!(
+            "Post-export script blocked: program '{}' is not in the allowed program list.",
+            program
+        ));
+    }
     Ok(())
 }
 
 fn run_post_export_script(
     script: Option<&PostExportScriptDto>,
     context: PostExportScriptContext<'_>,
+    allowed_programs: &[String],
 ) -> Option<PostExportScriptResult> {
     let command = script?.command.trim();
     if command.is_empty() {
@@ -1769,7 +1874,7 @@ fn run_post_export_script(
         }
     };
     let program = tokens[0].clone();
-    if let Err(error) = validate_post_export_program(&program) {
+    if let Err(error) = validate_post_export_program(&program, allowed_programs) {
         return Some(PostExportScriptResult {
             command: command.to_string(),
             resolved_command,
@@ -4143,6 +4248,27 @@ mod tests {
         guard
     }
 
+    /// Allowlist used by existing post-export tests: contains the dummy test
+    /// program plus a few harmless utilities so validation passes and the
+    /// tests exercise spawn/argument behavior.
+    fn default_test_allowlist() -> Vec<String> {
+        vec![
+            "__open_factory_missing_post_export_command__".to_string(),
+            "tool".to_string(),
+            "echo".to_string(),
+            "ffprobe".to_string(),
+        ]
+    }
+
+    fn post_export_test_context() -> PostExportScriptContext<'static> {
+        PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        }
+    }
+
     #[test]
     fn parses_ffmpeg_progress_lines() {
         assert_eq!(
@@ -4644,12 +4770,14 @@ unrelated line
             now: UNIX_EPOCH,
         };
 
-        assert!(run_post_export_script(None, context).is_none());
+        let allowlist = default_test_allowlist();
+        assert!(run_post_export_script(None, context, &allowlist).is_none());
         assert!(run_post_export_script(
             Some(&PostExportScriptDto {
                 command: "   ".to_string()
             }),
-            context
+            context,
+            &allowlist
         )
         .is_none());
     }
@@ -4668,6 +4796,7 @@ unrelated line
                 command: "__open_factory_missing_post_export_command__ {output}".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("failed script should still produce a result");
 
@@ -4702,6 +4831,7 @@ unrelated line
                 command: "tool {output}".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4723,6 +4853,7 @@ unrelated line
                 command: "tool {project}".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4744,6 +4875,7 @@ unrelated line
                 command: "../evil/script".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4765,6 +4897,7 @@ unrelated line
                 command: "subdir/script.sh".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4786,6 +4919,7 @@ unrelated line
                 command: "__open_factory_missing_post_export_command__".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should produce a result");
 
@@ -4811,6 +4945,7 @@ unrelated line
                 command: "C:/Windows/System32/cmd.exe".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4832,6 +4967,7 @@ unrelated line
                 command: "echo hello; rm -rf /".to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should return error result");
 
@@ -4855,6 +4991,7 @@ unrelated line
                         .to_string(),
             }),
             context,
+            &default_test_allowlist(),
         )
         .expect("should produce a result");
 
@@ -4866,6 +5003,239 @@ unrelated line
             "Expected 'Unable to start' error, got: {}",
             error
         );
+    }
+
+    // ── Post-export allowlist security tests ──────────────────────────────
+
+    /// PoC regression: `sh -c "<payload>"` used to bypass the metacharacter
+    /// blacklist because the tokenizer strips quotes, leaving arguments that
+    /// contain no blacklisted characters. The denylist must block it now.
+    #[test]
+    fn blocks_poc_sh_c_quoted_payload_regression() {
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "sh -c \"touch /tmp/open-factory-poc-pwned\"".to_string(),
+            }),
+            post_export_test_context(),
+            &default_test_allowlist(),
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("never allowed"));
+    }
+
+    /// PoC regression with single quotes.
+    #[test]
+    fn blocks_poc_sh_c_single_quote_payload_regression() {
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "sh -c 'touch /tmp/open-factory-poc-pwned'".to_string(),
+            }),
+            post_export_test_context(),
+            &default_test_allowlist(),
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("never allowed"));
+    }
+
+    /// PoC regression: file-read/exfiltration primitive `sh -c "cp ..."`.
+    #[test]
+    fn blocks_poc_cp_exfiltration_payload_regression() {
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "sh -c \"cp /etc/passwd /tmp/open-factory-poc-leak\"".to_string(),
+            }),
+            post_export_test_context(),
+            &default_test_allowlist(),
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("never allowed"));
+    }
+
+    /// Fail-closed: an empty allowlist disables the whole feature.
+    #[test]
+    fn fails_closed_when_allowlist_is_empty() {
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "echo done".to_string(),
+            }),
+            post_export_test_context(),
+            &Vec::new(),
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("no allowed programs are configured"));
+    }
+
+    #[test]
+    fn parses_allowlist_from_settings_json() {
+        let settings = r#"{"exportBackground":{"postExportScriptAllowedPrograms":["echo","ffprobe"]}}"#;
+        assert_eq!(
+            parse_post_export_allowed_programs(settings),
+            vec!["echo".to_string(), "ffprobe".to_string()]
+        );
+    }
+
+    /// Missing key, missing section, invalid JSON and non-string entries all
+    /// yield an empty allowlist (fail-closed).
+    #[test]
+    fn parses_allowlist_fails_closed_on_missing_or_invalid_input() {
+        assert!(parse_post_export_allowed_programs("{}").is_empty());
+        assert!(parse_post_export_allowed_programs(r#"{"exportBackground":{}}"#).is_empty());
+        assert!(parse_post_export_allowed_programs("not json").is_empty());
+        assert!(parse_post_export_allowed_programs(
+            r#"{"exportBackground":{"postExportScriptAllowedPrograms":[1,null,{"a":1}]}}"#
+        )
+        .is_empty());
+    }
+
+    #[test]
+    fn parses_allowlist_trims_and_dedupes_entries() {
+        let settings = r#"{"exportBackground":{"postExportScriptAllowedPrograms":[" echo ","echo","","  "]}}"#;
+        assert_eq!(
+            parse_post_export_allowed_programs(settings),
+            vec!["echo".to_string()]
+        );
+    }
+
+    #[test]
+    fn rejects_denylisted_unix_shells() {
+        let allowlist = default_test_allowlist();
+        for program in ["sh", "bash", "dash", "zsh", "ksh", "csh", "tcsh", "fish"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    #[test]
+    fn rejects_denylisted_windows_shells() {
+        let allowlist = default_test_allowlist();
+        for program in ["cmd", "powershell", "pwsh", "wsl", "mshta"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    #[test]
+    fn rejects_denylisted_interpreters_and_runtimes() {
+        let allowlist = default_test_allowlist();
+        for program in ["python", "python3", "pip", "node", "npm", "perl", "ruby", "php", "lua"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    #[test]
+    fn rejects_denylisted_network_tools() {
+        let allowlist = default_test_allowlist();
+        for program in ["curl", "wget", "nc", "netcat", "telnet", "ssh", "scp"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    /// The denylist wins even when the user explicitly adds a denied program
+    /// to their allowlist.
+    #[test]
+    fn denylist_wins_over_allowlist() {
+        let allowlist = vec!["sh".to_string(), "cmd".to_string(), "python".to_string()];
+        for program in ["sh", "cmd", "python"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must stay denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    /// Case variants (SH, Cmd, PYTHON) must not bypass the denylist.
+    #[test]
+    fn rejects_case_variant_bypass_attempts() {
+        let allowlist = default_test_allowlist();
+        for program in ["SH", "Sh", "CMD", "Cmd", "PYTHON", "PowerShell", "CURL"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    /// `.exe` suffix variants (sh.exe, cmd.exe, powershell.exe) must not
+    /// bypass the denylist.
+    #[test]
+    fn rejects_exe_suffix_bypass_attempts() {
+        let allowlist = default_test_allowlist();
+        for program in ["sh.exe", "cmd.exe", "powershell.exe", "python3.exe", "curl.EXE"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
+    }
+
+    /// Path variants (/bin/sh, C:\Windows\System32\cmd.exe) must not bypass
+    /// the checks: paths are rejected outright.
+    #[test]
+    fn rejects_path_variant_bypass_attempts() {
+        let allowlist = default_test_allowlist();
+        for program in ["/bin/sh", "/usr/bin/bash", "C:\\Windows\\System32\\cmd.exe"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("bare command name"), "program={}", program);
+        }
+    }
+
+    /// `cmd /C <command>` must be blocked: cmd itself is denylisted, so the
+    /// flag never gets a chance to run.
+    #[test]
+    fn rejects_cmd_c_flag_variant() {
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "cmd /C dir".to_string(),
+            }),
+            post_export_test_context(),
+            &default_test_allowlist(),
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("never allowed"));
+    }
+
+    /// Allowlisted programs pass validation, matching case-insensitively.
+    #[test]
+    fn allows_allowlisted_program_case_insensitively() {
+        let allowlist = vec!["echo".to_string(), "ffprobe".to_string()];
+        validate_post_export_program("echo", &allowlist).expect("echo allowed");
+        validate_post_export_program("ECHO", &allowlist).expect("ECHO allowed");
+        validate_post_export_program("ffprobe", &allowlist).expect("ffprobe allowed");
+    }
+
+    /// Programs not on the allowlist are rejected (fail-closed default).
+    #[test]
+    fn rejects_program_not_in_allowlist() {
+        let allowlist = vec!["echo".to_string()];
+        let error = validate_post_export_program("custom-tool", &allowlist)
+            .expect_err("custom-tool must be rejected");
+        assert!(error.contains("not in the allowed program list"));
+    }
+
+    /// Command wrappers and privilege-escalation helpers (env, xargs, sudo,
+    /// nohup) must be denied so they cannot re-introduce arbitrary execution.
+    #[test]
+    fn rejects_denylisted_wrappers_and_escalation_tools() {
+        let allowlist = default_test_allowlist();
+        for program in ["env", "eval", "exec", "xargs", "nohup", "sudo", "su"] {
+            let error = validate_post_export_program(program, &allowlist)
+                .expect_err(&format!("{} must be denied", program));
+            assert!(error.contains("never allowed"), "program={}", program);
+        }
     }
 
     #[test]

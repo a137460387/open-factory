@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Security
+- post_export_script 任意命令执行漏洞修复：原防护仅靠约 12 个 shell 元字符黑名单，可被 `sh -c "命令"` 类 payload 绕过（引号被分词器剥离后参数不含黑名单字符），RCE 已经独立 PoC 验证；现改为显式白名单机制——仅允许执行 settings.json `exportBackground.postExportScriptAllowedPrograms` 中配置的程序，74 项 shell/解释器/网络工具/提权包装器拒绝列表优先于白名单，白名单为空或未配置时功能整体禁用（失败关闭）；程序名规范化匹配（大小写不敏感、剥离 `.exe` 后缀、路径一律拒绝）；前端设置界面新增白名单配置入口；新增 19 个安全测试（PoC 回归、拒绝列表、失败关闭、大小写/.exe/路径变体绕过拦截）
+
 ## [v4.79.0] - 2026-08-29
 
 功能版本：情感高潮 top-K 建议。

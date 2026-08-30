@@ -173,6 +173,7 @@ export function useExportState(props: ExportDialogProps) {
     allowPowerActions: false,
     postExportScriptAcknowledged: false,
     lowPowerMode: false,
+    postExportScriptAllowedPrograms: [],
   }));
   const [postExportScriptPendingConfirm, setPostExportScriptPendingConfirm] = useState(false);
   const pendingConfirmResolveRef = useRef<((value: boolean) => void) | null>(null);
