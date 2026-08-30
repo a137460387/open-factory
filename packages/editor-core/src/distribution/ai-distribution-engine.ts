@@ -5,7 +5,7 @@
  * performance analytics, and A/B testing capabilities.
  */
 
-import type {DistributionPlatformId} from './platform-presets';
+import type { DistributionPlatformId } from './platform-presets';
 
 // ─── Content Analysis ────────────────────────────────────────────
 
@@ -231,10 +231,7 @@ export class AIDistributionEngine {
   }
 
   /** 预测最佳发布时间 */
-  predictPublishTime(
-    platformId: DistributionPlatformId,
-    contentCategory?: string,
-  ): PublishTimePrediction {
+  predictPublishTime(platformId: DistributionPlatformId, contentCategory?: string): PublishTimePrediction {
     const historical = this.historicalData.get(platformId) ?? [];
     const dataPoints = historical.length;
 
@@ -252,9 +249,7 @@ export class AIDistributionEngine {
   }
 
   /** 获取分发效果分析 */
-  getAnalyticsSummary(
-    period: { from: string; to: string },
-  ): DistributionAnalyticsSummary {
+  getAnalyticsSummary(period: { from: string; to: string }): DistributionAnalyticsSummary {
     const platformPerformance: PlatformPerformance[] = [];
     let totalViews = 0;
     let totalEngagements = 0;
@@ -263,9 +258,7 @@ export class AIDistributionEngine {
     let bestViews = 0;
 
     for (const [platformId, records] of this.historicalData) {
-      const filtered = records.filter(
-        (r) => r.date >= period.from && r.date <= period.to,
-      );
+      const filtered = records.filter((r) => r.date >= period.from && r.date <= period.to);
       if (filtered.length === 0) continue;
 
       const views = filtered.reduce((sum, r) => sum + r.views, 0);
@@ -449,10 +442,7 @@ export class AIDistributionEngine {
     }));
   }
 
-  private generateTimeSlots(
-    platformId: DistributionPlatformId,
-    _category?: string,
-  ): TimeSlot[] {
+  private generateTimeSlots(platformId: DistributionPlatformId, _category?: string): TimeSlot[] {
     const baseSlots: Record<string, TimeSlot[]> = {
       'youtube-1080p': [
         { dayOfWeek: 6, hour: 15, score: 95, reason: '周六下午观看高峰', audienceActivity: 0.9 },
@@ -471,9 +461,7 @@ export class AIDistributionEngine {
       ],
     };
 
-    return baseSlots[platformId] ?? [
-      { dayOfWeek: 1, hour: 12, score: 70, reason: '默认推荐', audienceActivity: 0.6 },
-    ];
+    return baseSlots[platformId] ?? [{ dayOfWeek: 1, hour: 12, score: 70, reason: '默认推荐', audienceActivity: 0.6 }];
   }
 
   private extractKeywords(text: string): string[] {

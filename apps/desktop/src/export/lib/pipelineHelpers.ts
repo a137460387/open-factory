@@ -138,5 +138,3 @@ export function formatDuration(value: number | undefined): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return zhCN.common.unavailable;
   return `${Math.round(value * 10) / 10}s`;
 }
-
-

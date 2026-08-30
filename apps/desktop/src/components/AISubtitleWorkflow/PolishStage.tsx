@@ -1,13 +1,19 @@
-import {useState, useCallback, useMemo, useRef} from 'react';
-import type {SubtitleClip} from '@open-factory/editor-core';
-import {calculateSubtitlePolishBatchSplit, parseSubtitlePolishResponse, removeFillerWords, isProviderConfigured, BatchUpdateSubtitleTextCommand} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {useEditorStore} from '../../store/editorStore';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
-import {commandManager, timelineAccessor} from '../../store/commandManager';
-import {showToast} from '../../lib/toast';
-import type {PolishState} from './useSubtitleWorkflow';
+import { useState, useCallback, useMemo, useRef } from 'react';
+import type { SubtitleClip } from '@open-factory/editor-core';
+import {
+  calculateSubtitlePolishBatchSplit,
+  parseSubtitlePolishResponse,
+  removeFillerWords,
+  isProviderConfigured,
+  BatchUpdateSubtitleTextCommand,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { useEditorStore } from '../../store/editorStore';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
+import { commandManager, timelineAccessor } from '../../store/commandManager';
+import { showToast } from '../../lib/toast';
+import type { PolishState } from './useSubtitleWorkflow';
 
 const t = zhCN.aiSubtitleWorkflow.polish;
 

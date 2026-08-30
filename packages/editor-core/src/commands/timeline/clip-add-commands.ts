@@ -1,8 +1,8 @@
-import type {TimelineAccessor} from './index';
-import {Clip, Timeline, Track, createTrack} from '../../model';
-import {detectOverlap, removeClip} from '../../timeline';
-import {Command} from '../command';
-import {findTrack, insertClip} from './utils';
+import type { TimelineAccessor } from './types';
+import { Clip, Timeline, Track, createTrack } from '../../model';
+import { detectOverlap, removeClip } from '../../timeline';
+import { Command } from '../command';
+import { findTrack, insertClip } from './utils';
 
 export class AddClipCommand implements Command {
   readonly description: string;

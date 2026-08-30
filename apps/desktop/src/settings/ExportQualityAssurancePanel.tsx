@@ -1,5 +1,8 @@
 import { zhCN } from '../i18n/strings';
-import { DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS, type PostExportQualityAssuranceSettings } from '@open-factory/editor-core';
+import {
+  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+  type PostExportQualityAssuranceSettings,
+} from '@open-factory/editor-core';
 
 function optionalNumberFromInput(value: string): number | undefined {
   if (!value.trim()) {

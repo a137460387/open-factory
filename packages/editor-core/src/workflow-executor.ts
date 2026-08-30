@@ -5,8 +5,14 @@
  * Supports conditional branching, loops, and parallel execution.
  */
 
-import type {WorkflowGraph, WorkflowNode, WorkflowExecutionProgress, NodeExecutionResult, FlowCondition} from './node-editor-types';
-import {NodeEditorEngine} from './node-editor-engine';
+import type {
+  WorkflowGraph,
+  WorkflowNode,
+  WorkflowExecutionProgress,
+  NodeExecutionResult,
+  FlowCondition,
+} from './node-editor-types';
+import { NodeEditorEngine } from './node-editor-engine';
 
 // ─── Node Executor Types ───────────────────────────────────────────────────
 
@@ -159,10 +165,7 @@ export class WorkflowExecutor {
 
     // Control flow nodes
     this.registerExecutor('control.if', async (ctx) => {
-      const condition = this.evaluateCondition(
-        ctx.config.condition as FlowCondition,
-        ctx.inputs,
-      );
+      const condition = this.evaluateCondition(ctx.config.condition as FlowCondition, ctx.inputs);
       return {
         true: condition ? ctx.inputs.input : undefined,
         false: condition ? undefined : ctx.inputs.input,
@@ -175,7 +178,7 @@ export class WorkflowExecutor {
 
     this.registerExecutor('control.delay', async (ctx) => {
       const duration = (ctx.config.duration as number) ?? 1000;
-      await new Promise(resolve => setTimeout(resolve, duration));
+      await new Promise((resolve) => setTimeout(resolve, duration));
       return { output: ctx.inputs.input };
     });
   }
@@ -183,10 +186,7 @@ export class WorkflowExecutor {
   // ─── Execution ───────────────────────────────────────────────────────────
 
   /** Execute a workflow */
-  async execute(
-    graph: WorkflowGraph,
-    inputs?: Record<string, unknown>,
-  ): Promise<WorkflowExecutionProgress> {
+  async execute(graph: WorkflowGraph, inputs?: Record<string, unknown>): Promise<WorkflowExecutionProgress> {
     this.abortController = new AbortController();
     this.executionResults.clear();
 
@@ -337,10 +337,7 @@ export class WorkflowExecutor {
 
   // ─── Condition Evaluation ────────────────────────────────────────────────
 
-  private evaluateCondition(
-    condition: FlowCondition | undefined,
-    inputs: Record<string, unknown>,
-  ): boolean {
+  private evaluateCondition(condition: FlowCondition | undefined, inputs: Record<string, unknown>): boolean {
     if (!condition) return false;
 
     const left = this.resolveValue(condition.left, inputs);
@@ -384,7 +381,7 @@ export class WorkflowExecutor {
   private async simulateAIProcessing(ctx: NodeExecutionContext): Promise<void> {
     // Simulate processing time based on config
     const duration = 100 + Math.random() * 200;
-    await new Promise(resolve => setTimeout(resolve, duration));
+    await new Promise((resolve) => setTimeout(resolve, duration));
 
     if (ctx.abortSignal?.aborted) {
       throw new Error('Processing cancelled');
@@ -393,11 +390,7 @@ export class WorkflowExecutor {
 
   // ─── Utilities ───────────────────────────────────────────────────────────
 
-  private estimateTimeRemaining(
-    completed: number,
-    total: number,
-    startedAt: number,
-  ): number {
+  private estimateTimeRemaining(completed: number, total: number, startedAt: number): number {
     if (completed === 0) return 0;
 
     const elapsed = Date.now() - startedAt;
@@ -408,16 +401,14 @@ export class WorkflowExecutor {
   }
 
   private emitProgress(progress: WorkflowExecutionProgress): void {
-    this.progressListeners.forEach(l => l(progress));
+    this.progressListeners.forEach((l) => l(progress));
   }
 
   /** Subscribe to execution progress */
   onProgress(listener: (progress: WorkflowExecutionProgress) => void): () => void {
     this.progressListeners.push(listener);
     return () => {
-      this.progressListeners = this.progressListeners.filter(l => l !== listener);
+      this.progressListeners = this.progressListeners.filter((l) => l !== listener);
     };
   }
 }
-
-

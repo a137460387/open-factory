@@ -1,4 +1,18 @@
-import type {Clip, MediaAsset, DialogueInterval, DialogueSensitivity, DialogueWhisperMiss, SilentRange, TargetAspectRatio, TransitionRecommendation, TransitionClipFeatures, AnomalyInterval, FrameAnalysisSample, ClipAIReframe, ReframeAIFrame} from '@open-factory/editor-core';
+import type {
+  Clip,
+  MediaAsset,
+  DialogueInterval,
+  DialogueSensitivity,
+  DialogueWhisperMiss,
+  SilentRange,
+  TargetAspectRatio,
+  TransitionRecommendation,
+  TransitionClipFeatures,
+  AnomalyInterval,
+  FrameAnalysisSample,
+  ClipAIReframe,
+  ReframeAIFrame,
+} from '@open-factory/editor-core';
 import {
   AddTrackCommand,
   BatchAlignSubtitleCommand,
@@ -24,21 +38,42 @@ import {
   smoothKeyframes,
   type TransitionType,
 } from '@open-factory/editor-core';
-import type {WhisperAvailability} from '../../../../lib/whisper';
-import {canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability} from '../../../../lib/whisper';
-import {useWhisperSettingsStore} from '../../../../store/whisperSettingsStore';
-import {commandManager, projectAccessor, timelineAccessor} from '../../../../store/commandManager';
-import {useEditorStore} from '../../../../store/editorStore';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import {detectClipDialogue} from '../../../../lib/dialogueDetection';
-import {generateTtsVoiceover, collectSubtitleClipsForTts} from '../../../../lib/ttsVoiceover';
-import {analyzeWaveform, cancelSceneDetection, detectSceneChanges, extractCoverFrames, listenBridge, listenCoverFrameProgress, type CoverFrameResult, type SceneDetectProgressEvent, type WhisperProgressEvent} from '../../../../lib/tauri-bridge';
-import {createSubtitleClipsFromDialogues, compareDialogueWithWhisper} from '@open-factory/editor-core';
-import {AddTransitionCommand} from '@open-factory/editor-core';
-import type {TimelineHandlerParams} from './types';
-import {buildSubtitleAlignmentPeaks, isSubtitleAlignmentMediaClip, timelineRangesOverlap, getCoverFrameOutputDir, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND, SUBTITLE_ALIGNMENT_MAX_DISTANCE} from './utils';
-import {runUiFeedbackTask} from '../../../../media/background-media-task-queue';
+import type { WhisperAvailability } from '../../../../lib/whisper';
+import {
+  canGenerateSubtitlesForClip,
+  buildWhisperSubtitleTrackForClip,
+  getWhisperAvailability,
+} from '../../../../lib/whisper';
+import { useWhisperSettingsStore } from '../../../../store/whisperSettingsStore';
+import { commandManager, projectAccessor, timelineAccessor } from '../../../../store/commandManager';
+import { useEditorStore } from '../../../../store/editorStore';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import { detectClipDialogue } from '../../../../lib/dialogueDetection';
+import { generateTtsVoiceover, collectSubtitleClipsForTts } from '../../../../lib/ttsVoiceover';
+import {
+  analyzeWaveform,
+  cancelSceneDetection,
+  detectSceneChanges,
+  extractCoverFrames,
+  listenBridge,
+  listenCoverFrameProgress,
+  type CoverFrameResult,
+  type SceneDetectProgressEvent,
+  type WhisperProgressEvent,
+} from '../../../../lib/tauri-bridge';
+import { createSubtitleClipsFromDialogues, compareDialogueWithWhisper } from '@open-factory/editor-core';
+import { AddTransitionCommand } from '@open-factory/editor-core';
+import type { TimelineHandlerParams } from './types';
+import {
+  buildSubtitleAlignmentPeaks,
+  isSubtitleAlignmentMediaClip,
+  timelineRangesOverlap,
+  getCoverFrameOutputDir,
+  SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND,
+  SUBTITLE_ALIGNMENT_MAX_DISTANCE,
+} from './utils';
+import { runUiFeedbackTask } from '../../../../media/background-media-task-queue';
 
 export function createAiFeatureHandlers(
   params: TimelineHandlerParams,
@@ -73,7 +108,7 @@ export function createAiFeatureHandlers(
     projectPath,
   } = params;
 
-  const {findClip, getClipMediaAsset} = helpers;
+  const { findClip, getClipMediaAsset } = helpers;
 
   function openSilenceDetection(clipId: string): void {
     const clip = findClip(clipId);
@@ -579,9 +614,9 @@ export function createAiFeatureHandlers(
       return;
     }
     const track = project.timeline.tracks.find((item) => item.id === clip.trackId && item.type === 'subtitle');
-    const subtitleClips = (track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []).sort(
-      (left, right) => left.start - right.start || left.id.localeCompare(right.id),
-    );
+    const subtitleClips = (
+      track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []
+    ).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
     if (subtitleClips.length === 0) {
       showToast({
         kind: 'warning',
@@ -616,7 +651,7 @@ export function createAiFeatureHandlers(
         { maxDistance: SUBTITLE_ALIGNMENT_MAX_DISTANCE, minDuration: 1 / Math.max(1, project.settings.fps) },
       );
       commandManager.execute(command);
-      setSelectedClipIds(command.report.updates.map((update: {clipId: string}) => update.clipId));
+      setSelectedClipIds(command.report.updates.map((update: { clipId: string }) => update.clipId));
       setSubtitleAlignReport({
         correctedCount: command.report.correctedCount,
         averageOffsetMs: command.report.averageOffsetMs,

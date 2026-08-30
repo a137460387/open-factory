@@ -6,8 +6,8 @@
  * Combines audio energy analysis with visual feature mapping.
  */
 
-import type {ContentAnalysisVisualSample, ContentAnalysisAudioSample} from './content-analysis';
-import {clamp} from './utils/math';
+import type { ContentAnalysisVisualSample, ContentAnalysisAudioSample } from './content-analysis';
+import { clamp } from './utils/math';
 
 // ─── Types ────────────────────────────────────────────────
 

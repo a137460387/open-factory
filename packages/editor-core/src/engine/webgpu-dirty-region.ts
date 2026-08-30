@@ -85,12 +85,14 @@ export class WebGPUDirtyRegionManager {
       maxY = Math.max(maxY, region.y + region.height);
     }
 
-    return [{
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-      reason: regions[0].reason,
-    }];
+    return [
+      {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+        reason: regions[0].reason,
+      },
+    ];
   }
 }

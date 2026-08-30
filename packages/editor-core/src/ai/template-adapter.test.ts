@@ -5,39 +5,73 @@ import type { EditingTemplate } from '../models/template-schema';
 
 function makeMedia(overrides: Partial<MediaAsset> = {}): MediaAsset {
   return {
-    id: 'media-1', type: 'video', name: 'clip.mp4', path: '/clip.mp4',
-    duration: 30, width: 1920, height: 1080, frameRate: 30, hasAudio: true,
+    id: 'media-1',
+    type: 'video',
+    name: 'clip.mp4',
+    path: '/clip.mp4',
+    duration: 30,
+    width: 1920,
+    height: 1080,
+    frameRate: 30,
+    hasAudio: true,
     ...overrides,
   };
 }
 
 function makeClip(dur = 10) {
   return {
-    type: 'video' as const, durationSec: dur, flexibleDuration: true,
-    placeholder: 'user-video' as const, placeholderParams: {},
-    effects: [], keyframes: [], colorNodes: [],
-    opacity: 1, speed: 1, volume: 1,
+    type: 'video' as const,
+    durationSec: dur,
+    flexibleDuration: true,
+    placeholder: 'user-video' as const,
+    placeholderParams: {},
+    effects: [],
+    keyframes: [],
+    colorNodes: [],
+    opacity: 1,
+    speed: 1,
+    volume: 1,
   };
 }
 
 function makeTemplate(overrides: Partial<EditingTemplate> = {}): EditingTemplate {
   return {
     metadata: {
-      id: 'tpl-1', version: '1.0', name: 'Test Template', description: '',
-      category: 'vlog', tags: [], author: 'test',
-      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      aspectRatio: '16:9', resolutionWidth: 1920, resolutionHeight: 1080,
-      frameRate: 30, estimatedDurationSec: 20, difficulty: 'beginner',
+      id: 'tpl-1',
+      version: '1.0',
+      name: 'Test Template',
+      description: '',
+      category: 'vlog',
+      tags: [],
+      author: 'test',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      aspectRatio: '16:9',
+      resolutionWidth: 1920,
+      resolutionHeight: 1080,
+      frameRate: 30,
+      estimatedDurationSec: 20,
+      difficulty: 'beginner',
     },
-    tracks: [{
-      type: 'video', name: 'main', clips: [makeClip(10), makeClip(10)],
-      transitions: [], trackEffects: [], muted: false, locked: false,
-    }],
+    tracks: [
+      {
+        type: 'video',
+        name: 'main',
+        clips: [makeClip(10), makeClip(10)],
+        transitions: [],
+        trackEffects: [],
+        muted: false,
+        locked: false,
+      },
+    ],
     audioLayout: {
       tracks: [{ role: 'music', volumeDb: -18, pan: 0, fadeInSec: 0.5, fadeOutSec: 0.5 }],
-      masterLoudnessTarget: -14, masterLimiter: true,
+      masterLoudnessTarget: -14,
+      masterLimiter: true,
     },
-    globalColorNodes: [], variables: [], ...overrides,
+    globalColorNodes: [],
+    variables: [],
+    ...overrides,
   };
 }
 
@@ -87,10 +121,19 @@ describe('Template Adapter', () => {
     });
 
     it('produces no duration changes when clips already match', () => {
-      const tpl = makeTemplate({ tracks: [{
-        type: 'video', name: 'main', clips: [makeClip(15), makeClip(15)],
-        transitions: [], trackEffects: [], muted: false, locked: false,
-      }]});
+      const tpl = makeTemplate({
+        tracks: [
+          {
+            type: 'video',
+            name: 'main',
+            clips: [makeClip(15), makeClip(15)],
+            transitions: [],
+            trackEffects: [],
+            muted: false,
+            locked: false,
+          },
+        ],
+      });
       const result = adaptTemplateToContent(tpl, analyzeMedia(makeMedia({ duration: 30 })));
       expect(result.changes.filter((c) => c.field === 'durationSec')).toHaveLength(0);
     });
@@ -114,10 +157,12 @@ describe('Template Adapter', () => {
     });
 
     it('prefers video over image and audio', () => {
-      const project = { media: [
-        makeMedia({ id: 'img', type: 'image' as const, duration: 5 }),
-        makeMedia({ id: 'vid', type: 'video' as const, duration: 25 }),
-      ]} as any;
+      const project = {
+        media: [
+          makeMedia({ id: 'img', type: 'image' as const, duration: 5 }),
+          makeMedia({ id: 'vid', type: 'video' as const, duration: 25 }),
+        ],
+      } as any;
       const result = createSmartAdaptation(project, makeTemplate());
       expect(result).not.toBeNull();
       expect(result!.adaptedDurationSec).toBe(25);

@@ -112,9 +112,11 @@ interface TextContextCall {
 
 function createTextContext() {
   const calls: TextContextCall[] = [];
-  const record = (method: string) => (...args: unknown[]) => {
-    calls.push({ method, args });
-  };
+  const record =
+    (method: string) =>
+    (...args: unknown[]) => {
+      calls.push({ method, args });
+    };
   const context = {
     filter: 'none',
     globalAlpha: 1,
@@ -237,11 +239,7 @@ describe('drawText2d', () => {
 
     drawText2d(context, canvas, clip);
 
-    expect(calls.filter((call) => call.method === 'fillText').map((call) => call.args[0])).toEqual([
-      'A',
-      'B',
-      'C',
-    ]);
+    expect(calls.filter((call) => call.method === 'fillText').map((call) => call.args[0])).toEqual(['A', 'B', 'C']);
   });
 
   it('路径文本沿路径逐字符绘制', () => {

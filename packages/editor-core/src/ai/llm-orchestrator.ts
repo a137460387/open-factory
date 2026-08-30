@@ -15,25 +15,25 @@
  * Raw video/audio streams are NEVER included.
  */
 
-import type {MaterialMetadata} from './semantic-extractor';
-import type {AIProvider} from '../ai-service';
+import type { MaterialMetadata } from './semantic-extractor';
+import type { AIProvider } from '../ai-service';
 
 // ─── LLM Instruction Protocol ──────────────────────────────────
 
 /** Supported LLM action types */
 export type EditActionType =
-  | 'cut'          // Remove a segment
-  | 'trim'         // Trim start/end of a clip
-  | 'reorder'      // Change clip order
-  | 'add_transition'  // Add transition between clips
-  | 'add_subtitle'    // Add subtitle overlay
-  | 'adjust_audio'    // Adjust audio levels
-  | 'add_effect'      // Apply visual effect
-  | 'split'           // Split clip at timepoint
-  | 'merge'           // Merge adjacent clips
-  | 'speed'           // Change playback speed
-  | 'fade'            // Add fade in/out
-  | 'narration';      // Add narration track
+  | 'cut' // Remove a segment
+  | 'trim' // Trim start/end of a clip
+  | 'reorder' // Change clip order
+  | 'add_transition' // Add transition between clips
+  | 'add_subtitle' // Add subtitle overlay
+  | 'adjust_audio' // Adjust audio levels
+  | 'add_effect' // Apply visual effect
+  | 'split' // Split clip at timepoint
+  | 'merge' // Merge adjacent clips
+  | 'speed' // Change playback speed
+  | 'fade' // Add fade in/out
+  | 'narration'; // Add narration track
 
 /** Single editing instruction from LLM */
 export interface EditInstruction {
@@ -194,10 +194,7 @@ Output JSON schema:
  * Build an editing prompt from material metadata.
  * Strips any raw media data, includes only text and optional low-res previews.
  */
-export function buildEditingPrompt(
-  materials: MaterialMetadata[],
-  userRequest: string
-): LLMMessage[] {
+export function buildEditingPrompt(materials: MaterialMetadata[], userRequest: string): LLMMessage[] {
   const systemMessage: LLMMessage = {
     role: 'system',
     content: SYSTEM_PROMPT_EDITING,
@@ -229,11 +226,7 @@ export function buildEditingPrompt(
 /**
  * Build a platform content generation prompt.
  */
-export function buildPlatformPrompt(
-  metadata: MaterialMetadata,
-  platforms: string[],
-  userHints?: string
-): LLMMessage[] {
+export function buildPlatformPrompt(metadata: MaterialMetadata, platforms: string[], userHints?: string): LLMMessage[] {
   const systemMessage: LLMMessage = {
     role: 'system',
     content: SYSTEM_PROMPT_PLATFORM,
@@ -264,7 +257,7 @@ export function buildPlatformPrompt(
 export function buildConversationalPrompt(
   materials: MaterialMetadata[],
   conversationHistory: LLMMessage[],
-  userMessage: string
+  userMessage: string,
 ): LLMMessage[] {
   const systemMessage: LLMMessage = {
     role: 'system',
@@ -285,12 +278,7 @@ export function buildConversationalPrompt(
     content: `Here are the available materials:\n\n${JSON.stringify(materialSummary, null, 2)}`,
   };
 
-  return [
-    systemMessage,
-    contextMessage,
-    ...conversationHistory,
-    { role: 'user', content: userMessage },
-  ];
+  return [systemMessage, contextMessage, ...conversationHistory, { role: 'user', content: userMessage }];
 }
 
 // ─── Response Parsing ───────────────────────────────────────────
@@ -303,9 +291,7 @@ export interface ParseError {
 }
 
 /** Result of parsing LLM response */
-export type ParseResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; errors: ParseError[] };
+export type ParseResult<T> = { ok: true; data: T } | { ok: false; errors: ParseError[] };
 
 /**
  * Safely parse an EditPlan from LLM JSON response.
@@ -336,8 +322,18 @@ export function parseEditPlan(jsonStr: string): ParseResult<EditPlan> {
     errors.push({ field: 'instructions', message: 'Expected array' });
   } else {
     const validActions: EditActionType[] = [
-      'cut', 'trim', 'reorder', 'add_transition', 'add_subtitle',
-      'adjust_audio', 'add_effect', 'split', 'merge', 'speed', 'fade', 'narration',
+      'cut',
+      'trim',
+      'reorder',
+      'add_transition',
+      'add_subtitle',
+      'adjust_audio',
+      'add_effect',
+      'split',
+      'merge',
+      'speed',
+      'fade',
+      'narration',
     ];
 
     for (let i = 0; i < obj.instructions.length; i++) {
@@ -450,7 +446,7 @@ export interface PlanExecutionResult {
 export function validateInstructionTarget(
   instruction: EditInstruction,
   materialCount: number,
-  maxDurationSec: number
+  maxDurationSec: number,
 ): { valid: boolean; error?: string } {
   const { target } = instruction;
 
@@ -532,11 +528,8 @@ export function buildLLMHeaders(provider: AIProvider): Record<string, string> {
 /**
  * Build the request body for OpenAI-compatible API.
  */
-export function buildOpenAIRequestBody(
-  messages: LLMMessage[],
-  config: LLMRequestConfig
-): Record<string, unknown> {
-  const openaiMessages = messages.map(msg => {
+export function buildOpenAIRequestBody(messages: LLMMessage[], config: LLMRequestConfig): Record<string, unknown> {
+  const openaiMessages = messages.map((msg) => {
     const parts: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
 
     parts.push({ type: 'text', text: msg.content });
@@ -588,7 +581,7 @@ const DEFAULT_CONFIDENCE_THRESHOLD = 0.6;
 export async function generateEditPlan(
   materials: MaterialMetadata[],
   userRequest: string,
-  config: OrchestratorConfig
+  config: OrchestratorConfig,
 ): Promise<{ plan: EditPlan | null; response: LLMResponse; parseErrors?: ParseError[] }> {
   const messages = buildEditingPrompt(materials, userRequest);
   const requestConfig: LLMRequestConfig = {
@@ -612,7 +605,7 @@ export async function generateEditPlan(
       const threshold = config.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD;
       const filtered = {
         ...result.data,
-        instructions: result.data.instructions.filter(i => i.confidence >= threshold),
+        instructions: result.data.instructions.filter((i) => i.confidence >= threshold),
       };
       return { plan: filtered, response };
     }
@@ -630,7 +623,7 @@ export async function generatePlatformContent(
   metadata: MaterialMetadata,
   platforms: string[],
   config: OrchestratorConfig,
-  userHints?: string
+  userHints?: string,
 ): Promise<{ contents: PlatformContent[] | null; response: LLMResponse; parseErrors?: ParseError[] }> {
   const messages = buildPlatformPrompt(metadata, platforms, userHints);
   const requestConfig: LLMRequestConfig = {

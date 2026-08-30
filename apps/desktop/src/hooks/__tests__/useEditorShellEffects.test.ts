@@ -43,7 +43,16 @@ import { useEditorShellEffects } from '../../hooks/useEditorShellEffects';
 const baseDeps = {
   projectPath: null as string | null,
   tutorialProgress: { tutorialStep: 0, tutorialCompleted: false, tutorialSkipped: false },
-  tutorialSignals: { mediaImported: false, clipOnTimeline: false, previewPlayed: false, clipTrimmed: false, effectApplied: false, colorGraded: false, audioAdjusted: false, exportStarted: false } as any,
+  tutorialSignals: {
+    mediaImported: false,
+    clipOnTimeline: false,
+    previewPlayed: false,
+    clipTrimmed: false,
+    effectApplied: false,
+    colorGraded: false,
+    audioAdjusted: false,
+    exportStarted: false,
+  } as any,
   setTutorialProgress: vi.fn(),
   setTutorialCelebrationVisible: vi.fn(),
   demucsExecutablePath: '',

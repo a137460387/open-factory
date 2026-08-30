@@ -1,11 +1,11 @@
-import type {ProjectAccessor} from './index';
-import {Project, replaceProjectActiveTimeline} from '../../model';
-import type {Clip} from '../../model';
-import {MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint} from '../../model-types';
-import {deleteSwitchPoint, updateSwitchPoint} from '../../multicam';
-import {replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {findClip, touchProject} from './utils';
+import type { ProjectAccessor } from './types';
+import { Project, replaceProjectActiveTimeline } from '../../model';
+import type { Clip } from '../../model';
+import { MulticamClip, MulticamClipAngle, MulticamSyncMode, SwitchPoint } from '../../model-types';
+import { deleteSwitchPoint, updateSwitchPoint } from '../../multicam';
+import { replaceClip } from '../../timeline';
+import { Command } from '../command';
+import { findClip, touchProject } from './utils';
 
 export class DeleteSwitchPointCommand implements Command {
   readonly description = 'Delete switch point';

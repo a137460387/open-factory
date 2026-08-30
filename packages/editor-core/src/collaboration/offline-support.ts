@@ -10,13 +10,27 @@ import type { CrdtOperation } from './crdt-integration';
 // ─── Types ──────────────────────────────────────────────────────────
 
 /** A queued offline operation awaiting sync. */
-export interface OfflineOperation { id: string; operation: CrdtOperation; timestamp: number; synced: boolean }
+export interface OfflineOperation {
+  id: string;
+  operation: CrdtOperation;
+  timestamp: number;
+  synced: boolean;
+}
 /** Current synchronisation state. */
 export type SyncState = 'synced' | 'syncing' | 'pending' | 'conflict';
 /** Queue statistics. */
-export interface OfflineQueueStats { pendingCount: number; syncedCount: number; failedCount: number; lastSyncAt: number | null }
+export interface OfflineQueueStats {
+  pendingCount: number;
+  syncedCount: number;
+  failedCount: number;
+  lastSyncAt: number | null;
+}
 /** Result of a batch sync attempt. */
-export interface SyncBatchResult { syncedIds: string[]; conflicts: OfflineOperation[]; hasErrors: boolean }
+export interface SyncBatchResult {
+  syncedIds: string[];
+  conflicts: OfflineOperation[];
+  hasErrors: boolean;
+}
 export type SyncCompleteCallback = (result: SyncBatchResult) => void;
 export type ConflictCallback = (operations: OfflineOperation[]) => void;
 
@@ -58,9 +72,15 @@ const DEFAULT_SYNC_CONFIG: OfflineSyncConfig = { batchMaxSize: 50, autoSyncInter
 /** In-memory storage. Does not survive page reloads. */
 export class MemoryStorageAdapter implements OfflineStorageAdapter {
   private data: OfflineOperation[] = [];
-  async save(operations: OfflineOperation[]): Promise<void> { this.data = [...operations]; }
-  async load(): Promise<OfflineOperation[]> { return [...this.data]; }
-  async clear(): Promise<void> { this.data = []; }
+  async save(operations: OfflineOperation[]): Promise<void> {
+    this.data = [...operations];
+  }
+  async load(): Promise<OfflineOperation[]> {
+    return [...this.data];
+  }
+  async clear(): Promise<void> {
+    this.data = [];
+  }
 }
 
 /** Browser-backed network provider using `navigator.onLine` events. */
@@ -71,8 +91,12 @@ export class BrowserNetworkProvider implements NetworkStatusProvider {
   private boundOff: () => void;
 
   constructor() {
-    this.boundOn = () => { for (const h of this.onlineH) h(); };
-    this.boundOff = () => { for (const h of this.offlineH) h(); };
+    this.boundOn = () => {
+      for (const h of this.onlineH) h();
+    };
+    this.boundOff = () => {
+      for (const h of this.offlineH) h();
+    };
     if (typeof globalThis.addEventListener === 'function') {
       globalThis.addEventListener('online', this.boundOn);
       globalThis.addEventListener('offline', this.boundOff);
@@ -83,8 +107,12 @@ export class BrowserNetworkProvider implements NetworkStatusProvider {
     return typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : true;
   }
 
-  onOnline(handler: () => void): void { this.onlineH.add(handler); }
-  onOffline(handler: () => void): void { this.offlineH.add(handler); }
+  onOnline(handler: () => void): void {
+    this.onlineH.add(handler);
+  }
+  onOffline(handler: () => void): void {
+    this.offlineH.add(handler);
+  }
 
   dispose(): void {
     if (typeof globalThis.removeEventListener === 'function') {
@@ -149,9 +177,7 @@ export class OfflineOperationQueue {
     await this.ensureLoaded();
     const idx = this.operations.findIndex((op) => op.id === id);
     if (idx === -1) return false;
-    this.operations = this.operations.map((op, i) =>
-      i === idx ? { ...op, synced: true } : op,
-    );
+    this.operations = this.operations.map((op, i) => (i === idx ? { ...op, synced: true } : op));
     await this.persist();
     return true;
   }
@@ -169,10 +195,7 @@ export class OfflineOperationQueue {
     const syncedCount = this.operations.filter((op) => op.synced).length;
     const lastSynced = this.operations
       .filter((op) => op.synced)
-      .reduce<number | null>(
-        (max, op) => (max === null || op.timestamp > max ? op.timestamp : max),
-        null,
-      );
+      .reduce<number | null>((max, op) => (max === null || op.timestamp > max ? op.timestamp : max), null);
     return { pendingCount, syncedCount, failedCount: 0, lastSyncAt: lastSynced };
   }
 
@@ -389,13 +412,21 @@ export class OfflineSyncManager {
 
   private emitSyncComplete(result: SyncBatchResult): void {
     for (const cb of this.syncCompleteCallbacks) {
-      try { cb(result); } catch { /* ignore */ }
+      try {
+        cb(result);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   private emitConflict(operations: OfflineOperation[]): void {
     for (const cb of this.conflictCallbacks) {
-      try { cb(operations); } catch { /* ignore */ }
+      try {
+        cb(operations);
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -421,11 +452,6 @@ export function createOfflineSupport(
   dispose: () => void;
 } {
   const queue = new OfflineOperationQueue(options?.storage);
-  const manager = new OfflineSyncManager(
-    transport,
-    queue,
-    options?.network,
-    options?.config,
-  );
+  const manager = new OfflineSyncManager(transport, queue, options?.network, options?.config);
   return { queue, manager, dispose: () => manager.dispose() };
 }

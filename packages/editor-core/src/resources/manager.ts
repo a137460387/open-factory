@@ -3,9 +3,21 @@
  * Handles proxy generation, cache management, and duplicate detection
  */
 
-import type {ResourceConfig, ResourceFile, ProxyFile, DuplicateGroup, CacheEntry, ResourceStats, ResourceReport, CleanupRecommendation, ResourceType, ResourceStatus, CacheCategory} from './types';
+import type {
+  ResourceConfig,
+  ResourceFile,
+  ProxyFile,
+  DuplicateGroup,
+  CacheEntry,
+  ResourceStats,
+  ResourceReport,
+  CleanupRecommendation,
+  ResourceType,
+  ResourceStatus,
+  CacheCategory,
+} from './types';
 
-import {DEFAULT_RESOURCE_CONFIG} from './types';
+import { DEFAULT_RESOURCE_CONFIG } from './types';
 export { formatDurationMs } from '../utils/time';
 
 let resourceIdCounter = 0;
@@ -78,9 +90,7 @@ export function getResourceType(filename: string): ResourceType {
  */
 function matchesExclusionPatterns(filename: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
-    const regex = new RegExp(
-      '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
-    );
+    const regex = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
     if (regex.test(filename)) return true;
   }
   return false;
@@ -217,10 +227,7 @@ export function analyzeCache(entries: CacheEntry[]): {
 /**
  * Generate proxy file specification
  */
-export function generateProxySpec(
-  original: ResourceFile,
-  config: ResourceConfig['proxy'],
-): ProxyFile | null {
+export function generateProxySpec(original: ResourceFile, config: ResourceConfig['proxy']): ProxyFile | null {
   if (original.type !== 'video') return null;
   if (original.size < config.generateThreshold) return null;
 
@@ -271,10 +278,7 @@ export function calculateResourceStats(files: ResourceFile[]): ResourceStats {
 
   const duplicates = detectDuplicates(files);
   const duplicateCount = duplicates.reduce((sum, g) => sum + g.files.length - 1, 0);
-  const duplicateSize = duplicates.reduce(
-    (sum, g) => sum + g.files.slice(1).reduce((s, f) => s + f.size, 0),
-    0,
-  );
+  const duplicateSize = duplicates.reduce((sum, g) => sum + g.files.slice(1).reduce((s, f) => s + f.size, 0), 0);
 
   const unused = identifyUnusedFiles(files);
 
@@ -309,11 +313,7 @@ export function generateCleanupRecommendations(
 
   // Unused files
   if (config.unused.enabled) {
-    const unused = identifyUnusedFiles(
-      files,
-      config.unused.olderThan,
-      config.unused.excludePatterns,
-    );
+    const unused = identifyUnusedFiles(files, config.unused.olderThan, config.unused.excludePatterns);
     if (unused.length > 0) {
       recommendations.push({
         id: generateResourceId(),

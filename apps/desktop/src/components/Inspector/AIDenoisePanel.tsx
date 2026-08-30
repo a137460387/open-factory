@@ -1,11 +1,22 @@
-import {useState, useCallback, useRef, useEffect} from 'react';
-import {Loader2, Sparkles, Volume2} from 'lucide-react';
-import type {Clip, AIDenoiseRecommendation, NoiseProfile, DenoiseFilterRecommendation} from '@open-factory/editor-core';
-import {parseDenoiseAiResponse, buildDenoiseFilterChain, createDenoiseRecommendation, normalizeAIDenoiseRecommendation, hasAvailableTextProvider} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
-import {showToast} from '../../lib/toast';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Loader2, Sparkles, Volume2 } from 'lucide-react';
+import type {
+  Clip,
+  AIDenoiseRecommendation,
+  NoiseProfile,
+  DenoiseFilterRecommendation,
+} from '@open-factory/editor-core';
+import {
+  parseDenoiseAiResponse,
+  buildDenoiseFilterChain,
+  createDenoiseRecommendation,
+  normalizeAIDenoiseRecommendation,
+  hasAvailableTextProvider,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
+import { showToast } from '../../lib/toast';
 
 const t = zhCN.inspector.aiDenoise;
 

@@ -1,33 +1,91 @@
-import {logger} from '@open-factory/editor-core/utils';
+import { logger } from '@open-factory/editor-core/utils';
 import React from 'react';
 import {
-  BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand,
-  type TimelineColorHeatmapPoint, type SceneColorDifference,
-  type TimelineRulerTick, type SelectionRect, type TimelineHeatmapSegment,
-  type TimelineMinimapLayout, type TimelineMinimapViewportRect,
-  type ProjectAnnotation, type TimelineNote,
-  type ProtectedRange, type Clip, type ClipGroup, type ClipGroupColor,
-  type KeyframeProperty, type Track, type TimelineRenderRange,
-  type TimelineDiffRange, type DialogueInterval, type Sequence,
-  type Project, type CollaborationUserPresence, type CollaborationClipLock,
-  type TimelineNoteLayout, type TimelineVirtualRenderWindow,
-  type TimelineLargeProjectMode, type Timeline as CoreTimeline,
-  type TimelineLabelColor, type AnomalyInterval, type MediaVersionEntry,
-  type MediaAsset, type TimelineMarker, type TimelineBookmark,
-  type BeatMarker, type TimelineThumbnailTrackSample,
+  BatchUpdateTrackHeightCommand,
+  UpdateSequenceSettingsCommand,
+  type TimelineColorHeatmapPoint,
+  type SceneColorDifference,
+  type TimelineRulerTick,
+  type SelectionRect,
+  type TimelineHeatmapSegment,
+  type TimelineMinimapLayout,
+  type TimelineMinimapViewportRect,
+  type ProjectAnnotation,
+  type TimelineNote,
+  type ProtectedRange,
+  type Clip,
+  type ClipGroup,
+  type ClipGroupColor,
+  type KeyframeProperty,
+  type Track,
+  type TimelineRenderRange,
+  type TimelineDiffRange,
+  type DialogueInterval,
+  type Sequence,
+  type Project,
+  type CollaborationUserPresence,
+  type CollaborationClipLock,
+  type TimelineNoteLayout,
+  type TimelineVirtualRenderWindow,
+  type TimelineLargeProjectMode,
+  type Timeline as CoreTimeline,
+  type TimelineLabelColor,
+  type AnomalyInterval,
+  type MediaVersionEntry,
+  type MediaAsset,
+  type TimelineMarker,
+  type TimelineBookmark,
+  type BeatMarker,
+  type TimelineThumbnailTrackSample,
   type GapFillStrategy,
 } from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {commandManager, projectAccessor} from '../../store/commandManager';
-import {LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type DragState, type VolumeEnvelopePointRequest, type VolumeEnvelopeMenuRequest, type ClipMenuRequest, type GapMenuRequest} from './TimelineParts';
-import {TrackBatchMenu, TransitionMenu, GapActionMenu, VolumeEnvelopeMenu, RulerContextMenu, ClipActionMenu, type TransitionMenuState, type ClipMenuState, type VolumeEnvelopeMenuState, type GapMenuState, type RulerMenuState, type TrackBatchMenuState} from './TimelineMenus';
-import {TimelineNoteLayer, AnnotationBubble, TimelineBookmarkOverlay, TimelineMarkerOverlay, SceneCutOverlay, BeatMarkerOverlay, SelectionMarquee, TimelineMinimap, TimelineColorHeatmapLayer, TimelineHeatmapCanvas, type TimelineNoteDraftState} from './TimelineOverlays';
-import {SequenceSettingsDialog, GapStatsPanel} from './TimelineDialogs';
-import type {TimelineHeatmapViewSettings} from '../../settings/appSettings';
-import {ContextualSuggestionBubble} from './ContextualSuggestionBubble';
-import type {ContextualSuggestion, TimelineContext} from '@open-factory/editor-core/contextual-suggestions';
-import type {SelectedKeyframeRef} from '../../store/editorStore';
-import type {RulerContextMenuAction} from './timeline-ruler-menu';
+import { zhCN } from '../../i18n/strings';
+import { commandManager, projectAccessor } from '../../store/commandManager';
+import {
+  LABEL_WIDTH,
+  Ruler,
+  ThumbnailTrack,
+  TrackRow,
+  TRACK_HEIGHT,
+  type DragState,
+  type VolumeEnvelopePointRequest,
+  type VolumeEnvelopeMenuRequest,
+  type ClipMenuRequest,
+  type GapMenuRequest,
+} from './TimelineParts';
+import {
+  TrackBatchMenu,
+  TransitionMenu,
+  GapActionMenu,
+  VolumeEnvelopeMenu,
+  RulerContextMenu,
+  ClipActionMenu,
+  type TransitionMenuState,
+  type ClipMenuState,
+  type VolumeEnvelopeMenuState,
+  type GapMenuState,
+  type RulerMenuState,
+  type TrackBatchMenuState,
+} from './TimelineMenus';
+import {
+  TimelineNoteLayer,
+  AnnotationBubble,
+  TimelineBookmarkOverlay,
+  TimelineMarkerOverlay,
+  SceneCutOverlay,
+  BeatMarkerOverlay,
+  SelectionMarquee,
+  TimelineMinimap,
+  TimelineColorHeatmapLayer,
+  TimelineHeatmapCanvas,
+  type TimelineNoteDraftState,
+} from './TimelineOverlays';
+import { SequenceSettingsDialog, GapStatsPanel } from './TimelineDialogs';
+import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import { ContextualSuggestionBubble } from './ContextualSuggestionBubble';
+import type { ContextualSuggestion, TimelineContext } from '@open-factory/editor-core/contextual-suggestions';
+import type { SelectedKeyframeRef } from '../../store/editorStore';
+import type { RulerContextMenuAction } from './timeline-ruler-menu';
 
 interface TimelineTracksContainerProps {
   // Scroll container
@@ -49,12 +107,12 @@ interface TimelineTracksContainerProps {
   renderCacheRanges: TimelineRenderRange[];
   staleRanges: TimelineRenderRange[];
   timelineCompareRanges: TimelineDiffRange[];
-  exportRangeHighlights: Array<{id: string; start: number; end: number}>;
+  exportRangeHighlights: Array<{ id: string; start: number; end: number }>;
   protectedRanges: ProtectedRange[];
   dialogueMarkers: DialogueInterval[];
   audioScrubEnabled: boolean;
   setPlayheadTime: (time: number) => void;
-  openRulerMenu: (request: {time: number; x: number; y: number}) => void;
+  openRulerMenu: (request: { time: number; x: number; y: number }) => void;
 
   // Note layer
   timelineNoteLayouts: TimelineNoteLayout[];
@@ -133,7 +191,7 @@ interface TimelineTracksContainerProps {
   onAnnotationLayerPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
   openAnnotationEditorAt: (time: number, annotation?: ProjectAnnotation) => void;
   removeTimelineMarker: (id: string) => void;
-  sceneCutOverlays: Array<{id: string; clipId: string; time: number}>;
+  sceneCutOverlays: Array<{ id: string; clipId: string; time: number }>;
   removeProjectBookmark: (id: string) => void;
   activeBeatMarkerId: string | undefined;
   removeBeatMarker: (id: string) => void;
@@ -198,7 +256,26 @@ interface TimelineTracksContainerProps {
   // Track batch menu
   trackBatchMenu: TrackBatchMenuState | undefined;
   selectedTracksForBatch: () => Track[];
-  applyBatchTrackPatch: (patchForTrack: (track: Track) => Partial<Pick<Track, 'name' | 'color' | 'volume' | 'language' | 'pan' | 'eq' | 'compressor' | 'locked' | 'solo' | 'subtitleType' | 'muted'>>) => void;
+  applyBatchTrackPatch: (
+    patchForTrack: (
+      track: Track,
+    ) => Partial<
+      Pick<
+        Track,
+        | 'name'
+        | 'color'
+        | 'volume'
+        | 'language'
+        | 'pan'
+        | 'eq'
+        | 'compressor'
+        | 'locked'
+        | 'solo'
+        | 'subtitleType'
+        | 'muted'
+      >
+    >,
+  ) => void;
   deleteSelectedEmptyTracks: () => void;
   setEqualHeightPrompt: (v: boolean) => void;
   setTrackBatchMenu: (v: TrackBatchMenuState | undefined) => void;
@@ -542,14 +619,17 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
             {project.pacingAnalysis
               ? (() => {
                   const pa = project.pacingAnalysis;
-                  const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p: {time: number; cpm: number}) => p.cpm), 1) : 1;
+                  const maxCpm =
+                    pa.cpmCurve.length > 0
+                      ? Math.max(...pa.cpmCurve.map((p: { time: number; cpm: number }) => p.cpm), 1)
+                      : 1;
                   return (
                     <div
                       className="relative h-10 border-t border-line bg-panel"
                       style={{ marginLeft: LABEL_WIDTH }}
                       data-testid="pacing-analysis-chart"
                     >
-                      {pa.slowSegments.map((seg: {start: number; end: number}, si: number) => (
+                      {pa.slowSegments.map((seg: { start: number; end: number }, si: number) => (
                         <div
                           key={si}
                           className="absolute top-0 bottom-0 bg-[var(--color-accent)]/15 cursor-pointer"
@@ -566,7 +646,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                           data-testid={`pacing-slow-segment-${si}`}
                         />
                       ))}
-                      {pa.fastSegments.map((seg: {start: number; end: number}, fi: number) => (
+                      {pa.fastSegments.map((seg: { start: number; end: number }, fi: number) => (
                         <div
                           key={fi}
                           className="absolute top-0 bottom-0 bg-[var(--color-danger)]/15"
@@ -587,7 +667,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
                         preserveAspectRatio="none"
                         viewBox={`0 0 ${Math.max(1, pa.cpmCurve.length)} ${maxCpm}`}
                       >
-                        {pa.cpmCurve.map((pt: {time: number; cpm: number}, i: number) => {
+                        {pa.cpmCurve.map((pt: { time: number; cpm: number }, i: number) => {
                           if (i === 0) return null;
                           const prev = pa.cpmCurve[i - 1];
                           return (
@@ -897,10 +977,7 @@ export const TimelineTracksContainer = React.memo(function TimelineTracksContain
               }}
             />
             {suggestionTimeline && suggestionMedia && suggestionContext && onApplySuggestion ? (
-              <div
-                className="absolute z-[25]"
-                style={{ left: LABEL_WIDTH + playheadTime * zoom + 12, top: 8 }}
-              >
+              <div className="absolute z-[25]" style={{ left: LABEL_WIDTH + playheadTime * zoom + 12, top: 8 }}>
                 <ContextualSuggestionBubble
                   timeline={suggestionTimeline}
                   media={suggestionMedia}

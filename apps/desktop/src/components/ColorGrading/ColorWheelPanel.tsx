@@ -109,14 +109,24 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({ params, onChan
         <ColorWheel label="Offset (偏移)" value={params.offset} onChange={updateOffset} disabled={disabled} />
       </div>
       <div className="space-y-2">
-        <MasterSlider label="Lift" value={params.liftMaster} onChange={(v) => onChange({ ...params, liftMaster: v })} disabled={disabled} />
+        <MasterSlider
+          label="Lift"
+          value={params.liftMaster}
+          onChange={(v) => onChange({ ...params, liftMaster: v })}
+          disabled={disabled}
+        />
         <MasterSlider
           label="Gamma"
           value={params.gammaMaster}
           onChange={(v) => onChange({ ...params, gammaMaster: v })}
           disabled={disabled}
         />
-        <MasterSlider label="Gain" value={params.gainMaster} onChange={(v) => onChange({ ...params, gainMaster: v })} disabled={disabled} />
+        <MasterSlider
+          label="Gain"
+          value={params.gainMaster}
+          onChange={(v) => onChange({ ...params, gainMaster: v })}
+          disabled={disabled}
+        />
         <MasterSlider
           label="Offset"
           value={params.offsetMaster}

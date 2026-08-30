@@ -1,28 +1,80 @@
-import type {Clip, ClipGroup, ClipGroupColor, KeyframeProperty, GapFillStrategy, MediaAsset, ProjectAnnotation, TimelineNote, ProtectedRange, SilentRange, SelectionRect, TimelineGridSettings, TimelineLabelColor, MediaVersionEntry, DialogueInterval, DialogueSensitivity, DialogueWhisperMiss, Track, TrackPatch, ClipAIReframe, ReframeAIFrame, AnomalyInterval, FrameAnalysisSample, TransitionClipFeatures, TransitionRecommendation, TransitionType, TargetAspectRatio, TimelineSnapHighlight, TimelineSnapCandidate, SnapEdge} from '@open-factory/editor-core';
-import type {TransitionMenuState, ClipMenuState, VolumeEnvelopeMenuState, GapMenuState, RulerMenuState, TrackBatchMenuState} from './TimelineMenus';
-import type {ReplaceMediaDialogState, SilenceDialogState, SceneDialogState, WhisperDialogState, CoverFrameDialogState, AnnotationEditorState, TimelineNoteEditorState} from './TimelineDialogs';
-import type {TimelineNoteDraftState, BookmarkRenameState} from './TimelineOverlays';
-import type {ClipMenuRequest, DragState, GapMenuRequest, VolumeEnvelopeMenuRequest, VolumeEnvelopePointRequest} from './TimelineParts';
-import type {RulerContextMenuAction} from './timeline-ruler-menu';
-import type {WhisperAvailability} from '../../lib/whisper';
-import type {useEditorStore, SelectedKeyframeRef} from '../../store/editorStore';
-import type {CoverFrameResult} from '../../lib/tauri-bridge';
+import type {
+  Clip,
+  ClipGroup,
+  ClipGroupColor,
+  KeyframeProperty,
+  GapFillStrategy,
+  MediaAsset,
+  ProjectAnnotation,
+  TimelineNote,
+  ProtectedRange,
+  SilentRange,
+  SelectionRect,
+  TimelineGridSettings,
+  TimelineLabelColor,
+  MediaVersionEntry,
+  DialogueInterval,
+  DialogueSensitivity,
+  DialogueWhisperMiss,
+  Track,
+  TrackPatch,
+  ClipAIReframe,
+  ReframeAIFrame,
+  AnomalyInterval,
+  FrameAnalysisSample,
+  TransitionClipFeatures,
+  TransitionRecommendation,
+  TransitionType,
+  TargetAspectRatio,
+  TimelineSnapHighlight,
+  TimelineSnapCandidate,
+  SnapEdge,
+} from '@open-factory/editor-core';
+import type {
+  TransitionMenuState,
+  ClipMenuState,
+  VolumeEnvelopeMenuState,
+  GapMenuState,
+  RulerMenuState,
+  TrackBatchMenuState,
+} from './TimelineMenus';
+import type {
+  ReplaceMediaDialogState,
+  SilenceDialogState,
+  SceneDialogState,
+  WhisperDialogState,
+  CoverFrameDialogState,
+  AnnotationEditorState,
+  TimelineNoteEditorState,
+} from './TimelineDialogs';
+import type { TimelineNoteDraftState, BookmarkRenameState } from './TimelineOverlays';
+import type {
+  ClipMenuRequest,
+  DragState,
+  GapMenuRequest,
+  VolumeEnvelopeMenuRequest,
+  VolumeEnvelopePointRequest,
+} from './TimelineParts';
+import type { RulerContextMenuAction } from './timeline-ruler-menu';
+import type { WhisperAvailability } from '../../lib/whisper';
+import type { useEditorStore, SelectedKeyframeRef } from '../../store/editorStore';
+import type { CoverFrameResult } from '../../lib/tauri-bridge';
 
-import type {TimelineHandlerParams, TimelineHandlers} from './hooks/timeline/types';
-import {createTrackManagementHandlers} from './hooks/timeline/track-management';
-import {createClipOperationsHandlers} from './hooks/timeline/clip-operations';
-import {createDragHandlers} from './hooks/timeline/drag-handlers';
-import {createSelectionHandlers} from './hooks/timeline/selection';
-import {createNestedMediaHandlers} from './hooks/timeline/nested-media';
-import {createGapHandlers} from './hooks/timeline/gap-handlers';
-import {createVolumeEnvelopeHandlers} from './hooks/timeline/volume-envelope';
-import {createAiFeatureHandlers} from './hooks/timeline/ai-features';
-import {createNavigationHandlers} from './hooks/timeline/navigation';
-import {createDropHandlers} from './hooks/timeline/drop-handlers';
-import {createKeyboardHandlers} from './hooks/timeline/keyboard';
-import {createSnapUtils} from './hooks/timeline/snap-utils';
+import type { TimelineHandlerParams, TimelineHandlers } from './hooks/timeline/types';
+import { createTrackManagementHandlers } from './hooks/timeline/track-management';
+import { createClipOperationsHandlers } from './hooks/timeline/clip-operations';
+import { createDragHandlers } from './hooks/timeline/drag-handlers';
+import { createSelectionHandlers } from './hooks/timeline/selection';
+import { createNestedMediaHandlers } from './hooks/timeline/nested-media';
+import { createGapHandlers } from './hooks/timeline/gap-handlers';
+import { createVolumeEnvelopeHandlers } from './hooks/timeline/volume-envelope';
+import { createAiFeatureHandlers } from './hooks/timeline/ai-features';
+import { createNavigationHandlers } from './hooks/timeline/navigation';
+import { createDropHandlers } from './hooks/timeline/drop-handlers';
+import { createKeyboardHandlers } from './hooks/timeline/keyboard';
+import { createSnapUtils } from './hooks/timeline/snap-utils';
 
-export type {TimelineHandlerParams, TimelineHandlers} from './hooks/timeline/types';
+export type { TimelineHandlerParams, TimelineHandlers } from './hooks/timeline/types';
 
 export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHandlers {
   // Create snap utilities first (needed by other handlers)

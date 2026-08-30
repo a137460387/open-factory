@@ -1,14 +1,34 @@
-import {ClipGroupBatchPatch} from '../../clip-groups';
-import {cloneEffects} from '../../effects';
-import {cloneClipKeyframes, normalizeClipKeyframes} from '../../keyframes';
-import {ChromaKey, ClipKeyframes, Project, ProtectedRange, Timeline, Track, createId, normalizeAudioFadeDuration, normalizeChromaKey, normalizeClipSceneCuts, normalizeColorCorrection, normalizeTrackVolume} from '../../model';
-import type {Clip, KeyframeProperty} from '../../model';
-import {round} from '../../time';
-import {calculateSpeedCurveSourceDuration, detectOverlap, getClipDisplayDuration, getClipSourceVisibleDuration, getClipSpeed, moveClip, removeClip, trimClip} from '../../timeline';
-import {applyProtectedRippleDeleteToTrack} from '../../timeline-protection';
-import {ReplaceableMediaClip} from './clip-edit-commands';
-
-
+import { ClipGroupBatchPatch } from '../../clip-groups';
+import { cloneEffects } from '../../effects';
+import { cloneClipKeyframes, normalizeClipKeyframes } from '../../keyframes';
+import {
+  ChromaKey,
+  ClipKeyframes,
+  Project,
+  ProtectedRange,
+  Timeline,
+  Track,
+  createId,
+  normalizeAudioFadeDuration,
+  normalizeChromaKey,
+  normalizeClipSceneCuts,
+  normalizeColorCorrection,
+  normalizeTrackVolume,
+} from '../../model';
+import type { Clip, KeyframeProperty } from '../../model';
+import { round } from '../../time';
+import {
+  calculateSpeedCurveSourceDuration,
+  detectOverlap,
+  getClipDisplayDuration,
+  getClipSourceVisibleDuration,
+  getClipSpeed,
+  moveClip,
+  removeClip,
+  trimClip,
+} from '../../timeline';
+import { applyProtectedRippleDeleteToTrack } from '../../timeline-protection';
+import type { ReplaceableMediaClip } from './types';
 
 /**
  * Throws if any of the given clip IDs belong to a locked track.
@@ -172,7 +192,11 @@ export function buildSplitRanges(duration: number, splitTimes: number[]): LocalT
   return ranges.filter((range) => range.end - range.start > 0.000001);
 }
 
-export function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTimeRange, nextStart: number): TClip {
+export function sliceClipForLocalRange<TClip extends Clip>(
+  clip: TClip,
+  range: LocalTimeRange,
+  nextStart: number,
+): TClip {
   const speed = getClipSpeed(clip);
   const pieceDuration = round(range.end - range.start);
   const sourceDuration = round(clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd);
@@ -252,7 +276,11 @@ export function replaceClipWithSlices(
   };
 }
 
-export function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protectedRanges: ProtectedRange[] = []): Track {
+export function rippleDeleteTrackClips(
+  track: Track,
+  selectedIds: Set<string>,
+  protectedRanges: ProtectedRange[] = [],
+): Track {
   if (protectedRanges.length > 0) {
     return applyProtectedRippleDeleteToTrack(track, selectedIds, protectedRanges);
   }

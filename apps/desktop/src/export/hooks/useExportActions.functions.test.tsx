@@ -146,11 +146,7 @@ import {
 } from '../../lib/tauri-bridge';
 import { chooseExportPath } from '../../lib/exportVideo';
 import { showToast } from '../../lib/toast';
-import {
-  BUILTIN_EXPORT_PRESETS,
-  serializeExportPresetPackage,
-  type ExportPreset,
-} from '../export-presets';
+import { BUILTIN_EXPORT_PRESETS, serializeExportPresetPackage, type ExportPreset } from '../export-presets';
 import {
   createTwoStepExportPipeline as coreTwoStep,
   createPublishAutomationPipeline as corePublish,
@@ -394,9 +390,7 @@ describe('useExportActions 路径选择', () => {
     await act(async () => {
       await actions.chooseAudioVisualizationBackgroundImage();
     });
-    expect(
-      (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setDraftSettings,
-    ).toHaveBeenCalledTimes(1);
+    expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setDraftSettings).toHaveBeenCalledTimes(1);
 
     vi.mocked(openFileDialog).mockRejectedValue(new Error('nope') as never);
     const state2 = createStateStub();
@@ -570,9 +564,12 @@ describe('useExportActions 预设包', () => {
 
   it('importOfficialPresetPackage 无官方包时警告提示', async () => {
     // stub fetch 防止真实网络请求（CI 可达 GitHub 会改变分支走向）
-    vi.stubGlobal('fetch', vi.fn(async () => {
-      throw new Error('offline');
-    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('offline');
+      }),
+    );
     try {
       const state = createStateStub();
       const actions = renderActions(state);
@@ -674,8 +671,7 @@ describe('useExportActions 版本批', () => {
     const rows = state.versionedBatchRows as unknown[];
 
     actions.updateVersionedBatchRow('row-1', { name: '改名' });
-    const setVersionedBatchRows = (state as unknown as Record<string, ReturnType<typeof vi.fn>>)
-      .setVersionedBatchRows;
+    const setVersionedBatchRows = (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setVersionedBatchRows;
     const updated = applyUpdater(setVersionedBatchRows.mock.calls[0], rows) as Array<{ id: string; name: string }>;
     expect(updated[0].name).toBe('改名');
 
@@ -721,8 +717,7 @@ describe('useExportActions 版本批', () => {
     });
     const setVersionedBatchTemplate = (state as unknown as Record<string, ReturnType<typeof vi.fn>>)
       .setVersionedBatchTemplate;
-    const setVersionedBatchRows = (state as unknown as Record<string, ReturnType<typeof vi.fn>>)
-      .setVersionedBatchRows;
+    const setVersionedBatchRows = (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setVersionedBatchRows;
     expect(setVersionedBatchTemplate).toHaveBeenCalledWith('C:/Exports/{version_name}.mp4');
     const rows = setVersionedBatchRows.mock.calls[0][0] as Array<{ id: string; enabled: boolean }>;
     expect(rows).toHaveLength(1);
@@ -1016,9 +1011,9 @@ describe('useExportActions 流水线执行', () => {
     actions.createPublishPipelineTemplate();
     config = setPipelineConfig.mock.calls[1][0] as { nodes: unknown[] };
     expect(config.nodes.length).toBeGreaterThan(2);
-    expect(
-      (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setPublishPipelineLogs,
-    ).toHaveBeenCalledWith([]);
+    expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setPublishPipelineLogs).toHaveBeenCalledWith(
+      [],
+    );
   });
 
   it('runPipelineUtilityNode 对发布节点读取文件统计并调用 runner', async () => {
@@ -1189,9 +1184,9 @@ describe('useExportActions 暖场与入队细节', () => {
       await actions.warmupSelectedJobs([{ outputPath: 'C:/Exports/a.mp4', range: null, settings: {} }]);
     });
 
-    expect(
-      (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setCurrentStep,
-    ).toHaveBeenCalledWith('export');
+    expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setCurrentStep).toHaveBeenCalledWith(
+      'export',
+    );
     expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setWarmupStatus).toHaveBeenCalledWith({
       status: 'cached',
     });
@@ -1302,9 +1297,7 @@ describe('useExportActions 上传/平台适配/杂项', () => {
 
     actions.relinkFromPreflight();
 
-    expect(
-      (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setPreflight,
-    ).toHaveBeenCalledWith(undefined);
+    expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setPreflight).toHaveBeenCalledWith(undefined);
     expect(state.onClose as ReturnType<typeof vi.fn>).toHaveBeenCalled();
     expect(state.onRelinkMissing as ReturnType<typeof vi.fn>).toHaveBeenCalled();
   });
@@ -1345,9 +1338,9 @@ describe('useExportActions 上传/平台适配/杂项', () => {
     await act(async () => {
       await actions.updateExportUploadPassword('secret');
     });
-    expect(
-      (state as unknown as Record<string, ReturnType<typeof vi.fn>>).setExportUploadPassword,
-    ).toHaveBeenCalledWith('secret');
+    expect((state as unknown as Record<string, ReturnType<typeof vi.fn>>).setExportUploadPassword).toHaveBeenCalledWith(
+      'secret',
+    );
 
     vi.mocked(writeExportUploadWebdavPassword).mockRejectedValueOnce(new Error('keyring') as never);
     const state2 = createStateStub();

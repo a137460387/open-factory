@@ -59,16 +59,12 @@ describe('InferenceGuard', () => {
 
   describe('withInferenceGuard', () => {
     it('throws InferenceFeatureDegradedError when no provider', async () => {
-      await expect(
-        withInferenceGuard(ASR_GUARD, async () => 'result'),
-      ).rejects.toThrow(InferenceFeatureDegradedError);
+      await expect(withInferenceGuard(ASR_GUARD, async () => 'result')).rejects.toThrow(InferenceFeatureDegradedError);
     });
 
     it('throws when provider lacks capability', async () => {
       initInferenceGuard(new HeuristicProvider());
-      await expect(
-        withInferenceGuard(ASR_GUARD, async () => 'result'),
-      ).rejects.toThrow('语音识别');
+      await expect(withInferenceGuard(ASR_GUARD, async () => 'result')).rejects.toThrow('语音识别');
     });
 
     it('executes operation when provider is ready', async () => {
@@ -83,10 +79,9 @@ describe('InferenceGuard', () => {
     it('wraps operation errors in InferenceFeatureDegradedError', async () => {
       initInferenceGuard(new HeuristicProvider());
       await expect(
-        withInferenceGuard(
-          { capability: 'scene-detection', featureName: '场景检测' },
-          async () => { throw new Error('operation failed'); },
-        ),
+        withInferenceGuard({ capability: 'scene-detection', featureName: '场景检测' }, async () => {
+          throw new Error('operation failed');
+        }),
       ).rejects.toThrow(InferenceFeatureDegradedError);
     });
 
@@ -94,19 +89,16 @@ describe('InferenceGuard', () => {
       const provider = new HeuristicProvider();
       initInferenceGuard(provider);
       let receivedProvider: any = null;
-      await withInferenceGuard(
-        { capability: 'scene-detection', featureName: '场景检测' },
-        async (p) => { receivedProvider = p; },
-      );
+      await withInferenceGuard({ capability: 'scene-detection', featureName: '场景检测' }, async (p) => {
+        receivedProvider = p;
+      });
       expect(receivedProvider).toBe(provider);
     });
   });
 
   describe('withInferenceGuardSync', () => {
     it('throws when no provider', () => {
-      expect(() =>
-        withInferenceGuardSync(ASR_GUARD, () => 'result'),
-      ).toThrow(InferenceFeatureDegradedError);
+      expect(() => withInferenceGuardSync(ASR_GUARD, () => 'result')).toThrow(InferenceFeatureDegradedError);
     });
 
     it('executes when provider is ready', () => {

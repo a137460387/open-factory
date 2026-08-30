@@ -12,11 +12,11 @@
  * - 与批量导出引擎集成
  */
 
-import type {Project, Timeline, VideoClip, ImageClip} from '../model-types';
-import type {DistributionPlatformSpec, DistributionPlatformId} from './platform-presets';
-import type {SmartCropResult, CropAnalysisInput} from './smart-crop';
-import {getDistributionPlatform, DISTRIBUTION_PLATFORMS} from './platform-presets';
-import {calculateSmartCrop, parseAspectRatio} from './smart-crop';
+import type { Project, Timeline, VideoClip, ImageClip } from '../model-types';
+import type { DistributionPlatformSpec, DistributionPlatformId } from './platform-presets';
+import type { SmartCropResult, CropAnalysisInput } from './smart-crop';
+import { getDistributionPlatform, DISTRIBUTION_PLATFORMS } from './platform-presets';
+import { calculateSmartCrop, parseAspectRatio } from './smart-crop';
 
 // ─── 格式变体类型 ────────────────────────────────────────────
 

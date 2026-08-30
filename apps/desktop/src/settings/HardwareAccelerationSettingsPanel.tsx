@@ -4,12 +4,23 @@
  * 允许用户配置视频解码的硬件加速选项
  */
 
-import {useEffect, useState} from 'react';
-import {AlertCircle, CheckCircle, RefreshCw} from 'lucide-react';
-import {Button} from '@/components/ui/button';
-import {zhCN} from '../i18n/strings';
-import {type HardwareCapabilities, type HardwareBackend, type HardwareBackendInfo, getHwDecodeCapabilities} from '../lib/tauri-bridge';
-import {type HardwareAccelerationSettings, type HardwareAccelerationBackend, DEFAULT_HARDWARE_ACCELERATION_SETTINGS, readHardwareAccelerationSettings, saveHardwareAccelerationSettings} from './appSettings';
+import { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { zhCN } from '../i18n/strings';
+import {
+  type HardwareCapabilities,
+  type HardwareBackend,
+  type HardwareBackendInfo,
+  getHwDecodeCapabilities,
+} from '../lib/tauri-bridge';
+import {
+  type HardwareAccelerationSettings,
+  type HardwareAccelerationBackend,
+  DEFAULT_HARDWARE_ACCELERATION_SETTINGS,
+  readHardwareAccelerationSettings,
+  saveHardwareAccelerationSettings,
+} from './appSettings';
 
 const t = zhCN.settings.hardwareAcceleration;
 

@@ -7,17 +7,18 @@
  * Designed to be consumed by any frontend framework (React, Vue, Svelte, etc.)
  */
 
-import type { MaterialMetadata, ExtractionConfig, ExtractionProgressEvent, KeyFrame, ASRSegment } from '../ai/semantic-extractor';
+import type {
+  MaterialMetadata,
+  ExtractionConfig,
+  ExtractionProgressEvent,
+  KeyFrame,
+  ASRSegment,
+} from '../ai/semantic-extractor';
 import { createDefaultExtractionConfig, validateExtractionConfig } from '../ai/semantic-extractor';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type SemanticPanelPhase =
-  | 'idle'
-  | 'configuring'
-  | 'extracting'
-  | 'complete'
-  | 'error';
+export type SemanticPanelPhase = 'idle' | 'configuring' | 'extracting' | 'complete' | 'error';
 
 export interface SemanticPanelState {
   /** Current phase */
@@ -67,17 +68,21 @@ export type SemanticPanelAction =
  * Pure state reducer for the semantic analysis panel.
  * Follows immutable update patterns.
  */
-export function semanticPanelReducer(
-  state: SemanticPanelState,
-  action: SemanticPanelAction
-): SemanticPanelState {
+export function semanticPanelReducer(state: SemanticPanelState, action: SemanticPanelAction): SemanticPanelState {
   switch (action.type) {
     case 'START_EXTRACTION': {
       const errors = validateExtractionConfig(state.config);
       if (errors.length > 0) {
-        return { ...state, phase: 'error', error: errors.map(e => e.message).join('; ') };
+        return { ...state, phase: 'error', error: errors.map((e) => e.message).join('; ') };
       }
-      return { ...state, phase: 'extracting', progress: undefined, metadata: undefined, warnings: [], error: undefined };
+      return {
+        ...state,
+        phase: 'extracting',
+        progress: undefined,
+        metadata: undefined,
+        warnings: [],
+        error: undefined,
+      };
     }
 
     case 'UPDATE_PROGRESS':
@@ -117,9 +122,7 @@ export function getFilteredSegments(state: SemanticPanelState): ASRSegment[] {
   if (!state.transcriptFilter) return state.metadata.asrSegments;
 
   const query = state.transcriptFilter.toLowerCase();
-  return state.metadata.asrSegments.filter(seg =>
-    seg.text.toLowerCase().includes(query)
-  );
+  return state.metadata.asrSegments.filter((seg) => seg.text.toLowerCase().includes(query));
 }
 
 /** Get the currently selected key frame */
@@ -143,12 +146,18 @@ export function getProgressLabel(state: SemanticPanelState): string {
   if (state.phase === 'error') return 'Error';
 
   switch (state.progress?.phase) {
-    case 'keyframes': return 'Extracting key frames...';
-    case 'preview': return 'Generating previews...';
-    case 'asr': return 'Transcribing audio...';
-    case 'visual': return 'Analyzing visuals...';
-    case 'aggregation': return 'Building metadata...';
-    default: return 'Processing...';
+    case 'keyframes':
+      return 'Extracting key frames...';
+    case 'preview':
+      return 'Generating previews...';
+    case 'asr':
+      return 'Transcribing audio...';
+    case 'visual':
+      return 'Analyzing visuals...';
+    case 'aggregation':
+      return 'Building metadata...';
+    default:
+      return 'Processing...';
   }
 }
 
@@ -161,9 +170,7 @@ export function getMetadataStats(metadata: MaterialMetadata): {
   duration: string;
   uploadSize: string;
 } {
-  const wordCount = metadata.transcriptText
-    .split(/\s+/)
-    .filter(Boolean).length;
+  const wordCount = metadata.transcriptText.split(/\s+/).filter(Boolean).length;
 
   const durationMin = Math.floor(metadata.source.durationSec / 60);
   const durationSec = Math.floor(metadata.source.durationSec % 60);

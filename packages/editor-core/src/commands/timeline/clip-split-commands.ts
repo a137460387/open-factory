@@ -1,9 +1,25 @@
-import type { TimelineAccessor, ProjectAccessor } from "./index";
-import { Clip, ClipStabilization, DEFAULT_NESTED_SEQUENCE_NAME, Project, Timeline, normalizeStabilization, normalizeTransform, replaceProjectActiveTimeline } from '../../model';
+import type { TimelineAccessor, ProjectAccessor } from './types';
+import {
+  Clip,
+  ClipStabilization,
+  DEFAULT_NESTED_SEQUENCE_NAME,
+  Project,
+  Timeline,
+  normalizeStabilization,
+  normalizeTransform,
+  replaceProjectActiveTimeline,
+} from '../../model';
 import { ProjectPlatformFitSuggestion } from '../../model-types';
 import { removeClip, replaceClip, splitClip } from '../../timeline';
 import { Command } from '../command';
-import { assertClipsNotOnLockedTrack, buildSplitRanges, findClip, findTrack, insertClip, replaceClipWithSlices } from './utils';
+import {
+  assertClipsNotOnLockedTrack,
+  buildSplitRanges,
+  findClip,
+  findTrack,
+  insertClip,
+  replaceClipWithSlices,
+} from './utils';
 import { packNestedSequence } from './utils-nested';
 
 export class PackNestedSequenceCommand implements Command {

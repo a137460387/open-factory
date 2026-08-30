@@ -2,8 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@open-factory/editor-core', () => ({
   createAllBuiltInProviders: () => [
-    { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
-    { id: 'elevenlabs', name: 'ElevenLabs', protocol: 'openai-compatible', baseUrl: 'https://api.elevenlabs.io/v1', defaultModel: 'eleven_multilingual_v2', enabled: true, isBuiltIn: true },
+    {
+      id: 'openai',
+      name: 'OpenAI',
+      protocol: 'openai-compatible',
+      baseUrl: 'https://api.openai.com/v1',
+      defaultModel: 'gpt-4o',
+      enabled: true,
+      isBuiltIn: true,
+    },
+    {
+      id: 'elevenlabs',
+      name: 'ElevenLabs',
+      protocol: 'openai-compatible',
+      baseUrl: 'https://api.elevenlabs.io/v1',
+      defaultModel: 'eleven_multilingual_v2',
+      enabled: true,
+      isBuiltIn: true,
+    },
   ],
 }));
 
@@ -20,9 +36,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { store = {}; }),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
   };
 })();
 
@@ -86,7 +108,15 @@ describe('aiSettingsStore', () => {
     it('切换 provider 启用状态', () => {
       useAISettingsStore.setState({
         providers: [
-          { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: true,
+          },
         ],
       });
 
@@ -139,8 +169,24 @@ describe('aiSettingsStore', () => {
     it('移除自定义 provider', () => {
       useAISettingsStore.setState({
         providers: [
-          { id: 'custom-1', name: 'My API', protocol: 'openai-compatible', baseUrl: 'https://my-api.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: false },
-          { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
+          {
+            id: 'custom-1',
+            name: 'My API',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://my-api.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: false,
+          },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: true,
+          },
         ],
       });
 
@@ -154,7 +200,15 @@ describe('aiSettingsStore', () => {
     it('不能移除内置 provider', () => {
       useAISettingsStore.setState({
         providers: [
-          { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: true,
+          },
         ],
       });
 
@@ -210,7 +264,15 @@ describe('aiSettingsStore', () => {
     it('更新 provider 属性', () => {
       useAISettingsStore.setState({
         providers: [
-          { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: true,
+          },
         ],
       });
 
@@ -224,7 +286,15 @@ describe('aiSettingsStore', () => {
     it('不能修改 id 和 isBuiltIn', () => {
       useAISettingsStore.setState({
         providers: [
-          { id: 'openai', name: 'OpenAI', protocol: 'openai-compatible', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', enabled: true, isBuiltIn: true },
+          {
+            id: 'openai',
+            name: 'OpenAI',
+            protocol: 'openai-compatible',
+            baseUrl: 'https://api.openai.com/v1',
+            defaultModel: 'gpt-4o',
+            enabled: true,
+            isBuiltIn: true,
+          },
         ],
       });
 

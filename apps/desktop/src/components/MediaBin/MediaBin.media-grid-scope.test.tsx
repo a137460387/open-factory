@@ -166,7 +166,9 @@ describe('MediaBin 网格常驻挂载（方案 E：scope 切换只换数据不�
   it('普通→智能相册：media-grid-view 保持同一 DOM 实例，文件夹 chrome 卸载', () => {
     holder.media = [makeAsset('a'), makeAsset('b'), makeAsset('c')];
     holder.smartAlbumId = 'none';
-    const { getByTestId, queryByTestId, rerender } = render(<MediaBin media={holder.media as MediaAsset[]} {...mediaBinProps} />);
+    const { getByTestId, queryByTestId, rerender } = render(
+      <MediaBin media={holder.media as MediaAsset[]} {...mediaBinProps} />,
+    );
 
     const gridBefore = getByTestId('media-grid-view');
     expect(gridBefore).toBeTruthy();
@@ -184,7 +186,9 @@ describe('MediaBin 网格常驻挂载（方案 E：scope 切换只换数据不�
   it('智能相册→普通：网格仍保持同一 DOM 实例（双向常驻），chrome 恢复', () => {
     holder.media = [makeAsset('a'), makeAsset('b')];
     holder.smartAlbumId = 'rating-five';
-    const { getByTestId, queryByTestId, rerender } = render(<MediaBin media={holder.media as MediaAsset[]} {...mediaBinProps} />);
+    const { getByTestId, queryByTestId, rerender } = render(
+      <MediaBin media={holder.media as MediaAsset[]} {...mediaBinProps} />,
+    );
 
     const gridBefore = getByTestId('media-grid-view');
     expect(queryByTestId('media-folder-root-dropzone')).toBeNull();

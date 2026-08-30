@@ -1,4 +1,4 @@
-import type {Clip} from '@open-factory/editor-core';
+import type { Clip } from '@open-factory/editor-core';
 import {
   BatchKeyframeEditCommand,
   MoveClipCommand,
@@ -18,13 +18,13 @@ import {
   snapTime,
   type KeyframeProperty,
 } from '@open-factory/editor-core';
-import {keyframeRefKey} from '../../TimelineOverlays';
-import type {DragState} from '../../TimelineParts';
-import type {SelectedKeyframeRef} from '../../../../store/editorStore';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
+import { keyframeRefKey } from '../../TimelineOverlays';
+import type { DragState } from '../../TimelineParts';
+import type { SelectedKeyframeRef } from '../../../../store/editorStore';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
 
 export function createDragHandlers(
   params: TimelineHandlerParams,
@@ -35,7 +35,9 @@ export function createDragHandlers(
     buildKeyframeStartTimes: (refs: SelectedKeyframeRef[]) => Record<string, number>;
     snapKeyframeTime: (clip: Clip, localTime: number, disabled: boolean) => number;
     snapClipStart: (time: number, duration: number, clip: Clip, disabled: boolean) => number;
-    buildMovedPreviewTimeline: (previewStartsByClipId: Record<string, number>) => ReturnType<typeof import('../../../../store/editorStore').useEditorStore.getState>['project']['timeline'];
+    buildMovedPreviewTimeline: (
+      previewStartsByClipId: Record<string, number>,
+    ) => ReturnType<typeof import('../../../../store/editorStore').useEditorStore.getState>['project']['timeline'];
     buildTrimPreview: (clip: Clip, edge: 'left' | 'right', delta: number, snappingDisabled: boolean) => Clip;
     minFrameDuration: () => number;
     canApplyProtectedMove: (startsByClipId: Record<string, number>) => boolean;
@@ -373,9 +375,7 @@ function buildSelectionMarqueeRect(
   };
 }
 
-function findClipIdsIntersectingRect(
-  rect: { left: number; top: number; right: number; bottom: number },
-): string[] {
+function findClipIdsIntersectingRect(rect: { left: number; top: number; right: number; bottom: number }): string[] {
   // This will be implemented in the facade
   return [];
 }

@@ -68,15 +68,17 @@ export async function analyzeAudioRhythm(
   return invoke<AudioRhythmResult>('analyze_audio_rhythm_command', {
     audioSamples: Array.from(audioSamples),
     sampleRate,
-    config: config ? {
-      fft_size: config.fft_size ?? 2048,
-      hop_size: config.hop_size ?? 512,
-      sample_rate: config.sample_rate ?? sampleRate,
-      onset_threshold: config.onset_threshold ?? 0.3,
-      min_bpm: config.min_bpm ?? 60,
-      max_bpm: config.max_bpm ?? 200,
-      min_onset_gap: config.min_onset_gap ?? 0.05,
-    } : null,
+    config: config
+      ? {
+          fft_size: config.fft_size ?? 2048,
+          hop_size: config.hop_size ?? 512,
+          sample_rate: config.sample_rate ?? sampleRate,
+          onset_threshold: config.onset_threshold ?? 0.3,
+          min_bpm: config.min_bpm ?? 60,
+          max_bpm: config.max_bpm ?? 200,
+          min_onset_gap: config.min_onset_gap ?? 0.05,
+        }
+      : null,
   });
 }
 
@@ -143,13 +145,15 @@ export async function detectVisualHighlights(
     frames: frames.map((f) => Array.from(f)),
     width,
     height,
-    config: config ? {
-      motion_threshold: config.motion_threshold ?? 0.15,
-      scene_change_threshold: config.scene_change_threshold ?? 0.4,
-      window_size: config.window_size ?? 5,
-      min_gap_seconds: config.min_gap_seconds ?? 0.5,
-      fps: config.fps ?? 30,
-    } : null,
+    config: config
+      ? {
+          motion_threshold: config.motion_threshold ?? 0.15,
+          scene_change_threshold: config.scene_change_threshold ?? 0.4,
+          window_size: config.window_size ?? 5,
+          min_gap_seconds: config.min_gap_seconds ?? 0.5,
+          fps: config.fps ?? 30,
+        }
+      : null,
   });
 }
 

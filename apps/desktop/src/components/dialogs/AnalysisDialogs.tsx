@@ -1,18 +1,35 @@
-import {lazy, Suspense, useMemo, useState} from 'react';
-import {X} from 'lucide-react';
-import {zhCN} from '../../i18n/strings';
-import type {Project, Clip, MediaAsset, Track, BeatSensitivity, ColorGradingGraph} from '@open-factory/editor-core';
-import type {Command} from '@open-factory/editor-core';
-import type {TimelineAccessor} from '@open-factory/editor-core';
-import {useDialogStore} from '../../store/dialogStore';
-import {useCollaborationStore} from '../../store/collaborationStore';
-import {useSpectrumAsset, useSetSpectrumAsset} from '../../store/mediaFeatureStore';
-import {useSetSpeakerDiarizationResult} from '../../store/aiFeatureStore';
-import {useSetOperationReplaySpeed, useSetOperationRecording, useSetOperationRecordingActive, useSetOperationReplayRunning, useSetOperationRecordingStep} from '../../store/timelineFeatureStore';
-import type {ContentAnalysisTarget} from '../../media/ContentAnalysisDialog';
-import type {VideoStitchWizardSettings} from '../../video-stitching/VideoStitchWizardDialog';
-import {normalizeOperationReplaySpeed, UpdateClipCommand, createColorGradingNode, createEmptyColorGradingGraph, type OperationRecordingFile, type OperationReplaySpeed, type SpeakerDiarizationSegment, type TimelineColorAnalysisResult, type SceneColorDifference, type PerformanceProfilerReport} from '@open-factory/editor-core';
-import {PanelLoading} from '../PanelLoading';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
+import { zhCN } from '../../i18n/strings';
+import type { Project, Clip, MediaAsset, Track, BeatSensitivity, ColorGradingGraph } from '@open-factory/editor-core';
+import type { Command } from '@open-factory/editor-core';
+import type { TimelineAccessor } from '@open-factory/editor-core';
+import { useDialogStore } from '../../store/dialogStore';
+import { useCollaborationStore } from '../../store/collaborationStore';
+import { useSpectrumAsset, useSetSpectrumAsset } from '../../store/mediaFeatureStore';
+import { useSetSpeakerDiarizationResult } from '../../store/aiFeatureStore';
+import {
+  useSetOperationReplaySpeed,
+  useSetOperationRecording,
+  useSetOperationRecordingActive,
+  useSetOperationReplayRunning,
+  useSetOperationRecordingStep,
+} from '../../store/timelineFeatureStore';
+import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
+import type { VideoStitchWizardSettings } from '../../video-stitching/VideoStitchWizardDialog';
+import {
+  normalizeOperationReplaySpeed,
+  UpdateClipCommand,
+  createColorGradingNode,
+  createEmptyColorGradingGraph,
+  type OperationRecordingFile,
+  type OperationReplaySpeed,
+  type SpeakerDiarizationSegment,
+  type TimelineColorAnalysisResult,
+  type SceneColorDifference,
+  type PerformanceProfilerReport,
+} from '@open-factory/editor-core';
+import { PanelLoading } from '../PanelLoading';
 
 const LutEditorDialog = lazy(() =>
   import('../../lut-editor/LutEditorDialog').then((m) => ({ default: m.LutEditorDialog })),
@@ -368,7 +385,10 @@ function ColorGradingWorkspaceDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="color-grading-dialog">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="color-grading-dialog"
+    >
       <section className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-md border border-line bg-gray-900 shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-gray-700 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-100">{zhCN.toolbar.colorGradingWorkspace}</h2>

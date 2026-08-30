@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { extractProjectContentProfile, scoreTemplate, recommendTemplates, explainRecommendation } from './template-recommender';
+import {
+  extractProjectContentProfile,
+  scoreTemplate,
+  recommendTemplates,
+  explainRecommendation,
+} from './template-recommender';
 import type { EditingTemplate } from '../models/template-schema';
 import type { ProjectContentProfile, UserPreference } from './template-recommender';
 
@@ -11,10 +16,14 @@ function makeProject(overrides: Record<string, any> = {}): any {
   return {
     media: [],
     timeline: {
-      tracks: [{
-        id: 't1', type: 'video', name: 'V1',
-        clips: [makeClip('c1', 5), makeClip('c2', 5, 1.5), makeClip('c3', 5, 0.8)],
-      }],
+      tracks: [
+        {
+          id: 't1',
+          type: 'video',
+          name: 'V1',
+          clips: [makeClip('c1', 5), makeClip('c2', 5, 1.5), makeClip('c3', 5, 0.8)],
+        },
+      ],
       transitions: [{ type: 'dissolve', durationSec: 0.5 }],
     },
     ...overrides,
@@ -23,9 +32,16 @@ function makeProject(overrides: Record<string, any> = {}): any {
 
 function makeProfile(overrides: Partial<ProjectContentProfile> = {}): ProjectContentProfile {
   return {
-    duration: 15, clipCount: 3, avgMotion: 0.3, hasDialogue: false,
-    musicGenre: null, mood: 'neutral', dominantClipType: 'video',
-    avgClipDuration: 5, transitionDensity: 4, ...overrides,
+    duration: 15,
+    clipCount: 3,
+    avgMotion: 0.3,
+    hasDialogue: false,
+    musicGenre: null,
+    mood: 'neutral',
+    dominantClipType: 'video',
+    avgClipDuration: 5,
+    transitionDensity: 4,
+    ...overrides,
   };
 }
 
@@ -41,28 +57,55 @@ function makePreferences(overrides: Partial<UserPreference> = {}): UserPreferenc
 function makeTemplate(overrides: Partial<EditingTemplate> = {}): EditingTemplate {
   return {
     metadata: {
-      id: 'tpl-rec', version: '1.0', name: 'Test Template', description: '',
-      category: 'vlog', tags: [], author: 'test',
-      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      aspectRatio: '16:9', resolutionWidth: 1920, resolutionHeight: 1080,
-      frameRate: 30, estimatedDurationSec: 15, difficulty: 'beginner',
+      id: 'tpl-rec',
+      version: '1.0',
+      name: 'Test Template',
+      description: '',
+      category: 'vlog',
+      tags: [],
+      author: 'test',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      aspectRatio: '16:9',
+      resolutionWidth: 1920,
+      resolutionHeight: 1080,
+      frameRate: 30,
+      estimatedDurationSec: 15,
+      difficulty: 'beginner',
     },
-    tracks: [{
-      type: 'video', name: 'main',
-      clips: [{
-        type: 'video', durationSec: 5, flexibleDuration: true,
-        placeholder: 'user-video', placeholderParams: {},
-        effects: [], keyframes: [], colorNodes: [],
-        opacity: 1, speed: 1, volume: 1,
-      }],
-      transitions: [{ type: 'dissolve', durationSec: 0.5 }],
-      trackEffects: [], muted: false, locked: false,
-    }],
+    tracks: [
+      {
+        type: 'video',
+        name: 'main',
+        clips: [
+          {
+            type: 'video',
+            durationSec: 5,
+            flexibleDuration: true,
+            placeholder: 'user-video',
+            placeholderParams: {},
+            effects: [],
+            keyframes: [],
+            colorNodes: [],
+            opacity: 1,
+            speed: 1,
+            volume: 1,
+          },
+        ],
+        transitions: [{ type: 'dissolve', durationSec: 0.5 }],
+        trackEffects: [],
+        muted: false,
+        locked: false,
+      },
+    ],
     audioLayout: {
       tracks: [{ role: 'music', volumeDb: -18, pan: 0, fadeInSec: 0.5, fadeOutSec: 0.5 }],
-      masterLoudnessTarget: -14, masterLimiter: true,
+      masterLoudnessTarget: -14,
+      masterLimiter: true,
     },
-    globalColorNodes: [], variables: [], ...overrides,
+    globalColorNodes: [],
+    variables: [],
+    ...overrides,
   };
 }
 
@@ -77,7 +120,9 @@ describe('Template Recommender', () => {
 
     it('detects energetic mood from high cut rate', () => {
       const clips = Array.from({ length: 60 }, (_, i) => makeClip(`c${i}`, 1));
-      const project = makeProject({ timeline: { tracks: [{ id: 't1', type: 'video', name: 'V1', clips }], transitions: [] } });
+      const project = makeProject({
+        timeline: { tracks: [{ id: 't1', type: 'video', name: 'V1', clips }], transitions: [] },
+      });
       expect(extractProjectContentProfile(project).mood).toBe('energetic');
     });
 

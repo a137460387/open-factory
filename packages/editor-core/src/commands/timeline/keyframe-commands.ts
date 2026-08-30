@@ -1,10 +1,18 @@
-import type {TimelineAccessor} from './index';
-import {ClipboardKeyframeGroup, PasteMode, cloneClipKeyframes, createKeyframe, normalizeClipKeyframes, normalizePastedKeyframes, setKeyframeForProperty} from '../../keyframes';
-import {Keyframe, KeyframeEasing, KeyframeHandle, KeyframeHandleMode, KeyframeProperty, Timeline} from '../../model';
-import type {Clip} from '../../model';
-import {detectOverlap, replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {applySpeedKeyframeDuration, findClip, findTrack} from './utils';
+import type { TimelineAccessor } from './types';
+import {
+  ClipboardKeyframeGroup,
+  PasteMode,
+  cloneClipKeyframes,
+  createKeyframe,
+  normalizeClipKeyframes,
+  normalizePastedKeyframes,
+  setKeyframeForProperty,
+} from '../../keyframes';
+import { Keyframe, KeyframeEasing, KeyframeHandle, KeyframeHandleMode, KeyframeProperty, Timeline } from '../../model';
+import type { Clip } from '../../model';
+import { detectOverlap, replaceClip } from '../../timeline';
+import { Command } from '../command';
+import { applySpeedKeyframeDuration, findClip, findTrack } from './utils';
 
 export interface PasteKeyframesInput {
   groups: ClipboardKeyframeGroup[];

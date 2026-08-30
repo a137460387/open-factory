@@ -6,10 +6,7 @@ import {
   generateVideo,
 } from '../lib/tauri-bridge/ltx-video';
 import { useVideoGenQueueStore } from './video-gen-store';
-import {
-  saveTaskProgress,
-  deleteTaskProgress,
-} from '../lib/generation-history-db';
+import { saveTaskProgress, deleteTaskProgress } from '../lib/generation-history-db';
 import { updateVideoGenTaskStatus } from '../lib/tauri-bridge/video-gen';
 import type { LtxProgressPayload, LtxCompletedPayload } from '../hooks/useVideoGeneration';
 import { silentError } from '../lib/error-handlers';
@@ -40,9 +37,7 @@ export async function startVideoGenRunner(): Promise<void> {
         // Task has no outputPath → it was truly interrupted. Reset to queued.
         useVideoGenQueueStore.setState((s) => ({
           tasks: s.tasks.map((t) =>
-            t.id === task.id
-              ? { ...t, status: 'queued' as const, startedAt: null, stage: 'queued' }
-              : t,
+            t.id === task.id ? { ...t, status: 'queued' as const, startedAt: null, stage: 'queued' } : t,
           ),
           activeTaskId: s.activeTaskId === task.id ? null : s.activeTaskId,
         }));
@@ -59,9 +54,7 @@ export async function startVideoGenRunner(): Promise<void> {
           undefined,
           undefined,
           seq,
-        ).catch((e) =>
-          console.error('[video-gen-runner] reset running task failed:', e),
-        );
+        ).catch((e) => console.error('[video-gen-runner] reset running task failed:', e));
       }
     }
     // Clear activeTaskId if it was one of the running tasks

@@ -1,16 +1,51 @@
-import {AddKeyframeCommand, DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_MODE, DEFAULT_SUBTITLE_STYLE, DEFAULT_TRANSFORM, DEFAULT_PRIMARY_SEQUENCE_NAME, PRIMARY_SEQUENCE_ID, createProject, createTrack, createVideoFingerprint, type FfmpegExportPlan, type KeyframeProperty, type Clip, type DenoiseFilterRecommendation, type MediaAsset, type Project, type ProjectFileV2, createMulticamClip} from '@open-factory/editor-core';
-import {commandManager, timelineAccessor} from '../store/commandManager';
-import {useDialogStore} from '../store/dialogStore';
-import {collaborationController} from '../collaboration/local-network';
-import {useCollaborationStore} from '../store/collaborationStore';
-import {useEditorStore} from '../store/editorStore';
-import {usePrivacyDetectionSettingsStore} from '../store/privacyDetectionSettingsStore';
-import {useEditorSettingsStore} from '../store/editorSettingsStore';
-import {useAISettingsStore} from '../store/aiSettingsStore';
-import type {BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, PreviewWindowRequest, PreviewWindowResolutionScale, PreviewWindowState, SmtpEmailRequest, TauriMocks, TranslationApiProvider, WebhookJsonRequest, WebdavExportUploadRequest, WebdavProjectBackupRequest, WebdavTextPutRequest} from '../lib/tauri-bridge';
-import {clearPluginHookLog, getPluginHookLog, refreshPluginRegistry} from '../plugins/plugin-manager';
-import {useExportQueueStore} from '../export/export-queue-store';
-import {useMediaJobStore} from '../media/media-job-store';
+import {
+  AddKeyframeCommand,
+  DEFAULT_CLIP_SPEED,
+  DEFAULT_COLOR_CORRECTION,
+  DEFAULT_SUBTITLE_MODE,
+  DEFAULT_SUBTITLE_STYLE,
+  DEFAULT_TRANSFORM,
+  DEFAULT_PRIMARY_SEQUENCE_NAME,
+  PRIMARY_SEQUENCE_ID,
+  createProject,
+  createTrack,
+  createVideoFingerprint,
+  type FfmpegExportPlan,
+  type KeyframeProperty,
+  type Clip,
+  type DenoiseFilterRecommendation,
+  type MediaAsset,
+  type Project,
+  type ProjectFileV2,
+  createMulticamClip,
+} from '@open-factory/editor-core';
+import { commandManager, timelineAccessor } from '../store/commandManager';
+import { useDialogStore } from '../store/dialogStore';
+import { collaborationController } from '../collaboration/local-network';
+import { useCollaborationStore } from '../store/collaborationStore';
+import { useEditorStore } from '../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
+import { useEditorSettingsStore } from '../store/editorSettingsStore';
+import { useAISettingsStore } from '../store/aiSettingsStore';
+import type {
+  BatchTranscodeTaskResult,
+  ExportPreviewSamplesResult,
+  GifExportRequest,
+  GifPreviewRequest,
+  PreviewWindowRequest,
+  PreviewWindowResolutionScale,
+  PreviewWindowState,
+  SmtpEmailRequest,
+  TauriMocks,
+  TranslationApiProvider,
+  WebhookJsonRequest,
+  WebdavExportUploadRequest,
+  WebdavProjectBackupRequest,
+  WebdavTextPutRequest,
+} from '../lib/tauri-bridge';
+import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
+import { useExportQueueStore } from '../export/export-queue-store';
+import { useMediaJobStore } from '../media/media-job-store';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';
@@ -1971,10 +2006,7 @@ window.__E2E_ACTIONS__ = {
           id: 'track-video',
           type: 'video',
           name: 'Video 1',
-          clips: [
-            makeEditingVideoClip('clip-guard-a', 0, 2, 0, 6),
-            makeEditingVideoClip('clip-guard-b', 4, 2, 0, 6),
-          ],
+          clips: [makeEditingVideoClip('clip-guard-a', 0, 2, 0, 6), makeEditingVideoClip('clip-guard-b', 4, 2, 0, 6)],
         }),
         createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
         createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
@@ -1986,7 +2018,9 @@ window.__E2E_ACTIONS__ = {
       timeline,
       sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
       activeSequenceId: PRIMARY_SEQUENCE_ID,
-      clipGroups: [{ id: 'group-guard-1', name: 'Guard Group', clipIds: ['clip-guard-a', 'clip-guard-b'], color: 'blue' }],
+      clipGroups: [
+        { id: 'group-guard-1', name: 'Guard Group', clipIds: ['clip-guard-a', 'clip-guard-b'], color: 'blue' },
+      ],
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(3);
@@ -5416,8 +5450,7 @@ window.__E2E_ACTIONS__ = {
       return {
         angleCount: clip.angles.length,
         switchCount: clip.switchPoints.length,
-        switches:
-          clip.switchPoints.map((sp) => ({ time: sp.time, angleId: clip.angles[sp.targetAngle]?.id ?? '' })),
+        switches: clip.switchPoints.map((sp) => ({ time: sp.time, angleId: clip.angles[sp.targetAngle]?.id ?? '' })),
         activeAngle: clip.angles[clip.activeAngle]?.id,
         angles: clip.angles.map((a) => ({ id: a.id, name: a.name, offset: a.offset })),
       };

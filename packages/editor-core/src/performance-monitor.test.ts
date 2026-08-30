@@ -267,15 +267,21 @@ describe('performance-monitor', () => {
     });
 
     it('钳制 undoHistorySize 最小值', () => {
-      const config = normalizePerformanceMonitorConfig({ thresholds: { undoHistorySize: 1, memoryBytes: 100 * 1024 * 1024, renderFps: 30 } });
+      const config = normalizePerformanceMonitorConfig({
+        thresholds: { undoHistorySize: 1, memoryBytes: 100 * 1024 * 1024, renderFps: 30 },
+      });
       expect(config.thresholds.undoHistorySize).toBe(10);
     });
 
     it('钳制 renderFps 到 [1, 60] 范围', () => {
-      const low = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 0, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 } });
+      const low = normalizePerformanceMonitorConfig({
+        thresholds: { renderFps: 0, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 },
+      });
       expect(low.thresholds.renderFps).toBe(1);
 
-      const high = normalizePerformanceMonitorConfig({ thresholds: { renderFps: 120, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 } });
+      const high = normalizePerformanceMonitorConfig({
+        thresholds: { renderFps: 120, memoryBytes: 100 * 1024 * 1024, undoHistorySize: 500 },
+      });
       expect(high.thresholds.renderFps).toBe(60);
     });
   });

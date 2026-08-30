@@ -44,7 +44,10 @@ function getStack(): string {
   const err = new Error();
   const lines = err.stack?.split('\n') ?? [];
   // Skip first 3 lines (Error, this function, addEventListener wrapper)
-  return lines.slice(3, 8).map(l => l.trim()).join(' ← ');
+  return lines
+    .slice(3, 8)
+    .map((l) => l.trim())
+    .join(' ← ');
 }
 
 export function installEventListenerMonitor(): void {
@@ -111,7 +114,7 @@ export function reportLeakedListeners(): void {
   logger.warn(`[EventListenerMonitor] ${leaked.length} active listener(s) detected:`);
   // eslint-disable-next-line no-console
   console.table(
-    leaked.map(r => ({
+    leaked.map((r) => ({
       target: r.target,
       type: r.type,
       listener: r.listener,

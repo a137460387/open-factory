@@ -1,7 +1,7 @@
 import { distributeKeyframeTimes } from '../../keyframes';
 import { Clip, Keyframe, Timeline } from '../../model';
 import { round } from '../../time';
-import { BatchKeyframeEditOperation, KeyframeSelectionRef } from './keyframe-edit-commands';
+import type { BatchKeyframeEditOperation, KeyframeSelectionRef } from './types';
 import { findClip } from './utils';
 
 export function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[] {
@@ -44,7 +44,10 @@ export function keyframeRefKey(ref: KeyframeSelectionRef): string {
   return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
 }
 
-export function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeSelectionRef[]): Map<string, number> {
+export function calculateDistributedKeyframeTimeMap(
+  timeline: Timeline,
+  refs: KeyframeSelectionRef[],
+): Map<string, number> {
   const entries = refs.flatMap((ref) => {
     const clip = findClip(timeline, ref.clipId);
     const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
@@ -75,7 +78,11 @@ export function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: Ke
   return output;
 }
 
-export function getBatchAlignValue(timeline: Timeline, refs: KeyframeSelectionRef[], value: number | undefined): number {
+export function getBatchAlignValue(
+  timeline: Timeline,
+  refs: KeyframeSelectionRef[],
+  value: number | undefined,
+): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }

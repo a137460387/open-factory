@@ -69,7 +69,9 @@ function flushDirtyNotifies(): void {
 
 function subscribeRenderCounts(cb: () => void) {
   renderListeners.add(cb);
-  return () => { renderListeners.delete(cb); };
+  return () => {
+    renderListeners.delete(cb);
+  };
 }
 
 function getRenderCountsSnapshot(): ReadonlyMap<string, number> {
@@ -84,7 +86,12 @@ let rafId = 0;
 let fpsIntervalId: ReturnType<typeof setInterval> | 0 = 0;
 const fpsListeners = new Set<() => void>();
 let fpsVersion = 0;
-let cachedFpsSnapshot: { current: number; avg: number; min: number; history: number[] } = { current: 0, avg: 0, min: 0, history: [] };
+let cachedFpsSnapshot: { current: number; avg: number; min: number; history: number[] } = {
+  current: 0,
+  avg: 0,
+  min: 0,
+  history: [],
+};
 
 function fpsTick(now: number) {
   if (lastFrameTime > 0) {
@@ -132,7 +139,9 @@ function stopFpsMonitor() {
 
 function subscribeFps(cb: () => void) {
   fpsListeners.add(cb);
-  return () => { fpsListeners.delete(cb); };
+  return () => {
+    fpsListeners.delete(cb);
+  };
 }
 
 function getFpsSnapshot() {
@@ -188,7 +197,9 @@ export function clearSubscriptionLog(): void {
 
 function subscribeSubLog(cb: () => void) {
   subListeners.add(cb);
-  return () => { subListeners.delete(cb); };
+  return () => {
+    subListeners.delete(cb);
+  };
 }
 
 function getSubSnapshot() {
@@ -213,28 +224,18 @@ export interface PerfMonitorData {
 export function usePerfMonitor(): PerfMonitorData {
   const active = typeof __DEV_PERF_MONITOR__ !== 'undefined' && __DEV_PERF_MONITOR__;
 
-  const counts = useSyncExternalStore(
-    subscribeRenderCounts,
-    getRenderCountsSnapshot,
-    getRenderCountsSnapshot,
-  );
+  const counts = useSyncExternalStore(subscribeRenderCounts, getRenderCountsSnapshot, getRenderCountsSnapshot);
 
-  const fps = useSyncExternalStore(
-    subscribeFps,
-    getFpsSnapshot,
-    () => ({ current: 0, avg: 0, min: 0, history: [] }),
-  );
+  const fps = useSyncExternalStore(subscribeFps, getFpsSnapshot, () => ({ current: 0, avg: 0, min: 0, history: [] }));
 
-  const subs = useSyncExternalStore(
-    subscribeSubLog,
-    getSubSnapshot,
-    () => [],
-  );
+  const subs = useSyncExternalStore(subscribeSubLog, getSubSnapshot, () => []);
 
   useEffect(() => {
     if (!active) return;
     startFpsMonitor();
-    return () => { stopFpsMonitor(); };
+    return () => {
+      stopFpsMonitor();
+    };
   }, [active]);
 
   return {

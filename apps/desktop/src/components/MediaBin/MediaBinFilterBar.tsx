@@ -1,14 +1,22 @@
-import {Search, Sparkles} from 'lucide-react';
-import {CONTENT_SCENE_TYPES, type ContentSceneType, type MediaAsset, type MediaMetadata, type SmartAlbumId, type MediaMetadataFilter, collectSmartAlbums} from '@open-factory/editor-core';
-import {clsx} from 'clsx';
-import {zhCN} from '../../i18n/strings';
-import {AISemanticSearchPanel} from './AISemanticSearchPanel';
-import {AIMediaOrganizePanel} from './AIMediaOrganizePanel';
-import {AdvancedSearchPanel} from './AdvancedSearchPanel';
-import type {MediaCollection} from '@open-factory/editor-core';
-import type {MediaLibraryViewSettings} from '../../media/mediaLibraryView';
-import type {MediaBinView, QuickMediaFilter} from './useMediaBinState';
-import {MediaLibraryViewToolbar} from './MediaBinViewToolbar';
+import { Search, Sparkles } from 'lucide-react';
+import {
+  CONTENT_SCENE_TYPES,
+  type ContentSceneType,
+  type MediaAsset,
+  type MediaMetadata,
+  type SmartAlbumId,
+  type MediaMetadataFilter,
+  collectSmartAlbums,
+} from '@open-factory/editor-core';
+import { clsx } from 'clsx';
+import { zhCN } from '../../i18n/strings';
+import { AISemanticSearchPanel } from './AISemanticSearchPanel';
+import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
+import { AdvancedSearchPanel } from './AdvancedSearchPanel';
+import type { MediaCollection } from '@open-factory/editor-core';
+import type { MediaLibraryViewSettings } from '../../media/mediaLibraryView';
+import type { MediaBinView, QuickMediaFilter } from './useMediaBinState';
+import { MediaLibraryViewToolbar } from './MediaBinViewToolbar';
 
 export function MediaBinFilterBar({
   media,
@@ -81,7 +89,9 @@ export function MediaBinFilterBar({
           type="button"
           className={clsx(
             'absolute right-1 top-1 rounded-md px-1.5 py-1 text-xs font-semibold',
-            aiSearchMode ? 'bg-brand text-white' : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] hover:bg-panel',
+            aiSearchMode
+              ? 'bg-brand text-white'
+              : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] hover:bg-panel',
           )}
           onClick={() => onAiSearchModeChange(!aiSearchMode)}
           data-testid="ai-search-toggle"
@@ -94,7 +104,10 @@ export function MediaBinFilterBar({
       {aiSearchMode && (
         <AISemanticSearchPanel
           media={media}
-          onSelectMedia={() => { onAiSearchModeChange(false); onSearchChange(''); }}
+          onSelectMedia={() => {
+            onAiSearchModeChange(false);
+            onSearchChange('');
+          }}
         />
       )}
       {!aiSearchMode && (
@@ -136,7 +149,8 @@ export function MediaBinFilterBar({
                 data-testid={`media-filter-${item}`}
                 onClick={() => {
                   onFilterChange(item);
-                  if (item === 'tagged' || item === 'titles' || item === 'shared' || item === 'effects') onQuickFilterChange('all');
+                  if (item === 'tagged' || item === 'titles' || item === 'shared' || item === 'effects')
+                    onQuickFilterChange('all');
                   onSmartAlbumIdChange('none');
                 }}
               >
@@ -154,7 +168,9 @@ export function MediaBinFilterBar({
             >
               <option value="all">{zhCN.contentAnalysis.sceneFilterAll}</option>
               {CONTENT_SCENE_TYPES.map((sceneType) => (
-                <option key={sceneType} value={sceneType}>{zhCN.contentAnalysis.sceneTypeLabels[sceneType]}</option>
+                <option key={sceneType} value={sceneType}>
+                  {zhCN.contentAnalysis.sceneTypeLabels[sceneType]}
+                </option>
               ))}
             </select>
           </label>

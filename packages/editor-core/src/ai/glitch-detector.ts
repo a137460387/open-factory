@@ -49,9 +49,7 @@ export interface GlitchDetectionConfig {
 }
 
 /** Default configuration */
-export const DEFAULT_GLITCH_CONFIG: Required<
-  Pick<GlitchDetectionConfig, 'threshold' | 'frameRate'>
-> = {
+export const DEFAULT_GLITCH_CONFIG: Required<Pick<GlitchDetectionConfig, 'threshold' | 'frameRate'>> = {
   threshold: 0.3,
   frameRate: 30,
 };
@@ -81,11 +79,7 @@ export function validateGlitchConfig(config: GlitchDetectionConfig): string[] {
     errors.push('End time must be non-negative.');
   }
 
-  if (
-    config.startTime !== undefined &&
-    config.endTime !== undefined &&
-    config.endTime <= config.startTime
-  ) {
+  if (config.startTime !== undefined && config.endTime !== undefined && config.endTime <= config.startTime) {
     errors.push('End time must be greater than start time.');
   }
 
@@ -97,8 +91,7 @@ export function validateGlitchConfig(config: GlitchDetectionConfig): string[] {
  */
 export function withGlitchDefaults(
   config: GlitchDetectionConfig,
-): Required<Pick<GlitchDetectionConfig, 'path' | 'threshold' | 'frameRate'>> &
-  Partial<GlitchDetectionConfig> {
+): Required<Pick<GlitchDetectionConfig, 'path' | 'threshold' | 'frameRate'>> & Partial<GlitchDetectionConfig> {
   return {
     ...config,
     threshold: config.threshold ?? DEFAULT_GLITCH_CONFIG.threshold,
@@ -110,10 +103,7 @@ export function withGlitchDefaults(
  * Group glitches by time proximity for timeline display.
  * Glitches within `windowSeconds` of each other are grouped together.
  */
-export function groupGlitchesByProximity(
-  glitches: GlitchItem[],
-  windowSeconds = 2.0,
-): GlitchItem[][] {
+export function groupGlitchesByProximity(glitches: GlitchItem[], windowSeconds = 2.0): GlitchItem[][] {
   if (glitches.length === 0) return [];
 
   const sorted = [...glitches].sort((a, b) => a.time - b.time);

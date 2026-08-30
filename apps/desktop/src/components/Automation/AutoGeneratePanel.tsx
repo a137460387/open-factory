@@ -1,11 +1,11 @@
-import {useState, useCallback, useMemo} from 'react';
-import type {AnalysisReport, AutoEditResult, AutoEditProgress, AutoEditorConfig} from '@open-factory/editor-core';
-import {TemplateManager, BUILTIN_EDIT_TEMPLATES, createDefaultAutoEditorConfig} from '@open-factory/editor-core';
-import {Wand2, ChevronDown, CheckCircle, Loader2, Film, Settings2} from 'lucide-react';
-import {cn} from '../../lib/utils';
-import {Button} from '../ui/button';
-import {Label} from '../ui/label';
-import {useAutomationWorker} from '../../hooks/useAutomationWorker';
+import { useState, useCallback, useMemo } from 'react';
+import type { AnalysisReport, AutoEditResult, AutoEditProgress, AutoEditorConfig } from '@open-factory/editor-core';
+import { TemplateManager, BUILTIN_EDIT_TEMPLATES, createDefaultAutoEditorConfig } from '@open-factory/editor-core';
+import { Wand2, ChevronDown, CheckCircle, Loader2, Film, Settings2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { useAutomationWorker } from '../../hooks/useAutomationWorker';
 
 /* ------------------------------------------------------------------ */
 /*  一键生成面板                                                        */

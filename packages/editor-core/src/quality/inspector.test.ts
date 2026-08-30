@@ -19,12 +19,7 @@ import {
   runQualityInspection,
 } from './inspector';
 
-import type {
-  FrameAnalysis,
-  AudioAnalysis,
-  SceneTransition,
-  InspectorConfig,
-} from './types';
+import type { FrameAnalysis, AudioAnalysis, SceneTransition, InspectorConfig } from './types';
 
 import { DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS } from './types';
 
@@ -38,7 +33,7 @@ describe('Quality Inspector', () => {
     it('should not detect bright frame as black', () => {
       const pixels = new Uint8ClampedArray(100 * 4);
       for (let i = 0; i < pixels.length; i += 4) {
-        pixels[i] = 200;     // R
+        pixels[i] = 200; // R
         pixels[i + 1] = 200; // G
         pixels[i + 2] = 200; // B
         pixels[i + 3] = 255; // A

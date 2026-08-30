@@ -11,7 +11,9 @@ import { generateSemanticRoughCutSuggestions, type SemanticRoughCutSuggestion } 
 
 // ── Fixture ─────────────────────────────────────────────────
 
-function makeMarker(overrides: Partial<NarrativeMarker> & { time: number; type: NarrativeMarker['type'] }): NarrativeMarker {
+function makeMarker(
+  overrides: Partial<NarrativeMarker> & { time: number; type: NarrativeMarker['type'] },
+): NarrativeMarker {
   return {
     confidence: 0.7,
     description: '重点内容',

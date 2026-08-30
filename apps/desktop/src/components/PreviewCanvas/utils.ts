@@ -1,11 +1,21 @@
-import type {CSSProperties} from 'react';
-import type {CanvasPoint, CanvasTransformHandle, ChromaKeyColor, Clip, ClipTransformBox, PathPoint, PathPointHandle, Project, Timeline} from '@open-factory/editor-core';
-import {buildClipTransformBox, getRenderableTracks, isPathMaskClosed} from '@open-factory/editor-core';
-import type {EditableCanvasClip, PreviewPixelRead} from './types';
-import {PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT} from './types';
-import type {PreviewPixelCoordinates} from '../../lib/preview/frame-inspector';
-import {calculatePreviewPixelCoordinates, rgbToHsl, rgbToHex} from '../../lib/preview/frame-inspector';
-import type {FrameInspectorSample} from './types';
+import type { CSSProperties } from 'react';
+import type {
+  CanvasPoint,
+  CanvasTransformHandle,
+  ChromaKeyColor,
+  Clip,
+  ClipTransformBox,
+  PathPoint,
+  PathPointHandle,
+  Project,
+  Timeline,
+} from '@open-factory/editor-core';
+import { buildClipTransformBox, getRenderableTracks, isPathMaskClosed } from '@open-factory/editor-core';
+import type { EditableCanvasClip, PreviewPixelRead } from './types';
+import { PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT } from './types';
+import type { PreviewPixelCoordinates } from '../../lib/preview/frame-inspector';
+import { calculatePreviewPixelCoordinates, rgbToHsl, rgbToHex } from '../../lib/preview/frame-inspector';
+import type { FrameInspectorSample } from './types';
 
 export function readPreviewCanvasPixel(
   canvas: HTMLCanvasElement,
@@ -378,7 +388,9 @@ export function waitForIdleFrame(): Promise<void> {
   });
 }
 
-export function getAdaptiveQualityIndicatorClass(status: ReturnType<typeof import('../../lib/preview/preview-performance').getPreviewAdaptiveQualityStatus>): string {
+export function getAdaptiveQualityIndicatorClass(
+  status: ReturnType<typeof import('../../lib/preview/preview-performance').getPreviewAdaptiveQualityStatus>,
+): string {
   if (status === 'degraded') {
     return 'bg-amber-400';
   }
@@ -408,10 +420,12 @@ export function buildFrameSearchCandidates(project: Project, query: string): imp
       .map((c): import('./types').FrameSearchCandidate => ({ id: c.id, type: 'clip', label: c.name, time: c.start })),
   );
   return [...markerCandidates, ...clipCandidates]
-    .sort((l, r) =>
-      (l.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) -
-      (r.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) ||
-      l.time - r.time || l.label.localeCompare(r.label),
+    .sort(
+      (l, r) =>
+        (l.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) -
+          (r.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1) ||
+        l.time - r.time ||
+        l.label.localeCompare(r.label),
     )
     .slice(0, 8);
 }

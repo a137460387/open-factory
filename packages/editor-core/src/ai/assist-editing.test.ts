@@ -598,9 +598,7 @@ describe('buildAssistEditingUserPrompt', () => {
 
   it('includes scene details', () => {
     const analysis: ContentAnalysisResult = {
-      scenes: [
-        { startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'exciting scene' },
-      ],
+      scenes: [{ startTime: 0, endTime: 5, sceneType: 'action', confidence: 0.9, description: 'exciting scene' }],
       emotionCurve: [0.8],
       rhythmProfile: { bpm: 120, beatTimes: [0, 0.5], energyCurve: [], tempoChanges: [{ time: 2, bpm: 140 }] },
       speakerSegments: [{ startTime: 0, endTime: 5, speakerId: 'sp1', text: 'hello world', emotion: 'neutral' }],

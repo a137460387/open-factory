@@ -123,11 +123,13 @@ describe('LocalInferenceProvider', () => {
 
   it('infer throws when not initialized', async () => {
     const provider = new LocalInferenceProvider();
-    await expect(provider.infer('asr', {
-      shape: [10],
-      dtype: 'float32',
-      data: new Float32Array(10).buffer,
-    })).rejects.toThrow('not ready');
+    await expect(
+      provider.infer('asr', {
+        shape: [10],
+        dtype: 'float32',
+        data: new Float32Array(10).buffer,
+      }),
+    ).rejects.toThrow('not ready');
   });
 
   it('destroy resets state', async () => {

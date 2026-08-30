@@ -220,7 +220,6 @@ export function TextField({
   );
 }
 
-
 function CustomShaderEffectFields({
   effect,
   onUpdate,
@@ -535,7 +534,6 @@ function formatNumberInputValue(value: number): string {
   return String(Number(value.toFixed(3)));
 }
 
-
 export function RangeNumberField({
   label,
   value,
@@ -611,7 +609,6 @@ export function RangeNumberField({
     </label>
   );
 }
-
 
 export function ColorField({
   label,

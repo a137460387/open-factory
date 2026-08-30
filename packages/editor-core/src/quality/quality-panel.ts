@@ -4,18 +4,19 @@
  * Manages inspection state, progress tracking, and result presentation
  */
 
-import type {QualityReport, InspectorQualityIssue, InspectorConfig, IssueSeverity, IssueCategory} from '../quality/types';
+import type {
+  QualityReport,
+  InspectorQualityIssue,
+  InspectorConfig,
+  IssueSeverity,
+  IssueCategory,
+} from '../quality/types';
 
-import {DEFAULT_INSPECTOR_CONFIG} from '../quality/types';
+import { DEFAULT_INSPECTOR_CONFIG } from '../quality/types';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type QualityPanelPhase =
-  | 'idle'
-  | 'configuring'
-  | 'inspecting'
-  | 'complete'
-  | 'error';
+export type QualityPanelPhase = 'idle' | 'configuring' | 'inspecting' | 'complete' | 'error';
 
 export interface QualityPanelState {
   /** Current phase */
@@ -71,10 +72,7 @@ export type QualityPanelAction =
 /**
  * Pure state reducer for the quality inspection panel
  */
-export function qualityPanelReducer(
-  state: QualityPanelState,
-  action: QualityPanelAction,
-): QualityPanelState {
+export function qualityPanelReducer(state: QualityPanelState, action: QualityPanelAction): QualityPanelState {
   switch (action.type) {
     case 'START_INSPECTION':
       return {

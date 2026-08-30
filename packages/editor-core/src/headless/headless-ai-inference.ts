@@ -99,19 +99,18 @@ export async function detectAvailableProviders(): Promise<InferenceProvider[]> {
 
   try {
     // Try ONNX Runtime Node.js (optional dependency)
-     
+
     const ort = await import(/* webpackIgnore: true */ 'onnxruntime-node' as string);
     if (ort) {
       providers.unshift('onnx-cpu');
 
       // Check for CUDA support
       try {
-         
         const session = await ort.InferenceSession.create('', {
           executionProviders: ['cuda'],
         });
         providers.unshift('onnx-cuda');
-         
+
         await session.release();
       } catch {
         // CUDA not available, CPU-only
@@ -157,21 +156,19 @@ export async function createOnnxSession(
 ): Promise<OnnxSession | null> {
   try {
     // Dynamic import — onnxruntime-node is an optional dependency
-     
+
     const ort = await import(/* webpackIgnore: true */ 'onnxruntime-node' as string);
-     
+
     const session = await ort.InferenceSession.create(modelPath, {
       executionProviders: [provider],
     });
 
     return {
       async run(feeds: Record<string, unknown>) {
-         
         const results = await session.run(feeds);
         return results as Record<string, unknown>;
       },
       async release() {
-         
         await session.release();
       },
     };
@@ -186,9 +183,7 @@ export async function createOnnxSession(
  * Heuristic scene detection based on frame differences.
  * Used when ONNX Runtime is not available.
  */
-export function heuristicSceneDetection(
-  input: SceneDetectionInput,
-): SceneDetectionOutput {
+export function heuristicSceneDetection(input: SceneDetectionInput): SceneDetectionOutput {
   const scenes: SceneDetectionOutput['scenes'] = [];
 
   if (input.frames.length < 2) {
@@ -263,16 +258,18 @@ function calculateFrameDifference(a: Uint8Array, b: Uint8Array): number {
 /**
  * Heuristic quality assessment based on technical metrics.
  */
-export function heuristicQualityAssessment(
-  input: QualityAssessmentInput,
-): QualityAssessmentOutput {
+export function heuristicQualityAssessment(input: QualityAssessmentInput): QualityAssessmentOutput {
   const issues: QualityAssessmentOutput['issues'] = [];
   const recommendations: string[] = [];
   let score = 100;
 
   // Resolution check
   if (input.width < 1280 || input.height < 720) {
-    issues.push({ severity: 'warning', code: 'LOW_RESOLUTION', message: `Resolution ${input.width}x${input.height} below HD` });
+    issues.push({
+      severity: 'warning',
+      code: 'LOW_RESOLUTION',
+      message: `Resolution ${input.width}x${input.height} below HD`,
+    });
     score -= 15;
     recommendations.push('Consider rendering at 1920x1080 or higher');
   } else if (input.width >= 3840) {
@@ -283,7 +280,11 @@ export function heuristicQualityAssessment(
   const bitrateMbps = input.bitrate / 1_000_000;
   const expectedBitrate = input.width >= 3840 ? 20 : input.width >= 1920 ? 8 : 4;
   if (bitrateMbps < expectedBitrate * 0.5) {
-    issues.push({ severity: 'warning', code: 'LOW_BITRATE', message: `Bitrate ${bitrateMbps.toFixed(1)} Mbps may be too low` });
+    issues.push({
+      severity: 'warning',
+      code: 'LOW_BITRATE',
+      message: `Bitrate ${bitrateMbps.toFixed(1)} Mbps may be too low`,
+    });
     score -= 10;
   }
 
@@ -295,11 +296,19 @@ export function heuristicQualityAssessment(
 
   // Loudness check
   if (input.loudnessIntegrated > -14) {
-    issues.push({ severity: 'warning', code: 'LOUDNESS_HIGH', message: `Loudness ${input.loudnessIntegrated} LUFS exceeds -14 LUFS` });
+    issues.push({
+      severity: 'warning',
+      code: 'LOUDNESS_HIGH',
+      message: `Loudness ${input.loudnessIntegrated} LUFS exceeds -14 LUFS`,
+    });
     score -= 10;
   }
   if (input.loudnessTruePeak > -1) {
-    issues.push({ severity: 'critical', code: 'TRUE_PEAK_CLIPPING', message: `True peak ${input.loudnessTruePeak} dBTP risks clipping` });
+    issues.push({
+      severity: 'critical',
+      code: 'TRUE_PEAK_CLIPPING',
+      message: `True peak ${input.loudnessTruePeak} dBTP risks clipping`,
+    });
     score -= 20;
   }
 
@@ -321,9 +330,7 @@ export function heuristicQualityAssessment(
 /**
  * Heuristic content analysis based on frame statistics.
  */
-export function heuristicContentAnalysis(
-  input: ContentAnalysisInput,
-): ContentAnalysisOutput {
+export function heuristicContentAnalysis(input: ContentAnalysisInput): ContentAnalysisOutput {
   if (input.frames.length === 0) {
     return { tags: [], mood: 'neutral', motionLevel: 'static', brightness: 0, contrast: 0 };
   }

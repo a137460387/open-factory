@@ -283,22 +283,28 @@ export function getAllPlatforms(): SocialPlatform[] {
   return ['bilibili', 'youtube', 'douyin', 'tiktok', 'xiaohongshu'];
 }
 
-export function buildFfmpegArgsForPreset(
-  preset: SocialMediaPreset,
-  inputPath: string,
-  outputPath: string,
-): string[] {
+export function buildFfmpegArgsForPreset(preset: SocialMediaPreset, inputPath: string, outputPath: string): string[] {
   const args = [
-    '-i', inputPath,
-    '-vf', `scale=${preset.width}:${preset.height}:force_original_aspect_ratio=decrease,pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2`,
-    '-c:v', preset.codec === 'h265' ? 'libx265' : 'libx264',
-    '-b:v', `${preset.videoBitrateKbps}k`,
-    '-maxrate', `${Math.round(preset.videoBitrateKbps * 1.5)}k`,
-    '-bufsize', `${preset.videoBitrateKbps * 2}k`,
-    '-c:a', 'aac',
-    '-b:a', `${preset.audioBitrateKbps}k`,
-    '-r', String(preset.fps),
-    '-movflags', '+faststart',
+    '-i',
+    inputPath,
+    '-vf',
+    `scale=${preset.width}:${preset.height}:force_original_aspect_ratio=decrease,pad=${preset.width}:${preset.height}:(ow-iw)/2:(oh-ih)/2`,
+    '-c:v',
+    preset.codec === 'h265' ? 'libx265' : 'libx264',
+    '-b:v',
+    `${preset.videoBitrateKbps}k`,
+    '-maxrate',
+    `${Math.round(preset.videoBitrateKbps * 1.5)}k`,
+    '-bufsize',
+    `${preset.videoBitrateKbps * 2}k`,
+    '-c:a',
+    'aac',
+    '-b:a',
+    `${preset.audioBitrateKbps}k`,
+    '-r',
+    String(preset.fps),
+    '-movflags',
+    '+faststart',
   ];
 
   if (preset.maxDurationSeconds) {
@@ -326,10 +332,7 @@ export function createCustomPreset(
   };
 }
 
-export function resolvePresetWithCustom(
-  preset: SocialMediaPreset,
-  custom?: UserCustomPreset,
-): SocialMediaPreset {
+export function resolvePresetWithCustom(preset: SocialMediaPreset, custom?: UserCustomPreset): SocialMediaPreset {
   if (!custom?.overrides) return preset;
   return { ...preset, ...custom.overrides, id: preset.id };
 }
@@ -337,7 +340,7 @@ export function resolvePresetWithCustom(
 export function estimateOutputFileSizeMb(preset: SocialMediaPreset, durationSeconds: number): number {
   const totalBitrateKbps = preset.videoBitrateKbps + preset.audioBitrateKbps;
   const bytesPerSecond = (totalBitrateKbps * 1000) / 8;
-  return Math.round((bytesPerSecond * durationSeconds) / (1024 * 1024) * 10) / 10;
+  return Math.round(((bytesPerSecond * durationSeconds) / (1024 * 1024)) * 10) / 10;
 }
 
 export function validateDurationForPlatform(

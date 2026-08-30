@@ -59,11 +59,7 @@ export class MediaSemaphore {
 
   /** Run a task, holding one slot until it settles. */
   run<T>(task: () => Promise<T> | T): Promise<T> {
-    return this.acquire().then((release) =>
-      Promise.resolve()
-        .then(task)
-        .finally(release),
-    );
+    return this.acquire().then((release) => Promise.resolve().then(task).finally(release));
   }
 
   private createRelease(): () => void {

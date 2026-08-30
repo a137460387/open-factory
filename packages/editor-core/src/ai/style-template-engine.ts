@@ -11,11 +11,30 @@
  * 4. User can customize variables before saving
  */
 
-import type {EditingTemplate, TemplateMetadata, TemplateTrack, TemplateClip, TemplateTransition, TemplateColorNode, TemplateAudioMix, TemplateAudioLayout, TemplateKeyframe, TemplateVariable, TemplateCategory} from '../models/template-schema';
-import {TEMPLATE_SCHEMA_VERSION} from '../models/template-schema';
-import type {StyleFingerprint, StyleRhythmProfile, ColorGradingStyle, AudioProcessingStyle, StyleTransitionPreference, EffectUsagePattern} from './style-analyzer';
-import {extractProjectStyle} from './style-analyzer';
-import type {Project} from '../model-types';
+import type {
+  EditingTemplate,
+  TemplateMetadata,
+  TemplateTrack,
+  TemplateClip,
+  TemplateTransition,
+  TemplateColorNode,
+  TemplateAudioMix,
+  TemplateAudioLayout,
+  TemplateKeyframe,
+  TemplateVariable,
+  TemplateCategory,
+} from '../models/template-schema';
+import { TEMPLATE_SCHEMA_VERSION } from '../models/template-schema';
+import type {
+  StyleFingerprint,
+  StyleRhythmProfile,
+  ColorGradingStyle,
+  AudioProcessingStyle,
+  StyleTransitionPreference,
+  EffectUsagePattern,
+} from './style-analyzer';
+import { extractProjectStyle } from './style-analyzer';
+import type { Project } from '../model-types';
 // ─── Style-to-Template Mapping ───────────────────────────────────
 
 /** Map style rhythm to template track structure */
@@ -169,10 +188,7 @@ export function generateTemplateFromStyle(
 ): EditingTemplate {
   const category = options?.category ?? inferCategory(fingerprint);
   const totalDuration = options?.totalDurationSec ?? 60;
-  const { trackCount, avgClipDuration, transitionDensity } = mapRhythmToTracks(
-    fingerprint.rhythm,
-    category,
-  );
+  const { trackCount, avgClipDuration, transitionDensity } = mapRhythmToTracks(fingerprint.rhythm, category);
 
   const clipCount = Math.max(3, Math.round(totalDuration / Math.max(avgClipDuration, 1)));
   const actualClipDuration = totalDuration / clipCount;
@@ -193,11 +209,7 @@ export function generateTemplateFromStyle(
   }));
 
   // Generate transitions
-  const transitions = mapTransitions(
-    fingerprint.transitions,
-    clipCount,
-    transitionDensity,
-  );
+  const transitions = mapTransitions(fingerprint.transitions, clipCount, transitionDensity);
 
   // Build tracks
   const tracks: TemplateTrack[] = [
@@ -291,9 +303,7 @@ export function saveProjectAsTemplate(
 
   const template = generateTemplateFromStyle(fingerprint, {
     ...options,
-    totalDurationSec: project.timeline.tracks
-      .flatMap((t) => t.clips)
-      .reduce((sum, c) => sum + c.duration, 0),
+    totalDurationSec: project.timeline.tracks.flatMap((t) => t.clips).reduce((sum, c) => sum + c.duration, 0),
   });
 
   return template;
@@ -330,10 +340,7 @@ function inferCategory(fp: StyleFingerprint): TemplateCategory {
   return 'custom';
 }
 
-function generateDefaultKeyframes(
-  _durationSec: number,
-  rhythm: StyleRhythmProfile,
-): TemplateKeyframe[] {
+function generateDefaultKeyframes(_durationSec: number, rhythm: StyleRhythmProfile): TemplateKeyframe[] {
   const keyframes: TemplateKeyframe[] = [];
 
   // Add fade-in keyframe for slow-paced content
@@ -355,10 +362,7 @@ function generateDefaultKeyframes(
   return keyframes;
 }
 
-function generateVariables(
-  category: TemplateCategory,
-  fingerprint: StyleFingerprint,
-): TemplateVariable[] {
+function generateVariables(category: TemplateCategory, fingerprint: StyleFingerprint): TemplateVariable[] {
   const vars: TemplateVariable[] = [
     {
       id: 'title',
@@ -389,11 +393,7 @@ function generateVariables(
   return vars;
 }
 
-function replacePlaceholders(
-  text: string,
-  varId: string,
-  value: string,
-): string {
+function replacePlaceholders(text: string, varId: string, value: string): string {
   return text.replace(new RegExp(`\\{\\{${escapeRegExp(varId)}\\}\\}`, 'g'), value);
 }
 

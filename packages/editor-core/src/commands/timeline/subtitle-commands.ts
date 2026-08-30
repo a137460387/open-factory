@@ -1,13 +1,19 @@
-import type {TimelineAccessor} from './index';
-import {Clip, DEFAULT_SUBTITLE_STYLE, SubtitleStyle, Timeline, Track, createTrack} from '../../model';
-import {SubtitleDataImportMode} from '../../subtitles/data-import';
-import {SubtitleProofreadingFix} from '../../subtitles/proofreading';
-import {SubtitleAlignmentOptions, SubtitleAlignmentReport, SubtitleTimingUpdate, calculateSubtitleAlignmentUpdates, calculateSubtitleShiftUpdates} from '../../subtitles/retiming';
-import {normalizeSubtitleStyleTemplateStyle} from '../../subtitles/style-templates';
-import {round} from '../../time';
-import {detectOverlap, removeClip, replaceClip} from '../../timeline';
-import {Command} from '../command';
-import {cloneCommandValue, findClip, findTrack, insertClip, timelineHasOverlaps} from './utils';
+import type { TimelineAccessor } from './types';
+import { Clip, DEFAULT_SUBTITLE_STYLE, SubtitleStyle, Timeline, Track, createTrack } from '../../model';
+import { SubtitleDataImportMode } from '../../subtitles/data-import';
+import { SubtitleProofreadingFix } from '../../subtitles/proofreading';
+import {
+  SubtitleAlignmentOptions,
+  SubtitleAlignmentReport,
+  SubtitleTimingUpdate,
+  calculateSubtitleAlignmentUpdates,
+  calculateSubtitleShiftUpdates,
+} from '../../subtitles/retiming';
+import { normalizeSubtitleStyleTemplateStyle } from '../../subtitles/style-templates';
+import { round } from '../../time';
+import { detectOverlap, removeClip, replaceClip } from '../../timeline';
+import { Command } from '../command';
+import { cloneCommandValue, findClip, findTrack, insertClip, timelineHasOverlaps } from './utils';
 
 export class AddSubtitleClipCommand implements Command {
   readonly description: string;

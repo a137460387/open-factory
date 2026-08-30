@@ -6,8 +6,8 @@
  * motion, scene types, dialogue detection) — no external API calls.
  */
 
-import type {MediaAsset, MediaMetadata} from './model-types';
-import type {ClipContentAnalysis, ContentSceneType} from './content-analysis';
+import type { MediaAsset, MediaMetadata } from './model-types';
+import type { ClipContentAnalysis, ContentSceneType } from './content-analysis';
 // ─── Types ──────────────────────────────────────────────
 
 export interface SceneTag {
@@ -98,15 +98,10 @@ export function generateAutoTagsBatch(
   contentAnalyses: Record<string, ClipContentAnalysis>,
   options?: AutoTagOptions,
 ): MediaTagSuggestion[] {
-  return assets.map((asset) =>
-    generateAutoTags(asset, contentAnalyses[asset.id], options),
-  );
+  return assets.map((asset) => generateAutoTags(asset, contentAnalyses[asset.id], options));
 }
 
-export function mergeAutoTagsWithExisting(
-  existing: string[],
-  autoTags: SceneTag[],
-): string[] {
+export function mergeAutoTagsWithExisting(existing: string[], autoTags: SceneTag[]): string[] {
   const merged = new Set(existing);
   for (const tag of autoTags) {
     merged.add(tag.tag);
@@ -117,9 +112,8 @@ export function mergeAutoTagsWithExisting(
 export function getTagsByCategory(tags: SceneTag[]): Record<string, SceneTag[]> {
   const categories: Record<string, SceneTag[]> = {};
   for (const tag of tags) {
-    const category = tag.source === 'ai-analysis' ? 'AI 分析'
-      : tag.source === 'audio-analysis' ? '音频分析'
-      : '内容启发';
+    const category =
+      tag.source === 'ai-analysis' ? 'AI 分析' : tag.source === 'audio-analysis' ? '音频分析' : '内容启发';
     if (!categories[category]) categories[category] = [];
     categories[category].push(tag);
   }
@@ -199,14 +193,8 @@ function generateAudioTags(analysis: ClipContentAnalysis): SceneTag[] {
   const tags: SceneTag[] = [];
 
   if (analysis.dialogueTurns.length > 0) {
-    const totalDialogueDuration = analysis.dialogueTurns.reduce(
-      (sum, t) => sum + (t.end - t.start),
-      0,
-    );
-    const segmentDuration = analysis.segments.reduce(
-      (sum, s) => sum + (s.end - s.start),
-      0,
-    );
+    const totalDialogueDuration = analysis.dialogueTurns.reduce((sum, t) => sum + (t.end - t.start), 0);
+    const segmentDuration = analysis.segments.reduce((sum, s) => sum + (s.end - s.start), 0);
     const dialogueRatio = segmentDuration > 0 ? totalDialogueDuration / segmentDuration : 0;
 
     if (dialogueRatio > 0.5) {

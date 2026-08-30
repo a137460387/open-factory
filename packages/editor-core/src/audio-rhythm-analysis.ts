@@ -181,10 +181,10 @@ export function calculateBandEnergies(
   const binFreq = sampleRate / fftSize;
   const bands: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
   const bandRanges: [number, number][] = [
-    [20, 60],     // sub-bass
-    [60, 250],    // bass
-    [250, 500],   // low-mid
-    [500, 2000],  // mid
+    [20, 60], // sub-bass
+    [60, 250], // bass
+    [250, 500], // low-mid
+    [500, 2000], // mid
     [2000, 4000], // high-mid
     [4000, 20000], // high
   ];
@@ -214,11 +214,7 @@ export function calculateBandEnergies(
 /**
  * Detect onsets from spectrum frames using spectral flux peaks.
  */
-export function detectOnsets(
-  spectrumFrames: SpectrumFrame[],
-  threshold: number,
-  minGapSeconds: number,
-): OnsetEvent[] {
+export function detectOnsets(spectrumFrames: SpectrumFrame[], threshold: number, minGapSeconds: number): OnsetEvent[] {
   if (spectrumFrames.length < 3) return [];
 
   const fluxes = spectrumFrames.map((f) => f.flux);
@@ -313,7 +309,7 @@ export function estimateTempo(onsets: OnsetEvent[], minBpm: number, maxBpm: numb
   for (let phase = 0; phase < bestInterval; phase += binWidth) {
     let score = 0;
     for (const onset of onsets) {
-      const beatPos = ((onset.time - phase) % bestInterval + bestInterval) % bestInterval;
+      const beatPos = (((onset.time - phase) % bestInterval) + bestInterval) % bestInterval;
       if (beatPos < binWidth * 2 || beatPos > bestInterval - binWidth * 2) {
         score += onset.strength;
       }
@@ -330,10 +326,7 @@ export function estimateTempo(onsets: OnsetEvent[], minBpm: number, maxBpm: numb
 /**
  * Generate beat timestamps from tempo estimate.
  */
-export function generateBeatTimes(
-  tempo: TempoEstimate,
-  duration: number,
-): number[] {
+export function generateBeatTimes(tempo: TempoEstimate, duration: number): number[] {
   if (!tempo || tempo.bpm <= 0) return [];
   const interval = 60 / tempo.bpm;
   const beats: number[] = [];
@@ -378,19 +371,44 @@ export function classifyRhythmPattern(onsets: OnsetEvent[]): RhythmPattern {
   const increasingRatio = increasingCount / Math.max(1, intervals.length - 1);
 
   if (decreasingRatio > 0.6) {
-    return { type: 'buildup', confidence: round(decreasingRatio), avgInterval: round(avgInterval), intervalVariance: round(variance) };
+    return {
+      type: 'buildup',
+      confidence: round(decreasingRatio),
+      avgInterval: round(avgInterval),
+      intervalVariance: round(variance),
+    };
   }
   if (increasingRatio > 0.6) {
-    return { type: 'breakdown', confidence: round(increasingRatio), avgInterval: round(avgInterval), intervalVariance: round(variance) };
+    return {
+      type: 'breakdown',
+      confidence: round(increasingRatio),
+      avgInterval: round(avgInterval),
+      intervalVariance: round(variance),
+    };
   }
   if (cv < 0.15) {
-    return { type: 'steady', confidence: round(1 - cv), avgInterval: round(avgInterval), intervalVariance: round(variance) };
+    return {
+      type: 'steady',
+      confidence: round(1 - cv),
+      avgInterval: round(avgInterval),
+      intervalVariance: round(variance),
+    };
   }
   if (cv < 0.4) {
-    return { type: 'syncopated', confidence: round(1 - cv * 2), avgInterval: round(avgInterval), intervalVariance: round(variance) };
+    return {
+      type: 'syncopated',
+      confidence: round(1 - cv * 2),
+      avgInterval: round(avgInterval),
+      intervalVariance: round(variance),
+    };
   }
 
-  return { type: 'irregular', confidence: round(cv), avgInterval: round(avgInterval), intervalVariance: round(variance) };
+  return {
+    type: 'irregular',
+    confidence: round(cv),
+    avgInterval: round(avgInterval),
+    intervalVariance: round(variance),
+  };
 }
 
 // ==================== Full Analysis Pipeline ====================
@@ -506,9 +524,11 @@ export function alignHighlightsWithRhythm(
   for (const t of visualTimes) allTimes.add(round(t, 4));
   for (const t of audioBeatTimes) allTimes.add(round(t, 4));
 
-  return [...allTimes].sort((a, b) => a - b).map((time) => {
-    const visualNearby = visualTimes.some((vt) => Math.abs(vt - time) <= toleranceSeconds);
-    const beatNearby = audioBeatTimes.some((bt) => Math.abs(bt - time) <= toleranceSeconds);
-    return { time, aligned: visualNearby && beatNearby, visualNearby, beatNearby };
-  });
+  return [...allTimes]
+    .sort((a, b) => a - b)
+    .map((time) => {
+      const visualNearby = visualTimes.some((vt) => Math.abs(vt - time) <= toleranceSeconds);
+      const beatNearby = audioBeatTimes.some((bt) => Math.abs(bt - time) <= toleranceSeconds);
+      return { time, aligned: visualNearby && beatNearby, visualNearby, beatNearby };
+    });
 }

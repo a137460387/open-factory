@@ -1,10 +1,10 @@
-import type {ClipMacro} from '../macros/clip-macros';
-import {getMacroSteps} from '../macros/clip-macros';
-import {zhCN} from '../i18n/strings';
-import {TIMELINE_SHORTCUT_DEFINITIONS} from '../shortcuts/timeline-shortcuts';
-import type {TimelineShortcutBindings} from '../shortcuts/timeline-shortcuts';
-import {MacroStepsEditor} from './MacroStepsEditor';
-import {useShortcutMacros} from './hooks/useShortcutMacros';
+import type { ClipMacro } from '../macros/clip-macros';
+import { getMacroSteps } from '../macros/clip-macros';
+import { zhCN } from '../i18n/strings';
+import { TIMELINE_SHORTCUT_DEFINITIONS } from '../shortcuts/timeline-shortcuts';
+import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
+import { MacroStepsEditor } from './MacroStepsEditor';
+import { useShortcutMacros } from './hooks/useShortcutMacros';
 
 interface ShortcutMacrosPanelProps {
   tab: 'shortcuts' | 'macros';
@@ -137,9 +137,7 @@ export function ShortcutMacrosPanel({
         </div>
       </div>
       {macros.length === 0 ? (
-        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">
-          {t.macros.empty}
-        </div>
+        <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.macros.empty}</div>
       ) : null}
       <div className="space-y-2">
         {macros.map((macro) => {
@@ -155,12 +153,8 @@ export function ShortcutMacrosPanel({
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-ink">{macro.name}</div>
-                  {macro.description ? (
-                    <div className="text-xs text-slate-500">{macro.description}</div>
-                  ) : null}
-                  <div className="mt-1 text-xs text-slate-500">
-                    {t.macros.stepCount(getMacroSteps(macro).length)}
-                  </div>
+                  {macro.description ? <div className="text-xs text-slate-500">{macro.description}</div> : null}
+                  <div className="mt-1 text-xs text-slate-500">{t.macros.stepCount(getMacroSteps(macro).length)}</div>
                   {hasConflict ? (
                     <div className="mt-1 text-xs font-medium text-rose-700">
                       {t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}
@@ -176,9 +170,7 @@ export function ShortcutMacrosPanel({
                     setCapturingMacroId(macro.id);
                   }}
                 >
-                  {capturingMacroId === macro.id
-                    ? t.shortcuts.pressKeys
-                    : (macro.shortcut ?? t.macros.bindShortcut)}
+                  {capturingMacroId === macro.id ? t.shortcuts.pressKeys : (macro.shortcut ?? t.macros.bindShortcut)}
                 </button>
                 <button
                   className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"

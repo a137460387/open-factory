@@ -14,13 +14,13 @@
  * Privacy: All analysis is local. Style fingerprints contain no media data.
  */
 
-import type {Clip, Timeline, Transition, TransitionType, Project} from '../model-types';
-import type {Effect, EffectType} from '../effects';
-import type {ColorCorrection} from '../model-types';
-import {normalizeColorCorrection} from '../model';
-import {round} from '../time';
-import {type StyleSummary, type NumericStyleStat} from '../style-transfer';
-import {clamp01} from '../utils/math';
+import type { Clip, Timeline, Transition, TransitionType, Project } from '../model-types';
+import type { Effect, EffectType } from '../effects';
+import type { ColorCorrection } from '../model-types';
+import { normalizeColorCorrection } from '../model';
+import { round } from '../time';
+import { type StyleSummary, type NumericStyleStat } from '../style-transfer';
+import { clamp01 } from '../utils/math';
 
 // ─── Style Fingerprint JSON Schema ──────────────────────────────
 
@@ -180,11 +180,7 @@ function calcNumericStat(values: readonly number[]): NumericStyleStat {
   return { mean, stddev: calcStddev(values, mean), count: values.length };
 }
 
-function buildHistogram(
-  values: readonly number[],
-  bins: number,
-  maxVal: number,
-): number[] {
+function buildHistogram(values: readonly number[], bins: number, maxVal: number): number[] {
   const histogram = new Array(bins).fill(0) as number[];
   const binWidth = maxVal / bins;
   for (const v of values) {
@@ -225,10 +221,7 @@ function extractTransitions(timeline: Timeline): StyleTransitionPreference[] {
 
 // ─── Rhythm Analysis ────────────────────────────────────────────
 
-function extractRhythm(
-  timeline: Timeline,
-  opts: Required<StyleExtractionOptions>,
-): StyleRhythmProfile {
+function extractRhythm(timeline: Timeline, opts: Required<StyleExtractionOptions>): StyleRhythmProfile {
   const allClips = getAllClips(timeline);
   const durations = allClips.map((c) => c.duration).filter((d) => d > 0);
 
@@ -250,9 +243,7 @@ function extractRhythm(
   const cutsPerMinute = totalDuration > 0 ? (durations.length / totalDuration) * 60 : 0;
 
   // Regularity: 1 - normalized stddev (clamped to 0-1)
-  const regularity = avgClipDurationSec > 0
-    ? Math.max(0, 1 - clipDurationStddev / avgClipDurationSec)
-    : 0;
+  const regularity = avgClipDurationSec > 0 ? Math.max(0, 1 - clipDurationStddev / avgClipDurationSec) : 0;
 
   const shortClipRatio = durations.filter((d) => d < 2).length / durations.length;
   const longClipRatio = durations.filter((d) => d > 10).length / durations.length;
@@ -342,23 +333,17 @@ function extractAudioProcessing(timeline: Timeline): AudioProcessingStyle {
     .filter((d) => d > 0);
 
   // Volume analysis
-  const volumes = allClips
-    .map((c) => ('volume' in c ? (c.volume as number) : 1))
-    .filter((v) => v >= 0);
+  const volumes = allClips.map((c) => ('volume' in c ? (c.volume as number) : 1)).filter((v) => v >= 0);
 
   // Crossfade detection: transitions between audio tracks
   const transitions = timeline.transitions ?? [];
   const crossfadeCount = transitions.filter((t) => t.duration > 0).length;
-  const crossfadeRatio = transitions.length > 0
-    ? round(crossfadeCount / transitions.length, 3)
-    : 0;
+  const crossfadeRatio = transitions.length > 0 ? round(crossfadeCount / transitions.length, 3) : 0;
 
   // Estimate music/speech ratio from track types
   const audioTracks = timeline.tracks.filter((t) => t.type === 'audio');
   const musicTracks = audioTracks.filter((t) => t.name.toLowerCase().includes('music'));
-  const musicSpeechRatio = audioTracks.length > 0
-    ? round(musicTracks.length / audioTracks.length, 3)
-    : 0.5;
+  const musicSpeechRatio = audioTracks.length > 0 ? round(musicTracks.length / audioTracks.length, 3) : 0.5;
 
   return {
     avgTargetLoudness: round(calcMean(volumes.map((v) => 20 * Math.log10(Math.max(v, 0.001)))), 1),
@@ -484,10 +469,7 @@ function generateId(): string {
 /**
  * Extract a style fingerprint from a single project.
  */
-export function extractProjectStyle(
-  project: Project,
-  options?: StyleExtractionOptions,
-): StyleFingerprint | null {
+export function extractProjectStyle(project: Project, options?: StyleExtractionOptions): StyleFingerprint | null {
   const opts = { ...DEFAULT_EXTRACTION_OPTIONS, ...options };
   const timeline = project.timeline;
   const allClips = getAllClips(timeline);
@@ -593,9 +575,7 @@ export function mergeStyleFingerprints(
       type: type as EffectType,
       totalCount: data.count,
       ratio: round(data.count / Math.max(totalEffects, 1), 3),
-      avgParams: Object.fromEntries(
-        Object.entries(data.params).map(([k, v]) => [k, round(calcMean(v), 3)]),
-      ),
+      avgParams: Object.fromEntries(Object.entries(data.params).map(([k, v]) => [k, round(calcMean(v), 3)])),
       typicallyEnabled: true,
     }))
     .sort((a, b) => b.totalCount - a.totalCount);
@@ -711,11 +691,13 @@ export function computeStyleSimilarity(a: StyleFingerprint, b: StyleFingerprint)
   const weights = { rhythm: 0.3, color: 0.3, transitions: 0.2, audio: 0.1, effects: 0.1 };
 
   // Rhythm similarity
-  const rhythmSim = 1 - Math.min(
-    Math.abs(a.rhythm.avgClipDurationSec - b.rhythm.avgClipDurationSec) /
-      Math.max(a.rhythm.avgClipDurationSec, b.rhythm.avgClipDurationSec, 1),
-    1,
-  );
+  const rhythmSim =
+    1 -
+    Math.min(
+      Math.abs(a.rhythm.avgClipDurationSec - b.rhythm.avgClipDurationSec) /
+        Math.max(a.rhythm.avgClipDurationSec, b.rhythm.avgClipDurationSec, 1),
+      1,
+    );
 
   // Color similarity
   const colorFields: Array<keyof Pick<ColorGradingStyle, 'brightness' | 'contrast' | 'saturation'>> = [
@@ -723,10 +705,11 @@ export function computeStyleSimilarity(a: StyleFingerprint, b: StyleFingerprint)
     'contrast',
     'saturation',
   ];
-  const colorSim = colorFields.reduce((sum, field) => {
-    const diff = Math.abs(a.colorGrading[field].mean - b.colorGrading[field].mean);
-    return sum + Math.max(0, 1 - diff / 100);
-  }, 0) / colorFields.length;
+  const colorSim =
+    colorFields.reduce((sum, field) => {
+      const diff = Math.abs(a.colorGrading[field].mean - b.colorGrading[field].mean);
+      return sum + Math.max(0, 1 - diff / 100);
+    }, 0) / colorFields.length;
 
   // Transition similarity (Jaccard on types)
   const aTypes = new Set(a.transitions.map((t) => t.type));
@@ -736,10 +719,8 @@ export function computeStyleSimilarity(a: StyleFingerprint, b: StyleFingerprint)
   const transSim = union > 0 ? intersection / union : 1;
 
   // Audio similarity
-  const audioSim = 1 - Math.min(
-    Math.abs(a.audioProcessing.avgTargetLoudness - b.audioProcessing.avgTargetLoudness) / 20,
-    1,
-  );
+  const audioSim =
+    1 - Math.min(Math.abs(a.audioProcessing.avgTargetLoudness - b.audioProcessing.avgTargetLoudness) / 20, 1);
 
   // Effect similarity
   const aEffectTypes = new Set(a.effects.map((e) => e.type));
@@ -801,19 +782,27 @@ function weightedMean(values: readonly number[], weights: readonly number[]): nu
   return values.reduce((sum, v, i) => sum + v * weights[i], 0) / totalWeight;
 }
 
-function mergeColorGrading(
-  fps: ReadonlyArray<StyleFingerprint>,
-): ColorGradingStyle {
+function mergeColorGrading(fps: ReadonlyArray<StyleFingerprint>): ColorGradingStyle {
   const weights = fps.map((f) => f.totalClipCount);
   const cg = (field: 'brightness' | 'contrast' | 'saturation' | 'hue'): NumericStyleStat => ({
-    mean: round(weightedMean(fps.map((f) => f.colorGrading[field].mean), weights), 2),
-    stddev: round(weightedMean(fps.map((f) => f.colorGrading[field].stddev), weights), 2),
+    mean: round(
+      weightedMean(
+        fps.map((f) => f.colorGrading[field].mean),
+        weights,
+      ),
+      2,
+    ),
+    stddev: round(
+      weightedMean(
+        fps.map((f) => f.colorGrading[field].stddev),
+        weights,
+      ),
+      2,
+    ),
     count: fps.reduce((s, f) => s + f.colorGrading[field].count, 0),
   });
 
-  const lutPaths = fps
-    .map((f) => f.colorGrading.preferredLutPath)
-    .filter((p): p is string => p !== null);
+  const lutPaths = fps.map((f) => f.colorGrading.preferredLutPath).filter((p): p is string => p !== null);
   const totalLutUsage = fps.reduce((s, f) => s + f.colorGrading.lutUsageRatio * f.totalClipCount, 0);
   const totalClips = fps.reduce((s, f) => s + f.totalClipCount, 0);
 
@@ -832,16 +821,50 @@ function mergeColorGrading(
   };
 }
 
-function mergeAudioProcessing(
-  fps: ReadonlyArray<StyleFingerprint>,
-): AudioProcessingStyle {
+function mergeAudioProcessing(fps: ReadonlyArray<StyleFingerprint>): AudioProcessingStyle {
   const weights = fps.map((f) => f.totalClipCount);
   return {
-    avgTargetLoudness: round(weightedMean(fps.map((f) => f.audioProcessing.avgTargetLoudness), weights), 1),
-    loudnessStddev: round(weightedMean(fps.map((f) => f.audioProcessing.loudnessStddev), weights), 1),
-    avgFadeInSec: round(weightedMean(fps.map((f) => f.audioProcessing.avgFadeInSec), weights), 3),
-    avgFadeOutSec: round(weightedMean(fps.map((f) => f.audioProcessing.avgFadeOutSec), weights), 3),
-    musicSpeechRatio: round(weightedMean(fps.map((f) => f.audioProcessing.musicSpeechRatio), weights), 3),
-    crossfadeRatio: round(weightedMean(fps.map((f) => f.audioProcessing.crossfadeRatio), weights), 3),
+    avgTargetLoudness: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.avgTargetLoudness),
+        weights,
+      ),
+      1,
+    ),
+    loudnessStddev: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.loudnessStddev),
+        weights,
+      ),
+      1,
+    ),
+    avgFadeInSec: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.avgFadeInSec),
+        weights,
+      ),
+      3,
+    ),
+    avgFadeOutSec: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.avgFadeOutSec),
+        weights,
+      ),
+      3,
+    ),
+    musicSpeechRatio: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.musicSpeechRatio),
+        weights,
+      ),
+      3,
+    ),
+    crossfadeRatio: round(
+      weightedMean(
+        fps.map((f) => f.audioProcessing.crossfadeRatio),
+        weights,
+      ),
+      3,
+    ),
   };
 }

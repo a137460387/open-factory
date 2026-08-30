@@ -44,7 +44,10 @@ export default function CollaborationPanel({ onClose }: CollaborationPanelProps)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="collaboration-panel">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      data-testid="collaboration-panel"
+    >
       <section className="grid max-h-[88vh] w-full max-w-2xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-md border border-line bg-white shadow-soft">
         <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
@@ -74,7 +77,10 @@ export default function CollaborationPanel({ onClose }: CollaborationPanelProps)
             <div className="space-y-2 rounded-md border border-line bg-panel p-3">
               <div className="flex items-center gap-2 text-xs text-slate-600">
                 <span className="font-medium">{t.sessionIdLabel}</span>
-                <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-ink" data-testid="collab-session-id">
+                <code
+                  className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-ink"
+                  data-testid="collab-session-id"
+                >
                   {sessionId}
                 </code>
               </div>
@@ -124,9 +130,14 @@ export default function CollaborationPanel({ onClose }: CollaborationPanelProps)
                     data-testid={`collab-user-${user.userId}`}
                   >
                     <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-ink">
-                      <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: user.color ?? '#38bdf8' }} />
+                      <span
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: user.color ?? '#38bdf8' }}
+                      />
                       {user.name}
-                      {user.userId === localUserId ? <span className="text-[10px] text-slate-400">({zhCN.collabPanel.online})</span> : null}
+                      {user.userId === localUserId ? (
+                        <span className="text-[10px] text-slate-400">({zhCN.collabPanel.online})</span>
+                      ) : null}
                     </span>
                     <span
                       className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700"

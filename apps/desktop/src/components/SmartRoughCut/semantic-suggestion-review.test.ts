@@ -35,10 +35,7 @@ describe('suggestionToSegments', () => {
   it('maps absolute timeline range to source range at speed=1 with zero trimStart', () => {
     // clip 占据时间线 [5, 20)，建议区间 [8, 12) → 源域 [3, 7)
     const clip = makeClip({ id: 'clip-1', start: 5, duration: 15 });
-    const segments = suggestionToSegments(
-      makeSuggestion({ timeRange: { start: 8, end: 12 } }),
-      clip,
-    );
+    const segments = suggestionToSegments(makeSuggestion({ timeRange: { start: 8, end: 12 } }), clip);
 
     expect(segments).toHaveLength(1);
     expect(segments[0].sourceStart).toBe(3);
@@ -49,10 +46,7 @@ describe('suggestionToSegments', () => {
   it('applies trimStart offset (source = trimStart + local)', () => {
     // clip 时间线 [0, 10)，trimStart=30 → 建议区间 [2, 5) → 源域 [32, 35)
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 10, trimStart: 30 });
-    const segments = suggestionToSegments(
-      makeSuggestion({ timeRange: { start: 2, end: 5 } }),
-      clip,
-    );
+    const segments = suggestionToSegments(makeSuggestion({ timeRange: { start: 2, end: 5 } }), clip);
 
     expect(segments[0].sourceStart).toBe(32);
     expect(segments[0].sourceEnd).toBe(35);
@@ -61,10 +55,7 @@ describe('suggestionToSegments', () => {
   it('scales by clip speed (source delta = absolute delta × speed)', () => {
     // speed=2：绝对区间宽 3s → 源域宽 6s；起点 = trimStart + local × 2
     const clip = makeClip({ id: 'clip-1', start: 10, duration: 5, trimStart: 100, speed: 2 });
-    const segments = suggestionToSegments(
-      makeSuggestion({ timeRange: { start: 12, end: 15 } }),
-      clip,
-    );
+    const segments = suggestionToSegments(makeSuggestion({ timeRange: { start: 12, end: 15 } }), clip);
 
     expect(segments[0].sourceStart).toBe(104);
     expect(segments[0].sourceEnd).toBe(110);
@@ -73,10 +64,7 @@ describe('suggestionToSegments', () => {
 
   it('passes suggestion confidence through to all score fields', () => {
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 10 });
-    const segments = suggestionToSegments(
-      makeSuggestion({ timeRange: { start: 2, end: 4 }, confidence: 0.85 }),
-      clip,
-    );
+    const segments = suggestionToSegments(makeSuggestion({ timeRange: { start: 2, end: 4 }, confidence: 0.85 }), clip);
 
     expect(segments[0].score).toBe(0.85);
     expect(segments[0].visualScore).toBe(0.85);
@@ -90,10 +78,7 @@ describe('buildSuggestionReviewModel', () => {
   it('builds before from clip trim window and after from suggestion range', () => {
     // clip trimStart=10、duration=8、speed=1 → before 源域 [10, 18)
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 8, trimStart: 10 });
-    const model = buildSuggestionReviewModel(
-      makeSuggestion({ timeRange: { start: 2, end: 6 } }),
-      clip,
-    );
+    const model = buildSuggestionReviewModel(makeSuggestion({ timeRange: { start: 2, end: 6 } }), clip);
 
     expect(model.before).toEqual({ start: 10, end: 18 });
     expect(model.after).toEqual({ start: 12, end: 16 });
@@ -106,10 +91,7 @@ describe('buildSuggestionReviewModel', () => {
     const base = { id: 'clip-1', start: 0, duration: 8 };
     const suggestion = makeSuggestion({ timeRange: { start: 2, end: 6 } });
     const speedOne = buildSuggestionReviewModel(suggestion, makeClip({ ...base, speed: 1 }));
-    const speedTwo = buildSuggestionReviewModel(
-      suggestion,
-      makeClip({ ...base, trimStart: 20, speed: 2 }),
-    );
+    const speedTwo = buildSuggestionReviewModel(suggestion, makeClip({ ...base, trimStart: 20, speed: 2 }));
 
     // 时间线上同为 4s/8s，保留比例与播放速率无关
     expect(speedTwo.retentionRatio).toBeCloseTo(speedOne.retentionRatio, 10);
@@ -120,10 +102,7 @@ describe('buildSuggestionReviewModel', () => {
   it('scales before window end by speed (trimEnd = trimStart + duration × speed)', () => {
     // duration=5、speed=2 → 源域覆盖宽 10s；trimStart=0 → before [0, 10)
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 5, speed: 2 });
-    const model = buildSuggestionReviewModel(
-      makeSuggestion({ timeRange: { start: 0, end: 2.5 } }),
-      clip,
-    );
+    const model = buildSuggestionReviewModel(makeSuggestion({ timeRange: { start: 0, end: 2.5 } }), clip);
 
     expect(model.before).toEqual({ start: 0, end: 10 });
     expect(model.after).toEqual({ start: 0, end: 5 });

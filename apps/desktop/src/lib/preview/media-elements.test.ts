@@ -54,9 +54,7 @@ describe('createVideoElement', () => {
   });
 
   it('代理就绪时优先使用代理路径', () => {
-    const video = createVideoElement(
-      makeAsset({ proxyStatus: 'ready', proxyPath: 'D:/cache/A_proxy.mp4' }),
-    );
+    const video = createVideoElement(makeAsset({ proxyStatus: 'ready', proxyPath: 'D:/cache/A_proxy.mp4' }));
 
     expect(video.src).toBe('d:/cache/A_proxy.mp4');
   });

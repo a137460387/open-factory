@@ -169,13 +169,15 @@ describe('trimExportHistory', () => {
   });
 
   it('keeps when under max', () => {
-    const snapshots: ExportResourceSnapshot[] = [{
-      exportId: 'e1',
-      startedAt: 0,
-      finishedAt: 0,
-      samples: [],
-      taskNames: [],
-    }];
+    const snapshots: ExportResourceSnapshot[] = [
+      {
+        exportId: 'e1',
+        startedAt: 0,
+        finishedAt: 0,
+        samples: [],
+        taskNames: [],
+      },
+    ];
     const result = trimExportHistory(snapshots);
     expect(result.length).toBe(1);
   });
@@ -183,7 +185,13 @@ describe('trimExportHistory', () => {
 
 describe('extractExportCurve', () => {
   it('returns empty for no samples', () => {
-    const snapshot: ExportResourceSnapshot = { exportId: 'e1', startedAt: 0, finishedAt: 100, samples: [], taskNames: [] };
+    const snapshot: ExportResourceSnapshot = {
+      exportId: 'e1',
+      startedAt: 0,
+      finishedAt: 100,
+      samples: [],
+      taskNames: [],
+    };
     expect(extractExportCurve(snapshot)).toEqual([]);
   });
 
@@ -203,13 +211,15 @@ describe('extractExportCurve', () => {
 
 describe('normalizeExportHistory', () => {
   it('delegates to trimExportHistory', () => {
-    const snapshots: ExportResourceSnapshot[] = [{
-      exportId: 'e1',
-      startedAt: 0,
-      finishedAt: 0,
-      samples: [],
-      taskNames: [],
-    }];
+    const snapshots: ExportResourceSnapshot[] = [
+      {
+        exportId: 'e1',
+        startedAt: 0,
+        finishedAt: 0,
+        samples: [],
+        taskNames: [],
+      },
+    ];
     expect(normalizeExportHistory(snapshots)).toEqual(snapshots);
   });
 });

@@ -1,5 +1,5 @@
-import {createId} from './model';
-import type {BookmarkGroup, BookmarkSortMode, TimelineBookmark} from './model-types';
+import { createId } from './model';
+import type { BookmarkGroup, BookmarkSortMode, TimelineBookmark } from './model-types';
 
 export const BOOKMARK_ANNOTATION_MAX_LENGTH = 50;
 export const BOOKMARK_GROUP_DEFAULT_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];

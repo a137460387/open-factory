@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   labelColorToHex,
   formatFrameRateLabel,
@@ -17,7 +17,7 @@ import {
   MEDIA_CARD_DRAG_MIME,
   SUBCLIP_DRAG_MIME,
 } from '../media-bin-utils';
-import type {MediaAsset} from '@open-factory/editor-core';
+import type { MediaAsset } from '@open-factory/editor-core';
 
 function makeAsset(overrides: Partial<MediaAsset> = {}): MediaAsset {
   return {
@@ -48,7 +48,7 @@ describe('media-bin-utils', () => {
 
     it('MEDIA_LABEL_COLOR_STYLES maps each key to a CSSProperties with backgroundColor', () => {
       for (const item of MEDIA_LABEL_COLORS) {
-        expect(MEDIA_LABEL_COLOR_STYLES[item.key]).toEqual({backgroundColor: item.value});
+        expect(MEDIA_LABEL_COLOR_STYLES[item.key]).toEqual({ backgroundColor: item.value });
       }
     });
 
@@ -58,7 +58,7 @@ describe('media-bin-utils', () => {
 
     it('TIMELINE_COLOR_STYLES maps each key', () => {
       for (const item of TIMELINE_COLORS) {
-        expect(TIMELINE_COLOR_STYLES[item.key]).toEqual({backgroundColor: item.value});
+        expect(TIMELINE_COLOR_STYLES[item.key]).toEqual({ backgroundColor: item.value });
       }
     });
   });
@@ -93,42 +93,42 @@ describe('media-bin-utils', () => {
 
   describe('formatMediaFormat', () => {
     it('shows type and extension for video', () => {
-      const asset = makeAsset({type: 'video', name: 'clip.mp4'});
+      const asset = makeAsset({ type: 'video', name: 'clip.mp4' });
       const result = formatMediaFormat(asset);
       expect(result).toContain('MP4');
     });
 
     it('shows type for audio without extension', () => {
-      const asset = makeAsset({type: 'audio', name: 'audiofile'});
+      const asset = makeAsset({ type: 'audio', name: 'audiofile' });
       expect(formatMediaFormat(asset)).toBeTruthy();
     });
 
     it('handles image type', () => {
-      const asset = makeAsset({type: 'image', name: 'photo.jpg'});
+      const asset = makeAsset({ type: 'image', name: 'photo.jpg' });
       expect(formatMediaFormat(asset)).toContain('JPG');
     });
   });
 
   describe('formatMediaResolution', () => {
     it('returns resolution for video', () => {
-      const asset = makeAsset({type: 'video', width: 1920, height: 1080});
+      const asset = makeAsset({ type: 'video', width: 1920, height: 1080 });
       expect(formatMediaResolution(asset)).toBe('1920 x 1080');
     });
 
     it('returns unavailable for audio', () => {
-      const asset = makeAsset({type: 'audio'});
+      const asset = makeAsset({ type: 'audio' });
       expect(formatMediaResolution(asset)).toBeTruthy();
     });
 
     it('returns unavailable when dimensions missing', () => {
-      const asset = makeAsset({type: 'video', width: undefined, height: undefined});
+      const asset = makeAsset({ type: 'video', width: undefined, height: undefined });
       expect(formatMediaResolution(asset)).toBeTruthy();
     });
   });
 
   describe('formatMediaColorProfile', () => {
     it('returns label when present', () => {
-      const asset = makeAsset({colorProfile: {label: 'sRGB'}} as any);
+      const asset = makeAsset({ colorProfile: { label: 'sRGB' } } as any);
       expect(formatMediaColorProfile(asset)).toBe('sRGB');
     });
 

@@ -68,10 +68,7 @@ describe('media job monitor', () => {
 
   it('setJobPriority updates a pending job priority and re-sorts the queue', () => {
     useMediaJobStore.setState({
-      jobs: [
-        makeJob('a', 'pending', '2026-06-15T10:00:00.000Z'),
-        makeJob('b', 'pending', '2026-06-15T10:00:01.000Z'),
-      ],
+      jobs: [makeJob('a', 'pending', '2026-06-15T10:00:00.000Z'), makeJob('b', 'pending', '2026-06-15T10:00:01.000Z')],
     });
 
     useMediaJobStore.getState().setJobPriority('b', 'high');
@@ -81,12 +78,14 @@ describe('media job monitor', () => {
   });
 
   it('enqueueWaveformJobsForMedia enqueues waveform jobs only for audio-bearing assets', () => {
-    useMediaJobStore.getState().enqueueWaveformJobsForMedia([
-      makeAsset('audio-1', 'audio'),
-      makeAsset('video-audio', 'video', true),
-      makeAsset('video-silent', 'video', false),
-      makeAsset('missing', 'audio', true, true),
-    ]);
+    useMediaJobStore
+      .getState()
+      .enqueueWaveformJobsForMedia([
+        makeAsset('audio-1', 'audio'),
+        makeAsset('video-audio', 'video', true),
+        makeAsset('video-silent', 'video', false),
+        makeAsset('missing', 'audio', true, true),
+      ]);
 
     const waveform = useMediaJobStore.getState().jobs.filter((job) => job.type === 'waveform');
     expect(waveform.map((job) => job.assetId)).toEqual(['audio-1', 'video-audio']);

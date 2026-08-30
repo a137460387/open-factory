@@ -32,7 +32,9 @@ vi.mock('../../../store/whisperSettingsStore', () => ({
 }));
 
 const mockReadTimelineInteractionSettings = vi.fn(() => Promise.resolve({}));
-const mockGetWhisperAvailability = vi.fn((_options: {executablePath?: string; modelPath?: string}) => Promise.resolve({ready: true}));
+const mockGetWhisperAvailability = vi.fn((_options: { executablePath?: string; modelPath?: string }) =>
+  Promise.resolve({ ready: true }),
+);
 const mockShowToast = vi.fn();
 
 vi.mock('../../../settings/appSettings', () => ({
@@ -40,7 +42,8 @@ vi.mock('../../../settings/appSettings', () => ({
 }));
 
 vi.mock('../../../lib/whisper', () => ({
-  getWhisperAvailability: (options: {executablePath?: string; modelPath?: string}) => mockGetWhisperAvailability(options),
+  getWhisperAvailability: (options: { executablePath?: string; modelPath?: string }) =>
+    mockGetWhisperAvailability(options),
 }));
 
 vi.mock('../../../lib/toast', () => ({
@@ -84,7 +87,10 @@ function makeEditorState(project: Project, overrides: Record<string, unknown> = 
 /** 双 clip 项目：c1(0,5) / c2(10,10) → timelineDuration = 22 */
 function makeTimelineProject(): Project {
   return makeProject({
-    tracks: [makeTrack({ id: 'track-1', clips: [makeClip({ id: 'c1', start: 0, duration: 5 })] }), makeTrack({ id: 'track-2', clips: [makeClip({ id: 'c2', start: 10, duration: 10 })] })],
+    tracks: [
+      makeTrack({ id: 'track-1', clips: [makeClip({ id: 'c1', start: 0, duration: 5 })] }),
+      makeTrack({ id: 'track-2', clips: [makeClip({ id: 'c2', start: 10, duration: 10 })] }),
+    ],
   }) as Project;
 }
 
@@ -173,7 +179,10 @@ describe('useTimelineState — 协作与节拍派生', () => {
     collaborationState = {
       enabled: true,
       userId: 'me',
-      users: [{ userId: 'me', name: 'me' }, { userId: 'other', name: 'other' }],
+      users: [
+        { userId: 'me', name: 'me' },
+        { userId: 'other', name: 'other' },
+      ],
       locks: [],
     };
     const { result } = renderHook(() => useTimelineState({}));
@@ -197,7 +206,10 @@ describe('useTimelineState — 协作与节拍派生', () => {
 
   it('activeBeatMarkerId 仅在播放且 playhead 命中节拍时返回', () => {
     const project = makeTimelineProject();
-    project.beatMarkers = [{ id: 'beat-1', time: 5 }, { id: 'beat-2', time: 8 }] as never;
+    project.beatMarkers = [
+      { id: 'beat-1', time: 5 },
+      { id: 'beat-2', time: 8 },
+    ] as never;
     editorState = makeEditorState(project, { isPlaying: false, playheadTime: 5 });
     const idle = renderHook(() => useTimelineState({}));
     expect(idle.result.current.activeBeatMarkerId).toBeUndefined();
@@ -418,16 +430,17 @@ describe('useTimelineState — 场景检测请求 effect', () => {
   it('无选中 clip 时弹 warning toast', () => {
     editorState = makeEditorState(makeTimelineProject());
     renderHook(() => useTimelineState({ sceneDetectionRequestId: 1 }));
-    expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'warning' }),
-    );
+    expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' }));
   });
 
   it('有选中 clip 时调用 openSceneDetection，同一请求 id 只处理一次', () => {
     const openSceneDetection = vi.fn();
     const handlerRefs = { current: { openSceneDetection } };
     editorState = makeEditorState(makeTimelineProject(), { selectedClipId: 'c1' });
-    const { rerender } = renderHook((props: { requestId: number }) => useTimelineState({ sceneDetectionRequestId: props.requestId, handlerRefs }), { initialProps: { requestId: 1 } });
+    const { rerender } = renderHook(
+      (props: { requestId: number }) => useTimelineState({ sceneDetectionRequestId: props.requestId, handlerRefs }),
+      { initialProps: { requestId: 1 } },
+    );
     expect(openSceneDetection).toHaveBeenCalledWith('c1');
 
     rerender({ requestId: 1 });
@@ -463,13 +476,17 @@ describe('useTimelineState — 异步设置加载', () => {
 
 describe('useTimelineState — heatmap', () => {
   it('heatmap 未启用时 segments 为空', async () => {
-    const { result } = renderHook(() => useTimelineState({ heatmap: { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' } }));
+    const { result } = renderHook(() =>
+      useTimelineState({ heatmap: { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' } }),
+    );
     expect(result.current.heatmapSegments).toEqual([]);
   });
 
   it('heatmap 启用时（无 Worker 环境）经 setTimeout 计算出 segments', async () => {
     vi.stubGlobal('Worker', undefined);
-    const { result } = renderHook(() => useTimelineState({ heatmap: { enabled: true, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' } }));
+    const { result } = renderHook(() =>
+      useTimelineState({ heatmap: { enabled: true, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' } }),
+    );
     await waitFor(() => expect(result.current.heatmapSegments.length).toBeGreaterThan(0), { timeout: 3000 });
   });
 });

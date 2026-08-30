@@ -2,10 +2,7 @@ import { round } from '../time';
 import { finiteOrDefault, normalizeOptionalHexColor } from '../math-utils';
 export { finiteOrDefault };
 import { isDefaultColorCurves, isNeutralThreeWayColor } from '../color-grading';
-import {
-  createId,
-  normalizeColorCorrection,
-} from './clip-normalize';
+import { createId, normalizeColorCorrection } from './clip-normalize';
 import {
   createTimelineMarker,
   createTimelineBookmark,

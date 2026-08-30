@@ -1,5 +1,13 @@
-import type {ExportSettings, Project} from '@open-factory/editor-core';
-import type {OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginHooks, PluginMessagePayload, PluginPermission} from '@open-factory/plugin-sdk';
+import type { ExportSettings, Project } from '@open-factory/editor-core';
+import type {
+  OpenFactoryPlugin,
+  OpenFactoryPluginManifest,
+  PluginHookName,
+  PluginHookPayloads,
+  PluginHooks,
+  PluginMessagePayload,
+  PluginPermission,
+} from '@open-factory/plugin-sdk';
 
 export type {
   OpenFactoryPlugin,
@@ -302,9 +310,11 @@ function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
       const result = runtime.invokeHook(hookName, payload);
       const timeout = new Promise<never>((_, reject) => {
         const timer = setTimeout(() => {
-          reject(new Error(
-            `PluginTimeoutError: "${runtime.plugin.name}" hook "${hookName}" exceeded ${PLUGIN_HOOK_TIMEOUT_MS}ms limit.`,
-          ));
+          reject(
+            new Error(
+              `PluginTimeoutError: "${runtime.plugin.name}" hook "${hookName}" exceeded ${PLUGIN_HOOK_TIMEOUT_MS}ms limit.`,
+            ),
+          );
         }, PLUGIN_HOOK_TIMEOUT_MS);
         // Prevent timer from keeping the process alive
         if (typeof timer === 'object' && 'unref' in timer) timer.unref();

@@ -6,7 +6,11 @@ export const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
 
-export function getExportRule(rules: ExportConditionRule[], id: string, fallback: ExportConditionRule): ExportConditionRule {
+export function getExportRule(
+  rules: ExportConditionRule[],
+  id: string,
+  fallback: ExportConditionRule,
+): ExportConditionRule {
   return rules.find((rule) => rule.id === id) ?? fallback;
 }
 

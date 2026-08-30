@@ -92,43 +92,36 @@ describe('validateUploadConfig', () => {
   });
 
   it('rejects empty title', () => {
-    const errors = validateUploadConfig(
-      makeUploadConfig({ metadata: makeMetadata({ title: '' }) }),
-      'youtube'
-    );
-    expect(errors.some(e => e.field === 'title')).toBe(true);
+    const errors = validateUploadConfig(makeUploadConfig({ metadata: makeMetadata({ title: '' }) }), 'youtube');
+    expect(errors.some((e) => e.field === 'title')).toBe(true);
   });
 
   it('rejects title exceeding max length', () => {
     const longTitle = 'x'.repeat(200);
-    const errors = validateUploadConfig(
-      makeUploadConfig({ metadata: makeMetadata({ title: longTitle }) }),
-      'youtube'
-    );
-    expect(errors.some(e => e.field === 'title')).toBe(true);
+    const errors = validateUploadConfig(makeUploadConfig({ metadata: makeMetadata({ title: longTitle }) }), 'youtube');
+    expect(errors.some((e) => e.field === 'title')).toBe(true);
   });
 
   it('rejects too many tags', () => {
     const tags = Array.from({ length: 20 }, (_, i) => `tag${i}`);
-    const errors = validateUploadConfig(
-      makeUploadConfig({ metadata: makeMetadata({ tags }) }),
-      'youtube'
-    );
+    const errors = validateUploadConfig(makeUploadConfig({ metadata: makeMetadata({ tags }) }), 'youtube');
     // YouTube allows up to 500 chars total, not count. But we check count too.
     // Actually YouTube limit is 500 chars total, our spec says maxTags: 500
     // Let's test with a platform that has a lower limit
-    expect(validateUploadConfig(
-      makeUploadConfig({ metadata: makeMetadata({ tags: Array.from({ length: 15 }, (_, i) => `tag${i}`) }) }),
-      'bilibili'
-    ).length).toBeGreaterThan(0);
+    expect(
+      validateUploadConfig(
+        makeUploadConfig({ metadata: makeMetadata({ tags: Array.from({ length: 15 }, (_, i) => `tag${i}`) }) }),
+        'bilibili',
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it('rejects tag exceeding max length', () => {
     const errors = validateUploadConfig(
       makeUploadConfig({ metadata: makeMetadata({ tags: ['a'.repeat(50)] }) }),
-      'youtube'
+      'youtube',
     );
-    expect(errors.some(e => e.field === 'tags')).toBe(true);
+    expect(errors.some((e) => e.field === 'tags')).toBe(true);
   });
 });
 
@@ -301,17 +294,17 @@ describe('validateMultiPlatformRequest', () => {
 
   it('rejects empty platforms', () => {
     const errors = validateMultiPlatformRequest({ ...validRequest, platforms: [] });
-    expect(errors.some(e => e.field === 'platforms')).toBe(true);
+    expect(errors.some((e) => e.field === 'platforms')).toBe(true);
   });
 
   it('rejects missing video path', () => {
     const errors = validateMultiPlatformRequest({ ...validRequest, videoPath: '' });
-    expect(errors.some(e => e.field === 'videoPath')).toBe(true);
+    expect(errors.some((e) => e.field === 'videoPath')).toBe(true);
   });
 
   it('rejects scheduled mode without time', () => {
     const errors = validateMultiPlatformRequest({ ...validRequest, mode: 'scheduled' });
-    expect(errors.some(e => e.field === 'scheduledAt')).toBe(true);
+    expect(errors.some((e) => e.field === 'scheduledAt')).toBe(true);
   });
 
   it('adapts and validates metadata per platform', () => {
@@ -328,7 +321,7 @@ describe('validateMultiPlatformRequest', () => {
       ...validRequest,
       metadata: makeMetadata({ title: '' }),
     });
-    expect(titleErrors.filter(e => e.field === 'title').length).toBeGreaterThan(0);
+    expect(titleErrors.filter((e) => e.field === 'title').length).toBeGreaterThan(0);
   });
 });
 

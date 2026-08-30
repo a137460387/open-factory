@@ -1,8 +1,11 @@
-import {Gauge} from 'lucide-react';
-import type {GpuPreviewMetrics} from '../../lib/preview/gpu-acceleration';
-import {getPreviewAdaptiveQualityStatus, type PreviewPerformanceSettings} from '../../lib/preview/preview-performance';
-import {getAdaptiveQualityIndicatorClass} from './utils';
-import {zhCN} from '../../i18n/strings';
+import { Gauge } from 'lucide-react';
+import type { GpuPreviewMetrics } from '../../lib/preview/gpu-acceleration';
+import {
+  getPreviewAdaptiveQualityStatus,
+  type PreviewPerformanceSettings,
+} from '../../lib/preview/preview-performance';
+import { getAdaptiveQualityIndicatorClass } from './utils';
+import { zhCN } from '../../i18n/strings';
 export interface PreviewEffectsProps {
   adaptiveIndicatorStatus: ReturnType<typeof getPreviewAdaptiveQualityStatus>;
   adaptiveIndicatorTitle: string;
@@ -18,9 +21,15 @@ export interface PreviewEffectsProps {
 
 export function PreviewEffects(props: PreviewEffectsProps) {
   const {
-    adaptiveIndicatorStatus, adaptiveIndicatorTitle, lowQualityPreview,
-    audioOnlyPreview, showGpuMetricsPanel, gpuPreviewMetrics,
-    gpuTextureMemoryLabel, effectivePreviewPerformance, adaptivePreviewState,
+    adaptiveIndicatorStatus,
+    adaptiveIndicatorTitle,
+    lowQualityPreview,
+    audioOnlyPreview,
+    showGpuMetricsPanel,
+    gpuPreviewMetrics,
+    gpuTextureMemoryLabel,
+    effectivePreviewPerformance,
+    adaptivePreviewState,
     previewPerformance,
   } = props;
   const t = zhCN.preview;
@@ -37,7 +46,10 @@ export function PreviewEffects(props: PreviewEffectsProps) {
         data-adaptive={previewPerformance.adaptiveEnabled === false ? 'false' : 'true'}
       />
       {lowQualityPreview ? (
-        <div className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white" data-testid="preview-simplified-effects-hint">
+        <div
+          className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white"
+          data-testid="preview-simplified-effects-hint"
+        >
           {audioOnlyPreview ? t.audioOnlyPreview : t.simplifiedEffects}
         </div>
       ) : null}
@@ -49,11 +61,30 @@ export function PreviewEffects(props: PreviewEffectsProps) {
           data-offscreen-active={gpuPreviewMetrics.offscreenWorkerActive ? 'true' : 'false'}
           data-draw-calls={gpuPreviewMetrics.drawCalls}
         >
-          <div className="flex items-center gap-2 text-xs font-semibold"><Gauge size={14} /><span>{t.gpuMetricsTitle}</span></div>
-          <div className="flex items-center justify-between gap-3"><span className="text-white/60">{t.gpuFrameTime}</span><span className="font-mono tabular-nums">{gpuPreviewMetrics.gpuFrameMs.toFixed(1)} ms</span></div>
-          <div className="flex items-center justify-between gap-3"><span className="text-white/60">{t.gpuTexturePool}</span><span className="font-mono tabular-nums">{gpuTextureMemoryLabel}</span></div>
-          <div className="flex items-center justify-between gap-3"><span className="text-white/60">{t.gpuDrawCalls}</span><span className="font-mono tabular-nums">{gpuPreviewMetrics.instancedDrawCalls}/{gpuPreviewMetrics.drawCalls}</span></div>
-          <div className="flex items-center justify-between gap-3"><span className="text-white/60">{t.gpuOffscreenWorker}</span><span className="font-mono tabular-nums">{gpuPreviewMetrics.offscreenWorkerSupported ? t.gpuOffscreenReady : t.gpuOffscreenFallback}</span></div>
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <Gauge size={14} />
+            <span>{t.gpuMetricsTitle}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white/60">{t.gpuFrameTime}</span>
+            <span className="font-mono tabular-nums">{gpuPreviewMetrics.gpuFrameMs.toFixed(1)} ms</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white/60">{t.gpuTexturePool}</span>
+            <span className="font-mono tabular-nums">{gpuTextureMemoryLabel}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white/60">{t.gpuDrawCalls}</span>
+            <span className="font-mono tabular-nums">
+              {gpuPreviewMetrics.instancedDrawCalls}/{gpuPreviewMetrics.drawCalls}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white/60">{t.gpuOffscreenWorker}</span>
+            <span className="font-mono tabular-nums">
+              {gpuPreviewMetrics.offscreenWorkerSupported ? t.gpuOffscreenReady : t.gpuOffscreenFallback}
+            </span>
+          </div>
         </div>
       ) : null}
     </>

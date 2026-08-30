@@ -1,5 +1,11 @@
-import type {MediaAsset, Timeline} from './model';
-import {calculateReframeCrop, resolveReframeDimensions, type ReframeCrop, type ReframeSettings, type TargetAspectRatio} from './reframe';
+import type { MediaAsset, Timeline } from './model';
+import {
+  calculateReframeCrop,
+  resolveReframeDimensions,
+  type ReframeCrop,
+  type ReframeSettings,
+  type TargetAspectRatio,
+} from './reframe';
 export const CUSTOM_ASPECT_RATIO_KEY = 'custom';
 export const BATCH_ASPECT_RATIO_OPTIONS = ['16:9', '9:16', '1:1', '4:5', '21:9', 'custom'] as const;
 export type BatchAspectRatioOption = (typeof BATCH_ASPECT_RATIO_OPTIONS)[number];

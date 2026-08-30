@@ -4,19 +4,27 @@
  * Manages real-time metrics, task analysis, and optimization recommendations.
  */
 
-import type {MonitorConfig, SystemMetrics, TaskMetrics, Bottleneck, OptimizationRecommendation} from '../performance/types';
+import type {
+  MonitorConfig,
+  SystemMetrics,
+  TaskMetrics,
+  Bottleneck,
+  OptimizationRecommendation,
+} from '../performance/types';
 
-import {DEFAULT_MONITOR_CONFIG} from '../performance/types';
+import { DEFAULT_MONITOR_CONFIG } from '../performance/types';
 
-import {collectSystemMetrics, detectBottlenecks, generateOptimizations, calculatePerformanceScore, checkThreshold} from '../performance/monitor';
+import {
+  collectSystemMetrics,
+  detectBottlenecks,
+  generateOptimizations,
+  calculatePerformanceScore,
+  checkThreshold,
+} from '../performance/monitor';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type PerformancePanelPhase =
-  | 'idle'
-  | 'monitoring'
-  | 'paused'
-  | 'error';
+export type PerformancePanelPhase = 'idle' | 'monitoring' | 'paused' | 'error';
 
 export interface PerformancePanelState {
   /** Current phase */
@@ -128,9 +136,7 @@ export function performancePanelReducer(
       return { ...state, tasks: [...state.tasks, action.task] };
 
     case 'UPDATE_TASK': {
-      const tasks = state.tasks.map((t) =>
-        t.taskId === action.taskId ? { ...t, ...action.updates } : t,
-      );
+      const tasks = state.tasks.map((t) => (t.taskId === action.taskId ? { ...t, ...action.updates } : t));
       return { ...state, tasks };
     }
 
@@ -168,11 +174,7 @@ export function performancePanelReducer(
 /**
  * Get metric status color based on thresholds
  */
-export function getMetricStatusColor(
-  value: number,
-  warning: number,
-  critical: number,
-): string {
+export function getMetricStatusColor(value: number, warning: number, critical: number): string {
   const status = checkThreshold(value, warning, critical);
   switch (status) {
     case 'critical':

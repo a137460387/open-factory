@@ -123,7 +123,25 @@ export const PLATFORM_SPECS: Record<PlatformId, PlatformSpec> = {
     maxTagLength: 30,
     maxVideoSizeBytes: 128 * 1024 * 1024 * 1024, // 128GB
     supportedFormats: ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm'],
-    categories: ['Film & Animation', 'Autos & Vehicles', 'Music', 'Pets & Animals', 'Sports', 'Short Movies', 'Travel & Events', 'Gaming', 'Videoblogging', 'People & Blogs', 'Comedy', 'Entertainment', 'News & Politics', 'Howto & Style', 'Education', 'Science & Technology', 'Nonprofits & Activism'],
+    categories: [
+      'Film & Animation',
+      'Autos & Vehicles',
+      'Music',
+      'Pets & Animals',
+      'Sports',
+      'Short Movies',
+      'Travel & Events',
+      'Gaming',
+      'Videoblogging',
+      'People & Blogs',
+      'Comedy',
+      'Entertainment',
+      'News & Politics',
+      'Howto & Style',
+      'Education',
+      'Science & Technology',
+      'Nonprofits & Activism',
+    ],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     uploadUrl: 'https://www.googleapis.com/upload/youtube/v3/videos',
@@ -137,7 +155,22 @@ export const PLATFORM_SPECS: Record<PlatformId, PlatformSpec> = {
     maxTagLength: 20,
     maxVideoSizeBytes: 8 * 1024 * 1024 * 1024, // 8GB
     supportedFormats: ['mp4', 'flv', 'avi', 'wmv', 'mov', 'webm', 'mkv', 'ts'],
-    categories: ['生活', '美食', '游戏', '知识', '影视', '娱乐', '动画', '音乐', '舞蹈', '科技', '运动', '汽车', '时尚', '动物圈'],
+    categories: [
+      '生活',
+      '美食',
+      '游戏',
+      '知识',
+      '影视',
+      '娱乐',
+      '动画',
+      '音乐',
+      '舞蹈',
+      '科技',
+      '运动',
+      '汽车',
+      '时尚',
+      '动物圈',
+    ],
     authUrl: 'https://account.bilibili.com/oauth2/authorize',
     tokenUrl: 'https://member.bilibili.com/x/oauth2/access_token',
     uploadUrl: 'https://member.bilibili.com/x/client/archive/upload',
@@ -197,10 +230,7 @@ export interface PublishValidationError {
 /**
  * Validate upload config against platform specs.
  */
-export function validateUploadConfig(
-  config: PlatformUploadConfig,
-  platform: PlatformId
-): PublishValidationError[] {
+export function validateUploadConfig(config: PlatformUploadConfig, platform: PlatformId): PublishValidationError[] {
   const spec = PLATFORM_SPECS[platform];
   const errors: PublishValidationError[] = [];
   const { metadata } = config;
@@ -232,19 +262,14 @@ export function validateUploadConfig(
  * Adapt metadata to platform-specific constraints.
  * Truncates fields, adjusts tags, etc.
  */
-export function adaptMetadataForPlatform(
-  metadata: PlatformVideoMetadata,
-  platform: PlatformId
-): PlatformVideoMetadata {
+export function adaptMetadataForPlatform(metadata: PlatformVideoMetadata, platform: PlatformId): PlatformVideoMetadata {
   const spec = PLATFORM_SPECS[platform];
 
   return {
     ...metadata,
     title: metadata.title.substring(0, spec.maxTitleLength),
     description: metadata.description.substring(0, spec.maxDescriptionLength),
-    tags: metadata.tags
-      .slice(0, spec.maxTags)
-      .map(tag => tag.substring(0, spec.maxTagLength)),
+    tags: metadata.tags.slice(0, spec.maxTags).map((tag) => tag.substring(0, spec.maxTagLength)),
   };
 }
 
@@ -312,12 +337,9 @@ const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
 /**
  * Build upload headers for a platform.
  */
-export function buildUploadHeaders(
-  token: PlatformAuthToken,
-  platform: PlatformId
-): Record<string, string> {
+export function buildUploadHeaders(token: PlatformAuthToken, platform: PlatformId): Record<string, string> {
   const headers: Record<string, string> = {
-    'Authorization': `Bearer ${token.accessToken}`,
+    Authorization: `Bearer ${token.accessToken}`,
   };
 
   if (platform === 'bilibili') {
@@ -332,7 +354,7 @@ export function buildUploadHeaders(
  */
 export function calculateChunks(
   totalBytes: number,
-  chunkSize: number
+  chunkSize: number,
 ): Array<{ start: number; end: number; index: number }> {
   const chunks: Array<{ start: number; end: number; index: number }> = [];
   let offset = 0;
@@ -386,9 +408,7 @@ export interface MultiPlatformPublishResult {
 /**
  * Validate a multi-platform publish request.
  */
-export function validateMultiPlatformRequest(
-  request: MultiPlatformPublishRequest
-): PublishValidationError[] {
+export function validateMultiPlatformRequest(request: MultiPlatformPublishRequest): PublishValidationError[] {
   const errors: PublishValidationError[] = [];
 
   if (request.platforms.length === 0) {
@@ -421,7 +441,7 @@ export function validateMultiPlatformRequest(
  */
 export function adaptMetadataForAllPlatforms(
   metadata: PlatformVideoMetadata,
-  platforms: PlatformId[]
+  platforms: PlatformId[],
 ): Map<PlatformId, PlatformVideoMetadata> {
   const result = new Map<PlatformId, PlatformVideoMetadata>();
   for (const platform of platforms) {

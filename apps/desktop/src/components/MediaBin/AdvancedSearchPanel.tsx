@@ -46,22 +46,24 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
     setResolutionRange,
     setDurationRange,
     setProjectPath,
-  } = useMediaIndexStore(useShallow((s) => ({
-    searchQuery: s.searchQuery,
-    isSearching: s.isSearching,
-    searchResults: s.searchResults,
-    allTags: s.allTags,
-    tagsLoading: s.tagsLoading,
-    setSearchQuery: s.setSearchQuery,
-    clearFilters: s.clearFilters,
-    refreshTags: s.refreshTags,
-    addTagFilter: s.addTagFilter,
-    removeTagFilter: s.removeTagFilter,
-    toggleAssetType: s.toggleAssetType,
-    setResolutionRange: s.setResolutionRange,
-    setDurationRange: s.setDurationRange,
-    setProjectPath: s.setProjectPath,
-  })));
+  } = useMediaIndexStore(
+    useShallow((s) => ({
+      searchQuery: s.searchQuery,
+      isSearching: s.isSearching,
+      searchResults: s.searchResults,
+      allTags: s.allTags,
+      tagsLoading: s.tagsLoading,
+      setSearchQuery: s.setSearchQuery,
+      clearFilters: s.clearFilters,
+      refreshTags: s.refreshTags,
+      addTagFilter: s.addTagFilter,
+      removeTagFilter: s.removeTagFilter,
+      toggleAssetType: s.toggleAssetType,
+      setResolutionRange: s.setResolutionRange,
+      setDurationRange: s.setDurationRange,
+      setProjectPath: s.setProjectPath,
+    })),
+  );
 
   const [expanded, setExpanded] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

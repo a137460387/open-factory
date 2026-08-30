@@ -1,10 +1,15 @@
-import React, {useCallback, useMemo} from 'react';
-import type {ColorGradingGraph, ColorGradingNode, PrimaryWheelParams, PrimarySliderParams} from '@open-factory/editor-core';
-import {createEmptyColorGradingGraph} from '@open-factory/editor-core';
-import {ColorWheelPanel} from './ColorWheelPanel';
-import {PrimarySlidersPanel} from './PrimarySlidersPanel';
-import {NodeGraphView} from './NodeGraphView';
-import {zhCN} from '../../i18n/strings';
+import React, { useCallback, useMemo } from 'react';
+import type {
+  ColorGradingGraph,
+  ColorGradingNode,
+  PrimaryWheelParams,
+  PrimarySliderParams,
+} from '@open-factory/editor-core';
+import { createEmptyColorGradingGraph } from '@open-factory/editor-core';
+import { ColorWheelPanel } from './ColorWheelPanel';
+import { PrimarySlidersPanel } from './PrimarySlidersPanel';
+import { NodeGraphView } from './NodeGraphView';
+import { zhCN } from '../../i18n/strings';
 
 interface ColorGradingWorkspaceProps {
   graph?: ColorGradingGraph;

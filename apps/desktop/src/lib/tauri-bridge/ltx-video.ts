@@ -2,10 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { getTauriMocks } from './mock-types';
 import { isTauriRuntime } from '../tauri';
-import type {
-  LtxProgressPayload,
-  LtxCompletedPayload,
-} from '../../hooks/useVideoGeneration';
+import type { LtxProgressPayload, LtxCompletedPayload } from '../../hooks/useVideoGeneration';
 import type { GpuInfo } from '../../hooks/useGpuDetect';
 import type {
   LocalModelInfo,
@@ -158,9 +155,7 @@ export function listenModelDownloadProgress(
     const unlisten = mock('model-download-progress', handler);
     return Promise.resolve(unlisten as unknown as UnlistenFn);
   }
-  return listen<ModelDownloadProgressPayload>('model-download-progress', (event) =>
-    handler(event.payload),
-  );
+  return listen<ModelDownloadProgressPayload>('model-download-progress', (event) => handler(event.payload));
 }
 
 export function listenModelDownloadCompleted(
@@ -171,7 +166,5 @@ export function listenModelDownloadCompleted(
     const unlisten = mock('model-download-completed', handler);
     return Promise.resolve(unlisten as unknown as UnlistenFn);
   }
-  return listen<ModelDownloadCompletedPayload>('model-download-completed', (event) =>
-    handler(event.payload),
-  );
+  return listen<ModelDownloadCompletedPayload>('model-download-completed', (event) => handler(event.payload));
 }

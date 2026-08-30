@@ -1,19 +1,26 @@
-import {lazy, Suspense, useMemo} from 'react';
-import type {Clip} from '@open-factory/editor-core';
-import {getTimelinePlaybackDuration, AddClipCommand} from '@open-factory/editor-core';
-import {ChevronRight} from 'lucide-react';
-import {ErrorBoundary} from '../common/ErrorBoundary';
-import {PanelLoading} from '../PanelLoading';
-import {CollapsedPanelRail} from '../CollapsedPanelRail';
-import {zhCN} from '../../i18n/strings';
-import {featureStrings} from '../../i18n/featureStrings';
-import {selectClipById, useEditorStore} from '../../store/editorStore';
-import {commandManager, timelineAccessor} from '../../store/commandManager';
-import {useLayoutSettings, useSetLayoutSettings, useViewportSize, useReviewMode, usePersistLayoutPatch, usePersistPanelVisibilityPatch} from '../../store/panelStore';
-import {useDialogStore} from '../../store/dialogStore';
-import {useTransitionStore} from '../../store/transitionStore';
-import {getEffectivePanelState} from '../../layout/layoutSettings';
-import {getReviewModeShellVisibility} from '../../review/reviewMode';
+import { lazy, Suspense, useMemo } from 'react';
+import type { Clip } from '@open-factory/editor-core';
+import { getTimelinePlaybackDuration, AddClipCommand } from '@open-factory/editor-core';
+import { ChevronRight } from 'lucide-react';
+import { ErrorBoundary } from '../common/ErrorBoundary';
+import { PanelLoading } from '../PanelLoading';
+import { CollapsedPanelRail } from '../CollapsedPanelRail';
+import { zhCN } from '../../i18n/strings';
+import { featureStrings } from '../../i18n/featureStrings';
+import { selectClipById, useEditorStore } from '../../store/editorStore';
+import { commandManager, timelineAccessor } from '../../store/commandManager';
+import {
+  useLayoutSettings,
+  useSetLayoutSettings,
+  useViewportSize,
+  useReviewMode,
+  usePersistLayoutPatch,
+  usePersistPanelVisibilityPatch,
+} from '../../store/panelStore';
+import { useDialogStore } from '../../store/dialogStore';
+import { useTransitionStore } from '../../store/transitionStore';
+import { getEffectivePanelState } from '../../layout/layoutSettings';
+import { getReviewModeShellVisibility } from '../../review/reviewMode';
 
 const AudioMixer = lazy(() => import('../AudioMixer/AudioMixer').then((m) => ({ default: m.AudioMixer })));
 const Inspector = lazy(() => import('../Inspector/Inspector').then((m) => ({ default: m.Inspector })));
@@ -170,26 +177,26 @@ export function ShellRightPanel() {
                     : videoGenerationOpen
                       ? 'AI Video Generation'
                       : narrationOpen
-                      ? zhCN.aiNarration.title
-                      : smartCreationOpen
-                        ? featureStrings.smartCreation.title
-                        : smartDistributionOpen
-                          ? '智能分发'
-                          : aiSubtitleWorkflowOpen
-                            ? zhCN.aiSubtitleWorkflow.title
-                            : smartRoughCutOpen
-                              ? zhCN.panels.smartRoughCut
-                              : transitionLibraryOpen
-                                ? zhCN.timeline.transitionPicker
-                                : assistEditingOpen
-                                  ? 'AI 辅助剪辑'
-                                  : contentGenerationOpen
-                                    ? 'AI 内容生成'
-                                    : qualityAssessmentOpen
-                                      ? 'AI 质量评估'
-                                      : automationOpen
-                                        ? '自动化工作流'
-                                        : zhCN.panels.inspector;
+                        ? zhCN.aiNarration.title
+                        : smartCreationOpen
+                          ? featureStrings.smartCreation.title
+                          : smartDistributionOpen
+                            ? '智能分发'
+                            : aiSubtitleWorkflowOpen
+                              ? zhCN.aiSubtitleWorkflow.title
+                              : smartRoughCutOpen
+                                ? zhCN.panels.smartRoughCut
+                                : transitionLibraryOpen
+                                  ? zhCN.timeline.transitionPicker
+                                  : assistEditingOpen
+                                    ? 'AI 辅助剪辑'
+                                    : contentGenerationOpen
+                                      ? 'AI 内容生成'
+                                      : qualityAssessmentOpen
+                                        ? 'AI 质量评估'
+                                        : automationOpen
+                                          ? '自动化工作流'
+                                          : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible

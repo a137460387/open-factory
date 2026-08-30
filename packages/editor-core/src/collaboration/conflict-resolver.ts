@@ -8,7 +8,7 @@
  * for stateful tracking and batch resolution.
  */
 
-import type {SharedTrack, SharedClip, SharedTransition} from './crdt-integration';
+import type { SharedTrack, SharedClip, SharedTransition } from './crdt-integration';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ export type VectorClock = Map<string, number>;
 export interface TimelineOperation {
   type: 'add' | 'update' | 'delete' | 'move';
   target: 'track' | 'clip' | 'transition';
-  data: Partial<SharedTrack> | Partial<SharedClip> | Partial<SharedTransition> & { id: string };
+  data: Partial<SharedTrack> | Partial<SharedClip> | (Partial<SharedTransition> & { id: string });
   timestamp: number;
   userId: string;
   vectorClock: VectorClock;
@@ -29,11 +29,7 @@ export interface TimelineOperation {
 export type ClockOrdering = 'before' | 'after' | 'concurrent';
 
 /** Resolution strategy for a conflict. */
-export type ConflictResolution =
-  | 'last-writer-wins'
-  | 'first-writer-wins'
-  | 'merge'
-  | 'manual';
+export type ConflictResolution = 'last-writer-wins' | 'first-writer-wins' | 'merge' | 'manual';
 
 /** A recorded conflict with its resolution. */
 export interface ConflictRecord {
@@ -161,10 +157,7 @@ function sortByTimestamp(ops: TimelineOperation[]): TimelineOperation[] {
  * @param strategy - The resolution strategy to apply.
  * @returns The winning operation(s) after resolution.
  */
-export function resolveConflict(
-  operations: TimelineOperation[],
-  strategy: ConflictResolution,
-): TimelineOperation[] {
+export function resolveConflict(operations: TimelineOperation[], strategy: ConflictResolution): TimelineOperation[] {
   if (operations.length === 0) return [];
   if (operations.length === 1) return operations;
 
@@ -221,9 +214,7 @@ function mergeOperations(operations: TimelineOperation[]): TimelineOperation[] {
     if (!latestNonDelete) return [latestDelete];
 
     // Later action wins
-    return latestDelete.timestamp >= latestNonDelete.timestamp
-      ? [latestDelete]
-      : [latestNonDelete];
+    return latestDelete.timestamp >= latestNonDelete.timestamp ? [latestDelete] : [latestNonDelete];
   }
 
   // Update-only merge: combine scalar properties, latest wins per key
@@ -252,10 +243,7 @@ function mergeOperations(operations: TimelineOperation[]): TimelineOperation[] {
  * @param windowMs - The time window in milliseconds.
  * @returns An array of operation batches.
  */
-export function batchOperations(
-  operations: TimelineOperation[],
-  windowMs: number,
-): TimelineOperation[][] {
+export function batchOperations(operations: TimelineOperation[], windowMs: number): TimelineOperation[][] {
   if (operations.length === 0) return [];
 
   const sorted = sortByTimestamp(operations);

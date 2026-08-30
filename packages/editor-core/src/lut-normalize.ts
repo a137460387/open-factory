@@ -8,10 +8,7 @@
 import type { LUTLayer } from './model-types-primitives';
 import { round } from './time';
 
-export function normalizeLutLayers(
-  luts: LUTLayer[] | undefined,
-  lutPath?: string | null,
-): LUTLayer[] {
+export function normalizeLutLayers(luts: LUTLayer[] | undefined, lutPath?: string | null): LUTLayer[] {
   // If luts array is explicitly provided, normalize it (max 3, filter intensity=0)
   if (luts && luts.length > 0) {
     return luts

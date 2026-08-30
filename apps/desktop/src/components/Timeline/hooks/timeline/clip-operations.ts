@@ -1,4 +1,4 @@
-import type {Clip, ClipGroup, ClipGroupColor, TimelineLabelColor} from '@open-factory/editor-core';
+import type { Clip, ClipGroup, ClipGroupColor, TimelineLabelColor } from '@open-factory/editor-core';
 import {
   AddClipCommand,
   AddCreditsClipCommand,
@@ -47,15 +47,15 @@ import {
   type ProjectAnnotation,
   type TimelineNote,
 } from '@open-factory/editor-core';
-import type {AnnotationEditorState, TimelineNoteEditorState} from '../../TimelineDialogs';
-import type {RulerContextMenuAction} from '../../timeline-ruler-menu';
-import {commandManager, projectAccessor, timelineAccessor} from '../../../../store/commandManager';
-import {useEditorStore} from '../../../../store/editorStore';
-import {zhCN} from '../../../../i18n/strings';
-import {createCreditsClip, createTextClip} from '../../../../lib/clipFactory';
-import {showToast} from '../../../../lib/toast';
-import {saveFileDialog, writeFile} from '../../../../lib/tauri-bridge';
-import type {TimelineHandlerParams} from './types';
+import type { AnnotationEditorState, TimelineNoteEditorState } from '../../TimelineDialogs';
+import type { RulerContextMenuAction } from '../../timeline-ruler-menu';
+import { commandManager, projectAccessor, timelineAccessor } from '../../../../store/commandManager';
+import { useEditorStore } from '../../../../store/editorStore';
+import { zhCN } from '../../../../i18n/strings';
+import { createCreditsClip, createTextClip } from '../../../../lib/clipFactory';
+import { showToast } from '../../../../lib/toast';
+import { saveFileDialog, writeFile } from '../../../../lib/tauri-bridge';
+import type { TimelineHandlerParams } from './types';
 
 export function createClipOperationsHandlers(
   params: TimelineHandlerParams,
@@ -100,7 +100,7 @@ export function createClipOperationsHandlers(
     setVolumeEnvelopeMenu,
   } = params;
 
-  const {findClip, getClipMediaAsset, minFrameDuration} = helpers;
+  const { findClip, getClipMediaAsset, minFrameDuration } = helpers;
 
   function updateClipColor(clipId: string, colorLabel: TimelineLabelColor | null): void {
     commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { colorLabel }));
@@ -197,11 +197,16 @@ export function createClipOperationsHandlers(
     }
     try {
       const label = zhCN.titleTemplates[templateId as keyof typeof zhCN.titleTemplates];
-      const clip = instantiateTitleTemplate(templateId as Parameters<typeof instantiateTitleTemplate>[0], track, project.timeline, {
-        name: label.name,
-        text: label.defaultText,
-        start,
-      });
+      const clip = instantiateTitleTemplate(
+        templateId as Parameters<typeof instantiateTitleTemplate>[0],
+        track,
+        project.timeline,
+        {
+          name: label.name,
+          text: label.defaultText,
+          start,
+        },
+      );
       commandManager.execute(new AddClipCommand(timelineAccessor, clip));
       setSelectedClipId(clip.id);
     } catch (error) {

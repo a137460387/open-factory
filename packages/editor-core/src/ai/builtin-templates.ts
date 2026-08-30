@@ -23,7 +23,8 @@ const VLOG_METADATA: TemplateMetadata = {
   id: 'builtin-vlog-fast',
   version: TEMPLATE_SCHEMA_VERSION,
   name: 'Vlog - Fast Pace',
-  description: 'Dynamic vlog template with quick cuts, energetic transitions, and upbeat pacing. Ideal for travel, lifestyle, and daily vlogs.',
+  description:
+    'Dynamic vlog template with quick cuts, energetic transitions, and upbeat pacing. Ideal for travel, lifestyle, and daily vlogs.',
   category: 'vlog',
   tags: ['vlog', 'fast-paced', 'dynamic', 'travel', 'lifestyle'],
   author: 'Open Factory',
@@ -195,7 +196,13 @@ const VLOG_COLOR: TemplateColorNode[] = [
 
 const VLOG_VARIABLES: TemplateVariable[] = [
   { id: 'title', label: 'Video Title', type: 'text', defaultValue: 'My Vlog', description: 'Opening title text' },
-  { id: 'accentColor', label: 'Accent Color', type: 'color', defaultValue: '#FF6B35', description: 'Overlay accent color' },
+  {
+    id: 'accentColor',
+    label: 'Accent Color',
+    type: 'color',
+    defaultValue: '#FF6B35',
+    description: 'Overlay accent color',
+  },
   { id: 'bgMusic', label: 'Background Music', type: 'media', defaultValue: '', description: 'Background music track' },
 ];
 
@@ -205,7 +212,8 @@ const TUTORIAL_METADATA: TemplateMetadata = {
   id: 'builtin-tutorial-knowledge',
   version: TEMPLATE_SCHEMA_VERSION,
   name: 'Knowledge Tutorial',
-  description: 'Structured educational template with text overlays, chapter markers, and calm pacing. Perfect for explainers, how-to videos, and online courses.',
+  description:
+    'Structured educational template with text overlays, chapter markers, and calm pacing. Perfect for explainers, how-to videos, and online courses.',
   category: 'tutorial',
   tags: ['tutorial', 'education', 'knowledge', 'explainer', 'how-to'],
   author: 'Open Factory',
@@ -232,9 +240,7 @@ const TUTORIAL_TRACKS: TemplateTrack[] = [
         placeholderParams: {},
         effects: [],
         keyframes: [],
-        colorNodes: [
-          { type: 'brightness-contrast', params: { brightness: 5, contrast: 5 }, enabled: true, order: 1 },
-        ],
+        colorNodes: [{ type: 'brightness-contrast', params: { brightness: 5, contrast: 5 }, enabled: true, order: 1 }],
         opacity: 1,
         speed: 1,
         volume: 1,
@@ -397,11 +403,41 @@ const TUTORIAL_COLOR: TemplateColorNode[] = [
 ];
 
 const TUTORIAL_VARIABLES: TemplateVariable[] = [
-  { id: 'title', label: 'Video Title', type: 'text', defaultValue: 'Learn Something New', description: 'Opening title' },
-  { id: 'chapter1', label: 'Chapter 1 Title', type: 'text', defaultValue: 'Introduction', description: 'First chapter title' },
-  { id: 'chapter2', label: 'Chapter 2 Title', type: 'text', defaultValue: 'Core Concepts', description: 'Second chapter title' },
-  { id: 'chapter3', label: 'Chapter 3 Title', type: 'text', defaultValue: 'Summary', description: 'Third chapter title' },
-  { id: 'subtitle', label: 'Subtitle Track', type: 'text', defaultValue: '', description: 'Subtitle content (SRT format)' },
+  {
+    id: 'title',
+    label: 'Video Title',
+    type: 'text',
+    defaultValue: 'Learn Something New',
+    description: 'Opening title',
+  },
+  {
+    id: 'chapter1',
+    label: 'Chapter 1 Title',
+    type: 'text',
+    defaultValue: 'Introduction',
+    description: 'First chapter title',
+  },
+  {
+    id: 'chapter2',
+    label: 'Chapter 2 Title',
+    type: 'text',
+    defaultValue: 'Core Concepts',
+    description: 'Second chapter title',
+  },
+  {
+    id: 'chapter3',
+    label: 'Chapter 3 Title',
+    type: 'text',
+    defaultValue: 'Summary',
+    description: 'Third chapter title',
+  },
+  {
+    id: 'subtitle',
+    label: 'Subtitle Track',
+    type: 'text',
+    defaultValue: '',
+    description: 'Subtitle content (SRT format)',
+  },
   { id: 'narration', label: 'Narration Audio', type: 'media', defaultValue: '', description: 'Voice narration track' },
 ];
 
@@ -411,7 +447,8 @@ const PRODUCT_METADATA: TemplateMetadata = {
   id: 'builtin-product-demo',
   version: TEMPLATE_SCHEMA_VERSION,
   name: 'Product Demo - Split Screen',
-  description: 'Professional split-screen product showcase template. Features side-by-side comparisons, feature callouts, and polished transitions.',
+  description:
+    'Professional split-screen product showcase template. Features side-by-side comparisons, feature callouts, and polished transitions.',
   category: 'product-demo',
   tags: ['product', 'demo', 'split-screen', 'showcase', 'marketing'],
   author: 'Open Factory',
@@ -627,11 +664,35 @@ const PRODUCT_COLOR: TemplateColorNode[] = [
 ];
 
 const PRODUCT_VARIABLES: TemplateVariable[] = [
-  { id: 'title', label: 'Product Name', type: 'text', defaultValue: 'Product Name', description: 'Product name for title card' },
-  { id: 'feature1', label: 'Feature 1', type: 'text', defaultValue: 'Feature One', description: 'First feature callout' },
-  { id: 'feature2', label: 'Feature 2', type: 'text', defaultValue: 'Feature Two', description: 'Second feature callout' },
+  {
+    id: 'title',
+    label: 'Product Name',
+    type: 'text',
+    defaultValue: 'Product Name',
+    description: 'Product name for title card',
+  },
+  {
+    id: 'feature1',
+    label: 'Feature 1',
+    type: 'text',
+    defaultValue: 'Feature One',
+    description: 'First feature callout',
+  },
+  {
+    id: 'feature2',
+    label: 'Feature 2',
+    type: 'text',
+    defaultValue: 'Feature Two',
+    description: 'Second feature callout',
+  },
   { id: 'cta', label: 'Call to Action', type: 'text', defaultValue: 'Learn More', description: 'End card CTA text' },
-  { id: 'accentColor', label: 'Brand Color', type: 'color', defaultValue: '#2563EB', description: 'Brand accent color' },
+  {
+    id: 'accentColor',
+    label: 'Brand Color',
+    type: 'color',
+    defaultValue: '#2563EB',
+    description: 'Brand accent color',
+  },
   { id: 'bgMusic', label: 'Background Music', type: 'media', defaultValue: '', description: 'Background music track' },
 ];
 
@@ -674,8 +735,6 @@ export function getBuiltinTemplate(id: string): EditingTemplate | undefined {
 }
 
 /** Get templates by category */
-export function getTemplatesByCategory(
-  category: EditingTemplate['metadata']['category'],
-): EditingTemplate[] {
+export function getTemplatesByCategory(category: EditingTemplate['metadata']['category']): EditingTemplate[] {
   return BUILTIN_TEMPLATES.filter((t) => t.metadata.category === category);
 }

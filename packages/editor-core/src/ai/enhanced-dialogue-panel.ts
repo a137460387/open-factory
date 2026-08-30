@@ -11,21 +11,21 @@
  * composed with the existing dialoguePanelReducer.
  */
 
-import type {EditingSuggestion, SuggestionCategory, SuggestionRequest, SuggestionResponse, SuggestionComparison} from './suggestion-engine';
-import {enrichSuggestionWithStyle, generateComparison, recordFeedback, filterSuggestions} from './suggestion-engine';
-import type {StyleFingerprint} from './style-analyzer';
-import type {MaterialMetadata} from './semantic-extractor';
-import type {EditPlan} from './llm-orchestrator';
+import type {
+  EditingSuggestion,
+  SuggestionCategory,
+  SuggestionRequest,
+  SuggestionResponse,
+  SuggestionComparison,
+} from './suggestion-engine';
+import { enrichSuggestionWithStyle, generateComparison, recordFeedback, filterSuggestions } from './suggestion-engine';
+import type { StyleFingerprint } from './style-analyzer';
+import type { MaterialMetadata } from './semantic-extractor';
+import type { EditPlan } from './llm-orchestrator';
 
 // ─── Suggestion State (additive to DialoguePanelState) ──────────
 
-export type SuggestionPhase =
-  | 'idle'
-  | 'generating'
-  | 'browsing'
-  | 'comparing'
-  | 'applying'
-  | 'error';
+export type SuggestionPhase = 'idle' | 'generating' | 'browsing' | 'comparing' | 'applying' | 'error';
 
 export interface SuggestionState {
   /** Current suggestion phase */
@@ -86,10 +86,7 @@ export type SuggestionAction =
  * Pure state reducer for the suggestion subsystem.
  * Compose with dialoguePanelReducer for full panel state.
  */
-export function suggestionReducer(
-  state: SuggestionState,
-  action: SuggestionAction,
-): SuggestionState {
+export function suggestionReducer(state: SuggestionState, action: SuggestionAction): SuggestionState {
   switch (action.type) {
     case 'SET_STYLES':
       return { ...state, availableStyles: action.styles };
@@ -241,10 +238,15 @@ export function formatSuggestionSummary(suggestion: EditingSuggestion): string {
 /** Get category display info */
 export function getCategoryInfo(category: SuggestionCategory): { label: string; color: string } {
   switch (category) {
-    case 'creative': return { label: 'Creative', color: '#8b5cf6' };
-    case 'style-match': return { label: 'Style Match', color: '#3b82f6' };
-    case 'platform': return { label: 'Platform', color: '#10b981' };
-    case 'efficiency': return { label: 'Efficiency', color: '#f59e0b' };
-    case 'experimentation': return { label: 'Experimental', color: '#ef4444' };
+    case 'creative':
+      return { label: 'Creative', color: '#8b5cf6' };
+    case 'style-match':
+      return { label: 'Style Match', color: '#3b82f6' };
+    case 'platform':
+      return { label: 'Platform', color: '#10b981' };
+    case 'efficiency':
+      return { label: 'Efficiency', color: '#f59e0b' };
+    case 'experimentation':
+      return { label: 'Experimental', color: '#ef4444' };
   }
 }

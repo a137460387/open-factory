@@ -42,17 +42,23 @@ describe('analyzeAudioRhythm', () => {
     });
 
     await analyzeAudioRhythm(new Float64Array([1, 2, 3]), 44100);
-    expect(mockInvoke).toHaveBeenCalledWith('analyze_audio_rhythm_command', expect.objectContaining({
-      audioSamples: [1, 2, 3],
-      sampleRate: 44100,
-    }));
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'analyze_audio_rhythm_command',
+      expect.objectContaining({
+        audioSamples: [1, 2, 3],
+        sampleRate: 44100,
+      }),
+    );
   });
 
   it('converts Float64Array to regular array', async () => {
     mockInvoke.mockResolvedValueOnce({
-      spectrum_frames: [], onsets: [], tempo: null,
+      spectrum_frames: [],
+      onsets: [],
+      tempo: null,
       pattern: { pattern_type: 'irregular', confidence: 0, avg_interval: 0, interval_variance: 0 },
-      beat_times: [], energy_curve: [],
+      beat_times: [],
+      energy_curve: [],
       stats: { total_frames: 0, onset_count: 0, avg_spectral_centroid: 0, avg_energy: 0 },
     });
 
@@ -65,9 +71,12 @@ describe('analyzeAudioRhythm', () => {
 
   it('applies default config when partial config provided', async () => {
     mockInvoke.mockResolvedValueOnce({
-      spectrum_frames: [], onsets: [], tempo: null,
+      spectrum_frames: [],
+      onsets: [],
+      tempo: null,
       pattern: { pattern_type: 'irregular', confidence: 0, avg_interval: 0, interval_variance: 0 },
-      beat_times: [], energy_curve: [],
+      beat_times: [],
+      energy_curve: [],
       stats: { total_frames: 0, onset_count: 0, avg_spectral_centroid: 0, avg_energy: 0 },
     });
 
@@ -80,9 +89,12 @@ describe('analyzeAudioRhythm', () => {
 
   it('passes null config when no config provided', async () => {
     mockInvoke.mockResolvedValueOnce({
-      spectrum_frames: [], onsets: [], tempo: null,
+      spectrum_frames: [],
+      onsets: [],
+      tempo: null,
       pattern: { pattern_type: 'irregular', confidence: 0, avg_interval: 0, interval_variance: 0 },
-      beat_times: [], energy_curve: [],
+      beat_times: [],
+      energy_curve: [],
       stats: { total_frames: 0, onset_count: 0, avg_spectral_centroid: 0, avg_energy: 0 },
     });
 
@@ -125,10 +137,13 @@ describe('detectVisualHighlights', () => {
     mockInvoke.mockResolvedValueOnce(mockResult);
     const frames = [new Uint8Array([1, 2, 3])];
     await detectVisualHighlights(frames, 3, 1);
-    expect(mockInvoke).toHaveBeenCalledWith('detect_visual_highlights_command', expect.objectContaining({
-      width: 3,
-      height: 1,
-    }));
+    expect(mockInvoke).toHaveBeenCalledWith(
+      'detect_visual_highlights_command',
+      expect.objectContaining({
+        width: 3,
+        height: 1,
+      }),
+    );
   });
 
   it('converts Uint8Array frames to regular arrays', async () => {

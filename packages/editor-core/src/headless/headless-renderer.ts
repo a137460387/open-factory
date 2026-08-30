@@ -5,7 +5,12 @@
  * child process, reporting progress via callbacks.
  */
 
-import type { HeadlessConfig, HeadlessProgress, HeadlessRenderRequest, HeadlessRenderResult } from './headless-editor-core';
+import type {
+  HeadlessConfig,
+  HeadlessProgress,
+  HeadlessRenderRequest,
+  HeadlessRenderResult,
+} from './headless-editor-core';
 import { HeadlessEditorCore } from './headless-editor-core';
 
 export interface FfmpegRenderOptions {
@@ -58,10 +63,7 @@ export function terminateFfmpegChildProcess(
 /**
  * Parse FFmpeg stderr output for progress information.
  */
-export function parseFfmpegProgress(
-  line: string,
-  totalDuration: number,
-): Partial<HeadlessProgress> | null {
+export function parseFfmpegProgress(line: string, totalDuration: number): Partial<HeadlessProgress> | null {
   // Match frame=  123 fps= 30 ...
   const frameMatch = line.match(/frame=\s*(\d+)/);
   const fpsMatch = line.match(/fps=\s*([\d.]+)/);
@@ -266,11 +268,14 @@ export async function headlessRender(
 
   request.onProgress?.({ phase: 'rendering', percent: 30, message: 'Starting FFmpeg render' });
 
-  return executeFfmpegRender({
-    config: effectiveConfig,
-    args,
-    outputPath: request.outputPath,
-    duration,
-    onProgress: request.onProgress,
-  }, signal);
+  return executeFfmpegRender(
+    {
+      config: effectiveConfig,
+      args,
+      outputPath: request.outputPath,
+      duration,
+      onProgress: request.onProgress,
+    },
+    signal,
+  );
 }

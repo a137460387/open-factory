@@ -19,13 +19,7 @@ export const TEMPLATE_FILE_EXTENSION = '.oft' as const;
 // ─── Template Categories ─────────────────────────────────────────
 
 export type TemplateCategory =
-  | 'vlog'
-  | 'tutorial'
-  | 'product-demo'
-  | 'music-video'
-  | 'documentary'
-  | 'short-form'
-  | 'custom';
+  'vlog' | 'tutorial' | 'product-demo' | 'music-video' | 'documentary' | 'short-form' | 'custom';
 
 // ─── Keyframe ────────────────────────────────────────────────────
 

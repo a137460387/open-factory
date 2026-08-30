@@ -1,6 +1,10 @@
-import type {LocaleStrings} from './strings.js';
-import {formatSignedNumber, formatTrackType} from './i18n-utils.js';
-type DeepPartial<T> = T extends (...args: any[]) => any ? T : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
+import type { LocaleStrings } from './strings.js';
+import { formatSignedNumber, formatTrackType } from './i18n-utils.js';
+type DeepPartial<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
 
 export const enOverrides = {
   common: {
@@ -2695,8 +2699,10 @@ export const enOverrides = {
     createSession: 'Create Session',
     sessionIdLabel: 'Session ID',
     inviteTitle: 'Invite Members',
-    inviteDescription: 'Local simulated collaboration: opening a new app window on this machine counts as a new user joining.',
-    inviteJoinHint: (sessionId: string, port: number) => `How to join: open a new window and join session ${sessionId} (port ${port})`,
+    inviteDescription:
+      'Local simulated collaboration: opening a new app window on this machine counts as a new user joining.',
+    inviteJoinHint: (sessionId: string, port: number) =>
+      `How to join: open a new window and join session ${sessionId} (port ${port})`,
     onlineUsers: 'Online Members',
     online: 'Online',
     noUsers: 'No other members yet.',

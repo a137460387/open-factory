@@ -114,10 +114,7 @@ describe('buildRenderFarmSegmentPath', () => {
 
 describe('buildRenderFarmConcatList', () => {
   it('builds concat list', () => {
-    const list = buildRenderFarmConcatList([
-      { outputPath: '/seg1.mp4' },
-      { outputPath: '/seg2.mp4' },
-    ]);
+    const list = buildRenderFarmConcatList([{ outputPath: '/seg1.mp4' }, { outputPath: '/seg2.mp4' }]);
     expect(list).toContain('seg1.mp4');
     expect(list).toContain('seg2.mp4');
   });

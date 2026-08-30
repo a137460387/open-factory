@@ -16,19 +16,13 @@ import {
   mergeWithAudioBeats,
   type VisualHighlightMarker,
 } from '@open-factory/editor-core/visual-highlight-engine';
-import {
-  analyzeAudioRhythm,
-  alignHighlightsWithRhythm,
-} from '@open-factory/editor-core/audio-rhythm-analysis';
+import { analyzeAudioRhythm, alignHighlightsWithRhythm } from '@open-factory/editor-core/audio-rhythm-analysis';
 import {
   generateRoughCutProposals,
   buildRoughCutSystemPrompt,
   buildRoughCutUserPrompt,
 } from '@open-factory/editor-core/smart-rough-cut';
-import {
-  generateContextualSuggestions,
-  getSuggestionIcon,
-} from '@open-factory/editor-core/contextual-suggestions';
+import { generateContextualSuggestions, getSuggestionIcon } from '@open-factory/editor-core/contextual-suggestions';
 import {
   getGestureTutorialSteps,
   DEFAULT_GESTURE_MAPPINGS,

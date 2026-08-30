@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   formatQualityMetricValue,
   formatPostExportQualityValue,
@@ -40,28 +40,28 @@ describe('exportFormatHelpers', () => {
 
   describe('formatPostExportQualityValue', () => {
     it('returns string values as-is', () => {
-      const check = {id: 'test'} as any;
+      const check = { id: 'test' } as any;
       expect(formatPostExportQualityValue(check, 'passed')).toBe('passed');
     });
 
     it('formats fileSize check with bytes', () => {
-      const check = {id: 'fileSize'} as any;
+      const check = { id: 'fileSize' } as any;
       const result = formatPostExportQualityValue(check, 1048576);
       expect(result).toContain('MB');
     });
 
     it('formats duration check with seconds', () => {
-      const check = {id: 'duration'} as any;
+      const check = { id: 'duration' } as any;
       expect(formatPostExportQualityValue(check, 12.345)).toBe('12.345s');
     });
 
     it('formats integer values as strings', () => {
-      const check = {id: 'other'} as any;
+      const check = { id: 'other' } as any;
       expect(formatPostExportQualityValue(check, 42)).toBe('42');
     });
 
     it('formats float values with 3 decimals', () => {
-      const check = {id: 'other'} as any;
+      const check = { id: 'other' } as any;
       expect(formatPostExportQualityValue(check, 3.14159)).toBe('3.142');
     });
   });

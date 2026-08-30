@@ -41,10 +41,16 @@ interface FloatingDialogsDeps {
   lastExportPath: string | undefined;
   setLastExportPath: (p: string) => void;
   setTutorialSignals: React.Dispatch<React.SetStateAction<TutorialSignals>>;
-  runAutomationForMedia: (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => Promise<void>;
+  runAutomationForMedia: (
+    trigger: 'on-import' | 'on-export-complete' | 'on-project-open',
+    media: MediaAsset[],
+  ) => Promise<void>;
   relinkAllMissing: () => Promise<void>;
   importEdlTimeline: (contents: string, path: string) => { title: string; matchedCount: number; missingCount: number };
-  importFcpXmlTimeline: (contents: string, path: string) => { title: string; matchedCount: number; missingCount: number };
+  importFcpXmlTimeline: (
+    contents: string,
+    path: string,
+  ) => { title: string; matchedCount: number; missingCount: number };
   addMedia: (media: MediaAsset[]) => void;
   createProjectFromTemplate: (templateId: ProjectTemplateId) => Promise<void>;
   createProjectFromTimelineTemplate: (nextProject: Project) => Promise<void>;
@@ -58,7 +64,12 @@ interface FloatingDialogsDeps {
   splitSpectrumAtTime: (asset: MediaAsset, sourceTime: number) => void;
   importVideosForStitchWizard: () => Promise<string[]>;
   generateVideoStitchTimeline: (settings: VideoStitchWizardSettings) => void;
-  generateSmartMontage: (config: { videoAssetIds: string[]; audioAssetId: string; beatTimes: number[]; sensitivity: BeatSensitivity }) => void;
+  generateSmartMontage: (config: {
+    videoAssetIds: string[];
+    audioAssetId: string;
+    beatTimes: number[];
+    sensitivity: BeatSensitivity;
+  }) => void;
   addAssetToTimeline: (assetId: string) => void;
   analyzeContentClip: (clipId: string) => Promise<void>;
   analyzePreferredContentTargets: () => void;
@@ -116,7 +127,10 @@ interface FloatingDialogsDeps {
   repairFromMediaHealthDashboard: () => Promise<void>;
   openMediaHealthRelinkPanel: () => void;
   refreshMediaOrganizer: () => Promise<void>;
-  confirmMediaOrganizerDuplicateGroups: (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => Promise<void>;
+  confirmMediaOrganizerDuplicateGroups: (
+    selections: MediaOrganizerDuplicateSelection[],
+    moveFilesToTrash: boolean,
+  ) => Promise<void>;
   removeMediaOrganizerReferences: (assetIds: string[]) => void;
   archiveUnusedMedia: () => Promise<void>;
   renameUnusedMedia: (template: string) => Promise<void>;
@@ -232,8 +246,10 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       exportQueueRecovery: deps.exportQueueRecovery,
       archiveProgress: deps.archiveProgress,
       sharePackageProgress: deps.sharePackageProgress,
-      restoreRecovery: () => deps.recoveryCandidate ? deps.restoreRecovery(deps.recoveryCandidate) : Promise.resolve(),
-      discardRecovery: () => deps.recoveryCandidate ? deps.discardRecovery(deps.recoveryCandidate) : Promise.resolve(),
+      restoreRecovery: () =>
+        deps.recoveryCandidate ? deps.restoreRecovery(deps.recoveryCandidate) : Promise.resolve(),
+      discardRecovery: () =>
+        deps.recoveryCandidate ? deps.discardRecovery(deps.recoveryCandidate) : Promise.resolve(),
       restoreExportQueueRecovery: deps.restoreExportQueueRecovery,
       discardExportQueueRecovery: deps.discardExportQueueRecovery,
       skipTutorial: deps.skipTutorial,
@@ -242,46 +258,105 @@ export function useEditorShellFloatingDialogsCallbacks(deps: FloatingDialogsDeps
       setLastExportPath: deps.setLastExportPath,
       setTutorialSignals: deps.setTutorialSignals,
     }),
-     
+
     [
-      deps.templateExportPreset, deps.exportDialogOpen, deps.setExportDialogOpen,
-      deps.timelineExportDialogOpen, deps.setTimelineExportDialogOpen, deps.lastExportPath,
-      deps.relinkAllMissing, deps.importEdlTimeline, deps.importFcpXmlTimeline,
-      deps.addMedia, deps.createProjectFromTemplate, deps.createProjectFromTimelineTemplate,
-      deps.colorAnalysisResults, deps.colorAnalysisJumps, deps.colorAnalysisBusy,
-      deps.runTimelineColorAnalysis, deps.alignTimelineColorToReference,
-      deps.seekSpectrumTime, deps.setSpectrumSelectionRange, deps.splitSpectrumAtTime,
-      deps.importVideosForStitchWizard, deps.generateVideoStitchTimeline,
-      deps.generateSmartMontage, deps.addAssetToTimeline,
-      deps.analyzeContentClip, deps.analyzePreferredContentTargets, deps.exportContentAnalysis,
-      deps.applySpeakerDiarization, deps.speakerDiarizationResult, deps.contentAnalysisTargets,
-      deps.operationRecording, deps.operationRecordingActive, deps.operationReplayRunning,
-      deps.operationRecordingStep, deps.operationReplaySpeed,
-      deps.startOperationRecording, deps.stopOperationRecording,
-      deps.saveOperationRecording, deps.loadOperationRecording,
-      deps.replayOperationRecording, deps.pauseOperationReplay,
-      deps.jumpOperationRecording, deps.exportOperationRecordingSlides,
-      deps.profilerRecording, deps.profilerElapsedMs, deps.profilerReport,
-      deps.startProfilerRecording, deps.stopProfilerRecording, deps.exportProfilerReportJson,
-      deps.saveNamedSnapshot, deps.restoreSnapshotProject, deps.applySnapshotDiffSelection,
-      deps.updateProjectReleaseVersion, deps.syncCompareClipRefs, deps.jumpToMediaAsset,
-      deps.detectedBeatBpm, deps.beatSyncBeatTimes, deps.canDetectBeats, deps.canSnapToBeats,
-      deps.applyManualBeatBpm, deps.detectSelectedBeats, deps.snapSelectedToBeats,
-      deps.updatePreviewPerformance, deps.updateTimelineInteractionSettings,
-      deps.deleteProxiesForMedia, deps.regenerateProxiesForMedia, deps.migrateProxiesToDirectory,
-      deps.executeMacro, deps.confirmProjectEncryptionSave,
-      deps.refreshProjectHealth, deps.autoRepairProjectHealth,
-      deps.relinkMissingFromHealth, deps.removeOrphanFromHealth,
-      deps.mergeDuplicateFromHealth, deps.queueProxyFromHealth,
-      deps.mergeDuplicateMediaGroups, deps.refreshMediaHealthDashboard,
-      deps.repairFromMediaHealthDashboard, deps.openMediaHealthRelinkPanel,
-      deps.refreshMediaOrganizer, deps.confirmMediaOrganizerDuplicateGroups,
-      deps.removeMediaOrganizerReferences, deps.archiveUnusedMedia, deps.renameUnusedMedia,
-      deps.recoveryCandidate, deps.exportQueueRecovery, deps.archiveProgress, deps.sharePackageProgress,
-      deps.restoreRecovery, deps.discardRecovery,
-      deps.restoreExportQueueRecovery, deps.discardExportQueueRecovery,
-      deps.skipTutorial, deps.closeTutorialCelebration,
-      deps.runAutomationForMedia, deps.setLastExportPath, deps.setTutorialSignals,
+      deps.templateExportPreset,
+      deps.exportDialogOpen,
+      deps.setExportDialogOpen,
+      deps.timelineExportDialogOpen,
+      deps.setTimelineExportDialogOpen,
+      deps.lastExportPath,
+      deps.relinkAllMissing,
+      deps.importEdlTimeline,
+      deps.importFcpXmlTimeline,
+      deps.addMedia,
+      deps.createProjectFromTemplate,
+      deps.createProjectFromTimelineTemplate,
+      deps.colorAnalysisResults,
+      deps.colorAnalysisJumps,
+      deps.colorAnalysisBusy,
+      deps.runTimelineColorAnalysis,
+      deps.alignTimelineColorToReference,
+      deps.seekSpectrumTime,
+      deps.setSpectrumSelectionRange,
+      deps.splitSpectrumAtTime,
+      deps.importVideosForStitchWizard,
+      deps.generateVideoStitchTimeline,
+      deps.generateSmartMontage,
+      deps.addAssetToTimeline,
+      deps.analyzeContentClip,
+      deps.analyzePreferredContentTargets,
+      deps.exportContentAnalysis,
+      deps.applySpeakerDiarization,
+      deps.speakerDiarizationResult,
+      deps.contentAnalysisTargets,
+      deps.operationRecording,
+      deps.operationRecordingActive,
+      deps.operationReplayRunning,
+      deps.operationRecordingStep,
+      deps.operationReplaySpeed,
+      deps.startOperationRecording,
+      deps.stopOperationRecording,
+      deps.saveOperationRecording,
+      deps.loadOperationRecording,
+      deps.replayOperationRecording,
+      deps.pauseOperationReplay,
+      deps.jumpOperationRecording,
+      deps.exportOperationRecordingSlides,
+      deps.profilerRecording,
+      deps.profilerElapsedMs,
+      deps.profilerReport,
+      deps.startProfilerRecording,
+      deps.stopProfilerRecording,
+      deps.exportProfilerReportJson,
+      deps.saveNamedSnapshot,
+      deps.restoreSnapshotProject,
+      deps.applySnapshotDiffSelection,
+      deps.updateProjectReleaseVersion,
+      deps.syncCompareClipRefs,
+      deps.jumpToMediaAsset,
+      deps.detectedBeatBpm,
+      deps.beatSyncBeatTimes,
+      deps.canDetectBeats,
+      deps.canSnapToBeats,
+      deps.applyManualBeatBpm,
+      deps.detectSelectedBeats,
+      deps.snapSelectedToBeats,
+      deps.updatePreviewPerformance,
+      deps.updateTimelineInteractionSettings,
+      deps.deleteProxiesForMedia,
+      deps.regenerateProxiesForMedia,
+      deps.migrateProxiesToDirectory,
+      deps.executeMacro,
+      deps.confirmProjectEncryptionSave,
+      deps.refreshProjectHealth,
+      deps.autoRepairProjectHealth,
+      deps.relinkMissingFromHealth,
+      deps.removeOrphanFromHealth,
+      deps.mergeDuplicateFromHealth,
+      deps.queueProxyFromHealth,
+      deps.mergeDuplicateMediaGroups,
+      deps.refreshMediaHealthDashboard,
+      deps.repairFromMediaHealthDashboard,
+      deps.openMediaHealthRelinkPanel,
+      deps.refreshMediaOrganizer,
+      deps.confirmMediaOrganizerDuplicateGroups,
+      deps.removeMediaOrganizerReferences,
+      deps.archiveUnusedMedia,
+      deps.renameUnusedMedia,
+      deps.recoveryCandidate,
+      deps.exportQueueRecovery,
+      deps.archiveProgress,
+      deps.sharePackageProgress,
+      deps.restoreRecovery,
+      deps.discardRecovery,
+      deps.restoreExportQueueRecovery,
+      deps.discardExportQueueRecovery,
+      deps.skipTutorial,
+      deps.closeTutorialCelebration,
+      deps.runAutomationForMedia,
+      deps.setLastExportPath,
+      deps.setTutorialSignals,
     ],
   );
 

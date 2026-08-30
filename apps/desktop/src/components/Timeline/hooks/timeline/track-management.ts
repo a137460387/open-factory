@@ -9,10 +9,10 @@ import {
   type Track,
   type TrackPatch,
 } from '@open-factory/editor-core';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
 
 export function createTrackManagementHandlers(params: TimelineHandlerParams) {
   const {
@@ -175,7 +175,7 @@ function resolveTrackHeaderSelection(options: {
   anchorTrackId: string | undefined;
   shiftKey: boolean;
 }): { selectedTrackIds: string[]; anchorTrackId: string | undefined } {
-  const {orderedTrackIds, currentSelection, clickedTrackId, anchorTrackId, shiftKey} = options;
+  const { orderedTrackIds, currentSelection, clickedTrackId, anchorTrackId, shiftKey } = options;
   if (shiftKey && anchorTrackId) {
     const anchorIndex = orderedTrackIds.indexOf(anchorTrackId);
     const clickedIndex = orderedTrackIds.indexOf(clickedTrackId);

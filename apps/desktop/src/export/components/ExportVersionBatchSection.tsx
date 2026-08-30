@@ -1,10 +1,10 @@
-import {Download, ListPlus, Trash2, Upload} from 'lucide-react';
-import type {ExportPresetSettings} from '../export-presets';
-import type {ExportPreset} from '../export-presets';
-import type {VersionedExportReportRow} from '@open-factory/editor-core';
-import {createVersionedExportJobs} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {VersionedBatchReportTable} from './VersionedBatchReportTable';
+import { Download, ListPlus, Trash2, Upload } from 'lucide-react';
+import type { ExportPresetSettings } from '../export-presets';
+import type { ExportPreset } from '../export-presets';
+import type { VersionedExportReportRow } from '@open-factory/editor-core';
+import { createVersionedExportJobs } from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { VersionedBatchReportTable } from './VersionedBatchReportTable';
 
 export type VersionWatermarkMode = 'inherit' | 'none' | 'text';
 export type VersionRangeMode = 'default' | 'custom';
@@ -275,9 +275,7 @@ export function ExportVersionBatchSection({
           <ListPlus size={13} />
           {t.add}
         </button>
-        {versionedBatchReportRows.length > 0 ? (
-          <VersionedBatchReportTable rows={versionedBatchReportRows} />
-        ) : null}
+        {versionedBatchReportRows.length > 0 ? <VersionedBatchReportTable rows={versionedBatchReportRows} /> : null}
       </div>
     </div>
   );

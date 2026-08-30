@@ -1,4 +1,4 @@
-import type {Clip, MediaAsset, MediaVersionEntry} from '@open-factory/editor-core';
+import type { Clip, MediaAsset, MediaVersionEntry } from '@open-factory/editor-core';
 import {
   PackNestedSequenceCommand,
   ReplaceMediaCommand,
@@ -8,14 +8,14 @@ import {
   listMediaVersionEntries,
   getReplaceMediaCompatibilityWarnings,
 } from '@open-factory/editor-core';
-import type {ReplaceMediaDialogState} from '../../TimelineDialogs';
-import {commandManager, projectAccessor, timelineAccessor} from '../../../../store/commandManager';
-import {useEditorStore} from '../../../../store/editorStore';
-import {zhCN} from '../../../../i18n/strings';
-import {openFileDialog} from '../../../../lib/tauri-bridge';
-import {probeMediaPath} from '../../../../lib/media';
-import {showToast} from '../../../../lib/toast';
-import type {TimelineHandlerParams} from './types';
+import type { ReplaceMediaDialogState } from '../../TimelineDialogs';
+import { commandManager, projectAccessor, timelineAccessor } from '../../../../store/commandManager';
+import { useEditorStore } from '../../../../store/editorStore';
+import { zhCN } from '../../../../i18n/strings';
+import { openFileDialog } from '../../../../lib/tauri-bridge';
+import { probeMediaPath } from '../../../../lib/media';
+import { showToast } from '../../../../lib/toast';
+import type { TimelineHandlerParams } from './types';
 
 export function createNestedMediaHandlers(
   params: TimelineHandlerParams,
@@ -36,7 +36,7 @@ export function createNestedMediaHandlers(
     setActiveSequenceId,
   } = params;
 
-  const {findClip, getClipMediaAsset} = helpers;
+  const { findClip, getClipMediaAsset } = helpers;
 
   function openNestedSequence(clip: Clip): void {
     if (clip.type !== 'nested-sequence') {

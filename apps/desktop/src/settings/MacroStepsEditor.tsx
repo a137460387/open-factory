@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Save, Trash2 } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
-import {
-  getMacroSteps,
-  serializeCommandSnapshots,
-  type ClipMacro,
-  type CommandSnapshot,
-} from '../macros/clip-macros';
+import { getMacroSteps, serializeCommandSnapshots, type ClipMacro, type CommandSnapshot } from '../macros/clip-macros';
 
 export function MacroStepsEditor({
   macro,

@@ -24,9 +24,7 @@ export function useVideoImport() {
         // interaction path → UI feedback pool so it is not starved by
         // batch background jobs.
         const outputDir = videoPath.replace(/[/\\][^/\\]+$/, '');
-        const outputStem = videoPath
-          .replace(/^.*[/\\]/, '')
-          .replace(/\.[^.]+$/, '');
+        const outputStem = videoPath.replace(/^.*[/\\]/, '').replace(/\.[^.]+$/, '');
         runUiFeedbackTask(() =>
           extractCoverFrames({
             clipId: asset.id,

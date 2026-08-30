@@ -1,7 +1,4 @@
-import {
-  normalizeSubtitleLanguageList,
-  normalizeSubtitleLanguage,
-} from '@open-factory/editor-core';
+import { normalizeSubtitleLanguageList, normalizeSubtitleLanguage } from '@open-factory/editor-core';
 import { type Dispatch, type SetStateAction } from 'react';
 import { type ExportPresetSettings } from '../export-presets';
 import { zhCN } from '../../i18n/strings';
@@ -73,4 +70,3 @@ export function SubtitleLanguageSection({
     </section>
   );
 }
-

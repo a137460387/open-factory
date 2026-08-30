@@ -1,10 +1,10 @@
-import type {Clip, ClipGroup, KeyframeProperty} from '@open-factory/editor-core';
-import {canMoveClipWithProtectedRanges} from '@open-factory/editor-core';
-import {keyframeRefKey} from '../../TimelineOverlays';
-import type {SelectedKeyframeRef} from '../../../../store/editorStore';
-import {showToast} from '../../../../lib/toast';
-import {zhCN} from '../../../../i18n/strings';
-import type {TimelineHandlerParams} from './types';
+import type { Clip, ClipGroup, KeyframeProperty } from '@open-factory/editor-core';
+import { canMoveClipWithProtectedRanges } from '@open-factory/editor-core';
+import { keyframeRefKey } from '../../TimelineOverlays';
+import type { SelectedKeyframeRef } from '../../../../store/editorStore';
+import { showToast } from '../../../../lib/toast';
+import { zhCN } from '../../../../i18n/strings';
+import type { TimelineHandlerParams } from './types';
 
 export function createSelectionHandlers(
   params: TimelineHandlerParams,
@@ -25,7 +25,7 @@ export function createSelectionHandlers(
     protectedRanges,
   } = params;
 
-  const {findClipById} = helpers;
+  const { findClipById } = helpers;
 
   function selectClip(clipId: string, additive: boolean, forceSingle = false): void {
     const group = forceSingle ? undefined : clipGroupByClipId.get(clipId);

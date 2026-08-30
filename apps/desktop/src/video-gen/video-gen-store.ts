@@ -184,9 +184,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
     set((state) => ({ tasks: [...state.tasks, task] }));
     const seq = 0;
     get().taskSeqMap.set(task.id, seq);
-    saveVideoGenTask(taskToDb(task, seq)).catch((e) =>
-      console.error('[video-gen-store] persist addTask failed:', e),
-    );
+    saveVideoGenTask(taskToDb(task, seq)).catch((e) => console.error('[video-gen-store] persist addTask failed:', e));
     return task;
   },
 
@@ -199,9 +197,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
     set((s) => ({
       activeTaskId: next.id,
       tasks: s.tasks.map((t) =>
-        t.id === next.id
-          ? { ...t, status: 'running' as const, startedAt: now, stage: 'starting' }
-          : t,
+        t.id === next.id ? { ...t, status: 'running' as const, startedAt: now, stage: 'starting' } : t,
       ),
     }));
     const seq = nextSeq(state.taskSeqMap, next.id);
@@ -216,22 +212,27 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       tsToIso(now),
       undefined,
       seq,
-    ).catch((e) =>
-      console.error('[video-gen-store] persist startNextTask failed:', e),
-    );
+    ).catch((e) => console.error('[video-gen-store] persist startNextTask failed:', e));
     return next.id;
   },
 
   updateTaskProgress: (taskId, progress, stage) => {
     set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === taskId ? { ...t, progress, stage } : t,
-      ),
+      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, progress, stage } : t)),
     }));
     const seq = nextSeq(get().taskSeqMap, taskId);
-    updateVideoGenTaskStatus(taskId, undefined, progress, stage, undefined, undefined, undefined, undefined, undefined, seq).catch((e) =>
-      console.error('[video-gen-store] persist updateTaskProgress failed:', e),
-    );
+    updateVideoGenTaskStatus(
+      taskId,
+      undefined,
+      progress,
+      stage,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      seq,
+    ).catch((e) => console.error('[video-gen-store] persist updateTaskProgress failed:', e));
   },
 
   completeTask: (taskId, videoPath) => {
@@ -256,9 +257,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) =>
-      console.error('[video-gen-store] persist completeTask failed:', e),
-    );
+    ).catch((e) => console.error('[video-gen-store] persist completeTask failed:', e));
   },
 
   failTask: (taskId, error, errorType) => {
@@ -283,20 +282,14 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) =>
-      console.error('[video-gen-store] persist failTask failed:', e),
-    );
+    ).catch((e) => console.error('[video-gen-store] persist failTask failed:', e));
   },
 
   cancelTask: (taskId) => {
     const now = Date.now();
     set((state) => ({
       activeTaskId: state.activeTaskId === taskId ? null : state.activeTaskId,
-      tasks: state.tasks.map((t) =>
-        t.id === taskId
-          ? { ...t, status: 'canceled' as const, finishedAt: now }
-          : t,
-      ),
+      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, status: 'canceled' as const, finishedAt: now } : t)),
     }));
     const seq = nextSeq(get().taskSeqMap, taskId);
     updateVideoGenTaskStatus(
@@ -310,9 +303,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) =>
-      console.error('[video-gen-store] persist cancelTask failed:', e),
-    );
+    ).catch((e) => console.error('[video-gen-store] persist cancelTask failed:', e));
   },
 
   removeTask: (taskId) => {
@@ -320,20 +311,14 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       tasks: state.tasks.filter((t) => t.id !== taskId),
       activeTaskId: state.activeTaskId === taskId ? null : state.activeTaskId,
     }));
-    deleteVideoGenTask(taskId).catch((e) =>
-      console.error('[video-gen-store] persist removeTask failed:', e),
-    );
+    deleteVideoGenTask(taskId).catch((e) => console.error('[video-gen-store] persist removeTask failed:', e));
   },
 
   clearCompleted: () => {
     set((state) => ({
-      tasks: state.tasks.filter(
-        (t) => t.status === 'queued' || t.status === 'running',
-      ),
+      tasks: state.tasks.filter((t) => t.status === 'queued' || t.status === 'running'),
     }));
-    cleanupVideoGenTasks().catch((e) =>
-      console.error('[video-gen-store] persist clearCompleted failed:', e),
-    );
+    cleanupVideoGenTasks().catch((e) => console.error('[video-gen-store] persist clearCompleted failed:', e));
   },
 
   getTask: (taskId) => get().tasks.find((t) => t.id === taskId),

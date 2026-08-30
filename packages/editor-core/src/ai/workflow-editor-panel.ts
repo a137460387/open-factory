@@ -7,19 +7,35 @@
  * Designed to be consumed by any frontend framework (React, Vue, Svelte, etc.)
  */
 
-import type {NodeWorkflow, WorkflowNode, WorkflowParameter, NodePosition, NodeDefinition, NodeGraphValidationError} from '../automation/workflow-node-editor';
-import {createNodeWorkflow, createNodeFromDefinition, addNode, removeNode, connectNodes, disconnectNodes, updateNodeParams, moveNode, validateNodeWorkflow, convertToWorkflow, resolveParameters, validateParameters, BUILTIN_NODE_DEFINITIONS, BUILTIN_NODE_TEMPLATES} from '../automation/workflow-node-editor';
-import type {Workflow, WorkflowExecutionContext} from '../automation/workflow-engine';
+import type {
+  NodeWorkflow,
+  WorkflowNode,
+  WorkflowParameter,
+  NodePosition,
+  NodeDefinition,
+  NodeGraphValidationError,
+} from '../automation/workflow-node-editor';
+import {
+  createNodeWorkflow,
+  createNodeFromDefinition,
+  addNode,
+  removeNode,
+  connectNodes,
+  disconnectNodes,
+  updateNodeParams,
+  moveNode,
+  validateNodeWorkflow,
+  convertToWorkflow,
+  resolveParameters,
+  validateParameters,
+  BUILTIN_NODE_DEFINITIONS,
+  BUILTIN_NODE_TEMPLATES,
+} from '../automation/workflow-node-editor';
+import type { Workflow, WorkflowExecutionContext } from '../automation/workflow-engine';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type WorkflowEditorPhase =
-  | 'idle'
-  | 'editing'
-  | 'validating'
-  | 'executing'
-  | 'complete'
-  | 'error';
+export type WorkflowEditorPhase = 'idle' | 'editing' | 'validating' | 'executing' | 'complete' | 'error';
 
 export interface WorkflowEditorState {
   /** Current phase */
@@ -55,9 +71,7 @@ export interface WorkflowEditorState {
   panOffset: NodePosition;
 }
 
-export function createInitialWorkflowEditorState(
-  name: string = 'New Workflow',
-): WorkflowEditorState {
+export function createInitialWorkflowEditorState(name: string = 'New Workflow'): WorkflowEditorState {
   return {
     phase: 'editing',
     workflow: createNodeWorkflow(name),
@@ -104,10 +118,7 @@ export type WorkflowEditorAction =
 /**
  * Pure state reducer for the workflow editor panel.
  */
-export function workflowEditorReducer(
-  state: WorkflowEditorState,
-  action: WorkflowEditorAction,
-): WorkflowEditorState {
+export function workflowEditorReducer(state: WorkflowEditorState, action: WorkflowEditorAction): WorkflowEditorState {
   switch (action.type) {
     case 'LOAD_WORKFLOW':
       return { ...state, workflow: action.workflow, selectedNodeIds: [], validationErrors: [], phase: 'editing' };
@@ -181,15 +192,17 @@ export function workflowEditorReducer(
       return { ...state, pendingConnection: undefined };
 
     case 'DELETE_CONNECTION':
-      return { ...state, workflow: disconnectNodes(state.workflow, action.connectionId), selectedConnectionId: undefined };
+      return {
+        ...state,
+        workflow: disconnectNodes(state.workflow, action.connectionId),
+        selectedConnectionId: undefined,
+      };
 
     case 'UPDATE_NODE_PARAMS':
       return { ...state, workflow: updateNodeParams(state.workflow, action.nodeId, action.params) };
 
     case 'TOGGLE_NODE_ENABLED': {
-      const nodes = state.workflow.nodes.map((n) =>
-        n.id === action.nodeId ? { ...n, enabled: !n.enabled } : n,
-      );
+      const nodes = state.workflow.nodes.map((n) => (n.id === action.nodeId ? { ...n, enabled: !n.enabled } : n));
       return { ...state, workflow: { ...state.workflow, nodes, updatedAt: Date.now() } };
     }
 
@@ -293,9 +306,7 @@ export function getLinearWorkflow(state: WorkflowEditorState): Workflow {
 }
 
 /** Get all available node types grouped by category */
-export function getNodeDefinitionsByCategory(
-  definitions: NodeDefinition[],
-): Map<string, NodeDefinition[]> {
+export function getNodeDefinitionsByCategory(definitions: NodeDefinition[]): Map<string, NodeDefinition[]> {
   const grouped = new Map<string, NodeDefinition[]>();
   for (const def of definitions) {
     const existing = grouped.get(def.category) ?? [];
@@ -308,12 +319,8 @@ export function getNodeDefinitionsByCategory(
 /** Format execution status for display */
 export function formatExecutionStatus(context: WorkflowExecutionContext): string {
   const total = context.stepResults.size;
-  const completed = Array.from(context.stepResults.values()).filter(
-    (r) => r.status === 'completed',
-  ).length;
-  const failed = Array.from(context.stepResults.values()).filter(
-    (r) => r.status === 'failed',
-  ).length;
+  const completed = Array.from(context.stepResults.values()).filter((r) => r.status === 'completed').length;
+  const failed = Array.from(context.stepResults.values()).filter((r) => r.status === 'failed').length;
 
   if (context.status === 'completed') return `Completed: ${completed}/${total} steps`;
   if (context.status === 'failed') return `Failed: ${failed} error(s), ${completed} succeeded`;

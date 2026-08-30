@@ -1,10 +1,22 @@
-import {isProviderConfigured, buildExportProjectInfo, buildExportOptimizationSystemPrompt, buildExportOptimizationUserPrompt, parseExportOptimizationResponse, sortExportSuggestionsByPriority, EXPORT_SUGGESTION_CACHE_TTL_MS, type AIExportSuggestion, type Project, type ExportLoudnessNormalization, type ExportSubtitleFormat} from '@open-factory/editor-core';
-import {useState, type Dispatch, type SetStateAction} from 'react';
-import {type ExportPresetSettings} from '../export-presets';
-import {zhCN} from '../../i18n/strings';
-import {Loader2} from 'lucide-react';
-import {callAiApi, readAiApiKey} from '../../lib/tauri-bridge';
-import {useAISettingsStore} from '../../store/aiSettingsStore';
+import {
+  isProviderConfigured,
+  buildExportProjectInfo,
+  buildExportOptimizationSystemPrompt,
+  buildExportOptimizationUserPrompt,
+  parseExportOptimizationResponse,
+  sortExportSuggestionsByPriority,
+  EXPORT_SUGGESTION_CACHE_TTL_MS,
+  type AIExportSuggestion,
+  type Project,
+  type ExportLoudnessNormalization,
+  type ExportSubtitleFormat,
+} from '@open-factory/editor-core';
+import { useState, type Dispatch, type SetStateAction } from 'react';
+import { type ExportPresetSettings } from '../export-presets';
+import { zhCN } from '../../i18n/strings';
+import { Loader2 } from 'lucide-react';
+import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
 
 function applyExportSuggestionToDraft(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
@@ -224,4 +236,3 @@ export function AIExportSuggestionPanel({
     </details>
   );
 }
-

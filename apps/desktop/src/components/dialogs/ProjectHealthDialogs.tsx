@@ -1,10 +1,16 @@
-import {lazy, Suspense} from 'react';
-import type {Project, DuplicateMediaIssue, MissingMediaIssue, OrphanMediaIssue, ProxyMissingIssue} from '@open-factory/editor-core';
-import {useDialogStore} from '../../store/dialogStore';
-import {useMediaFeatureStore} from '../../store/mediaFeatureStore';
-import type {DuplicateMediaMergeSelection} from '../../media/DuplicateMediaDialog';
-import type {MediaOrganizerDuplicateSelection} from '../../media/MediaOrganizerDialog';
-import {PanelLoading} from '../PanelLoading';
+import { lazy, Suspense } from 'react';
+import type {
+  Project,
+  DuplicateMediaIssue,
+  MissingMediaIssue,
+  OrphanMediaIssue,
+  ProxyMissingIssue,
+} from '@open-factory/editor-core';
+import { useDialogStore } from '../../store/dialogStore';
+import { useMediaFeatureStore } from '../../store/mediaFeatureStore';
+import type { DuplicateMediaMergeSelection } from '../../media/DuplicateMediaDialog';
+import type { MediaOrganizerDuplicateSelection } from '../../media/MediaOrganizerDialog';
+import { PanelLoading } from '../PanelLoading';
 
 const ProjectHealthDialog = lazy(() =>
   import('../../project-health/ProjectHealthDialog').then((m) => ({ default: m.ProjectHealthDialog })),

@@ -43,10 +43,7 @@ function resetStore() {
   });
 }
 
-function seedRunningTask(
-  id: string,
-  overrides: Partial<{ videoPath: string | null; status: string }> = {},
-) {
+function seedRunningTask(id: string, overrides: Partial<{ videoPath: string | null; status: string }> = {}) {
   const task = {
     id,
     params: {
@@ -100,9 +97,7 @@ describe('video-gen-runner crash recovery', () => {
 
     // Should have called updateVideoGenTaskStatus with 'completed' and seq > 3
     expect(mockUpdateStatus).toHaveBeenCalled();
-    const call = mockUpdateStatus.mock.calls.find(
-      (c: unknown[]) => c[0] === 'task-1' && c[1] === 'completed',
-    );
+    const call = mockUpdateStatus.mock.calls.find((c: unknown[]) => c[0] === 'task-1' && c[1] === 'completed');
     expect(call).toBeDefined();
     expect(call![9]).toBeGreaterThan(3); // seq must be > DB value
   });
@@ -121,9 +116,7 @@ describe('video-gen-runner crash recovery', () => {
 
     // Should have called updateVideoGenTaskStatus with 'queued'
     expect(mockUpdateStatus).toHaveBeenCalled();
-    const call = mockUpdateStatus.mock.calls.find(
-      (c: unknown[]) => c[0] === 'task-2' && c[1] === 'queued',
-    );
+    const call = mockUpdateStatus.mock.calls.find((c: unknown[]) => c[0] === 'task-2' && c[1] === 'queued');
     expect(call).toBeDefined();
     expect(call![9]).toBe(4); // seq = 3 (from seed) + 1
   });
@@ -192,12 +185,8 @@ describe('video-gen-runner crash recovery', () => {
     await startVideoGenRunner();
 
     // updateVideoGenTaskStatus should NOT be called for these tasks
-    const callsForQueued = mockUpdateStatus.mock.calls.filter(
-      (c: unknown[]) => c[0] === 'queued-task',
-    );
-    const callsForCompleted = mockUpdateStatus.mock.calls.filter(
-      (c: unknown[]) => c[0] === 'completed-task',
-    );
+    const callsForQueued = mockUpdateStatus.mock.calls.filter((c: unknown[]) => c[0] === 'queued-task');
+    const callsForCompleted = mockUpdateStatus.mock.calls.filter((c: unknown[]) => c[0] === 'completed-task');
     expect(callsForQueued).toHaveLength(0);
     expect(callsForCompleted).toHaveLength(0);
   });
@@ -209,9 +198,7 @@ describe('video-gen-runner crash recovery', () => {
     await startVideoGenRunner(); // second call should be no-op
 
     // updateVideoGenTaskStatus should only be called once for this task
-    const calls = mockUpdateStatus.mock.calls.filter(
-      (c: unknown[]) => c[0] === 'task-idem',
-    );
+    const calls = mockUpdateStatus.mock.calls.filter((c: unknown[]) => c[0] === 'task-idem');
     expect(calls).toHaveLength(1);
   });
 });

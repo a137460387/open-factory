@@ -32,10 +32,7 @@ describe('deriveEmotionalClimaxSuggestions derivation', () => {
   it('derives top-K highlight intervals with label/source/markerType contract (identity mapping)', () => {
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 12, trimStart: 0 });
     // 两个互斥高潮点：1（0.9）→ [1,6]；7（0.8）→ [7,12]（末端恰为 clip 末端）
-    const suggestions = deriveEmotionalClimaxSuggestions(
-      makeAnalysis([makePoint(1, 0.9), makePoint(7, 0.8)]),
-      clip,
-    );
+    const suggestions = deriveEmotionalClimaxSuggestions(makeAnalysis([makePoint(1, 0.9), makePoint(7, 0.8)]), clip);
 
     expect(suggestions).toHaveLength(2);
     expect(suggestions[0]).toMatchObject({
@@ -67,10 +64,7 @@ describe('deriveEmotionalClimaxSuggestions derivation', () => {
   it('filters out-of-window curve points and clamps interval end to the clip source window', () => {
     // 窗口 [0, 12]：窗外点 20（0.95）剔除；点 9（0.85）延伸 [9,14] → clamp [9,12]
     const clip = makeClip({ id: 'clip-1', start: 0, duration: 12, trimStart: 0 });
-    const suggestions = deriveEmotionalClimaxSuggestions(
-      makeAnalysis([makePoint(20, 0.95), makePoint(9, 0.85)]),
-      clip,
-    );
+    const suggestions = deriveEmotionalClimaxSuggestions(makeAnalysis([makePoint(20, 0.95), makePoint(9, 0.85)]), clip);
 
     expect(suggestions).toHaveLength(1);
     expect(suggestions[0].timeRange).toEqual({ start: 9, end: 12 });
@@ -105,8 +99,6 @@ describe('deriveEmotionalClimaxSuggestions derivation', () => {
 
   it('returns empty array for an all-zero emotion curve (minScore 严格大于 0)', () => {
     const clip = makeClip({ id: 'clip-1', duration: 12 });
-    expect(
-      deriveEmotionalClimaxSuggestions(makeAnalysis([makePoint(1, 0), makePoint(7, 0)]), clip),
-    ).toEqual([]);
+    expect(deriveEmotionalClimaxSuggestions(makeAnalysis([makePoint(1, 0), makePoint(7, 0)]), clip)).toEqual([]);
   });
 });

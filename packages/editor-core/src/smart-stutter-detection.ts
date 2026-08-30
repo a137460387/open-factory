@@ -160,9 +160,7 @@ export function buildRefinedCutIntervals(
   return keepSegments;
 }
 
-export function estimateRefinedDuration(
-  keepSegments: Array<{ duration: number }>,
-): number {
+export function estimateRefinedDuration(keepSegments: Array<{ duration: number }>): number {
   return round(keepSegments.reduce((sum, seg) => sum + seg.duration, 0));
 }
 
@@ -322,10 +320,7 @@ function detectRepetitions(
 
 // ─── Helpers ──────────────────────────────────────────────
 
-function mergeStutterIntervals(
-  intervals: StutterInterval[],
-  mergeGap: number,
-): StutterInterval[] {
+function mergeStutterIntervals(intervals: StutterInterval[], mergeGap: number): StutterInterval[] {
   if (intervals.length === 0) return [];
   const sorted = [...intervals].sort((a, b) => a.start - b.start);
   const merged: StutterInterval[] = [];

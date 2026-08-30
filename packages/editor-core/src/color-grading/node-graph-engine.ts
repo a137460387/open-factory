@@ -1,7 +1,15 @@
-import type {ColorGradingGraph, ColorGradingNode, CurvesNodeParams, LUTApplyNodeParams, PrimarySliderParams, PrimaryWheelParams, TrackingMaskNodeParams} from './types';
-import type {HSLQualifierParams} from './hsl-qualifier';
-import type {WindowMaskParams} from './window-mask';
-import {sampleCurve} from './color-curves';
+import type {
+  ColorGradingGraph,
+  ColorGradingNode,
+  CurvesNodeParams,
+  LUTApplyNodeParams,
+  PrimarySliderParams,
+  PrimaryWheelParams,
+  TrackingMaskNodeParams,
+} from './types';
+import type { HSLQualifierParams } from './hsl-qualifier';
+import type { WindowMaskParams } from './window-mask';
+import { sampleCurve } from './color-curves';
 
 /** Uniform value that can be a scalar, array, or structured descriptor */
 export type UniformValue =

@@ -378,7 +378,7 @@ export function preprocessText(text: string): string {
   processed = processed.replace(/\s+/g, ' ');
 
   // 移除控制字符
-   
+
   processed = processed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
   return processed;

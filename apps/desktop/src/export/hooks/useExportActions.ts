@@ -1,35 +1,124 @@
-import {logger} from '@open-factory/editor-core/utils';
-import {generatePlatformFitSuggestion, ApplyPlatformFitCommand, RestorePlatformFitClipCommand, PLATFORM_LIMITS} from '@open-factory/editor-core';
-import {BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, type ExportComplianceParams} from '@open-factory/editor-core';
-import {getTimelinePlaybackDuration, buildExportProjectFromProject, buildFfmpegPreviewSamplePlans, buildProjectForSequenceExport, expandSequenceBatchOutputPath, createVersionedExportJobs, parseVersionedBatchTemplate, serializeVersionedBatchTemplate, runExportPreflight, sortBatchSequenceIds, topologicallySortExportPipeline, getPipelineUpstreamNodeIds, shouldRunExportPipelineNode, createTwoStepExportPipeline, createPublishAutomationPipeline, SequenceDependencyCycleError, ExportPipelineCycleError, type ExportPipelineNode, type ExportPipelineNodeStatus, type ExportPublishNodeLog, type ExportTask, type ExportLoudnessNormalization, type ExportTaskHistoryEntry, type ExportOptimizationSuggestion, type PreflightResult, type Project, type VersionedExportDefinition, applyExportOptimizationSuggestion} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {commandManager, projectAccessor} from '../../store/commandManager';
-import {chooseExportPath} from '../../lib/exportVideo';
-import {isFontFamilyAvailable} from '../../lib/fonts';
-import {cancelQualityEvaluation, convertLocalFileSrc, evaluateExportQuality, getAppDataDir, getFileStat, getFfmpegCapabilities, getWebdavText, getTempSegmentsDir, openFileDialog, openDirectoryDialog, readFile, runExportPowerAction, runExportPreviewSamples, saveFileDialog, putWebdavText, writeFile, writeExportUploadWebdavPassword, sendNotification} from '../../lib/tauri-bridge';
-import {showToast} from '../../lib/toast';
-import {runPublishPipelineNode} from '../publish-pipeline-runner';
-import {saveExportBackgroundSettings, saveExportOptimizationSettings, saveExportPresetSyncSettings, saveExportUploadSettings, type ExportBackgroundSettings, type ExportUploadSettings} from '../../settings/appSettings';
-import {getWhisperAvailability} from '../../lib/whisper';
-import {enqueueExport, enqueueStemExport} from '../export-queue-runner';
-import {normalizeScheduledExportStart, type ExportCompletionAction} from '../export-background';
-import {useExportQueueStore} from '../export-queue-store';
-import {retryExportUploadFromHistory} from '../export-upload';
-import {ensureMediaJobRunner} from '../../media/media-job-runner';
-import {useMediaJobStore} from '../../media/media-job-store';
-import {runExportWarmup} from '../export-warmup';
-import {formatExportWarning} from '../export-utils';
-import {BUILTIN_EXPORT_PRESETS, deleteCustomExportPreset, EXPORT_PRESET_PACKAGE_EXTENSION, fetchOfficialExportPresetPackage, getExportPreset, importExportPresetPackage, parseExportPresetPackage, saveCustomExportPreset, serializeExportPresetPackage, syncExportPresetsWithWebdav, type ExportPresetSettings} from '../export-presets';
-import {MAX_CODEC_COMPARE_PRESETS, buildCodecCompareJobs, createInitialCodecCompareResults, type CodecCompareSortKey} from '../codec-compare';
+import { logger } from '@open-factory/editor-core/utils';
+import {
+  generatePlatformFitSuggestion,
+  ApplyPlatformFitCommand,
+  RestorePlatformFitClipCommand,
+  PLATFORM_LIMITS,
+} from '@open-factory/editor-core';
+import {
+  BUILTIN_BROADCAST_SPECS,
+  checkCompliance,
+  buildComplianceFix,
+  type ExportComplianceParams,
+} from '@open-factory/editor-core';
+import {
+  getTimelinePlaybackDuration,
+  buildExportProjectFromProject,
+  buildFfmpegPreviewSamplePlans,
+  buildProjectForSequenceExport,
+  expandSequenceBatchOutputPath,
+  createVersionedExportJobs,
+  parseVersionedBatchTemplate,
+  serializeVersionedBatchTemplate,
+  runExportPreflight,
+  sortBatchSequenceIds,
+  topologicallySortExportPipeline,
+  getPipelineUpstreamNodeIds,
+  shouldRunExportPipelineNode,
+  createTwoStepExportPipeline,
+  createPublishAutomationPipeline,
+  SequenceDependencyCycleError,
+  ExportPipelineCycleError,
+  type ExportPipelineNode,
+  type ExportPipelineNodeStatus,
+  type ExportPublishNodeLog,
+  type ExportTask,
+  type ExportLoudnessNormalization,
+  type ExportTaskHistoryEntry,
+  type ExportOptimizationSuggestion,
+  type PreflightResult,
+  type Project,
+  type VersionedExportDefinition,
+  applyExportOptimizationSuggestion,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { commandManager, projectAccessor } from '../../store/commandManager';
+import { chooseExportPath } from '../../lib/exportVideo';
+import { isFontFamilyAvailable } from '../../lib/fonts';
+import {
+  cancelQualityEvaluation,
+  convertLocalFileSrc,
+  evaluateExportQuality,
+  getAppDataDir,
+  getFileStat,
+  getFfmpegCapabilities,
+  getWebdavText,
+  getTempSegmentsDir,
+  openFileDialog,
+  openDirectoryDialog,
+  readFile,
+  runExportPowerAction,
+  runExportPreviewSamples,
+  saveFileDialog,
+  putWebdavText,
+  writeFile,
+  writeExportUploadWebdavPassword,
+  sendNotification,
+} from '../../lib/tauri-bridge';
+import { showToast } from '../../lib/toast';
+import { runPublishPipelineNode } from '../publish-pipeline-runner';
+import {
+  saveExportBackgroundSettings,
+  saveExportOptimizationSettings,
+  saveExportPresetSyncSettings,
+  saveExportUploadSettings,
+  type ExportBackgroundSettings,
+  type ExportUploadSettings,
+} from '../../settings/appSettings';
+import { getWhisperAvailability } from '../../lib/whisper';
+import { enqueueExport, enqueueStemExport } from '../export-queue-runner';
+import { normalizeScheduledExportStart, type ExportCompletionAction } from '../export-background';
+import { useExportQueueStore } from '../export-queue-store';
+import { retryExportUploadFromHistory } from '../export-upload';
+import { ensureMediaJobRunner } from '../../media/media-job-runner';
+import { useMediaJobStore } from '../../media/media-job-store';
+import { runExportWarmup } from '../export-warmup';
+import { formatExportWarning } from '../export-utils';
+import {
+  BUILTIN_EXPORT_PRESETS,
+  deleteCustomExportPreset,
+  EXPORT_PRESET_PACKAGE_EXTENSION,
+  fetchOfficialExportPresetPackage,
+  getExportPreset,
+  importExportPresetPackage,
+  parseExportPresetPackage,
+  saveCustomExportPreset,
+  serializeExportPresetPackage,
+  syncExportPresetsWithWebdav,
+  type ExportPresetSettings,
+} from '../export-presets';
+import {
+  MAX_CODEC_COMPARE_PRESETS,
+  buildCodecCompareJobs,
+  createInitialCodecCompareResults,
+  type CodecCompareSortKey,
+} from '../codec-compare';
 
-import {buildExportPreviewOutputPaths, normalizeDraftSettings, updateAudioVisualizationBackgroundImagePath, updateImageWatermarkPath, safePresetPackageFileName, choosePresetPackageConflictMode} from '../lib/exportSettingsHelpers';
+import {
+  buildExportPreviewOutputPaths,
+  normalizeDraftSettings,
+  updateAudioVisualizationBackgroundImagePath,
+  updateImageWatermarkPath,
+  safePresetPackageFileName,
+  choosePresetPackageConflictMode,
+} from '../lib/exportSettingsHelpers';
 
-import {buildExportJobs, delay, updatePipelineStatus, type ExportJob} from '../lib/pipelineHelpers';
+import { buildExportJobs, delay, updatePipelineStatus, type ExportJob } from '../lib/pipelineHelpers';
 
-import {formatOptimizationSuggestionTitle} from '../components/ExportOptimizationPanel';
-import type {VersionedExportRowState} from '../components/ExportVersionBatchSection';
+import { formatOptimizationSuggestionTitle } from '../components/ExportOptimizationPanel';
+import type { VersionedExportRowState } from '../components/ExportVersionBatchSection';
 
-import type {ExportState} from './useExportState';
+import type { ExportState } from './useExportState';
 
 const VERSIONED_BATCH_TEMPLATE_EXTENSION = 'ofbatch.json';
 const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;

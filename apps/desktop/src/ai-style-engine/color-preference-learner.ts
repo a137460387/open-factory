@@ -188,7 +188,9 @@ function calculateStdDev(values: number[]): number {
 /**
  * Calculate LUT usage distribution
  */
-export function calculateLutDistribution(params: ColorGradingParams[]): Array<{ lut: string; usageCount: number; percentage: number }> {
+export function calculateLutDistribution(
+  params: ColorGradingParams[],
+): Array<{ lut: string; usageCount: number; percentage: number }> {
   const lutCounts: Record<string, number> = {};
   let total = 0;
 
@@ -217,9 +219,7 @@ export function calculateColorTemperatureStats(params: ColorGradingParams[]): {
   avg: number;
   stdDev: number;
 } {
-  const temps = params
-    .map((p) => p.colorTemperature)
-    .filter((t): t is number => t !== undefined);
+  const temps = params.map((p) => p.colorTemperature).filter((t): t is number => t !== undefined);
 
   return {
     avg: temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : 5500,
@@ -235,9 +235,7 @@ export function calculateContrastStats(params: ColorGradingParams[]): {
   min: number;
   max: number;
 } {
-  const contrasts = params
-    .map((p) => p.contrast)
-    .filter((c): c is number => c !== undefined);
+  const contrasts = params.map((p) => p.contrast).filter((c): c is number => c !== undefined);
 
   if (contrasts.length === 0) {
     return { avg: 0, min: 0, max: 0 };
@@ -258,9 +256,7 @@ export function calculateSaturationStats(params: ColorGradingParams[]): {
   min: number;
   max: number;
 } {
-  const sats = params
-    .map((p) => p.saturation ?? p.vibrance)
-    .filter((s): s is number => s !== undefined);
+  const sats = params.map((p) => p.saturation ?? p.vibrance).filter((s): s is number => s !== undefined);
 
   if (sats.length === 0) {
     return { avg: 0, min: 0, max: 0 };
@@ -316,10 +312,7 @@ function vectorDistance(a: number[], b: number[]): number {
 /**
  * Simple K-means clustering for color styles
  */
-export function clusterColorStyles(
-  params: ColorGradingParams[],
-  numClusters: number = 3,
-): ColorStyleCluster[] {
+export function clusterColorStyles(params: ColorGradingParams[], numClusters: number = 3): ColorStyleCluster[] {
   if (params.length < numClusters) {
     return params.map((p, i) => ({
       id: `cluster-${i}`,
@@ -490,9 +483,8 @@ export function analyzeColorPreferences(project: ProjectLike): ColorAnalysisResu
 
   // Cluster styles
   const styleClusters = clusterColorStyles(allParams);
-  const dominantStyle = styleClusters.length > 0
-    ? styleClusters.reduce((a, b) => (a.confidence > b.confidence ? a : b))
-    : null;
+  const dominantStyle =
+    styleClusters.length > 0 ? styleClusters.reduce((a, b) => (a.confidence > b.confidence ? a : b)) : null;
 
   const profile: ColorPreferenceProfile = {
     topLuts,

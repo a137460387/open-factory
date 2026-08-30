@@ -1,9 +1,9 @@
-import type {ProjectAccessor} from './index';
-import {Project, Subclip} from '../../model';
-import {BeatSnapSuggestion, MediaCollection} from '../../model-types';
-import {TimelineLabelColor} from '../../timeline-color-labels';
-import {Command} from '../command';
-import {touchProject} from './utils';
+import type { ProjectAccessor } from './types';
+import { Project, Subclip } from '../../model';
+import { BeatSnapSuggestion, MediaCollection } from '../../model-types';
+import { TimelineLabelColor } from '../../timeline-color-labels';
+import { Command } from '../command';
+import { touchProject } from './utils';
 
 export class AddSubclipCommand implements Command {
   readonly description: string;

@@ -40,22 +40,75 @@ export function ViewMenu({
   const close = () => onToggle();
   return (
     <MenuDropdown label={t.viewMenu} open={open} onToggle={onToggle} testId="toolbar-view-menu-button">
-      <ViewToggleItem label={t.safeFrameGuides} active={safeFrameGuides} testId="toolbar-view-safe-frame-guides-menu-item" onClick={onToggleSafeFrameGuides} />
-      <ViewToggleItem label={t.thumbnailTrack} active={thumbnailTrackVisible} testId="toolbar-view-thumbnail-track-menu-item" onClick={onToggleThumbnailTrack} />
-      <ViewToggleItem label={t.timelineMinimap} active={timelineMinimapVisible} testId="toolbar-view-minimap-menu-item" onClick={onToggleTimelineMinimap} />
+      <ViewToggleItem
+        label={t.safeFrameGuides}
+        active={safeFrameGuides}
+        testId="toolbar-view-safe-frame-guides-menu-item"
+        onClick={onToggleSafeFrameGuides}
+      />
+      <ViewToggleItem
+        label={t.thumbnailTrack}
+        active={thumbnailTrackVisible}
+        testId="toolbar-view-thumbnail-track-menu-item"
+        onClick={onToggleThumbnailTrack}
+      />
+      <ViewToggleItem
+        label={t.timelineMinimap}
+        active={timelineMinimapVisible}
+        testId="toolbar-view-minimap-menu-item"
+        onClick={onToggleTimelineMinimap}
+      />
       <MenuSeparator />
-      <MenuItem label={t.timelineCompare} testId="toolbar-view-timeline-compare-menu-item" icon={<GitCompareArrows size={14} />} onClick={() => { close(); onOpenTimelineCompare(); }} />
-      <MenuItem label={zhCN.sequenceCompare.title} testId="toolbar-view-sequence-compare" onClick={() => { close(); onOpenSequenceCompare(); }} />
-      <ViewToggleItem label={t.timelineHeatmap} active={timelineHeatmap.enabled} testId="toolbar-view-heatmap-menu-item" onClick={() => onTimelineHeatmapChange({ enabled: !timelineHeatmap.enabled })} />
+      <MenuItem
+        label={t.timelineCompare}
+        testId="toolbar-view-timeline-compare-menu-item"
+        icon={<GitCompareArrows size={14} />}
+        onClick={() => {
+          close();
+          onOpenTimelineCompare();
+        }}
+      />
+      <MenuItem
+        label={zhCN.sequenceCompare.title}
+        testId="toolbar-view-sequence-compare"
+        onClick={() => {
+          close();
+          onOpenSequenceCompare();
+        }}
+      />
+      <ViewToggleItem
+        label={t.timelineHeatmap}
+        active={timelineHeatmap.enabled}
+        testId="toolbar-view-heatmap-menu-item"
+        onClick={() => onTimelineHeatmapChange({ enabled: !timelineHeatmap.enabled })}
+      />
       {timelineHeatmap.enabled ? (
         <HeatmapControls heatmap={timelineHeatmap} onChange={onTimelineHeatmapChange} />
       ) : null}
-      <MenuItem label={t.reviewMode} testId="toolbar-view-review-mode-menu-item" icon={<span className="text-xs text-slate-500">#review</span>} onClick={() => { close(); onToggleReviewMode(); }} />
+      <MenuItem
+        label={t.reviewMode}
+        testId="toolbar-view-review-mode-menu-item"
+        icon={<span className="text-xs text-slate-500">#review</span>}
+        onClick={() => {
+          close();
+          onToggleReviewMode();
+        }}
+      />
     </MenuDropdown>
   );
 }
 
-function ViewToggleItem({ label, active, testId, onClick }: { label: string; active: boolean; testId: string; onClick(): void }) {
+function ViewToggleItem({
+  label,
+  active,
+  testId,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  testId: string;
+  onClick(): void;
+}) {
   const t = zhCN.toolbar;
   return (
     <button
@@ -66,9 +119,7 @@ function ViewToggleItem({ label, active, testId, onClick }: { label: string; act
       onClick={onClick}
     >
       <span>{label}</span>
-      <span className="text-xs text-slate-500">
-        {active ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}
-      </span>
+      <span className="text-xs text-slate-500">{active ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
     </button>
   );
 }
@@ -92,7 +143,9 @@ function HeatmapControls({
           onChange={(event) => onChange({ type: event.target.value as TimelineHeatmapViewSettings['type'] })}
         >
           {(['edit-density', 'volume', 'cut-frequency'] as const).map((type) => (
-            <option key={type} value={type}>{t.heatmapTypes[type]}</option>
+            <option key={type} value={type}>
+              {t.heatmapTypes[type]}
+            </option>
           ))}
         </select>
       </label>
@@ -118,10 +171,14 @@ function HeatmapControls({
           className="mt-1 w-full rounded border border-line bg-white px-2 py-1 text-xs"
           value={heatmap.colorScheme}
           data-testid="toolbar-view-heatmap-color-select"
-          onChange={(event) => onChange({ colorScheme: event.target.value as TimelineHeatmapViewSettings['colorScheme'] })}
+          onChange={(event) =>
+            onChange({ colorScheme: event.target.value as TimelineHeatmapViewSettings['colorScheme'] })
+          }
         >
           {(['warm', 'cool', 'mono'] as const).map((scheme) => (
-            <option key={scheme} value={scheme}>{t.heatmapColorSchemes[scheme]}</option>
+            <option key={scheme} value={scheme}>
+              {t.heatmapColorSchemes[scheme]}
+            </option>
           ))}
         </select>
       </label>

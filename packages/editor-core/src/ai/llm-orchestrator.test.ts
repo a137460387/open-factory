@@ -10,11 +10,7 @@ import {
   buildLLMHeaders,
   buildOpenAIRequestBody,
 } from './llm-orchestrator';
-import type {
-  EditInstruction,
-  EditActionType,
-  LLMMessage,
-} from './llm-orchestrator';
+import type { EditInstruction, EditActionType, LLMMessage } from './llm-orchestrator';
 import type { MaterialMetadata } from './semantic-extractor';
 import type { AIProvider } from '../ai-service';
 import type { AudioProfile, VisualProfile } from './semantic-extractor';
@@ -37,16 +33,23 @@ function makeProvider(overrides: Partial<AIProvider> = {}): AIProvider {
 
 function makeAudio(): AudioProfile {
   return {
-    avgLoudness: -14, peakDb: -1, silenceRatio: 0.1,
-    hasMusic: false, speechRatio: 0.8, noiseLevel: 'quiet',
+    avgLoudness: -14,
+    peakDb: -1,
+    silenceRatio: 0.1,
+    hasMusic: false,
+    speechRatio: 0.8,
+    noiseLevel: 'quiet',
   };
 }
 
 function makeVisual(): VisualProfile {
   return {
-    motionIntensity: 0.5, colorPalette: ['#ff0000'],
-    avgBrightness: 0.5, sceneDistribution: { indoor: 0.6 },
-    faceCount: 1, hasOverlay: false,
+    motionIntensity: 0.5,
+    colorPalette: ['#ff0000'],
+    avgBrightness: 0.5,
+    sceneDistribution: { indoor: 0.6 },
+    faceCount: 1,
+    hasOverlay: false,
   };
 }
 
@@ -54,8 +57,13 @@ function makeMetadata(overrides: Partial<MaterialMetadata> = {}): MaterialMetada
   return {
     version: '1.0',
     source: {
-      fileName: 'test.mp4', durationSec: 60, width: 1920,
-      height: 1080, fps: 30, codec: 'h264', fileSizeBytes: 10_000_000,
+      fileName: 'test.mp4',
+      durationSec: 60,
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      codec: 'h264',
+      fileSizeBytes: 10_000_000,
     },
     extractedAt: new Date().toISOString(),
     keyFrames: [],
@@ -106,7 +114,7 @@ describe('buildEditingPrompt', () => {
   it('handles multiple materials', () => {
     const messages = buildEditingPrompt(
       [makeMetadata(), makeMetadata({ source: { ...makeMetadata().source, fileName: 'b.mp4' } })],
-      'Combine these'
+      'Combine these',
     );
     expect(messages[1].content).toContain('test.mp4');
     expect(messages[1].content).toContain('b.mp4');
@@ -148,11 +156,7 @@ describe('buildConversationalPrompt', () => {
       { role: 'user', content: 'First message' },
       { role: 'assistant', content: 'First response' },
     ];
-    const messages = buildConversationalPrompt(
-      [makeMetadata()],
-      history,
-      'Now do this'
-    );
+    const messages = buildConversationalPrompt([makeMetadata()], history, 'Now do this');
     expect(messages[0].role).toBe('system');
     // Context + history + new message
     expect(messages.length).toBeGreaterThanOrEqual(4);
@@ -199,48 +203,58 @@ describe('parseEditPlan', () => {
   });
 
   it('rejects missing title', () => {
-    const result = parseEditPlan(JSON.stringify({
-      description: 'test',
-      instructions: [],
-      estimatedDurationSec: 10,
-    }));
+    const result = parseEditPlan(
+      JSON.stringify({
+        description: 'test',
+        instructions: [],
+        estimatedDurationSec: 10,
+      }),
+    );
     expect(result.ok).toBe(false);
   });
 
   it('rejects invalid action type', () => {
-    const result = parseEditPlan(JSON.stringify({
-      title: 'Test',
-      description: 'test',
-      instructions: [{
-        id: '1',
-        action: 'invalid_action',
-        target: {},
-        params: {},
-        confidence: 0.5,
-        reason: 'test',
-      }],
-      estimatedDurationSec: 10,
-    }));
+    const result = parseEditPlan(
+      JSON.stringify({
+        title: 'Test',
+        description: 'test',
+        instructions: [
+          {
+            id: '1',
+            action: 'invalid_action',
+            target: {},
+            params: {},
+            confidence: 0.5,
+            reason: 'test',
+          },
+        ],
+        estimatedDurationSec: 10,
+      }),
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors.some(e => e.message.includes('Invalid action'))).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('Invalid action'))).toBe(true);
     }
   });
 
   it('rejects confidence out of range', () => {
-    const result = parseEditPlan(JSON.stringify({
-      title: 'Test',
-      description: 'test',
-      instructions: [{
-        id: '1',
-        action: 'cut',
-        target: {},
-        params: {},
-        confidence: 1.5,
-        reason: 'test',
-      }],
-      estimatedDurationSec: 10,
-    }));
+    const result = parseEditPlan(
+      JSON.stringify({
+        title: 'Test',
+        description: 'test',
+        instructions: [
+          {
+            id: '1',
+            action: 'cut',
+            target: {},
+            params: {},
+            confidence: 1.5,
+            reason: 'test',
+          },
+        ],
+        estimatedDurationSec: 10,
+      }),
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -286,9 +300,11 @@ describe('parsePlatformContent', () => {
   });
 
   it('rejects missing required fields', () => {
-    const result = parsePlatformContent(JSON.stringify({
-      platforms: [{ platform: 'youtube' }],
-    }));
+    const result = parsePlatformContent(
+      JSON.stringify({
+        platforms: [{ platform: 'youtube' }],
+      }),
+    );
     expect(result.ok).toBe(false);
   });
 
@@ -352,10 +368,7 @@ describe('sortInstructionsByPriority', () => {
   });
 
   it('does not mutate input', () => {
-    const instructions = [
-      makeInstruction({ action: 'add_subtitle' }),
-      makeInstruction({ action: 'cut' }),
-    ];
+    const instructions = [makeInstruction({ action: 'add_subtitle' }), makeInstruction({ action: 'cut' })];
     const original = [...instructions];
     sortInstructionsByPriority(instructions);
     expect(instructions).toEqual(original);
@@ -415,35 +428,37 @@ describe('buildOpenAIRequestBody', () => {
   });
 
   it('uses model override', () => {
-    const body = buildOpenAIRequestBody(
-      [{ role: 'user', content: 'test' }],
-      { provider: makeProvider(), model: 'claude-3' }
-    );
+    const body = buildOpenAIRequestBody([{ role: 'user', content: 'test' }], {
+      provider: makeProvider(),
+      model: 'claude-3',
+    });
     expect(body.model).toBe('claude-3');
   });
 
   it('adds json response format when requested', () => {
-    const body = buildOpenAIRequestBody(
-      [{ role: 'user', content: 'test' }],
-      { provider: makeProvider(), responseFormat: 'json' }
-    );
+    const body = buildOpenAIRequestBody([{ role: 'user', content: 'test' }], {
+      provider: makeProvider(),
+      responseFormat: 'json',
+    });
     expect(body.response_format).toEqual({ type: 'json_object' });
   });
 
   it('omits response format when not json', () => {
-    const body = buildOpenAIRequestBody(
-      [{ role: 'user', content: 'test' }],
-      { provider: makeProvider(), responseFormat: 'text' }
-    );
+    const body = buildOpenAIRequestBody([{ role: 'user', content: 'test' }], {
+      provider: makeProvider(),
+      responseFormat: 'text',
+    });
     expect(body.response_format).toBeUndefined();
   });
 
   it('includes image attachments', () => {
-    const messages: LLMMessage[] = [{
-      role: 'user',
-      content: 'Analyze this',
-      images: [{ base64: 'abc123', mimeType: 'image/jpeg' }],
-    }];
+    const messages: LLMMessage[] = [
+      {
+        role: 'user',
+        content: 'Analyze this',
+        images: [{ base64: 'abc123', mimeType: 'image/jpeg' }],
+      },
+    ];
     const body = buildOpenAIRequestBody(messages, { provider: makeProvider() });
     const msg = body.messages as Array<{ content: unknown }>;
     const content = msg[0].content as Array<{ type: string }>;
@@ -457,8 +472,18 @@ describe('buildOpenAIRequestBody', () => {
 
 describe('EditActionType completeness', () => {
   const allActions: EditActionType[] = [
-    'cut', 'trim', 'reorder', 'add_transition', 'add_subtitle',
-    'adjust_audio', 'add_effect', 'split', 'merge', 'speed', 'fade', 'narration',
+    'cut',
+    'trim',
+    'reorder',
+    'add_transition',
+    'add_subtitle',
+    'adjust_audio',
+    'add_effect',
+    'split',
+    'merge',
+    'speed',
+    'fade',
+    'narration',
   ];
 
   it('parseEditPlan accepts all action types', () => {
@@ -466,9 +491,16 @@ describe('EditActionType completeness', () => {
       const json = JSON.stringify({
         title: 'Test',
         description: 'Test',
-        instructions: [{
-          id: '1', action, target: {}, params: {}, confidence: 0.8, reason: 'test',
-        }],
+        instructions: [
+          {
+            id: '1',
+            action,
+            target: {},
+            params: {},
+            confidence: 0.8,
+            reason: 'test',
+          },
+        ],
         estimatedDurationSec: 10,
       });
       const result = parseEditPlan(json);
@@ -477,9 +509,7 @@ describe('EditActionType completeness', () => {
   });
 
   it('sortInstructionsByPriority handles all action types', () => {
-    const instructions = allActions.map((action, i) =>
-      makeInstruction({ id: `${i}`, action })
-    );
+    const instructions = allActions.map((action, i) => makeInstruction({ id: `${i}`, action }));
     const sorted = sortInstructionsByPriority(instructions);
     expect(sorted).toHaveLength(allActions.length);
   });

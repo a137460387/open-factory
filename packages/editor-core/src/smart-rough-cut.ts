@@ -126,14 +126,10 @@ export function generateCutPoints(
   // Add audio beat cut points
   for (const b of audioBeats) {
     // Check if near an existing visual highlight
-    const nearVisual = points.some(
-      (p) => p.reason === 'visual-highlight' && Math.abs(p.time - b.time) <= minGap,
-    );
+    const nearVisual = points.some((p) => p.reason === 'visual-highlight' && Math.abs(p.time - b.time) <= minGap);
     if (nearVisual) {
       // Boost the existing point
-      const existing = points.find(
-        (p) => p.reason === 'visual-highlight' && Math.abs(p.time - b.time) <= minGap,
-      );
+      const existing = points.find((p) => p.reason === 'visual-highlight' && Math.abs(p.time - b.time) <= minGap);
       if (existing) {
         existing.confidence = Math.min(1, existing.confidence * 1.2);
         existing.reason = 'combined';
@@ -188,12 +184,9 @@ export function selectSegments(
     if (duration < config.minClipDuration || duration > config.maxClipDuration) continue;
 
     // Find relevant cut points within this segment
-    const segHighlights = cutPoints.filter(
-      (p) => p.time >= start && p.time < end,
-    );
-    const avgConfidence = segHighlights.length > 0
-      ? segHighlights.reduce((s, p) => s + p.confidence, 0) / segHighlights.length
-      : 0.1;
+    const segHighlights = cutPoints.filter((p) => p.time >= start && p.time < end);
+    const avgConfidence =
+      segHighlights.length > 0 ? segHighlights.reduce((s, p) => s + p.confidence, 0) / segHighlights.length : 0.1;
 
     candidates.push({
       sourceStart: round(start),
@@ -201,11 +194,13 @@ export function selectSegments(
       duration: round(duration),
       score: round(avgConfidence),
       visualScore: round(
-        segHighlights.filter((p) => p.reason === 'visual-highlight' || p.reason === 'combined')
+        segHighlights
+          .filter((p) => p.reason === 'visual-highlight' || p.reason === 'combined')
           .reduce((s, p) => s + p.confidence, 0) / Math.max(1, segHighlights.length),
       ),
       audioScore: round(
-        segHighlights.filter((p) => p.reason === 'audio-beat' || p.reason === 'combined')
+        segHighlights
+          .filter((p) => p.reason === 'audio-beat' || p.reason === 'combined')
           .reduce((s, p) => s + p.confidence, 0) / Math.max(1, segHighlights.length),
       ),
     });
@@ -224,9 +219,7 @@ export function selectSegments(
     if (totalDuration >= maxDuration) break;
 
     // Check for overlap with already-selected segments
-    const overlaps = usedRanges.some(
-      (r) => seg.sourceStart < r.end && seg.sourceEnd > r.start,
-    );
+    const overlaps = usedRanges.some((r) => seg.sourceStart < r.end && seg.sourceEnd > r.start);
     if (overlaps) continue;
 
     selected.push(seg);
@@ -257,14 +250,9 @@ export function calculatePacingScore(segments: RoughCutSegment[], targetCpm: num
 /**
  * Calculate highlight coverage (fraction of input highlights included).
  */
-export function calculateHighlightCoverage(
-  segments: RoughCutSegment[],
-  highlights: VisualHighlightMarker[],
-): number {
+export function calculateHighlightCoverage(segments: RoughCutSegment[], highlights: VisualHighlightMarker[]): number {
   if (highlights.length === 0) return 1;
-  const covered = highlights.filter((h) =>
-    segments.some((seg) => h.time >= seg.sourceStart && h.time < seg.sourceEnd),
-  );
+  const covered = highlights.filter((h) => segments.some((seg) => h.time >= seg.sourceStart && h.time < seg.sourceEnd));
   return round(covered.length / highlights.length);
 }
 
@@ -283,13 +271,9 @@ function generateHighlightsProposal(
   const pacingScore = calculatePacingScore(segments, config.targetCpm);
   const highlightCoverage = calculateHighlightCoverage(segments, highlights);
   const totalDuration = segments.reduce((s, seg) => s + seg.duration, 0);
-  const avgScore = segments.length > 0
-    ? segments.reduce((s, seg) => s + seg.score, 0) / segments.length
-    : 0;
+  const avgScore = segments.length > 0 ? segments.reduce((s, seg) => s + seg.score, 0) / segments.length : 0;
   const qualityScore = round(
-    avgScore * config.visualWeight +
-    pacingScore * config.pacingWeight +
-    highlightCoverage * config.audioWeight,
+    avgScore * config.visualWeight + pacingScore * config.pacingWeight + highlightCoverage * config.audioWeight,
   );
 
   return {
@@ -318,22 +302,16 @@ function generateBeatSyncProposal(
   config: RoughCutConfig,
 ): RoughCutProposal {
   // Prefer combined and audio-beat cut points
-  const beatAlignedPoints = cutPoints.filter(
-    (p) => p.reason === 'audio-beat' || p.reason === 'combined',
-  );
+  const beatAlignedPoints = cutPoints.filter((p) => p.reason === 'audio-beat' || p.reason === 'combined');
   const allPoints = beatAlignedPoints.length >= 2 ? beatAlignedPoints : cutPoints;
 
   const segments = selectSegments(allPoints, sourceDuration, config);
   const pacingScore = calculatePacingScore(segments, config.targetCpm);
   const highlightCoverage = calculateHighlightCoverage(segments, highlights);
   const totalDuration = segments.reduce((s, seg) => s + seg.duration, 0);
-  const avgScore = segments.length > 0
-    ? segments.reduce((s, seg) => s + seg.audioScore, 0) / segments.length
-    : 0;
+  const avgScore = segments.length > 0 ? segments.reduce((s, seg) => s + seg.audioScore, 0) / segments.length : 0;
   const qualityScore = round(
-    avgScore * config.audioWeight +
-    pacingScore * config.pacingWeight +
-    highlightCoverage * config.visualWeight,
+    avgScore * config.audioWeight + pacingScore * config.pacingWeight + highlightCoverage * config.visualWeight,
   );
 
   return {
@@ -365,14 +343,11 @@ function generateBalancedProposal(
   const pacingScore = calculatePacingScore(segments, config.targetCpm);
   const highlightCoverage = calculateHighlightCoverage(segments, highlights);
   const totalDuration = segments.reduce((s, seg) => s + seg.duration, 0);
-  const avgScore = segments.length > 0
-    ? segments.reduce((s, seg) => s + (seg.visualScore + seg.audioScore) / 2, 0) / segments.length
-    : 0;
-  const qualityScore = round(
-    avgScore * 0.4 +
-    pacingScore * config.pacingWeight +
-    highlightCoverage * 0.4,
-  );
+  const avgScore =
+    segments.length > 0
+      ? segments.reduce((s, seg) => s + (seg.visualScore + seg.audioScore) / 2, 0) / segments.length
+      : 0;
+  const qualityScore = round(avgScore * 0.4 + pacingScore * config.pacingWeight + highlightCoverage * 0.4);
 
   return {
     id: 'balanced',
@@ -445,11 +420,18 @@ export function buildRoughCutSystemPrompt(): string {
  * Build user prompt for AI rough cut refinement.
  */
 export function buildRoughCutUserPrompt(result: RoughCutResult): string {
-  const lines = [`源素材时长: ${result.sourceDuration}秒`, `检测到高光: ${result.inputHighlightCount}个`, `检测到节拍: ${result.inputBeatCount}个`, ''];
+  const lines = [
+    `源素材时长: ${result.sourceDuration}秒`,
+    `检测到高光: ${result.inputHighlightCount}个`,
+    `检测到节拍: ${result.inputBeatCount}个`,
+    '',
+  ];
 
   for (const proposal of result.proposals) {
     lines.push(`方案: ${proposal.name} (${proposal.id})`);
-    lines.push(`  时长: ${proposal.totalDuration}秒, 质量: ${proposal.qualityScore}, 节奏: ${proposal.pacingScore}, 覆盖: ${proposal.highlightCoverage}`);
+    lines.push(
+      `  时长: ${proposal.totalDuration}秒, 质量: ${proposal.qualityScore}, 节奏: ${proposal.pacingScore}, 覆盖: ${proposal.highlightCoverage}`,
+    );
     lines.push(`  片段数: ${proposal.segments.length}`);
     lines.push(`  说明: ${proposal.description}`);
     lines.push('');

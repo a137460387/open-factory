@@ -17,7 +17,12 @@ import {
 
 // ==================== Test Helpers ====================
 
-function makeProject(tracks: Array<{ clips: Array<{ colorGrading?: ColorGradingParams; colorNodes?: Array<{ params: ColorGradingParams }> }> }>, presets?: Array<{ type: string; params: ColorGradingParams }>) {
+function makeProject(
+  tracks: Array<{
+    clips: Array<{ colorGrading?: ColorGradingParams; colorNodes?: Array<{ params: ColorGradingParams }> }>;
+  }>,
+  presets?: Array<{ type: string; params: ColorGradingParams }>,
+) {
   return {
     timeline: { tracks },
     presets,
@@ -33,9 +38,7 @@ describe('extractColorParams', () => {
   });
 
   it('extracts params from clip colorGrading', () => {
-    const project = makeProject([
-      { clips: [{ colorGrading: { contrast: 20, saturation: 10 } }] },
-    ]);
+    const project = makeProject([{ clips: [{ colorGrading: { contrast: 20, saturation: 10 } }] }]);
     const params = extractColorParams(project);
     expect(params).toHaveLength(1);
     expect(params[0].contrast).toBe(20);
@@ -44,12 +47,11 @@ describe('extractColorParams', () => {
   it('extracts params from colorNodes', () => {
     const project = makeProject([
       {
-        clips: [{
-          colorNodes: [
-            { params: { exposure: 1.5 } },
-            { params: { contrast: 30 } },
-          ],
-        }],
+        clips: [
+          {
+            colorNodes: [{ params: { exposure: 1.5 } }, { params: { contrast: 30 } }],
+          },
+        ],
       },
     ]);
     const params = extractColorParams(project);
@@ -66,10 +68,13 @@ describe('extractPresetParams', () => {
   });
 
   it('extracts color-grading presets only', () => {
-    const project = makeProject([], [
-      { type: 'color-grading', params: { contrast: 10 } },
-      { type: 'audio-effect', params: { contrast: 99 } },
-    ]);
+    const project = makeProject(
+      [],
+      [
+        { type: 'color-grading', params: { contrast: 10 } },
+        { type: 'audio-effect', params: { contrast: 99 } },
+      ],
+    );
     const params = extractPresetParams(project);
     expect(params).toHaveLength(1);
     expect(params[0].contrast).toBe(10);
@@ -108,10 +113,7 @@ describe('calculateColorTemperatureStats', () => {
   });
 
   it('calculates correct average', () => {
-    const params: ColorGradingParams[] = [
-      { colorTemperature: 3200 },
-      { colorTemperature: 5600 },
-    ];
+    const params: ColorGradingParams[] = [{ colorTemperature: 3200 }, { colorTemperature: 5600 }];
     const stats = calculateColorTemperatureStats(params);
     expect(stats.avg).toBeCloseTo(4400);
   });
@@ -128,11 +130,7 @@ describe('calculateContrastStats', () => {
   });
 
   it('calculates min/max/avg', () => {
-    const params: ColorGradingParams[] = [
-      { contrast: -20 },
-      { contrast: 40 },
-      { contrast: 10 },
-    ];
+    const params: ColorGradingParams[] = [{ contrast: -20 }, { contrast: 40 }, { contrast: 10 }];
     const stats = calculateContrastStats(params);
     expect(stats.avg).toBeCloseTo(10);
     expect(stats.min).toBe(-20);
@@ -243,17 +241,15 @@ describe('analyzeColorPreferences', () => {
   });
 
   it('produces full analysis for project with color data', () => {
-    const project = makeProject(
-      [
-        {
-          clips: [
-            { colorGrading: { contrast: 20, saturation: 10, colorTemperature: 5000, lut: 'warm.cube' } },
-            { colorGrading: { contrast: 30, saturation: 15, colorTemperature: 5500, lut: 'warm.cube' } },
-            { colorGrading: { contrast: -10, saturation: -5, colorTemperature: 3200 } },
-          ],
-        },
-      ],
-    );
+    const project = makeProject([
+      {
+        clips: [
+          { colorGrading: { contrast: 20, saturation: 10, colorTemperature: 5000, lut: 'warm.cube' } },
+          { colorGrading: { contrast: 30, saturation: 15, colorTemperature: 5500, lut: 'warm.cube' } },
+          { colorGrading: { contrast: -10, saturation: -5, colorTemperature: 3200 } },
+        ],
+      },
+    ]);
     const result = analyzeColorPreferences(project);
     expect(result.stats.totalSamples).toBe(3);
     expect(result.profile.topLuts[0].lut).toBe('warm.cube');

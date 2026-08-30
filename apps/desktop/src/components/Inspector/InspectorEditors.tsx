@@ -257,8 +257,6 @@ export function getKenBurnsEndScale(clip: Extract<Clip, { type: 'image' }>): num
   return clip.keyframes?.scaleX?.at(-1)?.value ?? clip.transform.scale;
 }
 
-
-
 export function resolveSelectedKeyframeEntries(
   project: Project,
   refs: SelectedKeyframeRef[],

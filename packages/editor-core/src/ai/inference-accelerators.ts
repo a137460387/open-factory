@@ -19,14 +19,8 @@ export class ASRAccelerator {
   async initialize(): Promise<boolean> {
     if (this.backend instanceof WebGPUBackend && this.backend.isAvailable()) {
       try {
-        this.encoderPipeline = await this.backend.createComputePipeline(
-          this.getEncoderShader(),
-          'main',
-        );
-        this.decoderPipeline = await this.backend.createComputePipeline(
-          this.getDecoderShader(),
-          'main',
-        );
+        this.encoderPipeline = await this.backend.createComputePipeline(this.getEncoderShader(), 'main');
+        this.decoderPipeline = await this.backend.createComputePipeline(this.getDecoderShader(), 'main');
         return true;
       } catch (error) {
         logger.error('ASR pipeline creation failed:', error);
@@ -70,21 +64,21 @@ export class ASRAccelerator {
   private computeMFCC(_frame: Float32Array): Float32Array {
     throw new Error(
       'NotImplementedError: computeMFCC requires a trained acoustic model. ' +
-      'Connect a real ASR backend before calling transcribe().',
+        'Connect a real ASR backend before calling transcribe().',
     );
   }
 
   private async encoder(_features: Float32Array): Promise<Float32Array> {
     throw new Error(
       'NotImplementedError: encoder requires a trained transformer model. ' +
-      'Connect a real ASR backend before calling transcribe().',
+        'Connect a real ASR backend before calling transcribe().',
     );
   }
 
   private async decoder(_encoded: Float32Array): Promise<string> {
     throw new Error(
       'NotImplementedError: decoder requires a trained CTC model. ' +
-      'Connect a real ASR backend before calling transcribe().',
+        'Connect a real ASR backend before calling transcribe().',
     );
   }
 
@@ -130,10 +124,7 @@ export class SemanticExtractorAccelerator {
   async initialize(): Promise<boolean> {
     if (this.backend instanceof WebGPUBackend && this.backend.isAvailable()) {
       try {
-        this.embeddingPipeline = await this.backend.createComputePipeline(
-          this.getEmbeddingShader(),
-          'main',
-        );
+        this.embeddingPipeline = await this.backend.createComputePipeline(this.getEmbeddingShader(), 'main');
         return true;
       } catch (error) {
         logger.error('Semantic extractor pipeline creation failed:', error);
@@ -150,13 +141,13 @@ export class SemanticExtractorAccelerator {
   }
 
   private tokenize(text: string): number[] {
-    return text.split('').map(c => c.charCodeAt(0));
+    return text.split('').map((c) => c.charCodeAt(0));
   }
 
   private async computeEmbeddings(_tokens: number[]): Promise<Float32Array> {
     throw new Error(
       'NotImplementedError: computeEmbeddings requires a trained embedding model. ' +
-      'Connect a real NLP backend before calling extractEmbedding().',
+        'Connect a real NLP backend before calling extractEmbedding().',
     );
   }
 

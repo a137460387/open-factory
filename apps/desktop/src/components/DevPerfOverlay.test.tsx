@@ -43,7 +43,9 @@ describe('DevPerfOverlay', () => {
 
   it('collapses to FPS bar when _ is clicked', () => {
     render(<DevPerfOverlay />);
-    act(() => { screen.getByText('_').click(); });
+    act(() => {
+      screen.getByText('_').click();
+    });
     expect(screen.queryByText('Perf Monitor')).toBeNull();
   });
 

@@ -1,28 +1,108 @@
-import type {ExportCostHistorySample} from '@open-factory/editor-core';
-import {logger} from '@open-factory/editor-core/utils';
-import {type ComplianceCheckResult} from '@open-factory/editor-core';
-import {expandSequenceBatchOutputPath, getSyncedProjectSequences, getTimelinePlaybackDuration, isProgressiveExportSupported, analyzeExportOptimizationSuggestions, DEFAULT_EXPORT_OPTIMIZATION_SETTINGS, buildVersionedExportReportRows, calculateHistoricalEstimateErrorPercent, estimateExportCost, suggestRenderFarmInstances, type ExportTaskPriority, type ExportPipeline, type ExportPipelineNodeStatus, type ExportPublishNodeLog, type ExportTaskHistoryEntry, type ExportOptimizationSettings, type ExportPreviewSampleKind, type FfmpegCapabilities, type PreflightResult, type Project, buildExportPresetRecommendations, buildExportRecommendationContext, type ExportStemFormat, type ExportStemMode} from '@open-factory/editor-core';
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {zhCN} from '../../i18n/strings';
-import {evaluateExportQuality, getFileStat, getFfmpegCapabilities, listHardwareEncoders, listenBridge, readExportPresetSyncWebdavPassword, readExportUploadWebdavPassword, runExportPowerAction, type QualityEvaluationProgressEvent, type QualityEvaluationResult} from '../../lib/tauri-bridge';
-import {showToast} from '../../lib/toast';
-import {DEFAULT_EXPORT_UPLOAD_SETTINGS, DEFAULT_EXPORT_PRESET_SYNC_SETTINGS, readExportBackgroundSettings, readDisableExportRecommendations, readExportOptimizationSettings, readExportPresetSyncSettings, readExportUploadSettings, type ExportBackgroundSettings, type ExportPresetSyncSettings, type ExportUploadSettings} from '../../settings/appSettings';
-import {useWhisperSettingsStore} from '../../store/whisperSettingsStore';
-import {localDatetimeInputValue, type ExportCompletionAction} from '../export-background';
-import {loadExportHistoryIntoStore} from '../export-history';
-import {estimateExportFileSizeBytes, formatEstimatedFileSize} from '../export-size-estimate';
-import {useExportQueueStore} from '../export-queue-store';
-import {getLastExportDurationSeconds, estimateDimensions} from '../export-utils';
-import {BUILTIN_EXPORT_PRESETS, getExportPreset, loadExportPresets, type ExportPreset, type ExportPresetSettings} from '../export-presets';
-import {applyCodecCompareQualityError, applyCodecCompareQualityResult, areCodecCompareResultsEqual, collectPendingCodecCompareEvaluations, markCodecCompareQualityRunning, recommendCodecCompareResult, sortCodecCompareResults, syncCodecCompareResultsWithTasks, type CodecCompareRecommendationMode, type CodecCompareJob, type CodecCompareResult, type CodecCompareSortDirection, type CodecCompareSortKey} from '../codec-compare';
+import type { ExportCostHistorySample } from '@open-factory/editor-core';
+import { logger } from '@open-factory/editor-core/utils';
+import { type ComplianceCheckResult } from '@open-factory/editor-core';
+import {
+  expandSequenceBatchOutputPath,
+  getSyncedProjectSequences,
+  getTimelinePlaybackDuration,
+  isProgressiveExportSupported,
+  analyzeExportOptimizationSuggestions,
+  DEFAULT_EXPORT_OPTIMIZATION_SETTINGS,
+  buildVersionedExportReportRows,
+  calculateHistoricalEstimateErrorPercent,
+  estimateExportCost,
+  suggestRenderFarmInstances,
+  type ExportTaskPriority,
+  type ExportPipeline,
+  type ExportPipelineNodeStatus,
+  type ExportPublishNodeLog,
+  type ExportTaskHistoryEntry,
+  type ExportOptimizationSettings,
+  type ExportPreviewSampleKind,
+  type FfmpegCapabilities,
+  type PreflightResult,
+  type Project,
+  buildExportPresetRecommendations,
+  buildExportRecommendationContext,
+  type ExportStemFormat,
+  type ExportStemMode,
+} from '@open-factory/editor-core';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { zhCN } from '../../i18n/strings';
+import {
+  evaluateExportQuality,
+  getFileStat,
+  getFfmpegCapabilities,
+  listHardwareEncoders,
+  listenBridge,
+  readExportPresetSyncWebdavPassword,
+  readExportUploadWebdavPassword,
+  runExportPowerAction,
+  type QualityEvaluationProgressEvent,
+  type QualityEvaluationResult,
+} from '../../lib/tauri-bridge';
+import { showToast } from '../../lib/toast';
+import {
+  DEFAULT_EXPORT_UPLOAD_SETTINGS,
+  DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  readExportBackgroundSettings,
+  readDisableExportRecommendations,
+  readExportOptimizationSettings,
+  readExportPresetSyncSettings,
+  readExportUploadSettings,
+  type ExportBackgroundSettings,
+  type ExportPresetSyncSettings,
+  type ExportUploadSettings,
+} from '../../settings/appSettings';
+import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
+import { localDatetimeInputValue, type ExportCompletionAction } from '../export-background';
+import { loadExportHistoryIntoStore } from '../export-history';
+import { estimateExportFileSizeBytes, formatEstimatedFileSize } from '../export-size-estimate';
+import { useExportQueueStore } from '../export-queue-store';
+import { getLastExportDurationSeconds, estimateDimensions } from '../export-utils';
+import {
+  BUILTIN_EXPORT_PRESETS,
+  getExportPreset,
+  loadExportPresets,
+  type ExportPreset,
+  type ExportPresetSettings,
+} from '../export-presets';
+import {
+  applyCodecCompareQualityError,
+  applyCodecCompareQualityResult,
+  areCodecCompareResultsEqual,
+  collectPendingCodecCompareEvaluations,
+  markCodecCompareQualityRunning,
+  recommendCodecCompareResult,
+  sortCodecCompareResults,
+  syncCodecCompareResultsWithTasks,
+  type CodecCompareRecommendationMode,
+  type CodecCompareJob,
+  type CodecCompareResult,
+  type CodecCompareSortDirection,
+  type CodecCompareSortKey,
+} from '../codec-compare';
 
-import {AUDIO_VISUALIZATION_FORMATS, VIDEO_EXPORT_FORMATS, normalizeDraftSettings, supportsLoudnessNormalization, countSpatialDenoiseClips, collectSubtitleLanguageOptions} from '../lib/exportSettingsHelpers';
+import {
+  AUDIO_VISUALIZATION_FORMATS,
+  VIDEO_EXPORT_FORMATS,
+  normalizeDraftSettings,
+  supportsLoudnessNormalization,
+  countSpatialDenoiseClips,
+  collectSubtitleLanguageOptions,
+} from '../lib/exportSettingsHelpers';
 
-import {resolveActiveExportRanges, resolveInOutExportRanges, resolveSelectedClipExportRange, type ExportJob, type ExportRangeMode} from '../lib/pipelineHelpers';
+import {
+  resolveActiveExportRanges,
+  resolveInOutExportRanges,
+  resolveSelectedClipExportRange,
+  type ExportJob,
+  type ExportRangeMode,
+} from '../lib/pipelineHelpers';
 
-import {type ExportWarmupUiStatus} from '../components/ExportOptimizationPanel';
-import type {SequenceBatchPresetMode} from '../components/SequenceBatchSection';
-import type {VersionedExportRowState} from '../components/ExportVersionBatchSection';
+import { type ExportWarmupUiStatus } from '../components/ExportOptimizationPanel';
+import type { SequenceBatchPresetMode } from '../components/SequenceBatchSection';
+import type { VersionedExportRowState } from '../components/ExportVersionBatchSection';
 
 // Re-export types for sub-components
 export type { ExportJob, ExportRangeMode } from '../lib/pipelineHelpers';
@@ -90,7 +170,16 @@ const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
 const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
 
 export function useExportState(props: ExportDialogProps) {
-  const { project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing } = props;
+  const {
+    project,
+    initialPreset,
+    selectedClipIds = [],
+    inPoint,
+    outPoint,
+    onClose,
+    onCompleted,
+    onRelinkMissing,
+  } = props;
   const t = zhCN.exportDialog;
 
   // Step state machine

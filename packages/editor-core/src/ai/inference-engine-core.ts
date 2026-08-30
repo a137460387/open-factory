@@ -73,10 +73,7 @@ export class InferenceEngine {
     return true;
   }
 
-  async infer(
-    modelType: ModelType,
-    input: TensorDescriptor,
-  ): Promise<InferenceResult> {
+  async infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult> {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -128,9 +125,7 @@ export class InferenceEngine {
     fusionSpeedup: number;
     gpuAccelerated: boolean;
   } {
-    const { speedup } = this.fusionOptimizer.optimize([
-      'conv2d', 'batchNorm', 'relu', 'matmul', 'add', 'relu',
-    ]);
+    const { speedup } = this.fusionOptimizer.optimize(['conv2d', 'batchNorm', 'relu', 'matmul', 'add', 'relu']);
 
     return {
       backend: this.getBackend(),
@@ -185,7 +180,7 @@ export class InferenceEngine {
   private async inferGeneric(_input: TensorDescriptor): Promise<TensorDescriptor> {
     throw new Error(
       'NotImplementedError: inferGeneric requires a loaded model. ' +
-      'No GPU backend available and no CPU fallback model is configured.',
+        'No GPU backend available and no CPU fallback model is configured.',
     );
   }
 }

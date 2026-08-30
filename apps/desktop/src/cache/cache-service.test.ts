@@ -79,8 +79,21 @@ describe('writeThumbnailToCache', () => {
     expect(writeCache).toHaveBeenCalledTimes(1);
     const [path, raw] = vi.mocked(writeCache).mock.calls[0];
     expect(path).toBe(thumbnailPaths.dataPath);
-    const entry = JSON.parse(raw) as { key: string; sourcePath: string; dataUrl: string; width: number; height: number; createdAt: string };
-    expect(entry).toMatchObject({ key, sourcePath: asset.path, dataUrl: 'data:image/png;base64,yyy', width: 320, height: 180 });
+    const entry = JSON.parse(raw) as {
+      key: string;
+      sourcePath: string;
+      dataUrl: string;
+      width: number;
+      height: number;
+      createdAt: string;
+    };
+    expect(entry).toMatchObject({
+      key,
+      sourcePath: asset.path,
+      dataUrl: 'data:image/png;base64,yyy',
+      width: 320,
+      height: 180,
+    });
     expect(typeof entry.createdAt).toBe('string');
   });
 
@@ -95,7 +108,16 @@ describe('writeThumbnailToCache', () => {
 
 describe('readWaveformFromCache', () => {
   it('命中：key 匹配时返回完整条目', async () => {
-    const entry = { key, sourcePath: asset.path, peaks: [0.1, 0.5], duration: 6, channels: 2, pointsPerSecond: 20, isSampled: false, createdAt: '2026-01-01T00:00:00Z' };
+    const entry = {
+      key,
+      sourcePath: asset.path,
+      peaks: [0.1, 0.5],
+      duration: 6,
+      channels: 2,
+      pointsPerSecond: 20,
+      isSampled: false,
+      createdAt: '2026-01-01T00:00:00Z',
+    };
     vi.mocked(readCache).mockResolvedValueOnce(JSON.stringify(entry));
     await expect(readWaveformFromCache(asset)).resolves.toEqual(entry);
     expect(readCache).toHaveBeenCalledWith(waveformPaths.dataPath);
@@ -112,7 +134,13 @@ describe('readWaveformFromCache', () => {
 
 describe('writeWaveformToCache', () => {
   it('补全 key/sourcePath/createdAt 后写入', async () => {
-    await writeWaveformToCache(asset, { peaks: [0.2, 0.4], duration: 6, channels: 2, pointsPerSecond: 20, isSampled: true });
+    await writeWaveformToCache(asset, {
+      peaks: [0.2, 0.4],
+      duration: 6,
+      channels: 2,
+      pointsPerSecond: 20,
+      isSampled: true,
+    });
     expect(writeCache).toHaveBeenCalledTimes(1);
     const [path, raw] = vi.mocked(writeCache).mock.calls[0];
     expect(path).toBe(waveformPaths.dataPath);
@@ -122,11 +150,19 @@ describe('writeWaveformToCache', () => {
   });
 
   it('资产缺 mtimeMs 跳过；写入失败不抛错', async () => {
-    await writeWaveformToCache({ ...asset, mtimeMs: undefined } as MediaAsset, { peaks: [], duration: 1, channels: 1, pointsPerSecond: 1, isSampled: false });
+    await writeWaveformToCache({ ...asset, mtimeMs: undefined } as MediaAsset, {
+      peaks: [],
+      duration: 1,
+      channels: 1,
+      pointsPerSecond: 1,
+      isSampled: false,
+    });
     expect(writeCache).not.toHaveBeenCalled();
 
     vi.mocked(writeCache).mockRejectedValueOnce(new Error('io'));
-    await expect(writeWaveformToCache(asset, { peaks: [], duration: 1, channels: 1, pointsPerSecond: 1, isSampled: false })).resolves.toBeUndefined();
+    await expect(
+      writeWaveformToCache(asset, { peaks: [], duration: 1, channels: 1, pointsPerSecond: 1, isSampled: false }),
+    ).resolves.toBeUndefined();
   });
 });
 

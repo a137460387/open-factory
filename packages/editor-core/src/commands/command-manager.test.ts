@@ -16,8 +16,12 @@ function makeCommand(description: string, value?: number): Command & { value: nu
   return {
     description,
     value: v,
-    execute() { v++; },
-    undo() { v--; },
+    execute() {
+      v++;
+    },
+    undo() {
+      v--;
+    },
   };
 }
 
@@ -36,8 +40,12 @@ describe('CommandManager', () => {
       let val = 0;
       manager.execute({
         description: 'increment',
-        execute() { val = 1; },
-        undo() { val = 0; },
+        execute() {
+          val = 1;
+        },
+        undo() {
+          val = 0;
+        },
       });
       expect(val).toBe(1);
       manager.undo();
@@ -49,8 +57,12 @@ describe('CommandManager', () => {
       let val = 0;
       manager.execute({
         description: 'increment',
-        execute() { val = 1; },
-        undo() { val = 0; },
+        execute() {
+          val = 1;
+        },
+        undo() {
+          val = 0;
+        },
       });
       manager.undo();
       expect(val).toBe(0);
@@ -135,8 +147,12 @@ describe('CommandManager', () => {
       const makeMergeable = (newVal: number): Command => {
         const cmd: Command & { newVal: number } = {
           description: `set to ${newVal}`,
-          execute() { val = newVal; },
-          undo() { val = 0; },
+          execute() {
+            val = newVal;
+          },
+          undo() {
+            val = 0;
+          },
           merge(other: Command) {
             const o = other as Command & { newVal?: number };
             return makeMergeable(o.newVal ?? newVal);
@@ -161,8 +177,12 @@ describe('CommandManager', () => {
       const makeMergeable = (newVal: number): Command => {
         const cmd: Command & { newVal: number } = {
           description: `set to ${newVal}`,
-          execute() { val = newVal; },
-          undo() { val = 0; },
+          execute() {
+            val = newVal;
+          },
+          undo() {
+            val = 0;
+          },
           merge(other: Command) {
             const o = other as Command & { newVal?: number };
             return makeMergeable(o.newVal ?? newVal);
@@ -174,7 +194,7 @@ describe('CommandManager', () => {
 
       manager.execute(makeMergeable(1));
       // Wait outside the merge window
-      await new Promise(r => setTimeout(r, 60));
+      await new Promise((r) => setTimeout(r, 60));
       manager.execute(makeMergeable(2));
 
       const meta = manager.getHistoryMeta();
@@ -197,10 +217,9 @@ describe('CommandManager', () => {
 describe('PropertyChangeCommand', () => {
   it('executes and undoes', () => {
     let val = 'old';
-    const cmd = new PropertyChangeCommand(
-      'entity-1', 'name', 'old', 'new',
-      (_id, v) => { val = v as string; },
-    );
+    const cmd = new PropertyChangeCommand('entity-1', 'name', 'old', 'new', (_id, v) => {
+      val = v as string;
+    });
     cmd.execute();
     expect(val).toBe('new');
     cmd.undo();
@@ -209,7 +228,9 @@ describe('PropertyChangeCommand', () => {
 
   it('merges with same entity and property', () => {
     let val = 'old';
-    const apply = (_id: string, v: unknown) => { val = v as string; };
+    const apply = (_id: string, v: unknown) => {
+      val = v as string;
+    };
 
     const cmd1 = new PropertyChangeCommand('e1', 'name', 'old', 'mid', apply);
     const cmd2 = new PropertyChangeCommand('e1', 'name', 'mid', 'new', apply);
@@ -240,7 +261,9 @@ describe('PropertyChangeCommand', () => {
 describe('PositionChangeCommand', () => {
   it('merges consecutive position changes', () => {
     let pos = { start: 0, trackIndex: 0 };
-    const apply = (_id: string, p: { start: number; trackIndex: number }) => { pos = { ...p }; };
+    const apply = (_id: string, p: { start: number; trackIndex: number }) => {
+      pos = { ...p };
+    };
 
     const cmd1 = new PositionChangeCommand('clip-1', { start: 0, trackIndex: 0 }, { start: 10, trackIndex: 0 }, apply);
     const cmd2 = new PositionChangeCommand('clip-1', { start: 10, trackIndex: 0 }, { start: 25, trackIndex: 1 }, apply);
@@ -265,7 +288,9 @@ describe('PositionChangeCommand', () => {
 describe('ScaleChangeCommand', () => {
   it('merges scale changes', () => {
     let scale = 1;
-    const apply = (_id: string, s: number) => { scale = s; };
+    const apply = (_id: string, s: number) => {
+      scale = s;
+    };
 
     const cmd1 = new ScaleChangeCommand('clip-1', 1, 1.5, apply);
     const cmd2 = new ScaleChangeCommand('clip-1', 1.5, 2.0, apply);
@@ -281,7 +306,9 @@ describe('ScaleChangeCommand', () => {
 describe('VolumeChangeCommand', () => {
   it('merges volume changes', () => {
     let vol = 1;
-    const apply = (_id: string, v: number) => { vol = v; };
+    const apply = (_id: string, v: number) => {
+      vol = v;
+    };
 
     const cmd1 = new VolumeChangeCommand('clip-1', 1, 0.5, apply);
     const cmd2 = new VolumeChangeCommand('clip-1', 0.5, 0.2, apply);
@@ -297,7 +324,9 @@ describe('VolumeChangeCommand', () => {
 describe('OpacityChangeCommand', () => {
   it('merges opacity changes', () => {
     let opacity = 1;
-    const apply = (_id: string, o: number) => { opacity = o; };
+    const apply = (_id: string, o: number) => {
+      opacity = o;
+    };
 
     const cmd1 = new OpacityChangeCommand('clip-1', 1, 0.8, apply);
     const cmd2 = new OpacityChangeCommand('clip-1', 0.8, 0.5, apply);
@@ -313,7 +342,9 @@ describe('OpacityChangeCommand', () => {
 describe('PlaybackRateChangeCommand', () => {
   it('merges playback rate changes', () => {
     let rate = 1;
-    const apply = (_id: string, r: number) => { rate = r; };
+    const apply = (_id: string, r: number) => {
+      rate = r;
+    };
 
     const cmd1 = new PlaybackRateChangeCommand('clip-1', 1, 1.5, apply);
     const cmd2 = new PlaybackRateChangeCommand('clip-1', 1.5, 2.0, apply);

@@ -1,0 +1,6 @@
+# 行尾归一化：仓库内文本文件统一以 LF 存储，根治 Windows autocrlf 带来的格式噪声
+* text=auto eol=lf
+
+# Windows 批处理脚本必须保持 CRLF，否则 cmd.exe 无法正确解析
+*.bat text eol=crlf
+*.cmd text eol=crlf

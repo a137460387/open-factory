@@ -168,13 +168,27 @@ describe('editorUIStore — H4 God Store 拆分验证', () => {
 
   describe('layoutSettings 程序化设置 vs 异步持久化加载竞态（auto-generate:68 根因）', () => {
     const persistedLayout = {
-      panels: { mediaLibrary: false, inspector: false, audioMixer: true, colorScopes: false, history: false, bookmarks: false },
+      panels: {
+        mediaLibrary: false,
+        inspector: false,
+        audioMixer: true,
+        colorScopes: false,
+        history: false,
+        bookmarks: false,
+      },
     } as unknown as ReturnType<typeof useEditorUIStore.getState>['layoutSettings'];
 
     beforeEach(() => {
       useEditorUIStore.setState({
         layoutSettings: {
-          panels: { mediaLibrary: true, inspector: true, audioMixer: true, colorScopes: false, history: false, bookmarks: false },
+          panels: {
+            mediaLibrary: true,
+            inspector: true,
+            audioMixer: true,
+            colorScopes: false,
+            history: false,
+            bookmarks: false,
+          },
         } as never,
         layoutSettingsTouched: false,
       });

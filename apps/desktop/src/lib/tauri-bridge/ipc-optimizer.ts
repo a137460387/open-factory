@@ -6,7 +6,7 @@
  * thumbnail buffers, and other large payloads. Falls back to JSON for small payloads.
  */
 
-import {invoke} from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -239,10 +239,7 @@ function estimatePayloadSize(obj: unknown): number {
 /**
  * Transfer waveform data as binary (much smaller than JSON array of numbers).
  */
-export async function transferWaveformBinary(
-  command: string,
-  args: Record<string, unknown>,
-): Promise<Float32Array> {
+export async function transferWaveformBinary(command: string, args: Record<string, unknown>): Promise<Float32Array> {
   const response = await invoke<number[]>(command, args);
   return new Float32Array(response);
 }
@@ -250,10 +247,7 @@ export async function transferWaveformBinary(
 /**
  * Transfer thumbnail data as binary.
  */
-export async function transferThumbnailBinary(
-  command: string,
-  args: Record<string, unknown>,
-): Promise<Uint8Array> {
+export async function transferThumbnailBinary(command: string, args: Record<string, unknown>): Promise<Uint8Array> {
   const response = await invoke<number[]>(command, args);
   return new Uint8Array(response);
 }
@@ -261,10 +255,7 @@ export async function transferThumbnailBinary(
 /**
  * Transfer spectrum data as binary.
  */
-export async function transferSpectrumBinary(
-  command: string,
-  args: Record<string, unknown>,
-): Promise<Float32Array> {
+export async function transferSpectrumBinary(command: string, args: Record<string, unknown>): Promise<Float32Array> {
   const response = await invoke<number[]>(command, args);
   return new Float32Array(response);
 }

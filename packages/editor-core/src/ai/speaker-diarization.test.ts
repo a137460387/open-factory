@@ -123,7 +123,12 @@ describe('agglomerativeClustering', () => {
 
   it('separates distant embeddings', () => {
     const result = agglomerativeClustering(
-      [[1, 0, 0], [1, 0.1, 0], [0, 0, 1], [0, 0.1, 1]],
+      [
+        [1, 0, 0],
+        [1, 0.1, 0],
+        [0, 0, 1],
+        [0, 0.1, 1],
+      ],
       0.8,
       'cosine',
     );
@@ -133,7 +138,11 @@ describe('agglomerativeClustering', () => {
 
   it('handles euclidean metric', () => {
     const result = agglomerativeClustering(
-      [[0, 0], [0.1, 0], [100, 100]],
+      [
+        [0, 0],
+        [0.1, 0],
+        [100, 100],
+      ],
       10,
       'euclidean',
     );
@@ -143,7 +152,11 @@ describe('agglomerativeClustering', () => {
 
   it('handles angular metric', () => {
     const result = agglomerativeClustering(
-      [[1, 0], [0.9, 0.1], [0, 1]],
+      [
+        [1, 0],
+        [0.9, 0.1],
+        [0, 1],
+      ],
       0.5,
       'angular',
     );
@@ -170,7 +183,12 @@ describe('kMeansClustering', () => {
 
   it('clusters points', () => {
     const result = kMeansClustering(
-      [[0, 0], [0.1, 0.1], [10, 10], [10.1, 10.1]],
+      [
+        [0, 0],
+        [0.1, 0.1],
+        [10, 10],
+        [10.1, 10.1],
+      ],
       2,
     );
     expect(result[0]).toBe(result[1]);
@@ -179,7 +197,13 @@ describe('kMeansClustering', () => {
   });
 
   it('adjusts k when k > n', () => {
-    const result = kMeansClustering([[1, 2], [3, 4]], 10);
+    const result = kMeansClustering(
+      [
+        [1, 2],
+        [3, 4],
+      ],
+      10,
+    );
     expect(result).toHaveLength(2);
   });
 });
@@ -249,7 +273,10 @@ describe('getSpeakerBasedAngleSwitches', () => {
       { speakerId: 1, startMs: 2000, endMs: 3000, confidence: 0.9, speakerLabel: 'B' },
       { speakerId: 0, startMs: 4000, endMs: 5000, confidence: 0.9, speakerLabel: 'A' },
     ];
-    const mapping = new Map([[0, 0], [1, 90]]);
+    const mapping = new Map([
+      [0, 0],
+      [1, 90],
+    ]);
     const result = getSpeakerBasedAngleSwitches(segments, mapping);
     expect(result.length).toBe(3);
   });
@@ -269,7 +296,10 @@ describe('getSpeakerBasedAngleSwitches', () => {
       { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'A' },
       { speakerId: 1, startMs: 500, endMs: 1500, confidence: 0.9, speakerLabel: 'B' },
     ];
-    const mapping = new Map([[0, 0], [1, 90]]);
+    const mapping = new Map([
+      [0, 0],
+      [1, 90],
+    ]);
     const result = getSpeakerBasedAngleSwitches(segments, mapping, 2000);
     expect(result.length).toBe(1);
   });
@@ -306,9 +336,7 @@ describe('extractSpeakerLabelsFromText', () => {
 describe('validateDiarizationResult', () => {
   it('validates correct result', () => {
     const result = validateDiarizationResult({
-      segments: [
-        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
-      ],
+      segments: [{ speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' }],
       speakers: [{ speakerId: 0, speakerLabel: 'Speaker 0', embedding: [1, 0, 0], confidence: 0.9, sampleCount: 10 }],
       durationMs: 1000,
       stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 1000, speakerSwitches: 0 },
@@ -317,49 +345,52 @@ describe('validateDiarizationResult', () => {
   });
 
   it('detects too many speakers', () => {
-    const result = validateDiarizationResult({
-      segments: [],
-      speakers: [],
-      durationMs: 0,
-      stats: { speakerCount: 20, avgConfidence: 0.9, maxMonologueMs: 0, speakerSwitches: 0 },
-    }, 0.5, 100, 5);
-    expect(result.some(i => i.type === 'too-many-speakers')).toBe(true);
+    const result = validateDiarizationResult(
+      {
+        segments: [],
+        speakers: [],
+        durationMs: 0,
+        stats: { speakerCount: 20, avgConfidence: 0.9, maxMonologueMs: 0, speakerSwitches: 0 },
+      },
+      0.5,
+      100,
+      5,
+    );
+    expect(result.some((i) => i.type === 'too-many-speakers')).toBe(true);
   });
 
   it('detects invalid time', () => {
     const result = validateDiarizationResult({
-      segments: [
-        { speakerId: 0, startMs: -1, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' },
-      ],
+      segments: [{ speakerId: 0, startMs: -1, endMs: 1000, confidence: 0.9, speakerLabel: 'Speaker 0' }],
       speakers: [],
       durationMs: 1000,
       stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 1000, speakerSwitches: 0 },
     });
-    expect(result.some(i => i.type === 'invalid-time')).toBe(true);
+    expect(result.some((i) => i.type === 'invalid-time')).toBe(true);
   });
 
   it('detects low confidence', () => {
     const result = validateDiarizationResult({
-      segments: [
-        { speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.1, speakerLabel: 'Speaker 0' },
-      ],
+      segments: [{ speakerId: 0, startMs: 0, endMs: 1000, confidence: 0.1, speakerLabel: 'Speaker 0' }],
       speakers: [],
       durationMs: 1000,
       stats: { speakerCount: 1, avgConfidence: 0.1, maxMonologueMs: 1000, speakerSwitches: 0 },
     });
-    expect(result.some(i => i.type === 'low-confidence')).toBe(true);
+    expect(result.some((i) => i.type === 'low-confidence')).toBe(true);
   });
 
   it('detects short segment', () => {
-    const result = validateDiarizationResult({
-      segments: [
-        { speakerId: 0, startMs: 0, endMs: 50, confidence: 0.9, speakerLabel: 'Speaker 0' },
-      ],
-      speakers: [],
-      durationMs: 50,
-      stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 50, speakerSwitches: 0 },
-    }, 0.5, 100);
-    expect(result.some(i => i.type === 'short-segment')).toBe(true);
+    const result = validateDiarizationResult(
+      {
+        segments: [{ speakerId: 0, startMs: 0, endMs: 50, confidence: 0.9, speakerLabel: 'Speaker 0' }],
+        speakers: [],
+        durationMs: 50,
+        stats: { speakerCount: 1, avgConfidence: 0.9, maxMonologueMs: 50, speakerSwitches: 0 },
+      },
+      0.5,
+      100,
+    );
+    expect(result.some((i) => i.type === 'short-segment')).toBe(true);
   });
 
   it('detects overlap', () => {
@@ -372,6 +403,6 @@ describe('validateDiarizationResult', () => {
       durationMs: 1500,
       stats: { speakerCount: 2, avgConfidence: 0.9, maxMonologueMs: 1000, speakerSwitches: 1 },
     });
-    expect(result.some(i => i.type === 'overlap')).toBe(true);
+    expect(result.some((i) => i.type === 'overlap')).toBe(true);
   });
 });

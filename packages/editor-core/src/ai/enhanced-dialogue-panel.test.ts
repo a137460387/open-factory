@@ -40,10 +40,35 @@ function makeStyle(overrides: Partial<StyleFingerprint> = {}): StyleFingerprint 
     analyzedProjectCount: 1,
     totalClipCount: 10,
     totalDurationSec: 60,
-    transitions: [{ type: 'dissolve' as TransitionType, count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 }],
-    rhythm: { avgClipDurationSec: 3, clipDurationStddev: 1, cutsPerMinute: 20, regularity: 0.7, durationHistogram: [], shortClipRatio: 0.2, longClipRatio: 0.1 },
-    colorGrading: { brightness: { mean: 0, stddev: 0, count: 0 }, contrast: { mean: 0, stddev: 0, count: 0 }, saturation: { mean: 0, stddev: 0, count: 0 }, hue: { mean: 0, stddev: 0, count: 0 }, preferredLutPath: null, lutUsageRatio: 0, temperatureTendency: 'neutral' },
-    audioProcessing: { avgTargetLoudness: -14, loudnessStddev: 0, avgFadeInSec: 0.3, avgFadeOutSec: 0.5, musicSpeechRatio: 0.5, crossfadeRatio: 0.3 },
+    transitions: [
+      { type: 'dissolve' as TransitionType, count: 5, avgDurationSec: 0.5, durationStddev: 0.1, ratio: 0.5 },
+    ],
+    rhythm: {
+      avgClipDurationSec: 3,
+      clipDurationStddev: 1,
+      cutsPerMinute: 20,
+      regularity: 0.7,
+      durationHistogram: [],
+      shortClipRatio: 0.2,
+      longClipRatio: 0.1,
+    },
+    colorGrading: {
+      brightness: { mean: 0, stddev: 0, count: 0 },
+      contrast: { mean: 0, stddev: 0, count: 0 },
+      saturation: { mean: 0, stddev: 0, count: 0 },
+      hue: { mean: 0, stddev: 0, count: 0 },
+      preferredLutPath: null,
+      lutUsageRatio: 0,
+      temperatureTendency: 'neutral',
+    },
+    audioProcessing: {
+      avgTargetLoudness: -14,
+      loudnessStddev: 0,
+      avgFadeInSec: 0.3,
+      avgFadeOutSec: 0.5,
+      musicSpeechRatio: 0.5,
+      crossfadeRatio: 0.3,
+    },
     effects: [],
     tags: ['test'],
     ...overrides,
@@ -99,7 +124,10 @@ describe('enhanced-dialogue-panel', () => {
 
     it('sets filters and sort', () => {
       let state = createInitialSuggestionState();
-      state = suggestionReducer(state, { type: 'SET_FILTERS', filters: { categories: ['creative'], minConfidence: 0.5 } });
+      state = suggestionReducer(state, {
+        type: 'SET_FILTERS',
+        filters: { categories: ['creative'], minConfidence: 0.5 },
+      });
       expect(state.filters.categories).toEqual(['creative']);
       state = suggestionReducer(state, { type: 'SET_SORT', sortBy: 'feedback' });
       expect(state.sortBy).toBe('feedback');
@@ -147,7 +175,11 @@ describe('enhanced-dialogue-panel', () => {
   describe('getSelectedSuggestion', () => {
     it('returns selected suggestion', () => {
       const sug = makeSuggestion({ id: 's1' });
-      const state: SuggestionState = { ...createInitialSuggestionState(), suggestions: [sug], selectedSuggestionId: 's1' };
+      const state: SuggestionState = {
+        ...createInitialSuggestionState(),
+        suggestions: [sug],
+        selectedSuggestionId: 's1',
+      };
       expect(getSelectedSuggestion(state)?.id).toBe('s1');
     });
 
@@ -160,9 +192,7 @@ describe('enhanced-dialogue-panel', () => {
     it('converts suggestion to edit plan', () => {
       const sug = makeSuggestion({
         title: 'My Plan',
-        previewInstructions: [
-          { action: 'cut', target: { startSec: 5 }, params: {}, reason: 'Trim' },
-        ],
+        previewInstructions: [{ action: 'cut', target: { startSec: 5 }, params: {}, reason: 'Trim' }],
       });
       const plan = suggestionToEditPlan(sug);
       expect(plan.title).toBe('My Plan');
@@ -173,7 +203,10 @@ describe('enhanced-dialogue-panel', () => {
 
   describe('formatSuggestionSummary', () => {
     it('formats readable summary', () => {
-      const sug = makeSuggestion({ confidence: 0.85, previewInstructions: [{ action: 'cut', target: {}, params: {}, reason: '' }] });
+      const sug = makeSuggestion({
+        confidence: 0.85,
+        previewInstructions: [{ action: 'cut', target: {}, params: {}, reason: '' }],
+      });
       const summary = formatSuggestionSummary(sug);
       expect(summary).toContain('creative');
       expect(summary).toContain('85%');

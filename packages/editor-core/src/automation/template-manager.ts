@@ -1,4 +1,4 @@
-import {clamp01} from '../math-utils';
+import { clamp01 } from '../math-utils';
 
 /**
  * 模板化创作系统
@@ -7,7 +7,7 @@ import {clamp01} from '../math-utils';
  * 本地优先：所有数据存储在本地
  */
 
-import type {TransitionType} from '../model-types';
+import type { TransitionType } from '../model-types';
 // ============================================================
 // 类型定义
 // ============================================================

@@ -62,7 +62,10 @@ const MOOD_CATEGORIES: Record<string, ReadonlyArray<TemplateCategory>> = {
   neutral: ['product-demo', 'custom', 'tutorial'],
 };
 
-const TYPE_PLACEHOLDER_MAP: Record<string, ReadonlyArray<'user-video' | 'user-image' | 'user-audio' | 'generated-text'>> = {
+const TYPE_PLACEHOLDER_MAP: Record<
+  string,
+  ReadonlyArray<'user-video' | 'user-image' | 'user-audio' | 'generated-text'>
+> = {
   video: ['user-video'],
   image: ['user-image'],
   audio: ['user-audio'],
@@ -91,13 +94,10 @@ export function extractProjectContentProfile(project: Project): ProjectContentPr
     .map((c) => c.speed);
   const avgMotion = speeds.length > 0 ? clamp(calcNormalizedStddev(speeds), 0, 1) : 0;
 
-  const hasDialogue = timeline.tracks.some((t) =>
-    t.type === 'audio' && /voice|dialogue|speech|narr/i.test(t.name),
-  );
+  const hasDialogue = timeline.tracks.some((t) => t.type === 'audio' && /voice|dialogue|speech|narr/i.test(t.name));
 
   const cutsPerMin = duration > 0 ? (clipCount / duration) * 60 : 0;
-  const mood: ProjectContentProfile['mood'] =
-    cutsPerMin > 12 ? 'energetic' : cutsPerMin < 4 ? 'calm' : 'neutral';
+  const mood: ProjectContentProfile['mood'] = cutsPerMin > 12 ? 'energetic' : cutsPerMin < 4 ? 'calm' : 'neutral';
 
   return {
     duration,
@@ -128,9 +128,7 @@ export function scoreTemplate(
   const materialFit = scoreMaterialFit(template, profile);
 
   const score = round3(
-    WEIGHTS.content * contentMatch +
-    WEIGHTS.preference * preferenceMatch +
-    WEIGHTS.material * materialFit,
+    WEIGHTS.content * contentMatch + WEIGHTS.preference * preferenceMatch + WEIGHTS.material * materialFit,
   );
 
   return {
@@ -181,15 +179,13 @@ export function explainRecommendation(recommendation: AITemplateRecommendation):
 
 function scoreContentMatch(template: EditingTemplate, profile: ProjectContentProfile): number {
   const templateDur = template.metadata.estimatedDurationSec;
-  const durationRatio = Math.min(templateDur, profile.duration) /
-    Math.max(templateDur, profile.duration, 1);
+  const durationRatio = Math.min(templateDur, profile.duration) / Math.max(templateDur, profile.duration, 1);
 
-  const categoryMood = (MOOD_CATEGORIES[profile.mood] ?? []).includes(template.metadata.category)
-    ? 1 : 0.3;
+  const categoryMood = (MOOD_CATEGORIES[profile.mood] ?? []).includes(template.metadata.category) ? 1 : 0.3;
 
   const templateClipCount = template.tracks.reduce((s, t) => s + t.clips.length, 0);
-  const clipCountRatio = Math.min(templateClipCount, profile.clipCount) /
-    Math.max(templateClipCount, profile.clipCount, 1);
+  const clipCountRatio =
+    Math.min(templateClipCount, profile.clipCount) / Math.max(templateClipCount, profile.clipCount, 1);
 
   const arScore = template.metadata.aspectRatio === '16:9' ? 1 : 0.8;
 
@@ -198,16 +194,17 @@ function scoreContentMatch(template: EditingTemplate, profile: ProjectContentPro
 
 function scorePreferenceMatch(template: EditingTemplate, preferences: UserPreference): number {
   const catIdx = preferences.favoriteCategories.indexOf(template.metadata.category);
-  const categoryScore = catIdx >= 0
-    ? 1 - catIdx / Math.max(preferences.favoriteCategories.length, 1) : 0;
+  const categoryScore = catIdx >= 0 ? 1 - catIdx / Math.max(preferences.favoriteCategories.length, 1) : 0;
 
   const templatePace = inferTemplatePace(template);
-  const paceScore = templatePace === preferences.preferredPace ? 1
-    : (templatePace === 'medium' || preferences.preferredPace === 'medium') ? 0.5 : 0;
+  const paceScore =
+    templatePace === preferences.preferredPace
+      ? 1
+      : templatePace === 'medium' || preferences.preferredPace === 'medium'
+        ? 0.5
+        : 0;
 
-  const templateTransitions = new Set(
-    template.tracks.flatMap((t) => t.transitions.map((tr) => tr.type)),
-  );
+  const templateTransitions = new Set(template.tracks.flatMap((t) => t.transitions.map((tr) => tr.type)));
   const preferredSet = new Set(preferences.preferredTransitions);
   const overlap = [...templateTransitions].filter((t) => preferredSet.has(t)).length;
   const union = new Set([...templateTransitions, ...preferredSet]).size;
@@ -218,23 +215,16 @@ function scorePreferenceMatch(template: EditingTemplate, preferences: UserPrefer
 
 function scoreMaterialFit(template: EditingTemplate, profile: ProjectContentProfile): number {
   const hasVoiceRole = template.audioLayout.tracks.some((t) => t.role === 'voice');
-  const dialogueScore = profile.hasDialogue
-    ? (hasVoiceRole ? 1 : 0.3) : (hasVoiceRole ? 0.7 : 1);
+  const dialogueScore = profile.hasDialogue ? (hasVoiceRole ? 1 : 0.3) : hasVoiceRole ? 0.7 : 1;
 
-  const templateHasEffects = template.tracks.some((t) =>
-    t.clips.some((c) => c.effects.length > 0),
-  );
+  const templateHasEffects = template.tracks.some((t) => t.clips.some((c) => c.effects.length > 0));
   const motionScore = profile.avgMotion > 0.5 ? (templateHasEffects ? 1 : 0.4) : 0.8;
 
-  const placeholderTypes = new Set(
-    template.tracks.flatMap((t) => t.clips.map((c) => c.placeholder)),
-  );
+  const placeholderTypes = new Set(template.tracks.flatMap((t) => t.clips.map((c) => c.placeholder)));
   const expected = TYPE_PLACEHOLDER_MAP[profile.dominantClipType] ?? [];
-  const typeScore = expected.length === 0 ? 0.7
-    : expected.some((p) => placeholderTypes.has(p)) ? 1 : 0.4;
+  const typeScore = expected.length === 0 ? 0.7 : expected.some((p) => placeholderTypes.has(p)) ? 1 : 0.4;
 
-  const musicScore = profile.musicGenre
-    ? (template.metadata.tags.includes(profile.musicGenre) ? 1 : 0.6) : 0.7;
+  const musicScore = profile.musicGenre ? (template.metadata.tags.includes(profile.musicGenre) ? 1 : 0.6) : 0.7;
 
   return cosineSimilarity([dialogueScore, motionScore, typeScore, musicScore], [1, 1, 1, 1]);
 }
@@ -250,7 +240,9 @@ function buildReasons(
   const reasons: string[] = [];
 
   if (scores.contentMatch > 0.7) {
-    reasons.push(`Duration closely matches project (${Math.round(template.metadata.estimatedDurationSec)}s vs ${Math.round(profile.duration)}s)`);
+    reasons.push(
+      `Duration closely matches project (${Math.round(template.metadata.estimatedDurationSec)}s vs ${Math.round(profile.duration)}s)`,
+    );
   }
   if ((MOOD_CATEGORIES[profile.mood] ?? []).includes(template.metadata.category)) {
     reasons.push(`Template style fits project ${profile.mood} mood`);
@@ -303,17 +295,15 @@ function round3(value: number): number {
 
 function inferTemplatePace(template: EditingTemplate): UserPreference['preferredPace'] {
   const totalClips = template.tracks.reduce((s, t) => s + t.clips.length, 0);
-  const cutsPerMin = template.metadata.estimatedDurationSec > 0
-    ? (totalClips / template.metadata.estimatedDurationSec) * 60 : 0;
+  const cutsPerMin =
+    template.metadata.estimatedDurationSec > 0 ? (totalClips / template.metadata.estimatedDurationSec) * 60 : 0;
   if (cutsPerMin > 12) return 'fast';
   if (cutsPerMin < 5) return 'slow';
   return 'medium';
 }
 
 function detectMusicGenre(timeline: Timeline): string | null {
-  const musicTracks = timeline.tracks.filter((t) =>
-    t.type === 'audio' && /music|bgm|soundtrack/i.test(t.name),
-  );
+  const musicTracks = timeline.tracks.filter((t) => t.type === 'audio' && /music|bgm|soundtrack/i.test(t.name));
   if (musicTracks.length === 0) return null;
   const name = musicTracks[0].name.toLowerCase();
   const genres = ['pop', 'rock', 'jazz', 'electronic', 'classical', 'hip-hop', 'ambient', 'lo-fi'];

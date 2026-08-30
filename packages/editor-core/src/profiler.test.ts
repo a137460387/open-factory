@@ -117,7 +117,13 @@ describe('profiler', () => {
       frameIndex: index,
       timestampMs: index * 16,
       playheadTime: index / 30,
-      render: { compositeMs: totalMs * 0.5, colorMs: totalMs * 0.2, effectsMs: totalMs * 0.2, overlayMs: totalMs * 0.1, totalMs },
+      render: {
+        compositeMs: totalMs * 0.5,
+        colorMs: totalMs * 0.2,
+        effectsMs: totalMs * 0.2,
+        overlayMs: totalMs * 0.1,
+        totalMs,
+      },
       drawCalls: 4,
       textureBytes: 1024,
       reason: '',
@@ -206,7 +212,13 @@ describe('profiler', () => {
     });
 
     it('钳制负值为 0', () => {
-      const bad = { timestampMs: 1000, jsHeapBytes: -100, webglTextureBytes: -50, proxyCacheBytes: 0, undoHistoryBytes: 0 };
+      const bad = {
+        timestampMs: 1000,
+        jsHeapBytes: -100,
+        webglTextureBytes: -50,
+        proxyCacheBytes: 0,
+        undoHistoryBytes: 0,
+      };
       const result = appendProfilerMemorySample([], bad);
       expect(result[0].jsHeapBytes).toBe(0);
       expect(result[0].webglTextureBytes).toBe(0);

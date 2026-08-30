@@ -18,7 +18,10 @@ import type {
 /**
  * Probe video file using ffprobe to extract technical metadata.
  */
-export async function probeVideo(inputPath: string, ffprobePath = 'ffprobe'): Promise<{
+export async function probeVideo(
+  inputPath: string,
+  ffprobePath = 'ffprobe',
+): Promise<{
   width: number;
   height: number;
   frameRate: number;
@@ -34,13 +37,7 @@ export async function probeVideo(inputPath: string, ffprobePath = 'ffprobe'): Pr
   return new Promise((resolve, reject) => {
     execFile(
       ffprobePath,
-      [
-        '-v', 'quiet',
-        '-print_format', 'json',
-        '-show_format',
-        '-show_streams',
-        inputPath,
-      ],
+      ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', inputPath],
       (error, stdout) => {
         if (error) {
           reject(new Error(`ffprobe failed: ${error.message}`));
@@ -49,14 +46,10 @@ export async function probeVideo(inputPath: string, ffprobePath = 'ffprobe'): Pr
 
         try {
           const data = JSON.parse(stdout);
-          const videoStream = (data.streams ?? []).find(
-            (s: Record<string, unknown>) => s.codec_type === 'video',
-          );
-          const audioStream = (data.streams ?? []).find(
-            (s: Record<string, unknown>) => s.codec_type === 'audio',
-          );
+          const videoStream = (data.streams ?? []).find((s: Record<string, unknown>) => s.codec_type === 'video');
+          const audioStream = (data.streams ?? []).find((s: Record<string, unknown>) => s.codec_type === 'audio');
 
-          const fpsParts = (videoStream?.r_frame_rate as string ?? '30/1').split('/');
+          const fpsParts = ((videoStream?.r_frame_rate as string) ?? '30/1').split('/');
           const fps = Number(fpsParts[0]) / Number(fpsParts[1]);
 
           resolve({
@@ -81,7 +74,10 @@ export async function probeVideo(inputPath: string, ffprobePath = 'ffprobe'): Pr
 /**
  * Measure audio loudness using ffmpeg loudnorm filter (2-pass).
  */
-export async function measureLoudness(inputPath: string, ffmpegPath = 'ffmpeg'): Promise<{
+export async function measureLoudness(
+  inputPath: string,
+  ffmpegPath = 'ffmpeg',
+): Promise<{
   integrated: number;
   truePeak: number;
   range: number;
@@ -91,12 +87,7 @@ export async function measureLoudness(inputPath: string, ffmpegPath = 'ffmpeg'):
   return new Promise((resolve) => {
     execFile(
       ffmpegPath,
-      [
-        '-i', inputPath,
-        '-af', 'loudnorm=print_format=json',
-        '-f', 'null',
-        '-',
-      ],
+      ['-i', inputPath, '-af', 'loudnorm=print_format=json', '-f', 'null', '-'],
       { timeout: 60_000 },
       (_error, _stdout, stderr) => {
         // Parse loudnorm JSON output from stderr
@@ -246,12 +237,7 @@ async function detectScenes(
   return new Promise((resolve) => {
     execFile(
       ffmpegPath,
-      [
-        '-i', inputPath,
-        '-vf', `select='gt(scene,${threshold})',showinfo`,
-        '-f', 'null',
-        '-',
-      ],
+      ['-i', inputPath, '-vf', `select='gt(scene,${threshold})',showinfo`, '-f', 'null', '-'],
       { timeout: 120_000 },
       (_error, _stdout, stderr) => {
         const timestamps: number[] = [];
@@ -324,18 +310,53 @@ interface PlatformRule {
 function getPlatformRules(platform: string): PlatformRule[] {
   const rules: Record<string, PlatformRule[]> = {
     youtube: [
-      { name: 'Resolution', expected: '1920x1080 or higher', check: (m) => m.width >= 1920 && m.height >= 1080, getActual: (m) => `${m.width}x${m.height}` },
-      { name: 'Frame Rate', expected: '24-60 fps', check: (m) => m.frameRate >= 24 && m.frameRate <= 60, getActual: (m) => `${m.frameRate} fps` },
-      { name: 'Video Codec', expected: 'h264 or h265', check: (m) => ['h264', 'hevc', 'h265'].includes(m.codec), getActual: (m) => m.codec },
+      {
+        name: 'Resolution',
+        expected: '1920x1080 or higher',
+        check: (m) => m.width >= 1920 && m.height >= 1080,
+        getActual: (m) => `${m.width}x${m.height}`,
+      },
+      {
+        name: 'Frame Rate',
+        expected: '24-60 fps',
+        check: (m) => m.frameRate >= 24 && m.frameRate <= 60,
+        getActual: (m) => `${m.frameRate} fps`,
+      },
+      {
+        name: 'Video Codec',
+        expected: 'h264 or h265',
+        check: (m) => ['h264', 'hevc', 'h265'].includes(m.codec),
+        getActual: (m) => m.codec,
+      },
       { name: 'Audio Codec', expected: 'aac', check: (m) => m.audioCodec === 'aac', getActual: (m) => m.audioCodec },
     ],
     tiktok: [
-      { name: 'Resolution', expected: '1080x1920 (vertical)', check: (m) => m.width >= 1080 && m.height >= 1920, getActual: (m) => `${m.width}x${m.height}` },
-      { name: 'Duration', expected: '10-180 seconds', check: (m) => m.duration >= 10 && m.duration <= 180, getActual: (m) => `${m.duration.toFixed(1)}s` },
+      {
+        name: 'Resolution',
+        expected: '1080x1920 (vertical)',
+        check: (m) => m.width >= 1080 && m.height >= 1920,
+        getActual: (m) => `${m.width}x${m.height}`,
+      },
+      {
+        name: 'Duration',
+        expected: '10-180 seconds',
+        check: (m) => m.duration >= 10 && m.duration <= 180,
+        getActual: (m) => `${m.duration.toFixed(1)}s`,
+      },
     ],
     bilibili: [
-      { name: 'Resolution', expected: '1920x1080 or higher', check: (m) => m.width >= 1920 && m.height >= 1080, getActual: (m) => `${m.width}x${m.height}` },
-      { name: 'Video Codec', expected: 'h264 or h265', check: (m) => ['h264', 'hevc', 'h265'].includes(m.codec), getActual: (m) => m.codec },
+      {
+        name: 'Resolution',
+        expected: '1920x1080 or higher',
+        check: (m) => m.width >= 1920 && m.height >= 1080,
+        getActual: (m) => `${m.width}x${m.height}`,
+      },
+      {
+        name: 'Video Codec',
+        expected: 'h264 or h265',
+        check: (m) => ['h264', 'hevc', 'h265'].includes(m.codec),
+        getActual: (m) => m.codec,
+      },
     ],
   };
 
@@ -345,10 +366,7 @@ function getPlatformRules(platform: string): PlatformRule[] {
 /**
  * Run full analysis (quality + semantic + compliance).
  */
-export async function analyzeFull(
-  inputPath: string,
-  onProgress?: (p: HeadlessProgress) => void,
-): Promise<FullReport> {
+export async function analyzeFull(inputPath: string, onProgress?: (p: HeadlessProgress) => void): Promise<FullReport> {
   onProgress?.({ phase: 'analyzing', percent: 0, message: 'Starting full analysis' });
 
   const quality = await analyzeQuality(inputPath, (p) => {
@@ -409,10 +427,24 @@ export async function headlessAnalyze(request: HeadlessAnalyzeRequest): Promise<
   }
 }
 
-function buildFallbackReport(type: HeadlessAnalyzeRequest['type']): QualityReport | SemanticReport | ComplianceReport | FullReport {
+function buildFallbackReport(
+  type: HeadlessAnalyzeRequest['type'],
+): QualityReport | SemanticReport | ComplianceReport | FullReport {
   switch (type) {
     case 'quality':
-      return { type: 'quality', resolution: { width: 0, height: 0 }, frameRate: 0, bitrate: 0, codec: '', audioCodec: '', audioChannels: 0, audioSampleRate: 0, loudness: { integrated: 0, truePeak: 0, range: 0 }, issues: [], score: 0 };
+      return {
+        type: 'quality',
+        resolution: { width: 0, height: 0 },
+        frameRate: 0,
+        bitrate: 0,
+        codec: '',
+        audioCodec: '',
+        audioChannels: 0,
+        audioSampleRate: 0,
+        loudness: { integrated: 0, truePeak: 0, range: 0 },
+        issues: [],
+        score: 0,
+      };
     case 'semantic':
       return { type: 'semantic', scenes: [], duration: 0, summary: 'Analysis failed' };
     case 'compliance':
@@ -420,7 +452,19 @@ function buildFallbackReport(type: HeadlessAnalyzeRequest['type']): QualityRepor
     case 'full':
       return {
         type: 'full',
-        quality: { type: 'quality', resolution: { width: 0, height: 0 }, frameRate: 0, bitrate: 0, codec: '', audioCodec: '', audioChannels: 0, audioSampleRate: 0, loudness: { integrated: 0, truePeak: 0, range: 0 }, issues: [], score: 0 },
+        quality: {
+          type: 'quality',
+          resolution: { width: 0, height: 0 },
+          frameRate: 0,
+          bitrate: 0,
+          codec: '',
+          audioCodec: '',
+          audioChannels: 0,
+          audioSampleRate: 0,
+          loudness: { integrated: 0, truePeak: 0, range: 0 },
+          issues: [],
+          score: 0,
+        },
         semantic: { type: 'semantic', scenes: [], duration: 0, summary: 'Analysis failed' },
         compliance: [],
       };

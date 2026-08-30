@@ -154,10 +154,7 @@ export function calculateVisualEnergy(
   motionWeight = 0.6,
   sceneWeight = 0.4,
 ): number {
-  return Math.min(
-    1,
-    motionIntensity * motionWeight + sceneChangeScore * sceneWeight,
-  );
+  return Math.min(1, motionIntensity * motionWeight + sceneChangeScore * sceneWeight);
 }
 
 // ==================== Highlight Detection ====================
@@ -261,11 +258,7 @@ export function detectVisualHighlights(
     cfg.sceneChangeThreshold,
     minGapFrames,
   );
-  const energyPeaks = findPeaks(
-    smoothedEnergies,
-    cfg.motionThreshold,
-    minGapFrames,
-  );
+  const energyPeaks = findPeaks(smoothedEnergies, cfg.motionThreshold, minGapFrames);
 
   // Merge peaks into highlight markers
   const highlightMap = new Map<number, VisualHighlightMarker>();
@@ -343,9 +336,7 @@ export function mergeWithAudioBeats(
   if (audioBeatTimes.length === 0) return visualHighlights;
 
   return visualHighlights.map((h) => {
-    const nearBeat = audioBeatTimes.some(
-      (beat) => Math.abs(beat - h.time) <= toleranceSeconds,
-    );
+    const nearBeat = audioBeatTimes.some((beat) => Math.abs(beat - h.time) <= toleranceSeconds);
     if (nearBeat) {
       return {
         ...h,

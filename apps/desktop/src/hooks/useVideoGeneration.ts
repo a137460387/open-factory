@@ -28,11 +28,7 @@ export interface LtxCompletedPayload {
 
 /** Specific error types for generation failures */
 export type GenerationErrorType =
-  | 'model_not_found'
-  | 'gpu_unavailable'
-  | 'sidecar_crash'
-  | 'inference_timeout'
-  | 'unknown';
+  'model_not_found' | 'gpu_unavailable' | 'sidecar_crash' | 'inference_timeout' | 'unknown';
 
 /** User-friendly error messages */
 export function getErrorHint(errorType: GenerationErrorType): string {

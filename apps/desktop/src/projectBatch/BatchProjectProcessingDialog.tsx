@@ -1,12 +1,27 @@
-import {buildExportProjectFromProject, buildFfmpegCurrentFrameExportPlan, buildFfmpegExportPlan, type SubtitleStyle} from '@open-factory/editor-core';
-import {ClipboardList, FolderOpen, Loader2, Play, X} from 'lucide-react';
-import {useMemo, useState} from 'react';
-import {zhCN} from '../i18n/strings';
-import {readProjectFile, writeProjectFile} from '../lib/projectFiles';
-import {getFfmpegCapabilities, openDirectoryDialog, openFileDialog, runExport} from '../lib/tauri-bridge';
-import {fileNameFromPath} from '../lib/tauri';
-import {showToast} from '../lib/toast';
-import {buildProjectBatchQueue, replaceProjectMediaPathPrefix, runProjectBatchQueue, serializeProjectBatchReport, updateProjectSubtitleStyle, type ProjectBatchOperation, type ProjectBatchReport, type ProjectBatchTask, type ProjectBatchTaskStatus} from './projectBatch';
+import {
+  buildExportProjectFromProject,
+  buildFfmpegCurrentFrameExportPlan,
+  buildFfmpegExportPlan,
+  type SubtitleStyle,
+} from '@open-factory/editor-core';
+import { ClipboardList, FolderOpen, Loader2, Play, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { zhCN } from '../i18n/strings';
+import { readProjectFile, writeProjectFile } from '../lib/projectFiles';
+import { getFfmpegCapabilities, openDirectoryDialog, openFileDialog, runExport } from '../lib/tauri-bridge';
+import { fileNameFromPath } from '../lib/tauri';
+import { showToast } from '../lib/toast';
+import {
+  buildProjectBatchQueue,
+  replaceProjectMediaPathPrefix,
+  runProjectBatchQueue,
+  serializeProjectBatchReport,
+  updateProjectSubtitleStyle,
+  type ProjectBatchOperation,
+  type ProjectBatchReport,
+  type ProjectBatchTask,
+  type ProjectBatchTaskStatus,
+} from './projectBatch';
 
 interface BatchProjectProcessingDialogProps {
   onClose(): void;

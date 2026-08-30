@@ -164,10 +164,12 @@ describe('getEnabledActions', () => {
 
 describe('buildCompletionNotificationMessage', () => {
   it('builds message from template', () => {
-    const msg = buildCompletionNotificationMessage(
-      '{batchName}: {completed}/{total} done, {failed} failed',
-      { batchName: 'Test', totalTasks: 3, completedTasks: 2, failedTasks: 1 },
-    );
+    const msg = buildCompletionNotificationMessage('{batchName}: {completed}/{total} done, {failed} failed', {
+      batchName: 'Test',
+      totalTasks: 3,
+      completedTasks: 2,
+      failedTasks: 1,
+    });
     expect(msg).toContain('Test');
     expect(msg).toContain('2');
     expect(msg).toContain('3');
@@ -175,10 +177,13 @@ describe('buildCompletionNotificationMessage', () => {
   });
 
   it('includes duration when provided', () => {
-    const msg = buildCompletionNotificationMessage(
-      'Done in {duration}',
-      { batchName: 'Test', totalTasks: 1, completedTasks: 1, failedTasks: 0, durationSeconds: 65 },
-    );
+    const msg = buildCompletionNotificationMessage('Done in {duration}', {
+      batchName: 'Test',
+      totalTasks: 1,
+      completedTasks: 1,
+      failedTasks: 0,
+      durationSeconds: 65,
+    });
     expect(msg).toContain('1');
   });
 });

@@ -1,16 +1,28 @@
-import {useMemo} from 'react';
-import type {Clip, ClipGroup, MediaAsset, ProjectSettings} from '@open-factory/editor-core';
-import {BatchUpdateClipGroupClipsCommand, UpdateClipCommand, UpdateProjectSpeakerLabelsCommand, performSpeakerDiarization, MIN_CLIP_SPEED, MAX_CLIP_SPEED, getClipSpeed, getTimelineDuration, normalizeColorCorrection, normalizeClipGroups, findCompleteClipGroup} from '@open-factory/editor-core';
-import {zhCN} from '../../i18n/strings';
-import {commandManager, projectAccessor, timelineAccessor} from '../../store/commandManager';
-import {showToast} from '../../lib/toast';
-import {SubtitleAIPolishPanel} from './SubtitleAIPolishPanel';
-import {ChapterTitleAIPanel} from './ChapterTitleAIPanel';
-import {useEditorStore, type SelectedKeyframeRef} from '../../store/editorStore';
-import {PanelTitle, Section, NumberField, RangeField, RangeNumberField} from './InspectorFields';
-import {SubtitleProofreadingPanel, SubtitleRetimingPanel} from './InspectorEditors';
-import {useClipInspectorState} from './useClipInspectorState';
-import {ClipInspectorBody} from './ClipInspectorBody';
+import { useMemo } from 'react';
+import type { Clip, ClipGroup, MediaAsset, ProjectSettings } from '@open-factory/editor-core';
+import {
+  BatchUpdateClipGroupClipsCommand,
+  UpdateClipCommand,
+  UpdateProjectSpeakerLabelsCommand,
+  performSpeakerDiarization,
+  MIN_CLIP_SPEED,
+  MAX_CLIP_SPEED,
+  getClipSpeed,
+  getTimelineDuration,
+  normalizeColorCorrection,
+  normalizeClipGroups,
+  findCompleteClipGroup,
+} from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
+import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
+import { showToast } from '../../lib/toast';
+import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
+import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
+import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
+import { PanelTitle, Section, NumberField, RangeField, RangeNumberField } from './InspectorFields';
+import { SubtitleProofreadingPanel, SubtitleRetimingPanel } from './InspectorEditors';
+import { useClipInspectorState } from './useClipInspectorState';
+import { ClipInspectorBody } from './ClipInspectorBody';
 
 interface InspectorProps {
   clip?: Clip;

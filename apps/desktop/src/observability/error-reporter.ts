@@ -41,10 +41,7 @@ export class ErrorReporter {
 
     const onUnhandledRejection = (event: PromiseRejectionEvent) => {
       event.preventDefault();
-      const error =
-        event.reason instanceof Error
-          ? event.reason
-          : new Error(String(event.reason));
+      const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
       this.report(error, { type: 'unhandledrejection' });
     };
 

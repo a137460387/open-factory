@@ -1,9 +1,9 @@
-import type {Clip} from '@open-factory/editor-core';
-import {getClipSourceVisibleDuration, getClipSpeed, round} from '@open-factory/editor-core';
-import {dirname} from '@open-factory/editor-core';
-import {getAppDataDir} from '../../../../lib/tauri-bridge';
-import {LABEL_WIDTH} from '../../TimelineParts';
-import type {SubtitleAlignmentMediaClip} from './types';
+import type { Clip } from '@open-factory/editor-core';
+import { getClipSourceVisibleDuration, getClipSpeed, round } from '@open-factory/editor-core';
+import { dirname } from '@open-factory/editor-core';
+import { getAppDataDir } from '../../../../lib/tauri-bridge';
+import { LABEL_WIDTH } from '../../TimelineParts';
+import type { SubtitleAlignmentMediaClip } from './types';
 
 export const SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND = 20;
 export const SUBTITLE_ALIGNMENT_MAX_DISTANCE = 0.3;
@@ -62,7 +62,12 @@ export function isSubtitleAlignmentMediaClip(clip: Clip): clip is SubtitleAlignm
   return clip.type === 'audio' || clip.type === 'video';
 }
 
-export function timelineRangesOverlap(leftStart: number, leftEnd: number, rightStart: number, rightEnd: number): boolean {
+export function timelineRangesOverlap(
+  leftStart: number,
+  leftEnd: number,
+  rightStart: number,
+  rightEnd: number,
+): boolean {
   return leftStart < rightEnd && rightStart < leftEnd;
 }
 

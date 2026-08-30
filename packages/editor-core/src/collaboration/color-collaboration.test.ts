@@ -57,8 +57,7 @@ describe('color-collaboration', () => {
     prev = 0,
     next = 1,
     baseVersion = 0,
-  ): ColorCollabOperation =>
-    createColorCollabOperation('wheel-adjust', userId, nodeId, param, prev, next, baseVersion);
+  ): ColorCollabOperation => createColorCollabOperation('wheel-adjust', userId, nodeId, param, prev, next, baseVersion);
 
   // ─── 工厂函数 ───────────────────────────────────────────────────────
   describe('createDefaultCollabSessionConfig', () => {

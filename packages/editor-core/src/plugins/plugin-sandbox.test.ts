@@ -72,22 +72,14 @@ describe('SandboxManager', () => {
   });
 
   it('creates and tracks sandboxes', async () => {
-    await manager.createSandbox(
-      { pluginId: 'plugin-1' },
-      'return { name: "plugin-1" }',
-    );
+    await manager.createSandbox({ pluginId: 'plugin-1' }, 'return { name: "plugin-1" }');
     expect(manager.size).toBe(1);
     expect(manager.getSandbox('plugin-1')).toBeDefined();
   });
 
   it('prevents duplicate sandboxes', async () => {
-    await manager.createSandbox(
-      { pluginId: 'plugin-1' },
-      'return {}',
-    );
-    await expect(
-      manager.createSandbox({ pluginId: 'plugin-1' }, 'return {}'),
-    ).rejects.toThrow('already exists');
+    await manager.createSandbox({ pluginId: 'plugin-1' }, 'return {}');
+    await expect(manager.createSandbox({ pluginId: 'plugin-1' }, 'return {}')).rejects.toThrow('already exists');
   });
 
   it('terminates individual sandboxes', async () => {
@@ -203,18 +195,12 @@ describe('Test Plugins', () => {
 
   describe('UI Plugin', () => {
     it('initializes successfully', async () => {
-      const sandbox = await manager.createSandbox(
-        { pluginId: 'ui-plugin' },
-        UI_PLUGIN_CODE,
-      );
+      const sandbox = await manager.createSandbox({ pluginId: 'ui-plugin' }, UI_PLUGIN_CODE);
       expect(sandbox.getStatus()).toBe('ready');
     });
 
     it('has correct metrics after init', async () => {
-      const sandbox = await manager.createSandbox(
-        { pluginId: 'ui-plugin' },
-        UI_PLUGIN_CODE,
-      );
+      const sandbox = await manager.createSandbox({ pluginId: 'ui-plugin' }, UI_PLUGIN_CODE);
       const metrics = sandbox.getMetrics();
       expect(metrics.initTimeMs).toBeGreaterThanOrEqual(0);
       expect(metrics.errorCount).toBe(0);
@@ -223,20 +209,14 @@ describe('Test Plugins', () => {
 
   describe('Data Plugin', () => {
     it('initializes successfully', async () => {
-      const sandbox = await manager.createSandbox(
-        { pluginId: 'data-plugin' },
-        DATA_PLUGIN_CODE,
-      );
+      const sandbox = await manager.createSandbox({ pluginId: 'data-plugin' }, DATA_PLUGIN_CODE);
       expect(sandbox.getStatus()).toBe('ready');
     });
   });
 
   describe('Communication Plugin', () => {
     it('initializes successfully', async () => {
-      const sandbox = await manager.createSandbox(
-        { pluginId: 'comm-plugin' },
-        COMM_PLUGIN_CODE,
-      );
+      const sandbox = await manager.createSandbox({ pluginId: 'comm-plugin' }, COMM_PLUGIN_CODE);
       expect(sandbox.getStatus()).toBe('ready');
     });
   });
@@ -310,10 +290,7 @@ describe('Sandbox Performance', () => {
 
   it('sandbox initialization is under 100ms', async () => {
     const start = performance.now();
-    await manager.createSandbox(
-      { pluginId: 'perf-plugin' },
-      'return { name: "perf" }',
-    );
+    await manager.createSandbox({ pluginId: 'perf-plugin' }, 'return { name: "perf" }');
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(100);
   });
@@ -321,10 +298,7 @@ describe('Sandbox Performance', () => {
   it('10 sandboxes can coexist', async () => {
     const count = 10;
     for (let i = 0; i < count; i++) {
-      await manager.createSandbox(
-        { pluginId: `plugin-${i}` },
-        'return { index: ' + i + ' }',
-      );
+      await manager.createSandbox({ pluginId: `plugin-${i}` }, 'return { index: ' + i + ' }');
     }
     expect(manager.size).toBe(count);
 
@@ -340,10 +314,7 @@ describe('Sandbox Performance', () => {
   it('all 10 sandboxes initialize under 500ms total', async () => {
     const start = performance.now();
     for (let i = 0; i < 10; i++) {
-      await manager.createSandbox(
-        { pluginId: `fast-${i}` },
-        'return {}',
-      );
+      await manager.createSandbox({ pluginId: `fast-${i}` }, 'return {}');
     }
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(500);
@@ -371,10 +342,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return { attempted: true };
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'proto-polluter' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'proto-polluter' }, MALICIOUS_CODE);
 
     // Verify the sandbox initialized (code ran inside iframe)
     expect(sandbox.getStatus()).toBe('ready');
@@ -400,10 +368,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'parent-access' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'parent-access' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
     // In browser, cross-origin access would throw. In test env (Node),
@@ -420,10 +385,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'storage-access' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'storage-access' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
   });
@@ -443,10 +405,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'network-access' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'network-access' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
   });
@@ -460,10 +419,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'eval-access' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'eval-access' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
   });
@@ -485,10 +441,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'node-access' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'node-access' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
   });
@@ -505,10 +458,7 @@ describe('Sandbox Escape Attempts (should all fail)', () => {
       return result;
     `;
 
-    const sandbox = await manager.createSandbox(
-      { pluginId: 'config-hack' },
-      MALICIOUS_CODE,
-    );
+    const sandbox = await manager.createSandbox({ pluginId: 'config-hack' }, MALICIOUS_CODE);
 
     expect(sandbox.getStatus()).toBe('ready');
     // Sandbox config should remain unchanged

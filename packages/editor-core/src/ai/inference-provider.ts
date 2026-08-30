@@ -6,8 +6,8 @@
  * InferenceEngine, enabling clean degradation when no real inference is available.
  */
 
-import type {ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType} from './inference-engine';
-import {logger} from '../utils/logger.js';
+import type { ComputeBackend, InferenceConfig, TensorDescriptor, InferenceResult, ModelType } from './inference-engine';
+import { logger } from '../utils/logger.js';
 
 // ==================== Provider Interface ====================
 
@@ -79,7 +79,7 @@ export function listRegisteredProviders(): string[] {
 
 // ==================== Local Inference Provider ====================
 
-import {InferenceEngine} from './inference-engine';
+import { InferenceEngine } from './inference-engine';
 
 /** Local inference provider using browser-side compute (WebGPU/WebGL2/WASM/CPU). */
 export class LocalInferenceProvider implements InferenceProvider {
@@ -131,9 +131,7 @@ export class LocalInferenceProvider implements InferenceProvider {
     try {
       const ok = await this.engine.initialize();
       this._isReady = ok;
-      this._health = ok
-        ? (this.engine.isGPUAccelerated() ? 'ready' : 'degraded')
-        : 'not-ready';
+      this._health = ok ? (this.engine.isGPUAccelerated() ? 'ready' : 'degraded') : 'not-ready';
       return ok;
     } catch (err) {
       this._health = 'error';
@@ -235,7 +233,7 @@ export class RemoteInferenceProvider implements InferenceProvider {
       throw new Error(`Remote inference failed: ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json() as { output: number[]; shape: number[] };
+    const result = (await response.json()) as { output: number[]; shape: number[] };
     const outputData = new Float32Array(result.output);
 
     return {
@@ -262,10 +260,14 @@ export class RemoteInferenceProvider implements InferenceProvider {
 }
 
 // Auto-register
-registerProvider('remote', (config) => new RemoteInferenceProvider({
-  endpoint: (config as Record<string, unknown>)?.endpoint as string ?? 'http://localhost:8080',
-  ...config,
-}));
+registerProvider(
+  'remote',
+  (config) =>
+    new RemoteInferenceProvider({
+      endpoint: ((config as Record<string, unknown>)?.endpoint as string) ?? 'http://localhost:8080',
+      ...config,
+    }),
+);
 
 // ==================== Heuristic Provider ====================
 
@@ -381,7 +383,7 @@ export class InferenceProviderManager {
 
   /** Get the currently active provider. */
   getActiveProvider(): InferenceProvider | null {
-    return this.activeProviderId ? this.providers.get(this.activeProviderId) ?? null : null;
+    return this.activeProviderId ? (this.providers.get(this.activeProviderId) ?? null) : null;
   }
 
   /** Get a specific provider by ID. */
@@ -391,7 +393,7 @@ export class InferenceProviderManager {
 
   /** List all registered providers with their status. */
   listProviders(): Array<{ id: string; name: string; health: ProviderHealth; isReady: boolean }> {
-    return Array.from(this.providers.values()).map(p => ({
+    return Array.from(this.providers.values()).map((p) => ({
       id: p.id,
       name: p.name,
       health: p.health,

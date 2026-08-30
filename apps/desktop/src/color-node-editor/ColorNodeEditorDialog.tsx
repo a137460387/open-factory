@@ -1,9 +1,38 @@
-import {useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react';
-import {BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES, INPUT_COLOR_SPACES, createDefaultColorNodeGraph, createId, detectColorNodeGraphCycle, normalizeColorNodeGraph, normalizeInputColorSpace, parseColorNodeGraphFile, serializeColorNodeGraphFile, clamp, type Clip, type ColorNode, type ColorNodeBlendMode, type ColorNodeGraph, type ColorNodeType, type InputColorSpace} from '@open-factory/editor-core';
-import {ChevronDown, Download, FolderOpen, GitCompareArrows, Link2, Move, Plus, Save, Trash2, Upload, X} from 'lucide-react';
-import {zhCN} from '../i18n/strings';
-import {getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile} from '../lib/tauri-bridge';
-import {showToast} from '../lib/toast';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  BUILT_IN_COLOR_NODE_GRAPH_TEMPLATES,
+  INPUT_COLOR_SPACES,
+  createDefaultColorNodeGraph,
+  createId,
+  detectColorNodeGraphCycle,
+  normalizeColorNodeGraph,
+  normalizeInputColorSpace,
+  parseColorNodeGraphFile,
+  serializeColorNodeGraphFile,
+  clamp,
+  type Clip,
+  type ColorNode,
+  type ColorNodeBlendMode,
+  type ColorNodeGraph,
+  type ColorNodeType,
+  type InputColorSpace,
+} from '@open-factory/editor-core';
+import {
+  ChevronDown,
+  Download,
+  FolderOpen,
+  GitCompareArrows,
+  Link2,
+  Move,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { zhCN } from '../i18n/strings';
+import { getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
 
 const BOARD_WIDTH = 1280;
 const BOARD_HEIGHT = 720;

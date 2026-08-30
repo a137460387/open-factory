@@ -6,7 +6,14 @@
  * All operations are synchronous and side-effect-free.
  */
 
-import type { AnyPlugin, PluginCategory, PluginManifest, PluginPermission, PluginRegistration, PluginStatus } from './plugin-types';
+import type {
+  AnyPlugin,
+  PluginCategory,
+  PluginManifest,
+  PluginPermission,
+  PluginRegistration,
+  PluginStatus,
+} from './plugin-types';
 
 // --- Types ---
 

@@ -5,7 +5,7 @@
  * 供分步编排面板 SmartRoughCutStepPanel 消费。
  * 一键编排面板家族（SmartRoughCutOrchestratorPanel + orchestrateSmartRoughCut core）已退役删除。
  */
-import {create} from 'zustand';
+import { create } from 'zustand';
 import {
   createInitialSmartRoughCutState,
   markSmartRoughCutStepComplete,
@@ -33,8 +33,7 @@ export interface SmartRoughCutOrchestratorState {
 export const useSmartRoughCutOrchestratorStore = create<SmartRoughCutOrchestratorState>((set) => ({
   stepState: createInitialSmartRoughCutState(),
 
-  markStepRunning: (step) =>
-    set((state) => ({ stepState: markSmartRoughCutStepRunning(state.stepState, step) })),
+  markStepRunning: (step) => set((state) => ({ stepState: markSmartRoughCutStepRunning(state.stepState, step) })),
 
   markStepComplete: (step, reportPatch) =>
     set((state) => ({ stepState: markSmartRoughCutStepComplete(state.stepState, step, reportPatch) })),

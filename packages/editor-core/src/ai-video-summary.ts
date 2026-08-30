@@ -220,7 +220,9 @@ export function generateSummaryHtml(result: VideoSummaryResult, projectName: str
     .join('\n');
   const keyMomentsHtml = result.keyMoments
     .map((km) => {
-      return '<li><span class="km-time">' + formatTimeShort(km.time) + '</span> ' + escapeHtml(km.description) + '</li>';
+      return (
+        '<li><span class="km-time">' + formatTimeShort(km.time) + '</span> ' + escapeHtml(km.description) + '</li>'
+      );
     })
     .join('\n');
   return (

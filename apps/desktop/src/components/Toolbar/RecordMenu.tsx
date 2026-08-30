@@ -35,9 +35,7 @@ export function RecordMenu({
         {recordingActive ? <Square size={15} /> : <Monitor size={15} />}
         <span>{recordingActive ? t.stopRecording : t.record}</span>
         {recordingActive ? (
-          <span className="text-xs tabular-nums text-slate-500">
-            {formatRecordingElapsed(recordingElapsedSeconds)}
-          </span>
+          <span className="text-xs tabular-nums text-slate-500">{formatRecordingElapsed(recordingElapsedSeconds)}</span>
         ) : (
           <ChevronDown size={14} />
         )}
@@ -51,7 +49,10 @@ export function RecordMenu({
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
             type="button"
             data-testid="toolbar-record-screen-menu-item"
-            onClick={() => { onToggle(); onStartRecording('screen'); }}
+            onClick={() => {
+              onToggle();
+              onStartRecording('screen');
+            }}
           >
             <Monitor size={14} />
             <span>{t.recordScreen}</span>
@@ -60,7 +61,10 @@ export function RecordMenu({
             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
             type="button"
             data-testid="toolbar-record-camera-menu-item"
-            onClick={() => { onToggle(); onStartRecording('camera'); }}
+            onClick={() => {
+              onToggle();
+              onStartRecording('camera');
+            }}
           >
             <Camera size={14} />
             <span>{t.recordCamera}</span>

@@ -12,7 +12,7 @@ import {
   UpdateTrackCommand,
 } from '@open-factory/editor-core';
 import { useClipInspectorState } from '../useClipInspectorState';
-import {DEFAULT_SUBTITLE_STYLE} from '@open-factory/editor-core';
+import { DEFAULT_SUBTITLE_STYLE } from '@open-factory/editor-core';
 import {
   makeAudioClip,
   makeInspectorProject,
@@ -20,7 +20,7 @@ import {
   makeSubtitleClip,
   makeTrack,
 } from './inspector-fixtures';
-import type {Project} from '@open-factory/editor-core';
+import type { Project } from '@open-factory/editor-core';
 
 const {
   executeMock,
@@ -71,16 +71,16 @@ const {
     targetLanguage: 'en',
     loadApiKey: vi.fn(),
   },
-  privacyStoreState: {modelPath: ''},
+  privacyStoreState: { modelPath: '' },
 }));
 
 vi.mock('../../../store/editorStore', () => ({
   useEditorStore: (selector: (state: typeof editorStoreState) => unknown) => selector(editorStoreState),
 }));
 vi.mock('../../../store/commandManager', () => ({
-  commandManager: {execute: executeMock},
-  projectAccessor: {name: 'project'},
-  timelineAccessor: {name: 'timeline'},
+  commandManager: { execute: executeMock },
+  projectAccessor: { name: 'project' },
+  timelineAccessor: { name: 'timeline' },
 }));
 vi.mock('../../../store/translationSettingsStore', () => ({
   useTranslationSettingsStore: (selector: (state: typeof translationStoreState) => unknown) =>
@@ -96,19 +96,17 @@ vi.mock('../../../lib/tauri-bridge', () => ({
   openFileDialog: openFileDialogMock,
   readFile: readFileMock,
   listenBridge: vi.fn(() => Promise.resolve(() => {})),
-  getFfmpegCapabilities: vi.fn(() =>
-    Promise.resolve({available: true, hasMinterpolate: true, hasArnndn: true}),
-  ),
+  getFfmpegCapabilities: vi.fn(() => Promise.resolve({ available: true, hasMinterpolate: true, hasArnndn: true })),
   getAppDataDir: vi.fn(() => Promise.resolve('D:/appdata')),
   convertLocalFileSrc: vi.fn((path: string) => `asset://${path}`),
-  runExportPreviewSamples: vi.fn(() => Promise.resolve({samples: []})),
+  runExportPreviewSamples: vi.fn(() => Promise.resolve({ samples: [] })),
   analyzeClip: vi.fn(),
   analyzeMotionTrack: vi.fn(),
   cancelMotionTracking: vi.fn(),
   detectPrivacyRegions: vi.fn(),
   evaluateExportQuality: vi.fn(),
 }));
-vi.mock('../../../lib/toast', () => ({showToast: showToastMock}));
+vi.mock('../../../lib/toast', () => ({ showToast: showToastMock }));
 vi.mock('../../../lib/subtitleStyleTemplates', () => ({
   loadSubtitleStyleTemplates: loadTemplatesMock,
   saveCustomSubtitleStyleTemplate: saveTemplateMock,
@@ -125,11 +123,11 @@ vi.mock('../../../lib/subtitleTranslation', () => ({
   translateSubtitleItems: translateItemsMock,
 }));
 vi.mock('../../../lib/frameInterpolationComparePreview', () => ({
-  buildFrameInterpolationComparePreviewPlan: vi.fn(() => ({samples: [], items: []})),
+  buildFrameInterpolationComparePreviewPlan: vi.fn(() => ({ samples: [], items: [] })),
   FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS: 60000,
 }));
-vi.mock('../../../lib/colorMatch', () => ({buildClipColorMatchCurves: vi.fn()}));
-vi.mock('../../../settings/appSettings', () => ({markLocalAiModelUsed: vi.fn()}));
+vi.mock('../../../lib/colorMatch', () => ({ buildClipColorMatchCurves: vi.fn() }));
+vi.mock('../../../settings/appSettings', () => ({ markLocalAiModelUsed: vi.fn() }));
 vi.mock('../../../media/pitchAnalysis', () => ({
   analyzeClipPitch: vi.fn(),
   exportClipPitchCsv: vi.fn(),
@@ -137,14 +135,17 @@ vi.mock('../../../media/pitchAnalysis', () => ({
 vi.mock('../InspectorEditors', () => ({
   buildAudioRestorationPreviewPeaks: vi.fn(() => []),
   mergeSubtitleStyleTemplateViews: vi.fn((a: unknown[], b: unknown[]) => [...a, ...b]),
-  getSubtitleStyleTemplateLabel: vi.fn((t: {name: string}) => t.name),
+  getSubtitleStyleTemplateLabel: vi.fn((t: { name: string }) => t.name),
   resolveSelectedKeyframeEntries: vi.fn(() => []),
   joinLocalPath: vi.fn((base: string, child: string) => `${base}/${child}`),
 }));
 
 /** 统一 renderHook 入口：注入 editorStoreState.project 并渲染 hook */
-function renderInspector(clip: Parameters<typeof useClipInspectorState>[0]['clip'], trackOverrides?: Project['timeline']['tracks']) {
-  const fallbackTrack = makeTrack({id: clip.trackId, type: 'subtitle', clips: [clip]});
+function renderInspector(
+  clip: Parameters<typeof useClipInspectorState>[0]['clip'],
+  trackOverrides?: Project['timeline']['tracks'],
+) {
+  const fallbackTrack = makeTrack({ id: clip.trackId, type: 'subtitle', clips: [clip] });
   editorStoreState.project = makeInspectorProject({
     tracks: trackOverrides ?? [fallbackTrack],
     speakers: [],
@@ -184,26 +185,26 @@ beforeEach(() => {
 
 describe('useClipInspectorState 字幕类型与 CC 域', () => {
   it('subtitleType 优先取 clip.subtitleType', () => {
-    const clip = makeSubtitleClip({subtitleType: 'cc'});
-    const {result} = renderInspector(clip);
+    const clip = makeSubtitleClip({ subtitleType: 'cc' });
+    const { result } = renderInspector(clip);
     expect(result.current.subtitleType).toBe('cc');
   });
 
   it('subtitleType 回退到轨道配置', () => {
-    const clip = makeSubtitleClip({trackId: 'track-cc'});
-    const track = makeTrack({id: 'track-cc', type: 'subtitle', subtitleType: 'cc', clips: [clip]});
-    const {result} = renderInspector(clip, [track]);
+    const clip = makeSubtitleClip({ trackId: 'track-cc' });
+    const track = makeTrack({ id: 'track-cc', type: 'subtitle', subtitleType: 'cc', clips: [clip] });
+    const { result } = renderInspector(clip, [track]);
     expect(result.current.subtitleType).toBe('cc');
   });
 
   it('subtitleType 默认 subtitle', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     expect(result.current.subtitleType).toBe('subtitle');
   });
 
   it('非 subtitle clip 的 subtitleType 固定 subtitle', () => {
     const clip = makeAudioClip();
-    const {result} = renderInspector(clip, [makeTrack({clips: [clip]})]);
+    const { result } = renderInspector(clip, [makeTrack({ clips: [clip] })]);
     expect(result.current.subtitleType).toBe('subtitle');
   });
 
@@ -211,25 +212,25 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
     const probe = renderInspector(makeSubtitleClip());
     const option = probe.result.current.soundDescriptionOptions[0];
     probe.unmount();
-    const clip = makeSubtitleClip({soundDesc: option});
-    const {result} = renderInspector(clip);
+    const clip = makeSubtitleClip({ soundDesc: option });
+    const { result } = renderInspector(clip);
     expect(result.current.soundDescSelectValue).toBe(option);
   });
 
   it('soundDescSelectValue：自定义值返回 custom', () => {
-    const clip = makeSubtitleClip({soundDesc: '非预置描述'});
-    const {result} = renderInspector(clip);
+    const clip = makeSubtitleClip({ soundDesc: '非预置描述' });
+    const { result } = renderInspector(clip);
     expect(result.current.soundDescSelectValue).toBe('custom');
   });
 
   it('soundDescSelectValue：无值返回空串', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     expect(result.current.soundDescSelectValue).toBe('');
   });
 
   it('commitSubtitleType 切到 cc 时保留 speaker/soundDesc 并更新轨道', () => {
-    const clip = makeSubtitleClip({subtitleType: 'subtitle', speaker: 'Alice', soundDesc: '描述'});
-    const {result} = renderInspector(clip);
+    const clip = makeSubtitleClip({ subtitleType: 'subtitle', speaker: 'Alice', soundDesc: '描述' });
+    const { result } = renderInspector(clip);
     act(() => {
       result.current.commitSubtitleType('cc');
     });
@@ -239,8 +240,8 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
   });
 
   it('commitSubtitleType 切回 subtitle 时清空 speaker/soundDesc', () => {
-    const clip = makeSubtitleClip({subtitleType: 'cc', speaker: 'Alice', soundDesc: '描述'});
-    const {result} = renderInspector(clip);
+    const clip = makeSubtitleClip({ subtitleType: 'cc', speaker: 'Alice', soundDesc: '描述' });
+    const { result } = renderInspector(clip);
     act(() => {
       result.current.commitSubtitleType('subtitle');
     });
@@ -250,7 +251,7 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
 
   it('commitSubtitleType 非 subtitle clip 直接返回', () => {
     const clip = makeAudioClip();
-    const {result} = renderInspector(clip, [makeTrack({clips: [clip]})]);
+    const { result } = renderInspector(clip, [makeTrack({ clips: [clip] })]);
     act(() => {
       result.current.commitSubtitleType('cc');
     });
@@ -261,19 +262,17 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
     executeMock.mockImplementation(() => {
       throw new Error('rejected');
     });
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.commitSubtitleType('cc');
     });
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'rejected'}),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning', message: 'rejected' }));
   });
 
   it('commitCcSpeaker 轨道非 cc 时补发 UpdateTrackCommand', () => {
-    const clip = makeSubtitleClip({trackId: 'track-plain'});
-    const track = makeTrack({id: 'track-plain', type: 'subtitle', clips: [clip]});
-    const {result} = renderInspector(clip, [track]);
+    const clip = makeSubtitleClip({ trackId: 'track-plain' });
+    const track = makeTrack({ id: 'track-plain', type: 'subtitle', clips: [clip] });
+    const { result } = renderInspector(clip, [track]);
     act(() => {
       result.current.commitCcSpeaker('Bob');
     });
@@ -283,9 +282,9 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
   });
 
   it('commitCcSpeaker 轨道已是 cc 时不重复更新轨道', () => {
-    const clip = makeSubtitleClip({trackId: 'track-cc'});
-    const track = makeTrack({id: 'track-cc', type: 'subtitle', subtitleType: 'cc', clips: [clip]});
-    const {result} = renderInspector(clip, [track]);
+    const clip = makeSubtitleClip({ trackId: 'track-cc' });
+    const track = makeTrack({ id: 'track-cc', type: 'subtitle', subtitleType: 'cc', clips: [clip] });
+    const { result } = renderInspector(clip, [track]);
     act(() => {
       result.current.commitCcSpeaker('Bob');
     });
@@ -294,7 +293,7 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
   });
 
   it('commitCcSoundDesc 提交声音描述并补轨道更新', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.commitCcSoundDesc('音乐');
     });
@@ -305,9 +304,12 @@ describe('useClipInspectorState 字幕类型与 CC 域', () => {
 });
 
 describe('useClipInspectorState 说话人库域', () => {
-  function renderWithSpeakers(clip: Parameters<typeof useClipInspectorState>[0]['clip'], speakers: Project['speakers']) {
-    const track = makeTrack({id: clip.trackId, type: 'subtitle', clips: [clip]});
-    editorStoreState.project = makeInspectorProject({tracks: [track], speakers});
+  function renderWithSpeakers(
+    clip: Parameters<typeof useClipInspectorState>[0]['clip'],
+    speakers: Project['speakers'],
+  ) {
+    const track = makeTrack({ id: clip.trackId, type: 'subtitle', clips: [clip] });
+    editorStoreState.project = makeInspectorProject({ tracks: [track], speakers });
     return renderHook(() =>
       useClipInspectorState({
         clip,
@@ -321,17 +323,17 @@ describe('useClipInspectorState 说话人库域', () => {
   }
 
   it('activeSpeaker 取自 clip.speaker 并匹配说话人条目', () => {
-    const clip = makeSubtitleClip({speaker: 'Alice'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Alice', color: '#ff0000'}]);
+    const clip = makeSubtitleClip({ speaker: 'Alice' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Alice', color: '#ff0000' }]);
     expect(result.current.activeSpeaker).toBe('Alice');
     expect(result.current.activeSpeakerEntry?.id).toBe('speaker-1');
     expect(result.current.projectSpeakers).toHaveLength(1);
   });
 
   it('updateProjectSpeakers 执行 UpdateProjectSpeakersCommand', () => {
-    const {result} = renderWithSpeakers(makeSubtitleClip(), []);
+    const { result } = renderWithSpeakers(makeSubtitleClip(), []);
     act(() => {
-      result.current.updateProjectSpeakers([{id: 'speaker-1', name: 'Alice'}]);
+      result.current.updateProjectSpeakers([{ id: 'speaker-1', name: 'Alice' }]);
     });
     expect(executeMock).toHaveBeenCalledTimes(1);
     expect(executeMock.mock.calls[0][0]).toBeInstanceOf(UpdateProjectSpeakersCommand);
@@ -341,17 +343,17 @@ describe('useClipInspectorState 说话人库域', () => {
     executeMock.mockImplementation(() => {
       throw new Error('speakers rejected');
     });
-    const {result} = renderWithSpeakers(makeSubtitleClip(), []);
+    const { result } = renderWithSpeakers(makeSubtitleClip(), []);
     act(() => {
       result.current.updateProjectSpeakers([]);
     });
     expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'speakers rejected'}),
+      expect.objectContaining({ kind: 'warning', message: 'speakers rejected' }),
     );
   });
 
   it('addActiveSpeakerToLibrary 无 speaker 时直接返回', () => {
-    const {result} = renderWithSpeakers(makeSubtitleClip(), []);
+    const { result } = renderWithSpeakers(makeSubtitleClip(), []);
     act(() => {
       result.current.addActiveSpeakerToLibrary();
     });
@@ -359,8 +361,8 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('addActiveSpeakerToLibrary 添加当前说话人（去重）', () => {
-    const clip = makeSubtitleClip({speaker: 'Alice'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Bob'}]);
+    const clip = makeSubtitleClip({ speaker: 'Alice' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Bob' }]);
     act(() => {
       result.current.addActiveSpeakerToLibrary();
     });
@@ -369,8 +371,8 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('addActiveSpeakerToLibrary 已存在同名说话人时不重复添加', () => {
-    const clip = makeSubtitleClip({speaker: 'Alice'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Alice'}]);
+    const clip = makeSubtitleClip({ speaker: 'Alice' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Alice' }]);
     act(() => {
       result.current.addActiveSpeakerToLibrary();
     });
@@ -378,10 +380,10 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('removeActiveSpeakerFromLibrary 移除匹配条目', () => {
-    const clip = makeSubtitleClip({speaker: 'Alice'});
-    const {result} = renderWithSpeakers(clip, [
-      {id: 'speaker-1', name: 'Alice'},
-      {id: 'speaker-2', name: 'Bob'},
+    const clip = makeSubtitleClip({ speaker: 'Alice' });
+    const { result } = renderWithSpeakers(clip, [
+      { id: 'speaker-1', name: 'Alice' },
+      { id: 'speaker-2', name: 'Bob' },
     ]);
     act(() => {
       result.current.removeActiveSpeakerFromLibrary();
@@ -391,8 +393,8 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('removeActiveSpeakerFromLibrary 无匹配条目时直接返回', () => {
-    const clip = makeSubtitleClip({speaker: 'Unknown'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Bob'}]);
+    const clip = makeSubtitleClip({ speaker: 'Unknown' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Bob' }]);
     act(() => {
       result.current.removeActiveSpeakerFromLibrary();
     });
@@ -400,8 +402,8 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('updateActiveSpeakerColor 更新对应说话人颜色', () => {
-    const clip = makeSubtitleClip({speaker: 'Alice'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Alice'}]);
+    const clip = makeSubtitleClip({ speaker: 'Alice' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Alice' }]);
     act(() => {
       result.current.updateActiveSpeakerColor('#00ff00');
     });
@@ -410,8 +412,8 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('updateActiveSpeakerColor 无活跃条目时直接返回', () => {
-    const clip = makeSubtitleClip({speaker: 'Ghost'});
-    const {result} = renderWithSpeakers(clip, [{id: 'speaker-1', name: 'Bob'}]);
+    const clip = makeSubtitleClip({ speaker: 'Ghost' });
+    const { result } = renderWithSpeakers(clip, [{ id: 'speaker-1', name: 'Bob' }]);
     act(() => {
       result.current.updateActiveSpeakerColor('#00ff00');
     });
@@ -419,32 +421,32 @@ describe('useClipInspectorState 说话人库域', () => {
   });
 
   it('allTimelineSubtitleClips 聚合全时间线字幕并按 start 排序', () => {
-    const clipA = makeSubtitleClip({id: 'sub-a', trackId: 'track-sub', start: 5});
-    const clipB = makeSubtitleClip({id: 'sub-b', trackId: 'track-sub', start: 1});
-    const audioClip = makeAudioClip({id: 'audio-1', trackId: 'track-audio'});
-    const subTrack = makeTrack({id: 'track-sub', type: 'subtitle', clips: [clipA, clipB]});
-    const audioTrack = makeTrack({id: 'track-audio', type: 'audio', clips: [audioClip]});
-    const {result} = renderInspector(clipA, [subTrack, audioTrack]);
+    const clipA = makeSubtitleClip({ id: 'sub-a', trackId: 'track-sub', start: 5 });
+    const clipB = makeSubtitleClip({ id: 'sub-b', trackId: 'track-sub', start: 1 });
+    const audioClip = makeAudioClip({ id: 'audio-1', trackId: 'track-audio' });
+    const subTrack = makeTrack({ id: 'track-sub', type: 'subtitle', clips: [clipA, clipB] });
+    const audioTrack = makeTrack({ id: 'track-audio', type: 'audio', clips: [audioClip] });
+    const { result } = renderInspector(clipA, [subTrack, audioTrack]);
     expect(result.current.allTimelineSubtitleClips.map((item) => item.id)).toEqual(['sub-b', 'sub-a']);
   });
 });
 
 describe('useClipInspectorState 字幕样式模板域', () => {
-  const TEMPLATE = {id: 'tpl-1', kind: 'builtin' as const, name: '模板一', style: DEFAULT_SUBTITLE_STYLE};
+  const TEMPLATE = { id: 'tpl-1', kind: 'builtin' as const, name: '模板一', style: DEFAULT_SUBTITLE_STYLE };
 
   it('applySubtitleStyleTemplate 执行 UpdateSubtitleStyleCommand 并提示成功', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.applySubtitleStyleTemplate(TEMPLATE);
     });
     expect(executeMock).toHaveBeenCalledTimes(1);
     expect(executeMock.mock.calls[0][0]).toBeInstanceOf(UpdateSubtitleStyleCommand);
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'success'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
   });
 
   it('applySubtitleStyleTemplate 非 subtitle clip 直接返回', () => {
     const clip = makeAudioClip();
-    const {result} = renderInspector(clip, [makeTrack({clips: [clip]})]);
+    const { result } = renderInspector(clip, [makeTrack({ clips: [clip] })]);
     act(() => {
       result.current.applySubtitleStyleTemplate(TEMPLATE);
     });
@@ -455,18 +457,16 @@ describe('useClipInspectorState 字幕样式模板域', () => {
     executeMock.mockImplementation(() => {
       throw new Error('style rejected');
     });
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.applySubtitleStyleTemplate(TEMPLATE);
     });
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'style rejected'}),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning', message: 'style rejected' }));
   });
 
   it('saveCurrentSubtitleStyleTemplate prompt 取消时直接返回', async () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.saveCurrentSubtitleStyleTemplate();
     });
@@ -476,50 +476,50 @@ describe('useClipInspectorState 字幕样式模板域', () => {
 
   it('saveCurrentSubtitleStyleTemplate 保存成功并提示', async () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('新模板');
-    saveTemplateMock.mockResolvedValue([{id: 'tpl-1', kind: 'builtin', name: '新模板', style: DEFAULT_SUBTITLE_STYLE}]);
-    const {result} = renderInspector(makeSubtitleClip());
+    saveTemplateMock.mockResolvedValue([
+      { id: 'tpl-1', kind: 'builtin', name: '新模板', style: DEFAULT_SUBTITLE_STYLE },
+    ]);
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.saveCurrentSubtitleStyleTemplate();
     });
     expect(saveTemplateMock).toHaveBeenCalledWith('新模板', expect.anything());
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'success'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     promptSpy.mockRestore();
   });
 
   it('saveCurrentSubtitleStyleTemplate 失败时弹 toast', async () => {
     const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('新模板');
     saveTemplateMock.mockRejectedValue(new Error('save failed'));
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.saveCurrentSubtitleStyleTemplate();
     });
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'save failed'}),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning', message: 'save failed' }));
     promptSpy.mockRestore();
   });
 
   it('deleteSubtitleStyleTemplate 删除并提示', async () => {
     deleteTemplateMock.mockResolvedValue([]);
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.deleteSubtitleStyleTemplate('tpl-1');
     });
     expect(deleteTemplateMock).toHaveBeenCalledWith('tpl-1');
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'info'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'info' }));
   });
 
   it('addSubtitleStyleTemplateToSharedLibrary 添加共享资源并派发更新事件', async () => {
     addSharedResourceMock.mockResolvedValue(undefined);
-    toSharedResourceMock.mockReturnValue({id: 'shared-1'});
+    toSharedResourceMock.mockReturnValue({ id: 'shared-1' });
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.addSubtitleStyleTemplateToSharedLibrary(TEMPLATE);
     });
     expect(addSharedResourceMock).toHaveBeenCalledWith(expect.anything(), 'overwrite');
     expect(dispatchSpy).toHaveBeenCalled();
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'success'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
     dispatchSpy.mockRestore();
   });
 });
@@ -527,8 +527,8 @@ describe('useClipInspectorState 字幕样式模板域', () => {
 describe('useClipInspectorState 字幕翻译域', () => {
   function renderForTranslation() {
     const clip = makeSubtitleClip();
-    const track = makeTrack({id: clip.trackId, type: 'subtitle', clips: [clip]});
-    editorStoreState.project = makeInspectorProject({tracks: [track]});
+    const track = makeTrack({ id: clip.trackId, type: 'subtitle', clips: [clip] });
+    editorStoreState.project = makeInspectorProject({ tracks: [track] });
     return renderHook(() =>
       useClipInspectorState({
         clip,
@@ -543,7 +543,7 @@ describe('useClipInspectorState 字幕翻译域', () => {
 
   it('未配置翻译时直接返回', async () => {
     isConfiguredMock.mockReturnValue(false);
-    const {result} = renderForTranslation();
+    const { result } = renderForTranslation();
     await act(async () => {
       await result.current.translateSubtitleTrack();
     });
@@ -553,25 +553,23 @@ describe('useClipInspectorState 字幕翻译域', () => {
 
   it('成功翻译时创建轨道与字幕剪辑', async () => {
     isConfiguredMock.mockReturnValue(true);
-    toTranslationItemsMock.mockReturnValue([{id: 'sub-src', text: '你好'}]);
-    translateItemsMock.mockResolvedValue([{id: 'sub-src', translatedText: 'hello'}]);
-    const {result} = renderForTranslation();
+    toTranslationItemsMock.mockReturnValue([{ id: 'sub-src', text: '你好' }]);
+    translateItemsMock.mockResolvedValue([{ id: 'sub-src', translatedText: 'hello' }]);
+    const { result } = renderForTranslation();
     await act(async () => {
       await result.current.translateSubtitleTrack();
     });
     expect(executeMock.mock.calls[0][0]).toBeInstanceOf(AddTrackCommand);
     expect(executeMock.mock.calls[1][0]).toBeInstanceOf(AddSubtitleClipCommand);
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'success'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
   });
 
   it('TOS 未接受且用户拒绝时中止翻译', async () => {
     isConfiguredMock.mockReturnValue(true);
     toTranslationItemsMock.mockReturnValue([]);
-    translateItemsMock
-      .mockRejectedValueOnce(new Error('TRANSLATION_TOS_NOT_ACCEPTED'))
-      .mockResolvedValueOnce([]);
+    translateItemsMock.mockRejectedValueOnce(new Error('TRANSLATION_TOS_NOT_ACCEPTED')).mockResolvedValueOnce([]);
     bridgeConfirmMock.mockResolvedValue(false);
-    const {result} = renderForTranslation();
+    const { result } = renderForTranslation();
     await act(async () => {
       await result.current.translateSubtitleTrack();
     });
@@ -582,11 +580,9 @@ describe('useClipInspectorState 字幕翻译域', () => {
   it('TOS 接受后重试翻译成功', async () => {
     isConfiguredMock.mockReturnValue(true);
     toTranslationItemsMock.mockReturnValue([]);
-    translateItemsMock
-      .mockRejectedValueOnce(new Error('TRANSLATION_TOS_NOT_ACCEPTED'))
-      .mockResolvedValueOnce([]);
+    translateItemsMock.mockRejectedValueOnce(new Error('TRANSLATION_TOS_NOT_ACCEPTED')).mockResolvedValueOnce([]);
     bridgeConfirmMock.mockResolvedValue(true);
-    const {result} = renderForTranslation();
+    const { result } = renderForTranslation();
     await act(async () => {
       await result.current.translateSubtitleTrack();
     });
@@ -598,13 +594,11 @@ describe('useClipInspectorState 字幕翻译域', () => {
     isConfiguredMock.mockReturnValue(true);
     toTranslationItemsMock.mockReturnValue([]);
     translateItemsMock.mockRejectedValue(new Error('network error'));
-    const {result} = renderForTranslation();
+    const { result } = renderForTranslation();
     await act(async () => {
       await result.current.translateSubtitleTrack();
     });
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'network error'}),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning', message: 'network error' }));
     expect(result.current.subtitleTranslationProgress).toBeUndefined();
   });
 });
@@ -612,9 +606,9 @@ describe('useClipInspectorState 字幕翻译域', () => {
 describe('useClipInspectorState 数据字幕域', () => {
   it('updateDataSubtitleTemplate 更新模板与文本', () => {
     const clip = makeSubtitleClip({
-      dataSubtitle: {sourceType: 'csv', template: '{row.text}', rows: [], filePath: 'D:/a.csv'},
+      dataSubtitle: { sourceType: 'csv', template: '{row.text}', rows: [], filePath: 'D:/a.csv' },
     });
-    const {result} = renderInspector(clip);
+    const { result } = renderInspector(clip);
     act(() => {
       result.current.updateDataSubtitleTemplate('{row.text}-{row.index}');
     });
@@ -623,7 +617,7 @@ describe('useClipInspectorState 数据字幕域', () => {
   });
 
   it('updateDataSubtitleTemplate 空 template 回退默认占位', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.updateDataSubtitleTemplate('  ');
     });
@@ -631,7 +625,7 @@ describe('useClipInspectorState 数据字幕域', () => {
   });
 
   it('clearDataSubtitleSource 清除数据源', () => {
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     act(() => {
       result.current.clearDataSubtitleSource();
     });
@@ -642,18 +636,18 @@ describe('useClipInspectorState 数据字幕域', () => {
   it('bindDataSubtitleSource 选择 csv 文件并解析行', async () => {
     openFileDialogMock.mockResolvedValue(['D:/subs.csv']);
     readFileMock.mockResolvedValue('time,text\n0,hello\n2,world');
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.bindDataSubtitleSource();
     });
     expect(readFileMock).toHaveBeenCalledWith('D:/subs.csv');
     expect(executeMock).toHaveBeenCalledTimes(1);
-    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({kind: 'success'}));
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }));
   });
 
   it('bindDataSubtitleSource 取消选择时不提交', async () => {
     openFileDialogMock.mockResolvedValue([]);
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.bindDataSubtitleSource();
     });
@@ -662,12 +656,10 @@ describe('useClipInspectorState 数据字幕域', () => {
 
   it('bindDataSubtitleSource 失败时弹 toast', async () => {
     openFileDialogMock.mockRejectedValue(new Error('dialog error'));
-    const {result} = renderInspector(makeSubtitleClip());
+    const { result } = renderInspector(makeSubtitleClip());
     await act(async () => {
       await result.current.bindDataSubtitleSource();
     });
-    expect(showToastMock).toHaveBeenCalledWith(
-      expect.objectContaining({kind: 'warning', message: 'dialog error'}),
-    );
+    expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning', message: 'dialog error' }));
   });
 });

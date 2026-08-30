@@ -52,7 +52,10 @@ vi.mock('../../settings/appSettings', () => ({
 vi.mock('../../lib/error-handlers', () => ({ logError: vi.fn() }));
 vi.mock('../../tutorial/tutorialState', () => ({ normalizeTutorialProgressSettings: vi.fn((p: any) => p) }));
 vi.mock('../../shortcuts/keybindings', () => ({ readCustomKeybindings: vi.fn(() => Promise.resolve([])) }));
-vi.mock('../../macros/clip-macros', () => ({ readClipMacros: vi.fn(() => Promise.resolve([])), readMacroHistory: vi.fn(() => Promise.resolve([])) }));
+vi.mock('../../macros/clip-macros', () => ({
+  readClipMacros: vi.fn(() => Promise.resolve([])),
+  readMacroHistory: vi.fn(() => Promise.resolve([])),
+}));
 vi.mock('../../lib/projectFiles', () => ({ findStartupAutosaveRecovery: vi.fn(() => Promise.resolve(undefined)) }));
 vi.mock('../../lib/tauri-bridge', () => ({
   getPreviewWindowState: vi.fn(() =>
@@ -66,7 +69,9 @@ import { useEditorShellSettings } from '../../hooks/useEditorShellSettings';
 
 describe('useEditorShellSettings', () => {
   it('renders without throwing', () => {
-    const { result } = renderHook(() => { useEditorShellSettings(); });
+    const { result } = renderHook(() => {
+      useEditorShellSettings();
+    });
     expect(result.current).toBeUndefined();
   });
 });

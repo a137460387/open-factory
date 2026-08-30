@@ -42,7 +42,14 @@ const SUGGESTIONS: SemanticRoughCutSuggestion[] = [
   }),
 ];
 
-function renderList(overrides: { suggestions?: SemanticRoughCutSuggestion[]; ready?: boolean; onPreviewTime?: ReturnType<typeof vi.fn>; onReview?: ReturnType<typeof vi.fn> } = {}) {
+function renderList(
+  overrides: {
+    suggestions?: SemanticRoughCutSuggestion[];
+    ready?: boolean;
+    onPreviewTime?: ReturnType<typeof vi.fn>;
+    onReview?: ReturnType<typeof vi.fn>;
+  } = {},
+) {
   const onPreviewTime = overrides.onPreviewTime ?? vi.fn();
   const onReview = overrides.onReview ?? vi.fn();
   render(
@@ -187,7 +194,14 @@ describe('SemanticSuggestionList ready gating', () => {
 
   it('does not fire hover previews while gated off', () => {
     const onPreviewTime = vi.fn();
-    render(<SemanticSuggestionList suggestions={SUGGESTIONS} ready={false} onPreviewTime={onPreviewTime} onReview={vi.fn()} />);
+    render(
+      <SemanticSuggestionList
+        suggestions={SUGGESTIONS}
+        ready={false}
+        onPreviewTime={onPreviewTime}
+        onReview={vi.fn()}
+      />,
+    );
 
     // 门控态下列表不渲染，无从 hover；断言回调零调用
     expect(onPreviewTime).not.toHaveBeenCalled();

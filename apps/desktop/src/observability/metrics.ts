@@ -35,10 +35,7 @@ export class MetricsCollector {
   private transports: MetricsTransport[];
   private bufferTransport: BufferMetricsTransport;
 
-  constructor(
-    enabled: boolean = import.meta.env.VITE_METRICS_ENABLED === 'true',
-    transports: MetricsTransport[] = [],
-  ) {
+  constructor(enabled: boolean = import.meta.env.VITE_METRICS_ENABLED === 'true', transports: MetricsTransport[] = []) {
     this.enabled = enabled;
     this.bufferTransport = new BufferMetricsTransport();
     this.transports = [this.bufferTransport, ...transports];
@@ -48,12 +45,7 @@ export class MetricsCollector {
     this.transports.push(transport);
   }
 
-  recordMetric(
-    name: string,
-    value: number,
-    type: MetricType = 'counter',
-    tags?: Record<string, string>,
-  ): void {
+  recordMetric(name: string, value: number, type: MetricType = 'counter', tags?: Record<string, string>): void {
     if (!this.enabled) return;
     const entry: MetricEntry = {
       name,

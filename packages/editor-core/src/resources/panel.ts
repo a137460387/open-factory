@@ -4,21 +4,24 @@
  * Manages resource state, proxy generation, and cleanup recommendations.
  */
 
-import type {ResourceConfig, ResourceFile, ProxyFile, DuplicateGroup, CacheEntry, ResourceStats, ResourceReport, CleanupRecommendation} from '../resources/types';
+import type {
+  ResourceConfig,
+  ResourceFile,
+  ProxyFile,
+  DuplicateGroup,
+  CacheEntry,
+  ResourceStats,
+  ResourceReport,
+  CleanupRecommendation,
+} from '../resources/types';
 
-import {DEFAULT_RESOURCE_CONFIG} from '../resources/types';
+import { DEFAULT_RESOURCE_CONFIG } from '../resources/types';
 
-import {detectDuplicates, formatSize} from '../resources/manager';
+import { detectDuplicates, formatSize } from '../resources/manager';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type ResourcePanelPhase =
-  | 'idle'
-  | 'scanning'
-  | 'analyzing'
-  | 'complete'
-  | 'cleaning'
-  | 'error';
+export type ResourcePanelPhase = 'idle' | 'scanning' | 'analyzing' | 'complete' | 'cleaning' | 'error';
 
 export interface ResourcePanelState {
   /** Current phase */
@@ -66,7 +69,13 @@ export function createInitialResourcePanelState(): ResourcePanelState {
 export type ResourcePanelAction =
   | { type: 'START_SCAN' }
   | { type: 'UPDATE_PROGRESS'; progress: number }
-  | { type: 'SCAN_COMPLETE'; report: ResourceReport; files: ResourceFile[]; proxies: ProxyFile[]; cacheEntries: CacheEntry[] }
+  | {
+      type: 'SCAN_COMPLETE';
+      report: ResourceReport;
+      files: ResourceFile[];
+      proxies: ProxyFile[];
+      cacheEntries: CacheEntry[];
+    }
   | { type: 'SCAN_ERROR'; error: string }
   | { type: 'UPDATE_CONFIG'; config: Partial<ResourceConfig> }
   | { type: 'SET_TAB'; tab: ResourcePanelState['activeTab'] }
@@ -82,10 +91,7 @@ export type ResourcePanelAction =
  * Pure state reducer for the resource manager panel.
  * Follows immutable update patterns.
  */
-export function resourcePanelReducer(
-  state: ResourcePanelState,
-  action: ResourcePanelAction,
-): ResourcePanelState {
+export function resourcePanelReducer(state: ResourcePanelState, action: ResourcePanelAction): ResourcePanelState {
   switch (action.type) {
     case 'START_SCAN':
       return {
@@ -154,9 +160,7 @@ export function resourcePanelReducer(
     }
 
     case 'PROXY_PROGRESS': {
-      const proxies = state.proxies.map((p) =>
-        p.id === action.proxyId ? { ...p, progress: action.progress } : p,
-      );
+      const proxies = state.proxies.map((p) => (p.id === action.proxyId ? { ...p, progress: action.progress } : p));
       return { ...state, proxies };
     }
 
@@ -288,9 +292,19 @@ export function getResourceOverviewStats(state: ResourcePanelState): Array<{
     { label: '总文件数', value: state.stats.totalFiles, icon: 'files' },
     { label: '总大小', value: formatSize(state.stats.totalSize), icon: 'storage' },
     { label: '代理文件', value: state.stats.proxyCount, color: getResourceTypeColor('proxy'), icon: 'proxy' },
-    { label: '缓存大小', value: formatSize(state.stats.cacheSize), color: getResourceTypeColor('cache'), icon: 'cache' },
+    {
+      label: '缓存大小',
+      value: formatSize(state.stats.cacheSize),
+      color: getResourceTypeColor('cache'),
+      icon: 'cache',
+    },
     { label: '重复文件', value: state.stats.duplicateCount, color: '#ca8a04', icon: 'duplicate' },
-    { label: '可释放空间', value: formatSize(state.stats.duplicateSize + state.stats.unusedSize), color: '#16a34a', icon: 'clean' },
+    {
+      label: '可释放空间',
+      value: formatSize(state.stats.duplicateSize + state.stats.unusedSize),
+      color: '#16a34a',
+      icon: 'clean',
+    },
   ];
 }
 
@@ -309,9 +323,7 @@ export function getProxyStats(proxies: ProxyFile[]): {
     ready: proxies.filter((p) => p.status === 'ready').length,
     generating: proxies.filter((p) => p.status === 'generating').length,
     failed: proxies.filter((p) => p.status === 'failed').length,
-    savedSpace: proxies
-      .filter((p) => p.status === 'ready')
-      .reduce((s, p) => s + p.size, 0),
+    savedSpace: proxies.filter((p) => p.status === 'ready').reduce((s, p) => s + p.size, 0),
   };
 }
 

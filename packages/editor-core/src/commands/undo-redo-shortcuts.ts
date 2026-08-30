@@ -56,7 +56,7 @@ export function registerUndoRedoShortcuts(options: UndoRedoShortcutOptions): Und
 
     // Check for Ctrl+Z (Windows/Linux) or Cmd+Z (macOS)
     const isMod = e.ctrlKey || e.metaKey;
-    if (!isMod || e.key !== 'z' && e.key !== 'Z') return;
+    if (!isMod || (e.key !== 'z' && e.key !== 'Z')) return;
 
     // Ignore if inside an input/textarea/contenteditable
     const target = e.target as HTMLElement;

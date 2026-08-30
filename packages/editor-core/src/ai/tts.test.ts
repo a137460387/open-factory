@@ -274,7 +274,7 @@ describe('applyFadeInOut', () => {
 describe('generateSilence', () => {
   it('generates silent audio', () => {
     const silence = generateSilence(44100, 100);
-    expect(silence.length).toBe(Math.round(44100 * 100 / 1000));
+    expect(silence.length).toBe(Math.round((44100 * 100) / 1000));
     for (let i = 0; i < silence.length; i++) {
       expect(silence[i]).toBe(0);
     }
@@ -307,52 +307,52 @@ describe('validateTTSParams', () => {
 
   it('reports empty text', () => {
     const issues = validateTTSParams({ text: '', voiceId: 'test' });
-    expect(issues.some(i => i.type === 'empty-text')).toBe(true);
+    expect(issues.some((i) => i.type === 'empty-text')).toBe(true);
   });
 
   it('reports whitespace-only text', () => {
     const issues = validateTTSParams({ text: '   ', voiceId: 'test' });
-    expect(issues.some(i => i.type === 'empty-text')).toBe(true);
+    expect(issues.some((i) => i.type === 'empty-text')).toBe(true);
   });
 
   it('reports text too long', () => {
     const longText = 'a'.repeat(10001);
     const issues = validateTTSParams({ text: longText, voiceId: 'test' });
-    expect(issues.some(i => i.type === 'text-too-long')).toBe(true);
+    expect(issues.some((i) => i.type === 'text-too-long')).toBe(true);
   });
 
   it('reports speed out of range', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test', speed: 5 });
-    expect(issues.some(i => i.type === 'invalid-params')).toBe(true);
+    expect(issues.some((i) => i.type === 'invalid-params')).toBe(true);
   });
 
   it('reports negative speed', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test', speed: -1 });
-    expect(issues.some(i => i.type === 'invalid-params')).toBe(true);
+    expect(issues.some((i) => i.type === 'invalid-params')).toBe(true);
   });
 
   it('reports pitch out of range', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test', pitch: 5 });
-    expect(issues.some(i => i.type === 'invalid-params')).toBe(true);
+    expect(issues.some((i) => i.type === 'invalid-params')).toBe(true);
   });
 
   it('reports volume out of range', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test', volume: 2 });
-    expect(issues.some(i => i.type === 'invalid-params')).toBe(true);
+    expect(issues.some((i) => i.type === 'invalid-params')).toBe(true);
   });
 
   it('reports negative volume', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test', volume: -0.5 });
-    expect(issues.some(i => i.type === 'invalid-params')).toBe(true);
+    expect(issues.some((i) => i.type === 'invalid-params')).toBe(true);
   });
 
   it('reports voice not found', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'nonexistent-voice-id' });
-    expect(issues.some(i => i.type === 'voice-not-found')).toBe(true);
+    expect(issues.some((i) => i.type === 'voice-not-found')).toBe(true);
   });
 
   it('accepts custom maxTextLength', () => {
     const issues = validateTTSParams({ text: 'hello', voiceId: 'test' }, { maxTextLength: 3 });
-    expect(issues.some(i => i.type === 'text-too-long')).toBe(true);
+    expect(issues.some((i) => i.type === 'text-too-long')).toBe(true);
   });
 });

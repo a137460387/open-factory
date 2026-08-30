@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- CI 质量门禁：新增 quality-gates job（format:check / lint:ci / depcruise:ci 三项静态检查，与 frontend/rust/e2e 并行）；新增 `lint:ci` 基线棘轮脚本（`--max-warnings 881`，当前实测基线，禁止新增警告，修复后手动下调）；新增 `.gitattributes` 行尾归一化（`eol=lf`，`.bat`/`.cmd` 例外保持 CRLF），根治 Windows autocrlf 格式噪声
+
+### Changed
+- 循环依赖 64→0：消除 editor-core 全部 64 条循环依赖（类型下沉 `types.ts`，切断 commands ↔ utils / commands ↔ barrel 反向环），对外 API 不变，depcruise 违规归零并入 CI 门禁
+- 全仓格式化：Prettier 一次性清偿 477 文件纯格式债（无逻辑改动），format:check 纳入 CI 门禁
+
 ### Security
 - post_export_script 任意命令执行漏洞修复：原防护仅靠约 12 个 shell 元字符黑名单，可被 `sh -c "命令"` 类 payload 绕过（引号被分词器剥离后参数不含黑名单字符），RCE 已经独立 PoC 验证；现改为显式白名单机制——仅允许执行 settings.json `exportBackground.postExportScriptAllowedPrograms` 中配置的程序，74 项 shell/解释器/网络工具/提权包装器拒绝列表优先于白名单，白名单为空或未配置时功能整体禁用（失败关闭）；程序名规范化匹配（大小写不敏感、剥离 `.exe` 后缀、路径一律拒绝）；前端设置界面新增白名单配置入口；新增 19 个安全测试（PoC 回归、拒绝列表、失败关闭、大小写/.exe/路径变体绕过拦截）
 

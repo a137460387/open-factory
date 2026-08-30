@@ -5,13 +5,17 @@
  * and dry-run mode for validation.
  */
 
-import type {MacroDefinition, MacroOperation, MacroExecutionStatus, MacroExecutionProgress, MacroExecutionOptions, MacroOperationType} from './macro-types';
+import type {
+  MacroDefinition,
+  MacroOperation,
+  MacroExecutionStatus,
+  MacroExecutionProgress,
+  MacroExecutionOptions,
+  MacroOperationType,
+} from './macro-types';
 
 /** Operation executor function type */
-export type OperationExecutor = (
-  operation: MacroOperation,
-  params: Record<string, unknown>,
-) => Promise<boolean>;
+export type OperationExecutor = (operation: MacroOperation, params: Record<string, unknown>) => Promise<boolean>;
 
 /** Macro execution result */
 export interface MacroExecutionResult {
@@ -53,12 +57,12 @@ export class MacroPlaybackEngine {
   onProgress(listener: (progress: MacroExecutionProgress) => void): () => void {
     this.progressListeners.push(listener);
     return () => {
-      this.progressListeners = this.progressListeners.filter(l => l !== listener);
+      this.progressListeners = this.progressListeners.filter((l) => l !== listener);
     };
   }
 
   private emitProgress(progress: MacroExecutionProgress): void {
-    this.progressListeners.forEach(l => l(progress));
+    this.progressListeners.forEach((l) => l(progress));
   }
 
   private updateProgress(
@@ -109,10 +113,7 @@ export class MacroPlaybackEngine {
    * @param options - Execution options
    * @returns Execution result
    */
-  async execute(
-    macro: MacroDefinition,
-    options: MacroExecutionOptions = {},
-  ): Promise<MacroExecutionResult> {
+  async execute(macro: MacroDefinition, options: MacroExecutionOptions = {}): Promise<MacroExecutionResult> {
     if (this.status === 'running') {
       throw new Error('Macro is already running');
     }
@@ -179,8 +180,7 @@ export class MacroPlaybackEngine {
     }
 
     const duration = Date.now() - this.startedAt;
-    const finalStatus = this.abortController.signal.aborted ? 'cancelled' :
-                       failedCount > 0 ? 'completed' : 'completed';
+    const finalStatus = this.abortController.signal.aborted ? 'cancelled' : failedCount > 0 ? 'completed' : 'completed';
 
     this.updateProgress(
       failedCount > 0 && executedCount === 0 ? 'failed' : 'completed',
@@ -209,9 +209,7 @@ export class MacroPlaybackEngine {
   ): MacroOperation[] {
     return macro.operations.map((op, index) => {
       const resolvedParams = this.resolveParameters(op.params, macro.parameters, parameterOverrides);
-      const resolvedTargetId = targetClipIds.length > 0
-        ? targetClipIds[index % targetClipIds.length]
-        : op.targetId;
+      const resolvedTargetId = targetClipIds.length > 0 ? targetClipIds[index % targetClipIds.length] : op.targetId;
 
       return {
         ...op,
@@ -233,7 +231,7 @@ export class MacroPlaybackEngine {
       if (typeof value === 'string' && value.startsWith('${') && value.endsWith('}')) {
         const paramId = value.slice(2, -1);
         const override = overrides[paramId];
-        const macroParam = macroParams.find(p => p.id === paramId);
+        const macroParam = macroParams.find((p) => p.id === paramId);
 
         if (override !== undefined) {
           resolved[key] = override;
@@ -253,7 +251,7 @@ export class MacroPlaybackEngine {
   // ─── Utilities ───────────────────────────────────────────────────────────
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /** Get current execution progress */

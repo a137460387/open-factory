@@ -19,13 +19,7 @@ import type { PlatformContent } from '../ai/llm-orchestrator';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type PublishPanelPhase =
-  | 'idle'
-  | 'configuring'
-  | 'generating_content'
-  | 'uploading'
-  | 'complete'
-  | 'error';
+export type PublishPanelPhase = 'idle' | 'configuring' | 'generating_content' | 'uploading' | 'complete' | 'error';
 
 export interface PlatformUploadState {
   platform: PlatformId;
@@ -104,10 +98,7 @@ export type PublishPanelAction =
 /**
  * Pure state reducer for the publish panel.
  */
-export function publishPanelReducer(
-  state: PublishPanelState,
-  action: PublishPanelAction
-): PublishPanelState {
+export function publishPanelReducer(state: PublishPanelState, action: PublishPanelAction): PublishPanelState {
   switch (action.type) {
     case 'SET_VIDEO_PATH':
       return { ...state, videoPath: action.path };
@@ -117,9 +108,10 @@ export function publishPanelReducer(
 
     case 'TOGGLE_PLATFORM': {
       const idx = state.selectedPlatforms.indexOf(action.platform);
-      const selected = idx >= 0
-        ? state.selectedPlatforms.filter(p => p !== action.platform)
-        : [...state.selectedPlatforms, action.platform];
+      const selected =
+        idx >= 0
+          ? state.selectedPlatforms.filter((p) => p !== action.platform)
+          : [...state.selectedPlatforms, action.platform];
       return { ...state, selectedPlatforms: selected };
     }
 
@@ -216,7 +208,7 @@ export function publishPanelReducer(
 
 /** Get platforms that have valid auth tokens */
 export function getAuthenticatedPlatforms(state: PublishPanelState): PlatformId[] {
-  return state.selectedPlatforms.filter(p => {
+  return state.selectedPlatforms.filter((p) => {
     const token = state.authTokens.get(p);
     return token && token.expiresAt > Date.now();
   });
@@ -224,7 +216,7 @@ export function getAuthenticatedPlatforms(state: PublishPanelState): PlatformId[
 
 /** Get platforms that need authentication */
 export function getUnauthenticatedPlatforms(state: PublishPanelState): PlatformId[] {
-  return state.selectedPlatforms.filter(p => {
+  return state.selectedPlatforms.filter((p) => {
     const token = state.authTokens.get(p);
     return !token || token.expiresAt <= Date.now();
   });
@@ -245,10 +237,7 @@ export function buildPublishRequest(state: PublishPanelState): MultiPlatformPubl
 }
 
 /** Get effective metadata for a platform (AI content or base) */
-export function getEffectiveMetadata(
-  state: PublishPanelState,
-  platform: PlatformId
-): PlatformVideoMetadata {
+export function getEffectiveMetadata(state: PublishPanelState, platform: PlatformId): PlatformVideoMetadata {
   const platformState = state.platformStates.get(platform);
 
   if (platformState?.useAIContent && platformState.aiContent) {

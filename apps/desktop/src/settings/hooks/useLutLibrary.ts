@@ -1,10 +1,10 @@
-import {useState, useCallback} from 'react';
-import {UpdateClipCommand, type Clip, type Project, type Timeline} from '@open-factory/editor-core';
-import {loadLutLibrary, toggleLutFavorite, type LutLibraryItem} from '../../lib/lutLibrary';
-import {showToast} from '../../lib/toast';
-import {commandManager, timelineAccessor} from '../../store/commandManager';
-import {useEditorStore} from '../../store/editorStore';
-import {zhCN} from '../../i18n/strings';
+import { useState, useCallback } from 'react';
+import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
+import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../../lib/lutLibrary';
+import { showToast } from '../../lib/toast';
+import { commandManager, timelineAccessor } from '../../store/commandManager';
+import { useEditorStore } from '../../store/editorStore';
+import { zhCN } from '../../i18n/strings';
 
 function buildPreviewTimelineWithLut(timeline: Timeline, clipId: string, lutPath: string): Timeline {
   return {
@@ -43,7 +43,7 @@ export function useLutLibrary(selectedClip: Clip | undefined, project: Project) 
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : t.lutLibrary.loadFailedMessage;
       setError(message);
-      showToast({kind: 'warning', title: t.lutLibrary.loadFailed, message});
+      showToast({ kind: 'warning', title: t.lutLibrary.loadFailed, message });
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export function useLutLibrary(selectedClip: Clip | undefined, project: Project) 
   const preview = useCallback(
     (item: LutLibraryItem) => {
       if (!selectedClipCanUseLut || !selectedClip) {
-        showToast({kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage});
+        showToast({ kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage });
         return;
       }
       setPreviewTimeline(buildPreviewTimelineWithLut(project.timeline, selectedClip.id, item.path));
@@ -63,15 +63,15 @@ export function useLutLibrary(selectedClip: Clip | undefined, project: Project) 
   const apply = useCallback(
     (item: LutLibraryItem) => {
       if (!selectedClipCanUseLut || !selectedClip) {
-        showToast({kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage});
+        showToast({ kind: 'warning', title: t.lutLibrary.noClipSelected, message: t.lutLibrary.noClipSelectedMessage });
         return;
       }
       try {
         commandManager.execute(
-          new UpdateClipCommand(timelineAccessor, selectedClip.id, {colorCorrection: {lutPath: item.path}}),
+          new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorCorrection: { lutPath: item.path } }),
         );
         setPreviewTimeline(undefined);
-        showToast({kind: 'success', title: t.lutLibrary.applied, message: item.name});
+        showToast({ kind: 'success', title: t.lutLibrary.applied, message: item.name });
       } catch (applyError) {
         showToast({
           kind: 'warning',
@@ -87,7 +87,7 @@ export function useLutLibrary(selectedClip: Clip | undefined, project: Project) 
     async (item: LutLibraryItem) => {
       try {
         const favorites = new Set(await toggleLutFavorite(item.path));
-        setItems((current) => current.map((entry) => ({...entry, favorite: favorites.has(entry.path)})));
+        setItems((current) => current.map((entry) => ({ ...entry, favorite: favorites.has(entry.path) })));
       } catch (favoriteError) {
         showToast({
           kind: 'warning',
@@ -99,5 +99,5 @@ export function useLutLibrary(selectedClip: Clip | undefined, project: Project) 
     [t],
   );
 
-  return {items, loading, error, selectedClipCanUseLut, refresh, preview, apply, toggleFavorite};
+  return { items, loading, error, selectedClipCanUseLut, refresh, preview, apply, toggleFavorite };
 }

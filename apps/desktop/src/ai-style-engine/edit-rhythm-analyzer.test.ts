@@ -27,7 +27,9 @@ function makeEntry(overrides: Partial<EditDecisionEntry> = {}): EditDecisionEntr
   };
 }
 
-function makeTimeline(clips: Array<{ start: number; duration: number; mediaId?: string; transition?: { type: string } }>) {
+function makeTimeline(
+  clips: Array<{ start: number; duration: number; mediaId?: string; transition?: { type: string } }>,
+) {
   return {
     tracks: [
       {
@@ -76,9 +78,7 @@ describe('parseEDLEntries', () => {
   });
 
   it('extracts transition type', () => {
-    const timeline = makeTimeline([
-      { start: 0, duration: 3, transition: { type: 'cross-dissolve' } },
-    ]);
+    const timeline = makeTimeline([{ start: 0, duration: 3, transition: { type: 'cross-dissolve' } }]);
     const entries = parseEDLEntries(timeline);
     expect(entries[0].transitionType).toBe('cross-dissolve');
   });
@@ -113,10 +113,10 @@ describe('calculateShotDurationStats', () => {
 
   it('classifies short/medium/long shots', () => {
     const entries = [
-      makeEntry({ duration: 1 }),   // short
+      makeEntry({ duration: 1 }), // short
       makeEntry({ duration: 1.5 }), // short
-      makeEntry({ duration: 5 }),   // medium
-      makeEntry({ duration: 15 }),  // long
+      makeEntry({ duration: 5 }), // medium
+      makeEntry({ duration: 15 }), // long
     ];
     const stats = calculateShotDurationStats(entries);
     expect(stats.shortRatio).toBe(0.5);
@@ -328,6 +328,11 @@ describe('compareEditingStyles', () => {
 
   it('returns 0 for zero vector', () => {
     const v = new Array(128).fill(0);
-    expect(compareEditingStyles({ vector: v, dimensions: [], confidence: [] }, { vector: v, dimensions: [], confidence: [] })).toBe(0);
+    expect(
+      compareEditingStyles(
+        { vector: v, dimensions: [], confidence: [] },
+        { vector: v, dimensions: [], confidence: [] },
+      ),
+    ).toBe(0);
   });
 });

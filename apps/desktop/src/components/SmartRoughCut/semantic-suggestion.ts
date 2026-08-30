@@ -92,7 +92,9 @@ export function generateSemanticRoughCutSuggestions(
     };
   });
   const ordered = [
-    ...suggestions.filter((item) => item.markerType === 'climax').sort((left, right) => right.confidence - left.confidence),
+    ...suggestions
+      .filter((item) => item.markerType === 'climax')
+      .sort((left, right) => right.confidence - left.confidence),
     ...suggestions.filter((item) => item.markerType !== 'climax'),
   ];
   const max = options.maxSuggestions;

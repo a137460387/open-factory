@@ -1,4 +1,4 @@
-import type {Clip} from '@open-factory/editor-core';
+import type { Clip } from '@open-factory/editor-core';
 import {
   MoveClipCommand,
   MoveClipsCommand,
@@ -7,13 +7,17 @@ import {
   fitTimelineZoomToWindow,
   getTimelineDuration,
 } from '@open-factory/editor-core';
-import {buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds} from '../../timeline-keyboard';
-import {commandManager, timelineAccessor} from '../../../../store/commandManager';
-import {zhCN} from '../../../../i18n/strings';
-import {showToast} from '../../../../lib/toast';
-import {LABEL_WIDTH} from '../../TimelineParts';
-import type {TimelineHandlerParams} from './types';
-import {isEditableKeyboardTarget} from './utils';
+import {
+  buildKeyboardClipMoveStarts,
+  buildKeyboardClipTrim,
+  getKeyboardSelectedClipIds,
+} from '../../timeline-keyboard';
+import { commandManager, timelineAccessor } from '../../../../store/commandManager';
+import { zhCN } from '../../../../i18n/strings';
+import { showToast } from '../../../../lib/toast';
+import { LABEL_WIDTH } from '../../TimelineParts';
+import type { TimelineHandlerParams } from './types';
+import { isEditableKeyboardTarget } from './utils';
 
 export function createKeyboardHandlers(
   params: TimelineHandlerParams,

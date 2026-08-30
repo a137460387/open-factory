@@ -1,13 +1,19 @@
-import type {TimelineAccessor} from './index';
-import {BeatAlignmentUpdate, BeatSnapUpdate, buildBeatSyncSpeedKeyframes, calculateBeatAlignmentUpdates, calculateBeatSnapUpdates} from '../../beats';
-import {normalizeClipKeyframes} from '../../keyframes';
-import {ProtectedRange, Timeline, normalizeClipBeatMarkers, normalizeDetectedBpm} from '../../model';
-import type {Clip} from '../../model';
-import {round} from '../../time';
-import {detectOverlap, moveClip, replaceClip} from '../../timeline';
-import {canMoveClipWithProtectedRanges} from '../../timeline-protection';
-import {Command} from '../command';
-import {assertClipsNotOnLockedTrack, findClip, findTrack, timelineHasOverlaps} from './utils';
+import type { TimelineAccessor } from './types';
+import {
+  BeatAlignmentUpdate,
+  BeatSnapUpdate,
+  buildBeatSyncSpeedKeyframes,
+  calculateBeatAlignmentUpdates,
+  calculateBeatSnapUpdates,
+} from '../../beats';
+import { normalizeClipKeyframes } from '../../keyframes';
+import { ProtectedRange, Timeline, normalizeClipBeatMarkers, normalizeDetectedBpm } from '../../model';
+import type { Clip } from '../../model';
+import { round } from '../../time';
+import { detectOverlap, moveClip, replaceClip } from '../../timeline';
+import { canMoveClipWithProtectedRanges } from '../../timeline-protection';
+import { Command } from '../command';
+import { assertClipsNotOnLockedTrack, findClip, findTrack, timelineHasOverlaps } from './utils';
 
 export class MoveClipCommand implements Command {
   readonly description = 'Move clip';

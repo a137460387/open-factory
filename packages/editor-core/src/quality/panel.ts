@@ -4,20 +4,21 @@
  * Manages inspection state, progress tracking, and result presentation.
  */
 
-import type {InspectorConfig, QualityReport, InspectorQualityIssue, IssueSeverity, IssueCategory} from '../quality/types';
+import type {
+  InspectorConfig,
+  QualityReport,
+  InspectorQualityIssue,
+  IssueSeverity,
+  IssueCategory,
+} from '../quality/types';
 
-import {DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS} from '../quality/types';
+import { DEFAULT_INSPECTOR_CONFIG, PLATFORM_SPECS } from '../quality/types';
 
-import {formatTime} from '../quality/inspector';
+import { formatTime } from '../quality/inspector';
 
 // ─── Panel State ────────────────────────────────────────────────
 
-export type QualityPanelPhase =
-  | 'idle'
-  | 'configuring'
-  | 'inspecting'
-  | 'complete'
-  | 'error';
+export type QualityPanelPhase = 'idle' | 'configuring' | 'inspecting' | 'complete' | 'error';
 
 export interface QualityPanelState {
   /** Current phase */
@@ -70,10 +71,7 @@ export type QualityPanelAction =
  * Pure state reducer for the quality inspector panel.
  * Follows immutable update patterns.
  */
-export function qualityPanelReducer(
-  state: QualityPanelState,
-  action: QualityPanelAction,
-): QualityPanelState {
+export function qualityPanelReducer(state: QualityPanelState, action: QualityPanelAction): QualityPanelState {
   switch (action.type) {
     case 'START_INSPECTION':
       return {
@@ -125,10 +123,7 @@ export function qualityPanelReducer(
 /**
  * Filter issues based on current filters
  */
-function filterIssues(
-  issues: InspectorQualityIssue[],
-  filters: QualityPanelState['filters'],
-): InspectorQualityIssue[] {
+function filterIssues(issues: InspectorQualityIssue[], filters: QualityPanelState['filters']): InspectorQualityIssue[] {
   return issues.filter((issue) => {
     if (filters.severity && issue.severity !== filters.severity) return false;
     if (filters.category && issue.category !== filters.category) return false;

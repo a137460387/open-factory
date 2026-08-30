@@ -75,43 +75,209 @@ const invokeCases: Array<{
   args: Record<string, unknown>;
   mockName?: string;
 }> = [
-  { name: 'runExport(带 taskId)', run: () => runExport({ fullArgs: [] } as never, 'task-1'), cmd: 'run_export', args: { plan: { fullArgs: [] }, taskId: 'task-1' }, mockName: 'runExport' },
-  { name: 'runExport(无 taskId 省略键)', run: () => runExport({ fullArgs: [] } as never), cmd: 'run_export', args: { plan: { fullArgs: [] } } },
-  { name: 'runExportPreviewSamples', run: () => runExportPreviewSamples({ samples: [] } as never), cmd: 'run_export_preview_samples', args: { request: { samples: [] } } },
-  { name: 'createSharePackageZip', run: () => createSharePackageZip({ projectPath: '/p' } as never), cmd: 'create_share_package', args: { request: { projectPath: '/p' } } },
-  { name: 'createSharedLibraryArchive', run: () => createSharedLibraryArchive({} as never), cmd: 'create_shared_library_archive', args: { request: {} } },
-  { name: 'importSharedLibraryArchive', run: () => importSharedLibraryArchive({} as never), cmd: 'import_shared_library_archive', args: { request: {} } },
-  { name: 'putWebdavProject', run: () => putWebdavProject({ url: 'http://dav' } as never), cmd: 'put_webdav_project', args: { request: { url: 'http://dav' } } },
-  { name: 'putWebdavExportFile', run: () => putWebdavExportFile({ url: 'http://dav' } as never), cmd: 'put_webdav_export_file', args: { request: { url: 'http://dav' } } },
-  { name: 'getWebdavText', run: () => getWebdavText({ url: 'http://dav' } as never), cmd: 'get_webdav_text', args: { request: { url: 'http://dav' } } },
-  { name: 'putWebdavText', run: () => putWebdavText({ url: 'http://dav' } as never), cmd: 'put_webdav_text', args: { request: { url: 'http://dav' } } },
+  {
+    name: 'runExport(带 taskId)',
+    run: () => runExport({ fullArgs: [] } as never, 'task-1'),
+    cmd: 'run_export',
+    args: { plan: { fullArgs: [] }, taskId: 'task-1' },
+    mockName: 'runExport',
+  },
+  {
+    name: 'runExport(无 taskId 省略键)',
+    run: () => runExport({ fullArgs: [] } as never),
+    cmd: 'run_export',
+    args: { plan: { fullArgs: [] } },
+  },
+  {
+    name: 'runExportPreviewSamples',
+    run: () => runExportPreviewSamples({ samples: [] } as never),
+    cmd: 'run_export_preview_samples',
+    args: { request: { samples: [] } },
+  },
+  {
+    name: 'createSharePackageZip',
+    run: () => createSharePackageZip({ projectPath: '/p' } as never),
+    cmd: 'create_share_package',
+    args: { request: { projectPath: '/p' } },
+  },
+  {
+    name: 'createSharedLibraryArchive',
+    run: () => createSharedLibraryArchive({} as never),
+    cmd: 'create_shared_library_archive',
+    args: { request: {} },
+  },
+  {
+    name: 'importSharedLibraryArchive',
+    run: () => importSharedLibraryArchive({} as never),
+    cmd: 'import_shared_library_archive',
+    args: { request: {} },
+  },
+  {
+    name: 'putWebdavProject',
+    run: () => putWebdavProject({ url: 'http://dav' } as never),
+    cmd: 'put_webdav_project',
+    args: { request: { url: 'http://dav' } },
+  },
+  {
+    name: 'putWebdavExportFile',
+    run: () => putWebdavExportFile({ url: 'http://dav' } as never),
+    cmd: 'put_webdav_export_file',
+    args: { request: { url: 'http://dav' } },
+  },
+  {
+    name: 'getWebdavText',
+    run: () => getWebdavText({ url: 'http://dav' } as never),
+    cmd: 'get_webdav_text',
+    args: { request: { url: 'http://dav' } },
+  },
+  {
+    name: 'putWebdavText',
+    run: () => putWebdavText({ url: 'http://dav' } as never),
+    cmd: 'put_webdav_text',
+    args: { request: { url: 'http://dav' } },
+  },
   { name: 'readWebdavPassword', run: () => readWebdavPassword(), cmd: 'read_webdav_password', args: {} },
-  { name: 'writeWebdavPassword', run: () => writeWebdavPassword('secret'), cmd: 'write_webdav_password', args: { password: 'secret' } },
-  { name: 'readExportUploadWebdavPassword', run: () => readExportUploadWebdavPassword(), cmd: 'read_export_upload_webdav_password', args: {} },
-  { name: 'writeExportUploadWebdavPassword', run: () => writeExportUploadWebdavPassword('secret'), cmd: 'write_export_upload_webdav_password', args: { password: 'secret' } },
-  { name: 'readExportPresetSyncWebdavPassword', run: () => readExportPresetSyncWebdavPassword(), cmd: 'read_export_preset_sync_webdav_password', args: {} },
-  { name: 'writeExportPresetSyncWebdavPassword', run: () => writeExportPresetSyncWebdavPassword('secret'), cmd: 'write_export_preset_sync_webdav_password', args: { password: 'secret' } },
-  { name: 'readTranslationApiKey', run: () => readTranslationApiKey('deepl'), cmd: 'read_translation_api_key', args: { provider: 'deepl' } },
-  { name: 'writeTranslationApiKey', run: () => writeTranslationApiKey('deepl', 'key-1'), cmd: 'write_translation_api_key', args: { provider: 'deepl', key: 'key-1' } },
-  { name: 'readSmtpPassword', run: () => readSmtpPassword('default'), cmd: 'read_smtp_password', args: { profile: 'default' } },
-  { name: 'writeSmtpPassword', run: () => writeSmtpPassword('default', 'pw'), cmd: 'write_smtp_password', args: { profile: 'default', password: 'pw' } },
-  { name: 'sendSmtpEmail', run: () => sendSmtpEmail({ to: ['a@b.c'] } as never), cmd: 'send_smtp_email', args: { request: { to: ['a@b.c'] } } },
-  { name: 'postWebhookJson', run: () => postWebhookJson({ url: 'http://hook' } as never), cmd: 'post_webhook_json', args: { request: { url: 'http://hook' } } },
-  { name: 'analyzeClip', run: () => analyzeClip({ clipId: 'c1' } as never), cmd: 'analyze_clip', args: { request: { clipId: 'c1' } } },
-  { name: 'analyzeMotionTrack', run: () => analyzeMotionTrack({ clipId: 'c1' } as never), cmd: 'analyze_motion_track', args: { request: { clipId: 'c1' } } },
-  { name: 'evaluateExportQuality', run: () => evaluateExportQuality({ taskId: 'q1' } as never), cmd: 'evaluate_export_quality', args: { request: { taskId: 'q1' } } },
-  { name: 'runPostExportQualityAssurance', run: () => runPostExportQualityAssurance({ taskId: 'qa1' } as never), cmd: 'run_post_export_quality_assurance', args: { request: { taskId: 'qa1' } } },
-  { name: 'exportMediaGif', run: () => exportMediaGif({ clipId: 'c1' } as never), cmd: 'export_media_gif', args: { request: { clipId: 'c1' } } },
-  { name: 'generateGifPreview', run: () => generateGifPreview({ clipId: 'c1' } as never), cmd: 'generate_gif_preview', args: { request: { clipId: 'c1' } } },
+  {
+    name: 'writeWebdavPassword',
+    run: () => writeWebdavPassword('secret'),
+    cmd: 'write_webdav_password',
+    args: { password: 'secret' },
+  },
+  {
+    name: 'readExportUploadWebdavPassword',
+    run: () => readExportUploadWebdavPassword(),
+    cmd: 'read_export_upload_webdav_password',
+    args: {},
+  },
+  {
+    name: 'writeExportUploadWebdavPassword',
+    run: () => writeExportUploadWebdavPassword('secret'),
+    cmd: 'write_export_upload_webdav_password',
+    args: { password: 'secret' },
+  },
+  {
+    name: 'readExportPresetSyncWebdavPassword',
+    run: () => readExportPresetSyncWebdavPassword(),
+    cmd: 'read_export_preset_sync_webdav_password',
+    args: {},
+  },
+  {
+    name: 'writeExportPresetSyncWebdavPassword',
+    run: () => writeExportPresetSyncWebdavPassword('secret'),
+    cmd: 'write_export_preset_sync_webdav_password',
+    args: { password: 'secret' },
+  },
+  {
+    name: 'readTranslationApiKey',
+    run: () => readTranslationApiKey('deepl'),
+    cmd: 'read_translation_api_key',
+    args: { provider: 'deepl' },
+  },
+  {
+    name: 'writeTranslationApiKey',
+    run: () => writeTranslationApiKey('deepl', 'key-1'),
+    cmd: 'write_translation_api_key',
+    args: { provider: 'deepl', key: 'key-1' },
+  },
+  {
+    name: 'readSmtpPassword',
+    run: () => readSmtpPassword('default'),
+    cmd: 'read_smtp_password',
+    args: { profile: 'default' },
+  },
+  {
+    name: 'writeSmtpPassword',
+    run: () => writeSmtpPassword('default', 'pw'),
+    cmd: 'write_smtp_password',
+    args: { profile: 'default', password: 'pw' },
+  },
+  {
+    name: 'sendSmtpEmail',
+    run: () => sendSmtpEmail({ to: ['a@b.c'] } as never),
+    cmd: 'send_smtp_email',
+    args: { request: { to: ['a@b.c'] } },
+  },
+  {
+    name: 'postWebhookJson',
+    run: () => postWebhookJson({ url: 'http://hook' } as never),
+    cmd: 'post_webhook_json',
+    args: { request: { url: 'http://hook' } },
+  },
+  {
+    name: 'analyzeClip',
+    run: () => analyzeClip({ clipId: 'c1' } as never),
+    cmd: 'analyze_clip',
+    args: { request: { clipId: 'c1' } },
+  },
+  {
+    name: 'analyzeMotionTrack',
+    run: () => analyzeMotionTrack({ clipId: 'c1' } as never),
+    cmd: 'analyze_motion_track',
+    args: { request: { clipId: 'c1' } },
+  },
+  {
+    name: 'evaluateExportQuality',
+    run: () => evaluateExportQuality({ taskId: 'q1' } as never),
+    cmd: 'evaluate_export_quality',
+    args: { request: { taskId: 'q1' } },
+  },
+  {
+    name: 'runPostExportQualityAssurance',
+    run: () => runPostExportQualityAssurance({ taskId: 'qa1' } as never),
+    cmd: 'run_post_export_quality_assurance',
+    args: { request: { taskId: 'qa1' } },
+  },
+  {
+    name: 'exportMediaGif',
+    run: () => exportMediaGif({ clipId: 'c1' } as never),
+    cmd: 'export_media_gif',
+    args: { request: { clipId: 'c1' } },
+  },
+  {
+    name: 'generateGifPreview',
+    run: () => generateGifPreview({ clipId: 'c1' } as never),
+    cmd: 'generate_gif_preview',
+    args: { request: { clipId: 'c1' } },
+  },
   { name: 'cancelExport', run: () => cancelExport('task-1'), cmd: 'cancel_export', args: { taskId: 'task-1' } },
-  { name: 'cancelMotionTracking', run: () => cancelMotionTracking('clip-1'), cmd: 'cancel_motion_tracking', args: { clipId: 'clip-1' } },
-  { name: 'cancelQualityEvaluation', run: () => cancelQualityEvaluation('task-1'), cmd: 'cancel_quality_evaluation', args: { taskId: 'task-1' } },
-  { name: 'batchTranscodeMedia', run: () => batchTranscodeMedia({ tasks: [] } as never), cmd: 'batch_transcode_media', args: { request: { tasks: [] } } },
-  { name: 'cancelBatchTranscodeTask', run: () => cancelBatchTranscodeTask('task-1'), cmd: 'cancel_batch_transcode_task', args: { taskId: 'task-1' } },
+  {
+    name: 'cancelMotionTracking',
+    run: () => cancelMotionTracking('clip-1'),
+    cmd: 'cancel_motion_tracking',
+    args: { clipId: 'clip-1' },
+  },
+  {
+    name: 'cancelQualityEvaluation',
+    run: () => cancelQualityEvaluation('task-1'),
+    cmd: 'cancel_quality_evaluation',
+    args: { taskId: 'task-1' },
+  },
+  {
+    name: 'batchTranscodeMedia',
+    run: () => batchTranscodeMedia({ tasks: [] } as never),
+    cmd: 'batch_transcode_media',
+    args: { request: { tasks: [] } },
+  },
+  {
+    name: 'cancelBatchTranscodeTask',
+    run: () => cancelBatchTranscodeTask('task-1'),
+    cmd: 'cancel_batch_transcode_task',
+    args: { taskId: 'task-1' },
+  },
   { name: 'getCacheDir', run: () => getCacheDir(), cmd: 'get_cache_dir', args: {} },
   { name: 'readCache', run: () => readCache('thumb/abc'), cmd: 'read_cache', args: { path: 'thumb/abc' } },
-  { name: 'writeCache', run: () => writeCache('thumb/abc', 'data'), cmd: 'write_cache', args: { path: 'thumb/abc', contents: 'data' } },
-  { name: 'removeCacheFile', run: () => removeCacheFile('thumb/abc'), cmd: 'remove_cache_file', args: { path: 'thumb/abc' } },
+  {
+    name: 'writeCache',
+    run: () => writeCache('thumb/abc', 'data'),
+    cmd: 'write_cache',
+    args: { path: 'thumb/abc', contents: 'data' },
+  },
+  {
+    name: 'removeCacheFile',
+    run: () => removeCacheFile('thumb/abc'),
+    cmd: 'remove_cache_file',
+    args: { path: 'thumb/abc' },
+  },
   { name: 'clearCache', run: () => clearCache(), cmd: 'clear_cache', args: {} },
   { name: 'getCacheSize', run: () => getCacheSize(), cmd: 'get_cache_size', args: {} },
 ];
@@ -128,7 +294,11 @@ describe('export bridge：Tauri invoke 路径（数据驱动）', () => {
     const handler = vi.fn(async () => ({ outputPath: '/out.png', durationMs: 5, success: true }));
     mockIPC(handler);
     const request = { projectId: 'p1', startSec: 0, endSec: 1, sourcePath: '/a.mp4', width: 64, height: 64 };
-    await expect(renderPreviewCache(request)).resolves.toEqual({ outputPath: '/out.png', durationMs: 5, success: true });
+    await expect(renderPreviewCache(request)).resolves.toEqual({
+      outputPath: '/out.png',
+      durationMs: 5,
+      success: true,
+    });
     expect(handler).toHaveBeenCalledWith('render_preview_cache', { request });
   });
 
@@ -212,14 +382,15 @@ describe('export bridge：__TAURI_MOCKS__ 路径', () => {
     getCacheSize: 'getCacheSize',
   };
 
-  it.each(
-    invokeCases.filter((c) => mockNameByCase[c.name] ?? c.mockName),
-  )('$name → mock 短路', async ({ name, run, mockName }) => {
-    const mock = vi.fn(async () => 'ok');
-    (window as WindowWithTauri).__TAURI_MOCKS__ = { [mockNameByCase[name] ?? mockName ?? '']: mock };
-    await run();
-    expect(mock).toHaveBeenCalledTimes(1);
-  });
+  it.each(invokeCases.filter((c) => mockNameByCase[c.name] ?? c.mockName))(
+    '$name → mock 短路',
+    async ({ name, run, mockName }) => {
+      const mock = vi.fn(async () => 'ok');
+      (window as WindowWithTauri).__TAURI_MOCKS__ = { [mockNameByCase[name] ?? mockName ?? '']: mock };
+      await run();
+      expect(mock).toHaveBeenCalledTimes(1);
+    },
+  );
 });
 
 describe('export bridge：浏览器回退路径', () => {

@@ -7,13 +7,18 @@
  * - One-click apply functionality
  */
 
-import {useState, useMemo} from 'react';
-import {Zap, Music, BarChart3, Clock, Star, Check, Eye, X, Scissors} from 'lucide-react';
-import {generateRoughCutProposals, type RoughCutResult, type RoughCutProposal, type RoughCutSegment} from '@open-factory/editor-core/smart-rough-cut';
-import type {VisualHighlightMarker} from '@open-factory/editor-core/visual-highlight-engine';
-import type {OnsetEvent} from '@open-factory/editor-core/audio-rhythm-analysis';
-import {formatTimeShort} from '@open-factory/editor-core';
-import {clsx} from 'clsx';
+import { useState, useMemo } from 'react';
+import { Zap, Music, BarChart3, Clock, Star, Check, Eye, X, Scissors } from 'lucide-react';
+import {
+  generateRoughCutProposals,
+  type RoughCutResult,
+  type RoughCutProposal,
+  type RoughCutSegment,
+} from '@open-factory/editor-core/smart-rough-cut';
+import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
+import type { OnsetEvent } from '@open-factory/editor-core/audio-rhythm-analysis';
+import { formatTimeShort } from '@open-factory/editor-core';
+import { clsx } from 'clsx';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,7 +53,11 @@ function SegmentTimeline({
   onPreviewSegment?(segment: RoughCutSegment): void;
 }) {
   if (sourceDuration <= 0 || segments.length === 0) {
-    return <div className="h-8 rounded bg-panel text-center text-[10px] text-[var(--color-text-muted)] leading-8">无片段</div>;
+    return (
+      <div className="h-8 rounded bg-panel text-center text-[10px] text-[var(--color-text-muted)] leading-8">
+        无片段
+      </div>
+    );
   }
 
   return (
@@ -67,7 +76,7 @@ function SegmentTimeline({
             style={{
               left: `${left}%`,
               width: `${Math.max(0.5, width)}%`,
-              backgroundColor: `hsl(${220 + i * 30}, 70%, ${55 + (seg.score * 15)}%)`,
+              backgroundColor: `hsl(${220 + i * 30}, 70%, ${55 + seg.score * 15}%)`,
             }}
             type="button"
             title={`片段 ${i + 1}: ${formatTimeShort(seg.sourceStart)} - ${formatTimeShort(seg.sourceEnd)} (${formatTimeShort(seg.duration)})`}
@@ -78,9 +87,7 @@ function SegmentTimeline({
       })}
 
       {/* Duration label */}
-      <span className="absolute right-1 bottom-0.5 text-[8px] text-white/50">
-        {formatTimeShort(sourceDuration)}
-      </span>
+      <span className="absolute right-1 bottom-0.5 text-[8px] text-white/50">{formatTimeShort(sourceDuration)}</span>
     </div>
   );
 }
@@ -140,9 +147,7 @@ function ProposalCard({
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent)]/15 text-[10px] font-bold text-[var(--color-accent)]">
             {rank}
           </span>
-          <span className="text-sm font-semibold text-[var(--color-text-secondary)]">
-            {proposal.name}
-          </span>
+          <span className="text-sm font-semibold text-[var(--color-text-secondary)]">{proposal.name}</span>
         </div>
         <span className="text-[10px] text-[var(--color-text-muted)]">{proposal.id}</span>
       </div>
@@ -166,9 +171,7 @@ function ProposalCard({
           <Clock size={12} />
           {formatTimeShort(proposal.totalDuration)}
         </div>
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          {proposal.segments.length} 片段
-        </span>
+        <span className="text-[10px] text-[var(--color-text-muted)]">{proposal.segments.length} 片段</span>
       </div>
 
       {/* Apply button (shown when selected) */}

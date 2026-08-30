@@ -131,11 +131,27 @@ export class ZenModeManager {
    */
   private initializeElementVisibility(): void {
     const allElements: UIElementType[] = [
-      'menu-bar', 'toolbar', 'timeline', 'preview', 'media-panel',
-      'effects-panel', 'audio-panel', 'color-panel', 'text-panel',
-      'transitions-panel', 'export-panel', 'status-bar', 'navigator',
-      'properties-panel', 'history-panel', 'bookmarks-panel', 'notes-panel',
-      'comments-panel', 'collaboration-panel', 'ai-panel', 'shortcuts-panel',
+      'menu-bar',
+      'toolbar',
+      'timeline',
+      'preview',
+      'media-panel',
+      'effects-panel',
+      'audio-panel',
+      'color-panel',
+      'text-panel',
+      'transitions-panel',
+      'export-panel',
+      'status-bar',
+      'navigator',
+      'properties-panel',
+      'history-panel',
+      'bookmarks-panel',
+      'notes-panel',
+      'comments-panel',
+      'collaboration-panel',
+      'ai-panel',
+      'shortcuts-panel',
       'settings-panel',
     ];
 
@@ -301,7 +317,7 @@ export class ZenModeManager {
       if (this.state.status === 'active') {
         this.setElementVisibility(element, true);
         this.state.activeElements.push(element);
-        this.state.hiddenElements = this.state.hiddenElements.filter(e => e !== element);
+        this.state.hiddenElements = this.state.hiddenElements.filter((e) => e !== element);
       }
     }
   }
@@ -310,12 +326,12 @@ export class ZenModeManager {
    * 移除保留元素
    */
   removeRetainedElement(element: UIElementType): void {
-    this.config.retainedElements = this.config.retainedElements.filter(e => e !== element);
+    this.config.retainedElements = this.config.retainedElements.filter((e) => e !== element);
 
     // Update visibility if active
     if (this.state.status === 'active') {
       this.setElementVisibility(element, false);
-      this.state.activeElements = this.state.activeElements.filter(e => e !== element);
+      this.state.activeElements = this.state.activeElements.filter((e) => e !== element);
       if (!this.state.hiddenElements.includes(element)) {
         this.state.hiddenElements.push(element);
       }
@@ -492,7 +508,7 @@ export function createZenModeManager(config?: Partial<ZenModeConfig>): ZenModeMa
  * 获取预设配置
  */
 export function getZenModePreset(presetId: string): ZenModePreset | undefined {
-  return ZEN_MODE_PRESETS.find(p => p.id === presetId);
+  return ZEN_MODE_PRESETS.find((p) => p.id === presetId);
 }
 
 /**

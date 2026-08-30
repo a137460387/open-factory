@@ -1,11 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  VIDEO_EXTENSIONS,
-  AUDIO_EXTENSIONS,
-  IMAGE_EXTENSIONS,
-  inferAssetType,
-  detectPngSequences,
-} from '../media';
+import { VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS, inferAssetType, detectPngSequences } from '../media';
 
 vi.mock('../lib/tauri', () => ({
   extensionFromPath: (path: string) => {
@@ -75,11 +69,7 @@ describe('media', () => {
 
   describe('detectPngSequences', () => {
     it('detects contiguous PNG sequence', () => {
-      const paths = [
-        '/frames/frame001.png',
-        '/frames/frame002.png',
-        '/frames/frame003.png',
-      ];
+      const paths = ['/frames/frame001.png', '/frames/frame002.png', '/frames/frame003.png'];
       const sequences = detectPngSequences(paths, 24);
       expect(sequences).toHaveLength(1);
       expect(sequences[0].frameCount).toBe(3);

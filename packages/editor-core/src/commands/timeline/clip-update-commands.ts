@@ -1,19 +1,57 @@
-import type {TimelineAccessor} from './index';
-import {normalizeClipPitchData} from '../../audio-pitch';
-import {normalizeClipBlendMode} from '../../blend-modes';
-import {normalizeClipContentAnalysis} from '../../content-analysis';
-import {normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle} from '../../credits-roll';
-import {normalizeDataSubtitleSource} from '../../data-subtitle';
-import {Timeline, normalizeAudioChannelRouting, normalizeAudioDenoise, normalizeAudioFadeCurve, normalizeAudioFadeDuration, normalizeAudioPitchSemitones, normalizeClipBeatMarkers, normalizeClipBorder, normalizeClipPanoramaView, normalizeClipProjection, normalizeClipSceneCuts, normalizeColorCorrection, normalizeDetectedBpm, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizeQualityEnhancement, normalizeSequenceFrameRate, normalizeSlowMotionMode, normalizeStabilization, normalizeSubtitleSoundDesc, normalizeSubtitleSpeaker, normalizeSubtitleTrackType, normalizeTextPath, normalizeTransform, normalizeVideoRestoration} from '../../model';
-import type {Clip} from '../../model';
-import {normalizeMotionGraphic} from '../../motion-graphics';
-import {normalizeSpatialAudio} from '../../spatial-audio';
-import {normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures} from '../../text-layout';
-import {detectOverlap, getClipDisplayDuration, getClipSourceVisibleDuration, getClipSpeed, replaceClip} from '../../timeline';
-import {normalizeTimelineLabelColor} from '../../timeline-color-labels';
-import {Command} from '../command';
-import {ClipPatch} from './clip-edit-commands';
-import {assertClipsNotOnLockedTrack, findClip, findTrack, mergeChromaKeyPatch} from './utils';
+import type { TimelineAccessor } from './types';
+import { normalizeClipPitchData } from '../../audio-pitch';
+import { normalizeClipBlendMode } from '../../blend-modes';
+import { normalizeClipContentAnalysis } from '../../content-analysis';
+import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../../credits-roll';
+import { normalizeDataSubtitleSource } from '../../data-subtitle';
+import {
+  Timeline,
+  normalizeAudioChannelRouting,
+  normalizeAudioDenoise,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
+  normalizeAudioPitchSemitones,
+  normalizeClipBeatMarkers,
+  normalizeClipBorder,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
+  normalizeClipSceneCuts,
+  normalizeColorCorrection,
+  normalizeDetectedBpm,
+  normalizeFrameInterpolation,
+  normalizeMasks,
+  normalizeMotionTrack,
+  normalizeQualityEnhancement,
+  normalizeSequenceFrameRate,
+  normalizeSlowMotionMode,
+  normalizeStabilization,
+  normalizeSubtitleSoundDesc,
+  normalizeSubtitleSpeaker,
+  normalizeSubtitleTrackType,
+  normalizeTextPath,
+  normalizeTransform,
+  normalizeVideoRestoration,
+} from '../../model';
+import type { Clip } from '../../model';
+import { normalizeMotionGraphic } from '../../motion-graphics';
+import { normalizeSpatialAudio } from '../../spatial-audio';
+import {
+  normalizeRichTextDocument,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
+} from '../../text-layout';
+import {
+  detectOverlap,
+  getClipDisplayDuration,
+  getClipSourceVisibleDuration,
+  getClipSpeed,
+  replaceClip,
+} from '../../timeline';
+import { normalizeTimelineLabelColor } from '../../timeline-color-labels';
+import { Command } from '../command';
+import { ClipPatch } from './clip-edit-commands';
+import { assertClipsNotOnLockedTrack, findClip, findTrack, mergeChromaKeyPatch } from './utils';
 
 export class UpdateClipCommand implements Command {
   readonly description = 'Update clip';

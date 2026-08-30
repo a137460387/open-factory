@@ -1,10 +1,10 @@
-import type {TimelineAccessor} from './index';
-import {ClipBorder, Timeline, normalizeClipBorder, normalizeTransform} from '../../model';
-import type {Clip} from '../../model';
-import {PiPLayoutPosition, calculatePiPTransform, createFullFrameTransform} from '../../pip-layout';
-import {SplitLayoutClipSource, SplitLayoutDefinition, calculateSplitLayoutTransforms} from '../../split-layout';
-import {Command} from '../command';
-import {findClip, isPiPVisualClip} from './utils';
+import type { TimelineAccessor } from './types';
+import { ClipBorder, Timeline, normalizeClipBorder, normalizeTransform } from '../../model';
+import type { Clip } from '../../model';
+import { PiPLayoutPosition, calculatePiPTransform, createFullFrameTransform } from '../../pip-layout';
+import { SplitLayoutClipSource, SplitLayoutDefinition, calculateSplitLayoutTransforms } from '../../split-layout';
+import { Command } from '../command';
+import { findClip, isPiPVisualClip } from './utils';
 
 export interface PiPLayoutCommandOptions {
   position?: PiPLayoutPosition;

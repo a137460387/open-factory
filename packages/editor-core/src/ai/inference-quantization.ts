@@ -47,7 +47,7 @@ export class QuantizationTool {
     for (let i = 0; i < data.length; i += 2) {
       const val1 = Math.round(data[i] * scale) + 8;
       const val2 = i + 1 < data.length ? Math.round(data[i + 1] * scale) + 8 : 0;
-      result[i / 2] = (val1 & 0x0F) | ((val2 & 0x0F) << 4);
+      result[i / 2] = (val1 & 0x0f) | ((val2 & 0x0f) << 4);
     }
 
     return result;
@@ -80,13 +80,13 @@ export class QuantizationTool {
     const f = int32[0];
 
     const sign = (f >> 16) & 0x8000;
-    const exponent = ((f >> 23) & 0xFF) - 127 + 15;
-    const mantissa = f & 0x7FFFFF;
+    const exponent = ((f >> 23) & 0xff) - 127 + 15;
+    const mantissa = f & 0x7fffff;
 
     if (exponent <= 0) {
       return sign;
     } else if (exponent >= 31) {
-      return sign | 0x7C00;
+      return sign | 0x7c00;
     }
 
     return sign | (exponent << 10) | (mantissa >> 13);
@@ -94,13 +94,13 @@ export class QuantizationTool {
 
   private static float16ToFloat32Value(value: number): number {
     const sign = (value & 0x8000) << 16;
-    const exponent = (value & 0x7C00) >> 10;
-    const mantissa = value & 0x03FF;
+    const exponent = (value & 0x7c00) >> 10;
+    const mantissa = value & 0x03ff;
 
     if (exponent === 0) {
       return (sign | (mantissa << 13)) >>> 0;
     } else if (exponent === 31) {
-      return (sign | 0x7F800000 | (mantissa << 13)) >>> 0;
+      return (sign | 0x7f800000 | (mantissa << 13)) >>> 0;
     }
 
     return (sign | ((exponent + 112) << 23) | (mantissa << 13)) >>> 0;
@@ -162,7 +162,7 @@ export class OperatorFusionOptimizer {
   }
 
   getFusionPattern(name: string): OperatorFusionPattern | undefined {
-    return this.fusionPatterns.find(p => p.name === name);
+    return this.fusionPatterns.find((p) => p.name === name);
   }
 
   addFusionPattern(pattern: OperatorFusionPattern): void {

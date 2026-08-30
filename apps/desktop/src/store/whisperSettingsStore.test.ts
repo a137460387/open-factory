@@ -9,9 +9,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { store = {}; }),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
   };
 })();
 
@@ -39,10 +45,7 @@ describe('whisperSettingsStore', () => {
       setExecutablePath('/usr/bin/whisper');
 
       expect(useWhisperSettingsStore.getState().executablePath).toBe('/usr/bin/whisper');
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'open-factory:whisper-executable-path',
-        '/usr/bin/whisper',
-      );
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('open-factory:whisper-executable-path', '/usr/bin/whisper');
     });
 
     it('空字符串时从 localStorage 移除', () => {
@@ -71,10 +74,7 @@ describe('whisperSettingsStore', () => {
       setModelPath('/models/ggml-base.bin');
 
       expect(useWhisperSettingsStore.getState().modelPath).toBe('/models/ggml-base.bin');
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'open-factory:whisper-model-path',
-        '/models/ggml-base.bin',
-      );
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('open-factory:whisper-model-path', '/models/ggml-base.bin');
     });
 
     it('空字符串时从 localStorage 移除', () => {

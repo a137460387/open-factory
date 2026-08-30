@@ -1,8 +1,4 @@
-import {
-  BUILT_IN_SPLIT_LAYOUTS,
-  SPLIT_LAYOUT_PRESET_IDS,
-  type SplitLayoutDefinition,
-} from '@open-factory/editor-core';
+import { BUILT_IN_SPLIT_LAYOUTS, SPLIT_LAYOUT_PRESET_IDS, type SplitLayoutDefinition } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 
 export function SplitLayoutPicker({

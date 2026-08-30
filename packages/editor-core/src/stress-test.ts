@@ -1,7 +1,7 @@
-import {createId} from './model';
-import {round} from './time';
-import type {TimecodeFormat} from './time';
-import type {Project, Track, Sequence, VideoClip} from './model-types';
+import { createId } from './model';
+import { round } from './time';
+import type { TimecodeFormat } from './time';
+import type { Project, Track, Sequence, VideoClip } from './model-types';
 
 export type StressScenarioId = 'mega-clips' | 'long-timeline' | 'mass-keyframes' | 'deep-nested';
 

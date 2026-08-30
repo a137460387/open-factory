@@ -22,14 +22,7 @@ export interface SandboxConfig {
 }
 
 /** Message types for sandbox communication. */
-export type SandboxMessageType =
-  | 'init'
-  | 'ready'
-  | 'call'
-  | 'result'
-  | 'error'
-  | 'event'
-  | 'terminate';
+export type SandboxMessageType = 'init' | 'ready' | 'call' | 'result' | 'error' | 'event' | 'terminate';
 
 /** Sandbox message envelope. */
 export interface SandboxMessage {
@@ -66,7 +59,7 @@ const DEFAULT_CSP = [
   "default-src 'none'",
   "script-src 'unsafe-inline'",
   "style-src 'unsafe-inline'",
-  "img-src data:",
+  'img-src data:',
   "connect-src 'none'",
   "frame-ancestors 'none'",
 ].join('; ');
@@ -85,7 +78,10 @@ export class PluginSandbox {
   readonly pluginId: string;
   private status: SandboxStatus = 'created';
   private iframe: HTMLIFrameElement | null = null;
-  private messageHandlers = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void; startTime: number }>();
+  private messageHandlers = new Map<
+    string,
+    { resolve: (v: unknown) => void; reject: (e: Error) => void; startTime: number }
+  >();
   private eventHandlers: SandboxEventHandler[] = [];
   private metrics: SandboxMetrics = {
     initTimeMs: 0,
@@ -157,7 +153,7 @@ export class PluginSandbox {
         });
       } else {
         // Test environment — simulate init delay
-        await new Promise(r => setTimeout(r, 1));
+        await new Promise((r) => setTimeout(r, 1));
       }
 
       this.status = 'ready';
@@ -249,9 +245,10 @@ export class PluginSandbox {
   // --- Internal ---
 
   private buildSandboxHtml(pluginCode: string): string {
-    const csp = this.config.allowedOrigins.length > 0
-      ? DEFAULT_CSP.replace("connect-src 'none'", `connect-src ${this.config.allowedOrigins.join(' ')}`)
-      : DEFAULT_CSP;
+    const csp =
+      this.config.allowedOrigins.length > 0
+        ? DEFAULT_CSP.replace("connect-src 'none'", `connect-src ${this.config.allowedOrigins.join(' ')}`)
+        : DEFAULT_CSP;
 
     return `<!DOCTYPE html>
 <html>

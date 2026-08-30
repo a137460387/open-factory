@@ -6,21 +6,21 @@
  * to provide a unified smart creation workflow.
  */
 
-import type {Clip, MediaAsset, ColorCorrection, Transform} from './model-types';
-import type {ContentAnalysisVisualSample, ContentAnalysisAudioSample, ContentEmotionPoint} from './content-analysis';
-import type {SceneDetectionResult, SceneDetectionOptions} from './ai-scene-detector';
-import type {EmotionAnalysisResult} from './ai-emotion-analyzer';
-import type {SpeechUnderstandingResult} from './ai-speech-understanding';
-import type {NarrativeAnalysisResult} from './ai-narrative-analyzer';
-import type {RecommendationResult, RecommendationContext} from './ai-smart-recommender';
-import type {NarrativeGenerationResult, NarrativeTemplate} from './ai-narrative-generator';
-import {detectScenes} from './ai-scene-detector';
-import {analyzeEmotion} from './ai-emotion-analyzer';
-import {understandSpeech} from './ai-speech-understanding';
-import {analyzeNarrative} from './ai-narrative-analyzer';
-import {recommendClips} from './ai-smart-recommender';
-import {generateNarrative} from './ai-narrative-generator';
-import {clamp01} from './utils/math';
+import type { Clip, MediaAsset, ColorCorrection, Transform } from './model-types';
+import type { ContentAnalysisVisualSample, ContentAnalysisAudioSample, ContentEmotionPoint } from './content-analysis';
+import type { SceneDetectionResult, SceneDetectionOptions } from './ai-scene-detector';
+import type { EmotionAnalysisResult } from './ai-emotion-analyzer';
+import type { SpeechUnderstandingResult } from './ai-speech-understanding';
+import type { NarrativeAnalysisResult } from './ai-narrative-analyzer';
+import type { RecommendationResult, RecommendationContext } from './ai-smart-recommender';
+import type { NarrativeGenerationResult, NarrativeTemplate } from './ai-narrative-generator';
+import { detectScenes } from './ai-scene-detector';
+import { analyzeEmotion } from './ai-emotion-analyzer';
+import { understandSpeech } from './ai-speech-understanding';
+import { analyzeNarrative } from './ai-narrative-analyzer';
+import { recommendClips } from './ai-smart-recommender';
+import { generateNarrative } from './ai-narrative-generator';
+import { clamp01 } from './utils/math';
 
 // ─── Types ────────────────────────────────────────────────
 
