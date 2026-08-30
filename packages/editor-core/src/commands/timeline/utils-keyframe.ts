@@ -1,7 +1,7 @@
 import { distributeKeyframeTimes } from '../../keyframes';
 import { Clip, Keyframe, Timeline } from '../../model';
 import { round } from '../../time';
-import { BatchKeyframeEditOperation, KeyframeSelectionRef } from './keyframe-edit-commands';
+import type { BatchKeyframeEditOperation, KeyframeSelectionRef } from './types';
 import { findClip } from './utils';
 
 export function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[] {

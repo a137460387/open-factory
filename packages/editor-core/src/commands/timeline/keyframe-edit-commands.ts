@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './types';
+import type { BatchKeyframeEditOperation, KeyframeSelectionRef, TimelineAccessor } from './types';
 import {
   alignKeyframeValues,
   applyBatchKeyframeEasing,
@@ -8,7 +8,7 @@ import {
   removeKeyframeForProperty,
   setKeyframeForProperty,
 } from '../../keyframes';
-import { Keyframe, KeyframeEasing, KeyframeProperty, Timeline } from '../../model';
+import { Keyframe, KeyframeProperty, Timeline } from '../../model';
 import type { Clip } from '../../model';
 import {
   TextAnimationDirection,
@@ -36,19 +36,7 @@ export type KeyframePatch = Partial<
   Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>
 >;
 
-export interface KeyframeSelectionRef {
-  clipId: string;
-  property: KeyframeProperty;
-  keyframeId: string;
-}
-
-export type BatchKeyframeEditOperation =
-  | { type: 'shift'; delta: number }
-  | { type: 'scale-time'; factor: number; center?: number }
-  | { type: 'delete' }
-  | { type: 'easing'; easing: KeyframeEasing }
-  | { type: 'distribute-time' }
-  | { type: 'align-value'; value?: number };
+export type { BatchKeyframeEditOperation, KeyframeSelectionRef } from './types';
 
 export class UpdateKeyframeCommand implements Command {
   readonly description = 'Update keyframe';

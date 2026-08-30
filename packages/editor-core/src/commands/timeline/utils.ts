@@ -28,7 +28,7 @@ import {
   trimClip,
 } from '../../timeline';
 import { applyProtectedRippleDeleteToTrack } from '../../timeline-protection';
-import { ReplaceableMediaClip } from './clip-edit-commands';
+import type { ReplaceableMediaClip } from './types';
 
 /**
  * Throws if any of the given clip IDs belong to a locked track.

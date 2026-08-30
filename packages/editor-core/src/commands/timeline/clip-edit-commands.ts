@@ -1,4 +1,4 @@
-import type { TimelineAccessor } from './types';
+import type { ReplaceableMediaClip, TimelineAccessor } from './types';
 import { CreditsRow, CreditsStyle } from '../../credits-roll';
 import {
   AudioFadeCurve,
@@ -115,7 +115,7 @@ export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | '
 
 export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
 
-export type ReplaceableMediaClip = Extract<Clip, { mediaId: string }>;
+export type { ReplaceableMediaClip } from './types';
 
 export function calculateReplaceMediaPatch(
   clip: ReplaceableMediaClip,
