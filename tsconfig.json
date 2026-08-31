@@ -3,7 +3,6 @@
   "references": [
     { "path": "./packages/editor-core" },
     { "path": "./packages/plugin-sdk" },
-    { "path": "./packages/cli" },
     { "path": "./packages/plugin-market" },
     { "path": "./packages/creator-dashboard" },
     { "path": "./packages/api-client" },

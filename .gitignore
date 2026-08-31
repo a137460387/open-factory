@@ -138,7 +138,7 @@ docs/api/
 # Stale compiled artifacts in editor-core src (use dist/ instead).
 # Prevents render-farm-style test ambiguity: vitest could otherwise load a
 # stale .js sibling instead of the .ts source. Rules are scoped to
-# editor-core/src so plugin-cli/src/*.js (legit JS source) is unaffected.
+# editor-core/src only.
 packages/editor-core/src/**/*.js
 packages/editor-core/src/**/*.js.map
 packages/editor-core/src/**/*.d.ts
