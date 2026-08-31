@@ -91,24 +91,15 @@ const VMAF_QUALITY_THRESHOLDS = {
  * 检测 VMAF 环境能力
  */
 export async function detectVmafCapabilities(): Promise<VmafEnvironmentCapabilities> {
-  try {
-    // 检查 FFmpeg 是否支持 VMAF
-    // 这里应该调用 Tauri 后端检测 FFmpeg 的 libvmaf 支持
-    // 暂时返回模拟数据
-    return {
-      vmafAvailable: true,
-      realtimeSupported: false, // 实时 VMAF 需要高性能硬件
-      vmafVersion: '2.3.1',
-      availableModels: ['vmaf_v0.6.1', 'vmaf_4k_v0.6.1'],
-    };
-  } catch (error) {
-    return {
-      vmafAvailable: false,
-      realtimeSupported: false,
-      availableModels: [],
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  // 检查 FFmpeg 是否支持 VMAF
+  // 这里应该调用 Tauri 后端检测 FFmpeg 的 libvmaf 支持
+  // 暂时返回模拟数据
+  return {
+    vmafAvailable: true,
+    realtimeSupported: false, // 实时 VMAF 需要高性能硬件
+    vmafVersion: '2.3.1',
+    availableModels: ['vmaf_v0.6.1', 'vmaf_4k_v0.6.1'],
+  };
 }
 
 /**

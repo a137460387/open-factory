@@ -38,8 +38,7 @@ async function runJobs(): Promise<void> {
       if (!job) {
         break;
       }
-      let promise: Promise<void>;
-      promise = runJobWithStatus(job).finally(() => {
+      const promise: Promise<void> = runJobWithStatus(job).finally(() => {
         running.delete(promise);
       });
       running.add(promise);

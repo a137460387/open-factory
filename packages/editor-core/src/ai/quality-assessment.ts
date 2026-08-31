@@ -606,6 +606,7 @@ export function assessAudioQuality(
 
   // 分帧计算能量分布（简化版 DFT 能量估计）
   const segCount = Math.min(Math.floor(audioData.length / fftSize), 20);
+  let freqBalanceScore: number;
   if (segCount > 0) {
     const segStep = Math.floor(audioData.length / segCount);
     for (let seg = 0; seg < segCount; seg++) {
@@ -640,12 +641,12 @@ export function assessAudioQuality(
       const lowPenalty = Math.abs(lowRatio - 0.3) * 100;
       const midPenalty = Math.abs(midRatio - 0.5) * 100;
       const highPenalty = Math.abs(highRatio - 0.2) * 100;
-      var freqBalanceScore = clamp(100 - (lowPenalty + midPenalty + highPenalty) * 0.8, 0, 100);
+      freqBalanceScore = clamp(100 - (lowPenalty + midPenalty + highPenalty) * 0.8, 0, 100);
     } else {
-      var freqBalanceScore = 50;
+      freqBalanceScore = 50;
     }
   } else {
-    var freqBalanceScore = 50;
+    freqBalanceScore = 50;
   }
 
   return {

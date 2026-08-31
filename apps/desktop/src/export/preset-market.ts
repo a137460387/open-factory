@@ -45,7 +45,7 @@ export interface PresetMarketLoadResult {
   warning?: string;
 }
 
-export interface PresetMarketStorage extends ExportPresetStorage {}
+export type PresetMarketStorage = ExportPresetStorage;
 
 export interface PresetMarketLoadOptions {
   storage?: PresetMarketStorage;
