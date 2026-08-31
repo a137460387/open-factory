@@ -72,7 +72,6 @@ import type {
 } from '../../media/mediaLibraryView';
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
-const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
 
 /**
  * 网格数据按 scope 选择（方案 E 的"切数据不切组件"契约）：
@@ -97,7 +96,7 @@ interface MediaGridNavCtxValue {
   scrollToMediaIndex(index: number): void;
   pendingFocusRef: { current: number | null };
 }
-const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
+const _MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
 interface SubclipContextValue {
   subclips: Subclip[];
@@ -1357,7 +1356,7 @@ function MediaCardGrid({
   mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
+  const _columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
   if (media.length === 0) return null;
   return (
     <div

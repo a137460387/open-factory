@@ -175,7 +175,7 @@ function resolveTrackHeaderSelection(options: {
   anchorTrackId: string | undefined;
   shiftKey: boolean;
 }): { selectedTrackIds: string[]; anchorTrackId: string | undefined } {
-  const { orderedTrackIds, currentSelection, clickedTrackId, anchorTrackId, shiftKey } = options;
+  const { orderedTrackIds, currentSelection: _currentSelection, clickedTrackId, anchorTrackId, shiftKey } = options;
   if (shiftKey && anchorTrackId) {
     const anchorIndex = orderedTrackIds.indexOf(anchorTrackId);
     const clickedIndex = orderedTrackIds.indexOf(clickedTrackId);

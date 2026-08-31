@@ -13,10 +13,10 @@ export function createSelectionHandlers(
   },
 ) {
   const {
-    allClips,
+    allClips: _allClips,
     clipGroupByClipId,
     selectedClipIds,
-    selectedClipId,
+    selectedClipId: _selectedClipId,
     setSelectedClipId,
     setSelectedClipIds,
     setSelectedKeyframe,

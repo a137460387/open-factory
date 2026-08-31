@@ -15,8 +15,8 @@ import { saveOfflineMediaReport, saveClipReport } from '../lib/mediaReport';
  * 涵盖报告生成、媒体版本对比、同步对比、缓存清理、收藏/标记等。
  */
 export function useEditorShellMiscCallbacks() {
-  const setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
-  const setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
+  const _setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
+  const _setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
   const setMediaVersionCompare = useMediaFeatureStore((s) => s.setMediaVersionCompare);
   const setSyncCompareOpen = useDialogStore((s) => s.setSyncCompareOpen);
 

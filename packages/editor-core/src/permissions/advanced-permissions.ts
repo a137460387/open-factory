@@ -1037,7 +1037,7 @@ export class AdvancedPermissionManager {
    * 清除过期的临时权限
    */
   cleanupExpiredPermissions(): number {
-    const now = new Date();
+    const _now = new Date();
     const before = this.state.temporaryPermissions.length;
 
     this.state.temporaryPermissions = this.state.temporaryPermissions.filter((tp) => isTemporaryPermissionValid(tp));

@@ -574,12 +574,6 @@ export function calculateQualityScore(issues: InspectorQualityIssue[]): QualityS
   const autoFixableCount = issues.filter((i) => i.autoFixable).length;
 
   // Deduct points based on severity
-  let score = 100;
-  score -= criticalIssues * 20;
-  score -= errorIssues * 10;
-  score -= warningIssues * 5;
-  score -= infoIssues * 1;
-  score = Math.max(0, Math.min(100, score));
 
   // Category scores
   const technicalIssues = issues.filter((i) => i.category === 'technical');

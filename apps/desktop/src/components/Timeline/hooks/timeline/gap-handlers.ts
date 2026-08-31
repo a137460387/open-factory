@@ -33,7 +33,7 @@ export function createGapHandlers(
     setRulerMenu,
   } = params;
 
-  const { findClip, getClipMediaAsset } = helpers;
+  const { findClip: _findClip, getClipMediaAsset } = helpers;
 
   function openGapMenu(request: import('../../TimelineParts').GapMenuRequest): void {
     setTransitionMenu(undefined);

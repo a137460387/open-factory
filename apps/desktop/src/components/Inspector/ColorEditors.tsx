@@ -2,7 +2,6 @@ import {
   DEFAULT_THREE_WAY_COLOR,
   normalizeColorWheelValue,
   normalizeThreeWayColor,
-  clamp01,
   type ColorWheelValue,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
@@ -162,4 +161,3 @@ function ColorWheelControl({
 }
 
 /** @deprecated 使用 clamp01 代替 */
-const clampUnit = clamp01;

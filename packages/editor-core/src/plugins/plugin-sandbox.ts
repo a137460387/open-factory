@@ -228,7 +228,7 @@ export class PluginSandbox {
     if (this.status === 'terminated') return;
 
     // Reject all pending messages
-    for (const [id, handler] of this.messageHandlers) {
+    for (const [_id, handler] of this.messageHandlers) {
       handler.reject(new Error('Sandbox terminated'));
     }
     this.messageHandlers.clear();

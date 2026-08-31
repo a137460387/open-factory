@@ -84,14 +84,10 @@ export function detectStaticIntervals(
   if (samples.length < minDuration) return [];
   const intervals: AnomalyInterval[] = [];
   let staticStart: number | null = null;
-  let staticCount = 0;
   for (const sample of samples) {
     if (sample.grayscaleDiff < motionThreshold) {
       if (staticStart === null) {
         staticStart = sample.time;
-        staticCount = 1;
-      } else {
-        staticCount++;
       }
     } else {
       if (staticStart !== null) {
@@ -105,7 +101,6 @@ export function detectStaticIntervals(
           });
         }
         staticStart = null;
-        staticCount = 0;
       }
     }
   }

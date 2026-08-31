@@ -598,7 +598,6 @@ export function assessAudioQuality(
   // 简化方案：将信号分为低/中/高频段，比较各段能量
   // 使用短时能量分布近似
   const fftSize = 2048;
-  const halfFft = fftSize / 2;
   let lowEnergy = 0;
   let midEnergy = 0;
   let highEnergy = 0;
@@ -612,8 +611,8 @@ export function assessAudioQuality(
       const offset = seg * segStep;
       // 简化频谱分析：使用自相关近似各频段能量
       // 低频 (20-300Hz)、中频 (300-4000Hz)、高频 (4000-20000Hz)
-      const lowBinEnd = Math.round((300 / sr) * fftSize);
-      const midBinEnd = Math.round((4000 / sr) * fftSize);
+      const _lowBinEnd = Math.round((300 / sr) * fftSize);
+      const _midBinEnd = Math.round((4000 / sr) * fftSize);
 
       for (let i = 0; i < fftSize && offset + i < audioData.length; i++) {
         const sample = audioData[offset + i];

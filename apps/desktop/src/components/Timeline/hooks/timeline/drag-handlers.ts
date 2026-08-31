@@ -53,9 +53,9 @@ export function createDragHandlers(
     selectionRect,
     setSelectionRect,
     protectedRanges,
-    setSelectedClipId,
+    setSelectedClipId: _setSelectedClipId,
     setSelectedClipIds,
-    setSelectedKeyframe,
+    setSelectedKeyframe: _setSelectedKeyframe,
     setSelectedKeyframes,
     setPreviewTimeline,
     setPlayheadTime,
@@ -63,7 +63,7 @@ export function createDragHandlers(
 
   const {
     findClipById,
-    findClip,
+    findClip: _findClip,
     getKeyframeTime,
     buildKeyframeStartTimes,
     snapKeyframeTime,

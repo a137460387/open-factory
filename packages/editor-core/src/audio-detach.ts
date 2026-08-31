@@ -151,12 +151,12 @@ export function unlinkAudioFromVideo(timeline: Timeline, audioClipId: string): T
       ...track,
       clips: track.clips.map((clip) => {
         if (clip.id === audioClipId && isLinkedAudioClip(clip)) {
-          const { softLinked, linkedVideoClipId, ...rest } = clip;
+          const { softLinked: _softLinked, linkedVideoClipId: _linkedVideoClipId, ...rest } = clip;
           return { ...rest, softLinked: false } as AudioClip;
         }
         const linkedId = getLinkedClipId(clip);
         if (linkedId === audioClipId && isDetachedVideoClip(clip)) {
-          const { audioDetached, linkedAudioClipId, ...rest } = clip;
+          const { audioDetached: _audioDetached, linkedAudioClipId: _linkedAudioClipId, ...rest } = clip;
           return { ...rest, audioDetached: false, volume: 1, muted: false } as VideoClip;
         }
         return clip;

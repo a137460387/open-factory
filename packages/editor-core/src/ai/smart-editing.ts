@@ -714,7 +714,7 @@ export function generateCutSuggestions(
   // 基于节拍的剪辑点
   if (mergedConfig.enableRhythmMatching) {
     for (const beat of beatInfo.beats) {
-      const nearbyEmotion = findNearestEmotion(emotionAnalysis.timeline, beat);
+      const _nearbyEmotion = findNearestEmotion(emotionAnalysis.timeline, beat);
 
       suggestions.push({
         id: generateId(),
@@ -1083,14 +1083,12 @@ function shuffleArray<T>(array: T[]): T[] {
 export function rhythmMatchEdit(
   videoSegments: VideoSegment[],
   beatInfo: BeatInfo,
-  config: Partial<SmartEditingConfig> = {},
+  _config: Partial<SmartEditingConfig> = {},
 ): CutSuggestion[] {
-  const mergedConfig = { ...DEFAULT_SMART_EDITING_CONFIG, ...config };
   const suggestions: CutSuggestion[] = [];
 
   let currentBeatIndex = 0;
   let currentVideoIndex = 0;
-  let currentTime = 0;
 
   while (currentVideoIndex < videoSegments.length && currentBeatIndex < beatInfo.beats.length) {
     const beatTime = beatInfo.beats[currentBeatIndex];
@@ -1118,7 +1116,6 @@ export function rhythmMatchEdit(
     } else {
       // 移动到下一个视频片段
       currentVideoIndex++;
-      currentTime = videoSegments[currentVideoIndex]?.startTime || 0;
     }
   }
 
@@ -1131,9 +1128,8 @@ export function rhythmMatchEdit(
 export function emotionAwareEdit(
   videoSegments: VideoSegment[],
   emotionAnalysis: EmotionAnalysis,
-  config: Partial<SmartEditingConfig> = {},
+  _config: Partial<SmartEditingConfig> = {},
 ): CutSuggestion[] {
-  const mergedConfig = { ...DEFAULT_SMART_EDITING_CONFIG, ...config };
   const suggestions: CutSuggestion[] = [];
 
   // 在情绪变化点创建剪辑建议

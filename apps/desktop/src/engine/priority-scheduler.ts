@@ -278,7 +278,7 @@ export class PriorityScheduler {
 
   private processQueue(): void {
     // Pause tasks that exceed the new concurrency limits
-    for (const [id, task] of this.tasks) {
+    for (const [_id, task] of this.tasks) {
       if (task.status === 'running') {
         const maxForPriority = this.state.maxConcurrent[task.priority];
         if (this.state.runningByPriority[task.priority] > maxForPriority) {

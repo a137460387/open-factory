@@ -34,7 +34,7 @@ export function SmartMontageDialog({ media, initialVideoIds = [], onGenerate, on
   const [beatTimes, setBeatTimes] = useState<number[]>([]);
   const [estimatedBpm, setEstimatedBpm] = useState(0);
 
-  const selectedVideoAssets = useMemo(
+  const _selectedVideoAssets = useMemo(
     () =>
       selectedVideoIds.flatMap((id) => {
         const a = media.find((m) => m.id === id);

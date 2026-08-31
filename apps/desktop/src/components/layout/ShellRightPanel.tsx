@@ -94,14 +94,14 @@ export function ShellRightPanel() {
   const playheadTime = useEditorStore((s) => s.playheadTime);
 
   const layoutSettings = useLayoutSettings();
-  const setLayoutSettings = useSetLayoutSettings();
+  const _setLayoutSettings = useSetLayoutSettings();
   const viewportSize = useViewportSize();
   const reviewMode = useReviewMode();
   const persistLayoutPatch = usePersistLayoutPatch();
-  const persistPanelVisibilityPatch = usePersistPanelVisibilityPatch();
+  const _persistPanelVisibilityPatch = usePersistPanelVisibilityPatch();
   const projectDocumentationOpen = useDialogStore((s) => s.projectDocumentationOpen);
   const historyPanelOpen = useDialogStore((s) => s.historyPanelOpen);
-  const setHistoryPanelOpen = useDialogStore((s) => s.setHistoryPanelOpen);
+  const _setHistoryPanelOpen = useDialogStore((s) => s.setHistoryPanelOpen);
   const aiRoughCutOpen = useDialogStore((s) => s.aiRoughCutOpen);
   const setAiRoughCutOpen = useDialogStore((s) => s.setAiRoughCutOpen);
   const directorModeOpen = useDialogStore((s) => s.directorModeOpen);
@@ -127,7 +127,7 @@ export function ShellRightPanel() {
   const smartRoughCutOpen = useDialogStore((s) => s.smartRoughCutOpen);
   const aiSubtitleWorkflowOpen = useDialogStore((s) => s.aiSubtitleWorkflowOpen);
   const setAiSubtitleWorkflowOpen = useDialogStore((s) => s.setAiSubtitleWorkflowOpen);
-  const storyboardOpen = useDialogStore((s) => s.storyboardOpen);
+  const _storyboardOpen = useDialogStore((s) => s.storyboardOpen);
   const assistEditingOpen = useDialogStore((s) => s.assistEditingOpen);
   const setAssistEditingOpen = useDialogStore((s) => s.setAssistEditingOpen);
   const contentGenerationOpen = useDialogStore((s) => s.contentGenerationOpen);

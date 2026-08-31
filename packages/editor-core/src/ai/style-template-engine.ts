@@ -188,7 +188,7 @@ export function generateTemplateFromStyle(
 ): EditingTemplate {
   const category = options?.category ?? inferCategory(fingerprint);
   const totalDuration = options?.totalDurationSec ?? 60;
-  const { trackCount, avgClipDuration, transitionDensity } = mapRhythmToTracks(fingerprint.rhythm, category);
+  const { trackCount: _trackCount, avgClipDuration, transitionDensity } = mapRhythmToTracks(fingerprint.rhythm, category);
 
   const clipCount = Math.max(3, Math.round(totalDuration / Math.max(avgClipDuration, 1)));
   const actualClipDuration = totalDuration / clipCount;

@@ -1,18 +1,13 @@
 import { logger } from '@open-factory/editor-core/utils';
 import { useState, useCallback, useMemo } from 'react';
-import type { Workflow, WorkflowTemplate, WorkflowStatus, WorkflowLogEntry } from '@open-factory/editor-core';
+import type { Workflow, WorkflowTemplate, WorkflowLogEntry } from '@open-factory/editor-core';
 import { WorkflowEngine, createDefaultWorkflow, createDefaultStep, BUILTIN_TEMPLATES } from '@open-factory/editor-core';
 import {
   Play,
-  Pause,
-  Square,
   Plus,
   Trash2,
   ChevronDown,
   ChevronRight,
-  Clock,
-  CheckCircle,
-  XCircle,
   Zap,
   FileText,
   Workflow as WorkflowIcon,
@@ -25,51 +20,8 @@ import { AutoGeneratePanel } from './AutoGeneratePanel';
 /*  状态样式                                                           */
 /* ------------------------------------------------------------------ */
 
-function statusStyle(status: WorkflowStatus): string {
-  switch (status) {
-    case 'running':
-      return 'text-blue-500';
-    case 'completed':
-      return 'text-green-500';
-    case 'failed':
-      return 'text-red-500';
-    case 'paused':
-      return 'text-yellow-500';
-    case 'cancelled':
-      return 'text-gray-500';
-    default:
-      return 'text-muted-foreground';
-  }
-}
 
-function statusIcon(status: WorkflowStatus) {
-  switch (status) {
-    case 'running':
-      return <Play className="w-4 h-4" />;
-    case 'completed':
-      return <CheckCircle className="w-4 h-4" />;
-    case 'failed':
-      return <XCircle className="w-4 h-4" />;
-    case 'paused':
-      return <Pause className="w-4 h-4" />;
-    case 'cancelled':
-      return <Square className="w-4 h-4" />;
-    default:
-      return <Clock className="w-4 h-4" />;
-  }
-}
 
-function statusLabel(status: WorkflowStatus): string {
-  const labels: Record<WorkflowStatus, string> = {
-    idle: '空闲',
-    running: '运行中',
-    paused: '已暂停',
-    completed: '已完成',
-    failed: '失败',
-    cancelled: '已取消',
-  };
-  return labels[status] || status;
-}
 
 /* ------------------------------------------------------------------ */
 /*  组件                                                              */

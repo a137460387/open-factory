@@ -219,7 +219,7 @@ export class ApplyPlatformFitCommand implements Command {
           if (removedIds.has(clip.id)) {
             return { ...clip, platformFitRemoved: true };
           }
-          const { platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
+          const { platformFitRemoved: _platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
           return rest;
         }),
       }));
@@ -264,7 +264,7 @@ export class RestorePlatformFitClipCommand implements Command {
         ...track,
         clips: track.clips.map((clip) => {
           if (clip.id === this.clipId) {
-            const { platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
+            const { platformFitRemoved: _platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
             return rest;
           }
           return clip;

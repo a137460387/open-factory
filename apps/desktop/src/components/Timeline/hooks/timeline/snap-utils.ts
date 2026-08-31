@@ -17,7 +17,7 @@ export function createSnapUtils(
     minFrameDuration: () => number;
   },
 ) {
-  const { project, allClips, zoom } = params;
+  const { project, allClips, zoom: _zoom } = params;
   const { findClip, snapClipEnd, minFrameDuration } = helpers;
 
   function buildMovedPreviewTimeline(previewStartsByClipId: Record<string, number>) {

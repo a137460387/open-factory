@@ -136,7 +136,6 @@ export interface ExportDialogProps {
   onRelinkMissing?(): void;
 }
 
-const VERSIONED_BATCH_TEMPLATE_EXTENSION = 'ofbatch.json';
 const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
   {
     id: 'version-landscape',
@@ -167,7 +166,6 @@ const DEFAULT_VERSIONED_BATCH_ROWS: VersionedExportRowState[] = [
     watermarkMode: 'inherit',
   },
 ];
-const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
 
 export function useExportState(props: ExportDialogProps) {
   const {

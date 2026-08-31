@@ -345,7 +345,6 @@ export function buildAutomationFilters(clip: ExportClip): string {
   // Apply automation volume curve
   if (automation.volume?.points?.length && automation.volume.points.length >= 2) {
     const points = automation.volume.points;
-    const duration = clip.duration;
     // Build FFmpeg volume keyframe expression using stepwise linear interpolation
     let expr = '';
     for (let i = points.length - 1; i >= 0; i--) {

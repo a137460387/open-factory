@@ -6477,7 +6477,6 @@ window.__E2E_ACTIONS__ = {
           if (c.id !== clipId || c.type !== 'subtitle' || !('text' in c)) return c;
           const text = c.text;
           const mid = Math.ceil(text.length / 2);
-          const splitTime = c.start + c.duration / 2;
           return { ...c, text: text.slice(0, mid), duration: c.duration / 2, readingSpeedWarning: null };
         }),
       };

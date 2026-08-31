@@ -27,7 +27,7 @@ export function createNestedMediaHandlers(
     project,
     selectedClipIds,
     setSelectedClipId,
-    setSelectedClipIds,
+    setSelectedClipIds: _setSelectedClipIds,
     setClipMenu,
     setReplaceMediaDialog,
     replaceMediaDialog,
@@ -35,7 +35,7 @@ export function createNestedMediaHandlers(
     setActiveSequenceId,
   } = params;
 
-  const { findClip, getClipMediaAsset } = helpers;
+  const { findClip, getClipMediaAsset: _getClipMediaAsset } = helpers;
 
   function openNestedSequence(clip: Clip): void {
     if (clip.type !== 'nested-sequence') {

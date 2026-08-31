@@ -38,7 +38,7 @@ export function PreviewTimeline(props: PreviewTimelineProps) {
     project,
     frameSearchQuery,
     frameSearchError,
-    frameSearchFocused,
+    frameSearchFocused: _frameSearchFocused,
     frameSearchHistory,
     frameSearchCandidates,
     showFrameSearchCandidates,

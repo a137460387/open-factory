@@ -6,38 +6,17 @@
  */
 
 import { Star } from 'lucide-react';
-import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface HighlightOverlayProps {
-  /** Highlight markers from visual-highlight-engine */
-  highlights: VisualHighlightMarker[];
-  /** Total media duration in seconds */
-  duration: number;
-  /** Called when user clicks a highlight time to seek preview */
-  onSeekToHighlight?(time: number): void;
-  /** Whether to show the compact badge only */
-  compact?: boolean;
-}
 
 // ---------------------------------------------------------------------------
 // Highlight type colors
 // ---------------------------------------------------------------------------
 
-const HIGHLIGHT_TYPE_COLORS: Record<VisualHighlightMarker['type'], string> = {
-  'motion-peak': '#f97316', // orange
-  'scene-change': '#8b5cf6', // violet
-  combined: '#10b981', // emerald
-};
 
-const HIGHLIGHT_TYPE_LABELS: Record<VisualHighlightMarker['type'], string> = {
-  'motion-peak': '运动峰值',
-  'scene-change': '场景切换',
-  combined: '综合高光',
-};
 
 // ---------------------------------------------------------------------------
 // Components

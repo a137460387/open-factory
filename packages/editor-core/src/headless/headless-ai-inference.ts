@@ -436,7 +436,7 @@ export async function assessQuality(
 ): Promise<InferenceResult<QualityAssessmentOutput>> {
   const startTime = Date.now();
   const effectiveConfig = { ...DEFAULT_INFERENCE_CONFIG, ...config };
-  const provider = await selectProvider(effectiveConfig);
+  const _provider = await selectProvider(effectiveConfig);
 
   // Quality assessment is metric-based, doesn't need ONNX
   const result = heuristicQualityAssessment(input);

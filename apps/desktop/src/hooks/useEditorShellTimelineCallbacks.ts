@@ -145,7 +145,7 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
   // store setters
   const setSelectedClipId = useEditorStore((s) => s.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((s) => s.setSelectedClipIds);
-  const setSelectedKeyframes = useEditorStore((s) => s.setSelectedKeyframes);
+  const _setSelectedKeyframes = useEditorStore((s) => s.setSelectedKeyframes);
   const setColorAnalysisBusy = useMediaFeatureStore((s) => s.setColorAnalysisBusy);
   const setColorAnalysisResults = useMediaFeatureStore((s) => s.setColorAnalysisResults);
   const setColorAnalysisJumps = useMediaFeatureStore((s) => s.setColorAnalysisJumps);

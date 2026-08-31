@@ -20,7 +20,6 @@ import {
   type TouchOptimizationSettings,
   normalizeTouchOptimizationSettings,
   type MediaGroupingSettings,
-  normalizeMediaGroupingSettings,
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import {
@@ -529,20 +528,8 @@ export async function readDisableExportRecommendations(): Promise<boolean> {
   return settings.disableExportRecommendations ?? false;
 }
 
-async function saveDisableExportRecommendations(disabled: boolean): Promise<void> {
-  const settings = await readAppSettings();
-  await writeAppSettings({ ...settings, disableExportRecommendations: disabled });
-}
 
-async function readThumbnailPrerenderEnabled(): Promise<boolean> {
-  const settings = await readAppSettings();
-  return settings.thumbnailPrerenderEnabled ?? true;
-}
 
-async function saveThumbnailPrerenderEnabled(enabled: boolean): Promise<void> {
-  const settings = await readAppSettings();
-  await writeAppSettings({ ...settings, thumbnailPrerenderEnabled: enabled });
-}
 
 export async function readViewSettings(): Promise<ViewSettings> {
   const settings = await readAppSettings();
@@ -1497,16 +1484,4 @@ export async function saveTouchOptimizationSettings(
   return next;
 }
 
-async function readMediaGroupingSettings(): Promise<MediaGroupingSettings> {
-  const settings = await readAppSettings();
-  return normalizeMediaGroupingSettings(settings.mediaGrouping);
-}
 
-async function saveMediaGroupingSettings(
-  mediaGrouping: Partial<MediaGroupingSettings>,
-): Promise<MediaGroupingSettings> {
-  const settings = await readAppSettings();
-  const next = normalizeMediaGroupingSettings({ ...settings.mediaGrouping, ...mediaGrouping });
-  await writeAppSettings({ ...settings, mediaGrouping: next });
-  return next;
-}

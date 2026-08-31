@@ -72,13 +72,6 @@ export interface VmafEnvironmentCapabilities {
   error?: string;
 }
 
-const DEFAULT_VMAF_CONFIG: VmafMonitoringConfig = {
-  mode: 'post-export',
-  sampleInterval: 10,
-  maxSamples: 20,
-  enablePsnr: true,
-  enableSsim: true,
-};
 
 const VMAF_QUALITY_THRESHOLDS = {
   excellent: 90,

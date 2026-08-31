@@ -198,7 +198,7 @@ function mergeOperations(operations: TimelineOperation[]): TimelineOperation[] {
   const sorted = sortByTimestamp(operations);
 
   const hasDelete = sorted.some((op) => op.type === 'delete');
-  const hasAdd = sorted.some((op) => op.type === 'add');
+  const _hasAdd = sorted.some((op) => op.type === 'add');
 
   // Pure add-wins: if any add exists, keep all adds
   if (sorted.every((op) => op.type === 'add')) {

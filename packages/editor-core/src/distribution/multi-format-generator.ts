@@ -129,7 +129,6 @@ export function extractCropAnalysisFromProject(
   overrides?: Partial<CropAnalysisInput>,
 ): CropAnalysisInput {
   const timeline = project.timeline;
-  const firstTrack = timeline?.tracks?.[0];
   const firstVideoClip = findFirstVideoClip(timeline);
 
   const sourceWidth = firstVideoClip?.mediaWidth ?? project.settings?.width ?? 1920;
@@ -230,7 +229,7 @@ function assessCropQuality(sourceWidth: number, sourceHeight: number, cropResult
   const targetRatio = parseAspectRatio(cropResult.targetAspectRatio);
 
   // 宽高比差异越大，质量损失越大
-  const ratioDiff = Math.abs(sourceRatio - targetRatio) / Math.max(sourceRatio, targetRatio);
+  const _ratioDiff = Math.abs(sourceRatio - targetRatio) / Math.max(sourceRatio, targetRatio);
 
   // 基础质量分：基于裁剪比例
   const cropArea = cropResult.cropWidth * cropResult.cropHeight;

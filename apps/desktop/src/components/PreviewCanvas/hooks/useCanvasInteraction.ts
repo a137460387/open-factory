@@ -110,12 +110,12 @@ export function useCanvasInteraction(params: CanvasInteractionParams) {
     setPreviewPan,
     setFrameInspectorSample,
     setCompareSplitRatio,
-    setCompareDividerDragging,
+    setCompareDividerDragging: _setCompareDividerDragging,
     onAddReviewAnnotation,
     reviewText,
     reviewTool,
     playheadTime,
-    fps,
+    fps: _fps,
   } = params;
 
   const t = zhCN.preview;

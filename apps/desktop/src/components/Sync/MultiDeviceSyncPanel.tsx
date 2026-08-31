@@ -382,7 +382,7 @@ export const MultiDeviceSyncPanel: React.FC<MultiDeviceSyncPanelProps> = ({
   onSyncStatusChange,
   onConflictResolved,
 }) => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
 
   // 状态管理
   const [manager] = useState(() => {

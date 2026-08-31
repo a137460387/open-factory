@@ -8,7 +8,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import { Zap, Music, BarChart3, Clock, Star, Check, Eye, X, Scissors } from 'lucide-react';
+import { Zap, Clock, Star, Check, Eye, X, Scissors } from 'lucide-react';
 import {
   generateRoughCutProposals,
   type RoughCutResult,
@@ -128,7 +128,6 @@ function ProposalCard({
   onApply(): void;
   onPreviewSegment?(segment: RoughCutSegment): void;
 }) {
-  const strategyIcon = proposal.id === 'highlights-first' ? Star : proposal.id === 'beat-sync' ? Music : BarChart3;
 
   return (
     <div
