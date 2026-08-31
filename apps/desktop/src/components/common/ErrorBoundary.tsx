@@ -20,6 +20,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   override componentDidCatch(error: unknown, errorInfo: React.ErrorInfo): void {
+    // eslint-disable-next-line no-console -- 崩溃日志需要保留原始 console.error 调用签名（有测试断言）
     console.error(`[ErrorBoundary:${this.props.name}]`, error, errorInfo.componentStack);
     showToast({
       kind: 'error',

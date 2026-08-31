@@ -66,13 +66,6 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
   const {
     t,
     project,
-    initialPreset,
-    selectedClipIds,
-    inPoint,
-    outPoint,
-    onClose,
-    onCompleted,
-    onRelinkMissing,
     // State
     complianceOpen,
     setComplianceOpen,
@@ -83,10 +76,7 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     setOutputPath,
     capabilities,
     availableHwEncoders,
-    error,
-    setError,
     presets,
-    setPresets,
     presetId,
     setPresetId,
     platformFitTarget,
@@ -132,14 +122,10 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     completionAction,
     setCompletionAction,
     exportBackgroundSettings,
-    exportOptimizationSettings,
     exportUploadSettings,
     exportUploadPassword,
     exportPresetSyncSettings,
-    exportPresetSyncPassword,
     presetSyncState,
-    warmupStatus,
-    disableRecommendations,
     recommendations,
     // Computed
     selectedPreset,
@@ -161,7 +147,6 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     progressiveExportSupported,
     formatOptions,
     spatialDenoiseClipCount,
-    activeExportRanges,
     rangeModeAvailable,
     renderFarmEnabled,
     setRenderFarmEnabled,
@@ -169,7 +154,6 @@ export function ExportConfig({ state, actions }: ExportConfigProps) {
     setRenderFarmInstances,
     suggestedRenderFarmInstances,
     // Store
-    history,
   } = state;
 
   // Helper functions

@@ -8,8 +8,7 @@ import {
 import { useVideoGenQueueStore } from './video-gen-store';
 import { saveTaskProgress, deleteTaskProgress } from '../lib/generation-history-db';
 import { updateVideoGenTaskStatus } from '../lib/tauri-bridge/video-gen';
-import type { LtxProgressPayload, LtxCompletedPayload } from '../hooks/useVideoGeneration';
-import { silentError } from '../lib/error-handlers';
+import { logError, silentError } from '../lib/error-handlers';
 
 let unlistenProgress: UnlistenFn | null = null;
 let unlistenCompleted: UnlistenFn | null = null;
@@ -54,7 +53,7 @@ export async function startVideoGenRunner(): Promise<void> {
           undefined,
           undefined,
           seq,
-        ).catch((e) => console.error('[video-gen-runner] reset running task failed:', e));
+        ).catch(logError('video-gen-runner: reset running task'));
       }
     }
     // Clear activeTaskId if it was one of the running tasks

@@ -6,6 +6,7 @@ export interface ErrorTransport {
 
 class ConsoleErrorTransport implements ErrorTransport {
   report(error: Error, context?: Record<string, unknown>): void {
+    // eslint-disable-next-line no-console -- ConsoleErrorTransport 按定义就是 console 传输层
     console.error('[ErrorReporter]', error.message, error.stack, context);
   }
 }

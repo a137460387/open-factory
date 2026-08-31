@@ -8,6 +8,7 @@ import {
   cleanupVideoGenTasks,
   listVideoGenTasks,
 } from '../lib/tauri-bridge/video-gen';
+import { logError } from '../lib/error-handlers';
 
 /** Video generation task status */
 export type VideoGenTaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled';
@@ -143,7 +144,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
         taskSeqMap: seqMap,
       });
     } catch (e) {
-      console.error('[video-gen-store] init failed:', e);
+      logError('video-gen-store: init')(e);
     }
   },
 
@@ -163,7 +164,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
         taskSeqMap: seqMap,
       });
     } catch (e) {
-      console.error('[video-gen-store] reloadFromDb failed:', e);
+      logError('video-gen-store: reloadFromDb')(e);
     }
   },
 
@@ -184,7 +185,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
     set((state) => ({ tasks: [...state.tasks, task] }));
     const seq = 0;
     get().taskSeqMap.set(task.id, seq);
-    saveVideoGenTask(taskToDb(task, seq)).catch((e) => console.error('[video-gen-store] persist addTask failed:', e));
+    saveVideoGenTask(taskToDb(task, seq)).catch(logError('video-gen-store: persist addTask'));
     return task;
   },
 
@@ -212,7 +213,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       tsToIso(now),
       undefined,
       seq,
-    ).catch((e) => console.error('[video-gen-store] persist startNextTask failed:', e));
+    ).catch(logError('video-gen-store: persist startNextTask'));
     return next.id;
   },
 
@@ -232,7 +233,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       undefined,
       seq,
-    ).catch((e) => console.error('[video-gen-store] persist updateTaskProgress failed:', e));
+    ).catch(logError('video-gen-store: persist updateTaskProgress'));
   },
 
   completeTask: (taskId, videoPath) => {
@@ -257,7 +258,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) => console.error('[video-gen-store] persist completeTask failed:', e));
+    ).catch(logError('video-gen-store: persist completeTask'));
   },
 
   failTask: (taskId, error, errorType) => {
@@ -282,7 +283,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) => console.error('[video-gen-store] persist failTask failed:', e));
+    ).catch(logError('video-gen-store: persist failTask'));
   },
 
   cancelTask: (taskId) => {
@@ -303,7 +304,7 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       undefined,
       tsToIso(now),
       seq,
-    ).catch((e) => console.error('[video-gen-store] persist cancelTask failed:', e));
+    ).catch(logError('video-gen-store: persist cancelTask'));
   },
 
   removeTask: (taskId) => {
@@ -311,14 +312,14 @@ export const useVideoGenQueueStore = create<VideoGenQueueState>((set, get) => ({
       tasks: state.tasks.filter((t) => t.id !== taskId),
       activeTaskId: state.activeTaskId === taskId ? null : state.activeTaskId,
     }));
-    deleteVideoGenTask(taskId).catch((e) => console.error('[video-gen-store] persist removeTask failed:', e));
+    deleteVideoGenTask(taskId).catch(logError('video-gen-store: persist removeTask'));
   },
 
   clearCompleted: () => {
     set((state) => ({
       tasks: state.tasks.filter((t) => t.status === 'queued' || t.status === 'running'),
     }));
-    cleanupVideoGenTasks().catch((e) => console.error('[video-gen-store] persist clearCompleted failed:', e));
+    cleanupVideoGenTasks().catch(logError('video-gen-store: persist clearCompleted'));
   },
 
   getTask: (taskId) => get().tasks.find((t) => t.id === taskId),

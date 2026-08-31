@@ -169,23 +169,21 @@ export class PluginSandbox {
     api: T,
     requiredPermission: PluginPermission,
   ): T {
-    const sandbox = this;
-
     return new Proxy(api, {
-      get(target, prop, receiver) {
+      get: (target, prop, receiver) => {
         const value = Reflect.get(target, prop, receiver);
         if (typeof value !== 'function') return value;
 
         return (...args: unknown[]) => {
-          sandbox.enforcePermission(pluginId, requiredPermission);
-          sandbox.enforceRateLimit(pluginId);
+          this.enforcePermission(pluginId, requiredPermission);
+          this.enforceRateLimit(pluginId);
 
-          const policy = sandbox.policies.get(pluginId);
+          const policy = this.policies.get(pluginId);
           const timeoutMs = policy?.maxExecutionTimeMs ?? 5000;
 
           return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
-              sandbox.reportViolation({
+              this.reportViolation({
                 type: 'execution-timeout',
                 pluginId,
                 message: `Plugin ${pluginId} call timed out: ${String(prop)}`,
