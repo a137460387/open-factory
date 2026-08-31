@@ -21,7 +21,6 @@
     "packages/editor-core/src/**": ["exports", "types"],
     "packages/cli/src/**": ["exports", "types"],
     "packages/creator-dashboard/src/**": ["exports", "types"],
-    "packages/api-gateway/src/**": ["exports", "types"],
     "examples/plugins/**": ["exports", "types"]
   },
   "include": ["exports", "types"]
