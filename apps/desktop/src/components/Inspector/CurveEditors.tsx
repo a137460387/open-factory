@@ -690,7 +690,7 @@ export function formatKeyframeValue(property: KeyframeProperty, value: number): 
 /** 缓动预设选择器组件（exported for testing） */
 export function EasingPresetSelector({
   selectedIds,
-  frames,
+  frames: _frames,
   onApplyPreset,
 }: {
   selectedIds: string[];

@@ -41,7 +41,6 @@ import type {
   FrameQualityScore,
   QualityDimension,
   QualityDimensionScore,
-  QualityThresholds,
   QualityAssessmentConfig,
   EnhancedQualityGrade,
   QualityIssue,
@@ -509,7 +508,7 @@ export function assessVideoQuality(frames: Uint8Array[], config: QualityAssessme
 export function assessAudioQuality(
   audioData: Float32Array,
   sampleRate: number,
-  config: QualityAssessmentConfig,
+  _config: QualityAssessmentConfig,
 ): AudioQualityMetrics {
   if (audioData.length === 0) {
     return {

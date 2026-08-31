@@ -351,7 +351,7 @@ export function generateVmafReport(result: VmafMonitoringResult, projectName?: s
 export function createDegradedQualityReport(
   plan: FfmpegExportPlan,
   settings: ExportSettings,
-  duration: number,
+  _duration: number,
 ): VmafMonitoringResult {
   // 基于编码参数估算质量
   const estimatedQuality = estimateQualityFromSettings(settings);
@@ -400,7 +400,7 @@ function estimateQualityFromSettings(settings: ExportSettings): number {
 /**
  * 从设置中提取 CRF 值
  */
-function getCrfFromSettings(settings: ExportSettings): number | null {
+function getCrfFromSettings(_settings: ExportSettings): number | null {
   // 这里需要从实际的 FFmpeg 参数中提取 CRF
   // 暂时返回默认值
   return 23;

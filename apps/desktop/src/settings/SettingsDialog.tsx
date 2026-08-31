@@ -20,7 +20,6 @@ import {
   type BuiltinTimelineScript,
   type EffectPresetFilters,
   type Project,
-  type ProjectColorPipeline,
   type PostExportQualityAssuranceSettings,
   type TimecodeFormat,
   type TimelineScriptOperation,
@@ -46,10 +45,7 @@ import {
 import { isTauriRuntime } from '../lib/tauri';
 import { showToast } from '../lib/toast';
 import {
-  PREVIEW_QUALITY_MODES,
-  PREVIEW_SKIP_FRAME_OPTIONS,
   type PreviewPerformanceSettings,
-  type PreviewQualityMode,
   type PreviewSkipFrames,
 } from '../lib/preview/preview-performance';
 import { type ClipMacro } from '../macros/clip-macros';
@@ -194,7 +190,7 @@ import {
   type ThemeSettings,
 } from '../theme/theme';
 import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
-import { DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings } from '../updater/update-settings';
+import { DEFAULT_UPDATE_SETTINGS, type UpdateSettings } from '../updater/update-settings';
 
 interface SettingsDialogProps {
   open: boolean;

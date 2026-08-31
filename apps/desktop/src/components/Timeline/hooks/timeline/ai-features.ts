@@ -1,9 +1,7 @@
 import type {
   Clip,
   MediaAsset,
-  DialogueInterval,
   DialogueSensitivity,
-  DialogueWhisperMiss,
   SilentRange,
   TargetAspectRatio,
   TransitionRecommendation,
@@ -36,9 +34,7 @@ import {
   recommendTransition,
   round,
   smoothKeyframes,
-  type TransitionType,
 } from '@open-factory/editor-core';
-import type { WhisperAvailability } from '../../../../lib/whisper';
 import {
   canGenerateSubtitlesForClip,
   buildWhisperSubtitleTrackForClip,

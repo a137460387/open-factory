@@ -105,12 +105,6 @@ import type {
 } from '../tauri-bridge';
 import type { GpuInfo } from '../../hooks/useGpuDetect';
 import type {
-  LocalModelInfo,
-  ModelDownloadCompletedPayload,
-  ModelDownloadProgressPayload,
-  RemoteModelInfo,
-} from '../../hooks/useModelManager';
-import type {
   GenerateVideoRequest,
   GenerateVideoResponse,
   ListLocalModelsResult,

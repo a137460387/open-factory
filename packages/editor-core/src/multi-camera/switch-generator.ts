@@ -214,7 +214,7 @@ export function generateRealtimeSwitch(
   currentAngleIndex: number,
   targetAngleIndex: number,
   angles: AngleDefinition[],
-  remainingDuration: number,
+  _remainingDuration: number,
 ): SwitchPointDef | undefined {
   if (targetAngleIndex === currentAngleIndex) return undefined;
   if (targetAngleIndex < 0 || targetAngleIndex >= angles.length) return undefined;

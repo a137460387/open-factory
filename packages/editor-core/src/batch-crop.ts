@@ -59,9 +59,9 @@ export function resolveCustomRatioValue(width: number, height: number): number {
 }
 
 export function smartAnchorForClip(
-  clip: { id: string; name?: string },
-  sourceWidth: number,
-  sourceHeight: number,
+  _clip: { id: string; name?: string },
+  _sourceWidth: number,
+  _sourceHeight: number,
 ): BatchCropAnchor {
   return {
     mode: 'smart',

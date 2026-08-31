@@ -41,7 +41,7 @@ type ProcessingState = 'idle' | 'processing' | 'completed' | 'error';
  * - GPU 加速状态
  */
 export function SuperResolutionPreview({
-  sourceUrl,
+  sourceUrl: _sourceUrl,
   sourceCanvas,
   onClose,
   onApply,

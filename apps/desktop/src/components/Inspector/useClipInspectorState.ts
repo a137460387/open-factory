@@ -386,13 +386,13 @@ export interface ClipInspectorStateReturn {
 
 export function useClipInspectorState({
   clip,
-  selectedClipLocked,
+  selectedClipLocked: _selectedClipLocked,
   selectedKeyframe,
   selectedKeyframes = [],
   media,
   playheadTime,
   projectSettings,
-  selectedSubtitleClips,
+  selectedSubtitleClips: _selectedSubtitleClips,
 }: ClipInspectorStateParams): ClipInspectorStateReturn {
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const clipStartTimecode = secondsToTimecode(clip.start, projectSettings.fps, projectSettings.timecodeFormat);

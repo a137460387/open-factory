@@ -23,7 +23,7 @@ export async function drawVideo2d(
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
   bypassProcessing = false,
-  disabledEffectTypes: EffectType[] = [],
+  _disabledEffectTypes: EffectType[] = [],
   hwDecodeManager?: HardwareDecodeManager | null,
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);

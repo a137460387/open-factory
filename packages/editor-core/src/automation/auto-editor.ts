@@ -295,7 +295,7 @@ export function generateEditPlan(
   template: EditTemplate,
   config: AutoEditorConfig,
   weights?: PreferenceWeights,
-  bpm?: number,
+  _bpm?: number,
 ): EditPlan {
   // 1. 筛选场景
   const filtered = filterScenes(scenes, template.filter);

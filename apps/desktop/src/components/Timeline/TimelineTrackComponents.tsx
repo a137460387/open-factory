@@ -5,7 +5,6 @@ import {
   getEffectiveClipColorLabel,
   getTimelineLabelColorHex,
   DEFAULT_TIMELINE_LABEL_COLOR_HEX,
-  isFrameRateMismatch,
   TIMELINE_THUMBNAIL_TRACK_HEIGHT,
   TIMELINE_LABEL_COLORS,
   type Clip,
@@ -20,7 +19,6 @@ import {
   type TimelineThumbnailTrackSample,
   type TimelineLargeProjectMode,
   type TimelineVirtualRenderWindow,
-  type VolumeEnvelopePoint,
   shouldLoadTimelineClipAssets,
   type Track,
   type Transition,
@@ -28,7 +26,6 @@ import {
   getEffectiveTrackHeight,
   clampTrackHeight,
   DEFAULT_TRACK_HEIGHT,
-  shouldShowWaveform,
 } from '@open-factory/editor-core';
 import { AlertTriangle, MoreHorizontal } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
@@ -54,9 +51,6 @@ import type {
 import { LABEL_WIDTH, TRACK_DRAG_MIME } from './timeline-parts-types';
 import {
   MemoizedClipBlock,
-  formatTransitionBadge,
-  getTrackWaveformColor,
-  formatFrameRateLabel,
 } from './TimelineClipComponents';
 
 function ThumbnailTrack({

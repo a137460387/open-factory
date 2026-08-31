@@ -80,7 +80,7 @@ interface AutomationPanelProps {
   onClose?: () => void;
 }
 
-export function AutomationPanel({ className, onClose }: AutomationPanelProps) {
+export function AutomationPanel({ className, onClose: _onClose }: AutomationPanelProps) {
   // 工作流引擎（同步回退实现，一键生成已通过 useAutomationWorker 在 Worker 中执行）
   const [engine] = useState(() => new WorkflowEngine({ verboseLogging: true }));
   const [workflows, setWorkflows] = useState<Workflow[]>([]);

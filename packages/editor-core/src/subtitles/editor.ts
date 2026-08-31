@@ -180,7 +180,7 @@ export function replaceSubtitles(
 
           const text = clip.text || '';
           const regex = new RegExp(pattern, caseSensitive ? 'g' : 'gi');
-          const newText = text.replace(regex, (match) => {
+          const newText = text.replace(regex, (_match) => {
             replacedCount++;
             return replaceText;
           });

@@ -628,7 +628,7 @@ export class RenderPipeline {
     return null;
   }
 
-  private prefetchNextFrames(currentFrame: number, fps: number, media: MediaAsset[], timeline: Timeline): void {
+  private prefetchNextFrames(currentFrame: number, fps: number, _media: MediaAsset[], _timeline: Timeline): void {
     const frames = this.prefetcher.getPredictedFrames(currentFrame, fps, this.config.prefetchFrames);
 
     for (const frame of frames) {

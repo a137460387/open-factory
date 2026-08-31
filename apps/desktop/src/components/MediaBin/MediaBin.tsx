@@ -1,8 +1,6 @@
 import {
   MAX_MEDIA_FOLDER_DEPTH,
   TITLE_TEMPLATE_IDS,
-  collectFingerprintReferences,
-  listFingerprintSourcePaths,
   type MediaAsset,
   type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
@@ -13,10 +11,9 @@ import {
   type MediaRenamePreviewItem,
   type TitleTemplateId,
   type EffectPreset,
-  type QualityAssessmentResult,
   type SmartAlbumId,
 } from '@open-factory/editor-core';
-import { parseFavoritesSearchFilter, type Subclip } from '@open-factory/editor-core';
+import { type Subclip } from '@open-factory/editor-core';
 import {
   AudioWaveform,
   ChevronDown,
@@ -37,7 +34,6 @@ import {
   createContext,
   Fragment,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -45,7 +41,7 @@ import {
 } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BatchMetadataDialog, BatchRenameDialog } from './BatchDialogs';
-import { MediaInfoDialog, formatBytes, formatDuration, type MediaInfoState } from './MediaInfoDialog';
+import { MediaInfoDialog, formatBytes, formatDuration } from './MediaInfoDialog';
 import { SubclipDialog } from './SubclipDialog';
 import {
   MediaCard,

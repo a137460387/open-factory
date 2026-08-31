@@ -1169,7 +1169,7 @@ function createNode(
   );
 }
 
-function normalizeNode(node: ColorNode, fallback: ColorNode | undefined, index: number): ColorNode {
+function normalizeNode(node: ColorNode, fallback: ColorNode | undefined, _index: number): ColorNode {
   return (
     normalizeColorNodeGraph({
       version: 1,

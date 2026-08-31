@@ -376,7 +376,7 @@ const mocks: TauriMocks = {
     mtimes.set(path, Date.now());
     persistFiles();
   },
-  writeBinaryFile: (path, base64Data) => {
+  writeBinaryFile: (path, _base64Data) => {
     exists.set(path, true);
     mtimes.set(path, Date.now());
   },
@@ -1644,7 +1644,7 @@ const mocks: TauriMocks = {
   },
   checkOllamaReachable: () => false,
   listOllamaModels: () => ({ reachable: false, models: [] }),
-  callTtsApi: (request) => ({
+  callTtsApi: (_request) => ({
     audioBase64:
       'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0NcAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0Nc',
     latencyMs: 50,

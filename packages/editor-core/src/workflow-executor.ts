@@ -76,7 +76,7 @@ export class WorkflowExecutor {
       image: ctx.config.mediaId ?? 'default-image',
     }));
 
-    this.registerExecutor('input.timeline', async (ctx) => ({
+    this.registerExecutor('input.timeline', async (_ctx) => ({
       timeline: 'current-timeline',
       clips: [],
     }));
@@ -153,7 +153,7 @@ export class WorkflowExecutor {
     }));
 
     // Output nodes
-    this.registerExecutor('output.timeline', async (ctx) => {
+    this.registerExecutor('output.timeline', async (_ctx) => {
       // Would send to actual timeline
       return { success: true };
     });

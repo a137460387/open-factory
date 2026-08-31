@@ -1,4 +1,4 @@
-import type { Clip, ClipGroup, KeyframeProperty } from '@open-factory/editor-core';
+import type { Clip, KeyframeProperty } from '@open-factory/editor-core';
 import { canMoveClipWithProtectedRanges } from '@open-factory/editor-core';
 import { keyframeRefKey } from '../../TimelineOverlays';
 import type { SelectedKeyframeRef } from '../../../../store/editorStore';

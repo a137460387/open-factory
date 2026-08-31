@@ -1,4 +1,4 @@
-import { type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import type { Clip, Project } from '@open-factory/editor-core';
 import {
   normalizePrivacyBlurEffect,
@@ -7,12 +7,10 @@ import {
   type FrameInterpolationCompareMode,
   type InputColorSpace,
   type Keyframe,
-  type KeyframeProperty,
   type PrivacyBlurEffect,
 } from '@open-factory/editor-core';
 import { t, zhCN } from '../../i18n/strings';
 import { type SelectedKeyframeRef } from '../../store/editorStore';
-import { NumberField as EffectNumberField } from './EffectEditors';
 // Re-export extracted components for backward compatibility
 export {
   SubtitleStyleTemplatesPanel,

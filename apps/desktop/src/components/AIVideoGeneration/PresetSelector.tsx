@@ -3,7 +3,6 @@ import { ChevronDown, Plus, Trash2, Save, AlertTriangle } from 'lucide-react';
 import type { VideoPreset } from '../../lib/video-presets';
 import { usePresets } from '../../hooks/usePresets';
 import type { VideoGenerationParams } from '../../hooks/useVideoGeneration';
-import type { Precision } from '../../hooks/useGpuDetect';
 
 export interface PresetSelectorProps {
   /** Currently selected preset ID */
@@ -27,7 +26,7 @@ export function PresetSelector({
   onSelect,
   currentParams,
   vramMb,
-  pytorchCompatible,
+  pytorchCompatible: _pytorchCompatible,
 }: PresetSelectorProps) {
   const { presets, createPreset, removePreset } = usePresets();
   const [isOpen, setIsOpen] = useState(false);

@@ -1,4 +1,3 @@
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import type {
   CanvasPoint,
   CanvasTransformHandle,
@@ -12,10 +11,6 @@ import type {
   Transform,
 } from '@open-factory/editor-core';
 import type { PreviewPixelCoordinates } from '../../lib/preview/frame-inspector';
-import type { PreviewCompareMode } from '../../lib/preview/compare';
-import type { GpuPreviewMetrics } from '../../lib/preview/gpu-acceleration';
-import type { PreviewPerformanceSettings } from '../../lib/preview/preview-performance';
-import type { PreviewRenderer, PreviewFrameReadback } from '../../lib/preview/renderer';
 
 export const PREVIEW_CANVAS_WIDTH = 1280;
 export const PREVIEW_CANVAS_HEIGHT = 720;

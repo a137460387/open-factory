@@ -18,7 +18,7 @@ import type { ClipInspectorBodyProps } from './ClipInspectorBody';
 export function SpeedPanel({
   clip,
   asset,
-  projectSettings,
+  projectSettings: _projectSettings,
   clipStartTimecode,
   clipDurationTimecode,
   showSlowMotionMode,
@@ -28,7 +28,7 @@ export function SpeedPanel({
   frameInterpolationCompareRunning,
   frameInterpolationCompareItems,
   frameInterpolationCompareError,
-  frameInterpolationExpandedMode,
+  frameInterpolationExpandedMode: _frameInterpolationExpandedMode,
   setFrameInterpolationExpandedMode,
   frameInterpolationExpandedItem,
   frameInterpolationQualityRunning,

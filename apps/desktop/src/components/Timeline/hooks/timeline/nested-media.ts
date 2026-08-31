@@ -8,7 +8,6 @@ import {
   listMediaVersionEntries,
   getReplaceMediaCompatibilityWarnings,
 } from '@open-factory/editor-core';
-import type { ReplaceMediaDialogState } from '../../TimelineDialogs';
 import { commandManager, projectAccessor, timelineAccessor } from '../../../../store/commandManager';
 import { useEditorStore } from '../../../../store/editorStore';
 import { zhCN } from '../../../../i18n/strings';

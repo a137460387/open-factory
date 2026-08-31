@@ -21,7 +21,7 @@ import { useAISettingsStore } from '../../store/aiSettingsStore';
 function applyExportSuggestionToDraft(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   suggestion: AIExportSuggestion,
-  project: Project,
+  _project: Project,
 ) {
   const param = suggestion.parameter;
   const value = suggestion.suggestedValue;

@@ -5,11 +5,8 @@
  * with color-coded badges and a hover tooltip showing highlight time points.
  */
 
-import { useState, useMemo } from 'react';
 import { Star } from 'lucide-react';
 import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
-import { extractHighlightRanges } from '@open-factory/editor-core/visual-highlight-engine';
-import { formatTimeShort } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types

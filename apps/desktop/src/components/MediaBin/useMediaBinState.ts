@@ -37,12 +37,9 @@ import type {
   MediaCollection,
   ClipContentAnalysis,
   MediaFolder,
-  MediaLabelColor,
-  MediaFlag,
 } from '@open-factory/editor-core';
 import type { Subclip } from '@open-factory/editor-core';
 import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
-import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { zhCN } from '../../i18n/strings';
 
 export type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';

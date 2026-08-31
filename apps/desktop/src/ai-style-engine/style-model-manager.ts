@@ -20,7 +20,6 @@ import {
 
 import {
   analyzeColorPreferences,
-  compareColorProfiles,
   type ColorPreferenceProfile,
   type ColorGradingParams,
   type ColorAnalysisResult,

@@ -5,7 +5,6 @@ import {
   type MediaAsset,
   type MediaMetadata,
   type SmartAlbumId,
-  type MediaMetadataFilter,
   collectSmartAlbums,
 } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
@@ -20,7 +19,7 @@ import { MediaLibraryViewToolbar } from './MediaBinViewToolbar';
 
 export function MediaBinFilterBar({
   media,
-  mediaMetadata,
+  mediaMetadata: _mediaMetadata,
   projectPath,
   search,
   onSearchChange,
@@ -41,8 +40,8 @@ export function MediaBinFilterBar({
   onOrganizePanelOpenChange,
   mediaCollections,
   onUpdateMediaCollections,
-  favoriteIds,
-  recentMediaIds,
+  favoriteIds: _favoriteIds,
+  recentMediaIds: _recentMediaIds,
 }: {
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;

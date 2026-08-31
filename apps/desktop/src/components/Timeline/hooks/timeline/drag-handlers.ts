@@ -14,9 +14,7 @@ import {
   detectOverlap,
   round,
   replaceClip,
-  canMoveClipWithProtectedRanges,
   snapTime,
-  type KeyframeProperty,
 } from '@open-factory/editor-core';
 import { keyframeRefKey } from '../../TimelineOverlays';
 import type { DragState } from '../../TimelineParts';
@@ -375,7 +373,7 @@ function buildSelectionMarqueeRect(
   };
 }
 
-function findClipIdsIntersectingRect(rect: { left: number; top: number; right: number; bottom: number }): string[] {
+function findClipIdsIntersectingRect(_rect: { left: number; top: number; right: number; bottom: number }): string[] {
   // This will be implemented in the facade
   return [];
 }

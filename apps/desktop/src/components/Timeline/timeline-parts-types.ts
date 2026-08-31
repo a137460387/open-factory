@@ -1,10 +1,6 @@
 import type {
   Clip,
-  ClipGroup,
-  CollaborationClipLock,
-  AnomalyInterval,
   KeyframeProperty,
-  TimelineLabelColor,
   TransitionType,
 } from '@open-factory/editor-core';
 import type { SelectedKeyframeRef } from '../../store/editorStore';

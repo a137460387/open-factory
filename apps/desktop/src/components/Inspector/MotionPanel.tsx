@@ -14,8 +14,8 @@ import type { ClipInspectorBodyProps } from './ClipInspectorBody';
 
 export function MotionPanel({
   clip,
-  selectedClipLocked,
-  asset,
+  selectedClipLocked: _selectedClipLocked,
+  asset: _asset,
   selectedKeyframe,
   selectedKeyframes,
   setSelectedKeyframes,
@@ -34,7 +34,7 @@ export function MotionPanel({
   motionTrack,
   motionTrackProgress,
   motionTrackingBusy,
-  commit,
+  commit: _commit,
   updateSelectedKeyframe,
   removeSelectedKeyframe,
   shiftSelectedKeyframes,

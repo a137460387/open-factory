@@ -377,7 +377,7 @@ export function ShellRightPanel() {
             ) : transitionLibraryOpen ? (
               <TransitionLibrary
                 onClose={() => setTransitionLibraryOpen(false)}
-                onSelectTransition={(type) => {
+                onSelectTransition={(_type) => {
                   // 选中转场时可扩展：应用到当前选中的转场或打开参数面板
                 }}
               />

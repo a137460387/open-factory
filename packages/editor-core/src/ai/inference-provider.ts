@@ -290,7 +290,7 @@ export class HeuristicProvider implements InferenceProvider {
     return true;
   }
 
-  async infer(modelType: ModelType, input: TensorDescriptor): Promise<InferenceResult> {
+  async infer(_modelType: ModelType, _input: TensorDescriptor): Promise<InferenceResult> {
     const startTime = performance.now();
 
     // Return a minimal valid result — downstream code must handle degraded quality

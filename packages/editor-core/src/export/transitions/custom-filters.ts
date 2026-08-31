@@ -114,8 +114,8 @@ function buildShapeTransition(
   toLabel: string,
   outputLabel: string,
   type: TransitionType,
-  durationArg: string,
-  offsetArg: string,
+  _durationArg: string,
+  _offsetArg: string,
 ): CustomFilterResult {
   const shapeLabel = `${toLabel}_shape`;
   const geqExpr = buildShapeGeqExpression(type);

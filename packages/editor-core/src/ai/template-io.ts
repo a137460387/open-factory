@@ -6,7 +6,7 @@
  */
 
 import type { EditingTemplate, OftFile, TemplateLibraryEntry, TemplateFilter } from '../models/template-schema';
-import { TEMPLATE_SCHEMA_VERSION, TEMPLATE_FILE_EXTENSION, validateTemplate } from '../models/template-schema';
+import { TEMPLATE_SCHEMA_VERSION, validateTemplate } from '../models/template-schema';
 import { BUILTIN_TEMPLATES } from './builtin-templates';
 import { logger } from '../utils/logger';
 

@@ -125,7 +125,7 @@ function mergeById<T extends { id: string; updatedAt: string }>(
   remote: T[],
   type: AnnotationSyncConflict['type'],
   conflicts: AnnotationSyncConflict[],
-  now: string,
+  _now: string,
 ): T[] {
   const localMap = new Map(local.map((item) => [item.id, item]));
   const remoteMap = new Map(remote.map((item) => [item.id, item]));

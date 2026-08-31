@@ -89,7 +89,7 @@ export class MacroPlaybackEngine {
     });
   }
 
-  private getCurrentOperationType(index: number): MacroOperationType | undefined {
+  private getCurrentOperationType(_index: number): MacroOperationType | undefined {
     return undefined; // Will be set during execution
   }
 
