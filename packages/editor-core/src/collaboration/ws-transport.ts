@@ -133,7 +133,6 @@ const DEFAULT_WS_CONFIG: WSTransportConfig = {
 
 // ==================== 工具函数 ====================
 
-
 /** 计算指数退避延迟 */
 export function computeBackoffDelay(attempt: number, initialMs: number, maxMs: number): number {
   const delay = initialMs * 2 ** attempt;

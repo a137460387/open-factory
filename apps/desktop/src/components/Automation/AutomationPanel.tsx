@@ -2,16 +2,7 @@ import { logger } from '@open-factory/editor-core/utils';
 import { useState, useCallback, useMemo } from 'react';
 import type { Workflow, WorkflowTemplate, WorkflowLogEntry } from '@open-factory/editor-core';
 import { WorkflowEngine, createDefaultWorkflow, createDefaultStep, BUILTIN_TEMPLATES } from '@open-factory/editor-core';
-import {
-  Play,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  Zap,
-  FileText,
-  Workflow as WorkflowIcon,
-} from 'lucide-react';
+import { Play, Plus, Trash2, ChevronDown, ChevronRight, Zap, FileText, Workflow as WorkflowIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { SceneAnalysisView } from './SceneAnalysisView';
@@ -19,9 +10,6 @@ import { AutoGeneratePanel } from './AutoGeneratePanel';
 /* ------------------------------------------------------------------ */
 /*  状态样式                                                           */
 /* ------------------------------------------------------------------ */
-
-
-
 
 /* ------------------------------------------------------------------ */
 /*  组件                                                              */

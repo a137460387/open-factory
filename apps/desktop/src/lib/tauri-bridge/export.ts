@@ -332,7 +332,6 @@ export interface RenderPreviewCacheResult {
   error?: string;
 }
 
-
 export async function renderPreviewCache(request: RenderPreviewCacheRequest): Promise<RenderPreviewCacheResult> {
   return await invoke<RenderPreviewCacheResult>('render_preview_cache', { request });
 }

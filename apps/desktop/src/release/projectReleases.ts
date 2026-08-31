@@ -47,7 +47,6 @@ export async function listProjectReleaseRecords(projectId: string): Promise<Proj
     .sort((left, right) => right.releasedAt.localeCompare(left.releasedAt) || right.path.localeCompare(left.path));
 }
 
-
 export async function getProjectReleaseDir(projectId: string): Promise<string> {
   const appDataDir = await getAppDataDir();
   return joinPath(appDataDir, 'releases', encodeURIComponent(projectId || 'project'));

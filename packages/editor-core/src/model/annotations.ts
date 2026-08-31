@@ -625,7 +625,11 @@ export function normalizeMixerChannel(raw: unknown): MixerChannel {
     inputBus: typeof rec?.inputBus === 'string' ? rec.inputBus : null,
     effectsChain: Array.isArray(rec?.effectsChain) ? (rec.effectsChain as AudioEffectSlot[]) : [],
     automation: (rec?.automation as ChannelAutomation | undefined) ?? {},
-    metering: (rec?.metering as MixerChannel['metering'] | undefined) ?? { peakLevel: -60, rmsLevel: -60, clipCount: 0 },
+    metering: (rec?.metering as MixerChannel['metering'] | undefined) ?? {
+      peakLevel: -60,
+      rmsLevel: -60,
+      clipCount: 0,
+    },
   };
 }
 

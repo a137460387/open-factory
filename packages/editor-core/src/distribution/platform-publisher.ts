@@ -332,7 +332,6 @@ export interface PlatformPublisherConfig {
   maxConcurrent?: number;
 }
 
-
 /**
  * Build upload headers for a platform.
  */

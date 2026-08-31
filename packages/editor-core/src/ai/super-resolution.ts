@@ -648,7 +648,6 @@ export function computeMotionVectors(prevFrame: ImageData, currFrame: ImageData,
       let bestDy = 0;
       let bestSAD = Infinity;
 
-
       for (let dy = -searchRadius; dy <= searchRadius; dy++) {
         for (let dx = -searchRadius; dx <= searchRadius; dx++) {
           let sad = 0;

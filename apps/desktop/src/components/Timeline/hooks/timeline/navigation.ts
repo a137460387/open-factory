@@ -59,7 +59,6 @@ export function createNavigationHandlers(
     setAnnotationEditor,
   } = params;
 
-
   function openAnnotationEditorAt(time: number, annotation?: ProjectAnnotation): void {
     setAnnotationEditor({
       id: annotation?.id,

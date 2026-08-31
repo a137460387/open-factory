@@ -92,7 +92,6 @@ const PRESET_SPEED_MAP: Record<string, number> = {
   veryslow: 1,
 };
 
-
 const CRF_DEFAULTS = {
   speed: 28,
   balanced: 23,

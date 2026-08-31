@@ -528,9 +528,6 @@ export async function readDisableExportRecommendations(): Promise<boolean> {
   return settings.disableExportRecommendations ?? false;
 }
 
-
-
-
 export async function readViewSettings(): Promise<ViewSettings> {
   const settings = await readAppSettings();
   return settings.view ?? defaultViewSettings();
@@ -1483,5 +1480,3 @@ export async function saveTouchOptimizationSettings(
   await writeAppSettings({ ...settings, touchOptimization: next });
   return next;
 }
-
-

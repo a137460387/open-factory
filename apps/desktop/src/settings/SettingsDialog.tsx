@@ -44,10 +44,7 @@ import {
 } from '../lib/tauri-bridge';
 import { isTauriRuntime } from '../lib/tauri';
 import { showToast } from '../lib/toast';
-import {
-  type PreviewPerformanceSettings,
-  type PreviewSkipFrames,
-} from '../lib/preview/preview-performance';
+import { type PreviewPerformanceSettings, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import { type ClipMacro } from '../macros/clip-macros';
 import {
   getPluginRegistrySnapshot,

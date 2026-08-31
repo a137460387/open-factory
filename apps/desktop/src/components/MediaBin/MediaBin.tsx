@@ -30,15 +30,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import {
-  createContext,
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type RefObject,
-} from 'react';
+import { createContext, Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BatchMetadataDialog, BatchRenameDialog } from './BatchDialogs';
 import { MediaInfoDialog, formatBytes, formatDuration } from './MediaInfoDialog';
@@ -65,11 +57,7 @@ import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-hig
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useMediaBinState } from './useMediaBinState';
 import { MediaBinFilterBar } from './MediaBinFilterBar';
-import type {
-  MediaLibraryGridSize,
-  MediaLibrarySortKey,
-  MediaLibraryViewSettings,
-} from '../../media/mediaLibraryView';
+import type { MediaLibraryGridSize, MediaLibrarySortKey, MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 

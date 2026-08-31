@@ -49,9 +49,7 @@ import type {
   GapMenuRequest,
 } from './timeline-parts-types';
 import { LABEL_WIDTH, TRACK_DRAG_MIME } from './timeline-parts-types';
-import {
-  MemoizedClipBlock,
-} from './TimelineClipComponents';
+import { MemoizedClipBlock } from './TimelineClipComponents';
 
 function ThumbnailTrack({
   samples,

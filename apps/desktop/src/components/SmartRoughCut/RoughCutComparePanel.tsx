@@ -128,7 +128,6 @@ function ProposalCard({
   onApply(): void;
   onPreviewSegment?(segment: RoughCutSegment): void;
 }) {
-
   return (
     <div
       className={clsx(

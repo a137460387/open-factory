@@ -17,9 +17,7 @@ import {
 } from './CurveEditors';
 
 export { formatKeyframeProperty, formatKeyframeValue } from './CurveEditors';
-import {
-  getPresetHandles,
-} from '@open-factory/editor-core';
+import { getPresetHandles } from '@open-factory/editor-core';
 import {
   useEffect,
   useRef,
@@ -28,13 +26,9 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { Clip, Keyframe, KeyframeProperty } from '@open-factory/editor-core';
-import {
-  applyKeyframeHandlePatch,
-  KEYFRAME_PROPERTY_LIMITS,
-} from '@open-factory/editor-core';
+import { applyKeyframeHandlePatch, KEYFRAME_PROPERTY_LIMITS } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
-
 
 export type CurveEditorDrag =
   | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }

@@ -72,7 +72,6 @@ export interface VmafEnvironmentCapabilities {
   error?: string;
 }
 
-
 const VMAF_QUALITY_THRESHOLDS = {
   excellent: 90,
   good: 75,

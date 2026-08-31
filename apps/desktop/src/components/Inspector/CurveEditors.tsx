@@ -739,7 +739,6 @@ export function EasingPresetSelector({
 // KeyframeCurveEditor component
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // Color curve helpers
 // ---------------------------------------------------------------------------
@@ -975,8 +974,6 @@ export function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommi
     </div>
   );
 }
-
-
 
 // ---------------------------------------------------------------------------
 // Shared numeric utilities

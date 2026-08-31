@@ -33,11 +33,7 @@ import {
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
-import type {
-  MediaCollection,
-  ClipContentAnalysis,
-  MediaFolder,
-} from '@open-factory/editor-core';
+import type { MediaCollection, ClipContentAnalysis, MediaFolder } from '@open-factory/editor-core';
 import type { Subclip } from '@open-factory/editor-core';
 import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-highlight-engine';
 import { zhCN } from '../../i18n/strings';

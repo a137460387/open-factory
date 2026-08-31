@@ -168,7 +168,6 @@ function calcStddev(values: readonly number[], mean?: number): number {
   return Math.sqrt(variance);
 }
 
-
 function calcNumericStat(values: readonly number[]): NumericStyleStat {
   const mean = calcMean(values);
   return { mean, stddev: calcStddev(values, mean), count: values.length };
