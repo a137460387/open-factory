@@ -1,7 +1,6 @@
 import type {
   Clip,
   ProjectAnnotation,
-  TimelineGridSettings,
   TimelineSnapCandidate,
   SnapEdge,
   SelectionRect,
@@ -17,9 +16,7 @@ import {
   findTimelineSnapTargetWithGrid,
   fitTimelineZoomToWindow,
   getTimelineDuration,
-  moveClip,
   rectsIntersect,
-  round,
   snapTimelineTimeToGrid,
   snapTime,
 } from '@open-factory/editor-core';
@@ -30,14 +27,13 @@ import type { TimelineHandlerParams } from './types';
 
 export function createNavigationHandlers(
   params: TimelineHandlerParams,
-  helpers: {
+  _helpers: {
     findClip: (clipId: string) => Clip;
     minFrameDuration: () => number;
   },
 ) {
   const {
     project,
-    allClips,
     zoom,
     playheadTime,
     scrollRef,
@@ -49,7 +45,6 @@ export function createNavigationHandlers(
     longPressActiveRef,
     scrollRafRef,
     setIsPanning,
-    setPlayheadTime,
     setTimelineZoom,
     reduceMotion,
     setSnapHighlight,
@@ -59,15 +54,11 @@ export function createNavigationHandlers(
     startTransition,
     timelineDuration,
     minimapHeight,
-    selectionStart,
     setSelectionStart,
-    selectionRect,
     setSelectionRect,
-    setSelectedClipIds,
     setAnnotationEditor,
   } = params;
 
-  const { findClip, minFrameDuration } = helpers;
 
   function openAnnotationEditorAt(time: number, annotation?: ProjectAnnotation): void {
     setAnnotationEditor({
