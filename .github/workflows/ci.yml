@@ -30,7 +30,6 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'tools/**'
-              - 'docker/**'
               - 'ltx-video-service/**'
               - '.github/**'
               - '.superpowers/**'
