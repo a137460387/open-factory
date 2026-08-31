@@ -906,10 +906,11 @@ export class ThemeManager {
    */
   updateColor(path: string, value: string): void {
     const parts = path.split('.');
-    let target: any = this.activeTheme.colors;
+    // ThemeColors 是无索引签名接口，动态路径访问需经 unknown 双重断言
+    let target = this.activeTheme.colors as unknown as Record<string, unknown>;
 
     for (let i = 0; i < parts.length - 1; i++) {
-      target = target[parts[i]];
+      target = target[parts[i]] as Record<string, unknown>;
     }
 
     target[parts[parts.length - 1]] = value;

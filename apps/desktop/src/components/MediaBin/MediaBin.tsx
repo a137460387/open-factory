@@ -69,6 +69,11 @@ import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-hig
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useMediaBinState } from './useMediaBinState';
 import { MediaBinFilterBar } from './MediaBinFilterBar';
+import type {
+  MediaLibraryGridSize,
+  MediaLibrarySortKey,
+  MediaLibraryViewSettings,
+} from '../../media/mediaLibraryView';
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
@@ -757,7 +762,7 @@ function MediaFolderTree(props: {
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
-  gridSize: any;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -835,7 +840,7 @@ function MediaFolderNode({
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
-  gridSize: any;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -1047,15 +1052,18 @@ function MediaLibraryListView({
   onExportGif,
 }: {
   media: MediaAsset[];
-  settings: any;
+  settings: MediaLibraryViewSettings;
   selectedAssetId?: string | null;
-  onSort(sortKey: any): void;
+  onSort(sortKey: MediaLibrarySortKey): void;
   onSelectAsset?(assetId: string): void;
   onAddToTimeline(assetId: string): void;
   onExportGif(asset: MediaAsset): void;
 }) {
   if (media.length === 0) return null;
-  const columns = [
+  const columns: (
+    | { key: MediaLibrarySortKey; label: string; sortable: true; testId: string }
+    | { key: string; label: string; sortable: false; testId: string }
+  )[] = [
     { key: 'name', label: zhCN.mediaBin.listColumns.name, sortable: true, testId: 'media-list-sort-name' },
     { key: 'format', label: zhCN.mediaBin.listColumns.format, sortable: false, testId: 'media-list-format-header' },
     {

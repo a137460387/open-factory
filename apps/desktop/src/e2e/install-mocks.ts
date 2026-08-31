@@ -7781,7 +7781,7 @@ window.__E2E_ACTIONS__ = {
     useDialogStore.getState().setAssistEditingOpen(false);
     useDialogStore.getState().setAiRoughCutOpen(false);
     // 确保 audio-mixer 不遮挡右侧面板
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
@@ -7827,7 +7827,7 @@ window.__E2E_ACTIONS__ = {
     useDialogStore.getState().setContentGenerationOpen(false);
     useDialogStore.getState().setAssistEditingOpen(false);
     useDialogStore.getState().setAiRoughCutOpen(false);
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
@@ -7862,7 +7862,7 @@ window.__E2E_ACTIONS__ = {
     // 隐藏音频混音器，避免其遮挡自动化面板（与相邻自动化 fixture 一致的写法）。
     // 依赖 layoutSettingsTouched 竞态修复：该程序化设置不再被挂载时的
     // readLayoutSettings 异步加载覆盖（auto-generate:68 根因修复后稳定生效）。
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },

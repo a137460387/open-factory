@@ -17,7 +17,14 @@ import { normalizeAudioRestoration } from '../audio-restoration';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { normalizeClipPitchData } from '../audio-pitch';
 import { normalizeDataSubtitleSource } from '../data-subtitle';
-import type { MixerState, MixerChannel, AudioBus } from '../audio/mixer-types';
+import type {
+  MixerState,
+  MixerChannel,
+  AudioBus,
+  ChannelAutomation,
+  AudioEffectSlot,
+  BusAssignment,
+} from '../audio/mixer-types';
 import { createBus } from '../audio/mixer-types';
 import type { ClipAIReframe, ReframeKeyframe } from '../ai-reframe';
 import type { AnomalyInterval, AnomalyType, AnomalySeverity } from '../anomaly-detection';
@@ -579,46 +586,56 @@ export function normalizeContinuityWarnings(input: unknown): ContinuityWarning[]
   );
 }
 
+/** 将 mixer 原始输入转为可安全索引的记录；null/非对象返回 undefined（与 raw?.x 的原始语义一致） */
+function asMixerRecord(raw: unknown): Record<string, unknown> | undefined {
+  return raw != null && typeof raw === 'object' ? (raw as Record<string, unknown>) : undefined;
+}
+
 /** Normalize mixer bus */
-export function normalizeBus(raw: any): AudioBus {
+export function normalizeBus(raw: unknown): AudioBus {
+  const rec = asMixerRecord(raw);
   return {
-    id: typeof raw?.id === 'string' && raw.id.trim() ? raw.id : createId('bus'),
-    name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Bus',
+    id: typeof rec?.id === 'string' && rec.id.trim() ? rec.id : createId('bus'),
+    name: typeof rec?.name === 'string' && rec.name.trim() ? rec.name.trim() : 'Bus',
     type:
-      raw?.type === 'submix' || raw?.type === 'send' || raw?.type === 'aux' || raw?.type === 'master'
-        ? raw.type
+      rec?.type === 'submix' || rec?.type === 'send' || rec?.type === 'aux' || rec?.type === 'master'
+        ? rec.type
         : 'submix',
-    effectsChain: Array.isArray(raw?.effectsChain) ? raw.effectsChain : [],
-    volume: typeof raw?.volume === 'number' && Number.isFinite(raw.volume) ? raw.volume : 0,
-    pan: typeof raw?.pan === 'number' && Number.isFinite(raw.pan) ? clamp(raw.pan, -100, 100) : 0,
-    muted: !!raw?.muted,
-    outputBusId: raw?.outputBusId ?? null,
+    // 嵌套数组/对象字段沿用原有的"存在即透传"行为，不做深度校验
+    effectsChain: Array.isArray(rec?.effectsChain) ? (rec.effectsChain as AudioEffectSlot[]) : [],
+    volume: typeof rec?.volume === 'number' && Number.isFinite(rec.volume) ? rec.volume : 0,
+    pan: typeof rec?.pan === 'number' && Number.isFinite(rec.pan) ? clamp(rec.pan, -100, 100) : 0,
+    muted: !!rec?.muted,
+    outputBusId: (rec?.outputBusId as string | null | undefined) ?? null,
   };
 }
 
 /** Normalize mixer channel */
-export function normalizeMixerChannel(raw: any): MixerChannel {
+export function normalizeMixerChannel(raw: unknown): MixerChannel {
+  const rec = asMixerRecord(raw);
   return {
-    trackId: typeof raw?.trackId === 'string' ? raw.trackId : '',
-    name: typeof raw?.name === 'string' ? raw.name : '',
-    volume: typeof raw?.volume === 'number' && Number.isFinite(raw.volume) ? raw.volume : 0,
-    pan: typeof raw?.pan === 'number' && Number.isFinite(raw.pan) ? clamp(raw.pan, -100, 100) : 0,
-    muted: !!raw?.muted,
-    solo: !!raw?.solo,
-    busAssignments: Array.isArray(raw?.busAssignments) ? raw.busAssignments : [],
-    inputBus: typeof raw?.inputBus === 'string' ? raw.inputBus : null,
-    effectsChain: Array.isArray(raw?.effectsChain) ? raw.effectsChain : [],
-    automation: raw?.automation ?? {},
-    metering: raw?.metering ?? { peakLevel: -60, rmsLevel: -60, clipCount: 0 },
+    trackId: typeof rec?.trackId === 'string' ? rec.trackId : '',
+    name: typeof rec?.name === 'string' ? rec.name : '',
+    volume: typeof rec?.volume === 'number' && Number.isFinite(rec.volume) ? rec.volume : 0,
+    pan: typeof rec?.pan === 'number' && Number.isFinite(rec.pan) ? clamp(rec.pan, -100, 100) : 0,
+    muted: !!rec?.muted,
+    solo: !!rec?.solo,
+    // 嵌套数组/对象字段沿用原有的"存在即透传"行为，不做深度校验
+    busAssignments: Array.isArray(rec?.busAssignments) ? (rec.busAssignments as BusAssignment[]) : [],
+    inputBus: typeof rec?.inputBus === 'string' ? rec.inputBus : null,
+    effectsChain: Array.isArray(rec?.effectsChain) ? (rec.effectsChain as AudioEffectSlot[]) : [],
+    automation: (rec?.automation as ChannelAutomation | undefined) ?? {},
+    metering: (rec?.metering as MixerChannel['metering'] | undefined) ?? { peakLevel: -60, rmsLevel: -60, clipCount: 0 },
   };
 }
 
 /** Normalize mixer state */
-export function normalizeMixerState(raw: any): MixerState | undefined {
+export function normalizeMixerState(raw: unknown): MixerState | undefined {
   if (!raw) return undefined;
+  const rec = asMixerRecord(raw);
   return {
-    channels: Array.isArray(raw.channels) ? raw.channels.map(normalizeMixerChannel) : [],
-    buses: Array.isArray(raw.buses) ? raw.buses.map(normalizeBus) : [],
-    masterBus: raw.masterBus ? normalizeBus(raw.masterBus) : createBus('Master', 'master'),
+    channels: Array.isArray(rec?.channels) ? rec.channels.map(normalizeMixerChannel) : [],
+    buses: Array.isArray(rec?.buses) ? rec.buses.map(normalizeBus) : [],
+    masterBus: rec?.masterBus ? normalizeBus(rec.masterBus) : createBus('Master', 'master'),
   };
 }

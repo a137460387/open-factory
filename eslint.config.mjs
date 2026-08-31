@@ -19,7 +19,7 @@ export default tseslint.config(
       'no-var': 'warn',
       'no-redeclare': 'warn',
       'prefer-const': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',

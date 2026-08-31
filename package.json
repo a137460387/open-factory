@@ -41,7 +41,7 @@
     "depcruise": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs",
     "depcruise:ci": "depcruise packages/editor-core/src --config .dependency-cruiser.cjs --output-type err-long",
     "lint": "eslint packages/ apps/desktop/src/",
-    "lint:ci": "eslint packages/ apps/desktop/src/ --max-warnings 325",
+    "lint:ci": "eslint packages/ apps/desktop/src/ --max-warnings 306",
     "docs:generate": "typedoc",
     "docs:serve": "typedoc --watch --serve",
     "check:bundle": "bun run scripts/check-bundle-size.ts",

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import type { FfmpegExportPlan } from '@open-factory/editor-core';
 
 // Radix Dialog wraps content in a Portal (createPortal). renderToStaticMarkup
 // cannot serialise portals — they produce empty output. Mock the Portal to
@@ -68,7 +69,8 @@ describe('P1-4 extracted dialog render tests', () => {
           name: 'Export 1',
           outputPath: '/out.mp4',
           status: 'pending' as const,
-          plan: { full_args: [] } as any,
+          // 测试只渲染对话框外壳，不需要完整导出计划
+          plan: { full_args: [] } as unknown as FfmpegExportPlan,
           priority: 'normal' as const,
           progress: 0,
           createdAt: new Date().toISOString(),

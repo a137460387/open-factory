@@ -6285,7 +6285,7 @@ const zh = {
   },
 } as const;
 
-type DeepPartial<T> = T extends (...args: any[]) => any
+type DeepPartial<T> = T extends (...args: never[]) => unknown
   ? T
   : T extends object
     ? { [K in keyof T]?: DeepPartial<T[K]> }
