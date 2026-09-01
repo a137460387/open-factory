@@ -57,7 +57,6 @@ import {
   openFileDialog,
   openDirectoryDialog,
   readFile,
-  runExportPowerAction,
   runExportPreviewSamples,
   saveFileDialog,
   putWebdavText,
@@ -72,12 +71,11 @@ import {
   saveExportOptimizationSettings,
   saveExportPresetSyncSettings,
   saveExportUploadSettings,
-  type ExportBackgroundSettings,
   type ExportUploadSettings,
 } from '../../settings/appSettings';
 import { getWhisperAvailability } from '../../lib/whisper';
 import { enqueueExport, enqueueStemExport } from '../export-queue-runner';
-import { normalizeScheduledExportStart, type ExportCompletionAction } from '../export-background';
+import { normalizeScheduledExportStart } from '../export-background';
 import { useExportQueueStore } from '../export-queue-store';
 import { retryExportUploadFromHistory } from '../export-upload';
 import { ensureMediaJobRunner } from '../../media/media-job-runner';
@@ -126,64 +124,39 @@ const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
 export function useExportActions(state: ExportState) {
   const {
     project,
-    initialPreset,
-    selectedClipIds = [],
-    inPoint,
-    outPoint,
     onClose,
-    onCompleted,
     onRelinkMissing,
     t,
     // State setters
     setCurrentStep,
-    setComplianceOpen,
-    setSelectedSpecId,
     setComplianceResults,
     setOutputPath,
     setCapabilities,
-    setAvailableHwEncoders,
     setError,
     setPreflight,
     setPresets,
     setPresetId,
-    setPlatformFitTarget,
-    setPlatformFitCustomSeconds,
     setDraftSettings,
-    setExportRangeMode,
-    setExportMode,
     setPipelineConfig,
     setPipelineStatuses,
     setPublishPipelineLogs,
-    setCustomPresetName,
-    setBatchOutputPaths,
     setVersionedBatchTemplate,
     setVersionedBatchRows,
     setLatestVersionedBatchId,
     setVersionedBatchFileSizes,
-    setSequenceBatchTemplate,
     setSelectedSequenceIds,
     setSequenceBatchOutputOverrides,
-    setSequenceBatchPresetMode,
     setSequenceBatchPresetIds,
     setCodecComparePresetIds,
     setCodecCompareResults,
     setCodecCompareSort,
-    setCodecCompareRecommendationMode,
-    setCodecCompareEvaluatingTaskId,
-    setStemTracks,
-    setStemMode,
     setStemOutputDir,
-    setPriority,
-    setScheduleEnabled,
-    setScheduledStartInput,
-    setCompletionAction,
     setExportBackgroundSettings,
     setPostExportScriptPendingConfirm,
     setExportOptimizationSettings,
     setExportUploadSettings,
     setExportUploadPassword,
     setExportPresetSyncSettings,
-    setExportPresetSyncPassword,
     setPresetSyncState,
     setWarmupStatus,
     setPreviewRunning,
@@ -196,85 +169,43 @@ export function useExportActions(state: ExportState) {
     setRenderFarmEnabled,
     setRenderFarmInstances,
     setProgressiveExportEnabled,
-    setDisableRecommendations,
     // Computed values
     selectedPreset,
     exportSettings,
     batchSequences,
-    sequenceBatchRows,
-    isAudioVisualization,
     isAudioOnly,
-    timelineVisualControlsDisabled,
-    subtitleLanguageOptions,
-    loudnessNormalizationEligible,
-    estimatedSize,
-    exportCostEstimate,
-    exportOptimizationSuggestions,
-    lastExportDurationSeconds,
-    exportCostHistoryError,
-    historyCostSamples,
-    hardwareEncodingEligible,
-    hardwareEncodingRequested,
     progressiveExportSupported,
-    formatOptions,
-    spatialDenoiseClipCount,
-    inOutExportRanges,
-    selectedClipExportRange,
     activeExportRanges,
-    rangeModeAvailable,
-    sortedCodecCompareResults,
-    codecCompareRecommendation,
-    versionedBatchReportRows,
     // Store selectors
-    tasks,
-    history,
-    runnerActive,
-    resourcePaused,
-    queuePaused,
-    maxConcurrent,
-    clearFinishedTasks,
     whisperExecutablePath,
     whisperModelPath,
     // Refs
-    notifiedSuccess,
     pendingCompletionAction,
     completionActionHandled,
     enqueueInFlight,
     // Other state
-    complianceOpen,
     selectedSpecId,
     complianceResults,
     outputPath,
     capabilities,
-    availableHwEncoders,
-    error,
     preflight,
     presets,
     presetId,
     platformFitTarget,
     platformFitCustomSeconds,
     draftSettings,
-    exportRangeMode,
     exportMode,
     pipelineConfig,
-    pipelineStatuses,
-    publishPipelineLogs,
     customPresetName,
     batchOutputPaths,
     versionedBatchTemplate,
     versionedBatchRows,
-    latestVersionedBatchId,
-    versionedBatchFileSizes,
     sequenceBatchTemplate,
     selectedSequenceIds,
     sequenceBatchOutputOverrides,
     sequenceBatchPresetMode,
     sequenceBatchPresetIds,
     codecComparePresetIds,
-    codecCompareResults,
-    codecCompareSort,
-    codecCompareRecommendationMode,
-    codecCompareEvaluatingTaskId,
     stemTracks,
     stemMode,
     stemOutputDir,
@@ -283,29 +214,16 @@ export function useExportActions(state: ExportState) {
     scheduledStartInput,
     completionAction,
     exportBackgroundSettings,
-    postExportScriptPendingConfirm,
     pendingConfirmResolveRef,
     exportOptimizationSettings,
     exportUploadSettings,
-    exportUploadPassword,
     exportPresetSyncSettings,
     exportPresetSyncPassword,
-    presetSyncState,
-    warmupStatus,
-    previewRunning,
-    previewError,
-    previewSamples,
     qualityTaskId,
-    qualityProgress,
-    qualityResult,
-    qualityError,
     suggestedRenderFarmInstances,
     renderFarmEnabled,
     renderFarmInstances,
     progressiveExportEnabled,
-    disableRecommendations,
-    recommendationContext,
-    recommendations,
   } = state;
 
   // Compliance functions
@@ -1559,44 +1477,4 @@ async function waitForExportTasks(taskIds: string[]): Promise<void> {
     await delay(100);
   }
   throw new Error(zhCN.exportDialog.pipeline.timeout);
-}
-
-async function runCompletionAction(action: ExportCompletionAction, settings: ExportBackgroundSettings): Promise<void> {
-  if (action === 'none') {
-    return;
-  }
-  if (action === 'notification') {
-    showToast({
-      kind: 'success',
-      title: zhCN.exportDialog.completionAction.notificationTitle,
-      message: zhCN.exportDialog.completionAction.notificationMessage,
-    });
-    if (typeof Notification !== 'undefined') {
-      const permission =
-        Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
-      if (permission === 'granted') {
-        new Notification(zhCN.exportDialog.completionAction.notificationTitle, {
-          body: zhCN.exportDialog.completionAction.notificationMessage,
-        });
-      }
-    }
-    return;
-  }
-  if (!settings.allowPowerActions) {
-    showToast({
-      kind: 'warning',
-      title: zhCN.exportDialog.completionAction.powerDisabledTitle,
-      message: zhCN.exportDialog.completionAction.powerDisabled,
-    });
-    return;
-  }
-  try {
-    await runExportPowerAction(action, true);
-  } catch (error) {
-    showToast({
-      kind: 'error',
-      title: zhCN.exportDialog.completionAction.powerFailedTitle,
-      message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage,
-    });
-  }
 }

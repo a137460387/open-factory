@@ -537,7 +537,7 @@ export const DEFAULT_SCENE_UNDERSTANDING_CONFIG: SceneUnderstandingConfig = {
  */
 export function detectObjects(imageData: ImageData, config: Partial<SceneUnderstandingConfig> = {}): DetectedObject[] {
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
-  const { width, height, data } = imageData;
+  const { width, height } = imageData;
   const objects: DetectedObject[] = [];
 
   // 简化的物体检测：基于颜色分割和轮廓检测
@@ -700,7 +700,7 @@ function classifySegment(segment: { color: { r: number; g: number; b: number }; 
  */
 function computeDetectionConfidence(
   segment: { color: { r: number; g: number; b: number }; pixels: number[] },
-  category: ObjectCategory,
+  _category: ObjectCategory,
 ): number {
   // 基于区域大小和颜色一致性计算置信度
   const sizeScore = Math.min(segment.pixels.length / 1000, 1);
@@ -712,7 +712,7 @@ function computeDetectionConfidence(
 /**
  * 计算颜色一致性
  */
-function computeColorConsistency(segment: { color: { r: number; g: number; b: number }; pixels: number[] }): number {
+function computeColorConsistency(_segment: { color: { r: number; g: number; b: number }; pixels: number[] }): number {
   // 简化实现：返回固定值
   return 0.7;
 }
@@ -743,7 +743,7 @@ function getObjectLabel(category: ObjectCategory): string {
  */
 function analyzeObjectAttributes(
   segment: { color: { r: number; g: number; b: number }; pixels: number[] },
-  category: ObjectCategory,
+  _category: ObjectCategory,
 ): ObjectAttributes {
   const { color } = segment;
   const hsl = rgbToHsl(color);
@@ -821,7 +821,7 @@ function rgbToHsl(rgb: { r: number; g: number; b: number }): { h: number; s: num
  */
 export function detectFaces(imageData: ImageData, config: Partial<SceneUnderstandingConfig> = {}): DetectedFace[] {
   const mergedConfig = { ...DEFAULT_SCENE_UNDERSTANDING_CONFIG, ...config };
-  const { width, height, data } = imageData;
+  const { width, height } = imageData;
   const faces: DetectedFace[] = [];
 
   // 检测肤色区域
@@ -1129,7 +1129,7 @@ function classifyMotion(
  */
 export function segmentSemantics(
   imageData: ImageData,
-  config: Partial<SceneUnderstandingConfig> = {},
+  _config: Partial<SceneUnderstandingConfig> = {},
 ): SemanticSegmentation {
   const { width, height, data } = imageData;
   const mask = new Uint8Array(width * height);
@@ -1226,7 +1226,6 @@ export function describeScene(
   objects: DetectedObject[],
   faces: DetectedFace[],
 ): SceneDescription {
-  const { width, height } = imageData;
   const brightness = computeImageBrightness(imageData);
   const contrast = computeImageContrast(imageData);
 
@@ -1266,7 +1265,6 @@ export function describeScene(
  * 检测场景类型
  */
 function detectSceneType(imageData: ImageData, objects: DetectedObject[]): SceneType {
-  const { width, height } = imageData;
   const brightness = computeImageBrightness(imageData);
 
   // 基于物体类别判断

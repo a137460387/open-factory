@@ -1,4 +1,3 @@
-import type { Clip } from '@open-factory/editor-core';
 import { AddTransitionCommand, DEFAULT_TRANSITION_DURATION, type TransitionType } from '@open-factory/editor-core';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../../../lib/titleTemplates';
 import { commandManager, timelineAccessor } from '../../../../store/commandManager';

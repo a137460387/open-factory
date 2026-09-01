@@ -16,7 +16,6 @@ import {
   type Clip,
   type ClipGroup,
   type ClipGroupColor,
-  type KeyframeProperty,
   type Track,
   type TimelineRenderRange,
   type TimelineDiffRange,

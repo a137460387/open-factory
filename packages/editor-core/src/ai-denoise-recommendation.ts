@@ -45,7 +45,7 @@ export function analyzeFrequencyBand(
   samples: Float32Array,
   sampleRate: number,
   freqHz: number,
-  bandwidthHz = 5,
+  _bandwidthHz = 5,
 ): number {
   if (samples.length === 0 || sampleRate <= 0 || freqHz <= 0) {
     return 0;

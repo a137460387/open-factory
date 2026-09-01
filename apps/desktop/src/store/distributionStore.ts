@@ -104,7 +104,7 @@ const INITIAL_STATE = {
 
 // ─── Store ────────────────────────────────────────────
 
-export const useDistributionStore = create<DistributionState>((set, get) => ({
+export const useDistributionStore = create<DistributionState>((set, _get) => ({
   ...INITIAL_STATE,
 
   setSelectedPlatforms(updater) {

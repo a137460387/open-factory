@@ -948,7 +948,7 @@ export class ACESColorManager {
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.rec2020ToAP0, color);
 
-      case 'acescct':
+      case 'acescct': {
         // 先转换为线性
         const linear: RGBColor = {
           r: TRANSFER_FUNCTIONS.acescctToLinear(color.r),
@@ -956,6 +956,7 @@ export class ACESColorManager {
           b: TRANSFER_FUNCTIONS.acescctToLinear(color.b),
         };
         return multiplyMatrix3x3(ACES_MATRICES.ap1ToAP0, linear);
+      }
 
       default:
         // 默认假设为sRGB
@@ -987,7 +988,7 @@ export class ACESColorManager {
       case 'lin-rec2020':
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToRec2020, color);
 
-      case 'acescct':
+      case 'acescct': {
         // 转换为ACEScg，然后应用ACEScct传输特性
         const ap1 = multiplyMatrix3x3(ACES_MATRICES.ap0ToAP1, color);
         return {
@@ -995,6 +996,7 @@ export class ACESColorManager {
           g: TRANSFER_FUNCTIONS.linearToACEScct(ap1.g),
           b: TRANSFER_FUNCTIONS.linearToACEScct(ap1.b),
         };
+      }
 
       default:
         return multiplyMatrix3x3(ACES_MATRICES.ap0ToSrgb, color);

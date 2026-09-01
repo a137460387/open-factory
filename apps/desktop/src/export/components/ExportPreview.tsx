@@ -16,11 +16,11 @@ export function ExportPreview({ state, actions }: ExportPreviewProps) {
     previewRunning,
     previewError,
     previewSamples,
-    platformFitTarget,
-    platformFitCustomSeconds,
-    setPlatformFitTarget,
-    setPlatformFitCustomSeconds,
-    project,
+    platformFitTarget: _platformFitTarget,
+    platformFitCustomSeconds: _platformFitCustomSeconds,
+    setPlatformFitTarget: _setPlatformFitTarget,
+    setPlatformFitCustomSeconds: _setPlatformFitCustomSeconds,
+    project: _project,
   } = state;
 
   if (isAudioOnly) {

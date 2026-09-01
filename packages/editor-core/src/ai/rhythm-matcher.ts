@@ -144,7 +144,7 @@ function classifyFrequencyBand(audioData: readonly number[], start: number): num
  */
 export function analyzeVideoMotion(
   frames: readonly { time: number; motionMagnitude: number }[],
-  fps: number = 30,
+  _fps: number = 30,
 ): VideoMotionPoint[] {
   if (frames.length === 0) return [];
 

@@ -1,9 +1,7 @@
 import type {
   Clip,
   MediaAsset,
-  DialogueInterval,
   DialogueSensitivity,
-  DialogueWhisperMiss,
   SilentRange,
   TargetAspectRatio,
   TransitionRecommendation,
@@ -36,9 +34,7 @@ import {
   recommendTransition,
   round,
   smoothKeyframes,
-  type TransitionType,
 } from '@open-factory/editor-core';
-import type { WhisperAvailability } from '../../../../lib/whisper';
 import {
   canGenerateSubtitlesForClip,
   buildWhisperSubtitleTrackForClip,
@@ -98,11 +94,11 @@ export function createAiFeatureHandlers(
     setSubtitleAlignReport,
     setReframeDialog,
     setTransitionDialog,
-    dialoguePanelOpen,
-    setDialoguePanelOpen,
+    dialoguePanelOpen: _dialoguePanelOpen,
+    setDialoguePanelOpen: _setDialoguePanelOpen,
     dialogueMarkers,
     setDialogueMarkers,
-    dialogueMisses,
+    dialogueMisses: _dialogueMisses,
     setDialogueMisses,
     whisperAvailability,
     projectPath,

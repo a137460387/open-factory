@@ -270,7 +270,6 @@ const DEFAULT_SILENCE_THRESHOLD_DB = -40;
 const DEFAULT_MIN_SILENCE_DURATION_MS = 200;
 
 /** 音频能量包络窗口大小 (样本数) */
-const DEFAULT_ENERGY_WINDOW_SIZE = 1024;
 
 /** 音乐风格默认 BPM */
 const GENRE_DEFAULT_TEMPO: Record<MusicGenre, number> = {
@@ -323,7 +322,6 @@ const EFFECT_BASE_PARTICLE_COUNT: Record<AIEffectType, number> = {
 };
 
 /** 音频分贝参考值 */
-const DB_REF = 1.0;
 
 // ==================== 工具函数 ====================
 
@@ -333,9 +331,6 @@ function generateId(prefix: string): string {
 }
 
 /** 分贝转振幅 */
-function dbToAmplitude(db: number): number {
-  return Math.pow(10, db / 20);
-}
 
 /** 振幅转分贝 */
 function amplitudeToDb(amplitude: number): number {
@@ -741,13 +736,10 @@ function estimateWordCount(text: string): number {
 
   const cjkPattern = /[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
   let cjkCount = 0;
-  let latinCount = 0;
 
   for (const char of text) {
     if (cjkPattern.test(char)) {
       cjkCount++;
-    } else if (/[a-zA-Z]/.test(char)) {
-      latinCount++;
     }
   }
 
@@ -950,7 +942,7 @@ function allocateSections(totalBeats: number, baseIntensity: number, genre: Musi
   }
 
   // Outro: 占剩余拍数
-  const outroBeats = Math.max(4, totalBeats - currentBeat);
+  const _outroBeats = Math.max(4, totalBeats - currentBeat);
   sections.push({
     type: 'outro',
     startBeat: currentBeat,

@@ -20,7 +20,7 @@ export function PerformanceMonitorPanel({ open, onClose }: PerformanceMonitorPan
     executeOptimization,
     dismissAlert,
     setConfig,
-    setPanelOpen,
+    setPanelOpen: _setPanelOpen,
     sample,
   } = usePerformanceMonitorStore(
     useShallow((s) => ({

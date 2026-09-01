@@ -481,8 +481,6 @@ function subjectToCropWindow(
   const subjectCenterY = (bbox.y + bbox.h / 2) * safeHeight;
 
   // Apply padding offset.
-  const paddedCropW = cropW * (1 + padding);
-  const paddedCropH = cropH * (1 + padding);
 
   let cropX = Math.round(subjectCenterX - cropW / 2);
   let cropY = Math.round(subjectCenterY - cropH / 2);

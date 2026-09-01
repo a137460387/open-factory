@@ -876,7 +876,6 @@ export class RenderProgressEstimator {
 
       if (task.status === 'rendering' && task.progress > 0) {
         // Partial progress
-        const elapsed = task.actualDurationMs || 0;
         const estimated = this.estimateRenderTime(task.type, task.region);
         totalMs += estimated * (1 - task.progress);
       } else {

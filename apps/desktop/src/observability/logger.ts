@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- 这是 logger 的 ConsoleTransport 实现，必须直接调用 console */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface LogEntry {

@@ -1,64 +1,5 @@
-import type {
-  Clip,
-  ClipGroup,
-  ClipGroupColor,
-  KeyframeProperty,
-  GapFillStrategy,
-  MediaAsset,
-  ProjectAnnotation,
-  TimelineNote,
-  ProtectedRange,
-  SilentRange,
-  SelectionRect,
-  TimelineGridSettings,
-  TimelineLabelColor,
-  MediaVersionEntry,
-  DialogueInterval,
-  DialogueSensitivity,
-  DialogueWhisperMiss,
-  Track,
-  TrackPatch,
-  ClipAIReframe,
-  ReframeAIFrame,
-  AnomalyInterval,
-  FrameAnalysisSample,
-  TransitionClipFeatures,
-  TransitionRecommendation,
-  TransitionType,
-  TargetAspectRatio,
-  TimelineSnapHighlight,
-  TimelineSnapCandidate,
-  SnapEdge,
-} from '@open-factory/editor-core';
-import type {
-  TransitionMenuState,
-  ClipMenuState,
-  VolumeEnvelopeMenuState,
-  GapMenuState,
-  RulerMenuState,
-  TrackBatchMenuState,
-} from './TimelineMenus';
-import type {
-  ReplaceMediaDialogState,
-  SilenceDialogState,
-  SceneDialogState,
-  WhisperDialogState,
-  CoverFrameDialogState,
-  AnnotationEditorState,
-  TimelineNoteEditorState,
-} from './TimelineDialogs';
-import type { TimelineNoteDraftState, BookmarkRenameState } from './TimelineOverlays';
-import type {
-  ClipMenuRequest,
-  DragState,
-  GapMenuRequest,
-  VolumeEnvelopeMenuRequest,
-  VolumeEnvelopePointRequest,
-} from './TimelineParts';
-import type { RulerContextMenuAction } from './timeline-ruler-menu';
-import type { WhisperAvailability } from '../../lib/whisper';
-import type { useEditorStore, SelectedKeyframeRef } from '../../store/editorStore';
-import type { CoverFrameResult } from '../../lib/tauri-bridge';
+import type { Clip } from '@open-factory/editor-core';
+import type { ClipMenuRequest } from './TimelineParts';
 
 import type { TimelineHandlerParams, TimelineHandlers } from './hooks/timeline/types';
 import { createTrackManagementHandlers } from './hooks/timeline/track-management';
@@ -84,7 +25,7 @@ export function useTimelineHandlers(params: TimelineHandlerParams): TimelineHand
       if (!clip) throw new Error(`Clip ${clipId} not found`);
       return clip;
     },
-    snapClipEnd: (time, clip, disabled) => {
+    snapClipEnd: (time, _clip, _disabled) => {
       // Will be overridden by navigation handlers
       return time;
     },

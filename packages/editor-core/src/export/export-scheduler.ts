@@ -92,18 +92,6 @@ const PRESET_SPEED_MAP: Record<string, number> = {
   veryslow: 1,
 };
 
-const PRESET_QUALITY_MAP: Record<string, number> = {
-  ultrafast: 1,
-  superfast: 2,
-  veryfast: 3,
-  faster: 4,
-  fast: 5,
-  medium: 6,
-  slow: 7,
-  slower: 8,
-  veryslow: 9,
-};
-
 const CRF_DEFAULTS = {
   speed: 28,
   balanced: 23,

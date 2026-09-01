@@ -332,8 +332,6 @@ export interface PlatformPublisherConfig {
   maxConcurrent?: number;
 }
 
-const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
-
 /**
  * Build upload headers for a platform.
  */

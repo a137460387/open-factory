@@ -46,12 +46,12 @@ export function PropertyPanel(props: ClipInspectorBodyProps) {
   const {
     clip,
     selectedClipLocked,
-    media,
+    media: _media,
     playheadTime,
-    projectSettings,
+    projectSettings: _projectSettings,
     asset,
-    clipStartTimecode,
-    clipDurationTimecode,
+    clipStartTimecode: _clipStartTimecode,
+    clipDurationTimecode: _clipDurationTimecode,
     assetDurationTimecode,
     textPath,
     textLayout,
@@ -753,7 +753,7 @@ function TextAdvancedPanel(props: {
   applyTextAnimation: () => void;
 }) {
   const {
-    clip,
+    clip: _clip,
     selectedClipLocked,
     textPath,
     textLayout,

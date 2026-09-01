@@ -48,7 +48,7 @@ export interface ProjectHealthDialogsProps {
 }
 
 export function ProjectHealthDialogs({
-  project,
+  project: _project,
   refreshProjectHealth,
   autoRepairProjectHealth,
   relinkMissingFromHealth,

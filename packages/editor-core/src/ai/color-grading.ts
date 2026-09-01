@@ -1037,7 +1037,7 @@ export function transferStyle(
 
   // 分析风格图像和内容图像
   const styleAnalysis = analyzeImageColors(styleImage);
-  const contentAnalysis = analyzeImageColors(contentImage);
+  const _contentAnalysis = analyzeImageColors(contentImage);
 
   // 提取色彩映射
   const colorMapping = extractColorMapping(styleImage, contentImage);

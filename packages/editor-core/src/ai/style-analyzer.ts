@@ -168,13 +168,6 @@ function calcStddev(values: readonly number[], mean?: number): number {
   return Math.sqrt(variance);
 }
 
-function calcMedian(values: readonly number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
 function calcNumericStat(values: readonly number[]): NumericStyleStat {
   const mean = calcMean(values);
   return { mean, stddev: calcStddev(values, mean), count: values.length };

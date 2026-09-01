@@ -290,7 +290,7 @@ export function generateAudioFingerprint(
  * 计算频段能量
  * 将信号分为 6 个频段：sub-bass, bass, low-mid, mid, high-mid, high
  */
-function computeFrequencyBands(samples: Float32Array, start: number, end: number, sampleRate: number): number[] {
+function computeFrequencyBands(samples: Float32Array, start: number, end: number, _sampleRate: number): number[] {
   const bandCount = 6;
   const bands = new Array(bandCount).fill(0);
   const fftSize = Math.min(end - start, 1024);

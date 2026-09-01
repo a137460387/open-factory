@@ -41,7 +41,7 @@ type ProcessingState = 'idle' | 'processing' | 'completed' | 'error';
  * - GPU 加速状态
  */
 export function SuperResolutionPreview({
-  sourceUrl,
+  sourceUrl: _sourceUrl,
   sourceCanvas,
   onClose,
   onApply,
@@ -51,7 +51,7 @@ export function SuperResolutionPreview({
   const [state, setState] = useState<ProcessingState>('idle');
   const [result, setResult] = useState<SuperResolutionResult | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [previewMode, setPreviewMode] = useState<'split' | 'original' | 'upscaled'>('split');
+  const [_previewMode, _setPreviewMode] = useState<'split' | 'original' | 'upscaled'>('split');
   const [splitPosition, setSplitPosition] = useState(50);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 

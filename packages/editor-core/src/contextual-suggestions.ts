@@ -290,7 +290,7 @@ export function generateContextualSuggestions(
 ): ContextualSuggestion[] {
   const cfg = { ...DEFAULT_SUGGESTION_CONFIG, ...config };
   const suggestions: ContextualSuggestion[] = [];
-  const { currentTime, selectedClipIds } = context;
+  const { currentTime, selectedClipIds: _selectedClipIds } = context;
 
   // Get all clips sorted by time
   const allClips = timeline.tracks.flatMap((t) => t.clips).sort((a, b) => a.start - b.start);

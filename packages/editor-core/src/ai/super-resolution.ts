@@ -648,9 +648,6 @@ export function computeMotionVectors(prevFrame: ImageData, currFrame: ImageData,
       let bestDy = 0;
       let bestSAD = Infinity;
 
-      const cx = bx * blockSize + blockSize / 2;
-      const cy = by * blockSize + blockSize / 2;
-
       for (let dy = -searchRadius; dy <= searchRadius; dy++) {
         for (let dx = -searchRadius; dx <= searchRadius; dx++) {
           let sad = 0;
@@ -1009,7 +1006,7 @@ export function quickPreview(input: ImageData, previewConfig: PreviewConfig): Im
   }
 
   // 快速超分
-  const quickConfig: SuperResolutionConfig = {
+  const _quickConfig: SuperResolutionConfig = {
     ...createDefaultSuperResolutionConfig(),
     scaleFactor: 2,
     denoiseStrength: 0.1,

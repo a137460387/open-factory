@@ -3964,15 +3964,15 @@ const zh = {
       generate: '生成章节',
       cancel: '取消',
       generating: 'AI 生成章节中...',
-      progress: (done: number, total: number) => '正在处理 ${done}/${total} 个分段...',
+      progress: (_done: number, _total: number) => '正在处理 ${done}/${total} 个分段...',
       previewTitle: '章节标题预览',
       time: '时间',
       titleLabel: '标题',
       chapterCount: '章节数量',
-      suggested: (min: number, max: number) => '建议 ${min}~${max} 个',
+      suggested: (_min: number, _max: number) => '建议 ${min}~${max} 个',
       apply: '应用章节',
       appliedTitle: '章节已创建',
-      appliedMessage: (count: number) => '已创建 ${count} 个章节标记。',
+      appliedMessage: (_count: number) => '已创建 ${count} 个章节标记。',
       cancelledTitle: '生成已取消',
       failedTitle: '生成失败',
       failedMessage: 'AI 章节标题请求失败，请检查服务商配置。',
@@ -6285,7 +6285,7 @@ const zh = {
   },
 } as const;
 
-type DeepPartial<T> = T extends (...args: any[]) => any
+type DeepPartial<T> = T extends (...args: never[]) => unknown
   ? T
   : T extends object
     ? { [K in keyof T]?: DeepPartial<T[K]> }

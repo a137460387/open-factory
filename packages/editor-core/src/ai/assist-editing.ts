@@ -1212,8 +1212,8 @@ function computeRhythmProfile(audioData: Float32Array, sampleRate: number): Rhyt
  */
 function detectTempoChanges(
   beatTimes: number[],
-  hopSize: number,
-  sampleRate: number,
+  _hopSize: number,
+  _sampleRate: number,
 ): Array<{ time: number; bpm: number }> {
   if (beatTimes.length < 8) return [];
 

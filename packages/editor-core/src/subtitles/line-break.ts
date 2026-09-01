@@ -35,7 +35,7 @@ export const DEFAULT_CHINESE_MAX_CHARS = 20;
 export const DEFAULT_ENGLISH_MAX_CHARS = 42;
 
 const CHINESE_CHAR_PATTERN = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
-const CHINESE_PUNCTUATION = /[，。！？、；：…—～·「」『』【】《》〈〉（）\(\)\[\]]/;
+const CHINESE_PUNCTUATION = /[，。！？、；：…—～·「」『』【】《》〈〉（）()[\]]/;
 const ENGLISH_PUNCTUATION = /[,.!?;:—\-\u2014\u2013]/;
 const PREPOSITIONS_EN = new Set([
   'and',

@@ -1,8 +1,6 @@
 import {
   MAX_MEDIA_FOLDER_DEPTH,
   TITLE_TEMPLATE_IDS,
-  collectFingerprintReferences,
-  listFingerprintSourcePaths,
   type MediaAsset,
   type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
@@ -13,10 +11,9 @@ import {
   type MediaRenamePreviewItem,
   type TitleTemplateId,
   type EffectPreset,
-  type QualityAssessmentResult,
   type SmartAlbumId,
 } from '@open-factory/editor-core';
-import { parseFavoritesSearchFilter, type Subclip } from '@open-factory/editor-core';
+import { type Subclip } from '@open-factory/editor-core';
 import {
   AudioWaveform,
   ChevronDown,
@@ -33,19 +30,10 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import {
-  createContext,
-  Fragment,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type RefObject,
-} from 'react';
+import { createContext, Fragment, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { BatchMetadataDialog, BatchRenameDialog } from './BatchDialogs';
-import { MediaInfoDialog, formatBytes, formatDuration, type MediaInfoState } from './MediaInfoDialog';
+import { MediaInfoDialog, formatBytes, formatDuration } from './MediaInfoDialog';
 import { SubclipDialog } from './SubclipDialog';
 import {
   MediaCard,
@@ -69,9 +57,9 @@ import type { VisualHighlightMarker } from '@open-factory/editor-core/visual-hig
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useMediaBinState } from './useMediaBinState';
 import { MediaBinFilterBar } from './MediaBinFilterBar';
+import type { MediaLibraryGridSize, MediaLibrarySortKey, MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
-const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
 
 /**
  * 网格数据按 scope 选择（方案 E 的"切数据不切组件"契约）：
@@ -96,7 +84,7 @@ interface MediaGridNavCtxValue {
   scrollToMediaIndex(index: number): void;
   pendingFocusRef: { current: number | null };
 }
-const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
+const _MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
 interface SubclipContextValue {
   subclips: Subclip[];
@@ -757,7 +745,7 @@ function MediaFolderTree(props: {
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
-  gridSize: any;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -835,7 +823,7 @@ function MediaFolderNode({
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
-  gridSize: any;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -1047,15 +1035,18 @@ function MediaLibraryListView({
   onExportGif,
 }: {
   media: MediaAsset[];
-  settings: any;
+  settings: MediaLibraryViewSettings;
   selectedAssetId?: string | null;
-  onSort(sortKey: any): void;
+  onSort(sortKey: MediaLibrarySortKey): void;
   onSelectAsset?(assetId: string): void;
   onAddToTimeline(assetId: string): void;
   onExportGif(asset: MediaAsset): void;
 }) {
   if (media.length === 0) return null;
-  const columns = [
+  const columns: (
+    | { key: MediaLibrarySortKey; label: string; sortable: true; testId: string }
+    | { key: string; label: string; sortable: false; testId: string }
+  )[] = [
     { key: 'name', label: zhCN.mediaBin.listColumns.name, sortable: true, testId: 'media-list-sort-name' },
     { key: 'format', label: zhCN.mediaBin.listColumns.format, sortable: false, testId: 'media-list-format-header' },
     {
@@ -1353,7 +1344,7 @@ function MediaCardGrid({
   mediaHighlights?: Map<string, VisualHighlightMarker[]>;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
+  const _columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
   if (media.length === 0) return null;
   return (
     <div

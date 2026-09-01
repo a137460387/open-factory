@@ -844,7 +844,7 @@ export class AdvancedPermissionManager {
   /**
    * 添加组规则
    */
-  addGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
+  addGroupRule(groupId: string, ruleId: string, _operatorId: string, _operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
@@ -869,7 +869,7 @@ export class AdvancedPermissionManager {
   /**
    * 移除组规则
    */
-  removeGroupRule(groupId: string, ruleId: string, operatorId: string, operatorName: string): boolean {
+  removeGroupRule(groupId: string, ruleId: string, _operatorId: string, _operatorName: string): boolean {
     const group = this.state.groups.find((g) => g.id === groupId);
     if (!group) return false;
 
@@ -1037,7 +1037,7 @@ export class AdvancedPermissionManager {
    * 清除过期的临时权限
    */
   cleanupExpiredPermissions(): number {
-    const now = new Date();
+    const _now = new Date();
     const before = this.state.temporaryPermissions.length;
 
     this.state.temporaryPermissions = this.state.temporaryPermissions.filter((tp) => isTemporaryPermissionValid(tp));

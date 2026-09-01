@@ -45,10 +45,6 @@ interface SubtitleSegmentInfo {
 }
 
 /** 媒体标签信息 */
-interface MediaTagInfo {
-  id: string;
-  tags: string[];
-}
 
 /**
  * 检测覆盖空隙：同一clip持续覆盖>minDuration秒且无B-roll叠加的字幕区间。

@@ -28,7 +28,7 @@ export function SequenceCompareDialog({ project, onClose, onDragClipToSequence }
       : [{ id: project.id, name: project.name, timeline: project.timeline }];
   const [leftId, setLeftId] = useState(saved?.leftSequenceId ?? allSequences[0]?.id ?? '');
   const [rightId, setRightId] = useState(saved?.rightSequenceId ?? allSequences[1]?.id ?? allSequences[0]?.id ?? '');
-  const [splitRatio, setSplitRatio] = useState(normalizeSplitRatio(saved?.splitRatio));
+  const [splitRatio, _setSplitRatio] = useState(normalizeSplitRatio(saved?.splitRatio));
   const [syncMarkersEnabled, setSyncMarkersEnabled] = useState(saved?.syncMarkersEnabled ?? false);
 
   const leftSeq = allSequences.find((s) => s.id === leftId);

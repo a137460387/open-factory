@@ -12,13 +12,11 @@ declare const __DEV_PERF_MONITOR__: boolean;
 
 const renderCounts = new Map<string, number>();
 const renderListeners = new Set<() => void>();
-let renderVersion = 0;
 let cachedCountsSnapshot: ReadonlyMap<string, number> = new Map();
 /** 有未通知的渲染计数变更时为 true，由 FPS 心跳统一 flush（见 flushDirtyNotifies） */
 let renderDirty = false;
 
 function notifyRenderListeners() {
-  renderVersion++;
   cachedCountsSnapshot = new Map(renderCounts);
   for (const fn of renderListeners) fn();
 }
@@ -85,7 +83,6 @@ let lastFrameTime = 0;
 let rafId = 0;
 let fpsIntervalId: ReturnType<typeof setInterval> | 0 = 0;
 const fpsListeners = new Set<() => void>();
-let fpsVersion = 0;
 let cachedFpsSnapshot: { current: number; avg: number; min: number; history: number[] } = {
   current: 0,
   avg: 0,
@@ -109,7 +106,6 @@ function notifyFpsListeners() {
   // 心跳是渲染相位外的固定节拍，顺带把累积的计数/订阅日志变更 flush 给订阅者，
   // 使面板数据以 ~500ms 节奏刷新，且永不触发"写入即通知"的闭环。
   flushDirtyNotifies();
-  fpsVersion++;
   const history = fpsHistory.slice(-60);
   const current = history[history.length - 1] ?? 0;
   const avg = history.length > 0 ? history.reduce((a, b) => a + b, 0) / history.length : 0;
@@ -159,13 +155,11 @@ interface SubscriptionEvent {
 const subscriptionLog: SubscriptionEvent[] = [];
 const MAX_SUB_LOG = 200;
 const subListeners = new Set<() => void>();
-let subVersion = 0;
 let cachedSubSnapshot: readonly SubscriptionEvent[] = [];
 /** 有未通知的订阅日志变更时为 true，由 FPS 心跳统一 flush（见 flushDirtyNotifies） */
 let subDirty = false;
 
 function notifySubListeners() {
-  subVersion++;
   cachedSubSnapshot = subscriptionLog.slice(-50);
   for (const fn of subListeners) fn();
 }

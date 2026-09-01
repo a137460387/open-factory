@@ -26,7 +26,7 @@ import {
   type ThreeWayColor,
 } from '@open-factory/editor-core';
 import { drawColorWheel, eventToUnitPoint, wheelPointToOffsets } from '../lib/color-wheel';
-import { clamp, clamp01 } from '@open-factory/editor-core/utils/math';
+import { clamp01 } from '@open-factory/editor-core/utils/math';
 import { zhCN } from '../i18n/strings';
 import {
   getAppDataDir,

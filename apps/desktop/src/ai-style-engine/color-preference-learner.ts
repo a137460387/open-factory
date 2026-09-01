@@ -168,11 +168,6 @@ export function extractPresetParams(project: ProjectLike): ColorGradingParams[] 
 /**
  * Calculate average numeric value from params
  */
-function calculateAverage(params: ColorGradingParams[], getter: (p: ColorGradingParams) => number | undefined): number {
-  const values = params.map(getter).filter((v): v is number => v !== undefined);
-  if (values.length === 0) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
 
 /**
  * Calculate standard deviation

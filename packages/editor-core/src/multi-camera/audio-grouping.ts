@@ -74,7 +74,7 @@ export function createMulticamAudioGroup(
   angles: Array<{ id: string; mediaId: string; name: string }>,
   followMode: AudioFollowMode = 'follow-video',
 ): MulticamAudioGroup {
-  const channels: MulticamAudioChannel[] = angles.map((angle, index) => ({
+  const channels: MulticamAudioChannel[] = angles.map((angle, _index) => ({
     id: `mc-audio-${angle.id}`,
     angleId: angle.id,
     mediaId: angle.mediaId,

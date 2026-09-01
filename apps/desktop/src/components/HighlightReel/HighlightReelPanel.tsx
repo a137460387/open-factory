@@ -49,7 +49,7 @@ export function HighlightReelPanel({
   const [weights, setWeights] = useState<HighlightScoreWeights>({ ...DEFAULT_HIGHLIGHT_WEIGHTS });
   const [sourceScope, setSourceScope] = useState<SourceScope>('all');
   const [phase, setPhase] = useState<Phase>('config');
-  const [scores, setScores] = useState<HighlightScore[]>([]);
+  const [_scores, setScores] = useState<HighlightScore[]>([]);
   const [selection, setSelection] = useState<ReturnType<typeof extractTopHighlightClips> | null>(null);
   const [transitionNotes, setTransitionNotes] = useState<string[]>([]);
   const [description, setDescription] = useState('');

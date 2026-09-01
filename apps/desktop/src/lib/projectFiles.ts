@@ -25,7 +25,6 @@ const AUTOSAVE_KEY = 'open-factory:autosave';
 const AUTOSAVE_INTERVAL_KEY = 'open-factory:autosave-interval-seconds';
 export const RECENT_PROJECT_PATH_KEY = 'open-factory:recent-project-path';
 export const DEFAULT_AUTOSAVE_INTERVAL_SECONDS = 60;
-const ENCRYPTED_PROJECT_EXTENSION = '.cutproj.enc';
 
 export interface ProjectFileEncryptionOptions {
   encrypted?: boolean;

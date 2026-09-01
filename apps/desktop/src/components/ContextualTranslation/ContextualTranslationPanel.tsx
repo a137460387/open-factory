@@ -47,11 +47,11 @@ export function ContextualTranslationPanel({
 
   const [targetLanguage, setTargetLanguage] = useState('en');
   const [phase, setPhase] = useState<Phase>('idle');
-  const [glossary, setGlossary] = useState<GlossaryTerm[]>([]);
+  const [_glossary, setGlossary] = useState<GlossaryTerm[]>([]);
   const [editingGlossary, setEditingGlossary] = useState<GlossaryTerm[]>([]);
   const [speakerStyle, setSpeakerStyle] = useState('');
   const [withContextTranslations, setWithContextTranslations] = useState<string[]>([]);
-  const [withoutContextTranslations, setWithoutContextTranslations] = useState<string[]>([]);
+  const [_withoutContextTranslations, setWithoutContextTranslations] = useState<string[]>([]);
   const [comparisons, setComparisons] = useState<TranslationComparison[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const abortRef = useRef(false);

@@ -279,7 +279,7 @@ export function SmartDistributionPanel({
   );
 
   // 推荐分数映射
-  const scoreMap = useMemo(() => {
+  const _scoreMap = useMemo(() => {
     const map = new Map<string, { score: number; reasons: string[] }>();
     for (const rec of recommendations) {
       map.set(rec.platform.id, { score: rec.score, reasons: rec.reasons });

@@ -59,7 +59,7 @@ export function calculateQuickActionPosition(
   toolbarWidth: number,
   toolbarHeight: number,
   viewportWidth: number,
-  viewportHeight: number,
+  _viewportHeight: number,
 ): QuickActionPosition {
   const PADDING = 8;
   const center = clipRect.x + clipRect.width / 2;

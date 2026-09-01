@@ -202,7 +202,7 @@ export function matchCharactersAcrossClips(
 
       // Compare against all already-assigned characters
       for (const [charId, entry] of Object.entries(characters)) {
-        const existingTags = entry.appearances.flatMap(() => {
+        const _existingTags = entry.appearances.flatMap(() => {
           // Collect tags from the character's tag set
           return entry.label
             .split(',')

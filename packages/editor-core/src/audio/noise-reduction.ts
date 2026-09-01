@@ -117,7 +117,7 @@ export function buildNoiseReductionFfmpegArgs(params: NoiseReductionParams): str
   if (normalized.autoNoiseSampling && normalized.noiseSampleEnd > normalized.noiseSampleStart) {
     filterParts.push(`nt=w`);
     // 使用 anlmdn 作为补充降噪
-    args.push('afftdn', ...filterParts.map((p) => `-af`), `afftdn=${filterParts.join(':')}`);
+    args.push('afftdn', ...filterParts.map((_p) => `-af`), `afftdn=${filterParts.join(':')}`);
   } else {
     args.push(`afftdn=${filterParts.join(':')}`);
   }

@@ -1,6 +1,6 @@
 import type { LocaleStrings } from './strings.js';
 import { formatSignedNumber, formatTrackType } from './i18n-utils.js';
-type DeepPartial<T> = T extends (...args: any[]) => any
+type DeepPartial<T> = T extends (...args: never[]) => unknown
   ? T
   : T extends object
     ? { [K in keyof T]?: DeepPartial<T[K]> }
@@ -3270,15 +3270,15 @@ export const enOverrides = {
       generate: 'Generate Chapters',
       cancel: 'Cancel',
       generating: 'Generating chapters...',
-      progress: (done: number, total: number) => 'Processing ${done}/${total} segments...',
+      progress: (_done: number, _total: number) => 'Processing ${done}/${total} segments...',
       previewTitle: 'Chapter Preview',
       time: 'Time',
       titleLabel: 'Title',
       chapterCount: 'Chapter Count',
-      suggested: (min: number, max: number) => 'Suggested ${min}~${max}',
+      suggested: (_min: number, _max: number) => 'Suggested ${min}~${max}',
       apply: 'Apply Chapters',
       appliedTitle: 'Chapters Created',
-      appliedMessage: (count: number) => 'Created ${count} chapter marker(s).',
+      appliedMessage: (_count: number) => 'Created ${count} chapter marker(s).',
       cancelledTitle: 'Cancelled',
       failedTitle: 'Generation Failed',
       failedMessage: 'AI chapter request failed. Check provider configuration.',

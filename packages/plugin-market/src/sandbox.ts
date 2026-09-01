@@ -80,7 +80,7 @@ export class PluginSandbox {
         violations: [...this.violations],
       };
     } catch (error: unknown) {
-      const executionTime = performance.now() - startTime;
+      const _executionTime = performance.now() - startTime;
       const errorMsg = error instanceof Error ? error.message : String(error);
       return this.buildResult(false, undefined, errorMsg, startTime, violations);
     }
@@ -112,7 +112,7 @@ export class PluginSandbox {
         violations: [...this.violations],
       };
     } catch (error: unknown) {
-      const executionTime = performance.now() - startTime;
+      const _executionTime = performance.now() - startTime;
       const errorMsg = error instanceof Error ? error.message : String(error);
       return this.buildResult(false, undefined, errorMsg, startTime, violations);
     }

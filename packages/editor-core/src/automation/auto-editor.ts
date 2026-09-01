@@ -295,7 +295,7 @@ export function generateEditPlan(
   template: EditTemplate,
   config: AutoEditorConfig,
   weights?: PreferenceWeights,
-  bpm?: number,
+  _bpm?: number,
 ): EditPlan {
   // 1. 筛选场景
   const filtered = filterScenes(scenes, template.filter);
@@ -391,7 +391,6 @@ export function generateEditPlan(
   const transitions: PlannedTransition[] = [];
   if (config.autoTransitions && template.transition.autoAddTransitions && selected.length > 1) {
     for (let i = 0; i < selected.length - 1; i++) {
-      const fromClip = selected[i];
       const toClip = selected[i + 1];
       const transType = template.transition.sceneTypeOverrides[toClip.sceneType] ?? template.transition.defaultType;
       transitions.push({

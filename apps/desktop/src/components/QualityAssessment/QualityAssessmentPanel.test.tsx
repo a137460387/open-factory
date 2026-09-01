@@ -45,6 +45,7 @@ vi.mock('@open-factory/editor-core', () => ({
 }));
 
 import { QualityAssessmentPanel } from './QualityAssessmentPanel';
+import type { Project } from '@open-factory/editor-core';
 
 const mockProject = {
   id: 'proj-1',
@@ -58,7 +59,8 @@ const mockProject = {
       },
     ],
   },
-} as any;
+  // 测试只渲染面板外壳，不需要完整 Project 结构
+} as unknown as Project;
 
 describe('QualityAssessmentPanel', () => {
   beforeEach(() => {

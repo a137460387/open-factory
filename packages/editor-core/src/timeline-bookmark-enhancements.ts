@@ -1,5 +1,5 @@
 import { createId } from './model';
-import type { BookmarkGroup, BookmarkSortMode, TimelineBookmark } from './model-types';
+import type { BookmarkGroup, TimelineBookmark } from './model-types';
 
 export const BOOKMARK_ANNOTATION_MAX_LENGTH = 50;
 export const BOOKMARK_GROUP_DEFAULT_COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -33,39 +33,6 @@ export function normalizeBookmarkAnnotationText(text: string | undefined): strin
     return undefined;
   }
   return trimmed.slice(0, BOOKMARK_ANNOTATION_MAX_LENGTH);
-}
-
-function sortBookmarks(
-  bookmarks: TimelineBookmark[],
-  mode: BookmarkSortMode,
-  groups?: BookmarkGroup[],
-): TimelineBookmark[] {
-  const sorted = [...bookmarks];
-  switch (mode) {
-    case 'time':
-      return sorted.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id));
-    case 'group': {
-      const groupOrder = new Map<string, number>();
-      if (groups) {
-        for (const group of groups) {
-          groupOrder.set(group.id, group.sortOrder);
-        }
-      }
-      return sorted.sort((a, b) => {
-        const ga = groupOrder.get(a.groupId ?? '') ?? 9999;
-        const gb = groupOrder.get(b.groupId ?? '') ?? 9999;
-        return ga - gb || a.time - b.time || a.id.localeCompare(b.id);
-      });
-    }
-    case 'created':
-      return sorted.sort((a, b) => {
-        const ca = a.createdAt ?? '';
-        const cb = b.createdAt ?? '';
-        return ca.localeCompare(cb) || a.id.localeCompare(b.id);
-      });
-    default:
-      return sorted;
-  }
 }
 
 export function groupBookmarks(

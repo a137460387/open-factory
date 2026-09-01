@@ -50,7 +50,7 @@ export function markAllNotificationsRead(notifications: ExportNotification[]): E
   return notifications.map((n) => ({ ...n, read: true }));
 }
 
-export function clearNotificationHistory(notifications: ExportNotification[]): ExportNotification[] {
+export function clearNotificationHistory(_notifications: ExportNotification[]): ExportNotification[] {
   return [];
 }
 

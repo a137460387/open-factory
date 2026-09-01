@@ -57,7 +57,7 @@ export async function invokeBinary<T>(
 export async function invokeBinaryResponse<T extends Uint8Array | ArrayBuffer>(
   command: string,
   args?: Record<string, unknown>,
-  signal?: AbortSignal,
+  _signal?: AbortSignal,
 ): Promise<T> {
   // Use Tauri's binary response protocol
   const response = await invoke<number[]>(command, args);
@@ -78,7 +78,7 @@ export async function invokeWithBinaryPayload<T>(
   command: string,
   payload: Uint8Array | ArrayBuffer,
   metadata?: Record<string, unknown>,
-  signal?: AbortSignal,
+  _signal?: AbortSignal,
 ): Promise<T> {
   // Convert ArrayBuffer to number array for Tauri IPC
   const bytes = payload instanceof Uint8Array ? payload : new Uint8Array(payload);
@@ -170,7 +170,7 @@ export async function invokeStreamed(
   command: string,
   args: Record<string, unknown>,
   onChunk: (chunk: StreamChunk) => void,
-  signal?: AbortSignal,
+  _signal?: AbortSignal,
 ): Promise<void> {
   // Use Tauri's event system for streaming
   const { listen } = await import('@tauri-apps/api/event');

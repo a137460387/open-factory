@@ -357,6 +357,6 @@ function normalizeForComparison(text: string): string {
   return text
     .trim()
     .toLowerCase()
-    .replace(/[，。！？、；：""''（）\[\]【】…—\-\s]+/gu, '')
-    .replace(/[,.!?;:"'()\[\]…\-\s]+/g, '');
+    .replace(/[，。！？、；：""''（）[\]【】…—\-\s]+/gu, '')
+    .replace(/[,.!?;:"'()[\]…\-\s]+/g, '');
 }

@@ -178,7 +178,6 @@ export function generateSwitchSegments(
   // 生成转场（仅在非 cut 类型时）
   const transitions: GeneratedTransition[] = [];
   for (let i = 1; i < segments.length; i++) {
-    const prevSeg = mergedSegments[i - 1];
     const seg = mergedSegments[i];
 
     if (seg.transition !== 'cut') {
@@ -214,7 +213,7 @@ export function generateRealtimeSwitch(
   currentAngleIndex: number,
   targetAngleIndex: number,
   angles: AngleDefinition[],
-  remainingDuration: number,
+  _remainingDuration: number,
 ): SwitchPointDef | undefined {
   if (targetAngleIndex === currentAngleIndex) return undefined;
   if (targetAngleIndex < 0 || targetAngleIndex >= angles.length) return undefined;

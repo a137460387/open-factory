@@ -41,7 +41,6 @@ import type {
   FrameQualityScore,
   QualityDimension,
   QualityDimensionScore,
-  QualityThresholds,
   QualityAssessmentConfig,
   EnhancedQualityGrade,
   QualityIssue,
@@ -509,7 +508,7 @@ export function assessVideoQuality(frames: Uint8Array[], config: QualityAssessme
 export function assessAudioQuality(
   audioData: Float32Array,
   sampleRate: number,
-  config: QualityAssessmentConfig,
+  _config: QualityAssessmentConfig,
 ): AudioQualityMetrics {
   if (audioData.length === 0) {
     return {
@@ -599,21 +598,21 @@ export function assessAudioQuality(
   // 简化方案：将信号分为低/中/高频段，比较各段能量
   // 使用短时能量分布近似
   const fftSize = 2048;
-  const halfFft = fftSize / 2;
   let lowEnergy = 0;
   let midEnergy = 0;
   let highEnergy = 0;
 
   // 分帧计算能量分布（简化版 DFT 能量估计）
   const segCount = Math.min(Math.floor(audioData.length / fftSize), 20);
+  let freqBalanceScore: number;
   if (segCount > 0) {
     const segStep = Math.floor(audioData.length / segCount);
     for (let seg = 0; seg < segCount; seg++) {
       const offset = seg * segStep;
       // 简化频谱分析：使用自相关近似各频段能量
       // 低频 (20-300Hz)、中频 (300-4000Hz)、高频 (4000-20000Hz)
-      const lowBinEnd = Math.round((300 / sr) * fftSize);
-      const midBinEnd = Math.round((4000 / sr) * fftSize);
+      const _lowBinEnd = Math.round((300 / sr) * fftSize);
+      const _midBinEnd = Math.round((4000 / sr) * fftSize);
 
       for (let i = 0; i < fftSize && offset + i < audioData.length; i++) {
         const sample = audioData[offset + i];
@@ -640,12 +639,12 @@ export function assessAudioQuality(
       const lowPenalty = Math.abs(lowRatio - 0.3) * 100;
       const midPenalty = Math.abs(midRatio - 0.5) * 100;
       const highPenalty = Math.abs(highRatio - 0.2) * 100;
-      var freqBalanceScore = clamp(100 - (lowPenalty + midPenalty + highPenalty) * 0.8, 0, 100);
+      freqBalanceScore = clamp(100 - (lowPenalty + midPenalty + highPenalty) * 0.8, 0, 100);
     } else {
-      var freqBalanceScore = 50;
+      freqBalanceScore = 50;
     }
   } else {
-    var freqBalanceScore = 50;
+    freqBalanceScore = 50;
   }
 
   return {

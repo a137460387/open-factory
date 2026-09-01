@@ -16,7 +16,7 @@ import {
 import type { BeatSensitivity } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { featureStrings } from '../../i18n/featureStrings';
-import { MenuDropdown, MenuItem, MenuSeparator } from './MenuDropdown';
+import { MenuDropdown, MenuItem } from './MenuDropdown';
 
 export function ToolsMenu({
   open,

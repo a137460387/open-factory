@@ -116,7 +116,7 @@ export function PreviewOverlay(props: PreviewOverlayProps) {
     differenceCanvasRef,
     previewSurfaceRef,
     previewSurfaceStyle,
-    previewZoom,
+    previewZoom: _previewZoom,
   } = props;
 
   const t = zhCN.preview;

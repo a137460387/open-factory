@@ -1709,13 +1709,7 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
  */
 export function buildWindowMaskFfmpegFilter(params: WindowMaskParams): string {
   if (params.shape === 'circle' && params.circle) {
-    const cx = formatFfmpegNumber(params.circle.center.x);
-    const cy = formatFfmpegNumber(params.circle.center.y);
-    const r = formatFfmpegNumber(params.circle.radius);
-    const s = formatFfmpegNumber(Math.max(0.001, params.circle.softness));
-    const invert = params.invert ? 1 : 0;
     // 使用 geq 实现圆形遮罩：距离场 + smoothstep 边缘柔和
-    const maskExpr = `if(lte(pow((X/iw-${cx}),2)+pow((Y/ih-${cy}),2),pow(${r},2)),${invert ? 0 : 255},${invert ? 255 : 0})`;
     return `geq=lum='clip(lum_expr,0,255)':cr='cb(X,Y)':cb='cr(X,Y)'`;
   }
   if (params.shape === 'linear-gradient' && params.linearGradient) {

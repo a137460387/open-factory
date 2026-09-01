@@ -1,12 +1,4 @@
-import type {
-  Clip,
-  ClipGroup,
-  CollaborationClipLock,
-  AnomalyInterval,
-  KeyframeProperty,
-  TimelineLabelColor,
-  TransitionType,
-} from '@open-factory/editor-core';
+import type { Clip, KeyframeProperty, TransitionType } from '@open-factory/editor-core';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
 type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';

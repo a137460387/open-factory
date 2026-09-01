@@ -34,7 +34,7 @@ export function useEditorShellOrchestrator(
   store: StoreSubscriptionsResult,
   derived: DerivedStateResult,
   exportQueue: ExportQueueResult,
-  stateSetters: {
+  _stateSetters: {
     setCommandPaletteOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setGestureTutorialOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setRoughCutCompareOpen: React.Dispatch<React.SetStateAction<boolean>>;

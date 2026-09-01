@@ -50,7 +50,7 @@ import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../../layout/layoutSettings';
 import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
-import { ToolButton, formatRecordingElapsed } from './ToolbarButton';
+import { ToolButton } from './ToolbarButton';
 import { FileMenu } from './FileMenu';
 import { EditMenu } from './EditMenu';
 import { ViewMenu } from './ViewMenu';

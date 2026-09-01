@@ -72,14 +72,6 @@ export interface VmafEnvironmentCapabilities {
   error?: string;
 }
 
-const DEFAULT_VMAF_CONFIG: VmafMonitoringConfig = {
-  mode: 'post-export',
-  sampleInterval: 10,
-  maxSamples: 20,
-  enablePsnr: true,
-  enableSsim: true,
-};
-
 const VMAF_QUALITY_THRESHOLDS = {
   excellent: 90,
   good: 75,
@@ -91,24 +83,15 @@ const VMAF_QUALITY_THRESHOLDS = {
  * 检测 VMAF 环境能力
  */
 export async function detectVmafCapabilities(): Promise<VmafEnvironmentCapabilities> {
-  try {
-    // 检查 FFmpeg 是否支持 VMAF
-    // 这里应该调用 Tauri 后端检测 FFmpeg 的 libvmaf 支持
-    // 暂时返回模拟数据
-    return {
-      vmafAvailable: true,
-      realtimeSupported: false, // 实时 VMAF 需要高性能硬件
-      vmafVersion: '2.3.1',
-      availableModels: ['vmaf_v0.6.1', 'vmaf_4k_v0.6.1'],
-    };
-  } catch (error) {
-    return {
-      vmafAvailable: false,
-      realtimeSupported: false,
-      availableModels: [],
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  // 检查 FFmpeg 是否支持 VMAF
+  // 这里应该调用 Tauri 后端检测 FFmpeg 的 libvmaf 支持
+  // 暂时返回模拟数据
+  return {
+    vmafAvailable: true,
+    realtimeSupported: false, // 实时 VMAF 需要高性能硬件
+    vmafVersion: '2.3.1',
+    availableModels: ['vmaf_v0.6.1', 'vmaf_4k_v0.6.1'],
+  };
 }
 
 /**
@@ -360,7 +343,7 @@ export function generateVmafReport(result: VmafMonitoringResult, projectName?: s
 export function createDegradedQualityReport(
   plan: FfmpegExportPlan,
   settings: ExportSettings,
-  duration: number,
+  _duration: number,
 ): VmafMonitoringResult {
   // 基于编码参数估算质量
   const estimatedQuality = estimateQualityFromSettings(settings);
@@ -409,7 +392,7 @@ function estimateQualityFromSettings(settings: ExportSettings): number {
 /**
  * 从设置中提取 CRF 值
  */
-function getCrfFromSettings(settings: ExportSettings): number | null {
+function getCrfFromSettings(_settings: ExportSettings): number | null {
   // 这里需要从实际的 FFmpeg 参数中提取 CRF
   // 暂时返回默认值
   return 23;

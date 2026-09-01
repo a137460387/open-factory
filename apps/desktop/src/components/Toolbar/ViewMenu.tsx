@@ -10,7 +10,7 @@ export function ViewMenu({
   thumbnailTrackVisible,
   timelineMinimapVisible,
   timelineHeatmap,
-  reviewMode,
+  reviewMode: _reviewMode,
   onToggleSafeFrameGuides,
   onToggleThumbnailTrack,
   onToggleTimelineMinimap,
@@ -18,7 +18,7 @@ export function ViewMenu({
   onOpenSequenceCompare,
   onTimelineHeatmapChange,
   onToggleReviewMode,
-  onCreateReviewReport,
+  onCreateReviewReport: _onCreateReviewReport,
 }: {
   open: boolean;
   onToggle(): void;

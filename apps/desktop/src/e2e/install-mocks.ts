@@ -376,7 +376,7 @@ const mocks: TauriMocks = {
     mtimes.set(path, Date.now());
     persistFiles();
   },
-  writeBinaryFile: (path, base64Data) => {
+  writeBinaryFile: (path, _base64Data) => {
     exists.set(path, true);
     mtimes.set(path, Date.now());
   },
@@ -1644,7 +1644,7 @@ const mocks: TauriMocks = {
   },
   checkOllamaReachable: () => false,
   listOllamaModels: () => ({ reachable: false, models: [] }),
-  callTtsApi: (request) => ({
+  callTtsApi: (_request) => ({
     audioBase64:
       'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0NcAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0Nc',
     latencyMs: 50,
@@ -6477,7 +6477,6 @@ window.__E2E_ACTIONS__ = {
           if (c.id !== clipId || c.type !== 'subtitle' || !('text' in c)) return c;
           const text = c.text;
           const mid = Math.ceil(text.length / 2);
-          const splitTime = c.start + c.duration / 2;
           return { ...c, text: text.slice(0, mid), duration: c.duration / 2, readingSpeedWarning: null };
         }),
       };
@@ -7781,7 +7780,7 @@ window.__E2E_ACTIONS__ = {
     useDialogStore.getState().setAssistEditingOpen(false);
     useDialogStore.getState().setAiRoughCutOpen(false);
     // 确保 audio-mixer 不遮挡右侧面板
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
@@ -7827,7 +7826,7 @@ window.__E2E_ACTIONS__ = {
     useDialogStore.getState().setContentGenerationOpen(false);
     useDialogStore.getState().setAssistEditingOpen(false);
     useDialogStore.getState().setAiRoughCutOpen(false);
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },
@@ -7862,7 +7861,7 @@ window.__E2E_ACTIONS__ = {
     // 隐藏音频混音器，避免其遮挡自动化面板（与相邻自动化 fixture 一致的写法）。
     // 依赖 layoutSettingsTouched 竞态修复：该程序化设置不再被挂载时的
     // readLayoutSettings 异步加载覆盖（auto-generate:68 根因修复后稳定生效）。
-    useDialogStore.getState().setLayoutSettings((s: any) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
+    useDialogStore.getState().setLayoutSettings((s) => ({ ...s, panels: { ...s.panels, audioMixer: false } }));
     useDialogStore.getState().setAutomationOpen(true);
     commandManager.clear();
   },

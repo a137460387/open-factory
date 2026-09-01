@@ -8,7 +8,6 @@ import {
   listMediaVersionEntries,
   getReplaceMediaCompatibilityWarnings,
 } from '@open-factory/editor-core';
-import type { ReplaceMediaDialogState } from '../../TimelineDialogs';
 import { commandManager, projectAccessor, timelineAccessor } from '../../../../store/commandManager';
 import { useEditorStore } from '../../../../store/editorStore';
 import { zhCN } from '../../../../i18n/strings';
@@ -28,7 +27,7 @@ export function createNestedMediaHandlers(
     project,
     selectedClipIds,
     setSelectedClipId,
-    setSelectedClipIds,
+    setSelectedClipIds: _setSelectedClipIds,
     setClipMenu,
     setReplaceMediaDialog,
     replaceMediaDialog,
@@ -36,7 +35,7 @@ export function createNestedMediaHandlers(
     setActiveSequenceId,
   } = params;
 
-  const { findClip, getClipMediaAsset } = helpers;
+  const { findClip, getClipMediaAsset: _getClipMediaAsset } = helpers;
 
   function openNestedSequence(clip: Clip): void {
     if (clip.type !== 'nested-sequence') {

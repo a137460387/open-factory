@@ -595,7 +595,7 @@ export class WorkflowEngine {
   private async executeStep(
     step: AutomationWorkflowStep,
     context: WorkflowExecutionContext,
-    workflow: Workflow,
+    _workflow: Workflow,
   ): Promise<void> {
     const stepResult: StepResult = {
       stepId: step.id,

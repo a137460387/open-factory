@@ -252,7 +252,7 @@ export class HeadlessEditorCore {
   ): Promise<string[]> {
     const timeline = this.extractTimeline(projectFile);
     const assets = this.extractAssets(projectFile);
-    const duration = getTimelinePlaybackDuration(timeline);
+    const _duration = getTimelinePlaybackDuration(timeline);
 
     const width = settings.width ?? 1920;
     const height = settings.height ?? 1080;

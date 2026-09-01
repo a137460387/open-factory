@@ -42,7 +42,7 @@ export function createKeyboardHandlers(
     protectedRanges,
     zoom,
     scrollRef,
-    playheadTime,
+    playheadTime: _playheadTime,
     setPlayheadTime,
     setTimelineZoom,
   } = params;

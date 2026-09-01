@@ -27,7 +27,7 @@ export interface CursorDisplayData {
 export function transformCursorsToDisplay(
   awareness: AwarenessState[],
   timelineDuration: number,
-  trackCount: number,
+  _trackCount: number,
 ): CursorDisplayData[] {
   return awareness
     .filter((s) => s.isOnline)

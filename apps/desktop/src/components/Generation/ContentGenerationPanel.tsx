@@ -83,7 +83,7 @@ type Phase = 'idle' | 'generating' | 'done';
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
-export function ContentGenerationPanel({ project, onClose }: { project: Project; onClose: () => void }) {
+export function ContentGenerationPanel({ project: _project, onClose }: { project: Project; onClose: () => void }) {
   /* --- AI provider ------------------------------------------------ */
   const providers = useAISettingsStore((s) => s.providers);
   const textProviders = providers.filter((p) => p.enabled);

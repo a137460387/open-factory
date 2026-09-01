@@ -13,14 +13,14 @@ export function ExportDialog(props: ExportDialogProps) {
     t,
     currentStep,
     setCurrentStep,
-    exportMode,
+    exportMode: _exportMode,
     warmupStatus,
     postExportScriptPendingConfirm,
     setPostExportScriptPendingConfirm,
     pendingConfirmResolveRef,
     exportSettings,
-    outputPath,
-    error,
+    outputPath: _outputPath,
+    error: _error,
   } = state;
 
   return (

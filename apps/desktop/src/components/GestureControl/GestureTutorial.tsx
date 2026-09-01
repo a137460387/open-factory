@@ -249,10 +249,10 @@ export interface GesturePracticePanelProps {
 
 export function GesturePracticePanel({
   mappings = DEFAULT_GESTURE_MAPPINGS,
-  onMappingsChange,
+  onMappingsChange: _onMappingsChange,
 }: GesturePracticePanelProps) {
   const [cameraActive, setCameraActive] = useState(false);
-  const [lastDetectedGesture, setLastDetectedGesture] = useState<GestureType | null>(null);
+  const [lastDetectedGesture, _setLastDetectedGesture] = useState<GestureType | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 

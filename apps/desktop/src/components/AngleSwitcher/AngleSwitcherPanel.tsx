@@ -20,7 +20,7 @@ interface AngleSwitcherPanelProps {
 export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
   multicamClip,
   currentTime,
-  isPlaying,
+  isPlaying: _isPlaying,
   onAngleSwitch,
   onSyncRequest,
   onSwitchPointAdd,

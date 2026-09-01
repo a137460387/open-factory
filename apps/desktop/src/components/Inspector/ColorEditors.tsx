@@ -1,12 +1,8 @@
 import {
   DEFAULT_THREE_WAY_COLOR,
   normalizeColorWheelValue,
-  normalizeCurvePoints,
   normalizeThreeWayColor,
-  sampleCurve,
-  clamp01,
   type ColorWheelValue,
-  type CurvePoint,
   type ThreeWayColor,
 } from '@open-factory/editor-core';
 import { drawColorWheel, eventToUnitPoint, wheelPointToOffsets } from '../../lib/color-wheel';
@@ -165,4 +161,3 @@ function ColorWheelControl({
 }
 
 /** @deprecated 使用 clamp01 代替 */
-const clampUnit = clamp01;

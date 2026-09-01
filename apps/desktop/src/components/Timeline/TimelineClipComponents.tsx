@@ -28,7 +28,7 @@ import {
 import { EMOTION_COLORS } from '@open-factory/editor-core';
 import { AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zhCN } from '../../i18n/strings';
 import {
   getTimelineThumbnailPlaceholders,
@@ -577,7 +577,7 @@ const ClipAssetStrips = memo(function ClipAssetStrips({
   trackMuted,
   waveformColor,
   largeProjectMode,
-  trackHeight,
+  trackHeight: _trackHeight,
 }: ClipAssetStripsProps) {
   return (
     <>

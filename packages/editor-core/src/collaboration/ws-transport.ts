@@ -133,10 +133,6 @@ const DEFAULT_WS_CONFIG: WSTransportConfig = {
 
 // ==================== 工具函数 ====================
 
-function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 /** 计算指数退避延迟 */
 export function computeBackoffDelay(attempt: number, initialMs: number, maxMs: number): number {
   const delay = initialMs * 2 ** attempt;

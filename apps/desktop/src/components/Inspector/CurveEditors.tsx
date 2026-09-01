@@ -1,6 +1,5 @@
 import {
   getEasingPresetsByCategory,
-  getPresetHandles,
   clamp01,
   clamp,
   type EasingPreset,
@@ -18,7 +17,6 @@ import {
   KEYFRAME_PROPERTY_LIMITS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
-  applyKeyframeHandlePatch,
   calculateBezierHandleCoordinates,
   calculateKeyframeSpeedSamples,
   createDefaultColorCurves,
@@ -29,7 +27,6 @@ import {
   normalizeCurvePoints,
   sampleCurve,
   type ColorCurves,
-  type ColorWheelValue,
   type CurvePoint,
   type Keyframe,
   type KeyframeEasing,
@@ -37,7 +34,6 @@ import {
   type KeyframeProperty,
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
-import { type SelectedKeyframeRef } from '../../store/editorStore';
 
 // ---------------------------------------------------------------------------
 // Speed curve helpers
@@ -285,11 +281,6 @@ export function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(fram
 // ---------------------------------------------------------------------------
 // Keyframe curve editor types & helpers
 // ---------------------------------------------------------------------------
-
-type CurveEditorDrag =
-  | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }
-  | { mode: 'points'; start: CurveEditorFrame; base: CurveEditorFrame[]; selectedIds: string[] }
-  | { mode: 'handle'; keyframeId: string; handle: 'in' | 'out'; base: CurveEditorFrame[] };
 
 type CanvasPoint = { x: number; y: number };
 type CurveEditorFrame = Keyframe<number>;
@@ -690,7 +681,7 @@ export function formatKeyframeValue(property: KeyframeProperty, value: number): 
 /** 缓动预设选择器组件（exported for testing） */
 export function EasingPresetSelector({
   selectedIds,
-  frames,
+  frames: _frames,
   onApplyPreset,
 }: {
   selectedIds: string[];
@@ -747,236 +738,6 @@ export function EasingPresetSelector({
 // ---------------------------------------------------------------------------
 // KeyframeCurveEditor component
 // ---------------------------------------------------------------------------
-
-function KeyframeCurveEditor({
-  clip,
-  property,
-  selectedKeyframes,
-  onSelectionChange,
-  onCommit,
-}: {
-  clip: Clip;
-  property: KeyframeProperty;
-  selectedKeyframes: SelectedKeyframeRef[];
-  onSelectionChange(refs: SelectedKeyframeRef[]): void;
-  onCommit(frames: CurveEditorFrame[]): void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const speedCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const dragRef = useRef<CurveEditorDrag | null>(null);
-  const [draft, setDraft] = useState<CurveEditorFrame[]>(() => getCurveEditorFrames(clip, property));
-  const [selectionBox, setSelectionBox] = useState<{ start: CanvasPoint; current: CanvasPoint } | null>(null);
-  const draftRef = useRef(draft);
-  const duration = Math.max(0.001, clip.duration);
-  const selectedIds = selectedKeyframes
-    .filter((ref) => ref.clipId === clip.id && ref.property === property)
-    .map((ref) => ref.keyframeId);
-
-  useEffect(() => {
-    const next = getCurveEditorFrames(clip, property);
-    draftRef.current = next;
-    setDraft(next);
-  }, [clip, property]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      drawKeyframeCurveCanvas(canvas, draft, property, duration, selectedIds, selectionBox);
-    }
-    const speedCanvas = speedCanvasRef.current;
-    if (speedCanvas) {
-      drawKeyframeVelocityCanvas(speedCanvas, draft, property, duration);
-    }
-  }, [draft, duration, property, selectedIds, selectionBox]);
-
-  const updateDraft = (frames: CurveEditorFrame[]) => {
-    const next = normalizeCurveEditorFrames(frames, property, duration);
-    draftRef.current = next;
-    setDraft(next);
-  };
-  const refsForIds = (ids: string[]) => ids.map((keyframeId) => ({ clipId: clip.id, property, keyframeId }));
-  const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-    const frame = eventToCurveEditorFrame(event, canvas, property, duration);
-    const point = eventToCanvasPoint(event, canvas);
-    const nearestHandle = findNearestCurveHandle(draftRef.current, property, duration, canvas, point, 8);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    if (nearestHandle) {
-      if (!selectedIds.includes(nearestHandle.keyframeId)) {
-        onSelectionChange(refsForIds([nearestHandle.keyframeId]));
-      }
-      dragRef.current = {
-        mode: 'handle',
-        keyframeId: nearestHandle.keyframeId,
-        handle: nearestHandle.handle,
-        base: draftRef.current.map((item) => ({ ...item })),
-      };
-      return;
-    }
-    const nearest = findNearestCurveFrame(draftRef.current, frame, property, duration, 0.055);
-    if (nearest !== null) {
-      const nearestFrame = draftRef.current[nearest];
-      const nextSelectedIds = selectedIds.includes(nearestFrame.id) ? selectedIds : [nearestFrame.id];
-      if (!selectedIds.includes(nearestFrame.id)) {
-        onSelectionChange(refsForIds(nextSelectedIds));
-      }
-      dragRef.current = {
-        mode: 'points',
-        start: frame,
-        base: draftRef.current.map((item) => ({ ...item })),
-        selectedIds: nextSelectedIds,
-      };
-      return;
-    }
-    dragRef.current = { mode: 'box', start: point, current: point };
-    setSelectionBox({ start: point, current: point });
-  };
-  const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    const drag = dragRef.current;
-    if (!canvas || !drag) {
-      return;
-    }
-    if (drag.mode === 'box') {
-      const current = eventToCanvasPoint(event, canvas);
-      dragRef.current = { ...drag, current };
-      setSelectionBox({ start: drag.start, current });
-      return;
-    }
-    if (drag.mode === 'handle') {
-      const target = drag.base.find((item) => item.id === drag.keyframeId);
-      if (!target) {
-        return;
-      }
-      const handleFrame = eventToCurveEditorFrame(event, canvas, property, duration);
-      const handle = {
-        dx: roundFinite(handleFrame.time - target.time),
-        dy: roundFinite(handleFrame.value - target.value),
-      };
-      updateDraft(
-        drag.base.map((item) =>
-          item.id === drag.keyframeId
-            ? applyKeyframeHandlePatch(item, drag.handle, handle, item.handleMode ?? 'independent')
-            : item,
-        ),
-      );
-      return;
-    }
-    const frame = eventToCurveEditorFrame(event, canvas, property, duration);
-    const limits = KEYFRAME_PROPERTY_LIMITS[property];
-    const deltaTime = frame.time - drag.start.time;
-    const deltaValue = frame.value - drag.start.value;
-    updateDraft(
-      drag.base.map((item) =>
-        drag.selectedIds.includes(item.id)
-          ? {
-              ...item,
-              time: roundFinite(Math.min(duration, Math.max(0, item.time + deltaTime))),
-              value: roundFinite(Math.min(limits.max, Math.max(limits.min, item.value + deltaValue))),
-            }
-          : item,
-      ),
-    );
-  };
-  const handlePointerUp = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    const drag = dragRef.current;
-    dragRef.current = null;
-    setSelectionBox(null);
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    if (!canvas || !drag) {
-      return;
-    }
-    if (drag.mode === 'box') {
-      const selected = getCurveFrameIdsInBox(draftRef.current, property, duration, canvas, drag.start, drag.current);
-      onSelectionChange(refsForIds(selected));
-      return;
-    }
-    onCommit(normalizeCurveEditorFrames(draftRef.current, property, duration));
-  };
-  const handleContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-    event.preventDefault();
-    const point = eventToCanvasPoint(event, canvas);
-    const nearestHandle = findNearestCurveHandle(draftRef.current, property, duration, canvas, point, 10);
-    const targetId =
-      nearestHandle?.keyframeId ??
-      findNearestCurveFrameIdByPoint(draftRef.current, property, duration, canvas, point, 10);
-    if (!targetId) {
-      return;
-    }
-    const next = draftRef.current.map((frame) =>
-      frame.id === targetId ? { ...frame, handleMode: nextHandleMode(frame.handleMode) } : frame,
-    );
-    updateDraft(next);
-    onCommit(normalizeCurveEditorFrames(next, property, duration));
-    onSelectionChange(refsForIds([targetId]));
-  };
-
-  return (
-    <div className="rounded-md border border-line bg-panel p-2" data-testid="keyframe-curve-editor">
-      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
-        <span>{zhCN.inspector.fields.speedDerivative}</span>
-        <span className="tabular-nums">{draft.length}</span>
-      </div>
-      <canvas
-        ref={speedCanvasRef}
-        className="mb-2 block h-16 w-full rounded border border-line bg-slate-950"
-        width={288}
-        height={64}
-        data-testid="keyframe-speed-curve-canvas"
-      />
-      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
-        <span>{formatKeyframeProperty(property)}</span>
-        <span>
-          {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].min)} -{' '}
-          {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].max)}
-        </span>
-      </div>
-      <canvas
-        ref={canvasRef}
-        className="block h-32 w-full touch-none rounded border border-line bg-slate-950"
-        width={288}
-        height={128}
-        data-testid="keyframe-curve-editor-canvas"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onContextMenu={handleContextMenu}
-      />
-      {/* 缓动预设选择器 */}
-      <EasingPresetSelector
-        selectedIds={selectedIds}
-        frames={draft}
-        onApplyPreset={(preset) => {
-          const handles = getPresetHandles(preset.id);
-          if (!handles) return;
-          const updated = draft.map((frame) =>
-            selectedIds.includes(frame.id)
-              ? {
-                  ...frame,
-                  easing: preset.easing,
-                  inHandle: handles.inHandle ?? frame.inHandle,
-                  outHandle: handles.outHandle ?? frame.outHandle,
-                }
-              : frame,
-          );
-          updateDraft(updated);
-          onCommit(normalizeCurveEditorFrames(updated, property, duration));
-        }}
-      />
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Color curve helpers
@@ -1214,38 +975,6 @@ export function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommi
   );
 }
 
-function wheelOffsetsToPoint(value: ColorWheelValue): { x: number; y: number } {
-  const x = value.r;
-  const y = (value.b - value.g) / 1.7320508;
-  const length = Math.hypot(x, y);
-  if (length <= 1) {
-    return { x, y };
-  }
-  return { x: x / length, y: y / length };
-}
-
-function hsvToRgb(hue: number, saturation: number, value: number): { r: number; g: number; b: number } {
-  const sector = Math.floor(hue * 6);
-  const fraction = hue * 6 - sector;
-  const p = value * (1 - saturation);
-  const q = value * (1 - fraction * saturation);
-  const t = value * (1 - (1 - fraction) * saturation);
-  switch (sector % 6) {
-    case 0:
-      return { r: value, g: t, b: p };
-    case 1:
-      return { r: q, g: value, b: p };
-    case 2:
-      return { r: p, g: value, b: t };
-    case 3:
-      return { r: p, g: q, b: value };
-    case 4:
-      return { r: t, g: p, b: value };
-    default:
-      return { r: value, g: p, b: q };
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Shared numeric utilities
 // ---------------------------------------------------------------------------
@@ -1258,4 +987,4 @@ export function roundFinite(value: number): number {
 export const clampUnit = clamp01;
 
 /** @deprecated 使用 clamp(value, -1, 1) 代替 */
-const clampSigned = (value: number): number => clamp(value, -1, 1);
+const _clampSigned = (value: number): number => clamp(value, -1, 1);

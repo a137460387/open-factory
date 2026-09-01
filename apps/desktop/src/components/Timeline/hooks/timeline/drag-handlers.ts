@@ -14,9 +14,7 @@ import {
   detectOverlap,
   round,
   replaceClip,
-  canMoveClipWithProtectedRanges,
   snapTime,
-  type KeyframeProperty,
 } from '@open-factory/editor-core';
 import { keyframeRefKey } from '../../TimelineOverlays';
 import type { DragState } from '../../TimelineParts';
@@ -55,9 +53,9 @@ export function createDragHandlers(
     selectionRect,
     setSelectionRect,
     protectedRanges,
-    setSelectedClipId,
+    setSelectedClipId: _setSelectedClipId,
     setSelectedClipIds,
-    setSelectedKeyframe,
+    setSelectedKeyframe: _setSelectedKeyframe,
     setSelectedKeyframes,
     setPreviewTimeline,
     setPlayheadTime,
@@ -65,7 +63,7 @@ export function createDragHandlers(
 
   const {
     findClipById,
-    findClip,
+    findClip: _findClip,
     getKeyframeTime,
     buildKeyframeStartTimes,
     snapKeyframeTime,
@@ -375,7 +373,7 @@ function buildSelectionMarqueeRect(
   };
 }
 
-function findClipIdsIntersectingRect(rect: { left: number; top: number; right: number; bottom: number }): string[] {
+function findClipIdsIntersectingRect(_rect: { left: number; top: number; right: number; bottom: number }): string[] {
   // This will be implemented in the facade
   return [];
 }

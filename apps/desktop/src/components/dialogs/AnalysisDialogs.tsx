@@ -207,10 +207,10 @@ export function AnalysisDialogs({
   const setSpectrumAsset = useSetSpectrumAsset();
   const setOperationReplaySpeed = useSetOperationReplaySpeed();
   const setSpeakerDiarizationResult = useSetSpeakerDiarizationResult();
-  const setOperationRecording = useSetOperationRecording();
-  const setOperationRecordingActive = useSetOperationRecordingActive();
-  const setOperationReplayRunning = useSetOperationReplayRunning();
-  const setOperationRecordingStep = useSetOperationRecordingStep();
+  const _setOperationRecording = useSetOperationRecording();
+  const _setOperationRecordingActive = useSetOperationRecordingActive();
+  const _setOperationReplayRunning = useSetOperationReplayRunning();
+  const _setOperationRecordingStep = useSetOperationRecordingStep();
 
   return (
     <Suspense fallback={<PanelLoading label="分析工具" />}>

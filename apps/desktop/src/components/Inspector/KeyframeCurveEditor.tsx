@@ -1,39 +1,23 @@
 import {
-  getSpeedCurveFrames,
-  normalizeSpeedCurveFrames,
-  eventToSpeedFrame,
-  drawSpeedCurveCanvas,
-  speedFrameToPoint,
-  findNearestSpeedFrame,
   getCurveEditorFrames,
   normalizeCurveEditorFrames,
   drawKeyframeCurveCanvas,
   drawKeyframeVelocityCanvas,
-  getInterpolatedCurveEditorValue,
   findNearestCurveHandle,
   findNearestCurveFrameIdByPoint,
   nextHandleMode,
-  getKeyframeFallbackForCurve,
   eventToCurveEditorFrame,
   eventToCanvasPoint,
-  curveFrameToPoint,
   findNearestCurveFrame,
   getCurveFrameIdsInBox,
   formatKeyframeValue,
   EasingPresetSelector,
   roundFinite,
-  clampUnit,
   formatKeyframeProperty,
 } from './CurveEditors';
 
 export { formatKeyframeProperty, formatKeyframeValue } from './CurveEditors';
-import {
-  getEasingPresetsByCategory,
-  getPresetHandles,
-  clamp01,
-  type EasingPreset,
-  type EasingPresetCategory,
-} from '@open-factory/editor-core';
+import { getPresetHandles } from '@open-factory/editor-core';
 import {
   useEffect,
   useRef,
@@ -41,22 +25,10 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import type { Clip, Keyframe, KeyframeEasing, KeyframeHandleMode, KeyframeProperty } from '@open-factory/editor-core';
-import {
-  applyKeyframeHandlePatch,
-  calculateBezierHandleCoordinates,
-  calculateKeyframeSpeedSamples,
-  createId,
-  getClipSpeed,
-  interpolateKeyframes,
-  KEYFRAME_PROPERTY_LIMITS,
-  MAX_CLIP_SPEED,
-  MIN_CLIP_SPEED,
-} from '@open-factory/editor-core';
+import type { Clip, Keyframe, KeyframeProperty } from '@open-factory/editor-core';
+import { applyKeyframeHandlePatch, KEYFRAME_PROPERTY_LIMITS } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
-
-type SpeedCurveFrame = { id: string; time: number; value: number; easing: KeyframeEasing };
 
 export type CurveEditorDrag =
   | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }

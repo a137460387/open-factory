@@ -37,6 +37,7 @@ import type { VideoStitchWizardSettings } from '../../video-stitching/VideoStitc
 import type { DuplicateMediaMergeSelection } from '../../media/DuplicateMediaDialog';
 import type { MediaOrganizerDuplicateSelection } from '../../media/MediaOrganizerDialog';
 import type { AutosaveRecoveryCandidate, ProjectFileEncryptionOptions } from '../../lib/projectFiles';
+import type { TimelineImportSummary } from '../../timeline-export/TimelineExportDialog';
 import type { ContentAnalysisTarget } from '../../media/ContentAnalysisDialog';
 import type { BeatSensitivity } from '@open-factory/editor-core';
 import { shouldShowTutorial } from '../../tutorial/tutorialState';
@@ -96,8 +97,8 @@ export interface ShellFloatingDialogsProps {
   setTimelineExportDialogOpen: (open: boolean) => void;
   onExportCompleted: (path: string) => void;
   onRelinkMissing: () => void;
-  importEdlTimeline: (contents: string, path: string) => any;
-  importFcpXmlTimeline: (contents: string, path: string) => any;
+  importEdlTimeline: (contents: string, path: string) => TimelineImportSummary;
+  importFcpXmlTimeline: (contents: string, path: string) => TimelineImportSummary;
   addMedia: (media: MediaAsset[]) => void;
   lastExportPath: string | undefined;
   // Template
